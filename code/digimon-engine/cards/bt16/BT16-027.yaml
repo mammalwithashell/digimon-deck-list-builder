@@ -30,69 +30,30 @@
 #   Alt-path 3: Burst digivolve (Blast Digivolve keyword — [Hand][Counter], cost 0).
 #               DCGO: BlastDigivolveEffect at OnCounterTiming.
 #   Clause 1:   <Blast Digivolve> keyword grant (face-up declarative).
-#   Clause 2:   BLOCKED — [On Play][When Digivolving] return-to-bottom filtered by
-#               ≤ digi-cards-as-this. See G-PRED-STACK-SIZE-LTE-SOURCE below.
+#   Clause 2:   IMPLEMENTED — [On Play][When Digivolving] return-to-bottom of 1
+#               opponent Digimon filtered by ≤ digivolution-cards-as-this. Uses
+#               `materials_count_lte: { formula: { source_material_count: {} } }`
+#               — the same dynamic-comparison pattern AD1-025 uses faithfully.
 #   Clause 3:   IMPLEMENTED — [End of Attack][OPT] unsuspend self + conditional
 #               return when Imperialdramon: Dragon Mode is in this Digimon's
 #               digivolution cards. Uses runtime-supported
 #               `self_digivolution_contains_name`.
 #   Inherited:  Ace Overflow <-4> via top-level `ace_overflow` field.
 #
-# ─── DSL Gap: G-PRED-STACK-SIZE-LTE-SOURCE  [Clause 2] ───────────────────────────
+# ─── Implemented: Clause 2 source-material-count filter ────────────────────────
 #
 # Effect text: "Return 1 of your opponent's Digimon with as many or fewer
 #   digivolution cards as this Digimon to the bottom of the deck."
 #
-# The filter on the opponent's target permanent requires:
+# The filter on the opponent's target permanent requires
 #   target.card_sources.len() <= source.card_sources.len()
-# (where source is this Digimon's permanent).
-#
-# The DSL predicate `stack_size_lte` takes a literal `u8` (parsed at compile time
-# from the YAML). There is no `stack_size_lte_source` or `stack_size_lte_binding`
-# variant that compares the target's stack size against the source's stack size at
-# runtime.
-#
-# The DCGO condition:
-#   `permanent.DigivolutionCards.Count <= card.PermanentOfThisCard().DigivolutionCards.Count`
-# is a dynamic runtime comparison between two permanent stack sizes.
-#
-# Proposed DSL syntax (to file in qa/dsl-vocab-gaps.md):
-#   filter:
-#     stack_size_lte_source: true   # target.card_sources.len() <= ctx.source.card_sources.len()
-# OR (more general):
-#   filter:
-#     stack_size_lte_binding: <binding_name>   # compare against a bound integer
-#
-# Lowers to engine API: The predicate evaluator already has access to
-# `ctx.source_permanent()` via `ReadEffectContext`; adding a new leaf that compares
-# the candidate's `card_sources.len()` against the source's is straightforward.
-#
-# Until this gap closes, Clause 2 is BLOCKED. Authoring the clause without the
-# dynamic predicate would select any opponent Digimon regardless of stack size —
-# violating the printed text and the no-approximations policy.
-#
-# Stub (commented — uncomment + adjust when G-PRED-STACK-SIZE-LTE-SOURCE closes):
-#
-# - when: [on_play, when_digivolving]
-#   summary: "[On Play][When Digivolving] Return 1 opp Digimon with ≤ digi-cards as this to bottom of deck"
-#   condition:
-#     any_permanent:
-#       of: opponent
-#       zone: [battle_area]
-#       kind: digimon
-#       stack_size_lte_source: true        # ← BLOCKED: predicate not in DSL
-#   process:
-#     - select_opponent_permanent:
-#         bind_as: target
-#         filter:
-#           all_of:
-#             - kind: digimon
-#             - stack_size_lte_source: true  # ← BLOCKED: predicate not in DSL
-#         prompt: "Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck"
-#     - return_to_deck:
-#         target: target
-#         position: bottom
-#         include_sources: false
+# (where source is this Digimon's permanent). The DSL predicate
+# `materials_count_lte` with `formula: { source_material_count: {} }` resolves the
+# source permanent's digivolution-card count at runtime and compares the
+# candidate's against it — the exact dynamic comparison the DCGO condition
+# `permanent.DigivolutionCards.Count <= card.PermanentOfThisCard().DigivolutionCards.Count`
+# performs. AD1-025 uses this identical pattern for "return all opponent Digimon
+# with as many or fewer digivolution cards as this Digimon".
 #
 # ─── Implemented: Clause 3 source-name conditional ─────────────────────────────
 #
@@ -151,16 +112,30 @@ effects:
   - kind: grant_keyword
     keyword: BlastDigivolve
 
-  # ─── Clause 2 — BLOCKED [On Play][When Digivolving] return ≤-digi-card opp ────
+  # ─── Clause 2 — [On Play][When Digivolving] return ≤-digi-card opp ────────────
   # "[On Play] [When Digivolving] Return 1 of your opponent's Digimon with as
   #  many or fewer digivolution cards as this Digimon to the bottom of the deck."
   #
-  # BLOCKED: G-PRED-STACK-SIZE-LTE-SOURCE — see header comment.
-  # The DSL `stack_size_lte` predicate takes a literal u8, not a dynamic
-  # runtime comparison against the source permanent's card_sources count.
-  # Authoring this clause without the predicate would yield an over-permissive
-  # selection — any opponent Digimon regardless of stack size — violating
-  # the printed text and the no-approximations policy.
+  # `materials_count_lte: { formula: { source_material_count: {} } }` resolves
+  # this Digimon's digivolution-card count at runtime and keeps only opponent
+  # Digimon whose own digivolution-card count is <= that value. Mandatory pick
+  # (printed text has no "may"); silently no-ops when no legal target exists.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Return 1 opp Digimon with <= this Digimon's digivolution cards to bottom of deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte:
+                  formula:
+                    source_material_count: {}
+          prompt: "Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck"
+      - return_to_deck:
+          target: target
+          position: bottom
+          include_sources: false
 
   # ─── Clause 3 — [End of Attack][OPT] unsuspend + conditional return ───────────
   # "[End of Attack] [Once Per Turn] Unsuspend this Digimon. Then, if

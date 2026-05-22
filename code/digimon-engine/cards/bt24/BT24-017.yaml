@@ -28,11 +28,6 @@ effects:
   #
   # Sequence:
   #   1. Delete 1 of your opponent's lowest-DP Digimon.
-  #      NOTE: dp_lte with aggregate formula is authored correctly but the
-  #      predicate evaluator does not yet check dp_lte on permanents — see
-  #      engine gap G-PRED-DP-LTE.  Until that gap closes, the select prompt
-  #      will show all opponent Digimon rather than only lowest-DP ones.
-  #      The YAML is correct against the spec; the engine gap is flagged below.
   #
   #   2. By returning 2 cards from their trash to the bottom of the deck,
   #      the opponent plays 2 Petrification Tokens.
@@ -45,19 +40,13 @@ effects:
   #      until their turn ends.
   - when: when_digivolving
     process:
-      # Step 1 — delete opponent's lowest-DP Digimon.
-      # G-PRED-DP-LTE: dp_lte predicate on permanents is parsed but the
-      # engine predicate evaluator does not evaluate it yet.  All opponent
-      # Digimon will be valid targets until the gap closes.
+      # Step 1 — delete opponent's lowest-DP Digimon.  The `selector` field
+      # restricts candidates to the opponent's lowest-DP Digimon; it is
+      # recomputed across process steps and respects target-legality.
       - select_opponent_permanent:
           bind_as: victim
-          filter:
-            all_of:
-              - kind: digimon
-              - dp_lte:
-                  aggregate:
-                    selector: lowest_dp
-                    scope: opponent
+          filter: { kind: digimon }
+          selector: lowest_dp
           prompt: "Delete opponent's lowest-DP Digimon"
       - delete_permanent: { target: victim }
 

@@ -323,6 +323,22 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) pending_would_digivolve_resume: Option<PendingWouldDigivolveResume>,
 
+    /// Player-scoped one-shot future-digivolve cost reducers
+    /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`). Installed by a `[Main]` effect with
+    /// no field permanent to host it (BT3-103 Hidden Potential Discovered!).
+    /// Consulted at the top of each digivolve-from-hand cost path BEFORE the
+    /// synchronous field-hosted `BeforePayCost` scan. See
+    /// `player_cost_reducer.rs` for the lifecycle.
+    pub player_digivolve_cost_reducers: Vec<crate::player_cost_reducer::PlayerDigivolveCostReducer>,
+
+    /// Reduction (in memory) granted by an already-resolved player-scoped
+    /// digivolve cost reducer for the digivolution currently being
+    /// re-entered. Set by the accept/decline callbacks of the player-scoped
+    /// reducer prompt; read by the digivolve cost calculation and cleared
+    /// once consumed. `0` means "no player-scoped reduction" (also the
+    /// decline outcome).
+    pub(crate) pending_player_digivolve_reduction: i32,
+
     /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
     /// have already fired within the current `try_replace` call chain so a
     /// redirected route does not re-fire the same timing for the same subject
@@ -733,6 +749,8 @@ impl Game {
             pending_would_play_resume: None,
             pending_would_link_resume: None,
             pending_would_digivolve_resume: None,
+            player_digivolve_cost_reducers: Vec::new(),
+            pending_player_digivolve_reduction: 0,
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,
@@ -3155,6 +3173,7 @@ mod current_attacker_tests {
             dual: None,
             ace_overflow: None,
             digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
         }
     }
 

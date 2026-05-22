@@ -47,5 +47,8 @@ effects:
               - kind: digimon
               - other: true
           prompt: "Delete 1 of your other Digimon to end the attack"
-      - delete_permanent: { target: sacrifice }
-      - end_attack: true
+      - if:
+          condition: { binding_present: sacrifice }
+          then:
+            - delete_permanent: { target: sacrifice }
+            - end_attack: true

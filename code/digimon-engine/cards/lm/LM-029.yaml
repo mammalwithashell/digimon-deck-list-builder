@@ -35,8 +35,8 @@ cost: 2
 # the body fires at the start of the owner's next turn after the placing turn;
 # trashing LM-029 is the Delay activation cost. `active_when` gates on the
 # opponent controlling >=1 Digimon (DCGO CanUseCondition). Step (a) returns 1
-# yellow Digimon from trash to the deck TOP via `return_trash_list_to_deck_top`
-# (G-ZONE-SELECTED-TRASH-TO-DECK-TOP closed 2026-05-21). Step (b) is gated on
+# yellow Digimon from trash to the deck TOP via `move_trash_card_to_deck_top`
+# (G-ZONE-SELECTED-TRASH-TO-DECK-TOP). Step (b) is gated on
 # the controller holding 0 battle-area Digimon; the trash play is optional.
 #
 # ─── Clause C: [Security] (Inherited) ────────────────────────────────────────
@@ -118,9 +118,9 @@ effects:
               - kind: digimon
               - color_is: yellow
           prompt: "Return 1 yellow Digimon card from your trash to the top of the deck"
-      - return_trash_list_to_deck_top:
+      - move_trash_card_to_deck_top:
           of: you
-          cards: returned
+          card: returned
       # Step (b): if you control no Digimon, may free-play a small yellow one.
       - if:
           condition:

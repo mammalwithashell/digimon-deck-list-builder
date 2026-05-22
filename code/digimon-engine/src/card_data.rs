@@ -147,6 +147,14 @@ pub struct CardData {
     /// Alternate names visible only to DigiXros material matching.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub digixros_aliases: Vec<String>,
+    /// Static identity aliases — "this card is also treated as [Other
+    /// Name]" (DCGO `ChangeCardNamesClass`). Populated from DSL-authored
+    /// `also_treated_as`; honored by generic name-matching predicates
+    /// (`name_is` / `name_contains` / `name_in`) and by
+    /// `CardSource::card_names` / `contains_card_name` in every zone.
+    /// Unlike `digixros_aliases`, NOT scoped to DigiXros recipes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub also_treated_as: Vec<String>,
 }
 
 /// Raw JSON shape from cards.json — matches the actual file format.
@@ -380,6 +388,9 @@ impl CardData {
                 ace_overflow: raw_card.ace_overflow,
                 dual: raw_card.dual,
                 digixros_aliases,
+                // cards.json carries no static identity aliases; DSL-authored
+                // `also_treated_as` is merged in by the DSL→engine bridge.
+                also_treated_as: Vec::new(),
             };
             cards.insert(id, card);
         }

@@ -212,6 +212,18 @@ pub fn try_run(
             true
         }
 
+        // G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME — return each selected
+        // digivolution source card to its OWNER's hand (a return, not a
+        // trash: fires no `OnDigivolutionCardTrashed`).
+        CompiledStep::ReturnSelectedSourcesToHand { source_refs } => {
+            if let Some(source_refs) = bindings.get_source_refs(source_refs) {
+                for source_ref in source_refs {
+                    ctx.return_card_source_to_hand(source_ref.permanent, source_ref.card);
+                }
+            }
+            true
+        }
+
         CompiledStep::PlaySelectedSourcesFree { source_refs } => {
             if let Some(source_refs) = bindings.get_source_refs(source_refs) {
                 ctx.play_selected_sources_without_cost(source_refs);
@@ -380,10 +392,14 @@ pub fn try_run(
         }
         CompiledStep::ReturnAllTrashToDeckBottom { of } => {
             let player = resolve_player(ctx, *of);
-            let _ = ctx.return_all_trash_to_deck_bottom(player);
-            // `return_all_trash_to_deck_bottom` is bulk and does not currently
-            // expose the moved handles. Record a sentinel only through
-            // per-card moves until the helper returns provenance.
+            // The helper returns every moved card handle; record them in the
+            // per-effect result log so a later `returned_card_matching` /
+            // `effect_returned_any_card` predicate can inspect this return.
+            // G-ANY-RETURNED-CARD-PREDICATE.
+            let moved = ctx.return_all_trash_to_deck_bottom(player);
+            for h in moved {
+                bindings.record_returned_to_deck(h);
+            }
             true
         }
         CompiledStep::ReturnTrashListToDeckBottom { of, cards } => {
@@ -396,29 +412,39 @@ pub fn try_run(
                 Some(ResolvedBinding::Card(h)) => vec![h],
                 _ => Vec::new(),
             };
-            let _ = ctx.return_trash_cards_to_deck_bottom(player, &handles);
+            let moved = ctx.return_trash_cards_to_deck_bottom(player, &handles);
+            for h in moved {
+                bindings.record_returned_to_deck(h);
+            }
             true
         }
-        CompiledStep::ReturnTrashListToDeckTop { of, cards } => {
-            // G-ZONE-SELECTED-TRASH-TO-DECK-TOP — move exactly the bound card
-            // list out of trash to the TOP of the deck, leaving the rest of
-            // the trash untouched. Accepts a multi-pick `CardList`, a single
-            // `Card` handle, or a `select_trash` `TrashIndex` binding.
-            let player = resolve_player(ctx, *of);
-            let handles = match resolve_binding_ref(cards, ctx, bindings) {
-                Some(ResolvedBinding::CardList(v)) => v,
-                Some(ResolvedBinding::Card(h)) => vec![h],
-                Some(ResolvedBinding::TrashIndex(owner, i)) => ctx
-                    .game
-                    .player(owner)
-                    .trash
-                    .get(i as usize)
-                    .map(|cs| cs.handle())
-                    .into_iter()
-                    .collect(),
-                _ => Vec::new(),
+        CompiledStep::MoveTrashCardToDeckTop { of, card } => {
+            // G-ZONE-SELECTED-TRASH-TO-DECK-TOP — move exactly the one bound
+            // trash card to the TOP of its owner's deck. `of` identifies whose
+            // trash currently holds the card; the engine routes the card back
+            // to its OWNER's deck.
+            let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
+                return true;
             };
-            let _ = ctx.return_trash_cards_to_deck_top(player, &handles);
+            let player = resolve_player(ctx, *of);
+            let (owner, handle) = match resolved {
+                ResolvedBinding::TrashIndex(owner, i) => {
+                    let handle = ctx
+                        .game
+                        .player(owner)
+                        .trash
+                        .get(i as usize)
+                        .map(|cs| cs.handle());
+                    (owner, handle)
+                }
+                ResolvedBinding::Card(h) => (player, Some(h)),
+                _ => (player, None),
+            };
+            if let Some(h) = handle {
+                if ctx.move_trash_card_to_deck_top(owner, h) {
+                    bindings.record_returned_to_deck(h);
+                }
+            }
             true
         }
         CompiledStep::TrashTopNDigivolutionCardsOfEach { of, n } => {

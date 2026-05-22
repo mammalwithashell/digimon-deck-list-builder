@@ -624,6 +624,9 @@ Format per entry:
 ---
 
 ## P-117 — inherited When Attacking color-count predicate  [G-DSL-SELF-COLOR-COUNT-GTE]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — `self_color_count_gte` exists; P-117 IMPLEMENTED. The "Remaining sibling blocker" note below is now stale: BT12-031 clause 1b ships via `self_color_count_gte` in a `while_condition` (see the BT12-031 entry).
+
 - Effect text: "[When Attacking] If this Digimon has 2 or more colors, ＜Draw 1＞ (Draw 1 card from your deck.)"
 - Status 2026-05-11: resolved for top-card color counts. `self_color_count_gte: N` is now in `PredicateSpec` / `CompiledPredicate` and evaluates the predicate subject/source permanent's synthesized top-card colors.
 - DCGO reference: `P_117.cs` lines 203-211 — `card.PermanentOfThisCard().TopCard.CardColors.Count >= 2`. Note: DCGO checks ONLY the top card's colors, not the union of the full digivolution stack. The DSL predicate should align with DCGO behavior: count the top card's colors only.
@@ -1492,6 +1495,8 @@ is satisfiable today.
 
 ## BT3-002 — `carrier_has_keyword` predicate for inherited clause conditions  [G-DSL-CARRIER-HAS-KEYWORD]
 
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — redundant; `has_keyword` already resolves against the carrier permanent for inherited clauses (`enqueue_from_permanent` sets `source_permanent` to the carrier handle). No predicate added.
+
 - Effect text: "Inherited Effect [When Attacking] [Once Per Turn] If this Digimon has <Jamming>, <Draw 1> (Draw 1 card from your deck.)"
 - Card first discovered in: BT3-002 DemiVeemon (Digi-Egg, Lv.2, Blue)
 - Missing DSL verb / step kind / predicate: `carrier_has_keyword` — a `PredicateSpec` / `BoolPredicate` leaf for inherited triggered clauses that checks whether the TOP CARD of the permanent carrying the egg source has a given keyword (printed OR modifier-granted). The existing `has_keyword` predicate in `CompiledPredicate` evaluates on `source_permanent` (the egg slot itself), not the carrier permanent. For inherited effects, `source_permanent` is the bottom-of-stack source card, not the carrier Digimon.
@@ -1512,7 +1517,45 @@ is satisfiable today.
 
 ---
 
+<!-- ───────────────────────────────────────────────────────────────────────
+  BG IMPERIAL PHASE 0 RE-AUDIT — 2026-05-20 (`bg-imperial-substrate-closeout`)
+
+  The BG Imperial entries below were re-verified against current source.
+  STALE (primitive shipped — entry should be closed at change closeout):
+    G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED (lower_grant_keyword.rs:18-36
+      now consumes active_when), G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME (already
+      marked resolved), G-IS-EFFECT-INITIATED (event_is_effect_initiated exists),
+      G-BEFORE-PAY-COST-GAIN-MEMORY (resolved Track H), G-EFFECT-INITIATED-
+      DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (resolved Track F),
+      G-DSL-TRASH-TOP-N-DIGI-CARDS (closed), G-DSL-UNION-PLAY-FREE
+      (play_union_bound_free / PUPPETS-G014 shipped), G-DSL-SELF-COLOR-COUNT-GTE
+      (self_color_count_gte shipped), G-EVENT-CARD-COLOR-IS partial
+      (event_card_color_only/_count shipped — only a `_has`-semantics leaf
+      remains), G-FORMULA-SOURCE-DP (source_dp formula shipped).
+  GENUINE — now CLOSED by `bg-imperial-substrate-closeout` (2026-05-20), see
+    qa/resolved-gaps.md § "BG Imperial substrate closeout": G-DSL-EFFECT-
+    SUSPENDED-RESULT (`effect_suspended_any_opponent_digimon`),
+    G-EVENT-CARD-COLOR-IS (`event_card_color_has`), G-SELECT-OPPONENT-SOURCES
+    (`select_opponent_sources`), G-ZONE-SELECTED-TRASH-TO-DECK-TOP
+    (`move_trash_card_to_deck_top`), G-ANY-RETURNED-CARD-PREDICATE
+    (`returned_card_matching`).
+  REDUNDANT — audit correction: these 4 were NOT genuine gaps; pre-existing
+    capability already covers them, no predicate was added —
+    G-PRED-STACK-SIZE-LTE-SOURCE / G-DSL-STACK-SIZE-LTE-SOURCE
+    (`materials_count_lte` + `source_material_count` formula),
+    G-DSL-CARRIER-HAS-KEYWORD (`has_keyword` resolves to carrier for inherited
+    clauses), G-DSL-AURA-TARGET-SOURCE-PERMANENT (`scope: inherited` +
+    `target: {}` self-aura), G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT
+    (`source_permanent_trait_has`). See qa/resolved-gaps.md § "BG Imperial
+    substrate closeout" → "Audit correction". Card YAML re-authoring to consume
+    the new + pre-existing vocabulary runs separately.
+  Verified per-card classification:
+    openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md
+─────────────────────────────────────────────────────────────────────── -->
+
 ## BT12-022 — `active_when` on `kind: grant_keyword` declarative clauses is not consumed  [G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — stale; `lower_grant_keyword.rs` already consumes `active_when` on `kind: grant_keyword` declarative clauses.
 
 - Effect text: "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Jamming＞" (BT12-022 ExVeemon, inherited)
 - Missing DSL verb / step kind / predicate: `DeclarativeClause.active_when` is compiled into `CompiledDeclarativeClause::GrantKeyword { active_when, .. }` but is silently discarded by `lower_grant_keyword::lower` in `code/digimon-engine/src/dsl_cards/mod.rs` (line 82-98 uses `..` to destructure, ignoring `active_when`). The `lower_grant_keyword::lower` function signature has no `active_when` parameter.
@@ -1552,6 +1595,8 @@ is satisfiable today.
 
 ## EX1-014 — `aura` declarative target scoping  [G-DSL-AURA-TARGET-SOURCE-PERMANENT]
 
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — redundant; a `kind: aura` with `scope: inherited` + `target: {}` is a carrier-only self-aura. No leaf added.
+
 - Effect text: "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Jamming＞" — should grant Jamming ONLY to the carrier permanent (the Digimon containing this card in its digivolution stack), not all controller-side Digimon.
 - Card first discovered in: EX1-014 ExVeemon (Digimon, Lv.4, Blue), also in BT12-022 (sister card).
 - Missing DSL verb / step kind / predicate: `target_is_source: true` BoolPredicate (or equivalent) usable inside `kind: aura` `target:` filter, so the aura applies only to the carrier of the source permanent — not the entire `target: { owner: you, kind: digimon }` set. Currently `lower_aura.rs` applies to all matches of the target predicate.
@@ -1570,6 +1615,8 @@ is satisfiable today.
 ---
 
 ## EX1-014 — `self_digivolution_contains_trait` predicate  [G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — redundant; the existing `source_permanent_trait_has` predicate covers EX1-014's `[Free]`-trait arm. No predicate added.
 
 - Effect text: "...has [Imperialdramon] in its name or the [Free] trait..." — needs a predicate that evaluates whether the carrier permanent's digivolution stack contains a card with a given trait.
 - Card first discovered in: EX1-014 ExVeemon (Digimon, Lv.4, Blue).
@@ -1607,6 +1654,8 @@ on the auto-resolved post-state. 5 tests now active.
 - First reported: 2026-05-04 (BT16-040 batch-implement-cards-rust-dsl)
 
 ## BT12-028 / BT16-025 / BT16-027 — `stack_size_lte_source` predicate  [G-PRED-STACK-SIZE-LTE-SOURCE]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — redundant; `materials_count_lte: { formula: { source_material_count: {} } }` already expresses "as many or fewer digivolution cards as this Digimon". No predicate added.
 
 - Effect text variants: "Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck." (BT16-027) / "Suspend all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon" (BT16-025).
 - Card first discovered in: BT16-027 Imperialdramon: Fighter Mode. Cross-listed in BT16-025 Paildramon (same gap).
@@ -1655,6 +1704,8 @@ on the auto-resolved post-state. 5 tests now active.
 
 ## BT16-025 — `binding_is_none` / "if-no-target" predicate  [G-DSL-IF-NO-TARGET]
 
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — the `binding_present` / `binding_absent` predicates (alias `binding_is_none`) exist and cover the "if this effect didn't suspend" branch.
+
 - Effect text: "Suspend 1 of your opponent's unsuspended Digimon. If this effect didn't suspend, unsuspend this Digimon." (BT16-025 clause 2).
 - Card first discovered in: BT16-025 Paildramon.
 - Missing DSL verb / step kind / predicate: `select_opponent_permanent` with `optional: true` skips silently when no targets exist, but does not bind a "skipped" flag. Need `binding_is_none: <name>` BoolPredicate for subsequent `if` conditions to test whether the previous selection was taken or skipped.
@@ -1673,6 +1724,8 @@ on the auto-resolved post-state. 5 tests now active.
 ---
 
 ## BT16-028 — `event_is_effect_initiated` predicate  [G-IS-EFFECT-INITIATED]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — the `event_is_effect_initiated` predicate exists and BT16-028 consumes it for the effect-play/digivolve observer gate.
 
 - Effect text: "[All Turns] When an effect plays or digivolves an opponent's Digimon, if you have a Tamer, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in the hand without paying the cost."
 - Card first discovered in: BT16-028 Imperialdramon: Dragon Mode (2026-05-04).
@@ -1716,6 +1769,28 @@ on the auto-resolved post-state. 5 tests now active.
 ---
 
 ## BT12-031 — Alt-cost: return named source card from own digi-stack to hand  [G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — `EffectContext::return_card_source_to_hand` + the `return_selected_sources_to_hand` DSL verb landed; BT12-031 Step C now ships → BT12-031 IMPLEMENTED. Full record in `qa/resolved-gaps.md` § "Follow-up engine gaps closed (2026-05-21)" and `docs/RUST_ENGINE_GAPS.md`.
+
+- **Canonical record relocated 2026-05-21 (`bg-imperial-substrate-closeout`): this is an ENGINE gap, not DSL-only.**
+  The full scoping entry now lives in
+  [`docs/RUST_ENGINE_GAPS.md`](../docs/RUST_ENGINE_GAPS.md#return-a-selected-digivolution-stack-source-card-to-its-owners-hand)
+  ("Return a selected digivolution-stack source card to its owner's hand",
+  🟡 PARTIAL) — consult that entry for the suggested `EffectContext` /
+  DSL-verb / YAML shape, likely files, complexity estimate, first test,
+  and known interactions. This `qa/dsl-vocab-gaps.md` entry is retained
+  only as a redirect; do not treat the notes below as the live spec.
+  Summary: the two sub-gaps below (select-own-sources filter; `binding_present`)
+  are both resolved, but BT12-031 Step C is still BLOCKED on a genuine missing
+  engine primitive — there is **no DSL verb / `EffectContext` method that
+  returns a single selected digivolution-stack source card to its owner's
+  hand**. The only source-ref consumers are `trash_selected_sources` and
+  `play_selected_sources_free`; `return_to_hand` moves a whole permanent, not
+  one source card. BT12-031 Step C stays omitted, 2 tests `#[ignore]`'d, card
+  verdict PARTIAL. Suggested fix: an `EffectContext` method + DSL verb (e.g.
+  `return_selected_sources_to_hand`) routing each chosen source `Card` to its
+  owner's hand. BT12-031 clause 1b (Security A.+1 + Blocker via
+  `self_color_count_gte` `while_condition`) IS implemented.
 - Effect text (BT12-031 Clause 0, Step C): "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's digivolution cards to its owner's hand, return all of your opponent's suspended Digimon to the bottom of their owners' decks instead."
 - Missing DSL verb / step kind / predicate: Two sub-gaps combine to block this step:
   1. **G-DSL-SELECT-OWN-SOURCES-FILTER** — resolved 2026-05-08. `select_own_sources` now accepts `filter:` and evaluates it against each source card, with optional `from:` host restriction.
@@ -1770,6 +1845,8 @@ on the auto-resolved post-state. 5 tests now active.
 
 ## BT17-077 — `return_all_trash_to_deck_bottom` step + player-choice target  [G-RETURN-ALL-TRASH-TO-DECK-BOTTOM]
 
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — the player-choice-of-trash branch is composable via `select_effect_choice` + `if` branching `return_all_trash_to_deck_bottom: { of: you|opponent }`; BT17-077 Clause 1b now ships.
+
 - Effect text: "Then, return all cards from your or your opponent's trash to the bottom of the deck." (BT17-077 Clause 1b).
 - Card first discovered in: BT17-077 Imperialdramon: Paladin Mode.
 - Status: PARTIALLY CLOSED on 2026-05-09 for the reusable bulk-zone DSL verb. YAML can now call `return_all_trash_to_deck_bottom: { of: you|opponent }`, and owner-routing is covered by `zone_movement_verbs::bulk_trash_and_hand_reduction_verbs_call_helpers`. The remaining printed-card gap is the player-choice branch for "your or your opponent's trash" and the returned-card result predicate for the memory rider.
@@ -1797,6 +1874,8 @@ on the auto-resolved post-state. 5 tests now active.
 ---
 
 ## BT17-077 — `any_returned_card` result predicate  [G-ANY-RETURNED-CARD-PREDICATE]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — the `returned_card_matching` filtered result predicate landed (`bg-imperial-substrate-closeout` Tier 2); BT17-077 Clause 1c now ships.
 
 - Effect text: "If this effect returned a white level 7 card, gain 3 memory." (BT17-077 Clause 1c).
 - Card first discovered in: BT17-077 Imperialdramon: Paladin Mode. Clause 1c fires after the `return_all_trash_to_deck_bottom` step (Clause 1b) completes; the memory gain is conditional on at least one of the moved cards satisfying `color: white AND level: 7`.

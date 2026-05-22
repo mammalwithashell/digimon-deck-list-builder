@@ -10,42 +10,31 @@
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT3/Green/BT3_103.cs
 //!
-//! # Implementation status: PARTIAL
+//! # Implementation status: IMPLEMENTED
 //!
 //! | Clause | Description                                       | Status      |
 //! |--------|---------------------------------------------------|-------------|
-//! | 0      | [Main] one-shot green-Digimon digivolve cost -5   | BLOCKED     |
+//! | 0      | [Main] one-shot green-Digimon digivolve cost -5   | IMPLEMENTED |
 //! | 1      | [Security] Add this card to the hand              | IMPLEMENTED |
 //!
-//! # Clause 0 — BLOCKED
+//! # Clause 0 — IMPLEMENTED (G-COST-REDUCE-ALLY-DIGIVOLVE, 2026-05-21)
 //!
-//! The main effect arms a turn-scoped BeforePayCost observer that fires once
-//! when any green Digimon would digivolve, allowing the player to suspend any
-//! 1 of their Digimon to reduce the digivolution cost by 5.
+//! The main effect arms a player-scoped, turn-scoped, single-fire digivolve
+//! cost reducer (`arm_digivolve_cost_reducer`). At the next qualifying green
+//! digivolution, the digivolve cost path installs an accept/decline prompt;
+//! on accept, the player is prompted to suspend 1 of their own Digimon, and
+//! the digivolution cost is reduced by 5.
 //!
-//! Three DSL vocab gaps block this clause:
+//! The primitive (`Game::player_digivolve_cost_reducers` +
+//! `EffectContext::arm_player_digivolve_cost_reducer` +
+//! `Game::try_prompt_player_digivolve_cost_reducer`) closes three gaps:
 //!
-//! * **G-COST-REDUCE-ALLY-DIGIVOLVE** — `CostReductionBody` has no
-//!   `when_any_ally_would_digivolve` trigger form. The engine's
-//!   `scan_before_pay_cost_reduction` fires only during play-cost scans,
-//!   not during digivolve-cost scans. The analogous gap for digivolve-INTO
-//!   (BT23-005, BT5-092) is tracked in qa/dsl-vocab-gaps.md; this is the
-//!   SOURCE-color form of the same missing primitive.
-//!
-//! * **G-COST-REDUCE-NEXT-SINGLE-FIRE** — the "next digivolve" wording means
-//!   the observer should fire exactly once (DCGO achieves this via a "Remove
-//!   Effect" background coroutine that unregisters the ChangeCostClass after
-//!   the first application). No one-shot/self-removing variant exists for
-//!   CostReductionBody.
-//!
-//! * **G-PAY-COST-SELECT-ARBITRARY-SUSPEND** — the suspension cost in
-//!   `pay_cost:` step lists is currently only verified for `suspend: { target:
-//!   source }` (the source card itself). BT3-103 requires selecting any 1 of
-//!   the controller's own Digimon to suspend — a `select_own_permanent` inside
-//!   `pay_cost:`, which is unimplemented in the BeforePayCost scanning flow.
-//!
-//! Clause 0 is intentionally omitted from BT3-103.yaml. The `#[ignore]`'d
-//! tests below document the expected behavior for when these gaps close.
+//! * **G-COST-REDUCE-ALLY-DIGIVOLVE** — a player-scoped reducer with no
+//!   field permanent to host it; consulted by the digivolve cost path.
+//! * **G-COST-REDUCE-NEXT-SINGLE-FIRE** — `single_fire` consumes the reducer
+//!   on the first successful application.
+//! * **G-PAY-COST-SELECT-ARBITRARY-SUSPEND** — `suspend_cost` installs an
+//!   interactive `OwnField` selection (suspend 1 of your own Digimon).
 //!
 //! # Clause 1 — IMPLEMENTED
 //!
@@ -55,25 +44,32 @@
 //!
 //! # Test coverage
 //!
-//! Active tests (structural):
+//! Structural:
 //!   - `bt3_103_compiles_as_option_card` — card parses + compiles, cost 4, green
-//!   - `bt3_103_has_exactly_one_inherited_security_clause` — clause count assertion
+//!   - `bt3_103_has_main_and_inherited_security_clause` — 2 clauses; [Main]
+//!     carries `ArmDigivolveCostReducer`
 //!   - `bt3_103_security_clause_uses_add_this_option_to_hand` — step-kind assertion
 //!   - `bt3_103_security_clause_is_not_optional` — mandatory per rules
 //!
-//! Ignored (blocked):
-//!   - `bt3_103_main_arms_digivolve_cost_reduction_for_turn` (G-COST-REDUCE-ALLY-DIGIVOLVE)
-//!   - `bt3_103_cost_reduction_fires_on_green_digimon_only` (G-COST-REDUCE-ALLY-DIGIVOLVE)
-//!   - `bt3_103_cost_reduction_does_not_fire_on_non_green_digimon` (G-COST-REDUCE-ALLY-DIGIVOLVE)
-//!   - `bt3_103_cost_reduction_requires_player_to_suspend_one_digimon` (G-PAY-COST-SELECT-ARBITRARY-SUSPEND)
-//!   - `bt3_103_cost_reduction_fires_at_most_once_per_play` (G-COST-REDUCE-NEXT-SINGLE-FIRE)
+//! Clause 0 behavioral:
+//!   - `bt3_103_main_arms_digivolve_cost_reduction_for_turn`
+//!   - `bt3_103_cost_reduction_fires_on_green_digimon_only`
+//!   - `bt3_103_cost_reduction_does_not_fire_on_non_green_digimon`
+//!   - `bt3_103_cost_reduction_requires_player_to_suspend_one_digimon`
+//!   - `bt3_103_cost_reduction_fires_at_most_once_per_play`
 
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
-use digimon_engine::card_data::CardData;
+use digimon_engine::action::space::{encode_attack, HAND_EFFECT_START, PASS};
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::enums::{CardColor, CardKind, PlaySource};
+use digimon_engine::selection::SelectionKind;
+
+// Evo-color byte: Green == 3, Red == 0 (matches `card_data::parse_card_color`).
+const EVO_GREEN: u8 = 3;
+const EVO_RED: u8 = 0;
 
 // ─── Helper builders ─────────────────────────────────────────────────────────
 
@@ -101,6 +97,32 @@ fn make_red_digimon(id: &str, level: u8) -> CardData {
     c
 }
 
+/// A Lv.3 base Digimon of `color` — a legal digivolve base.
+fn lvl3_base(id: &str, color: CardColor) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(3);
+    c.dp = Some(3000);
+    c.colors = vec![color];
+    c
+}
+
+/// A Lv.4 Digimon with a printed `Lv.3 <evo_color>, cost <memory_cost>`
+/// digivolution cost.
+fn lvl4_evo3(id: &str, color: CardColor, evo_color: u8, memory_cost: u16) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(5000);
+    c.colors = vec![color];
+    c.evo_costs = vec![EvoCost {
+        card_color: evo_color,
+        level: 3,
+        memory_cost,
+    }];
+    c
+}
+
 /// Base runner: BT3-103 registered in hand index 0, filler decks on both
 /// sides so no deck-out on draw, filler security for P1.
 fn runner() -> DebugRunner {
@@ -117,6 +139,29 @@ fn runner() -> DebugRunner {
         .security(1, &["FILL"; 3])
         .memory(4)
         .start()
+}
+
+/// Digivolve-scenario runner: BT3-103 in hand index 0, a green Lv.4 evo
+/// card and a red Lv.4 evo card also in hand, a green Lv.3 base and a red
+/// Lv.3 base on P1's field. Both Lv.4 cards have printed digivolution cost
+/// 4. `memory` is set to 10 so cost payment is observable.
+///
+/// Returns `(runner, green_base_index, red_base_index)`.
+fn digivolve_scenario() -> (DebugRunner, usize, usize) {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT3-103")
+        .expect("BT3-103 YAML must parse and compile")
+        .add_card(lvl3_base("GBASE", CardColor::Green))
+        .add_card(lvl3_base("RBASE", CardColor::Red))
+        .add_card(lvl4_evo3("GEVO", CardColor::Green, EVO_GREEN, 4))
+        .add_card(lvl4_evo3("REVO", CardColor::Red, EVO_RED, 4))
+        .hand(0, &["BT3-103", "GEVO", "REVO"])
+        .deck(0, &["GBASE"; 5])
+        .memory(10)
+        .start();
+    let green_base = r.place_on_field(0, "GBASE", Some(0)).index as usize;
+    let red_base = r.place_on_field(0, "RBASE", Some(0)).index as usize;
+    (r, green_base, red_base)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -145,10 +190,10 @@ fn bt3_103_compiles_as_option_card() {
     // CompiledCard.colors — just assert the cost and kind are correct here.
 }
 
-/// The YAML omits Clause 0 (BLOCKED main effect) so only the inherited
-/// security clause should be present.
+/// BT3-103 has exactly 2 clauses: the [Main] cost-reduction clause and the
+/// inherited [Security] clause.
 #[test]
-fn bt3_103_has_exactly_one_inherited_security_clause() {
+fn bt3_103_has_main_and_inherited_security_clause() {
     let r = runner();
     let card = r
         .compiled_card("BT3-103")
@@ -156,9 +201,23 @@ fn bt3_103_has_exactly_one_inherited_security_clause() {
 
     assert_eq!(
         card.effects.len(),
-        1,
-        "BT3-103 must have exactly 1 clause (inherited security only; \
-         main clause is BLOCKED on G-COST-REDUCE-ALLY-DIGIVOLVE)"
+        2,
+        "BT3-103 must have exactly 2 clauses ([Main] cost reducer + \
+         inherited [Security])"
+    );
+
+    // The [Main] clause must be a triggered clause carrying the
+    // `ArmDigivolveCostReducer` step.
+    let main_has_arm = card.effects.iter().any(|c| match c {
+        CompiledClause::Triggered(t) => t
+            .process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::ArmDigivolveCostReducer { .. })),
+        _ => false,
+    });
+    assert!(
+        main_has_arm,
+        "the [Main] clause must contain an ArmDigivolveCostReducer step"
     );
 }
 
@@ -248,80 +307,208 @@ fn bt3_103_security_clause_uses_add_this_option_to_hand() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Section 2 — Clause 0 (Main) — BLOCKED behavioral tests
+// Section 2 — Clause 0 (Main) — behavioral tests
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// All tests below are #[ignore]'d. They document the expected behavioral
-// contract for Clause 0 and will be un-ignored once the blocking gaps close.
+// Closed by G-COST-REDUCE-ALLY-DIGIVOLVE (2026-05-21): the player-scoped
+// one-shot future-digivolve cost reducer. `arm_digivolve_cost_reducer`
+// installs a turn-scoped reducer; the digivolve cost path prompts an
+// accept/decline + suspend selection before the cost is paid.
 //
-// Gap tags:
-//   G-COST-REDUCE-ALLY-DIGIVOLVE — no when_any_ally_would_digivolve trigger
-//   G-COST-REDUCE-NEXT-SINGLE-FIRE — no one-shot self-removing observer
-//   G-PAY-COST-SELECT-ARBITRARY-SUSPEND — no select_own_permanent in pay_cost
+// Gap tags (all closed):
+//   G-COST-REDUCE-ALLY-DIGIVOLVE — player-scoped digivolve cost reducer
+//   G-COST-REDUCE-NEXT-SINGLE-FIRE — single-fire one-shot lifecycle
+//   G-PAY-COST-SELECT-ARBITRARY-SUSPEND — interactive suspend cost
 
-/// Playing BT3-103 from hand should arm a BeforePayCost observer for the
-/// current turn. The armed observer should be visible in engine state (as
-/// a modifier or queued effect) so that RL agents can observe it in the
-/// action mask.
-///
-/// Blocked: G-COST-REDUCE-ALLY-DIGIVOLVE — the DSL has no
-/// `when_any_ally_would_digivolve` trigger form and
-/// `scan_before_pay_cost_reduction` does not intercept digivolve-cost scans.
+/// Playing BT3-103's [Main] effect arms a player-scoped digivolve cost
+/// reducer for the current turn (`G-COST-REDUCE-ALLY-DIGIVOLVE`).
 #[test]
-#[ignore = "BLOCKED: G-COST-REDUCE-ALLY-DIGIVOLVE (qa/dsl-vocab-gaps.md)"]
 fn bt3_103_main_arms_digivolve_cost_reduction_for_turn() {
-    let mut r = runner();
-    let _fired = r.game.activate_hand_main(0, 0);
-    // Expected: engine has a turn-scoped observer registered that will
-    // intercept the next green-Digimon digivolve BeforePayCost event.
-    // Assertion shape (TBD once primitive lands):
-    //   assert!(r.game.has_pending_cost_reduction_observer_for_player(0));
-    todo!("implement once G-COST-REDUCE-ALLY-DIGIVOLVE closes")
+    let (mut r, _g, _red) = digivolve_scenario();
+    assert!(r.game.player_digivolve_cost_reducers.is_empty());
+
+    let fired = r.game.activate_hand_main(0, 0);
+    assert!(fired, "activate_hand_main must fire BT3-103's [Main] clause");
+
+    assert_eq!(
+        r.game.player_digivolve_cost_reducers.len(),
+        1,
+        "the [Main] clause must arm exactly one player-scoped reducer"
+    );
+    let reducer = &r.game.player_digivolve_cost_reducers[0];
+    assert_eq!(reducer.player, 0);
+    assert_eq!(reducer.amount, 5, "the reduction is -5");
+    assert!(reducer.single_fire, "\"next digivolve\" is single-fire");
+    assert!(reducer.suspend_cost, "the cost is suspending 1 Digimon");
+
+    // "For the turn" — the reducer expires at end of turn.
+    r.end_turn();
+    assert!(
+        r.game.player_digivolve_cost_reducers.is_empty(),
+        "the reducer is dropped at end of the installing player's turn"
+    );
 }
 
-/// The cost reduction should trigger only when a GREEN Digimon would
-/// digivolve. If the digivolving Digimon is a different color (e.g. red),
-/// the observer should not fire.
-///
-/// Blocked: G-COST-REDUCE-ALLY-DIGIVOLVE — source-color predicate (green)
-/// on the digivolving permanent is also missing from the trigger form.
+/// A GREEN Digimon digivolving fires the reducer prompt; accepting,
+/// suspending a Digimon, applies the -5 reduction once.
 #[test]
-#[ignore = "BLOCKED: G-COST-REDUCE-ALLY-DIGIVOLVE (source-color predicate)"]
 fn bt3_103_cost_reduction_fires_on_green_digimon_only() {
-    todo!("implement once G-COST-REDUCE-ALLY-DIGIVOLVE closes (green source predicate)")
+    let (mut r, green_base, _red) = digivolve_scenario();
+    r.game.activate_hand_main(0, 0); // arm the reducer
+    let memory_before = r.memory();
+
+    // `activate_hand_main` runs the [Main] process without consuming the
+    // card, so the hand is still [BT3-103, GEVO, REVO] — GEVO is index 1.
+    let ok = r
+        .game
+        .digivolve_from_hand(0, 1, green_base, PlaySource::ByDigivolve);
+    assert!(!ok, "digivolve parks on the accept/decline prompt");
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("green digivolution installs the reducer prompt");
+    assert!(matches!(pending.kind, SelectionKind::EffectChoice));
+    assert!(pending.is_optional, "the prompt is declinable");
+    assert_eq!(r.memory(), memory_before, "no cost paid before the prompt");
+
+    // Accept → suspend the green base itself.
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("accept resolves");
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("suspend-cost selection installed");
+    assert!(matches!(pending.kind, SelectionKind::OwnField));
+    r.game
+        .resolve_selection(0, encode_attack(0, green_base as u16))
+        .expect("suspend selection resolves");
+
+    assert!(r.game.pending_selection.is_none(), "digivolution completes");
+    // printed digivolution cost 4 - 5 = clamped to 0.
+    assert_eq!(
+        r.memory(),
+        memory_before,
+        "the reduced digivolution cost is 0 (4 - 5, clamped)"
+    );
+    assert!(
+        r.game.player_digivolve_cost_reducers.is_empty(),
+        "single-fire reducer consumed after the application"
+    );
 }
 
-/// Negative test: a non-green (e.g. red) Digimon digivolving should not
-/// receive the cost discount.
-///
-/// Blocked: G-COST-REDUCE-ALLY-DIGIVOLVE.
+/// Negative test: a non-green (red) Digimon digivolving never sees the
+/// prompt — the reducer's green target filter excludes it.
 #[test]
-#[ignore = "BLOCKED: G-COST-REDUCE-ALLY-DIGIVOLVE"]
 fn bt3_103_cost_reduction_does_not_fire_on_non_green_digimon() {
-    todo!("implement once G-COST-REDUCE-ALLY-DIGIVOLVE closes")
+    let (mut r, _green, red_base) = digivolve_scenario();
+    r.game.activate_hand_main(0, 0); // arm the reducer
+    let memory_before = r.memory();
+
+    // Hand is [BT3-103, GEVO, REVO] (activate_hand_main does not consume
+    // the card) — REVO is index 2.
+    let ok = r
+        .game
+        .digivolve_from_hand(0, 2, red_base, PlaySource::ByDigivolve);
+    assert!(ok, "non-green digivolution succeeds outright");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "a non-green digivolution must NOT install the reducer prompt"
+    );
+    assert_eq!(
+        r.memory(),
+        memory_before - 4,
+        "non-green digivolution pays the full digivolution cost"
+    );
+    assert_eq!(
+        r.game.player_digivolve_cost_reducers.len(),
+        1,
+        "the green-only reducer is untouched by a non-green digivolution"
+    );
 }
 
-/// When the observer fires, the player must be prompted to suspend any 1
-/// of their Digimon (not the Option itself). If the player declines (passes)
-/// the digivolution cost is unmodified.
-///
-/// Blocked: G-PAY-COST-SELECT-ARBITRARY-SUSPEND — `select_own_permanent`
-/// inside pay_cost steps is unimplemented for BeforePayCost scanning.
+/// The suspend cost is a real player choice: declining the prompt keeps the
+/// full digivolution cost and leaves the reducer armed
+/// (`G-PAY-COST-SELECT-ARBITRARY-SUSPEND`).
 #[test]
-#[ignore = "BLOCKED: G-PAY-COST-SELECT-ARBITRARY-SUSPEND"]
 fn bt3_103_cost_reduction_requires_player_to_suspend_one_digimon() {
-    todo!("implement once G-PAY-COST-SELECT-ARBITRARY-SUSPEND closes")
+    let (mut r, green_base, _red) = digivolve_scenario();
+    r.game.activate_hand_main(0, 0); // arm the reducer
+    let memory_before = r.memory();
+
+    // Hand is [BT3-103, GEVO, REVO] — GEVO is index 1.
+    r.game
+        .digivolve_from_hand(0, 1, green_base, PlaySource::ByDigivolve);
+    // Decline — the player chooses NOT to suspend a Digimon.
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("declining the reducer prompt resolves");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "digivolution completes after decline"
+    );
+    assert_eq!(
+        r.memory(),
+        memory_before - 4,
+        "declining keeps the full digivolution cost (no suspend, no -5)"
+    );
+    assert_eq!(
+        r.game.player_digivolve_cost_reducers.len(),
+        1,
+        "a declined prompt must leave the single-fire reducer armed"
+    );
 }
 
-/// The observer must be self-removing after the first firing ("NEXT
-/// digivolve"). Playing BT3-103 and then having two green Digimon digivolve
-/// in the same turn should only grant the cost reduction on the first
-/// digivolve; the second digivolve cost is unaffected.
-///
-/// Blocked: G-COST-REDUCE-NEXT-SINGLE-FIRE — no one-shot/self-removing
-/// qualifier on CostReductionBody.
+/// "Next digivolve" is single-fire: after the first successful application,
+/// a second green digivolution in the same turn does not get the reduction
+/// (`G-COST-REDUCE-NEXT-SINGLE-FIRE`).
 #[test]
-#[ignore = "BLOCKED: G-COST-REDUCE-NEXT-SINGLE-FIRE"]
 fn bt3_103_cost_reduction_fires_at_most_once_per_play() {
-    todo!("implement once G-COST-REDUCE-NEXT-SINGLE-FIRE closes")
+    // Two green Lv.3 bases so the second digivolution has a fresh target.
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT3-103")
+        .expect("BT3-103 YAML must parse and compile")
+        .add_card(lvl3_base("GBASE", CardColor::Green))
+        .add_card(lvl4_evo3("GEVO", CardColor::Green, EVO_GREEN, 4))
+        .add_card(lvl4_evo3("GEVO2", CardColor::Green, EVO_GREEN, 4))
+        .hand(0, &["BT3-103", "GEVO", "GEVO2"])
+        .deck(0, &["GBASE"; 5])
+        .memory(20)
+        .start();
+    let base_a = r.place_on_field(0, "GBASE", Some(0)).index as usize;
+    let base_b = r.place_on_field(0, "GBASE", Some(0)).index as usize;
+
+    r.game.activate_hand_main(0, 0); // arm the reducer
+
+    // Hand is [BT3-103, GEVO, GEVO2] (activate_hand_main does not consume
+    // BT3-103). First green digivolution uses GEVO at index 1.
+    r.game
+        .digivolve_from_hand(0, 1, base_a, PlaySource::ByDigivolve);
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("accept");
+    r.game
+        .resolve_selection(0, encode_attack(0, base_b as u16))
+        .expect("suspend");
+    assert!(
+        r.game.player_digivolve_cost_reducers.is_empty(),
+        "single-fire reducer consumed after the first digivolution"
+    );
+
+    let memory_before = r.memory();
+    // GEVO was consumed → hand is [BT3-103, GEVO2]; GEVO2 is now index 1.
+    // Second green digivolution onto base_b — no prompt.
+    let ok = r
+        .game
+        .digivolve_from_hand(0, 1, base_b, PlaySource::ByDigivolve);
+    assert!(ok, "second green digivolution succeeds outright (no prompt)");
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(
+        r.memory(),
+        memory_before - 4,
+        "second digivolution pays the full cost — the reducer is one-shot"
+    );
 }

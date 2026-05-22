@@ -78,17 +78,17 @@
 # | [All Turns] <Delay> cost (trash this card)                          | IMPLEMENTED via cost: delay_self: true |
 # | [All Turns] digivolve subject into Imperialdramon-name hand card    | IMPLEMENTED via choose: from: hand + digivolve_without_cost |
 # | [All Turns] prevent the deletion                                    | IMPLEMENTED via outcome: prevent |
-# | [Security] play Davis/Ken Tamer from hand or trash, free            | PARTIAL — hand branch via select_hand/play_from_hand_free; trash branch via select_trash/play_from_trash_free; zone-choice workaround for G-DSL-UNION-PLAY-FREE |
+# | [Security] play Davis/Ken Tamer from hand or trash, free            | IMPLEMENTED via select_union_zone (hand∪trash) + play_union_bound_free |
 # | [Security] "Then, place this card in the battle area"               | IMPLEMENTED via place_self_as_delay_option |
 #
-# ─── DSL gap: G-DSL-UNION-PLAY-FREE ──────────────────────────────────────────
+# ─── DSL gap: G-DSL-UNION-PLAY-FREE — RESOLVED ───────────────────────────────
 #
-# Clause C prints "from your hand or trash". `select_union_zone` binds a
-# Card-typed handle; `play_from_hand_free` / `play_from_trash_free` need a
-# HandIndex / TrashIndex binding. Workaround: explicit `select_effect_choice`
-# (From hand / From trash) with branching per BT17-095 / BT21-015 pattern.
-# The engine does not auto-collapse when only one zone is populated.
-# Tracked in qa/dsl-vocab-gaps.md §G-DSL-UNION-PLAY-FREE.
+# Clause C prints "from your hand or trash". This is now authored natively
+# with `select_union_zone` (zones: [hand, trash]) feeding `play_union_bound_free`
+# — the union binding carries the origin zone, so the free play replays the
+# card from its true zone. The union selection auto-collapses to the single
+# populated zone when only one holds an eligible card. No zone-choice
+# workaround is needed. Same idiom as ST19-08 / EX11-022 / BT17-095.
 #
 # ─── option_flow/replacement_integration.rs compatibility ─────────────────────
 #
@@ -235,14 +235,16 @@ effects:
   # with [Davis Motomiya] or [Ken Ichijoji] in its name from your hand or trash
   # without paying the cost. Then, place this card in the battle area."
   #
-  # `optional: true` — DCGO `canNoSelect: true` on both per-zone picks; player
-  # may decline without playing any Tamer.
+  # `optional: true` — DCGO `canNoSelect: true`; player may decline without
+  # playing any Tamer.
   #
-  # Workaround for G-DSL-UNION-PLAY-FREE: hand-or-trash union play requires a
-  # `select_union_zone` step but the resulting Card-typed binding cannot feed
-  # `play_from_hand_free` / `play_from_trash_free`. Per BT17-095 / BT21-015
-  # pattern: explicit `select_effect_choice` (From hand / From trash) with
-  # branching select_hand/select_trash per branch.
+  # G-DSL-UNION-PLAY-FREE resolved: the hand-or-trash union play is authored
+  # natively with `select_union_zone` (zones: [hand, trash]) followed by
+  # `play_union_bound_free`. The union binding carries the origin zone, so
+  # `play_union_bound_free` replays the picked card from its true zone for
+  # free. When only one zone holds an eligible Tamer, the union selection
+  # auto-collapses to that zone — no explicit zone-choice prompt is needed.
+  # Same idiom as ST19-08 / EX11-022 / BT17-095.
   #
   # "Then, place this card in the battle area." — `place_self_as_delay_option: {}`
   # is the correct verb (cf. BT17-095 Clause A). This seats this Option as a
@@ -259,47 +261,22 @@ effects:
     optional: true
     summary: "[Security][Inherited] You may play 1 [Davis Motomiya]/[Ken Ichijoji] Tamer from hand or trash free; then place self in battle area"
     process:
-      # G-DSL-UNION-PLAY-FREE workaround: surface the zone choice explicitly.
-      # DCGO would auto-collapse to the populated zone when only one has
-      # eligible cards; this DSL form always presents both branches.
-      - select_effect_choice:
-          labels: ["From hand", "From trash"]
-          bind_as: zone_choice
-          prompt: "From which area do you play a [Davis Motomiya] or [Ken Ichijoji] Tamer?"
-      - if:
-          condition: { equals: [zone_choice, 0] }
-          then:
-            - select_hand:
-                of: you
-                bind_as: picked_hand
-                optional: true
-                filter:
-                  all_of:
-                    - kind: tamer
-                    - any_of:
-                        - name_contains: "Davis Motomiya"
-                        - name_contains: "Ken Ichijoji"
-                prompt: "Play 1 [Davis Motomiya] or [Ken Ichijoji] Tamer from hand (free)"
-            - play_from_hand_free:
-                of: you
-                hand_index: picked_hand
-      - if:
-          condition: { equals: [zone_choice, 1] }
-          then:
-            - select_trash:
-                of: you
-                bind_as: picked_trash
-                optional: true
-                filter:
-                  all_of:
-                    - kind: tamer
-                    - any_of:
-                        - name_contains: "Davis Motomiya"
-                        - name_contains: "Ken Ichijoji"
-                prompt: "Play 1 [Davis Motomiya] or [Ken Ichijoji] Tamer from trash (free)"
-            - play_from_trash_free:
-                of: you
-                hand_index: picked_trash
+      # Native hand∪trash union selection — auto-collapses to the single
+      # populated zone when only one holds an eligible Tamer.
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: picked_tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - any_of:
+                  - name_contains: "Davis Motomiya"
+                  - name_contains: "Ken Ichijoji"
+          prompt: "You may play 1 [Davis Motomiya] or [Ken Ichijoji] Tamer from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked_tamer
       # Final step: place this Option in controller's battle area as a Delay
       # permanent. DCGO: `CardEffectCommons.PlaceDelayOptionCards(card, ...)`.
       - place_self_as_delay_option: {}

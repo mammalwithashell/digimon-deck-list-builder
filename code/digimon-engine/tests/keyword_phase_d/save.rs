@@ -56,6 +56,7 @@ fn save_card(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -81,6 +82,7 @@ fn tamer_card(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -107,6 +109,7 @@ fn plain_digimon(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -413,6 +416,7 @@ fn save_under_decoy_decline_defers_via_no_replace_path() {
             norm_id: 0.0,
             ace_overflow: None,
             digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
         }
     }
 

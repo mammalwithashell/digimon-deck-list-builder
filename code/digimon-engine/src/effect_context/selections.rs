@@ -432,6 +432,61 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    /// Opponent-side mirror of `select_own_sources`. The candidate set is drawn
+    /// from the controller's OPPONENT's battle-area digivolution-source stacks
+    /// (every card below the top card of each opponent permanent). Identical
+    /// count / PASS / filter / stable-source-ref semantics — only the player
+    /// whose stacks are scanned differs. G-SELECT-OPPONENT-SOURCES.
+    pub fn select_opponent_sources<F, C>(
+        &mut self,
+        prompt: &str,
+        min: u8,
+        max: u8,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, SourceSelectionRef) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<SourceSelectionRef>) + Send + Sync + 'static,
+    {
+        assert!(min <= max, "select_opponent_sources min must be <= max");
+        assert!(max > 0, "select_opponent_sources max must be > 0");
+
+        let opponent = self.game.next_clockwise(self.player);
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
+        let previous_phase = self.game.current_phase;
+        install_source_multi_selection(
+            self.game,
+            opponent,
+            selecting_player,
+            override_pin,
+            prompt.to_string(),
+            min,
+            max,
+            Vec::new(),
+            std::sync::Arc::new(filter),
+            source_card,
+            source_permanent,
+            source_kind,
+            previous_phase,
+            Box::new(move |game, picked| {
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                );
+                callback(&mut ctx, picked);
+            }),
+        );
+    }
+
     pub fn select_partition_sources<C>(
         &mut self,
         host: PermanentHandle,

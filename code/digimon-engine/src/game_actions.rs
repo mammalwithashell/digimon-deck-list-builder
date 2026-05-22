@@ -3190,6 +3190,26 @@ impl Game {
         field_index: usize,
         source: PlaySource,
     ) -> bool {
+        self.digivolve_from_hand_inner(player_id, hand_index, field_index, source, false)
+    }
+
+    /// As [`Self::digivolve_from_hand`], but threads a `player_reducer_resolved`
+    /// flag (`G-COST-REDUCE-ALLY-DIGIVOLVE`). When `false` (the default user
+    /// call), the function first consults `Game::player_digivolve_cost_reducers`
+    /// and — if a reducer qualifies and is payable — installs an interactive
+    /// accept/decline prompt, returning `false` without performing the
+    /// digivolution; the accept/decline callbacks re-invoke this function with
+    /// the flag `true` and a pre-resolved `pending_player_digivolve_reduction`.
+    /// When `true`, the player-scoped reducer prompt is skipped (it has already
+    /// been resolved this attempt).
+    fn digivolve_from_hand_inner(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+        player_reducer_resolved: bool,
+    ) -> bool {
         if self.current_phase != GamePhase::Main {
             self.logger.log(&format!(
                 "[Rejected] digivolve_from_hand: not in Main phase (phase={:?})",
@@ -3239,6 +3259,23 @@ impl Game {
         };
         let printed_cost = route.memory_cost;
 
+        // G-COST-REDUCE-ALLY-DIGIVOLVE — player-scoped one-shot future-digivolve
+        // cost reducer prompt. Runs BEFORE the synchronous field-hosted
+        // BeforePayCost scan; if a reducer qualifies and is payable, this
+        // installs an interactive accept/decline PendingSelection and returns
+        // — the accept/decline callbacks re-enter `digivolve_from_hand_inner`
+        // with `player_reducer_resolved = true`.
+        if !player_reducer_resolved
+            && self.try_prompt_player_digivolve_cost_reducer(
+                player_id, handle, hand_index, field_index, source,
+            )
+        {
+            return false;
+        }
+        // Pre-resolved player-scoped reduction (set by the accept callback,
+        // 0 on decline). Consumed once here.
+        let player_reduction = std::mem::take(&mut self.pending_player_digivolve_reduction);
+
         // Pass the hand card being digivolved into as the cost-target so
         // target-aware predicates (`cost_target: { trait_has: Free }`)
         // can fire — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET. `handle` is the
@@ -3255,7 +3292,7 @@ impl Game {
             player_id,
             CostReductionKind::Digivolve,
             Some(target),
-        );
+        ) + player_reduction;
         // Fire BeforePayCost observers (e.g. gain_memory) AFTER reduction
         // is computed but BEFORE pay_memory — G-BEFORE-PAY-COST-GAIN-MEMORY.
         self.scan_before_pay_cost_observers(player_id, Some(target));
@@ -3304,6 +3341,290 @@ impl Game {
             card: card.handle(),
             effective_cost,
         })
+    }
+
+    /// G-COST-REDUCE-ALLY-DIGIVOLVE — consult `Game::player_digivolve_cost_reducers`
+    /// for a reducer that qualifies for the digivolution of `target` by
+    /// `acting_player`. When one qualifies AND its (suspend) cost is payable,
+    /// install an interactive accept/decline `PendingSelection` and return
+    /// `true` (the caller must abort and let the callbacks re-enter the
+    /// digivolve). Returns `false` if no reducer qualifies, or the reducer's
+    /// suspend cost is unpayable — in which case the reducer stays armed and
+    /// the digivolve proceeds at the unreduced cost.
+    ///
+    /// Only the FIRST qualifying reducer is offered per digivolution (a
+    /// second qualifying reducer would be offered on a subsequent
+    /// digivolution after this one resolves; BT3-103's `single_fire` means
+    /// a player rarely has more than one armed at once).
+    fn try_prompt_player_digivolve_cost_reducer(
+        &mut self,
+        acting_player: PlayerId,
+        target: PermanentHandle,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+    ) -> bool {
+        if self.player_digivolve_cost_reducers.is_empty() {
+            return false;
+        }
+        // The flood-gates that suppress field-hosted digivolve reducers must
+        // also suppress the player-scoped reducer (see
+        // `collect_before_pay_cost_reducers`).
+        if self
+            .modifiers
+            .player_has(acting_player, ModifierType::CannotReduceCost)
+            || self
+                .modifiers
+                .player_has(acting_player, ModifierType::CannotReduceDigivolveCost)
+            || self.modifiers.any_other_player_has(
+                acting_player,
+                ModifierType::OpponentCannotReduceDigivolveCost,
+            )
+        {
+            return false;
+        }
+        // Top-card colors of the digivolving permanent (the permanent is the
+        // SOURCE of the digivolution — BT3-103 keys on "your green Digimon").
+        let top_colors: Vec<crate::enums::CardColor> = match self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+        {
+            Some(perm) => perm.top_card().digimon_colors(&self.card_data).to_vec(),
+            None => return false,
+        };
+        let Some(reducer_idx) = self
+            .player_digivolve_cost_reducers
+            .iter()
+            .position(|r| r.qualifies(acting_player, target, &top_colors))
+        else {
+            return false;
+        };
+        let reducer = self.player_digivolve_cost_reducers[reducer_idx].clone();
+
+        // Verify the suspend cost is payable: the player must have at least
+        // one unsuspended Digimon to suspend. If not, the reducer cannot
+        // fire — leave it armed (per the gap's single-fire rule: a
+        // cost-impossible attempt does NOT consume the reducer) and let the
+        // digivolution proceed at the unreduced cost.
+        if reducer.suspend_cost && self.suspendable_own_digimon(acting_player).is_empty() {
+            return false;
+        }
+
+        self.install_player_digivolve_reducer_prompt(
+            reducer_idx,
+            reducer,
+            acting_player,
+            hand_index,
+            field_index,
+            source,
+        );
+        true
+    }
+
+    /// Battle-area field indices of `player`'s unsuspended Digimon — the
+    /// legal suspend-cost targets for `G-PAY-COST-SELECT-ARBITRARY-SUSPEND`.
+    fn suspendable_own_digimon(&self, player: PlayerId) -> Vec<usize> {
+        self.player(player)
+            .battle_area
+            .iter()
+            .enumerate()
+            .filter(|(_, perm)| !perm.is_suspended && perm.is_digimon(&self.card_data))
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// Install the accept/decline `PendingSelection` for a player-scoped
+    /// digivolve cost reducer. On accept → install the suspend-cost
+    /// selection, then re-enter the digivolve with the reduction applied.
+    /// On decline → re-enter the digivolve at full cost (reducer stays
+    /// armed). `G-COST-REDUCE-ALLY-DIGIVOLVE`.
+    fn install_player_digivolve_reducer_prompt(
+        &mut self,
+        reducer_idx: usize,
+        reducer: crate::player_cost_reducer::PlayerDigivolveCostReducer,
+        acting_player: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+    ) {
+        use crate::action::space::HAND_EFFECT_START;
+        use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
+
+        let source_card = reducer.source_card;
+        let source_kind = self.effect_source_kind_for_handle(source_card);
+        let amount = reducer.amount;
+
+        // Accept branch — pay the suspend cost (if any), apply the reduction,
+        // consume the reducer if single-fire, then re-enter the digivolve.
+        let accept = {
+            let reducer = reducer.clone();
+            move |game: &mut Game, _action_id: u16| {
+                game.player_digivolve_reducer_accept(
+                    reducer_idx,
+                    reducer,
+                    acting_player,
+                    hand_index,
+                    field_index,
+                    source,
+                );
+            }
+        };
+        // Decline branch — leave the reducer armed, re-enter the digivolve
+        // at the unreduced cost.
+        let decline = move |game: &mut Game| {
+            game.pending_player_digivolve_reduction = 0;
+            game.digivolve_from_hand_inner(
+                acting_player,
+                hand_index,
+                field_index,
+                source,
+                true,
+            );
+        };
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::EffectChoice,
+            selecting_player: acting_player,
+            previous_phase,
+            valid_action_ids: vec![HAND_EFFECT_START],
+            is_optional: true,
+            prompt: format!(
+                "Suspend 1 of your Digimon to reduce the digivolution cost by {}?",
+                amount
+            ),
+            effect_choices: Some(vec![EffectChoiceEntry {
+                label: format!("Suspend 1 Digimon (digivolution cost -{})", amount),
+                action_id: HAND_EFFECT_START,
+                source_card: Some(source_card),
+                source_kind: Some(source_kind),
+                timing: Some(crate::enums::EffectTiming::BeforePayCost),
+                is_optional: true,
+                observation_metadata: Default::default(),
+            }]),
+            source_card,
+            source_permanent: None,
+            source_kind,
+            callback: Box::new(accept),
+            on_decline: Some(Box::new(decline)),
+        });
+    }
+
+    /// Accept-branch continuation for a player-scoped digivolve cost
+    /// reducer: install the suspend-cost selection (`select 1 unsuspended
+    /// own Digimon`). On suspend resolution → suspend it, apply the
+    /// reduction, consume the reducer if single-fire, and re-enter the
+    /// digivolve. `G-COST-REDUCE-ALLY-DIGIVOLVE` / `G-PAY-COST-SELECT-ARBITRARY-SUSPEND`.
+    fn player_digivolve_reducer_accept(
+        &mut self,
+        reducer_idx: usize,
+        reducer: crate::player_cost_reducer::PlayerDigivolveCostReducer,
+        acting_player: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+    ) {
+        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+        use crate::selection::{PendingSelection, SelectionKind};
+
+        let amount = reducer.amount;
+        let single_fire = reducer.single_fire;
+        let source_card = reducer.source_card;
+        let source_kind = self.effect_source_kind_for_handle(source_card);
+
+        if !reducer.suspend_cost {
+            // No suspend cost — apply the reduction directly.
+            self.consume_player_digivolve_reducer(reducer_idx, &reducer, single_fire);
+            self.pending_player_digivolve_reduction = amount;
+            self.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, true);
+            return;
+        }
+
+        let suspendable = self.suspendable_own_digimon(acting_player);
+        if suspendable.is_empty() {
+            // Cost became unpayable between prompt-install and accept — leave
+            // the reducer armed and continue at the unreduced cost.
+            self.pending_player_digivolve_reduction = 0;
+            self.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, true);
+            return;
+        }
+
+        let valid_action_ids: Vec<u16> = suspendable
+            .iter()
+            .map(|i| encode_attack(0, *i as u16))
+            .collect();
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectTarget;
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::OwnField,
+            selecting_player: acting_player,
+            previous_phase,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Suspend 1 of your Digimon (digivolution cost reduction)".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: None,
+            source_kind,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let offset = action_id.saturating_sub(ATTACK_START);
+                let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+                let suspend_target = PermanentHandle {
+                    player: acting_player,
+                    index: target_index,
+                };
+                game.suspend(suspend_target);
+                game.consume_player_digivolve_reducer(reducer_idx, &reducer, single_fire);
+                game.pending_player_digivolve_reduction = amount;
+                game.digivolve_from_hand_inner(
+                    acting_player,
+                    hand_index,
+                    field_index,
+                    source,
+                    true,
+                );
+            }),
+            on_decline: None,
+        });
+    }
+
+    /// Remove a single-fire player-scoped digivolve cost reducer after a
+    /// successful application. The reducer is located by identity (player +
+    /// source card + amount) rather than by stale index, since the vector
+    /// may have shifted between prompt-install and resolution.
+    fn consume_player_digivolve_reducer(
+        &mut self,
+        reducer_idx: usize,
+        reducer: &crate::player_cost_reducer::PlayerDigivolveCostReducer,
+        single_fire: bool,
+    ) {
+        if !single_fire {
+            return;
+        }
+        // Prefer the recorded index when it still points at the same reducer;
+        // otherwise re-locate by identity.
+        if self
+            .player_digivolve_cost_reducers
+            .get(reducer_idx)
+            .is_some_and(|r| {
+                r.player == reducer.player
+                    && r.source_card == reducer.source_card
+                    && r.amount == reducer.amount
+            })
+        {
+            self.player_digivolve_cost_reducers.remove(reducer_idx);
+            return;
+        }
+        if let Some(pos) = self.player_digivolve_cost_reducers.iter().position(|r| {
+            r.player == reducer.player
+                && r.source_card == reducer.source_card
+                && r.amount == reducer.amount
+        }) {
+            self.player_digivolve_cost_reducers.remove(pos);
+        }
     }
 
     pub(crate) fn commit_pending_would_digivolve(
@@ -3684,12 +4005,23 @@ impl Game {
     /// source card is taken from the zone specified by `source` (hand slot,
     /// trash slot, deck top, security slot, material stack slot, or reveal
     /// pool). Returns false if the source or target is invalid.
+    ///
+    /// `face_down` sets the inserted `CardSource.face_down` flag (the DCGO
+    /// `IsFlipped` analog for digivolution-stack sources). Pass `true` to
+    /// stash a face-down source (e.g. a Tamer face-down stash); `false`
+    /// preserves the ordinary face-up placement.
+    ///
+    /// NOTE: `face_down` is honored only for hand / trash / deck-top /
+    /// material / reveal sources placed into the breeding or battle area; it
+    /// is **not** honored for `CardSourceRef::Security` sources, which are
+    /// always placed face-up (DCGO parity).
     pub fn place_as_bottom_source(
         &mut self,
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
+        face_down: bool,
     ) -> bool {
-        self.place_as_bottom_source_observed(source, target, target.player)
+        self.place_as_bottom_source_observed(source, target, target.player, face_down)
     }
 
     pub(crate) fn place_as_bottom_source_observed(
@@ -3697,6 +4029,7 @@ impl Game {
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
         observer_player: PlayerId,
+        face_down: bool,
     ) -> bool {
         if let crate::enums::CardSourceRef::Security(defender, index) = source {
             if target.index == crate::action::space::BREEDING_TARGET as u8 {
@@ -3739,7 +4072,9 @@ impl Game {
                 let _ = self.restore_card_source_ref(source, taken);
                 return false;
             };
-            breeding.push_under(taken.card);
+            let mut card = taken.card;
+            card.face_down = face_down;
+            breeding.push_under(card);
             return true;
         }
 
@@ -3748,7 +4083,9 @@ impl Game {
             let _ = self.restore_card_source_ref(source, taken);
             return false;
         }
-        target_player.battle_area[target.index as usize].push_under(taken.card);
+        let mut card = taken.card;
+        card.face_down = face_down;
+        target_player.battle_area[target.index as usize].push_under(card);
         true
     }
 

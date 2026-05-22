@@ -52,6 +52,7 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         ace_overflow: spec.ace_overflow,
         identity,
         digixros_aliases: spec.digixros_aliases.clone(),
+        also_treated_as: spec.also_treated_as.clone(),
         dual,
         use_requirement,
         alt_paths,
@@ -573,6 +574,7 @@ fn compile_predicate(
         has_keyword: p.has_keyword.clone(),
         has_on_deletion_effect: p.has_on_deletion_effect,
         self_color_count_gte: p.self_color_count_gte,
+        has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
@@ -590,6 +592,9 @@ fn compile_predicate(
         source_is_unsuspended: p.source_is_unsuspended,
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
+        is_face_down: p.is_face_down,
+        is_bottom_source: p.is_bottom_source,
+        host_kind_is: p.host_kind_is.map(compile_card_kind),
         rules_text_contains: p.rules_text_contains.clone(),
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
         self_digivolution_sources_contain_name: p
@@ -671,6 +676,10 @@ fn compile_predicate(
             .event_card_color_only
             .as_ref()
             .map(|colors| colors.iter().copied().map(compile_color).collect()),
+        event_card_color_has: p
+            .event_card_color_has
+            .as_ref()
+            .map(|colors| colors.iter().copied().map(compile_color).collect()),
         event_card_color_count: p.event_card_color_count,
         event_cause: p.event_cause.map(compile_event_cause),
         host_permanent_trait_has: p.host_permanent_trait_has.clone(),
@@ -691,7 +700,16 @@ fn compile_predicate(
         binding_present: p.binding_present.clone(),
         binding_absent: p.binding_absent.clone(),
         effect_suspended_any_own_digimon: p.effect_suspended_any_own_digimon,
+        effect_suspended_any_opponent_digimon: p.effect_suspended_any_opponent_digimon,
         effect_returned_any_card: p.effect_returned_any_card,
+        returned_card_matching: p.returned_card_matching.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.returned_card_matching"),
+                card_id,
+                errors,
+            ))
+        }),
         effect_deleted_any_own_digimon: p.effect_deleted_any_own_digimon,
         effect_deleted_any_opponent_digimon: p.effect_deleted_any_opponent_digimon,
         effect_played_any_digimon: p.effect_played_any_digimon,
@@ -1496,6 +1514,7 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             permanent,
             binding,
             of_permanent,
+            deck_top,
             ..
         }) => {
             if let Some(p) = permanent {
@@ -1504,6 +1523,8 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
                 CompiledBindingRef::Binding(b.clone())
             } else if let Some(o) = of_permanent {
                 CompiledBindingRef::OfPermanent(o.clone())
+            } else if let Some(p) = deck_top {
+                CompiledBindingRef::DeckTop(compile_player_ref(*p))
             } else {
                 CompiledBindingRef::Named(String::new())
             }
@@ -1743,6 +1764,7 @@ fn compile_step(
         S::PlaceAsBottomSource(a) => CompiledStep::PlaceAsBottomSource {
             source: compile_binding_ref(&a.source),
             target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
         },
         S::PlaceTopSourceAsBottom(a) => CompiledStep::PlaceTopSourceAsBottom {
             target: compile_binding_ref(&a.target),
@@ -1753,7 +1775,15 @@ fn compile_step(
         S::TrashAllSources(a) => CompiledStep::TrashAllSources {
             target: compile_binding_ref(&a.target),
         },
+        S::TrashBottomFaceDownSourceUnderTamer(a) => {
+            CompiledStep::TrashBottomFaceDownSourceUnderTamer {
+                of: compile_player_ref(a.of),
+            }
+        }
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
+            source_refs: a.source_refs.clone(),
+        },
+        S::ReturnSelectedSourcesToHand(a) => CompiledStep::ReturnSelectedSourcesToHand {
             source_refs: a.source_refs.clone(),
         },
         S::BindPermanentProperty(a) => CompiledStep::BindPermanentProperty {
@@ -1952,9 +1982,9 @@ fn compile_step(
             of: compile_player_ref(a.of),
             cards: compile_binding_ref(&a.cards),
         },
-        S::ReturnTrashListToDeckTop(a) => CompiledStep::ReturnTrashListToDeckTop {
+        S::MoveTrashCardToDeckTop(a) => CompiledStep::MoveTrashCardToDeckTop {
             of: compile_player_ref(a.of),
-            cards: compile_binding_ref(&a.cards),
+            card: compile_binding_ref(&a.card),
         },
         S::TrashTopNDigivolutionCardsOfEach(a) => CompiledStep::TrashTopNDigivolutionCardsOfEach {
             of: compile_player_ref(a.of),
@@ -2138,6 +2168,20 @@ fn compile_step(
                 .as_ref()
                 .or(a.from.as_ref())
                 .map(compile_binding_ref),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            min: a.min,
+            max: a.max,
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            then: a
+                .then
+                .iter()
+                .enumerate()
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
+                .collect(),
+        },
+        S::SelectOpponentSources(a) => CompiledStep::SelectOpponentSources {
+            target: a.target.as_ref().map(compile_binding_ref),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             min: a.min,
             max: a.max,
@@ -2488,6 +2532,12 @@ fn compile_step(
                 kind: kind.unwrap_or(crate::compiled::CompiledActivationCostKind::SuspendSelf),
             }
         }
+        S::ArmDigivolveCostReducer(a) => CompiledStep::ArmDigivolveCostReducer {
+            amount: a.amount,
+            single_fire: a.single_fire,
+            target_color: a.target_color.map(compile_color),
+            suspend_cost: a.suspend_cost,
+        },
     }
 }
 

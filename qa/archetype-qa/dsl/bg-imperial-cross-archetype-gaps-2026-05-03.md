@@ -1,5 +1,37 @@
 # BG Imperial Cross-Archetype DSL / Engine Gap Source
 
+> **Phase 0 re-audit — 2026-05-20 (`bg-imperial-substrate-closeout` change):**
+> Every `#[ignore]`'d test and cited gap ID across the 24 BG Imperial cards
+> was re-verified against current `code/digimon-dsl/src/` and
+> `code/digimon-engine/src/`. **Most gaps this document and the BG entries of
+> `qa/dsl-vocab-gaps.md` describe as open are stale** — closed by Phase 2
+> Tracks A–J, DNA Omnimon completion, and the Puppets sweep. Of ~15 cited gap
+> IDs only 6 are genuine substrate gaps (`stack_size_lte_source`,
+> `effect_suspended_any_opponent_digimon`, `event_card_color_has`,
+> `carrier_has_keyword`, `is_carrier_of_source`,
+> `self_digivolution_contains_trait`) plus 3 Tier-2 verbs
+> (`select_opponent_sources`, selected-trash→deck-top, `any_returned_card`).
+> Tier 3 (DNA-origin material/result payloads) is NOT needed by any BG card.
+> The verified per-card classification is the input contract at
+> `openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md` — consult
+> it, not the stale "Remaining Reusable Gap Candidates" below, until this
+> document is rewritten at change closeout.
+>
+> **Substrate landed — 2026-05-20:** 5 genuine substrate gaps closed
+> (`effect_suspended_any_opponent_digimon`, `event_card_color_has`,
+> `select_opponent_sources`, `move_trash_card_to_deck_top`,
+> `returned_card_matching`) — see `qa/resolved-gaps.md` § "BG Imperial substrate
+> closeout". An audit correction found 4 originally-flagged gaps already covered
+> by pre-existing capability (`materials_count_lte`+`source_material_count`
+> formula; `has_keyword` carrier resolution; `scope: inherited`+`target: {}`
+> self-aura; `source_permanent_trait_has`) — no predicate added for those.
+>
+> **Archetype complete — 2026-05-21:** all 24 cards re-authored and IMPLEMENTED.
+> The two follow-up engine gaps (`G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME` →
+> BT12-031, `G-COST-REDUCE-ALLY-DIGIVOLVE` → BT3-103) were also closed — see
+> `qa/resolved-gaps.md` § "Follow-up engine gaps closed (2026-05-21)".
+> **Final tally: 24 / 24 IMPLEMENTED** (from the 9 / 13 / 2 baseline).
+
 > **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
 > #449–#458. Track E DSL verbs landed (PR #454) so `raw_rust` carve-outs
 > for the ten zone-movement verbs in `qa/dsl-vocab-gaps.md` are now

@@ -22,25 +22,14 @@
 //! # Patterns this test covers
 //! - Clause A (Main): effect_initiated_digivolve with cost reduce 3 from an
 //!   option card (main_from_hand timing, optional permanent selection)
-//! - Clause B (Delay/StartOfYourTurn): timing is supported by `kind: delay`
-//!   with `trigger: start_of_your_turn`, but the clause remains omitted until
-//!   its body can faithfully move a selected trash card to deck top and enforce
-//!   the DP-limited optional play tail.
+//! - Clause B (Delay/StartOfYourTurn): `kind: delay` + `trigger:
+//!   start_of_your_turn`, `active_when` opponent-has-Digimon gate;
+//!   `move_trash_card_to_deck_top` returns the selected green Digimon to deck
+//!   top; conditional `play_from_trash_free` of a ≤2000 DP green Digimon when
+//!   you control no Digimon.
 //! - Clause C (Security, inherited): on_security with select_trash (green
-//!   Digimon ≤2000 DP, gated by G-PRED-DP-LTE), play_from_trash_free,
-//!   add_this_option_to_hand.
-//!
-//! # Known gaps
-//! - **G-ZONE-SELECTED-TRASH-TO-DECK-TOP** (Clause B): "Return 1 green
-//!   Digimon from trash to top of deck" needs a selected-card trash-to-deck-top
-//!   verb. The current bulk `return_all_trash_to_deck_bottom` verb is not a
-//!   faithful substitute.
-//! - **G-PRED-DP-LTE**: `dp_lte: 2000` is authored for LM-030 Security, but is
-//!   not evaluated at selection time for trash/card-zone subjects
-//!   (`eval_card_fields` does not check `dp_lte` for `PredicateSubject::Card`).
-//! - **G-OPTIONAL-SELECTION-CONTINUE-TAIL**: declining the optional trash play
-//!   must still continue the mandatory "Then, add this card to the hand" tail
-//!   while leaving the selected trash Digimon unplayed.
+//!   Digimon ≤2000 DP, `dp_lte` enforced for trash subjects),
+//!   play_from_trash_free, add_this_option_to_hand.
 
 #![allow(unused_imports, dead_code)]
 
@@ -123,19 +112,17 @@ fn lm_030_is_green_option_cost_2() {
     assert_eq!(compiled.cost, Some(2));
 }
 
-/// LM-030 has exactly 2 compiled clauses: Main (main_from_hand) and Security
-/// (on_security inherited). The Delay clause (Clause B) is omitted even though
-/// start-of-turn Delay timing is now available, because its body still needs
-/// selected-trash-card deck-top movement plus the DP/optional-tail fixes.
+/// LM-030 has 3 compiled clauses: Main (main_from_hand), Delay
+/// (start_of_your_turn), and Security (on_security inherited).
 #[test]
-fn lm_030_has_two_clauses_main_and_security() {
+fn lm_030_has_three_clauses_main_delay_and_security() {
     let runner = lm_030_runner();
     let compiled = runner.compiled_card("LM-030").expect("LM-030 compiled");
 
     assert_eq!(
         compiled.effects.len(),
-        2,
-        "LM-030 ships only Main and Security; Delay body remains blocked by reusable body gaps"
+        3,
+        "LM-030 ships Main, Delay, and Security clauses"
     );
 }
 
@@ -419,40 +406,283 @@ fn lm_030_main_decline_leaves_field_and_hand_unchanged() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 3 — Clause B: Delay (BLOCKED — body gaps)
+// Section 3 — Clause B: Delay ([Start of Your Turn])
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Clause B is omitted from YAML entirely. Start-of-turn Delay timing is
-/// available; these tests stay blocked until the Delay body can faithfully
-/// perform selected trash-to-deck-top movement and DP-limited optional play.
+use digimon_engine::permanent::OptionState;
+use digimon_engine::enums::DelayTrigger;
 
+/// Place LM-030 on P0's field as a Delay-Option whose `StartOfYourNextTurn`
+/// trigger matures at the start of P0's next turn. Driven via two `end_turn()`
+/// calls (P0 → P1 → P0): the start of the P0 turn fires the delay.
+fn place_lm_030_as_start_delay(runner: &mut DebugRunner) {
+    let handle = runner.place_on_field(0, "LM-030", Some(0));
+    // P0 is the turn player; "next P0 turn" is turn_count + 2 (skip P1).
+    let fire_turn = runner.game.turn_count + 2;
+    runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: fire_turn,
+            trigger: DelayTrigger::StartOfYourNextTurn,
+            placed_on_turn: runner.game.turn_count,
+        };
+}
+
+/// Advance from P0's turn to the start of P0's next turn (P0 → P1 → P0),
+/// where `StartOfYourNextTurn` delays mature.
+fn advance_to_next_p0_turn(runner: &mut DebugRunner) {
+    runner.end_turn(); // P0 → P1
+    runner.end_turn(); // P1 → P0 (start fires matured delays)
+}
+
+/// Push a card by id into player `p`'s trash; owned by `p`.
+fn push_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("push_trash: unknown card_id {card_id}"));
+    let card = digimon_engine::card_source::CardSource::new(
+        data_idx,
+        p,
+        runner.game.next_card_index(),
+    );
+    runner.game.players[p as usize].trash.push(card);
+}
+
+/// Place an opponent (P1) Digimon on the field.
+fn place_opp_digimon(runner: &mut DebugRunner, card_id: &str) {
+    runner.place_on_field(1, card_id, None);
+}
+
+/// The Delay fires at the start of P0's turn when the opponent has a Digimon:
+/// it installs the mandatory trash selection (return a green Digimon to the
+/// top of the deck).
 #[test]
-#[ignore = "pending: G-ZONE-SELECTED-TRASH-TO-DECK-TOP + G-PRED-DP-LTE + G-OPTIONAL-SELECTION-CONTINUE-TAIL — timing exists, body not faithful yet"]
 fn lm_030_delay_fires_at_start_of_your_turn_when_opponent_has_digimon() {
-    unimplemented!("blocked until Delay body gaps are resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-030 YAML parses")
+        .add_card(make_green_digimon("LM030-TRASH-GREEN", 3, 2000, 3))
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    // OPP-DIGI must be a Digimon for the active_when gate.
+    if let Some(d) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "OPP-DIGI")
+    {
+        d.card_kind = CardKind::Digimon;
+        d.level = Some(4);
+        d.dp = Some(4000);
+    }
+
+    place_lm_030_as_start_delay(&mut runner);
+    place_opp_digimon(&mut runner, "OPP-DIGI");
+    push_trash(&mut runner, 0, "LM030-TRASH-GREEN");
+
+    advance_to_next_p0_turn(&mut runner);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay must install the mandatory green-Digimon trash selection");
+    assert_eq!(view.kind, SelectionKind::Trash);
+    assert!(
+        !runner.pending_is_optional(),
+        "step 1 of the Delay body is a mandatory selection (no PASS)"
+    );
 }
 
+/// The Delay must NOT fire when the opponent controls no Digimon — its
+/// `active_when` opponent-has-Digimon gate fails.
 #[test]
-#[ignore = "pending: G-ZONE-SELECTED-TRASH-TO-DECK-TOP + G-PRED-DP-LTE + G-OPTIONAL-SELECTION-CONTINUE-TAIL — Delay clause omitted until body can be faithful"]
 fn lm_030_delay_does_not_fire_when_opponent_has_no_digimon() {
-    unimplemented!("blocked until Delay body gaps are resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-030 YAML parses")
+        .add_card(make_green_digimon("LM030-TRASH-GREEN", 3, 2000, 3))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    place_lm_030_as_start_delay(&mut runner);
+    push_trash(&mut runner, 0, "LM030-TRASH-GREEN");
+    // No opponent Digimon on the field.
+
+    advance_to_next_p0_turn(&mut runner);
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "Delay must not fire (and not prompt) when opponent has no Digimon"
+    );
 }
 
-/// Inner Delay body (1/2): "Return 1 green Digimon from trash to top of deck."
-/// Blocked by G-ZONE-SELECTED-TRASH-TO-DECK-TOP: there is no native DSL verb
-/// for moving the selected trash card to deck top.
+/// Inner Delay body (1/2): the selected green Digimon is moved from trash to
+/// the TOP of P0's deck. The Delay fires during `begin_turn`, before the
+/// turn-start draw; once the parked Delay resolves, `begin_turn` continues and
+/// the turn-start draw takes the top card — so the returned green Digimon ends
+/// up in hand. Being drawn proves it was placed on the deck TOP (the draw
+/// always takes the top card). The Delay cost trashes LM-030 itself.
 #[test]
-#[ignore = "pending: G-ZONE-SELECTED-TRASH-TO-DECK-TOP — no selected trash-card to deck-top DSL verb"]
 fn lm_030_delay_body_returns_green_digimon_to_top_of_deck() {
-    unimplemented!("blocked until selected trash-card to deck-top movement is available");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-030 YAML parses")
+        .add_card(make_green_digimon("LM030-RET-GREEN", 3, 2000, 3))
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    if let Some(d) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "OPP-DIGI")
+    {
+        d.card_kind = CardKind::Digimon;
+        d.level = Some(4);
+        d.dp = Some(4000);
+    }
+
+    place_lm_030_as_start_delay(&mut runner);
+    place_opp_digimon(&mut runner, "OPP-DIGI");
+    push_trash(&mut runner, 0, "LM030-RET-GREEN");
+
+    // P0 has a Digimon on the field so the optional play branch does NOT fire
+    // — isolates step 1 (return to deck top).
+    runner.place_on_field(0, "OPP-DIGI", None);
+
+    advance_to_next_p0_turn(&mut runner);
+
+    // Pick the green Digimon in the mandatory trash selection.
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay must install the trash selection");
+    assert_eq!(view.kind, SelectionKind::Trash);
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("select green Digimon from trash");
+    runner.auto_resolve().expect("finish Delay body");
+
+    // The green Digimon must have left the trash.
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .all(|c| c.card_id(&runner.game.card_data) != "LM030-RET-GREEN"),
+        "the returned green Digimon must leave the trash"
+    );
+    // It was placed on the deck TOP and then drawn by the turn-start draw.
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "LM030-RET-GREEN"),
+        "the returned green Digimon must be on the deck TOP — proven by the \
+         turn-start draw pulling it into hand"
+    );
+    // The Delay cost trashes LM-030 itself.
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "LM-030"),
+        "LM-030 must be trashed as the <Delay> cost"
+    );
 }
 
-/// Inner Delay body (2/2): conditional free-play only fires when you have no
-/// Digimon on field.
+/// Inner Delay body (2/2): when P0 controls NO Digimon, the conditional
+/// free-play branch fires — a ≤2000 DP green Digimon is played from trash.
 #[test]
-#[ignore = "pending: G-ZONE-SELECTED-TRASH-TO-DECK-TOP + G-PRED-DP-LTE + G-OPTIONAL-SELECTION-CONTINUE-TAIL"]
 fn lm_030_delay_body_play_from_trash_only_when_no_field_digimon() {
-    unimplemented!("blocked until Delay body movement, DP filter, and optional-tail gaps resolve");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-030 YAML parses")
+        .add_card(make_green_digimon("LM030-RET-GREEN", 3, 2000, 3))
+        .add_card(make_small_green_digimon("LM030-PLAY-GREEN"))
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    if let Some(d) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "OPP-DIGI")
+    {
+        d.card_kind = CardKind::Digimon;
+        d.level = Some(4);
+        d.dp = Some(4000);
+    }
+
+    place_lm_030_as_start_delay(&mut runner);
+    place_opp_digimon(&mut runner, "OPP-DIGI");
+    push_trash(&mut runner, 0, "LM030-RET-GREEN");
+    push_trash(&mut runner, 0, "LM030-PLAY-GREEN");
+    // P0 controls no Digimon (only the LM-030 Delay-Option permanent).
+
+    advance_to_next_p0_turn(&mut runner);
+
+    // Step 1: mandatory trash selection — return a green Digimon to deck top.
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay step 1 trash selection");
+    assert_eq!(view.kind, SelectionKind::Trash);
+    // Pick the card NOT meant for play (return LM030-RET-GREEN).
+    let ret_action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| {
+            // Both green Digimon are eligible for step 1; either works. Use
+            // the first.
+            true
+        })
+        .expect("a trash card to return");
+    runner
+        .execute_action(view.selecting_player, ret_action)
+        .expect("return a green Digimon to deck top");
+
+    // Step 2: optional play selection — a ≤2000 DP green Digimon from trash.
+    let play_view = runner
+        .pending_selection_view()
+        .expect("Delay step 2 optional play selection (P0 has no Digimon)");
+    assert_eq!(play_view.kind, SelectionKind::Trash);
+    assert!(
+        runner.pending_is_optional(),
+        "step 2 play is optional ('you may')"
+    );
+    runner
+        .execute_action(play_view.selecting_player, play_view.valid_action_ids[0])
+        .expect("play a green Digimon from trash");
+    runner.auto_resolve().expect("finish Delay body");
+
+    // A green Digimon must have been played from trash onto P0's field.
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| {
+                let id = p.top_card().card_id(&runner.game.card_data);
+                id == "LM030-PLAY-GREEN" || id == "LM030-RET-GREEN"
+            }),
+        "the conditional branch must play a ≤2000 DP green Digimon from trash"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

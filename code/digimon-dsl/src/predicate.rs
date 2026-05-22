@@ -117,6 +117,10 @@ pub struct PredicateSpec {
     pub has_on_deletion_effect: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_color_count_gte: Option<u8>,
+    /// Permanent-subject predicate. Matches whether the permanent's
+    /// digivolution stack contains at least one face-down source.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_face_down_source: Option<bool>,
     /// True when the observer's Tamers (battle-area Tamer permanents)
     /// collectively have at least N distinct colors. A no-subject
     /// global predicate — does not inspect the candidate. Used by
@@ -150,6 +154,23 @@ pub struct PredicateSpec {
     pub source_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_digivolution_contains_name: Option<String>,
+    /// Source-subject predicate (Tamer face-down stash). Matches `CardSource.face_down`.
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_face_down: Option<bool>,
+    /// Source-subject predicate. Matches whether the source sits at
+    /// `card_sources` index 0 (the bottom of the digivolution stack).
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_bottom_source: Option<bool>,
+    /// Source-subject predicate. Matches the `CardKind` of the host
+    /// permanent's top card (e.g. `tamer` for a source stashed under a Tamer).
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub host_kind_is: Option<CardKind>,
     /// Like `self_digivolution_contains_name` but scans ONLY the
     /// digivolution *source* cards beneath the carrier — the carrier's
     /// own top card is excluded. `self_digivolution_contains_name` calls
@@ -253,6 +274,13 @@ pub struct PredicateSpec {
     /// PUPPETS-G023.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_color_only: Option<Vec<ColorSpec>>,
+    /// True when the triggering event card has AT LEAST ONE of the listed
+    /// colors (intersection / "has" semantics). Sibling of
+    /// `event_card_color_only` (subset semantics — not a faithful
+    /// substitute). Used by BT16-085's "when a blue or green Digimon
+    /// digivolves" trigger gate. G-EVENT-CARD-COLOR-IS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_color_has: Option<Vec<ColorSpec>>,
     /// True when the triggering event card has exactly N distinct colors.
     /// Pair with `event_card_color_only` to express "exactly 2-color
     /// black/yellow". PUPPETS-G023.
@@ -296,8 +324,25 @@ pub struct PredicateSpec {
     pub binding_count_eq: Option<BindingCountPredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_suspended_any_own_digimon: Option<bool>,
+    /// Opponent-side sibling of `effect_suspended_any_own_digimon`. True
+    /// when the current effect's result log records a suspend of any of
+    /// the controller's OPPONENT's Digimon. Used by BT16-025 Paildramon
+    /// clause 2 ("If this effect didn't suspend, unsuspend this Digimon").
+    /// G-DSL-EFFECT-SUSPENDED-RESULT.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_suspended_any_opponent_digimon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "any_returned_card")]
     pub effect_returned_any_card: Option<bool>,
+    /// Filtered variant of `effect_returned_any_card`. True when at least one
+    /// card moved by a preceding return / zone-move step in the SAME effect
+    /// satisfies the inner card-shape predicate. The inner predicate is
+    /// evaluated as a `Card` subject against each returned card identity in
+    /// the per-effect result log (`returned_to_deck`). Distinct field name
+    /// from the bare-bool `any_returned_card` alias so the two never collide.
+    /// Example: `returned_card_matching: { color_is: white, level_eq: 7 }`.
+    /// G-ANY-RETURNED-CARD-PREDICATE — driver BT17-077 clause 1c.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub returned_card_matching: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_deleted_any_own_digimon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

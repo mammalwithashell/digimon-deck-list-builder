@@ -453,8 +453,6 @@ fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
     push_to_trash(&mut runner, 1, "LIB_TRASH");
     push_to_trash(&mut runner, 1, "LIB_COST5_TRASH");
 
-    let trash_before = runner.game.players[1].trash.len(); // 2
-    let hand_before = runner.game.players[1].hand.len();   // 2
     let memory_before = runner.memory();
 
     // ── Trigger the security check ──────────────────────────────────────────
@@ -498,22 +496,35 @@ fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
         .expect("security pipeline must complete after selection");
 
     // ── Post-resolution assertions ──────────────────────────────────────────
-    // Exactly one card must have entered the battle area (played for free).
-    let played_lib = in_battle_area(&runner, 1, "LIB_TRASH")
-        || in_battle_area(&runner, 1, "LIB_HAND");
+    // The printed text plays exactly ONE [LIBERATOR] card. The [Security]
+    // clause resolves once, so exactly one of the two legal candidates
+    // reaches the battle area and the other stays in its origin zone.
+    let lib_hand_played = in_battle_area(&runner, 1, "LIB_HAND");
+    let lib_trash_played = in_battle_area(&runner, 1, "LIB_TRASH");
     assert!(
-        played_lib,
-        "a [LIBERATOR] card must have been played to the battle area for free"
+        lib_hand_played ^ lib_trash_played,
+        "exactly 1 [LIBERATOR] card must be played to the battle area for free \
+         (LIB_HAND played={lib_hand_played}, LIB_TRASH played={lib_trash_played})"
     );
 
-    // Total cards in hand ∪ trash must shrink by exactly 1 (origin-preserving).
-    let trash_after = runner.game.players[1].trash.len();
-    let hand_after = runner.game.players[1].hand.len();
-    assert_eq!(
-        (trash_before + hand_before) - (trash_after + hand_after),
-        1,
-        "exactly 1 card must leave hand ∪ trash; the other zone must be untouched"
-    );
+    // The unplayed candidate stays untouched in its origin zone.
+    if lib_hand_played {
+        assert!(
+            runner.game.players[1]
+                .trash
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == "LIB_TRASH"),
+            "the unplayed LIB_TRASH must remain in trash"
+        );
+    } else {
+        assert!(
+            runner.game.players[1]
+                .hand
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == "LIB_HAND"),
+            "the unplayed LIB_HAND must remain in hand"
+        );
+    }
 
     // Memory must not have changed — play_union_bound_free charges nothing.
     assert_eq!(

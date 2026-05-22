@@ -1,4 +1,5 @@
 use digimon_dsl::compiled::{CompiledClause, CompiledStep};
+use digimon_engine::action::space::TRASH_EFFECT_START;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -362,4 +363,443 @@ fn search_own_security_stack_runs_select_or_no_match_body() {
     );
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(runner.memory(), 1);
+}
+
+// ─── S8 `move_trash_card_to_deck_top` (G-ZONE-SELECTED-TRASH-TO-DECK-TOP) ──────
+
+#[test]
+fn move_trash_card_to_deck_top_routes_selected_card_to_owner_deck_top() {
+    // LM-030 clause B shape: a select_trash binds one card, then
+    // move_trash_card_to_deck_top places it on TOP of its OWNER's deck.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("T0", "Trash 0"))
+        .add_card(make_test_card("T1", "Trash 1"))
+        .add_card(make_test_card("DECK0", "Deck Bottom"))
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+    // Seed P0's deck with one card; the returned card must land on TOP (Vec end).
+    let deck_seed = add_to_trash(&mut runner, 0, 0, "DECK0");
+    {
+        let card = runner.game.players[0]
+            .trash
+            .iter()
+            .position(|c| c.handle() == deck_seed)
+            .expect("seed");
+        let cs = runner.game.players[0].trash.remove(card);
+        runner.game.players[0].deck.push(cs);
+    }
+    // P0's trash holds two cards; T1 is OWNED by P1.
+    add_to_trash(&mut runner, 0, 0, "T0");
+    let owned_by_p1 = add_to_trash(&mut runner, 0, 1, "T1");
+
+    run_compiled_steps(
+        &mut runner,
+        source_card,
+        Some(source),
+        compile_steps(
+            r#"      - select_trash:
+          of: you
+          bind_as: to_return
+          filter: { kind: digimon }
+          prompt: "Return 1 card from trash to the top of the deck"
+      - move_trash_card_to_deck_top:
+          of: you
+          card: to_return
+"#,
+        ),
+    );
+
+    // Resolve the select_trash selection — pick the P1-owned card.
+    let (player, action) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("select_trash should park a selection");
+        let want = TRASH_EFFECT_START
+            + runner.game.players[0]
+                .trash
+                .iter()
+                .position(|c| c.handle() == owned_by_p1)
+                .expect("p1 card still in p0 trash") as u16;
+        assert!(pending.valid_action_ids.contains(&want));
+        (pending.selecting_player, want)
+    };
+    runner
+        .execute_action(player, action)
+        .expect("select_trash resolves");
+
+    assert!(runner.game.pending_selection.is_none());
+    // The P1-owned card returned to P1's deck (owner routing), on TOP.
+    assert_eq!(
+        runner.deck_size(1),
+        1,
+        "P1-owned trash card returns to P1's deck"
+    );
+    assert_eq!(
+        runner.game.players[1].deck.last().map(|c| c.handle()),
+        Some(owned_by_p1),
+        "returned card must be on TOP (Vec end) of its owner's deck"
+    );
+    // P0's deck is untouched — only the un-picked T0 remains in P0's trash.
+    assert_eq!(runner.deck_size(0), 1, "P0 deck untouched");
+    assert_eq!(
+        runner.trash_size(0),
+        1,
+        "only the picked card leaves P0's trash"
+    );
+}
+
+#[test]
+fn move_trash_card_to_deck_top_noop_when_card_absent() {
+    // Negative: a binding pointing at a card not in trash is a silent no-op.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("PHANTOM", "Phantom"))
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+    let phantom = CardHandle(9999);
+
+    let steps = vec![CompiledStep::MoveTrashCardToDeckTop {
+        of: digimon_dsl::compiled::CompiledPlayerRef::You,
+        card: digimon_dsl::compiled::CompiledBindingRef::Named("ghost".into()),
+    }];
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_card("ghost", phantom);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(runner.deck_size(0), 0, "no card moved");
+    assert!(
+        bindings.result_log().returned_to_deck.is_empty(),
+        "no return recorded for a no-op"
+    );
+}
+
+// ─── S9 `returned_card_matching` (G-ANY-RETURNED-CARD-PREDICATE) ──────────────
+
+#[test]
+fn return_all_trash_to_deck_bottom_records_returned_cards_in_result_log() {
+    // The bulk return now records every moved card identity so a later
+    // `returned_card_matching` / `effect_returned_any_card` predicate can
+    // inspect this effect's returns.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("R0", "Returned 0"))
+        .add_card(make_test_card("R1", "Returned 1"))
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+    let r0 = add_to_trash(&mut runner, 0, 0, "R0");
+    let r1 = add_to_trash(&mut runner, 0, 0, "R1");
+
+    let steps = compile_steps(r#"      - return_all_trash_to_deck_bottom: { of: you }"#);
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
+    let mut bindings = Bindings::new();
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    let logged = &bindings.result_log().returned_to_deck;
+    assert!(logged.contains(&r0) && logged.contains(&r1));
+    assert_eq!(logged.len(), 2);
+}
+
+#[test]
+fn returned_card_matching_fires_when_a_matching_card_was_returned() {
+    // BT17-077 clause 1c shape: return all trash, then "if this effect
+    // returned a white level 7 card, gain 3 memory".
+    let src = make_test_card("SRC", "Source");
+    let mut white7 = make_test_card("WHITE7", "White Seven");
+    white7.colors = vec![digimon_engine::enums::CardColor::White];
+    white7.level = Some(7);
+    let mut red3 = make_test_card("RED3", "Red Three");
+    red3.colors = vec![digimon_engine::enums::CardColor::Red];
+    red3.level = Some(3);
+
+    let mut runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(white7)
+        .add_card(red3)
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+    add_to_trash(&mut runner, 0, 0, "WHITE7");
+    add_to_trash(&mut runner, 0, 0, "RED3");
+
+    let steps = compile_steps(
+        r#"      - return_all_trash_to_deck_bottom: { of: you }
+      - if:
+          condition:
+            returned_card_matching: { color_is: white, level_eq: 7 }
+          then:
+            - gain_memory: 3
+"#,
+    );
+    let before = runner.memory();
+    run_compiled_steps(&mut runner, source_card, Some(source), steps);
+
+    assert_eq!(
+        runner.memory(),
+        before + 3,
+        "returned_card_matching must fire — a white Lv.7 card was returned"
+    );
+}
+
+#[test]
+fn returned_card_matching_does_not_fire_without_a_matching_card() {
+    // Negative: no white Lv.7 among the returned cards → predicate fails.
+    let src = make_test_card("SRC", "Source");
+    let mut red3 = make_test_card("RED3", "Red Three");
+    red3.colors = vec![digimon_engine::enums::CardColor::Red];
+    red3.level = Some(3);
+    let mut white4 = make_test_card("WHITE4", "White Four");
+    white4.colors = vec![digimon_engine::enums::CardColor::White];
+    white4.level = Some(4);
+
+    let mut runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(red3)
+        .add_card(white4)
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+    add_to_trash(&mut runner, 0, 0, "RED3");
+    add_to_trash(&mut runner, 0, 0, "WHITE4");
+
+    let steps = compile_steps(
+        r#"      - return_all_trash_to_deck_bottom: { of: you }
+      - if:
+          condition:
+            returned_card_matching: { color_is: white, level_eq: 7 }
+          then:
+            - gain_memory: 3
+"#,
+    );
+    let before = runner.memory();
+    run_compiled_steps(&mut runner, source_card, Some(source), steps);
+
+    assert_eq!(
+        runner.memory(),
+        before,
+        "returned_card_matching must not fire — no white Lv.7 was returned"
+    );
+}
+
+#[test]
+fn move_trash_card_to_deck_top_feeds_returned_card_matching() {
+    // S8 + S9 compose: the selected-trash → deck-top move also records the
+    // returned card so `returned_card_matching` can inspect it.
+    let src = make_test_card("SRC", "Source");
+    let mut green6 = make_test_card("GREEN6", "Green Six");
+    green6.colors = vec![digimon_engine::enums::CardColor::Green];
+    green6.level = Some(6);
+
+    let mut runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(green6)
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+    let green = add_to_trash(&mut runner, 0, 0, "GREEN6");
+
+    let steps = vec![
+        CompiledStep::MoveTrashCardToDeckTop {
+            of: digimon_dsl::compiled::CompiledPlayerRef::You,
+            card: digimon_dsl::compiled::CompiledBindingRef::Named("picked".into()),
+        },
+        CompiledStep::If {
+            condition: digimon_dsl::compiled::CompiledPredicate {
+                returned_card_matching: Some(Box::new(digimon_dsl::compiled::CompiledPredicate {
+                    color_is: Some(digimon_dsl::compiled::CompiledColor::Green),
+                    ..Default::default()
+                })),
+                ..Default::default()
+            },
+            then: vec![CompiledStep::GainMemory(2)],
+            else_branch: vec![],
+        },
+    ];
+    let before = runner.memory();
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_card("picked", green);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(
+        runner.memory(),
+        before + 2,
+        "returned_card_matching must see the card moved by move_trash_card_to_deck_top"
+    );
+}
+
+// ─── G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME ───────────────────────────────
+//
+// `return_selected_sources_to_hand` removes each `select_own_sources`-bound
+// digivolution source card from its host stack and routes it to its OWNER's
+// hand (mirror of `trash_selected_sources`, hand destination instead of trash;
+// fires no `OnDigivolutionCardTrashed`).
+
+/// POSITIVE: a selected own digivolution source returns to the controller's
+/// own hand (owner == controller, the common case), leaving the host
+/// permanent's top card and remaining stack intact.
+#[test]
+fn return_selected_sources_to_hand_routes_picked_source_to_owner_hand() {
+    use digimon_dsl::compiled::CompiledPredicate;
+    use digimon_engine::action::space::encode_source_select;
+    use digimon_engine::dsl_cards::step::RunOutcome;
+    use digimon_engine::selection::SelectionKind;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC-LOW", "Bottom Source"))
+        .add_card(make_test_card("SRC-MID", "Dragon Mode"))
+        .add_card(make_test_card("TOP", "Host Top"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    // Host stack owned entirely by P0: [SRC-LOW, SRC-MID, TOP] bottom→top.
+    let host = runner.place_stack(0, &["SRC-LOW", "SRC-MID", "TOP"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let hand_before = runner.game.players[0].hand.len();
+
+    let mut name_filter = CompiledPredicate::default();
+    name_filter.name_contains = Some("Dragon Mode".to_string());
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: None,
+        filter: name_filter,
+        min: 1,
+        max: 1,
+        bind_as: Some("picked".to_string()),
+        prompt: "Choose Dragon Mode source".to_string(),
+        then: vec![CompiledStep::ReturnSelectedSourcesToHand {
+            source_refs: "picked".to_string(),
+        }],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+    assert_eq!(
+        runner.game.pending_selection.as_ref().map(|s| s.kind),
+        Some(SelectionKind::SourceMulti {
+            min: 1,
+            max: 1,
+            picked: 0,
+        })
+    );
+
+    // SRC-MID is the digivolution source at source_index 1 (just under TOP).
+    let pick = encode_source_select(host.index as u16, 1).expect("Dragon Mode source action");
+    runner.execute_action(0, pick).expect("pick Dragon Mode");
+
+    assert!(runner.game.pending_selection.is_none());
+
+    // Host top card and the remaining below-top source are untouched.
+    let host_perm = &runner.game.players[0].battle_area[host.index as usize];
+    assert_eq!(
+        host_perm.card_sources.len(),
+        2,
+        "host stack shrinks by exactly the one returned source"
+    );
+    assert_eq!(
+        host_perm.top_card().card_id(&runner.game.card_data),
+        "TOP",
+        "host top card preserved"
+    );
+    assert_eq!(
+        host_perm.card_sources[0].card_id(&runner.game.card_data),
+        "SRC-LOW",
+        "the un-picked below-top source remains, ordering preserved"
+    );
+
+    // The picked source returns to P0's (its owner's) hand, NOT to trash.
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        hand_before + 1,
+        "owner's hand grows by 1 (the returned Dragon Mode source)"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "SRC-MID"),
+        "the returned source is the Dragon Mode card"
+    );
+    assert!(
+        runner.game.players[0].trash.is_empty(),
+        "return-to-hand must NOT route the source to trash"
+    );
+}
+
+/// OWNER-ROUTING: a digivolution source owned by P1 but sitting under a
+/// P0-controlled host returns to P1's hand (the source's `CardSource.owner`),
+/// not P0's — even though P0 is the controller running the effect.
+#[test]
+fn return_selected_sources_to_hand_routes_to_source_owner_not_controller() {
+    use digimon_engine::action::space::encode_source_select;
+    use digimon_engine::dsl_cards::step::RunOutcome;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC-OWNED-BY-P1", "Foreign Source"))
+        .add_card(make_test_card("TOP", "Host Top"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    // P0 controls host [TOP]; push a P1-owned digivolution source under it.
+    let host = runner.place_stack(0, &["TOP"]);
+    runner.push_source_owned(host, "SRC-OWNED-BY-P1", 1);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let p0_hand_before = runner.game.players[0].hand.len();
+    let p1_hand_before = runner.game.players[1].hand.len();
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: None,
+        filter: digimon_dsl::compiled::CompiledPredicate::default(),
+        min: 1,
+        max: 1,
+        bind_as: Some("picked".to_string()),
+        prompt: "Choose source".to_string(),
+        then: vec![CompiledStep::ReturnSelectedSourcesToHand {
+            source_refs: "picked".to_string(),
+        }],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+
+    // The P1-owned source is at source_index 0 (below TOP).
+    let pick = encode_source_select(host.index as u16, 0).expect("foreign source action");
+    runner.execute_action(0, pick).expect("pick foreign source");
+
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        p0_hand_before,
+        "controller P0's hand must NOT receive a source it does not own"
+    );
+    assert_eq!(
+        runner.game.players[1].hand.len(),
+        p1_hand_before + 1,
+        "the source returns to its OWNER P1's hand"
+    );
+    assert!(
+        runner.game.players[1]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "SRC-OWNED-BY-P1"),
+        "P1's hand holds the returned foreign source"
+    );
 }

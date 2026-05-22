@@ -29,13 +29,12 @@
 //! - PendingSelection/action-mask visibility for field and hand choices.
 //!
 //! # Closed gaps
-//! - **G-ZONE-SELECTED-TRASH-TO-DECK-TOP** (closed 2026-05-21): the DSL now has
-//!   the `return_trash_list_to_deck_top` verb (mirror of
-//!   `return_trash_list_to_deck_bottom`, appending each moved card to the deck
-//!   end = deck top = drawn first). The [Start of Your Turn] Delay clause uses
-//!   it; adding the `kind: delay` clause also makes the engine auto-seat LM-029
-//!   in the battle area as a Delay Option, so the Main clause's "place this
-//!   card in the battle area" sub-step works.
+//! - **G-ZONE-SELECTED-TRASH-TO-DECK-TOP**: the DSL `move_trash_card_to_deck_top`
+//!   verb moves a single selected trash card to the deck top (Vec end = drawn
+//!   first). The [Start of Your Turn] Delay clause uses it; adding the
+//!   `kind: delay` clause also makes the engine auto-seat LM-029 in the battle
+//!   area as a Delay Option, so the Main clause's "place this card in the
+//!   battle area" sub-step works.
 //!
 //! # Resolved gaps now exercised
 //! - **G-PRED-DP-LTE** (Track A, 2026-05-17): `dp_lte` is now evaluated for
@@ -762,7 +761,7 @@ fn lm_029_main_places_this_card_in_battle_area_after_resolution() {
 /// The delay fires automatically at the start of the owner's next turn. Because
 /// the card is returned to the deck TOP (Vec end, drawn first), that turn's
 /// Draw phase draws it straight back into hand — the observable proof of
-/// `return_trash_list_to_deck_top` versus the deck-bottom verb.
+/// `move_trash_card_to_deck_top` versus the deck-bottom verb.
 #[test]
 fn lm_029_delay_fires_at_start_of_your_turn_and_returns_yellow_trash_to_deck_top() {
     let mut runner = DebugRunner::builder()

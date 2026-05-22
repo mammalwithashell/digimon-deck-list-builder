@@ -29,10 +29,10 @@
 //!   [Imperialdramon: Dragon Mode] is modelled as `kind: activated_digivolve`.
 //!
 //! - Clause 1 ([On Play][When Digivolving] return-to-bottom):
-//!   BLOCKED — G-PRED-STACK-SIZE-LTE-SOURCE. The `stack_size_lte` DSL predicate
-//!   takes a literal u8; there is no `stack_size_lte_source` form that compares
-//!   the target's stack size against the source permanent's stack size at runtime.
-//!   See qa/dsl-vocab-gaps.md.
+//!   IMPLEMENTED — `select_opponent_permanent` filtered by
+//!   `materials_count_lte: { formula: { source_material_count: {} } }`, which
+//!   compares each candidate's digivolution-card count against this Digimon's at
+//!   runtime. AD1-025 uses the identical pattern faithfully.
 //!
 //! - Clause 2 ([End of Attack][OPT] unsuspend + conditional return):
 //!   IMPLEMENTED for the Dragon Mode source predicate slice. The source-relative
@@ -44,7 +44,8 @@
 //! # Patterns
 //! - H12: Blast Digivolve / burst_digivolve alt-path + BlastDigivolve keyword grant
 //! - H13: ACE Overflow -4 via `ace_overflow` top-level field
-//! - G-PRED-STACK-SIZE-LTE-SOURCE: dynamic stack-size comparison predicate gap
+//! - `materials_count_lte` + `source_material_count`: dynamic digivolution-card
+//!   count comparison for the [On Play][When Digivolving] return clause
 //! - `self_digivolution_contains_name`: gates the Dragon Mode End of Attack rider
 
 use digimon_engine::action::build_action_mask;
@@ -172,26 +173,23 @@ fn bt16_027_blast_digivolve_keyword_grant_is_declared() {
     );
 }
 
-/// Confirm Clause 2 (on_play/when_digivolving return) is not authored in the
-/// current YAML while G-PRED-STACK-SIZE-LTE-SOURCE is open — it must be absent
-/// rather than present as an over-permissive approximation.
+/// Confirm Clause 2 (on_play/when_digivolving return) is authored now that the
+/// `materials_count_lte` + `source_material_count` predicate pair is available.
 #[test]
-fn bt16_027_on_play_clause_is_absent_while_stack_size_predicate_gap_is_open() {
+fn bt16_027_on_play_clause_is_authored() {
     let runner = fighter_mode_runner().start();
     let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
     let on_play_triggered = compiled.effects.iter().any(|clause| match clause {
         CompiledClause::Triggered(t) => {
-            use digimon_dsl::compiled::CompiledTiming;
             t.when.contains(&CompiledTiming::OnPlay)
-                || t.when.contains(&CompiledTiming::WhenDigivolving)
+                && t.when.contains(&CompiledTiming::WhenDigivolving)
         }
         _ => false,
     });
     assert!(
-        !on_play_triggered,
-        "on_play / when_digivolving clause must not be authored while \
-         G-PRED-STACK-SIZE-LTE-SOURCE is open (would be over-permissive)"
+        on_play_triggered,
+        "on_play / when_digivolving return clause must be authored"
     );
 }
 
@@ -213,35 +211,102 @@ fn bt16_027_end_of_attack_clause_is_once_per_turn() {
     assert!(!clause.optional, "printed End of Attack effect is mandatory");
 }
 
-// ─── Gap-blocked behavioural tests ───────────────────────────────────────────
+// ─── [On Play][When Digivolving] behavioural tests ───────────────────────────
+
+fn fire_on_play(runner: &mut DebugRunner, handle: PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(handle));
+    runner.game.drain_effect_queue();
+}
 
 /// [On Play][When Digivolving]: return 1 opp Digimon with ≤ digi-cards as this.
 ///
-/// Blocked pending G-PRED-STACK-SIZE-LTE-SOURCE in qa/dsl-vocab-gaps.md.
-/// The `stack_size_lte` predicate takes a literal u8; no `stack_size_lte_source`
-/// variant exists to compare target's stack size against the source permanent's
-/// card_sources count dynamically.
+/// The Fighter is placed on a stack of 3 cards (2 digivolution cards). An
+/// opponent Digimon with 2 digivolution cards (equal) and one with 1 (fewer)
+/// must both be selectable; the selected one returns to the deck bottom.
 #[test]
-#[ignore = "pending: G-PRED-STACK-SIZE-LTE-SOURCE from qa/dsl-vocab-gaps.md — stack_size_lte_source predicate not in DSL"]
 fn bt16_027_on_play_returns_opp_digimon_with_lte_digi_cards() {
-    // When G-PRED-STACK-SIZE-LTE-SOURCE closes:
-    // 1. Place this card and an opponent Digimon with ≤ sources on field.
-    // 2. Play BT16-027 from hand.
-    // 3. Assert SelectionKind::OppField filters only the opponent Digimon with
-    //    card_sources.len() <= source.card_sources.len().
-    // 4. Execute selection; assert opponent Digimon moves to the bottom of deck.
-    // Also: opponent Digimon with MORE digi-cards must be excluded from selection.
+    let mut runner = end_of_attack_runner();
+    // Fighter on a 3-card stack → 2 digivolution cards.
+    let fighter = runner.place_stack(0, &["PLAIN-SOURCE", "DRAGON-MODE", "BT16-027"]);
+    // Opponent Digimon with equal digivolution-card count (2).
+    let opp_equal = runner.place_on_field(1, "OPP-SUSPENDED", Some(0));
+    runner.push_source(opp_equal, "PLAIN-SOURCE");
+    runner.push_source(opp_equal, "PLAIN-SOURCE");
+    // Opponent Digimon with fewer digivolution cards (1).
+    let opp_fewer = runner.place_on_field(1, "OPP-UNSUSPENDED", Some(0));
+    runner.push_source(opp_fewer, "PLAIN-SOURCE");
+
+    fire_on_play(&mut runner, fighter);
+
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
+    let view = runner
+        .pending_selection_view()
+        .expect("on-play return prompt should install");
+    let equal_action = encode_attack(0, opp_equal.index as u16);
+    let fewer_action = encode_attack(0, opp_fewer.index as u16);
+    assert!(
+        view.valid_action_ids.contains(&equal_action),
+        "opponent Digimon with EQUAL digivolution cards must be selectable"
+    );
+    assert!(
+        view.valid_action_ids.contains(&fewer_action),
+        "opponent Digimon with FEWER digivolution cards must be selectable"
+    );
+
+    let deck_before = runner.deck_size(1);
+    let battle_before = runner.battle_area_size(1);
+    runner
+        .execute_action(0, equal_action)
+        .expect("select the equal-count opponent Digimon");
+    assert_eq!(
+        runner.battle_area_size(1),
+        battle_before - 1,
+        "selected opponent Digimon must leave the battle area"
+    );
+    assert_eq!(
+        runner.deck_size(1),
+        deck_before + 1,
+        "selected opponent Digimon must return to the bottom of the deck"
+    );
 }
 
 /// [On Play][When Digivolving]: opponent Digimon with MORE digi-cards is excluded.
-///
-/// Blocked pending G-PRED-STACK-SIZE-LTE-SOURCE from qa/dsl-vocab-gaps.md.
 #[test]
-#[ignore = "pending: G-PRED-STACK-SIZE-LTE-SOURCE from qa/dsl-vocab-gaps.md — stack_size_lte_source predicate not in DSL"]
 fn bt16_027_on_play_excludes_opp_digimon_with_more_digi_cards() {
-    // When G-PRED-STACK-SIZE-LTE-SOURCE closes:
-    // Place an opponent Digimon whose card_sources.len() > source.card_sources.len().
-    // Play BT16-027 — that opponent Digimon must not appear in the selection.
+    let mut runner = end_of_attack_runner();
+    // Fighter played from hand → 0 digivolution cards.
+    let fighter = runner.place_on_field(0, "BT16-027", Some(0));
+    // Opponent Digimon with MORE digivolution cards (1 > 0).
+    let opp_more = runner.place_on_field(1, "OPP-SUSPENDED", Some(0));
+    runner.push_source(opp_more, "PLAIN-SOURCE");
+    // Opponent Digimon with EQUAL count (0) — the only legal target.
+    let opp_equal = runner.place_on_field(1, "OPP-UNSUSPENDED", Some(0));
+
+    fire_on_play(&mut runner, fighter);
+
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
+    let view = runner
+        .pending_selection_view()
+        .expect("on-play return prompt should install");
+    let more_action = encode_attack(0, opp_more.index as u16);
+    let equal_action = encode_attack(0, opp_equal.index as u16);
+    assert!(
+        !view.valid_action_ids.contains(&more_action),
+        "opponent Digimon with MORE digivolution cards must be excluded"
+    );
+    assert_eq!(
+        view.valid_action_ids,
+        vec![equal_action],
+        "only the equal-count opponent Digimon should be selectable"
+    );
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[more_action as usize], 0.0,
+        "action mask must not expose the more-digi-cards opponent Digimon"
+    );
 }
 
 fn fire_end_of_attack(runner: &mut DebugRunner, handle: PermanentHandle) {

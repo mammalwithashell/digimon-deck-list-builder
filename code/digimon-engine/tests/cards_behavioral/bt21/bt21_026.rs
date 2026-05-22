@@ -67,6 +67,7 @@ fn make_digimon_filler(id: &str) -> digimon_engine::card_data::CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -357,6 +358,7 @@ fn bt21_026_cost_reduction_does_not_leak_to_other_cards() {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     };
 
     let mut runner = DebugRunner::builder()

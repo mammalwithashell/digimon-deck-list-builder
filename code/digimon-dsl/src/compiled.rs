@@ -27,6 +27,9 @@ pub struct CompiledCard {
     pub ace_overflow: Option<i32>,
     pub identity: Option<CompiledIdentity>,
     pub digixros_aliases: Vec<String>,
+    /// Static identity aliases — see `CardSpec::also_treated_as`.
+    /// Honored by generic name-matching predicates in every zone.
+    pub also_treated_as: Vec<String>,
     pub dual: Option<CompiledDual>,
     pub use_requirement: Option<CompiledPredicate>,
     pub alt_paths: Vec<CompiledAltPath>,
@@ -231,6 +234,7 @@ pub struct CompiledPredicate {
     /// gates target selection on this predicate.
     pub has_on_deletion_effect: Option<bool>,
     pub self_color_count_gte: Option<u8>,
+    pub has_face_down_source: Option<bool>,
     /// True when the observer's battle-area Tamers collectively have at
     /// least N distinct colors. G-DSL-DISTINCT-TAMER-COLORS.
     pub distinct_tamer_colors_gte: Option<u8>,
@@ -244,6 +248,9 @@ pub struct CompiledPredicate {
     pub source_is_unsuspended: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
+    pub is_face_down: Option<bool>,
+    pub is_bottom_source: Option<bool>,
+    pub host_kind_is: Option<CompiledCardKind>,
     /// Case-insensitive substring match against the carrier permanent's
     /// printed rules text (effect_text + inherited_text + security_text of
     /// the top card). Fails when the subject is not a permanent. PUPPETS-G025.
@@ -280,6 +287,9 @@ pub struct CompiledPredicate {
     pub event_card_name_contains: Option<String>,
     /// Every color of the triggering event card must be within this set.
     pub event_card_color_only: Option<Vec<CompiledColor>>,
+    /// The triggering event card must have at least one of these colors
+    /// (intersection / "has" semantics). G-EVENT-CARD-COLOR-IS.
+    pub event_card_color_has: Option<Vec<CompiledColor>>,
     /// The triggering event card must have exactly this many distinct colors.
     pub event_card_color_count: Option<u8>,
     pub event_permanent_is_source: Option<bool>,
@@ -294,7 +304,14 @@ pub struct CompiledPredicate {
     pub binding_present: Option<String>,
     pub binding_absent: Option<String>,
     pub effect_suspended_any_own_digimon: Option<bool>,
+    /// Opponent-side sibling of `effect_suspended_any_own_digimon`.
+    /// G-DSL-EFFECT-SUSPENDED-RESULT.
+    pub effect_suspended_any_opponent_digimon: Option<bool>,
     pub effect_returned_any_card: Option<bool>,
+    /// Filtered variant of `effect_returned_any_card`. When present, the inner
+    /// predicate is evaluated as a `Card` subject against each returned card
+    /// identity in the per-effect result log. G-ANY-RETURNED-CARD-PREDICATE.
+    pub returned_card_matching: Option<Box<CompiledPredicate>>,
     pub effect_deleted_any_own_digimon: Option<bool>,
     pub effect_deleted_any_opponent_digimon: Option<bool>,
     pub effect_played_any_digimon: Option<bool>,
@@ -910,6 +927,7 @@ pub enum CompiledStep {
     PlaceAsBottomSource {
         source: CompiledBindingRef,
         target: CompiledBindingRef,
+        face_down: bool,
     },
     /// Phase 2 Track F (2026-05-17) — deterministic "top stacked card →
     /// bottom" source-stack rotation. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
@@ -925,6 +943,13 @@ pub enum CompiledStep {
     },
     TrashAllSources {
         target: CompiledBindingRef,
+    },
+    /// Pick one of `of`'s Tamers that carries a face-down stash, then trash
+    /// that Tamer's bottom face-down digivolution source. Compiled from the
+    /// `trash_bottom_face_down_source_under_tamer` verb; used as an activation
+    /// cost by BEATBREAK / DATA SQUAD cards.
+    TrashBottomFaceDownSourceUnderTamer {
+        of: CompiledPlayerRef,
     },
     Hatch {
         of: CompiledPlayerRef,
@@ -1059,11 +1084,12 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         cards: CompiledBindingRef,
     },
-    /// Move a bound card list out of trash to the TOP of the deck.
-    /// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
-    ReturnTrashListToDeckTop {
+    /// Move a single selected trash card to the TOP of its owner's deck.
+    /// `of` identifies whose trash the card is in; the card returns to its
+    /// OWNER's deck. G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+    MoveTrashCardToDeckTop {
         of: CompiledPlayerRef,
-        cards: CompiledBindingRef,
+        card: CompiledBindingRef,
     },
     TrashTopNDigivolutionCardsOfEach {
         of: CompiledPlayerRef,
@@ -1212,6 +1238,18 @@ pub enum CompiledStep {
         prompt: String,
         then: Vec<CompiledStep>,
     },
+    /// Opponent-side mirror of `SelectOwnSources`. Candidate set drawn from the
+    /// OPPONENT's battle-area digivolution-source stacks.
+    /// G-SELECT-OPPONENT-SOURCES.
+    SelectOpponentSources {
+        target: Option<CompiledBindingRef>,
+        filter: CompiledPredicate,
+        min: u8,
+        max: u8,
+        bind_as: Option<String>,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
     SelectOpponentDpBudget {
         dp_budget: i32,
         min_picks: u8,
@@ -1240,6 +1278,12 @@ pub enum CompiledStep {
         then: Vec<CompiledStep>,
     },
     TrashSelectedSources {
+        source_refs: String,
+    },
+    /// G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME — return each
+    /// `SelectOwnSources`-bound digivolution source card to its owner's hand
+    /// (mirror of `TrashSelectedSources`, hand destination instead of trash).
+    ReturnSelectedSourcesToHand {
         source_refs: String,
     },
     BindPermanentProperty {
@@ -1402,6 +1446,14 @@ pub enum CompiledStep {
     ActivationCost {
         kind: CompiledActivationCostKind,
     },
+    /// G-COST-REDUCE-ALLY-DIGIVOLVE — install a player-scoped one-shot
+    /// future-digivolve cost reducer. BT3-103 Hidden Potential Discovered!.
+    ArmDigivolveCostReducer {
+        amount: i32,
+        single_fire: bool,
+        target_color: Option<CompiledColor>,
+        suspend_cost: bool,
+    },
 }
 
 /// Concrete activation-cost shapes recognized by the DSL. Extensible —
@@ -1446,6 +1498,9 @@ pub enum CompiledBindingRef {
     Permanent(String),
     Binding(String),
     OfPermanent(String),
+    /// Top card of a player's deck — resolves to `CardSourceRef::DeckTop`.
+    /// Card-source binding only (never a permanent/card handle).
+    DeckTop(CompiledPlayerRef),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1509,6 +1564,7 @@ mod tests {
             ace_overflow: None,
             identity: None,
             digixros_aliases: vec![],
+            also_treated_as: vec![],
             dual: None,
             use_requirement: None,
             alt_paths: vec![],
@@ -1566,6 +1622,7 @@ mod tests {
             ace_overflow: None,
             identity: None,
             digixros_aliases: vec![],
+            also_treated_as: vec![],
             dual: None,
             use_requirement: None,
             alt_paths: vec![],

@@ -80,12 +80,16 @@ fn resolve_card_source_ref(
     ctx: &EffectContext<'_>,
     bindings: &Bindings,
 ) -> Option<CardSourceRef> {
+    // `DeckTop` is a card-source-only binding (no `ResolvedBinding` form):
+    // resolve the owning player and address the top of their deck directly.
+    if let digimon_dsl::compiled::CompiledBindingRef::DeckTop(of) = source {
+        return Some(CardSourceRef::DeckTop(resolve_player(ctx, *of)));
+    }
     match resolve_binding_ref(source, ctx, bindings)? {
         ResolvedBinding::HandIndex(owner, i) => Some(CardSourceRef::Hand(owner, i as usize)),
         ResolvedBinding::TrashIndex(owner, i) => Some(CardSourceRef::Trash(owner, i as usize)),
         ResolvedBinding::Card(h) => resolve_card_handle_source_ref(ctx, h),
-        // DeckTop and other kinds: no IR binding produces them today.
-        // Future: widen as IR evolves.
+        // Other kinds (permanent / list): not addressable as a card source.
         _ => None,
     }
 }
@@ -590,7 +594,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             );
             true
         }
-        CompiledStep::PlaceAsBottomSource { source, target } => {
+        CompiledStep::PlaceAsBottomSource {
+            source,
+            target,
+            face_down,
+        } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
@@ -604,7 +612,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
                 return true;
             };
-            let _ = ctx.place_as_bottom_source(source_ref, target_handle);
+            let _ = ctx.place_as_bottom_source(source_ref, target_handle, *face_down);
             true
         }
         CompiledStep::PlaceTopSourceAsBottom { target } => {
