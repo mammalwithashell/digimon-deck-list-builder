@@ -49,20 +49,9 @@ effects:
   # at least one when eligible targets exist; canEndNotMax: true allows ending
   # early with fewer than the maximum picks).
   #
-  # BLOCKED: G-DP-BUDGET-MULTI-SELECT
-  #   The engine has no `select_opponent_permanent_multi_dp_budget` API that
-  #   enforces a running DP sum cap after each pick (comparable to DCGO's
-  #   `canTargetConditionByPreSelectedList` + `canEndSelectCondition` pattern).
-  #   The existing `select_count_capped_multi` caps pick COUNT, not DP sum.
-  #
-  #   This clause is implemented via raw_rust step
-  #   `bt17_018_delete_opp_digimon_dp_budget` as an escape hatch.
-  #   Until G-DP-BUDGET-MULTI-SELECT is closed, the raw_rust step falls back to
-  #   a single-pick selection (approximation noted in qa/archetype-qa/engine-gaps.md).
-  #
-  #   Condition: ≥1 opponent Digimon in battle area (mirrors DCGO CanActivateCondition).
-  #
-  # G-DP-BUDGET-MULTI-SELECT tracked in qa/archetype-qa/engine-gaps.md.
+  # Native implementation: `select_opponent_dp_budget` enforces the running
+  # DP-sum cap after each pick, binds the selected permanents, then deletes the
+  # bound list. The condition mirrors DCGO CanActivateCondition.
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete opp Digimon with total DP ≤ 15000"
     condition:
@@ -71,10 +60,13 @@ effects:
         zone: [battle_area]
         kind: digimon
     process:
-      # raw_rust step: implements DP-budget multi-select delete.
-      # Selects any number of opponent Digimon whose total DP ≤ 15000 and deletes them.
-      # Falls back to single-pick until G-DP-BUDGET-MULTI-SELECT is resolved.
-      - raw_rust: { fn: bt17_018_delete_opp_digimon_dp_budget }
+      - select_opponent_dp_budget:
+          dp_budget: 15000
+          min_picks: 1
+          bind_as: targets
+          prompt: "Delete opponent Digimon whose total DP is 15000 or less"
+          then:
+            - delete_bound_permanents: { binding: targets }
 
   # ─── Clause 3 — [When Attacking][Once Per Turn] security trash ───────────────
   # "For every 10 cards in both players' trash, trash 1 card from the top of your

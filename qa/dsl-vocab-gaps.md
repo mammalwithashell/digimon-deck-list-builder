@@ -1601,8 +1601,9 @@ is satisfiable today.
     clauses), G-DSL-AURA-TARGET-SOURCE-PERMANENT (`scope: inherited` +
     `target: {}` self-aura), G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT
     (`source_permanent_trait_has`). See qa/resolved-gaps.md § "BG Imperial
-    substrate closeout" → "Audit correction". Card YAML re-authoring to consume
-    the new + pre-existing vocabulary runs separately.
+    substrate closeout" → "Audit correction". The 2026-05-22 BG Imperial
+    readiness reconciliation verified that the deck-library pool now consumes
+    the new + pre-existing vocabulary without live raw_rust escapes.
   Verified per-card classification:
     openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md
 ─────────────────────────────────────────────────────────────────────── -->
@@ -1621,7 +1622,8 @@ is satisfiable today.
   2. In `mod.rs`, pass `active_when.clone()` to the call.
   3. Inside `lower_grant_keyword::lower`, add `if let Some(aw) = active_when { builder = builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None)); }`.
 - Gap kind: dsl (engine has condition support on `Effect` struct; only the lowering wire-up is missing).
-- Workaround: Ship the clause without `active_when` (unconditional keyword grant, over-fires). Or omit the clause entirely. BT12-022 ships with `active_when` specified but unconditionally firing. Negative-condition tests are `#[ignore = "pending: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED from qa/dsl-vocab-gaps.md"]`.
+- Workaround: none needed. BT12-022 now ships with `active_when` consumed by
+  `grant_keyword` lowering and focused negative-condition coverage active.
 - Cards affected: BT12-022 ExVeemon (inherited conditional Jamming).
 - First reported: 2026-05-04 (BT12-022 batch-implement-cards-rust-dsl)
 
@@ -1750,8 +1752,10 @@ on the auto-resolved post-state. 5 tests now active.
 - Status: CLOSED for the reusable Track E DSL verb on 2026-05-09. YAML can now use `trash_top_n_digivolution_cards_of_each: { of: opponent, n: 3 }`, which lowers to `EffectContext::trash_top_n_digivolution_cards_of_each`. Evidence: `cargo test --manifest-path code/digimon-dsl/Cargo.toml --test parse_zone_movement_steps`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`.
 - Landed DSL verb / step kind: `trash_top_n_digivolution_cards_of_each: { of: opponent, n: 3 }`.
 - Lowers to engine API: `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)`.
-- Gap kind: closed for the bounded top-N-each reusable primitive. BT17-077's "all sources" text remains a separate G-ASL-07 card-local/generalization gap.
-- Workaround: no longer needed for bounded top-N source trash; BT12-028 remains load-only until its DNA-gated follow-up can ship with the full printed clause.
+- Gap kind: closed for the bounded top-N-each reusable primitive. BT17-077's
+  "all sources" sibling is also covered by the later BG Imperial substrate
+  closeout.
+- Workaround: no longer needed; BT12-028 is implemented in production YAML.
 - First reported: 2026-05-04 (BT12-028 batch-implement-cards-rust-dsl).
 
 ---
@@ -1920,8 +1924,11 @@ on the auto-resolved post-state. 5 tests now active.
       else:
         - return_all_trash_to_deck_bottom: { of: opponent }  # ← new verb
   ```
-- Gap kind: partially closed. Engine bulk-move, DSL verb, and owner routing are closed; player-choice binding and returned-card result predicates remain open for BT17-077's full printed clause.
-- Workaround: Clause 1b (and the dependent Clause 1c memory rider) are omitted from BT17-077.yaml pending G-ASL-07 closure. Behavioral tests #[ignore]'d.
+- Gap kind: closed. Engine bulk-move, DSL verb, owner routing,
+  player-choice branching, and the returned-card predicate are covered for
+  BT17-077's full printed clause.
+- Workaround: none needed. BT17-077 Clause 1b and the dependent Clause 1c memory
+  rider ship in YAML and are covered by focused behavioral tests.
 - Cross-ref: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md) tracks the remaining all-source/player-choice/result-predicate family.
 - First reported: 2026-05-04 (BT17-077 batch-implement-cards-rust-dsl).
 
@@ -1950,7 +1957,8 @@ on the auto-resolved post-state. 5 tests now active.
         - gain_memory: 3
   ```
 - Gap kind: dsl (engine result-binding infrastructure would also need extending for the `bind_returned_as` step argument).
-- Workaround: Clause 1c is omitted from BT17-077.yaml; behavioral test #[ignore]'d.
+- Workaround: none needed. Clause 1c ships in BT17-077.yaml using
+  `returned_card_matching`.
 - Cross-ref: G-RETURN-ALL-TRASH-TO-DECK-BOTTOM (above) must close first (Clause 1b provides the moved-card set that Clause 1c predicates on).
 - First reported: 2026-05-04 (BT17-077 batch-implement-cards-rust-dsl).
 ---
@@ -2032,28 +2040,25 @@ on the auto-resolved post-state. 5 tests now active.
 - Workaround: None needed for current script-facing retarget effects.
 - First reported: 2026-05-05 (Royal Knights Batch 3: BT19-072).
 
-## BT17-102 — dynamic name alias from digivolution-source stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK] — OPEN
+## ~~BT17-102 — dynamic name alias from digivolution-source stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK]~~ — RESOLVED 2026-05-22
 
 - Effect text: BT17-102 Greymon "[All Turns] This Digimon has all the names of level 3 and lower cards in its digivolution cards."
-- Status: OPEN. Verified open against code by the `complete-dna-omnimon-archetype` change. BT17-102 is otherwise IMPLEMENTED; this single `[All Turns]` clause is omitted and the test `bt17_102_all_turns_aliases_low_level_material_names` is left `#[ignore]`'d.
-- Missing capability: the DSL identity layer carries only static `name_aliases`. There is NO engine consumer for a *dynamic* alias derived from the live digivolution-source stack — a name predicate run by any other card against this permanent sees only the printed top-card name. A faithful fix is a cross-cutting engine feature: a `Permanent`-level effective-name-set query (union of printed name + dynamic overlay names) consulted by every name predicate, aura filter, and inherited-effect name check.
-- Companion engine gap: this is the DSL/identity-layer face of the engine-level "Digivolution-stack name overlay" gap in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
-- Gap kind: hybrid (engine needs the effective-name-set overlay + universal consult-site rewrite; DSL needs a declarative `name_overlay_from_sources`-style verb).
-- Workaround: none faithful — the clause is OMITTED per no-approximations.
+- Status: RESOLVED 2026-05-22 by `close-dna-omnimon-partial-gaps`. `identity.source_name_aliases` compiles a source-derived effective-name overlay, the engine synthesized identity includes those names, and name predicates consult the synthesized set.
+- Evidence: `cargo test -p digimon-engine --test cards_behavioral bt17_102 -- --nocapture` passes with `bt17_102_all_turns_aliases_low_level_material_names` enabled.
+- Companion engine gap: resolved in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
+- Gap kind: hybrid, closed.
+- Workaround: none needed.
 - First reported: 2026-05-20 (`complete-dna-omnimon-archetype` closure — BT17-102 Greymon).
 
-## BT23-096 — `<Delay>`-on-attack-event clause  [G-DSL-DELAY-ON-ATTACK-EVENT] — OPEN
+## ~~BT23-096 — `<Delay>`-on-attack-event clause  [G-DSL-DELAY-ON-ATTACK-EVENT]~~ — RESOLVED 2026-05-22
 
 - Effect text: BT23-096 Comet Hammer — `<Delay>` body gated on an ally-attack event.
-- Status: OPEN. Verified open against code by the `complete-dna-omnimon-archetype` change. BT23-096 is otherwise IMPLEMENTED; the `<Delay>`-on-attack clause is omitted and its test is left `#[ignore]`'d.
-- Missing capability: a 3-part engine blocker prevents an attack event from triggering a `<Delay>` body —
-  1. `lower_delay.rs` does not map attack timings to `DelayTrigger::OnEvent`;
-  2. `combat.rs` dispatches `OnAllyAttack` via `TriggerSource::PlayerBattleArea`, which `effect_queue.rs` never fans out to event-gated delays;
-  3. `attacker_trait_has` resolves the attacker only via `attack_target_change()`, which is unset for a plain attack.
-- Already-present substrate (NOT the blocker): `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` — the on-ally-attack timing token and the attacker-trait predicate both exist; the gap is delay/attack-event dispatch wiring.
-- Companion engine gap: tracked engine-side in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
-- Gap kind: hybrid (engine needs delay/attack-event dispatch + plain-attack attacker resolution; DSL needs the attack-timing → `DelayTrigger::OnEvent` lowering).
-- Workaround: none faithful — the clause is OMITTED per no-approximations.
+- Status: RESOLVED 2026-05-22 by `close-dna-omnimon-partial-gaps`. `lower_delay.rs` maps attack timings to `DelayTrigger::OnEvent`, attack dispatch fans into event-gated delayed options with attacker context, and `attacker_trait_has` can evaluate ordinary attack context.
+- Evidence: `cargo test -p digimon-engine --test cards_behavioral bt23_096 -- --nocapture` passes with the CS attack Delay and non-CS negative tests enabled.
+- Already-present substrate: `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` remain noted as pre-existing halves; this change closed the missing delay/attack-event dispatch wiring.
+- Companion engine gap: resolved in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
+- Gap kind: hybrid, closed.
+- Workaround: none needed.
 - First reported: 2026-05-20 (`complete-dna-omnimon-archetype` closure — BT23-096 Comet Hammer).
 
 ## Zephagamon — prompted attack target retarget to another Digimon or player  [ZEPH-G005]
@@ -2634,3 +2639,33 @@ Coverage:
   - `code/digimon-engine/cards/rb1/RB1-035.yaml` — [All Turns] clause noted
     as needing "event-card level predicates" in comment.
 - **First reported:** 2026-05-22 (BT8-094 Pass 2 audit).
+
+## ~~DSL Gap: LM-027 — Move a selected trash card to deck TOP~~  [G-ZONE-SELECTED-TRASH-TO-DECK-TOP] — RESOLVED 2026-05-21
+- **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `EffectContext::return_trash_cards_to_deck_top` + a `destination: top | bottom` field on the `return_trash_list_to_deck_bottom` step move a selected trash card to the deck top. Full entry archived in `qa/resolved-gaps.md`.
+- **Discovered in:** Medusamon archetype re-attempt run, LM-027 Red Scramble DSL implementation (2026-05-21). Also pre-noted as MED-GAP-01 in `qa/archetype-qa/dsl/2026-05-03-medusamon-cross-archetype-gaps.md` and `qa/archetype-qa/dsl/bg_imperial.md`.
+- **Scope:** DSL + engine (hybrid). Cross-referenced in `qa/archetype-qa/engine-gaps.md` under the same gap ID.
+- **Card(s):** LM-027 Red Scramble — `[Start of Your Turn] <Delay>` clause "Return 1 red Digimon card from your trash to the **top** of the deck." Also LM-029, LM-030, LM-031 (sibling Scramble cards with the same Delay body).
+- **Effect text:** "Return 1 red Digimon card from your trash to the top of the deck."
+- **What's missing:** No DSL verb / `EffectContext` method moves a *selected* trash card to the **top** of the owner's deck. Verified: `EffectContext::return_all_trash_to_deck_bottom` and `return_trash_cards_to_deck_bottom` (`effect_context/mod.rs`) both hard-code `deck.insert(0, card)` (deck bottom). DSL `step/zone_moves.rs` exposes only `ReturnAllTrashToDeckBottom` / `ReturnTrashListToDeckBottom` — bottom-only. `ReturnToDeckFromReveal` accepts a `position` but operates on the reveal pool, not the trash. Routing to deck bottom would be an unfaithful approximation (top vs bottom changes what is drawn) — forbidden by the no-approximations policy. The deck-**bottom** sibling gap `G-ZONE-TRASH-TO-DECK` and the timing gap `G-DELAY-START-OF-TURN` are both RESOLVED; this deck-TOP variant is genuinely new and distinct.
+- **Suggested change:** Add a `destination: top | bottom` parameter to a generalized `return_bound_cards_to_deck` DSL step (or a dedicated `return_selected_trash_to_deck_top` verb) plus a matching `EffectContext::return_trash_cards_to_deck_top` engine method (mirror `return_trash_cards_to_deck_bottom` but `deck.push`).
+- **Workaround:** LM-027 clause B retains a `raw_rust` no-op placeholder; 4 tests `#[ignore = "...G-ZONE-SELECTED-TRASH-TO-DECK-TOP"]`. Clauses A and C ship faithfully in pure DSL.
+
+## ~~DSL Gap: BT21-072 — `save_in_text` predicate for alt-path `from:` filters~~  [G-ALT-PATH-SAVE-IN-TEXT] — RESOLVED 2026-05-21
+- **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). **No new predicate needed** — the existing `effect_text_contains` predicate already scans a candidate's printed text and `eval_predicate` already evaluates it against an alt-path `from:` candidate. BT21-072's cost-3 path uses `from: { any_of: [{level_eq:4, effect_text_contains:"＜Save＞"}, {level_eq:4, trait_has:Hero}] }`. Full entry archived in `qa/resolved-gaps.md`.
+- **Discovered in:** Medusamon archetype re-attempt run, BT21-072 Arresterdramon: Superior Mode (2026-05-21).
+- **Scope:** DSL.
+- **Card(s):** BT21-072 — `xros_req: "[Digivolve] Lv.4 w/＜Save＞ in text or w/[Hero] trait: Cost 3"`. Any card whose alt-digivolution requirement gates on the source permanent having ＜Save＞ printed in its effect text.
+- **Effect text:** "[Digivolve] Lv.4 w/＜Save＞ in text or w/[Hero] trait: Cost 3"
+- **What's missing:** Alt-path `from:` filters support `level_eq`, `trait_has`, `name_contains`, etc., but there is no `save_in_text: true` predicate to match a source permanent whose top card has the ＜Save＞ keyword in its printed effect text. The "w/[Hero] trait" half is expressible (`trait_has: Hero`); the "w/＜Save＞ in text" half is not — so the cost-3 alt-path cannot be faithfully expressed as a whole (it is a single OR-condition path).
+- **Suggested change:** Add a `save_in_text: bool` (or a generalized `keyword_in_text: <keyword>`) predicate leaf usable in alt-path `from:` filters, evaluated against the source card's printed effect text / parsed keyword set.
+- **Workaround:** None faithful. BT21-072's `alt_paths` ships the standard cost-4 path only; the cost-3 ＜Save＞/Hero path is omitted. BT21-072 is PARTIAL.
+
+## ~~DSL Gap: BT21-093 — declinable `activation_cost: { trash_self: true }`~~  [G-ACTIVATION-COST-TRASH-SELF] — RESOLVED 2026-05-21
+- **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `activation_cost: { trash_self: true }` added (`CompiledActivationCostKind::TrashSelf` → `EffectContext::trash_self_as_cost`); declinable per Comprehensive Rules 16-16-2. Full entry archived in `qa/resolved-gaps.md`.
+- **Discovered in:** Medusamon archetype re-attempt run, BT21-093 Raging Serpentine (2026-05-21).
+- **Scope:** DSL.
+- **Card(s):** BT21-093 Raging Serpentine — `[All Turns] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)`. Any ＜Delay＞ card whose activation cost is "by trashing this card".
+- **Effect text:** "＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)"
+- **What's missing:** `activation_cost:` accepts only `suspend_self` and `return_self_to_deck_bottom` (per `compile.rs`). There is no `trash_self: true` variant. Per Comprehensive Rules 16-16-2, ＜Delay＞ processing is OPTIONAL — the controller may decline to trash the card and activate the effect. Without a declinable `trash_self` activation cost, the trash-self must be modeled as the first mandatory body step, which forces the activation once the trigger fires and a valid target exists — suppressing a rules-mandated player choice (a no-approximations violation).
+- **Suggested change:** Add `activation_cost: { trash_self: true }` — a declinable activation cost that trashes the source card and gates the body; declining skips the whole Delay.
+- **Workaround:** BT21-093 models the trash as a mandatory first body step. PARTIAL.

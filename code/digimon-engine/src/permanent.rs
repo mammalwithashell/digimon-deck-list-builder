@@ -51,6 +51,7 @@ pub enum OptionState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SynthIdentity {
     pub card_name: String,
+    pub card_names: Vec<String>,
     pub kind: CardKind,
     pub level: Option<u8>,
     pub colors: Vec<CardColor>,
@@ -159,6 +160,11 @@ impl Permanent {
         let top = self.top_card();
         let mut identity = SynthIdentity {
             card_name: top.card_name(data).to_string(),
+            card_names: top
+                .card_names(data)
+                .into_iter()
+                .map(ToString::to_string)
+                .collect(),
             kind: top.card_kind(data),
             level: top.level(data),
             colors: top.colors(data).to_vec(),
@@ -203,11 +209,42 @@ impl Permanent {
             match &entry.payload {
                 ModifierPayload::Name { value, base: _ } => {
                     identity.card_name = value.clone();
+                    identity.card_names.clear();
+                    identity.card_names.push(value.clone());
                 }
                 ModifierPayload::None if entry.value != 0 => {
                     identity.card_name = entry.value.to_string();
+                    identity.card_names.clear();
+                    identity.card_names.push(identity.card_name.clone());
                 }
                 _ => {}
+            }
+        }
+        for entry in modifiers.get(handle, ModifierType::SourceNameAliases) {
+            if let ModifierPayload::SourceNameAliases { level_lte } = &entry.payload {
+                for card in self
+                    .card_sources
+                    .iter()
+                    .take(self.card_sources.len().saturating_sub(1))
+                {
+                    if let Some(cap) = *level_lte {
+                        if !matches!(card.level(data), Some(level) if level <= cap) {
+                            continue;
+                        }
+                    }
+                    if level_lte.is_none() && card.level(data).is_none() {
+                        continue;
+                    }
+                    for name in card.card_names(data) {
+                        if !identity
+                            .card_names
+                            .iter()
+                            .any(|existing| existing.eq_ignore_ascii_case(name))
+                        {
+                            identity.card_names.push(name.to_string());
+                        }
+                    }
+                }
             }
         }
         for entry in modifiers.get(handle, ModifierType::ChangeBaseCardColor) {
@@ -359,7 +396,11 @@ impl Permanent {
     ) -> bool {
         let needle = name.to_lowercase();
         let identity = self.synth_identity(data, modifiers, handle);
-        if identity.card_name.to_lowercase().contains(&needle) {
+        if identity
+            .card_names
+            .iter()
+            .any(|card_name| card_name.to_lowercase().contains(&needle))
+        {
             return true;
         }
         self.card_sources

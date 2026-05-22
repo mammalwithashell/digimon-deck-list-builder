@@ -88,6 +88,7 @@ pub struct CompiledDualOption {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledIdentity {
     pub name_aliases: Vec<CompiledNameAlias>,
+    pub source_name_aliases: Vec<CompiledSourceNameAlias>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -96,6 +97,11 @@ pub struct CompiledNameAlias {
     pub zone: Vec<CompiledZone>,
     pub has_inherited_card_number: Option<String>,
     pub has_inherited_name: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledSourceNameAlias {
+    pub level_lte: Option<u8>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -823,6 +829,12 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    /// Trash a bound card from a player's security stack.
+    /// G-TRASH-SELECTED-SECURITY.
+    TrashSelectedSecurity {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
     AddTopSecurityToHand {
         of: CompiledPlayerRef,
     },
@@ -980,7 +992,7 @@ pub enum CompiledStep {
         suppress_on_play: bool,
     },
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
-    /// true origin zone (hand vs trash). `binding` names a `select_union_zone`
+    /// true origin zone (hand, trash, or material). `binding` names a `select_union_zone`
     /// `bind_as`; the origin zone is carried in the binding value.
     PlayUnionBoundFree {
         binding: String,
@@ -1078,11 +1090,13 @@ pub enum CompiledStep {
     ReturnAllTrashToDeckBottom {
         of: CompiledPlayerRef,
     },
-    /// Move a bound card list out of trash to the bottom of the deck.
-    /// G-ZONE-TRASH-TO-DECK.
+    /// Move a bound card list out of trash to the deck. `to_top` selects the
+    /// deck top (the next card drawn) over the bottom.
+    /// G-ZONE-TRASH-TO-DECK / G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
     ReturnTrashListToDeckBottom {
         of: CompiledPlayerRef,
         cards: CompiledBindingRef,
+        to_top: bool,
     },
     /// Move a single selected trash card to the TOP of its owner's deck.
     /// `of` identifies whose trash the card is in; the card returns to its
@@ -1251,7 +1265,7 @@ pub enum CompiledStep {
         then: Vec<CompiledStep>,
     },
     SelectOpponentDpBudget {
-        dp_budget: i32,
+        dp_budget: CompiledFormula,
         min_picks: u8,
         bind_as: Option<String>,
         prompt: String,
@@ -1470,6 +1484,10 @@ pub enum CompiledActivationCostKind {
     /// owner's deck bottom (digivolution sources trashed per standard
     /// rules). Fails if the source has already left the field.
     ReturnSelfToDeckBottom,
+    /// "by trashing this card ..." — pays the cost by trashing the source
+    /// permanent (a `<Delay>` Option). Fails if the source has already left
+    /// the field. G-ACTIVATION-COST-TRASH-SELF.
+    TrashSelf,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -27,7 +27,7 @@
 //!   CannotPlayDigimonByEffect + CannotPlayTamerByEffect (end_of_opponents_turn);
 //!   then conditional `trash_top_security` if Dragon Mode in digi-stack.
 //! - Clause 3 (All Turns OPT): triggered on `on_opponent_security_removed`,
-//!   once_per_turn, active_when: all_turns. Delete body BLOCKED on G-FORMULA-SOURCE-DP.
+//!   once_per_turn, active_when: all_turns. Delete body uses `source_dp`.
 //!
 //! # Known gaps and test status
 //!
@@ -37,9 +37,9 @@
 //! | (1) Piercing declarative grant | G-DECLARATIVE-KEYWORD | compiled/structural only |
 //! | (2) When Digivolving flood-gate | No gap — add_player_modifier fully implemented | IMPLEMENTED |
 //! | (2) Conditional security trash | self_digivolution_contains_name in if-condition | IMPLEMENTED |
-//! | (3) OPT trigger structure | on_opponent_security_removed + once_per_turn | IMPLEMENTED (structural only) |
-//! | (3) Delete ≤ self DP | G-FORMULA-SOURCE-DP: source_dp formula primitive missing | BLOCKED — no delete body |
-//! | (3) OPT enforcement | G-OPT-TRIGGERED: triggered OPT not enforced at runtime | #[ignore] |
+//! | (3) OPT trigger structure | on_opponent_security_removed + once_per_turn | IMPLEMENTED |
+//! | (3) Delete <= self DP | source_dp formula | IMPLEMENTED |
+//! | (3) OPT enforcement | once_per_turn trigger lockout | IMPLEMENTED |
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -191,7 +191,7 @@ fn bt20_020_has_raid_and_piercing_grants() {
 
 /// BT20-020 must compile exactly 2 triggered clauses:
 ///   [0] when_digivolving (flood-gate + conditional security trash)
-///   [1] on_opponent_security_removed OPT (structural; delete body BLOCKED)
+///   [1] on_opponent_security_removed OPT (delete body uses source_dp)
 #[test]
 fn bt20_020_has_two_triggered_clauses() {
     let card = compiled("BT20-020");

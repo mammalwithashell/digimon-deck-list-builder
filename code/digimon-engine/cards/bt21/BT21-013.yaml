@@ -1,3 +1,90 @@
+# BT21-013 Agunimon — Digimon, Lv.4, Red, DP 5000, Cost 5.
+# Traits: Wizard, Hero.  Form: Hybrid.  Attribute: Variable.
+# Evo: Lv.3 Red / cost 2.
+#
+# Printed card text (data/cards.json):
+#
+#   [When Digivolving] You may place 1 [Hybrid] or [Hero] trait Digimon card
+#   from your hand or trash as this Digimon's bottom digivolution card or under
+#   any of your red Tamers with inherited effects.
+#   [When Attacking] This Digimon may digivolve into a red [Hybrid] or [Hero]
+#   trait Digimon card in the hand with the digivolution cost reduced by 1.
+#
+# Inherited:
+#   [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Red/BT21_013.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# DCGO BT21_013.cs registers five clauses:
+#
+#   (1) EffectTiming.None — AddSelfDigivolutionRequirementStaticEffect for a
+#       red-Tamer alt-digivolution source at cost 2. This is an unprinted
+#       implementation alt-source (the printed card has no [Digivolve] keyword
+#       for Tamers) — it is the DCGO encoding of "you may digivolve onto a
+#       red Tamer". Per source priority (printed text wins), we do NOT add a
+#       Tamer alt_path; the printed evo block is only Lv.3 Red / cost 2.
+#   (2) EffectTiming.None — AddSelfDigivolutionRequirementStaticEffect for the
+#       xros_req "[Digivolve] [BurningGreymon]: Cost 0" line. cards.json carries
+#       this in `xros_req`. It is a named-source alt-path; encoded below.
+#   (3) EffectTiming.OnEnterFieldAnyone — the [When Digivolving] place clause.
+#       CanUseCondition: IsExistOnBattleAreaDigimon + CanTriggerWhenDigivolving.
+#       CanActivateCondition gates on (a) HasMatchConditionOwnersPermanent
+#       (self OR red Tamer w/ inherited) AND (b) a Hybrid/Hero Digimon in hand
+#       OR trash. ActivateCoroutine: SelectPermanentEffect (canNoSelect: true —
+#       optional) for the destination, then a bool selection "From hand" /
+#       "From trash" (only when BOTH zones have a candidate; otherwise the
+#       single available zone is auto-picked), then SelectHandEffect /
+#       SelectCardEffect over the chosen zone (canNoSelect: true), then
+#       AddDigivolutionCardsBottom on the selected permanent.
+#       Clause is "you may" → optional at clause level.
+#   (4) EffectTiming.OnAllyAttack — the [When Attacking] digivolve clause.
+#       CanUseCondition: IsExistOnBattleAreaDigimon + CanTriggerOnAttack.
+#       CanActivateCondition: a red Hybrid/Hero Digimon in hand.
+#       ActivateCoroutine: DigivolveIntoHandOrTrashCard(targetPermanent =
+#       card.PermanentOfThisCard(), cardCondition = Hybrid|Hero && red,
+#       payCost: true, reduceCostTuple: (reduceCost: 1, null), isHand: true).
+#       "This Digimon may digivolve" → optional at clause level.
+#   (5) EffectTiming.None — ChangeSelfDPStaticEffect(+2000, isInheritedEffect:
+#       true, condition: IsOwnerTurn). The inherited [Your Turn] +2000 DP aura.
+#
+# ─── DSL modelling notes ─────────────────────────────────────────────────────
+#
+# Clause 1 ([When Digivolving]):
+#   - optional: true ("you may place").
+#   - select_own_permanent (optional: true) for the destination — self
+#     (card_number_is BT21-013) OR a red Tamer with inherited effects
+#     (has_inherited). DCGO canNoSelect: true.
+#   - The destination pick is gated: if the player declines (no `dest`
+#     binding), the whole place flow is skipped via `if { binding_present:
+#     dest }`. This mirrors DCGO, which skips the bool/source selection
+#     entirely when selectedPermanent == null.
+#   - select_effect_choice surfaces the real hand-vs-trash zone choice
+#     (DCGO's bool selection). Both zones are always offered; if a zone has
+#     no eligible card the inner select_hand / select_trash installs an
+#     empty selection that the player declines — faithful to "you may".
+#   - select_hand / select_trash carry the Hybrid|Hero trait filter (DCGO
+#     CanSelectSourceCard). They are optional: true (DCGO canNoSelect: true).
+#   - place_as_bottom_source moves the chosen card under the chosen
+#     permanent (DCGO AddDigivolutionCardsBottom).
+#
+# Clause 2 ([When Attacking]):
+#   - optional: true ("This Digimon may digivolve").
+#   - select_hand filtered to red Hybrid|Hero Digimon (DCGO CanSelectCard).
+#   - effect_initiated_digivolve { target: source } — the digivolve TARGET
+#     is this permanent (Agunimon itself digivolves into the chosen card).
+#     `source` resolves to the live source permanent; `self` would resolve
+#     to the source CARD and effect_initiated_digivolve requires a
+#     PermanentHandle target. cost: { reduce: 1 } encodes "digivolution
+#     cost reduced by 1"; ignore_requirements: false (DCGO payCost: true,
+#     no IgnoreRequirement — printed text reduces cost but keeps reqs).
+#
+# Clause 3 (Inherited [Your Turn] +2000 DP):
+#   - scope: inherited, kind: aura, active_when: { your_turn: true },
+#     dp_modifier: 2000 — fires only while Agunimon is a digivolution
+#     source under a carrier, on the controller's turn (D4 aura pattern).
+
 card: BT21-013
 name: Agunimon
 kind: digimon
@@ -6,12 +93,20 @@ color: [red]
 cost: 5
 dp: 5000
 traits: [Wizard, Hero]
+
 alt_paths:
+  # Standard digivolution: Lv.3 Red / cost 2 (printed evo block).
   - kind: digivolve
     from: { level_eq: 3 }
     cost: 2
 
+  # xros_req "[Digivolve] [BurningGreymon]: Cost 0" — named-source alt-path.
+  - kind: digivolve
+    from: { name_contains: "BurningGreymon" }
+    cost: 0
+
 effects:
+  # ─── Clause 1 — [When Digivolving] place Hybrid/Hero as bottom source ────────
   - when: when_digivolving
     optional: true
     summary: "[When Digivolving] You may place 1 [Hybrid]/[Hero] Digimon from hand or trash as bottom source under self or a red Tamer with inherited effects"
@@ -27,45 +122,51 @@ effects:
                   - color_is: red
                   - has_inherited: {}
           prompt: "Choose a destination: this Digimon or a red Tamer with inherited effects"
-      - select_effect_choice:
-          bind_as: zone_choice
-          labels:
-            - "From hand"
-            - "From trash"
-          prompt: "Select a [Hybrid] or [Hero] Digimon from which area?"
       - if:
-          condition: { equals: [zone_choice, 0] }
+          condition: { binding_present: dest }
           then:
-            - select_hand:
-                of: you
-                bind_as: source_card
-                filter:
-                  all_of:
-                    - kind: digimon
-                    - any_of:
-                        - trait_has: Hybrid
-                        - trait_has: Hero
-                prompt: "Choose a [Hybrid] or [Hero] Digimon from hand"
-            - place_as_bottom_source:
-                source: source_card
-                target: dest
-      - if:
-          condition: { equals: [zone_choice, 1] }
-          then:
-            - select_trash:
-                of: you
-                bind_as: source_card
-                filter:
-                  all_of:
-                    - kind: digimon
-                    - any_of:
-                        - trait_has: Hybrid
-                        - trait_has: Hero
-                prompt: "Choose a [Hybrid] or [Hero] Digimon from trash"
-            - place_as_bottom_source:
-                source: source_card
-                target: dest
+            - select_effect_choice:
+                bind_as: zone_choice
+                labels:
+                  - "From hand"
+                  - "From trash"
+                prompt: "Select a [Hybrid] or [Hero] Digimon from which area?"
+            - if:
+                condition: { equals: [zone_choice, 0] }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: source_card
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - any_of:
+                              - trait_has: Hybrid
+                              - trait_has: Hero
+                      prompt: "Choose a [Hybrid] or [Hero] Digimon from hand"
+                  - place_as_bottom_source:
+                      source: source_card
+                      target: dest
+            - if:
+                condition: { equals: [zone_choice, 1] }
+                then:
+                  - select_trash:
+                      of: you
+                      bind_as: source_card
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - any_of:
+                              - trait_has: Hybrid
+                              - trait_has: Hero
+                      prompt: "Choose a [Hybrid] or [Hero] Digimon from trash"
+                  - place_as_bottom_source:
+                      source: source_card
+                      target: dest
 
+  # ─── Clause 2 — [When Attacking] digivolve into red Hybrid/Hero, cost -1 ────
   - when: when_attacking
     optional: true
     summary: "[When Attacking] This Digimon may digivolve into a red [Hybrid]/[Hero] Digimon in hand, cost -1"
@@ -82,11 +183,12 @@ effects:
                   - trait_has: Hero
           prompt: "Choose a red [Hybrid] or [Hero] Digimon to digivolve into"
       - effect_initiated_digivolve:
-          target: self
+          target: source
           from_hand: evo
           cost: { reduce: 1 }
           ignore_requirements: false
 
+  # ─── Clause 3 — Inherited [Your Turn] +2000 DP self-aura ────────────────────
   - scope: inherited
     kind: aura
     active_when: { your_turn: true }

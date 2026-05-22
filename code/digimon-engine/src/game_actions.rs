@@ -18,8 +18,8 @@ use crate::game::{
 };
 use crate::permanent::PermanentHandle;
 use crate::selection::{
-    OptionPlayResult, OptionResolutionPhase, OptionUseSource, PendingOption, PendingSelection,
-    QueuedEffect, SelectionKind, TriggerSource,
+    OptionPlayResult, OptionResolutionPhase, OptionSubtype, OptionUseSource, PendingOption,
+    PendingSelection, QueuedEffect, SelectionKind, TriggerSource,
 };
 use rand::seq::SliceRandom;
 
@@ -53,16 +53,38 @@ impl OptionSource {
     }
 }
 
-/// Phase 8 Option subtype, inferred from effect flags. First-match-wins
-/// inside `classify_option_subtype` — printed cards carry at most one
-/// subtype per Option, so the ordering (Delay → Training → Link →
-/// Standard) is rule-consistent but doesn't affect conforming data.
+/// One available play mode for an Option card. `classify_option_modes`
+/// derives the set of modes from the card's effect list. Most Options have
+/// exactly one mode; a dual-mode Plug-In Option that is both a Standard
+/// `[Main]` Option and a Link Option has two (`Standard`, then `Link`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum OptionSubtype {
+pub(crate) enum OptionPlayMode {
+    /// Played as a normal `[Main]` Option — pay the printed use cost,
+    /// resolve the `OptionMain` body, dispose to trash.
     Standard,
+    /// A Delay Option — parks on the field until its delay trigger.
     Delay(crate::enums::DelayTrigger),
-    Link,
+    /// Plugged in via Link Requirements — pay `cost`, attach sideways to a
+    /// host Digimon. No `[Main]` / `[Security]` effect runs.
+    Link { cost: u16 },
+    /// A Training Option.
     Training,
+}
+
+impl OptionPlayMode {
+    /// The disposal subtype this play mode resolves to.
+    fn subtype(self) -> OptionSubtype {
+        match self {
+            OptionPlayMode::Standard => OptionSubtype::Standard,
+            OptionPlayMode::Delay(trigger) => OptionSubtype::Delay(trigger),
+            OptionPlayMode::Link { .. } => OptionSubtype::Link,
+            OptionPlayMode::Training => OptionSubtype::Training,
+        }
+    }
+
+    fn is_link(self) -> bool {
+        matches!(self, OptionPlayMode::Link { .. })
+    }
 }
 
 fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
@@ -141,21 +163,52 @@ impl PlayFromHandCostResult {
     }
 }
 
-/// Inspect an Option's effect list to decide its play-path subtype.
-/// Iterates effects; the first one carrying a subtype flag wins.
-fn classify_option_subtype(effects: &[crate::effect::Effect]) -> OptionSubtype {
+/// Inspect an Option's effect list to derive every available play mode.
+///
+/// Returns a 1- or 2-element list. `Delay` and `Training` are exclusive
+/// whole-card subtypes (a card carrying either has exactly that one mode).
+/// Otherwise the card may have a Standard `[Main]` mode (it carries a
+/// non-link `OptionMain` body) and/or a Link mode (it carries a
+/// `link_requirement` effect with a `link_cost`). A Plug-In Option that
+/// has both is **dual-mode**: the list is `[Standard, Link]`, in that
+/// order, and the player picks via a mode-select prompt.
+fn classify_option_modes(effects: &[crate::effect::Effect]) -> Vec<OptionPlayMode> {
+    let mut delay = None;
+    let mut training = false;
+    let mut link_cost: Option<u16> = None;
+    let mut has_standard_main = false;
     for eff in effects {
         if let Some(trigger) = eff.delay_trigger {
-            return OptionSubtype::Delay(trigger);
+            delay = Some(trigger);
         }
         if eff.training {
-            return OptionSubtype::Training;
+            training = true;
         }
-        if eff.link_cost.is_some() {
-            return OptionSubtype::Link;
+        if let Some(cost) = eff.link_cost {
+            link_cost = Some(cost);
+        } else if eff.timing == EffectTiming::OptionMain {
+            // A non-link `OptionMain` effect is a Standard `[Main]` body.
+            has_standard_main = true;
         }
     }
-    OptionSubtype::Standard
+    // Delay / Training are exclusive whole-card subtypes.
+    if let Some(trigger) = delay {
+        return vec![OptionPlayMode::Delay(trigger)];
+    }
+    if training {
+        return vec![OptionPlayMode::Training];
+    }
+    let mut modes = Vec::new();
+    // A card with no link effect is always Standard (the fallback for
+    // `[Security]`-only Options too); a card with a link effect is
+    // Standard only when it additionally carries a `[Main]` body.
+    if has_standard_main || link_cost.is_none() {
+        modes.push(OptionPlayMode::Standard);
+    }
+    if let Some(cost) = link_cost {
+        modes.push(OptionPlayMode::Link { cost });
+    }
+    modes
 }
 
 impl Game {
@@ -933,30 +986,109 @@ impl Game {
         }
     }
 
+    /// Candidate host Digimon for a Link Option attach: every Standard-state
+    /// own Digimon that is below its link cap and passes the card's
+    /// `link_filter`. Shared by `dispose_option`'s Link arm and the
+    /// dual-mode legality check in `option_legal_play_modes`.
+    pub(crate) fn link_host_candidates(
+        &self,
+        owner: PlayerId,
+        source_card: crate::card_source::CardHandle,
+        effects: &[crate::effect::Effect],
+    ) -> Vec<PermanentHandle> {
+        let mut out: Vec<PermanentHandle> = Vec::new();
+        for (i, perm) in self.player(owner).battle_area.iter().enumerate() {
+            let handle = PermanentHandle {
+                player: owner,
+                index: i as u8,
+            };
+            if !self.permanent_is_digimon_for_rules(handle) {
+                continue;
+            }
+            if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
+                continue;
+            }
+            let link_max =
+                (5 + self.modifiers.link_max_delta(handle)).clamp(0, u8::MAX as i32) as usize;
+            if perm.linked_cards.len() >= link_max {
+                continue;
+            }
+            let filter_ok = effects
+                .iter()
+                .find(|e| e.link_cost.is_some())
+                .map_or(true, |link_effect| {
+                    if let Some(f) = &link_effect.link_filter {
+                        let read_ctx = EffectReadContext::new(self, source_card, None, owner);
+                        f(&read_ctx, handle)
+                    } else {
+                        true
+                    }
+                });
+            if filter_ok {
+                out.push(handle);
+            }
+        }
+        out
+    }
+
+    /// The set of play modes `player_id` may **afford** for `card` right
+    /// now. A dual-mode Plug-In Option yields `[Standard, Link]` when both
+    /// fit the memory budget (the player then picks via the mode-select);
+    /// a single affordable mode plays directly; an empty result means the
+    /// Option cannot be played at all.
+    ///
+    /// Only affordability is filtered here — host availability for a Link
+    /// play is resolved later by `dispose_option` (a Link play with no
+    /// eligible host trashes the card, identical to a single-mode Link
+    /// Option). This keeps `PLAY_HAND` masking and the mode-select offer
+    /// consistent with the engine's existing Link-Option contract.
+    pub(crate) fn option_legal_play_modes(
+        &self,
+        card: &CardSource,
+        player_id: PlayerId,
+    ) -> Vec<OptionPlayMode> {
+        let effects = self
+            .effects_for_card(card.card_id(&self.card_data), card.handle())
+            .unwrap_or_default();
+        let use_cost = card
+            .option_use_cost(&self.card_data)
+            .unwrap_or_else(|| card.play_cost(&self.card_data));
+        let memory_min = self.rules.memory_range.0;
+        classify_option_modes(&effects)
+            .into_iter()
+            .filter(|mode| {
+                let cost = match mode {
+                    OptionPlayMode::Link { cost } => (*cost as i32
+                        + self.modifiers.link_cost_delta_for_player(player_id))
+                    .max(0) as i16,
+                    _ => use_cost as i16,
+                };
+                (self.memory - cost) >= memory_min
+            })
+            .collect()
+    }
+
     /// Play an Option card from `player`'s hand.
     ///
-    /// Phase 8 Task 2 — Standard Option pipeline:
+    /// Pipeline:
     /// 1. Validate phase / hand index / card kind / color match.
-    /// 2. Compute + pay cost (honors BeforePayCost reductions).
-    /// 3. Move card out of hand into `pending_option`.
-    /// 4. Fire `OnUseOption` global observer (every battle area) + this
-    ///    card's `OptionMain` body, drain the queue.
-    /// 5. If a `PendingSelection` parked inside the body, return `Pending`
-    ///    — caller drives the selection; `dispose_option` re-enters
-    ///    via the post-resolution path once the selection resolves.
-    /// 6. Otherwise dispose (Standard → trash; Delay → park on field) and
-    ///    `check_turn_end`.
-    ///
-    /// Delay / Link / Training dispatch lands in Tasks 3/4/5. For Task 2
-    /// every Option is treated as Standard — the specialized dispatch
-    /// looks at the fired effect's flags in the `option_main` body and
-    /// parks a different `OptionResolutionPhase`.
+    /// 2. Resolve the play mode — a dual-mode Plug-In Option (Standard
+    ///    `[Main]` + Link) surfaces a mode-select prompt first.
+    /// 3. Compute + pay the mode's cost (honors BeforePayCost reductions
+    ///    for Standard; the flat link cost for Link).
+    /// 4. Move card out of hand into `pending_option`.
+    /// 5. Fire `OnUseOption`; for non-Link modes also fire the `OptionMain`
+    ///    body. Drain the queue.
+    /// 6. If a `PendingSelection` parked, return `Pending` — the caller
+    ///    drives the selection; `dispose_option` re-enters via the
+    ///    post-resolution path once it resolves.
+    /// 7. Otherwise dispose per the resolved subtype and `check_turn_end`.
     pub fn play_option_from_hand(
         &mut self,
         player_id: PlayerId,
         hand_index: usize,
     ) -> OptionPlayResult {
-        self.play_option_core(player_id, OptionSource::Hand(hand_index))
+        self.play_option_core(player_id, OptionSource::Hand(hand_index), None)
     }
 
     /// Play an Option card from `player`'s trash (effect-driven).
@@ -975,13 +1107,22 @@ impl Game {
         {
             return OptionPlayResult::Invalid;
         }
-        self.play_option_core(player_id, OptionSource::Trash(trash_index))
+        self.play_option_core(player_id, OptionSource::Trash(trash_index), None)
     }
 
-    /// Shared Option-play pipeline. Forks only on source zone — every other
-    /// step (cost, OnUseOption + OptionMain, dispose) is identical between
-    /// hand- and trash-sourced plays.
-    fn play_option_core(&mut self, player_id: PlayerId, source: OptionSource) -> OptionPlayResult {
+    /// Shared Option-play pipeline. Forks on source zone (hand vs trash)
+    /// and on the resolved play mode (Standard / Delay / Link / Training).
+    ///
+    /// `chosen_mode` is `None` for a fresh play; for a dual-mode Plug-In
+    /// Option the first call installs a mode-select `pending_selection` and
+    /// returns `Pending`, and the selection callback re-enters with the
+    /// chosen mode as `Some(_)`.
+    fn play_option_core(
+        &mut self,
+        player_id: PlayerId,
+        source: OptionSource,
+        chosen_mode: Option<OptionPlayMode>,
+    ) -> OptionPlayResult {
         debug_assert!(
             self.pending_option.is_none(),
             "reentrant Option play while another is mid-resolution"
@@ -1044,7 +1185,46 @@ impl Game {
             )
         };
 
-        // 3. Compute + pay cost (Phase 5 BeforePayCost hooks).
+        // 3. Resolve the play mode. A dual-mode Plug-In Option (both a
+        // Standard `[Main]` Option and a Link Option) surfaces a
+        // mode-select prompt; its callback re-enters here with the chosen
+        // mode. Cost, `OptionMain` firing, and disposal all fork on it.
+        let mode = match chosen_mode {
+            Some(mode) => mode,
+            // Counter-window plays are always Standard counter Options;
+            // dual-mode Plug-Ins are never counter Options.
+            None if self.in_counter_window => OptionPlayMode::Standard,
+            None => {
+                let legal_modes = {
+                    let player = self.player(player_id);
+                    let card = match source {
+                        OptionSource::Hand(i) => &player.hand[i],
+                        OptionSource::Trash(i) => &player.trash[i],
+                    };
+                    self.option_legal_play_modes(card, player_id)
+                };
+                match legal_modes.as_slice() {
+                    [] => return OptionPlayResult::Invalid,
+                    [single] => *single,
+                    _ => {
+                        // Dual-mode: park a mode-select; the callback
+                        // re-enters with the chosen mode.
+                        self.install_option_mode_select(
+                            player_id,
+                            source,
+                            card_handle,
+                            legal_modes,
+                        );
+                        return OptionPlayResult::Pending;
+                    }
+                }
+            }
+        };
+
+        // 4. Compute + pay cost (Phase 5 BeforePayCost hooks). For a
+        // dual-mode card the first call returns at the mode-select above,
+        // so the BeforePayCost scan runs exactly once — on the re-entry
+        // with the chosen mode.
         // Pass the option's hand/trash handle as the cost-target so target-
         // aware predicates and observers can fire — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET.
         let cost_target_ctx = CostTargetContext {
@@ -1060,21 +1240,24 @@ impl Game {
         );
         // Observer dispatch — G-BEFORE-PAY-COST-GAIN-MEMORY.
         self.scan_before_pay_cost_observers(player_id, Some(cost_target_ctx));
-        let base_cost = printed_cost as i32;
-        let link_cost = self
-            .effects_for_card(&card_id, card_handle)
-            .unwrap_or_default()
-            .iter()
-            .find_map(|effect| effect.link_cost)
-            .unwrap_or(0);
-        let modified_link_cost =
-            (link_cost as i32 + self.modifiers.link_cost_delta_for_player(player_id)).max(0) as u16;
-        let effective_cost = (base_cost - total_reduction).max(0) as u16 + modified_link_cost;
+        let effective_cost = match mode {
+            // Link Requirements: pay exactly the link cost (plus any
+            // `ChangeLinkCost` modifier delta). The printed Option use cost
+            // and BeforePayCost `OptionUse` reductions do not apply when
+            // plugging the card in via Link Requirements.
+            OptionPlayMode::Link { cost } => (cost as i32
+                + self.modifiers.link_cost_delta_for_player(player_id))
+            .max(0) as u16,
+            // Standard / Delay / Training: the printed use cost, less any
+            // BeforePayCost reduction.
+            _ => ((printed_cost as i32) - total_reduction).max(0) as u16,
+        };
         if !self.pay_memory(effective_cost) {
             return OptionPlayResult::Invalid;
         }
 
-        // 4. Remove from source zone, install PendingOption.
+        // 5. Remove from source zone, install PendingOption with the
+        // resolved subtype (so `dispose_option` need not re-classify).
         let card = match source {
             OptionSource::Hand(i) => self.player_mut(player_id).hand.remove(i),
             OptionSource::Trash(i) => self.player_mut(player_id).trash.remove(i),
@@ -1084,9 +1267,10 @@ impl Game {
             card,
             source_kind,
             resolution_phase: OptionResolutionPhase::MainEffectDrain,
+            subtype: mode.subtype(),
         });
 
-        // 5. Fire OnUseOption (global observer across every battle area) +
+        // 6. Fire OnUseOption (global observer across every battle area) +
         // OptionMain (this card's body). Drain between — OnUseOption fires
         // first per spec §4 (global observer fires before body).
         for pid in 0..self.players.len() {
@@ -1114,10 +1298,16 @@ impl Game {
             }
         }
 
-        self.enqueue_option_main_from_pending(&card_id, card_handle, player_id);
+        // Fire the `OptionMain` body for the resolved mode. A Standard /
+        // Delay / Training play runs the non-link `[Main]` body; a Link play
+        // runs only the link-declaration effect (which may itself carry a
+        // body — e.g. a Link Option whose `.link(..).process(..)` does the
+        // plug-in's work). This split is what keeps a dual-mode Plug-In's
+        // Standard `[Main]` body from firing on a Link play, and vice versa.
+        self.enqueue_option_main_from_pending(&card_id, card_handle, player_id, mode.is_link());
         self.drain_effect_queue();
 
-        // 6. If an effect parked a selection, suspend and let the caller drive.
+        // 7. If an effect parked a selection, suspend and let the caller drive.
         if self.pending_selection.is_some() {
             return OptionPlayResult::Pending;
         }
@@ -1126,7 +1316,7 @@ impl Game {
             return OptionPlayResult::Pending;
         }
 
-        // 7. Dispose per subtype (Standard → trash; Delay → park on field;
+        // 8. Dispose per subtype (Standard → trash; Delay → park on field;
         // Link → install host-selection). `dispose_option` may install a
         // PendingSelection (Link flow); if so, return Pending and defer
         // check_turn_end until `attach_linked_card` finishes the attach.
@@ -1136,6 +1326,69 @@ impl Game {
         }
         self.check_turn_end();
         OptionPlayResult::Trashed
+    }
+
+    /// Install the dual-mode mode-select prompt for a Plug-In Option that
+    /// is both a Standard `[Main]` Option and a Link Option. `legal_modes`
+    /// holds the modes the player may legally choose right now — this is
+    /// reached only when there are two (a single legal mode plays
+    /// directly). The selection callback re-enters `play_option_core` with
+    /// the chosen mode. The mode-select surfaces as a normal
+    /// `pending_selection`, so every legal play mode is exposed to the
+    /// action space (no-approximations policy).
+    fn install_option_mode_select(
+        &mut self,
+        player_id: PlayerId,
+        source: OptionSource,
+        card_handle: crate::card_source::CardHandle,
+        legal_modes: Vec<OptionPlayMode>,
+    ) {
+        use crate::action::space::HAND_EFFECT_START;
+
+        let mut valid_action_ids: Vec<u16> = Vec::with_capacity(legal_modes.len());
+        let mut choices: Vec<crate::selection::EffectChoiceEntry> =
+            Vec::with_capacity(legal_modes.len());
+        for (i, mode) in legal_modes.iter().enumerate() {
+            let action_id = HAND_EFFECT_START + i as u16;
+            valid_action_ids.push(action_id);
+            let label = match mode {
+                OptionPlayMode::Link { cost } => {
+                    format!("Plug in via Link Requirements (Cost {cost})")
+                }
+                _ => "Play as a [Main] Option".to_string(),
+            };
+            choices.push(crate::selection::EffectChoiceEntry {
+                label,
+                action_id,
+                source_card: Some(card_handle),
+                source_kind: Some(EffectSourceKind::Option),
+                timing: None,
+                is_optional: false,
+                observation_metadata: Default::default(),
+            });
+        }
+
+        let modes = legal_modes;
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::EffectChoice,
+            selecting_player: player_id,
+            previous_phase,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Choose how to play this Plug-In Option".to_string(),
+            effect_choices: Some(choices),
+            source_card: card_handle,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Option,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let index = action_id.saturating_sub(HAND_EFFECT_START) as usize;
+                let mode = modes.get(index).copied().unwrap_or(OptionPlayMode::Standard);
+                let _ = game.play_option_core(player_id, source, Some(mode));
+            }),
+            on_decline: None,
+        });
     }
 
     pub(crate) fn pending_option_can_arts_digivolve(&self) -> bool {
@@ -1415,6 +1668,7 @@ impl Game {
         card_id: &str,
         card_handle: crate::card_source::CardHandle,
         owner: PlayerId,
+        link_mode: bool,
     ) {
         let Some(effects) = self.effects_for_card(card_id, card_handle) else {
             return;
@@ -1425,17 +1679,14 @@ impl Game {
             if effect.timing != EffectTiming::OptionMain {
                 continue;
             }
-            // Skip link-metadata-only effects: those with a `link_cost` but
-            // NO `process` closure. These are `link_requirement` DSL clauses
-            // that carry the link cost and filter for cost computation /
-            // classify_option_subtype / dispose_option candidate filtering —
-            // they have no executable body and enqueuing them would produce a
-            // spurious TriggerOrder multi-bundle prompt.
-            //
-            // Effects that have BOTH a `link_cost` and a `process` closure
-            // (e.g. raw-Rust `LinkToAnyDigimon`-style effects) are real body
-            // effects and must NOT be skipped.
-            if effect.link_cost.is_some() && effect.process.is_none() {
+            // Fork on the resolved play mode. A link-declaration effect
+            // (`link_cost.is_some()` — DSL `link_requirement` or a
+            // hand-written `.link(..).process(..)` Link Option) belongs to
+            // the Link play; a non-link `OptionMain` effect is the Standard
+            // `[Main]` body. Enqueuing only the matching set keeps a
+            // dual-mode Plug-In's two bodies from cross-firing — and avoids
+            // a spurious `TriggerOrder` prompt between them.
+            if effect.link_cost.is_some() != link_mode {
                 continue;
             }
             self.effect_queue.push_back(QueuedEffect {
@@ -1534,7 +1785,10 @@ impl Game {
         let effects = self
             .effects_for_card(&card_id, pending.card.handle())
             .unwrap_or_default();
-        let subtype = classify_option_subtype(&effects);
+        // The disposal subtype was fixed at play time (`play_option_core`
+        // stores the resolved mode on `pending_option`) — a dual-mode
+        // Plug-In Option must not be re-classified here.
+        let subtype = pending.subtype;
 
         match subtype {
             OptionSubtype::Standard => {
@@ -1568,6 +1822,7 @@ impl Game {
                         card: pending.card,
                         source_kind: pending.source_kind,
                         resolution_phase: OptionResolutionPhase::Disposing,
+                        subtype: pending.subtype,
                     });
                     return;
                 }
@@ -1607,52 +1862,15 @@ impl Game {
             }
             OptionSubtype::Link => {
                 // Phase 8 Task 4: evaluate link_filter against every
-                // Standard-state Digimon on the owner's battle_area. If no
-                // candidate passes, trash the card silently (mirrors "no
-                // legal target" for other effect selections). Otherwise
-                // install a PendingSelection routed to `attach_linked_card`
-                // and park `pending_option` in `LinkSelectHost`.
+                // Standard-state Digimon on the owner's battle_area (shared
+                // helper `link_host_candidates`). If no candidate passes,
+                // trash the card silently (mirrors "no legal target" for
+                // other effect selections). Otherwise install a
+                // PendingSelection routed to `attach_linked_card` and park
+                // `pending_option` in `LinkSelectHost`.
                 let owner = pending.owner;
                 let source_card = pending.card.handle();
-                let candidates = {
-                    let owner_player = self.player(owner);
-                    let mut out: Vec<PermanentHandle> = Vec::new();
-                    for (i, perm) in owner_player.battle_area.iter().enumerate() {
-                        let handle = PermanentHandle {
-                            player: owner,
-                            index: i as u8,
-                        };
-                        if !self.permanent_is_digimon_for_rules(handle) {
-                            continue;
-                        }
-                        if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
-                            continue;
-                        }
-                        let link_max = (5 + self.modifiers.link_max_delta(handle))
-                            .clamp(0, u8::MAX as i32)
-                            as usize;
-                        if perm.linked_cards.len() >= link_max {
-                            continue;
-                        }
-                        // Find a link effect; evaluate its filter.
-                        let filter_ok = effects.iter().find(|e| e.link_cost.is_some()).map_or(
-                            true,
-                            |link_effect| {
-                                if let Some(f) = &link_effect.link_filter {
-                                    let read_ctx =
-                                        EffectReadContext::new(self, source_card, None, owner);
-                                    f(&read_ctx, handle)
-                                } else {
-                                    true
-                                }
-                            },
-                        );
-                        if filter_ok {
-                            out.push(handle);
-                        }
-                    }
-                    out
-                };
+                let candidates = self.link_host_candidates(owner, source_card, &effects);
 
                 if candidates.is_empty() {
                     self.player_mut(owner).trash.push(pending.card);
@@ -1667,6 +1885,7 @@ impl Game {
                     card: pending.card,
                     source_kind: pending.source_kind,
                     resolution_phase: OptionResolutionPhase::LinkSelectHost,
+                    subtype: pending.subtype,
                 });
                 self.install_link_host_selection(owner, source_card, candidates, false);
             }

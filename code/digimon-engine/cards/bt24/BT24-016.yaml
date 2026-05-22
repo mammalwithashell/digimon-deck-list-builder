@@ -7,44 +7,108 @@ cost: 7
 dp: 7000
 traits: [Dragonkin, LIBERATOR]
 
-# Standard digivolution from any Lv4 (cost 3 from battlearea).
-# Alt activated-digivolve path: [Hand][Main] requires Owen Dreadnought in
-# play. AltPathSpec now carries a `condition:` field (G-ALT-PATH-CONDITION
-# RESOLVED 2026-05-15 — see qa/resolved-gaps.md) consumed by the
-# Digivolve route in dna_digivolve.rs. The Owen gate is NOT wired here:
-# authoring the predicate for this card is card-local follow-up.
-# Currently the gate is partially enforced by the `from:` filter
-# (Elizamon must be on field) and the `extra_cost` select_trash
-# (Dimetromon must be in trash); Owen presence is not checked.
+# Standard digivolution: from any Lv.4, cost 3 (printed default digivolve path).
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4 }
     cost: 3
 
-  - kind: activated_digivolve
-    from:
-      of: you
-      zone: [battle_area]
-      name_contains: "Elizamon"
-    cost: 3
-    ignore_requirements: true
-    extra_cost:
+effects:
+  # ─── Clause 1: [Hand] [Main] activated digivolve ─────────────────────────────
+  #
+  # "If you have [Owen Dreadnought], by placing 1 [Dimetromon] from your trash as
+  # any of your [Elizamon]'s bottom digivolution card, it digivolves into this
+  # card for a digivolution cost of 3, ignoring digivolution requirements."
+  #
+  # DCGO models this as a `[Hand][Main]` activated effect. It is modelled here as
+  # a `when: main_from_hand` triggered clause (the engine masks a Hand [Main]
+  # action for any hand card with a `MainFromHand` effect whose `condition`
+  # passes, and `activate_hand_main` runs it for any card kind). The body:
+  #   1. select the [Elizamon] target permanent,
+  #   2. select a [Dimetromon] from trash (the printed cost),
+  #   3. place that Dimetromon as the Elizamon's bottom digivolution card,
+  #   4. `effect_initiated_digivolve` — Lamiamon (this card, in hand) digivolves
+  #      onto the Elizamon at cost 3, ignoring digivolution requirements.
+  # `effect_initiated_digivolve` fires `WhenDigivolving`, so clause 2 fires as it
+  # should.
+  #
+  # `condition:` gates the masked action on "If you have [Owen Dreadnought]" (a
+  # Tamer permanent named "Owen Dreadnought" on your battle area — DCGO `IsOwen`)
+  # AND on an [Elizamon] being on your battle area (the digivolve target must
+  # exist). The Dimetromon-in-trash cost is enforced inside the body: the
+  # mandatory `select_trash` finds no candidate when the trash holds no
+  # Dimetromon, and the `if binding_present` gate then skips the place + digivolve
+  # so the cost is never half-paid.
+  #
+  # G-ACTIVATED-DIGIVOLVE-EXECUTION: the `kind: activated_digivolve` alt-path
+  # kind has no engine execution route; this clause re-models the same printed
+  # effect with `main_from_hand` + `effect_initiated_digivolve`, which the engine
+  # fully supports. See the `unblock-medusamon-tier3-cards` change design.md (D1).
+  - when: main_from_hand
+    summary: "[Hand][Main] If you have Owen Dreadnought: place a Dimetromon from trash under your Elizamon, then digivolve into this card for cost 3"
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            name_is: "Owen Dreadnought"
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            name_contains: "Elizamon"
+    process:
+      # Step 1: choose which [Elizamon] to digivolve into.
+      - select_own_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Elizamon"
+          prompt: "Choose an Elizamon to digivolve into Lamiamon"
+      # Step 2: choose a [Dimetromon] from trash (the printed cost).
       - select_trash:
           of: you
-          bind_as: source
+          bind_as: dimetromon
           filter: { name_contains: "Dimetromon" }
-          prompt: "Select a Dimetromon from trash to place as bottom source"
-      - place_as_bottom_source:
-          source: source
-          target: { binding: activated_digivolve_target }
+          prompt: "Place a Dimetromon from your trash as the Elizamon's bottom digivolution card"
+      # Steps 3-4: only when both the target and the Dimetromon cost are bound —
+      # place the Dimetromon as the Elizamon's bottom source, then digivolve.
+      - if:
+          condition:
+            all_of:
+              - binding_present: target
+              - binding_present: dimetromon
+          then:
+            - place_as_bottom_source:
+                source: dimetromon
+                target: target
+            - effect_initiated_digivolve:
+                target: target
+                from_hand: self
+                cost: 3
+                ignore_requirements: true
 
-effects:
-  # Clause 3: [When Digivolving][When Attacking][OPT]
-  # Opponent places 1 card from hand as their bottom security card,
-  # then you trash their top security card.
-  # Card text says opponent places (not optional for them), then you trash.
+  # ─── Clause 2: [When Digivolving] [When Attacking] [Once Per Turn] ──────────
+  #
+  # "Your opponent places 1 card from their hand as the bottom security card.
+  # Then, trash their top security card."
+  #
+  # The opponent places (mandatory for them — DCGO SelectHandEffect with
+  # canNoSelect: false), then you trash their top security card.
+  #
+  # `as_selecting_player: { of: opponent }` routes the select_hand prompt to the
+  # opponent so the placement is THEIR choice (no approximation / no auto-pick).
+  # G-AS-SELECTING-PLAYER: the `as_selecting_player` step is wired
+  # (code/digimon-engine/src/dsl_cards/step/as_selecting_player.rs) and proven
+  # by BT21-024's behavioral tests which exercise the identical
+  # as_selecting_player → select_hand → place_on_security → trash_top_security
+  # shape. `trash_top_security` is the printed "trash their top security card"
+  # (NOT the non-top G-TRASH-SELECTED-SECURITY gap).
   - when: [when_digivolving, when_attacking]
     once_per_turn: true
+    summary: "[When Digivolving][When Attacking][OPT] Opponent places hand card as bottom security; trash their top security"
     process:
       - as_selecting_player:
           of: opponent
@@ -52,23 +116,36 @@ effects:
             - select_hand:
                 of: opponent
                 bind_as: pick
+                optional: false
                 filter: {}
                 prompt: "Place a card from your hand as your bottom security card"
-      - place_on_security:
-          of: opponent
-          source: { binding: pick, zone: hand }
-          position: bottom
-          face_up: false
+            - place_on_security:
+                of: opponent
+                source: { binding: pick, zone: hand }
+                position: bottom
+                face_up: false
       - trash_top_security: { of: opponent }
 
-  # Clause 4: Inherited [All Turns][OPT] OnOpponentSecurityRemoved
-  # You may play 1 5000 DP or lower Reptile or Dragonkin Digimon from
-  # your hand without paying its cost.
+  # ─── Clause 3: Inherited [All Turns] [Once Per Turn] ───────────────────────
+  #
+  # "When your opponent's security stack is removed from, you may play 1
+  # 5000 DP or lower [Reptile] or [Dragonkin] Digimon card from your hand
+  # without paying the cost."
+  #
+  # G-INHERITED-DISPATCH RESOLVED 2026-05-17 (Phase 2 Track D) — inherited
+  # triggered effects dispatch from the digivolution stack. The clause is
+  # [All Turns] (active_when: all_turns: true) so it fires on BOTH players'
+  # turns when the opponent's security is removed.
+  #
+  # "you may" → optional: true. dp_lte: 5000 on the hand-card filter is
+  # honored (G-PRED-DP-LTE RESOLVED 2026-05-17 — dp_lte works on card-zone
+  # subjects incl. hand). Non-Digimon cards fail the dp_lte constraint.
   - scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     optional: true
     active_when: { all_turns: true }
+    summary: "[Inherited][All Turns][OPT] Opponent's security removed → may play a Reptile/Dragonkin Digimon (DP <= 5000) from hand free"
     process:
       - select_hand:
           of: you

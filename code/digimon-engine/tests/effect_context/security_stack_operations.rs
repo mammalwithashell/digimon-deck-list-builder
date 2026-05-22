@@ -256,6 +256,72 @@ fn trash_top_security_fires_opponent_security_removed_once() {
     assert_eq!(runner.game.players[1].trash.len(), 1);
 }
 
+// ─── trash_security_card (G-TRASH-SELECTED-SECURITY) ─────────────────────────
+
+#[test]
+fn trash_security_card_trashes_chosen_non_top_card_by_handle() {
+    // Three security cards: trash the BOTTOM one (index 0 — a non-top card),
+    // addressed by its stable handle. Proves G-TRASH-SELECTED-SECURITY trashes
+    // an arbitrary chosen card, not just the top.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("S0", "Sec0"))
+        .add_card(make_test_card("S1", "Sec1"))
+        .add_card(make_test_card("S2", "Sec2"))
+        .security(1, &["S0", "S1", "S2"])
+        .start();
+
+    let bottom_handle = runner.game.players[1].security[0].handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, CardHandle(0), None, 0);
+        assert!(
+            ctx.trash_security_card(1, bottom_handle),
+            "trashing a card present in the security stack returns true"
+        );
+    }
+
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        2,
+        "exactly the chosen card left the security stack"
+    );
+    assert!(
+        !runner.game.players[1]
+            .security
+            .iter()
+            .any(|c| c.handle() == bottom_handle),
+        "the chosen non-top card is no longer in security"
+    );
+    assert!(
+        runner.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.handle() == bottom_handle),
+        "the chosen card moved to its owner's trash"
+    );
+}
+
+#[test]
+fn trash_security_card_no_op_for_handle_not_in_security() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SEC", "Security"))
+        .security(1, &["SEC"])
+        .start();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, CardHandle(0), None, 0);
+        assert!(
+            !ctx.trash_security_card(1, CardHandle(9999)),
+            "a handle not in the security stack must be a no-op returning false"
+        );
+    }
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        1,
+        "no security card was trashed"
+    );
+}
+
 #[test]
 fn trash_top_security_fires_removed_cards_on_lose_security_once() {
     let mut runner = DebugRunner::builder()

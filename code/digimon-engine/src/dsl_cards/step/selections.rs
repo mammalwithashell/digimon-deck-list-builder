@@ -42,6 +42,18 @@ fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Opti
     })
 }
 
+fn formula_value(
+    formula: &digimon_dsl::compiled::CompiledFormula,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> i32 {
+    let target = ctx.source_permanent.unwrap_or(PermanentHandle {
+        player: ctx.player,
+        index: u8::MAX,
+    });
+    formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
+}
+
 fn collect_matching_permanents(
     ctx: &EffectContext<'_>,
     player: u8,
@@ -687,14 +699,15 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if !has_opponent_dp_budget_candidates(ctx, *dp_budget) {
+            let dp_budget = formula_value(dp_budget, ctx, &bindings);
+            if !has_opponent_dp_budget_candidates(ctx, dp_budget) {
                 return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
             install_select_opponent_dp_budget(
                 ctx,
-                *dp_budget,
+                dp_budget,
                 *min_picks,
                 bind_as.clone(),
                 prompt.clone(),
@@ -712,7 +725,8 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if !has_opponent_play_cost_budget_candidates(ctx, *play_cost_budget, filter, &bindings) {
+            if !has_opponent_play_cost_budget_candidates(ctx, *play_cost_budget, filter, &bindings)
+            {
                 return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
@@ -766,8 +780,9 @@ pub fn try_install(
                 match z {
                     CompiledZone::Hand => zoneset |= UnionZoneSet::HAND,
                     CompiledZone::Trash => zoneset |= UnionZoneSet::TRASH,
+                    CompiledZone::Material => zoneset |= UnionZoneSet::MATERIAL,
                     // Other zones not yet exposed by UnionZoneSet bitfield.
-                    // Silently skip — Phase 2f+ widens engine API as needed.
+                    // Silently skip — future tasks widen engine API as needed.
                     _ => {}
                 }
             }
@@ -2565,7 +2580,7 @@ fn install_select_union_zone(
             if let Some(name) = &bind_as {
                 // PUPPETS-G014: record the origin zone alongside the handle
                 // so a `play_union_bound_free` tail step can replay the card
-                // from its true zone (hand vs trash).
+                // from its true zone (hand, trash, or material).
                 b.insert_union_card(name, handle, origin, target_player);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
@@ -2781,9 +2796,8 @@ fn install_order_remainder(
         .iter()
         .map(|d| remainder_destination_label(*d).to_string())
         .collect();
-    let prompt = prompt.unwrap_or_else(|| {
-        "Place remaining cards on top or bottom of the deck?".to_string()
-    });
+    let prompt =
+        prompt.unwrap_or_else(|| "Place remaining cards on top or bottom of the deck?".to_string());
     let destinations_capture: Vec<CompiledRemainderDestination> = destinations;
     let tail_arc = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
@@ -2890,7 +2904,9 @@ fn place_remainder_in_order(
     match position {
         StackPosition::Top => {
             for handle in ordered.iter().rev() {
-                let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Top);
+                let placed =
+                    ctx.game
+                        .return_to_deck_from_reveal(player, *handle, StackPosition::Top);
                 debug_assert!(
                     placed,
                     "place_remainder_in_order: handle {:?} not found in revealed_cards",
@@ -2900,7 +2916,9 @@ fn place_remainder_in_order(
         }
         StackPosition::Bottom => {
             for handle in ordered.iter() {
-                let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Bottom);
+                let placed =
+                    ctx.game
+                        .return_to_deck_from_reveal(player, *handle, StackPosition::Bottom);
                 debug_assert!(
                     placed,
                     "place_remainder_in_order: handle {:?} not found in revealed_cards",
@@ -2910,7 +2928,9 @@ fn place_remainder_in_order(
         }
         StackPosition::Random => {
             for handle in ordered.iter() {
-                let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Random);
+                let placed =
+                    ctx.game
+                        .return_to_deck_from_reveal(player, *handle, StackPosition::Random);
                 debug_assert!(
                     placed,
                     "place_remainder_in_order: handle {:?} not found in revealed_cards",

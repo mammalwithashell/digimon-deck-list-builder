@@ -402,17 +402,31 @@ pub fn try_run(
             }
             true
         }
-        CompiledStep::ReturnTrashListToDeckBottom { of, cards } => {
-            // G-ZONE-TRASH-TO-DECK — move exactly the bound card list out of
-            // trash to the bottom of the deck, leaving the rest of the trash
-            // untouched.
+        CompiledStep::ReturnTrashListToDeckBottom { of, cards, to_top } => {
+            // G-ZONE-TRASH-TO-DECK / G-ZONE-SELECTED-TRASH-TO-DECK-TOP — move
+            // exactly the bound card list out of trash to the deck top or
+            // bottom, leaving the rest of the trash untouched. Accepts a
+            // card-list binding (e.g. from `select_count_capped_multi`), a
+            // single card, or a `select_trash` slot index.
             let player = resolve_player(ctx, *of);
-            let handles = match resolve_binding_ref(cards, ctx, bindings) {
+            let handles: Vec<_> = match resolve_binding_ref(cards, ctx, bindings) {
                 Some(ResolvedBinding::CardList(v)) => v,
                 Some(ResolvedBinding::Card(h)) => vec![h],
+                Some(ResolvedBinding::TrashIndex(owner, i)) => ctx
+                    .game
+                    .player(owner)
+                    .trash
+                    .get(i as usize)
+                    .map(|cs| cs.handle())
+                    .into_iter()
+                    .collect(),
                 _ => Vec::new(),
             };
-            let moved = ctx.return_trash_cards_to_deck_bottom(player, &handles);
+            let moved = if *to_top {
+                ctx.return_trash_cards_to_deck_top(player, &handles)
+            } else {
+                ctx.return_trash_cards_to_deck_bottom(player, &handles)
+            };
             for h in moved {
                 bindings.record_returned_to_deck(h);
             }

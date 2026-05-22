@@ -233,10 +233,10 @@ Selections are the heart of agent-safe card scripting. They install a `PendingSe
 Use:
 
 - Field permanents: `select_own_permanent`, `select_opponent_permanent`, `select_any_permanent`, `select_own_breeding_permanent`.
-- Zones: `select_hand`, `select_trash`, `select_security`, `select_union_zone`. A `select_union_zone` pick (hand ∪ trash) records the **origin zone** of the chosen card in its `bind_as` binding, not just the card handle. Pair it with `play_union_bound_free: { binding: <name>, bind_as: <opt> }` to replay that card for free from its true zone (`play_from_hand_free` for a hand pick, `play_from_trash` Free for a trash pick). If the `select_union_zone` is `optional`, declining still runs all mandatory tail steps.
+- Zones: `select_hand`, `select_trash`, `select_security`, `select_union_zone`. A `select_union_zone` pick (hand ∪ trash ∪ material) records the **origin zone** of the chosen card in its `bind_as` binding, not just the card handle. Pair it with `play_union_bound_free: { binding: <name>, bind_as: <opt> }` to replay that card for free from its true zone (`play_from_hand_free` for hand, `play_from_trash` Free for trash, `play_from_materials` Free for material under the source permanent). If the `select_union_zone` is `optional`, declining still runs all mandatory tail steps.
 - Reveal pools: `select_reveal`, `select_reveal_buckets`, `select_ordered_permutation`, `select_count_capped_multi`.
 - Stacks / sources: `select_own_sources`, `select_opponent_sources` (opponent-side mirror of `select_own_sources` — player-visible exact-N / up-to-N pick of digivolution-source cards across the **opponent's** battle-area stacks; same `min` / `max`, PASS-after-min, optional `filter:`, optional `target:` to restrict to one opponent permanent binding, stable cross-permanent refs, and `then:` tail; drives BT16-085's DNA branch "trash any 3 digivolution cards under your opponent's Digimon"), `select_material`, `digi_burst` (Burst-style material picks), `select_dna_pair`.
-- Modal / cost shapes: `select_effect_choice` for printed modal choices, `select_opponent_dp_budget` for "delete Digimon up to DP X total".
+- Modal / cost shapes: `select_effect_choice` for printed modal choices, `select_opponent_dp_budget` for "delete Digimon up to DP X total". `dp_budget` accepts a literal or a formula such as `{ source_dp: {} }` for "this Digimon's DP"; `min_picks: 1` hides PASS until at least one target is selected.
 - `as_selecting_player` to flip the selector to the opponent (e.g. "your opponent chooses").
 
 Example modal branch:

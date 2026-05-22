@@ -1,3 +1,43 @@
+# BT23-005 Elizamon — Digimon, Lv.3, Red, DP 1000, Cost 0.
+# Traits: Reptile, LIBERATOR.
+# Evo costs: Lv.2 Red / cost 0.
+#
+# Printed effect text (data/cards.json — verbatim):
+#   [Your Turn] When this Digimon would digivolve into a Digimon card with the
+#   [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.
+#
+# Inherited effect text (data/cards.json — verbatim):
+#   [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT23/Red/BT23_005.cs
+#
+# ─── Faithfulness diff vs. card text ─────────────────────────────────────────
+#
+# | Card-text element                                                | Status |
+# |------------------------------------------------------------------|--------|
+# | [Your Turn] When digivolving into [Reptile]/[Dragonkin] → cost -1 | IMPLEMENTED — Phase 2 Track H (cost_target + source_is_cost_target_permanent) |
+# | Inherited [Your Turn] This Digimon gets +2000 DP                  | IMPLEMENTED — declarative self-aura |
+#
+# ─── Clause 1 — IMPLEMENTED [Phase 2 Track H] ───────────────────────────────
+#
+# Closed by Phase 2 Track H (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET, resolved
+# 2026-05-17). The DSL now exposes `cost_target: { ... }` — a nested predicate
+# evaluated against the digivolve-target card during BeforePayCost cost-calc
+# dispatch — and `source_is_cost_target_permanent: true` to gate on "THIS
+# permanent (Elizamon) is the one being digivolved into". DCGO BT23_005.cs gates
+# the trigger on `PermanentCondition` (the digivolving permanent IS Elizamon's
+# permanent) plus `HasProperTrait` (target card is a Digimon with Reptile or
+# Dragonkin). Not [Once Per Turn] — DCGO `SetUpActivateClass(..., -1, ...)`
+# (max-count -1 = unlimited) and the printed text has no OPT annotation.
+#
+# ─── Clause 2 — IMPLEMENTED ─────────────────────────────────────────────────
+#
+# Inherited [Your Turn] +2000 DP self-aura. The DSL self-aura (empty target
+# predicate) with `scope: inherited` sets the static `dp_modifier` on the
+# Effect; `Game::source_dp_contribution` reads it. `active_when: { your_turn:
+# true }` gates it to the controller's turn.
+
 card: BT23-005
 name: Elizamon
 kind: digimon
@@ -6,26 +46,33 @@ color: [red]
 cost: 0
 dp: 1000
 traits: [Reptile, LIBERATOR]
+
 alt_paths:
   - kind: digivolve
     from: { level_eq: 2 }
     cost: 0
 
-# Clause 1 — [Your Turn] cost reduction on self-digivolve into Reptile/Dragonkin.
-# BLOCKED: DSL lacks a `when_this_digivolves_into` + `target_trait_has` trigger.
-# `CostReductionBody` only supports `when_playing_this` (play from hand) and
-# `when_any_ally_played` (observer on ally entering field). There is no knob for
-# "when THIS permanent is the source being digivolved FROM and the target card
-# has trait X". The engine's `scan_before_pay_cost_reduction` receives no
-# information about the digivolution target card, so the condition closure cannot
-# filter by the target's traits. Logged to qa/dsl-vocab-gaps.md.
-#
-# Clause 2 — [Inherited] [Your Turn] This Digimon gets +2000 DP.
-# The DSL self-aura (empty target predicate) with scope: inherited sets the
-# static `dp_modifier` field on the Effect, which `source_dp_contribution` reads.
-# `active_when: { your_turn: true }` gates it to the controller's turn.
-
 effects:
+  # ─── Clause 1 — [Your Turn] cost reduction on digivolve into Reptile/Dragonkin
+  # `trait_has` is a single string, so the Reptile-OR-Dragonkin requirement is
+  # expressed with `any_of`. `kind: digimon` mirrors DCGO's `source.IsDigimon`
+  # guard in `HasProperTrait`.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Reptile
+                  - trait_has: Dragonkin
+    amount: 1
+    summary: "[Your Turn] When digivolving into [Reptile]/[Dragonkin] Digimon, reduce digivolution cost by 1"
+
+  # ─── Clause 2 — Inherited [Your Turn] This Digimon gets +2000 DP ────────────
   - scope: inherited
     kind: aura
     active_when: { your_turn: true }

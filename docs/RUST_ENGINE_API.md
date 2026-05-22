@@ -4025,10 +4025,10 @@ pub fn select_union_zone<F, C>(
 )
 where
     F: Fn(&Game, &CardSource) -> bool + Send + Sync + 'static,
-    C: FnOnce(&mut EffectContext<'_>, CardHandle) + Send + Sync + 'static,
+    C: FnOnce(&mut EffectContext<'_>, CardHandle, UnionZoneOrigin) + Send + Sync + 'static,
 ```
 
-**Semantics.** Installs a single `PendingSelection` that lets the active player choose one card from the player's hand, trash, materials, or a combination of those zones (per the `zones` bitset). The selection reuses existing action ranges — hand picks map to `PLAY_HAND_START + i`, trash picks map to `TRASH_EFFECT_START + i`, and material picks map to `SOURCE_SELECT_START + field * SOURCES_PER_FIELD + source_index` — so no new action range is needed. The resolver classifies the incoming `action_id` by range and reconstructs the `CardHandle` from the appropriate zone. The callback receives a zone-agnostic `CardHandle`, so call-sites do not need to branch on the source zone.
+**Semantics.** Installs a single `PendingSelection` that lets the active player choose one card from the player's hand, trash, materials, or a combination of those zones (per the `zones` bitset). The selection reuses existing action ranges — hand picks map to `PLAY_HAND_START + i`, trash picks map to `TRASH_EFFECT_START + i`, and material picks map to `SOURCE_SELECT_START + field * SOURCES_PER_FIELD + source_index` — so no new action range is needed. The resolver classifies the incoming `action_id` by range and reconstructs the `CardHandle` from the appropriate zone. The callback receives both the `CardHandle` and `UnionZoneOrigin`; DSL bindings preserve that origin so `play_union_bound_free` can replay from hand, trash, or source material faithfully.
 
 **Filter signature difference vs `select_hand`/`select_trash`.** The filter here is `Fn(&Game, &CardSource) -> bool` — zone-agnostic. `select_hand` and `select_trash` take `Fn(&Game, usize) -> bool` (index-based). This lets cross-zone predicates (e.g. "any Digimon with level ≥ 5") be expressed without duplicating logic.
 
@@ -4046,11 +4046,12 @@ Effect::on_play(card)
             "Choose a Digimon from your hand or trash",
             false,  // not optional
             |_g, cs| cs.is_digimon(),
-            |ctx, handle| {
+            |ctx, handle, origin| {
                 let me = ctx.player;
-                // handle is zone-agnostic; add_to_hand_from_trash / from_hand routes internally
-                ctx.add_to_hand_from_trash(me, handle);
-                // (hand→hand is a no-op; a complete script would check zone)
+                // Branch on `origin` when the follow-up action differs by zone.
+                if matches!(origin, UnionZoneOrigin::Trash) {
+                    ctx.add_to_hand_from_trash(me, handle);
+                }
             },
         )
     })
@@ -4359,7 +4360,7 @@ pub struct EffectContextSelectorScope<'a, 'g> {
 | `select_effect_choice` | Arbitrary N-option branch, chosen by opponent |
 | `select_hand` | Picks from a zone of the effect-controller's hand |
 | `select_trash` | Same, trash |
-| `select_union_zone` | Cross-zone (hand or trash) with opponent as chooser |
+| `select_union_zone` | Cross-zone (hand, trash, or material) with opponent as chooser |
 | `select_count_capped_multi` | Up-to-N multi-pick with opponent as chooser |
 | `select_ordered_permutation` | Permutation ordered by the opponent |
 

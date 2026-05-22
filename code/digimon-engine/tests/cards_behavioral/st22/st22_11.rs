@@ -20,12 +20,12 @@ use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, Keyword};
-use digimon_engine::selection::OptionPlayResult;
+use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 // ─── Card-data factories ─────────────────────────────────────────────────────
 
@@ -81,6 +81,45 @@ fn make_lv3_digimon(id: &str) -> CardData {
     c.play_cost = 3;
     c.colors = vec![CardColor::Red];
     c
+}
+
+// ─── Dual-mode helpers ───────────────────────────────────────────────────────
+
+/// True when a dual-mode mode-select prompt (EffectChoice) is currently
+/// installed. ST22-11 carries both a Standard `[Main]` body and a
+/// `link_requirement` clause, so playing it from hand surfaces a mode-select
+/// before either body runs — identical to ST22-08's dual-mode behaviour.
+fn mode_select_pending(runner: &DebugRunner) -> bool {
+    matches!(
+        runner.game.pending_selection.as_ref().map(|s| &s.kind),
+        Some(SelectionKind::EffectChoice)
+    )
+}
+
+/// Play ST22-11 from hand index 0 in Standard `[Main]` mode.
+///
+/// The dual-mode mode-select prompt is resolved automatically by choosing the
+/// first choice (`HAND_EFFECT_START + 0` = Standard `[Main]`). Returns the
+/// `OptionPlayResult` of the initial `play_option_from_hand` call; after this
+/// function returns the next `pending_selection` (if any) is the first prompt
+/// from the Standard `[Main]` body (the optional link-host selection).
+fn play_st22_11_standard(runner: &mut DebugRunner) -> OptionPlayResult {
+    let result = runner.game.play_option_from_hand(0, 0);
+    if mode_select_pending(runner) {
+        // Dual-mode: pick Standard `[Main]` Option (choice index 0).
+        let ids = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids
+            .clone();
+        runner
+            .game
+            .resolve_selection(0, ids[0])
+            .expect("resolve mode-select: choose Standard [Main]");
+    }
+    result
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -335,6 +374,10 @@ fn st22_11_security_adds_to_hand_even_without_opponent_digimon() {
 
 /// Playing ST22-11 from hand installs a pending selection (the optional
 /// link_to_own_digimon prompt). PASS is a valid action (link is optional).
+///
+/// ST22-11 is dual-mode (Standard [Main] + Link Requirements), so playing it
+/// surfaces a mode-select prompt first. We resolve that by choosing Standard,
+/// then the link-host selection appears with is_optional == true.
 #[test]
 fn st22_11_main_link_selection_is_optional_with_pass() {
     let mut runner = DebugRunner::builder()
@@ -347,16 +390,20 @@ fn st22_11_main_link_selection_is_optional_with_pass() {
 
     runner.place_on_field(0, "DIGI", Some(0));
 
-    let result = runner.game.play_option_from_hand(0, 0);
+    // ST22-11 is dual-mode — play_option_from_hand returns Pending on the
+    // mode-select prompt. play_st22_11_standard resolves that automatically.
+    let result = play_st22_11_standard(&mut runner);
     assert_eq!(
         result,
         OptionPlayResult::Pending,
-        "link_to_own_digimon must install a pending selection"
+        "play must park (mode-select or link-host selection)"
     );
 
-    let view = runner
+    // After the mode-select resolves, the next pending is the optional
+    // link-host selection from the Standard [Main] body.
+    let _view = runner
         .pending_selection_view()
-        .expect("pending selection must be installed");
+        .expect("link-host selection must be installed after mode-select resolves");
     // For optional link selections, is_optional == true allows PASS via
     // resolve_selection — PASS is NOT in valid_action_ids (that list holds only
     // host-candidate actions), but is_optional gates a PASS accept in the engine.
@@ -368,6 +415,9 @@ fn st22_11_main_link_selection_is_optional_with_pass() {
 
 /// Declining the link (choosing PASS) still proceeds to the buff selection.
 /// After resolving the buff selection, the Digimon gains Reboot and +3000 DP.
+///
+/// ST22-11 is dual-mode, so we first resolve the mode-select (Standard), then
+/// PASS the optional link-host selection, then pick the buff target.
 #[test]
 fn st22_11_main_declining_link_grants_reboot_and_dp_buff() {
     let mut runner = DebugRunner::builder()
@@ -380,15 +430,18 @@ fn st22_11_main_declining_link_grants_reboot_and_dp_buff() {
 
     let digi = runner.place_on_field(0, "DIGI", Some(0));
 
-    let result = runner.game.play_option_from_hand(0, 0);
+    // Resolve mode-select (dual-mode) → Standard [Main].
+    let result = play_st22_11_standard(&mut runner);
     assert_eq!(result, OptionPlayResult::Pending);
 
+    // After mode-select resolves, the optional link-host selection is pending.
     // Decline the link — select PASS.
     runner
         .execute_action(0, PASS)
         .expect("PASS on the link prompt must be accepted");
 
-    // Next pending: select_own_permanent (buff target).
+    // Next pending: select_own_permanent (buff target). The buff runs
+    // unconditionally — "Then, 1 of your Digimon gains Reboot and +3000 DP."
     let view = runner
         .pending_selection_view()
         .expect("buff target selection must follow link decline");
@@ -487,11 +540,12 @@ fn st22_11_main_buff_expires_after_opponents_turn() {
 
     let digi = runner.place_on_field(0, "DIGI", Some(0));
 
-    // Play ST22-11 and resolve both prompts.
-    let result = runner.game.play_option_from_hand(0, 0);
+    // Play ST22-11. Resolve mode-select (Standard [Main]) then decline link.
+    let result = play_st22_11_standard(&mut runner);
     assert_eq!(result, OptionPlayResult::Pending);
 
-    // Decline link.
+    // After mode-select resolves, the optional link-host selection is pending.
+    // Decline the link.
     runner.execute_action(0, PASS).expect("pass link");
 
     // Select buff target.

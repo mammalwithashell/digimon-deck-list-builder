@@ -63,13 +63,13 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT16-082 | Ukkomon | IMPLEMENT | IMPLEMENTED | 16 active / 2 ignored | Native on_move reveal-3/add Digimon-or-Tamer/remainder-bottom body ships. `can_hatch` predicate gates the optional hatch prompt; raw_rust no-op removed. Residual ignored tests cover OnMove triggered OPT lockout/reset coverage. |
 | BT21-007 | Agumon | IMPLEMENT | IMPLEMENTED | 14 active / 0 ignored | OnPlay optional trash-to-hand (Reptile/Dragonkin filter) + inherited [Your Turn] +2000 DP aura. 14/14 pass, 0 ignored. No engine gaps. |
 | BT21-013 | Agunimon | IMPLEMENT | PARTIAL | 9 active / 6 ignored | [WD] optional place Hybrid/Hero from hand/trash as bottom source ships (has_inherited: {} + select_effect_choice + if/then + place_as_bottom_source); [WA] effect-initiated digivolve cost -1 ships; inherited +2000 DP aura ships. 4 ignored G-WHEN-DIGIVOLVING-DISPATCH, 2 ignored filter-eval gaps. |
-| P-137 | Flamedramon | IMPLEMENT | IMPLEMENTED | 10 active / 2 ignored | (a) ArmorPurge keyword + (b) Raid keyword + (c) on_attack_target_change OPT → opponent adds top security to hand (raw_rust). Alt-path name_contains: Veemon. Hybrid gap G-ADD-TOP-SECURITY-TO-HAND (new). BT21-024.yaml restructured as side-fix (place_on_security moved inside as_selecting_player body). New gap G-SELECT-EMPTY-OUTER-TAIL documented. |
+| P-137 | Flamedramon | IMPLEMENT | IMPLEMENTED | 10 active / 2 ignored | (a) ArmorPurge keyword + (b) Raid keyword + (c) on_attack_target_change OPT → opponent adds top security to hand via native `add_top_security_to_hand`. Alt-path name_contains: Veemon. Residual ignored tests are G-OPT-TRIGGERED only. |
 | EX9-013 | BlitzGreymon | IMPLEMENT | IMPLEMENTED | 21 active / 0 ignored | BlastDigivolve + Alliance + Blocker; De-Digivolve 3; optional EOT DNA into Omnimon Alter-S from hand, then PASS-able attacker selection and normal effect-created attack flow; alt paths and ace_overflow covered. |
 | EX10-010 | BlackWarGreymon | IMPLEMENT | PARTIAL | 16 active / 3 ignored | BurstDigivolve marker:true + Raid+Reboot+Blocker grants + ace_overflow:-4 + delete Digimon/Tamer + conditional DP aura + conditional immunity (flood_gate). 16 pass; 3 ignored: G-PLAY-COST-LTE (delete cost filter), G-PRED-DP-LTE (dp_gte:13000 aura condition), 2 immunity gaps (lower_aura modifier not wired + CannotBeAffected not enforced). |
 | BT21-026 | WarGreymon | IMPLEMENT | IMPLEMENTED | 11 active / 5 ignored | Cost reduction (-2 per opp battle area permanent when played) + Rush/Raid/Blocker grant_keyword all ship. Engine fix landed: `scan_before_pay_cost_reduction_for_hand_card` added to evaluate `when_playing_this: true` effects from the card in hand (previously the cost reduction returned 0 because the card wasn't on the field yet). Leak fix: `effect.when_playing_this` flag added to Effect struct; field-scan skips these effects to prevent leaking onto other cards played later. 5 ignored: G-DECLARATIVE-KEYWORD (Rush/Blocker not installed at runtime x2), G-EVENT-TARGET-OWNER (deletion arm omitted x3). |
 | BT9-112 | DeathXmon | IMPLEMENT | IMPLEMENTED | 12 active / 1 ignored | (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete ≤Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 1 ignored: G-OPT-TRIGGERED. Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate, worked around via raw_rust), G-OPT-TRIGGERED (triggered OPT not enforced). |
 | BT23-014 | Gallantmon | IMPLEMENT | PARTIAL | 16 active / 1 ignored | Clause 1 [On Play][When Digivolving] floodgate: player-scoped CannotPlayDigimonByEffect + CannotPlayTamerByEffect with EndOfOpponentsTurn expiry via raw_rust `bt23_014_opp_cannot_play_from_trash`. New engine primitive `CannotPlayTamerByEffect` added to enums.rs + enforcement in play_from_hand/trash_with_cost. Clause 2 [On Play][When Digivolving][When Attacking] dynamic DP cap delete: `8000 + 2000 × opp_battle_area_count` via raw_rust formula `bt23_014_dynamic_dp_cap`. 1 ignored: G-PRED-DP-LTE (dp_lte predicate not evaluated for permanents). Gaps: G-PLAYER-FLOOD-GATE-DSL (player-level modifiers use raw_rust bridge), G-PRED-DP-LTE. Root-cause fix: `gallantmon_in_hand()` test fixture lacked deck cards; P1 deckout on turn-rotate was silently blocking the second `end_turn()` call and preventing EndOfOpponentsTurn expiry — added 3-card decks to both players to prevent deckout during multi-turn tests. |
-| LM-021 | Agumon - Bond of Bravery | IMPLEMENT | PARTIAL | 13 active / 2 ignored | Lv7 Red Blast Digivolve ACE. (1) BlastDigivolve grant_keyword declarative ships; (2) [On Play][When Digivolving] delete opp Digimon DP-sum ≤ 14000 — raw_rust:lm_021_delete_dp_sum single-pick fallback (G-MULTI-SELECT-OPP-DP-SUM new engine gap); (3) [When Attacking][OPT] if you have a Tamer, trash_top_security ships and tests pass. ace_overflow: -5. 2 ignored: G-OPT-TRIGGERED. Bug fix: bt17_018 tests were failing due to summoning sickness (turn_count=0 when using .build()); added r.game.turn_count = 1 to runner_with_p1_security() in bt17_018.rs. Full suite: 412 passed, 0 failed, 146 ignored. |
+| LM-021 | Agumon - Bond of Bravery | IMPLEMENT | PARTIAL | 14 active / 2 ignored | Lv7 Red Blast Digivolve ACE. (1) BlastDigivolve grant_keyword declarative ships; (2) [On Play][When Digivolving] delete opponent Digimon with running DP-sum ≤ this Digimon's live DP via native `select_opponent_dp_budget` + `source_dp` formula + `delete_bound_permanents`; (3) [When Attacking][OPT] if you have a Tamer, `trash_top_security` ships. ace_overflow: -5. Residual ignored tests: G-OPT-TRIGGERED. |
 | ST22-08 | Offensive Plug-In V | IMPLEMENT | BLOCKED (hybrid) | 2 active / 17 ignored | Plug-In / Link card. Native add_this_option_to_hand is available for the Security disposition, but the card remains blocked by G-IGNORE-COLOR-MASK, G-PRED-DP-LTE, G-DSL-LINK-VERB, G-BINDING-DP-FORMULA, and G-DSL-LINKED-SCOPE. 2 structural tests pass (YAML parses+compiles), 17 ignored. |
 | BT21-072 | Arresterdramon: Superior Mode | IMPLEMENT | PARTIAL | 9 active / 1 ignored | Raid + Piercing keywords, inherited [Your Turn] +2000 DP aura, and [When Digivolving] may attack without suspending now ship through may_attack_now. Remaining ignored: G-AURA-DP-FORMULA for [All Turns] +1000 DP per digivolution card. |
 | P-103 | Offense Training | IMPLEMENT | PARTIAL | 13 active / 3 ignored | Clause 0 ([Main] reveal top 2 → add 1 red to hand → place rest at bottom) fully expressed in DSL; "then place self in battle area" sub-step blocked by G-PLACE-SELF-AS-OPTION-PERMANENT (1 ignored). Clause 1 ([Main]<Delay> optional digivolve into red Digimon in hand, cost -2) fully expressed using kind:delay + effect_initiated_digivolve cost:{reduce:2}. Clause 2 (inherited [Security] place self in battle area) structurally present as scope:inherited on_security with empty process; placement blocked by G-PLACE-SELF-AS-OPTION-PERMANENT (2 ignored). DSL infra: 312 dsl tests pass. cards_behavioral binary blocked from full compile by pre-existing lm_027.rs errors (unrelated in-progress work on this branch). |
@@ -82,8 +82,8 @@ Pipeline: batch-implement-cards-rust-dsl
 
 ## Engine-Gap Blocked Cards / Clauses
 ### G-MULTI-SELECT-OPP-DP-SUM (Multi-Select with Running DP-Sum Cap)
-- Affected: LM-021 Agumon - Bond of Bravery clause 2 (delete any number opp Digimon, total DP ≤ 14000); BT17-018 Gallantmon Crimson Mode clause 2 (same mechanic).
-- Workaround: `raw_rust: { fn: lm_021_delete_dp_sum }` / `raw_rust: { fn: bt17_018_delete_opp_digimon_dp_budget }` — single-pick fallback with DP ≤ budget filter.
+- Status: Resolved for the known Medusamon/Royal Knights users. LM-021 uses native `select_opponent_dp_budget` with formula-valued `dp_budget: { source_dp: {} }`; BT17-018 Gallantmon Crimson Mode uses native `select_opponent_dp_budget` with literal `dp_budget: 15000`.
+- Workaround removed: `lm_021_delete_dp_sum` and `bt17_018_delete_opp_digimon_dp_budget` raw Rust shims have both been retired.
 - See `qa/archetype-qa/engine-gaps.md` entry G-MULTI-SELECT-OPP-DP-SUM.
 
 ### G-INHERITED-DISPATCH (Digivolution-Stack Inherited Triggered Dispatch)
@@ -165,8 +165,7 @@ Pipeline: batch-implement-cards-rust-dsl
 - See `qa/dsl-vocab-gaps.md` entry G-PLAY-COST-LTE.
 
 ### G-ADD-TOP-SECURITY-TO-HAND (opponent adds top security to hand — engine + DSL half)
-- Affected: P-137 Flamedramon clause (c).
-- Workaround: `raw_rust: { fn: p_137_opp_adds_top_security_to_hand }`.
+- Resolved for P-137: clause (c) uses native `add_top_security_to_hand`.
 - See `qa/archetype-qa/engine-gaps.md` and `qa/dsl-vocab-gaps.md` entry G-ADD-TOP-SECURITY-TO-HAND.
 
 ### G-SELECT-EMPTY-OUTER-TAIL (outer-tail steps lost when inner select_hand has no candidates)
@@ -220,12 +219,12 @@ Pipeline: batch-implement-cards-rust-dsl
 - BT21-007 Agumon (Batch 7): IMPLEMENTED — 14/14 pass, 0 ignored. No new gaps.
 - BT5-008 Gaossmon (Batch 7): PARTIAL — 2 structural pass, 5 ignored. Clause 1 [Your Turn] filtered aura blocked by G-DECLARATIVE-KEYWORD. Clause 2 [Opponent's Turn] cost-reduction gate blocked by G-PLAYER-FLOOD-GATE-DSL. Raw_rust bt5_008_opp_cannot_reduce_digivolve_cost registered.
 - BT21-013 Agunimon (Batch 8): PARTIAL — 9 active, 6 ignored. 3 clauses: [When Digivolving] place Hybrid/Hero as bottom source ships with full has_inherited: {} + select_effect_choice + if/then + place_as_bottom_source YAML. [When Attacking] effect-initiated digivolve cost -1 ships (proven BT21-001 path). Inherited +2000 DP aura ships. 4 ignored G-WHEN-DIGIVOLVING-DISPATCH; 2 ignored filter-eval gaps (trait_has in select_hand). Key discovery: has_inherited: {} (empty PredicateSpec) now parses cleanly — the prior comment saying it fails DSL parse was stale. Running suite: 255+ passed, 0 failed from BT21-013 tests.
-- P-137 Flamedramon (Batch 8): IMPLEMENTED — 10 active / 2 ignored. YAML: grant_keyword ArmorPurge + grant_keyword Raid + on_attack_target_change/active_when:your_turn/once_per_turn with raw_rust:p_137_opp_adds_top_security_to_hand. Alt-path from Veemon-topped permanent (name_contains: "Veemon", cost 2). New hybrid gap G-ADD-TOP-SECURITY-TO-HAND (EffectContext lacks add_top_security_to_hand; raw_rust workaround fires security event chain). Side-fix: BT21-024.yaml restructured — place_on_security moved inside as_selecting_player body so the pick binding is in scope at inner-tail time (was in outer tail, causing silent no-op). New gap G-SELECT-EMPTY-OUTER-TAIL documented: outer-tail steps after as_selecting_player are lost when inner select_hand has no candidates. BT21-024 test bt21_024_clause1_trashes_top_security_even_when_opponent_has_no_hand #[ignore]'d with G-SELECT-EMPTY-OUTER-TAIL. Full suite: 298 passed, 0 failed, 123 ignored.
+- P-137 Flamedramon (Batch 8): IMPLEMENTED — 10 active / 2 ignored. YAML: grant_keyword ArmorPurge + grant_keyword Raid + on_attack_target_change/active_when:your_turn/once_per_turn with native `add_top_security_to_hand`. Alt-path from Veemon-topped permanent (name_contains: "Veemon", cost 2). G-ADD-TOP-SECURITY-TO-HAND is resolved for this card; the former raw_rust shim has been removed. Side-fix: BT21-024.yaml restructured — place_on_security moved inside as_selecting_player body so the pick binding is in scope at inner-tail time (was in outer tail, causing silent no-op). Gap G-SELECT-EMPTY-OUTER-TAIL remains documented: outer-tail steps after as_selecting_player are lost when inner select_hand has no candidates. BT21-024 test bt21_024_clause1_trashes_top_security_even_when_opponent_has_no_hand #[ignore]'d with G-SELECT-EMPTY-OUTER-TAIL.
 - EX9-013 BlitzGreymon (Batch 9): updated 2026-05-08 to IMPLEMENTED — 21 active / 0 ignored. The post-DNA "1 of your Digimon may attack" clause now selects an own attacker with PASS available, then opens the normal effect-created attack target prompt. Key fix during TDD: `select_opponent_permanent` installs `SelectionKind::OppField` (not `Target`) — test assertions corrected accordingly. Raw_rust budget: no raw_rust needed for this card.
 - EX10-010 BlackWarGreymon (Batch 9): PARTIAL — 16 active / 3 ignored. Lv6 Red/Black Blast Digivolve ACE with Raid+Reboot+Blocker, delete Digimon/Tamer, conditional DP aura (+3000), conditional immunity. All active tests green. 3 ignored: (1) G-PLAY-COST-LTE — delete filter "play cost ≤7" not enforced at selection (play_cost_lte predicate missing from PredicateSpec); (2) G-PRED-DP-LTE — dp_gte:13000 in active_when not evaluated (aura over-fires on ANY opp Digimon); (3) immunity clause — two separate gaps: lower_aura.rs drops the `modifier` field (CannotBeAffected never installed), AND CannotBeAffected is not enforced by the engine's effect execution path even if installed. Key decisions: immunity represented as `kind: flood_gate, modifier: CannotBeAffected` with self-targeting `card_number_is: EX10-010`; immunity and DP aura share the same `active_when` predicate (all_of: all_turns + any_permanent opp digimon dp_gte). No new raw_rust fns needed. Running suite post-commit: ~333 passed, 0 failed, ~127 ignored.
 - BT21-026 WarGreymon (Batch 9 final): IMPLEMENTED — 11 active / 5 ignored. Key engine fix: `scan_before_pay_cost_reduction` was only scanning battle-area permanents, so `when_playing_this: true` cost reductions from a card in hand were never applied (formula returned 0 because source_permanent was None). Also, the same effect leaked onto OTHER cards when BT21-026 was already on the field. Two-part fix: (1) added `Effect.when_playing_this: bool` flag + `Effect::when_playing_this()` builder method; (2) field-scan skips effects with `when_playing_this=true`; (3) new `scan_before_pay_cost_reduction_for_hand_card` companion method evaluates these effects for the card in hand using a sentinel PermanentHandle (player=controller, index=255) so zone-count formulas work. `lower_with_formula` signature updated with `when_playing_this: bool` param; two test callsites in phase3_reducer_costs.rs updated. `evaluate_amount` in lower_cost_reduction.rs updated to use sentinel handle (not None-return 0) for non-Literal formulas. EX8-074 stub YAML fixed (dp_lte formula syntax: `dp_lte: { raw_rust: fn_name }` not `dp_lte: formula: raw_rust:`). Full suite: 357 passed, 0 failed, 137 ignored.
 - BT23-014 Gallantmon (Batch 10): PARTIAL — 16 active / 1 ignored. New engine primitive: `ModifierType::CannotPlayTamerByEffect` added to enums.rs (companion to existing `CannotPlayDigimonByEffect`), with enforcement wired in both `play_from_hand_with_cost` and `play_from_trash_with_cost`. Floodgate clause uses raw_rust `bt23_014_opp_cannot_play_from_trash` to install player-level modifiers with `EndOfOpponentsTurn` expiry (gap G-PLAYER-FLOOD-GATE-DSL: DSL `flood_gate` installs permanent-level modifiers only). Delete clause uses raw_rust formula `bt23_014_dynamic_dp_cap` computing `8000 + 2000 × opp_battle_area_count`. Key bug found: test fixture `gallantmon_in_hand()` had no deck cards for either player; P1 deck-out on `begin_turn()` during first `end_turn()` call set `game_over=true`, causing the second `end_turn()` to return immediately — `expire_player_end_of_turn(1)` never fired, so the floodgate modifiers appeared stuck. Fixed by adding 3-card stub decks for both players. 1 ignored for G-PRED-DP-LTE. BT9-112 tests (parallel batch) contributed lm_021 and bt17_018 raw_rust functions to mod.rs before this batch started; lm_021_delete_dp_sum and bt17_018_delete_opp_digimon_dp_budget were already registered at merge time. LM-021.yaml created as compilation unblock for lm_021 test file (which uses include_str!). Full suite now: 410 passed (BT23-014 added 16), 2 failing pre-existing bt17_018 behavioral tests unrelated to BT23-014, 146 ignored.
-- LM-021 Agumon - Bond of Bravery (Batch 10 final): PARTIAL — 13 active / 2 ignored. Lv7 Red Blast Digivolve ACE. YAML and tests both already present from parallel agent run; primary work in this session was: (1) adding `lm_021_delete_dp_sum` raw_rust function to src/cards/raw_rust/mod.rs and registering it in `build_registry()` — resolving the compile error that was blocking the test file; (2) fixing bt17_018 summoning sickness: bt17_018 tests were calling `r.attack_digimon()` while `game.turn_count = 0` (`.build()` default) and the permanent had `turn_played = Some(0)` → `is_fresh = true` → `can_attack() = false` → `Invalid` action. Fixed by adding `r.game.turn_count = 1` to `runner_with_p1_security()`. New engine gap: G-MULTI-SELECT-OPP-DP-SUM documented in engine-gaps.md — EffectContext has no primitive for iterative multi-select with running DP-sum cap (DCGO: canEndNotMax:true + canTargetConditionByPreSelectedList + dynamic remainder). Both LM-021 and BT17-018 use single-pick fallback raw_rust until this gap closes. Final suite: 412 passed, 0 failed, 146 ignored.
+- LM-021 Agumon - Bond of Bravery (Batch 10 final): PARTIAL — 14 active / 2 ignored. Lv7 Red Blast Digivolve ACE. Delete clause now uses native `select_opponent_dp_budget` with formula-valued `dp_budget: { source_dp: {} }` followed by `delete_bound_permanents`, matching DCGO's running DP-sum selection shape without the former `lm_021_delete_dp_sum` raw_rust shim. G-MULTI-SELECT-OPP-DP-SUM is also resolved for BT17-018 via native `select_opponent_dp_budget` with literal `dp_budget: 15000`.
 - ST22-08 Offensive Plug-In V (Batch 11): BLOCKED (hybrid) — 2 active / 17 ignored. The Plug-In / Link card mechanic is entirely unavailable in the DSL. Seven distinct clauses were identified, all blocked:
   (1) Color bypass via IgnoreColorRequirement flood_gate: the YAML expression compiles (modifier is in the DSL validator allowlist) but G-IGNORE-COLOR-MASK — `option_color_match_available` in `action/mask.rs` never checks this modifier; the enforcement hook is missing in the Rust action mask (Python engine resolved this 2026-03-14 but Rust was never updated).
   (2) [Security] delete lowest-DP opponent Digimon: requires `dp_lte: { formula: { aggregate: { selector: lowest_dp, scope: opponent } } }` — but G-PRED-DP-LTE: dp_lte is not evaluated in `eval_permanent_fields`.
@@ -242,3 +241,156 @@ Pipeline: batch-implement-cards-rust-dsl
 - P-151 Digimon Liberator (Batch 13): PARTIAL — 15 active / 3 ignored. Purple Option Cost 3 [LIBERATOR] trait. 3 clauses: (0) flood_gate IgnoreColorRequirement while LIBERATOR Digimon/Tamer on field — compiles structurally (matches EX7-074 pattern), G-IGNORE-COLOR-MASK blocks runtime enforcement (2 tests ignored). (1) [Main] reveal_top_deck(3) + select_reveal(optional, trait_has:LIBERATOR) + add_to_hand_from_reveal + place_remainder_on_deck(bottom) + select_hand(optional, trait_has:LIBERATOR) + play_from_hand_free — pure DSL, fully working. G-PLAY-COST-LTE: cost-≤3 filter unenforced (1 test ignored). (2) [Inherited][Security] mirrors Clause 1 exactly — standard AddActivateMainOptionSecurityEffect pattern (scope:inherited, when:on_security). Key implementation fix: all behavioral tests use activate_hand_main(0, 0) (P-035 pattern) instead of runner.play() — play() auto-resolves through the full pipeline and consumes the option card, making hand-size assertions incorrect. Reveal-pick test further fixed: explicit execute_action(0, view.valid_action_ids[0]) drives the selection rather than auto_resolve() which passes on optional prompts. No new engine or DSL gaps introduced.
 - P-206 Digital Gate Open (Batch 14 — final card of the Medusamon archetype run): PARTIAL — ~17 active / ~8 ignored. 38th and final card in the 53-card Medusamon pool processed in this skill run. White Option Cost 4 with 4 clauses. Clause 0 ([Main] reveal top 3 → add 1 Digimon + 1 Tamer → place rest at bottom): fully DSL-expressed using two sequential select_reveal+add_to_hand_from_reveal steps (BT9-092 pattern) + place_remainder_on_deck(bottom); G-PLACE-SELF-AS-OPTION-PERMANENT for battle-area placement (2 tests ignored). Clause 1 ([Main]<Delay> optional play Tamer from hand cost -4): kind:delay + select_hand(optional, filter:kind:tamer) + play_from_hand(cost_delta:-4). NEW DSL gap G-COLOR-MATCH-AGAINST-BOARD: dynamic board-color cross-reference predicate (card colors intersect current field Digimon colors) is not expressible in PredicateSpec; color_is accepts only static literals; 2 tests ignored. Clause 2 (flood_gate IgnoreColorRequirement): compiles but G-IGNORE-COLOR-MASK (action mask doesn't enforce it); 1 test ignored. Clause 3 ([Inherited][Security] optional play Digimon cost ≤3 free from hand or trash + add self to hand): select_effect_choice + two if-branches + play_from_hand_free/play_from_trash_free + legacy raw_rust p_206_add_self_to_hand shim, now backed by `add_pending_security_to_hand`; G-PLAY-COST-LTE (1 test ignored) + G-PLACE-SELF-AS-OPTION-PERMANENT security side (1 test ignored). New DSL gap G-COLOR-MATCH-AGAINST-BOARD documented in qa/dsl-vocab-gaps.md. Verdict: PARTIAL (gap_kind: dsl). Archetype run complete.
 - EX7-074 Vortex Resonance (Batch 13 supplemental): PARTIAL — 6 active / 15 ignored. 3-clause multi-color Option (Cost 3, Green+Blue, trait: LIBERATOR). Clause 0 (flood_gate IgnoreColorRequirement while LIBERATOR Digimon/Tamer in your battle area): active_when: any_permanent { any_of: [ all_of:[kind:digimon, trait_has:LIBERATOR], kind:tamer ] }, modifier: IgnoreColorRequirement, target: card_number_is:"EX7-074" — compiles structurally following P-206/ST22-08 pattern; G-IGNORE-COLOR-MASK (action/mask.rs option_color_match_available never queries IgnoreColorRequirement modifier, no runtime enforcement); 1 runtime test ignored. Clause 1 ([Main] reveal top 3 → select_reveal(LIBERATOR filter, optional) → add_to_hand_from_reveal → place_remainder_on_deck(bottom) → select_own_permanent(optional, filter: Digimon in battle_area) → select_hand(Digimon) → effect_initiated_digivolve cost:{reduce:4}): fully DSL-expressed using proven BT9-092 reveal pipeline + LM-027 optional-digivolve patterns; optional:false at clause level (no outer "you may" on the reveal step), select_own_permanent has optional:true (DCGO canNoSelect:true on the digivolve sub-step); 6 integration tests ignored pending main_from_hand DebugRunner dispatch. Clause 2 ([Inherited][Security] optional play 1 LIBERATOR (cost ≤4) from hand or trash free, add this card to hand): select_effect_choice(["From hand","From trash"]) + two if-branch pairs (zone_choice 0 → select_hand+play_from_hand_free; zone_choice 1 → select_trash+play_from_trash_free) + legacy raw_rust ex7_074_add_self_to_hand shim, now backed by `add_pending_security_to_hand`; G-PLAY-COST-LTE (cost ≤4 filter unenforced at selection, 1 test ignored); 4 further security tests ignored pending DebugRunner security-inherited dispatch. No new gaps introduced. 6 structural tests pass (YAML parses, 3-clause count, flood_gate declarative, main_from_hand triggered, security inherited+optional, color bypass declarative). Test run: 6 passed / 15 ignored, 0 failures.
+
+---
+
+## Re-attempt run — 2026-05-21 (batch-implement-cards-rust-dsl)
+
+Re-processing of the 18 cards left at `PARTIAL`/`BLOCKED` after the original archetype run. Many blocking gaps have since been resolved (G-EVENT-TARGET-OWNER, G-DECLARATIVE-KEYWORD, G-MAY-ATTACK-NOW, G-WHEN-DIGIVOLVING-DISPATCH, G-INHERITED-DISPATCH, G-OPT-TRIGGERED, G-OPP-SECURITY-COUNT-LTE, G-SELECT-EMPTY-OUTER-TAIL, G-AURA-DP-FORMULA, G-PRED-DP-LTE, G-PLACE-SELF-AS-OPTION-PERMANENT, G-ALT-PATH-CONDITION, G-OTHER-PREDICATE-UNEVALUATED, G-PLAYER-FLOOD-GATE-DSL, G-PLAY-COST-LTE, G-IGNORE-COLOR-MASK). Routed through IMPLEMENT mode to complete the partial YAML. 36 cards already `IMPLEMENTED` were skipped.
+
+### Per-Card Verdicts
+| Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+|---------|------|------|---------|--------|-------|-------|
+| BT23-005 | Elizamon | IMPLEMENT | IMPLEMENTED | APPROVED | 13/13 | Cost-reduction-on-self-digivolve clause completed in pure DSL. |
+| BT24-012 | Dimetromon | IMPLEMENT | IMPLEMENTED | APPROVED | 22/22 | [All Turns] cross-permanent would-leave replacement done in pure DSL (G-EVENT-TARGET-OWNER closed); raw_rust placeholder now orphaned. |
+| BT24-016 | Lamiamon | IMPLEMENT | PARTIAL (engine) | APPROVED | 24/24 | Clauses 2 & 3 now fully behavioral; clause 1 activated-digivolve structural-only — NEW gap G-ACTIVATED-DIGIVOLVE-EXECUTION. |
+| BT24-089 | Unique Emblem: Blazing Conductor | IMPLEMENT | IMPLEMENTED | APPROVED | 23/23 | Main place-self + event-gated Delay-on-Owen-suspend + Security clause completed. |
+
+Batch 1 merged test run: 82 passed, 0 failed, 0 ignored.
+
+### Batch 2 — BT24 finishers
+| Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+|---------|------|------|---------|--------|-------|-------|
+| BT24-017 | Medusamon | IMPLEMENT | IMPLEMENTED | APPROVED | 16/16 | Fully completed incl. return-2-trash-to-deck-bottom + Petrification Tokens — G-ZONE-TRASH-TO-DECK was already resolved (`return_trash_list_to_deck_bottom`). |
+| BT24-018 | Styracomon | IMPLEMENT | PARTIAL (hybrid) | APPROVED | 18+1 | Clauses f & g now behavioral (g = kind:replacement); trash-chosen-opponent-security sub-clause remains BLOCKED on G-TRASH-SELECTED-SECURITY. |
+| P-189 | Dimetromon | IMPLEMENT | PARTIAL (engine) | APPROVED | 22+1 | YAML fully faithful; one decline-path test blocked by NEW engine bug G-SECURITY-SKILL-RESUME-REFIRE. |
+| ST22-08 | Offensive Plug-In V | IMPLEMENT | PARTIAL (engine) | APPROVED | 26/26 | BLOCKED→PARTIAL — link/Plug-In DSL all landed; 3/4 clauses done, 0 ignored. Dedicated Cost-2 plug-in play mode unrepresentable — NEW gap G-LINK-OPTION-DUAL-PLAY-MODE. |
+
+Batch 2 merged test run: 82 passed, 0 failed, 2 ignored (gap-tagged).
+
+New engine gaps logged this run: G-ACTIVATED-DIGIVOLVE-EXECUTION (Batch 1), G-SECURITY-SKILL-RESUME-REFIRE, G-LINK-OPTION-DUAL-PLAY-MODE. Stale-resolved correction: G-ZONE-TRASH-TO-DECK marked RESOLVED.
+
+### Batch 3 — red search / digivolve options
+| Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+|---------|------|------|---------|--------|-------|-------|
+| EX7-074 | Vortex Resonance | IMPLEMENT | IMPLEMENTED | APPROVED | 27/27 | All 14 prior "harness coverage" ignores converted to real driven tests. |
+| LM-027 | Red Scramble | IMPLEMENT | PARTIAL (hybrid) | APPROVED | 18+4 | Clauses A & C done in pure DSL; Delay clause B blocked — NEW gap G-ZONE-SELECTED-TRASH-TO-DECK-TOP (return selected trash to deck *top*). |
+| P-035 | Red Memory Boost! | IMPLEMENT | IMPLEMENTED | APPROVED | 20/20 | place_self_as_delay_option; `<Delay>` modeled as player-initiated `trigger: delayed`. |
+| P-103 | Offense Training | IMPLEMENT | IMPLEMENTED | APPROVED (after fix) | 23/23 | Review fix: `<Delay>` trigger corrected `on_play`→`delayed` for faithful player-initiated model (matches P-035/P-037). |
+
+Batch 3 merged test run: 88 passed, 0 failed, 4 ignored (gap-tagged).
+New gap logged: G-ZONE-SELECTED-TRASH-TO-DECK-TOP (hybrid — engine-gaps.md + dsl-vocab-gaps.md).
+
+### Batch 4 — BT21 Reptile/Dragonkin + Hybrids
+| Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+|---------|------|------|---------|--------|-------|-------|
+| BT21-013 | Agunimon | IMPLEMENT | IMPLEMENTED | APPROVED | 19/19 | All 3 clauses done; added missing `xros_req` [Digivolve][BurningGreymon] Cost 0 alt-path. |
+| BT21-024 | Cyberdramon | IMPLEMENT | IMPLEMENTED | APPROVED | 17/17 | opponent_security_count_lte gate + empty-hand edge + inherited aura — all 4 prior blockers closed. |
+| BT21-072 | Arresterdramon: Superior Mode | IMPLEMENT | PARTIAL (dsl) | APPROVED (downgrade) | 16/16 | 4 effect clauses done (may_attack_now, dp_modifier_fn aura); printed `xros_req` cost-3 path unmodeled — NEW gap G-ALT-PATH-SAVE-IN-TEXT. |
+| BT21-093 | Raging Serpentine | IMPLEMENT | PARTIAL (dsl) | APPROVED (downgrade) | 16/16 | 5 clauses pure DSL, both raw_rust stubs removed; Delay activation forced (rule 16-16-2 needs it declinable) — NEW gap G-ACTIVATION-COST-TRASH-SELF. |
+
+Batch 4 merged test run: 68 passed, 0 failed, 0 ignored.
+New DSL gaps logged: G-ALT-PATH-SAVE-IN-TEXT, G-ACTIVATION-COST-TRASH-SELF.
+Orphaned raw_rust fn flagged for cleanup: bt21_093_delete_highest_dp_opponent (registered, unreferenced).
+
+### Batch 5 — remaining
+| Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+|---------|------|------|---------|--------|-------|-------|
+| BT5-008 | Gaossmon | IMPLEMENT | IMPLEMENTED | APPROVED | 9/9 | Both clauses pure DSL (filtered aura + opponent flood_gate); 3 prior blockers closed. |
+| BT20-016 | Paildramon | IMPLEMENT | IMPLEMENTED | APPROVED | 33/33 | All clauses pure DSL incl. cross-permanent deletion → DNA-digivolve-into-Imperialdramon; raw_rust no-op replaced. |
+
+Batch 5 merged test run: 42 passed, 0 failed, 0 ignored.
+New engine gap logged (latent): G-OUTER-OPTIONAL-COND-NO-TRIGGER-CONTEXT.
+Orphaned raw_rust fn flagged for cleanup: bt20_016_dna_on_deletion (registered, unreferenced).
+
+### Re-attempt run — final summary (2026-05-21)
+
+Total Medusamon pool: 54 · Processed this run: 18 · Skipped (prior IMPLEMENTED): 36
+
+- **IMPLEMENTED: 11** — BT23-005, BT24-012, BT24-089, BT24-017, EX7-074, P-035, P-103, BT21-013, BT21-024, BT5-008, BT20-016
+- **PARTIAL: 7** — BT24-016, BT24-018, P-189, ST22-08, LM-027, BT21-072, BT21-093
+- **BLOCKED: 0**
+
+All 18 cards entered the run at PARTIAL (17) or BLOCKED (1, ST22-08). Outcome: 11 promoted to IMPLEMENTED, ST22-08 promoted BLOCKED→PARTIAL, and the 7 remaining PARTIAL cards each advanced — they are now blocked only on the precisely-diagnosed gaps below.
+
+| Card | Verdict | gap_kind | Blocking gap (PARTIAL only) |
+|------|---------|----------|------------------------------|
+| BT24-016 Lamiamon | PARTIAL | engine | G-ACTIVATED-DIGIVOLVE-EXECUTION |
+| BT24-018 Styracomon | PARTIAL | hybrid | G-TRASH-SELECTED-SECURITY (pre-existing open) |
+| P-189 Dimetromon | PARTIAL | engine | G-SECURITY-SKILL-RESUME-REFIRE |
+| ST22-08 Offensive Plug-In V | PARTIAL | engine | G-LINK-OPTION-DUAL-PLAY-MODE |
+| LM-027 Red Scramble | PARTIAL | hybrid | G-ZONE-SELECTED-TRASH-TO-DECK-TOP |
+| BT21-072 Arresterdramon: Superior Mode | PARTIAL | dsl | G-ALT-PATH-SAVE-IN-TEXT |
+| BT21-093 Raging Serpentine | PARTIAL | dsl | G-ACTIVATION-COST-TRASH-SELF |
+
+**New gaps discovered (7):** G-ACTIVATED-DIGIVOLVE-EXECUTION (engine), G-SECURITY-SKILL-RESUME-REFIRE (engine), G-LINK-OPTION-DUAL-PLAY-MODE (engine), G-OUTER-OPTIONAL-COND-NO-TRIGGER-CONTEXT (engine, latent) → `engine-gaps.md`; G-ZONE-SELECTED-TRASH-TO-DECK-TOP (hybrid) → both trackers; G-ALT-PATH-SAVE-IN-TEXT (dsl), G-ACTIVATION-COST-TRASH-SELF (dsl) → `dsl-vocab-gaps.md`.
+
+**Stale-resolved correction:** G-ZONE-TRASH-TO-DECK marked RESOLVED in `engine-gaps.md`.
+
+**Verification:** per-batch merged tests 82/82/88/68/42 (all 0 failed). Full engine suite `cargo test --features dsl-yaml-loader` exits 0 — `cards_behavioral` 2705 passed / 0 failed / 135 ignored (135 = other archetypes' deferred tests; only 6 of the run's own tests remain `#[ignore]`'d, all gap-tagged).
+
+**Janitorial follow-up (non-blocking):** 3 orphaned raw_rust no-op fns are now registered-but-unreferenced — `bt24_012_would_leave_replacement`, `bt21_093_delete_highest_dp_opponent`, `bt20_016_dna_on_deletion` — to be removed from `code/digimon-engine/src/cards/raw_rust/mod.rs`.
+
+---
+
+## Substrate follow-up — Tier 1+2 unblock (2026-05-21, `unblock-medusamon-partial-cards`)
+
+The `unblock-medusamon-partial-cards` OpenSpec change closed **5 of the 7** substrate
+gaps from the run above. The 5 affected cards move from `PARTIAL` to `IMPLEMENTED`:
+
+| Card | Was | Gap closed | Now |
+|------|-----|------------|-----|
+| P-189 Dimetromon | PARTIAL (engine) | G-SECURITY-SKILL-RESUME-REFIRE | **IMPLEMENTED** — 23/23, 0 ignored |
+| LM-027 Red Scramble | PARTIAL (hybrid) | G-ZONE-SELECTED-TRASH-TO-DECK-TOP | **IMPLEMENTED** — 22/22, 0 ignored |
+| BT24-018 Styracomon | PARTIAL (hybrid) | G-TRASH-SELECTED-SECURITY | **IMPLEMENTED** — 19/19, 0 ignored |
+| BT21-093 Raging Serpentine | PARTIAL (dsl) | G-ACTIVATION-COST-TRASH-SELF | **IMPLEMENTED** — 17/17, 0 ignored |
+| BT21-072 Arresterdramon: Superior Mode | PARTIAL (dsl) | G-ALT-PATH-SAVE-IN-TEXT | **IMPLEMENTED** — 18/18, 0 ignored |
+
+The 5 closed gaps are archived in `qa/resolved-gaps.md` and struck through in
+`engine-gaps.md` / `dsl-vocab-gaps.md`. Notable: G-ALT-PATH-SAVE-IN-TEXT needed
+**no new DSL vocab** — the existing `effect_text_contains` predicate already
+covers "<Keyword> in text"; the suspected double-play under G-SECURITY-SKILL-RESUME-REFIRE
+was also fixed (a latent `st19_08` count-assertion bug was corrected).
+
+**Still PARTIAL (2):** BT24-016 Lamiamon (G-ACTIVATED-DIGIVOLVE-EXECUTION) and
+ST22-08 Offensive Plug-In V (G-LINK-OPTION-DUAL-PLAY-MODE). Both are scoped into the
+follow-up change `unblock-medusamon-tier3-cards` — the action-space spike found
+**both close by reusing existing action IDs** (no `ACTION_SPACE_SIZE` change, no RL
+retraining), so the follow-up is lighter than first feared.
+
+**Verification:** full engine suite `cargo test --features dsl-yaml-loader` exits 0 —
+`cards_behavioral` 2714 passed / 0 failed; all other engine test binaries green.
+Medusamon archetype is now **52/54 IMPLEMENTED, 2 PARTIAL**.
+
+---
+
+## Substrate follow-up — Tier 3 unblock (2026-05-22, `unblock-medusamon-tier3-cards`)
+
+The `unblock-medusamon-tier3-cards` OpenSpec change closed the **last 2** substrate
+gaps. Both final cards move from `PARTIAL` to `IMPLEMENTED` — **Medusamon is now
+54/54 IMPLEMENTED, 0 PARTIAL, 0 BLOCKED**.
+
+| Card | Was | Gap closed | Now |
+|------|-----|------------|-----|
+| BT24-016 Lamiamon | PARTIAL (engine) | G-ACTIVATED-DIGIVOLVE-EXECUTION | **IMPLEMENTED** — 24/24, 0 ignored |
+| ST22-08 Offensive Plug-In V | PARTIAL (engine) | G-LINK-OPTION-DUAL-PLAY-MODE | **IMPLEMENTED** — 34/34, 0 ignored |
+
+The action-space spike (change `design.md`) confirmed **neither gap needed a new
+action ID** — `ACTION_SPACE_SIZE` (2192) / `TENSOR_SIZE` unchanged, no RL retraining.
+
+- **G-LINK-OPTION-DUAL-PLAY-MODE** (engine) — fully RESOLVED. `classify_option_modes`
+  returns the set of available play modes; `play_option_core` installs an
+  `EffectChoice` mode-select for a dual-mode Plug-In and forks cost (Standard use
+  cost 4 vs flat Link cost 2) + disposal on the chosen mode. ST22-08.yaml gained a
+  `kind: link_requirement` clause (cost 2, `level_gte: 3`). Archived in
+  `qa/resolved-gaps.md`, struck through in `engine-gaps.md`.
+- **G-ACTIVATED-DIGIVOLVE-EXECUTION** (engine) — BT24-016 unblocked via re-model
+  (design.md D1-REVISED): clause 1 re-authored from a `kind: activated_digivolve`
+  alt-path to a `when: main_from_hand` triggered clause — using only existing
+  machinery, **zero engine code**. The gap entry stays open in `engine-gaps.md`
+  as a residual for the 3 out-of-scope `activated_digivolve` cards (BT22-013/026,
+  BT16-027).
+
+**Verification:** full engine suite `cargo test --features dsl-yaml-loader` exits 0 —
+`cards_behavioral` 2722 passed / 129 ignored / 0 failed; `option_flow` 93,
+`mask_and_tensor` 157, `dsl` 635, all other engine test binaries green.

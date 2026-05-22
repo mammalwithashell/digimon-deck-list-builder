@@ -76,7 +76,10 @@ pub fn lower_with_raw(
         // `enqueue_triggered` for the `EnteredField` dispatch fan-out).
         CompiledTiming::OnSuspend
         | CompiledTiming::OnUnsuspend
-        | CompiledTiming::OnAllyPlayed => compiled_timing_to_engine(trigger)
+        | CompiledTiming::OnAllyPlayed
+        | CompiledTiming::OnAttack
+        | CompiledTiming::OnAllyAttack
+        | CompiledTiming::OnOpponentAttack => compiled_timing_to_engine(trigger)
             .map(DelayTrigger::OnEvent)
             .unwrap_or(DelayTrigger::EndOfYourNextTurn),
         _ => DelayTrigger::EndOfYourNextTurn,

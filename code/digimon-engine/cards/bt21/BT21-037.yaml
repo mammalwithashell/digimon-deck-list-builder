@@ -10,6 +10,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 3 }
     cost: 3
+  - kind: digivolve
+    from: { name_contains: "Veemon" }
+    cost: 2
+    ignore_requirements: true
 
 effects:
   # ─── Clause 1: <Piercing> ─────────────────────────────────────────────────

@@ -12,29 +12,46 @@
 //! DCGO/Assets/Scripts/CardEffect/BT5/Red/BT5_008.cs
 //!
 //! # Patterns this test covers
-//! - D4  declarative aura (own-turn, named-card filter, +3000 DP)
+//! - D4  declarative aura (own-turn, named-card filter, +3000 DP, self-excluded)
 //! - D6  flood gate / opponent restriction (opponent-turn, cannot-reduce-digivolve-cost)
 //!
 //! # Clause summary
 //!
-//! | # | Clause              | Timing/Kind     | Scope  | DSL shape                                       |
-//! |---|---------------------|-----------------|--------|-------------------------------------------------|
-//! | 1 | [Your Turn] +3000   | aura            | FaceUp | kind: aura, active_when: your_turn, name_contains: "Gaossmon", other: true, dp_modifier: 3000 |
-//! | 2 | [Opp Turn] no cost reduction | flood_gate / declarative | FaceUp | kind: flood_gate, target_player: opponent, modifier: CannotReduceDigivolveCost |
+//! | # | Clause                       | Timing/Kind | Scope  | DSL shape                                                                                     |
+//! |---|------------------------------|-------------|--------|-----------------------------------------------------------------------------------------------|
+//! | 1 | [Your Turn] +3000 DP         | aura        | FaceUp | kind: aura, active_when: { your_turn: true }, target: { name_contains: "Gaossmon", other: true }, dp_modifier: 3000 |
+//! | 2 | [Opp Turn] no cost reduction | flood_gate  | FaceUp | kind: flood_gate, active_when: { opponents_turn: true }, target_player: opponent, modifier: CannotReduceDigivolveCost |
 //!
-//! # Known gaps
+//! # Implementation status (2026-05-21)
 //!
-//! | Clause | Gap | Status |
-//! |--------|-----|--------|
-//! | Clause 1 filtered aura runtime | G-DECLARATIVE-KEYWORD — `EffectTiming::Declarative` is never enqueued or fired by the engine; the filtered aura's process closure (ctx.add_dp_modifier) is compiled but never called; ChangeDp modifier is never installed at runtime | BLOCKED — all behavioral aura tests are #[ignore]'d; structural tests pass |
-//! | Clause 1 self-exclusion | G-OTHER-PREDICATE-UNEVALUATED — `other: true` in CompiledPredicate is compiled but `eval_permanent_fields` does not check it; aura would fire on self too (over-fires) if G-DECLARATIVE-KEYWORD were closed | BLOCKED — #[ignore]'d; secondary to G-DECLARATIVE-KEYWORD |
-//! | Clause 2 digivolve-cost gate | Player-targeted DSL and `CannotReduceDigivolveCost` enforcement are available. Remaining passive runtime blocker is G-DECLARATIVE-KEYWORD: declarative field effects are compiled but not globally dispatched, so this static floodgate is not installed from field state yet. | PARTIAL — structural DSL-native tests pass; behavioral passive test remains ignored |
+//! All three blocking gaps are resolved, so BT5-008 is now pure DSL with full
+//! behavioral coverage:
+//!
+//! - G-DECLARATIVE-KEYWORD — RESOLVED 2026-05-02. `Game::tick_declarative_effects`
+//!   dispatches process-backed declarative effects from face-up field sources, so
+//!   the filtered aura and the player-scoped flood gate both materialize at runtime.
+//! - G-OTHER-PREDICATE-UNEVALUATED — RESOLVED (Group 6). `eval_permanent_fields`
+//!   now rejects the source `PermanentHandle` when `other: true`, so BT5-008 no
+//!   longer buffs itself.
+//! - G-PLAYER-FLOOD-GATE-DSL — RESOLVED (Group 6). `kind: flood_gate` with
+//!   `target_player: opponent` installs `CannotReduceDigivolveCost` on the
+//!   opponent; the prior `raw_rust` no-op is removed.
+//!
+//! `tick_declarative_effects()` is the natural state-change refresh hook — the
+//! behavioral tests call it explicitly after seeding the field, exactly as the
+//! Group 6 aura/flood-gate fixtures and the sibling BT5-033 Cutemon test do.
+
+use std::sync::Arc;
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledPlayerRef, CompiledScope,
 };
-use digimon_engine::card_data::CardData;
+use digimon_engine::action::{build_action_mask, encode_digivolve};
+use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::{CardColor, CardKind, ModifierType, PlaySource};
 
 // ─── Helper builders ─────────────────────────────────────────────────────────
 
@@ -58,7 +75,7 @@ fn make_non_gaossmon(id: &str) -> CardData {
     c
 }
 
-/// Standard runner: BT5-008 Gaossmon + one extra Gaossmon in hand + filler deck.
+/// Standard runner: BT5-008 Gaossmon + one extra Gaossmon + one non-Gaossmon + filler deck.
 fn gaossmon_runner() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT5-008")
@@ -66,6 +83,57 @@ fn gaossmon_runner() -> DebugRunner {
         .add_card(make_gaossmon("GAOSSMON-2"))
         .add_card(make_non_gaossmon("NON-GAOSSMON"))
         .add_card(make_test_card("FILLER", "FILLER"))
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(10)
+        .start()
+}
+
+// ─── Clause 2 fixtures — opponent digivolution-cost reduction ────────────────
+
+/// A field permanent whose effect reduces any digivolution cost by 3.
+struct FieldCostReducer;
+
+impl CardEffect for FieldCostReducer {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::before_pay_cost(card).cost_reduction(3).build()]
+    }
+}
+
+fn make_level_digimon(id: &str, level: u8) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(level);
+    card.dp = Some(3000);
+    card.play_cost = 3;
+    card.colors = vec![CardColor::Red];
+    card
+}
+
+fn make_evo_digimon(id: &str, level: u8, from_level: u8, cost: u16) -> CardData {
+    let mut card = make_level_digimon(id, level);
+    card.evo_costs = vec![EvoCost {
+        level: from_level,
+        memory_cost: cost,
+        card_color: CardColor::Red as u8,
+    }];
+    card
+}
+
+/// Runner with a digivolve target + a P1-side cost reducer for clause 2 tests.
+fn cost_reduction_runner() -> DebugRunner {
+    let mut registry = digimon_engine::cards::build_registry();
+    registry.insert("REDUCER", Arc::new(FieldCostReducer));
+
+    DebugRunner::builder()
+        .with_registry(registry)
+        .dsl_card("BT5-008")
+        .expect("BT5-008 found in embedded DSL pack")
+        .add_card(make_level_digimon("BASE", 3))
+        .add_card(make_evo_digimon("EVO", 4, 3, 4))
+        .add_card(make_level_digimon("REDUCER", 4))
+        .add_card(make_test_card("FILLER", "FILLER"))
+        .hand(1, &["EVO"])
         .deck(0, &["FILLER"])
         .deck(1, &["FILLER"])
         .memory(10)
@@ -159,21 +227,9 @@ fn bt5_008_has_your_turn_aura_clause_shape() {
 
 // ─── Section 2: Clause 1 behavioral — [Your Turn] Gaossmon aura ──────────────
 
-/// Positive: On your turn, another Gaossmon on the field gets +3000 DP
+/// Positive: on your turn, another Gaossmon on the field gets +3000 DP
 /// while BT5-008 is in play.
-///
-/// Blocked by G-DECLARATIVE-KEYWORD: the filtered aura lowers to
-/// `Effect::declarative(card).process(|ctx| { ... ctx.add_dp_modifier(h, 3000, Expiry::Permanent) })`,
-/// but `EffectTiming::Declarative` is NEVER enqueued or fired by the engine.
-/// The process closure that installs `ChangeDp` modifiers is therefore never called.
-/// As a result, `runner.dp_of(gaossmon_2)` returns the base DP (2000) — the +3000
-/// modifier was never installed at runtime.
-///
-/// Additionally, due to G-OTHER-PREDICATE-UNEVALUATED, the `other: true` self-exclusion
-/// predicate is also not enforced (see separate test). Both gaps must close for the
-/// full behavioral contract to be satisfied.
 #[test]
-#[ignore = "pending: declarative tick not invoked from place_on_field; test setup needs explicit Game::tick_declarative_effects call (G-DECLARATIVE-KEYWORD substrate closed 2026-05-02)"]
 fn bt5_008_aura_buffs_other_gaossmon_on_your_turn() {
     let mut runner = gaossmon_runner();
 
@@ -181,6 +237,9 @@ fn bt5_008_aura_buffs_other_gaossmon_on_your_turn() {
     let gaossmon_1 = runner.place_on_field(0, "BT5-008", None);
     // Place a second Gaossmon on P0's field.
     let gaossmon_2 = runner.place_on_field(0, "GAOSSMON-2", None);
+
+    // Refresh declarative field auras now that both permanents are seeded.
+    runner.game.tick_declarative_effects();
 
     // On P0's turn, the aura should give GAOSSMON-2 +3000 DP.
     let dp_gaossmon_2 = runner.dp_of(gaossmon_2).unwrap_or(0);
@@ -194,22 +253,29 @@ fn bt5_008_aura_buffs_other_gaossmon_on_your_turn() {
     let _ = gaossmon_1;
 }
 
-/// Negative: On your turn, a non-Gaossmon Digimon on P0's field does NOT get buffed.
+/// Negative: on your turn, a non-Gaossmon Digimon on P0's field does NOT get
+/// buffed — the aura's `name_contains: "Gaossmon"` filter excludes it.
 ///
-/// Blocked by G-DECLARATIVE-KEYWORD: same root cause as the positive test.
-/// With the declarative process never firing, non-Gaossmon also shows base DP —
-/// but that's because the aura does nothing, not because filtering works correctly.
-/// This test would vacuously pass if run, but that would be a false positive.
+/// To prove this is real filtering (not a vacuous "aura does nothing" pass),
+/// a sibling Gaossmon is on the same field and IS buffed in the same tick.
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — filtered aura process never fires; non-Gaossmon check \
-            would vacuously pass (correct result, wrong reason — declarative tick blocked)"]
 fn bt5_008_aura_does_not_buff_non_gaossmon() {
     let mut runner = gaossmon_runner();
 
     // Place BT5-008 on P0's field.
     runner.place_on_field(0, "BT5-008", None);
-    // Place a non-Gaossmon Digimon on P0's field.
+    // A real Gaossmon (control — must be buffed) and a non-Gaossmon (must not).
+    let gaossmon_2 = runner.place_on_field(0, "GAOSSMON-2", None);
     let non_gaossmon = runner.place_on_field(0, "NON-GAOSSMON", None);
+
+    runner.game.tick_declarative_effects();
+
+    // Control: the named filter matches a real Gaossmon.
+    assert_eq!(
+        runner.dp_of(gaossmon_2).unwrap_or(0),
+        2000 + 3000,
+        "control: a real other Gaossmon must be buffed (proves the aura fired)"
+    );
 
     // NON-GAOSSMON should NOT get +3000 DP from BT5-008's aura.
     let dp_non_gaossmon = runner.dp_of(non_gaossmon).unwrap_or(0);
@@ -221,14 +287,9 @@ fn bt5_008_aura_does_not_buff_non_gaossmon() {
     );
 }
 
-/// Negative: On opponent's turn, the [Your Turn] aura condition fails —
+/// Negative: on the opponent's turn, the [Your Turn] aura condition fails —
 /// the other Gaossmon should NOT get +3000 DP.
-///
-/// Blocked by G-DECLARATIVE-KEYWORD: same root cause. The active_when condition
-/// closure is never called, so the turn-gating cannot be verified at runtime.
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — declarative process never fires; active_when condition \
-            cannot be verified; opponent-turn negative test would vacuously pass"]
 fn bt5_008_aura_does_not_fire_on_opponents_turn() {
     let mut runner = gaossmon_runner();
 
@@ -237,10 +298,19 @@ fn bt5_008_aura_does_not_fire_on_opponents_turn() {
     // Place a second Gaossmon on P0's field.
     let gaossmon_2 = runner.place_on_field(0, "GAOSSMON-2", None);
 
-    // Advance to P1's turn.
-    runner.end_turn();
+    // Sanity: on P0's turn the aura is active.
+    runner.game.tick_declarative_effects();
+    assert_eq!(
+        runner.dp_of(gaossmon_2).unwrap_or(0),
+        2000 + 3000,
+        "control: aura must be active on the controller's own turn"
+    );
 
-    // The aura should NOT fire on P1's turn (active_when: your_turn).
+    // Advance to P1's turn and re-tick.
+    runner.end_turn();
+    runner.game.tick_declarative_effects();
+
+    // The aura must NOT fire on P1's turn (active_when: { your_turn: true }).
     let dp_gaossmon_2 = runner.dp_of(gaossmon_2).unwrap_or(0);
     assert_eq!(
         dp_gaossmon_2,
@@ -252,21 +322,26 @@ fn bt5_008_aura_does_not_fire_on_opponents_turn() {
     let _ = gaossmon_1;
 }
 
-/// G-OTHER-PREDICATE-UNEVALUATED: BT5-008's aura should NOT buff itself
-/// (the `other: true` predicate should exclude the source card), but due to
-/// the engine gap the aura currently also applies to BT5-008 itself.
-///
-/// This test documents the EXPECTED behavior (self NOT buffed). It is #[ignore]'d
-/// because the engine currently over-fires (BT5-008 buffs itself too).
+/// Negative (self-exclusion): BT5-008's aura must NOT buff itself —
+/// the printed text says "Your OTHER [Gaossmon]", expressed via `other: true`.
 #[test]
-#[ignore = "BLOCKED: G-OTHER-PREDICATE-UNEVALUATED — eval_permanent_fields does not check pred.other; BT5-008 incorrectly buffs itself (expected: self excluded from aura target)"]
 fn bt5_008_aura_does_not_buff_self() {
     let mut runner = gaossmon_runner();
 
-    // Place BT5-008 on P0's field.
+    // Place BT5-008 on P0's field, alongside another Gaossmon as a control.
     let gaossmon_1 = runner.place_on_field(0, "BT5-008", None);
+    let gaossmon_2 = runner.place_on_field(0, "GAOSSMON-2", None);
 
-    // On P0's turn, BT5-008 should NOT buff itself (other: true exclusion).
+    runner.game.tick_declarative_effects();
+
+    // Control: the OTHER Gaossmon IS buffed, proving the aura is active.
+    assert_eq!(
+        runner.dp_of(gaossmon_2).unwrap_or(0),
+        2000 + 3000,
+        "control: another Gaossmon must be buffed (proves the aura fired)"
+    );
+
+    // On P0's turn, BT5-008 must NOT buff itself (other: true exclusion).
     let dp_self = runner.dp_of(gaossmon_1).unwrap_or(0);
     assert_eq!(
         dp_self,
@@ -276,27 +351,116 @@ fn bt5_008_aura_does_not_buff_self() {
     );
 }
 
-// ─── Section 3: Clause 2 behavioral — [Opponent's Turn] no digivolution cost reduction ──
+// ─── Section 3: Clause 2 behavioral — [Opponent's Turn] no cost reduction ────
 
-/// Clause 2 is DSL-native now, but runtime behavior is still blocked by
-/// G-DECLARATIVE-KEYWORD: passive declarative field effects are not dispatched globally.
-/// Once the declarative pass exists, BT5-008 on P0's field during P1's turn should
-/// install `CannotReduceDigivolveCost` on P1 and suppress P1's digivolution cost
-/// reductions without affecting play-cost reducers.
+/// Structural/runtime: while BT5-008 is on P0's field during P1's turn, the
+/// `CannotReduceDigivolveCost` modifier is installed on P1 (the opponent) and
+/// NOT on P0.
 #[test]
-#[ignore = "BLOCKED: G-DECLARATIVE-KEYWORD — passive declarative flood_gate compiles, but field-state declarative effects are not globally dispatched yet"]
-fn bt5_008_opponent_cannot_reduce_digivolution_costs_while_in_play() {
-    // This test would need:
-    // 1. A cost-reduction effect on P1's side (e.g., a BeforePayCost script).
-    // 2. BT5-008 on P0's field.
-    // 3. End P0's turn (P1's turn starts).
-    // 4. P1 attempts to digivolve → cost reduction should be suppressed.
-    //
-    // The player-scoped DSL shape and per-cost-type enforcement now exist; the
-    // remaining missing piece is the passive declarative dispatcher that installs
-    // this static field floodgate while BT5-008 is face-up and active.
+fn bt5_008_installs_cannot_reduce_digivolve_cost_on_opponent_on_their_turn() {
+    let mut runner = gaossmon_runner();
+
+    // Place BT5-008 on P0's field.
+    runner.place_on_field(0, "BT5-008", None);
+
+    // On P0's own turn, the [Opponent's Turn] flood gate must be inactive.
+    runner.game.tick_declarative_effects();
     assert!(
-        false,
-        "placeholder — remove when G-DECLARATIVE-KEYWORD is closed"
+        !runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotReduceDigivolveCost),
+        "flood gate must be inactive on the controller's own turn"
+    );
+
+    // Advance to P1's turn — the flood gate becomes active.
+    runner.end_turn();
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotReduceDigivolveCost),
+        "opponent must carry CannotReduceDigivolveCost on their turn while BT5-008 is in play"
+    );
+    assert!(
+        !runner
+            .game
+            .modifiers
+            .player_has(0, ModifierType::CannotReduceDigivolveCost),
+        "the controller must never receive their own flood gate"
+    );
+}
+
+/// Integrated: with BT5-008 on P0's field, P1's digivolution-cost reducer is
+/// suppressed during P1's turn — the digivolve stays legal, but pays full cost.
+#[test]
+fn bt5_008_opponent_cannot_reduce_digivolution_costs_while_in_play() {
+    let mut runner = cost_reduction_runner();
+
+    // BT5-008 on P0's field; P1 has a base Digimon + a -3 cost reducer.
+    runner.place_on_field(0, "BT5-008", Some(0));
+    runner.place_on_field(1, "BASE", Some(0));
+    runner.place_on_field(1, "REDUCER", Some(0));
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.game.set_memory(10);
+    runner.game.tick_declarative_effects();
+
+    // BT5-008 must NOT hide the opponent's ordinary digivolve from the mask.
+    let action = encode_digivolve(0, 0);
+    let mask = build_action_mask(&runner.game, 1);
+    assert_eq!(
+        mask[action as usize], 1.0,
+        "BT5-008 must not hide the opponent's ordinary digivolve action from the mask"
+    );
+
+    // EVO costs 4 to digivolve from level 3. The -3 reducer would normally
+    // make it cost 1; BT5-008 suppresses the reduction, so it costs the full 4.
+    let memory_before = runner.memory();
+    let digivolved = runner
+        .game
+        .digivolve_from_hand(1, 0, 0, PlaySource::ByDigivolve);
+
+    assert!(
+        digivolved,
+        "opponent's ordinary digivolve must remain legal"
+    );
+    assert_eq!(
+        memory_before - runner.memory(),
+        4,
+        "BT5-008 must suppress the opponent's -3 digivolution cost reducer (full cost paid)"
+    );
+}
+
+/// Baseline (negative): without BT5-008 on the field, the opponent's
+/// digivolution-cost reducer applies normally — proving the suppression in the
+/// integrated test above is caused by BT5-008, not by anything else.
+#[test]
+fn bt5_008_baseline_without_gaossmon_allows_digivolution_cost_reductions() {
+    let mut runner = cost_reduction_runner();
+
+    // No BT5-008 on the field this time.
+    runner.place_on_field(1, "BASE", Some(0));
+    runner.place_on_field(1, "REDUCER", Some(0));
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.game.set_memory(10);
+    runner.game.tick_declarative_effects();
+
+    let memory_before = runner.memory();
+    let digivolved = runner
+        .game
+        .digivolve_from_hand(1, 0, 0, PlaySource::ByDigivolve);
+
+    assert!(
+        digivolved,
+        "ordinary digivolve should remain legal when no Gaossmon flood gate is active"
+    );
+    assert_eq!(
+        memory_before - runner.memory(),
+        1,
+        "digivolution cost reducer should apply normally without BT5-008 (4 - 3 = 1)"
     );
 }

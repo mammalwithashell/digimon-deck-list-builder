@@ -29,12 +29,12 @@ cost: 2
 #   - effect_initiated_digivolve { cost: { reduce: 3 }, ignore_requirements: false }
 #
 # "Then, place this card in the battle area" — Delay-Option auto-placement.
-# The engine classifies this Option as a Delay-Option (Clause B raw_rust Delay
-# clause) and auto-seats it in battle area at MainEffectDrain. No explicit step
+# The engine classifies this Option as a Delay-Option and auto-seats it in
+# battle area at MainEffectDrain. No explicit step
 # needed (see G-PLACE-SELF-AS-OPTION-PERMANENT notes in dsl-vocab-gaps.md and
 # the LM-027 precedent).
 #
-# ─── Clause B: [Start of Your Turn] Delay — BLOCKED (body gaps) ──────────────
+# ─── Clause B: [Start of Your Turn] Delay — IMPLEMENTED ─────────────────────
 #
 # "[Start of Your Turn] If your opponent has a Digimon, ＜Delay＞ (By trashing
 # this card after the placing turn, activate the effect below.)
@@ -87,7 +87,7 @@ cost: 2
 #   - scope: inherited
 #   - when: on_security
 #   - optional: true  (DCGO canNoSelect: true at SelectTrashCardEffect — "you may")
-#   - select_trash (filter: digimon + color_is: green [+ dp_lte: 2000 blocked])
+#   - select_trash (filter: digimon + color_is: green + dp_lte: 2000)
 #   - play_from_trash_free
 #   - add_this_option_to_hand
 #

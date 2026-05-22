@@ -22,7 +22,7 @@ These statuses are from the legacy Python QA lane. Rust YAML DSL readiness repor
 | 12 | ExMaquinamon | 16 | 12 | 2 | 2 | Complete |
 | 13 | Galacticmon | 36 | 16 | 0 | 5 | Complete (sampled) |
 | 14 | Zephagamon | 73 | 64 | 0 | 9 | Complete |
-| 15 | BG Imperial | 25 | 21 | 0 | 4 | Complete |
+| 15 | BG Imperial | 25 | 25 | 0 | 0 | Complete |
 | 16 | Rocks | 47 | 40 | 2 | 5 | Complete |
 | 17 | TS Olympos | 105 | 90+ | 5 | 0 | Complete (shared with TS Jupitermon/Neptunemon) |
 

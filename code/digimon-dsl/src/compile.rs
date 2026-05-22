@@ -363,6 +363,11 @@ fn compile_cost_delta(
 fn compile_identity(id: &crate::identity::IdentitySpec) -> CompiledIdentity {
     CompiledIdentity {
         name_aliases: id.name_aliases.iter().map(compile_name_alias).collect(),
+        source_name_aliases: id
+            .source_name_aliases
+            .iter()
+            .map(compile_source_name_alias)
+            .collect(),
     }
 }
 
@@ -380,6 +385,14 @@ fn compile_name_alias(a: &crate::identity::NameAliasSpec) -> CompiledNameAlias {
             .has_inherited
             .as_ref()
             .and_then(|i| i.name_is.clone()),
+    }
+}
+
+fn compile_source_name_alias(
+    a: &crate::identity::SourceNameAliasSpec,
+) -> CompiledSourceNameAlias {
+    CompiledSourceNameAlias {
+        level_lte: a.level_lte,
     }
 }
 
@@ -1646,6 +1659,10 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::TrashSelectedSecurity(a) => CompiledStep::TrashSelectedSecurity {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+        },
         S::AddTopSecurityToHand(a) => CompiledStep::AddTopSecurityToHand {
             of: compile_player_ref(a.of),
         },
@@ -1981,6 +1998,7 @@ fn compile_step(
         S::ReturnTrashListToDeckBottom(a) => CompiledStep::ReturnTrashListToDeckBottom {
             of: compile_player_ref(a.of),
             cards: compile_binding_ref(&a.cards),
+            to_top: matches!(a.destination, crate::step::DeckDestination::Top),
         },
         S::MoveTrashCardToDeckTop(a) => CompiledStep::MoveTrashCardToDeckTop {
             of: compile_player_ref(a.of),
@@ -2220,7 +2238,12 @@ fn compile_step(
             }
         }
         S::SelectOpponentDpBudget(a) => CompiledStep::SelectOpponentDpBudget {
-            dp_budget: a.dp_budget,
+            dp_budget: compile_formula(
+                &a.dp_budget,
+                &format!("{prefix}.dp_budget"),
+                card_id,
+                errors,
+            ),
             min_picks: a.min_picks,
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
@@ -2502,27 +2525,32 @@ fn compile_step(
             binds: r.binds.clone(),
         },
         S::ActivationCost(a) => {
-            let kind = match (a.suspend_self, a.return_self_to_deck_bottom) {
-                (true, false) => Some(crate::compiled::CompiledActivationCostKind::SuspendSelf),
-                (false, true) => {
+            let kind = match (a.suspend_self, a.return_self_to_deck_bottom, a.trash_self) {
+                (true, false, false) => {
+                    Some(crate::compiled::CompiledActivationCostKind::SuspendSelf)
+                }
+                (false, true, false) => {
                     Some(crate::compiled::CompiledActivationCostKind::ReturnSelfToDeckBottom)
                 }
-                (false, false) => {
+                (false, false, true) => {
+                    Some(crate::compiled::CompiledActivationCostKind::TrashSelf)
+                }
+                (false, false, false) => {
                     errors.push(ValidationError {
                         card_id: card_id.to_string(),
                         path: format!("{}.activation_cost", prefix),
                         message:
-                            "activation_cost requires exactly one cost kind: suspend_self or return_self_to_deck_bottom"
+                            "activation_cost requires exactly one cost kind: suspend_self, return_self_to_deck_bottom, or trash_self"
                                 .to_string(),
                     });
                     None
                 }
-                (true, true) => {
+                _ => {
                     errors.push(ValidationError {
                         card_id: card_id.to_string(),
                         path: format!("{}.activation_cost", prefix),
                         message:
-                            "activation_cost: suspend_self and return_self_to_deck_bottom are mutually exclusive"
+                            "activation_cost: suspend_self, return_self_to_deck_bottom, and trash_self are mutually exclusive"
                                 .to_string(),
                     });
                     None

@@ -16,7 +16,7 @@ cost: 3
 #     simplifiedSelectCardConditions: [
 #       { canTargetCondition: IsDigimon && HasCardColor(Red),
 #         canNoSelect: true (optional — 0 eligible = no selection prompt),
-#         message: "Add 1 red Digimon to your hand.",
+#         message: "Select 1 red Digimon card.",
 #         mode: AddHand, maxCount: 1 }
 #     ],
 #     remainingCardsPlace: RemainingCardsPlace.DeckBottom)
@@ -25,16 +25,24 @@ cost: 3
 # DSL modelling:
 #   - when: main_from_hand  (OptionSkill / MainFromHand timing)
 #   - reveal_top_deck: { of: you, count: 4 }
-#   - select_reveal: { filter: { all_of: [kind: digimon, color_is: red] }, optional: true }
-#     DCGO canNoSelect: true → optional: true (select skipped if 0 eligible)
+#   - select_reveal: { filter: { all_of: [kind: digimon, color_is: red] }, optional: false }
+#     Printed text "Add 1 red Digimon card among them" is mandatory — when ≥1
+#     red Digimon is revealed you MUST add one. `install_select_reveal` enforces
+#     the compiled filter when building valid_action_ids — only red Digimon
+#     among the 4 revealed are selectable. When zero eligible the install
+#     short-circuits (select_reveal returns false → no prompt, no card added),
+#     regardless of the `optional` flag — so DCGO's canNoSelect (0-eligible
+#     skip) is handled by the empty-valid_action_ids path. Matches sibling
+#     P-037 Yellow Memory Boost!.
 #   - add_to_hand_from_reveal: { of: you, card: picked }
+#     No-ops when `picked` is unbound (no eligible card → select skipped).
 #   - place_remainder_on_deck: { of: you, position: bottom }
 #     (internally calls select_ordered_permutation — "any order" is auto-handled)
-#   - "Then, place this card in the battle area" — G-PLACE-SELF-AS-OPTION-PERMANENT:
-#     No DSL step verb for placing the option card into the battle area as a
-#     Delay permanent. The engine infers option-as-permanent placement from the
-#     presence of the Delay clause (classify_option_subtype + dispose_option).
-#     Tests for this sub-clause are #[ignore]'d.
+#   - place_self_as_delay_option: {}
+#     "Then, place this card in the battle area" — places the currently-resolving
+#     Option card into the owner's battle area as an OptionState::Delayed
+#     permanent (G-PLACE-SELF-AS-OPTION-PERMANENT resolved 2026-05-02). In the
+#     main-from-hand context the engine removes P-035 from the controller's hand.
 #
 # ─── Clause 1: [Main] <Delay> ────────────────────────────────────────────────
 #
@@ -43,14 +51,18 @@ cost: 3
 #
 # DCGO (EffectTiming.OnDeclaration):
 #   CanUseCondition: CanDeclareOptionDelayEffect(card)
-#     → standard EndOfYourNextTurn delay (not on-suspend).
+#     → standard player-initiated <Delay> (trash on/after the placing turn).
 #   ActivateCoroutine:
 #     DeletePermanentAndProcessAccordingToResult → if success:
 #       AddMemory(2)
 #
 # DSL modelling:
-#   - kind: delay  (maps to DelayTrigger::EndOfYourNextTurn in lower_delay.rs)
-#     trigger: end_of_your_next_turn  (explicit variant → CompiledTiming::EndOfYourNextTurn)
+#   - kind: delay
+#     trigger: delayed  → CompiledTiming::Delayed → DelayTrigger::MainPhaseActivated.
+#     This is the standard printed <Delay> (RULES_CONTEXT 16-16): a
+#     player-visible [Main]-phase activation action. The controller trashes the
+#     parked Option on a later main phase to activate the body — it never
+#     auto-fires. Matches sibling P-037 Yellow Memory Boost!.
 #   - process: [ gain_memory: 2 ]
 #
 # ─── Clause 2: [Security] (inherited) ────────────────────────────────────────
@@ -66,21 +78,15 @@ cost: 3
 # DSL modelling:
 #   - scope: inherited  (inherited security effect)
 #   - when: on_security
-#   - process: []  — G-PLACE-SELF-AS-OPTION-PERMANENT: no DSL step exists for
-#     placing an option card in battle area from the inherited-security context.
-#     Tests asserting the card lands in battle area after security are #[ignore]'d.
-#
-# G-PLACE-SELF-AS-OPTION-PERMANENT [DSL gap]:
-#   No `place_option_in_battle_area: {}` step verb exists. The engine infers
-#   option-as-permanent placement from the Delay clause presence together with a
-#   main_from_hand trigger, but there is no explicit DSL step to trigger that
-#   placement when hit as an inherited security effect.
-#   Same gap as P-103.yaml and BT24-089.yaml.
+#   - process: [ place_self_as_delay_option: {} ]
+#     In the security context `place_self_as_delay_option` consumes the
+#     pending_security card and places it into the owner's battle area as an
+#     OptionState::Delayed permanent (instead of disposing it to trash).
 
 effects:
   # ─── Clause 0: [Main] ─────────────────────────────────────────────────────
   # Reveal top 4, add 1 red Digimon to hand, place rest at bottom in any order.
-  # "Then, place this card in battle area" — G-PLACE-SELF-AS-OPTION-PERMANENT.
+  # "Then, place this card in battle area" via place_self_as_delay_option.
   - when: main_from_hand
     optional: false
     summary: "[Main] Reveal top 4; add 1 red Digimon to hand; place rest at bottom; place self in battle area"
@@ -88,11 +94,15 @@ effects:
       - reveal_top_deck:
           of: you
           count: 4
-      # DCGO: IsDigimon && HasCardColor(Red), canNoSelect: true (optional), maxCount: 1
+      # DCGO: IsDigimon && HasCardColor(Red), maxCount: 1.
+      # The compiled filter is enforced by install_select_reveal — only red
+      # Digimon among the 4 revealed are selectable; 0 eligible → no prompt.
+      # optional: false — "Add 1 red Digimon card" is mandatory when ≥1 is
+      # revealed (matches sibling P-037 Yellow Memory Boost!).
       - select_reveal:
           of: you
           bind_as: picked
-          optional: true
+          optional: false
           filter:
             all_of:
               - kind: digimon
@@ -102,16 +112,16 @@ effects:
       # place_remainder_on_deck internally calls select_ordered_permutation —
       # the "any order" requirement is auto-handled by the engine.
       - place_remainder_on_deck: { of: you, position: bottom }
-      # "Then, place this card in the battle area" is G-PLACE-SELF-AS-OPTION-PERMANENT.
-      # No DSL verb available; the engine infers option placement from the Delay clause.
+      # "Then, place this card in the battle area" — places the resolving Option
+      # card into the owner's battle area as an OptionState::Delayed permanent.
+      - place_self_as_delay_option: {}
 
   # ─── Clause 1: [Main] <Delay> ─────────────────────────────────────────────
-  # Standard Delay: player may trash this card on or after the next turn to
-  # activate the effect below (gain 2 memory).
-  # trigger: end_of_your_next_turn → CompiledTiming::EndOfYourNextTurn →
-  #   lower_delay.rs maps to DelayTrigger::EndOfYourNextTurn (standard Delay).
+  # Standard printed <Delay>: the controller may trash this parked Option on a
+  # later main phase (after the placing turn) to activate the body.
+  # trigger: delayed → CompiledTiming::Delayed → DelayTrigger::MainPhaseActivated.
   - kind: delay
-    trigger: end_of_your_next_turn
+    trigger: delayed
     summary: "[Main]<Delay> Gain 2 memory"
     process:
       # DCGO: AddMemory(2)
@@ -120,10 +130,10 @@ effects:
   # ─── Clause 2: [Security] (inherited) ─────────────────────────────────────
   # "Security Effect [Security] Place this card in the battle area."
   # DCGO: PlaceSelfDelayOptionSecurityEffect — places option as Delay permanent.
-  # G-PLACE-SELF-AS-OPTION-PERMANENT: no DSL step for this placement.
-  # The clause is structurally present so security_effects dispatch finds it;
-  # behavioral placement tests are #[ignore]'d.
+  # place_self_as_delay_option consumes the pending_security card and places it
+  # in the owner's battle area as an OptionState::Delayed permanent.
   - scope: inherited
     when: on_security
     summary: "[Security][Inherited] Place this card in the battle area"
-    process: []
+    process:
+      - place_self_as_delay_option: {}

@@ -7,7 +7,9 @@ use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::CardKind;
 use digimon_engine::permanent::{Permanent, PermanentHandle};
-use digimon_engine::selection::{OptionResolutionPhase, OptionUseSource, PendingOption};
+use digimon_engine::selection::{
+    OptionResolutionPhase, OptionSubtype, OptionUseSource, PendingOption,
+};
 
 fn compile_steps(step_yaml: &str) -> Vec<CompiledStep> {
     let yaml = format!(
@@ -152,6 +154,7 @@ fn place_self_option_at_security_consumes_pending_option() {
         card,
         source_kind: OptionUseSource::Hand,
         resolution_phase: OptionResolutionPhase::MainEffectDrain,
+        subtype: OptionSubtype::Standard,
     });
 
     run_compiled_steps(

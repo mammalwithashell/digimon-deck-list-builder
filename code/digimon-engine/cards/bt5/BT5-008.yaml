@@ -9,44 +9,30 @@ traits: [Reptile]
 
 # ─── Clause 1: [Your Turn] Your other [Gaossmon] all get +3000 DP ───────────
 #
-# DCGO: ChangeDPStaticEffect with:
-#   - permanent != card.PermanentOfThisCard()  (self-exclusion, `other: true`)
-#   - TopCard.CardNames.Contains("Gaossmon")   (name filter)
-#   - IsOwnerTurn condition                    (active_when: your_turn)
-#   - Amount: 3000
+# DCGO (BT5_008.cs): ChangeDPStaticEffect with:
+#   - permanent != card.PermanentOfThisCard()  → self-exclusion (`other: true`)
+#   - TopCard.CardNames.Contains("Gaossmon")   → name filter (`name_contains`)
+#   - IsOwnerTurn condition                    → `active_when: { your_turn: true }`
+#   - changeValue: 3000                        → `dp_modifier: 3000`
 #
-# DSL shape: kind: aura, active_when: { your_turn: true },
-#   target: { owner: you, zone: [battle_area], name_contains: "Gaossmon", other: true },
-#   dp_modifier: 3000
-#
-# KNOWN GAP — G-DECLARATIVE-KEYWORD (primary blocker):
-#   `EffectTiming::Declarative` is never enqueued or fired anywhere in the engine.
-#   The filtered aura lowers to an `Effect::declarative(card).process(|ctx| { ctx.add_dp_modifier(...) })`,
-#   but that process closure is NEVER called. As a result, the ChangeDp modifier is never
-#   installed in the modifier registry at runtime. All behavioral aura tests are #[ignore]'d.
-#   See qa/archetype-qa/engine-gaps.md [G-DECLARATIVE-KEYWORD].
-#
-# KNOWN GAP — G-OTHER-PREDICATE-UNEVALUATED (secondary — blocked until G-DECLARATIVE-KEYWORD closes):
-#   The `other: true` field in `PredicateSpec` compiles to `CompiledPredicate.other`
-#   but `eval_permanent_fields` in `dsl_cards/predicate.rs` does NOT check `pred.other`.
-#   As a result, even once G-DECLARATIVE-KEYWORD is fixed, BT5-008 will also buff itself
-#   (over-fires), violating the printed text.
-#   The self-exclusion behavioral test is `#[ignore]`'d with this gap tag until
-#   `eval_permanent_fields` gains an `if pred.other == Some(true) && handle == source_handle { return false }` check.
+# Lowers to a process-backed declarative aura. `Game::tick_declarative_effects`
+# scans face-up field sources, evaluates `active_when`, then installs +3000
+# ChangeDp on every battle-area permanent matching the `target` predicate.
+# `other: true` excludes BT5-008's own permanent (G-OTHER-PREDICATE-UNEVALUATED,
+# resolved Group 6); `name_contains` matches the printed "[Gaossmon]" filter.
 #
 # ─── Clause 2: [Opponent's Turn] Your opponent can't reduce digivolution costs ─
 #
-# DCGO: CannotReduceCostClass with:
-#   - Target: card.Owner.Enemy (opponent player)
-#   - isPermanent: true (permanent player-level modifier)
-#   - IsOpponentTurn condition
+# DCGO (BT5_008.cs): CannotReduceCostClass with:
+#   - PlayerCondition: player == card.Owner.Enemy  → `target_player: opponent`
+#   - isPermanent: true                            → permanent player-level modifier
+#   - IsOpponentTurn condition                     → `active_when: { opponents_turn: true }`
 #
-# DSL shape: kind: flood_gate, active_when: { opponents_turn: true },
-#   target_player: opponent, modifier: CannotReduceDigivolveCost.
-#
-# Remaining runtime blocker: declarative process effects are still not dispatched
-# globally, so passive field auras/floodgates compile but do not yet install at
-# runtime. Tracked as G-DECLARATIVE-KEYWORD.
+# Lowers to a player-scoped declarative flood gate. The same declarative tick
+# installs `CannotReduceDigivolveCost` on the opponent; the engine's cost-calc
+# path then suppresses that player's digivolution-cost reducers while leaving
+# ordinary digivolution and play-cost reducers untouched
+# (G-PLAYER-FLOOD-GATE-DSL, resolved Group 6 — raw_rust placeholder removed).
 
 effects:
   # ─── Clause 1: [Your Turn] other Gaossmon +3000 DP ─────────────────────────
