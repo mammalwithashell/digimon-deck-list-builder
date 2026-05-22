@@ -486,9 +486,18 @@ impl Game {
                 );
             }
         }
+        // Fan event dispatches out to placed event-gated Delay Options.
+        // `EnteredField` covers `OnEnterFieldAnyone` / `OnAllyPlayed` plays:
+        // P-229's `<Delay>` is keyed to `OnEvent(OnAllyPlayed)` and must fire
+        // when a [Mirai Kinosaki] is played (PUPPETS-G004). The candidate scan
+        // in `enqueue_event_gated_delayed_options` only matches Options whose
+        // `OnEvent(event_timing)` equals `timing`, so dispatching for both the
+        // `OnEnterFieldAnyone` and `OnAllyPlayed` broadcasts is harmless.
         if matches!(
             source,
-            TriggerSource::EventObserved { .. } | TriggerSource::AttackTargetChanged { .. }
+            TriggerSource::EventObserved { .. }
+                | TriggerSource::AttackTargetChanged { .. }
+                | TriggerSource::EnteredField { .. }
         ) {
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);

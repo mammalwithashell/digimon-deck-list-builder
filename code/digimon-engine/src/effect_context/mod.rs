@@ -4253,9 +4253,20 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return;
         }
+        // `*NextTurn` expiries installed during the about-to-end turn must
+        // skip that turn-end (otherwise they expire one turn early). The
+        // engine knows the current turn at install time, so compute it
+        // here — every `add_modifier` / `add_dp_modifier` caller (DSL and
+        // hand-written) gets correct "until end of next turn" semantics.
+        let pending_skips = crate::modifiers::pending_skips_for_install(
+            expiry,
+            self.player,
+            self.game.turn_player(),
+        );
         self.game.modifiers.add(
             target,
-            ModifierEntry::simple(modifier, value, expiry, self.player),
+            ModifierEntry::simple(modifier, value, expiry, self.player)
+                .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();
     }

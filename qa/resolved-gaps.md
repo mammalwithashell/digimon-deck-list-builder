@@ -2174,6 +2174,22 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
 - **Residual:** `BT22-098` has a distinct residual filed as `PUPPETS-G033` — the Option-card pipeline's integrated resolution (pending optional play + post-resolution battle-area placement as a Delayed Option) is not yet proven. That is a different, narrower shape from the standard `<Delay>` main-phase activation that this entry closes.
 - **Related:** `PUPPETS-G009` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; `PUPPETS-G033` (BT22-098 Option pipeline residual).
 
+## Hybrid Gap: `on_ally_played` event-gated Delay Options (PUPPETS-G004) — RESOLVED 2026-05-21
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets (2026-04-28 archetype assessment)
+- **Card(s):** `P-229` Unique Emblem: Narrative Ronde. (`BT22-098`'s sibling `on_suspend` slice closed earlier, 2026-05-02.)
+- **Effect text:** "[Your Turn] When any of your [Mirai Kinosaki]s are played, `<Delay>` (By trashing this card after the placing turn, activate the effect below.) 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
+- **What was missing (two halves):**
+  - **DSL:** `code/digimon-engine/src/dsl_cards/lower_delay.rs` mapped only `on_suspend` / `on_unsuspend` to `DelayTrigger::OnEvent`. `trigger: on_ally_played` fell through to `DelayTrigger::EndOfYourNextTurn`, which auto-expires the Option on the wrong schedule.
+  - **Engine:** `enqueue_event_gated_delayed_options` (the scan that fires placed Delay Options matching an observed event) was only invoked from the `EventObserved` / `AttackTargetChanged` dispatch in `effect_queue.rs` `enqueue_triggered`. The `OnAllyPlayed` play broadcast uses `TriggerSource::EnteredField`, which never reached it — a placed Delay Option keyed to `on_ally_played` never fired.
+- **Resolution:**
+  - `lower_delay.rs` now maps `CompiledTiming::OnAllyPlayed` → `DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed)` alongside the existing event arm.
+  - `effect_queue.rs` `enqueue_triggered` now fans `TriggerSource::EnteredField` dispatches out to `enqueue_event_gated_delayed_options`. The candidate scan only matches Options whose `OnEvent(event_timing)` equals the dispatch `timing`, so dispatching for both the `OnEnterFieldAnyone` and `OnAllyPlayed` play broadcasts is harmless.
+  - `OnEvent(_)` Delay Options park indefinitely (`compute_delay_trash_turn` = `u16::MAX`), so the Option's "place this card in the battle area" tail is faithful with no turn-keyed auto-trash approximation.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_229` — 13 tests pass, 0 ignored, incl. placing-turn gate, non-Mirai event-predicate gate, and decline-still-pays-the-trash-cost. Full engine suite green (`bt22_098` `on_suspend` sibling unaffected).
+- **Related:** `PUPPETS-G004` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`, `qa/dsl-vocab-gaps.md`; `G-DELAY-EVENT-GATED` in `qa/archetype-qa/engine-gaps.md`.
+
 ## Engine Gap: Effect-spawned permanent with end-of-turn deletion rider — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - **Severity:** 🔴 BLOCKING (closed for provenance-bound cleanup substrate)
