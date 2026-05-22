@@ -91,7 +91,7 @@ fn fire_when_digivolving(runner: &mut DebugRunner, fm: digimon_engine::permanent
 ///   [1] the All-Turns self-aura (dp_modifier_fn = DigivolutionColorCount * 1000)
 ///   [2] the conditional Security A. +1 / Blocker self-aura (while_condition)
 ///
-/// Clause 0c (alt-cost) is BLOCKED and omitted.
+/// Clause 0c (alt-cost) is implemented via `return_selected_sources_to_hand`.
 #[test]
 fn bt12_031_compiles_to_three_clauses() {
     let runner = fighter_mode();

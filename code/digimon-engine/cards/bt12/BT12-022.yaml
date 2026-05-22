@@ -16,23 +16,18 @@
 #
 # ─── Clause layout ────────────────────────────────────────────────────────────
 #
-#   Clause 0 (own effect): BLOCKED
+#   Clause 0 (own effect): IMPLEMENTED
 #     "[Your Turn] When this Digimon would DNA digivolve into a green Digimon
 #     card, gain 1 memory."
 #     DCGO: EffectTiming.BeforePayCost with CanTriggerWhenPermanentWouldDigivolveOfCard
 #     + IsJogress + target card must be green Digimon. This is a BeforePayCost
 #     triggered gain_memory effect gated on the digivolve target's color.
-#     BLOCKED on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (already in qa/dsl-vocab-gaps.md)
-#     for the DNA-digivolve-target thread, PLUS a new sub-gap:
-#     G-BEFORE-PAY-COST-GAIN-MEMORY — BeforePayCost triggered effects currently
-#     only model `cost_reduction` in CostReductionBody; there is no triggered
-#     form for `gain_memory` at BeforePayCost timing.
-#     Note: `on_dna_digivolve` fires AFTER DNA completes and has no
-#     `event_card_color_is` predicate, so it cannot model the "would into green"
-#     gating faithfully even if timing were adjusted.
-#     See qa/dsl-vocab-gaps.md entries for this card.
+#     Historical blocker G-BEFORE-PAY-COST-DIGIVOLVE-TARGET +
+#     G-BEFORE-PAY-COST-GAIN-MEMORY closed in Phase 2 Track H. Authored as a
+#     `before_pay_cost_observe` clause gated by `dna_origin`,
+#     `source_is_cost_target_permanent`, and a green Digimon `cost_target`.
 #
-#   Clause 1 (inherited): PARTIAL
+#   Clause 1 (inherited): IMPLEMENTED
 #     "[Your Turn] While this Digimon has [Imperialdramon] in its name or the
 #     [Free] trait, it gains <Jamming>"
 #     DCGO: EffectTiming.None, JammingSelfStaticEffect(isInheritedEffect: true),

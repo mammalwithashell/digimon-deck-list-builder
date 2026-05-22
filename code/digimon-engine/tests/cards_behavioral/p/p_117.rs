@@ -16,7 +16,7 @@
 //! DCGO/Assets/Scripts/CardEffect/P/Blue/P_117.cs
 //!
 //! # Patterns this test covers
-//! - D2-adjacent: BeforePayCost cost reduction (clause 0 — BLOCKED)
+//! - D2-adjacent: BeforePayCost cost reduction (clause 0 — IMPLEMENTED)
 //! - B3-adjacent: Tamer-on-field condition (clause 0)
 //! - G4-adjacent: inherited When Attacking on base Digimon (clause 1)
 //!
@@ -403,7 +403,7 @@ fn p_117_inherited_when_attacking_fires_on_each_attack_no_opt() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 5 (BLOCKED stubs) — Clause 0 cost reduction
+// SECTION 5 — Clause 0 cost reduction
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// CLOSED (Phase 2 Track H): Clause 0 cost reduction is now expressible.

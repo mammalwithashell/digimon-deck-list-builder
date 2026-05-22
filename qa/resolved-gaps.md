@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-20
+Last updated: 2026-05-22
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -18,6 +18,14 @@ Tracks A–J, DNA Omnimon completion, Puppets sweep) — see
 `openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md`. The 5 genuine
 substrate gaps below landed. Engine/DSL only — no card YAML re-authored (the BG
 card re-authoring sweep runs separately); no `ACTION_SPACE_SIZE` / tensor changes.
+
+**Readiness reconciliation (2026-05-22):** the live `BG Imperial`
+deck-library pool is 25 cards, not 24. The extra pool card is `BT17-077`,
+which remains canonically ledger-owned by `Royal Knights` but is covered for BG
+Imperial deck readiness. `BT21-037` also moved from a stale `PARTIAL`
+ledger entry to `IMPLEMENTED` after adding its printed `[Digivolve] [Veemon]:
+Cost 2` alternate path. The reconciliation found zero live `raw_rust` YAML
+escapes in the 25-card pool.
 
 **Audit correction:** the Phase 0 audit initially flagged 9 gaps, but a second
 review found 4 of them already covered by pre-existing engine capability — they
