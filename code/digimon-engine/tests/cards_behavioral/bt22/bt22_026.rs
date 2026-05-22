@@ -407,6 +407,40 @@ fn bt22_026_when_digivolving_branch_1_only_lowest_level_is_a_legal_target() {
     );
 }
 
+/// Branch 1 tie-break: when two opp Digimon share the same lowest level,
+/// BOTH must be valid bounce targets (the `level_matches_aggregate` predicate
+/// matches all Digimon that tie for the lowest level, not just one).
+///
+/// This asserts the tie-breaking semantic of `level_matches_aggregate {
+/// selector: lowest_level, of: opponent }`: any Digimon whose level equals
+/// the minimum level on the opponent's field is a legal target.
+#[test]
+fn bt22_026_when_digivolving_branch_1_two_opp_at_same_lowest_level_are_both_legal() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-026 YAML loads")
+        .add_card(make_opp_digimon("OPP-LOW-A", "OppLowA", 3, 3000))
+        .add_card(make_opp_digimon("OPP-LOW-B", "OppLowB", 3, 5000))
+        .memory(15)
+        .start();
+
+    let bt22 = place_bt22_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-LOW-A", None);
+    runner.place_on_field(1, "OPP-LOW-B", None);
+
+    trigger_when_digivolving(&mut runner, bt22);
+    let _ = runner.execute_branch(1);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("bounce-target selection installs");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "both Lv.3 opp Digimon must be valid bounce targets when they share the lowest level"
+    );
+}
+
 /// Branch 0 (Digivolve Agumon → WarGreymon free): selecting branch 0
 /// should chain through select_own_permanent → select_hand →
 /// effect_initiated_digivolve. **BLOCKED**: G-EFFECT-INITIATED-DIGIVOLVE-

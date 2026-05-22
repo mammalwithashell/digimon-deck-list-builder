@@ -1,0 +1,161 @@
+# AD1-019 Matt Ishida & T.K. Takaishi — Tamer, Cost 3, Blue/Yellow.
+# Traits: ADVENTURE, Hero
+#
+# NOTE: AD1-019 is absent from data/cards.json and data/card_overrides.json.
+# Authoritative text sourced from en.digimoncard.com (official card site):
+#
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [When Digivolving] [Once Per Turn] When any of your Digimon digivolve into
+#     an [ADVENTURE] trait Digimon, by suspending this Tamer, you may play 1
+#     [ADVENTURE] trait card from your hand. For every 2 of your Tamers' colors,
+#     reduce this effect's play cost by 1.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/AD1/ (submodule not populated;
+# structural patterns derived from sister Tamer cards BT21-081 and BT24-082 which
+# carry identical clause shapes in the same block)
+#
+# ─── Source-priority audit ────────────────────────────────────────────────────
+#
+# Clause (a): "[Start of Your Main Phase] If your opponent has a Digimon, gain
+#   1 memory." — Identical text to BT21-081 clause (a). Mandatory (no "you may").
+#   Condition: any_permanent of opponent in battle_area of kind digimon.
+#   Step: gain_memory: 1.
+#
+# Clause (b): "[When Digivolving] [Once Per Turn] When any of your Digimon
+#   digivolve into an [ADVENTURE] trait Digimon, by suspending this Tamer, you
+#   may play 1 [ADVENTURE] trait card from your hand. For every 2 of your
+#   Tamers' colors, reduce this effect's play cost by 1."
+#
+#   Timing: on_digivolve — the OnDigivolve observer fires when a permanent
+#   digivolves, carrying the new top-card permanent as the event target. Engine:
+#   TriggerSource::Digivolved { player, permanent, card, ... }.
+#
+#   Condition: event_target_owner: you (the digivolving Digimon belongs to us)
+#   AND event_target_trait_has: ADVENTURE (the result has ADVENTURE trait).
+#   This matches BT24-082's event_target_owner + event_target_trait_has pattern.
+#
+#   "by suspending this Tamer" = activation cost → optional: true.
+#   "you may" = the play body is also optional (canNoSelect: true in DCGO pattern).
+#
+#   Condition gate additionally: Matt must be unsuspended (can pay the suspend
+#   cost). Added via `is_unsuspended: true` on an any_permanent gate referencing
+#   the Tamer's own card_number_is.
+#
+#   Play body BLOCKED:
+#     "For every 2 of your Tamers' colors, reduce this effect's play cost by 1"
+#     requires `cost_delta: { formula_reduce: floor_div(distinct_colors_count, 2) }`.
+#     DSL `CostDelta` only accepts { reduce: N } (literal N), `free`, or `printed`.
+#     Under the no-approximations policy, both `play_from_hand_free` (over-permissive)
+#     and `play_from_hand { cost_delta: { reduce: 1 } }` (wrong fixed amount) violate
+#     the printed text. The play body is OMITTED pending G-DSL-COST-DELTA-FORMULA.
+#
+#     When the gap closes, the full play body would lower as:
+#
+#       - select_hand:
+#           of: you
+#           bind_as: adventure_pick
+#           optional: true
+#           filter: { trait_has: ADVENTURE }
+#           prompt: "Play 1 [ADVENTURE] trait card from your hand"
+#       - play_from_hand:
+#           of: you
+#           hand_index: adventure_pick
+#           cost_delta:
+#             formula_reduce:
+#               floor_div:
+#                 - distinct_colors_count:
+#                     of: you
+#                     zone: battle_area
+#                     filter: { kind: tamer }
+#                 - 2
+#
+# Clause (c): "[Security] Play this card without paying the cost." — Standard
+#   play_from_security pattern shared by BT21-081, BT24-082, BT13-095, etc.
+#
+# ─── Clause status summary ────────────────────────────────────────────────────
+#
+#   (a) start_of_your_main_phase + condition + gain_memory   IMPLEMENTED
+#   (b) on_digivolve + suspend cost (play body BLOCKED)      PARTIAL
+#         gap: G-DSL-COST-DELTA-FORMULA
+#   (c) on_security play_from_security                       IMPLEMENTED
+
+card: AD1-019
+name: Matt Ishida & T.K. Takaishi
+kind: tamer
+color: [blue, yellow]
+cost: 3
+traits: [ADVENTURE, Hero]
+
+effects:
+  # ─── Clause (a): [Start of Your Main Phase] ───────────────────────────────────
+  #
+  # Printed text:
+  #   "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+  #
+  # Mandatory (no "you may"). Condition: opponent has at least 1 Digimon.
+  # Mirrors BT21-081 clause (a) exactly.
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If opponent has Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  # ─── Clause (b): [on_digivolve][Once Per Turn] suspend self → play ADVENTURE ──
+  #
+  # Printed text:
+  #   "[When Digivolving] [Once Per Turn] When any of your Digimon digivolve into
+  #    an [ADVENTURE] trait Digimon, by suspending this Tamer, you may play 1
+  #    [ADVENTURE] trait card from your hand. For every 2 of your Tamers' colors,
+  #    reduce this effect's play cost by 1."
+  #
+  # optional: true — "by suspending this Tamer" is the activation cost.
+  # Condition (a): event_target_owner: you (the digivolving permanent belongs to us).
+  # Condition (b): event_target_trait_has: ADVENTURE (result has ADVENTURE trait).
+  # Condition (c): Matt must be unsuspended so the suspend cost can be paid.
+  #   Without this gate, the suspend step would attempt to suspend an already-
+  #   suspended tamer; the condition mirrors DCGO's CanActivateSuspendCostEffect.
+  #
+  # Process:
+  #   Step 1 (cost): suspend this Tamer.
+  #   Steps 2-3 (body): BLOCKED — see header docs for G-DSL-COST-DELTA-FORMULA.
+  #     The play body requires floor(distinct_tamer_colors / 2) cost reduction;
+  #     CostDelta does not support formula expressions. Per no-approximations
+  #     policy, the play body is OMITTED.
+  - when: on_digivolve
+    optional: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[on_digivolve][OPT] When ally digivolves into ADVENTURE: suspend self → play ADVENTURE from hand (play body BLOCKED: G-DSL-COST-DELTA-FORMULA)"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_trait_has: ADVENTURE
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "AD1-019"
+            is_unsuspended: true
+    process:
+      # Cost: suspend this Tamer.
+      # `source` resolves to ctx.source_permanent (the Matt & T.K. Tamer permanent).
+      - suspend: { target: source }
+      # Play body BLOCKED — G-DSL-COST-DELTA-FORMULA.
+      # "you may play 1 [ADVENTURE] trait card from your hand" at cost reduced
+      # by floor(distinct_tamer_colors / 2) cannot be expressed until CostDelta
+      # gains formula support. See header docs for the pending YAML shape.
+
+  # ─── Clause (c): [Security] play self free ────────────────────────────────────
+  #
+  # Printed text:
+  #   "[Security] Play this card without paying the cost."
+  #
+  # Standard play_from_security pattern shared by BT21-081, BT24-082, BT13-095.
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

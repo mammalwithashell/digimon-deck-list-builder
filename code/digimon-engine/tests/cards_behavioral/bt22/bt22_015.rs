@@ -80,6 +80,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlayerId};
 use digimon_engine::events::GameEvent;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 /// Production YAML for BT22-015, inlined at compile time from the canonical
@@ -672,4 +673,289 @@ fn bt22_015_when_digivolving_bottom_decks_n_opp_digimon_per_same_level_pair() {
         runner.pending_selection().is_some(),
         "the 'Then, this Digimon may attack' prompt should still follow"
     );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 5 — Structural: Replacement (Decode) clause count
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// BT22-015 has exactly two Replacement declarative clauses:
+/// <Decode (Red/Black Lv.3)> and <Decode (Blue/Yellow Lv.3)>.
+/// These compile to `CompiledDeclarativeClause::Replacement` — distinct from
+/// the two triggered clauses already counted in SECTION 1.
+#[test]
+fn bt22_015_has_exactly_two_replacement_decode_clauses() {
+    let card = compiled_bt22_015();
+
+    let replacement_count = card
+        .effects
+        .iter()
+        .filter(|c| {
+            matches!(
+                c,
+                CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { .. })
+            )
+        })
+        .count();
+
+    assert_eq!(
+        replacement_count, 2,
+        "expected exactly 2 Replacement declarative clauses (Decode Red/Black + Decode Blue/Yellow), got {replacement_count}"
+    );
+}
+
+/// Both Decode clauses must be marked `optional: true` — printed text says
+/// "you may play 1 ... card".
+#[test]
+fn bt22_015_both_decode_replacement_clauses_are_optional() {
+    let card = compiled_bt22_015();
+
+    let replacement_clauses: Vec<_> = card
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+                optional, ..
+            }) => Some(optional),
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(
+        replacement_clauses.len(),
+        2,
+        "exactly 2 Replacement clauses expected (for optionality check)"
+    );
+    for (i, optional) in replacement_clauses.iter().enumerate() {
+        assert!(
+            *optional,
+            "Decode clause {i} must be optional: true (printed 'you may play')"
+        );
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 6 — Decode negative paths
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Negative: when BT22-015 leaves the battle area via battle (combat
+/// deletion), neither Decode clause should fire — `active_when: { none_of:
+/// [replacement_cause: battle] }` must block both.
+#[test]
+fn bt22_015_decode_does_not_fire_when_leave_is_via_battle() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-015 YAML loads")
+        .add_card(make_colored_level_digimon("RED-L3", CardColor::Red, 3))
+        .memory(15)
+        .start();
+
+    let bt22 = runner.place_stack(0, &["RED-L3", "BT22-015"]);
+
+    // Delete with ReplacementCause::Battle — models the combat deletion path.
+    runner
+        .game
+        .delete_permanent_with_cause(bt22, ReplacementCause::Battle);
+
+    // No Decode prompt should be installed — the cause filter suppresses it.
+    assert!(
+        runner.pending_selection().is_none(),
+        "Decode must not fire when the leave is caused by battle (combat deletion)"
+    );
+    // BT22-015 should now be in trash, not on the field.
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "BT22-015 should be gone from the battle area after a battle deletion"
+    );
+}
+
+/// Negative: the Decode replacement is optional — the player may decline by
+/// submitting PASS. After declining, the original leave completes and no
+/// source is played.
+#[test]
+fn bt22_015_decode_player_can_decline_optional_replacement() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-015 YAML loads")
+        .add_card(make_colored_level_digimon("RED-L3", CardColor::Red, 3))
+        .memory(15)
+        .start();
+
+    let bt22 = runner.place_stack(0, &["RED-L3", "BT22-015"]);
+
+    // Trigger a non-battle leave (effect-sourced return to hand).
+    runner.game.return_to_hand_from_effect(bt22, 1);
+
+    // The optional Decode prompt should install.
+    let view = runner
+        .pending_selection_view()
+        .expect("Decode should install an optional replacement selection");
+    assert_eq!(
+        view.kind,
+        SelectionKind::Replacement,
+        "prompt must be a Replacement selection kind"
+    );
+    assert!(
+        view.is_optional,
+        "Decode replacement must be optional (is_optional: true)"
+    );
+
+    // Player declines — submit PASS.
+    runner
+        .execute_action(0, PASS)
+        .expect("PASS is always legal on an optional selection");
+
+    // No source should be played; BT22-015 should have left the field.
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "BT22-015 should be gone from the field after the leave completes"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "BT22-015 returns to hand (the leave effect completes); no Lv.3 source played"
+    );
+}
+
+/// Negative: when BT22-015's digivolution stack has no Red/Black Lv.3 source,
+/// the engine's pre-flight (`replacement_process_has_payable_required_selection`)
+/// evaluates `SelectMaterial` and finds zero candidates → the replacement
+/// condition returns false → no optional Decode prompt is installed at all.
+/// The leave event completes normally without any pending selection.
+///
+/// This is correct: suppressing a "you may" prompt when there's nothing to pick
+/// avoids a misleading UI prompt.
+#[test]
+fn bt22_015_decode_no_matching_source_suppresses_replace_prompt() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-015 YAML loads")
+        .add_card(make_colored_level_digimon("GREEN-L3", CardColor::Green, 3))
+        .memory(15)
+        .start();
+
+    // Stack only has a Green Lv.3 source — matches neither Red/Black Lv.3 nor
+    // Blue/Yellow Lv.3 (Green is off-color for both Decode clauses).
+    let bt22 = runner.place_stack(0, &["GREEN-L3", "BT22-015"]);
+
+    runner.game.return_to_hand_from_effect(bt22, 1);
+
+    // Neither Decode clause should install a prompt — the pre-flight found no
+    // matching materials and suppressed both optional replacements.
+    assert!(
+        runner.pending_selection().is_none(),
+        "no Decode prompt should install when the source stack has no Red/Black or Blue/Yellow Lv.3 sources"
+    );
+    // BT22-015 should have left the field normally.
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "BT22-015 should be gone after the leave completes"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "only BT22-015 returns to hand; no source played"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 7 — [When Digivolving] negative / edge cases
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Negative: if BT22-015's digivolution stack contains no same-level pairs
+/// (all sources are at unique levels), the formula evaluates to 0 and no
+/// bottom-deck selection is installed. The `may attack` prompt may still
+/// follow if the engine wires through even when the count is 0.
+///
+/// Key assertion: with formula = 0, the player is NOT asked to bottom-deck
+/// any opponent Digimon (0 selections from the opponent field).
+#[test]
+fn bt22_015_when_digivolving_zero_pairs_no_bottom_deck_selection() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-015 YAML loads")
+        .add_card(make_filler_digimon_with_level("SRC-L6", 6))
+        .add_card(make_filler_digimon_with_level("SRC-L5", 5))
+        .add_card(make_filler_digimon_with_level("SRC-L4", 4))
+        .add_card(make_filler_digimon("OPP-A"))
+        .add_card(make_filler_digimon("OPP-B"))
+        .memory(15)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Stack has one Lv.6, one Lv.5, one Lv.4 — zero same-level pairs.
+    let bt22 = runner.place_stack(0, &["SRC-L6", "SRC-L5", "SRC-L4", "BT22-015"]);
+    runner.place_on_field(1, "OPP-A", None);
+    runner.place_on_field(1, "OPP-B", None);
+    let opp_before = runner.battle_area_size(1);
+
+    trigger_when_digivolving(&mut runner, bt22);
+
+    // No CountCappedMultiSelect with max > 0 should fire.
+    // If a selection installs, it should NOT be the bottom-deck picker with
+    // actual opponent Digimon as candidates — that would imply pairs were found.
+    if let Some(view) = runner.pending_selection_view() {
+        match view.kind {
+            SelectionKind::CountCappedMultiSelect { max, .. } => {
+                assert_eq!(
+                    max, 0,
+                    "zero same-level pairs → max pick count must be 0, got {max}"
+                );
+            }
+            // A may_attack_now prompt is acceptable here; verify opp field is untouched.
+            _ => {}
+        }
+    }
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        opp_before,
+        "no opponent Digimon should be bottom-decked when there are zero same-level pairs"
+    );
+}
+
+/// Positive: `may_attack_now` is optional — the player can pass without
+/// declaring an attack. After the [When Digivolving] resolves with a follow-up
+/// attack prompt, PASS should be a legal action.
+#[test]
+fn bt22_015_when_digivolving_attack_prompt_is_optional_pass_allowed() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-015 YAML loads")
+        .add_card(make_filler_digimon("OPP-DEF"))
+        .memory(15)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Stack with zero same-level pairs to skip the bottom-deck step and go
+    // directly to the may_attack_now.
+    let bt22 = runner.place_stack(0, &["BT22-015"]);
+    runner.place_on_field(1, "OPP-DEF", None);
+
+    trigger_when_digivolving(&mut runner, bt22);
+
+    // Drive through any bottom-deck CountCappedMultiSelect (max = 0 means
+    // it resolves immediately without player input, or auto-skip).
+    // Then the may_attack_now prompt should be the next pending selection.
+    let final_view = runner.pending_selection_view();
+    if let Some(view) = &final_view {
+        assert!(
+            view.is_optional || view.valid_action_ids.contains(&PASS),
+            "may_attack_now must be optional — PASS must be a legal action; \
+             found kind={:?}, is_optional={}, valid_ids={:?}",
+            view.kind,
+            view.is_optional,
+            view.valid_action_ids
+        );
+        // Confirm the player CAN decline without error.
+        runner
+            .execute_action(0, PASS)
+            .expect("declining the may_attack_now must succeed");
+    }
+    // Non-panic on no selection is also acceptable if the engine skips the
+    // prompt when there's nothing to attack (no opp Digimon + no-player-attack
+    // gating).
 }

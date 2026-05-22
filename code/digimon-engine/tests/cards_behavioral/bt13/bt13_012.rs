@@ -641,3 +641,86 @@ fn bt13_012_dp_lte_filter_excludes_high_dp_targets() {
         pending.valid_action_ids
     );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 6 — Additional coverage: yellow Tamer path + inherited-only-when-source
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Positive condition gate (yellow Tamer): printed text says "red **or yellow**
+/// Tamers". A yellow Tamer suspending must also install the optional delete prompt.
+///
+/// This is the symmetric counterpart to
+/// `bt13_012_on_own_red_tamer_suspend_installs_delete_prompt` (which covers
+/// red only). While the G-EVENT-TARGET-COLOR gap means the clause currently
+/// fires on any-color own Tamers, this test validates the expected happy-path
+/// for yellow once the color filter is wired in — and confirms the current
+/// behavior is correctly permissive rather than accidentally blocking yellow.
+#[test]
+fn bt13_012_on_own_yellow_tamer_suspend_installs_delete_prompt() {
+    let mut runner = fresh_runner(vec![
+        make_tamer("YELLOW-TAMER", vec![CardColor::Yellow]),
+        make_digimon("OPP-DGM-3000", 3000, CardColor::Blue),
+    ]);
+
+    let _carrier = runner.place_stack(0, &["BT13-012", "TOP-DGM"]);
+    let yellow_tamer = runner.place_on_field(0, "YELLOW-TAMER", Some(0));
+    let _opp = runner.place_on_field(1, "OPP-DGM-3000", Some(0));
+
+    assert_eq!(runner.game.turn_player(), 0, "test assumes P0's turn");
+
+    runner.game.suspend(yellow_tamer);
+
+    let pending = runner.game.pending_selection.as_ref().expect(
+        "BT13-012 inherited clause must install a pending selection \
+         when an own yellow Tamer suspends on the controller's turn",
+    );
+    assert!(
+        pending.is_optional,
+        "delete prompt is printed as 'you may delete', so optional"
+    );
+}
+
+/// Engine inherited-dispatch behavior: the `scope: inherited` YAML flag compiles
+/// to `Effect.inherited = true`, which controls the *card_sources* inherited scan
+/// path (where sources under the top card contribute inherited effects to their
+/// host). However, the top-card dispatch path (`enqueue_from_permanent`, lines
+/// 1323–1352 of effect_queue.rs) does NOT skip `effect.inherited = true` effects
+/// except for Training permanents — so the effect also fires when GeoGreymon is
+/// the top (only) card of its own stack.
+///
+/// This test documents that behavior: placing BT13-012 alone (no digivolution
+/// source underneath) still activates its on_suspend inherited effect, because
+/// the effect is a fully-registered triggered observer regardless of stack depth.
+///
+/// Practical implication: the `place_stack(0, &["BT13-012", "TOP-DGM"])` pattern
+/// used in the rest of this test file is the correct setup for testing inherited
+/// effects *as inherited* (i.e. from under another card), but does not change
+/// whether the clause fires — it still fires in both configurations.
+#[test]
+fn bt13_012_inherited_fires_even_when_geogreymon_is_top_only() {
+    // GeoGreymon alone as top card — effect still fires (see doc comment).
+    let mut runner = fresh_runner(vec![
+        make_tamer("RED-TAMER", vec![CardColor::Red]),
+        make_digimon("OPP-DGM-3000", 3000, CardColor::Blue),
+    ]);
+
+    let _geo_alone = runner.place_on_field(0, "BT13-012", Some(0));
+    let red_tamer = runner.place_on_field(0, "RED-TAMER", Some(0));
+    let _opp = runner.place_on_field(1, "OPP-DGM-3000", Some(0));
+
+    runner.game.suspend(red_tamer);
+
+    // The effect is registered as a top-card triggered observer as well as an
+    // inherited (card_sources) observer. When GeoGreymon is the sole top card,
+    // the top-card dispatch path fires it.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "effect.inherited = true does not suppress top-card dispatch; delete prompt \
+         must install even when BT13-012 is the top-only card of its stack"
+    );
+    let pending = runner.game.pending_selection.as_ref().unwrap();
+    assert!(
+        pending.is_optional,
+        "prompt must still be optional ('you may delete')"
+    );
+}

@@ -74,10 +74,10 @@ use digimon_dsl::compiled::{
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, ModifierType, PlayerId};
+use digimon_engine::enums::{CardKind, EffectTiming, ModifierType, PlayerId};
 use digimon_engine::events::GameEvent;
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 // ─── Fixture helpers ────────────────────────────────────────────────────────
 
@@ -570,5 +570,143 @@ fn bt17_027_inherited_when_attacking_metalgarurumon_top_does_not_unsuspend() {
     assert!(
         attacker_perm.is_suspended,
         "MetalGarurumon-only top card must NOT trigger the [Omnimon]-name unsuspend"
+    );
+}
+
+// ─── Section 5 — [When Digivolving] timing parity ───────────────────────────
+
+/// The [On Play][When Digivolving] clause should fire via the WhenDigivolving
+/// timing exactly the same as via OnPlay. This test manually enqueues the
+/// WhenDigivolving trigger and verifies that the EffectChoice prompt installs.
+#[test]
+fn bt17_027_when_digivolving_installs_branch_choice_prompt() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-027")
+        .expect("BT17-027 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-DIGI", "OppDigi", 5000))
+        .memory(10)
+        .start();
+
+    // Place BT17-027 directly on field (bypassing the play action — we want to
+    // fire WhenDigivolving independently of OnPlay).
+    let handle = runner.place_on_field(0, "BT17-027", None);
+    runner.place_on_field(1, "OPP-DIGI", None);
+
+    // Manually enqueue WhenDigivolving trigger (mirrors how the engine fires it
+    // when a player digivolves onto a Lv.5 Garurumon-name card).
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.drain_effect_queue();
+
+    let kind = runner
+        .pending_kind()
+        .expect("WhenDigivolving must install a pending selection");
+    assert_eq!(
+        kind,
+        SelectionKind::EffectChoice,
+        "WhenDigivolving must produce the same 2-way EffectChoice as OnPlay"
+    );
+
+    // Branch count must be 2 (lock vs digivolve).
+    let view = runner
+        .pending_selection_view()
+        .expect("pending selection view");
+    let n_choices = view
+        .effect_choices
+        .as_ref()
+        .map_or(0, |v| v.len());
+    assert_eq!(
+        n_choices,
+        2,
+        "WhenDigivolving branch-choice must offer exactly 2 options"
+    );
+}
+
+/// Branch 0 fully resolves via the WhenDigivolving path: EffectChoice fires,
+/// branch 0 is picked, an opp Digimon is selected, and CannotSuspend is applied.
+#[test]
+fn bt17_027_when_digivolving_branch_0_applies_cannot_suspend() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-027")
+        .expect("BT17-027 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-DIGI2", "OppDigi2", 5000))
+        .memory(10)
+        .start();
+
+    let handle = runner.place_on_field(0, "BT17-027", None);
+    let opp_handle = runner.place_on_field(1, "OPP-DIGI2", None);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.drain_effect_queue();
+
+    // Pick branch 0 (lock/CannotSuspend).
+    runner.execute_branch(0).expect("pick CannotSuspend branch via WhenDigivolving");
+    runner.auto_resolve().expect("auto-resolve target pick");
+
+    let has_cannot_suspend = runner
+        .game
+        .modifiers
+        .has(opp_handle, ModifierType::CannotSuspend);
+    assert!(
+        has_cannot_suspend,
+        "CannotSuspend must be applied to opp Digimon when branch 0 resolves via WhenDigivolving"
+    );
+}
+
+// ─── Section 6 — CannotSuspend expiry ───────────────────────────────────────
+
+/// The CannotSuspend modifier from branch 0 must persist during P1's turn but
+/// expire after P1's turn ends (expiry: end_of_opponents_turn).
+///
+/// Sequence: P0 plays BT17-027 → picks branch 0 → locks OPP-DIGI → end_turn()
+/// (enters P1 turn) → modifier still active → end_turn() (re-enters P0 turn)
+/// → modifier expires.
+#[test]
+fn bt17_027_cannot_suspend_modifier_expires_after_opponents_turn() {
+    // Filler card needed to give each player a non-empty deck so that turn
+    // rotation does not trigger a deck-out loss before the modifier expires.
+    let filler0 = make_test_card("FILL0", "Filler0");
+    let filler1 = make_test_card("FILL1", "Filler1");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-027")
+        .expect("BT17-027 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-DIGI3", "OppDigi3", 5000))
+        .add_card(filler0)
+        .add_card(filler1)
+        .hand(0, &["BT17-027"])
+        .deck(0, &["FILL0", "FILL0"])
+        .deck(1, &["FILL1", "FILL1"])
+        .memory(15)
+        .start();
+
+    let opp_handle = runner.place_on_field(1, "OPP-DIGI3", None);
+
+    // Play BT17-027 → branch 0 → lock opp Digimon.
+    let _field_idx = runner.play(0, 0);
+    runner.execute_branch(0).expect("pick lock branch");
+    runner.auto_resolve().expect("auto-resolve target pick");
+
+    // Modifier should be active immediately after being applied.
+    assert!(
+        runner.game.modifiers.has(opp_handle, ModifierType::CannotSuspend),
+        "CannotSuspend must be active immediately after branch 0 resolves"
+    );
+
+    // End P0's turn → enter P1's turn. Modifier must still be active.
+    runner.game.end_turn();
+    assert!(
+        runner.game.modifiers.has(opp_handle, ModifierType::CannotSuspend),
+        "CannotSuspend must persist during opponent's turn (expiry is END_of_opponents_turn)"
+    );
+
+    // End P1's turn → back to P0. Modifier must now be expired.
+    runner.game.end_turn();
+    assert!(
+        !runner.game.modifiers.has(opp_handle, ModifierType::CannotSuspend),
+        "CannotSuspend must expire after opponent's turn ends"
     );
 }

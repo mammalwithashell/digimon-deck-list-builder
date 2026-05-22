@@ -23,11 +23,16 @@
 //! # Patterns this test covers
 //! - Structural: 2 alt_paths (Digivolve Lv.6/Blue/cost-6 + DNA Blue+Red
 //!   cost 0) + 1 triggered clause ([When Digivolving] mandatory delete +
-//!   return-to-deck). The [All Turns] replacement clause is OMITTED until
-//!   two new gaps close — see BLOCKED tests in Section 4.
+//!   return-to-deck) + 1 declarative replacement clause ([All Turns]
+//!   leave-other-than-own-effect → play BlitzGreymon + CresGarurumon free,
+//!   then place self at security bottom face-down).
 //! - F1-adjacent literal `dp_lte: 8000` predicate (sister tests:
 //!   BT8-097, BT13-012, BT18-087, BT21-015, BT21-025).
 //! - Sequential mandatory selects within one clause (BT15-101 idiom).
+//! - F3 Replacement effect: `when_would_leave_battle_area` with
+//!   `replacement_cause: own_effect` negative gate.
+//! - Self-security-bottom placement via
+//!   `place_permanent_on_security_and_handle_replacement`.
 //!
 //! # Sister cards (cross-reference)
 //! - BT22-015 Omnimon — sister Decode form whose play-from-own-digivolution
@@ -48,22 +53,8 @@
 //! | DNA digivolve Lv.6 Blue + Lv.6 Red / Cost 0                     | OK             |
 //! | [When Digivolving] Delete 1 opp Digimon DP <= 8000               | OK             |
 //! | [When Digivolving] Return 1 opp Lv >= 6 Digimon to bottom-deck   | OK             |
-//! | [All Turns] On leave-other-than-own-effect, play BlitzGreymon + CresGarurumon free | BLOCKED (G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES) |
-//! | [All Turns] Then, place self at bottom of security face down     | BLOCKED (G-PLACE-SELF-AT-SECURITY-BOTTOM) |
-//!
-//! # Known engine/DSL gaps affecting these tests
-//!
-//! - **G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES** (NEW): no DSL verb / step for
-//!   "play a named card from THIS permanent's digivolution cards without
-//!   paying the cost". Sibling of BT22-015's
-//!   G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES. Filed in
-//!   `qa/dsl-vocab-gaps.md`.
-//! - **G-PLACE-SELF-AT-SECURITY-BOTTOM** (NEW): no DSL verb / step for
-//!   "place this leaving Digimon at the bottom of your security stack face
-//!   down" as a self-disposition reroute on a `kind: replacement` clause
-//!   whose subject IS this permanent. Sibling of the engine-side
-//!   "Zone-manipulation: security stack operations" gap in
-//!   `docs/RUST_ENGINE_GAPS.md`. Filed in `qa/dsl-vocab-gaps.md`.
+//! | [All Turns] On leave-other-than-own-effect, play BlitzGreymon + CresGarurumon free | OK (gaps G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-BOTTOM closed 2026-05-08) |
+//! | [All Turns] Then, place self at bottom of security face down     | OK             |
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -149,10 +140,34 @@ fn ex4_060_compiles_with_two_alt_paths_and_one_triggered() {
     assert_eq!(
         triggered.len(),
         1,
-        "expected exactly 1 triggered clause ([When Digivolving] — the [All Turns] \
-         replacement clause is OMITTED on G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + \
-         G-PLACE-SELF-AT-SECURITY-BOTTOM); got {}",
+        "expected exactly 1 triggered clause ([When Digivolving]); \
+         the [All Turns] leave-replacement is a declarative Replacement, not counted here; got {}",
         triggered.len()
+    );
+}
+
+/// Structural: the [All Turns] replacement clause compiles to a declarative
+/// `Replacement` with trigger `when_would_leave_battle_area` (F3 pattern).
+/// Its `none_of: replacement_cause: own_effect` active_when gate is what
+/// enforces the "other than by one of your effects" restriction.
+#[test]
+fn ex4_060_has_declarative_replacement_when_would_leave_battle_area() {
+    let card = compiled_ex4_060();
+
+    let has_replacement = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+                trigger,
+                ..
+            }) if trigger == "when_would_leave_battle_area"
+        )
+    });
+
+    assert!(
+        has_replacement,
+        "EX4-060 must have a declarative `when_would_leave_battle_area` replacement clause \
+         for the [All Turns] leave-other-than-own-effect text"
     );
 }
 

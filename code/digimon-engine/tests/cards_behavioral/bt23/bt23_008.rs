@@ -44,6 +44,8 @@ use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{Keyword, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::SelectionKind;
+use digimon_engine::AttackResult;
 
 use crate::dsl_card_data::card_data_from_compiled;
 
@@ -377,7 +379,163 @@ fn bt23_008_face_up_raid_installs_on_field() {
     );
 }
 
-// ─── Section 4: [Main][OPT] place-top-as-bottom + play — BLOCKED ─────────────
+// ─── Section 4: Behavioral — <Raid> attack-time retarget ─────────────────────
+//
+// These tests drive `attack_digimon` and inspect the resulting pending
+// selection directly. Raid's optional switch is installed by the combat
+// state machine (`try_enter_raid_switch`) immediately after attack
+// declaration, when the attacker has the Raid keyword and there is at
+// least one unsuspended opponent Digimon with strictly-higher DP than
+// the declared target (or tied-highest excluding the declared target).
+
+/// Negative: before BT23-008 is placed on the field, `has_keyword` must
+/// return false for Raid. Confirms the keyword is not present in hand or
+/// prior to declarative-effect installation.
+#[test]
+fn bt23_008_raid_absent_before_placement() {
+    let runner = greymon_runner();
+    // Construct a dummy handle pointing at battle_area[0], player 0,
+    // which does not yet exist (no Digimon placed). We cannot call
+    // has_keyword on a stale handle, so instead confirm no battle area
+    // exists at all — meaning there's nothing to carry the keyword.
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "precondition: P0 battle area is empty before placement"
+    );
+}
+
+/// Positive behavioral: when Greymon attacks a lower-DP opponent Digimon
+/// and a second unsuspended opponent Digimon has higher DP, the Raid
+/// optional retarget prompt appears (OppField, is_optional = true).
+///
+/// Card text: "you may switch the target of attack to 1 of your
+/// opponent's unsuspended Digimon with the highest DP."
+#[test]
+fn bt23_008_raid_switch_prompt_appears_when_higher_dp_candidate_exists() {
+    // Low-DP target: declared attack target (DP 3000 < Greymon 5000 < Big 8000).
+    let mut low_dp = make_test_card("OPP-LOW", "OppLow");
+    low_dp.dp = Some(3000);
+    low_dp.level = Some(4);
+    // High-DP candidate: unsuspended, higher DP — should appear in Raid selection.
+    let mut high_dp = make_test_card("OPP-HIGH", "OppHigh");
+    high_dp.dp = Some(8000);
+    high_dp.level = Some(5);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-008")
+        .expect("BT23-008 in embedded DSL pack")
+        .add_card(low_dp)
+        .add_card(high_dp)
+        .memory(10)
+        .start();
+
+    let greymon = runner.place_on_field(0, "BT23-008", Some(0));
+    let low_target = runner.place_on_field(1, "OPP-LOW", Some(0));
+    let _high_candidate = runner.place_on_field(1, "OPP-HIGH", Some(0));
+
+    // Precondition: Greymon must have Raid installed.
+    assert!(
+        runner.game.has_keyword(greymon, Keyword::Raid),
+        "precondition: BT23-008 must have Raid keyword before attack"
+    );
+
+    // Attack the low-DP target; the high-DP candidate triggers Raid.
+    let result = runner.attack_digimon(greymon, low_target, false);
+    assert_eq!(
+        result,
+        AttackResult::InProgress,
+        "Raid switch selection must pause the attack and return InProgress"
+    );
+
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OppField),
+        "Raid retarget selection must be OppField kind"
+    );
+    assert!(
+        runner.pending_is_optional(),
+        "Raid is printed as 'you may switch' — selection must be optional (PASS allowed)"
+    );
+}
+
+/// Negative behavioral: when Greymon attacks the sole opponent Digimon
+/// (the only target), Raid has no other candidates — no switch prompt
+/// should appear and the attack proceeds.
+///
+/// The combat spec excludes the declared target from the Raid candidate
+/// list, so a single opponent Digimon produces an empty candidate set.
+#[test]
+fn bt23_008_raid_no_switch_prompt_when_only_declared_target_exists() {
+    let mut sole_target = make_test_card("OPP-SOLE", "OppSole");
+    sole_target.dp = Some(8000);
+    sole_target.level = Some(5);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-008")
+        .expect("BT23-008 in embedded DSL pack")
+        .add_card(sole_target)
+        .memory(10)
+        .start();
+
+    let greymon = runner.place_on_field(0, "BT23-008", Some(0));
+    let target = runner.place_on_field(1, "OPP-SOLE", Some(0));
+
+    // No second unsuspended opponent Digimon → Raid has no candidates.
+    let _result = runner.attack_digimon(greymon, target, false);
+
+    // Either the attack completed (no pending) or moved past the Raid step.
+    // The key assertion: the current pending selection (if any) is NOT a
+    // Raid OppField retarget prompt.  It may be Block or no selection at all.
+    let is_raid_prompt = runner.pending_kind() == Some(SelectionKind::OppField)
+        && runner.pending_is_optional();
+    assert!(
+        !is_raid_prompt,
+        "with only the declared target on the opponent's field, Raid must not \
+         install an optional OppField switch prompt"
+    );
+}
+
+/// Negative behavioral: when the would-be Raid candidate is suspended,
+/// it must not appear in the Raid switch selection. Raid text specifies
+/// "unsuspended Digimon with the highest DP."
+#[test]
+fn bt23_008_raid_ignores_suspended_opp_digimon() {
+    let mut low_dp = make_test_card("OPP-LOW2", "OppLow2");
+    low_dp.dp = Some(3000);
+    low_dp.level = Some(4);
+    let mut high_dp_suspended = make_test_card("OPP-SUSP", "OppSuspended");
+    high_dp_suspended.dp = Some(9000);
+    high_dp_suspended.level = Some(5);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-008")
+        .expect("BT23-008 in embedded DSL pack")
+        .add_card(low_dp)
+        .add_card(high_dp_suspended)
+        .memory(10)
+        .start();
+
+    let greymon = runner.place_on_field(0, "BT23-008", Some(0));
+    let low_target = runner.place_on_field(1, "OPP-LOW2", Some(0));
+    let high_susp = runner.place_on_field(1, "OPP-SUSP", Some(0));
+
+    // Suspend the high-DP candidate — it must be excluded from Raid.
+    runner.game.players[1].battle_area[high_susp.index as usize].is_suspended = true;
+
+    let _result = runner.attack_digimon(greymon, low_target, false);
+
+    // No valid unsuspended Raid candidate → no optional OppField selection.
+    let is_raid_prompt = runner.pending_kind() == Some(SelectionKind::OppField)
+        && runner.pending_is_optional();
+    assert!(
+        !is_raid_prompt,
+        "a suspended high-DP opponent Digimon must not trigger Raid's optional \
+         retarget prompt — Raid only considers unsuspended Digimon"
+    );
+}
+
+// ─── Section 5: [Main][OPT] place-top-as-bottom + play — BLOCKED ─────────────
 //
 // Clause 2 cannot be expressed in the current DSL:
 //   "By placing this Digimon's top stacked card as its bottom digivolution

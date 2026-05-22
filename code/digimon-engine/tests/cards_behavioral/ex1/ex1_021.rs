@@ -34,7 +34,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledScope, CompiledTiming,
+    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
@@ -187,6 +188,27 @@ fn ex1_021_total_triggered_clause_count_is_two() {
         .filter(|c| matches!(c, CompiledClause::Triggered(_)))
         .collect();
     assert_eq!(triggered.len(), 2, "Must have exactly 2 triggered clauses");
+}
+
+/// Card-level metadata must match the printed card exactly. Changes to the YAML
+/// header that accidentally alter level, dp, cost, color, or kind are caught here.
+#[test]
+fn ex1_021_card_metadata() {
+    let compiled = compiled_ex1_021();
+    assert_eq!(compiled.kind, CompiledCardKind::Digimon, "kind must be Digimon");
+    assert_eq!(compiled.level, Some(6), "level must be 6");
+    assert_eq!(compiled.dp, Some(12000), "DP must be 12000");
+    assert_eq!(compiled.cost, Some(11), "play cost must be 11");
+    assert_eq!(
+        compiled.color,
+        vec![CompiledColor::Blue],
+        "color must be [blue]"
+    );
+    assert!(
+        compiled.traits.iter().any(|t| t == "Cyborg"),
+        "traits must include Cyborg; got {:?}",
+        compiled.traits
+    );
 }
 
 // ─── SECTION 2 — [When Digivolving] memory-gain behavioral (BLOCKED) ─────────
@@ -378,6 +400,69 @@ fn ex1_021_when_attacking_blocks_when_hand_lt_8() {
     assert!(
         r.pending_selection().is_none(),
         "[When Attacking] must not install selection when hand<8"
+    );
+}
+
+/// Regression guard: hand < 8 (tamer present). Process is `[]` so no
+/// selection installs today. Once G-COUNT-GTE-NOT-EVALUATED closes, this
+/// test is superseded by the ignored `ex1_021_when_attacking_blocks_when_hand_lt_8`.
+#[test]
+fn ex1_021_when_attacking_hand_lt_8_currently_installs_no_selection() {
+    let mut r = metal_garurumon_runner();
+    let perm = r.place_on_field(0, "EX1-021", Some(0));
+    let _tamer = r.place_on_field(0, "OWN-TAMER", Some(0));
+    let _opp = r.place_on_field(1, "OPP-DIGI", None);
+
+    set_hand_size(&mut r, 0, 5); // hand < 8
+
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(perm));
+    r.game.drain_effect_queue();
+    assert!(
+        r.pending_selection().is_none(),
+        "Body is process: [] -- no selection installs regardless of hand size"
+    );
+}
+
+/// Regression guard: hand >= 8 but NO tamer on field. Process is `[]` so no
+/// selection installs today. Once both gaps close the tamer condition must
+/// gate the effect; this test documents the intended semantics.
+#[test]
+fn ex1_021_when_attacking_no_tamer_currently_installs_no_selection() {
+    let mut r = metal_garurumon_runner();
+    let perm = r.place_on_field(0, "EX1-021", Some(0));
+    // Intentionally omit OWN-TAMER to exercise the no-tamer gate.
+    let _opp = r.place_on_field(1, "OPP-DIGI", None);
+
+    set_hand_size(&mut r, 0, 8);
+
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(perm));
+    r.game.drain_effect_queue();
+    assert!(
+        r.pending_selection().is_none(),
+        "Body is process: [] -- no selection installs regardless of board state"
+    );
+}
+
+#[test]
+#[ignore = "BLOCKED: G-DSL-HAS-ON-DELETION-EFFECT / G-COUNT-GTE-NOT-EVALUATED -- process: [] pending; once gaps close, no-tamer must block the effect"]
+fn ex1_021_when_attacking_blocks_when_no_tamer_in_play() {
+    // Once both gaps close, this test must verify that the Tamer condition
+    // prevents the selection from installing when no Tamer is in play.
+    let mut r = metal_garurumon_runner();
+    let perm = r.place_on_field(0, "EX1-021", Some(0));
+    // No tamer placed.
+    let _opp = r.place_on_field(1, "OPP-DIGI", None);
+
+    set_hand_size(&mut r, 0, 8);
+
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(perm));
+    r.game.drain_effect_queue();
+    assert!(
+        r.pending_selection().is_none(),
+        "[When Attacking] must not install selection when no Tamer in play"
     );
 }
 

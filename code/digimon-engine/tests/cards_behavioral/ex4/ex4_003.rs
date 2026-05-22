@@ -40,7 +40,10 @@
 
 #![allow(dead_code)]
 
-use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledPlayerRef, CompiledScope,
+    CompiledStep, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::permanent::PermanentHandle;
@@ -318,6 +321,171 @@ fn ex4_003_is_cost_zero_lv2_black_in_training() {
     // surfaces it as 0 when given. Either is acceptable per spec.
     let cost = compiled.cost.unwrap_or(0);
     assert_eq!(cost, 0, "Tsunomon must be cost 0; got {cost}");
+}
+
+#[test]
+fn ex4_003_color_is_black() {
+    // Sanity: Tsunomon is a Black DigiEgg (cards.json card_colors: [5]).
+    // [Lesser] support and search effects that gate on color use this.
+    let runner = tsunomon_runner();
+    let compiled = runner
+        .compiled_card("EX4-003")
+        .expect("EX4-003 compiled card present");
+
+    assert!(
+        compiled.color.contains(&CompiledColor::Black),
+        "Tsunomon must be Black; got {:?}",
+        compiled.color
+    );
+}
+
+#[test]
+fn ex4_003_inherited_clause_active_when_is_your_turn() {
+    // [Your Turn] must compile to an `active_when` predicate whose
+    // `your_turn` leaf is `Some(true)` (DCGO `IsOwnerTurn(card)`).
+    // This gates the clause so it never queues during the opponent's turn.
+    let runner = tsunomon_runner();
+    let compiled = runner
+        .compiled_card("EX4-003")
+        .expect("EX4-003 compiled card present");
+
+    let triggered: Vec<_> = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .collect();
+
+    let active_when = triggered[0]
+        .active_when
+        .as_ref()
+        .expect("clause must have an active_when predicate for [Your Turn]");
+
+    assert_eq!(
+        active_when.your_turn,
+        Some(true),
+        "active_when must have your_turn: true for [Your Turn]; got {:?}",
+        active_when
+    );
+}
+
+#[test]
+fn ex4_003_inherited_clause_condition_has_event_target_owner_you() {
+    // "your ... Digimon" → condition must carry `event_target_owner: You`
+    // (DCGO `IsPermanentExistsOnOwnerBattleArea`).
+    // This gate prevents cross-player firings even after G-INHERITED-DISPATCH
+    // closes.
+    let runner = tsunomon_runner();
+    let compiled = runner
+        .compiled_card("EX4-003")
+        .expect("EX4-003 compiled card present");
+
+    let triggered: Vec<_> = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .collect();
+
+    let cond = triggered[0]
+        .condition
+        .as_ref()
+        .expect("clause must have a condition");
+
+    // The condition is `all_of` containing the two gates. Verify the
+    // `event_target_owner: you` leaf is present anywhere in the flat
+    // `all_of` list (matching the DSL condition block).
+    let has_owner_gate = cond
+        .all_of
+        .iter()
+        .any(|p| p.event_target_owner == Some(CompiledPlayerRef::You));
+
+    assert!(
+        has_owner_gate,
+        "condition must include event_target_owner: you; got all_of: {:?}",
+        cond.all_of
+    );
+}
+
+#[test]
+fn ex4_003_inherited_clause_condition_has_event_target_kind_digimon() {
+    // "your ... Digimon" → condition must carry `event_target_kind: Digimon`
+    // (DCGO `IsPermanentExistsOnOwnerBattleAreaDigimon`).
+    // Together with the owner gate this rejects Tamer-related events and
+    // opponent digivolves.
+    let runner = tsunomon_runner();
+    let compiled = runner
+        .compiled_card("EX4-003")
+        .expect("EX4-003 compiled card present");
+
+    let triggered: Vec<_> = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .collect();
+
+    let cond = triggered[0]
+        .condition
+        .as_ref()
+        .expect("clause must have a condition");
+
+    let has_kind_gate = cond
+        .all_of
+        .iter()
+        .any(|p| p.event_target_kind == Some(CompiledCardKind::Digimon));
+
+    assert!(
+        has_kind_gate,
+        "condition must include event_target_kind: digimon; got all_of: {:?}",
+        cond.all_of
+    );
+}
+
+#[test]
+fn ex4_003_inherited_clause_process_is_draw_one_for_you() {
+    // `process: [draw: { of: you, count: 1 }]` — single step, Draw 1 to
+    // Tsunomon's controller (DCGO `DrawClass(card.Owner, 1, ...)`).
+    let runner = tsunomon_runner();
+    let compiled = runner
+        .compiled_card("EX4-003")
+        .expect("EX4-003 compiled card present");
+
+    let triggered: Vec<_> = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .collect();
+
+    let process = &triggered[0].process;
+
+    assert_eq!(
+        process.len(),
+        1,
+        "process must contain exactly one step (Draw 1); got {:?}",
+        process
+    );
+
+    match &process[0] {
+        CompiledStep::Draw { of, count } => {
+            assert_eq!(
+                *of,
+                CompiledPlayerRef::You,
+                "Draw must target 'you' (Tsunomon's controller); got {of:?}"
+            );
+            assert_eq!(*count, 1u8, "Draw must draw exactly 1 card; got {count}");
+        }
+        other => panic!("process[0] must be Draw; got {other:?}"),
+    }
 }
 
 // ─── Section 2: Behavioral firing (POSITIVE — gated by G-INHERITED-DISPATCH) ─

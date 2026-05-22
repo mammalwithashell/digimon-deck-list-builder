@@ -37,6 +37,7 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
+use digimon_engine::action::space::PASS;
 use digimon_engine::enums::{CardKind, EffectTiming, Expiry, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::TriggerSource;
@@ -598,5 +599,199 @@ fn ad1_014_inherited_when_attacking_fires_when_top_card_contains_garurumon_in_na
     assert!(
         runner.pending_selection().is_some(),
         "inherited clause must install lock selection when top-card name contains Garurumon"
+    );
+}
+
+// ─── Section 8: Additional delete-target level coverage ──────────────────────
+
+#[test]
+fn ad1_014_on_play_level_4_digimon_is_eligible_for_delete() {
+    // level_lte: 5 covers Lv4, Lv3, Lv2, Lv1 — not just exactly Lv5.
+    let mut runner = metal_garurumon_runner()
+        .add_card(make_digimon("OPP-LV4", 4, 5000))
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "AD1-014", Some(0));
+    runner.place_on_field(1, "OPP-LV4", Some(0));
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(perm));
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection().is_some(),
+        "Lv4 opponent Digimon must be eligible for the delete-1 selection (level_lte: 5)"
+    );
+}
+
+// ─── Section 9: All-Turns OPT — once-per-turn enforcement ───────────────────
+
+#[test]
+fn ad1_014_all_turns_opt_blocks_second_on_suspend_same_turn() {
+    // The [All Turns][OPT] on_suspend clause may only trigger once per turn.
+    // A second ally Digimon suspending in the same turn must not install a
+    // second optional-unsuspend prompt.
+    let mut runner = metal_garurumon_runner()
+        .add_card(make_digimon("ALLY-A", 4, 5000))
+        .add_card(make_digimon("ALLY-B", 4, 5000))
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "AD1-014", Some(0));
+    let ally_a = runner.place_on_field(0, "ALLY-A", Some(0));
+    let ally_b = runner.place_on_field(0, "ALLY-B", Some(0));
+
+    // Pre-suspend AD1-014 so the unsuspend response is meaningful.
+    runner.game.players[0].battle_area[perm.index as usize].is_suspended = true;
+
+    // First ally suspends → optional unsuspend prompt appears.
+    runner.game.suspend(ally_a);
+    let _ = runner.auto_resolve();
+    // AD1-014 should have unsuspended.
+    assert!(
+        !runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "AD1-014 should unsuspend on first ally Digimon suspend"
+    );
+
+    // Re-suspend AD1-014 manually so that a second trigger would be observable.
+    runner.game.players[0].battle_area[perm.index as usize].is_suspended = true;
+
+    // Second ally suspends in same turn → OPT lockout should prevent unsuspend.
+    runner.game.suspend(ally_b);
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "OPT must block the on_suspend clause from firing twice in the same turn"
+    );
+}
+
+#[test]
+fn ad1_014_all_turns_opt_resets_after_turn_end() {
+    // After a full round (two end_turns), the OPT counter for the [All Turns]
+    // on_suspend clause resets so it can fire again on player 0's next turn.
+    //
+    // Engine behavior: `permanent.new_turn()` (which clears `effect_activations`)
+    // is called only when that player starts their turn
+    // (`game_phases::continue_begin_turn_after_start_delays`). So player 0's
+    // OPT counter resets after the second end_turn (when player 0 is again the
+    // turn player). We add FILL digimons to both decks to avoid deck-out loss
+    // during the two draw phases.
+    let mut runner = metal_garurumon_runner()
+        .add_card(make_digimon("ALLY", 4, 5000))
+        .add_card(make_digimon("FILL", 3, 3000))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "AD1-014", Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+
+    // Pre-suspend AD1-014.
+    runner.game.players[0].battle_area[perm.index as usize].is_suspended = true;
+
+    // Consume the OPT this turn (player 0's turn).
+    runner.game.suspend(ally);
+    let _ = runner.auto_resolve();
+    assert!(
+        !runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "should unsuspend in first turn"
+    );
+
+    // --- Turn 1 ends, player 1 takes their turn ---
+    runner.end_turn(); // player 1's turn begins; player 1's permanents reset, not player 0's
+    let _ = runner.auto_resolve(); // drain any StartOfYourTurn triggers for player 1
+
+    // Player 0's permanents have NOT reset yet (still OPT locked on on_suspend).
+    // Re-suspend AD1-014 and try the on_suspend clause during player 1's turn.
+    runner.game.players[0].battle_area[perm.index as usize].is_suspended = true;
+    runner.game.players[0].battle_area[ally.index as usize].is_suspended = false;
+    runner.game.suspend(ally);
+    let _ = runner.auto_resolve();
+    // Even though it's player 1's turn, AD1-014 is an [All Turns] observer.
+    // But OPT should still be locked from player 0's activation in turn 1.
+    assert!(
+        runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "OPT should still be locked during player 1's turn (not yet reset)"
+    );
+
+    // --- Turn 2 ends, player 0 takes their turn again (own turn) ---
+    runner.end_turn(); // player 0's turn begins; player 0's permanents reset via new_turn()
+    let _ = runner.auto_resolve();
+
+    // Now player 0's OPT counter is cleared. Re-suspend AD1-014 and ally.
+    runner.game.players[0].battle_area[perm.index as usize].is_suspended = true;
+    runner.game.players[0].battle_area[ally.index as usize].is_suspended = false;
+    runner.game.suspend(ally);
+    let _ = runner.auto_resolve();
+
+    assert!(
+        !runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "OPT must reset when player 0's turn begins — on_suspend clause should fire again"
+    );
+}
+
+// ─── Section 10: All-Turns clause optional — player may decline unsuspend ────
+
+#[test]
+#[ignore = "engine-gap: G-DSL-OPTIONAL-NON-SELECTION-TRIGGER — `optional: true` on a triggered clause with no selection-driving step in its body does not surface a player prompt; the engine's single-trigger auto-fire path exposes optionality only through `body's first actionable pending selection` (effect_queue.rs §2.5 single-trigger comment). For `unsuspend: {target: source}`, the body has no selection step, so the trigger auto-fires. AD1-014 printed text says `may unsuspend` — the choice should be exposed. Until the engine installs a `may-accept` prompt for optional single triggers with non-selection bodies, this clause auto-fires (always unsuspends) rather than presenting a choice."]
+fn ad1_014_on_suspend_is_optional_and_player_can_decline() {
+    // The [All Turns][OPT] clause is `optional: true`. The player can PASS
+    // rather than unsuspending AD1-014, leaving it suspended.
+    let mut runner = metal_garurumon_runner()
+        .add_card(make_digimon("ALLY", 4, 5000))
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "AD1-014", Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+
+    // Pre-suspend AD1-014.
+    runner.game.players[0].battle_area[perm.index as usize].is_suspended = true;
+
+    // Trigger the on_suspend clause.
+    runner.game.suspend(ally);
+    runner.game.drain_effect_queue();
+
+    // The selection must be optional (player may choose not to unsuspend).
+    assert!(
+        runner.pending_is_optional(),
+        "on_suspend → may unsuspend clause must be optional (player may decline)"
+    );
+
+    // Player declines (PASS).
+    runner
+        .execute_action(0, PASS)
+        .expect("PASS to decline optional unsuspend");
+    let _ = runner.auto_resolve();
+
+    assert!(
+        runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "AD1-014 must remain suspended when the player declines the optional unsuspend"
+    );
+}
+
+// ─── Section 11: All-Turns clause kind gate — own Tamer suspend excluded ─────
+
+#[test]
+fn ad1_014_own_tamer_suspend_does_not_trigger_unsuspend_clause() {
+    // The `event_target_kind: digimon` gate means suspending your own Tamer
+    // must NOT trigger the on_suspend → unsuspend clause (only your Digimon do).
+    use digimon_engine::enums::CardColor;
+    let mut runner = metal_garurumon_runner()
+        .add_card(make_tamer_with_colors("OWN-TAMER", &[CardColor::Blue]))
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "AD1-014", Some(0));
+    let tamer = runner.place_on_field(0, "OWN-TAMER", Some(0));
+
+    // Pre-suspend AD1-014 so any unsuspend is observable.
+    runner.game.players[0].battle_area[perm.index as usize].is_suspended = true;
+
+    // Suspend own Tamer — must NOT satisfy event_target_kind: digimon.
+    runner.game.suspend(tamer);
+    let _ = runner.auto_resolve();
+
+    assert!(
+        runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "own Tamer suspending must not trigger the [All Turns] on_suspend clause (gate: kind: digimon)"
     );
 }

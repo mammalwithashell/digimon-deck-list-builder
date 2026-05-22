@@ -466,6 +466,73 @@ fn bt22_013_when_digivolving_no_targets_does_not_panic() {
     // No assertion required — absence of panic is the acceptance criterion.
 }
 
+/// Timing gate: firing with OnPlay (wrong timing) against a BT22-013 permanent
+/// must NOT install any EffectChoice prompt. The [When Digivolving] clause
+/// carries `when: when_digivolving` only — it is NOT a dual on_play/when_digivolving
+/// clause like some cards (e.g. BT9-112 clause B). Checking this prevents
+/// a regression where a timing-dispatch bug fires the branch-choice on any
+/// "enter field" event regardless of the digivolving flag.
+#[test]
+fn bt22_013_when_digivolving_does_not_fire_on_wrong_timing() {
+    use digimon_engine::selection::TriggerSource;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-013 YAML loads")
+        .add_card(make_opp_digimon("OPP-DIGI", "OppDigi", 5000))
+        .memory(15)
+        .start();
+
+    let bt22 = place_bt22_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-DIGI", None);
+
+    // Trigger via OnPlay — this is the wrong timing; the clause is when_digivolving.
+    runner.game.enqueue_triggered(
+        EffectTiming::OnPlay,
+        TriggerSource::Permanent(bt22),
+    );
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_kind().is_none(),
+        "[When Digivolving] clause must NOT install a selection when triggered via OnPlay"
+    );
+}
+
+/// Branch 1 (Delete lowest-DP opp Digimon) with NO opp Digimon at all — no
+/// valid delete target. After picking branch 1 the engine should either
+/// silently skip the delete step or install an empty selection. The game must
+/// not panic. This is complementary to `bt22_013_when_digivolving_no_targets_does_not_panic`
+/// which fires the choice prompt but does NOT explicitly pick a branch.
+#[test]
+fn bt22_013_when_digivolving_branch_1_no_opp_digimon_does_not_panic() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-013 YAML loads")
+        .memory(15)
+        .start();
+
+    let bt22 = place_bt22_on_field(&mut runner, 0);
+    // No opp Digimon — branch 1 has no valid delete target.
+    trigger_when_digivolving(&mut runner, bt22);
+
+    // Branch-choice prompt must install (the branch-choice itself is mandatory).
+    let kind = runner.pending_kind().expect("branch prompt installs even with no opp targets");
+    assert_eq!(kind, SelectionKind::EffectChoice);
+
+    // Explicitly pick branch 1 (Delete). With no opp Digimon the delete step
+    // has no legal target; the engine should resolve gracefully without panic.
+    runner.execute_branch(1).expect("pick Delete branch");
+    let _ = runner.auto_resolve();
+
+    // No assertion beyond absence of panic — the opp battle area stays empty.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "opp battle area must remain empty (no targets to delete)"
+    );
+}
+
 // ─── Section 3 — Inherited [When Attacking][OPT] behavioral ────────────────
 
 /// Stack BT22-013 under an Omnimon-named top card so the printed name gate

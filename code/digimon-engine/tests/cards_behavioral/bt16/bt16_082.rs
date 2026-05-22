@@ -454,18 +454,150 @@ fn bt16_082_does_not_prompt_hatch_when_player_cannot_hatch() {
     );
 }
 
+/// Fully resolve a pending Ukkomon trigger (reveal+pick first eligible card,
+/// order remainder, then decline the "you may hatch" prompt if it appears).
+/// After this call no pending_selection remains.
+fn resolve_ukkomon_trigger(runner: &mut DebugRunner) {
+    // Resolve reveal selection: pick the first valid (Digimon/Tamer) card.
+    if let Some(view) = runner.pending_selection_view() {
+        if matches!(view.kind, SelectionKind::Reveal) {
+            let action = *view
+                .valid_action_ids
+                .first()
+                .expect("at least one Digimon or Tamer must be selectable");
+            runner
+                .execute_action(view.selecting_player, action)
+                .expect("pick revealed card");
+            runner.game.drain_effect_queue();
+        }
+    }
+
+    // Drain any OrderedPermutation prompts for returning the remainder.
+    while runner
+        .pending_selection_view()
+        .is_some_and(|v| matches!(v.kind, SelectionKind::OrderedPermutation { .. }))
+    {
+        let view = runner.pending_selection_view().expect("ordered prompt");
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("place remainder card");
+        runner.game.drain_effect_queue();
+    }
+
+    // Decline hatch if prompted.
+    if let Some(view) = runner.pending_selection_view() {
+        if matches!(view.kind, SelectionKind::EffectChoice) {
+            // "Don't hatch" is index 1 in the labels vec.
+            runner
+                .execute_action(view.selecting_player, view.valid_action_ids[1])
+                .expect("decline hatch");
+            runner.game.drain_effect_queue();
+        }
+    }
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "after full resolution no pending selection should remain"
+    );
+}
+
 /// OPT lockout: second move-from-breeding in the same turn does NOT re-trigger.
+///
+/// Setup:
+///  - P0's turn, Ukkomon in battle area, MOVER in breeding.
+///  - First move fires → fully resolved.
+///  - Place MOVER2 in breeding, move again → OPT must suppress the trigger.
 #[test]
-#[ignore = "pending: triggered OPT lockout coverage for OnMove effects"]
 fn bt16_082_opt_blocks_second_trigger_same_turn() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    // Need two Digimon to move (MOVER and MOVER2) plus the reveal deck.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-082")
+        .expect("BT16-082 YAML parses")
+        .add_card(digimon("MOVER"))
+        .add_card(digimon("MOVER2"))
+        .add_card(digimon("PICK-DIGI"))
+        .add_card(tamer("PICK-TAMER"))
+        .add_card(option("NOPE-OPTION"))
+        .add_card(digimon("FILL"))
+        .deck(0, &["FILL", "NOPE-OPTION", "PICK-TAMER", "PICK-DIGI"])
+        .memory(10)
+        .build();
+
+    runner.place_on_field(0, "BT16-082", Some(0));
+
+    // --- First move-from-breeding: trigger fires and is fully resolved ---
+    runner.place_in_breeding(0, "MOVER");
+    let moved = runner.move_from_breeding(0);
+    assert!(moved, "first move_from_breeding must succeed");
+    assert!(
+        runner.pending_selection().is_some(),
+        "first OnMove must install a reveal selection"
+    );
+    resolve_ukkomon_trigger(&mut runner);
+
+    // --- Second move-from-breeding same turn: OPT must block ---
+    runner.place_in_breeding(0, "MOVER2");
+    let moved2 = runner.move_from_breeding(0);
+    assert!(moved2, "second move_from_breeding must succeed");
+    assert!(
+        runner.pending_selection().is_none(),
+        "[Once Per Turn] must block Ukkomon's trigger on the second move in the same turn"
+    );
 }
 
 /// OPT resets after end_turn: the trigger fires again on the player's next turn.
+///
+/// After calling end_turn twice (P0 ends → P1's full turn → P0 begins again),
+/// `new_turn()` clears the activation counter so Ukkomon can fire once more.
 #[test]
-#[ignore = "pending: triggered OPT reset coverage for OnMove effects"]
 fn bt16_082_opt_resets_after_end_turn() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-082")
+        .expect("BT16-082 YAML parses")
+        .add_card(digimon("MOVER"))
+        .add_card(digimon("MOVER2"))
+        .add_card(digimon("PICK-DIGI"))
+        .add_card(tamer("PICK-TAMER"))
+        .add_card(option("NOPE-OPTION"))
+        .add_card(digimon("FILL"))
+        .deck(
+            0,
+            &[
+                "FILL",
+                "NOPE-OPTION",
+                "PICK-TAMER",
+                "PICK-DIGI",
+                "FILL",
+                "NOPE-OPTION",
+                "PICK-TAMER",
+                "PICK-DIGI",
+            ],
+        )
+        .memory(10)
+        .build();
+
+    runner.place_on_field(0, "BT16-082", Some(0));
+
+    // --- First move this turn: fires ---
+    runner.place_in_breeding(0, "MOVER");
+    assert!(runner.move_from_breeding(0), "first move must succeed");
+    assert!(
+        runner.pending_selection().is_some(),
+        "first trigger must fire"
+    );
+    resolve_ukkomon_trigger(&mut runner);
+
+    // --- End P0's turn, then P1's turn (two end_turn calls rotate back to P0) ---
+    runner.end_turn(); // P0 ends → P1 begins
+    runner.end_turn(); // P1 ends → P0 begins (new_turn resets P0's activation_count)
+
+    // --- Second move on P0's new turn: OPT must fire again ---
+    runner.place_in_breeding(0, "MOVER2");
+    assert!(runner.move_from_breeding(0), "move on new turn must succeed");
+    assert!(
+        runner.pending_selection().is_some(),
+        "Ukkomon must re-trigger after OPT resets at turn start"
+    );
 }
 
 /// The trigger does NOT fire on the opponent's turn ([Your Turn] gate).

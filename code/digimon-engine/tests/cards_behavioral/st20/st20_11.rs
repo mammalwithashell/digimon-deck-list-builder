@@ -46,16 +46,11 @@
 //!   the tamer-color synergy to RL agents. All behavioral tests for this
 //!   clause are `#[ignore]`'d with the gap tag.
 //!
-//! - **G-PRED-DP-LTE** (qa/archetype-qa/engine-gaps.md): the `dp_lte`
-//!   predicate is parsed and compiled but `eval_permanent_fields` in
-//!   `dsl_cards/predicate.rs` does NOT evaluate it for permanents. The
+//! - **G-PRED-DP-LTE** — RESOLVED (2026-05-02, qa/resolved-gaps.md). The
 //!   `dp_lte: { aggregate: { selector: lowest_dp, scope: opponent } }` filter
-//!   on the [WD][WA] delete clause is therefore over-permissive — the
-//!   selection prompt currently offers ANY opponent Digimon rather than only
-//!   those tied for lowest DP. Tests that assert only the lowest-DP target
-//!   is offered are `#[ignore]`'d with the gap tag. The mandatory-selection
-//!   "any opp Digimon eligible" tests run green and lock the YAML shape +
-//!   the trigger plumbing for both timings.
+//!   on the [WD][WA] delete clause now correctly restricts the selection prompt
+//!   to only the lowest-DP opponent Digimon. The two tests that previously
+//!   exercised this filter under `#[ignore]` are now active and passing.
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -368,13 +363,14 @@ fn st20_11_when_digivolving_deletes_chosen_opponent_digimon() {
     );
 }
 
-/// G-PRED-DP-LTE: the lowest-DP filter is authored as
-/// `dp_lte: { aggregate: { selector: lowest_dp, scope: opponent } }` but the
-/// permanent-side `dp_lte` predicate is not evaluated. With two opponent
-/// Digimon at different DPs, only the lower-DP one should be a valid target —
-/// when the gap closes this test should pass; until then both are offered.
+/// The lowest-DP filter is authored as
+/// `dp_lte: { aggregate: { selector: lowest_dp, scope: opponent } }`.
+/// G-PRED-DP-LTE is resolved (2026-05-02): the aggregate formula path
+/// evaluates `lowest_dp` via `formula_eval::evaluate_aggregate_read` and the
+/// `dp_lte` constraint correctly restricts selection to only the lowest-DP
+/// targets. With two opponent Digimon at different DPs, only the lower-DP one
+/// should be a valid target.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — `dp_lte` predicate not evaluated for permanents in eval_permanent_fields; lowest-DP filter is currently over-permissive (any opp Digimon eligible)"]
 fn st20_11_when_digivolving_only_offers_lowest_dp_opponent() {
     let mut runner = wargreymon_runner()
         .add_card(make_digimon("OPP-LOW", 4, 4000))
@@ -401,12 +397,13 @@ fn st20_11_when_digivolving_only_offers_lowest_dp_opponent() {
     );
 }
 
-/// G-PRED-DP-LTE companion: with two opponent Digimon TIED at the lowest DP,
+/// G-PRED-DP-LTE resolved: with two opponent Digimon TIED at the lowest DP,
 /// both must be valid targets (player picks). With higher-DP Digimon also on
-/// the field, those higher-DP ones must NOT be eligible. Until the gap
-/// closes, this test fails because all four Digimon are offered.
+/// the field, those higher-DP ones must NOT be eligible. The aggregate formula
+/// path computes min(opponent DPs) and `dp_lte` filters to only those at that
+/// exact minimum — so exactly the 2 tied permanents are offered, not the
+/// higher-DP one.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — see above; ties at lowest DP must include all tied permanents and exclude higher-DP ones"]
 fn st20_11_when_digivolving_offers_all_tied_lowest_dp_opponents() {
     let mut runner = wargreymon_runner()
         .add_card(make_digimon("OPP-TIE-A", 4, 4000))
@@ -432,6 +429,35 @@ fn st20_11_when_digivolving_offers_all_tied_lowest_dp_opponents() {
         view.valid_action_ids.len(),
         2,
         "exactly the 2 tied lowest-DP opponent Digimon should be valid targets"
+    );
+}
+
+/// [When Attacking] timing also restricts to lowest-DP targets (the YAML
+/// clause is shared — `when: [when_digivolving, when_attacking]`). Mirrors
+/// the [WD] lowest-DP test to confirm the filter is not timing-specific.
+#[test]
+fn st20_11_when_attacking_only_offers_lowest_dp_opponent() {
+    let mut runner = wargreymon_runner()
+        .add_card(make_digimon("OPP-LOW", 4, 3000))
+        .add_card(make_digimon("OPP-HIGH", 6, 11000))
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "ST20-11", Some(0));
+    runner.place_on_field(1, "OPP-LOW", Some(0));
+    runner.place_on_field(1, "OPP-HIGH", Some(0));
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(perm));
+    runner.game.drain_effect_queue();
+
+    let view = runner
+        .pending_selection_view()
+        .expect("[WA] delete selection installs with opponent Digimon");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "only the lowest-DP opponent Digimon (OPP-LOW at 3000) should be a valid target"
     );
 }
 

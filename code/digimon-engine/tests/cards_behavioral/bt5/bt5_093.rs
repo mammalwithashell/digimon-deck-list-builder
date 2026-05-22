@@ -67,18 +67,15 @@
 //!   that asserts the keyword is installed (the install-side half of the
 //!   contract) runs green and locks the aura's runtime install.
 //!
-//! - **G-PREDICATE-OF-ALIAS** (NEW — to be filed): the YAML's
-//!   `target: { of: you, ... }` for the aura uses an unrecognized field
-//!   name. `BoolPredicateSpec` defines the controller filter as `owner`
-//!   (`code/digimon-dsl/src/predicate.rs:89`); there is no `#[serde(alias =
-//!   "of")]`. serde permissively drops unknown keys, so the aura target's
-//!   compiled `owner` is `None` and the aura scans BOTH controllers'
-//!   battle areas. The aura currently buffs opponent's Omnimon-named
-//!   Digimon as well as own — directly violating "All of YOUR Digimon
-//!   with [Omnimon] in their name". Fix: either rename `of:` to `owner:`
-//!   in the YAML (1-line authoring fix) or add `#[serde(alias = "of")]`
-//!   to `BoolPredicateSpec::owner`. The negative test for opponent's
-//!   Omnimon is `#[ignore]`'d on this gap.
+//! - **G-PREDICATE-OF-ALIAS** (RESOLVED): the `_examples/BT5-093.yaml`
+//!   draft used `target: { of: you, ... }` for the aura controller filter.
+//!   `BoolPredicateSpec` defines the controller filter as `owner`; there is
+//!   no `#[serde(alias = "of")]`, so serde silently dropped the key and the
+//!   aura matched both controllers' Omnimon-named Digimon. The production
+//!   YAML at `cards/bt5/BT5-093.yaml` uses `owner: you` (the correct DSL
+//!   field name), resolving the gap. The negative test
+//!   `bt5_093_aura_does_not_grant_to_opponents_omnimon` now runs without
+//!   `#[ignore]` and passes.
 //!
 //! - **G-AURA-ACTIVE-WHEN-CROSS-TURN** (NEW — to be filed): the aura's
 //!   `active_when: { your_turn: true }` is authored, but cross-turn
@@ -100,7 +97,7 @@ use digimon_engine::enums::{CardKind, EffectTiming, Keyword, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 
-const YAML: &str = include_str!("../../../cards/_examples/BT5-093.yaml");
+const YAML: &str = include_str!("../../../cards/bt5/BT5-093.yaml");
 const CARD_ID: &str = "BT5-093";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -496,26 +493,11 @@ fn bt5_093_aura_does_not_grant_to_non_omnimon_own_digimon() {
 /// Negative (controller filter): an opponent's Omnimon-named Digimon must
 /// NOT receive the keyword — printed text scopes to "your Digimon".
 ///
-/// **Found bug — YAML authoring gap (G-PREDICATE-OF-ALIAS or YAML rename to
-/// `owner`):** the YAML target predicate is currently `target: { of: you,
-/// zone: [battle_area], kind: digimon, name_contains: "Omnimon" }`. The DSL
-/// `BoolPredicateSpec` has no `of` field — the controller filter is named
-/// `owner` (see `code/digimon-dsl/src/predicate.rs:89`). With serde defaulted
-/// to permissive parsing, `of: you` is silently ignored, so the compiled
-/// `target.owner` is `None` and the aura scans BOTH controllers' battle
-/// areas. The fix is either:
-///   (a) update `cards/_examples/BT5-093.yaml` to use `owner: you` (1-line
-///       authoring fix), OR
-///   (b) add `#[serde(alias = "of")]` to `BoolPredicateSpec::owner` so the
-///       existing field name remains valid.
-/// This test is `#[ignore]`'d on the gap; the install-side positive test
-/// `bt5_093_aura_grants_security_attack_plus_to_own_omnimon` already passes.
+/// Fixed by using `owner: you` (correct DSL field name) in the production
+/// YAML at `cards/bt5/BT5-093.yaml`. The `_examples/` draft used `of: you`
+/// which was silently ignored by serde (BoolPredicateSpec has no `of` alias).
+/// This test passes against the canonical bt5 YAML.
 #[test]
-#[ignore = "BLOCKED: G-PREDICATE-OF-ALIAS — BT5-093.yaml uses `target: { of: you, ... }` but \
-            `BoolPredicateSpec` has no `of` field (only `owner`). serde silently drops the \
-            unknown key, so the aura target has no owner filter and matches both controllers' \
-            Omnimon-named Digimon. Fix: rename `of:` to `owner:` in the YAML, or add \
-            #[serde(alias=\"of\")] to BoolPredicateSpec::owner."]
 fn bt5_093_aura_does_not_grant_to_opponents_omnimon() {
     let mut runner = taimatt_runner();
     runner

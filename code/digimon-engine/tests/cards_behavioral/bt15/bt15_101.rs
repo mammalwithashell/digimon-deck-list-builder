@@ -336,6 +336,48 @@ fn bt15_101_when_digivolving_filters_out_own_permanents() {
     );
 }
 
+// ─── Section 2b: [When Digivolving] partial-fill lock ────────────────────────
+
+#[test]
+fn bt15_101_when_digivolving_with_exactly_two_opp_permanents_locks_both() {
+    // With only 2 valid opp permanents the third `select_opponent_permanent`
+    // step finds no candidates and skips silently — DCGO Math.Min(3, count).
+    // Both present permanents must still receive CannotSuspend.
+    let mut runner = metal_garurumon_runner()
+        .add_card(make_digimon("OPP-A", 5, 7000))
+        .add_card(make_tamer("OPP-T", "OPP-T"))
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "BT15-101", Some(0));
+    let a = runner.place_on_field(1, "OPP-A", Some(0));
+    let t = runner.place_on_field(1, "OPP-T", Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
+    runner.game.drain_effect_queue();
+
+    runner
+        .auto_resolve()
+        .expect("auto-resolve 2 picks + silent skip of pick 3");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no selection pending after partial-fill auto-resolve"
+    );
+
+    let modifiers = runner.modifiers();
+    assert!(
+        modifiers.has(a, ModifierType::CannotSuspend),
+        "first of 2 opp permanents must receive CannotSuspend"
+    );
+    assert!(
+        modifiers.has(t, ModifierType::CannotSuspend),
+        "second of 2 opp permanents must receive CannotSuspend"
+    );
+}
+
 // ─── Section 3: All-Turns OPT — on_suspend → may unsuspend self ──────────────
 
 #[test]
@@ -407,5 +449,79 @@ fn bt15_101_on_opponent_suspend_does_not_unsuspend_self() {
     assert!(
         suspended_after,
         "opponent suspending must not trigger BT15-101's clause (event_target_owner: you gate)"
+    );
+}
+
+// ─── Section 4: All-Turns OPT — once-per-turn enforcement ───────────────────
+
+#[test]
+fn bt15_101_all_turns_opt_blocks_second_on_suspend_same_turn() {
+    // [Once Per Turn] — after the clause fires once, a second suspension of
+    // BT15-101 in the same turn must NOT offer the unsuspend prompt again.
+    let mut runner = metal_garurumon_runner().memory(20).start();
+    let perm = runner.place_on_field(0, "BT15-101", Some(0));
+
+    // First self-suspend — fires the OPT clause; auto_resolve unsuspends.
+    runner.game.suspend(perm);
+    let _ = runner.auto_resolve();
+    assert!(
+        !runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "BT15-101 should unsuspend on first suspend (OPT consumed)"
+    );
+
+    // Re-suspend BT15-101 manually to make a second trigger observable.
+    runner.game.players[0].battle_area[perm.index as usize].is_suspended = true;
+
+    // Second self-suspend in the same turn — OPT must block the clause.
+    runner.game.suspend(perm);
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "OPT must block the on_suspend clause from firing twice in the same turn"
+    );
+}
+
+#[test]
+fn bt15_101_all_turns_opt_resets_after_turn_cycle() {
+    // OPT counter resets when player 0 starts their next turn (after a full
+    // round). Uses FILL cards in both decks to survive the draw phases.
+    let mut runner = metal_garurumon_runner()
+        .add_card(make_digimon("FILL", 3, 3000))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "BT15-101", Some(0));
+
+    // --- Player 0's turn: consume the OPT ---
+    runner.game.suspend(perm);
+    let _ = runner.auto_resolve();
+    assert!(
+        !runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "should unsuspend on first suspend (turn 1)"
+    );
+
+    // --- Player 1's turn (OPT still locked for player 0) ---
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+
+    runner.game.players[0].battle_area[perm.index as usize].is_suspended = true;
+    runner.game.suspend(perm);
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "OPT still locked during player 1's turn — BT15-101 must remain suspended"
+    );
+
+    // --- Player 0's next turn (OPT counter resets via new_turn()) ---
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+
+    // BT15-101 should still be suspended from above; now trigger it again.
+    runner.game.suspend(perm);
+    let _ = runner.auto_resolve();
+    assert!(
+        !runner.game.players[0].battle_area[perm.index as usize].is_suspended,
+        "OPT must reset when player 0's next turn begins — on_suspend should fire again"
     );
 }

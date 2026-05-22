@@ -46,12 +46,12 @@
 
 use digimon_dsl::compiled::{
     CompiledAltPath, CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause,
-    CompiledScope, CompiledTiming,
+    CompiledColor, CompiledScope, CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{Keyword, PlayerId};
+use digimon_engine::enums::{CardKind, Keyword, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 
 use crate::dsl_card_data::card_data_from_compiled;
@@ -121,6 +121,19 @@ fn bt23_018_card_metadata_matches_print() {
     assert_eq!(card.level, Some(4), "Garurumon is Lv.4");
     assert_eq!(card.dp, Some(5000), "Garurumon is DP 5000");
     assert_eq!(card.cost, Some(6), "Garurumon costs 6 to play");
+}
+
+/// Color must be exactly [Blue] — a single-color Blue Digimon.
+#[test]
+fn bt23_018_color_is_blue() {
+    let runner = garurumon_runner();
+    let card = runner.compiled_card("BT23-018").expect("BT23-018 compiles");
+
+    assert_eq!(
+        card.color,
+        vec![CompiledColor::Blue],
+        "BT23-018 Garurumon must be exactly [Blue]"
+    );
 }
 
 /// Standard alt-digivolve: Lv.3 Blue / Cost 2 must be present.
@@ -391,6 +404,90 @@ fn bt23_018_face_up_jamming_installs_on_field() {
         runner.game.has_keyword(garurumon, Keyword::Jamming),
         "face-up <Jamming> keyword must be installed on a face-up BT23-018 \
          (G-DECLARATIVE-KEYWORD resolved 2026-05-02)"
+    );
+}
+
+/// Face-up <Jamming> protects BT23-018 from deletion when it attacks a player
+/// and the revealed security card is a Digimon with higher DP.
+///
+/// Card text: "This Digimon can't be deleted in battles against Security
+/// Digimon." Engine path: `combat.rs` line: `attacker_dp < sec_dp &&
+/// !self.has_keyword(attacker, Keyword::Jamming)` — Jamming prevents the
+/// `delete_permanent_with_effects` call.
+///
+/// Setup: BT23-018 (DP 5000) on P0's field; one strong security Digimon
+/// (DP 9000) in P1's security stack. Garurumon attacks player 1. The
+/// security Digimon is revealed; it outclasses Garurumon, but Jamming
+/// keeps Garurumon alive.
+#[test]
+fn bt23_018_jamming_protects_attacker_against_stronger_security_digimon() {
+    let mut strong_sec = make_test_card("STRONG-SEC", "StrongSecurity");
+    strong_sec.card_kind = CardKind::Digimon;
+    strong_sec.level = Some(5);
+    strong_sec.dp = Some(9000); // outclasses Garurumon's 5000 DP
+
+    let filler = make_test_card("FILLER", "Filler");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-018")
+        .expect("BT23-018 found in embedded DSL pack")
+        .add_card(strong_sec)
+        .add_card(filler)
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .security(1, &["STRONG-SEC"])
+        .memory(10)
+        .start();
+
+    let garurumon = runner.place_on_field(0, "BT23-018", Some(0));
+
+    // Materialize the face-up Jamming grant before the attack.
+    runner.auto_resolve().ok();
+
+    assert!(
+        runner.game.has_keyword(garurumon, Keyword::Jamming),
+        "precondition: Garurumon must have Jamming installed before the attack"
+    );
+
+    // Garurumon attacks player 1's security stack.
+    let _ = runner.attack_player(garurumon, 1, false);
+    runner.auto_resolve().ok();
+
+    assert!(
+        runner.battle_area_size(0) > 0,
+        "Garurumon (DP 5000, <Jamming>) must survive the battle against a \
+         9000-DP security Digimon; got {} permanents on P0's field",
+        runner.battle_area_size(0)
+    );
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "the security Digimon must still be consumed (Jamming protects the \
+         attacker, but does not prevent the security card from being spent)"
+    );
+}
+
+/// BT23-018's <Jamming> is a *face-up* grant_keyword (FaceUp scope), not an
+/// inherited one. When Garurumon is a digivolution source under a carrier, the
+/// carrier must NOT receive Jamming from the face-up grant — only the top card
+/// (the Garurumon permanent itself when face-up) is affected.
+///
+/// Contrast with BT12-022 ExVeemon which has *inherited* Jamming and explicitly
+/// propagates it to the carrier. BT23-018's grant_keyword is scope: face_up in
+/// the DSL and maps to CompiledScope::FaceUp; the lowering only installs the
+/// keyword on the Garurumon permanent itself, not on cards stacked on top.
+#[test]
+fn bt23_018_face_up_jamming_does_not_propagate_to_carrier() {
+    let (runner, carrier_handle) = runner_with_garurumon_as_source();
+
+    // The carrier (CARRIER-LV5) is the face-up permanent. BT23-018 is a
+    // source (inherited slot). The face-up Jamming grant must NOT have been
+    // installed on the carrier via the inherited path.
+    assert!(
+        !runner.game.has_keyword(carrier_handle, Keyword::Jamming),
+        "Carrier stacked on top of Garurumon must NOT have Jamming: BT23-018's \
+         grant_keyword is face-up scope, not inherited — it only applies when \
+         Garurumon itself is the face-up top card"
     );
 }
 

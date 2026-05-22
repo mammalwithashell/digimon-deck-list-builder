@@ -554,6 +554,205 @@ fn ex9_021_end_of_attack_plays_two_from_stack_then_places_self_top_security() {
     );
 }
 
+// ─── Section 4: Behavioral — delete-highest definitive assertion ─────────────
+
+/// Definitive (non-tolerant) confirmation that the for_each captures and
+/// deletes the Lv.7 target while the Lv.5 survives.  Unlike the tolerant
+/// sibling in Section 2, this test calls `auto_resolve()` after draining the
+/// queue so any pending trigger-order prompts are resolved, and then asserts
+/// the exact post-deletion state:
+///   - opponent battle area shrinks to exactly 1 (the Lv.5 remains)
+///   - the surviving permanent is the Lv.5 (OPP-LV5)
+#[test]
+fn ex9_021_when_digivolving_definitively_deletes_highest_level() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-021 YAML loads")
+        .add_card(make_opp_digimon("DEF-LV5", "OppLow", 5, 5000))
+        .add_card(make_opp_digimon("DEF-LV7", "OppHigh", 7, 12000))
+        .memory(10)
+        .build();
+
+    runner.place_on_field(1, "DEF-LV5", None);
+    runner.place_on_field(1, "DEF-LV7", None);
+    let perm = runner.place_on_field(0, "EX9-021", None);
+
+    let before = runner.battle_area_size(1);
+    assert_eq!(before, 2, "fixture: 2 opp Digimon on field before trigger");
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
+    runner.game.drain_effect_queue();
+    runner.auto_resolve().expect("trigger resolves cleanly");
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "after delete-highest: opp battle area should contain exactly 1 Digimon (the Lv.5)"
+    );
+    let surviving_name = runner.game.players[1].battle_area[0]
+        .top_card()
+        .card_name(&runner.game.card_data);
+    assert_eq!(
+        surviving_name, "OppLow",
+        "the surviving Digimon must be the Lv.5 (OppLow), not the Lv.7"
+    );
+}
+
+/// Confirms that the delete-highest fires even when this Digimon reached Lv.7
+/// via standard digivolve (non-DNA path). The "Then, delete..." sentence is
+/// unconditional per printed text — the DNA gate covers only the immunity arm.
+#[test]
+fn ex9_021_when_digivolving_standard_path_still_deletes_highest() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-021 YAML loads")
+        .add_card(make_opp_digimon("STD-OPP-LV6", "OppA", 6, 9000))
+        .memory(10)
+        .build();
+
+    runner.place_on_field(1, "STD-OPP-LV6", None);
+    let perm = runner.place_on_field(0, "EX9-021", None);
+
+    let before = runner.battle_area_size(1);
+    assert_eq!(before, 1, "fixture: 1 opp Digimon on field");
+
+    // Use a standard (non-DNA) TriggerSource to confirm unconditional delete.
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
+    runner.game.drain_effect_queue();
+    runner.auto_resolve().expect("trigger resolves cleanly");
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "standard-digivolved EX9-021 must still delete opponent Digimon (unconditional)"
+    );
+}
+
+// ─── Section 5: Behavioral — End of Attack trait-based source filtering ──────
+
+/// Printed: "1 card with [Greymon] in its name OR the [Ver.1] trait".
+/// This test verifies the [Ver.1] trait arm: a Digimon with `Ver.1` trait
+/// and no "Greymon" in its name must appear as a valid candidate in the
+/// first pick slot.
+#[test]
+fn ex9_021_end_of_attack_ver1_trait_source_is_eligible_for_greymon_slot() {
+    let mut ver1_source = make_test_card("VER1", "SomeDigimon");
+    ver1_source.card_kind = CardKind::Digimon;
+    ver1_source.level = Some(5);
+    ver1_source.dp = Some(8000);
+    ver1_source.traits = vec!["Ver.1".to_string()];
+
+    // Filler Garurumon source to fill the second slot.
+    let garu_source = make_named_source("GARU-SLOT", "MetalGarurumon", &[]);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-021 YAML loads")
+        .add_card(ver1_source)
+        .add_card(garu_source)
+        .memory(15)
+        .start();
+
+    let ex9 = runner.place_stack(0, &["VER1", "GARU-SLOT", "EX9-021"]);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfAttack, TriggerSource::Permanent(ex9));
+    runner.game.drain_effect_queue();
+
+    // Accept the optional End of Attack choice.
+    let choice = runner
+        .pending_selection_view()
+        .expect("End of Attack optional choice must be offered");
+    assert_eq!(choice.kind, SelectionKind::EffectChoice);
+    runner
+        .execute_action(0, choice.valid_action_ids[0])
+        .expect("accept End of Attack source play");
+
+    // The first pick (Greymon or Ver.1 slot) must offer VER1 as a candidate.
+    let first_pick = runner
+        .pending_selection_view()
+        .expect("first source pick must be presented");
+    assert_eq!(
+        first_pick.kind,
+        SelectionKind::Material,
+        "first pick must be a material selection"
+    );
+    assert!(
+        !first_pick.valid_action_ids.is_empty(),
+        "Ver.1-trait source (VER1) must be a valid candidate in the Greymon/Ver.1 pick slot"
+    );
+}
+
+/// Printed: "1 card with [Garurumon] in its name OR the [Ver.2] trait".
+/// This test verifies the [Ver.2] trait arm: a Digimon with `Ver.2` trait
+/// and no "Garurumon" in its name must appear as a valid candidate in the
+/// second pick slot.
+#[test]
+fn ex9_021_end_of_attack_ver2_trait_source_is_eligible_for_garurumon_slot() {
+    // Filler Greymon source to allow the first pick to proceed.
+    let grey_source = make_named_source("GREY-SLOT", "WarGreymon", &[]);
+
+    let mut ver2_source = make_test_card("VER2", "AnotherDigimon");
+    ver2_source.card_kind = CardKind::Digimon;
+    ver2_source.level = Some(5);
+    ver2_source.dp = Some(8000);
+    ver2_source.traits = vec!["Ver.2".to_string()];
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-021 YAML loads")
+        .add_card(grey_source)
+        .add_card(ver2_source)
+        .memory(15)
+        .start();
+
+    let ex9 = runner.place_stack(0, &["GREY-SLOT", "VER2", "EX9-021"]);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfAttack, TriggerSource::Permanent(ex9));
+    runner.game.drain_effect_queue();
+
+    // Accept the optional End of Attack choice.
+    let choice = runner
+        .pending_selection_view()
+        .expect("End of Attack optional choice must be offered");
+    assert_eq!(choice.kind, SelectionKind::EffectChoice);
+    runner
+        .execute_action(0, choice.valid_action_ids[0])
+        .expect("accept End of Attack source play");
+
+    // Advance past the first (Greymon/Ver.1) pick.
+    let first_pick = runner
+        .pending_selection_view()
+        .expect("first source pick (Greymon/Ver.1) must be presented");
+    assert_eq!(first_pick.kind, SelectionKind::Material);
+    runner
+        .execute_action(0, first_pick.valid_action_ids[0])
+        .expect("select Greymon/Ver.1 source");
+
+    // The second pick (Garurumon or Ver.2 slot) must now be pending with VER2.
+    let second_pick = runner
+        .pending_selection_view()
+        .expect("second source pick must be presented");
+    assert_eq!(
+        second_pick.kind,
+        SelectionKind::Material,
+        "second pick must be a material selection"
+    );
+    assert!(
+        !second_pick.valid_action_ids.is_empty(),
+        "Ver.2-trait source (VER2) must be a valid candidate in the Garurumon/Ver.2 pick slot"
+    );
+}
+
 /// "If this effect played" tail conditional — when the head arm plays
 /// nothing (player declines the optional outer prompt OR no eligible
 /// candidates), the place-self-at-security-top tail must NOT fire and the

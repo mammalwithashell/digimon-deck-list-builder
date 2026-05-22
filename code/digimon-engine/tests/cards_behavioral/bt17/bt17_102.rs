@@ -97,7 +97,7 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming, ModifierType, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
@@ -770,5 +770,135 @@ fn bt17_102_inherited_on_deletion_no_legal_targets_resolves_to_noop() {
     assert!(
         runner.battle_area_size(0) <= battle_area_before,
         "battle area must not grow when the inherited On Deletion has no legal target"
+    );
+}
+
+// ─── Section 7 — [On Deletion] Hatch branch ─────────────────────────────────
+
+/// Own [On Deletion] Hatch branch: when the player chooses branch 1 ("Hatch"),
+/// a Digi-egg from the digitama deck moves into the breeding area.
+/// The player must have a non-empty digitama deck so hatching is legal.
+#[test]
+fn bt17_102_own_on_deletion_hatch_branch_moves_egg_to_breeding() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(make_test_egg("EGG-01", "TestEgg"))
+        .digitama(0, &["EGG-01"])
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Confirm breeding area is empty before deletion.
+    assert!(
+        runner.game.players[0].breeding_area.is_none(),
+        "breeding area must be empty before the test"
+    );
+
+    let perm = runner.place_on_field(0, "BT17-102", Some(0));
+
+    runner.game.delete_permanent_with_cause(
+        perm,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+
+    // Drain trigger-order prompts from both face-up and inherited clauses
+    // queuing on the same deletion event.
+    skip_trigger_order_prompts(&mut runner);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("EffectChoice prompt must install after deletion");
+    assert_eq!(view.kind, SelectionKind::EffectChoice);
+
+    // Branch 1 = "Hatch in your breeding area".
+    runner.execute_branch(1).expect("pick Hatch branch");
+    let _ = runner.auto_resolve();
+
+    assert!(
+        runner.game.players[0].breeding_area.is_some(),
+        "breeding area must have an egg after choosing the Hatch branch"
+    );
+}
+
+/// Inherited [On Deletion] Hatch branch: same as the own clause but triggered
+/// via a carrier stack. When the carrier is deleted and the player picks branch
+/// 1 on the inherited [On Deletion], a Digi-egg moves to the breeding area.
+#[test]
+fn bt17_102_inherited_on_deletion_hatch_branch_moves_egg_to_breeding() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_egg("EGG-01", "TestEgg"))
+        .digitama(0, &["EGG-01"])
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    assert!(
+        runner.game.players[0].breeding_area.is_none(),
+        "breeding area must be empty before carrier deletion"
+    );
+
+    // Stack [BT17-102, CARRIER] — BT17-102 rides as inherited source.
+    let carrier = runner.place_stack(0, &["BT17-102", "CARRIER"]);
+
+    runner.game.delete_permanent_with_cause(
+        carrier,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+
+    skip_trigger_order_prompts(&mut runner);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("inherited EffectChoice prompt must install");
+    assert_eq!(view.kind, SelectionKind::EffectChoice);
+
+    runner.execute_branch(1).expect("pick Hatch branch via inherited clause");
+    let _ = runner.auto_resolve();
+
+    assert!(
+        runner.game.players[0].breeding_area.is_some(),
+        "breeding area must have an egg after choosing the Hatch branch via the inherited clause"
+    );
+}
+
+// ─── Section 8 — [When Digivolving] DP buff expiry ───────────────────────────
+
+/// The +3000 DP buff granted by [When Digivolving] is `expiry: end_of_turn`.
+/// After calling `end_turn()`, the buff must be purged and the effective DP
+/// must return to the 5000 base value.
+#[test]
+fn bt17_102_when_digivolving_dp_buff_expires_at_end_of_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(make_koromon("KORO"))
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Stack [KORO, BT17-102] and fire the [When Digivolving] trigger.
+    let stack = runner.place_stack(0, &["KORO", "BT17-102"]);
+    fire_when_digivolving(&mut runner, stack);
+    let _ = runner.auto_resolve();
+
+    // Verify the buff is active during the current turn.
+    let dp_during = runner.effective_dp(stack).expect("perm has DP");
+    assert!(
+        dp_during >= 8000,
+        "DP during turn must be ≥ 8000 (base 5000 + 3000 buff); got {dp_during}"
+    );
+
+    // Advance past the turn boundary — the modifier's `end_of_turn` expiry
+    // should cause it to be purged during end_turn processing.
+    runner.end_turn();
+
+    let dp_after = runner.effective_dp(stack).expect("perm still on field");
+    assert_eq!(
+        dp_after, 5000,
+        "+3000 DP buff must expire at end of turn; expected 5000, got {dp_after}"
     );
 }

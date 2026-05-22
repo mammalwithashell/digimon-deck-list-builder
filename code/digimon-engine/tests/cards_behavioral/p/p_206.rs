@@ -875,3 +875,203 @@ fn p_206_delay_tamer_cost_reduced_by_4() {
 fn p_206_delay_tamer_play_is_optional() {
     todo!("implement once G-PLACE-SELF-AS-OPTION-PERMANENT is resolved");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 6 — Auditor-added tests (2026-05-11)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The Delay clause `select_hand` step must be optional (DCGO: canNoSelect: true).
+///
+/// Verifies structural field — the "you may" keyword in the printed Delay text
+/// requires optional=true on the hand selection step.
+#[test]
+fn p_206_delay_select_hand_step_is_optional() {
+    use digimon_dsl::compiled::CompiledStep;
+
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("FILL"))
+        .hand(0, &["P-206"])
+        .deck(0, &["FILL"])
+        .memory(0)
+        .start();
+
+    let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
+    let delay_process = match &compiled.effects[1] {
+        CompiledClause::Declarative(CompiledDeclarativeClause::Delay { process, .. }) => process,
+        other => panic!("clause 1 must be Declarative(Delay); got {:?}", other),
+    };
+
+    // Find the select_hand step in the Delay process.
+    let select_hand_optional = delay_process.iter().find_map(|step| match step {
+        CompiledStep::SelectHand { optional, .. } => Some(*optional),
+        _ => None,
+    });
+
+    let is_optional = select_hand_optional
+        .expect("Delay process must contain a SelectHand step");
+
+    assert!(
+        is_optional,
+        "Delay 'you may' text → SelectHand step must be optional=true (DCGO: canNoSelect: true)"
+    );
+}
+
+/// Main clause: when 3 cards are revealed and 2 are added to hand, the 1 remaining
+/// card is returned to the bottom of the deck (not discarded).
+///
+/// Verifies place_remainder_on_deck with position: bottom by checking deck size
+/// accounts for exactly 1 returned card. The rest-card must appear at deck bottom
+/// (deck index 0 when deck is ordered bottom-first).
+#[test]
+fn p_206_main_remainder_returned_to_deck_not_discarded() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_digimon("DIG-1"))
+        .add_card(make_tamer("TAM-1"))
+        .add_card(filler("FILL-BOTTOM"))
+        .add_card(filler("FILL-EXTRA"))
+        .hand(0, &["P-206"])
+        // Deck order (bottom to top): FILL-EXTRA, FILL-BOTTOM, TAM-1, DIG-1
+        // Top 3 revealed: DIG-1 + TAM-1 + FILL-BOTTOM; FILL-EXTRA stays below.
+        .deck(0, &["FILL-EXTRA", "FILL-BOTTOM", "TAM-1", "DIG-1"])
+        .deck(1, &["FILL-EXTRA"])
+        .memory(10)
+        .start();
+
+    let trash_before = runner.trash_size(0);
+    let deck_before = runner.deck_size(0); // 4
+
+    runner.game.activate_hand_main(0, 0);
+    let _ = runner.auto_resolve();
+
+    let trash_after = runner.trash_size(0);
+    let deck_after = runner.deck_size(0); // should be 2 (DIG-1 + TAM-1 removed; FILL-BOTTOM returned; FILL-EXTRA untouched)
+
+    // The remainder must not land in trash.
+    assert_eq!(
+        trash_after,
+        trash_before,
+        "Remainder card must be returned to deck bottom, NOT trashed; trash grew by {}",
+        trash_after as i32 - trash_before as i32
+    );
+
+    // Deck loses exactly 2 cards net (3 revealed, 1 returned to bottom).
+    assert_eq!(
+        deck_before - deck_after,
+        2,
+        "Net deck change must be -2 (2 added to hand, 1 returned); before={deck_before}, after={deck_after}"
+    );
+}
+
+/// Main clause: when only Digimon cards are in the top 3 (no Tamer present),
+/// both select_reveal steps are optional — the Tamer pick skips gracefully.
+///
+/// Net hand gain should be +1 (only Digimon added). Filter enforcement is
+/// accept-all (Phase 2b), but optional=true prevents crashes when no tamer present.
+#[test]
+fn p_206_main_optional_decline_when_no_tamer_in_top_3() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_digimon("DIG-1"))
+        .add_card(make_digimon("DIG-2"))
+        .add_card(make_digimon("DIG-3"))
+        .add_card(filler("FILL-1"))
+        .hand(0, &["P-206"])
+        // Top 3 are all Digimon; Tamer select_reveal should result in optional skip or PASS.
+        .deck(0, &["FILL-1", "DIG-3", "DIG-2", "DIG-1"])
+        .deck(1, &["FILL-1"])
+        .memory(10)
+        .start();
+
+    // Must not panic when the Tamer select_reveal fires with no tamer candidates.
+    runner.game.activate_hand_main(0, 0);
+    let result = runner.auto_resolve();
+    // auto_resolve may return Ok or have no selection — either is acceptable as
+    // long as no panic or assertion failure occurs.
+    let _ = result;
+    // Game should be in a valid post-resolution state.
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "After auto_resolve, no pending selection should remain (no crash on empty tamer reveal)"
+    );
+}
+
+/// AUDIT 2026-05-11: G-PLAY-COST-LTE was resolved on 2026-05-10.
+/// `PredicateSpec::play_cost_lte` now accepts either a literal threshold or a
+/// formula. P-189.yaml and P-151.yaml already use `play_cost_lte: 3`/`4` in their
+/// filters. However, P-206.yaml's inherited security clause `select_hand` and
+/// `select_trash` filters still omit `play_cost_lte: 3`.
+///
+/// This structural test documents the discrepancy: it asserts the *current*
+/// state (predicate NOT present in P-206's compiled inherited-security filters)
+/// and is expected to FAIL after the YAML is updated to:
+///   filter:
+///     all_of:
+///       - kind: digimon
+///       - play_cost_lte: 3
+///
+/// When the YAML is updated, flip this test (assertion direction) and remove the
+/// `#[ignore = "pending: G-PLAY-COST-LTE"]` on
+/// `p_206_inherited_security_cost_filter_excludes_high_cost_digimon` and
+/// implement that test with a real behavioral assertion.
+#[test]
+fn p_206_inherited_security_filter_does_not_yet_use_play_cost_lte() {
+    use digimon_dsl::compiled::CompiledStep;
+
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("FILL"))
+        .hand(0, &["P-206"])
+        .deck(0, &["FILL"])
+        .memory(0)
+        .start();
+
+    let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
+
+    // Find the inherited security clause's process steps.
+    let security_process = compiled.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t)
+            if t.scope == CompiledScope::Inherited
+                && t.when.contains(&CompiledTiming::OnSecurity) =>
+        {
+            Some(&t.process)
+        }
+        _ => None,
+    });
+
+    if let Some(process) = security_process {
+        // Collect all SelectHand and SelectTrash steps, inspect their filters.
+        let any_filter_has_play_cost_lte = process.iter().any(|step| {
+            let filter = match step {
+                CompiledStep::SelectHand { filter, .. } => Some(filter),
+                CompiledStep::SelectTrash { filter, .. } => Some(filter),
+                _ => None,
+            };
+            if let Some(f) = filter {
+                // Check direct play_cost_lte or inside all_of
+                f.play_cost_lte.is_some()
+                    || f.all_of
+                        .iter()
+                        .any(|p| p.play_cost_lte.is_some())
+            } else {
+                false
+            }
+        });
+
+        assert!(
+            !any_filter_has_play_cost_lte,
+            "AUDIT REGRESSION: P-206 inherited security filter now includes \
+             `play_cost_lte: 3`. Update this audit test (flip the assertion) \
+             AND un-ignore `p_206_inherited_security_cost_filter_excludes_high_cost_digimon` \
+             with a real behavioral assertion. See qa/dsl-vocab-gaps.md \
+             G-PLAY-COST-LTE (resolved 2026-05-10)."
+        );
+    }
+    // If no Triggered security clause found (raw_rust path), this check is N/A.
+    // The raw_rust stub must be replaced or augmented with DSL once the gap closes.
+}

@@ -113,10 +113,10 @@ use digimon_dsl::compiled::{
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, PlayerId};
+use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
 use digimon_engine::events::GameEvent;
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 // ─── Fixture helpers ────────────────────────────────────────────────────────
 
@@ -541,6 +541,97 @@ fn bt17_015_on_play_branch_1_digivolves_gabumon_into_metalgarurumon_free() {
         "MY-MG",
         "MetalGarurumon must be the top card of the (former) Gabumon stack \
          after the digivolve branch resolves"
+    );
+}
+
+/// [When Digivolving] also fires the branch-choice prompt: enqueueing the
+/// `WhenDigivolving` timing on a BT17-015 permanent already on the field
+/// must install an `EffectChoice` selection (same body as [On Play]).
+#[test]
+fn bt17_015_when_digivolving_installs_branch_choice_prompt() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-015")
+        .expect("BT17-015 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-DIGI", "OppDigi", 5000))
+        .memory(10)
+        .start();
+
+    let wg = runner.place_on_field(0, "BT17-015", Some(0));
+    runner.place_on_field(1, "OPP-DIGI", None);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(wg));
+    runner.game.drain_effect_queue();
+
+    let kind = runner
+        .pending_kind()
+        .expect("WhenDigivolving must install branch-choice prompt");
+    assert_eq!(
+        kind,
+        SelectionKind::EffectChoice,
+        "[When Digivolving] must produce the same 2-way EffectChoice as [On Play]"
+    );
+}
+
+/// Delete branch 0: exact 8000 DP boundary — a Digimon with DP == 8000 must
+/// be a legal target (the filter is `dp_lte: 8000`, inclusive).
+#[test]
+fn bt17_015_on_play_branch_0_can_target_dp_exactly_8000() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-015")
+        .expect("BT17-015 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-8K", "OppExact8K", 8000))
+        .hand(0, &["BT17-015"])
+        .memory(15)
+        .start();
+
+    runner.place_on_field(1, "OPP-8K", None);
+    let opp_before = runner.battle_area_size(1);
+
+    runner.play(0, 0).expect("BT17-015 plays");
+    let kind = runner.pending_kind().expect("branch prompt installs");
+    assert_eq!(kind, SelectionKind::EffectChoice);
+
+    runner.execute_branch(0).expect("pick Delete branch");
+    runner.auto_resolve().expect("auto-resolve target pick");
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        opp_before - 1,
+        "8000-DP Digimon is at the dp_lte boundary and must be a legal delete target"
+    );
+}
+
+/// Delete branch 0 with no legal targets: when the opponent has no Digimon
+/// with DP ≤ 8000 on the field, the delete-select prompt must resolve to a
+/// no-op (no crash, no deletion — target pool is empty).
+#[test]
+fn bt17_015_on_play_branch_0_noop_when_no_valid_targets() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-015")
+        .expect("BT17-015 in embedded DSL pack")
+        // Only place a >8000-DP opp Digimon so the delete filter is empty.
+        .add_card(make_opp_digimon("OPP-9K", "OppHigh9K", 9000))
+        .hand(0, &["BT17-015"])
+        .memory(15)
+        .start();
+
+    runner.place_on_field(1, "OPP-9K", None);
+
+    runner.play(0, 0).expect("BT17-015 plays");
+    let kind = runner.pending_kind().expect("branch prompt installs");
+    assert_eq!(kind, SelectionKind::EffectChoice);
+
+    runner.execute_branch(0).expect("pick Delete branch");
+    // Empty target pool — auto_resolve should not crash.
+    let _ = runner.auto_resolve();
+
+    // The 9000-DP opp Digimon must be untouched.
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "No legal delete targets: opp Digimon must remain on field"
     );
 }
 

@@ -94,6 +94,7 @@ use digimon_dsl::compiled::{
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::permanent::{OptionState, PermanentHandle};
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const CARD_ID: &str = "BT23-096";
@@ -554,7 +555,264 @@ fn bt23_096_your_turn_cs_attack_delay_dedigi4_BLOCKED() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 5 — Anti-helpers (silence unused-warning across test fork)
+// Section 5 — Behavioral: [Main] places self as OptionState::Delayed
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// After resolving the full [Main] flow (select opp Digimon → de-digi → place),
+/// BT23-096 must land on the field as a Delay-Option permanent
+/// (`OptionState::Delayed`), not remain in hand.
+///
+/// This exercises the `place_self_as_delay_option` tail step end-to-end.
+#[test]
+fn bt23_096_main_places_self_on_field_as_delayed_option_after_resolution() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_opp_digimon("OPP-DIG", "OppDigi"))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(1, "OPP-DIG", None);
+
+    assert_eq!(runner.hand_size(0), 1, "precondition: BT23-096 in hand");
+    assert_eq!(runner.battle_area_size(0), 0, "precondition: P0 field empty");
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired, "activate_hand_main must fire for BT23-096");
+
+    // Resolve the mandatory OppField target selection.
+    runner
+        .auto_resolve()
+        .expect("selection resolves without error");
+
+    // BT23-096 must have left the hand.
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "BT23-096 must leave hand after [Main]"
+    );
+
+    // BT23-096 must be on the field as a Delayed permanent.
+    assert_eq!(
+        runner.battle_area_size(0),
+        1,
+        "BT23-096 must appear on P0's field via place_self_as_delay_option"
+    );
+    assert!(
+        matches!(
+            runner.game.players[0].battle_area[0].option_state,
+            OptionState::Delayed { .. }
+        ),
+        "BT23-096 must be in OptionState::Delayed after [Main] (printed: 'Then, place this card in the battle area')"
+    );
+}
+
+/// After [Main] resolution, the selected opponent Digimon's stack must have
+/// had up to 4 cards trashed from the top (De-Digivolve 4 primitive).
+/// Setup: opponent has a [Lv3, Lv4, Lv5, Lv6, Lv7] five-card stack.
+/// Expected after de-digi-4: only the Lv3 base remains (4 pops, stopped by
+/// the 4-pop limit, not the level-3 guard in this case).
+#[test]
+fn bt23_096_main_dedigivolves_target_stack_by_up_to_4_cards() {
+    fn opp_lvl(id: &str, level: u8) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(level);
+        c.dp = Some(level as i32 * 1000);
+        c.play_cost = level as u16;
+        c.colors = vec![CardColor::Red];
+        c
+    }
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(opp_lvl("LVL3", 3))
+        .add_card(opp_lvl("LVL4", 4))
+        .add_card(opp_lvl("LVL5", 5))
+        .add_card(opp_lvl("LVL6", 6))
+        .add_card(opp_lvl("LVL7", 7))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    // Build a 5-card stack: [Lv3 base → Lv4 → Lv5 → Lv6 → Lv7 top].
+    let opp_stack = runner.place_stack(1, &["LVL3", "LVL4", "LVL5", "LVL6", "LVL7"]);
+    let trash_before = runner.trash_size(1);
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired);
+    runner
+        .auto_resolve()
+        .expect("selection resolves without error");
+
+    // 4 cards popped from the top: Lv7, Lv6, Lv5, Lv4.
+    // Lv3 base remains (de-digi stops after 4 pops regardless of level here).
+    let stack_after = &runner.game.players[1].battle_area[opp_stack.index as usize];
+    assert_eq!(
+        stack_after.stack_size(),
+        1,
+        "de_digivolve 4 must pop 4 cards from a 5-card stack, leaving only the Lv3 base"
+    );
+    assert_eq!(
+        stack_after.top_card().card_id(&runner.game.card_data),
+        "LVL3",
+        "remaining base card must be LVL3"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        trash_before + 4,
+        "4 popped sources must land in P1's trash"
+    );
+}
+
+/// [Main] de_digivolve stop_at_level=3 constraint: a stack [Lv3, Lv4, Lv5] of
+/// 3 cards should have its Lv5 and Lv4 popped but stop before trashing the Lv3
+/// base (even though the 4-pop budget still has capacity).
+/// Expected: 2 cards trashed (Lv5, Lv4), Lv3 base remains.
+#[test]
+fn bt23_096_main_dedigivolve_stops_at_level_3_card() {
+    fn opp_lvl(id: &str, level: u8) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(level);
+        c.dp = Some(level as i32 * 1000);
+        c.play_cost = level as u16;
+        c.colors = vec![CardColor::Red];
+        c
+    }
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(opp_lvl("LVL3B", 3))
+        .add_card(opp_lvl("LVL4B", 4))
+        .add_card(opp_lvl("LVL5B", 5))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    // Stack: [Lv3B base → Lv4B → Lv5B top].
+    let opp_stack = runner.place_stack(1, &["LVL3B", "LVL4B", "LVL5B"]);
+    let trash_before = runner.trash_size(1);
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired);
+    runner
+        .auto_resolve()
+        .expect("selection resolves without error");
+
+    // De-Digivolve 4 with stop_at_level=3: pops Lv5B and Lv4B but halts at
+    // the Lv3B — printed "You can't trash past level 3 cards."
+    let stack_after = &runner.game.players[1].battle_area[opp_stack.index as usize];
+    assert_eq!(
+        stack_after.stack_size(),
+        1,
+        "stop_at_level=3 must leave only the Lv3 base card; got stack size {}",
+        stack_after.stack_size()
+    );
+    assert_eq!(
+        stack_after.top_card().card_id(&runner.game.card_data),
+        "LVL3B",
+        "remaining top card must be the level-3 base"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        trash_before + 2,
+        "exactly 2 cards (Lv5B and Lv4B) must land in P1's trash"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 6 — Behavioral: [Security] (inherited) clause fires with prompt
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// The inherited [Security] clause fires when BT23-096 rides under a Digimon
+/// and a SecuritySkill trigger is dispatched. With an opponent Digimon present,
+/// the clause must install an OppField selection (same body as [Main]).
+///
+/// Uses `enqueue_triggered(SecuritySkill, TriggerSource::Permanent(...))` to
+/// simulate a security-hit activation without needing to run a full attack.
+#[test]
+fn bt23_096_security_fires_and_installs_oppfield_selection() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_opp_digimon("OPP-SEC", "OppSecDigi"))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    // Place BT23-096 as a field permanent (rides under a Digimon in security
+    // context — simulates the inherited security trigger scenario).
+    let field_handle = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "OPP-SEC", None);
+
+    // Enqueue a SecuritySkill trigger sourced from the field permanent holding
+    // BT23-096 (the inherited clause's activation path).
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(field_handle),
+    );
+    runner.game.drain_effect_queue();
+
+    // The inherited on_security clause must install an OppField selection
+    // (select_opponent_permanent for the De-Digivolve 4 target).
+    let kind = runner
+        .pending_kind()
+        .expect("[Security] clause must install an OppField selection when opp Digimon exists");
+    assert_eq!(
+        kind,
+        SelectionKind::OppField,
+        "inherited security clause must prompt to select an OppField target"
+    );
+    assert!(
+        !runner.pending_is_optional(),
+        "[Security] clause is mandatory — no canNoSelect on DCGO security path"
+    );
+}
+
+/// Negative: [Security] with no opponent Digimon on field → condition gate
+/// blocks the body; no selection prompt installs.
+#[test]
+fn bt23_096_security_no_prompt_when_no_opp_digimon() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let field_handle = runner.place_on_field(0, CARD_ID, Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(field_handle),
+    );
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no selection prompt should install when opponent has no Digimon (condition gate)"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 7 — Anti-helpers (silence unused-warning across test fork)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[allow(dead_code)]

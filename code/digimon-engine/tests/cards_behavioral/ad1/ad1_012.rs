@@ -40,8 +40,9 @@ use digimon_engine::action::space::PASS;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::{EffectTiming, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::AttackTarget;
+use digimon_engine::selection::{AttackTarget, TriggerSource};
 
 use crate::dsl_card_data::{card_data_from_compiled, compiled};
 
@@ -106,6 +107,15 @@ impl CardEffect for RedirectOnAttack {
             })
             .build()]
     }
+}
+
+/// Generic filler card for decks — prevents deck-out during multi-turn tests.
+fn deck_filler(id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.level = Some(3);
+    card.dp = Some(1000);
+    card.card_kind = digimon_engine::enums::CardKind::Digimon;
+    card
 }
 
 fn cresgarurumon_runner() -> DebugRunner {
@@ -532,5 +542,253 @@ fn ad1_012_inherited_blocks_attack_target_change_during_your_turn() {
             .iter()
             .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "AD1-012-DEF-B"),
         "the redirect target should remain on the field"
+    );
+}
+
+// ─── SECTION 7 — Structural: inherited aura (CanNotSwitchAttackTarget) ───────
+
+/// The compiled card must contain exactly one inherited Aura declarative clause
+/// whose `scope` is `Inherited` and `modifier` is `CanNotSwitchAttackTarget`.
+/// This corresponds to the printed "Inherited Effect: [Your Turn] This Digimon's
+/// attack target can't change."
+#[test]
+fn ad1_012_has_inherited_aura_can_not_switch_attack_target() {
+    let card = compiled("AD1-012");
+
+    let auras: Vec<_> = card
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+                scope, modifier, ..
+            }) => Some((scope, modifier.as_deref())),
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(
+        auras.len(),
+        1,
+        "AD1-012 must have exactly one Aura declarative clause; got {}",
+        auras.len()
+    );
+    let (scope, modifier) = auras[0];
+    assert_eq!(
+        *scope,
+        CompiledScope::Inherited,
+        "the Aura declarative must be in Inherited scope"
+    );
+    assert_eq!(
+        modifier,
+        Some("CanNotSwitchAttackTarget"),
+        "the Aura modifier must be 'CanNotSwitchAttackTarget' (printed: attack target can't change)"
+    );
+}
+
+// ─── SECTION 8 — Timing parity: [When Digivolving] fires the shared body ─────
+
+/// When the [When Digivolving] timing fires via `enqueue_triggered`, the shared
+/// OP/WD/WA body must install a selection (same as [On Play]), verifying that
+/// all three printed timings are wired to the same process.
+#[test]
+fn ad1_012_when_digivolving_timing_fires_shared_clause() {
+    let mut runner = cresgarurumon_runner();
+
+    let cres = runner.place_on_field(0, "AD1-012", None);
+    runner.place_on_field(1, "AD1-012-OPP-LOW", None);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(cres));
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "[When Digivolving] must fire the shared OP/WD/WA body and install a selection"
+    );
+}
+
+/// When the [When Attacking] timing fires via `enqueue_triggered`, the shared
+/// OP/WD/WA body must install a selection (same as [On Play]).
+#[test]
+fn ad1_012_when_attacking_timing_fires_shared_clause() {
+    let mut runner = cresgarurumon_runner();
+
+    let cres = runner.place_on_field(0, "AD1-012", None);
+    runner.place_on_field(1, "AD1-012-OPP-LOW", None);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(cres));
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "[When Attacking] must fire the shared OP/WD/WA body and install a selection"
+    );
+}
+
+// ─── SECTION 9 — OPT resets after turn boundary ──────────────────────────────
+
+/// After the OPT lockout is consumed in turn N, it must clear at the next turn
+/// boundary so the effect is available again in turn N+2 (player 0's second turn).
+///
+/// Setup: OPP-LOW stays on the field across the turn boundary so the bounce
+/// select has a candidate on the third fire. The first fire is resolved by
+/// PASSING on the bounce (so OPP-LOW is NOT returned to hand) and then
+/// declining the unsuspend optional — this consumes the OPT lockout without
+/// removing the candidate from P1's field.
+///
+/// Both players are given a 3-card deck so P1's draw phase does not deck-out
+/// and terminate the game before P0's second turn begins.
+#[test]
+fn ad1_012_opt_resets_after_turn_boundary() {
+    // Build a custom runner with deck cards to prevent P1 deck-out during
+    // multi-turn traversal. cresgarurumon_runner() omits decks, so P1 would
+    // deck-out on their draw phase and end the game via handle_deckout before
+    // P0's second turn begins, which would prevent new_turn() from clearing OPT.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-012")
+        .expect("AD1-012 found in embedded DSL pack")
+        .add_card(greymon_named())
+        .add_card(low_level_opp())
+        .add_card(deck_filler("AD1-012-FILLER-P0-A"))
+        .add_card(deck_filler("AD1-012-FILLER-P0-B"))
+        .add_card(deck_filler("AD1-012-FILLER-P0-C"))
+        .add_card(deck_filler("AD1-012-FILLER-P1-A"))
+        .add_card(deck_filler("AD1-012-FILLER-P1-B"))
+        .add_card(deck_filler("AD1-012-FILLER-P1-C"))
+        .deck(0, &["AD1-012-FILLER-P0-A", "AD1-012-FILLER-P0-B", "AD1-012-FILLER-P0-C"])
+        .deck(1, &["AD1-012-FILLER-P1-A", "AD1-012-FILLER-P1-B", "AD1-012-FILLER-P1-C"])
+        .memory(12)
+        .start();
+
+    let cres = runner.place_on_field(0, "AD1-012", None);
+    runner.place_on_field(1, "AD1-012-OPP-LOW", None);
+
+    // ── First fire: consume the OPT without bouncing OPP-LOW ─────────────
+    // Fire the shared clause; the bounce select installs first.
+    runner.fire_on_play(0, cres.index as usize);
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "first OnPlay must install selection (turn 1)"
+    );
+
+    // PASS on the bounce select (OPP-LOW stays on P1's field).
+    let sel_player = runner.game.pending_selection.as_ref().unwrap().selecting_player;
+    runner.execute_action(sel_player, PASS).expect("PASS on bounce select");
+
+    // Drain any remaining selections (the optional unsuspend sub-block
+    // may install; PASS through it too).
+    let _ = runner.auto_resolve();
+
+    // ── OPT now locked ────────────────────────────────────────────────────
+    runner.fire_on_play(0, cres.index as usize);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "OPT must block second OnPlay fire in same turn"
+    );
+
+    // ── Advance through both turns so P0 is the turn player again ────────
+    runner.end_turn(); // player 1's turn (draws from deck — no deck-out)
+    runner.end_turn(); // player 0's turn again
+
+    // Guard: both end_turn calls must complete successfully (game must not be over).
+    assert!(
+        !runner.game.game_over,
+        "game must not be over after turn rotation — check deck setup"
+    );
+
+    // ── Third fire: OPT must have reset ───────────────────────────────────
+    // OPP-LOW is still on P1's field, so the bounce select has a candidate
+    // and pending_selection must be installed.
+    runner.fire_on_play(0, cres.index as usize);
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "OPT must reset after turn boundary — third fire on player 0's next turn must install selection"
+    );
+}
+
+// ─── SECTION 10 — Inherited aura: modifier installed on carrier ──────────────
+
+/// The inherited [Your Turn] CanNotSwitchAttackTarget aura must install the
+/// `CanNotSwitchAttackTarget` modifier on the specific Digimon carrying the
+/// inherited effect (the stacked permanent), not on all permanents.
+#[test]
+fn ad1_012_inherited_aura_installs_modifier_on_carrier() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-012")
+        .expect("AD1-012 in embedded DSL pack")
+        .add_card(digimon("AD1-012-CARRIER", 5000))
+        .memory(0)
+        .start();
+
+    // Build a stack: CresGarurumon on top of a generic Lv.6 carrier.
+    let stacked = runner.place_stack(0, &["AD1-012", "AD1-012-CARRIER"]);
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        runner
+            .modifiers()
+            .has(stacked, ModifierType::CanNotSwitchAttackTarget),
+        "the inherited aura must install CanNotSwitchAttackTarget on the permanent \
+         that carries the CresGarurumon stack"
+    );
+}
+
+/// When CresGarurumon is NOT in the digivolution stack of a permanent, that
+/// permanent must NOT have the CanNotSwitchAttackTarget modifier.
+#[test]
+fn ad1_012_inherited_aura_not_installed_on_unrelated_permanent() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-012")
+        .expect("AD1-012 in embedded DSL pack")
+        .add_card(digimon("AD1-012-OTHER", 5000))
+        .memory(0)
+        .start();
+
+    // Place a standalone generic Digimon — no CresGarurumon in its stack.
+    let other = runner.place_on_field(0, "AD1-012-OTHER", Some(0));
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        !runner
+            .modifiers()
+            .has(other, ModifierType::CanNotSwitchAttackTarget),
+        "CanNotSwitchAttackTarget must NOT apply to a permanent without \
+         CresGarurumon in its digivolution stack"
+    );
+}
+
+// ─── SECTION 11 — [When Digivolving] OPT lockout ─────────────────────────────
+
+/// Firing [When Digivolving] then [When Digivolving] again in the same turn
+/// must only install the selection on the first fire.
+#[test]
+fn ad1_012_opt_blocks_second_when_digivolving_same_turn() {
+    let mut runner = cresgarurumon_runner();
+
+    let cres = runner.place_on_field(0, "AD1-012", None);
+    runner.place_on_field(1, "AD1-012-OPP-LOW", None);
+
+    // First WD fire — selection must install.
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(cres));
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "first [When Digivolving] fire must install selection"
+    );
+    let _ = runner.auto_resolve();
+
+    // Second WD fire same turn — OPT must lock.
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(cres));
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "second [When Digivolving] fire in same turn must be locked by OPT"
     );
 }

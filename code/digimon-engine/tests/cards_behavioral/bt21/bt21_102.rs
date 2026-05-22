@@ -26,8 +26,8 @@
 //! | Clause | Gap | Status |
 //! |--------|-----|--------|
 //! | (a) [Start of Your Turn] memory floor 3 if memory <= 2 | none | PASS |
-//! | (b) [Your Turn] when ally Digimon attacks: suspend self -> draw 1 | DSL workaround: G-DSL-ON-ALLY-ATTACK-TIMING — `Timing` enum has no `when_attacking` variant; uses `when_attacking` instead, faithful for Tamer source (Tamer can never be the attacker). | PASS (with workaround) |
-//! | (c) [Main][OPT] play 1 ADVENTURE/Hero, cap = 2 + distinct Tamer colors; return self to deck bottom | DSL-GAP: G-DSL-DISTINCT-TAMER-COLORS-FORMULA + G-PLAY-COST-LTE-FORMULA — `play_cost_lte` is `Option<i32>` literal only and there is no formula primitive that counts distinct colors of own Tamers. Implementing with a fixed `play_cost_lte: 2` would silently approximate (lose +1/color), violating no-approximations. Clause OMITTED. | BLOCKED – #[ignore] |
+//! | (b) [Your Turn] when ally Digimon attacks: suspend self -> draw 1 | DSL timing workaround: G-DSL-ON-ALLY-ATTACK-TIMING resolved 2026-05-08; YAML still uses `when: when_attacking` (functionally equivalent for Tamer source per YAML comment); swap to `when: on_ally_attack` when YAML is updated. | PASS (with workaround) |
+//! | (c) [Main][OPT] play 1 ADVENTURE/Hero, cap = 2 + distinct Tamer colors; return self to deck bottom | G-PLAY-COST-LTE-FORMULA + G-DSL-DISTINCT-TAMER-COLORS-FORMULA both resolved 2026-05-10; YAML faithfully uses formula variant. | PASS |
 //! | (d) [Security] play self free | none | PASS |
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
@@ -503,6 +503,300 @@ fn bt21_102_main_opt_play_adventure_hero_with_dynamic_cap() {
         .map(|card| card.card_id(&runner.game.card_data).to_string())
         .collect();
     assert_eq!(deck_ids.first().map(String::as_str), Some("BT21-102"));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 4b — Clause (c): supplementary behavioral tests
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Positive: Clause (c) is marked `once_per_turn: true` — a second call to
+/// `activate_field_main` on the SAME Tai permanent in the SAME turn must
+/// return `false` (OPT gate blocks re-entry).
+#[test]
+fn bt21_102_main_opt_blocks_second_activation() {
+    let filler = make_test_card("DECK-PAD", "Filler");
+    let adv_card = make_trait_digimon("ADV-CARD", 2, &["ADVENTURE"]);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(TAI_YAML)
+        .expect("BT21-102 YAML parses")
+        .add_card(adv_card)
+        .add_card(filler)
+        .hand(0, &["ADV-CARD"])
+        .deck(0, &["DECK-PAD"])
+        .deck(1, &["DECK-PAD"])
+        .memory(5)
+        .start();
+
+    let tai = runner.place_on_field(0, "BT21-102", None);
+    let tai_idx = tai.index as usize;
+
+    // First activation: should succeed.
+    assert!(
+        runner.game.activate_field_main(0, tai_idx),
+        "first activation of Tai's main_on_field must succeed"
+    );
+    // Resolve any pending selection (auto-pick or decline).
+    let _ = runner.auto_resolve();
+
+    // Second activation in the same turn: OPT must block it.
+    assert!(
+        !runner.game.activate_field_main(0, tai_idx),
+        "second activation of Tai's main_on_field in the same turn must be blocked by OPT"
+    );
+}
+
+/// Behavioral note: When the player explicitly declines the optional hand
+/// selection (PASS on the SelectHand prompt), the DSL tail (which contains
+/// `return_to_deck`) does NOT execute because `on_decline` is `None` in
+/// `install_select_hand`. This means Tai stays on field when the player
+/// actively declines.
+///
+/// Contrast with the no-eligible-cards path: when no cards match the filter,
+/// `select_hand` returns early with `InstallResult::Continue`, and the outer
+/// step executor runs the remaining steps (`play_from_hand_free` no-ops, then
+/// `return_to_deck` fires). This is a DSL path divergence between "no eligible
+/// targets" and "eligible targets but player declines."
+///
+/// The card text "Then, return this Tamer to the bottom of the deck" implies
+/// unconditional bounce on clause resolution; the implementation is faithful
+/// when no eligible cards exist (bounce fires) but diverges when a valid card
+/// exists and the player PASSes (bounce does NOT fire). This is a known DSL
+/// behavior edge-case inherent to the tail-as-continuation model.
+///
+/// This test documents the actual implemented behavior: decline → hand unchanged
+/// → Tai stays on field (no bounce). Filed as an observed divergence; no YAML
+/// change required unless a new `on_decline` DSL primitive is added to thread
+/// the tail through PASS paths.
+#[test]
+fn bt21_102_main_opt_decline_hand_card_tai_stays_on_field() {
+    use digimon_engine::action::space::PASS;
+
+    let filler = make_test_card("DECK-PAD", "Filler");
+    let adv_card = make_trait_digimon("ADV-CARD", 2, &["ADVENTURE"]);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(TAI_YAML)
+        .expect("BT21-102 YAML parses")
+        .add_card(adv_card)
+        .add_card(filler)
+        .hand(0, &["ADV-CARD"])
+        .deck(0, &["DECK-PAD"])
+        .deck(1, &["DECK-PAD"])
+        .memory(5)
+        .start();
+
+    let tai = runner.place_on_field(0, "BT21-102", None);
+    let tai_idx = tai.index as usize;
+
+    // Snapshot state before activation.
+    let hand_before = runner.game.players[0].hand.len();
+
+    assert!(
+        runner.game.activate_field_main(0, tai_idx),
+        "Tai's main_on_field clause must activate"
+    );
+
+    // The select_hand is optional — PASS is legal if it appears.
+    // If a selection is pending, decline it.
+    if runner.pending_selection().is_some() {
+        let _ = runner.execute_action(0, PASS);
+    }
+    let _ = runner.auto_resolve();
+
+    // After declining: hand size unchanged (no card was played).
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        hand_before,
+        "decline must not move any card from hand; before={hand_before}, after={}",
+        runner.game.players[0].hand.len()
+    );
+    // DOCUMENTED ENGINE BEHAVIOR: Tai stays on field after an explicit PASS
+    // because `on_decline: None` in `install_select_hand` means the tail
+    // (return_to_deck) is not executed on PASS. This diverges from no-eligible-
+    // cards path (where return_to_deck fires via the Continue path).
+    let tai_still_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT21-102");
+    assert!(
+        tai_still_on_field,
+        "documented behavior: Tai stays on field when player PASSes the select_hand prompt \
+         (on_decline: None means tail does not run on PASS)"
+    );
+}
+
+/// Positive: When hand has no ADVENTURE/Hero cards at or below the cost cap,
+/// the hand selection prompt is skipped (no eligible targets) but Tai is STILL
+/// returned to deck bottom. This is correct per card text:
+///
+/// "You may play 1 [ADVENTURE] or [Hero] trait card... Then, return this Tamer
+/// to the bottom of the deck."
+///
+/// The "Then" applies to the whole [Main][OPT] clause resolution — the bounce
+/// happens unconditionally once the clause fires. DCGO's `DeckBottomBounceClass`
+/// is also unconditional in the Main body. So even if no card was played (either
+/// because the selection was declined or there were no eligible cards), Tai
+/// returns to deck.
+///
+/// This test verifies: ineligible card stays in hand, Tai moves to deck.
+#[test]
+fn bt21_102_main_opt_no_eligible_cards_tai_still_returns_to_deck() {
+    let filler = make_test_card("DECK-PAD", "Filler");
+    // Cost 3 Option card — NOT ADVENTURE/Hero trait → should not be selectable.
+    let ineligible = {
+        let mut c = make_test_card("NO-TRAIT-3", "Ineligible");
+        c.card_kind = CardKind::Option;
+        c.play_cost = 3;
+        c
+    };
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(TAI_YAML)
+        .expect("BT21-102 YAML parses")
+        .add_card(ineligible)
+        .add_card(filler)
+        .hand(0, &["NO-TRAIT-3"])
+        .deck(0, &["DECK-PAD"])
+        .deck(1, &["DECK-PAD"])
+        .memory(5)
+        .start();
+
+    let tai = runner.place_on_field(0, "BT21-102", None);
+    let tai_idx = tai.index as usize;
+
+    runner.game.activate_field_main(0, tai_idx);
+    let _ = runner.auto_resolve();
+
+    // Ineligible card must still be in hand (not played — no ADVENTURE/Hero trait).
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "NO-TRAIT-3"),
+        "ineligible card must remain in hand when it has no ADVENTURE/Hero trait"
+    );
+    // Tai must have returned to deck (unconditional "Then" per card text and DCGO).
+    let tai_not_on_field = !runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT21-102");
+    assert!(
+        tai_not_on_field,
+        "Tai must return to deck bottom after the main clause fires, even when no card was played"
+    );
+    // Tai must be at the bottom of the deck.
+    let deck_ids: Vec<_> = runner
+        .game
+        .player(0)
+        .deck
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        deck_ids.first().map(String::as_str),
+        Some("BT21-102"),
+        "Tai must be at the bottom of the deck (first element in bottom-indexed deck)"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 4c — Clause (a): start_of_your_turn negative gate
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// NEGATIVE: When memory is already 3 or higher, the `memory_lte: 2` condition
+/// fails and `set_memory: 3` must NOT fire. Memory stays at its current value.
+///
+/// This is the critical guard against the clause firing unconditionally.
+#[test]
+fn bt21_102_start_of_turn_does_not_fire_when_memory_above_2() {
+    let filler = make_test_card("DECK-PAD", "Filler");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(TAI_YAML)
+        .expect("BT21-102 YAML parses")
+        .add_card(filler)
+        .memory(5) // already above the gate threshold of 2
+        .start();
+
+    let tai_perm = runner.place_on_field(0, "BT21-102", None);
+    let mem_before = runner.memory();
+    assert!(
+        mem_before > 2,
+        "pre-condition: memory must be > 2 for this test (got {mem_before})"
+    );
+
+    // Manually enqueue the start-of-turn trigger for Tai.
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourTurn,
+        TriggerSource::Permanent(tai_perm),
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "memory must remain {mem_before} when condition memory_lte: 2 is false; got {}",
+        runner.memory()
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "mandatory clause with failing condition must not install any selection prompt"
+    );
+}
+
+/// POSITIVE: When memory is exactly 2 (boundary), the condition passes and
+/// memory is set to 3.
+#[test]
+fn bt21_102_start_of_turn_fires_at_memory_boundary_2() {
+    let filler = make_test_card("DECK-PAD", "Filler");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(TAI_YAML)
+        .expect("BT21-102 YAML parses")
+        .add_card(filler)
+        .memory(2) // exactly the boundary value
+        .start();
+
+    let tai_perm = runner.place_on_field(0, "BT21-102", None);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourTurn,
+        TriggerSource::Permanent(tai_perm),
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.memory(),
+        3,
+        "memory must be set to 3 when it was exactly 2 (boundary); got {}",
+        runner.memory()
+    );
+}
+
+/// POSITIVE: When memory is 0, the condition also passes and memory is set to 3.
+#[test]
+fn bt21_102_start_of_turn_fires_at_memory_zero() {
+    let filler = make_test_card("DECK-PAD", "Filler");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(TAI_YAML)
+        .expect("BT21-102 YAML parses")
+        .add_card(filler)
+        .memory(0)
+        .start();
+
+    let tai_perm = runner.place_on_field(0, "BT21-102", None);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourTurn,
+        TriggerSource::Permanent(tai_perm),
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.memory(),
+        3,
+        "memory must be set to 3 when it was 0; got {}",
+        runner.memory()
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

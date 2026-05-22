@@ -233,6 +233,165 @@ fn bt17_095_security_clause_is_optional_inherited() {
 // Section 2 — Clause A: [Main] play [Agumon]/[Gabumon] from hand or trash
 // ═══════════════════════════════════════════════════════════════════════════
 
+/// Positive (hand branch): play [Agumon] from hand.
+/// After executing "From hand" → picking the Agumon → resolving, the Agumon
+/// should be on P0's battle area AND BT17-095 should be on P0's field as a
+/// Delay-Option permanent (`place_self_as_delay_option` tail).
+#[test]
+fn bt17_095_main_hand_branch_plays_agumon_and_places_self_on_field() {
+    let agumon = make_named_red_digimon("BT17095-AGU", "Agumon");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(agumon.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .hand(0, &["BT17-095", "BT17095-AGU"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    // Activate [Main] from hand index 0 (BT17-095 is in hand[0]).
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired, "activate_hand_main must succeed for BT17-095");
+
+    // First prompt: zone choice (From hand / From trash). Execute branch 0 = "From hand".
+    runner
+        .execute_branch(0)
+        .expect("execute zone-choice branch 0 (From hand)");
+    runner.game.drain_effect_queue();
+
+    // Second prompt: select_hand pick over Agumon-named cards. Accept first choice.
+    if let Some(view) = runner.pending_selection_view() {
+        let first = *view.valid_action_ids.first().expect("at least one action");
+        runner
+            .execute_action(0, first)
+            .expect("pick Agumon from hand");
+        runner.game.drain_effect_queue();
+    }
+
+    // Drain remaining (play_from_hand_free + place_self_as_delay_option).
+    let _ = runner.auto_resolve();
+
+    // Agumon must be on P0's field.
+    let agumon_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17095-AGU");
+    assert!(
+        agumon_on_field,
+        "Agumon must be on P0's battle area after Main hand-branch play"
+    );
+
+    // BT17-095 must be on P0's field as a Delay-Option permanent.
+    let bt17_095_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-095");
+    assert!(
+        bt17_095_on_field,
+        "BT17-095 must be on P0's field (placed as Delay-Option by place_self_as_delay_option)"
+    );
+
+    // BT17-095's permanent must be in a Delayed OptionState.
+    let bt17_perm = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-095")
+        .expect("BT17-095 permanent exists");
+    assert!(
+        matches!(
+            bt17_perm.option_state,
+            digimon_engine::permanent::OptionState::Delayed { .. }
+        ),
+        "BT17-095 must have OptionState::Delayed after place_self_as_delay_option"
+    );
+}
+
+/// Positive (trash branch): play [Gabumon] from trash free.
+/// After executing "From trash" → picking the Gabumon → resolving, the Gabumon
+/// should be on P0's battle area AND BT17-095 should be on P0's field.
+#[test]
+fn bt17_095_main_trash_branch_plays_gabumon_and_places_self_on_field() {
+    let gabumon = make_named_red_digimon("BT17095-GABU", "Gabumon");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(gabumon.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .hand(0, &["BT17-095"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    // Pre-seed P0's trash with the Gabumon.
+    let gabumon_data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "BT17095-GABU")
+        .expect("Gabumon registered");
+    let next = runner.game.next_card_index();
+    runner.game.players[0]
+        .trash
+        .push(CardSource::new(gabumon_data_idx, 0, next));
+
+    let trash_before = runner.trash_size(0);
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired, "activate_hand_main must succeed for BT17-095");
+
+    // Execute zone-choice branch 1 = "From trash".
+    runner
+        .execute_branch(1)
+        .expect("execute zone-choice branch 1 (From trash)");
+    runner.game.drain_effect_queue();
+
+    // Second prompt: select_trash over Gabumon-named cards. Accept first choice.
+    if let Some(view) = runner.pending_selection_view() {
+        let first = *view.valid_action_ids.first().expect("at least one action");
+        runner
+            .execute_action(0, first)
+            .expect("pick Gabumon from trash");
+        runner.game.drain_effect_queue();
+    }
+
+    let _ = runner.auto_resolve();
+
+    // Gabumon must be on P0's field.
+    let gabumon_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17095-GABU");
+    assert!(
+        gabumon_on_field,
+        "Gabumon must be on P0's battle area after Main trash-branch play"
+    );
+
+    // Trash should be smaller (Gabumon was consumed by play_from_trash_free).
+    assert!(
+        runner.trash_size(0) < trash_before,
+        "trash must shrink after playing Gabumon from trash (before={}, after={})",
+        trash_before,
+        runner.trash_size(0)
+    );
+
+    // BT17-095 itself must also be on field.
+    let bt17_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-095");
+    assert!(
+        bt17_on_field,
+        "BT17-095 must land on P0's field after place_self_as_delay_option"
+    );
+}
+
 /// Activating [Main] from hand installs a pending selection (the From-hand /
 /// From-trash effect choice). Smoke test: the activation does not panic and
 /// puts the engine into a SelectionKind::EffectChoice state.
@@ -445,6 +604,164 @@ fn bt17_095_replacement_does_not_fire_for_own_l6_unmatched_name() {
     );
 }
 
+/// Positive: own L6 Greymon-named Digimon leaving outside of battle FIRES the
+/// replacement — the Delay cost (trash BT17-095 from the field) is paid.
+/// After the replacement resolves, BT17-095 must NOT be on P0's field any more.
+#[test]
+fn bt17_095_replacement_fires_and_trashes_self_for_own_l6_greymon_leaving() {
+    let l6_grey = make_l6_digimon_named("BT17095-L6-GREY", "WarGreymon");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(l6_grey.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    // Place BT17-095 on field as a Delay-Option (simulate post-Main placement).
+    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    // Mark it as Delayed so the replacement clause fires (source_is_delayed_option guard).
+    runner.game.players[0].battle_area[bt17_095.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: 99,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn: 0,
+        };
+
+    let own_grey = runner.place_on_field(0, "BT17095-L6-GREY", None);
+
+    // Delete the Greymon outside of battle (OwnEffect cause).
+    runner.game.delete_permanent_with_cause(
+        own_grey,
+        digimon_engine::replacement::ReplacementCause::OwnEffect,
+    );
+    runner.game.drain_effect_queue();
+
+    // If a replacement selection is pending (optional prompt), accept it.
+    while let Some(view) = runner.pending_selection_view() {
+        let first = *view.valid_action_ids.first().expect("at least one action");
+        runner
+            .execute_action(0, first)
+            .expect("accept replacement selection");
+        runner.game.drain_effect_queue();
+    }
+
+    // BT17-095 must be gone from P0's field (Delay cost: trash self).
+    let bt17_still_present = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-095");
+    assert!(
+        !bt17_still_present,
+        "BT17-095 must be trashed (Delay cost paid) after replacement fires for own L6 Greymon leaving"
+    );
+}
+
+/// Positive: own L6 Garurumon-named Digimon leaving outside of battle also
+/// fires the replacement (name filter covers BOTH Greymon AND Garurumon).
+#[test]
+fn bt17_095_replacement_fires_for_own_l6_garurumon_leaving() {
+    let l6_garu = make_l6_digimon_named("BT17095-L6-GARU", "MetalGarurumon");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(l6_garu.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    runner.game.players[0].battle_area[bt17_095.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: 99,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn: 0,
+        };
+
+    let own_garu = runner.place_on_field(0, "BT17095-L6-GARU", None);
+
+    runner.game.delete_permanent_with_cause(
+        own_garu,
+        digimon_engine::replacement::ReplacementCause::OwnEffect,
+    );
+    runner.game.drain_effect_queue();
+
+    while let Some(view) = runner.pending_selection_view() {
+        let first = *view.valid_action_ids.first().expect("at least one action");
+        runner
+            .execute_action(0, first)
+            .expect("accept replacement selection");
+        runner.game.drain_effect_queue();
+    }
+
+    let bt17_still_present = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-095");
+    assert!(
+        !bt17_still_present,
+        "BT17-095 must be trashed after replacement fires for own L6 Garurumon (MetalGarurumon) leaving"
+    );
+}
+
+/// Negative (battle-cause filter): when an own L6 Greymon-named Digimon leaves
+/// IN battle (ReplacementCause::Battle), the replacement must NOT fire —
+/// "outside of a battle" is a printed hard gate.
+///
+/// Expected result: BT17-095 remains on P0's field unchanged.
+#[test]
+fn bt17_095_replacement_does_not_fire_for_own_l6_greymon_leaving_in_battle() {
+    let l6_grey = make_l6_digimon_named("BT17095-L6-GREY-BTL", "WarGreymon");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(l6_grey.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    runner.game.players[0].battle_area[bt17_095.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: 99,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn: 0,
+        };
+
+    let own_grey = runner.place_on_field(0, "BT17095-L6-GREY-BTL", None);
+
+    // Delete with Battle cause — the "none_of: [replacement_cause: battle]" gate
+    // in the YAML should block the replacement entirely.
+    runner.game.delete_permanent_with_cause(
+        own_grey,
+        digimon_engine::replacement::ReplacementCause::Battle,
+    );
+    runner.game.drain_effect_queue();
+    let _ = runner.auto_resolve();
+
+    // BT17-095 must still be on field (replacement did not fire, Delay cost not paid).
+    let bt17_still_present = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-095");
+    assert!(
+        bt17_still_present,
+        "BT17-095 must remain on field when Greymon leaves via Battle cause (outside-of-battle gate blocks)"
+    );
+}
+
 /// G-DSL-DNA-FROM-HAND-PARTNER: the printed body's DNA-digivolve sub-clause
 /// (where the second material lives in the controller's hand) cannot be
 /// expressed with the current `effect_initiated_dna_digivolve` verb. Until
@@ -576,6 +893,137 @@ fn bt17_095_security_adds_card_to_hand_after_play() {
     assert_eq!(
         hand_id, "BT17-095",
         "the card landed in defender's hand must be BT17-095 itself"
+    );
+}
+
+/// Positive: when BT17-095 is in P1's security and an attack triggers it,
+/// and P1 has a Tai Kamiya tamer in their HAND, the security clause should
+/// play the tamer from hand AND add BT17-095 to P1's hand.
+///
+/// This uses the full attack-security path (the only way `pending_security`
+/// is populated and `add_this_option_to_hand` can route correctly).
+#[test]
+fn bt17_095_security_hand_branch_plays_tai_kamiya_from_hand_and_adds_self_to_hand() {
+    let mut attacker_card = make_filler("BT17095-ATK2");
+    attacker_card.dp = Some(6000);
+    let tamer = make_named_tamer("BT17095-TAI2", "Tai Kamiya");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(attacker_card.clone())
+        .add_card(tamer.clone())
+        .memory(10)
+        // P1 starts with empty security — we'll inject BT17-095 directly.
+        .deck(0, &["BT17095-TAI2"; 2])
+        .deck(1, &["BT17095-TAI2"; 2])
+        .security(1, &["BT17-095"])
+        .start();
+
+    // Seed P1's hand with a Tai Kamiya tamer.
+    let tamer_data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "BT17095-TAI2")
+        .expect("Tai Kamiya tamer registered");
+    let next = runner.game.next_card_index();
+    runner.game.players[1]
+        .hand
+        .push(CardSource::new(tamer_data_idx, 1, next));
+
+    let hand_before = runner.hand_size(1);
+    assert!(hand_before >= 1, "precondition: P1 hand has Tai Kamiya");
+
+    let attacker = runner.place_on_field(0, "BT17095-ATK2", Some(0));
+    let _ = runner.attack_player(attacker, 1, false);
+
+    // auto_resolve drives the security trigger: zone-choice → branch 0 (hand)
+    // → pick the Tai Kamiya → add BT17-095 to hand.
+    // We accept the first valid action at every prompt.
+    while let Some(view) = runner.pending_selection_view() {
+        let first = *view.valid_action_ids.first().expect("at least one action");
+        runner
+            .execute_action(view.selecting_player, first)
+            .expect("drive security prompt");
+        runner.game.drain_effect_queue();
+    }
+    let _ = runner.auto_resolve();
+
+    // Tai Kamiya must be on P1's battle area (played free).
+    let tamer_on_field = runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17095-TAI2");
+    assert!(
+        tamer_on_field,
+        "Tai Kamiya must be on P1's field after security hand-branch play"
+    );
+
+    // BT17-095 must be in P1's hand (add_this_option_to_hand).
+    let bt17_in_hand = runner.game.players[1]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "BT17-095");
+    assert!(
+        bt17_in_hand,
+        "BT17-095 must be in P1's hand after add_this_option_to_hand"
+    );
+
+    // Security stack is now empty (BT17-095 was consumed).
+    assert_eq!(runner.security_count(1), 0, "BT17-095 left security");
+}
+
+/// Positive: when BT17-095 is in security and P1 has a Matt Ishida tamer in
+/// their TRASH, the security "From trash" branch should play the tamer and
+/// add BT17-095 to P1's hand.
+///
+/// NOTE: `auto_resolve` picks the first valid action at every prompt.
+/// Depending on prompt ordering, it may pick "From hand" (branch 0) first
+/// even if hand is empty. We assert only the end-state: BT17-095 in hand.
+/// The Matt-Ishida-from-trash path is covered by the underlying
+/// `bt17_095_security_adds_card_to_hand_after_play` test which seeds from trash.
+#[test]
+fn bt17_095_security_routes_to_hand_regardless_of_zone_branch() {
+    let mut attacker_card = make_filler("BT17095-ATK3");
+    attacker_card.dp = Some(6000);
+    let tamer = make_named_tamer("BT17095-MATT2", "Matt Ishida");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(attacker_card.clone())
+        .add_card(tamer.clone())
+        .memory(10)
+        .deck(0, &["BT17095-MATT2"; 2])
+        .deck(1, &["BT17095-MATT2"; 2])
+        .security(1, &["BT17-095"])
+        .start();
+
+    // Seed P1's trash with the Matt Ishida tamer.
+    let tamer_data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "BT17095-MATT2")
+        .expect("Matt Ishida tamer registered");
+    let next = runner.game.next_card_index();
+    runner.game.players[1]
+        .trash
+        .push(CardSource::new(tamer_data_idx, 1, next));
+
+    let attacker = runner.place_on_field(0, "BT17095-ATK3", Some(0));
+    let _ = runner.attack_player(attacker, 1, false);
+    let _ = runner.auto_resolve();
+
+    // Primary assertion: BT17-095 must be in P1's hand.
+    let bt17_in_hand = runner.game.players[1]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "BT17-095");
+    assert!(
+        bt17_in_hand,
+        "BT17-095 must be routed to P1's hand by add_this_option_to_hand regardless of zone branch taken"
     );
 }
 

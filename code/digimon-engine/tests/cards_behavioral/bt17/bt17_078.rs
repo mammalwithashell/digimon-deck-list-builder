@@ -55,7 +55,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{
-    CardColor, CardKind, CostDelta, EffectTiming, GamePhase, Keyword, PlayerId,
+    CardColor, CardKind, CostDelta, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId,
 };
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
@@ -730,4 +730,455 @@ fn bt17_078_blast_dna_bottom_decks_same_level_then_prompts_delete() {
 
 // ─── SECTION 5 — OPT enforcement ─────────────────────────────────────────────
 //
-// No clause on BT17-078 is `[Once Per Turn]`. Skipped intentionally.
+// NOTE (AUDIT 2026-05-11): The printed BT17-078 text DOES contain a
+// [Once Per Turn] clause: "[When Attacking] [Once Per Turn] You may trash 1
+// card from your hand. If you do, this Digimon gets +1000 DP, <Jamming>, and
+// may attack again until end of opponent's next turn."
+//
+// The claim "No clause on BT17-078 is [Once Per Turn]" is INCORRECT per the
+// printed card text. The following tests are marked #[ignore] pending YAML
+// correction (AUDITED-DRIFT verdict for the full card spec).
+
+// ─── SECTION 6 — Faithfulness audit: missing / drifted clauses ───────────────
+//
+// The YAML and tests above implement:
+//   "[On Play][When Digivolving] If DNA digivolving, choose 1 of your
+//    opponent's Digimon and return all of your opponent's Digimon with the
+//    same level as it to the bottom of the deck. Then, delete 1 of your
+//    opponent's Digimon."
+//
+// The PRINTED BT17-078 text (task description) contains:
+//   Clause 4: "[On Play][When Digivolving] If DNA digivolved into using a
+//     [WarGreymon] and a [MetalGarurumon], the chosen [WarGreymon] gains
+//     <Piercing> and <Security Attack +2> for the turn."
+//   Clause 5: "[When Attacking] [Once Per Turn] You may trash 1 card from
+//     your hand. If you do, this Digimon gets +1000 DP, <Jamming>, and may
+//     attack again until end of opponent's next turn."
+//
+// Clauses 4 and 5 are entirely absent from the YAML.
+// The current Clause 3 text (bottom-deck-by-level + delete) does NOT appear
+// in the printed BT17-078 text at all — it belongs to a different card.
+//
+// Verdict: AUDITED-DRIFT (wrong-card-text substitution in Clause 3 +
+//   two wholly absent clauses: Clause 4 and Clause 5).
+//
+// DSL vocabulary gap for Clause 4:
+//   "the chosen [WarGreymon] gains <Piercing> and <Security Attack +2>"
+//   After DNA digivolve, WarGreymon is a digivolution SOURCE CARD under
+//   Omnimon, not a battle-area permanent. The DSL `grant_keyword` step
+//   (step-form) only accepts a `PermanentHandle` target via `resolve_binding_ref`.
+//   `select_material` yields a `CardHandle` binding; there is no DSL step to
+//   grant a keyword to a named source card within a digivolution stack.
+//   This is a new DSL vocab gap: `grant_keyword_to_source`.
+//
+// DSL vocabulary for Clause 5:
+//   - "You may trash 1 card from your hand": `select_hand { optional: true }` +
+//     `trash_from_hand_by_index` — both verbs exist.
+//   - "+1000 DP": `add_dp_modifier: { target: self, value: 1000, expiry: end_of_turn }` — exists.
+//   - "<Jamming>": `grant_keyword: { target: self, keyword: Jamming, expiry: end_of_turn }` — exists.
+//   - "may attack again until end of opponent's next turn": install a `MayAttack`
+//     modifier with `end_of_opponents_next_turn` expiry. The modifier type
+//     `MayAttack` exists in the engine; `end_of_opponents_next_turn` is a valid
+//     expiry in the validator. This is representable as:
+//       `add_modifier: { target: self, modifier: MayAttack, value: 1, expiry: end_of_opponents_next_turn }`
+//     Confirm: `MayAttack` is listed in `modifier_map.rs` / `KNOWN_MODIFIER_KEYS`
+//     before authoring the YAML.
+
+// ─── Structural: YAML is missing the when_attacking OPT clause ───────────────
+
+/// The YAML currently has no `when_attacking` triggered clause.
+/// Per the printed text, BT17-078 must have exactly one `when_attacking`
+/// triggered clause (face-up, optional, once_per_turn).
+/// This test documents the drift: it PASSES only if the YAML is corrected.
+#[test]
+#[ignore = "AUDITED-DRIFT: YAML implements wrong card text. BT17-078's When \
+            Attacking OPT clause is entirely absent. Fix the YAML before \
+            removing this #[ignore]."]
+fn bt17_078_has_when_attacking_opt_clause() {
+    let c = compiled_bt17_078();
+    let when_atk: Vec<_> = c
+        .effects
+        .iter()
+        .filter_map(|cl| match cl {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .filter(|t| t.when.contains(&CompiledTiming::WhenAttacking))
+        .collect();
+    assert_eq!(
+        when_atk.len(),
+        1,
+        "BT17-078 must have exactly 1 WhenAttacking triggered clause (printed text Clause 5)"
+    );
+    let clause = when_atk[0];
+    assert_eq!(
+        clause.scope,
+        CompiledScope::FaceUp,
+        "Clause 5 is a face-up (own) When Attacking effect"
+    );
+    assert!(
+        clause.optional,
+        "Clause 5 opens with 'You may' — must be optional"
+    );
+    assert!(
+        clause.once_per_turn,
+        "Clause 5 has [Once Per Turn] marker"
+    );
+}
+
+/// Structural: On Play / When Digivolving clause must be gated by BOTH
+/// WarGreymon AND MetalGarurumon names, not merely dna_origin.
+/// Per printed text: "If DNA digivolved into using a [WarGreymon] and a
+/// [MetalGarurumon]" — the gate checks specific named sources.
+/// The current YAML gates only on `dna_origin: true` without name checks.
+/// This test documents the drift; it will pass only once the YAML is corrected.
+#[test]
+#[ignore = "AUDITED-DRIFT: YAML gates Clause 3 only on dna_origin:true, not on \
+            WarGreymon+MetalGarurumon name check. Printed text requires both \
+            specific names. Fix the YAML before removing this #[ignore]."]
+fn bt17_078_on_play_dna_gate_requires_wargreymon_and_metalgarurumon_names() {
+    let c = compiled_bt17_078();
+    let clause = c
+        .effects
+        .iter()
+        .filter_map(|cl| match cl {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| {
+            t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::WhenDigivolving)
+        })
+        .expect("On Play + When Digivolving clause must exist");
+
+    let gating = clause
+        .active_when
+        .as_ref()
+        .expect("Clause must have active_when gate");
+
+    // The gate must check for a WarGreymon-named source AND a
+    // MetalGarurumon-named source as DNA materials, not just dna_origin.
+    let checks_wargreymon = pred_any(gating, |q| {
+        q.name_is.as_deref() == Some("WarGreymon")
+            || q.name_contains.as_deref() == Some("WarGreymon")
+    });
+    let checks_metalgarurumon = pred_any(gating, |q| {
+        q.name_is.as_deref() == Some("MetalGarurumon")
+            || q.name_contains.as_deref() == Some("MetalGarurumon")
+    });
+    assert!(
+        checks_wargreymon,
+        "active_when must include a WarGreymon name predicate per printed text"
+    );
+    assert!(
+        checks_metalgarurumon,
+        "active_when must include a MetalGarurumon name predicate per printed text"
+    );
+}
+
+// ─── Behavioral: Clause 4 — WarGreymon source gains Piercing + SecAttk+2 ─────
+
+/// [On Play][When Digivolving] — positive: after DNA digivolve using WarGreymon
+/// + MetalGarurumon, Omnimon's WarGreymon digivolution source should carry
+/// Piercing and SecurityAttackPlus (+2) until end of turn.
+///
+/// NOTE: This test is blocked by a DSL vocab gap (`grant_keyword_to_source`
+/// does not exist) in addition to the YAML drift. See the gap entry below.
+#[test]
+#[ignore = "AUDITED-DRIFT + DSL-VOCAB-GAP: YAML implements wrong card text \
+            AND the DSL lacks `grant_keyword_to_source` to target a named \
+            digivolution source card. See dsl-vocab-gaps.md entry BT17-078 \
+            Clause 4 WarGreymon grant. Fix YAML + add DSL verb before \
+            removing this #[ignore]."]
+fn bt17_078_dna_with_wargreymon_grants_piercing_and_security_attack_plus_2_to_wargreymon_source() {
+    let mut wargreymon = make_named_digimon("WAR", "WarGreymon", 6, 12000);
+    wargreymon.colors = vec![CardColor::Red];
+    let mut metalgarurumon = make_named_digimon("METAL", "MetalGarurumon", 6, 12000);
+    metalgarurumon.colors = vec![CardColor::Blue];
+    let attacker = make_named_digimon("ATK", "Attacker", 5, 7000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(wargreymon)
+        .add_card(metalgarurumon)
+        .add_card(attacker)
+        .hand(1, &["BT17-078", "METAL"])
+        .memory(5)
+        .start();
+
+    let atk_perm = runner.place_on_field(0, "ATK", Some(0));
+    let wargrey_perm = runner.place_on_field(1, "WAR", Some(0));
+
+    // Trigger Counter Blast DNA digivolve: ATK attacks wargrey_perm
+    let result = runner.game.begin_attack(
+        atk_perm,
+        digimon_engine::selection::AttackTarget::Digimon(wargrey_perm),
+        false,
+    );
+    assert_eq!(result, AttackResult::InProgress);
+    runner
+        .game
+        .resolve_selection(1, DNA_DIGIVOLVE_START)
+        .expect("select BT17-078 as Counter Blast DNA");
+    runner
+        .game
+        .resolve_selection(1, 0)
+        .expect("select WarGreymon as field material");
+    runner
+        .game
+        .resolve_selection(1, PLAY_HAND_START + 1)
+        .expect("select MetalGarurumon as hand material");
+
+    // After DNA digivolve: Omnimon (BT17-078) is in battle_area[0] of player 1.
+    // The WarGreymon source card (index 0 in the stack) must have Piercing and
+    // SecurityAttackPlus granted for the turn.
+    //
+    // Since granting keywords to source cards requires a DSL verb that doesn't
+    // exist yet (`grant_keyword_to_source`), the following check is pending.
+    let omnimon_perm = runner.perm_handle(1, 0);
+
+    // The WarGreymon source should carry Piercing (inherited up to Omnimon)
+    assert!(
+        runner.game.has_keyword(omnimon_perm, Keyword::Piercing),
+        "Omnimon must have Piercing (inherited from WarGreymon source) after \
+         DNA digivolve with WarGreymon + MetalGarurumon"
+    );
+    // Security Attack +2 check: the SecurityAttackChange modifier delta should be +2.
+    let sa_delta = runner
+        .game
+        .modifiers
+        .sum(omnimon_perm, ModifierType::SecurityAttackChange);
+    assert_eq!(
+        sa_delta, 2,
+        "SecurityAttack +2 must be applied via SecurityAttackChange modifier; got {sa_delta}"
+    );
+}
+
+// ─── Behavioral: Clause 5 — When Attacking OPT trash hand → +DP/Jamming/re-attack
+
+/// [When Attacking][OPT] positive branch: trash 1 hand card → Omnimon gains
+/// +1000 DP, Jamming, and a MayAttack grant until end of opponent's next turn.
+#[test]
+#[ignore = "AUDITED-DRIFT: When Attacking OPT clause is absent from the YAML. \
+            Fix the YAML before removing this #[ignore]."]
+fn bt17_078_when_attacking_opt_trash_hand_grants_dp_jamming_attack_again() {
+    let hand_card = make_named_digimon("HAND-FILL", "HandFill", 3, 2000);
+    let opp_perm_card = make_named_digimon("OPP", "OppDig", 5, 5000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(hand_card)
+        .add_card(opp_perm_card)
+        .hand(0, &["HAND-FILL"])
+        .memory(10)
+        .start();
+
+    let omnimon = runner.place_on_field(0, "BT17-078", None);
+    runner.place_on_field(1, "OPP", Some(0));
+    runner.game.players[0].unsuspend_all();
+
+    let dp_before = runner
+        .game
+        .effective_dp(omnimon)
+        .expect("Omnimon must be on field");
+    let hand_before = runner.hand_size(0);
+
+    // Trigger When Attacking by attacking the opponent player.
+    let result = runner.attack_player(omnimon, 1, false);
+    // Expect a pending selection for the OPT "You may trash 1 from hand".
+    let sel = runner
+        .pending_selection()
+        .expect("When Attacking OPT must install a pending selection");
+    assert!(
+        sel.is_optional,
+        "OPT selection must be optional (you may)"
+    );
+    // Resolve: yes, trash the hand card (first valid action).
+    let trash_action = sel.valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(0, trash_action)
+        .expect("choose hand card to trash");
+
+    // Verify hand decreased by 1.
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before - 1,
+        "1 hand card must be trashed as cost"
+    );
+    // Verify +1000 DP.
+    let dp_after = runner.game.effective_dp(omnimon).expect("still on field");
+    assert_eq!(
+        dp_after,
+        dp_before + 1000,
+        "Omnimon must gain +1000 DP after paying the trash cost; \
+         before={dp_before}, after={dp_after}"
+    );
+    // Verify Jamming granted.
+    assert!(
+        runner.game.has_keyword(omnimon, Keyword::Jamming),
+        "Omnimon must have Jamming after paying the trash cost"
+    );
+    // Verify MayAttack modifier is present (the "may attack again" grant).
+    let has_may_attack = runner.game.modifiers.has(omnimon, ModifierType::MayAttack);
+    assert!(
+        has_may_attack,
+        "Omnimon must have MayAttack modifier (may attack again until end of \
+         opponent's next turn)"
+    );
+}
+
+/// [When Attacking][OPT] negative: if the player has no hand cards, the clause
+/// can still be activated but the conditional "if you do" body must not fire
+/// (the cost cannot be paid). Alternatively: if zero hand cards, the
+/// selection must not install (gate on hand non-empty).
+#[test]
+#[ignore = "AUDITED-DRIFT: When Attacking OPT clause is absent from the YAML. \
+            Fix the YAML before removing this #[ignore]."]
+fn bt17_078_when_attacking_opt_with_empty_hand_does_not_fire_body() {
+    let opp_perm_card = make_named_digimon("OPP", "OppDig", 5, 5000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(opp_perm_card)
+        .memory(10)
+        .start();
+
+    // No hand cards for player 0.
+    let omnimon = runner.place_on_field(0, "BT17-078", None);
+    runner.place_on_field(1, "OPP", Some(0));
+    runner.game.players[0].unsuspend_all();
+    assert_eq!(runner.hand_size(0), 0, "test requires empty hand");
+
+    let dp_before = runner.game.effective_dp(omnimon).expect("Omnimon on field");
+
+    let _ = runner.attack_player(omnimon, 1, false);
+
+    // With an empty hand, either:
+    //   (a) no OPT selection installs (gate on hand.len() > 0), or
+    //   (b) selection installs but the cost-pay resolves as no-op.
+    // In either case, DP must remain unchanged.
+    let _ = runner.auto_resolve();
+    let dp_after = runner.game.effective_dp(omnimon).unwrap_or(dp_before);
+    assert_eq!(
+        dp_after, dp_before,
+        "DP must not increase if no hand card was trashed"
+    );
+    assert!(
+        !runner.game.has_keyword(omnimon, Keyword::Jamming),
+        "Jamming must not be granted when the trash cost cannot be paid"
+    );
+}
+
+// ─── OPT lockout: Clause 5 — second activation same turn must be gated ────────
+
+/// OPT lockout: second When Attacking activation same turn must NOT re-install
+/// the OPT selection or re-apply the DP/Jamming buffs.
+#[test]
+#[ignore = "AUDITED-DRIFT: When Attacking OPT clause is absent from the YAML. \
+            Fix the YAML before removing this #[ignore]."]
+fn bt17_078_when_attacking_opt_locks_out_second_attack_same_turn() {
+    let hand_card1 = make_named_digimon("HC1", "HandCard1", 3, 2000);
+    let hand_card2 = make_named_digimon("HC2", "HandCard2", 3, 2000);
+    let opp_perm1 = make_named_digimon("OPP1", "OppDig1", 5, 5000);
+    let opp_perm2 = make_named_digimon("OPP2", "OppDig2", 5, 5000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(hand_card1)
+        .add_card(hand_card2)
+        .add_card(opp_perm1)
+        .add_card(opp_perm2)
+        .hand(0, &["HC1", "HC2"])
+        .memory(10)
+        .start();
+
+    let omnimon = runner.place_on_field(0, "BT17-078", None);
+    runner.place_on_field(1, "OPP1", Some(0));
+    runner.place_on_field(1, "OPP2", Some(0));
+    runner.game.players[0].unsuspend_all();
+
+    // First attack: OPT fires, player trashes HC1, gains +1000 DP + Jamming.
+    let _ = runner.attack_player(omnimon, 1, false);
+    if let Some(sel) = runner.pending_selection() {
+        let action = sel.valid_action_ids[0];
+        let _ = runner.game.resolve_selection(0, action);
+    }
+    let _ = runner.auto_resolve();
+    let dp_after_first = runner.game.effective_dp(omnimon).unwrap_or(15000);
+
+    // Second attack (same turn, OPT lockout): no OPT selection must install.
+    runner.game.players[0].unsuspend_all(); // re-enable for test
+    let _ = runner.attack_player(omnimon, 1, false);
+    // Drain without resolving any OPT prompt (there should be none).
+    let _ = runner.auto_resolve();
+    let dp_after_second = runner.game.effective_dp(omnimon).unwrap_or(dp_after_first);
+
+    assert_eq!(
+        dp_after_second, dp_after_first,
+        "second attack same turn: OPT lockout must prevent the +1000 DP grant \
+         from firing again; dp_after_first={dp_after_first}, dp_after_second={dp_after_second}"
+    );
+}
+
+/// OPT clears after end_turn: attack on the next turn re-enables the OPT.
+#[test]
+#[ignore = "AUDITED-DRIFT: When Attacking OPT clause is absent from the YAML. \
+            Fix the YAML before removing this #[ignore]."]
+fn bt17_078_when_attacking_opt_clears_after_end_turn() {
+    let hand_card1 = make_named_digimon("HC1", "HandCard1", 3, 2000);
+    let hand_card2 = make_named_digimon("HC2", "HandCard2", 3, 2000);
+    let opp_perm = make_named_digimon("OPP", "OppDig", 5, 5000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(hand_card1)
+        .add_card(hand_card2)
+        .add_card(opp_perm)
+        .hand(0, &["HC1", "HC2"])
+        .memory(10)
+        .start();
+
+    let omnimon = runner.place_on_field(0, "BT17-078", None);
+    runner.place_on_field(1, "OPP", Some(0));
+    runner.game.players[0].unsuspend_all();
+
+    // Turn 1 attack: fire OPT, trash HC1.
+    let _ = runner.attack_player(omnimon, 1, false);
+    if let Some(sel) = runner.pending_selection() {
+        let action = sel.valid_action_ids[0];
+        let _ = runner.game.resolve_selection(0, action);
+    }
+    let _ = runner.auto_resolve();
+    let dp_t1 = runner.game.effective_dp(omnimon).unwrap_or(15000);
+
+    // End turn (P0→P1→P0 round-trip) to clear OPT state.
+    runner.end_turn();
+    runner.end_turn();
+
+    runner.game.players[0].unsuspend_all();
+
+    // Turn 2 attack: OPT should fire again.
+    let _ = runner.attack_player(omnimon, 1, false);
+    let sel_t2 = runner.pending_selection();
+    assert!(
+        sel_t2.is_some(),
+        "OPT must re-arm after end_turn round-trip; no selection on second turn attack"
+    );
+    if let Some(sel) = sel_t2 {
+        let action = sel.valid_action_ids[0];
+        let _ = runner.game.resolve_selection(0, action); // trash HC2
+    }
+    let dp_t2 = runner.game.effective_dp(omnimon).unwrap_or(dp_t1);
+    assert_eq!(
+        dp_t2,
+        dp_t1 + 1000,
+        "OPT re-armed after end_turn: +1000 DP must apply again on turn 2; \
+         dp_t1={dp_t1}, dp_t2={dp_t2}"
+    );
+}

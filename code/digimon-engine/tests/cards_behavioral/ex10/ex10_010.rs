@@ -685,3 +685,107 @@ fn ex10_010_cannot_be_affected_not_installed_when_opp_lacks_13000_dp_digimon() {
         "expected CannotBeAffected NOT installed"
     );
 }
+
+// ─── SECTION 9 — Tamer as delete target ──────────────────────────────────────
+
+/// Make a Tamer card with a given play cost.
+fn make_opp_tamer(id: &str, play_cost: u16) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = digimon_engine::enums::CardKind::Tamer;
+    c.play_cost = play_cost;
+    c.dp = None;
+    c
+}
+
+/// [On Play] delete clause must include an opponent Tamer (cost ≤7) as a valid
+/// target. Card text says "Digimon or Tamers", so Tamers are explicitly eligible.
+#[test]
+fn ex10_010_on_play_installs_delete_prompt_when_opp_has_tamer() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in embedded DSL pack")
+        .add_card(make_opp_tamer("OPP-TAMER", 4))
+        .add_card(make_filler("FILLER"))
+        .hand(0, &["EX10-010"])
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .security(0, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .security(1, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .memory(7)
+        .start();
+
+    let _opp_tamer = runner.place_on_field(1, "OPP-TAMER", None);
+    let _perm = runner.play(0, 0);
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "On Play must install a delete selection when opponent has a cost-4 Tamer"
+    );
+}
+
+/// Playing EX10-010 with an opponent Tamer present: selecting the Tamer deletes it.
+#[test]
+fn ex10_010_on_play_deletes_selected_opponent_tamer() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in embedded DSL pack")
+        .add_card(make_opp_tamer("OPP-TAMER", 4))
+        .add_card(make_filler("FILLER"))
+        .hand(0, &["EX10-010"])
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .security(0, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .security(1, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .memory(7)
+        .start();
+
+    let _opp_tamer = runner.place_on_field(1, "OPP-TAMER", None);
+    let initial_opp_field = runner.battle_area_size(1);
+
+    let _perm = runner.play(0, 0);
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "delete prompt must install when opponent has a Tamer"
+    );
+    resolve_first_pending(&mut runner);
+
+    let final_opp_field = runner.battle_area_size(1);
+    assert_eq!(
+        final_opp_field,
+        initial_opp_field - 1,
+        "opponent's field should shrink by 1 after deleting Tamer; had {initial_opp_field}, now {final_opp_field}"
+    );
+}
+
+/// A Tamer with play cost exactly 7 (boundary) must be a valid delete target.
+#[test]
+fn ex10_010_on_play_tamer_at_cost_boundary_7_is_valid_target() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in embedded DSL pack")
+        .add_card(make_opp_tamer("OPP-TAMER-7", 7))
+        .add_card(make_filler("FILLER"))
+        .hand(0, &["EX10-010"])
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .security(0, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .security(1, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .memory(7)
+        .start();
+
+    let _opp_tamer = runner.place_on_field(1, "OPP-TAMER-7", None);
+    let _perm = runner.play(0, 0);
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "On Play must offer cost-7 Tamer as a valid delete target (boundary inclusive)"
+    );
+    let n = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids
+        .len();
+    assert_eq!(n, 1, "exactly 1 valid target (the cost-7 Tamer); got {}", n);
+}

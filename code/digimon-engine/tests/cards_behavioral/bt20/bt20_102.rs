@@ -40,9 +40,9 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::Keyword;
+use digimon_engine::enums::{EffectTiming, Keyword};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 use crate::dsl_card_data::compiled;
 
@@ -411,6 +411,54 @@ fn bt20_102_on_play_return_to_deck_prompt_installs_after_boardwipe() {
         );
     }
     // No assertion fails if opp has 0 remaining: the return step simply skips.
+}
+
+/// POSITIVE: [When Digivolving] path fires the same boardwipe raw_rust as [On Play].
+///
+/// Fire the WhenDigivolving timing explicitly from BT20-102's permanent handle.
+/// With 2 opp Digimon present, a SelectOpponentField prompt must install.
+#[test]
+fn bt20_102_when_digivolving_installs_boardwipe_selection() {
+    let mut opp1 = make_test_card("TEST-OPP-WD-1", "WdOpp1");
+    opp1.level = Some(4);
+    opp1.dp = Some(5000);
+
+    let mut opp2 = make_test_card("TEST-OPP-WD-2", "WdOpp2");
+    opp2.level = Some(4);
+    opp2.dp = Some(4000);
+
+    let filler = make_test_card("DECK-PAD", "Filler");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-102.yaml"))
+        .expect("BT20-102 YAML parses")
+        .add_card(opp1)
+        .add_card(opp2)
+        .add_card(filler)
+        .memory(10)
+        .deck(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .start();
+
+    runner.place_on_field(1, "TEST-OPP-WD-1", Some(0));
+    runner.place_on_field(1, "TEST-OPP-WD-2", Some(0));
+    let omni_h = runner.place_on_field(0, "BT20-102", None);
+
+    // Fire WhenDigivolving explicitly (simulates digivolving into BT20-102).
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(omni_h));
+    runner.game.drain_effect_queue();
+
+    // The boardwipe raw_rust fn fires: opp has 2 Digimon → SelectOpponentField installs.
+    let kind = runner.pending_kind();
+    assert!(
+        kind.is_some(),
+        "[When Digivolving] boardwipe clause must install a selection when opp has Digimon"
+    );
+    assert!(
+        matches!(kind, Some(SelectionKind::OppField)),
+        "[When Digivolving] selection must be OppField (choose opp Digimon to protect)"
+    );
 }
 
 // ─── SECTION 2b — Condition gating tests (G-SELF-DIGIVOLUTION-CONTAINS-NAME) ──
