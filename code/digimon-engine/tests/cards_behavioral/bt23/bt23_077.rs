@@ -26,7 +26,20 @@
 //! - Metadata and static <Blocker>.
 //! - Faithful [On Play] mandatory opponent Digimon selection filtered by play cost <= 4.
 //! - Self-scoped [All Turns] OnSuspend <De-Digivolve 1>, gated so ally suspend
-//!   events do not over-fire.
+//!   events do not over-fire (positive: self-suspend fires; negative: ally
+//!   suspend does not — the PUPPETS-G029 over-fire guard).
+//! - [All Turns] OnSuspend "any opponent Digimon" gating (negative: no
+//!   opponent Digimon → no prompt).
+//! - <De-Digivolve 1> trashes the chosen target's top card to its owner's
+//!   trash, and the "can't trash past level 3" floor is honored.
+//! - The OnSuspend observer is NOT [Once Per Turn]: it fires again on a
+//!   second suspend within the same turn.
+//!
+//! # Pattern tags
+//!
+//! - C1 Triggered [On Play]; D2 Static keyword (<Blocker>); G3 Self-scoped
+//!   OnSuspend observer (`event_permanent_is_source`); De-Digivolve N with a
+//!   level-3 floor (`stop_at_level: 3`).
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledPredicate, CompiledScope,
@@ -244,6 +257,144 @@ fn bt23_077_self_suspend_de_digivolves_one_opponent_digimon_but_other_suspend_do
     assert_eq!(stack_size(&runner, opponent_stack), 1);
 }
 
+#[test]
+fn bt23_077_self_suspend_with_no_opponent_digimon_installs_no_prompt() {
+    // Negative half of the [All Turns] OnSuspend "any opponent Digimon"
+    // condition: this Digimon suspends but the opponent controls no
+    // Digimon, so the printed <De-Digivolve 1> has nothing to target and
+    // no selection should be installed.
+    let mut runner = sistermon_runner().start();
+    let ciel = runner.place_on_field(0, "BT23-077", Some(0));
+
+    runner.game.suspend(ciel);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "self-suspend with no opponent Digimon must install no De-Digivolve prompt"
+    );
+}
+
+#[test]
+fn bt23_077_self_suspend_de_digivolve_trashes_top_card_to_target_owners_trash() {
+    // Behavioral: <De-Digivolve 1> trashes the chosen opponent Digimon's
+    // top card. The popped card lands in its owner's trash and the stack
+    // shrinks by exactly one.
+    let mut runner = sistermon_runner()
+        .add_card(make_digimon_lvl("BASE-LV3", 3, 3))
+        .add_card(make_digimon_lvl("TOP-LV4", 4, 4))
+        .start();
+    let ciel = runner.place_on_field(0, "BT23-077", Some(0));
+    let opponent_stack = runner.place_stack(1, &["BASE-LV3", "TOP-LV4"]);
+    assert_eq!(stack_size(&runner, opponent_stack), 2);
+    assert_eq!(
+        runner.game.players[1].trash.len(),
+        0,
+        "opponent trash starts empty"
+    );
+
+    runner.game.suspend(ciel);
+    let view = runner
+        .pending_selection_view()
+        .expect("self-suspend De-Digivolve target selection");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("choose opponent stack");
+    runner.auto_resolve().expect("finish De-Digivolve");
+
+    assert_eq!(
+        stack_size(&runner, opponent_stack),
+        1,
+        "<De-Digivolve 1> pops exactly one card from the chosen stack"
+    );
+    assert_eq!(
+        runner.game.players[1].trash.len(),
+        1,
+        "the trashed top card moves to its owner's trash"
+    );
+}
+
+#[test]
+fn bt23_077_self_suspend_de_digivolve_cannot_trash_past_level_3() {
+    // "(Trash the top card. You can't trash past level 3 cards.)"
+    // The opponent stack is [Lv.2 base, Lv.3 top]. <De-Digivolve 1> would
+    // pop the Lv.3 top and leave a Lv.2 base — that is "trashing past a
+    // level 3 card", which is forbidden. The pop must be refused: the
+    // stack and the opponent trash are both unchanged.
+    let mut runner = sistermon_runner()
+        .add_card(make_digimon_lvl("BASE-LV2", 2, 2))
+        .add_card(make_digimon_lvl("TOP-LV3", 3, 3))
+        .start();
+    let ciel = runner.place_on_field(0, "BT23-077", Some(0));
+    let opponent_stack = runner.place_stack(1, &["BASE-LV2", "TOP-LV3"]);
+    assert_eq!(stack_size(&runner, opponent_stack), 2);
+
+    runner.game.suspend(ciel);
+    let view = runner
+        .pending_selection_view()
+        .expect("self-suspend De-Digivolve target selection");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("choose opponent stack");
+    runner.auto_resolve().expect("finish De-Digivolve");
+
+    assert_eq!(
+        stack_size(&runner, opponent_stack),
+        2,
+        "De-Digivolve 1 cannot trash past a level 3 card — the Lv.3 top survives"
+    );
+    assert_eq!(
+        runner.game.players[1].trash.len(),
+        0,
+        "no card is trashed when the level-3 floor blocks the pop"
+    );
+}
+
+#[test]
+fn bt23_077_self_suspend_observer_is_not_once_per_turn() {
+    // Printed text has no [Once Per Turn] on the [All Turns] clause, so the
+    // observer must fire again on a second suspend in the same turn. Drive
+    // two real suspend events (unsuspending between them) and confirm the
+    // De-Digivolve prompt installs both times.
+    let mut runner = sistermon_runner()
+        .add_card(make_digimon_lvl("BASE-LV3-A", 3, 3))
+        .add_card(make_digimon_lvl("TOP-LV4-A", 4, 4))
+        .add_card(make_digimon_lvl("BASE-LV3-B", 3, 3))
+        .add_card(make_digimon_lvl("TOP-LV4-B", 4, 4))
+        .start();
+    let ciel = runner.place_on_field(0, "BT23-077", Some(0));
+    let first_stack = runner.place_stack(1, &["BASE-LV3-A", "TOP-LV4-A"]);
+    let second_stack = runner.place_stack(1, &["BASE-LV3-B", "TOP-LV4-B"]);
+
+    // First suspend → observer fires.
+    runner.game.suspend(ciel);
+    let first_view = runner
+        .pending_selection_view()
+        .expect("first self-suspend installs the De-Digivolve prompt");
+    assert_eq!(first_view.kind, SelectionKind::OppField);
+    runner
+        .execute_action(0, encode_permanent(first_stack))
+        .expect("choose first opponent stack");
+    runner.auto_resolve().expect("finish first De-Digivolve");
+    assert_eq!(stack_size(&runner, first_stack), 1);
+
+    // Unsuspend, then suspend again in the same turn → observer fires AGAIN.
+    runner.game.unsuspend(ciel);
+    runner.game.suspend(ciel);
+    let second_view = runner
+        .pending_selection_view()
+        .expect("second self-suspend re-installs the prompt — clause is not Once Per Turn");
+    assert_eq!(second_view.kind, SelectionKind::OppField);
+    runner
+        .execute_action(0, encode_permanent(second_stack))
+        .expect("choose second opponent stack");
+    runner.auto_resolve().expect("finish second De-Digivolve");
+    assert_eq!(
+        stack_size(&runner, second_stack),
+        1,
+        "the second suspend's De-Digivolve also resolves"
+    );
+}
+
 fn sistermon_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card("BT23-077")
@@ -254,6 +405,19 @@ fn make_digimon(id: &str, play_cost: u16) -> digimon_engine::card_data::CardData
     let mut card = make_test_card(id, id);
     card.card_kind = CardKind::Digimon;
     card.level = Some(3);
+    card.dp = Some(3000);
+    card.play_cost = play_cost;
+    card
+}
+
+/// Level-parameterized Digimon fixture. The De-Digivolve "can't trash past
+/// level 3" floor is level-sensitive, so the self-suspend tests build
+/// stacks out of cards with explicit levels rather than the level-3-only
+/// `make_digimon` helper.
+fn make_digimon_lvl(id: &str, play_cost: u16, level: u8) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(level);
     card.dp = Some(3000);
     card.play_cost = play_cost;
     card

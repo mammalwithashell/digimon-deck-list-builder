@@ -13,9 +13,23 @@
 //! # Coverage
 //!
 //! - Metadata and printed purple Lv.6 / [ShineGreymon] alternate digivolution paths.
+//! - End of Attack self-delete + opponent delete + Recovery + hatch chain
+//!   (PUPPETS-G031 RESOLVED — existing primitives compose).
 //! - Gap-routed [When Digivolving] [On Deletion] opponent-wide -5000 DP through
 //!   the end of the opponent's next turn.
-//! - Gap-routed End of Attack self-delete + opponent delete + Recovery + hatch chain.
+//!
+//! # Gap status (2026-05-21 — `G-DSL-MODIFIER-PENDING-SKIPS` CLOSED)
+//!
+//! The `[When Digivolving] [On Deletion]` mass −5000 DP clause is now fully
+//! implemented. `Expiry::EndOfOpponentsNextTurn` and the DSL key
+//! `end_of_opponents_next_turn` were already closed; the remaining narrow gap
+//! — the DSL `add_modifier` step could not set `ModifierEntry.pending_skips` —
+//! is now closed by `modifiers::pending_skips_for_install`, which
+//! `EffectContext::add_modifier` calls to auto-compute `pending_skips` from the
+//! current turn at install time. An `[On Deletion]` install during the
+//! opponent's turn now correctly skips that turn-end and expires at the end of
+//! the opponent's NEXT turn; a `[When Digivolving]` install on the controller's
+//! own turn expires at the first (= next) opponent turn-end.
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
@@ -70,11 +84,12 @@ fn ex4_074_metadata_alt_paths_and_supported_clause_match_printed_text() {
     );
 
     assert!(
-        !triggered_clauses(compiled).iter().any(|clause| {
+        triggered_clauses(compiled).iter().any(|clause| {
             clause.when.contains(&CompiledTiming::WhenDigivolving)
-                || clause.when.contains(&CompiledTiming::OnDeletion)
+                && clause.when.contains(&CompiledTiming::OnDeletion)
         }),
-        "When Digivolving / On Deletion DP reduction is intentionally omitted until next-turn modifier expiry exists"
+        "the -5000 DP debuff must compile as one clause spanning both \
+         [When Digivolving] and [On Deletion]"
     );
     assert!(
         triggered_clauses(compiled)
@@ -85,7 +100,6 @@ fn ex4_074_metadata_alt_paths_and_supported_clause_match_printed_text() {
 }
 
 #[test]
-#[ignore = "BLOCKED: EX4-074 needs modifier expiry for opponent's next turn, not current end_of_opponents_turn"]
 fn ex4_074_when_digivolving_reduces_all_opponent_digimon_but_not_tamers() {
     let mut runner = shine_runner()
         .add_card(make_digimon("BASE", 3000))
@@ -114,7 +128,6 @@ fn ex4_074_when_digivolving_reduces_all_opponent_digimon_but_not_tamers() {
 }
 
 #[test]
-#[ignore = "BLOCKED: EX4-074 needs modifier expiry for opponent's next turn, not current end_of_opponents_turn"]
 fn ex4_074_on_deletion_reduces_all_opponent_digimon() {
     let mut runner = shine_runner()
         .add_card(make_digimon("OPP-1", 9000))
@@ -136,7 +149,6 @@ fn ex4_074_on_deletion_reduces_all_opponent_digimon() {
 }
 
 #[test]
-#[ignore = "BLOCKED: EX4-074 needs modifier expiry for opponent's next turn, not current end_of_opponents_turn"]
 fn ex4_074_on_deletion_during_opponents_turn_expires_at_end_of_their_next_turn() {
     let mut runner = shine_runner()
         .add_card(make_digimon("OPP", 9000))
@@ -214,6 +226,53 @@ fn ex4_074_end_of_attack_self_deletes_opponent_delete_recovers_and_hatches_with_
     assert!(
         runner.game.players[0].breeding_area.is_some(),
         "Tamer condition hatches an egg into an empty breeding area"
+    );
+}
+
+/// NEGATIVE for the End-of-Attack chain's "if you have a Tamer in play" hatch
+/// sub-condition: with no Tamer on player 0's field the self-delete + opponent
+/// delete + Recovery +1 still resolve, but the hatch is skipped — no egg moves
+/// to the breeding area.
+#[test]
+fn ex4_074_end_of_attack_skips_hatch_without_a_tamer() {
+    let mut runner = shine_runner()
+        .add_card(make_digimon("OPP", 9000))
+        .add_card(make_egg("EGG"))
+        .add_card(make_test_card("SECURITY", "Security"))
+        .deck(0, &["SECURITY"])
+        .digitama(0, &["EGG"])
+        .security(1, &["SECURITY"])
+        .start();
+    let ruin = runner.place_on_field(0, "EX4-074", Some(0));
+    // No Tamer is placed on player 0's field.
+    let opp = runner.place_on_field(1, "OPP", Some(0));
+
+    runner.attack_player(ruin, 1, false);
+    runner.auto_resolve().expect("resolve End of Attack chain");
+
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .all(|perm| { perm.top_card().card_id(&runner.game.card_data) != "EX4-074" }),
+        "Ruin Mode deletes itself even without a Tamer"
+    );
+    assert!(
+        runner.game.players[1]
+            .battle_area
+            .iter()
+            .all(|perm| { perm.top_card().card_id(&runner.game.card_data) != "OPP" }),
+        "Chosen opponent Digimon is deleted even without a Tamer"
+    );
+    let _ = opp;
+    assert_eq!(
+        runner.security_count(0),
+        1,
+        "Recovery +1 (Deck) still applies without a Tamer"
+    );
+    assert!(
+        runner.game.players[0].breeding_area.is_none(),
+        "with no Tamer in play the hatch sub-condition fails — no Digi-Egg is hatched"
     );
 }
 

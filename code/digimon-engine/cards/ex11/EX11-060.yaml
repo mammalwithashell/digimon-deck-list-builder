@@ -28,11 +28,7 @@ effects:
             - all_of:
                 - event_target_kind: digimon
                 - event_target_trait_has: Puppet
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: "EX11-060"
-            is_unsuspended: true
+        - source_is_unsuspended: true
     process:
       - select_effect_choice:
           labels: ["Suspend this Tamer", "Decline"]

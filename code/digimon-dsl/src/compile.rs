@@ -1952,6 +1952,10 @@ fn compile_step(
             of: compile_player_ref(a.of),
             cards: compile_binding_ref(&a.cards),
         },
+        S::ReturnTrashListToDeckTop(a) => CompiledStep::ReturnTrashListToDeckTop {
+            of: compile_player_ref(a.of),
+            cards: compile_binding_ref(&a.cards),
+        },
         S::TrashTopNDigivolutionCardsOfEach(a) => CompiledStep::TrashTopNDigivolutionCardsOfEach {
             of: compile_player_ref(a.of),
             n: compile_formula(&a.n, &format!("{prefix}.n"), card_id, errors),

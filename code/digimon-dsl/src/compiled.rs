@@ -1059,6 +1059,12 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         cards: CompiledBindingRef,
     },
+    /// Move a bound card list out of trash to the TOP of the deck.
+    /// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+    ReturnTrashListToDeckTop {
+        of: CompiledPlayerRef,
+        cards: CompiledBindingRef,
+    },
     TrashTopNDigivolutionCardsOfEach {
         of: CompiledPlayerRef,
         n: CompiledFormula,

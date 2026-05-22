@@ -138,7 +138,7 @@ Resolver-backed corrected batches on 2026-05-03:
 | `EX11-023` | implemented | yellow Lv5 and Puppet Lv5 digivolve paths; Alliance; Scapegoat; mandatory lowest-level opponent Digimon delete on When Digivolving and End of Opponent's Turn; All Turns OPT other-Digimon-deleted optional level 4 or lower Puppet trash play | none identified in covered text |
 | `EX11-060` | implemented | start-of-turn memory setter; Token/Puppet deletion observer with visible suspend-this-Tamer Draw 1 branch; Overclock-only level 4 Puppet hand-play; Security play this Tamer without paying cost | none identified in covered text |
 | `EX11-061` | partial | Start of Your Main Phase memory gain; Security play this Tamer without paying cost | Puppet digivolve observer/effect-play branch needs `PUPPETS-G005`; exact turn-end cleanup needs `PUPPETS-G003` |
-| `P-229` | partial | Main and Security reveal-top-3 dual-bucket search for 1 Puppet Digimon and 1 LIBERATOR | Mirai-played event-gated Delay/reduced-cost digivolve needs `PUPPETS-G004`; Option-pipeline integrated battle-area placement needs `PUPPETS-G033` |
+| `P-229` | implemented | Main and Security reveal-top-3 dual-bucket search for 1 Puppet Digimon and 1 LIBERATOR; battle-area placement as an event-gated Delay Option; Mirai-played event-gated Delay (level≤6 LIBERATOR reduced-cost digivolve) | none — `PUPPETS-G004` closed 2026-05-21 |
 | `BT22-098` | partial | supported hand-origin Main/Security Shoemon/Arisa free-play; Arisa-suspend event-gated Delay with Puppet base and Puppet+LIBERATOR hand digivolve cost -3 | exact hand-or-trash origin-preserving play needs `PUPPETS-G014`; full Option-pipeline integrated resolution (pending optional play + post-resolution battle-area placement) remains under `PUPPETS-G033` |
 | `LM-029` | partial | Main yellow Digimon effect-digivolve cost -3; mandatory Security add-this-option-to-hand tail | optional Security yellow DP<=2000 trash play and Scramble Delay trash-to-deck-top body need hidden-zone DP filtering, trash-to-deck-top movement, and mandatory-tail continuation under `PUPPETS-G017` |
 | `P-105` | implemented | Main reveal-top-2 yellow-card search; battle-area delayed Option placement; inherited Security placement; Delay yellow hand digivolve cost -2 with visible player-activated Main action after placing turn (`PUPPETS-G009` closed) | none identified in covered text |
@@ -167,7 +167,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 | `PUPPETS-G001` | dsl-gap / test-gap | open | Most Puppet core cards | none; archetype-local authoring backlog |
 | `PUPPETS-G002` | engine-gap / dsl-gap | closed for Puppet self-refire | refire primitive exists; `BT22-040` and `BT22-042` prove deleted-object gated self-refire fixtures, including visible optional refire and once-per-turn handling | `qa/archetype-qa/engine-gaps.md` |
 | `PUPPETS-G003` | engine-gap | **closed** (Puppets substrate sweep 2026-05-20) | `EX11-022`, `EX11-061`, related effect-play cleanup cards | `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G004` | hybrid | partially resolved | `BT22-098`, `P-229` | `qa/dsl-vocab-gaps.md` |
+| `PUPPETS-G004` | hybrid | **closed** (2026-05-21) | `BT22-098` (IMPLEMENTED), `P-229` (IMPLEMENTED) | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G005` | engine-gap / test-gap | partially resolved | `EX9-067`, `EX11-061` | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G006` | test-gap | partially resolved | security end-of-battle play effects | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G007` | test-gap | closed | no current Puppet aura/Rush cards in the resolved pool | none |
@@ -233,16 +233,25 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 - **First test:** Resolve `EX11-022` to play a 4000 DP or less Puppet from hand or trash, shift battle-area indices before turn end, and assert only the effect-played permanent is deleted.
 - **Implementation hint:** Store a stable provenance key on effect-played permanents or schedule a cleanup keyed by stable `CardSource` identity rather than battle-area index.
 
-### PUPPETS-G004: Event-Gated Delay Windows for Puppet Options
+### PUPPETS-G004: Event-Gated Delay Windows for Puppet Options — RESOLVED 2026-05-21
 
 - **Type:** hybrid `engine-gap` / `dsl-gap`
-- **Status:** partially resolved
-- **Blocks:** `BT22-098` Unique Emblem: Fable Waltz, `P-229` Unique Emblem: Narrative Ronde.
-- **Effect text:** `BT22-098` delays when Arisa suspends; `P-229` delays when Mirai Kinosaki is played.
-- **Why it matters:** These options are important Puppet consistency tools and must place into battle, watch later events, then expose the delayed digivolve choice through pending selections.
-- **Evidence:** `qa/dsl-vocab-gaps.md` records this as partially resolved for `BT22-098`'s `on_suspend` slice. Batch 7 production YAML/tests now cover the Arisa-suspend event-gated Delay body for `BT22-098`; `P-229` remains blocked while `on_ally_played` is virtual/skipped and its option placement/full Delay route remain open.
-- **First test:** Play `P-229`, play `Mirai Kinosaki` on a later turn, and assert the delayed option can be trashed to offer a level 6 or lower `LIBERATOR` digivolution from hand with cost reduced by 3.
-- **Implementation hint:** Lower `on_ally_played` to a real entered-field event predicate or a more explicit `on_enter_field_anyone` condition, then reuse the event-gated Delay lifecycle.
+- **Status:** **closed** 2026-05-21.
+- **Blocks:** `BT22-098` Unique Emblem: Fable Waltz (IMPLEMENTED — `on_suspend` slice), `P-229` Unique Emblem: Narrative Ronde (IMPLEMENTED — `on_ally_played` slice).
+- **Closed via (two halves):**
+  - **DSL:** `code/digimon-engine/src/dsl_cards/lower_delay.rs` now maps
+    `CompiledTiming::OnAllyPlayed` → `DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed)`
+    alongside the existing `on_suspend` / `on_unsuspend` arm.
+  - **Engine:** `code/digimon-engine/src/effect_queue.rs` `enqueue_triggered` now
+    fans `TriggerSource::EnteredField` dispatches out to
+    `enqueue_event_gated_delayed_options` (previously only `EventObserved` /
+    `AttackTargetChanged` reached it). The candidate scan only matches Options
+    whose `OnEvent(event_timing)` equals the dispatch timing, so dispatching for
+    both the `OnEnterFieldAnyone` and `OnAllyPlayed` play broadcasts is harmless.
+- **Lifecycle:** `OnEvent(_)` Delay Options park indefinitely
+  (`compute_delay_trash_turn` = `u16::MAX`), so the option's "place this card in
+  the battle area" tail is faithful — no turn-keyed auto-trash approximation.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_229` — 13 tests pass, 0 ignored, including placing-turn gate, non-Mirai event-predicate gate, and decline-still-pays-the-trash-cost. `bt22_098` (the `on_suspend` sibling) remains green.
 
 ### PUPPETS-G005: Effect-Initiated Play/Digivolve Event Context and "By This Effect" Filters
 

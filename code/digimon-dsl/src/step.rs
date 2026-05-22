@@ -172,6 +172,7 @@ pub enum StepSpec {
     SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
     ReturnTrashListToDeckBottom(ReturnTrashListToDeckBottomArgs),
+    ReturnTrashListToDeckTop(ReturnTrashListToDeckTopArgs),
     TrashTopNDigivolutionCardsOfEach(TrashTopNDigivolutionCardsOfEachArgs),
     TrashOpponentHandToCount(TrashOpponentHandToCountArgs),
     SearchOwnSecurityStack(SearchOwnSecurityStackArgs),
@@ -363,6 +364,9 @@ impl Serialize for StepSpec {
             }
             StepSpec::ReturnTrashListToDeckBottom(v) => {
                 kv!(s, "return_trash_list_to_deck_bottom", v)
+            }
+            StepSpec::ReturnTrashListToDeckTop(v) => {
+                kv!(s, "return_trash_list_to_deck_top", v)
             }
             StepSpec::TrashTopNDigivolutionCardsOfEach(v) => {
                 kv!(s, "trash_top_n_digivolution_cards_of_each", v)
@@ -567,6 +571,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_trash_list_to_deck_bottom" => {
                 StepSpec::ReturnTrashListToDeckBottom(map.next_value()?)
             }
+            "return_trash_list_to_deck_top" => {
+                StepSpec::ReturnTrashListToDeckTop(map.next_value()?)
+            }
             "trash_top_n_digivolution_cards_of_each" => {
                 StepSpec::TrashTopNDigivolutionCardsOfEach(map.next_value()?)
             }
@@ -714,6 +721,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "security_place_top_stacked_card",
                         "return_all_trash_to_deck_bottom",
                         "return_trash_list_to_deck_bottom",
+                        "return_trash_list_to_deck_top",
                         "trash_top_n_digivolution_cards_of_each",
                         "trash_opponent_hand_to_count",
                         "search_own_security_stack",
@@ -802,6 +810,18 @@ pub struct DeleteBoundPermanentsArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReturnTrashListToDeckBottomArgs {
+    pub of: PlayerRef,
+    pub cards: BindingRef,
+}
+
+/// Move a selected list of trash cards to the TOP of the deck. `cards` is
+/// the name of a card-list (or single-card) binding (e.g. produced by
+/// `select_trash`). Unlike `return_trash_list_to_deck_bottom` this appends
+/// the bound cards to the deck end (deck top = drawn first).
+/// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnTrashListToDeckTopArgs {
     pub of: PlayerRef,
     pub cards: BindingRef,
 }

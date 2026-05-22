@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-05-20",
+  "last_updated": "2026-05-21",
   "cards": {
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -36,14 +36,14 @@
     },
     "EX7-074": {
       "card_name": "Vortex Resonance",
-      "validated_date": "2026-04-28",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-074.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_074.rs",
-      "test_count": 22,
+      "test_count": 28,
       "tests_passing": 8,
       "tests_ignored": 14,
       "patterns": [
@@ -51,7 +51,7 @@
         "D-COLOR-IGNORE",
         "F-PLAY-FROM-HAND-FREE"
       ],
-      "notes": "use_requirement color bypass now unlocks hand play with LIBERATOR board presence; reveal-3 + LIBERATOR-trait add + optional digivolve cost-reduce-4 remain DSL-modelled. Inherited Security hand/trash play now uses play_cost_lte:4 filters and native add_this_option_to_hand; 8 active, 14 ignored for option/security flow harness coverage."
+      "notes": "Completion run: all 14 prior #[ignore] tests un-ignored (they were test-harness-coverage stale, not gap-blocked; DebugRunner now drives option/security flow). Fixed faithfulness defect: card color was green/blue, corrected to green/yellow per cards.json. [Main] reveal-3 + LIBERATOR-add + optional digivolve cost-4, [Security] hand-or-trash LIBERATOR play all covered. 28 tests, 0 ignored."
     },
     "EX4-006": {
       "card_name": "Guilmon",
@@ -3053,21 +3053,21 @@
     },
     "EX9-024": {
       "card_name": "Hanimon",
-      "validated_date": "2026-05-03",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-a",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex9/EX9-024.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_024.rs",
-      "test_count": 3,
+      "test_count": 13,
       "patterns": [
         "TRASH-FROM-HAND-COST",
         "TRASH-TO-HAND",
         "PUPPET-TRAIT-FILTER",
         "INHERITED-ATTACK-CANCEL"
       ],
-      "notes": "Resolver-backed Puppets card from `code/tools/resolve_deck.py Puppets --json`. Production YAML and focused tests cover the On Play optional discard-cost path, Puppet Digimon recursion from trash, decline path, and inherited opponent-turn attack cancellation by explicit EffectChoice, deleting the carrier Digimon, and ending the pending attack without a security check."
+      "notes": "Completion run: audited and fixed 2 faithfulness defects in the inherited [Opponent Turn][OPT] attack-end clause -- (1) deleted the EX9-024 carrier itself instead of 1 of your OTHER Digimon; (2) ended the attack for free when lone carrier had no other Digimon. Now select_own_permanent(other:true) gated by if binding_present. On Play cost-gated Puppet recursion + Kyaromon cost-0 alt-path confirmed. gap_kind:engine was stale. Tests 3->13."
     },
     "EX9-027": {
       "card_name": "Kokeshimon",
@@ -3123,35 +3123,35 @@
     },
     "EX7-025": {
       "card_name": "ShoeShoemon",
-      "validated_date": "2026-05-03",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-025.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_025.rs",
-      "test_count": 1,
+      "test_count": 7,
       "patterns": [
         "CONDITIONAL-TAMER-COUNT",
         "PLAY-FROM-HAND-FREE"
       ],
-      "notes": "Production YAML and focused test cover When Digivolving optional Arisa Kinosaki play from hand when you have 1 or fewer Tamers. Inherited opponent-security Digimon -3000 DP aura remains omitted pending `G-OPPONENT-SECURITY-DP-AURA` / `PUPPETS-G008`."
+      "notes": "Completion run: deferred inherited opponent-security -3000 DP aura implemented via applies_to_opponent_security_dp (PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA closed Track I 2026-05-17). When Digivolving free Arisa play was already done. 7 tests."
     },
     "EX7-027": {
       "card_name": "Chaperomon",
-      "validated_date": "2026-05-03",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-027.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_027.rs",
-      "test_count": 2,
+      "test_count": 8,
       "patterns": [
         "OVERCLOCK",
         "PLAY-FROM-HAND-FREE"
       ],
-      "notes": "Production YAML and focused tests cover Puppet Overclock and When Digivolving optional level 3 Puppet play from hand. Inherited leave-prevention by deleting a Token or other Puppet remains omitted pending the reusable Puppet/token replacement-cost body tracked in `qa/dsl-vocab-gaps.md`."
+      "notes": "Completion run: inherited [All Turns][OPT] leave-prevention replacement (delete a Token/other-Puppet to cancel removal not-by-own-effect) confirmed faithful in shipping YAML (gap closed Track B 2026-05-08). Test coverage extended 4->8: structural inherited/OPT, decline branch, cost-deletion, OPT lockout."
     },
     "EX7-063": {
       "card_name": "Arisa Kinosaki",
@@ -3171,20 +3171,20 @@
     },
     "EX11-021": {
       "card_name": "Kokeshimon",
-      "validated_date": "2026-05-03",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-021.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_021.rs",
-      "test_count": 2,
+      "test_count": 14,
       "patterns": [
         "CONDITIONAL-TAMER-COUNT",
         "PLAY-FROM-HAND-FREE",
         "INHERITED-ATTACK-CANCEL"
       ],
-      "notes": "Production YAML and focused tests cover When Digivolving optional Mirai Kinosaki play from hand when you have 1 or fewer Tamers, plus inherited opponent-turn attack cancellation by explicit EffectChoice, delete-this carrier cost, and end_attack. This batch also added DSL vocabulary/mapping for on_ally_attack and on_opponent_attack."
+      "notes": "Completion run: inherited [Opponent Turn][OPT] attack-end clause REWRITTEN to fix 2 faithfulness defects -- (1) deleted the carrier itself instead of 1 of your OTHER Digimon; (2) end_attack ran free when lone carrier had no other Digimon. Now select_own_permanent(other:true) gated by if binding_present. gap_kind:engine was stale (on_opponent_attack fully wired). Tests 2->14."
     },
     "BT4-104": {
       "card_name": "Blinding Ray",
@@ -3219,7 +3219,7 @@
         "DELAY",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "LM-035": {
       "card_name": "Amber Memory Boost!",
@@ -3238,7 +3238,7 @@
         "DELAY",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "LM-037": {
       "card_name": "Sepia Memory Boost!",
@@ -3257,7 +3257,7 @@
         "DELAY",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "ST19-01": {
       "card_name": "Kyaromon",
@@ -3334,38 +3334,38 @@
     },
     "EX7-024": {
       "card_name": "Shoemon",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-3",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-024.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_024.rs",
-      "test_count": 6,
+      "test_count": 9,
       "patterns": [
         "ALT-DIGIVOLVE",
         "SOURCE-SCOPED-COST-REDUCTION",
         "OPPONENT-SECURITY-DP-AURA"
       ],
-      "notes": "Production YAML and focused tests cover printed metadata plus yellow Lv2 cost-0 digivolution path. The own-turn source-scoped cost reduction when this Digimon would digivolve into a Puppet is omitted pending the reusable when_this_digivolves_into + target-trait cost hook, and the inherited opponent-security Digimon DP aura remains omitted pending PUPPETS-G008."
+      "notes": "Completion run: both deferred clauses implemented. Source-scoped cost reduction (digivolve into [Puppet], -1) via cost_target + source_is_cost_target_permanent (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET closed Track H 2026-05-17), and inherited opponent-security -3000 DP aura via applies_to_opponent_security_dp (PUPPETS-G008 closed Track I 2026-05-17). 9 tests incl. source-scope negative."
     },
     "ST19-08": {
       "card_name": "ShoeShoemon",
-      "validated_date": "2026-05-20",
-      "report": "implement-rust-dsl-archetype/puppets-substrate-sweep-2026-05-20",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/st19/ST19-08.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_08.rs",
-      "test_count": 4,
+      "test_count": 9,
       "patterns": [
         "OVERCLOCK",
         "TOKEN-OR-PUPPET-COST-FILTER",
         "UNION-ZONE-PLAY",
         "OPPONENT-SECURITY-DP-AURA"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G014 (origin-preserving union-zone play) closed; Security hand-or-trash LIBERATOR play and inherited opponent-security DP aura are now expressible. However, 1 test remains #[ignore] annotated for G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008 referencing inherited applies_to_opponent_security_dp — this annotation is stale (G008 closed Track I 2026-05-17) and needs cleanup in a separate pass."
+      "notes": "Completion run: inherited opponent-security -3000 DP aura clause was missing from YAML (prior PARTIAL note premise was wrong) and the old ignored test was a false-positive trap. Aura clause added via applies_to_opponent_security_dp; test rewritten with real structural+behavioral coverage. 9 tests, no #[ignore]."
     },
     "ST19-11": {
       "card_name": "Chaperomon",
@@ -3445,32 +3445,32 @@
     },
     "BT22-040": {
       "card_name": "Cendrillmon",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-040.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_040.rs",
-      "test_count": 8,
+      "test_count": 10,
       "patterns": [
         "OVERCLOCK",
         "TOKEN-PLAY",
         "EFFECT-CHOICE",
         "EFFECT-REFIRE"
       ],
-      "notes": "Production YAML and focused tests cover Puppet/Token Overclock and optional On Play/When Digivolving Familiar Token play with explicit Play/Decline choices. The All Turns OPT refire slice is omitted because refire_effect exists but OnAnyDeletion still lacks deleted-permanent event context to enforce 'your other Digimon' without over-triggering."
+      "notes": "Completion run: deferred [All Turns][OPT] refire (when your other Digimon deleted, refire a When Digivolving effect) confirmed faithful in shipping YAML (refire_effect + OnAnyDeletion deleted-object context closed 2026-05-08). Tests 8->10 incl. structural + OPT-reset-after-turn-cycle."
     },
     "BT22-042": {
       "card_name": "Nyabootmon",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-042.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_042.rs",
-      "test_count": 9,
+      "test_count": 13,
       "patterns": [
         "ALT-DIGIVOLVE",
         "OVERCLOCK",
@@ -3478,7 +3478,7 @@
         "FORMULA-DP-MODIFIER",
         "EFFECT-REFIRE"
       ],
-      "notes": "Production YAML and focused tests cover standard yellow Lv6 digivolve cost 4 and Puppet/Token Overclock. The conditional Arisa+Chaperomon cost-6 route is omitted pending conditional alt-path support; the When Digivolving may-play-plus-mandatory-DP compound body is omitted pending reliable optional substep continuation for this shape; the other-deletion refire is omitted pending deleted-permanent event context even though refire_effect itself exists."
+      "notes": "Completion run: conditional Chaperomon cost-6 alt-path (gated by you-control-Arisa-Kinosaki) added to YAML (G-ALT-PATH-CONDITION resolved 2026-05-15). When Digivolving optional-play-then-mandatory-DP compound and [All Turns][OPT] refire confirmed faithful. Tests 8->13."
     },
     "EX9-032": {
       "card_name": "Karakurumon",
@@ -3573,14 +3573,14 @@
     },
     "EX11-060": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-060.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_060.rs",
-      "test_count": 5,
+      "test_count": 12,
       "patterns": [
         "MEMORY-SETTER",
         "SECURITY-PLAY",
@@ -3588,7 +3588,7 @@
         "SUSPEND-COST",
         "OVERCLOCK-CAUSE"
       ],
-      "notes": "Production YAML and focused tests cover the start-of-turn memory setter when memory is 2 or less, the negative case when memory is already above 2, and Security play-self. The All Turns Token/Puppet deletion observer, suspend-this-Tamer Draw 1 cost, and Overclock-gated optional level 4 or lower Puppet play from hand are omitted pending deleted-object event context, Overclock deletion-cause context, and suspend-this-Tamer cost vocabulary."
+      "notes": "Completion run: deferred [All Turns] Token/Puppet deletion observer (suspend-self cost -> Draw 1, Overclock-cause rider plays a level<=4 Puppet free) confirmed in shipping YAML (deleted-object context, PUPPETS-G022 event_cause:overclock, suspend cost all closed). Review fix: suspend-cost gate any_permanent->source_is_unsuspended for multi-copy correctness. Tests 5->12."
     },
     "EX11-061": {
       "card_name": "Mirai Kinosaki",
@@ -3610,57 +3610,58 @@
     },
     "P-229": {
       "card_name": "Unique Emblem: Narrative Ronde",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/p/P-229.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_229.rs",
-      "test_count": 9,
+      "test_count": 13,
       "patterns": [
         "REVEAL-SEARCH",
         "DUAL-BUCKET",
         "SECURITY-ACTIVATE-MAIN",
         "DELAY",
+        "EVENT-GATED-DELAY",
         "EFFECT-DIGIVOLVE"
       ],
-      "notes": "Production YAML and focused tests cover Main and Security reveal-top-3 dual-bucket search, adding 1 Puppet Digimon and 1 LIBERATOR without double-picking the same card and bottoming the remainder. The option battle-area placement and event-gated Delay when Mirai Kinosaki is played, followed by reduced-cost level 6 or lower LIBERATOR digivolve from hand, are omitted pending option placement plus on_ally_played Delay timing and reduced-cost effect-digivolve support."
+      "notes": "FULLY IMPLEMENTED \u2014 hybrid gap PUPPETS-G004 closed 2026-05-21. [Main]/[Security] reveal-3 dual-bucket search (1 Puppet Digimon + 1 LIBERATOR, no double-pick, bottom remainder), option battle-area placement (kind: delay \u2192 Option pipeline auto-seats), and the [Your Turn] Mirai-played event-gated <Delay> (level<=6 LIBERATOR digivolve cost-3) all complete. Substrate: lower_delay.rs now maps on_ally_played \u2192 DelayTrigger::OnEvent(OnAllyPlayed); effect_queue.rs enqueue_triggered now fans EnteredField dispatches out to enqueue_event_gated_delayed_options. 13 tests pass, 0 ignored (incl. placing-turn gate, non-Mirai event gate, decline-still-trashes cost)."
     },
     "BT22-098": {
       "card_name": "Unique Emblem: Fable Waltz",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-098.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_098.rs",
-      "test_count": 11,
+      "test_count": 14,
       "patterns": [
         "FREE-PLAY-FROM-HAND",
         "SECURITY-ACTIVATE-MAIN",
         "EVENT-GATED-DELAY",
         "EFFECT-DIGIVOLVE"
       ],
-      "notes": "Production YAML and focused tests cover the supported hand-origin Main slice for Shoemon/Arisa free-play, the inherited Security mirror of that hand-origin slice, and the Arisa-suspend event-gated Delay body with Puppet base selection, Puppet+LIBERATOR hand evolution selection, and cost reduction 3. Exact hand-or-trash origin-preserving Main/Security play and full integrated option placement remain omitted pending PUPPETS-G014 and PUPPETS-G009."
+      "notes": "Completion run: hand-or-trash origin-preserving union play for [Main] + [Security] (PUPPETS-G014 closed), Security self-placement, Delay [Main] action (PUPPETS-G009 closed). Arisa-suspend event-gated Delay (Puppet base + Puppet/LIBERATOR hand digivolve cost-3) confirmed. PUPPETS-G033 integrated Option-pipeline resolution verified working by pipeline tests. 14 tests."
     },
     "LM-029": {
       "card_name": "Yellow Scramble",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/lm/LM-029.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_029.rs",
-      "test_count": 10,
+      "test_count": 16,
       "patterns": [
         "EFFECT-DIGIVOLVE",
         "OPTION-SELF-TO-HAND",
         "SCRAMBLE-DELAY"
       ],
-      "notes": "Production YAML and focused tests cover the supported Main digivolve path into yellow Digimon with cost reduction 3, visible field and hand choices, and the mandatory Security add-this-option-to-hand tail. The optional Security play of a yellow 2000 DP or less Digimon from trash and the Scramble Delay trash-to-deck-top body remain omitted pending hidden-zone DP filtering and optional-substep mandatory tail support."
+      "notes": "Completion run + gap closure: [Start of Your Turn] Delay clause implemented. G-ZONE-SELECTED-TRASH-TO-DECK-TOP closed by the new return_trash_list_to_deck_top DSL verb + return_trash_cards_to_deck_top engine method (mirror of the deck-bottom verb, appends to deck end). Adding the kind:delay clause also makes the engine auto-seat LM-029 as a Delay Option (Main placement). Main + Security clauses unchanged. 16 tests, 0 ignored."
     },
     "P-105": {
       "card_name": "Physical Training",
@@ -3678,7 +3679,7 @@
         "EFFECT-DIGIVOLVE",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "LM-054": {
       "card_name": "Treadmill Training",
@@ -3697,7 +3698,7 @@
         "EFFECT-DIGIVOLVE",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "BT13-101": {
       "card_name": "Miki Kurosaki & Megumi Shirakawa",
@@ -3736,21 +3737,21 @@
     },
     "BT20-084": {
       "card_name": "Sistermon Ciel (Awakened)",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-084.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_084.rs",
-      "test_count": 6,
+      "test_count": 12,
       "patterns": [
         "ALT-DIGIVOLVE",
         "CANNOT-SUSPEND",
         "TRASH-RESIDENT-OBSERVER",
         "SOURCE-TO-SECURITY"
       ],
-      "notes": "Production YAML and focused tests cover printed metadata, Sistermon Ciel cost-1 digivolution path, and On Play/When Digivolving selection of an opponent Digimon or Tamer to receive CannotSuspend until opponent turn end. The Trash All Turns observer that digivolves one of your Sistermon Ciels into this card from trash and the End of All Turns top-stack-card-to-security movement are omitted pending reusable trash-resident observer and source-stack-to-security support."
+      "notes": "Completion run: deferred [Trash][All Turns] trash-resident observer (Sistermon Ciel digivolves into this from trash, on_ally_played) and [End of All Turns] top-stacked-card-to-security movement confirmed faithful in shipping YAML (PUPPETS-G026/G027 closed Track E). Review fix: security placement face corrected up->down (DCGO AddSecurityCard faceUp:false; CR 3-7-4). Tests 6->12."
     },
     "BT22-088": {
       "card_name": "Arisa Kinosaki",
@@ -3776,21 +3777,21 @@
     },
     "BT23-077": {
       "card_name": "Sistermon Ciel",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-077.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_077.rs",
-      "test_count": 6,
+      "test_count": 10,
       "patterns": [
         "KEYWORD",
         "ON-PLAY-DELETE",
         "PLAY-COST-FILTER",
         "ON-SUSPEND-OBSERVER"
       ],
-      "notes": "Production YAML and focused tests cover printed metadata, face-up Blocker, and mandatory On Play selection/deletion of an opponent Digimon with play cost 4 or less. The All Turns self-suspend De-Digivolve 1 observer is omitted pending PUPPETS-G029 self-scoped OnSuspend event predicates."
+      "notes": "Completion run: deferred [All Turns] self-suspend De-Digivolve 1 observer confirmed faithful in shipping YAML (when:on_suspend gated by event_permanent_is_source; PUPPETS-G029 closed 2026-05-08). De-Digivolve stop_at_level 3. Tests 6->10."
     },
     "BT5-033": {
       "card_name": "Cutemon",
@@ -3864,14 +3865,14 @@
     },
     "EX4-074": {
       "card_name": "ShineGreymon: Ruin Mode",
-      "validated_date": "2026-05-17",
-      "report": "implement-rust-dsl-archetype/phase-2-track-i-puppets-pilot-completion",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex4/EX4-074.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs",
-      "test_count": 5,
+      "test_count": 6,
       "patterns": [
         "ALT-DIGIVOLVE",
         "MASS-DP-REDUCTION",
@@ -3879,14 +3880,14 @@
         "RECOVERY",
         "HATCH"
       ],
-      "notes": "Track I 2026-05-17: End of Attack self-delete + opponent-delete + Recovery +1 + Tamer-gated hatch chain authored and behaviorally verified (PUPPETS-G031 RESOLVED \u2014 existing primitives suffice, moved to qa/resolved-gaps.md). 2/5 tests pass: metadata + alt-paths and the End of Attack chain. 3 tests remain ignored on the When Digivolving/On Deletion opponent-wide -5000 DP clause pending Expiry::EndOfOpponentsNextTurn modifier-expiry support (separate substrate gap)."
+      "notes": "Completion run + gap closure: the [When Digivolving][On Deletion] opponent-wide -5000 DP clause is now implemented. G-DSL-MODIFIER-PENDING-SKIPS closed by modifiers::pending_skips_for_install (EffectContext::add_modifier auto-computes pending_skips from the current turn at install time), so end_of_opponents_next_turn is faithful for both timings incl. mid-opponent-turn [On Deletion] installs. End-of-Attack chain also implemented. All 6 tests pass, 0 ignored."
     },
     "EX6-011": {
       "card_name": "RagnaLoardmon",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex6/EX6-011.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex6/ex6_011.rs",
@@ -3900,7 +3901,7 @@
         "EFFECT-IMMUNITY",
         "DNA-ORIGIN"
       ],
-      "notes": "Production YAML and focused tests cover metadata, Ace Overflow -5, red Lv6 digivolve path, red+black Lv6 DNA route, Raid/Reboot, On Play/When Digivolving top-security trash and opponent-effect immunity, and the DNA-origin De-Digivolve-all plus delete-one tail. The Hand Counter Blast DNA Digivolve activation is omitted pending PUPPETS-G032 / G-COUNTER-BLAST-DNA-ACTIVATION."
+      "notes": "Completion run: deferred [Hand][Counter] Blast DNA Digivolve (Durandamon + BryweLudramon) activation confirmed faithful in shipping YAML (PUPPETS-G032 / G-COUNTER-BLAST-DNA-ACTIVATION closed Track D 2026-05-15). All alt-paths, Raid/Reboot, On Play/When Digivolving + DNA-origin tail covered. 8 tests."
     },
     "EX8-030": {
       "card_name": "Tapirmon",
@@ -3941,21 +3942,21 @@
     },
     "P-156": {
       "card_name": "Future Potential!",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-11",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/p/P-156.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_156.rs",
-      "test_count": 10,
+      "test_count": 14,
       "patterns": [
         "OPTION-USE-REQUIREMENT",
         "BINDING-COLOR-MATCH",
         "HAND-TRASH-FREE-PLAY",
         "SECURITY-ADD-THIS-OPTION-TO-HAND"
       ],
-      "notes": "Production YAML and focused tests cover metadata, Tamer-based option color bypass, Main chosen-Tamer binding into hand/trash Digimon free-play filtered by bound Tamer color and play cost <=3, and the mandatory Security add-this-option-to-hand tail. The Security optional Tamer play before the mandatory tail remains omitted pending PUPPETS-G017."
+      "notes": "Completion run: [Security] optional Tamer free-play before the mandatory add-this-option-to-hand tail implemented (PUPPETS-G017 engine mechanism closed; card-shaped adoption). Security clause is mandatory overall with an inner Play/Decline branch for the optional Tamer play. Color bypass + [Main] chosen-Tamer-color free-play confirmed. 14 tests, 0 ignored."
     },
     "BT6-082": {
       "card_name": "Sistermon Blanc",

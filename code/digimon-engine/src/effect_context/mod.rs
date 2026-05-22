@@ -4022,9 +4022,20 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return;
         }
+        // `*NextTurn` expiries installed during the about-to-end turn must
+        // skip that turn-end (otherwise they expire one turn early). The
+        // engine knows the current turn at install time, so compute it
+        // here — every `add_modifier` / `add_dp_modifier` caller (DSL and
+        // hand-written) gets correct "until end of next turn" semantics.
+        let pending_skips = crate::modifiers::pending_skips_for_install(
+            expiry,
+            self.player,
+            self.game.turn_player(),
+        );
         self.game.modifiers.add(
             target,
-            ModifierEntry::simple(modifier, value, expiry, self.player),
+            ModifierEntry::simple(modifier, value, expiry, self.player)
+                .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -4644,6 +4655,39 @@ impl<'a> EffectContext<'a> {
             let card = self.game.player_mut(player).trash.remove(pos);
             let owner = card.owner;
             self.game.player_mut(owner).deck.insert(0, card);
+            moved.push(handle);
+        }
+        moved
+    }
+
+    /// Move a SELECTED LIST of cards out of `player`'s trash to the TOP of
+    /// the deck, in the given order (the first handle ends up deeper, the
+    /// last handle ends up on top). The deck-top is the `Vec` end (the
+    /// position drawn from first), so each moved card is appended via
+    /// `deck.push(card)`. Exact mirror of `return_trash_cards_to_deck_bottom`
+    /// except for the insertion end. Returns the handles actually moved (a
+    /// handle not found in the trash is silently skipped).
+    /// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+    pub fn return_trash_cards_to_deck_top(
+        &mut self,
+        player: PlayerId,
+        cards: &[CardHandle],
+    ) -> Vec<CardHandle> {
+        let mut moved = Vec::with_capacity(cards.len());
+        for &handle in cards {
+            let Some(pos) = self
+                .game
+                .player(player)
+                .trash
+                .iter()
+                .position(|c| c.handle() == handle)
+            else {
+                continue;
+            };
+            let card = self.game.player_mut(player).trash.remove(pos);
+            let owner = card.owner;
+            // deck top = Vec end (drawn first); push appends there.
+            self.game.player_mut(owner).deck.push(card);
             moved.push(handle);
         }
         moved

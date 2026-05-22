@@ -370,34 +370,45 @@ Format per entry:
 - Gap kind: hybrid. Some engine primitives exist (`battle:`, static keyword grants, `ModifierType::VortexCanAttackPlayer`), but the remaining Zephagamon clauses need DSL result bindings, formulas, conditional aura lowering, and card-specific faithful branch wiring.
 - First reported: 2026-05-03 (Zephagamon Battle Engine Prep Task 4)
 
-## BT22-098 / P-229 — event-gated Delay activation windows
+## BT22-098 / P-229 — event-gated Delay activation windows — RESOLVED 2026-05-21
 - Effect text: BT22-098: "[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> ... 1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3." P-229: "[Your Turn] When any of your [Mirai Kinosaki]s are played, <Delay> ... 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
-- Status: partially resolved 2026-05-02 for the BT22-098 "when Arisa suspends" slice. `kind: delay` now accepts body-level `active_when`, preserves `event_card_name_contains`, and lowers `trigger: on_suspend` to `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` with the condition evaluated when the event fires.
-- Remaining missing DSL verb / step kind / predicate: `on_ally_played` for P-229 is still virtual/skipped by the timing map, and the process body still depends on faithful `effect_initiated_digivolve` support for hand-zone targets, Puppet/LIBERATOR trait filters, and cost reduction.
-- Lowers to engine API: `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` plus an event predicate on the delayed Option's `DelayEffect`, preserving the rule that Delay effects cannot activate the turn the option was placed.
-- Suggested DSL syntax:
+- Status: **closed** 2026-05-21 (gap id `PUPPETS-G004`). The BT22-098 `on_suspend`
+  slice closed 2026-05-02; the P-229 `on_ally_played` slice closed 2026-05-21.
+- Closed via (two halves):
+  - DSL: `code/digimon-engine/src/dsl_cards/lower_delay.rs` now maps
+    `CompiledTiming::OnAllyPlayed` → `DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed)`
+    alongside the existing `on_suspend` / `on_unsuspend` arm.
+  - Engine: `code/digimon-engine/src/effect_queue.rs` `enqueue_triggered` now fans
+    `TriggerSource::EnteredField` dispatches out to
+    `enqueue_event_gated_delayed_options` (previously only `EventObserved` /
+    `AttackTargetChanged` reached it).
+- Working DSL syntax (P-229 production YAML, `cards/p/P-229.yaml`):
   ```yaml
   - kind: delay
-    trigger: on_suspend
-    active_when:
-      event_card_name_contains: "Arisa Kinosaki"
-    process:
-      - effect_initiated_digivolve:
-          target: { trait: Puppet }
-          into: { trait_all: [Puppet, LIBERATOR], zone: hand }
-          cost_delta: -3
-
-  - kind: delay
     trigger: on_ally_played
-    condition: { event_card_name_is: "Mirai Kinosaki" }
+    active_when:
+      your_turn: true
+      event_target_owner: you
+      event_card_name_contains: "Mirai Kinosaki"
     process:
-      - effect_digivolve:
-          from: hand
-          target_filter: { trait_has: LIBERATOR, level_lte: 6 }
-          cost_reduction: 3
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter: { all_of: [ { kind: digimon }, { zone: [battle_area] } ] }
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: false
+          filter:
+            all_of: [ { kind: digimon }, { trait_has: LIBERATOR }, { level_lte: 6 } ]
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false
   ```
-- Gap kind: hybrid (BT22-098 event trigger/predicate lowering is covered; remaining process vocabulary/lowering and P-229 timing support stay open).
-- First reported: 2026-04-28 (Puppets archetype assessment)
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_229` — 13 tests pass, 0 ignored.
+- First reported: 2026-04-28 (Puppets archetype assessment); resolved 2026-05-21.
 
 ## EX9-032 / EX7-027 / BT22-036 — replacement cause predicate and `active_when` lowering
 - Effect text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
@@ -2405,6 +2416,23 @@ for all install timings.
 Coverage:
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- end_of_opponents_next_turn_with_pending_skips`
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- end_of_opponents_next_turn_without_pending_skips`
+
+### G-DSL-MODIFIER-PENDING-SKIPS — DSL `add_modifier` step cannot set `pending_skips` — RESOLVED 2026-05-21
+
+- **Discovered in:** Puppets `/batch-implement-cards-rust-dsl` completion run, EX4-074 ShineGreymon: Ruin Mode (2026-05-21).
+- **Card(s):** EX4-074 — `[When Digivolving][On Deletion] Until the end of your opponent's next turn, all of your opponent's Digimon get -5000 DP.`
+- **Was missing:** the DSL `add_modifier` / `add_dp_modifier` step had no way to set `ModifierEntry.pending_skips`; its lowering routed through `ModifierEntry::simple` (hard-coded `pending_skips: 0`), so a DSL-installed `expiry: end_of_opponents_next_turn` modifier aliased to `EndOfOpponentsTurn` semantics and expired one turn early when installed mid-opponent-turn.
+- **Resolution:** rather than a DSL field (the correct `pending_skips` is runtime turn-state, not authoring-time data), the engine now auto-computes it. `modifiers::pending_skips_for_install(expiry, source_player, turn_player)` returns `1` exactly for the `*NextTurn` install that would otherwise expire one turn early; `EffectContext::add_modifier` calls it and threads the result through `ModifierEntry::with_pending_skips`. Every `add_modifier` / `add_dp_modifier` caller (DSL and hand-written) now gets faithful "until end of next turn" semantics for free — no new DSL vocab needed.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --lib modifiers::tests::pending_skips`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_074` (6 passed, 0 ignored — the 3 formerly-deferred −5000 DP tests now run).
+
+### G-ZONE-SELECTED-TRASH-TO-DECK-TOP — selected trash card → deck top — RESOLVED 2026-05-21
+
+- **Discovered in:** Puppets `/batch-implement-cards-rust-dsl` completion run, LM-029 Yellow Scramble (shared by the LM-027 / LM-030 Scramble Delay clauses).
+- **Card(s):** LM-029 — `[Start of Your Turn] <Delay> ... Return 1 yellow Digimon card from your trash to the top of the deck.`
+- **Was missing:** no DSL verb moved a *selected* trash card to the *top* of the deck. The only trash→deck verbs (`return_all_trash_to_deck_bottom`, `return_trash_list_to_deck_bottom`) are bottom-only.
+- **Resolution:** added the `return_trash_list_to_deck_top` DSL verb (exact mirror of `return_trash_list_to_deck_bottom` — `StepSpec::ReturnTrashListToDeckTop` / `CompiledStep::ReturnTrashListToDeckTop`, fields `of` + `cards`) lowering to the new `EffectContext::return_trash_cards_to_deck_top` engine method (mirror of `return_trash_cards_to_deck_bottom` but `deck.push` to the `Vec` end = deck top = drawn first).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- lm_029` (16 passed, 0 ignored — LM-029's `[Start of Your Turn]` Delay clause fully implemented).
+- **Note:** LM-027 / LM-030 Scramble Delay clauses share this gap and are now unblockable (not implemented here — out of Puppets scope).
 
 ### Phase 4l — Track C overlay propagation (full set)
 

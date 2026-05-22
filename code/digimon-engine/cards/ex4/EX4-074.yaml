@@ -16,19 +16,21 @@ alt_paths:
     from: { name_contains: "ShineGreymon" }
     cost: 4
 
-# BLOCKED: the printed [When Digivolving] [On Deletion] mass DP reduction is
-# omitted rather than approximated:
+# ─── Clause 1 — [When Digivolving] [On Deletion] mass opponent DP debuff ─────
 #
-# "Until the end of your opponent's next turn, all of your opponent's Digimon
-# get -5000DP."
+# Printed text:
+#   "[When Digivolving] [On Deletion] Until the end of your opponent's next
+#    turn, all of your opponent's Digimon get -5000DP."
 #
-# The DSL can scan all opponent Digimon with `for_each`, but modifier expiry
-# currently only supports `end_of_opponents_turn`, not the printed next-turn
-# duration. That would expire too early when this card is deleted during the
-# opponent's turn. Existing reusable blocker:
-# docs/RUST_ENGINE_GAPS.md "Condition-gated modifier entries + new Expiry
-# variants" (`Expiry::EndOfOpponentsNextTurn` / target-anchored next-turn
-# modifier expiry).
+# `expiry: end_of_opponents_next_turn` is faithful for BOTH timings: the engine
+# auto-computes `ModifierEntry.pending_skips` at install time
+# (`modifiers::pending_skips_for_install`, consumed by `EffectContext::
+# add_modifier`). An `[On Deletion]` that fires during the opponent's turn
+# installs with `pending_skips: 1`, so it skips that turn-end and expires at
+# the end of the opponent's NEXT turn; a `[When Digivolving]` install on the
+# controller's own turn installs with `pending_skips: 0` and expires at the
+# first (= next) opponent turn-end. Tamers carry no DP and are excluded by the
+# `kind: digimon` target filter.
 
 # ─── Clause 2 — [End of Attack] self-delete + opp delete + Recovery + hatch ──
 #
@@ -48,6 +50,15 @@ alt_paths:
 # still resolves. `optional: true` on the select step lets it pass cleanly
 # when no targets exist while still requiring a choice when targets do.
 effects:
+  - when: [when_digivolving, on_deletion]
+    summary: "[When Digivolving][On Deletion] All opponent Digimon -5000 DP until end of opponent's next turn"
+    process:
+      - add_modifier:
+          target: { of: opponent, kind: digimon }
+          modifier: ChangeDp
+          value: -5000
+          expiry: end_of_opponents_next_turn
+
   - when: end_of_attack
     summary: "[End of Attack] Self-delete, delete 1 opp Digimon, Recovery +1, hatch if Tamer in play"
     process:

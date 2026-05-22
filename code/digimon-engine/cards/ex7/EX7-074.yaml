@@ -1,7 +1,8 @@
 card: EX7-074
 name: "Vortex Resonance"
 kind: option
-color: [green, blue]
+# cards.json card_colors: [3, 2] → Green + Yellow.
+color: [green, yellow]
 cost: 3
 traits: [LIBERATOR]
 use_requirement:
