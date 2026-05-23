@@ -2180,6 +2180,35 @@ impl<'a> EffectContext<'a> {
         self.game.delete_permanent_with_effects(target);
     }
 
+    pub fn trash_breeding_permanent(&mut self, target: PermanentHandle) -> bool {
+        if target.index != crate::action::space::BREEDING_TARGET as u8 {
+            return false;
+        }
+        if !self.can_affect_permanent(target) {
+            return false;
+        }
+
+        let Some(perm) = self.game.player_mut(target.player).breeding_area.take() else {
+            return false;
+        };
+
+        if !perm.card_sources.is_empty() && !perm.top_card().is_token {
+            for card in perm.card_sources {
+                let owner = card.owner;
+                self.game.player_mut(owner).trash.push(card);
+            }
+        }
+        for card in perm.linked_cards {
+            let owner = card.owner;
+            self.game.player_mut(owner).trash.push(card);
+        }
+
+        self.game.clear_permanent_full(target);
+        self.game.modifiers.expire_player_on_permanent_leave(target);
+        self.game.mark_until_condition_dirty();
+        true
+    }
+
     /// Pop up to `amount` cards off `target`'s digivolution stack,
     /// trashing each popped source into the target owner's trash.
     ///
@@ -2841,6 +2870,51 @@ impl<'a> EffectContext<'a> {
         self.play_from_hand_with_cost(player, hand_index, crate::enums::CostDelta::Free)
     }
 
+    pub fn play_from_hand_free_suppress_on_play(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        suppress_on_play: bool,
+    ) -> Option<PermanentHandle> {
+        match self
+            .game
+            .play_from_hand_with_cost_result_from_origin_suppress(
+                player,
+                hand_index,
+                crate::enums::CostDelta::Free,
+                PlaySource::ByEffect,
+                false,
+                PendingWouldPlayOrigin::Hand,
+                suppress_on_play,
+            ) {
+            PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
+                player,
+                index: field_index as u8,
+            }),
+            PlayFromHandCostResult::Pending | PlayFromHandCostResult::Failed => None,
+        }
+    }
+
+    pub fn play_from_trash_with_cost_suppress_on_play(
+        &mut self,
+        player: PlayerId,
+        trash_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        suppress_on_play: bool,
+    ) -> Option<PermanentHandle> {
+        let field_index = self.game.play_from_trash_with_cost_suppress(
+            player,
+            trash_index,
+            cost_delta,
+            PlaySource::ByEffect,
+            suppress_on_play,
+        )?;
+        Some(PermanentHandle {
+            player,
+            index: field_index as u8,
+        })
+    }
+
     pub fn play_from_hand_free_with_provenance(
         &mut self,
         player: PlayerId,
@@ -3030,6 +3104,25 @@ impl<'a> EffectContext<'a> {
         source_index: usize,
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
+        self.play_from_materials_suppress_on_play(target, source_index, cost_delta, false)
+    }
+
+    pub fn play_from_materials_suppress_on_play(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        suppress_on_play: bool,
+    ) -> Option<PermanentHandle> {
+        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            return self.play_from_breeding_materials_suppress_on_play(
+                target,
+                source_index,
+                cost_delta,
+                suppress_on_play,
+            );
+        }
+
         // Validate target permanent + source_index up-front using immutable
         // borrows.
         let player = target.player;
@@ -3053,17 +3146,20 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.game.play_from_hand_with_cost_result_from_origin(
-            player,
-            hand_index,
-            cost_delta,
-            PlaySource::ByEffect,
-            false,
-            PendingWouldPlayOrigin::Source {
-                permanent: target,
-                source_index,
-            },
-        ) {
+        match self
+            .game
+            .play_from_hand_with_cost_result_from_origin_suppress(
+                player,
+                hand_index,
+                cost_delta,
+                PlaySource::ByEffect,
+                false,
+                PendingWouldPlayOrigin::Source {
+                    permanent: target,
+                    source_index,
+                },
+                suppress_on_play,
+            ) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,
                 index: field_index as u8,
@@ -3083,6 +3179,71 @@ impl<'a> EffectContext<'a> {
                 // hand was mutated by the failed play attempt; the
                 // battle-area entry was left untouched.
                 self.game.player_mut(player).battle_area[target.index as usize]
+                    .card_sources
+                    .insert(source_index, card);
+                None
+            }
+        }
+    }
+
+    fn play_from_breeding_materials_suppress_on_play(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        suppress_on_play: bool,
+    ) -> Option<PermanentHandle> {
+        let player = target.player;
+        {
+            let breeding = self.game.player(player).breeding_area.as_ref()?;
+            if source_index >= breeding.card_sources.len()
+                || source_index + 1 >= breeding.card_sources.len()
+            {
+                return None;
+            }
+        }
+
+        let source = self
+            .game
+            .player_mut(player)
+            .breeding_area
+            .as_mut()?
+            .card_sources
+            .remove(source_index);
+
+        self.game.player_mut(player).hand.push(source);
+        let hand_index = self.game.player(player).hand.len() - 1;
+
+        match self
+            .game
+            .play_from_hand_with_cost_result_from_origin_suppress(
+                player,
+                hand_index,
+                cost_delta,
+                PlaySource::ByEffect,
+                false,
+                PendingWouldPlayOrigin::Source {
+                    permanent: target,
+                    source_index,
+                },
+                suppress_on_play,
+            ) {
+            PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
+                player,
+                index: field_index as u8,
+            }),
+            PlayFromHandCostResult::Pending => None,
+            PlayFromHandCostResult::Failed => {
+                let card = self
+                    .game
+                    .player_mut(player)
+                    .hand
+                    .pop()
+                    .expect("invariant: card was just pushed to hand");
+                self.game
+                    .player_mut(player)
+                    .breeding_area
+                    .as_mut()?
                     .card_sources
                     .insert(source_index, card);
                 None
@@ -3712,11 +3873,7 @@ impl<'a> EffectContext<'a> {
     ///
     /// Returns `true` when the source handle was found and moved; `false` if
     /// the permanent slot is gone or the card is not in its stack.
-    pub fn return_card_source_to_hand(
-        &mut self,
-        perm: PermanentHandle,
-        card: CardHandle,
-    ) -> bool {
+    pub fn return_card_source_to_hand(&mut self, perm: PermanentHandle, card: CardHandle) -> bool {
         let removed = {
             let permanent = match self
                 .game
@@ -3746,10 +3903,7 @@ impl<'a> EffectContext<'a> {
     /// keeping parity with `play_selected_sources_without_cost`. Each selected
     /// source ref is returned to its owner's hand. Returns `true` if every
     /// ref was successfully moved.
-    pub fn return_selected_sources_to_hand(
-        &mut self,
-        selected: Vec<SourceSelectionRef>,
-    ) -> bool {
+    pub fn return_selected_sources_to_hand(&mut self, selected: Vec<SourceSelectionRef>) -> bool {
         let mut all_ok = true;
         for source_ref in selected {
             if !self.return_card_source_to_hand(source_ref.permanent, source_ref.card) {

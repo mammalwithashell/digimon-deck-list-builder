@@ -8,11 +8,47 @@ dp: 5000
 traits: [Puppet, X Antibody, LIBERATOR]
 attribute: Data
 
-effects: []
+effects:
+  - when: on_play
+    summary: "[On Play] Place 1 Royal Knight from hand under fielded King Drasil_7D6 to Draw 1"
+    condition:
+      all_of:
+        - count_gte:
+            filter:
+              owner: you
+              zone: [battle_area]
+              kind: digimon
+              name_is: "King Drasil_7D6"
+            n: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: digimon
+              trait_has: "Royal Knight"
+            n: 1
+    process:
+      - select_own_permanent:
+          bind_as: king_drasil
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "King Drasil_7D6"
+          prompt: "Choose your King Drasil_7D6"
+      - select_hand:
+          of: you
+          bind_as: royal_knight
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Royal Knight"
+          prompt: "Choose a Royal Knight card to place under King Drasil_7D6"
+      - place_as_bottom_source:
+          source: royal_knight
+          target: king_drasil
+      - draw: { of: you, count: 1 }
 
 # Stubbed:
-# - [On Play] place a Royal Knight from hand as bottom source of any fielded
-#   King Drasil_7D6 to draw 1. Needs filtered field target plus hand-to-source.
 # - [On Deletion] at 1 or fewer security, play Omnimon (X Antibody) from hand
 #   or under fielded King Drasil_7D6, then place this card under it. Needs union
 #   hand/source play plus binding the played Digimon for source placement.

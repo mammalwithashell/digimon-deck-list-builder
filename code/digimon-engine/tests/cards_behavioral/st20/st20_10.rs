@@ -486,7 +486,7 @@ fn st20_10_warp_into_wargreymon_blocked_when_neither_disjunct_satisfied() {
 
     let agumon = runner.place_on_field(0, "ST20-10", Some(0));
     runner.place_on_field(1, "SMALL-DP", Some(0)); // < 10000 DP
-    // Only 2 distinct Tamer colors — below the 3-colour threshold.
+                                                   // Only 2 distinct Tamer colors — below the 3-colour threshold.
     runner.place_on_field(0, "TAMER-RED", None);
     runner.place_on_field(0, "TAMER-BLUE", None);
 

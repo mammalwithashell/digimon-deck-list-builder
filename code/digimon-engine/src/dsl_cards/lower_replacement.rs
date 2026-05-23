@@ -418,12 +418,16 @@ fn required_selection_step_has_candidate(
                 return count >= *min as usize;
             }
             match zone {
-                CompiledZone::Hand => {
-                    !ctx.game.player(resolve_player_ref(ctx, *of)).hand.is_empty()
-                }
-                CompiledZone::Trash => {
-                    !ctx.game.player(resolve_player_ref(ctx, *of)).trash.is_empty()
-                }
+                CompiledZone::Hand => !ctx
+                    .game
+                    .player(resolve_player_ref(ctx, *of))
+                    .hand
+                    .is_empty(),
+                CompiledZone::Trash => !ctx
+                    .game
+                    .player(resolve_player_ref(ctx, *of))
+                    .trash
+                    .is_empty(),
                 _ => true,
             }
         }
@@ -933,7 +937,10 @@ impl DelayHandDnaDigivolveFlow {
         if !is_binding_ref_named(from_hand, result_bind) {
             return None;
         }
-        if !matches!(cost, CompiledCostDelta::Free | CompiledCostDelta::Literal(0)) {
+        if !matches!(
+            cost,
+            CompiledCostDelta::Free | CompiledCostDelta::Literal(0)
+        ) {
             return None;
         }
         if !*ignore_requirements || !*result_optional || !*partner_optional {

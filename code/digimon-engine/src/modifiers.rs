@@ -950,6 +950,70 @@ impl ModifierRegistry {
         self.granted_triggered.remove(&target);
     }
 
+    /// Re-key permanent-scoped modifier state after removing one battle-area
+    /// permanent. Battle-area handles are index based, so every later
+    /// permanent for the same player shifts down by one.
+    pub fn shift_after_battle_area_remove(&mut self, player: PlayerId, removed_index: u8) {
+        fn shifted(
+            handle: PermanentHandle,
+            player: PlayerId,
+            removed_index: u8,
+        ) -> Option<PermanentHandle> {
+            if handle.player != player {
+                return Some(handle);
+            }
+            if handle.index == removed_index {
+                return None;
+            }
+            if handle.index > removed_index {
+                return Some(PermanentHandle {
+                    player: handle.player,
+                    index: handle.index.saturating_sub(1),
+                });
+            }
+            Some(handle)
+        }
+
+        fn remap_entries<T>(
+            map: &mut HashMap<PermanentHandle, Vec<T>>,
+            player: PlayerId,
+            removed_index: u8,
+        ) {
+            let old = std::mem::take(map);
+            for (handle, entries) in old {
+                if let Some(new_handle) = shifted(handle, player, removed_index) {
+                    map.entry(new_handle).or_default().extend(entries);
+                }
+            }
+        }
+
+        remap_entries(&mut self.permanent_modifiers, player, removed_index);
+        remap_entries(&mut self.permanent_keywords, player, removed_index);
+        remap_entries(&mut self.granted_triggered, player, removed_index);
+
+        for entries in self.permanent_modifiers.values_mut() {
+            for entry in entries {
+                entry.source_permanent = entry
+                    .source_permanent
+                    .and_then(|h| shifted(h, player, removed_index));
+            }
+        }
+        for entries in self.permanent_keywords.values_mut() {
+            for entry in entries {
+                entry.source_permanent = entry
+                    .source_permanent
+                    .and_then(|h| shifted(h, player, removed_index));
+            }
+        }
+        for entries in self.player_modifiers.values_mut() {
+            for entry in entries {
+                entry.source_permanent = entry
+                    .source_permanent
+                    .and_then(|h| shifted(h, player, removed_index));
+            }
+        }
+    }
+
     /// Track H §3 — install a granted triggered effect on `carrier`.
     /// The body fires when the carrier's matching `timing` drains.
     pub fn add_granted_triggered(

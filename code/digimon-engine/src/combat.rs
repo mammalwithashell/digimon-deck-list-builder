@@ -3434,14 +3434,19 @@ impl Game {
             if !sources.first().is_some_and(|source| source.is_token) {
                 self.apply_ace_overflow_for_sources(&sources);
             }
+            self.clear_permanent_full(handle);
+            self.modifiers.expire_player_on_permanent_leave(handle);
             self.player_mut(handle.player)
                 .delete_permanent(handle.index as usize);
+            self.modifiers
+                .shift_after_battle_area_remove(handle.player, handle.index);
+        } else {
+            // Clear any modifiers on the handle (by index), even if the permanent
+            // was already gone — modifiers live in a separate registry.
+            self.clear_permanent_full(handle);
+            // Phase 6: expire any player-scoped modifiers sourced from this permanent.
+            self.modifiers.expire_player_on_permanent_leave(handle);
         }
-        // Clear any modifiers on the handle (by index), even if the permanent
-        // was already gone — modifiers live in a separate registry.
-        self.clear_permanent_full(handle);
-        // Phase 6: expire any player-scoped modifiers sourced from this permanent.
-        self.modifiers.expire_player_on_permanent_leave(handle);
         self.mark_until_condition_dirty();
 
         // Phase D Task 8 — drain post-deletion replays (e.g. printed

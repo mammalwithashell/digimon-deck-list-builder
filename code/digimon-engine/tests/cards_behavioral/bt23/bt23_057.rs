@@ -10,6 +10,6 @@ fn bt23_057_loads_with_gap_stub() {
         .start();
 }
 
-#[ignore = "pending: G-MULTI-TRASH-TO-DECK-PLACEMENT — trash-return cost reduction and dynamic play-cost delete. Hinukamuy token now registered (token_registry.rs, S2.3); the production BT23-057 card body remains unauthored (Track J PR 3)."]
+#[ignore = "pending: G-MULTI-TRASH-TO-DECK-PLACEMENT plus dynamic play-cost delete — trash-return cost reduction remains open; Hinukamuy token is registered; tracker: qa/archetype-qa/dsl/royal-knights-2026-05-03-dsl-engine-gaps.md"]
 #[test]
 fn bt23_057_trash_return_cost_token_and_dynamic_delete() {}

@@ -756,11 +756,7 @@ fn ex7_074_digivolve_substep_only_offers_digimon_hand_cards() {
     // first action / passing. No Digimon in hand → digivolve cannot complete.
     while runner.pending_selection().is_some() {
         let view = runner.pending_selection_view().unwrap();
-        let action = view
-            .valid_action_ids
-            .first()
-            .copied()
-            .unwrap_or(PASS);
+        let action = view.valid_action_ids.first().copied().unwrap_or(PASS);
         let _ = runner.execute_action(view.selecting_player, action);
     }
 
@@ -811,11 +807,7 @@ fn ex7_074_digivolve_substep_skipped_when_no_eligible_digimon() {
     // Resolve the remainder of the flow without panic.
     while runner.pending_selection().is_some() {
         let view = runner.pending_selection_view().unwrap();
-        let action = view
-            .valid_action_ids
-            .first()
-            .copied()
-            .unwrap_or(PASS);
+        let action = view.valid_action_ids.first().copied().unwrap_or(PASS);
         let _ = runner.execute_action(view.selecting_player, action);
     }
 
@@ -883,7 +875,11 @@ fn ex7_074_security_installs_hand_selection_when_only_hand_eligible() {
         .start();
 
     let attacker_handle = runner.place_on_field(0, "EX7074-ATK-HAND", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: EX7-074 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: EX7-074 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
 
@@ -992,8 +988,16 @@ fn ex7_074_security_no_op_when_no_liberator_available() {
 
     let attacker_handle = runner.place_on_field(0, "EX7074-ATK-EMPTY", Some(0));
     assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
-    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
-    assert_eq!(runner.security_count(1), 1, "precondition: EX7-074 in security");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "precondition: defender trash empty"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: EX7-074 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -1005,7 +1009,11 @@ fn ex7_074_security_no_op_when_no_liberator_available() {
         "no LIBERATOR in hand or trash → nothing played"
     );
     // The mandatory tail still ran: EX7-074 left security and went to hand.
-    assert_eq!(runner.security_count(1), 0, "EX7-074 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "EX7-074 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,
@@ -1158,7 +1166,7 @@ fn ex7_074_security_filters_liberator_by_cost_lte_4() {
         .from_dsl_yaml(EX7_074_YAML)
         .expect("EX7-074 YAML must parse and compile")
         .add_card(attacker.clone())
-        .add_card(make_liberator_low_cost("LIB-LOW"))   // cost 3 — eligible
+        .add_card(make_liberator_low_cost("LIB-LOW")) // cost 3 — eligible
         .add_card(make_liberator_high_cost("LIB-HIGH")) // cost 7 — excluded
         .add_card(make_filler("FILL"))
         .hand(1, &["LIB-LOW", "LIB-HIGH"])
@@ -1217,7 +1225,11 @@ fn ex7_074_security_adds_self_to_hand_after_resolving() {
         .start();
 
     let attacker_handle = runner.place_on_field(0, "EX7074-ATK-SELFHAND", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: EX7-074 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: EX7-074 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -1271,7 +1283,9 @@ fn ex7_074_security_decline_play_still_adds_self_to_hand() {
     runner
         .execute_action(view.selecting_player, PASS)
         .expect("decline the optional security play");
-    runner.auto_resolve().expect("security resolves after decline");
+    runner
+        .auto_resolve()
+        .expect("security resolves after decline");
 
     // Nothing played — LIB-LOW remains in the defender's hand.
     assert!(
@@ -1286,7 +1300,11 @@ fn ex7_074_security_decline_play_still_adds_self_to_hand() {
         "the declined LIBERATOR card must remain in the defender's hand"
     );
     // The mandatory tail still routes EX7-074 to hand.
-    assert_eq!(runner.security_count(1), 0, "EX7-074 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "EX7-074 left the security stack"
+    );
     assert!(
         runner.game.players[1]
             .hand

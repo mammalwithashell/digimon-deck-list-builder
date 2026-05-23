@@ -16,9 +16,7 @@
 //! test verifies the BT9-103 Main clause body installs both modifiers
 //! when executed against an opponent board.
 
-use digimon_dsl::compiled::{
-    CompiledClause, CompiledScope, CompiledStep, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_steps;
@@ -134,9 +132,7 @@ fn bt9_103_main_installs_modifiers_on_opponent_and_low_cost_digimon() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::MainFromHand) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainFromHand) => {
                 Some(t.process.clone())
             }
             _ => None,

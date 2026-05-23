@@ -96,7 +96,7 @@ fn bt23_058_has_optional_leave_prevention_replacement() {
 }
 
 #[test]
-#[ignore = "pending: G-SELF-ON-SUSPEND plus G-PLAY-COST-AGGREGATE — self-scoped on_suspend and lowest play-cost delete-all"]
+#[ignore = "pending: G-SELF-ON-SUSPEND plus G-PLAY-COST-AGGREGATE — self-scoped on_suspend and lowest play-cost delete-all; tracker: qa/archetype-qa/dsl/royal-knights-2026-05-03-dsl-engine-gaps.md"]
 fn bt23_058_when_this_suspends_deletes_all_opponent_lowest_play_cost_digimon() {
     panic!("requires self-only on_suspend predicate plus aggregate lowest play-cost deletion");
 }

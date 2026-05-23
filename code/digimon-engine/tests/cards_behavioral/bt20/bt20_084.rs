@@ -358,10 +358,7 @@ fn bt20_084_trash_observer_no_prompt_when_no_sistermon_ciel_on_field() {
 fn bt20_084_trash_observer_no_prompt_when_played_card_is_not_a_digimon() {
     // Condition gating (negative): `event_target_kind: digimon` gates the
     // observer — playing a Tamer must not fire the trash digivolve.
-    let mut runner = bt20_084_runner()
-        .hand(0, &["OPP-TAMER"])
-        .memory(10)
-        .start();
+    let mut runner = bt20_084_runner().hand(0, &["OPP-TAMER"]).memory(10).start();
     runner.place_on_field(0, "SISTERMON-CIEL-BASE", Some(0));
     push_to_trash(&mut runner, 0, "BT20-084");
 

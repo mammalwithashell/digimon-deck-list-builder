@@ -53,7 +53,10 @@ fn select_own_sources_is_face_down_filter_offers_only_face_down_sources() {
     {
         let perm = &mut runner.game.players[0].battle_area[carrier.index as usize];
         perm.card_sources[0].face_down = true;
-        assert!(!perm.card_sources[1].face_down, "second source stays face-up");
+        assert!(
+            !perm.card_sources[1].face_down,
+            "second source stays face-up"
+        );
         assert!(!perm.card_sources[2].face_down, "top card stays face-up");
     }
 
@@ -458,7 +461,10 @@ fn select_own_sources_face_down_and_bottom_all_of_offers_only_that_source() {
         let perm = &mut runner.game.players[0].battle_area[carrier.index as usize];
         perm.card_sources[0].face_down = true;
         perm.card_sources[1].face_down = true;
-        assert!(!perm.card_sources[2].face_down, "upper source stays face-up");
+        assert!(
+            !perm.card_sources[2].face_down,
+            "upper source stays face-up"
+        );
     }
 
     let mut face_down_arm = CompiledPredicate::default();
@@ -514,7 +520,11 @@ fn select_own_sources_face_down_and_bottom_all_of_offers_only_that_source() {
 
 /// Build a `CardData` like `make_test_card` but with the given `CardKind` so
 /// a carrier's TOP card can be a Tamer rather than the default Digimon.
-fn make_test_card_kind(card_id: &str, card_name: &str, kind: CardKind) -> digimon_engine::card_data::CardData {
+fn make_test_card_kind(
+    card_id: &str,
+    card_name: &str,
+    kind: CardKind,
+) -> digimon_engine::card_data::CardData {
     let mut d = make_test_card(card_id, card_name);
     d.card_kind = kind;
     d
@@ -528,7 +538,11 @@ fn select_own_sources_host_kind_is_tamer_offers_only_tamer_hosted_source() {
     // `host_kind_is: tamer` must offer ONLY the Tamer-hosted source.
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("TAMER-SRC", "Tamer Stash Source"))
-        .add_card(make_test_card_kind("TAMER-TOP", "Hosting Tamer", CardKind::Tamer))
+        .add_card(make_test_card_kind(
+            "TAMER-TOP",
+            "Hosting Tamer",
+            CardKind::Tamer,
+        ))
         .add_card(make_test_card("DIGI-SRC", "Digimon Stash Source"))
         .add_card(make_test_card("DIGI-TOP", "Hosting Digimon"))
         .add_card(make_test_card("EFFECT", "Effect"))
@@ -588,7 +602,11 @@ fn select_own_sources_host_kind_is_digimon_offers_only_digimon_hosted_source() {
     // source and exclude the one stashed under a Tamer.
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("TAMER-SRC", "Tamer Stash Source"))
-        .add_card(make_test_card_kind("TAMER-TOP", "Hosting Tamer", CardKind::Tamer))
+        .add_card(make_test_card_kind(
+            "TAMER-TOP",
+            "Hosting Tamer",
+            CardKind::Tamer,
+        ))
         .add_card(make_test_card("DIGI-SRC", "Digimon Stash Source"))
         .add_card(make_test_card("DIGI-TOP", "Hosting Digimon"))
         .add_card(make_test_card("EFFECT", "Effect"))
@@ -648,7 +666,11 @@ fn select_own_sources_host_kind_is_inside_all_of_combinator() {
     // already-degraded `Card` subject and unconditionally fail.
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("TAMER-SRC", "Tamer Stash Source"))
-        .add_card(make_test_card_kind("TAMER-TOP", "Hosting Tamer", CardKind::Tamer))
+        .add_card(make_test_card_kind(
+            "TAMER-TOP",
+            "Hosting Tamer",
+            CardKind::Tamer,
+        ))
         .add_card(make_test_card("DIGI-SRC", "Digimon Stash Source"))
         .add_card(make_test_card("DIGI-TOP", "Hosting Digimon"))
         .add_card(make_test_card("EFFECT", "Effect"))

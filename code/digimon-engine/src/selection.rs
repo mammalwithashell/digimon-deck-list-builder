@@ -75,6 +75,11 @@ pub enum UnionZoneOrigin {
     Hand,
     /// The card was picked from the player's trash.
     Trash,
+    /// The card was picked from a carrier's digivolution sources.
+    Material {
+        carrier: PermanentHandle,
+        source_index: u8,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -164,7 +169,10 @@ pub enum SelectionKind {
     /// Pick opponent permanents whose total printed play cost is capped by a
     /// remaining budget. Play-cost analog of `DpBudget`.
     /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
-    PlayCostBudget { remaining_play_cost: i32, picked: u8 },
+    PlayCostBudget {
+        remaining_play_cost: i32,
+        picked: u8,
+    },
     /// Pick the selecting player's breeding-area permanent.
     BreedingPermanent,
 }

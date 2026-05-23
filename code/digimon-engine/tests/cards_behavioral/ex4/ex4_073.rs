@@ -91,10 +91,7 @@ fn ex4_073_has_two_triggered_clauses_authored() {
     let has_when_attacking = triggered
         .iter()
         .any(|t| t.when.contains(&CompiledTiming::WhenAttacking));
-    assert!(
-        has_when_attacking,
-        "clause C must fire on WhenAttacking"
-    );
+    assert!(has_when_attacking, "clause C must fire on WhenAttacking");
 }
 
 /// The single authored triggered clause fires on WhenDigivolving and is
@@ -200,7 +197,12 @@ fn ex4_073_clause_b_no_fire_when_opponent_has_no_digimon() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Build a Digimon test card with an explicit play cost.
-fn opp_digimon(id: &str, name: &str, level: u8, play_cost: u16) -> digimon_engine::card_data::CardData {
+fn opp_digimon(
+    id: &str,
+    name: &str,
+    level: u8,
+    play_cost: u16,
+) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, name);
     card.card_kind = digimon_engine::enums::CardKind::Digimon;
     card.level = Some(level);
@@ -289,8 +291,7 @@ fn ex4_073_clause_b_arm2_deletes_opp_digimon_within_play_cost_sum_6() {
         .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
         .collect();
     assert!(
-        !surviving.contains(&"CHEAP-A".to_string())
-            && !surviving.contains(&"CHEAP-B".to_string()),
+        !surviving.contains(&"CHEAP-A".to_string()) && !surviving.contains(&"CHEAP-B".to_string()),
         "both opponent Digimon within the play-cost budget must be deleted; \
          survivors={surviving:?}"
     );
@@ -425,7 +426,10 @@ fn source_card(id: &str, level: u8) -> digimon_engine::card_data::CardData {
 }
 
 /// Fire WhenAttacking for a permanent.
-fn fire_when_attacking(runner: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle) {
+fn fire_when_attacking(
+    runner: &mut DebugRunner,
+    handle: digimon_engine::permanent::PermanentHandle,
+) {
     runner.game.enqueue_triggered(
         EffectTiming::WhenAttacking,
         TriggerSource::Permanent(handle),
@@ -461,15 +465,11 @@ fn ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources() {
     let view = runner
         .pending_selection_view()
         .expect("clause C must install a source-select when Lv6+ sources exist");
-    let lv6_action =
-        encode_source_select(handle.index as u16, 0).expect("Lv6 source action");
-    let lv7_action =
-        encode_source_select(handle.index as u16, 2).expect("Lv7 source action");
-    let lv5_action =
-        encode_source_select(handle.index as u16, 1).expect("Lv5 source action");
+    let lv6_action = encode_source_select(handle.index as u16, 0).expect("Lv6 source action");
+    let lv7_action = encode_source_select(handle.index as u16, 2).expect("Lv7 source action");
+    let lv5_action = encode_source_select(handle.index as u16, 1).expect("Lv5 source action");
     assert!(
-        view.valid_action_ids.contains(&lv6_action)
-            && view.valid_action_ids.contains(&lv7_action),
+        view.valid_action_ids.contains(&lv6_action) && view.valid_action_ids.contains(&lv7_action),
         "both Lv6+ digivolution sources must be selectable; valid={:?}",
         view.valid_action_ids
     );
@@ -481,8 +481,12 @@ fn ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources() {
 
     // Pick both Lv6+ sources — they must move to trash.
     let trash_before = runner.trash_size(0);
-    runner.execute_action(0, lv6_action).expect("pick Lv6 source");
-    runner.execute_action(0, lv7_action).expect("pick Lv7 source");
+    runner
+        .execute_action(0, lv6_action)
+        .expect("pick Lv6 source");
+    runner
+        .execute_action(0, lv7_action)
+        .expect("pick Lv7 source");
     // Resolve the per-trash delete prompts + finish.
     while let Some(v) = runner.pending_selection_view() {
         let act = v
@@ -527,9 +531,10 @@ fn ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash() {
     let view = runner
         .pending_selection_view()
         .expect("source-select installs");
-    let src_action =
-        encode_source_select(handle.index as u16, 0).expect("Lv6 source action");
-    runner.execute_action(0, src_action).expect("pick Lv6 source");
+    let src_action = encode_source_select(handle.index as u16, 0).expect("Lv6 source action");
+    runner
+        .execute_action(0, src_action)
+        .expect("pick Lv6 source");
 
     // The per-trash delete must offer ONLY the lowest-play-cost opponent
     // permanent (OPP-CHEAP, cost 2). OPP-PRICEY (cost 9) must not be offered.
@@ -607,8 +612,7 @@ fn ex4_073_clause_c_trashes_2_opp_security_when_3_sources_trashed() {
 
     // Trash all 3 Lv6 sources.
     for src_index in 0..3u16 {
-        let act = encode_source_select(handle.index as u16, src_index)
-            .expect("Lv6 source action");
+        let act = encode_source_select(handle.index as u16, src_index).expect("Lv6 source action");
         runner.execute_action(0, act).expect("pick Lv6 source");
     }
     // Resolve the 3 per-trash delete prompts + tail.

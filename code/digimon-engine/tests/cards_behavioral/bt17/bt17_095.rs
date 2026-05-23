@@ -341,11 +341,9 @@ fn bt17_095_main_auto_collapses_zone_choice_when_only_one_zone_eligible() {
         .position(|d| d.card_id == "BT17095-AGU")
         .expect("Agumon card data registered");
     let agu_card_index = runner.game.next_card_index();
-    runner.game.players[0].trash.push(CardSource::new(
-        agu_data_index,
-        0,
-        agu_card_index,
-    ));
+    runner.game.players[0]
+        .trash
+        .push(CardSource::new(agu_data_index, 0, agu_card_index));
 
     let fired = runner.game.activate_hand_main(0, 0);
     assert!(fired, "BT17-095 Main must activate");
@@ -534,7 +532,10 @@ fn make_l6_hand_partner(id: &str) -> CardData {
 /// gated on `source_is_delayed_option`. Placing a card on the field via
 /// `place_on_field` yields a Standard option, so the delay state is set here
 /// directly (mirroring `place_self_as_delay_option_permanent`).
-fn seat_as_delay_option(runner: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle) {
+fn seat_as_delay_option(
+    runner: &mut DebugRunner,
+    handle: digimon_engine::permanent::PermanentHandle,
+) {
     use digimon_engine::permanent::OptionState;
     let turn = runner.game.turn_count;
     let perm = &mut runner.game.players[handle.player as usize].battle_area[handle.index as usize];
@@ -775,7 +776,11 @@ fn bt17_095_security_no_panic_with_empty_hand_and_trash() {
 
     let attacker_handle = runner.place_on_field(0, "BT17095-ATK-EMPTY", Some(0));
     assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
-    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "precondition: defender trash empty"
+    );
     assert_eq!(
         runner.security_count(1),
         1,

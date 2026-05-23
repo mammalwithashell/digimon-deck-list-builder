@@ -154,7 +154,11 @@ fn filler(id: &str) -> CardData {
 
 /// Push a registered card directly onto a battle-area permanent's
 /// `card_sources` (as a digivolution source under the top card).
-fn insert_source_under(runner: &mut DebugRunner, perm: digimon_engine::permanent::PermanentHandle, card_id: &str) {
+fn insert_source_under(
+    runner: &mut DebugRunner,
+    perm: digimon_engine::permanent::PermanentHandle,
+    card_id: &str,
+) {
     let game = runner.game_mut();
     let data_idx = game
         .card_data
@@ -300,7 +304,11 @@ fn ex7_024_cost_reduction_clause_structural_shape() {
         Some("before_pay_cost"),
         "cost reduction must fire at BeforePayCost cost-calc"
     );
-    assert_eq!(amount, Some(1), "printed text reduces the cost by exactly 1");
+    assert_eq!(
+        amount,
+        Some(1),
+        "printed text reduces the cost by exactly 1"
+    );
     assert!(
         !once_per_turn,
         "printed text carries no [Once Per Turn] — reduction fires for every \
@@ -396,12 +404,10 @@ fn ex7_024_cost_reduction_reduces_digivolving_into_puppet_by_one() {
     let hand_idx = runner.game.player(0).hand.len() - 1;
 
     let memory_before = runner.game.memory;
-    let digivolved = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        shoemon.index as usize,
-        PlaySource::ByHand,
-    );
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, shoemon.index as usize, PlaySource::ByHand);
     assert!(
         digivolved,
         "EX7-024 must digivolve into the Lv.4 Puppet (effective cost 2 - 1 = 1)"
@@ -447,12 +453,10 @@ fn ex7_024_cost_reduction_does_not_apply_to_non_puppet_target() {
     let hand_idx = runner.game.player(0).hand.len() - 1;
 
     let memory_before = runner.game.memory;
-    let digivolved = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        shoemon.index as usize,
-        PlaySource::ByHand,
-    );
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, shoemon.index as usize, PlaySource::ByHand);
     assert!(
         digivolved,
         "EX7-024 must still be able to digivolve into the non-Puppet Lv.4 Digimon"
@@ -511,12 +515,10 @@ fn ex7_024_cost_reduction_does_not_apply_to_unrelated_permanent_digivolution() {
     let hand_idx = runner.game.player(0).hand.len() - 1;
 
     let memory_before = runner.game.memory;
-    let digivolved = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        other.index as usize,
-        PlaySource::ByHand,
-    );
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, other.index as usize, PlaySource::ByHand);
     assert!(
         digivolved,
         "the unrelated Lv.3 must digivolve into the Lv.4 Puppet"

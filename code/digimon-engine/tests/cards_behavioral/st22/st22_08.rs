@@ -119,9 +119,10 @@ fn st22_08_runner() -> DebugRunner {
 
 /// Enqueue + drain ST22-08's [Security] effect for the given permanent handle.
 fn fire_security(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -702,7 +703,10 @@ fn st22_08_main_delete_offers_only_opponent_digimon_at_or_below_ally_dp() {
         runner.pending_is_optional(),
         "the link host selection must be declinable"
     );
-    runner.game.resolve_selection(0, PASS).expect("decline link");
+    runner
+        .game
+        .resolve_selection(0, PASS)
+        .expect("decline link");
 
     // Step 2: choose the ally DP comparator (MY-ALLY @ 5000). There is one
     // own Digimon, so exactly one choice.
@@ -724,10 +728,7 @@ fn st22_08_main_delete_offers_only_opponent_digimon_at_or_below_ally_dp() {
         .pending_selection_view()
         .expect("opponent-delete selection installs");
     assert_eq!(
-        view.valid_action_ids
-            .iter()
-            .filter(|&&a| a != PASS)
-            .count(),
+        view.valid_action_ids.iter().filter(|&&a| a != PASS).count(),
         1,
         "[Main] delete must offer only the opponent Digimon with DP <= the chosen ally's DP"
     );
@@ -756,7 +757,10 @@ fn st22_08_main_delete_skipped_when_no_opponent_at_or_below_ally_dp() {
     let _ = play_st22_08(&mut runner, false);
 
     // Decline the optional link.
-    runner.game.resolve_selection(0, PASS).expect("decline link");
+    runner
+        .game
+        .resolve_selection(0, PASS)
+        .expect("decline link");
 
     // Pick the only ally comparator (2000 DP).
     {
@@ -803,7 +807,10 @@ fn st22_08_main_delete_removes_chosen_opponent_digimon() {
     runner.game.enter_main_phase();
 
     let _ = play_st22_08(&mut runner, false);
-    runner.game.resolve_selection(0, PASS).expect("decline link");
+    runner
+        .game
+        .resolve_selection(0, PASS)
+        .expect("decline link");
 
     // Pick the ally comparator.
     {
@@ -910,7 +917,12 @@ fn st22_08_main_link_excludes_level_2_host() {
     // never be a valid link target. Resolving the first valid action must
     // not attach ST22-08 to the Lv.2 Digimon.
     if runner.game.pending_selection.is_some() {
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         let _ = runner.game.resolve_selection(0, action);
     }
     assert_eq!(

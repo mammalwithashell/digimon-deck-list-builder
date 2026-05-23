@@ -15,7 +15,7 @@ fn breeding_selection_mask_exposes_only_breeding_select_action() {
     r.place_in_breeding(p0, "BREED");
     {
         let mut ctx = EffectContext::new(&mut r.game, source_card, Some(source), p0);
-        ctx.select_own_breeding_permanent("pick breeding", |_, _| true, |_, _| {});
+        ctx.select_own_breeding_permanent("pick breeding", false, |_, _| true, |_, _| {});
     }
 
     let mask = build_action_mask(&r.game, p0);

@@ -712,7 +712,11 @@ fn bt17_097_security_plays_davis_from_hand_and_places_self_on_field() {
         1,
         "precondition: defender holds only the Davis Tamer"
     );
-    assert_eq!(runner.security_count(1), 1, "precondition: BT17-097 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: BT17-097 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -778,7 +782,11 @@ fn bt17_097_security_eligible_filter_accepts_ken_ichijoji() {
         1,
         "precondition: defender holds only the Ken Tamer"
     );
-    assert_eq!(runner.security_count(1), 1, "precondition: BT17-097 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: BT17-097 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -836,7 +844,11 @@ fn bt17_097_security_auto_collapses_zone_when_only_hand_eligible() {
         .start();
 
     let attacker_handle = runner.place_on_field(0, "BT17097-ATK-COLLAPSE", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: BT17-097 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: BT17-097 in security"
+    );
 
     // Attack the defender's security → BT17-097's [Security] clause fires.
     let _ = runner.attack_player(attacker_handle, 1, false);

@@ -29,8 +29,8 @@
 //! matching EX11-020 Hanimon, whose printed text is identical.
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledColor, CompiledCost, CompiledPredicate, CompiledScope,
-    CompiledStep, CompiledTiming,
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledCost, CompiledPredicate,
+    CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
@@ -119,9 +119,7 @@ fn ex11_021_has_printed_metadata_and_evolution_paths() {
         compiled.alt_paths.iter().any(|path| {
             matches!(path.cost, Some(CompiledCost::Literal(2)))
                 && path.from.as_ref().is_some_and(|from| {
-                    from.all_of
-                        .iter()
-                        .any(|p| p.level_eq == Some(3))
+                    from.all_of.iter().any(|p| p.level_eq == Some(3))
                         && from
                             .all_of
                             .iter()
@@ -144,9 +142,7 @@ fn ex11_021_has_when_digivolving_optional_clause() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::WhenDigivolving) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenDigivolving) => {
                 Some(t)
             }
             _ => None,
@@ -155,7 +151,10 @@ fn ex11_021_has_when_digivolving_optional_clause() {
 
     assert_eq!(clause.scope, CompiledScope::FaceUp);
     assert_eq!(clause.when, vec![CompiledTiming::WhenDigivolving]);
-    assert!(clause.optional, "the free play is optional (\"you may play\")");
+    assert!(
+        clause.optional,
+        "the free play is optional (\"you may play\")"
+    );
     assert!(
         !clause.once_per_turn,
         "When Digivolving free play is not Once Per Turn"
@@ -179,9 +178,7 @@ fn ex11_021_has_inherited_opponent_turn_opt_attack_end_clause() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnOpponentAttack) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnOpponentAttack) => {
                 Some(t)
             }
             _ => None,
@@ -330,7 +327,9 @@ fn ex11_021_when_digivolving_play_is_optional_and_declinable() {
         runner.pending_is_optional(),
         "play-Mirai selection is optional"
     );
-    runner.execute_action(0, PASS).expect("decline the free play");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the free play");
 
     assert!(
         runner.pending_selection_view().is_none(),
@@ -420,7 +419,10 @@ fn ex11_021_when_digivolving_fires_through_real_digivolve() {
         base.index as usize,
         PlaySource::ByDigivolve,
     );
-    assert!(ok, "digivolve EX11-021 onto the Lv.3 yellow base must succeed");
+    assert!(
+        ok,
+        "digivolve EX11-021 onto the Lv.3 yellow base must succeed"
+    );
     runner.game.drain_effect_queue();
 
     let view = runner

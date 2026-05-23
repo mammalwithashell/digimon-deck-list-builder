@@ -150,7 +150,11 @@ fn predicate_contains_trait(predicate: &CompiledPredicate, needle: &str) -> bool
 fn predicate_contains_name(predicate: &CompiledPredicate, needle: &str) -> bool {
     predicate.name_is.as_deref() == Some(needle)
         || predicate.name_contains.as_deref() == Some(needle)
-        || predicate.name_in.iter().flatten().any(|name| name == needle)
+        || predicate
+            .name_in
+            .iter()
+            .flatten()
+            .any(|name| name == needle)
         || predicate
             .all_of
             .iter()
@@ -216,7 +220,10 @@ fn bt24_089_is_option_cost_3() {
         .compiled_card("BT24-089")
         .expect("BT24-089 compiled card present");
 
-    assert_eq!(compiled.kind, digimon_dsl::compiled::CompiledCardKind::Option);
+    assert_eq!(
+        compiled.kind,
+        digimon_dsl::compiled::CompiledCardKind::Option
+    );
     assert_eq!(compiled.cost, Some(3));
 }
 
@@ -395,10 +402,7 @@ fn bt24_089_clause1_is_event_gated_delay_on_owen_suspend() {
         .as_ref()
         .expect("Delay must be gated to the Owen Dreadnought suspend event");
     assert_eq!(active_when.your_turn, Some(true));
-    assert_eq!(
-        active_when.event_target_owner,
-        Some(CompiledPlayerRef::You)
-    );
+    assert_eq!(active_when.event_target_owner, Some(CompiledPlayerRef::You));
     assert_eq!(
         active_when.event_card_name_contains.as_deref(),
         Some("Owen Dreadnought")
@@ -817,7 +821,9 @@ fn bt24_089_main_no_eligible_card_no_panic() {
         .start();
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve().expect("main resolves with no eligible target");
+    runner
+        .auto_resolve()
+        .expect("main resolves with no eligible target");
     // No panic is the primary assertion.
 }
 
@@ -847,7 +853,9 @@ fn bt24_089_main_decline_optional_play_still_places_self() {
     runner
         .decline_optional_trigger()
         .expect("decline the optional play");
-    runner.auto_resolve().expect("clause resolves after decline");
+    runner
+        .auto_resolve()
+        .expect("clause resolves after decline");
 
     assert!(
         hand_contains(&runner, 0, "ELIZAMON"),
@@ -1102,9 +1110,9 @@ fn bt24_089_main_free_play_emits_play_event() {
     runner.auto_resolve().expect("resolve Main");
 
     let events = runner.events_since(checkpoint);
-    let played_elizamon = events.iter().any(|e| {
-        matches!(e, GameEvent::Play { player: 0, card_id, .. } if card_id == "ELIZAMON")
-    });
+    let played_elizamon = events
+        .iter()
+        .any(|e| matches!(e, GameEvent::Play { player: 0, card_id, .. } if card_id == "ELIZAMON"));
     assert!(
         played_elizamon,
         "the cost-free [Main] play must emit a Play event for Elizamon; events={events:?}"

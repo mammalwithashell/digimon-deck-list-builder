@@ -8,13 +8,78 @@ traits: ["9000", CS]
 form: Mega
 attribute: Unknown
 
-effects: []
+effects:
+  - when: main_from_hand
+    summary: "[Hand][Main] Pay 3 and place this card under breeding King Drasil_7D6/Mother Eater to Draw 1"
+    condition:
+      count_gte:
+        filter:
+          owner: you
+          zone: [breeding]
+          any_of:
+            - name_is: "King Drasil_7D6"
+            - name_is: "Mother Eater"
+        n: 1
+    process:
+      - lose_memory: 3
+      - select_own_breeding_permanent:
+          bind_as: breeding_host
+          prompt: "Choose your breeding King Drasil_7D6 or Mother Eater"
+          filter:
+            any_of:
+              - name_is: "King Drasil_7D6"
+              - name_is: "Mother Eater"
+      - place_as_bottom_source:
+          source: self
+          target: breeding_host
+      - draw: { of: you, count: 1 }
 
-# Stubbed:
-# - [Hand][Main] pay 3 and place this card under King Drasil_7D6/Mother Eater
-#   in breeding to draw 1. Needs hand-activated source placement into breeding.
-# - [All Turns] when a Royal Knight/CS Digimon is played, suspend this Digimon
-#   to grant Rush/Raid/Reboot/Blocker until opponent turn ends. Needs played-
-#   Digimon event binding from breeding/battle and suspend-self cost.
-# - Inherited [Breeding][Start of Your Main Phase] play King Drasil from this
-#   Digimon's sources needs breeding inherited observer and play-from-sources.
+  - when: on_ally_played
+    optional: true
+    active_when: { source_is_unsuspended: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_trait_has: "Royal Knight"
+            - event_target_trait_has: CS
+    summary: "[All Turns] Suspend this Digimon to give the played Royal Knight/CS Rush/Raid/Reboot/Blocker"
+    process:
+      - activation_cost: { suspend_self: true }
+      - grant_keyword:
+          target: event_target
+          keyword: Rush
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: event_target
+          keyword: Raid
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: event_target
+          keyword: Reboot
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: event_target
+          keyword: Blocker
+          expiry: end_of_opponents_turn
+
+  - scope: inherited
+    when: start_of_your_main_phase
+    optional: true
+    active_when: { materials_count_gte: 6 }
+    summary: "[Breeding][Start of Main] Play a King Drasil source free if this Digimon has 6+ sources"
+    process:
+      - select_materials:
+          of_permanent: carrier
+          max: 1
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "King Drasil"
+          bind_as: king_drasil_source
+          prompt: "Choose a King Drasil source to play"
+      - play_from_materials:
+          target: carrier
+          source_index: king_drasil_source
+          cost_delta: free

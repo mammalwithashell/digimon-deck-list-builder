@@ -103,9 +103,8 @@ fn digimon_card(card_id: &str, color: CardColor) -> digimon_engine::CardData {
 /// Field-effect activation bit for the `[Main]` activated ability of the
 /// permanent at `field_index`.
 fn field_main_bit(field_index: usize) -> usize {
-    (FIELD_EFFECT_START
-        + field_index as u16 * EFFECTS_PER_PERMANENT
-        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+    (FIELD_EFFECT_START + field_index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN)
+        as usize
 }
 
 /// Park a standard `<Delay>` Option in `player`'s battle area as if it had
@@ -284,7 +283,11 @@ fn declining_standard_delay_leaves_option_on_field() {
     // The controller declines — passes the turn instead.
     r.game.decode_action(PASS, 0);
 
-    assert_eq!(*witness.lock().unwrap(), 0, "declined: Delay body never ran");
+    assert_eq!(
+        *witness.lock().unwrap(),
+        0,
+        "declined: Delay body never ran"
+    );
     assert!(
         r.game.player(0).battle_area.iter().any(|p| matches!(
             p.option_state,
@@ -447,5 +450,9 @@ fn activating_standard_delay_re_drives_trash_replacement_window() {
         "no delayed Option remains — the deferred continuation was re-driven, not dropped"
     );
     assert_eq!(*witness.lock().unwrap(), 1, "Delay body did not re-run");
-    assert_eq!(r.memory(), 2, "memory unchanged after the replacement resolves");
+    assert_eq!(
+        r.memory(),
+        2,
+        "memory unchanged after the replacement resolves"
+    );
 }

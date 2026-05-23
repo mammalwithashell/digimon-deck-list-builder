@@ -275,9 +275,7 @@ fn ex11_061_turn_end_deletes_only_the_digimon_this_effect_played() {
     runner.game.drain_effect_queue();
 
     // Accept the activation, then pick PUPPET-LV3 from hand.
-    let activation = runner
-        .pending_selection_view()
-        .expect("activation prompt");
+    let activation = runner.pending_selection_view().expect("activation prompt");
     runner
         .execute_action(activation.selecting_player, activation.valid_action_ids[0])
         .expect("accept activation");

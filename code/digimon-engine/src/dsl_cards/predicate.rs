@@ -292,12 +292,7 @@ pub fn eval_predicate_with_bindings(
         let Some(target) = rctx.cost_target_card else {
             return false;
         };
-        if !eval_predicate_with_bindings(
-            inner,
-            rctx,
-            PredicateSubject::Card(target),
-            bindings,
-        ) {
+        if !eval_predicate_with_bindings(inner, rctx, PredicateSubject::Card(target), bindings) {
             return false;
         }
     }
@@ -353,6 +348,24 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(ref trait_name) = pred.self_digivolution_sources_trait_has {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        let source_match = perm
+            .card_sources
+            .iter()
+            .take(perm.card_sources.len().saturating_sub(1))
+            .filter_map(|card| rctx.game.card_data_for_handle(card.handle()))
+            .any(|data| {
+                data.traits
+                    .iter()
+                    .any(|x| x.eq_ignore_ascii_case(trait_name))
+            });
+        if !source_match {
+            return false;
+        }
+    }
     if let Some(ref needle) = pred.source_name_contains {
         let Some(perm) = subject_or_source_permanent(subject, rctx) else {
             return false;
@@ -373,7 +386,11 @@ pub fn eval_predicate_with_bindings(
         let Some(data) = rctx.game.card_data_for_handle(perm.top_card().handle()) else {
             return false;
         };
-        if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(trait_name)) {
+        if !data
+            .traits
+            .iter()
+            .any(|x| x.eq_ignore_ascii_case(trait_name))
+        {
             return false;
         }
     }
@@ -638,17 +655,14 @@ fn eval_result_bound_fields(
     // returned `CardHandle` is resolved to its identity via
     // `card_data_for_handle` (zone-agnostic) and evaluated as a `Card` subject.
     if let Some(inner) = &pred.returned_card_matching {
-        let any_match = log
-            .returned_to_deck
-            .iter()
-            .any(|&handle| {
-                eval_predicate_with_bindings(
-                    inner,
-                    rctx,
-                    PredicateSubject::Card(handle),
-                    Some(bindings),
-                )
-            });
+        let any_match = log.returned_to_deck.iter().any(|&handle| {
+            eval_predicate_with_bindings(
+                inner,
+                rctx,
+                PredicateSubject::Card(handle),
+                Some(bindings),
+            )
+        });
         if !any_match {
             return false;
         }
@@ -1047,6 +1061,34 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.event_target_is_source {
+        let event_target = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| {
+                trigger
+                    .event_permanent
+                    .or(trigger.target_permanent)
+                    .or(trigger.event_host_permanent)
+            });
+        let source = match subject {
+            PredicateSubject::Permanent(handle) => Some(handle),
+            PredicateSubject::BreedingPermanent(player) => Some(PermanentHandle {
+                player,
+                index: crate::action::space::BREEDING_TARGET as u8,
+            }),
+            PredicateSubject::Card(_)
+            | PredicateSubject::RevealedCard(_)
+            | PredicateSubject::Source(_)
+            | PredicateSubject::None => rctx.source_permanent,
+        };
+        let is_source =
+            matches!((event_target, source), (Some(event), Some(source)) if event == source);
+        if is_source != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_target_was_self {
         let Some(change) = rctx.attack_target_change() else {
             return false;
@@ -1280,6 +1322,23 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.event_card_level_eq {
+        let Some(level) = event_card_level(rctx) else {
+            return false;
+        };
+        if level != want {
+            return false;
+        }
+    }
+    if let Some(floor) = &pred.event_card_level_gte {
+        let Some(level) = event_card_level(rctx) else {
+            return false;
+        };
+        let floor = eval_int_constraint(floor, rctx, None, None);
+        if i32::from(level) < floor {
+            return false;
+        }
+    }
     if let Some(ref allowed) = pred.event_card_color_only {
         // Every color of the triggering event card must appear in `allowed`.
         let Some(card) = rctx
@@ -1338,6 +1397,12 @@ fn eval_event_fields(
             return false;
         };
         if distinct_color_count(&data.colors) as u8 != want_count {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_target_same_level_as_previous {
+        let actual = event_target_same_level_as_previous(rctx).unwrap_or(false);
+        if actual != want {
             return false;
         }
     }
@@ -1571,6 +1636,29 @@ fn live_event_permanent_card(
     }
 }
 
+fn event_card_level(rctx: &EffectReadContext<'_>) -> Option<u8> {
+    let card = event_target_card(rctx).or_else(|| {
+        rctx.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+    })?;
+    rctx.game
+        .card_data_for_handle(card)
+        .and_then(|data| data.level)
+}
+
+fn event_target_same_level_as_previous(rctx: &EffectReadContext<'_>) -> Option<bool> {
+    let trigger = rctx.game.current_trigger_context.as_ref()?;
+    let handle = trigger.event_permanent.or(trigger.target_permanent)?;
+    let permanent = permanent_for_handle(rctx, handle)?;
+    let top = permanent.card_sources.last()?;
+    let previous = permanent.card_sources.iter().rev().nth(1)?;
+    let top_level = rctx.game.card_data[top.data_index].level?;
+    let previous_level = rctx.game.card_data[previous.data_index].level?;
+    Some(top_level == previous_level)
+}
+
 /// True when any of a candidate card's effective names satisfies `matches`.
 /// The effective names are the printed `card_name`, an optional
 /// reveal-overlay name, and every static "also treated as" identity alias.
@@ -1690,18 +1778,24 @@ fn eval_card_fields(
     // identity aliases — see `any_effective_name_matches`.
     if let Some(ref n) = pred.name_is {
         let overlay_name = overlay.and_then(|o| o.name.as_deref());
-        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
-            name == n.as_str()
-        }) {
+        if !any_effective_name_matches(
+            &data.card_name,
+            overlay_name,
+            &data.also_treated_as,
+            |name| name == n.as_str(),
+        ) {
             return false;
         }
     }
     if let Some(ref n) = pred.name_contains {
         let needle = n.to_lowercase();
         let overlay_name = overlay.and_then(|o| o.name.as_deref());
-        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
-            name.to_lowercase().contains(&needle)
-        }) {
+        if !any_effective_name_matches(
+            &data.card_name,
+            overlay_name,
+            &data.also_treated_as,
+            |name| name.to_lowercase().contains(&needle),
+        ) {
             return false;
         }
     }
@@ -1719,9 +1813,12 @@ fn eval_card_fields(
     }
     if let Some(ref names) = pred.name_in {
         let overlay_name = overlay.and_then(|o| o.name.as_deref());
-        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
-            names.iter().any(|n| n.as_str() == name)
-        }) {
+        if !any_effective_name_matches(
+            &data.card_name,
+            overlay_name,
+            &data.also_treated_as,
+            |name| names.iter().any(|n| n.as_str() == name),
+        ) {
             return false;
         }
     }
@@ -1768,12 +1865,13 @@ fn eval_card_fields(
         let Some(dp) = data.dp else {
             return false;
         };
-        let perm_target = formula_target.or(rctx.source_permanent).unwrap_or(
-            crate::permanent::PermanentHandle {
-                player: rctx.player,
-                index: 0,
-            },
-        );
+        let perm_target =
+            formula_target
+                .or(rctx.source_permanent)
+                .unwrap_or(crate::permanent::PermanentHandle {
+                    player: rctx.player,
+                    index: 0,
+                });
         if let Some(want) = &pred.dp_eq {
             if dp != eval_dp_constraint(want, rctx, perm_target, bindings) {
                 return false;
@@ -1832,10 +1930,7 @@ fn card_has_alt_path(rctx: &EffectReadContext<'_>, card_id: &str, kind_name: &st
         .any(|p| alt_path_kind_matches(&p.kind, kind_name))
 }
 
-fn alt_path_kind_matches(
-    kind: &digimon_dsl::compiled::CompiledAltPathKind,
-    name: &str,
-) -> bool {
+fn alt_path_kind_matches(kind: &digimon_dsl::compiled::CompiledAltPathKind, name: &str) -> bool {
     use digimon_dsl::compiled::CompiledAltPathKind as K;
     let normalized = name.to_ascii_lowercase().replace('-', "_");
     let kind_str = match kind {
@@ -1956,8 +2051,7 @@ fn field_digimon_has_name(
                 player,
                 index: index as u8,
             };
-            let identity =
-                permanent.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
+            let identity = permanent.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
             if !kind_matches_field(CompiledCardKind::Digimon, identity.kind) {
                 continue;
             }
@@ -2368,6 +2462,29 @@ fn eval_breeding_permanent_fields(
     if !eval_dp_constraints(pred, rctx, handle, bindings) {
         return false;
     }
+    if let Some(cap) = &pred.stack_size_lte {
+        if perm.card_sources.len() as i32 > eval_int_constraint(cap, rctx, Some(handle), bindings) {
+            return false;
+        }
+    }
+    if let Some(floor) = &pred.stack_size_gte {
+        if (perm.card_sources.len() as i32)
+            < eval_int_constraint(floor, rctx, Some(handle), bindings)
+        {
+            return false;
+        }
+    }
+    let materials_count = perm.card_sources.len().saturating_sub(1) as i32;
+    if let Some(cap) = &pred.materials_count_lte {
+        if materials_count > eval_int_constraint(cap, rctx, Some(handle), bindings) {
+            return false;
+        }
+    }
+    if let Some(floor) = &pred.materials_count_gte {
+        if materials_count < eval_int_constraint(floor, rctx, Some(handle), bindings) {
+            return false;
+        }
+    }
     if let Some(want) = pred.in_breeding {
         if !want {
             return false;
@@ -2394,12 +2511,7 @@ fn eval_breeding_permanent_fields(
         }
     }
 
-    pred.is_suspended.is_none()
-        && pred.is_unsuspended.is_none()
-        && pred.stack_size_lte.is_none()
-        && pred.stack_size_gte.is_none()
-        && pred.materials_count_lte.is_none()
-        && pred.materials_count_gte.is_none()
+    pred.is_suspended.is_none() && pred.is_unsuspended.is_none()
 }
 
 fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {

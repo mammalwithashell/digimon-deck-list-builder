@@ -2143,7 +2143,9 @@ fn return_trash_cards_to_deck_top_places_card_at_deck_top() {
         let di = g.next_card_index();
         g.players[0]
             .deck
-            .push(digimon_engine::card_source::CardSource::new(deck_idx, 0, di));
+            .push(digimon_engine::card_source::CardSource::new(
+                deck_idx, 0, di,
+            ));
         let t_idx = g
             .card_data
             .iter()

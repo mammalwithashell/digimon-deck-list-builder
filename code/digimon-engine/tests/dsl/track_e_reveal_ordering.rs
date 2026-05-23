@@ -322,8 +322,7 @@ fn order_remainder_two_destinations_chains_choice_then_permutation() {
 
     // Memory must NOT have advanced yet — tail runs only after permutation.
     assert_eq!(
-        runner.game.memory,
-        memory_before,
+        runner.game.memory, memory_before,
         "tail must not run before the ordered permutation completes"
     );
 
@@ -551,8 +550,18 @@ fn p_167_style_reveal_choose_order_full_flow() {
     runner
         .execute_branch(0) // SelectReveal uses branch-style actions via valid_action_ids
         .or_else(|_| {
-            let act = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-            let p = runner.game.pending_selection.as_ref().unwrap().selecting_player;
+            let act = runner
+                .game
+                .pending_selection
+                .as_ref()
+                .unwrap()
+                .valid_action_ids[0];
+            let p = runner
+                .game
+                .pending_selection
+                .as_ref()
+                .unwrap()
+                .selecting_player;
             runner.execute_action(p, act)
         })
         .expect("pick the only matching Mineral/Rock revealed card");
@@ -582,9 +591,7 @@ fn p_167_style_reveal_choose_order_full_flow() {
         runner.game.pending_selection.is_some(),
         "permutation selection must install after destination choice"
     );
-    runner
-        .auto_resolve()
-        .expect("permutation resolves");
+    runner.auto_resolve().expect("permutation resolves");
 
     assert_eq!(
         runner.game.revealed_cards.len(),

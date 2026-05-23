@@ -56,10 +56,12 @@ fn lower_cost_delta(
         Some(CompiledCostDelta::Literal(n)) => CostDelta::Fixed(*n as i16),
         Some(CompiledCostDelta::Reduce(n)) => CostDelta::Reduce(*n as i16),
         Some(CompiledCostDelta::ReduceFn(formula)) => {
-            let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
-                player: ctx.player,
-                index: 0,
-            });
+            let target = ctx
+                .source_permanent
+                .unwrap_or(crate::permanent::PermanentHandle {
+                    player: ctx.player,
+                    index: 0,
+                });
             let raw = crate::dsl_cards::formula_eval::evaluate_with_bindings(
                 formula,
                 ctx,
@@ -135,15 +137,11 @@ fn source_index_of(
     carrier: crate::permanent::PermanentHandle,
     card: CardHandle,
 ) -> Option<usize> {
-    ctx.game
-        .player(carrier.player)
-        .battle_area
-        .get(carrier.index as usize)
-        .and_then(|perm| {
-            perm.card_sources
-                .iter()
-                .position(|source| source.handle() == card)
-        })
+    crate::effect_context::material_carrier_permanent(ctx.game, carrier).and_then(|perm| {
+        perm.card_sources
+            .iter()
+            .position(|source| source.handle() == card)
+    })
 }
 
 /// Try to handle `step` as a play / digivolve / placement variant.
@@ -237,7 +235,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         }
 
         // ── Origin-preserving union-zone play (PUPPETS-G014) ──────────────
-        CompiledStep::PlayUnionBoundFree { binding, bind_as } => {
+        CompiledStep::PlayUnionBoundFree {
+            binding,
+            bind_as,
+            suppress_on_play,
+        } => {
             // Resolve the union-zone binding: the picked card, the zone it
             // came from (hand vs trash), and the owner of that zone. The
             // binding is read directly (not via `resolve_binding_ref`) so the
@@ -254,7 +256,13 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                             .hand
                             .iter()
                             .position(|c| c.handle() == card)
-                            .and_then(|idx| ctx.play_from_hand_free(owner, idx))
+                            .and_then(|idx| {
+                                ctx.play_from_hand_free_suppress_on_play(
+                                    owner,
+                                    idx,
+                                    *suppress_on_play,
+                                )
+                            })
                     }
                     UnionZoneOrigin::Trash => {
                         // Locate the card in the owner's trash by handle and
@@ -265,9 +273,23 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                             .iter()
                             .position(|c| c.handle() == card)
                             .and_then(|idx| {
-                                ctx.play_from_trash_with_cost(owner, idx, CostDelta::Free)
+                                ctx.play_from_trash_with_cost_suppress_on_play(
+                                    owner,
+                                    idx,
+                                    CostDelta::Free,
+                                    *suppress_on_play,
+                                )
                             })
                     }
+                    UnionZoneOrigin::Material {
+                        carrier,
+                        source_index,
+                    } => ctx.play_from_materials_suppress_on_play(
+                        carrier,
+                        source_index as usize,
+                        CostDelta::Free,
+                        *suppress_on_play,
+                    ),
                 };
                 if let Some(played) = played {
                     bindings.record_played(played);
@@ -293,13 +315,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // permanent even after battle-area indices shift. Missing /
             // wrong-kind binding: silent no-op (e.g. the optional play was
             // declined).
-            if let Some(ResolvedBinding::Permanent(handle)) =
-                resolve_binding_ref(
-                    &digimon_dsl::compiled::CompiledBindingRef::Named(binding.clone()),
-                    ctx,
-                    bindings,
-                )
-            {
+            if let Some(ResolvedBinding::Permanent(handle)) = resolve_binding_ref(
+                &digimon_dsl::compiled::CompiledBindingRef::Named(binding.clone()),
+                ctx,
+                bindings,
+            ) {
                 if *at_opponents_turn {
                     ctx.schedule_delete_at_end_of_opponents_turn(handle);
                 } else {
@@ -335,9 +355,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // (typically from a prior `select_security`). Resolve the owner
             // and play exactly that security card free.
             let owner = resolve_player(ctx, *of);
-            if let Some(ResolvedBinding::Card(handle)) =
-                resolve_binding_ref(card, ctx, bindings)
-            {
+            if let Some(ResolvedBinding::Card(handle)) = resolve_binding_ref(card, ctx, bindings) {
                 if let Some(played) = ctx.play_from_security_card(owner, handle) {
                     bindings.record_played(played);
                 }
@@ -351,9 +369,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // security card. No-op when the binding is unset — i.e. the
             // player declined an optional `select_security`.
             let owner = resolve_player(ctx, *of);
-            if let Some(ResolvedBinding::Card(handle)) =
-                resolve_binding_ref(card, ctx, bindings)
-            {
+            if let Some(ResolvedBinding::Card(handle)) = resolve_binding_ref(card, ctx, bindings) {
                 let _ = ctx.trash_security_card(owner, handle);
             }
             true
@@ -362,6 +378,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             target,
             source_index,
             cost_delta,
+            suppress_on_play,
             bind_as,
         } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
@@ -381,9 +398,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // removes the consumed source and shifts later indices down.
             match resolve_binding_ref(source_index, ctx, bindings) {
                 Some(ResolvedBinding::Literal(v)) if v >= 0 => {
-                    if let Some(played) =
-                        ctx.play_from_materials(target_handle, v as usize, delta)
-                    {
+                    if let Some(played) = ctx.play_from_materials_suppress_on_play(
+                        target_handle,
+                        v as usize,
+                        delta,
+                        *suppress_on_play,
+                    ) {
                         bindings.record_played(played);
                         if let Some(name) = bind_as {
                             bindings.insert_permanent(name, played);
@@ -392,9 +412,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 }
                 Some(ResolvedBinding::Card(card)) => {
                     if let Some(idx) = source_index_of(ctx, target_handle, card) {
-                        if let Some(played) =
-                            ctx.play_from_materials(target_handle, idx, delta)
-                        {
+                        if let Some(played) = ctx.play_from_materials_suppress_on_play(
+                            target_handle,
+                            idx,
+                            delta,
+                            *suppress_on_play,
+                        ) {
                             bindings.record_played(played);
                             if let Some(name) = bind_as {
                                 bindings.insert_permanent(name, played);
@@ -415,9 +438,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                             // skip it; the remaining picks still play.
                             continue;
                         };
-                        if let Some(played) =
-                            ctx.play_from_materials(target_handle, idx, delta)
-                        {
+                        if let Some(played) = ctx.play_from_materials_suppress_on_play(
+                            target_handle,
+                            idx,
+                            delta,
+                            *suppress_on_play,
+                        ) {
                             bindings.record_played(played);
                             last_played = Some(played);
                         }

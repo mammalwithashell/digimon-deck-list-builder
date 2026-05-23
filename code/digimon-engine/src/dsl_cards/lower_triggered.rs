@@ -103,13 +103,13 @@ pub fn lower_for_kind_with_clause_index(
         // The compile-side validator guarantees the step only appears as
         // the first body step of a triggered clause; mid-body uses are
         // rejected. Remaining steps form the process body.
-        let (activation_cost_kind, body_steps): (Option<CompiledActivationCostKind>, Vec<CompiledStep>) =
-            match clause.process.split_first() {
-                Some((CompiledStep::ActivationCost { kind }, rest)) => {
-                    (Some(*kind), rest.to_vec())
-                }
-                _ => (None, clause.process.clone()),
-            };
+        let (activation_cost_kind, body_steps): (
+            Option<CompiledActivationCostKind>,
+            Vec<CompiledStep>,
+        ) = match clause.process.split_first() {
+            Some((CompiledStep::ActivationCost { kind }, rest)) => (Some(*kind), rest.to_vec()),
+            _ => (None, clause.process.clone()),
+        };
         // G-OUTER-OPTIONAL-NOT-INSTALLED: decide whether a "you may" clause
         // needs an explicit outer accept/decline prompt — computed before
         // `body_steps` is moved into the `Arc` below.
@@ -310,9 +310,7 @@ fn players_for_compiled_ref(
         CompiledPlayerRef::You => vec![rctx.player],
         CompiledPlayerRef::Opponent => vec![rctx.opponent_id()],
         CompiledPlayerRef::Active => vec![rctx.game.turn_player()],
-        CompiledPlayerRef::Any => {
-            (0..rctx.game.players.len() as crate::enums::PlayerId).collect()
-        }
+        CompiledPlayerRef::Any => (0..rctx.game.players.len() as crate::enums::PlayerId).collect(),
     }
 }
 

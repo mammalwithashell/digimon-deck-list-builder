@@ -631,9 +631,12 @@ fn ad1_025_all_turns_observer_routes_security_to_opp_trash() {
     // The trashed top security card must be in the opponent's trash. (The
     // deleted opp Digimon also routes to that trash; this assertion targets
     // the security card by its stable `card_index`.)
-    let security_in_trash = runner.game.player(1).trash.iter().any(|c| {
-        c.card_index == security_card_index
-    });
+    let security_in_trash = runner
+        .game
+        .player(1)
+        .trash
+        .iter()
+        .any(|c| c.card_index == security_card_index);
     assert!(
         security_in_trash,
         "trashed top security must end up in the opponent's trash"

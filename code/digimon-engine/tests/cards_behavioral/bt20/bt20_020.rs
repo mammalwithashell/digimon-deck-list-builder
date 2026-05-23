@@ -64,7 +64,8 @@ use crate::dsl_card_data::compiled;
 // children so the assertions hold regardless of how the `from` is nested.
 
 fn pred_level_eq(p: &CompiledPredicate) -> Option<u8> {
-    p.level_eq.or_else(|| p.all_of.iter().find_map(pred_level_eq))
+    p.level_eq
+        .or_else(|| p.all_of.iter().find_map(pred_level_eq))
 }
 
 fn pred_color_is(p: &CompiledPredicate) -> Option<CompiledColor> {
@@ -456,7 +457,10 @@ fn opp_digimon(id: &str, dp: i32) -> CardData {
 
 /// Fire the `on_opponent_security_removed` observer for BT20-020's permanent
 /// directly, simulating an opponent security card being removed.
-fn fire_opp_security_removed(runner: &mut DebugRunner, ifm: digimon_engine::permanent::PermanentHandle) {
+fn fire_opp_security_removed(
+    runner: &mut DebugRunner,
+    ifm: digimon_engine::permanent::PermanentHandle,
+) {
     runner.game.enqueue_triggered(
         EffectTiming::OnOpponentSecurityRemoved,
         TriggerSource::Permanent(ifm),

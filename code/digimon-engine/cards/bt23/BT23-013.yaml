@@ -19,9 +19,51 @@ effects:
   - kind: grant_keyword
     keyword: Alliance
 
-# Stubbed:
-# - [When Digivolving][When Attacking] may play Atho/Rene/Por token or a
-#   Sistermon from hand or trash, excluding names already on your field. Needs
-#   token registration plus union hand/trash play with field-name exclusion.
-# - [Your Turn][Once Per Turn] when another Digimon is played, this Digimon may
-#   attack. Needs other-ally-played observer and in-effect attack selection.
+  - when: [when_digivolving, when_attacking]
+    optional: true
+    summary: "[When Digivolving][When Attacking] Play Atho/Rene/Por token or a name-safe Sistermon from hand/trash"
+    process:
+      - select_effect_choice:
+          bind_as: play_choice
+          labels:
+            - "Play Atho, Rene & Por Token"
+            - "Play Sistermon from hand or trash"
+          prompt: "Choose what Jesmon plays"
+      - if:
+          condition: { equals: [play_choice, 0] }
+          then:
+            - play_token:
+                controller: you
+                token_name: atho_rene_por
+      - if:
+          condition: { equals: [play_choice, 1] }
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                bind_as: sistermon_pick
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: "Sistermon"
+                    - name_not_shared_by_field_digimon: you
+                prompt: "Play 1 Sistermon from hand or trash without paying the cost"
+            - play_union_bound_free:
+                binding: sistermon_pick
+
+  - when: on_ally_played
+    optional: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_is_source: false
+    summary: "[Your Turn][Once Per Turn] When another Digimon is played, this Digimon may attack"
+    process:
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true
+          prompt: "Have this Jesmon attack?"

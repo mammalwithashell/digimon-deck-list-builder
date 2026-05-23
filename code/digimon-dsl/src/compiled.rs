@@ -280,11 +280,14 @@ pub struct CompiledPredicate {
     /// permanent's card name. G-EVENT-TARGET-NAME-CONTAINS.
     pub event_target_name_contains: Option<String>,
     pub event_target_is_player: Option<bool>,
+    pub event_target_is_source: Option<bool>,
     pub event_target_was_self: Option<bool>,
     pub attack_target_change_reason: Option<String>,
     pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
     pub event_card_name_contains: Option<String>,
+    pub event_card_level_eq: Option<u8>,
+    pub event_card_level_gte: Option<CompiledDpConstraint>,
     /// Every color of the triggering event card must be within this set.
     pub event_card_color_only: Option<Vec<CompiledColor>>,
     /// The triggering event card must have at least one of these colors
@@ -294,6 +297,7 @@ pub struct CompiledPredicate {
     pub event_card_color_count: Option<u8>,
     pub event_permanent_is_source: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
+    pub event_target_same_level_as_previous: Option<bool>,
     pub event_cause: Option<CompiledEventCause>,
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,
@@ -334,6 +338,7 @@ pub struct CompiledPredicate {
     /// digivolution source cards beneath the carrier — the carrier's
     /// own top card is excluded. G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY.
     pub self_digivolution_sources_contain_name: Option<String>,
+    pub self_digivolution_sources_trait_has: Option<String>,
     pub event_target_owner: Option<CompiledPlayerRef>,
     /// Event-target permanent color-set intersection test.
     /// G-EVENT-TARGET-COLOR.
@@ -795,8 +800,12 @@ pub enum CompiledStep {
     /// mutation. Evaluated at resolution time via `formula_eval` and
     /// fed to the engine's signed `add_memory` helper. Mirror of the
     /// literal `GainMemory(i32)` with runtime-computed magnitude.
-    GainMemoryFn { formula: CompiledFormula },
-    LoseMemoryFn { formula: CompiledFormula },
+    GainMemoryFn {
+        formula: CompiledFormula,
+    },
+    LoseMemoryFn {
+        formula: CompiledFormula,
+    },
     Draw {
         of: CompiledPlayerRef,
         count: u8,
@@ -900,6 +909,9 @@ pub enum CompiledStep {
     DeleteBoundPermanents {
         binding: String,
     },
+    TrashBreedingPermanent {
+        target: CompiledBindingRef,
+    },
     ReturnToHand {
         target: CompiledBindingRef,
     },
@@ -992,12 +1004,14 @@ pub enum CompiledStep {
         binding: String,
         /// Bind the just-played permanent handle for use in later steps.
         bind_as: Option<String>,
+        suppress_on_play: bool,
     },
     PlayFromSecurity,
     PlayFromMaterials {
         target: CompiledBindingRef,
         source_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
+        suppress_on_play: bool,
         bind_as: Option<String>,
     },
     PlaySelectedSourcesFree {
@@ -1261,6 +1275,7 @@ pub enum CompiledStep {
     SelectOpponentDpBudget {
         dp_budget: i32,
         min_picks: u8,
+        filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,
         then: Vec<CompiledStep>,
@@ -1278,6 +1293,7 @@ pub enum CompiledStep {
     SelectOwnBreedingPermanent {
         bind_as: Option<String>,
         prompt: String,
+        optional: bool,
         /// Predicate the breeding permanent must satisfy before the
         /// selection prompt opens. `CompiledPredicate::default()` is the
         /// "accept any breeding permanent" carrier matching the historical
@@ -1324,11 +1340,13 @@ pub enum CompiledStep {
     SelectUnionZone {
         of: CompiledPlayerRef,
         zones: Vec<CompiledZone>,
+        material_of: Option<CompiledBindingRef>,
         filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        then: Vec<CompiledStep>,
     },
     SelectOrderedPermutation {
         items: CompiledBindingRef,

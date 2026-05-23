@@ -378,49 +378,6 @@ fn bt9_112_delete_lowest_cost_digimon(ctx: &mut EffectContext<'_>, _bindings: &m
 ///
 /// BLOCKED: G-DP-BUDGET-MULTI-SELECT
 ///   The engine has no `select_opponent_permanent_multi_dp_budget` primitive.
-///   `select_count_capped_multi` caps pick COUNT, not DP sum. A proper
-///   implementation requires:
-///     1. Initial candidate list: all opponent Digimon.
-///     2. After each pick: subtract that Digimon's DP from remaining budget (15000 -
-///        sum_picked), re-filter candidates to those whose DP ≤ remaining budget.
-///     3. On PASS (or when no candidates remain): delete all picked Digimon.
-///   This multi-round incremental selection is not currently supported by
-///   `PendingSelection` — it would require a new selection kind or a looping
-///   raw_rust harness that re-installs selection each round.
-///
-/// Current approximation (no-approximations policy violation — noted for tracking):
-///   This function installs a SINGLE mandatory selection of ONE opponent Digimon
-///   with DP ≤ 15000 (i.e., effectively treats the 15000 budget as a filter on
-///   the single target). It does NOT support multi-pick. This violates the
-///   no-approximations policy for the multi-select aspect, but is the least bad
-///   option until G-DP-BUDGET-MULTI-SELECT closes.
-///
-/// When G-DP-BUDGET-MULTI-SELECT is closed, replace this function with a proper
-/// multi-round selection harness or a new engine primitive, and update BT17-018.yaml.
-///
-/// Tracked in qa/archetype-qa/engine-gaps.md under G-DP-BUDGET-MULTI-SELECT.
-fn bt17_018_delete_opp_digimon_dp_budget(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    use crate::enums::CardKind;
-
-    // Install a single mandatory selection of ONE opponent Digimon with DP ≤ 15000.
-    // BLOCKED: G-DP-BUDGET-MULTI-SELECT — full multi-pick with running DP-sum cap
-    // is not yet supported by the engine. This is a single-pick approximation only.
-    ctx.select_opponent_permanent(
-        "Select 1 of your opponent's Digimon to delete (DP ≤ 15000 budget; multi-pick pending G-DP-BUDGET-MULTI-SELECT)",
-        false, // mandatory (canNoSelect: false)
-        |game, h| {
-            // Filter: must be Digimon with DP ≤ 15000.
-            let perm = &game.player(h.player).battle_area[h.index as usize];
-            let top = perm.top_card();
-            let data = &game.card_data[top.data_index];
-            data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 15000
-        },
-        |ctx, selected| {
-            ctx.delete_permanent(selected);
-        },
-    );
-}
-
 /// BT17-018 Gallantmon: Crimson Mode — [When Attacking][Once Per Turn] security trash loop.
 ///
 /// Printed effect: "[When Attacking] [Once Per Turn] For every 10 cards in both players'
@@ -748,10 +705,6 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_step(
         "bt9_112_delete_lowest_cost_digimon",
         bt9_112_delete_lowest_cost_digimon,
-    );
-    r.register_step(
-        "bt17_018_delete_opp_digimon_dp_budget",
-        bt17_018_delete_opp_digimon_dp_budget,
     );
     r.register_step(
         "bt17_018_trash_security_per_ten_trash",

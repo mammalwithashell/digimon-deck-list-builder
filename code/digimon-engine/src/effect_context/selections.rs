@@ -645,8 +645,13 @@ impl<'a> EffectContext<'a> {
         );
     }
 
-    pub fn select_own_breeding_permanent<F, C>(&mut self, prompt: &str, filter: F, callback: C)
-    where
+    pub fn select_own_breeding_permanent<F, C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
         F: Fn(&Game, BreedingPermanentSelectionRef) -> bool + Send + Sync + 'static,
         C: FnOnce(&mut EffectContext<'_>, BreedingPermanentSelectionRef) + Send + Sync + 'static,
     {
@@ -684,7 +689,7 @@ impl<'a> EffectContext<'a> {
             selecting_player,
             previous_phase,
             valid_action_ids: vec![action_id],
-            is_optional: false,
+            is_optional,
             prompt: prompt.to_string(),
             effect_choices: None,
             source_card,
@@ -1005,6 +1010,7 @@ impl<'a> EffectContext<'a> {
         &mut self,
         of_player: PlayerId,
         zones: crate::selection::UnionZoneSet,
+        material_of: Option<crate::permanent::PermanentHandle>,
         prompt: &str,
         is_optional: bool,
         filter: F,
@@ -1020,7 +1026,9 @@ impl<'a> EffectContext<'a> {
             + 'static,
     {
         use crate::action::space::{
-            HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
+            decode_breeding_source_select, decode_source_select, encode_breeding_source_select,
+            encode_source_select, HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START,
+            TRASH_EFFECT_END, TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
         };
         use crate::selection::UnionZoneSet;
 
@@ -1049,6 +1057,35 @@ impl<'a> EffectContext<'a> {
                 let card_clone = self.game.player(of_player).trash[i].clone();
                 if filter(self.game, &card_clone) {
                     valid_action_ids.push(TRASH_EFFECT_START + i as u16);
+                }
+            }
+        }
+
+        if zones.contains(UnionZoneSet::MATERIAL) {
+            if let Some(carrier) = material_of {
+                let candidates: Vec<(usize, CardSource)> =
+                    material_carrier_permanent(self.game, carrier)
+                        .map(|perm| {
+                            perm.card_sources
+                                .iter()
+                                .take(perm.card_sources.len().saturating_sub(1))
+                                .cloned()
+                                .enumerate()
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                for (source_index, card_clone) in candidates {
+                    if !filter(self.game, &card_clone) {
+                        continue;
+                    }
+                    let action = if carrier.index == crate::action::space::BREEDING_TARGET as u8 {
+                        encode_breeding_source_select(carrier.player, source_index as u16)
+                    } else {
+                        encode_source_select(carrier.index as u16, source_index as u16)
+                    };
+                    if let Some(action) = action {
+                        valid_action_ids.push(action);
+                    }
                 }
             }
         }
@@ -1093,7 +1130,57 @@ impl<'a> EffectContext<'a> {
                 );
                 // Disambiguate by range — the action_id range also records
                 // the picked card's origin zone.
-                let (handle, origin) = if action_id >= TRASH_EFFECT_START {
+                let (handle, origin) = if (crate::action::space::BREEDING_SOURCE_SELECT_START
+                    ..crate::action::space::BREEDING_SOURCE_SELECT_END)
+                    .contains(&action_id)
+                {
+                    let (player, source_index) = decode_breeding_source_select(action_id);
+                    let player = player as u8;
+                    let source_index = source_index as u8;
+                    let carrier = crate::permanent::PermanentHandle {
+                        player,
+                        index: crate::action::space::BREEDING_TARGET as u8,
+                    };
+                    let handle = game
+                        .player(player)
+                        .breeding_area
+                        .as_ref()
+                        .and_then(|perm| perm.card_sources.get(source_index as usize))
+                        .map(|card| card.handle())
+                        .expect("valid breeding-source union action must resolve");
+                    (
+                        handle,
+                        crate::selection::UnionZoneOrigin::Material {
+                            carrier,
+                            source_index,
+                        },
+                    )
+                } else if (crate::action::space::SOURCE_SELECT_START
+                    ..crate::action::space::SOURCE_SELECT_END)
+                    .contains(&action_id)
+                {
+                    let (field_index, source_index) = decode_source_select(action_id);
+                    let field_index = field_index as u8;
+                    let source_index = source_index as u8;
+                    let carrier = crate::permanent::PermanentHandle {
+                        player: of_player,
+                        index: field_index,
+                    };
+                    let handle = game
+                        .player(of_player)
+                        .battle_area
+                        .get(field_index as usize)
+                        .and_then(|perm| perm.card_sources.get(source_index as usize))
+                        .map(|card| card.handle())
+                        .expect("valid source union action must resolve");
+                    (
+                        handle,
+                        crate::selection::UnionZoneOrigin::Material {
+                            carrier,
+                            source_index,
+                        },
+                    )
+                } else if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&action_id) {
                     let idx = (action_id - TRASH_EFFECT_START) as usize;
                     (
                         game.player(of_player).trash[idx].handle(),
@@ -1292,31 +1379,32 @@ impl<'a> EffectContext<'a> {
         // is the base for source_index 0 of this carrier; threading it
         // through `install_count_capped_step` keeps every recursive step
         // consistent. zone_len = sources excluding the top card.
-        let (zone_len, range_start) = match zone {
-            CountCappedZone::Hand => {
-                let len = self.game.player(of_player).hand.len().min(HAND_MAIN_LIMIT);
-                (len, PLAY_HAND_START)
-            }
-            CountCappedZone::Trash => {
-                let len = self
-                    .game
-                    .player(of_player)
-                    .trash
-                    .len()
-                    .min(TRASH_MAIN_LIMIT);
-                (len, TRASH_EFFECT_START)
-            }
-            CountCappedZone::Material(perm_handle) => {
-                let (source_count, base) = material_zone_geometry(self.game, perm_handle)
-                    .unwrap_or((0, 0));
-                debug_assert!(
+        let (zone_len, range_start) =
+            match zone {
+                CountCappedZone::Hand => {
+                    let len = self.game.player(of_player).hand.len().min(HAND_MAIN_LIMIT);
+                    (len, PLAY_HAND_START)
+                }
+                CountCappedZone::Trash => {
+                    let len = self
+                        .game
+                        .player(of_player)
+                        .trash
+                        .len()
+                        .min(TRASH_MAIN_LIMIT);
+                    (len, TRASH_EFFECT_START)
+                }
+                CountCappedZone::Material(perm_handle) => {
+                    let (source_count, base) =
+                        material_zone_geometry(self.game, perm_handle).unwrap_or((0, 0));
+                    debug_assert!(
                     source_count <= SOURCES_PER_FIELD as usize,
                     "Material zone: source_count {} exceeds SOURCES_PER_FIELD {} for carrier {:?}",
                     source_count, SOURCES_PER_FIELD, perm_handle
                 );
-                (source_count, base)
-            }
-        };
+                    (source_count, base)
+                }
+            };
 
         // Collect all indices whose card passes the filter. We clone each card
         // to avoid a simultaneous immutable + mutable borrow of self.game.
@@ -1765,6 +1853,7 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
         &mut self,
         of_player: crate::enums::PlayerId,
         zones: crate::selection::UnionZoneSet,
+        material_of: Option<crate::permanent::PermanentHandle>,
         prompt: &str,
         is_optional: bool,
         filter: F,
@@ -1781,8 +1870,15 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
     {
         let prev = self.ctx.override_selecting_player.take();
         self.ctx.override_selecting_player = Some(self.selecting_player);
-        self.ctx
-            .select_union_zone(of_player, zones, prompt, is_optional, filter, callback);
+        self.ctx.select_union_zone(
+            of_player,
+            zones,
+            material_of,
+            prompt,
+            is_optional,
+            filter,
+            callback,
+        );
         self.ctx.override_selecting_player = prev;
     }
 
@@ -2662,7 +2758,9 @@ pub(crate) fn material_carrier_permanent(
     if perm.index == crate::action::space::BREEDING_TARGET as u8 {
         game.player(perm.player).breeding_area.as_ref()
     } else {
-        game.player(perm.player).battle_area.get(perm.index as usize)
+        game.player(perm.player)
+            .battle_area
+            .get(perm.index as usize)
     }
 }
 
@@ -3033,7 +3131,7 @@ fn install_count_capped_step(
                             material_zone_slice(game, ph)
                                 .expect("material carrier present for distinct_by candidate lookup")
                                 [i]
-                            .data_index
+                                .data_index
                         }
                     };
                     let cand_data = &game.card_data[cand_data_idx];

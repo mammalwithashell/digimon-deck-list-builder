@@ -6,8 +6,8 @@
 //! `GamePhase::SelectMaterial` with kind `SelectionKind::Material`.
 
 use digimon_engine::action::space::{
-    decode_source_select, BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START, BREEDING_TARGET,
-    PASS, SOURCES_PER_FIELD, SOURCE_SELECT_START,
+    decode_source_select, BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START,
+    BREEDING_TARGET, PASS, SOURCES_PER_FIELD, SOURCE_SELECT_START,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::{CardHandle, CardSource};
@@ -178,7 +178,13 @@ fn breeding_carrier_select_material_emits_breeding_source_ids() {
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
-        ctx.select_material(carrier, "pick a breeding material", true, |_, _| true, |_, _| {});
+        ctx.select_material(
+            carrier,
+            "pick a breeding material",
+            true,
+            |_, _| true,
+            |_, _| {},
+        );
     }
 
     let sel = r

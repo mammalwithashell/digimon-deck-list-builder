@@ -586,7 +586,10 @@ fn p_035_delay_activation_gains_2_memory_via_main_phase_action() {
         .add_card(filler("FILL"))
         // Reveal top 4: 3 blue Digimon + RED-D1 (top, eligible).
         .hand(0, &["P-035"])
-        .deck(0, &["FILL", "FILL", "BLUE-D1", "BLUE-D2", "BLUE-D3", "RED-D1"])
+        .deck(
+            0,
+            &["FILL", "FILL", "BLUE-D1", "BLUE-D2", "BLUE-D3", "RED-D1"],
+        )
         .deck(1, &["FILL"; 6])
         .memory(10)
         .start();
@@ -648,7 +651,10 @@ fn p_035_delay_activation_gains_2_memory_via_main_phase_action() {
         mask[bit], 1.0,
         "P-035 <Delay> activation must be a legal action after the placing turn"
     );
-    assert_eq!(mask[PASS as usize], 1.0, "declining the <Delay> stays legal");
+    assert_eq!(
+        mask[PASS as usize], 1.0,
+        "declining the <Delay> stays legal"
+    );
 
     // Take the activation: trash P-035 as cost, run the body (gain 2 memory).
     runner.game.decode_action(bit as u16, 0);

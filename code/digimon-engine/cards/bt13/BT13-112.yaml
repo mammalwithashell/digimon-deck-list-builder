@@ -13,11 +13,68 @@ alt_paths:
     from: { level_eq: 6, color_is: red }
     cost: 4
 
-effects: []
-
-# Stubbed:
-# - [On Play][When Digivolving] modal delete 1 opponent Digimon OR play one
-#   of each differently named Royal Knight from breeding sources, trash the
-#   breeding Digimon, and grant Rush. This needs a modal branch with source
-#   play from breeding, different-name grouping, breeding trash, and per-play
-#   Rush grant.
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] delete 1 opponent Digimon or play different-name Royal Knights from breeding sources"
+    condition:
+      any_of:
+        - any_permanent:
+            of: opponent
+            predicate: { kind: digimon }
+        - count_gte:
+            filter:
+              owner: you
+              zone: [breeding]
+              materials_count_gte: 1
+            n: 1
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Delete 1 opponent Digimon"
+            - "Play Royal Knights from breeding sources"
+          prompt: "Choose effect"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter: { kind: digimon }
+                prompt: "Choose an opponent Digimon to delete"
+            - delete_permanent: { target: delete_target }
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - select_own_breeding_permanent:
+                bind_as: breeding_digimon
+                prompt: "Choose your breeding Digimon"
+                filter: { materials_count_gte: 1 }
+                then:
+                  - select_materials:
+                      of_permanent: breeding_digimon
+                      max: 12
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - trait_has: "Royal Knight"
+                      uniqueness: name
+                      optional_zero: true
+                      bind_as: royal_knights
+                      prompt: "Choose Royal Knight sources with different names to play"
+                  - play_from_materials:
+                      target: breeding_digimon
+                      source_index: royal_knights
+                      cost_delta: free
+                      suppress_on_play: true
+                  - if:
+                      condition: { effect_played_any_digimon: true }
+                      then:
+                        - trash_breeding_permanent: { target: breeding_digimon }
+                        - for_each:
+                            over: { of: you, zone: [battle_area], kind: digimon }
+                            bind_as: ally
+                            body:
+                              - grant_keyword:
+                                  target: ally
+                                  keyword: Rush
+                                  expiry: end_of_turn

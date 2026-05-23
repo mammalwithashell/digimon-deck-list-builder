@@ -7,11 +7,7 @@ use crate::dsl_cards::formula_eval;
 use crate::effect_context::EffectContext;
 use crate::permanent::PermanentHandle;
 
-pub fn try_run(
-    step: &CompiledStep,
-    ctx: &mut EffectContext<'_>,
-    bindings: &Bindings,
-) -> bool {
+pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bindings) -> bool {
     match step {
         CompiledStep::GainMemory(n) => {
             ctx.gain_memory(*n as i16);

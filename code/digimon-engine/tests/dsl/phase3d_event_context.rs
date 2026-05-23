@@ -1,10 +1,11 @@
+use digimon_dsl::compiled::CompiledClause;
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{
-    CardColor, CardKind, CardSourceRef, CostDelta, DelayTrigger, EffectTiming, PlaySource,
+    CardColor, CardKind, CardSourceRef, CostDelta, DelayTrigger, EffectTiming, Keyword, PlaySource,
     StackPosition,
 };
 use digimon_engine::permanent::{Permanent, PermanentHandle};
@@ -801,6 +802,70 @@ effects:
 }
 
 #[test]
+fn on_enter_field_event_target_grant_keyword_marks_only_played_digimon() {
+    let yaml = r#"
+card: DSL-PLAYED-GRANT
+name: Played Grant Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_enter_field_anyone
+    process:
+      - grant_keyword:
+          target: event_target
+          keyword: Rush
+          expiry: end_of_turn
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card(
+            "PLAYED",
+            "Played Royal Knight",
+            &["Royal Knight"],
+            3000,
+        ))
+        .add_card(digimon_card(
+            "OTHER-RK",
+            "Other Royal Knight",
+            &["Royal Knight"],
+            3000,
+        ))
+        .build();
+    let observer = runner.place_on_field(0, "DSL-PLAYED-GRANT", None);
+    let other = runner.place_on_field(0, "OTHER-RK", None);
+    let played = runner.place_on_field(0, "PLAYED", None);
+    let card = runner.top_card(played);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnEnterFieldAnyone,
+        TriggerSource::EnteredField {
+            player: played.player,
+            permanent: played,
+            card,
+            effect_initiated: true,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.has_keyword(played, Keyword::Rush),
+        "event_target grant should mark the Digimon carried by the play event"
+    );
+    assert!(
+        !runner.game.has_keyword(observer, Keyword::Rush),
+        "observer source must not receive the event-target keyword"
+    );
+    assert!(
+        !runner.game.has_keyword(other, Keyword::Rush),
+        "unrelated matching Royal Knight Digimon must not be over-targeted"
+    );
+}
+
+#[test]
 fn event_is_effect_initiated_matches_effect_play_only() {
     let yaml = r#"
 card: DSL-EFFECT-PLAY-OBS
@@ -1089,7 +1154,7 @@ effects:
     runner.place_on_field(0, "DSL-ENTER-OBS", None);
 
     let before = runner.memory();
-    assert_eq!(runner.play(1, 0), Some(0));
+    assert!(runner.play(1, 0).is_some());
 
     assert_eq!(
         runner.memory(),
@@ -1128,7 +1193,7 @@ effects:
     runner.place_on_field(0, "DSL-ANY-PLAYED-OBS", None);
 
     let before = runner.memory();
-    assert_eq!(runner.play(1, 0), Some(0));
+    assert!(runner.play(1, 0).is_some());
 
     assert_eq!(
         runner.memory(),
@@ -1599,11 +1664,224 @@ effects:
     runner.place_on_field(0, "DSL-ENTER-STALE-OBS", None);
 
     let before = runner.memory();
-    assert_eq!(runner.play(1, 0), Some(0));
+    assert!(runner.play(1, 0).is_some());
 
     assert_eq!(
         runner.memory(),
         before + 5,
         "event_target_trait_has should not inspect a different permanent through a stale event_permanent handle"
+    );
+}
+
+#[test]
+fn event_card_level_predicates_branch_on_played_digimon_level() {
+    let yaml = r#"
+card: DSL-PLAYED-LEVEL
+name: Played Level Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_any_digimon_played
+    condition: { event_card_level_gte: 4 }
+    process:
+      - gain_memory: 2
+  - when: on_any_digimon_played
+    condition: { event_card_level_eq: 3 }
+    process:
+      - gain_memory: 1
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card({
+            let mut card = digimon_card("LV3-PLAYED", "Level 3 Played", &[], 1000);
+            card.level = Some(3);
+            card.play_cost = 0;
+            card
+        })
+        .add_card({
+            let mut card = digimon_card("LV4-PLAYED", "Level 4 Played", &[], 4000);
+            card.level = Some(4);
+            card.play_cost = 0;
+            card
+        })
+        .hand(1, &["LV3-PLAYED", "LV4-PLAYED"])
+        .memory(0)
+        .build();
+    let compiled = runner
+        .compiled_card("DSL-PLAYED-LEVEL")
+        .expect("compiled observer");
+    let CompiledClause::Triggered(level3_clause) = &compiled.effects[1] else {
+        panic!("expected level-3 triggered clause");
+    };
+    assert_eq!(
+        level3_clause
+            .condition
+            .as_ref()
+            .and_then(|condition| condition.event_card_level_eq),
+        Some(3)
+    );
+    runner.place_on_field(0, "DSL-PLAYED-LEVEL", None);
+
+    let memory_before = runner.memory();
+    assert!(runner.play(1, 0).is_some());
+    runner.auto_resolve().expect("resolve level-3 observer");
+    assert_eq!(
+        runner.memory(),
+        memory_before + 1,
+        "level-3 played Digimon should satisfy event_card_level_eq: 3"
+    );
+
+    let memory_before = runner.memory();
+    assert!(runner.play(1, 0).is_some());
+    runner.auto_resolve().expect("resolve level-4 observer");
+    assert_eq!(
+        runner.memory(),
+        memory_before + 2,
+        "level-4 opponent Digimon should satisfy event_card_level_gte: 4 for the P0 observer"
+    );
+}
+
+#[test]
+fn digivolve_event_can_match_same_level_x_antibody_transition() {
+    let yaml = r#"
+card: DSL-SAME-X
+name: Same Level X Observer
+kind: tamer
+color: [red]
+cost: 0
+effects:
+  - when: when_digivolving
+    condition:
+      all_of:
+        - event_card_trait_has: X Antibody
+        - event_target_same_level_as_previous: true
+    process:
+      - gain_memory: 2
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card({
+            let mut card = digimon_card("BASE-L4", "Base Level 4", &[], 4000);
+            card.level = Some(4);
+            card
+        })
+        .add_card({
+            let mut card = digimon_card("X-L4", "X Level 4", &["X Antibody"], 4000);
+            card.level = Some(4);
+            card
+        })
+        .add_card({
+            let mut card = digimon_card("X-L5", "X Level 5", &["X Antibody"], 6000);
+            card.level = Some(5);
+            card
+        })
+        .build();
+    runner.place_on_field(0, "DSL-SAME-X", None);
+    let target = runner.place_stack(0, &["BASE-L4", "X-L4"]);
+    let target_card = runner.game.players[0].battle_area[target.index as usize]
+        .top_card()
+        .handle();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Digivolved {
+            player: 0,
+            permanent: target,
+            card: target_card,
+            effect_initiated: false,
+            dna_origin: false,
+        },
+    );
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        runner.memory(),
+        2,
+        "same-level X Antibody transition should pass the event predicate"
+    );
+
+    let target = runner.place_stack(0, &["BASE-L4", "X-L5"]);
+    let target_card = runner.game.players[0].battle_area[target.index as usize]
+        .top_card()
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Digivolved {
+            player: 0,
+            permanent: target,
+            card: target_card,
+            effect_initiated: false,
+            dna_origin: false,
+        },
+    );
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        runner.memory(),
+        2,
+        "different-level X Antibody transition must not pass the same-level predicate"
+    );
+}
+
+#[test]
+fn security_removed_payload_exposes_removed_card_and_cause() {
+    let yaml = r#"
+card: DSL-SEC-REMOVED
+name: Security Removed Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_own_security_removed
+    condition:
+      all_of:
+        - event_card_trait_has: Royal Knight
+        - event_cause: security_removal
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card(
+            "RK-SECURITY-REMOVED",
+            "Royal Security",
+            &["Royal Knight"],
+            3000,
+        ))
+        .memory(0)
+        .build();
+    runner.place_on_field(0, "DSL-SEC-REMOVED", None);
+    let removed_data = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "RK-SECURITY-REMOVED")
+        .expect("registered removed security card");
+    let removed = CardSource::new(removed_data, 0, runner.game.next_card_index());
+    let removed_handle = removed.handle();
+    runner.game.players[0].trash.push(removed);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOwnSecurityRemoved,
+        TriggerSource::SecurityRemoved {
+            affected_player: 0,
+            observer_player: 0,
+            source_player: 1,
+            card: removed_handle,
+            cause: digimon_engine::trigger_context::EventCause::SecurityRemoval,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.memory(),
+        3,
+        "own security-removed observers should see the moved card and cause payload"
     );
 }

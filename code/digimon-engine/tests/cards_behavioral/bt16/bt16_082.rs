@@ -466,7 +466,14 @@ fn bt16_082_opt_blocks_second_trigger_same_turn() {
     // Six deck cards: three feed the first reveal, three remain so a second
     // reveal *could* draw if the OPT lockout were absent.
     let mut runner = bt16_behavior_runner(
-        &["PICK-DIGI", "PICK-TAMER", "FILL", "PICK-DIGI", "PICK-TAMER", "FILL"],
+        &[
+            "PICK-DIGI",
+            "PICK-TAMER",
+            "FILL",
+            "PICK-DIGI",
+            "PICK-TAMER",
+            "FILL",
+        ],
         &[],
     );
     runner.place_on_field(0, "BT16-082", Some(0));
@@ -501,7 +508,14 @@ fn bt16_082_opt_blocks_second_trigger_same_turn() {
 #[test]
 fn bt16_082_opt_resets_after_end_turn() {
     let mut runner = bt16_behavior_runner(
-        &["PICK-DIGI", "PICK-TAMER", "FILL", "PICK-DIGI", "PICK-TAMER", "FILL"],
+        &[
+            "PICK-DIGI",
+            "PICK-TAMER",
+            "FILL",
+            "PICK-DIGI",
+            "PICK-TAMER",
+            "FILL",
+        ],
         &[],
     );
     runner.place_on_field(0, "BT16-082", Some(0));
@@ -519,12 +533,26 @@ fn bt16_082_opt_resets_after_end_turn() {
     runner.end_turn();
     if runner.game.pending_selection.is_some() {
         // Defensive: drain any end-of-turn prompt.
-        let p = runner.game.pending_selection.as_ref().unwrap().selecting_player;
-        let a = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .selecting_player;
+        let a = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(p, a).ok();
         runner.game.drain_effect_queue();
     }
-    assert_eq!(runner.turn_player(), 1, "precondition: P1's turn after first end_turn");
+    assert_eq!(
+        runner.turn_player(),
+        1,
+        "precondition: P1's turn after first end_turn"
+    );
     runner.end_turn();
     assert_eq!(runner.turn_player(), 0, "precondition: back to P0's turn");
 

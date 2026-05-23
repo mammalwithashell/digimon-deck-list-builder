@@ -40,15 +40,18 @@ fn fixture_steps() -> Vec<CompiledStep> {
         CompiledStep::SelectUnionZone {
             of: CompiledPlayerRef::You,
             zones: vec![CompiledZone::Hand, CompiledZone::Trash],
+            material_of: None,
             filter: CompiledPredicate::default(),
             bind_as: Some("union_pick".to_string()),
             prompt: "Pick from hand or trash".to_string(),
             prompt_key: None,
             optional: true,
+            then: vec![],
         },
         CompiledStep::PlayUnionBoundFree {
             binding: "union_pick".to_string(),
             bind_as: Some("played".to_string()),
+            suppress_on_play: false,
         },
         // Mandatory tail step — must run even when the optional union pick
         // is declined.

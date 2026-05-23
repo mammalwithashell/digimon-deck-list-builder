@@ -162,14 +162,25 @@ impl Bindings {
         origin: UnionZoneOrigin,
         owner: PlayerId,
     ) {
-        self.insert(name, BindingValue::UnionCard { card, origin, owner });
+        self.insert(
+            name,
+            BindingValue::UnionCard {
+                card,
+                origin,
+                owner,
+            },
+        );
     }
 
     /// Fetch a union-zone pick `(card, origin, owner)`. Returns `None` if the
     /// binding is absent or holds a different `BindingValue` kind.
     pub fn get_union_card(&self, name: &str) -> Option<(CardHandle, UnionZoneOrigin, PlayerId)> {
         match self.get(name)? {
-            BindingValue::UnionCard { card, origin, owner } => Some((card, origin, owner)),
+            BindingValue::UnionCard {
+                card,
+                origin,
+                owner,
+            } => Some((card, origin, owner)),
             _ => None,
         }
     }

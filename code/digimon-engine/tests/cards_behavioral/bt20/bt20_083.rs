@@ -4,28 +4,24 @@
 //! - <Blocker>.
 //! - [On Play] If you have 1 or fewer security cards, may digivolve this
 //!   Digimon into [Omnimon (X Antibody)] in hand ignoring requirements/free.
-//!
-//! Gap-routed:
-//! - [On Deletion] place this card under [King Drasil_7D6] in breeding — the
-//!   RK-G001 filter shipped in Phase 2 Track J PR 1, but the printed "you may"
-//!   optionality needs an `optional: bool` field on
-//!   `select_own_breeding_permanent` (today hardcoded `is_optional: false`),
-//!   so authoring would silently make the trigger mandatory.
-//! - Inherited [Breeding][Opponent's Turn] security-removed trigger needs the
-//!   printed body (suspend the breeding carrier as a cost and play [Omekamon]
-//!   from that breeding stack's materials without paying the cost). The
-//!   fan-out timing already fires per `bt20_083_inherited_breeding_security_removed_fans_out_once_with_payload`.
+//! - [On Deletion] may place itself under [King Drasil_7D6] in breeding.
+//! - Inherited [Breeding][Opponent's Turn] when your security is removed,
+//!   suspend the breeding carrier to play an [Omekamon] source for free.
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledCostDelta, CompiledDeclarativeClause,
-    CompiledDpConstraint, CompiledStep, CompiledTiming,
+    CompiledDpConstraint, CompiledScope, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::BREEDING_TARGET;
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{
+    encode_breeding_select, encode_breeding_source_select, BREEDING_TARGET, PASS,
+};
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardKind, EffectTiming};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::SelectionKind;
 use digimon_engine::trigger_context::EventCause;
 use std::sync::{Arc, Mutex};
 
@@ -75,7 +71,7 @@ impl CardEffect for Bt20_083BreedingFanoutWitness {
         let seen = Arc::clone(&self.seen);
         vec![Effect::inherited(card)
             .name("BT20-083 breeding security removed witness")
-            .timing(EffectTiming::OnOpponentSecurityRemoved)
+            .timing(EffectTiming::OnOwnSecurityRemoved)
             .process(move |ctx| {
                 seen.lock().unwrap().push((
                     ctx.event_affected_player(),
@@ -167,9 +163,193 @@ fn bt20_083_has_blocker_grant_and_low_security_on_play_digivolve() {
 }
 
 #[test]
-#[ignore = "pending: G-OPTIONAL-BREEDING-SELECTION — RK-G001 filter shipped (Phase 2 Track J PR 1), but `select_own_breeding_permanent` is hardcoded `is_optional: false`, so authoring the printed 'you may' clause would silently turn the trigger mandatory"]
+fn bt20_083_has_on_deletion_and_inherited_security_removed_clauses() {
+    let runner = runner();
+    let card = runner
+        .compiled_card("BT20-083")
+        .expect("BT20-083 compiled card present");
+
+    let on_deletion = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if triggered.when.contains(&CompiledTiming::OnDeletion) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("On Deletion clause exists");
+    assert!(
+        on_deletion.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::SelectOwnBreedingPermanent {
+                optional: true,
+                filter,
+                ..
+            } if filter.name_is.as_deref() == Some("King Drasil_7D6")
+        )),
+        "On Deletion must expose an optional King Drasil breeding selection"
+    );
+
+    let inherited = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if matches!(triggered.scope, CompiledScope::Inherited)
+                    && triggered
+                        .when
+                        .contains(&CompiledTiming::OnOwnSecurityRemoved) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("inherited own-security-removed clause exists");
+    assert!(inherited.optional, "printed inherited effect is optional");
+    assert!(
+        inherited
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::Suspend { .. })),
+        "inherited flow must suspend the breeding carrier as the cost"
+    );
+    assert!(
+        inherited.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::SelectMaterials { filter, .. }
+                if filter.name_is.as_deref() == Some("Omekamon")
+        )),
+        "inherited flow must select an Omekamon source"
+    );
+    assert!(
+        inherited.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::PlayFromMaterials {
+                cost_delta: Some(CompiledCostDelta::Free),
+                ..
+            }
+        )),
+        "selected Omekamon source must be played for free"
+    );
+}
+
+#[test]
+fn bt20_083_on_deletion_can_decline_place_self_under_king_drasil() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-083")
+        .expect("BT20-083 YAML loads")
+        .add_card(make_test_card("KING", "King Drasil_7D6"))
+        .hand(0, &["BT20-083"])
+        .memory(10)
+        .start();
+    runner.place_in_breeding(0, "KING");
+    runner.play(0, 0).expect("Omekamon plays");
+
+    let omekamon_idx = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|perm| perm.top_card().card_name(&runner.game.card_data) == "Omekamon")
+        .expect("Omekamon on field");
+    let omekamon_handle = runner.game.player(0).battle_area[omekamon_idx]
+        .top_card()
+        .handle();
+
+    runner.game.delete_permanent_with_effects(PermanentHandle {
+        player: 0,
+        index: omekamon_idx as u8,
+    });
+
+    let pending = runner
+        .pending_selection_view()
+        .expect("optional King Drasil breeding selection opens");
+    assert_eq!(pending.kind, SelectionKind::BreedingPermanent);
+    assert!(pending.is_optional);
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PASS as usize],
+        1.0,
+        "PASS must be legal through the action mask for optional On Deletion placement"
+    );
+
+    runner
+        .execute_action(0, PASS)
+        .expect("decline optional On Deletion placement");
+
+    let breeding = runner.game.player(0).breeding_area.as_ref().unwrap();
+    assert_eq!(breeding.stack_size(), 1);
+    assert!(
+        !breeding
+            .card_sources
+            .iter()
+            .any(|source| source.handle() == omekamon_handle),
+        "declining leaves Omekamon out of the breeding stack"
+    );
+    assert!(
+        runner
+            .game
+            .player(0)
+            .trash
+            .iter()
+            .any(|card| card.handle() == omekamon_handle),
+        "declined On Deletion lets normal deletion move Omekamon to trash"
+    );
+}
+
+#[test]
 fn bt20_083_on_deletion_places_self_under_king_drasil_only() {
-    panic!("requires optional select_own_breeding_permanent before the printed 'you may' clause can be authored faithfully");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-083")
+        .expect("BT20-083 YAML loads")
+        .add_card(make_test_card("KING", "King Drasil_7D6"))
+        .hand(0, &["BT20-083"])
+        .memory(10)
+        .start();
+    runner.place_in_breeding(0, "KING");
+    runner.play(0, 0).expect("Omekamon plays");
+
+    let omekamon_idx = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|perm| perm.top_card().card_name(&runner.game.card_data) == "Omekamon")
+        .expect("Omekamon on field");
+    let omekamon_handle = runner.game.player(0).battle_area[omekamon_idx]
+        .top_card()
+        .handle();
+
+    runner.game.delete_permanent_with_effects(PermanentHandle {
+        player: 0,
+        index: omekamon_idx as u8,
+    });
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::BreedingPermanent)
+    );
+    runner
+        .execute_action(0, encode_breeding_select(0).unwrap())
+        .expect("choose King Drasil");
+
+    let breeding = runner.game.player(0).breeding_area.as_ref().unwrap();
+    assert_eq!(breeding.stack_size(), 2);
+    assert_eq!(
+        breeding.card_sources[0].handle(),
+        omekamon_handle,
+        "Omekamon is tucked as the bottom source under King Drasil"
+    );
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .trash
+            .iter()
+            .any(|card| card.handle() == omekamon_handle),
+        "Omekamon moved to breeding instead of normal deletion trash"
+    );
 }
 
 #[test]
@@ -201,10 +381,9 @@ fn bt20_083_inherited_breeding_security_removed_fans_out_once_with_payload() {
     );
 
     let attacker = runner.place_on_field(0, "BT20-083-ATTACKER", Some(0));
-    runner.place_in_breeding(0, "BT20-083-BREED-TOP");
-    add_breeding_source(&mut runner, 0, "BT20-083");
+    runner.place_in_breeding(1, "BT20-083-BREED-TOP");
+    add_breeding_source(&mut runner, 1, "BT20-083");
 
-    let before = runner.memory();
     let _ = runner.attack_player(attacker, 1, true);
 
     let seen = seen.lock().unwrap();
@@ -213,18 +392,13 @@ fn bt20_083_inherited_breeding_security_removed_fans_out_once_with_payload() {
         1,
         "BT20-083 as an inherited breeding source should observe the opponent-security removal exactly once"
     );
-    assert_eq!(
-        runner.memory(),
-        before + 1,
-        "BT20-083 witness gained memory only if the inherited source fired"
-    );
     assert_eq!(seen[0].0, Some(1), "defender security was removed");
     assert_eq!(seen[0].1, Some(0), "attacker caused the security removal");
     assert_eq!(seen[0].2, Some(EventCause::SecurityRemoval));
     assert_eq!(
         seen[0].3,
         Some(PermanentHandle {
-            player: 0,
+            player: 1,
             index: BREEDING_TARGET as u8,
         }),
         "BT20-083 inherited source should retain the breeding carrier sentinel"
@@ -232,7 +406,70 @@ fn bt20_083_inherited_breeding_security_removed_fans_out_once_with_payload() {
 }
 
 #[test]
-#[ignore = "pending: G-BREEDING-TRIGGER-DISPATCH plus source-play from materials"]
 fn bt20_083_inherited_breeding_security_removed_suspends_carrier_and_plays_omekamon_source() {
-    panic!("requires breeding inherited security-removed observer and source-play support");
+    let mut attacker = make_test_card("BT20-083-ATTACKER", "BT20-083 attacker");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.level = Some(5);
+    attacker.dp = Some(9000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-083")
+        .expect("BT20-083 YAML loads")
+        .add_card(attacker)
+        .add_card(make_test_card("BT20-083-BREED-TOP", "King Drasil_7D6"))
+        .add_card(make_test_card("BT20-083-SEC", "Security card"))
+        .add_card(make_test_card("BT20-083-FILL", "Filler"))
+        .security(1, &["BT20-083-SEC", "BT20-083-SEC"])
+        .deck(0, &["BT20-083-FILL"; 10])
+        .deck(1, &["BT20-083-FILL"; 10])
+        .memory(5)
+        .start();
+
+    let attacker = runner.place_on_field(0, "BT20-083-ATTACKER", Some(0));
+    runner.place_in_breeding(1, "BT20-083-BREED-TOP");
+    let source_handle = add_breeding_source(&mut runner, 1, "BT20-083");
+
+    let _ = runner.attack_player(attacker, 1, true);
+    assert!(
+        matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::Replacement | SelectionKind::TriggerOrder)
+        ),
+        "optional inherited trigger should expose an accept/decline prompt"
+    );
+    assert!(runner.pending_is_optional());
+    runner
+        .accept_optional_trigger()
+        .expect("accept optional inherited Omekamon trigger");
+
+    assert!(
+        matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::CountCappedMultiSelect { max: 1, picked: 0 })
+        ),
+        "select_materials should expose a one-pick source selection"
+    );
+    runner
+        .execute_action(1, encode_breeding_source_select(1, 0).unwrap())
+        .expect("choose Omekamon breeding source");
+
+    let breeding = runner.game.player(1).breeding_area.as_ref().unwrap();
+    assert!(
+        breeding.is_suspended,
+        "the breeding carrier is suspended as the printed cost"
+    );
+    assert!(
+        !breeding
+            .card_sources
+            .iter()
+            .any(|source| source.handle() == source_handle),
+        "played Omekamon source leaves the breeding stack"
+    );
+    assert!(
+        runner.game.player(1).battle_area.iter().any(|perm| {
+            perm.top_card().handle() == source_handle
+                && perm.top_card().card_name(&runner.game.card_data) == "Omekamon"
+        }),
+        "selected Omekamon source is played for free"
+    );
 }

@@ -1,5 +1,62 @@
 # Royal Knights Rust DSL/Engine Gap Rollup
 
+> **Royal Knights reconciliation — 2026-05-22:** The current
+> `qa/archetype-qa/royal-knights/deck_pool.json` resolves to **72** cards;
+> all 72 have Rust YAML under `code/digimon-engine/cards/` and a behavioral
+> test file under `code/digimon-engine/tests/cards_behavioral/`. Current
+> source reconciliation before card-body migration classifies the active
+> Royal Knights gap markers as follows:
+>
+> | Area / Cards | Current classification | Code-verified result |
+> |---|---|---|
+> | Optional own breeding permanent selection (`BT13-110`, `BT20-083`) | **Closed substrate / migrated consumers** | `select_own_breeding_permanent optional: true` now exposes PASS/decline and leaves mandatory/no-candidate behavior distinct. BT13-110 and BT20-083 consume it in active behavioral tests. |
+> | Filtered own breeding permanent target (`BT13-093`, related King Drasil placement cards) | **Closed substrate / migrated current consumers** | RK-G001 filter support exists in the DSL compiled predicate and pre-check path; BT13-110, BT20-083, BT23-072, and related source-play paths now use the closed selection/source primitives where their printed clauses fit. |
+> | Breeding material selection and play (`BT13-112`, `BT13-110`, `BT20-083`, `BT23-072`) | **Closed substrate / migrated current consumers** | `select_materials` and `play_from_materials` can select from the `BREEDING_TARGET` carrier, enforce name uniqueness, bind picked source cards, and suppress On Play. BT13-112, BT13-110, BT20-083, and BT23-072 now have focused production coverage for their expressible clauses. |
+> | DP-budget opponent selection (`BT17-018`) | **Closed substrate / migrated** | `select_opponent_dp_budget` and engine running-budget selection exist. BT17-018 now uses native DSL for the 15000 DP budgeted delete instead of the stale raw-rust approximation. |
+> | Event-bound may-attack / keyword grants (`BT20-017`, `BT23-072`) | **Closed or composable substrate / migrated** | Event-target binding plus `may_attack_now` / keyword grant support are present and consumed in BT20-017, BT23-013, and BT23-072 behavioral coverage. |
+> | `BT23-013` | **Implemented for current closed substrate** | Rush, Alliance, Atho/Rene/Por token branch, Sistermon hand/trash name-excluded play, and other-Digimon-played may-attack observer are migrated. |
+> | `BT13-019` | **Open substrate** | Needs a reusable union over trash plus breeding sources with name exclusions, not just hand/trash union. |
+> | `EX11-053` | **Partial / residual open source-play shape** | On Play Royal Knight hand-to-fielded-King-Drasil source placement is migrated. On Deletion Omnimon X union hand/source play plus attach-self remains open. |
+> | `BT20-021` | **Open substrate** | Union hand/trash source-as-cost, source-DP compare, unsuspend, and source-count security trash remain outside the closed Royal Knights substrate. |
+> | `BT23-057` | **Open substrate plus card-authoring backlog** | Multi-card trash-to-deck placement/cost-reduction and dynamic play-cost delete-all remain true blockers; Hinukamuy token registration alone is closed. |
+> | `BT23-058` | **Open substrate / out of this change's narrow closure** | Self-scoped on-suspend and aggregate lowest play-cost delete-all remain current blockers. |
+>
+> Raw-rust occurrences in the current Royal Knights pool are concentrated in
+> `BT13-007`, `BT13-040`, `BT20-102`, `BT23-014`, and `EX8-074`;
+> BT17-018's stale DP-budget raw-rust bridge has been removed.
+> This change targets only the stale/raw Royal Knights gaps called out above;
+> unrelated raw-rust bodies remain separate tracker debt unless a task names
+> their primitive directly.
+
+> **Closeout update — 2026-05-22:** `close-royal-knights-substrate-gaps`
+> migrated the now-unblocked Royal Knights clauses for BT17-018, BT13-112,
+> BT13-110, BT20-083, BT20-017, BT23-072, BT23-013, and EX11-053. Remaining
+> active ignored tests now point to current tracker entries only:
+> `G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY` (BT13-019),
+> `G-UNION-HAND-TRASH-SOURCE-COST` / source-count security trash
+> (BT20-021), BT23-057 trash-return cost reduction plus dynamic play-cost
+> delete, BT23-058 self-scoped on-suspend plus aggregate lowest play-cost
+> delete-all, and EX11-053 On Deletion hand/source play plus attach-self.
+
+> **Implementation slice — 2026-05-22,
+> `complete-royal-knights-event-union-gaps`:** Printed-text reconciliation
+> for the next change splits the target set into two reusable primitive
+> families. Event-context coverage owns the security and event-payload clauses:
+> BT15-084 (security trashed/removed), BT20-056 and BT20-060 (security stack
+> removed), BT23-035 and BT23-047 (own/opponent security removed), BT8-090
+> (security added), BT9-092 (same-level X Antibody digivolution), and RB1-035
+> (opponent-played level branch). Union/source coverage owns BT13-019
+> (Sistermon-from-trash OR Royal-Knight-from-breeding-sources play with fixed
+> Gankoomon/Omnimon exclusion), EX11-053 On Deletion (Omnimon X from hand OR
+> King Drasil source, then attach this card), and BT20-021 (Royal Knight
+> hand/trash source-placement cost plus follow-up delete; source-count
+> security trash remains the paired formula/security blocker). EX11-069 remains
+> union-adjacent only if its trash digivolve and suspend-cost recursion can use
+> the same source-binding machinery; otherwise it stays a separate
+> effect-digivolve-from-trash/end-all-turns suspend-cost gap. Out-of-scope for
+> this slice: BT23-057 trash-return cost reduction, BT23-058 lowest play-cost
+> aggregate delete-all, and unrelated raw-rust card bodies.
+
 > **Phase 2 Track J PR 1 — 2026-05-17:** Substrate enabler PR landed.
 > Closures: **RK-G001** (filter on `select_own_breeding_permanent` +
 > `BreedingPermanentRef` surfaced as a `Permanent(BREEDING_TARGET)`
@@ -152,25 +209,25 @@ Implemented / audited in these batches:
 | `BT13-087` Dynasmon | `PARTIAL` | Reveal 4; add up to two Lucemon/Royal Knight cards; trash rest. | Another matching Digimon played observer and delete-all level 4 or lower. |
 | `BT13-102` Keenan Crier | `PARTIAL` | [Security] play self. | Opponent hidden-hand choice; opponent-turn effect-play memory observer. |
 | `BT13-111` Gallantmon | `PARTIAL` | Rush. | Combined-trash play-cost reduction; delete-result fallback. |
-| `BT13-112` Omnimon | `BLOCKED` | Load-only gap stub. | Modal delete or different-name Royal Knight source play from breeding, King Drasil trash, Rush grant, On Play suppression. |
+| `BT13-112` Omnimon | `IMPLEMENTED` for current closed substrate | Modal delete and different-name Royal Knight source play from breeding, King Drasil trash, Rush grant, and On Play suppression. | none for this change's migrated slice. |
 | `BT15-092` Revelation of Light | `BLOCKED` | Load-only gap stub. | Security-trash self-dispatch; security search/play; self-to-security top; security-Digimon debuff. |
 | `BT17-077` Imperialdramon: Paladin Mode | `PARTIAL` | ACE metadata; trash all sources of all opponent Digimon. | Blast Digivolve; bulk trash-to-deck; returned-card memory binding; sourceless bottom-deck cost. |
 | `BT19-093` Queen Device | `BLOCKED` | Load-only gap stub. | Option battle-area carrier lifecycle; negative color-bypass predicate; two-target security modifier. |
-| `BT20-017` Jesmon | `BLOCKED` | Load-only gap stub. | Atho/Rene/Por token registration; other-Digimon-played delete/may-attack observer. |
+| `BT20-017` Jesmon | `IMPLEMENTED` for current closed substrate | Atho/Rene/Por token play; other-Digimon-played delete and may-attack observer. | none for this change's migrated slice. |
 | `BT20-021` Jesmon GX | `BLOCKED` | ACE metadata and standard route. | Union hand/trash source cost; source-DP compare; unsuspend; source-count security trash. |
 | `BT20-045` Examon | `PARTIAL` | ACE metadata; Raid, Piercing, Blocker, Evade; Counter Blast DNA using Breakdramon + Slayerdramon. | DNA-gated highest-DP bottom-deck sweep; any-Digimon-suspend observer. |
 | `BT20-056` Alphamon | `PARTIAL` | Barrier; [On Play]/[When Digivolving] Recovery +1. | During-attack breeding digivolve; security-removed observer; inherited replacement. |
 | `BT22-025` UlforceVeedramon | `PARTIAL` | ACE metadata; [When Attacking][OPT] unsuspend self. | Blast Digivolve; modal lowest-level bottom-deck or blue Tamer play. |
 | `BT22-041` Kentaurosmon | `PARTIAL` | Blocker, Barrier, optional yellow hand-to-top-security. | Total-security play-cost reduction; self-suspend security-trash unsuspend cost. |
 | `BT22-052` Leopardmon | `PARTIAL` | ACE metadata; optional 5000 DP-or-lower hand play; own level 3+ Blocker grant; Blast Digivolve marker and other-Digimon would-leave memory observer. | Remaining gaps are outside the Track B replacement/Counter marker slice. |
-| `BT23-013` Jesmon | `PARTIAL` | Rush and Alliance. | Card-authoring only (Track J PR 3) — the substrate is RESOLVED: Atho/Rene/Por token (PR 1), the Sistermon hand/trash union play with name exclusion (`G-UNION-HAND-TRASH-NAME-EXCLUSION`, S2.2 — `select_union_zone` filter + `name_not_shared_by_field_digimon`), and the other-Digimon-played may-attack observer (`G-ALLY-PLAYED-MAY-ATTACK`, S2.1). |
+| `BT23-013` Jesmon | `IMPLEMENTED` for current closed substrate | Rush, Alliance, Atho/Rene/Por token choice, Sistermon hand/trash name-excluded play, and other-Digimon-played may-attack observer. | none for this change's migrated slice. |
 | `BT23-035` Dynasmon | `PARTIAL` | Barrier; top-security cost into -6000 DP board debuff. | Security-removed Security A. +1 / recovery tail. |
 | `BT23-047` Examon | `PARTIAL` | Piercing, Security A. +1, and declared green Lv.5 + blue Lv.5 Partition source requirement. | Five-target suspend; next-unsuspend lock; may attack; security-removed tail. |
-| `BT23-057` Gankoomon | `BLOCKED` | Load-only gap stub. Hinukamuy token registered in `token_registry.rs` (Track J S2.3 — White/6000 DP/`<Alliance> <Reboot> <Blocker>`). | Multi-card trash-to-deck cost reduction; dynamic play-cost delete; production card body unauthored (Track J PR 3). |
-| `BT23-072` King Drasil_7D6 | `BLOCKED` | Load-only gap stub. | Hand-main source placement; played-Digimon keyword grant; breeding source play. |
+| `BT23-057` Gankoomon | `BLOCKED` | Load-only gap stub. Hinukamuy token registered in `token_registry.rs` (Track J S2.3 — White/6000 DP/`<Alliance> <Reboot> <Blocker>`). | Multi-card trash-to-deck cost reduction; dynamic play-cost delete. |
+| `BT23-072` King Drasil_7D6 | `IMPLEMENTED` for current closed substrate | Hand-main source placement; played-Digimon Rush/Raid/Reboot/Blocker grant; inherited breeding-source play. | none for this change's migrated slice. |
 | `EX8-073` Gallantmon (X Antibody) | `BLOCKED` | Load-only gap stub. | Source-gated DP swings; delete-or-security fallback; memory aura immunity. |
 | `EX10-068` Digimon Emperor | `PARTIAL` | [On Play] delete play cost 5 or lower; [Security] play self. | Opponent distinct-color count; returned-card color binding into same-color hand/trash play. |
-| `EX11-053` Omekamon | `BLOCKED` | Load-only gap stub. | Royal Knight hand-to-King-Drasil source placement; Omnimon X union hand/source play and attach self. |
+| `EX11-053` Omekamon | `PARTIAL` | On Play Royal Knight hand-to-fielded-King-Drasil source placement. | On Deletion Omnimon X union hand/source play and attach self. |
 
 Regression files were added under:
 

@@ -251,8 +251,8 @@ fn select_materials_batch_play_from_materials_plays_every_picked_source() {
     // The `select_materials` multi-pick binds the picks as a `CardList`;
     // `play_from_materials` consumes the whole batch, playing each picked
     // source as a fresh battle-area permanent. Each played source fires its
-    // own [On Play] (gain memory) — the merged engine wires no suppression
-    // through the `play_from_materials` path.
+    // own [On Play] (gain memory) because this default path does not request
+    // On Play suppression.
     let mut runner = carrier_with_sources(&["RK-ALPHA", "RK-OMEGA", "RK-GANK"]);
 
     let perm_handle = runner.perm_handle(0, 0);
@@ -282,6 +282,7 @@ fn select_materials_batch_play_from_materials_plays_every_picked_source() {
             target: CompiledBindingRef::Named("carrier".to_string()),
             source_index: CompiledBindingRef::Named("picked".to_string()),
             cost_delta: Some(CompiledCostDelta::Free),
+            suppress_on_play: false,
             bind_as: None,
         },
     ];
@@ -333,6 +334,81 @@ fn select_materials_batch_play_from_materials_plays_every_picked_source() {
         runner.game.memory,
         memory_before + 3 * ON_PLAY_GAIN,
         "each of the three batch-played sources fires its own On Play (gain memory)"
+    );
+}
+
+#[test]
+fn play_from_materials_can_suppress_on_play_for_picked_breeding_sources() {
+    let mut runner = breeding_carrier_with_sources(&["RK-ALPHA", "RK-OMEGA"]);
+    let carrier_top = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .unwrap()
+        .top_card()
+        .handle();
+    let battle_before = runner.game.players[0].battle_area.len();
+    let memory_before = runner.game.memory;
+
+    let mut bindings = Bindings::new();
+    bindings.insert_breeding_permanent_ref(
+        "king_drasil",
+        BreedingPermanentSelectionRef {
+            player: 0,
+            card: carrier_top,
+        },
+    );
+
+    let steps = vec![
+        CompiledStep::SelectMaterials {
+            of_permanent: CompiledBindingRef::Named("king_drasil".to_string()),
+            max: CompiledCountBound::Literal(2),
+            filter: CompiledPredicate {
+                trait_has: Some("Royal Knight".to_string()),
+                ..CompiledPredicate::default()
+            },
+            uniqueness: Some(CompiledDistinctBy::Name),
+            bind_as: Some("picked".to_string()),
+            prompt: "Pick Royal Knight sources from the breeding carrier".to_string(),
+            prompt_key: None,
+            optional_zero: false,
+        },
+        CompiledStep::PlayFromMaterials {
+            target: CompiledBindingRef::Named("king_drasil".to_string()),
+            source_index: CompiledBindingRef::Named("picked".to_string()),
+            cost_delta: Some(CompiledCostDelta::Free),
+            suppress_on_play: true,
+            bind_as: None,
+        },
+    ];
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, carrier_top, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    for _ in 0..2 {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("pending selection while picks remain");
+        let action = pending.valid_action_ids[0];
+        let selecting_player = pending.selecting_player;
+        runner
+            .game
+            .resolve_selection(selecting_player, action)
+            .expect("pick breeding source");
+    }
+
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        battle_before + 2,
+        "each selected breeding source is played"
+    );
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "suppress_on_play must prevent the played source Digimon's On Play gains"
     );
 }
 
@@ -707,7 +783,10 @@ fn select_materials_breeding_carrier_distinct_by_exercises_recursive_path() {
 
     // Finish the two remaining distinct-name picks.
     let next = pending.valid_action_ids[0];
-    runner.game.resolve_selection(sp, next).expect("second pick");
+    runner
+        .game
+        .resolve_selection(sp, next)
+        .expect("second pick");
     let pending = runner.game.pending_selection.as_ref().unwrap();
     assert_eq!(pending.valid_action_ids.len(), 1, "one distinct name left");
     let last = pending.valid_action_ids[0];
