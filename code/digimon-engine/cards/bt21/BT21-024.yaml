@@ -16,15 +16,29 @@ effects:
   # "If your opponent has 5 or fewer security cards, they place 1 card from
   # their hand as the bottom security card. Then, trash their top security card."
   #
-  # The printed card text gates both the bottom-security placement and the
-  # top-security trash under "If your opponent has 5 or fewer security cards".
-  # Print text wins over DCGO when they diverge, so this condition uses the
-  # aggregate count predicate over the opponent's security stack.
+  # The printed card text gates the WHOLE clause (both the bottom-security
+  # placement and the top-security trash) under "If your opponent has 5 or
+  # fewer security cards". The native `opponent_security_count_lte` predicate
+  # leaf (G-OPP-SECURITY-COUNT-LTE, resolved 2026-05-17) reads
+  # `rctx.security_count(rctx.opponent_id())` directly — the right shape for
+  # this aggregate count gate.
+  #
+  # DCGO (BT21_024.cs): the SelectHandEffect runs only when
+  # `Enemy.SecurityCards.Count <= 5 && Enemy.HandCards.Count() >= 1`, with
+  # `canNoSelect: false` — the opponent CANNOT decline the placement. The
+  # `select_hand` step is therefore mandatory (not `optional`).
+  #
+  # `select_hand` + `place_on_security` are paired INSIDE the
+  # `as_selecting_player` body so the `pick` hand-index binding (set by the
+  # select_hand resolution callback) flows directly into the placement step
+  # that consumes it. `trash_top_security` is the outer-tail sibling — it must
+  # fire after the placement resolves. When the opponent has an empty hand the
+  # engine's empty-candidate path (G-SELECT-EMPTY-OUTER-TAIL, resolved) skips
+  # the select_hand install and runs the body synchronously, so the outer-tail
+  # `trash_top_security` step still fires.
   - when: [on_play, when_digivolving]
     condition:
-      count_lte:
-        filter: { zone: [security], owner: opponent }
-        n: 5
+      opponent_security_count_lte: 5
     process:
       - as_selecting_player:
           of: opponent
@@ -32,7 +46,6 @@ effects:
             - select_hand:
                 of: opponent
                 bind_as: pick
-                optional: true
                 filter: {}
                 prompt: "Place a card from your hand as your bottom security card"
             - place_on_security:

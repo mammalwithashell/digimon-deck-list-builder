@@ -432,6 +432,61 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    /// Opponent-side mirror of `select_own_sources`. The candidate set is drawn
+    /// from the controller's OPPONENT's battle-area digivolution-source stacks
+    /// (every card below the top card of each opponent permanent). Identical
+    /// count / PASS / filter / stable-source-ref semantics — only the player
+    /// whose stacks are scanned differs. G-SELECT-OPPONENT-SOURCES.
+    pub fn select_opponent_sources<F, C>(
+        &mut self,
+        prompt: &str,
+        min: u8,
+        max: u8,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, SourceSelectionRef) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<SourceSelectionRef>) + Send + Sync + 'static,
+    {
+        assert!(min <= max, "select_opponent_sources min must be <= max");
+        assert!(max > 0, "select_opponent_sources max must be > 0");
+
+        let opponent = self.game.next_clockwise(self.player);
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
+        let previous_phase = self.game.current_phase;
+        install_source_multi_selection(
+            self.game,
+            opponent,
+            selecting_player,
+            override_pin,
+            prompt.to_string(),
+            min,
+            max,
+            Vec::new(),
+            std::sync::Arc::new(filter),
+            source_card,
+            source_permanent,
+            source_kind,
+            previous_phase,
+            Box::new(move |game, picked| {
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                );
+                callback(&mut ctx, picked);
+            }),
+        );
+    }
+
     pub fn select_partition_sources<C>(
         &mut self,
         host: PermanentHandle,
@@ -928,10 +983,10 @@ impl<'a> EffectContext<'a> {
     /// chosen card.
     ///
     /// Action IDs reuse existing ranges: hand slots map to `PLAY_HAND_START +
-    /// i`; trash slots map to `TRASH_EFFECT_START + i`. The inner callback
-    /// disambiguates by range before invoking the user callback. No new action
-    /// range is introduced. This matches Python's `effect_play_from_zone`
-    /// dual-range approach.
+    /// i`, trash slots map to `TRASH_EFFECT_START + i`, and source-material
+    /// slots map to `SOURCE_SELECT_START + field * SOURCES_PER_FIELD + i`.
+    /// The inner callback disambiguates by range before invoking the user
+    /// callback. No new action range is introduced.
     ///
     /// If no card passes the filter (across all zones), this is a no-op —
     /// matching the silent-empty contract used by the other select_* helpers.
@@ -940,12 +995,12 @@ impl<'a> EffectContext<'a> {
     /// `usize` index), this helper's filter receives `&CardSource` so cross-zone
     /// predicates can inspect the card directly without branching on whether the
     /// index is a hand or trash index.
-    /// Prompt for a card from the union of `zones` (hand ∪ trash). The
+    /// Prompt for a card from the union of `zones` (hand ∪ trash ∪ material). The
     /// `callback` receives the picked card's `CardHandle` **and** the
     /// [`UnionZoneOrigin`](crate::selection::UnionZoneOrigin) of the zone it
     /// came from, so a downstream consumer can act on the card's true origin
-    /// (e.g. play it back from hand vs trash). The origin is recovered from
-    /// the encoded `action_id` range (`PLAY_HAND` vs `TRASH_EFFECT`).
+    /// (e.g. play it back from hand, trash, or source materials). The origin is
+    /// recovered from the encoded `action_id` range.
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
@@ -965,7 +1020,9 @@ impl<'a> EffectContext<'a> {
             + 'static,
     {
         use crate::action::space::{
-            HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
+            decode_source_select, encode_source_select, HAND_MAIN_LIMIT, PLAY_HAND_END,
+            PLAY_HAND_START, SOURCES_PER_FIELD, SOURCE_SELECT_END, SOURCE_SELECT_START,
+            TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
         };
         use crate::selection::UnionZoneSet;
 
@@ -994,6 +1051,34 @@ impl<'a> EffectContext<'a> {
                 let card_clone = self.game.player(of_player).trash[i].clone();
                 if filter(self.game, &card_clone) {
                     valid_action_ids.push(TRASH_EFFECT_START + i as u16);
+                }
+            }
+        }
+
+        // Material zone — source cards beneath this effect's source permanent.
+        if zones.contains(UnionZoneSet::MATERIAL) {
+            if let Some(source_permanent) = self.source_permanent {
+                if source_permanent.player == of_player {
+                    if let Some(perm) = self
+                        .game
+                        .player(source_permanent.player)
+                        .battle_area
+                        .get(source_permanent.index as usize)
+                    {
+                        let source_count = perm.card_sources.len().saturating_sub(1);
+                        let cap = source_count.min(SOURCES_PER_FIELD as usize);
+                        for source_index in 0..cap {
+                            let card_clone = perm.card_sources[source_index].clone();
+                            if filter(self.game, &card_clone) {
+                                if let Some(action_id) = encode_source_select(
+                                    source_permanent.index as u16,
+                                    source_index as u16,
+                                ) {
+                                    valid_action_ids.push(action_id);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1032,26 +1117,37 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 debug_assert!(
-                    action_id < PLAY_HAND_END || action_id >= TRASH_EFFECT_START,
-                    "select_union_zone: action_id {} falls in gap between PLAY_HAND ({}..{}) and TRASH_EFFECT ({}..); valid_action_ids was populated incorrectly",
-                    action_id, PLAY_HAND_START, PLAY_HAND_END, TRASH_EFFECT_START
+                    action_id < PLAY_HAND_END
+                        || action_id >= TRASH_EFFECT_START
+                        || (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action_id),
+                    "select_union_zone: action_id {} falls outside supported union-zone action ranges; valid_action_ids was populated incorrectly",
+                    action_id
                 );
                 // Disambiguate by range — the action_id range also records
                 // the picked card's origin zone.
-                let (handle, origin) = if action_id >= TRASH_EFFECT_START {
-                    let idx = (action_id - TRASH_EFFECT_START) as usize;
-                    (
-                        game.player(of_player).trash[idx].handle(),
-                        crate::selection::UnionZoneOrigin::Trash,
-                    )
-                } else {
-                    // PLAY_HAND_START range (0-29)
-                    let idx = action_id.saturating_sub(PLAY_HAND_START) as usize;
-                    (
-                        game.player(of_player).hand[idx].handle(),
-                        crate::selection::UnionZoneOrigin::Hand,
-                    )
-                };
+                let (handle, origin) =
+                    if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action_id) {
+                        let (field_index, source_index) = decode_source_select(action_id);
+                        (
+                            game.player(of_player).battle_area[field_index as usize].card_sources
+                                [source_index as usize]
+                                .handle(),
+                            crate::selection::UnionZoneOrigin::Material,
+                        )
+                    } else if action_id >= TRASH_EFFECT_START {
+                        let idx = (action_id - TRASH_EFFECT_START) as usize;
+                        (
+                            game.player(of_player).trash[idx].handle(),
+                            crate::selection::UnionZoneOrigin::Trash,
+                        )
+                    } else {
+                        // PLAY_HAND_START range (0-29)
+                        let idx = action_id.saturating_sub(PLAY_HAND_START) as usize;
+                        (
+                            game.player(of_player).hand[idx].handle(),
+                            crate::selection::UnionZoneOrigin::Hand,
+                        )
+                    };
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1237,31 +1333,32 @@ impl<'a> EffectContext<'a> {
         // is the base for source_index 0 of this carrier; threading it
         // through `install_count_capped_step` keeps every recursive step
         // consistent. zone_len = sources excluding the top card.
-        let (zone_len, range_start) = match zone {
-            CountCappedZone::Hand => {
-                let len = self.game.player(of_player).hand.len().min(HAND_MAIN_LIMIT);
-                (len, PLAY_HAND_START)
-            }
-            CountCappedZone::Trash => {
-                let len = self
-                    .game
-                    .player(of_player)
-                    .trash
-                    .len()
-                    .min(TRASH_MAIN_LIMIT);
-                (len, TRASH_EFFECT_START)
-            }
-            CountCappedZone::Material(perm_handle) => {
-                let (source_count, base) = material_zone_geometry(self.game, perm_handle)
-                    .unwrap_or((0, 0));
-                debug_assert!(
+        let (zone_len, range_start) =
+            match zone {
+                CountCappedZone::Hand => {
+                    let len = self.game.player(of_player).hand.len().min(HAND_MAIN_LIMIT);
+                    (len, PLAY_HAND_START)
+                }
+                CountCappedZone::Trash => {
+                    let len = self
+                        .game
+                        .player(of_player)
+                        .trash
+                        .len()
+                        .min(TRASH_MAIN_LIMIT);
+                    (len, TRASH_EFFECT_START)
+                }
+                CountCappedZone::Material(perm_handle) => {
+                    let (source_count, base) =
+                        material_zone_geometry(self.game, perm_handle).unwrap_or((0, 0));
+                    debug_assert!(
                     source_count <= SOURCES_PER_FIELD as usize,
                     "Material zone: source_count {} exceeds SOURCES_PER_FIELD {} for carrier {:?}",
                     source_count, SOURCES_PER_FIELD, perm_handle
                 );
-                (source_count, base)
-            }
-        };
+                    (source_count, base)
+                }
+            };
 
         // Collect all indices whose card passes the filter. We clone each card
         // to avoid a simultaneous immutable + mutable borrow of self.game.
@@ -2607,7 +2704,9 @@ pub(crate) fn material_carrier_permanent(
     if perm.index == crate::action::space::BREEDING_TARGET as u8 {
         game.player(perm.player).breeding_area.as_ref()
     } else {
-        game.player(perm.player).battle_area.get(perm.index as usize)
+        game.player(perm.player)
+            .battle_area
+            .get(perm.index as usize)
     }
 }
 
@@ -2978,7 +3077,7 @@ fn install_count_capped_step(
                             material_zone_slice(game, ph)
                                 .expect("material carrier present for distinct_by candidate lookup")
                                 [i]
-                            .data_index
+                                .data_index
                         }
                     };
                     let cand_data = &game.card_data[cand_data_idx];

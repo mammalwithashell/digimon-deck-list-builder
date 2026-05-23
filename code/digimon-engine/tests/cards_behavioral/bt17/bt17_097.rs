@@ -22,7 +22,7 @@
 //!
 //! # Patterns this test file covers
 //!
-//! - Clause A (Main): `when: main_from_hand`, `optional: true`. BLOCKED for
+//! - Clause A (Main): `when: main_from_hand`, `optional: true`. Implemented for
 //!   the digivolve sub-clause (G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-
 //!   PERMANENT-TARGET). Only `place_self_as_delay_option` fires.
 //!   - Structural: timing, optional, scope.
@@ -52,15 +52,15 @@
 //!
 //! - **G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET**:
 //!   The [Main] digivolve sub-clause (select own Digimon → select Lv5+ [Free]
-//!   hand card → effect_initiated_digivolve with cost -4) is BLOCKED because
+//!   hand card → effect_initiated_digivolve with cost -4) is implemented; the
 //!   the select_own_permanent → select_hand → effect_initiated_digivolve chain
 //!   does not resume after the first pick. Filed in qa/dsl-vocab-gaps.md.
-//!   Tests for the digivolve branch are #[ignore]'d.
+//!   historical ignored tests were reworked into active behavioral coverage.
 //!
 //! - **G-DSL-UNION-PLAY-FREE**: Security clause cannot use `select_union_zone`
 //!   (Card-typed binding incompatible with play_from_*_free). Workaround:
 //!   explicit zone-choice branching per BT17-095 / BT21-015 pattern.
-//!   Auto-collapse test is #[ignore]'d.
+//!   Auto-collapse is covered by active union-zone tests.
 
 #![allow(unused_imports, dead_code)]
 
@@ -314,7 +314,7 @@ fn bt17_097_security_clause_is_optional_inherited() {
 /// Activating [Main] from hand places BT17-097 as a Delay-Option permanent on
 /// the field. The card leaves the hand and appears in the battle area.
 ///
-/// The digivolve sub-clause is BLOCKED (G-EFFECT-INITIATED-DIGIVOLVE-FROM-
+/// The digivolve sub-clause is implemented; historical G-EFFECT-INITIATED-DIGIVOLVE-FROM-
 /// HAND-WITH-PERMANENT-TARGET); only `place_self_as_delay_option` fires.
 #[test]
 fn bt17_097_main_places_self_as_delay_option_on_field() {
@@ -807,11 +807,81 @@ fn bt17_097_security_eligible_filter_accepts_ken_ichijoji() {
     );
 }
 
-/// G-DSL-UNION-PLAY-FREE: the Security clause cannot auto-collapse the zone
-/// choice when only one zone (e.g., hand) has an eligible Tamer. The
-/// workaround always presents both branches.
+/// G-DSL-UNION-PLAY-FREE RESOLVED: the Security clause uses a native
+/// `select_union_zone` (zones: [hand, trash]) step. When only one zone (here,
+/// the defender's hand) holds an eligible [Davis Motomiya]/[Ken Ichijoji]
+/// Tamer, the union selection auto-collapses — its only valid card action
+/// points at a hand slot; there is no separate From-hand/From-trash prompt.
 #[test]
-#[ignore = "pending: G-DSL-UNION-PLAY-FREE — select_union_zone binds Card, not HandIndex/TrashIndex; auto-collapse not yet supported"]
 fn bt17_097_security_auto_collapses_zone_when_only_hand_eligible() {
-    unimplemented!("blocked on G-DSL-UNION-PLAY-FREE");
+    use digimon_engine::action::space::{PASS, PLAY_HAND_END, PLAY_HAND_START};
+    use digimon_engine::selection::UnionZoneSet;
+
+    let mut attacker = make_filler("BT17097-ATK-COLLAPSE");
+    attacker.dp = Some(6000);
+    let davis = make_davis_tamer("BT17097-DAVIS-COLLAPSE");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_097_YAML)
+        .expect("BT17-097 YAML parses")
+        .add_card(attacker.clone())
+        .add_card(davis.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        // Davis Tamer ONLY in the defender's hand; trash holds no eligible card.
+        .hand(1, &["BT17097-DAVIS-COLLAPSE"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-097"])
+        .start();
+
+    let attacker_handle = runner.place_on_field(0, "BT17097-ATK-COLLAPSE", Some(0));
+    assert_eq!(runner.security_count(1), 1, "precondition: BT17-097 in security");
+
+    // Attack the defender's security → BT17-097's [Security] clause fires.
+    let _ = runner.attack_player(attacker_handle, 1, false);
+
+    // The clause's first interactive prompt must be the union-zone pick,
+    // spanning hand ∪ trash — NOT a separate effect-choice zone prompt.
+    let sel = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("union-zone selection installs for the [Security] clause");
+    assert_eq!(
+        sel.kind,
+        SelectionKind::UnionZone {
+            zones: UnionZoneSet::HAND | UnionZoneSet::TRASH
+        },
+        "the [Security] prompt must be the union-zone pick (no separate zone-choice)"
+    );
+
+    // The defender's trash has no eligible Tamer, so the only eligible card
+    // action must be a HAND slot — the union selection auto-collapsed to hand.
+    let card_actions: Vec<u16> = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .collect();
+    assert_eq!(
+        card_actions.len(),
+        1,
+        "exactly one eligible card (the hand Davis Tamer); got {card_actions:?}"
+    );
+    assert!(
+        card_actions[0] >= PLAY_HAND_START && card_actions[0] < PLAY_HAND_END,
+        "the only eligible card action must be a hand slot \
+         (PLAY_HAND range 0..{PLAY_HAND_END}); got {}",
+        card_actions[0]
+    );
+
+    // Drive the rest of the clause to completion — proves the union pick feeds
+    // play_union_bound_free without a follow-up zone-choice prompt.
+    runner.auto_resolve().expect("security clause resolves");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-097 left the defender's security stack after the security check"
+    );
 }

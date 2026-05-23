@@ -12,22 +12,28 @@
 //! - Conditional Option color bypass via top-level `use_requirement`.
 //! - Main chosen-Tamer color binding with visible hand/trash choice and free
 //!   play of an eligible Digimon.
-//! - Mandatory Security tail that adds the currently resolving Option to hand.
+//! - Security optional Tamer free-play from hand (visible Play/Decline branch),
+//!   followed by the mandatory add-this-option-to-hand tail.
 //!
-//! Omitted rather than approximated:
-//! - Security optional Tamer play before the mandatory add-to-hand tail.
+//! DCGO reference: DCGO/Assets/Scripts/CardEffect/P/White/P_156.cs
+//!
+//! Pattern tags:
+//! - option-color-bypass-use-requirement
+//! - chosen-permanent-color-binding
+//! - hand-or-trash-free-play
+//! - optional-substep-mandatory-tail (PUPPETS-G017 card-shaped adoption)
+//! - security-add-this-option-to-hand
 
 use std::path::Path;
 
 use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledTiming};
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
-use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use digimon_engine::effect_context::EffectReadContext;
 use digimon_engine::enums::{CardColor, CardKind, PlayerId};
-use digimon_engine::selection::OptionPlayResult;
+use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 fn yaml() -> String {
     std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("cards/p/P-156.yaml"))
@@ -175,9 +181,13 @@ fn p_156_security_tail_adds_this_option_to_hand() {
         .start();
 
     let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
-    let result = runner.attack_player(attacker, 1, false);
+    // No Tamer in the defender's hand: the count_gte guard suppresses the
+    // optional Play/Decline prompt; only the mandatory tail runs. The Security
+    // clause still resolves through the deferred-selection pipeline, so the
+    // attack returns `InProgress` and `auto_resolve` finalizes it.
+    let _ = runner.attack_player(attacker, 1, false);
+    runner.auto_resolve().expect("security clause resolves");
 
-    assert_eq!(result, AttackResult::SecurityCheckSurvived);
     assert_eq!(runner.security_count(1), 0);
     assert!(zone_contains_card(&runner, 1, Zone::Hand, "P-156"));
     assert!(!zone_contains_card(&runner, 1, Zone::Trash, "P-156"));
@@ -411,14 +421,198 @@ fn p_156_main_trash_branch_uses_same_bound_tamer_color_and_cost_filter() {
     assert!(!battle_area_contains_card(&runner, 0, "YELLOW-HIGH"));
 }
 
+/// Structural: the [Security] clause itself is mandatory. The printed "you may"
+/// governs only the inner Tamer play; the "Then, add this card to your hand"
+/// tail is unconditional, so the whole Security effect must never be declinable
+/// at the clause level. The Tamer-play optionality lives in an inner branch.
 #[test]
-#[ignore = "pending: PUPPETS-G017 - optional Tamer play must be declinable while the mandatory add-this-option-to-hand tail still resolves"]
-fn p_156_security_can_decline_tamer_play_and_still_add_this_option_to_hand() {
-    todo!("decline the optional Security Tamer play and assert P-156 still moves to hand");
+fn p_156_security_clause_is_mandatory_with_inner_optional_tamer_play() {
+    let runner = runner();
+    let compiled = runner.compiled_card("P-156").expect("compiled card");
+
+    let security = compiled
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if triggered.when.contains(&CompiledTiming::OnSecurity) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("P-156 must expose a Security clause");
+
+    assert!(
+        !security.optional,
+        "P-156's Security clause is mandatory: the add-this-option-to-hand tail \
+         is unconditional and must never be skippable by declining the clause"
+    );
 }
 
+/// Positive: a Tamer in the defending player's hand during the Security check
+/// surfaces a visible Play/Decline branch. Choosing Play installs a hand
+/// selection of Tamer cards; selecting the Tamer plays it to the battle area
+/// for free. The mandatory tail then routes P-156 itself to the defender's hand.
 #[test]
-#[ignore = "pending: PUPPETS-G017 - optional Tamer play before mandatory Security tail needs continuation-on-accept and continuation-on-decline"]
 fn p_156_security_can_play_tamer_from_hand_then_add_this_option_to_hand() {
-    todo!("select a Tamer from hand during Security, play it for free, then assert P-156 moves to hand");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("P-156 YAML parses")
+        .add_card(digimon("ATTACKER", CardColor::Red, 3))
+        .add_card(tamer("SEC-TAMER", CardColor::Blue))
+        .add_card(filler("FILL"))
+        .hand(1, &["SEC-TAMER"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .security(1, &["P-156"])
+        .memory(10)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    assert_eq!(runner.security_count(1), 1, "precondition: P-156 in security");
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "precondition: defender has no permanents"
+    );
+
+    // The Security clause parks on its first prompt, so the attack returns
+    // `InProgress`; the pending selection is then driven explicitly.
+    let _ = runner.attack_player(attacker, 1, false);
+
+    // The Security clause installs a visible Play/Decline branch because the
+    // defender holds a Tamer that the optional sub-effect can play.
+    let branch = runner
+        .pending_selection_view()
+        .expect("Security Play/Decline branch must install when a Tamer is in hand");
+    assert_eq!(branch.kind, SelectionKind::EffectChoice);
+    assert_eq!(
+        branch.selecting_player, 1,
+        "the security holder resolves the inherited Security effect"
+    );
+    runner
+        .execute_action(branch.selecting_player, branch.valid_action_ids[0])
+        .expect("choose to play a Tamer");
+
+    // Choosing Play installs a hand selection over the defender's Tamer cards.
+    let hand_choice = runner
+        .pending_selection_view()
+        .expect("hand Tamer selection must install after choosing Play");
+    assert_eq!(hand_choice.kind, SelectionKind::Hand);
+    assert_eq!(
+        hand_choice.valid_action_ids,
+        vec![PLAY_HAND_START],
+        "only the Tamer in hand should be selectable"
+    );
+    runner
+        .execute_action(hand_choice.selecting_player, PLAY_HAND_START)
+        .expect("play the Tamer from hand for free");
+    runner.auto_resolve().expect("finish P-156 Security");
+
+    assert!(
+        battle_area_contains_card(&runner, 1, "SEC-TAMER"),
+        "the chosen Tamer must be played to the defender's battle area"
+    );
+    // Mandatory tail: P-156 leaves security and is added to the defender's hand.
+    assert_eq!(runner.security_count(1), 0, "P-156 left the security stack");
+    assert!(
+        zone_contains_card(&runner, 1, Zone::Hand, "P-156"),
+        "the mandatory add-this-option-to-hand tail must still run after the optional play"
+    );
+    assert!(!zone_contains_card(&runner, 1, Zone::Trash, "P-156"));
+}
+
+/// Negative (decline): with a Tamer in hand, the player declines the optional
+/// play. The Tamer stays in hand, nothing reaches the battle area, and the
+/// mandatory add-this-option-to-hand tail still resolves.
+#[test]
+fn p_156_security_can_decline_tamer_play_and_still_add_this_option_to_hand() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("P-156 YAML parses")
+        .add_card(digimon("ATTACKER", CardColor::Red, 3))
+        .add_card(tamer("SEC-TAMER", CardColor::Blue))
+        .add_card(filler("FILL"))
+        .hand(1, &["SEC-TAMER"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .security(1, &["P-156"])
+        .memory(10)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    let _ = runner.attack_player(attacker, 1, false);
+
+    let branch = runner
+        .pending_selection_view()
+        .expect("Security Play/Decline branch must install when a Tamer is in hand");
+    assert_eq!(branch.kind, SelectionKind::EffectChoice);
+    // Branch index 1 is the "Decline" label.
+    runner
+        .execute_action(branch.selecting_player, branch.valid_action_ids[1])
+        .expect("decline the optional Tamer play");
+    runner.auto_resolve().expect("finish P-156 Security");
+
+    assert!(
+        !battle_area_contains_card(&runner, 1, "SEC-TAMER"),
+        "declining must leave the Tamer unplayed"
+    );
+    assert!(
+        zone_contains_card(&runner, 1, Zone::Hand, "SEC-TAMER"),
+        "the declined Tamer stays in the defender's hand"
+    );
+    // Mandatory tail still runs even though the optional play was declined.
+    assert_eq!(runner.security_count(1), 0, "P-156 left the security stack");
+    assert!(
+        zone_contains_card(&runner, 1, Zone::Hand, "P-156"),
+        "declining the optional play must not skip the mandatory add-to-hand tail"
+    );
+    assert!(!zone_contains_card(&runner, 1, Zone::Trash, "P-156"));
+}
+
+/// Negative (no candidate): the defender has no Tamer in hand, so no Play/Decline
+/// prompt installs at all. The mandatory add-this-option-to-hand tail still runs.
+#[test]
+fn p_156_security_no_tamer_in_hand_skips_prompt_but_still_adds_this_option_to_hand() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("P-156 YAML parses")
+        .add_card(digimon("ATTACKER", CardColor::Red, 3))
+        .add_card(digimon("HAND-DIGIMON", CardColor::Blue, 3))
+        .add_card(filler("FILL"))
+        .hand(1, &["HAND-DIGIMON"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .security(1, &["P-156"])
+        .memory(10)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    assert_eq!(runner.security_count(1), 1, "precondition: P-156 in security");
+
+    let _ = runner.attack_player(attacker, 1, false);
+
+    // No Tamer in hand: the count_gte guard suppresses the Play/Decline prompt.
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no Tamer in hand must not install any optional-play prompt"
+    );
+    runner.auto_resolve().expect("security clause resolves");
+
+    // Mandatory tail still runs with no Tamer candidate available.
+    assert_eq!(runner.security_count(1), 0, "P-156 left the security stack");
+    assert!(
+        zone_contains_card(&runner, 1, Zone::Hand, "P-156"),
+        "the mandatory add-to-hand tail must run even with no Tamer candidate"
+    );
+    assert!(
+        zone_contains_card(&runner, 1, Zone::Hand, "HAND-DIGIMON"),
+        "the non-Tamer hand card is untouched"
+    );
+    assert!(
+        !battle_area_contains_card(&runner, 1, "HAND-DIGIMON"),
+        "a non-Tamer Digimon must never be playable by the Security Tamer sub-effect"
+    );
+    assert!(!zone_contains_card(&runner, 1, Zone::Trash, "P-156"));
 }

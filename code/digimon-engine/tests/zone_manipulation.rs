@@ -787,7 +787,7 @@ fn place_as_bottom_source_from_hand_stacks_under_target() {
 
     let ok = r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Hand(0, 0), target);
+        .place_as_bottom_source(CardSourceRef::Hand(0, 0), target, false);
     assert!(ok);
     assert_eq!(r.hand_size(0), 0);
 
@@ -829,7 +829,7 @@ fn place_as_bottom_source_from_trash() {
 
     let ok = r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Trash(0, 0), target);
+        .place_as_bottom_source(CardSourceRef::Trash(0, 0), target, false);
     assert!(ok);
     assert_eq!(r.trash_size(0), 0);
 
@@ -855,7 +855,7 @@ fn place_as_bottom_source_from_deck_top() {
 
     let ok = r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::DeckTop(0), target);
+        .place_as_bottom_source(CardSourceRef::DeckTop(0), target, false);
     assert!(ok);
     assert_eq!(r.deck_size(0), 0);
 
@@ -882,7 +882,7 @@ fn place_as_bottom_source_from_reveal() {
 
     let ok = r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Reveal(handle), target);
+        .place_as_bottom_source(CardSourceRef::Reveal(handle), target, false);
     assert!(ok);
     assert_eq!(r.game_mut().revealed_cards.len(), 0);
 
@@ -904,13 +904,13 @@ fn place_as_bottom_source_bad_source_index_returns_false() {
 
     assert!(!r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Hand(0, 99), target));
+        .place_as_bottom_source(CardSourceRef::Hand(0, 99), target, false));
     assert!(!r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Trash(0, 99), target));
+        .place_as_bottom_source(CardSourceRef::Trash(0, 99), target, false));
     assert!(!r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::DeckTop(0), target)); // empty deck
+        .place_as_bottom_source(CardSourceRef::DeckTop(0), target, false)); // empty deck
 }
 
 // ─── effect_initiated_digivolve ───────────────────────────────────────────────
@@ -2117,6 +2117,107 @@ fn return_all_trash_to_deck_bottom_routes_each_card_to_its_owner() {
         r.deck_size(1),
         p1_deck_before + 1,
         "player 1's card returned to player 1's deck"
+    );
+}
+
+// ─── return_trash_cards_to_deck_top ──────────────────────────────────────────
+// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+
+/// A selected trash card returned to the deck TOP becomes the next card drawn.
+#[test]
+fn return_trash_cards_to_deck_top_places_card_at_deck_top() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("TRASHCARD", "TrashCard", 1))
+        .add_card(plain_digimon("DECKCARD", "DeckCard", 1))
+        .start();
+
+    // Seed player 0: one card already in the deck, one card in the trash.
+    let trash_handle = {
+        let g = r.game_mut();
+        let deck_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "DECKCARD")
+            .unwrap();
+        let di = g.next_card_index();
+        g.players[0]
+            .deck
+            .push(digimon_engine::card_source::CardSource::new(deck_idx, 0, di));
+        let t_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TRASHCARD")
+            .unwrap();
+        let ti = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(t_idx, 0, ti);
+        let h = card.handle();
+        g.players[0].trash.push(card);
+        h
+    };
+
+    let moved = {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 0);
+        ctx.return_trash_cards_to_deck_top(0, &[trash_handle])
+    };
+
+    assert_eq!(moved.len(), 1, "the selected trash card moved");
+    assert_eq!(r.trash_size(0), 0, "card left the trash");
+    // Deck top = Vec end (the slot `draw` pops first).
+    let top_id = {
+        let g = r.game_mut();
+        let deck = &g.player(0).deck;
+        deck[deck.len() - 1].card_id(&g.card_data).to_string()
+    };
+    assert_eq!(
+        top_id, "TRASHCARD",
+        "the returned trash card sits on top of the deck — the next card drawn"
+    );
+}
+
+/// Returning several selected trash cards to the top preserves selection
+/// order as draw order: the first handle is drawn first.
+#[test]
+fn return_trash_cards_to_deck_top_preserves_selection_order_as_draw_order() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("CARD_A", "CardA", 1))
+        .add_card(plain_digimon("CARD_B", "CardB", 1))
+        .start();
+
+    let (a, b) = {
+        let g = r.game_mut();
+        let mut mk = |id: &str| {
+            let idx = g.card_data.iter().position(|c| c.card_id == id).unwrap();
+            let ci = g.next_card_index();
+            let card = digimon_engine::card_source::CardSource::new(idx, 0, ci);
+            let h = card.handle();
+            g.players[0].trash.push(card);
+            h
+        };
+        let a = mk("CARD_A");
+        let b = mk("CARD_B");
+        (a, b)
+    };
+
+    {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 0);
+        // Selection order [A, B] → A is drawn first.
+        ctx.return_trash_cards_to_deck_top(0, &[a, b]);
+    }
+
+    let g = r.game_mut();
+    let deck = &g.player(0).deck;
+    let n = deck.len();
+    assert_eq!(
+        deck[n - 1].card_id(&g.card_data),
+        "CARD_A",
+        "first-selected card is on top (drawn first)"
+    );
+    assert_eq!(
+        deck[n - 2].card_id(&g.card_data),
+        "CARD_B",
+        "second-selected card sits just beneath it"
     );
 }
 

@@ -57,4 +57,4 @@ effects:
           carrier: source
           of: you
           position: top
-          face: up
+          face: down

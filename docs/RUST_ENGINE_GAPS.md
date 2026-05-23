@@ -177,18 +177,16 @@ Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`),
 > effect-initiated DNA mid-attack-interrupt, `source_dp` /
 > `source_material_count` formula inputs, `play_security_card` +
 > `EffectContext::play_from_security_card`, and
-> `Modifiers::granted_security_attack_keyword_bonus`. Two gaps remain
-> genuinely OPEN — both are engine-level and account for the 2 PARTIAL
-> cards:
+> `Modifiers::granted_security_attack_keyword_bonus`.
 >
-> - **G-DYNAMIC-NAME-ALIAS-FROM-STACK** — BT17-102 Greymon's `[All Turns]`
->   material-name-alias clause. Engine-level: declarative identity /
->   effective-name. Tracked below as "Digivolution-stack name overlay
->   ("has all names of materials")".
-> - **G-DSL-DELAY-ON-ATTACK-EVENT** — BT23-096 Comet Hammer's
->   `<Delay>`-on-attack clause. Engine-level: delay/attack-event
->   dispatch. Tracked below as "Delay-on-attack-event dispatch
->   (`<Delay>` body gated on an attack event)".
+> **DNA Omnimon partial-gap closure — 2026-05-22:** The follow-up
+> `close-dna-omnimon-partial-gaps` change resolved the two remaining
+> DNA Omnimon partial gaps: `G-DYNAMIC-NAME-ALIAS-FROM-STACK`
+> (BT17-102 source-derived effective names) and
+> `G-DSL-DELAY-ON-ATTACK-EVENT` (BT23-096 event-backed
+> ally-attack Delay dispatch). The archetype ledger is now
+> **64 IMPLEMENTED / 0 PARTIAL / 0 BLOCKED** with zero live
+> `raw_rust` escapes.
 
 There are two related assessment workflows:
 
@@ -214,10 +212,12 @@ Each entry lists the cards that surfaced it, but the entry itself describes a re
 | Archetype | Audited | Cards | 🟢 Supported | 🟡 Partial | 🔴 Blocked |
 |---|---|---|---|---|---|
 | Medusamon | 2026-04-17 | — | — | — | — |
-| DNA Omnimon | 2026-04-17; completed 2026-05-20 | 64 | 62 | 2 | 0 |
+| DNA Omnimon | 2026-04-17; completed 2026-05-20; partial gaps closed 2026-05-22 | 64 | 64 | 0 | 0 |
 | TS Olympos | 2026-04-18 | 105 | 1 | 4 | 100 |
 | Rocks | 2026-04-18; refreshed 2026-04-28 | 47 | 0 | 0 | 47 |
 | Dark Masters | 2026-04-18 | 58 | 0 | 0 | 58 |
+| ST-23 BEATBREAK | 2026-05-17 | 15 | 2 | 4 | 9 |
+| ST-24 DATA SQUAD | 2026-05-17 | 15 | 3 | 5 | 7 |
 
 ### Rocks refresh notes (2026-04-28)
 
@@ -252,8 +252,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Option card play flow residual: place-Option-in-battle-area + [Hand][Main] Plug-In flow](#option-card-play-flow-residual-place-option-in-battle-area--handmain-plug-in-flow) | 🟡 | 11 | `game.rs`, `effect.rs`, `effect_context.rs`, `action/` |
 | [Standard Delay main-phase activation action](#standard-delay-main-phase-activation-action) | 🟡 | 3+ | `game_actions.rs`, `action/mask.rs`, `effect_context.rs` |
 | [Trait-filter helpers on `CardSource` / `Permanent`](#trait-filter-helpers-on-cardsource--permanent) | 🟡 | pervasive | `card_source.rs`, `permanent.rs` |
-| [Digivolution-stack name overlay ("has all names of materials") (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`)](#digivolution-stack-name-overlay-has-all-names-of-materials) | 🔴 | 1 | `effect.rs`, `card_source.rs`, `permanent.rs` |
-| [Delay-on-attack-event dispatch (`<Delay>` body gated on an attack event) (`G-DSL-DELAY-ON-ATTACK-EVENT`)](#delay-on-attack-event-dispatch-delay-body-gated-on-an-attack-event) | 🔴 | 1 | `lower_delay.rs`, `combat.rs`, `effect_queue.rs` |
+| ~~[Digivolution-stack name overlay ("has all names of materials") (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`)](#digivolution-stack-name-overlay-has-all-names-of-materials)~~ — RESOLVED 2026-05-22 | ✅ | — | — |
+| ~~[Delay-on-attack-event dispatch (`<Delay>` body gated on an attack event) (`G-DSL-DELAY-ON-ATTACK-EVENT`)](#delay-on-attack-event-dispatch-delay-body-gated-on-an-attack-event)~~ — RESOLVED 2026-05-22 | ✅ | — | — |
 | [Decode residual: EX10-061 Apocalymon batch + different-name source play DSL sugar](#decode-residual-ex10-061-apocalymon-batch--different-name-source-play-dsl-sugar) | 🟡 | 1 | `effect.rs` |
 | [Ergonomics partials](#ergonomics-partials) | 🟡 | pervasive | `effect.rs`, `effect_context.rs` |
 | [Grant Security A. ±N modifier — targeted typed sugar](#grant-security-a-n-modifier-to-a-targeted-permanent-parametric-securityattackchange) | 🟡 | 3+ | `effect_context.rs` |
@@ -287,6 +287,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | ~~Ally-played may-attack observer (`G-ALLY-PLAYED-MAY-ATTACK`)~~ — already-composable, no engine change | ✅ | — | RESOLVED 2026-05-20 (Phase 2 Track J Task S2.1) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine--dsl-gap-g-ally-played-may-attack--already-composable-2026-05-20-phase-2-track-j-task-s21) |
 | ~~Union hand/trash name-excluded play (`G-UNION-HAND-TRASH-NAME-EXCLUSION`)~~ — `select_union_zone` lowering now applies its `filter`; new `name_not_shared_by_field_digimon` predicate leaf | ✅ | — | RESOLVED 2026-05-20 (Phase 2 Track J Task S2.2) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine--dsl-gap-g-union-hand-trash-name-exclusion--resolved-2026-05-20-phase-2-track-j-task-s22) |
 | ~~End-of-attack mandatory self-delete chain (EX4-074)~~ | ✅ | — | RESOLVED 2026-05-17 (Track I first-test confirmed existing primitives suffice) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) |
+| ~~Return a selected digivolution-stack source card to its owner's hand (`G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME`)~~ — RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Player-scoped one-shot future-digivolve cost reducer with a paid cost (`G-COST-REDUCE-ALLY-DIGIVOLVE`)~~ — RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`, see `qa/resolved-gaps.md`) | ✅ | — | — |
 
 **Group 5 contract note (2026-05-02):** Group 5 did not change ACTION_SPACE_SIZE or TENSOR_SIZE. New Link/Delay choices reuse existing pending-selection masks.
 
@@ -558,31 +560,23 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 ### Digivolution-stack name overlay ("has all names of materials")
 - **Gap ID:** `G-DYNAMIC-NAME-ALIAS-FROM-STACK`
-- **Severity:** 🔴 BLOCKING
-- **Status:** OPEN — re-verified open against code by the `complete-dna-omnimon-archetype` change (2026-05-20). BT17-102 is otherwise IMPLEMENTED; this one `[All Turns]` clause is omitted and test `bt17_102_all_turns_aliases_low_level_material_names` is left `#[ignore]`'d. Accounts for one of the 2 PARTIAL cards in the completed DNA Omnimon ledger.
+- **Severity:** ✅ RESOLVED
+- **Status:** RESOLVED 2026-05-22 by `close-dna-omnimon-partial-gaps`. BT17-102 now authors the `[All Turns]` clause with `identity.source_name_aliases: [{ level_lte: 3 }]`, name predicates consult synthesized permanent identity names, and `bt17_102_all_turns_aliases_low_level_material_names` is enabled and passing.
 - **Discovered in:** DNA Omnimon (2026-04-17)
 - **Card(s):** BT17-102 Greymon ("[All Turns] This Digimon has all the names of level 3 and lower cards in its digivolution cards.")
 - **Effect text:** As above.
-- **What's missing:** `Permanent::contains_card_name` already walks the stack for self-checks, but external name lookups on this permanent from other cards see only the top card's printed name. The DSL identity layer carries only static `name_aliases` — there is NO engine consumer for a *dynamic* alias derived from the live digivolution-source stack. No "virtual name overlay" mechanism that synthesizes additional names for external queries (e.g., another Tamer's aura that checks "[Koromon]" should see the overlay names).
-- **Suggested API shape:** A `Permanent`-level effective-name-set query (union of printed name + dynamic overlay names) consulted by every name predicate, e.g. `Effect::declarative(card).name_overlay_from_sources(|src, data| src.level(data).map_or(false, |l| l <= 3))`; update all name-lookup surfaces (aura filters, inherited-effect name checks, trait-from-name derivations) to union overlays into the lookup set.
-- **Workaround:** None — BLOCKED for external observers that query names on this permanent; the clause is OMITTED per no-approximations.
-- **Related:** "Named-target declarative aura"; DSL/identity-layer face tracked in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
+- **What closed:** A reusable source-name alias identity payload and modifier path now derives additional effective names from matching source cards and routes name predicates through the synthesized name set.
+- **Related:** "Named-target declarative aura"; DSL/identity-layer face resolved in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
 
 ### Delay-on-attack-event dispatch (`<Delay>` body gated on an attack event)
 - **Gap ID:** `G-DSL-DELAY-ON-ATTACK-EVENT`
-- **Severity:** 🔴 BLOCKING
-- **Status:** OPEN — filed by the `complete-dna-omnimon-archetype` change (2026-05-20). BT23-096 is otherwise IMPLEMENTED; the `<Delay>`-on-attack clause is omitted and its test is left `#[ignore]`'d. Accounts for one of the 2 PARTIAL cards in the completed DNA Omnimon ledger.
+- **Severity:** ✅ RESOLVED
+- **Status:** RESOLVED 2026-05-22 by `close-dna-omnimon-partial-gaps`. BT23-096 now authors the `[Your Turn]` CS ally-attack Delay clause, and `bt23_096_your_turn_cs_attack_delay_dedigi4` plus the non-CS negative are enabled and passing.
 - **Discovered in:** DNA Omnimon (2026-05-20)
 - **Card(s):** BT23-096 Comet Hammer (`<Delay>` body gated on an ally-attack event).
 - **Effect text:** `<Delay>` body that activates off an attack event.
-- **What's missing:** A 3-part engine blocker prevents an attack event from triggering a `<Delay>` body —
-  1. `lower_delay.rs` does not map attack timings to `DelayTrigger::OnEvent`;
-  2. `combat.rs` dispatches `OnAllyAttack` via `TriggerSource::PlayerBattleArea`, which `effect_queue.rs` never fans out to event-gated delays;
-  3. `attacker_trait_has` resolves the attacker only via `attack_target_change()`, which is unset for a plain attack.
-- **Already-present substrate (NOT the blocker):** `G-DSL-ON-ALLY-ATTACK-TIMING` (on-ally-attack timing token) and `G-ATK-TRAIT-FILTER` (attacker-trait predicate) both exist; the gap is delay/attack-event dispatch wiring.
-- **Suggested API shape:** Map attack timings to `DelayTrigger::OnEvent` in `lower_delay.rs`; fan `OnAllyAttack` dispatch out to event-gated delays in `effect_queue.rs`; resolve the attacker for a plain attack (not only via `attack_target_change()`).
-- **Workaround:** None faithful — the clause is OMITTED per no-approximations.
-- **Related:** "Standard Delay main-phase activation action" (RESOLVED Track I); DSL face tracked in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
+- **What closed:** Delay lowering maps attack timings to `DelayTrigger::OnEvent`, combat dispatch carries attacker context into event-gated delayed options, and `attacker_trait_has` evaluates ordinary attack context as well as attack-target-change context.
+- **Related:** "Standard Delay main-phase activation action" (RESOLVED Track I); DSL face resolved in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
 
 ### Decode keyword (play from own digivolution stack without paying cost on non-battle leave)
 - **Severity:** 🟡 PARTIAL (audit 2026-05-15: narrowed; BT22-015 Red/Black Decode, EX4-060 BlitzGreymon/CresGarurumon ladder, and EX9-021 End-of-Attack source-play all close. **Updated 2026-05-19 (Track J substrate S1.2):** the batch / different-name source-play DSL sugar is now CLOSED — see "What's closed" below. Residual is the native `Keyword::Decode` parsing sugar only.)
@@ -790,6 +784,117 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 ### `CannotAttackPlayer` modifier enforcement (mask + combat)
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-cannotattackplayer-modifier-enforcement-mask--combat--resolved-2026-05-15-track-d-2026-05-08) by the 2026-05-15 hygiene sweep.
 
+### Return a selected digivolution-stack source card to its owner's hand — RESOLVED 2026-05-21
+> Closed by `bg-imperial-substrate-closeout` — `EffectContext::return_card_source_to_hand`
+> + `return_selected_sources_to_hand` DSL verb landed; BT12-031 → IMPLEMENTED. See
+> [`qa/resolved-gaps.md`](../qa/resolved-gaps.md) § "Follow-up engine gaps closed
+> (2026-05-21)". Scoping detail retained below for reference.
+
+- **Severity:** 🟡 PARTIAL (*ergonomics / primitive-with-fidelity-cost* — the selection half is fully closed; only the source-to-hand movement primitive is missing, and there is no faithful workaround for it, but the gap is narrow)
+- **Gap ID:** `G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME` (canonical engine-gap record; supersedes the same ID in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md), which is now a redirect)
+- **Discovered in:** BG Imperial (2026-05-04, BT12-031 `batch-implement-cards-rust-dsl`); diagnosis corrected from "DSL-only" to engine gap 2026-05-21 (`bg-imperial-substrate-closeout`)
+- **Card(s):** BT12-031 Imperialdramon: Paladin Mode (Clause 0, Step C — the last non-IMPLEMENTED clause; card verdict PARTIAL, 2 tests `#[ignore]`'d)
+- **Effect text:** "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's digivolution cards to its owner's hand, return all of your opponent's suspended Digimon to the bottom of their owners' decks instead."
+- **What's missing:** There is **no `EffectContext` method or DSL verb that returns a single selected digivolution-stack source card to its owner's hand.** `select_own_sources` already binds stable `SourceSelectionRef`s (`effect_context/selections.rs:383`, name-filtered via the `filter:` arg since 2026-05-08), and the `binding_present` branch for the optional-decline fall-through is solved card-side. But the only two consumers of those bound source refs are `TrashSelectedSources` → `ctx.trash_card_source` (routes the source `Card` to `owner.trash`, `effect_context/mod.rs:3477`) and `PlaySelectedSourcesFree` → `ctx.play_selected_sources_without_cost` (`effect_context/mod.rs:3616`). `EffectContext::return_to_hand` (`effect_context/mod.rs:3625`) bounces a whole **permanent** (top card + entire stack) — it cannot extract one below-top source. So a source card selected out of a digivolution stack can be trashed or replayed, but not handed back to its owner.
+- **Suggested API shape:**
+  - **`EffectContext` method** — sibling of `trash_card_source`, differing only in the destination zone (push to `owner.hand` instead of `owner.trash`); same `OnDigivolutionCardTrashed`-class observer fan-out is NOT appropriate (this is a return-to-hand, not a trash), but the source-leaves-stack event should still fire so leave-stack observers see it:
+    ```rust
+    /// Remove a single digivolution source card from `perm`'s stack and
+    /// route it to its owner's hand. Mirrors `trash_card_source` but the
+    /// destination is the owner's hand, not trash. Fires the source-leaves-
+    /// stack observer path (NOT the trash-specific OnDigivolutionCardTrashed).
+    pub fn return_card_source_to_hand(
+        &mut self,
+        perm: PermanentHandle,
+        card: CardHandle,
+    ) -> bool
+    ```
+    A `Vec`-taking convenience wrapper (`return_selected_sources_to_hand(&mut self, selected: Vec<SourceSelectionRef>)`) keeps parity with `play_selected_sources_without_cost`.
+  - **DSL verb / `CompiledStep`** — mirror `TrashSelectedSources` exactly: a new `ReturnSelectedSourcesToHand { source_refs: String }` `CompiledStep` (`digimon-dsl/src/compiled.rs`, alongside line 1247), a `StepSpec::ReturnSelectedSourcesToHand(TrashSelectedSourcesArgs)` reusing the existing `TrashSelectedSourcesArgs { source_refs: String }` struct (`digimon-dsl/src/step.rs:1333`), the `compile.rs` arm (alongside line 1766), and the consumer arm in `dsl_cards/step/zone_moves.rs` (alongside the `TrashSelectedSources` arm at line 206) that reads `bindings.get_source_refs(...)` and calls the new `EffectContext` method per ref.
+  - **YAML form:**
+    ```yaml
+    - select_own_sources:
+        from: source            # restrict to this Digimon's own stack
+        filter: { name_contains: "Imperialdramon: Dragon Mode" }
+        min: 0
+        max: 1
+        bind_as: dragon_mode_source
+        prompt: "..."
+        then:
+          - return_selected_sources_to_hand: { source_refs: dragon_mode_source }
+          # binding_present branch then runs the return-all-to-bottom outcome
+    ```
+- **Workaround:** None faithful. Trashing the source instead of returning it to hand changes the printed cost; omitting Step C (current state) drops the entire alternative outcome.
+- **Likely files:** `code/digimon-engine/src/effect_context/mod.rs` (new method next to `trash_card_source`), `code/digimon-engine/src/dsl_cards/step/zone_moves.rs` (consumer arm), `code/digimon-dsl/src/compiled.rs` + `code/digimon-dsl/src/step.rs` + `code/digimon-dsl/src/compile.rs` (verb plumbing), `code/digimon-engine/cards/bt12/BT12-031.yaml` (un-block Step C), `code/digimon-engine/tests/cards_behavioral/bt12/bt12_031.rs` (un-ignore 2 tests).
+- **Complexity estimate:** Small. One ~20-line `EffectContext` method (a near-copy of `trash_card_source` with the destination `Vec` swapped) + the standard 4-file DSL-verb plumbing. No new selection state, no mask change, no `ACTION_SPACE_SIZE` impact — the selection is already a closed `select_own_sources` flow.
+- **First test:** `bt3`-style behavioral test under `tests/cards_behavioral/bt12/bt12_031.rs` (un-ignore the existing `#[ignore]`'d Step C tests at lines 345/362): set up Imperialdramon: Paladin Mode with an `Imperialdramon: Dragon Mode` card in its digivolution stack and 2+ suspended opponent Digimon; resolve the [When Digivolving] effect; accept the optional `select_own_sources` pick; assert the Dragon Mode source card lands in its owner's hand AND every suspended opponent Digimon is at the bottom of its owner's deck. The decline path test asserts that passing the optional selection falls through to the base "return 1 suspended opponent Digimon to hand" outcome with the Dragon Mode source untouched.
+- **Known interactions / risks:**
+  - Owner routing: the moved card must go to the source card's `owner` (the `CardSource.owner` field), not the controller's hand — `trash_card_source` already reads `removed.owner`; the new method must do the same so a source owned by the opponent (rare, but possible via control-transfer plays) routes correctly.
+  - Stack invariant: extracting a below-top source must not disturb the host permanent's top card or remaining stack ordering — `trash_card_source` removes by `position(...)` rather than `pop()`, so the new method should do likewise.
+  - Observer dispatch: this is a *return-to-hand*, so it must NOT fire `OnDigivolutionCardTrashed` (which would mis-attribute the move as a trash to Rocks-style source-trash listeners). Decide explicitly whether any source-leaves-stack observer should fire — the safest first cut fires nothing trash-specific.
+
+### Player-scoped one-shot future-digivolve cost reducer with a paid cost — RESOLVED 2026-05-21
+> Closed by `bg-imperial-substrate-closeout` — new `player_cost_reducer.rs`
+> (`PlayerDigivolveCostReducer`), `EffectContext::arm_player_digivolve_cost_reducer`,
+> a pre-cost accept/decline + suspend-cost `PendingSelection` chain in a split
+> `digivolve_from_hand` / `digivolve_from_hand_inner` (the synchronous
+> `scan_before_pay_cost_reduction_with_target` hot path was NOT touched), and the
+> `arm_digivolve_cost_reducer` DSL step. BT3-103 → IMPLEMENTED. See
+> [`qa/resolved-gaps.md`](../qa/resolved-gaps.md) § "Follow-up engine gaps closed
+> (2026-05-21)". Scoping detail retained below for reference.
+
+- **Severity:** 🔴 BLOCKING
+- **Gap ID:** `G-COST-REDUCE-ALLY-DIGIVOLVE` (umbrella; also covers the `G-COST-REDUCE-NEXT-SINGLE-FIRE` and `G-PAY-COST-SELECT-ARBITRARY-SUSPEND` sub-IDs cited in the BT3-103 test header — they are three facets of this one missing primitive)
+- **Discovered in:** BG Imperial (2026-05-03 cross-archetype assessment, `G-BG-01`); explicitly **DEFERRED** by Phase 2 Track H's discovery rider (see line 127 above)
+- **Card(s):** BT3-103 Hidden Potential Discovered! (Option, Green, cost 4 — the last non-IMPLEMENTED BG Imperial card; Clause 0 omitted from `BT3-103.yaml`, 5 tests `#[ignore]`'d). Cross-archetype: green/yellow Memory Boost / Training Options frequently install "the next time one of your Digimon would digivolve this turn" reducers with a paid condition.
+- **Effect text:** "[Main] For the turn, when one of your green Digimon would next digivolve, by suspending 1 of your Digimon, reduce the digivolution cost by 5."
+- **What's missing:** A **player-scoped, one-shot, paid future-digivolve cost reducer** installed by a [Main] effect. No part of this shape exists today:
+  1. **No player-scoped reducer registry.** `before_pay_cost_source_infos` (`game_actions.rs:4214`) gathers `BeforePayCost` effects only from battle-area permanents, breeding-area permanents, and the cost-target card itself. An Option that resolves and trashes itself (BT3-103 is not a Plug-In / not a Delay — it leaves the field on resolution) has no field permanent to host the reducer effect, so it can never be scanned. The `player_modifiers` registry (`modifiers.rs:707`, `PlayerModifierEntry`) is a passive *data* registry — `value` / `payload` / `expiry` only — with no slot for a `condition` / `cost_reduction_fn` / `pay_cost_fn` closure, so a reducer cannot live there either.
+  2. **The digivolve cost path cannot prompt an optional/paid reducer.** `scan_before_pay_cost_reduction_with_target` (`game_actions.rs:3965`) — the function the digivolve cost-calc calls — **explicitly skips `candidate.optional` reducers** (line 3982: `if candidate.optional || (candidate.has_pay_cost && cost_target.is_none()) { continue; }`). The interactive accept/decline pending-selection chain (`continue_play_from_hand_cost_reduction_chain`, `game_actions.rs:465`) exists **only for `CostReductionKind::Play`** (play-from-hand). The digivolve path has no equivalent chain, so even a field-hosted optional reducer cannot surface its choice during a digivolution.
+  3. **No "fires exactly once, then consumes itself" lifecycle.** `max_per_turn` (`inspect_cost_reduction_candidate`, `game_actions.rs:4100`) caps activations *per turn* but is keyed to a `source_permanent` via `cost_reducer_activation_count` (`game_actions.rs:4176`) — there is no permanent to key against here, and "next digivolve" means single-fire then removal, not a per-turn cap.
+  4. **No `select`-an-arbitrary-Digimon-to-suspend cost inside the `BeforePayCost` flow.** `pay_cost_fn` runs synchronously inside `apply_cost_reduction_candidate` (`game_actions.rs:4156`); `suspend_self_as_cost` (`effect_context/mod.rs:2341`) only suspends the source. BT3-103's "by suspending 1 of your Digimon" requires a player-visible `select_own_permanent` *inside* the cost payment — an interactive selection nested in the cost flow.
+- **Suggested API shape:**
+  - **A closure-bearing player-scoped reducer registry.** Either (a) a new `Game` field `player_cost_reducers: HashMap<PlayerId, Vec<PlayerCostReducer>>` where `PlayerCostReducer` carries the same `condition` / `cost_reduction` / `pay_cost_fn` (or `activation_cost_fn`) closures as `Effect`, plus a `consumed: bool` / single-fire flag and a `CostReductionKind` filter; or (b) extend `before_pay_cost_source_infos` to also yield infos sourced from a player-scoped store. A new builder constructor:
+    ```rust
+    // Effect builder — install a turn-scoped, single-fire reducer onto a player.
+    Effect::before_pay_cost_player_scoped(card)
+        .cost_kind(CostReductionKind::Digivolve)
+        .single_fire()                       // consume on first successful application
+        .expiry(Expiry::EndOfTurn)           // "For the turn" upper bound
+        .condition(|rctx| /* cost target permanent is a green Digimon */)
+        .cost_reduction(5)
+        .activation_cost(|ctx| ctx.select_one_own_digimon_to_suspend_as_cost())
+    ```
+    and an `EffectContext` install helper: `ctx.arm_player_digivolve_cost_reducer(player, reducer)`.
+  - **Generalize the optional/paid reducer pending-selection chain to the digivolve path.** Factor the accept/decline `PendingSelection` loop currently inside `continue_play_from_hand_cost_reduction_chain` so the digivolve cost-calc (`scan_before_pay_cost_reduction_with_target`) can also install it instead of skipping optional/paid candidates. Decline must leave the unreduced cost; the reducer must NOT be consumed on decline.
+  - **A cost-flow nested selection helper:** `ctx.select_one_own_digimon_to_suspend_as_cost()` — an interactive `select_own_permanent` (filter: own, unsuspended) returning `true` only after a suspend completes, surfaced through `pending_selection` so the RL action space sees it (Working Rule §17).
+  - **YAML form (illustrative — exact verb naming TBD with DSL author):**
+    ```yaml
+    clauses:
+      - timing: main
+        process:
+          - arm_digivolve_cost_reducer:
+              scope: { of: you }
+              expiry: this_turn
+              single_fire: true
+              target_filter: { color_has: green }   # the digivolving Digimon
+              amount: 5
+              pay_cost:
+                - select_own_permanent:
+                    filter: { suspended: false }
+                    prompt: "Suspend 1 of your Digimon"
+                    then: [ suspend: { target: selected } ]
+    ```
+- **Workaround:** None — BLOCKED. A static unconditional `-5` modifier hides the printed "by suspending 1 of your Digimon" choice, can apply to the wrong digivolution, and ignores the single-fire semantics. Auto-suspending violates §17.
+- **Likely files:** `code/digimon-engine/src/game_actions.rs` (player-scoped reducer collection in `before_pay_cost_source_infos`; lift the optional/paid pending-selection chain out of `continue_play_from_hand_cost_reduction_chain` and reuse it on the digivolve path), `code/digimon-engine/src/effect.rs` (new `before_pay_cost_player_scoped` builder + single-fire flag), `code/digimon-engine/src/modifiers.rs` or a new `Game` field (the closure-bearing player-scoped store), `code/digimon-engine/src/effect_context/` (install helper + `select_one_own_digimon_to_suspend_as_cost`), `code/digimon-engine/src/action/mask.rs` (the nested suspend-cost selection must be maskable), `code/digimon-dsl/src/step.rs` + `code/digimon-engine/src/dsl_cards/step/` (the `arm_digivolve_cost_reducer` verb + lowering), `code/digimon-engine/cards/bt3/BT3-103.yaml` + `code/digimon-engine/tests/cards_behavioral/bt3/bt3_103.rs` (un-block Clause 0, un-ignore 5 tests).
+- **Complexity estimate:** Large. Three substantive sub-systems: (1) a net-new closure-bearing player-scoped store with a single-fire/expiry lifecycle; (2) generalizing the optional/paid reducer accept/decline `PendingSelection` chain from the play-from-hand path to the digivolve path (a refactor touching live cost-calc code on every digivolution); (3) a selection nested inside `pay_cost`/`activation_cost` (interactive cost payment, mask-visible). Each carries regression risk against existing `BeforePayCost` behavior. The cross-archetype `qa/archetype-qa/dsl/bg-imperial-cross-archetype-gaps-2026-05-03.md` § `G-BG-01` sketch is directionally correct but **stale on one point**: it lists `code/digimon-engine/src/cost_hooks/` as a likely file — no such directory exists; the BeforePayCost machinery lives entirely in `game_actions.rs`. The sketch also predates Track B's `activation_cost` builder hook, which is the natural attachment point for the suspend cost.
+- **First test:** `tests/cards_behavioral/bt3/bt3_103.rs` (un-ignore `bt3_103_main_arms_digivolve_cost_reduction_for_turn` and siblings). Play BT3-103 with one unsuspended own Digimon available; attempt a green digivolution; assert a suspend-cost prompt (`PendingSelection`) appears before the reduced cost is paid; **decline** keeps the unreduced cost and leaves the reducer armed; **accept** suspends the selected Digimon and applies `-5` exactly once; a second green digivolution in the same turn must NOT get the reduction (single-fire consumed); a non-green digivolution must never see the prompt (target-color filter).
+- **Known interactions / risks:**
+  - **Single most important risk:** generalizing the optional/paid reducer pending-selection chain to the digivolve path means inserting an interactive prompt into `scan_before_pay_cost_reduction_with_target` — a function on the hot path of *every* digivolution. It currently returns an `i32` synchronously; converting it to a possibly-suspending flow (pending-selection mid-cost-calc) risks regressing the many existing field-hosted mandatory reducers and the DNA / Blast digivolve cost paths that all call it. The play-from-hand chain proves the pattern is feasible but the digivolve cost-calc has more call sites (normal digivolve, DNA digivolve, Blast) that must each tolerate a `Pending` result.
+  - Stacked reducers: a player-scoped reducer plus a field-hosted reducer must compose; processing order and whether each can independently decline must be defined (the play-from-hand chain already threads `processed: Vec<CostReductionKey>` for this).
+  - Single-fire timing: "next digivolve" consumes on the first *successful* application — a declined prompt must leave it armed; a green digivolution where the player has no Digimon to suspend (cost-impossible) must also leave it armed (or define explicitly), unlike `activation_cost`'s silent-collapse-consumes-OPT rule.
+  - `CannotReduceDigivolveCost` / `OpponentCannotReduceDigivolveCost` flood-gates (`collect_before_pay_cost_reducers`, `game_actions.rs:4025-4033`) must continue to suppress the player-scoped reducer too.
+
 ## Deferred — verification / test coverage only
 
 Items where the existing primitive **likely works** but no behavioral test covers the specific pathway. Not engine gaps; filed here so they surface when the archetype moves to the Rust DSL implementation workflow and a faithful DebugRunner test must be written. **Do not count toward BLOCKING / PARTIAL tallies.**
@@ -924,6 +1029,147 @@ Items where the existing primitive **likely works** but no behavioral test cover
 
 ### End-of-attack mandatory self-delete chain with recovery and conditional hatch
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) by the 2026-05-17 Track I first-test confirmation. Existing primitives (`delete_permanent { target: source }`, `select_opponent_permanent { optional: true }`, `recover`, `if { any_field_permanent + can_hatch } then hatch`) compose into a faithful chain — see `code/digimon-engine/cards/ex4/EX4-074.yaml` Clause 2 and `code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs::ex4_074_end_of_attack_self_deletes_opponent_delete_recovers_and_hatches_with_tamer`.
+
+### BEATBREAK / DATA SQUAD Tamer face-down stash substrate (place under chosen Tamer + cost-form trash bottom face-down)
+- **Severity:** 🔴 BLOCKING — Phase A substrate landed 2026-05-17; residual Phases B–F remain blocking (see Status footer)
+- **Discovered in:** ST-23 BEATBREAK (2026-05-17); ST-24 DATA SQUAD (2026-05-17)
+- **Card(s):**
+  - **Place side (face-down deck-top under chosen Tamer):** ST23-06 Gekkomon, ST23-13 Tomoro Tenma & Kyo Sawashiro, ST23-14 Reina Sakuya & Makoto Kuonji, ST24-03 Gaogamon, ST24-09 Sunflowmon, ST24-13 Marcus Damon & Thomas H. Norstein, ST24-14 Yoshino Fujieda & Keenan Crier.
+  - **Place side (face-down hand card under chosen Tamer):** ST23-10 Pristimon, ST24-02 Gaomon.
+  - **Cost side (trash bottom face-down source from chosen own Tamer):** ST23-01 Kekkomon, ST23-03 Cougarmon, ST23-04 Murasamemon, ST23-08 Monarchlizamon, ST23-11 Wolvermon, ST23-12 Chiropmon, ST24-01 Koromon, ST24-06 RizeGreymon, ST24-10 Lilamon, ST24-11 Rosemon, ST24-12 Falcomon. Also the inherited [End of Attack] unsuspend on ST23-04/08 and the inherited self-or-friend-set leave-prevention on ST23-05/ST24-06/ST24-10. Sibling face-down placement card EX9-068 Analogman from the existing "Alt-digivolve with override-cost + ignore-reqs + face-down placement" entry shares the engine-side `face_down: bool` axis.
+- **Effect text:** "place the top card of your deck face down under this Tamer" / "place 1 such card face down under any of your [Glowing Dawn]/[DATA SQUAD] trait Tamers" / "By placing 1 card from your hand face down under any of your Tamers, ..." / "by trashing the bottom face-down card from under any of your Tamers, ..."
+- **What's missing:** Four coupled holes that together unblock the entire ST-23/ST-24 Tamer-stash archetype:
+  1. **DSL `face_down: bool` axis on `place_as_bottom_source`** — the engine `CardSource::face_down: bool` field exists (`code/digimon-engine/src/card_source.rs:37`) but only `<Training>`'s hardcoded `training_place_deck_top_under_self_face_down` writes it. The general `EffectContext::place_card_under_permanent_bottom` (`effect_context/mod.rs:2870`) and the DSL `place_as_bottom_source` step always insert face-up. Add a `face_down: bool` parameter (default false) to both the engine helper and the DSL step; thread through `Game::place_as_bottom_source_observed`.
+  2. **DSL `CardSourceRef::DeckTop` binding** — `resolve_card_source_ref` returns `None` for `DeckTop`. ST23-06 / ST23-13/14 / ST24-03 / ST24-09 / ST24-13/14 all need the deck top as a source-binding for `place_as_bottom_source { source: deck_top, target: tamer_pick, face_down: true }`. Add a curated `place_deck_top_under_permanent(target, face_down)` `EffectContext` helper and the DSL binding form, OR widen `resolve_card_source_ref` to accept `BindingRef::DeckTop { of: PlayerRef }`.
+  3. **New `PredicateSpec` source leaves: `is_face_down: bool`, `is_bottom_source: bool` (or sugar over `source_index_eq: 0`), `host_kind_is: tamer`** — `SelectOwnSourcesArgs.filter` already accepts a `PredicateSpec`, but no leaf restricts to face-down sources, to the bottom-of-stack position, or to "this source's host permanent is a Tamer". The engine `SourceSelectionRef` (`selection.rs:64-69`) already carries `permanent`, `field_index`, `source_index`, `card` — the engine-side filter closures can express this trivially; only DSL vocabulary is missing.
+  4. **Curated `trash_bottom_face_down_source(target)` helper + `has_face_down_source: bool` permanent filter** — the printed cost specifies the bottom face-down card, not any face-down card. Add `EffectContext::trash_bottom_face_down_source(target: PermanentHandle) -> bool` that pops `card_sources[0]` only if `face_down == true`, routes to owner's trash, fires `OnDigivolutionCardTrashed` with `event_host_permanent` set to the Tamer. Pair with `has_face_down_source: bool` on `PermanentPredicate` for the upstream `select_own_permanent { kind: tamer, has_face_down_source: true }` Tamer-pick gate, so the cost fail-cleans when no eligible Tamer exists.
+- **Suggested API shape:**
+  - Engine: `EffectContext::place_deck_top_under_permanent(target: PermanentHandle, face_down: bool) -> Option<CardHandle>`; widen `place_card_under_permanent_bottom` with `face_down: bool` parameter; `EffectContext::trash_bottom_face_down_source(target: PermanentHandle) -> bool`.
+  - DSL steps: `place_deck_top_under_tamer: { of: you, target: <perm-binding|source>, face_down: bool }`, extend `place_as_bottom_source` with `face_down: bool`, new step `trash_bottom_face_down_source_under_tamer: { of: you }` (with internal two-stage `select_own_permanent` { kind: tamer, has_face_down_source: true } → `trash_bottom_face_down_source { target: pick }`).
+  - New `PredicateSpec` leaves: `is_face_down: Option<bool>`, `is_bottom_source: Option<bool>`, `source_position_eq: Option<u8>`, `host_kind_is: Option<CardKind>`, `host_permanent_trait_has: Option<String>`. New `PermanentPredicate` leaf: `has_face_down_source: Option<bool>`.
+- **Workaround:** None faithful. Auto-picking the Tamer or trashing a face-up source violates §17 no-approximations; substituting face-up placement breaks the downstream `is_face_down` cost predicate AND the tensor's face-down visibility convention (`tensor_v2_lite.rs:153,171,175`); skipping the cost makes rider effects free.
+- **Related:** Existing "[Alt-digivolve with override-cost + ignore-reqs + face-down placement](#alt-digivolve-with-override-cost--ignore-reqs--face-down-placement)" (sibling `face_down: bool` axis on `place_as_bottom_source` already filed for EX9-068 — this entry expands the card list and adds the cost-form trash + DSL predicates); existing "[`<Training>` keyword](#training-keyword)" (the only existing face-down placement helper — scoped to self, deck-source only); existing "[Generic `.activation_cost(...)` builder hook for triggered abilities](#generic-activation_cost-builder-hook-for-triggered-abilities-suspend-self--pay-as-cost-on-triggered-abilities)" (the cost-form here also exercises that hook for ST23-04/08/10 inherited and triggered bodies).
+- **Status — Phase A landed (2026-05-17):** The Tamer face-down stash substrate is implemented on branch `claude/nostalgic-saha-3ddfce` per [`docs/superpowers/plans/2026-05-17-rust-engine-tamer-face-down-stash-substrate.md`](../docs/superpowers/plans/2026-05-17-rust-engine-tamer-face-down-stash-substrate.md):
+  - A1 — `face_down` axis on `place_card_under_permanent_bottom` / `place_as_bottom_source` (engine + DSL step). `face_down` is not honored for `CardSourceRef::Security` sources (always face-up, DCGO parity).
+  - A2 — `place_deck_top_under_permanent` helper + `{ deck_top: <player> }` DSL binding (`StructuredBindingRef.deck_top`).
+  - A3 — `is_face_down` / `is_bottom_source` / `host_kind_is` / `has_face_down_source` predicate leaves + `PredicateSubject::Source`.
+  - A4 — `trash_bottom_face_down_source` helper + `trash_bottom_face_down_source_under_tamer` DSL verb. The helper does not honor `ImmuneFromStackTrashing` (voluntary cost, not involuntary peeling).
+  - A5 — Tamer-host `OnDigivolutionCardTrashed` dispatch coverage confirmed.
+  The placement + cost-form trash + DSL predicate trio called out as "what's missing" in this entry is now closed. The engine/DSL API surface is documented in `docs/RUST_ENGINE_API.md` (§ Placement, § Track E zone-movement DSL verbs, § DSL Tamer Face-Down Stash Substrate). The remaining ST-23/ST-24 gaps (Phases B–F of the fix-plan: the `event_host_permanent_is_source` predicate, the Option-lifecycle exit, unified play-or-use, `BeforePayCost` selection-bearing `pay_cost_fn`, and the cost-reduction target-card predicate trigger — each filed as its own entry below) are NOT addressed by Phase A and remain open. The 🔴 BLOCKING severity now applies only to those residual non-substrate gaps.
+
+### `event_host_permanent_is_source` DSL predicate for `OnDigivolutionCardTrashed` observers
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** ST-23 BEATBREAK (2026-05-17); ST-24 DATA SQUAD (2026-05-17)
+- **Card(s):** ST23-13 Tomoro Tenma & Kyo Sawashiro, ST23-14 Reina Sakuya & Makoto Kuonji, ST24-11 Rosemon (clause 2 source-trash branch), ST24-13 Marcus Damon & Thomas H. Norstein, ST24-14 Yoshino Fujieda & Keenan Crier. Sibling Tamers BT16-085 Davis & Ken, BT22-088 Arisa Kinosaki share the substrate need.
+- **Effect text:** "When effects trash cards from under this Tamer, by suspending this Tamer, ..." — the observer must gate on "this Tamer is the host of the trashed source", otherwise it fires on every Tamer-source trash across both battle areas.
+- **What's missing:** `PredicateSpec` has `event_permanent_is_source` for non-host event timings (where `TriggerContext.event_permanent` is populated). The `SourceTrashedFromStack` trigger populates `event_host_permanent` (not `event_permanent`), so the existing predicate returns false. The fanout in `effect_queue.rs::dispatch` walks all battle-area permanents on both players, so without a host-self-equality gate the observer over-fires. Add `event_host_permanent_is_source: Option<bool>` to `PredicateSpec`, evaluated against `current_trigger_context.event_host_permanent == rctx.source_permanent`.
+- **Suggested API shape:** Add `event_host_permanent_is_source: Option<bool>` to `PredicateSpec` (DSL) and `CompiledPredicate` (lowered); same shape as the existing `event_permanent_is_source` but reading the host-permanent slot of the trigger context.
+- **Workaround:** None faithful — without the host-self gate, the observer fires on opponent source-trashes and on other-own-Tamer source-trashes too, multiplying the suspend-self cost / rider body fan-out.
+- **Related:** Existing `event_permanent_is_source` predicate (sibling shape on non-host event timings); existing `Rocks archetype refresh — event-card predicates` (qa/dsl-vocab-gaps.md G-ROCKS-EVENT-CARD-PREDICATES — neighbor leaves `host_permanent_trait_has`, `trashed_source_trait_has`, `trashed_source_card_id_is`).
+
+### Move existing field-Option face-down under chosen own permanent (new Option-lifecycle exit, distinct from trash)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** ST-23 BEATBREAK (2026-05-17); ST-24 DATA SQUAD (2026-05-17)
+- **Card(s):** ST23-15 e-Pulse, ST24-15 DNA Charge — both Option cards with `[Start of Your Main Phase] By placing this card from the battle area face down under any of your [BEATBREAK]/[DATA SQUAD] trait Tamers, <Draw 1> and gain 1 memory.`
+- **Effect text:** "By placing this card from the battle area face down under any of your [BEATBREAK]/[DATA SQUAD] trait Tamers, <Draw 1> and gain 1 memory."
+- **What's missing:** `EffectContext::place_card_under_permanent_bottom` accepts a `CardHandle` and `EffectContext::place_as_bottom_source` accepts `CardSourceRef::{Hand, Trash, DeckTop, Security, Material, Reveal}` — neither has a `BattleAreaPermanent(PermanentHandle)` source variant for relocating an already-on-field Option permanent into another permanent's digivolution stack. This is distinct from `attach_tamer_to_digimon` (which keeps the Tamer as the top card and is for the printed `[Hand][Main]` Tamer-as-Plug-In flow); ST23-15 / ST24-15 retire the Option's standalone `OptionFieldState::OrdinaryFieldOption` lifecycle and insert the Option's top `CardSource` as a face-down digivolution source beneath the chosen Tamer's existing top. Must NOT fire `OnOptionTrashed` (the card isn't trashed — it moves zones).
+- **Suggested API shape:** `EffectContext::move_self_option_under_permanent(target: PermanentHandle, face_down: bool) -> bool`. Internally: pop the source-permanent's top `CardSource`, clear that permanent's modifier entries via existing `clear_permanent_modifiers`, mark the Option's lifecycle as moved-not-trashed (new cause variant distinguishing `OptionMoveCause::MovedUnderPermanent` from `OptionTrashCause::*`), then push under target with `face_down`. Skip both `OnDigivolutionCardTrashed` (no source trash) and `OnOptionTrashed` (lifecycle is "moved," not "trashed"). DSL: `move_self_option_under_permanent: { target: tamer_pick, face_down: true }`. Couples with the BEATBREAK/DATA SQUAD Tamer-stash placement substrate above.
+- **Workaround:** None faithful. Trashing the Option and creating a face-down source from elsewhere isn't the printed move — the card's identity and location are observably different (no `OnOptionTrashed` event, no trash placement).
+- **Related:** Existing "[Option card play flow residual: place-Option-in-battle-area + [Hand][Main] Plug-In flow](#option-card-play-flow-residual-place-option-in-battle-area--handmain-plug-in-flow)" (this is a follow-up Option-lifecycle move on top of in-battle-area persistence); BEATBREAK / DATA SQUAD Tamer face-down stash substrate (sibling face-down placement family).
+
+### `BeforePayCost` cost-reducer with selection-bearing `pay_cost_fn` (Parked-outcome handling)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** ST-23 BEATBREAK (2026-05-17)
+- **Card(s):** ST23-03 Cougarmon ("[Your Turn] When this Digimon would digivolve into a [Glowing Dawn] trait Digimon card, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 2"). Likely also applies to any future card whose printed text reads "When this Digimon would digivolve, by trashing X (selection-bearing cost), reduce the cost by N".
+- **Effect text:** As above.
+- **What's missing:** The resolved gap "Dynamic cost reduction at `BeforePayCost`" (qa/resolved-gaps.md 2026-05-15 Group 3) closed selection-installing costs on **triggered** effects (`run_queued_effect` dispatch), but the `BeforePayCost` dispatch site retains the v1 synchronous-only constraint per `RUST_ENGINE_API.md` §11.5: "The closure is synchronous and must NOT install a `PendingSelection` inside it." The DSL lowering at `code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs:153-160` returns `matches!(..., RunOutcome::Synchronous)` — if cost steps install a `PendingSelection` (returning `Parked`), the closure returns `false` and the cost reduction is silently dropped (the cost selection itself runs, but the reducer's contribution is excluded).
+- **Suggested API shape:** Extend the `BeforePayCost` dispatch site with a two-phase "park, pay, then re-enter scan" flow mirroring the optional-reducer accept/decline pattern (`code/digimon-engine/tests/cost_hooks/stacked_would_play_reducers.rs`). The reducer's contribution accumulates only after the selection resolves to a paid cost. Update `lower_cost_reduction.rs` to surface `Parked` outcomes instead of silently dropping them. Update API doc §11.5 v1 constraint once landed.
+- **Workaround:** None — BLOCKED. Auto-paying violates §17 (hidden auto-selection across multiple Tamer candidates); omitting the reduction makes the entire cost-reduction clause non-functional.
+- **Related:** Resolved "Dynamic cost reduction at `BeforePayCost` (closure-valued + selection-gated + suspend/self-return as cost)" — the selection-gated variant was claimed resolved but the regression coverage exercises only synchronous costs (suspend, trash-from-top, condition gating); no test covers `select_own_sources` inside a `BeforePayCost` `pay_cost_fn`. Couples with BEATBREAK / DATA SQUAD Tamer face-down stash substrate (Cougarmon's specific cost shape).
+
+### Cost-reduction trigger with target-card trait / name predicate ("when this/any Digimon would digivolve into a {trait/name} hand card")
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** ST-23 BEATBREAK (2026-05-17); previously surfaced in BT5-092 / BT23-005 audits
+- **Card(s):** ST23-11 Wolvermon ("When this Digimon would digivolve into a [Glowing Dawn] trait Digimon card, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 2"); BT5-092 Nokia Shiramine ("When one of your Digimon would digivolve into a Digimon card in your hand with [Greymon], [Garurumon] or [Omnimon] in its name" — BT5-092.yaml header documents this gap); BT23-005 (per BT5-092 YAML header note); likely extends to every BEATBREAK Lv4 finisher.
+- **Effect text:** As above.
+- **What's missing:** `CostReductionBody` (`digimon-dsl/src/clause.rs:323-349`) exposes only `when_playing_this: bool` and `when_any_ally_played: PredicateSpec`. It has no `when_this_digivolves_into` / `when_any_ally_digivolves_into` trigger variants keyed on the **target** card's name/trait/level/color. The engine path `scan_before_pay_cost_reduction` does not thread the digivolution-target `CardSource` through to the condition closure, so a predicate could not inspect the target's properties even if the trigger variant existed.
+- **Suggested API shape:** Add `when_this_digivolves_into: Option<PredicateSpec>` and `when_any_ally_digivolves_into: Option<PredicateSpec>` to `CostReductionBody`, where the predicate evaluates against the target card source (the hand card being digivolved INTO). Add target-side predicate leaves (`target_name_contains`, `target_trait_has`, `target_level_eq/lte/gte`, `target_color_has`), or reuse `event_card_*` predicate family after verifying scope semantics. Thread the target `CardSource` through `scan_before_pay_cost_reduction` → `EffectReadContext` so the predicate can see it.
+- **Workaround:** None faithful. Omitting the trigger over-fires on every digivolve; auto-selecting BEATBREAK targets violates §17.
+- **Related:** Existing "[Conditional digivolve-target restriction (filter on candidate top-card name/trait/level/color)](#conditional-digivolve-target-restriction-filter-on-candidate-top-card-nametraitlevelcolor)" (sibling restriction shape on the same target; this entry adds the cost-reduction trigger shape on the same target predicate substrate); BT5-092.yaml header `when_this_digivolves_into` anchor; qa/dsl-vocab-gaps.md.
+
+### Unified `play_or_use_from_hand_free` helper (kind-bridging Digimon/Tamer/Option/Dual + non-Main phase lift)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** ST-23 BEATBREAK (2026-05-17); ST-24 DATA SQUAD (2026-05-17)
+- **Card(s):** ST23-04 Murasamemon, ST23-08 Monarchlizamon ("play or use 1 [Glowing Dawn] trait card from your hand with the cost reduced by 3"); ST24-06 RizeGreymon ("play or use 1 [DATA SQUAD] trait card with a play or use cost of 5 or less from your hand without paying the cost"). "Play or use" is the standard Aces/BEATBREAK printed wording covering Digimon/Tamer (play) and Option/Dual-Option-face (use).
+- **Effect text:** As above.
+- **What's missing:** `EffectContext::play_from_hand_with_cost` exists for the play half; there is no symmetric `EffectContext::use_option_from_hand_with_cost` for the Option-use half. `Game::play_option_from_hand` exists but (a) is not exposed on `EffectContext`, (b) refuses outside Main phase (`game_actions.rs:896`) — RizeGreymon fires from `[When Attacking]`, so the inline phase gate blocks Option use, (c) has no free-cost path. No DSL verb takes a hand index bound from `select_hand` and dispatches based on `CardKind`. For DUAL cards (face choice is part of the use, per printed text), the choice must surface through `SelectionKind::EffectChoice`.
+- **Suggested API shape:**
+  - `EffectContext::use_option_from_hand_with_cost(player, hand_index, CostDelta) -> OptionPlayResult` mirroring `play_from_hand_with_cost`, with the Main-phase gate lifted when invoked from a triggered effect body.
+  - `EffectContext::play_or_use_from_hand_with_cost(player, hand_index, CostDelta)` — single entry point that inspects `CardKind`, routes Digimon/Tamer to play and Option to use, and for DUAL installs a `SelectionKind::EffectChoice { labels: ["Play as Digimon", "Use as Option"] }` selection.
+  - DSL verb `play_or_use_from_hand: { of, hand_index: <binding>, cost_delta: <CostDelta> }` lowering to the unified entry point.
+  - Upstream `select_hand` filter `kind: any` or `any_of: [kind: digimon, kind: tamer, kind: option, kind: dual]` (verify multi-kind lowering).
+  - Formula leaf `play_or_use_cost_lte: N` (compares against the larger of `printed.play_cost` for Digimon/Tamer or `option_use_cost` for Option) for the upstream filter — distinct from existing `play_cost_lte`.
+- **Workaround:** Author the play half only and omit Option use — drops legal Option/Dual choices from the action space, violating §17. Branching post-selection on `kind` via `select_effect_choice` + `if` ladders still needs the missing `use_option_from_hand_with_cost` helper.
+- **Related:** Existing "[Option card play flow residual: place-Option-in-battle-area + [Hand][Main] Plug-In flow](#option-card-play-flow-residual-place-option-in-battle-area--handmain-plug-in-flow)" (the broader Option-play architectural gap; once that lands, this DSL verb is a thin compose layer); RUST_ENGINE_API §8 "DUAL cards and Arts Digivolve".
+
+### Filtered hand-or-trash origin-preserving free-play (PUPPETS-G014/G028 promotion)
+- **Severity:** ✅ RESOLVED
+- **Discovered in:** ST-23 BEATBREAK (2026-05-17); ST-24 DATA SQUAD (2026-05-17); previously filed only in archetype QA (`qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md:163,326`)
+- **Card(s):** ST23-15 e-Pulse ("play 1 [BEATBREAK] trait card with a play cost of 4 or less from your hand or trash without paying the cost"); ST24-07 ShineGreymon ("play 1 Tamer card with a play cost of 5 or less from your hand or trash without paying the cost"); ST24-15 DNA Charge (same shape as ST23-15); also Puppets cards ST19-08, BT22-098 already noted in archetype QA.
+- **Effect text:** As above.
+- **Resolution:** `select_union_zone` now preserves the pick origin in the binding and `play_union_bound_free` replays the bound card from hand, trash, or material. DSL lowering evaluates the selection filter against candidate cards. The 2026-05-22 Medusamon substrate pass extended the origin set to material/source picks for BT13-040's "from hand or this Digimon's sources" shape.
+- **Workaround:** None needed for hand/trash/material origin-preserving free play. Broader play-or-use Option routing remains separate under the adjacent "Play or use" gap.
+- **Related:** "[Option card play flow residual: place-Option-in-battle-area + [Hand][Main] Plug-In flow](#option-card-play-flow-residual-place-option-in-battle-area--handmain-plug-in-flow)"; PUPPETS-G014/G028 in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; unified `play_or_use_from_hand_free` (sibling — RizeGreymon needs both unified play-or-use AND the hand-or-trash origin preservation as a compound shape).
+
+### Player selection by metric (`most_security_cards`, with active-player tie-break)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** ST-23 BEATBREAK (2026-05-17)
+- **Card(s):** ST23-05 Habakirimon ("Then, by trashing the top security card of 1 player with the most security cards, <Recovery +1>"). Likely extends to any future card whose printed text picks "the player with the most/least X" where X is a player-scope metric (security, hand, trash, memory, suspended Digimon).
+- **Effect text:** As above.
+- **What's missing:** No engine helper or DSL verb selects a player by metric. `select_effect_choice` gives N-label branching but doesn't surface a player handle; existing selection helpers all target permanents, cards, or zones. On a tie (both players hold the same max), TCG rules require the resolving-player to choose, so the engine cannot auto-pick without §17 violation. The existing `trash_top_security(player)` (`effect_context/mod.rs:1863`) takes a `PlayerId` — once a player is selected the trash itself is a one-liner.
+- **Suggested API shape:** `ctx.select_player_by_metric(metric: PlayerMetric, ordering: Extrema::Most | Extrema::Least, prompt, callback: |&mut EffectContext, PlayerId|)` that filters candidates to those holding the max/min metric, auto-resolves to single candidate, surfaces `PendingSelection` on tie. `PlayerMetric` enum starts with `SecurityCount`, with room for `HandSize`, `TrashSize`, `Memory`, `SuspendedCount`. DSL verb: `select_player_by_metric: { metric: most_security, prompt: ..., bind_as: target_player }` followed by `trash_top_security: { of: target_player }`.
+- **Workaround:** None — BLOCKED. Auto-picking the source's controller or the opponent silently violates §17 when both players hold the tied maximum. Routing through `select_effect_choice` doesn't gate on "has the most security cards".
+- **Related:** None in this tracker. Adjacent helpers: `select_effect_choice` (label-only branch), `select_opponent_permanents_by_dp_budget` (metric-bounded permanent selection, not player selection).
+
+### Player-scope mass `CannotUnsuspend` aura on opponent (mirror of existing `CannotSuspend` gap)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** ST-24 DATA SQUAD (2026-05-17)
+- **Card(s):** ST24-11 Rosemon ("by trashing the bottom face-down card from under any of your Tamers, none of their Digimon can unsuspend until their turn ends")
+- **Effect text:** As above.
+- **What's missing:** Sibling of "[Player-scope mass `CannotSuspend` aura on opponent](#player-scope-mass-cannotsuspend-aura-on-opponent-condition-gated-and--or-stack-depth-filtered)". The existing `ModifierType::CannotUnsuspend` is permanent-scope only — there is no broadcast variant that applies to every current and future opponent Digimon until `Expiry::EndOfOpponentsTurn`. DCGO call is `GainCanNotUnsuspendPlayerEffect(permanentCondition, EffectDuration.UntilOpponentTurnEnd)`. Must re-evaluate against newly-played Digimon during its lifetime.
+- **Suggested API shape:** Extend the resolution path of the existing `CannotSuspend` player-aura gap to include `cannot_unsuspend()` on the same builder: `Effect::declarative(card).player_aura(opponent_id).cannot_unsuspend().expire_at(Expiry::EndOfOpponentsTurn)`. Implementation parallels the suspend-side: extend player-scoped `ModifierRegistry` with `CannotUnsuspend` entry, consult on every unsuspend-mask query and on the bulk turn-start unsuspend path.
+- **Workaround:** Apply `CannotUnsuspend` to each opponent Digimon currently in play at resolution time — fails for future plays (Digimon entering the field during the lockdown window are unaffected), under-narrows "none of their Digimon".
+- **Related:** "[Player-scope mass `CannotSuspend` aura on opponent (condition-gated and / or stack-depth-filtered)](#player-scope-mass-cannotsuspend-aura-on-opponent-condition-gated-and--or-stack-depth-filtered)" — same architecture, sister modifier; existing permanent-scope `CannotUnsuspend` (RUST_ENGINE_API.md §5 ModifierType); existing `EndOfOpponentsTurn` expiry (resolved 2026-05-15).
+
+### Shared-OPT across heterogeneous-timing trigger pair with per-timing conditions
+- **Severity:** 🟡 PARTIAL
+- **Discovered in:** ST-24 DATA SQUAD (2026-05-17)
+- **Card(s):** ST24-11 Rosemon clause 2 ("[All Turns] [Once Per Turn] When any of your opponent's Digimon or Tamers suspend, or effects trash cards from under your Tamers, trash your opponent's top security card")
+- **Effect text:** As above. DCGO implements this as two `ActivateClass` instances (one for `OnTappedAnyone`, one for `OnDigivolutionCardDiscarded`) that share `SetHashString("ST24_11_AT")` — DCGO's hash-keyed cross-effect OPT.
+- **What's missing:** A way for a single DSL clause to (a) bind `when: [on_suspend, on_digivolution_card_trashed]` (already supported via `TimingSet::Multi`), (b) gate `condition` on the firing timing — apply the suspend-event condition when fired by `OnSuspend` (`event_permanent` populated) and the source-trash condition when fired by `OnDigivolutionCardTrashed` (`event_host_permanent` populated). Today the clause-level `condition` is a single predicate AST evaluated against `current_trigger_context`. An `any_of` composition can approximate it (suspend branch reads `event_permanent`, source-trash branch reads `event_host_permanent`), but only once `event_host_permanent_is_source` exists (separate entry above) — and the composition is fragile because predicate leaves silently return false on the wrong timing.
+- **Suggested API shape:** Either (a) add a `when_is: <Timing>` predicate leaf so authors can write `condition: { any_of: [{ all_of: [{when_is: on_suspend}, ...] }, { all_of: [{when_is: on_digivolution_card_trashed}, ...] }] }`; or (b) allow per-timing condition blocks: `triggers: [{ when: on_suspend, condition: {...} }, { when: on_digivolution_card_trashed, condition: {...} }]` inside a single clause, sharing the OPT counter. Option (b) is the cleaner authoring surface.
+- **Workaround:** Split into two clauses — each gets its own OPT counter, violating printed "[Once Per Turn]" because the same security trash could fire twice in one turn (once from a suspend, once from a source-trash). Not faithful.
+- **Related:** Existing OPT identity model (`(card_id, clause_index)`); existing `event_permanent_is_source` predicate; companion gap `event_host_permanent_is_source` (above).
+
+### "Also treated as [X]/[Y]" Tamer name-rule (declarative card-name alias)
+- **Severity:** 🟡 PARTIAL
+- **Discovered in:** ST-23 BEATBREAK (2026-05-17); ST-24 DATA SQUAD (2026-05-17)
+- **Card(s):** ST23-13 Tomoro Tenma & Kyo Sawashiro, ST23-14 Reina Sakuya & Makoto Kuonji, ST24-13 Marcus Damon & Thomas H. Norstein, ST24-14 Yoshino Fujieda & Keenan Crier. Also covers prior dual-named Tamers (BT16-085 Davis Motomiya & Ken Ichijoji, BT17-081 Tai Kamiya & Matt Ishida, EX9-066 Tai & Matt, EX4-061 Matt & Tai, etc.).
+- **Effect text:** "[Rule] Name: Also treated as [Marcus Damon]/[Thomas H. Norstein]" (per DCGO `ChangeCardNamesClass`). Printed text describes a passive name-alias so predicates on other cards ("1 of your [Marcus Damon]" etc.) match this Tamer.
+- **What's missing:** The Rust engine has `Permanent::contains_card_name(name)` and a printed `card_data.name` field, but no declarative mechanism to layer additional "treated as" names onto a permanent or onto its underlying `CardData`. DCGO `ChangeCardNamesClass` returns an extended name list when consulted. The Rust engine has no name-overlay surface; cards filtering on "card with [Marcus Damon] in its name" miss this Tamer when checking `top_card.name`.
+- **Suggested API shape:** Two options. (a) DSL clause `kind: name_alias` with `names: [<list>]` that lowers to a `CardNameOverlay` registered against the source permanent and consulted by `Permanent::contains_card_name` / `name_matches`. (b) Static `card_data` field `also_treated_as: Vec<String>` populated from YAML metadata for printed name overlays (no DSL effect needed). Option (b) is simpler and consistent with how DCGO's `ChangeCardNamesClass` always returns the same list per card. Engine `name_matches` paths must consult the overlay.
+- **Workaround:** Authoring without the overlay leaves the standalone Tamer functional but breaks predicates on other cards searching for `[Marcus Damon]` etc. Future Glowing Dawn / DATA SQUAD support cards that filter Tamers by individual character name will misfire.
+- **Related:** Existing "[Digivolution-stack name overlay (\"has all names of materials\")](#digivolution-stack-name-overlay-has-all-names-of-materials)" (different shape — that's stack-derived names; this is printed dual-name Tamers).
+
+### Inherited-effect "Use Requirement: <trait>" activation gating (block-scoped trait gate on inherited Digimon effects)
+- **Severity:** 🟡 PARTIAL — primitive-with-fidelity-cost (expressible per-effect via `condition` closure; printed structure diverges)
+- **Discovered in:** ST-24 DATA SQUAD (2026-05-17)
+- **Card(s):** ST24-07 ShineGreymon (inherited `Use Requirement: DATA SQUAD trait` / `[Main] -6000 DP then delete ≤7000 DP`)
+- **Effect text:** "Use Requirement: DATA SQUAD trait / [Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, delete 1 of your opponent's Digimon with 7000 DP or less."
+- **What's missing:** Not the same as DUAL Option `use_requirement` (color-substitute when using as Option from hand). This is a **block-level activation gate** on an inherited Digimon effect that resolves only when the carrier (top card of the digivolution stack hosting this source) currently has the specified trait. Today scripts must add `condition(|ctx| trait_for_rules(ctx.source_permanent.top_card_id()).contains("DATA SQUAD"))` to every triggered effect in the inherited block. The action-mask gate for `[Main]` activation also needs the same check before exposing the action ID.
+- **Suggested API shape:** A `CardData`-level `inherited_use_requirement: Option<TraitFilter>` field that gates both effect dispatch and mask emission for inherited effects in a single declarative slot. DSL top-level: `inherited_use_requirement: { trait_has: "DATA SQUAD" }` (analogous to existing `use_requirement` but scoped to inherited-block activation).
+- **Workaround:** Per-effect `condition` closure on every inherited effect — fidelity-preserving but card-data shape diverges from printed structure; easier to miss a clause during authoring.
+- **Related:** Existing "DSL Option Use Requirements" / `use_requirement` (sibling but distinct — Option-use color-substitute vs. inherited-block trait-gate).
 
 ## Resolved gaps
 

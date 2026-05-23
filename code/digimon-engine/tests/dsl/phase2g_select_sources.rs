@@ -74,7 +74,13 @@ fn select_own_sources_binds_source_refs_for_trashing() {
 }
 
 #[test]
-fn empty_select_own_sources_runs_outer_tail_synchronously() {
+fn empty_select_own_sources_silently_skips_outer_tail_when_min_positive() {
+    // When SelectOwnSources has min > 0 and no source candidates exist, the
+    // mandatory cost cannot be paid. Per the no-approximations silent-skip
+    // contract the ENTIRE effect body — including subsequent outer-tail steps —
+    // is skipped. Memory stays at 0 (neither GainMemory(7) nor GainMemory(3)
+    // runs). This mirrors how the EX10-032 buff clause behaves when no
+    // Mineral/Rock source is available.
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("EFFECT", "Effect"))
         .hand(0, &["EFFECT"])
@@ -102,7 +108,8 @@ fn empty_select_own_sources_runs_outer_tail_synchronously() {
 
     assert_eq!(outcome, RunOutcome::Synchronous);
     assert!(runner.game.pending_selection.is_none());
-    assert_eq!(runner.game.memory, 3);
+    // Neither the `then` body nor the outer tail ran — mandatory cost unpayable.
+    assert_eq!(runner.game.memory, 0);
 }
 
 #[test]
@@ -241,6 +248,188 @@ effects:
         runner.game.memory, 5,
         "two source-trash observer firings (+2) should resolve before/alongside the nested body (+3)"
     );
+}
+
+// ─── S7 `select_opponent_sources` (G-SELECT-OPPONENT-SOURCES) ─────────────────
+
+#[test]
+fn select_opponent_sources_binds_opponent_source_refs_for_trashing() {
+    // BT16-085 DNA branch shape: pick digivolution cards under the OPPONENT's
+    // battle-area stacks and trash them.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("OPP-SRC-A", "Opp Source A"))
+        .add_card(make_test_card("OPP-TOP-A", "Opp Top A"))
+        .add_card(make_test_card("OPP-SRC-B", "Opp Source B"))
+        .add_card(make_test_card("OPP-TOP-B", "Opp Top B"))
+        .add_card(make_test_card("OWN-SRC", "Own Source"))
+        .add_card(make_test_card("OWN-TOP", "Own Top"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let opp_a = runner.place_stack(1, &["OPP-SRC-A", "OPP-TOP-A"]);
+    let opp_b = runner.place_stack(1, &["OPP-SRC-B", "OPP-TOP-B"]);
+    let own = runner.place_stack(0, &["OWN-SRC", "OWN-TOP"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let steps = vec![CompiledStep::SelectOpponentSources {
+        target: None,
+        filter: CompiledPredicate::default(),
+        min: 2,
+        max: 2,
+        bind_as: Some("chosen_sources".to_string()),
+        prompt: "Choose two opponent sources".to_string(),
+        then: vec![CompiledStep::TrashSelectedSources {
+            source_refs: "chosen_sources".to_string(),
+        }],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+    assert_eq!(
+        runner.game.pending_selection.as_ref().map(|s| s.kind),
+        Some(SelectionKind::SourceMulti {
+            min: 2,
+            max: 2,
+            picked: 0,
+        })
+    );
+
+    // The controller (P0) chooses; candidates are OPPONENT (P1) sources.
+    // Source-select action IDs carry no player dimension, so the candidate
+    // count (one per opponent source) is the soundness check that own sources
+    // are excluded: 2 opponent stacks × 1 source each = exactly 2 candidates
+    // (the PASS action is not added at an exact-N minimum).
+    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
+    let action_b = encode_source_select(opp_b.index as u16, 0).expect("opp B source action");
+    {
+        let pending = runner.game.pending_selection.as_ref().expect("pending");
+        assert_eq!(pending.selecting_player, 0, "controller picks");
+        assert!(pending.valid_action_ids.contains(&action_a));
+        assert!(pending.valid_action_ids.contains(&action_b));
+        assert_eq!(
+            pending.valid_action_ids.len(),
+            2,
+            "only the 2 opponent sources are candidates — own sources excluded"
+        );
+    }
+
+    runner.execute_action(0, action_a).expect("pick opp A");
+    runner.execute_action(0, action_b).expect("pick opp B");
+
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.game.players[1].battle_area[opp_a.index as usize]
+            .card_sources
+            .len(),
+        1
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[opp_b.index as usize]
+            .card_sources
+            .len(),
+        1
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[own.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "controller's own stack untouched"
+    );
+    // Trashed opponent sources go to their OWNER's (P1's) trash.
+    assert_eq!(runner.game.players[1].trash.len(), 2);
+}
+
+#[test]
+fn select_opponent_sources_restricts_to_target_opponent_permanent() {
+    // `target:` binding limits the picker to one opponent permanent's sources.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("OPP-SRC-A", "Opp Source A"))
+        .add_card(make_test_card("OPP-TOP-A", "Opp Top A"))
+        .add_card(make_test_card("OPP-SRC-B", "Opp Source B"))
+        .add_card(make_test_card("OPP-TOP-B", "Opp Top B"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let opp_a = runner.place_stack(1, &["OPP-SRC-A", "OPP-TOP-A"]);
+    let opp_b = runner.place_stack(1, &["OPP-SRC-B", "OPP-TOP-B"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let steps = vec![CompiledStep::SelectOpponentSources {
+        target: Some(CompiledBindingRef::Binding("opp_stack".to_string())),
+        filter: CompiledPredicate::default(),
+        min: 1,
+        max: 1,
+        bind_as: Some("chosen".to_string()),
+        prompt: "Choose a source under the chosen opponent Digimon".to_string(),
+        then: vec![CompiledStep::TrashSelectedSources {
+            source_refs: "chosen".to_string(),
+        }],
+    }];
+
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("opp_stack", opp_a);
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+
+    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
+    let action_b = encode_source_select(opp_b.index as u16, 0).expect("opp B source action");
+    {
+        let pending = runner.game.pending_selection.as_ref().expect("pending");
+        assert!(pending.valid_action_ids.contains(&action_a));
+        assert!(
+            !pending.valid_action_ids.contains(&action_b),
+            "target binding must restrict to the chosen opponent permanent"
+        );
+    }
+    runner.execute_action(0, action_a).expect("pick opp A");
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(runner.game.players[1].trash.len(), 1);
+}
+
+#[test]
+fn empty_select_opponent_sources_silently_skips_outer_tail_when_min_positive() {
+    // No opponent stacks with sources → mandatory cost (min:1) cannot be paid.
+    // The entire effect body — including subsequent outer-tail steps — is
+    // silently skipped. Memory stays at 0. Mirrors the SelectOwnSources
+    // contract for the opponent-side variant.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let steps = vec![
+        CompiledStep::SelectOpponentSources {
+            target: None,
+            filter: CompiledPredicate::default(),
+            min: 1,
+            max: 1,
+            bind_as: Some("chosen".to_string()),
+            prompt: "Choose opponent source".to_string(),
+            then: vec![CompiledStep::GainMemory(7)],
+        },
+        CompiledStep::GainMemory(3),
+    ];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Synchronous);
+    assert!(runner.game.pending_selection.is_none());
+    // Neither the `then` body nor the outer tail ran — mandatory cost unpayable.
+    assert_eq!(runner.game.memory, 0);
 }
 
 #[test]

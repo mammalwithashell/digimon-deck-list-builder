@@ -42,6 +42,18 @@ fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Opti
     })
 }
 
+fn formula_value(
+    formula: &digimon_dsl::compiled::CompiledFormula,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> i32 {
+    let target = ctx.source_permanent.unwrap_or(PermanentHandle {
+        player: ctx.player,
+        index: u8::MAX,
+    });
+    formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
+}
+
 fn collect_matching_permanents(
     ctx: &EffectContext<'_>,
     player: u8,
@@ -275,6 +287,37 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
+            selection_result(ctx)
+        }
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer { of } => {
+            // Bundled activation cost: "pick one of `of`'s Tamers that carries
+            // a face-down stash → trash its bottom face-down source". Pre-filter
+            // the controller's permanents with the fixed predicate
+            // `{ kind: tamer, has_face_down_source: true }`.
+            let player = resolve_player(ctx, *of);
+            let filter = CompiledPredicate {
+                kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
+                has_face_down_source: Some(true),
+                ..CompiledPredicate::default()
+            };
+            let candidates = collect_matching_permanents(ctx, player, &filter, Some(&bindings));
+            if candidates.is_empty() {
+                // The cost is unpayable: no Tamer has a face-down stash. Abort
+                // the clause — the dispatcher must stop and the tail (the rest
+                // of the process) must NOT run. `TailAlreadyRan` here means
+                // "dispatcher, stop; do not run the remaining steps".
+                return InstallResult::TailAlreadyRan;
+            }
+            install_trash_bottom_face_down_source_under_tamer(
+                ctx,
+                filter,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            // With ≥1 candidate, `select_own_permanent` always installs a
+            // pending selection (even a single candidate is exposed as a
+            // 1-option selection — no auto-resolve), so this parks.
             selection_result(ctx)
         }
         CompiledStep::SelectOpponentPermanent {
@@ -561,8 +604,21 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if min > max || *max == 0 || !has_own_source_candidates(ctx) {
+            if min > max || *max == 0 {
                 return InstallResult::Continue;
+            }
+            // When no digivolution sources exist at all (unfiltered), and the
+            // clause requires at least one pick (min > 0), the cost cannot be
+            // paid: abort the outer continuation silently. For min == 0, no
+            // sources means the player implicitly picks 0 — the `then` body
+            // with an empty binding is a no-op anyway, so advancing to the
+            // outer tail (`Continue`) is correct for that case.
+            if !has_own_source_candidates(ctx) {
+                return if *min > 0 {
+                    InstallResult::TailAlreadyRan
+                } else {
+                    InstallResult::Continue
+                };
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
@@ -578,24 +634,83 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            selection_result(ctx)
+            // The outer tail was captured inside `inner_tail` and passed
+            // entirely into `install_select_own_sources`. The outer loop must
+            // NOT advance into those same steps again. If a selection was
+            // installed, `Parked` stops the loop. If no selection was
+            // installed (callback ran synchronously for min=0, or filtered
+            // candidates = 0 for min>0 so the callback was dropped), the
+            // outer tail already ran or was intentionally discarded —
+            // `TailAlreadyRan` stops the loop in both sub-cases.
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else {
+                InstallResult::TailAlreadyRan
+            }
         }
-        CompiledStep::SelectOpponentDpBudget {
-            dp_budget,
-            min_picks,
+        CompiledStep::SelectOpponentSources {
+            target,
+            filter,
+            min,
+            max,
             bind_as,
             prompt,
             then,
         } => {
-            if !has_opponent_dp_budget_candidates(ctx, *dp_budget) {
+            if min > max || *max == 0 {
+                return InstallResult::Continue;
+            }
+            // Mirror of SelectOwnSources early-abort logic: when no opponent
+            // sources exist and min > 0, the cost cannot be paid — abort.
+            if !has_opponent_source_candidates(ctx) {
+                return if *min > 0 {
+                    InstallResult::TailAlreadyRan
+                } else {
+                    InstallResult::Continue
+                };
+            }
+            let mut inner_tail = then.clone();
+            inner_tail.extend_from_slice(tail);
+            install_select_opponent_sources(
+                ctx,
+                filter.clone(),
+                *min,
+                *max,
+                target.clone(),
+                bind_as.clone(),
+                prompt.clone(),
+                inner_tail,
+                bindings,
+                runtime.clone(),
+            );
+            // Same tail-capture semantics as SelectOwnSources: the outer tail
+            // is embedded in inner_tail, so the outer loop must not advance
+            // into those steps regardless of how the install resolved.
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else {
+                InstallResult::TailAlreadyRan
+            }
+        }
+        CompiledStep::SelectOpponentDpBudget {
+            dp_budget,
+            min_picks,
+            filter,
+            bind_as,
+            prompt,
+            then,
+        } => {
+            let dp_budget = formula_value(dp_budget, ctx, &bindings);
+            if !has_opponent_dp_budget_candidates(ctx, dp_budget, filter, &bindings) {
                 return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
             install_select_opponent_dp_budget(
                 ctx,
-                *dp_budget,
+                dp_budget,
                 *min_picks,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 inner_tail,
@@ -612,7 +727,8 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if !has_opponent_play_cost_budget_candidates(ctx, *play_cost_budget, filter, &bindings) {
+            if !has_opponent_play_cost_budget_candidates(ctx, *play_cost_budget, filter, &bindings)
+            {
                 return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
@@ -666,8 +782,9 @@ pub fn try_install(
                 match z {
                     CompiledZone::Hand => zoneset |= UnionZoneSet::HAND,
                     CompiledZone::Trash => zoneset |= UnionZoneSet::TRASH,
+                    CompiledZone::Material => zoneset |= UnionZoneSet::MATERIAL,
                     // Other zones not yet exposed by UnionZoneSet bitfield.
-                    // Silently skip — Phase 2f+ widens engine API as needed.
+                    // Silently skip — future tasks widen engine API as needed.
                     _ => {}
                 }
             }
@@ -777,6 +894,18 @@ fn has_own_source_candidates(ctx: &EffectContext<'_>) -> bool {
         .any(|perm| perm.card_sources.len() > 1)
 }
 
+/// Opponent-side mirror of `has_own_source_candidates`: true when at least one
+/// of the controller's OPPONENT's battle-area permanents has a digivolution
+/// source below its top card. G-SELECT-OPPONENT-SOURCES.
+fn has_opponent_source_candidates(ctx: &EffectContext<'_>) -> bool {
+    let opponent = ctx.game.next_clockwise(ctx.player);
+    ctx.game
+        .player(opponent)
+        .battle_area
+        .iter()
+        .any(|perm| perm.card_sources.len() > 1)
+}
+
 fn has_material_candidates(
     ctx: &EffectContext<'_>,
     perm: PermanentHandle,
@@ -805,8 +934,14 @@ fn has_material_candidates(
         .unwrap_or(false)
 }
 
-fn has_opponent_dp_budget_candidates(ctx: &EffectContext<'_>, dp_budget: i32) -> bool {
+fn has_opponent_dp_budget_candidates(
+    ctx: &EffectContext<'_>,
+    dp_budget: i32,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+) -> bool {
     let opponent = ctx.game.next_clockwise(ctx.player);
+    let read = ctx.as_read();
     ctx.game
         .player(opponent)
         .battle_area
@@ -817,7 +952,15 @@ fn has_opponent_dp_budget_candidates(ctx: &EffectContext<'_>, dp_budget: i32) ->
                 player: opponent,
                 index: index as u8,
             };
-            ctx.game.effective_dp(handle).unwrap_or(0) <= dp_budget
+            if ctx.game.effective_dp(handle).unwrap_or(0) > dp_budget {
+                return false;
+            }
+            eval_predicate_with_bindings(
+                filter,
+                &read,
+                PredicateSubject::Permanent(handle),
+                Some(bindings),
+            )
         })
 }
 
@@ -1160,6 +1303,83 @@ fn install_select_own_permanent(
                 b.insert_permanent(name, handle);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    );
+}
+
+/// Install the Tamer pick for `trash_bottom_face_down_source_under_tamer`.
+///
+/// Mirrors `install_select_own_permanent` but with a fixed predicate and no
+/// `selector` / `bind_as` / `optional`. The empty-candidates short-circuit is
+/// NOT here — the caller (`try_install`) already handled the no-eligible-Tamer
+/// case by returning `TailAlreadyRan`. The pick is mandatory (`optional:
+/// false`): once the player activates the clause, they must choose which
+/// eligible Tamer pays the cost. Whether to activate/decline at all is the
+/// clause's own `optional`, governed one level up.
+///
+/// The callback trashes the picked Tamer's bottom face-down source via
+/// `EffectContext::trash_bottom_face_down_source`; the captured tail runs ONLY
+/// if that trash succeeded. The eligibility filter (`has_face_down_source`)
+/// matches a Tamer if ANY source is face-down, but `trash_bottom_face_down_source`
+/// only succeeds when `card_sources[0]` (the BOTTOM) is face-down. In the
+/// current ST-23/ST-24 pool these always agree (stashes insert at index 0), but
+/// this substrate is reusable: guarding the tail on the trash's `bool` keeps a
+/// future filter/action desync from running the effect without paying the cost
+/// (a no-approximations violation). The `debug_assert!` makes such a desync
+/// fail loudly in dev/test; production degrades gracefully by skipping the tail.
+fn install_trash_bottom_face_down_source_under_tamer(
+    ctx: &mut EffectContext<'_>,
+    filter: CompiledPredicate,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+    ctx.select_own_permanent(
+        "Choose a Tamer to trash a face-down card from under",
+        false,
+        move |game, handle| {
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Permanent(handle),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, handle: PermanentHandle| {
+            let trashed = cb_ctx.trash_bottom_face_down_source(handle);
+            debug_assert!(
+                trashed,
+                "trash_bottom_face_down_source_under_tamer: eligibility filter \
+                 (has_face_down_source) offered a Tamer whose bottom source is not \
+                 face-down — filter and action have desynced"
+            );
+            // No-approximations: the tail (the effect) runs ONLY if the cost was
+            // actually paid. A `false` return means nothing was trashed, so the
+            // tail must not run.
+            if trashed {
+                let mut b = bindings.clone();
+                run_tail_preserving_trigger_context(
+                    cb_ctx,
+                    trigger_context,
+                    &tail,
+                    &mut b,
+                    &runtime,
+                );
+            }
         },
     );
 }
@@ -2112,6 +2332,77 @@ fn install_select_own_sources(
             eval_predicate_with_bindings(
                 &filter,
                 &read,
+                PredicateSubject::Source(source),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, source_refs| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_source_refs(name, source_refs);
+            }
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    );
+}
+
+/// Opponent-side mirror of `install_select_own_sources`. The candidate set is
+/// drawn from the controller's OPPONENT's battle-area stacks via
+/// `EffectContext::select_opponent_sources`; `target` (when present) restricts
+/// the picker to a single opponent permanent binding. G-SELECT-OPPONENT-SOURCES.
+#[allow(clippy::too_many_arguments)]
+fn install_select_opponent_sources(
+    ctx: &mut EffectContext<'_>,
+    filter: CompiledPredicate,
+    min: u8,
+    max: u8,
+    target: Option<CompiledBindingRef>,
+    bind_as: Option<String>,
+    prompt: String,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    if min > max || max == 0 {
+        return;
+    }
+
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let target_permanent =
+        target
+            .as_ref()
+            .and_then(|target| match resolve_binding_ref(target, ctx, &bindings) {
+                Some(ResolvedBinding::Permanent(handle)) => Some(handle),
+                _ => None,
+            });
+    let target_resolution_failed = target.is_some() && target_permanent.is_none();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+    ctx.select_opponent_sources(
+        &prompt,
+        min,
+        max,
+        move |game, source| {
+            if target_resolution_failed {
+                return false;
+            }
+            if target_permanent.is_some_and(|handle| source.permanent != handle) {
+                return false;
+            }
+            let read = EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read,
                 PredicateSubject::Card(source.card),
                 Some(&filter_bindings),
             )
@@ -2131,6 +2422,7 @@ fn install_select_opponent_dp_budget(
     ctx: &mut EffectContext<'_>,
     dp_budget: i32,
     min_picks: u8,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     tail: Vec<CompiledStep>,
@@ -2139,11 +2431,30 @@ fn install_select_opponent_dp_budget(
 ) {
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_opponent_permanents_by_dp_budget(
         &prompt,
         dp_budget,
         min_picks,
-        |_game, _handle| true,
+        move |game, handle| {
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Permanent(handle),
+                Some(&filter_bindings),
+            )
+        },
         move |cb_ctx, handles| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -2305,7 +2616,7 @@ fn install_select_union_zone(
             if let Some(name) = &bind_as {
                 // PUPPETS-G014: record the origin zone alongside the handle
                 // so a `play_union_bound_free` tail step can replay the card
-                // from its true zone (hand vs trash).
+                // from its true zone (hand, trash, or material).
                 b.insert_union_card(name, handle, origin, target_player);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
@@ -2468,7 +2779,7 @@ fn route_chosen_reveal(
         }
         CompiledRevealDestination::BottomSourceOf(_) => {
             if let Some(perm) = target_permanent {
-                let _ = ctx.place_as_bottom_source(CardSourceRef::Reveal(handle), perm);
+                let _ = ctx.place_as_bottom_source(CardSourceRef::Reveal(handle), perm, false);
             }
         }
     }
@@ -2521,9 +2832,8 @@ fn install_order_remainder(
         .iter()
         .map(|d| remainder_destination_label(*d).to_string())
         .collect();
-    let prompt = prompt.unwrap_or_else(|| {
-        "Place remaining cards on top or bottom of the deck?".to_string()
-    });
+    let prompt =
+        prompt.unwrap_or_else(|| "Place remaining cards on top or bottom of the deck?".to_string());
     let destinations_capture: Vec<CompiledRemainderDestination> = destinations;
     let tail_arc = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
@@ -2630,7 +2940,9 @@ fn place_remainder_in_order(
     match position {
         StackPosition::Top => {
             for handle in ordered.iter().rev() {
-                let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Top);
+                let placed =
+                    ctx.game
+                        .return_to_deck_from_reveal(player, *handle, StackPosition::Top);
                 debug_assert!(
                     placed,
                     "place_remainder_in_order: handle {:?} not found in revealed_cards",
@@ -2640,7 +2952,9 @@ fn place_remainder_in_order(
         }
         StackPosition::Bottom => {
             for handle in ordered.iter() {
-                let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Bottom);
+                let placed =
+                    ctx.game
+                        .return_to_deck_from_reveal(player, *handle, StackPosition::Bottom);
                 debug_assert!(
                     placed,
                     "place_remainder_in_order: handle {:?} not found in revealed_cards",
@@ -2650,7 +2964,9 @@ fn place_remainder_in_order(
         }
         StackPosition::Random => {
             for handle in ordered.iter() {
-                let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Random);
+                let placed =
+                    ctx.game
+                        .return_to_deck_from_reveal(player, *handle, StackPosition::Random);
                 debug_assert!(
                     placed,
                     "place_remainder_in_order: handle {:?} not found in revealed_cards",

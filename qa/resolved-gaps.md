@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-20
+Last updated: 2026-05-22
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -9,14 +9,97 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
 
+## BG Imperial substrate closeout — 2026-05-20
+
+The `bg-imperial-substrate-closeout` change (OpenSpec) re-audited the 24-card BG
+Imperial pool and closed the genuinely-remaining DSL substrate gaps. ~12 gap IDs
+that the BG trackers still listed as open were verified stale (closed by Phase 2
+Tracks A–J, DNA Omnimon completion, Puppets sweep) — see
+`openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md`. The 5 genuine
+substrate gaps below landed. Engine/DSL only — no card YAML re-authored (the BG
+card re-authoring sweep runs separately); no `ACTION_SPACE_SIZE` / tensor changes.
+
+**Readiness reconciliation (2026-05-22):** the live `BG Imperial`
+deck-library pool is 25 cards, not 24. The extra pool card is `BT17-077`,
+which remains canonically ledger-owned by `Royal Knights` but is covered for BG
+Imperial deck readiness. `BT21-037` also moved from a stale `PARTIAL`
+ledger entry to `IMPLEMENTED` after adding its printed `[Digivolve] [Veemon]:
+Cost 2` alternate path. The reconciliation found zero live `raw_rust` YAML
+escapes in the 25-card pool.
+
+**Audit correction:** the Phase 0 audit initially flagged 9 gaps, but a second
+review found 4 of them already covered by pre-existing engine capability — they
+were NOT genuine gaps and no new predicate was added for them:
+
+- **G-PRED-STACK-SIZE-LTE-SOURCE / G-DSL-STACK-SIZE-LTE-SOURCE** — already
+  expressible as `materials_count_lte: { formula: { source_material_count: {} } }`
+  (the `source_material_count` formula resolves the source permanent's
+  digivolution-card count). BT16-027 / AD1-025 use this path.
+- **G-DSL-CARRIER-HAS-KEYWORD** — already covered: `has_keyword` resolves against
+  the carrier permanent for inherited clauses (`enqueue_from_permanent` sets
+  `source_permanent` to the carrier handle).
+- **G-DSL-AURA-TARGET-SOURCE-PERMANENT** — already covered: a `kind: aura` with
+  `scope: inherited` + `target: {}` is a carrier-only self-aura.
+- **G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT** — EX1-014's `[Free]`-trait arm is
+  covered by the existing `source_permanent_trait_has` predicate.
+
+### Tier 1 — DSL predicate leaves (genuinely new)
+
+- **G-DSL-EFFECT-SUSPENDED-RESULT** — `effect_suspended_any_opponent_digimon` result
+  predicate; opponent-side read-time filter on the existing owner-agnostic suspend
+  result log. Driver BT16-025 clause 2.
+- **G-EVENT-CARD-COLOR-IS** — `event_card_color_has` predicate: event card has ≥1 of
+  the listed colors (intersection; sibling of subset-semantics `event_card_color_only`).
+  Driver BT16-085.
+
+Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group7_predicate_batch`
+
+### Tier 2 — engine-touching DSL verbs
+
+- **G-SELECT-OPPONENT-SOURCES** — `select_opponent_sources` step + `EffectContext::select_opponent_sources`;
+  opponent-side mirror of `select_own_sources` (exact-N / up-to-N, PASS-after-min,
+  `filter:`, `target:`, stable refs). Driver BT16-085.
+  Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl phase2g_select_sources`
+- **G-ZONE-SELECTED-TRASH-TO-DECK-TOP** — `move_trash_card_to_deck_top` verb: a single
+  `select_trash`-bound card → owner's deck top. Driver LM-030 clause B.
+- **G-ANY-RETURNED-CARD-PREDICATE** — `returned_card_matching` filtered result predicate
+  (distinct from the bare-bool `any_returned_card` alias); result log records returned
+  card handles. BT17-077 clause-1b player-choice-of-trash verified already composable
+  via `select_effect_choice` + `if`. Driver BT17-077.
+  Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`
+
+### Follow-up engine gaps closed (2026-05-21)
+
+The two engine gaps that left BG Imperial at 22/24 were scoped and then closed,
+bringing the archetype to **24/24 IMPLEMENTED**.
+
+- **G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME** — `EffectContext::return_card_source_to_hand(perm, card)`
+  (sibling of `trash_card_source`, routes the extracted source `Card` to its
+  owner's hand; does NOT fire `OnDigivolutionCardTrashed`) + the `Vec`-taking
+  `return_selected_sources_to_hand` wrapper + the `return_selected_sources_to_hand`
+  DSL verb (mirrors `trash_selected_sources`). Closes BT12-031 Step C → BT12-031
+  IMPLEMENTED. Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt12_031`.
+- **G-COST-REDUCE-ALLY-DIGIVOLVE** (umbrella over `G-COST-REDUCE-NEXT-SINGLE-FIRE`
+  + `G-PAY-COST-SELECT-ARBITRARY-SUSPEND`) — new `player_cost_reducer.rs` module
+  (`PlayerDigivolveCostReducer` data struct), `Game` fields, `EffectContext::arm_player_digivolve_cost_reducer`,
+  and a pre-cost accept/decline + suspend-cost `PendingSelection` chain wired into
+  a split `digivolve_from_hand` / `digivolve_from_hand_inner`. The synchronous
+  `scan_before_pay_cost_reduction_with_target` hot path was deliberately NOT
+  touched (the prompt runs before it) — normal/DNA/Blast digivolve confirmed
+  unregressed. DSL surface: `arm_digivolve_cost_reducer` step. End-of-turn expiry
+  wired in `rotate_turn_player`. Closes BT3-103 Clause 0 → BT3-103 IMPLEMENTED.
+  Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cost_hooks player_digivolve_reducer`;
+  `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt3_103`.
+
 ## Phase 2 / DNA Omnimon completion closure — 2026-05-20
 
 The `complete-dna-omnimon-archetype` change drove the DNA Omnimon archetype (64 cards)
-from a Phase A baseline of 34 IMPLEMENTED / 25 PARTIAL / 5 BLOCKED to a final ledger of
-**62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED**. Archetype verdict ledger:
-[qa/qa-reports/validated_cards_dsl.json](qa-reports/validated_cards_dsl.json). The two
-remaining PARTIAL cards (BT17-102, BT23-096) are blocked on the two still-open gaps
-recorded at the end of this section.
+from a Phase A baseline of 34 IMPLEMENTED / 25 PARTIAL / 5 BLOCKED to an interim ledger
+of **62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED**. The 2026-05-22
+`close-dna-omnimon-partial-gaps` follow-up resolved the two remaining partial gaps
+(BT17-102, BT23-096), so the current archetype verdict ledger is
+**64 IMPLEMENTED / 0 PARTIAL / 0 BLOCKED**:
+[qa/qa-reports/validated_cards_dsl.json](qa-reports/validated_cards_dsl.json).
 
 DNA Omnimon now has 0 live `raw_rust` escapes — BT20-102's board-wipe/return migrated to
 pure DSL, AD1-025's body migrated, and the unused `bt20_102_boardwipe_and_return` fn was
@@ -94,28 +177,17 @@ behavioral tests, which now pass:
 `G-ADD-OPTION-SELF-TO-HAND`, `G-EVENT-CARD-TAMER-PLAY`, `G-COLOR-MATCH-AGAINST-BOARD`,
 `G-DSL-SELF-NAME-CONTAINS`, `G-EVENT-TARGET-NOT-SOURCE`.
 
-### Gaps STILL OPEN (verified open against code; filed, not closed by this change)
-
-These two gaps remain genuinely open and are tracked in
-[qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md) and
-[docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md). They account for the 2 PARTIAL
-cards in the final ledger:
+### Follow-up gaps CLOSED 2026-05-22
 
 - **G-DYNAMIC-NAME-ALIAS-FROM-STACK** — BT17-102 Greymon `[All Turns]` material-name-alias
-  clause. The DSL identity layer has only static `name_aliases`; there is NO engine
-  consumer for a dynamic alias derived from the live digivolution-source stack. A faithful
-  fix is a cross-cutting engine feature (a Permanent-level effective-name-set query
-  consulted by every name predicate). BT17-102 is otherwise IMPLEMENTED; this one clause
-  is omitted and test `bt17_102_all_turns_aliases_low_level_material_names` is left
-  `#[ignore]`'d.
+  clause. Closed by `identity.source_name_aliases`, synthesized permanent effective names,
+  and name-predicate routing through that synthesized name set. BT17-102 is now fully
+  IMPLEMENTED; `bt17_102_all_turns_aliases_low_level_material_names` is enabled and passing.
 - **G-DSL-DELAY-ON-ATTACK-EVENT** — BT23-096 Comet Hammer `<Delay>`-on-attack clause.
-  3-part engine blocker: `lower_delay.rs` does not map attack timings to
-  `DelayTrigger::OnEvent`; `combat.rs` dispatches `OnAllyAttack` via
-  `TriggerSource::PlayerBattleArea` which `effect_queue.rs` never fans out to event-gated
-  delays; `attacker_trait_has` resolves the attacker only via `attack_target_change()`
-  (unset for a plain attack). `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` are
-  noted as already-present substrate. BT23-096 is otherwise IMPLEMENTED; the clause is
-  omitted and the test is left `#[ignore]`'d.
+  Closed by lowering attack timings to `DelayTrigger::OnEvent`, feeding attack events into
+  event-gated delayed options, and carrying attacker context for `attacker_trait_has`.
+  BT23-096 is now fully IMPLEMENTED; the CS attack Delay and non-CS negative tests are
+  enabled and passing.
 
 ## Phase 2 Track C closure — 2026-05-17
 
@@ -791,11 +863,11 @@ Resolved by Group 3:
 
 - **Discovered in:** Medusamon Batch 10, LM-021 Agumon - Bond of Bravery DSL implementation (2026-04-28)
 - **Scope:** Rust engine + DSL.
-- **Card(s):** LM-021 Agumon - Bond of Bravery — "[On Play][When Digivolving] Delete any number of your opponent's Digimon whose total DP adds up to equal or less than this Digimon's DP." Also BT17-018 Gallantmon Crimson Mode — "[On Play][When Digivolving] Delete any number of your opponent's Digimon with total DP equal to or less than this Digimon's DP." Both cards share the same selection mechanic.
+- **Card(s):** LM-021 Agumon - Bond of Bravery — "[On Play][When Digivolving] Delete any number of your opponent's Digimon whose total DP adds up to equal or less than this Digimon's DP." Also BT17-018 Gallantmon Crimson Mode — "[On Play][When Digivolving] Delete any number of your opponent's Digimon whose total DP adds up to 15000 or less and delete them." Both cards share the same selection mechanic; LM-021 uses a source-DP formula budget and BT17-018 uses a literal 15000 budget.
 - **Effect text (LM-021):** "Delete any number of your opponent's Digimon whose total DP adds up to equal or less than this Digimon's DP."
 - **What's missing:** `EffectContext` exposes only single-target selection (`select_opponent_permanent`) and count-capped multi-target selection (`select_count_capped_multi`, which caps by pick count, not by DP sum). There is no primitive for iterative multi-select where each pick reduces a remaining DP budget and the player may stop at any point once they have at least one selection (DCGO: `canEndNotMax: true`, `canTargetConditionByPreSelectedList` with dynamic remainder). The running DP-sum cap requires: (a) tracking cumulative DP of already-selected targets, (b) re-filtering valid candidates after each pick to exclude those whose DP would exceed the remaining budget, and (c) allowing early termination once at least one target is picked. None of these are available in the current selection state machine.
 - **Suggested change:** Add a `select_opponent_permanent_dp_sum(description, self_dp, callback)` method to `EffectContext` that: (1) initializes a `remaining_budget = self_dp`; (2) presents a filtered pick from `opponent.battle_area` where `perm.dp <= remaining_budget`; (3) after each pick, subtracts the picked card's DP from `remaining_budget` and repeats if budget > 0 and valid candidates remain; (4) allows the player to stop picking at any point; (5) calls `callback` once on all selected handles. Alternatively, extend `PendingSelection` with a `DpBudget(u32)` variant that the selection engine drains per-pick.
-- **Workaround:** `raw_rust: { fn: lm_021_delete_dp_sum }` and `raw_rust: { fn: bt17_018_delete_opp_digimon_dp_budget }` — both fall back to single-pick with a DP <= budget filter. Full multi-pick semantics are deferred until this gap closes.
+- **Former workaround:** `raw_rust: { fn: lm_021_delete_dp_sum }` and `raw_rust: { fn: bt17_018_delete_opp_digimon_dp_budget }` both fell back to single-pick with a DP <= budget filter before the shared DP-budget selection landed. As of 2026-05-22, LM-021 uses native `select_opponent_dp_budget` with `dp_budget: { source_dp: {} }`; BT17-018 uses native `select_opponent_dp_budget` with `dp_budget: 15000`.
 - **Updated 2026-04-29:** Resolved for opponent battle-area DP-budget selection. `EffectContext::select_opponent_permanents_by_dp_budget` installs `SelectionKind::DpBudget`, filters remaining affordable targets after each pick, and exposes PASS after `min_picks`. DSL `select_opponent_dp_budget` binds the chosen permanents and `delete_bound_permanents` consumes them. Covered by `dp_budget_selection_tracks_remaining_dp_and_allows_pass_after_min`, `dp_budget_selection_finishes_when_no_targets_fit`, `dp_budget_selection_mask_exposes_only_remaining_affordable_targets`, and `dsl_select_dp_budget_deletes_bound_permanents`.
 
 ---
@@ -1197,7 +1269,7 @@ Resolved by Group 3:
 - **Effect text:** "opponent adds the top card of their security stack to the hand"
 - **What's missing:** `EffectContext` only exposes `trash_top_security(player)` for security removal. There is no `add_top_security_to_hand(player)` method that pops the top security card and places it in the player's hand while firing the standard security-removed event chain (`OnLoseSecurity` via `SecurityRevealed` + `OnOpponentSecurityRemoved` via `PlayerBattleArea`).
 - **Suggested change:** Add `pub fn add_top_security_to_hand(&mut self, player: PlayerId) -> bool` to `EffectContext`. Implementation: pop `security.last()`, push to `hand`, fire `EffectTiming::OnLoseSecurity` with `TriggerSource::SecurityRevealed { defender: player, card: card_handle }` and `EffectTiming::OnOpponentSecurityRemoved` with `TriggerSource::PlayerBattleArea(controller)`.
-- **Workaround:** `raw_rust: { fn: p_137_opp_adds_top_security_to_hand }` — manually implements the move + event chain in `src/cards/raw_rust/mod.rs`.
+- **Former workaround:** `raw_rust: { fn: p_137_opp_adds_top_security_to_hand }` manually implemented the move + event chain. As of 2026-05-22, P-137 uses native `add_top_security_to_hand` and the raw shim has been removed.
 
 ---
 
@@ -2100,6 +2172,22 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
 - **Residual:** `BT22-098` has a distinct residual filed as `PUPPETS-G033` — the Option-card pipeline's integrated resolution (pending optional play + post-resolution battle-area placement as a Delayed Option) is not yet proven. That is a different, narrower shape from the standard `<Delay>` main-phase activation that this entry closes.
 - **Related:** `PUPPETS-G009` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; `PUPPETS-G033` (BT22-098 Option pipeline residual).
 
+## Hybrid Gap: `on_ally_played` event-gated Delay Options (PUPPETS-G004) — RESOLVED 2026-05-21
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets (2026-04-28 archetype assessment)
+- **Card(s):** `P-229` Unique Emblem: Narrative Ronde. (`BT22-098`'s sibling `on_suspend` slice closed earlier, 2026-05-02.)
+- **Effect text:** "[Your Turn] When any of your [Mirai Kinosaki]s are played, `<Delay>` (By trashing this card after the placing turn, activate the effect below.) 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
+- **What was missing (two halves):**
+  - **DSL:** `code/digimon-engine/src/dsl_cards/lower_delay.rs` mapped only `on_suspend` / `on_unsuspend` to `DelayTrigger::OnEvent`. `trigger: on_ally_played` fell through to `DelayTrigger::EndOfYourNextTurn`, which auto-expires the Option on the wrong schedule.
+  - **Engine:** `enqueue_event_gated_delayed_options` (the scan that fires placed Delay Options matching an observed event) was only invoked from the `EventObserved` / `AttackTargetChanged` dispatch in `effect_queue.rs` `enqueue_triggered`. The `OnAllyPlayed` play broadcast uses `TriggerSource::EnteredField`, which never reached it — a placed Delay Option keyed to `on_ally_played` never fired.
+- **Resolution:**
+  - `lower_delay.rs` now maps `CompiledTiming::OnAllyPlayed` → `DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed)` alongside the existing event arm.
+  - `effect_queue.rs` `enqueue_triggered` now fans `TriggerSource::EnteredField` dispatches out to `enqueue_event_gated_delayed_options`. The candidate scan only matches Options whose `OnEvent(event_timing)` equals the dispatch `timing`, so dispatching for both the `OnEnterFieldAnyone` and `OnAllyPlayed` play broadcasts is harmless.
+  - `OnEvent(_)` Delay Options park indefinitely (`compute_delay_trash_turn` = `u16::MAX`), so the Option's "place this card in the battle area" tail is faithful with no turn-keyed auto-trash approximation.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_229` — 13 tests pass, 0 ignored, incl. placing-turn gate, non-Mirai event-predicate gate, and decline-still-pays-the-trash-cost. Full engine suite green (`bt22_098` `on_suspend` sibling unaffected).
+- **Related:** `PUPPETS-G004` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`, `qa/dsl-vocab-gaps.md`; `G-DELAY-EVENT-GATED` in `qa/archetype-qa/engine-gaps.md`.
+
 ## Engine Gap: Effect-spawned permanent with end-of-turn deletion rider — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - **Severity:** 🔴 BLOCKING (closed for provenance-bound cleanup substrate)
@@ -2135,6 +2223,110 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
 - **Effect text:** "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
 - **Resolution:** `suppress_on_play: true` flag added to effect-play helpers and threaded through the play event context. On Play enqueue skips the just-played permanent's On Play clauses when the flag is set. DSL step: `play_from_trash_free: { filter: ..., suppress_on_play: true }`.
 - **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
+
+## Medusamon PARTIAL-card unblock (Tier 1+2) — 2026-05-21
+
+The `unblock-medusamon-partial-cards` OpenSpec change closed 5 of the 7 substrate
+gaps blocking PARTIAL Medusamon cards. The remaining 2 (G-ACTIVATED-DIGIVOLVE-EXECUTION,
+G-LINK-OPTION-DUAL-PLAY-MODE) are scoped into the follow-up change
+`unblock-medusamon-tier3-cards` — both close by reusing existing action IDs (no
+`ACTION_SPACE_SIZE` change), per the action-space spike recorded in that change's
+design.md.
+
+### Gaps CLOSED
+
+- **G-SECURITY-SKILL-RESUME-REFIRE** (engine) — a drain arm of
+  `combat.rs::drive_security_resolution` re-enqueued its `EffectTiming`
+  on every resume, so declining an optional `[Security]` "you may" effect
+  infinite-looped (and, with 2+ candidates, double-played). Fixed by a
+  `phase_enqueue_done: bool` on `SecurityResolutionState`: each drain phase
+  enqueues its timing exactly once; resume just flushes any continuation and
+  advances. The flag covers all three drain phases (superseding an earlier
+  single-phase `security_skill_drained` variant). Mirrors the `Dispose` →
+  `DisposeFinalize` guard. Unblocks **P-189**; also fixes P-206 / ST19-08 and a
+  latent double-play (`st19_08` count assertion corrected).
+- **G-ZONE-SELECTED-TRASH-TO-DECK-TOP** (engine + DSL) — no method moved a
+  selected trash card to the deck TOP. Added `EffectContext::return_trash_cards_to_deck_top`
+  (reverse-push so the first selected card lands on top) and a
+  `destination: top | bottom` field (`DeckDestination`, default `bottom`) on the
+  `return_trash_list_to_deck_bottom` DSL step; the lowering also resolves a
+  `select_trash` `TrashIndex` binding. Unblocks **LM-027** (clause B now a real
+  `kind: delay` clause; the `lm_027_delay_start_of_turn_noop` raw_rust placeholder
+  removed); LM-029/030/031 use the same primitive.
+- **G-TRASH-SELECTED-SECURITY** (engine + DSL) — no verb trashed a chosen non-top
+  security card. Added `EffectContext::trash_security_card(player, handle)`
+  (handle-based — no index-staleness) and a `trash_selected_security` DSL verb
+  that consumes a `select_security` binding. Unblocks **BT24-018**.
+- **G-ACTIVATION-COST-TRASH-SELF** (DSL) — `activation_cost:` accepted only
+  `suspend_self` / `return_self_to_deck_bottom`. Added a declinable
+  `trash_self: true` variant (`CompiledActivationCostKind::TrashSelf` +
+  `EffectContext::trash_self_as_cost`) so a `<Delay>` "by trashing this card"
+  cost is genuinely declinable per Comprehensive Rules 16-16-2. Unblocks **BT21-093**.
+- **G-ALT-PATH-SAVE-IN-TEXT** (DSL) — alt-path `from:` filters could not gate on
+  "<Keyword> in text". **No new predicate needed:** the existing
+  `effect_text_contains` predicate already does a printed-text substring scan and
+  `eval_predicate` already runs it against an alt-path `from:` candidate. BT21-072's
+  `xros_req` cost-3 path now uses `from: { any_of: [{level_eq:4, effect_text_contains:"<Save>"}, {level_eq:4, trait_has:Hero}] }`.
+  Unblocks **BT21-072**.
+
+- **Closed by:** `unblock-medusamon-partial-cards` OpenSpec change, 2026-05-21.
+  Full engine suite green (`cards_behavioral` 2714 passed / 0 failed).
+
+## Medusamon PARTIAL-card unblock (Tier 3) — 2026-05-22
+
+The `unblock-medusamon-tier3-cards` OpenSpec change closed the two Tier-3 gaps that
+the spike (design.md) had feared would need a new action ID. **The spike found
+neither needs the action space to grow** — `ACTION_SPACE_SIZE` (2192) and
+`TENSOR_SIZE` are unchanged; no RL retraining.
+
+### G-LINK-OPTION-DUAL-PLAY-MODE — RESOLVED (engine)
+
+A Plug-In Option that is both a Standard `[Main]` Option and a Link Option could
+not be expressed: `classify_option_subtype` was first-match-wins, so any effect
+with `link_cost.is_some()` reclassified the whole card as `OptionSubtype::Link`.
+
+**Resolution (no new action ID):**
+- `classify_option_subtype` → `classify_option_modes` — returns a
+  `Vec<OptionPlayMode>` of the available play modes; `[Standard, Link]` for a
+  dual-mode Plug-In, a 1-element list for every other Option (single-mode cards
+  behaviorally identical).
+- `OptionSubtype` moved to `selection.rs` (pub) and is stored on
+  `PendingOption.subtype` at play time, so `dispose_option` routes on the
+  resolved mode instead of re-classifying.
+- `play_option_core` gained a `chosen_mode` parameter. When `option_legal_play_modes`
+  (affordability filter) yields >1 mode it installs an `EffectChoice` mode-select
+  (`install_option_mode_select`, "Play as a [Main] Option" vs "Plug in via Link
+  Requirements"); the selection callback re-enters `play_option_core` with the
+  chosen mode. Cost forks (Standard use cost vs flat Link cost — BeforePayCost
+  reductions apply to Standard only); `OptionMain` firing is skipped for a Link
+  play; disposal routes Standard→trash vs Link→host-attach.
+- The mode-select reuses the existing `EffectChoice` / `HAND_EFFECT_START` action
+  range and surfaces as a normal `pending_selection`, so every legal play mode is
+  exposed to the action space (no-approximations policy).
+- `action/mask.rs` lights `PLAY_HAND` for an Option when any mode is affordable.
+  Unblocks **ST22-08** (gained a `kind: link_requirement` clause, cost 2,
+  `filter: { level_gte: 3 }`; 34 behavioral tests, 0 ignored).
+
+### G-ACTIVATED-DIGIVOLVE-EXECUTION — BT24-016 unblocked via re-model (no engine code)
+
+The `kind: activated_digivolve` alt-path kind has no engine execution route, and
+the task-1.1 investigation found `extra_cost` is unimplemented engine-wide (3
+sites, all exclusions). Rather than build a from-scratch parking `extra_cost`
+runner, **BT24-016 clause 1 was re-modelled** (design.md D1-REVISED) from a
+`kind: activated_digivolve` alt-path to a `when: main_from_hand` triggered clause
+(select Elizamon → select Dimetromon from trash → `place_as_bottom_source` →
+`effect_initiated_digivolve` cost 3, `ignore_requirements`). This is faithful to
+the printed `[Hand][Main]` text, uses only working machinery, and adds **zero
+engine code**. BT24-016 is `IMPLEMENTED` (24/24 tests).
+
+This entry is **not fully closed**: the `CompiledAltPathKind::ActivatedDigivolve`
+execution route is still genuinely missing for the 3 out-of-scope cards
+(BT22-013/026, BT16-027) — see the residual entry in
+[qa/archetype-qa/engine-gaps.md](archetype-qa/engine-gaps.md).
+
+- **Closed by:** `unblock-medusamon-tier3-cards` OpenSpec change, 2026-05-22.
+  Full engine suite green (`cards_behavioral` 2722 passed / 129 ignored / 0 failed;
+  `option_flow` 93; `mask_and_tensor` 157).
 
 ## DSL Gap: Card-level "also treated as [Name]" identity alias — RESOLVED 2026-05-21
 

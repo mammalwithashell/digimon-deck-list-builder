@@ -40,7 +40,15 @@ effects:
       - play_union_bound_free:
           binding: picked
 
-  # Inherited [Your Turn] all opponent security Digimon get -3000 DP.
-  # BLOCKED: G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008. The engine has
-  # EffectBuilder::applies_to_opponent_security_dp(), but the DSL cannot
-  # express an inherited opponent-security-Digimon DP aura yet.
+  # Inherited [Your Turn] "All of your opponent's security Digimon get -3000 DP".
+  # PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA: RESOLVED Track I 2026-05-17.
+  # Lowers via `applies_to_opponent_security_dp: true` to
+  # `EffectBuilder::applies_to_opponent_security_dp()` so the -3000 DP rides
+  # under the attacker's stack and surfaces during the security battle's
+  # `attacker_security_dp_adjustment` consult.
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+    summary: "[Inherited][Your Turn] All opponent security Digimon get -3000 DP"

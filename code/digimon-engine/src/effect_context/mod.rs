@@ -2073,6 +2073,74 @@ impl<'a> EffectContext<'a> {
         true
     }
 
+    /// Trash a specific card — identified by the stable `handle` — from
+    /// `player`'s security stack. Used by effects that let a player trash
+    /// "any 1" of a security stack: the card is chosen via a `select_security`
+    /// binding, which yields a `CardHandle`. Addressing the card by handle
+    /// (rather than a positional index) means an intervening security-stack
+    /// mutation cannot cause the wrong card to be trashed.
+    ///
+    /// No-op (returns false) if `handle` is not currently in `player`'s
+    /// security stack. Mirrors `trash_top_security` / `trash_bottom_security`:
+    /// same `WhenWouldBeTrashed` replacement window and security-removed
+    /// observer fan-out, but addresses an arbitrary chosen card.
+    /// G-TRASH-SELECTED-SECURITY.
+    pub fn trash_security_card(&mut self, player: PlayerId, handle: CardHandle) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // The handle must currently be in `player`'s security stack.
+        if !self
+            .game
+            .player(player)
+            .security
+            .iter()
+            .any(|c| c.handle() == handle)
+        {
+            return false;
+        }
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Card(handle, Zone::Security);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeTrashed,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.game.pending_selection.is_some() {
+            return false;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return false;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
+            }
+        }
+
+        // Re-find the card by handle — the replacement window may have mutated
+        // the security stack.
+        let p = self.game.player_mut(player);
+        let Some(pos) = p.security.iter().position(|c| c.handle() == handle) else {
+            return false;
+        };
+        let card = p.security.remove(pos);
+        p.face_up_security.remove(&card.card_index);
+        self.fire_security_removed_observers(
+            player,
+            card,
+            crate::selection::SecurityRemovalDestination::Trash,
+        );
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
+        true
+    }
+
     fn fire_security_removed_observers(
         &mut self,
         defender: PlayerId,
@@ -2359,6 +2427,43 @@ impl<'a> EffectContext<'a> {
         true
     }
 
+    /// Install a player-scoped one-shot future-digivolve cost reducer
+    /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`).
+    ///
+    /// Used by BT3-103 Hidden Potential Discovered!'s `[Main]` clause:
+    /// "For the turn, when one of your green Digimon would next digivolve,
+    /// by suspending 1 of your Digimon, reduce the digivolution cost by 5."
+    ///
+    /// The reducer is pushed onto `Game::player_digivolve_cost_reducers`
+    /// and is consulted at the top of each digivolve-from-hand cost path.
+    /// `target_color` gates which digivolutions qualify; `single_fire`
+    /// consumes the reducer on the first successful application; the
+    /// reducer expires at end of the installing player's turn.
+    ///
+    /// When `suspend_cost` is `true`, applying the reduction prompts the
+    /// player to suspend one of their own unsuspended Digimon — an
+    /// interactive, player-visible cost surfaced through `pending_selection`
+    /// (Working Rule §17). No auto-suspend.
+    pub fn arm_player_digivolve_cost_reducer(
+        &mut self,
+        amount: i32,
+        single_fire: bool,
+        target_color: Option<crate::enums::CardColor>,
+        suspend_cost: bool,
+    ) {
+        let reducer = crate::player_cost_reducer::PlayerDigivolveCostReducer {
+            player: self.player,
+            source_card: self.source_card,
+            kind: crate::player_cost_reducer::PlayerCostReducerKind::Digivolve,
+            expiry: crate::player_cost_reducer::PlayerCostReducerExpiry::EndOfTurn,
+            amount,
+            single_fire,
+            target_color,
+            suspend_cost,
+        };
+        self.game.player_digivolve_cost_reducers.push(reducer);
+    }
+
     /// Pay the source permanent's return-self-to-deck-bottom activation
     /// cost.
     ///
@@ -2386,6 +2491,31 @@ impl<'a> EffectContext<'a> {
         // DSL step shape applied to `source`.
         self.game
             .return_to_deck(handle, crate::enums::StackPosition::Bottom)
+    }
+
+    /// Pay the source permanent's trash-self activation cost.
+    ///
+    /// Used as the closure body for [`crate::effect::EffectBuilder::activation_cost`]
+    /// on `<Delay>` abilities whose printed cost is "by trashing this card"
+    /// (BT21-093 Raging Serpentine family). Deletes the source permanent —
+    /// for a `<Delay>` Option this moves the card to its owner's trash —
+    /// routing through `delete_permanent` so `OnDeletion` observers and
+    /// `WhenWouldBeDeleted` replacements fire identically to the
+    /// `delete_permanent` step. Returns `false` if the source permanent has
+    /// already left the field.
+    ///
+    /// No-approximations note: per Comprehensive Rules 16-16-2 the processing
+    /// of a `<Delay>` is optional; the player's accept/decline prompt belongs
+    /// to [`crate::effect::EffectBuilder::optional`] and runs BEFORE this cost.
+    pub fn trash_self_as_cost(&mut self) -> bool {
+        let Some(handle) = self.source_permanent else {
+            return false;
+        };
+        if self.source_permanent().is_none() {
+            return false;
+        }
+        self.delete_permanent(handle);
+        true
     }
 
     /// Unsuspend a permanent and fire `OnUnsuspend` observers.
@@ -3085,13 +3215,20 @@ impl<'a> EffectContext<'a> {
     /// status is unchanged. Gating here would over-restrict relative to
     /// DCGO and break parity with cards that intentionally route a source
     /// under an opponent's Progress attacker.
+    ///
+    /// `face_down: true` marks the inserted digivolution source face-down
+    /// (Tamer-stash callers); `false` is ordinary face-up placement. Note
+    /// that `face_down` is NOT honored for `CardSourceRef::Security` sources
+    /// — those are always placed face-up (see the `Game::place_as_bottom_source`
+    /// doc caveat).
     pub fn place_as_bottom_source(
         &mut self,
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
+        face_down: bool,
     ) -> bool {
         self.game
-            .place_as_bottom_source_observed(source, target, self.player)
+            .place_as_bottom_source_observed(source, target, self.player, face_down)
     }
 
     pub fn place_permanent_as_bottom_sources(
@@ -3130,6 +3267,7 @@ impl<'a> EffectContext<'a> {
         self.place_as_bottom_source(
             crate::enums::CardSourceRef::Material(target, top_stacked_idx),
             target,
+            false,
         )
     }
 
@@ -3163,14 +3301,22 @@ impl<'a> EffectContext<'a> {
     /// them in normal play. `revealed_cards` is included to handle cards that
     /// are mid-reveal when a Save effect resolves.
     ///
+    /// `face_down: true` marks the placed source face-down; `false` is
+    /// ordinary face-up placement.
+    ///
     /// # Panics
     ///
     /// Panics if `card` cannot be located in any zone — this represents a
     /// programming error (passing an invalid or already-moved handle).
     ///
     /// Used by: `<Save>`, `<Material Save N>`.
-    pub fn place_card_under_permanent_bottom(&mut self, card: CardHandle, target: PermanentHandle) {
-        let taken = self
+    pub fn place_card_under_permanent_bottom(
+        &mut self,
+        card: CardHandle,
+        target: PermanentHandle,
+        face_down: bool,
+    ) {
+        let mut taken = self
             .game
             .remove_card_from_any_zone(card)
             .unwrap_or_else(|| {
@@ -3184,9 +3330,12 @@ impl<'a> EffectContext<'a> {
         if (target.index as usize) >= target_player.battle_area.len() {
             // Safe-fail: target permanent no longer exists; route to its
             // controller's trash rather than dropping the card on the floor.
+            // Trashed cards are not face-down sources, so `face_down` is not
+            // applied on this path.
             target_player.trash.push(taken);
             return;
         }
+        taken.face_down = face_down;
         target_player.battle_area[target.index as usize].push_under(taken);
     }
 
@@ -3463,6 +3612,38 @@ impl<'a> EffectContext<'a> {
         // rather than misroute; in practice unreachable.
     }
 
+    /// Place the top card of `target.player`'s deck as the bottom digivolution
+    /// source of `target`. Generalizes `training_place_deck_top_under_self_face_down`
+    /// to an arbitrary target permanent (Tamer or Digimon, in either player's
+    /// battle area).
+    ///
+    /// Returns `Some(card_handle)` on success or `None` if the controller's
+    /// deck is empty (silent no-op on empty deck, mirroring `Player::draw`).
+    ///
+    /// `face_down: true` marks the placed source face-down (Tamer-stash
+    /// callers); `false` is ordinary face-up placement.
+    ///
+    /// Used by: ST-23 BEATBREAK / ST-24 DATA SQUAD Tamer-stash placement cards
+    /// (e.g. ST23-13 Tomoro Tenma & Kyo Sawashiro, ST24-09 Sunflowmon).
+    pub fn place_deck_top_under_permanent(
+        &mut self,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        let card_handle = self.game.player(target.player).deck.last()?.handle();
+        let ok = self.game.place_as_bottom_source_observed(
+            crate::enums::CardSourceRef::DeckTop(target.player),
+            target,
+            self.player,
+            face_down,
+        );
+        if ok {
+            Some(card_handle)
+        } else {
+            None
+        }
+    }
+
     /// Trash a specific digivolution source from a permanent.
     ///
     /// Used by:
@@ -3506,6 +3687,69 @@ impl<'a> EffectContext<'a> {
             source_card,
             crate::trigger_context::EventCause::from(self.game.infer_effect_cause(perm.player)),
         );
+    }
+
+    /// Remove a single digivolution source card from `perm`'s stack and route
+    /// it to its **owner's** hand. Mirrors `trash_card_source` but the
+    /// destination is the owner's hand, not trash.
+    ///
+    /// Used by card effects that say "By returning N [card] from this
+    /// Digimon's digivolution cards to its owner's hand" (e.g. BT12-031's
+    /// Imperialdramon: Dragon Mode alt-cost).
+    ///
+    /// Owner-routing: the card is pushed to `removed.owner`'s hand (the
+    /// `CardSource.owner` field), NOT the controller's — so a source owned by
+    /// the opponent (rare, via control-transfer plays) returns to its true
+    /// owner. `trash_card_source` reads `removed.owner` for the same reason.
+    ///
+    /// Stack invariant: the source is removed by `position(...)` (anywhere in
+    /// the stack, not just the top), preserving the host permanent's top card
+    /// and the ordering of the remaining sources.
+    ///
+    /// Observer dispatch: this is a *return-to-hand*, NOT a trash, so it does
+    /// **not** fire `OnDigivolutionCardTrashed` (which would mis-attribute the
+    /// move to source-trash listeners). No trash-specific observer fires.
+    ///
+    /// Returns `true` when the source handle was found and moved; `false` if
+    /// the permanent slot is gone or the card is not in its stack.
+    pub fn return_card_source_to_hand(&mut self, perm: PermanentHandle, card: CardHandle) -> bool {
+        let removed = {
+            let permanent = match self
+                .game
+                .player_mut(perm.player)
+                .battle_area
+                .get_mut(perm.index as usize)
+            {
+                Some(p) => p,
+                None => return false,
+            };
+            let pos = match permanent
+                .card_sources
+                .iter()
+                .position(|c| c.handle() == card)
+            {
+                Some(pos) => pos,
+                None => return false,
+            };
+            permanent.card_sources.remove(pos)
+        };
+        let owner = removed.owner;
+        self.game.player_mut(owner).hand.push(removed);
+        true
+    }
+
+    /// `Vec`-taking convenience wrapper over `return_card_source_to_hand`,
+    /// keeping parity with `play_selected_sources_without_cost`. Each selected
+    /// source ref is returned to its owner's hand. Returns `true` if every
+    /// ref was successfully moved.
+    pub fn return_selected_sources_to_hand(&mut self, selected: Vec<SourceSelectionRef>) -> bool {
+        let mut all_ok = true;
+        for source_ref in selected {
+            if !self.return_card_source_to_hand(source_ref.permanent, source_ref.card) {
+                all_ok = false;
+            }
+        }
+        all_ok
     }
 
     /// Trash every digivolution source below `target`'s top card, preserving
@@ -3609,6 +3853,79 @@ impl<'a> EffectContext<'a> {
         // sources-below-top dispatch in `Game::return_to_hand` /
         // `Game::return_to_deck`. Enqueue once per player so observers on
         // either side of the field pick it up.
+        self.game.fire_digivolution_card_trashed(
+            target.player,
+            target,
+            host_card,
+            source_card,
+            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(target.player)),
+        );
+        true
+    }
+
+    /// Trash the bottom-most face-down digivolution source from `target`,
+    /// fire `OnDigivolutionCardTrashed`, and drain the observer queue. Returns
+    /// `true` iff a face-down source was found at `card_sources[0]` and
+    /// trashed; returns `false` with no mutation otherwise (no face-down
+    /// bottom source, or `target` missing).
+    ///
+    /// This is the cost-form trash primitive for ST-23 BEATBREAK and ST-24
+    /// DATA SQUAD cards whose printed text reads "by trashing the bottom
+    /// face-down card from under any of your Tamers, ...".
+    ///
+    /// The trashed source routes to the source's own `owner` trash, matching
+    /// the standard `OnDigivolutionCardTrashed` ownership semantics (mirrors
+    /// `trash_card_source` / `trash_top_source`).
+    ///
+    /// Unlike `trash_top_source`, this helper does NOT honor
+    /// `ImmuneFromStackTrashing`: that modifier guards against involuntary
+    /// stack-peeling by opponent effects, whereas this is a voluntary
+    /// activation cost the controller chooses to pay (the controller earlier
+    /// stashed the face-down card under their own Tamer). The omission is by
+    /// design — do not add the check.
+    ///
+    /// Used by: ST23-01 Kekkomon, ST23-03 Cougarmon, ST23-04 Murasamemon,
+    /// ST23-08 Monarchlizamon, ST23-11 Wolvermon, ST23-12 Chiropmon,
+    /// ST24-01 Koromon, ST24-06 RizeGreymon, ST24-10 Lilamon, ST24-11 Rosemon,
+    /// ST24-12 Falcomon.
+    pub fn trash_bottom_face_down_source(&mut self, target: PermanentHandle) -> bool {
+        // Inspect `card_sources[0]`: it must exist AND be face-down. Reject
+        // before any mutation otherwise (missing target, empty stack, or a
+        // face-up bottom source — e.g. an un-stashed Tamer whose only source
+        // is its own face-up card).
+        let removed = {
+            let permanent = match self
+                .game
+                .player_mut(target.player)
+                .battle_area
+                .get_mut(target.index as usize)
+            {
+                Some(p) => p,
+                None => return false,
+            };
+            match permanent.card_sources.first() {
+                Some(bottom) if bottom.face_down => {}
+                _ => return false,
+            }
+            permanent.card_sources.remove(0)
+        };
+        let source_card = removed.handle();
+        let owner = removed.owner;
+        self.game.player_mut(owner).trash.push(removed);
+
+        // Compute the host's CURRENT top card AFTER the removal — the
+        // permanent still exists with its remaining sources / its own top
+        // card. A Tamer always retains its own card as the top.
+        //
+        // The direct index (not `.get()`) is infallible by construction here:
+        // the permanent was validated present at the top of this function, and
+        // only a source — never the permanent — was removed.
+        let host_card = self.game.player(target.player).battle_area[target.index as usize]
+            .top_card()
+            .handle();
+
+        // Fire OnDigivolutionCardTrashed for the trashed bottom source, the
+        // same observer dispatch as `trash_card_source` / `trash_top_source`.
         self.game.fire_digivolution_card_trashed(
             target.player,
             target,
@@ -4022,9 +4339,20 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return;
         }
+        // `*NextTurn` expiries installed during the about-to-end turn must
+        // skip that turn-end (otherwise they expire one turn early). The
+        // engine knows the current turn at install time, so compute it
+        // here — every `add_modifier` / `add_dp_modifier` caller (DSL and
+        // hand-written) gets correct "until end of next turn" semantics.
+        let pending_skips = crate::modifiers::pending_skips_for_install(
+            expiry,
+            self.player,
+            self.game.turn_player(),
+        );
         self.game.modifiers.add(
             target,
-            ModifierEntry::simple(modifier, value, expiry, self.player),
+            ModifierEntry::simple(modifier, value, expiry, self.player)
+                .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -4048,6 +4376,31 @@ impl<'a> EffectContext<'a> {
                 self.source_permanent,
                 self.player,
             ),
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
+    pub fn add_declarative_modifier_with_payload(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        payload: crate::modifiers::ModifierPayload,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::materialized_declarative(
+                modifier,
+                value,
+                expiry,
+                self.source_permanent,
+                self.player,
+            )
+            .with_payload(payload),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -4647,6 +5000,70 @@ impl<'a> EffectContext<'a> {
             moved.push(handle);
         }
         moved
+    }
+
+    /// Move a SELECTED LIST of cards out of `player`'s trash to the **top** of
+    /// the deck — the position `draw` pops first. The deck-bottom sibling is
+    /// `return_trash_cards_to_deck_bottom`; by deck convention bottom is index
+    /// 0 and top is the `Vec` end. The first handle in `cards` ends up on top
+    /// (drawn first), the rest sit just beneath it, so selection order becomes
+    /// draw order. Returns the handles actually moved, in selection order (a
+    /// handle not found in the trash is silently skipped).
+    /// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+    pub fn return_trash_cards_to_deck_top(
+        &mut self,
+        player: PlayerId,
+        cards: &[CardHandle],
+    ) -> Vec<CardHandle> {
+        let mut moved = Vec::with_capacity(cards.len());
+        // Iterate in reverse and `push`: the first handle in `cards` is pushed
+        // last, landing at the `Vec` end (= deck top, drawn first).
+        for &handle in cards.iter().rev() {
+            let Some(pos) = self
+                .game
+                .player(player)
+                .trash
+                .iter()
+                .position(|c| c.handle() == handle)
+            else {
+                continue;
+            };
+            let card = self.game.player_mut(player).trash.remove(pos);
+            let owner = card.owner;
+            self.game.player_mut(owner).deck.push(card);
+            moved.push(handle);
+        }
+        // `moved` was built in reverse; restore selection order for callers.
+        moved.reverse();
+        moved
+    }
+
+    /// Move a single SELECTED card out of `player`'s trash to the TOP of the
+    /// deck (the position drawn from first). The card returns to its OWNER's
+    /// deck — `player` only identifies whose trash zone currently holds it.
+    /// Selected-trash analog of `return_trash_cards_to_deck_bottom`, but
+    /// single-card and deck-TOP. Returns true if the card was found and moved.
+    /// A handle not present in `player`'s trash is a silent no-op.
+    /// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+    pub fn move_trash_card_to_deck_top(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(pos) = self
+            .game
+            .player(player)
+            .trash
+            .iter()
+            .position(|c| c.handle() == card)
+        else {
+            return false;
+        };
+        let removed = self.game.player_mut(player).trash.remove(pos);
+        let owner = removed.owner;
+        // Deck top = Vec end (drawn first) per engine convention.
+        self.game.player_mut(owner).deck.push(removed);
+        true
     }
 
     /// (Track A) Move a battle-area permanent to a player's security stack

@@ -16,19 +16,14 @@
 //! DCGO/Assets/Scripts/CardEffect/P/Blue/P_117.cs
 //!
 //! # Patterns this test covers
-//! - D2-adjacent: BeforePayCost cost reduction (clause 0 — BLOCKED)
-//! - B3-adjacent: Tamer-on-field condition (clause 0 — BLOCKED)
+//! - D2-adjacent: BeforePayCost cost reduction (clause 0 — IMPLEMENTED)
+//! - B3-adjacent: Tamer-on-field condition (clause 0)
 //! - G4-adjacent: inherited When Attacking on base Digimon (clause 1)
 //!
-//! # Known gaps affecting these tests
-//!
-//! **G-BEFORE-PAY-COST-DIGIVOLVE-TARGET [engine+DSL gap]:**
-//!   Clause 0 (Your Turn cost reduction when digivolving into [Free]) is fully
-//!   OMITTED from the YAML. The `CostReductionBody` has no
-//!   `when_this_digivolves_into: { target_trait_has: Free }` trigger form, and
-//!   `scan_before_pay_cost_reduction` does not thread the digivolution-target card
-//!   into the condition closure. Same gap as BT23-005.
-//!   Tests for this clause are `#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET"]`.
+//! Clause 0 (Your Turn cost reduction when digivolving into [Free]) is fully
+//! authored — `kind: cost_reduction` gated on `cost_target: { trait_has: Free }`
+//! + `source_is_cost_target_permanent` + a Tamer existential, closed by
+//! Phase 2 Track H (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET). No tests are ignored.
 //!
 //! Clause 1 condition uses `self_color_count_gte: 2`, evaluated against the
 //! source permanent's synthesized top-card colors. DCGO gates on
@@ -408,7 +403,7 @@ fn p_117_inherited_when_attacking_fires_on_each_attack_no_opt() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 5 (BLOCKED stubs) — Clause 0 cost reduction
+// SECTION 5 — Clause 0 cost reduction
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// CLOSED (Phase 2 Track H): Clause 0 cost reduction is now expressible.

@@ -1,3 +1,80 @@
+# BT24-017 Medusamon — Digimon, Lv.6, Red, DP 11000, Cost 11.
+# Traits: Dragonkin, LIBERATOR. Attribute: Virus.
+# Evo: from Lv5 Red / Cost 3.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   <Raid> (When this Digimon attacks, you may switch the target of attack to
+#     1 of your opponent's unsuspended Digimon with the highest DP.)
+#   <Progress> (While attacking, your opponent's effects don't affect this
+#     Digimon.)
+#   <Piercing> (When this Digimon attacks and deletes an opponent's Digimon
+#     and survives the battle, it performs any security checks it normally
+#     would.)
+#   [When Digivolving] Delete 1 of your opponent's lowest DP Digimon. Then, by
+#     returning 2 cards from their trash to the bottom of the deck, they play 2
+#     [Petrification] Tokens. (Digimon/White/3000 DP/[Your Turn] This Digimon
+#     can't suspend. [On Deletion] Trash your top security card.) After, this
+#     Digimon gets +2000 DP for each of your opponent's Digimon until their
+#     turn ends.
+#
+# Inherited / Security: (none)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT24/Red/BT24_017.cs
+#
+# Pattern tags: H9 (Raid), H3 (Piercing), Progress keyword, F2-adjacent
+#   (mandatory when-digivolving delete + chained selection), D1-adjacent
+#   (per-opponent-count DP modifier with end-of-opponents-turn expiry),
+#   token play (Petrification).
+#
+# ─── Source-priority cross-check (printed text + RULES_CONTEXT.md > DCGO) ───
+#
+# Printed text governs and DCGO matches it on every clause:
+#   - Raid / Progress / Piercing — native keyword grants (RaidSelfEffect,
+#     ProgressSelfStaticEffect, PierceSelfEffect in DCGO).
+#   - [When Digivolving] (DCGO OnEnterFieldAnyone gated by
+#     CanTriggerWhenDigivolving) — a single mandatory ActivateClass:
+#       1. Delete 1 lowest-DP opp Digimon. DCGO: SelectPermanentEffect with
+#          CanDeleteCondition = IsMinDP(permanent, Enemy); canNoSelect: false,
+#          maxCount 1. Mandatory if a legal target exists, no-op otherwise.
+#       2. Conditional sub-clause: `if (Enemy.TrashCards.Count >= 2)` →
+#          opponent selects 2 trash cards (selectPlayer: card.Owner — the
+#          ACTIVE player picks for the opponent's trash), bottom-decks them,
+#          and `if (selectedCards.Count == 2)` plays 2 Petrification Tokens
+#          AND grants the +2000×opp-Digimon DP boost. The token play AND the
+#          DP boost are BOTH gated on the cost (returning 2 cards) being paid.
+#       3. DP boost: ChangeDigimonDP(2000 * opp-Digimon-count,
+#          EffectDuration.UntilOpponentTurnEnd).
+#
+# Faithfulness note on "by returning 2 cards":
+#   This is a COST. Per DCGO the opponent must have >=2 trash cards for the
+#   sub-clause to run at all, and only `if (selectedCards.Count == 2)` do the
+#   tokens spawn and the DP boost apply. Modelled with `min: 2` on the
+#   count-capped multi-select (G-SELECT-MULTI-MIN: a min that cannot be met
+#   by the candidate pool silently no-ops — the cost is unpayable) plus a
+#   `binding_count_eq` gate so the token play + DP boost only fire when
+#   exactly 2 cards were actually returned.
+#
+# ─── Engine / DSL gap re-verification (2026-05-21) ──────────────────────────
+#
+# G-PRED-DP-LTE — RESOLVED 2026-05-17. The "lowest DP" delete filter is
+#   expressed with the `selector: lowest_dp` field on the
+#   `select_opponent_permanent` step (NOT a `dp_lte` aggregate predicate —
+#   that aggregate form is never evaluated). `selector: lowest_dp` restricts
+#   the candidate set to the permanent(s) with the lowest effective DP and
+#   recomputes per pick. Substrate proof:
+#   tests/dsl/selection_dp_extrema.rs::selector_lowest_dp_only_offers_lowest
+#   _current_candidates. If multiple opp Digimon share the lowest DP, all
+#   of them are offered (the choice surfaces — no auto-pick).
+#
+# G-ZONE-TRASH-TO-DECK — RESOLVED at the DSL level. The first-class verb
+#   `return_trash_list_to_deck_bottom` moves exactly a bound card list out
+#   of a player's trash to the bottom of their (owner's) deck, leaving the
+#   rest of the trash untouched. It consumes the card-list binding produced
+#   by `select_count_capped_multi`. Lowers to
+#   EffectContext::return_trash_cards_to_deck_bottom. No raw_rust required.
+
 card: BT24-017
 name: Medusamon
 kind: digimon
@@ -8,11 +85,11 @@ dp: 11000
 traits: [Dragonkin, LIBERATOR]
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 5 }
+    from: { level_eq: 5, color_includes: red }
     cost: 3
 
 effects:
-  # ─── Declarative keywords ────────────────────────────────────────────────────
+  # ─── Declarative keywords ────────────────────────────────────────────────
   - kind: grant_keyword
     keyword: Raid
 
@@ -24,77 +101,92 @@ effects:
 
   # ─── [When Digivolving] ──────────────────────────────────────────────────────
   #
-  # Mandatory (not optional) triggered clause.
-  #
-  # Sequence:
-  #   1. Delete 1 of your opponent's lowest-DP Digimon.
-  #      NOTE: dp_lte with aggregate formula is authored correctly but the
-  #      predicate evaluator does not yet check dp_lte on permanents — see
-  #      engine gap G-PRED-DP-LTE.  Until that gap closes, the select prompt
-  #      will show all opponent Digimon rather than only lowest-DP ones.
-  #      The YAML is correct against the spec; the engine gap is flagged below.
-  #
+  # Mandatory (not optional) triggered clause. Sequence:
+  #   1. Delete 1 of opponent's lowest-DP Digimon.
   #   2. By returning 2 cards from their trash to the bottom of the deck,
   #      the opponent plays 2 Petrification Tokens.
-  #      NOTE: The "return trash to deck bottom" mutation has no DSL verb and
-  #      no EffectContext API yet — see engine gap G-ZONE-TRASH-TO-DECK.
-  #      We author the selection (select_count_capped_multi) and the
-  #      return step as raw_rust:, then play the tokens.
-  #
-  #   3. After, this Digimon gets +2000 DP for each of your opponent's Digimon
-  #      until their turn ends.
+  #   3. After, this Digimon gets +2000 DP for each opponent Digimon until
+  #      their turn ends.
   - when: when_digivolving
+    summary: "[When Digivolving] Delete lowest-DP opp Digimon; return 2 trash for 2 Tokens; +2000 DP per opp Digimon"
     process:
-      # Step 1 — delete opponent's lowest-DP Digimon.
-      # G-PRED-DP-LTE: dp_lte predicate on permanents is parsed but the
-      # engine predicate evaluator does not evaluate it yet.  All opponent
-      # Digimon will be valid targets until the gap closes.
+      # Step 1 — delete opponent's lowest-DP Digimon. The `selector: lowest_dp`
+      # field restricts candidates to the opponent's lowest-effective-DP
+      # Digimon; it is recomputed across process steps and respects
+      # target-legality. If no opponent Digimon exist the step installs no
+      # selection (no-op).
       - select_opponent_permanent:
           bind_as: victim
-          filter:
-            all_of:
-              - kind: digimon
-              - dp_lte:
-                  aggregate:
-                    selector: lowest_dp
-                    scope: opponent
+          filter: { kind: digimon }
+          selector: lowest_dp
           prompt: "Delete opponent's lowest-DP Digimon"
       - delete_permanent: { target: victim }
 
-      # Step 2 — opponent returns 2 trash to deck bottom, then plays 2 tokens.
-      # The opponent selects which 2 trash cards to return.
+      # Step 2 — opponent returns 2 trash cards to the bottom of their deck.
+      # DCGO: the ACTIVE player (card.Owner) selects which 2 cards from the
+      # opponent's trash to return. Modelled with `as_selecting_player:
+      # { of: you }` wrapping the count-capped multi-select over the
+      # opponent's trash zone.
+      #
+      # `min: 2` enforces the "by returning 2 cards" cost: if the opponent
+      # has fewer than 2 trash cards the count-capped multi-select silently
+      # no-ops AND aborts the rest of the body (G-SELECT-MULTI-MIN: an
+      # unpayable required cost stops the slice) — so the token play and DP
+      # boost do NOT fire, matching DCGO's `if (Enemy.TrashCards.Count >= 2)`
+      # outer gate. `optional_zero: false` — when the cost CAN be paid it
+      # must be paid in full (DCGO maxCount 2, canEndNotMax false).
+      #
+      # The trash-return / token-play / DP-boost steps live INSIDE the
+      # `as_selecting_player` body so they form the multi-select's captured
+      # tail and observe the `returned_cards` binding. (An outer sibling
+      # would run against a pre-callback bindings snapshot and never see it.)
       - as_selecting_player:
-          of: opponent
+          of: you
           body:
             - select_count_capped_multi:
                 of: opponent
                 zone: trash
+                min: 2
                 max: 2
                 filter: {}
                 bind_as: returned_cards
-                prompt: "Return 2 cards from your trash to the bottom of your deck"
                 optional_zero: false
-      # G-ZONE-TRASH-TO-DECK: no DSL verb for returning a trash card to deck
-      # bottom.  This step is delegated to a raw_rust helper until the gap closes.
-      - raw_rust: { fn: bt24_017_return_selected_trash_to_deck_bottom }
+                prompt: "Return 2 cards from your opponent's trash to the bottom of their deck"
+            # Move exactly the 2 picked cards out of the opponent's trash to
+            # the bottom of their deck (G-ZONE-TRASH-TO-DECK verb).
+            - return_trash_list_to_deck_bottom:
+                of: opponent
+                cards: returned_cards
+            # Token play + DP boost are gated on the cost being paid in full
+            # (DCGO `if (selectedCards.Count == 2)`). `binding_count_eq` is
+            # true only when exactly 2 cards were returned.
+            - if:
+                condition:
+                  binding_count_eq:
+                    binding: returned_cards
+                    n: 2
+                then:
+                  # Opponent plays 2 Petrification Tokens.
+                  - play_token:
+                      controller: opponent
+                      token_name: petrification
+                  - play_token:
+                      controller: opponent
+                      token_name: petrification
 
-      # Opponent plays 2 Petrification Tokens.
-      - play_token:
-          controller: opponent
-          token_name: Petrification
-      - play_token:
-          controller: opponent
-          token_name: Petrification
-
-      # Step 3 — BT24-017 gets +2000 DP per opponent Digimon until opp turn ends.
-      - add_dp_modifier:
-          target: source
-          value:
-            formula:
-              base: 0
-              per:
-                card_count_in_zone:
-                  of: opponent
-                  zone: battle_area
-              delta: 2000
-          expiry: end_of_opponents_turn
+                  # After — BT24-017 gets +2000 DP per opponent Digimon
+                  # until the opponent's turn ends. The 2 Petrification
+                  # Tokens just played count toward the opponent's Digimon
+                  # total (they are on the opponent's battle area when this
+                  # modifier evaluates).
+                  - add_dp_modifier:
+                      target: source
+                      value:
+                        formula:
+                          base: 0
+                          per:
+                            card_count_in_zone:
+                              of: opponent
+                              zone: battle_area
+                          delta: 2000
+                      expiry: end_of_opponents_turn

@@ -2,8 +2,9 @@
 //!
 //! `CompiledDeclarativeClause::Delay` should emit exactly one `Effect` with
 //! `timing == DelayEffect`. The `delay_trigger` field is mapped from
-//! `CompiledTiming::EndOfYourTurn` → `DelayTrigger::EndOfThisTurn`; all
-//! other timings default to `DelayTrigger::EndOfYourNextTurn`.
+//! `CompiledTiming::EndOfYourTurn` → `DelayTrigger::EndOfThisTurn`; attack
+//! and event observer timings map to event-backed triggers; other timings
+//! default to `DelayTrigger::EndOfYourNextTurn`.
 //! `CompiledScope::Inherited` sets `inherited == true`.
 
 use digimon_dsl::compiled::{
@@ -201,6 +202,27 @@ fn delay_event_trigger_lowers_to_on_event_delay() {
         effects[0].condition.is_some(),
         "Delay active_when should lower to a runtime condition"
     );
+}
+
+#[test]
+fn delay_attack_triggers_lower_to_on_event_delay() {
+    for (compiled, expected) in [
+        (CompiledTiming::OnAttack, EffectTiming::OnAttack),
+        (CompiledTiming::OnAllyAttack, EffectTiming::OnAllyAttack),
+        (
+            CompiledTiming::OnOpponentAttack,
+            EffectTiming::OnOpponentAttack,
+        ),
+    ] {
+        let dsl = DslCardEffect::new(Arc::new(fixture_delay(CompiledScope::FaceUp, compiled)));
+        let effects = dsl.effects(CardHandle(0));
+
+        assert_eq!(
+            effects[0].delay_trigger,
+            Some(DelayTrigger::OnEvent(expected)),
+            "{compiled:?} must lower to an event-backed Delay trigger"
+        );
+    }
 }
 
 #[test]

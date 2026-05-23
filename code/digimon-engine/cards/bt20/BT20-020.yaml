@@ -31,41 +31,20 @@
 #   Clause 2:  [When Digivolving] opp cannot play Digimon/Tamers by  IMPLEMENTED
 #              effect until end of their turn; then if Dragon Mode
 #              in digi-stack, trash opp top security
-#   Clause 3:  [All Turns][OPT] on opp security removed → delete 1   PARTIAL
-#              opp Digimon with DP ≤ this Digimon                    (delete BLOCKED — G-FORMULA-SOURCE-DP)
+#   Clause 3:  [All Turns][OPT] on opp security removed → delete 1   IMPLEMENTED
+#              opp Digimon with DP ≤ this Digimon
 #
-# ─── DSL-GAP — Cannot read source permanent's DP in formula  [G-FORMULA-SOURCE-DP] ─
+# ─── Resolved history — source permanent DP formula [G-FORMULA-SOURCE-DP] ────
 #
 # Clause 3 requires deleting 1 opponent Digimon with DP ≤ this Digimon's
 # current effective DP, not merely BT20-020's printed/base DP.
-# The `dp_lte` predicate accepts literal values or formula-based values, but
-# the `FormulaSpec` enum has no `source_dp: {}` primitive that reads the
-# source permanent's own effective DP at runtime. The engine has the data
-# (`ctx.source_permanent` + `ctx.game.effective_dp(h)`) but the formula layer
-# lacks a primitive to surface it.
+# The `source_dp` formula now reads the source permanent's own effective DP at
+# runtime, so Clause 3 can filter opponent Digimon with `dp_lte:
+# { formula: { source_dp: {} } }`.
 #
-# This gap is shared with BT17-102 Greymon, P-182 WarGreymon, and BT18-087
-# Owen Dreadnought (the latter uses a literal cap; the former two need source DP).
-# All existing cards that need "≤ self DP" deletes are BLOCKED on this gap and
-# omit the delete clause under no-approximations (including a `kind: digimon`
-# delete without the DP filter would over-target opponents with arbitrary DP).
-#
-# Suggested closure:
-#   - Add `SourceDp` variant to `FormulaSpec` / `CompiledFormula` in
-#     `digimon-dsl`, evaluated as:
-#       ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h)).unwrap_or(0)
-#   - Then Clause 3's filter becomes:
-#       filter:
-#         all_of:
-#           - kind: digimon
-#           - dp_lte: { formula: { source_dp: {} } }
-#
-# Until the gap closes, the `select_opponent_permanent` + `delete_permanent`
-# body of Clause 3 is OMITTED. The trigger itself (timing, active_when,
-# once_per_turn) is still compiled so the structural test passes.
-#
-# See also: G-PRED-DP-LTE (G-PRED-DP-LTE-SOURCE is a sister gap naming variant)
-# and qa/dsl-vocab-gaps.md for the BT17-102 / P-182 entry.
+# See `qa/resolved-gaps.md` for the DNA Omnimon completion closure. The old
+# stale verdict wording in this header is retained here only as resolved gap
+# provenance.
 
 card: BT20-020
 name: "Imperialdramon: Fighter Mode"
@@ -201,37 +180,36 @@ effects:
   #   Timing: `on_opponent_security_removed` — fires when opponent's security is
   #   removed (equivalent to DCGO OnLoseSecurity filtered by opponent).
   #   `active_when: { all_turns: true }` — fires on both players' turns.
-  #   `once_per_turn: true` — enforces the [OPT] gate.
+  #   `once_per_turn: true` — enforces the [OPT] gate (Phase 2 Track C
+  #   enforces triggered once-per-turn at runtime).
   #
-  # BLOCKED sub-clause (delete with DP ≤ self):
-  #   The delete target filter requires `dp_lte: { formula: { source_dp: {} } }`
-  #   — a `source_dp` formula primitive that reads `ctx.source_permanent`'s
-  #   current effective DP, including buffs/debuffs. This primitive does not
-  #   exist in the DSL.
-  #   BLOCKED by G-FORMULA-SOURCE-DP (see BT17-102 and P-182 headers for full docs).
-  #
-  #   Under no-approximations, the delete step MUST be omitted:
-  #   - Including `select_opponent_permanent` without the DP filter would expose
-  #     ALL opponent Digimon as valid targets (no DP gating), violating the
-  #     printed card text and the no-approximations policy.
-  #   - Including the trigger without the body leaves a no-op [OPT] which is
-  #     preferable to an over-permissive body.
-  #
-  # The compiled clause structure (timing, active_when, once_per_turn, no body)
-  # gives the structural tests something to assert and documents the block point.
-  #
-  # Stub (commented — uncomment + remove BLOCKED note when G-FORMULA-SOURCE-DP closes):
-  #
-  # process:
-  #   - select_opponent_permanent:
-  #       bind_as: tgt
-  #       filter:
-  #         all_of:
-  #           - kind: digimon
-  #           - dp_lte: { formula: { source_dp: {} } }   # NEW formula primitive
-  #       prompt: "Delete 1 of opponent's Digimon (DP ≤ this Digimon)"
-  #   - delete_permanent: { target: tgt }
+  # Delete sub-clause (delete with DP ≤ self):
+  #   IMPLEMENTED — `dp_lte: { formula: { source_dp: {} } }` reads the carrier
+  #   permanent's effective DP at resolution time (including buffs/debuffs),
+  #   exactly DCGO's `card.PermanentOfThisCard().DP`. The `source_dp` formula
+  #   primitive is shared with BT17-102 Greymon and P-182 WarGreymon.
+  #   The select is guarded by an `any_permanent` precondition so the
+  #   selection only installs when a legal target exists; "delete 1" is
+  #   mandatory once an eligible Digimon is present.
   - when: on_opponent_security_removed
     once_per_turn: true
     active_when: { all_turns: true }
-    summary: "[All Turns][OPT] On opp security removed — delete body BLOCKED (G-FORMULA-SOURCE-DP)"
+    summary: "[All Turns][OPT] On opp security removed — delete 1 opp Digimon with DP ≤ this Digimon"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              all_of:
+                - kind: digimon
+                - dp_lte: { formula: { source_dp: {} } }
+          then:
+            - select_opponent_permanent:
+                bind_as: tgt
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: { formula: { source_dp: {} } }
+                prompt: "Delete 1 of opponent's Digimon (DP ≤ this Digimon)"
+            - delete_permanent: { target: tgt }

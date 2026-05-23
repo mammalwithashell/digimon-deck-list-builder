@@ -154,7 +154,7 @@ fn place_from_hand_lands_at_bottom_of_stack() {
 
     {
         let mut ctx = EffectContext::new(&mut r.game, tuck_handle, None, tp);
-        ctx.place_card_under_permanent_bottom(tuck_handle, target_handle);
+        ctx.place_card_under_permanent_bottom(tuck_handle, target_handle, false);
     }
 
     // Post-condition: hand emptied.
@@ -216,7 +216,7 @@ fn place_from_trash_lands_at_bottom_of_stack() {
 
     {
         let mut ctx = EffectContext::new(&mut r.game, save_handle, None, tp);
-        ctx.place_card_under_permanent_bottom(save_handle, target_handle);
+        ctx.place_card_under_permanent_bottom(save_handle, target_handle, false);
     }
 
     // Trash emptied.
@@ -304,15 +304,15 @@ fn multiple_successive_placements_preserve_insertion_order() {
     // currently in the stack (by handle, not by position).
     {
         let mut ctx = EffectContext::new(&mut r.game, src_a_handle, None, tp);
-        ctx.place_card_under_permanent_bottom(src_a_handle, target_handle);
+        ctx.place_card_under_permanent_bottom(src_a_handle, target_handle, false);
     }
     {
         let mut ctx = EffectContext::new(&mut r.game, src_b_handle, None, tp);
-        ctx.place_card_under_permanent_bottom(src_b_handle, target_handle);
+        ctx.place_card_under_permanent_bottom(src_b_handle, target_handle, false);
     }
     {
         let mut ctx = EffectContext::new(&mut r.game, src_c_handle, None, tp);
-        ctx.place_card_under_permanent_bottom(src_c_handle, target_handle);
+        ctx.place_card_under_permanent_bottom(src_c_handle, target_handle, false);
     }
 
     // SOURCE-PERM should now have only 1 card left (itself, the base).

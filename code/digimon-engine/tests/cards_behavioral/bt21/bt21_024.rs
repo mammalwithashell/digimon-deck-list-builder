@@ -18,18 +18,23 @@
 //!
 //! # Patterns this test covers
 //! - Structural: 1 triggered clause (OnPlay + WhenDigivolving), 1 inherited aura
-//! - Clause 1: opponent security count condition + as_selecting_player +
-//!   select_hand + place_on_security(bottom) + trash_top_security
+//! - Clause 1: opponent-security-count condition (`opponent_security_count_lte: 5`)
+//!   + as_selecting_player + select_hand + place_on_security(bottom) +
+//!   trash_top_security
+//! - Clause 1 empty-hand edge case: trash_top_security still fires when the
+//!   opponent has no hand card (G-SELECT-EMPTY-OUTER-TAIL resolved)
 //! - Clause 2: inherited [Your Turn] self-aura +4000 DP (D4 pattern)
 //!
-//! # Known gaps and test status
+//! # Status — IMPLEMENTED
+//!
+//! All clauses are faithfully implemented and behaviorally covered.
 //!
 //! | Clause | Gap | Status |
 //! |--------|-----|--------|
-//! | (1) "if opp ≤5 security" condition | YAML drift | AUDITED-DRIFT — current DSL can express this as `count_lte` over opponent security, but YAML still lacks the condition |
-//! | (1) place-from-hand + trash-top-security | condition drift | both printed sub-steps are conditional; current YAML runs them unconditionally |
-//! | (2) inherited +4000 DP self-aura structure | none (compile-only) | structural PASS |
-//! | (2) inherited aura runtime dispatch | G-INHERITED-DISPATCH | #[ignore] pending dispatch wiring |
+//! | (1) "if opp ≤5 security" condition | G-OPP-SECURITY-COUNT-LTE (resolved) | PASS — native `opponent_security_count_lte: 5` predicate gates the whole clause |
+//! | (1) place-from-hand + trash-top-security | G-SELECT-EMPTY-OUTER-TAIL (resolved) | PASS — trash fires even when opponent hand is empty |
+//! | (1) WhenDigivolving dispatch | none | PASS — `enqueue_triggered(WhenDigivolving)` fires the clause |
+//! | (2) inherited +4000 DP self-aura | G-INHERITED-DISPATCH (resolved) | PASS — `source_dp_contribution` reads +4000 on your turn, 0 on opponent's |
 
 #![allow(dead_code, unused_imports)]
 
@@ -38,7 +43,10 @@ use digimon_dsl::compiled::{
     CompiledScope, CompiledTiming, CompiledTriggeredClause, CompiledZone,
 };
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::EffectTiming;
+use digimon_engine::TriggerSource;
 
 use super::super::dsl_card_data::compiled;
 
@@ -186,15 +194,13 @@ fn bt21_024_clause1_is_mandatory_not_opt_own_scope() {
 /// Clause 1 must be gated by the printed condition:
 /// "If your opponent has 5 or fewer security cards..."
 ///
-/// Current DSL capability note: the old `opponent_security_count_lte` gap is no
-/// longer the right target for this card. Aggregate predicates can count cards
-/// in zones for an owner, so the YAML should use:
+/// G-OPP-SECURITY-COUNT-LTE (resolved 2026-05-17) added the native
+/// `opponent_security_count_lte` predicate leaf, which reads
+/// `rctx.security_count(rctx.opponent_id())` directly. The YAML uses it:
 ///
 /// ```yaml
 /// condition:
-///   count_lte:
-///     filter: { zone: [security], owner: opponent }
-///     n: 5
+///   opponent_security_count_lte: 5
 /// ```
 #[test]
 fn bt21_024_clause1_condition_counts_opponent_security_lte_5() {
@@ -213,24 +219,17 @@ fn bt21_024_clause1_condition_counts_opponent_security_lte_5() {
         .condition
         .as_ref()
         .expect("printed text requires a clause condition: opponent has ≤5 security");
-    let aggregate = condition
-        .count_lte
-        .as_ref()
-        .expect("condition should use count_lte over opponent security");
     assert_eq!(
-        aggregate.n,
-        CompiledDpConstraint::Literal(5),
-        "condition threshold must be ≤5 security"
+        condition.opponent_security_count_lte,
+        Some(CompiledDpConstraint::Literal(5)),
+        "condition must gate on opponent_security_count_lte: 5"
     );
-    assert_eq!(
-        aggregate.filter.owner,
-        Some(CompiledPlayerRef::Opponent),
-        "count_lte filter must count the opponent's security stack"
-    );
-    assert_eq!(
-        aggregate.filter.zone,
-        vec![CompiledZone::Security],
-        "count_lte filter must count security cards"
+    // The native opponent-security predicate fully expresses the gate, so the
+    // older count_lte aggregate over { zone: [security], owner: opponent }
+    // must NOT also be present.
+    assert!(
+        condition.count_lte.is_none(),
+        "clause 1 condition uses the native predicate leaf, not the count_lte aggregate"
     );
 }
 
@@ -311,12 +310,10 @@ fn bt21_024_inherited_aura_has_active_when_your_turn() {
 //
 // Print text wins over DCGO. Both "they place 1 card from their hand as the
 // bottom security card" and "Then, trash their top security card" are under the
-// opponent-security condition. Current YAML still follows the older DCGO-shaped
-// implementation and runs clause 1 unconditionally.
-//
-// Capability drift: current aggregate predicates can express the needed gate as
-// `count_lte` with `filter: { zone: [security], owner: opponent }, n: 5`, so the
-// AUDIT expectation is active rather than ignored.
+// "If your opponent has 5 or fewer security cards" condition. The YAML gates the
+// whole triggered clause with the native `opponent_security_count_lte: 5`
+// predicate (G-OPP-SECURITY-COUNT-LTE, resolved 2026-05-17), so when the
+// opponent has 6+ security NOTHING runs — no placement prompt and no trash.
 
 /// Positive condition: when opponent has 3 security cards (within ≤5), the effect
 /// fires and a pending selection installs (opponent prompted to place a hand card).
@@ -449,20 +446,16 @@ fn bt21_024_clause1_places_hand_card_bottom_and_trashes_top_security_on_play() {
     );
 }
 
-/// When opponent satisfies the security-count condition but has an empty hand,
-/// no selection installs (no hand cards to select from), but the
-/// trash_top_security step still needs to fire because it is the tail of the
-/// same conditional clause.
+/// When the opponent satisfies the security-count condition but has an EMPTY
+/// hand, no `select_hand` selection installs (there are no hand cards to pick).
+/// The `trash_top_security` outer-tail step must still fire because it is the
+/// tail of the same conditional clause.
 ///
-/// IGNORED: When select_hand has no valid candidates (empty hand), the engine
-/// returns early from install_select_hand without installing a PendingSelection.
-/// The outer continuation steps (trash_top_security) are parked in dsl_outer_tail
-/// but are only drained by the selection callback — which never fires for empty
-/// hand. This means trash_top_security is permanently lost in the empty-hand case.
-/// Gap: G-SELECT-EMPTY-OUTER-TAIL — outer tail steps after an as_selecting_player
-/// body whose inner select_hand has no candidates are silently dropped.
+/// G-SELECT-EMPTY-OUTER-TAIL (resolved): when `select_hand` has zero valid
+/// candidates `install_select_hand` returns `InstallResult::Continue`, so the
+/// `as_selecting_player` body finishes synchronously and the outer-tail
+/// `trash_top_security` step runs. No add-from-hand → security count drops by 1.
 #[test]
-#[ignore = "pending: G-SELECT-EMPTY-OUTER-TAIL — outer-tail steps lost when select_hand has no candidates (empty hand skips outer continuation)"]
 fn bt21_024_clause1_trashes_top_security_even_when_opponent_has_no_hand() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-024")
@@ -476,51 +469,120 @@ fn bt21_024_clause1_trashes_top_security_even_when_opponent_has_no_hand() {
         .memory(10)
         .start();
 
-    let _opp_sec_before = runner.security_count(1); // 3
+    let opp_sec_before = runner.security_count(1); // 3
+    let opp_hand_before = runner.hand_size(1); // 0
     let opp_trash_before = runner.trash_size(1); // 0
 
     runner.play(0, 0);
 
-    // With no hand cards, the select_hand step should resolve with nothing selected.
-    // There may or may not be a pending selection depending on how empty-selection is handled.
-    // Either way, auto_resolve should clear any pending state.
-    let _ = runner.auto_resolve();
-
-    // Regardless of whether the hand-placement fired, trash_top_security fires.
-    // Opponent trash should have grown by at least 1 (the trashed top security).
-    // Security count decreased by 1 (only trash, no add-from-hand).
+    // No hand cards → no select_hand prompt installs. The clause must run to
+    // completion synchronously: trash_top_security fires immediately.
     assert!(
-        runner.trash_size(1) >= opp_trash_before + 1,
-        "opponent trash must grow by at least 1 (top security trashed even with empty hand)"
+        runner.game.pending_selection.is_none(),
+        "empty opponent hand → no select_hand prompt; clause resolves synchronously"
+    );
+
+    // No card was placed (opponent had nothing to place).
+    assert_eq!(
+        runner.hand_size(1),
+        opp_hand_before,
+        "opponent hand stays empty — nothing to place"
+    );
+
+    // trash_top_security still fired: trash grew by exactly 1.
+    assert_eq!(
+        runner.trash_size(1),
+        opp_trash_before + 1,
+        "opponent trash must grow by 1 (top security trashed even with empty hand)"
+    );
+
+    // Net security dropped by exactly 1 (no add-from-hand, just the trash).
+    assert_eq!(
+        runner.security_count(1),
+        opp_sec_before - 1,
+        "opponent security drops by 1 (only trash, no add-from-hand)"
     );
 }
 
-/// Clause 1 fires on WhenDigivolving (second trigger timing).
-/// Behavioral test is ignored until G-OPT-TRIGGERED / WhenDigivolving dispatch is wired.
+/// Clause 1 fires on WhenDigivolving (the second printed trigger timing).
+///
+/// BT21-024 is placed as the top card of a digivolution stack (over a Lv4
+/// base), then the WhenDigivolving trigger is enqueued on its permanent —
+/// matching the pattern used by sibling cards (bt21_037). The clause must
+/// install the opponent's hand-placement selection and, after it resolves,
+/// trash the opponent's top security card.
 #[test]
-#[ignore = "pending: card-local fixture-driven WhenDigivolving body — G-OPT-TRIGGERED closed by Track C; sibling cards (bt14_001, bt21_001) cover dispatch"]
 fn bt21_024_clause1_fires_when_digivolving() {
-    // Scaffolding (for when the gap closes):
-    //
-    //   let mut runner = DebugRunner::builder()
-    //       .dsl_card("BT21-024").expect("in pack")
-    //       .add_card(make_filler("FILLER"))
-    //       .add_card(make_filler("LV4-BASE"))
-    //       .add_card(make_filler("OPP-HAND"))
-    //       .security(1, &["FILLER", "FILLER", "FILLER"])
-    //       .hand(1, &["OPP-HAND"])
-    //       .hand(0, &["BT21-024"])
-    //       .deck(0, &["FILLER"]).deck(1, &["FILLER"])
-    //       .memory(20).start();
-    //
-    //   // Place a Lv4 base on field, then digivolve BT21-024 on top.
-    //   let base = runner.place_on_field(0, "LV4-BASE", Some(0));
-    //   runner.digivolve(0, base, 0).expect("digivolve succeeds");
-    //
-    //   let pending = runner.game.pending_selection.as_ref()
-    //       .expect("pending selection installs on WhenDigivolving");
-    //   assert_eq!(pending.selecting_player, 1, "opponent selects");
-    todo!("implement once WhenDigivolving dispatch wiring closes");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-024")
+        .expect("BT21-024 in embedded DSL pack")
+        .add_card(make_filler("LV4-BASE"))
+        .add_card(make_filler("OPP-HAND"))
+        .security(1, &["LV4-BASE", "LV4-BASE", "LV4-BASE"])
+        .hand(1, &["OPP-HAND"])
+        .deck(0, &["LV4-BASE"])
+        .deck(1, &["LV4-BASE"])
+        .memory(10)
+        .start();
+
+    // Place BT21-024 as the top of a stack over a Lv4 base — simulating a
+    // completed digivolution.
+    let cyberdramon = runner.place_stack(0, &["LV4-BASE", "BT21-024"]);
+
+    let opp_hand_before = runner.hand_size(1); // 1 (OPP-HAND)
+    let opp_sec_before = runner.security_count(1); // 3
+    let opp_trash_before = runner.trash_size(1); // 0
+
+    // Fire the WhenDigivolving timing on the Cyberdramon permanent.
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(cyberdramon),
+    );
+    runner.game.drain_effect_queue();
+
+    // The opponent (player 1) must be prompted to place a hand card.
+    {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("pending selection installs on WhenDigivolving");
+        assert_eq!(
+            pending.selecting_player, 1,
+            "the OPPONENT (player 1) must be the selecting player on WhenDigivolving"
+        );
+        let action = pending.valid_action_ids[0];
+        runner
+            .game
+            .resolve_selection(1, action)
+            .expect("opponent selection resolves successfully");
+    }
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no further pending selections after opponent places card"
+    );
+
+    // Opponent hand shrank by 1 (placed a card to bottom of security).
+    assert_eq!(
+        runner.hand_size(1),
+        opp_hand_before - 1,
+        "opponent hand must shrink by 1 after placing a card to bottom of security"
+    );
+
+    // Net security unchanged: added 1 to bottom, trashed 1 from top → ±0.
+    assert_eq!(
+        runner.security_count(1),
+        opp_sec_before,
+        "net opponent security count unchanged (added bottom, trashed top)"
+    );
+
+    // Opponent trash grew by 1 (the trashed top security card).
+    assert_eq!(
+        runner.trash_size(1),
+        opp_trash_before + 1,
+        "opponent trash must grow by 1 (top security was trashed) on WhenDigivolving"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -557,52 +619,84 @@ fn bt21_024_play_event_fires_on_play() {
 // Section 5 — Inherited aura behavioral (clause 2)
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// The inherited +4000 DP aura requires G-INHERITED-DISPATCH to be wired: the
-// digivolution-stack `card_sources[0..n-1]` are not yet scanned for inherited
-// triggered/declarative effects. Structural tests above confirm the YAML compiles
-// correctly with `scope: inherited, dp_modifier: 4000, active_when: { your_turn: true }`.
+// The inherited +4000 DP aura is a declarative aura: it writes to
+// Effect.dp_modifier, which `source_dp_contribution` reads directly over the
+// `card_sources` stack — no trigger queue involved. The tests below place
+// BT21-024 as source[0] under a synthetic Lv6 carrier and assert the +4000
+// contribution is gated by `active_when: { your_turn: true }`.
 
-/// Positive (gap-blocked): Cyberdramon's inherited +4000 DP aura is active on
-/// the controller's turn when Cyberdramon is in a digivolution stack.
-///
-/// G-INHERITED-DISPATCH for *triggered* effects closed 2026-05-17 (Phase 2
-/// Track D). Declarative auras like this one read through a separate path
-/// (`source_dp_contribution` over `card_sources`) which has been passing
-/// for some time; see BT21-072 for live coverage. Test body left as
-/// `todo!()` — implementing it is a fixture-authoring follow-up.
-#[test]
-#[ignore = "pending: card-local body not authored — declarative inherited aura substrate closed by Group 6; see BT21-072 for live coverage of the same shape"]
-fn bt21_024_inherited_aura_grants_4000_dp_on_your_turn() {
-    // Scaffolding (for when the gap closes):
-    //
-    //   let mut runner = DebugRunner::builder()
-    //       .dsl_card("BT21-024").expect("in pack")
-    //       .add_card(make_filler("FILLER"))
-    //       .add_card(make_filler("LV6-TOP"))
-    //       .deck(0, &["FILLER"]).deck(1, &["FILLER"])
-    //       .memory(20).start();
-    //
-    //   // Place Cyberdramon then stack a Lv6 on top (simulating digivolution).
-    //   let cyber = runner.place_on_field(0, "BT21-024", Some(0));
-    //   let top = runner.place_on_field(0, "LV6-TOP", Some(0));
-    //   // Stack BT21-024 as source below LV6-TOP (implementation-specific).
-    //   // runner.push_digivolution_source(top, "BT21-024");
-    //
-    //   // On player 0's turn the inherited aura should be active.
-    //   let base_dp = runner.dp_of(top).expect("LV6-TOP has DP");
-    //   let effective = runner.effective_dp(top).expect("effective DP reads");
-    //   assert_eq!(
-    //       effective,
-    //       base_dp + 4000,
-    //       "inherited +4000 DP aura must be active on your turn"
-    //   );
-    todo!("implement once G-INHERITED-DISPATCH closes");
+/// A synthetic Lv6 carrier Digimon used to host BT21-024 as a digivolution
+/// source. DP 9000 so the +4000 inheritance is clearly distinguishable.
+fn make_carrier(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.traits = vec![];
+    c.level = Some(6);
+    c.dp = Some(9000);
+    c
 }
 
-/// Negative (gap-blocked): the inherited +4000 DP aura is inactive on the opponent's turn.
+/// Positive: when BT21-024 is a digivolution source under a carrier, its
+/// inherited [Your Turn] +4000 DP aura contributes on the CONTROLLER'S turn.
+///
+/// Declarative inherited auras write to `Effect.dp_modifier`, which
+/// `source_dp_contribution` reads directly over the `card_sources` stack —
+/// the same path BT21-072's inherited aura test exercises.
 #[test]
-#[ignore = "pending: card-local body not authored — declarative inherited aura substrate closed by Group 6; see BT21-072 for live coverage of the same shape"]
+fn bt21_024_inherited_aura_grants_4000_dp_on_your_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-024")
+        .expect("BT21-024 in embedded DSL pack")
+        .add_card(make_carrier("CARRIER-LV6"))
+        .deck(0, &["CARRIER-LV6"])
+        .deck(1, &["CARRIER-LV6"])
+        .memory(10)
+        .start();
+
+    // BT21-024 is source[0]; CARRIER-LV6 is the top card of the stack.
+    let carrier = runner.place_stack(0, &["BT21-024", "CARRIER-LV6"]);
+
+    assert_eq!(
+        runner.game.turn_player(),
+        0,
+        "precondition: P0 must be the turn player"
+    );
+
+    // source_dp_contribution at index 0 = BT21-024's inherited contribution.
+    let contribution = runner.game.source_dp_contribution(carrier, 0);
+    assert_eq!(
+        contribution, 4000,
+        "BT21-024 inherited aura must contribute +4000 DP on the controller's turn; \
+         got {contribution}"
+    );
+}
+
+/// Negative: the inherited +4000 DP aura must NOT contribute on the
+/// opponent's turn — the `active_when: { your_turn: true }` gate blocks it.
+#[test]
 fn bt21_024_inherited_aura_inactive_on_opponents_turn() {
-    // After runner.end_turn(), effective_dp must drop back to base.
-    todo!("implement once G-INHERITED-DISPATCH closes");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-024")
+        .expect("BT21-024 in embedded DSL pack")
+        .add_card(make_carrier("CARRIER-LV6"))
+        .deck(0, &["CARRIER-LV6"])
+        .deck(1, &["CARRIER-LV6"])
+        .memory(10)
+        .start();
+
+    let carrier = runner.place_stack(0, &["BT21-024", "CARRIER-LV6"]);
+
+    // Advance to the opponent's turn.
+    runner.end_turn();
+    assert_ne!(
+        runner.game.turn_player(),
+        0,
+        "precondition: P0 must NOT be the turn player"
+    );
+
+    let contribution = runner.game.source_dp_contribution(carrier, 0);
+    assert_eq!(
+        contribution, 0,
+        "inherited aura must be inactive on the opponent's turn \
+         (active_when: your_turn); got {contribution}"
+    );
 }

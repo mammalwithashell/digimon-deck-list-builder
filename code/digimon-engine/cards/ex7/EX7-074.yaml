@@ -1,7 +1,8 @@
 card: EX7-074
 name: "Vortex Resonance"
 kind: option
-color: [green, blue]
+# cards.json card_colors: [3, 2] → Green + Yellow.
+color: [green, yellow]
 cost: 3
 traits: [LIBERATOR]
 use_requirement:
@@ -73,6 +74,11 @@ use_requirement:
 #   - select_own_permanent: { optional: true, filter: digimon }
 #   - select_hand: { filter: kind: digimon }
 #   - effect_initiated_digivolve: { cost: { reduce: 4 } }
+#
+# Note: the digivolve sub-step (select_own_permanent → select_hand →
+# effect_initiated_digivolve) is gated by select_own_permanent's optional: true.
+# When the player declines that pick, the bound `target` is absent and the
+# subsequent select_hand + effect_initiated_digivolve steps are skipped.
 
 # ─── Clause 2: Inherited [Security] ──────────────────────────────────────────
 #
@@ -87,8 +93,14 @@ use_requirement:
 #   PlayPermanentCards(payCost: false) on selected card.
 #   AddThisCardToHand → EX7-074 moves to controller's hand.
 #
-# play_cost_lte: 4 is enforced by select_hand/select_trash card filters.
-# add_this_option_to_hand moves the currently resolving security Option to hand.
+# DSL modelling (G-DSL-UNION-PLAY-FREE CLOSED — same idiom as BT17-095, BT22-098):
+#   A single `select_union_zone` over hand + trash binds a `UnionCard` value
+#   that records the picked card's origin zone. The engine auto-collapses to
+#   the populated zone when only one is eligible (matching DCGO's
+#   `SetBool(canSelectHand)` shortcut). `play_union_bound_free` then replays the
+#   bound card from its true origin zone without paying the cost.
+#   play_cost_lte: 4 is enforced by the union-zone card filter.
+#   add_this_option_to_hand moves the currently resolving security Option to hand.
 
 effects:
   # ─── Clause 0: Color bypass flood_gate ─────────────────────────────────────
@@ -175,43 +187,28 @@ effects:
     optional: true
     summary: "[Security][Inherited] You may play 1 LIBERATOR (cost ≤4) from hand or trash free; add this card to hand"
     process:
-      # Zone choice when both hand and trash have eligible cards.
-      # DCGO: SetBoolSelection(["From hand","From trash"]) if both zones eligible;
-      #       SetBool(canSelectHand) if only one zone eligible.
-      - select_effect_choice:
-          labels: ["From hand", "From trash"]
-          bind_as: zone_choice
-          prompt: "From which area do you play a card?"
-      # Branch A: play from hand.
-      # DCGO: SelectHandEffect(canNoSelect: true, filter: LIBERATOR + cost≤4 + playable)
-      - if:
-          condition: { equals: [zone_choice, 0] }
-          then:
-            - select_hand:
-                of: you
-                bind_as: picked_hand
-                optional: true
-                filter:
-                  all_of:
-                    - trait_has: LIBERATOR
-                    - play_cost_lte: 4
-                prompt: "Select a LIBERATOR card (cost 4 or less) to play from your hand"
-            - play_from_hand_free: { of: you, hand_index: picked_hand }
-      # Branch B: play from trash.
-      # DCGO: SelectCardEffect(canNoSelect: () => true, root: Trash, filter: LIBERATOR + cost≤4)
-      - if:
-          condition: { equals: [zone_choice, 1] }
-          then:
-            - select_trash:
-                of: you
-                bind_as: picked_trash
-                optional: true
-                filter:
-                  all_of:
-                    - trait_has: LIBERATOR
-                    - play_cost_lte: 4
-                prompt: "Select a LIBERATOR card (cost 4 or less) to play from your trash"
-            - play_from_trash_free: { of: you, hand_index: picked_trash }
+      # G-DSL-UNION-PLAY-FREE CLOSED — single `select_union_zone` over hand +
+      # trash, binding a `UnionCard` value that records the origin zone.
+      # The engine auto-collapses to the populated zone when only one is
+      # eligible (matching DCGO's `SetBool(canSelectHand)` shortcut), and
+      # presents the "From hand / From trash" choice only when both zones have
+      # candidates. The play_cost_lte: 4 + trait_has filter mirrors DCGO's
+      # CanSelectCardCondition (LIBERATOR && GetCostItself <= 4 && !IsDigiEgg).
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: picked
+          filter:
+            all_of:
+              - trait_has: LIBERATOR
+              - play_cost_lte: 4
+          prompt: "You may play 1 [LIBERATOR] card (cost 4 or less) from your hand or trash without paying the cost"
+      # `play_union_bound_free` replays the bound card from its true origin
+      # zone (hand or trash) without paying the cost. DCGO: PlayPermanentCards
+      # (payCost: false). No-op if the union pick was declined.
+      - play_union_bound_free:
+          binding: picked
       # "Then, add this card to the hand."
       # DCGO: CardEffectCommons.AddThisCardToHand(card, activateClass).
       - add_this_option_to_hand: {}

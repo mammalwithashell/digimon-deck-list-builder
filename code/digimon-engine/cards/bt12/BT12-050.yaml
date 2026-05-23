@@ -17,19 +17,18 @@
 #
 # ─── Clause layout ────────────────────────────────────────────────────────────
 #
-#   Clause 0 (own effect): BLOCKED
+#   Clause 0 (own effect): IMPLEMENTED
 #     "[Your Turn] When this Digimon would DNA digivolve into a blue Digimon
 #     card, gain 1 memory."
 #     DCGO: EffectTiming.BeforePayCost with CanTriggerWhenPermanentWouldDigivolveOfCard
 #     + IsJogress + target card must be blue Digimon. This is a BeforePayCost
 #     triggered gain_memory effect gated on the digivolve target's color.
-#     BLOCKED on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (already in qa/dsl-vocab-gaps.md)
-#     for the DNA-digivolve-target thread, PLUS G-BEFORE-PAY-COST-GAIN-MEMORY —
-#     BeforePayCost triggered effects currently only model `cost_reduction` in
-#     CostReductionBody; there is no triggered form for `gain_memory` at
-#     BeforePayCost timing.
+#     Historical blocker G-BEFORE-PAY-COST-DIGIVOLVE-TARGET +
+#     G-BEFORE-PAY-COST-GAIN-MEMORY closed in Phase 2 Track H. Authored as a
+#     `before_pay_cost_observe` clause gated by `dna_origin`,
+#     `source_is_cost_target_permanent`, and a blue Digimon `cost_target`.
 #     Structurally identical to BT12-022 clause 0 (green→blue swap only).
-#     See qa/dsl-vocab-gaps.md entries for these gaps.
+#     See qa/dsl-vocab-gaps.md entries for the resolved history.
 #
 #   Clause 1 (inherited): IMPLEMENTED
 #     "[Your Turn] While this Digimon has [Imperialdramon] in its name or the

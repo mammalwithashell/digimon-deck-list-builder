@@ -473,6 +473,7 @@ fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
         card: pending_snapshot.card,
         source_kind: pending_snapshot.source_kind,
         resolution_phase: OptionResolutionPhase::LinkSelectHost,
+        subtype: pending_snapshot.subtype,
     });
     ctx.game
         .install_link_host_selection(owner, source_card, candidates, *optional);

@@ -35,6 +35,8 @@ use crate::cards::CardEffectRegistry;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect::{CardEffect, Effect};
+use crate::enums::{Expiry, ModifierType};
+use crate::modifiers::ModifierPayload;
 
 pub struct DslCardEffect {
     compiled: Arc<CompiledCard>,
@@ -69,6 +71,29 @@ impl CardEffect for DslCardEffect {
         };
 
         let mut out = Vec::new();
+        if let Some(identity) = &self.compiled.identity {
+            for source_alias in &identity.source_name_aliases {
+                let level_lte = source_alias.level_lte;
+                out.push(
+                    Effect::declarative(card)
+                        .name("Dynamic source name aliases")
+                        .materializes_declarative_state()
+                        .process(move |ctx| {
+                            let Some(handle) = ctx.source_permanent else {
+                                return;
+                            };
+                            ctx.add_declarative_modifier_with_payload(
+                                handle,
+                                ModifierType::SourceNameAliases,
+                                0,
+                                Expiry::Permanent,
+                                ModifierPayload::SourceNameAliases { level_lte },
+                            );
+                        })
+                        .build(),
+                );
+            }
+        }
         for path in &self.compiled.alt_paths {
             if matches!(
                 path.kind,

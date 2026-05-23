@@ -47,10 +47,6 @@ effects:
               - kind: digimon
               - other: true
           prompt: "Delete 1 of your other Digimon to end the attack"
-      # Ending the attack is the PAID payoff of deleting an other Digimon.
-      # When the controller has no other Digimon, select_own_permanent
-      # short-circuits without binding `sacrifice`; gating the payoff on the
-      # binding prevents a lone carrier from ending the attack for free.
       - if:
           condition: { binding_present: sacrifice }
           then:

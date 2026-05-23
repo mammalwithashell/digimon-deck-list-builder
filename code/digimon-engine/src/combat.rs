@@ -2456,6 +2456,7 @@ impl Game {
             card_kind: kind,
             was_face_up,
             phase: SecurityPhase::SecuritySkillDrain,
+            phase_enqueue_done: false,
             checks_remaining,
             outcome_so_far: AttackResult::SecurityCheckSurvived,
         });
@@ -2497,6 +2498,7 @@ impl Game {
                 SecurityPhase::SecuritySkillDrain => {
                     let defender = state.defender;
                     let card_handle = state.revealed_card;
+                    let enqueue_done = state.phase_enqueue_done;
                     // NOTE: Progress / ImmunityToOpponentEffects is NOT
                     // gated here. Per the printed rules (and DCGO's
                     // `ProgressProcess`), Progress makes the attacking
@@ -2510,13 +2512,25 @@ impl Game {
                     // delete_permanent with opponent-source attribution,
                     // negative DP modifiers) — tracked in
                     // docs/DCGO_KEYWORD_PARITY.md under "Progress".
-                    self.enqueue_triggered(
-                        EffectTiming::SecuritySkill,
-                        TriggerSource::SecurityRevealed {
-                            defender,
-                            card: card_handle,
-                        },
-                    );
+                    //
+                    // Collect the revealed card's `[Security]` effects exactly
+                    // once. If one parks on a `pending_selection`, this phase
+                    // is re-entered on resume; `phase_enqueue_done` keeps the
+                    // re-entry from re-collecting (and re-firing) the same
+                    // `[Security]` clause — an infinite loop when the player
+                    // declines an optional "you may" clause.
+                    if !enqueue_done {
+                        if let Some(st) = self.security_resolution.as_mut() {
+                            st.phase_enqueue_done = true;
+                        }
+                        self.enqueue_triggered(
+                            EffectTiming::SecuritySkill,
+                            TriggerSource::SecurityRevealed {
+                                defender,
+                                card: card_handle,
+                            },
+                        );
+                    }
                     self.drain_effect_queue();
                     if self.pending_selection.is_some() {
                         return None;
@@ -2568,14 +2582,27 @@ impl Game {
                     let Some(state) = self.security_resolution.as_ref() else {
                         break;
                     };
-                    if let Some(attacker) = state.attacker {
-                        let trigger = TriggerSource::OnSecurityCheck {
-                            attacker,
-                            defender: state.defender,
-                            revealed_card: state.revealed_card,
-                            was_face_up: state.was_face_up,
-                        };
-                        self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger);
+                    let enqueue_done = state.phase_enqueue_done;
+                    let attacker_opt = state.attacker;
+                    let defender = state.defender;
+                    let revealed_card = state.revealed_card;
+                    let was_face_up = state.was_face_up;
+                    if let Some(attacker) = attacker_opt {
+                        // Collect observers once; a parked selection re-enters
+                        // this phase, and `phase_enqueue_done` stops the
+                        // re-entry from double-firing the observers.
+                        if !enqueue_done {
+                            if let Some(st) = self.security_resolution.as_mut() {
+                                st.phase_enqueue_done = true;
+                            }
+                            let trigger = TriggerSource::OnSecurityCheck {
+                                attacker,
+                                defender,
+                                revealed_card,
+                                was_face_up,
+                            };
+                            self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger);
+                        }
                         self.drain_effect_queue();
                         if self.pending_selection.is_some() {
                             return None;
@@ -2608,13 +2635,22 @@ impl Game {
                     };
                     let defender = state.defender;
                     let card_handle = state.revealed_card;
-                    self.enqueue_triggered(
-                        EffectTiming::OnLoseSecurity,
-                        TriggerSource::SecurityRevealed {
-                            defender,
-                            card: card_handle,
-                        },
-                    );
+                    let enqueue_done = state.phase_enqueue_done;
+                    // Collect `OnLoseSecurity` effects once; a parked selection
+                    // re-enters this phase, and `phase_enqueue_done` keeps the
+                    // re-entry from re-firing them.
+                    if !enqueue_done {
+                        if let Some(st) = self.security_resolution.as_mut() {
+                            st.phase_enqueue_done = true;
+                        }
+                        self.enqueue_triggered(
+                            EffectTiming::OnLoseSecurity,
+                            TriggerSource::SecurityRevealed {
+                                defender,
+                                card: card_handle,
+                            },
+                        );
+                    }
                     self.drain_effect_queue();
                     if self.pending_selection.is_some() {
                         return None;
@@ -2806,9 +2842,14 @@ impl Game {
 
     /// In-place phase mutation. Kept as a small helper so the state-machine
     /// arms don't re-borrow `security_resolution` mutably inline.
+    ///
+    /// Clears `phase_enqueue_done` so the phase being entered gets a fresh
+    /// enqueue budget — each `*Drain` phase collects its triggered effects
+    /// exactly once, then re-entries on resume skip the re-collection.
     fn set_security_phase(&mut self, phase: SecurityPhase) {
         if let Some(st) = self.security_resolution.as_mut() {
             st.phase = phase;
+            st.phase_enqueue_done = false;
         }
     }
 
@@ -2982,9 +3023,21 @@ impl Game {
         // the attacker itself. We piggyback on the PlayerBattleArea scan
         // and filter the attacker's own slot from the queue after enqueue.
         let attacker_queue_start = self.effect_queue.len();
+        let attacker_card = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| perm.top_card().handle());
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnAllyAttack,
-            crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+            attacker_card.map_or(
+                crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+                |card| crate::selection::TriggerSource::PlayerBattleAreaAttack {
+                    player: handle.player,
+                    attacker: handle,
+                    card,
+                },
+            ),
         );
         // Drop any entries whose source_permanent is the attacker itself
         // — the attacker does not fire its own OnAllyAttack observer.
@@ -3007,7 +3060,14 @@ impl Game {
         if (opp as usize) < self.players.len() {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnOpponentAttack,
-                crate::selection::TriggerSource::PlayerBattleArea(opp),
+                attacker_card.map_or(
+                    crate::selection::TriggerSource::PlayerBattleArea(opp),
+                    |card| crate::selection::TriggerSource::PlayerBattleAreaAttack {
+                        player: opp,
+                        attacker: handle,
+                        card,
+                    },
+                ),
             );
             self.drain_effect_queue();
         }

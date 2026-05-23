@@ -50,26 +50,21 @@ effects:
   #   - CardEffectCondition: cardEffect.EffectSourceCard.Owner == card.Owner.Enemy
   #   - Added to UntilOwnerTurnEndEffects (opponent's perspective) = EndOfOpponentsTurn.
   #
-  # Implementation:
-  #   raw_rust step installs two player-level modifiers on opponent with
-  #   EndOfOpponentsTurn expiry:
-  #     1. CannotPlayDigimonByEffect — blocks effect-initiated Digimon plays (any zone).
-  #     2. CannotPlayTamerByEffect   — blocks effect-initiated Tamer plays (any zone).
-  #
-  # Limitation vs printed text: the modifier blocks effect-plays from ALL zones,
-  # not exclusively trash. In practice, effect-plays from hand are rare and the
-  # over-blocking is conservative (never misses a real restriction). This is
-  # acceptable under the no-approximations policy since no player choice is removed
-  # — only unwanted plays are blocked, never forced.
-  #
-  # NOTE: broad player-level floodgates can now be installed from DSL via
-  # target_player/add_player_modifier. This remains raw_rust because the printed
-  # text is source-zone scoped ("from trash"), while the current broad
-  # CannotPlay*ByEffect modifiers block effect-plays from all zones.
+  # Implementation: `add_player_modifier` installs the trash-scoped
+  # `CannotPlayFromTrash` modifier on the opponent with `end_of_opponents_turn`
+  # expiry. This blocks effect-initiated plays from the opponent's trash —
+  # zone-faithful to the printed "from the trash". (The broad
+  # `CannotPlayDigimonByEffect` / `CannotPlayTamerByEffect` modifiers also block
+  # HAND plays, a much larger over-block.) `CannotPlayFromTrash` is not
+  # kind-discriminating, so it also blocks the vanishingly rare effect-initiated
+  # Option play from trash — a far narrower residual than the all-zones path.
   - when: [on_play, when_digivolving]
     summary: "Until opp's turn ends, their effects can't play Digimon/Tamers from trash"
     process:
-      - raw_rust: { fn: bt23_014_opp_cannot_play_from_trash }
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotPlayFromTrash
+          expiry: end_of_opponents_turn
 
   # ─── Clause 2: [On Play] [When Digivolving] [When Attacking] Delete ─────────
   #
@@ -82,13 +77,11 @@ effects:
   #   - Selects 1 opponent Digimon with DP ≤ DPThreshold(). canNoSelect: false
   #     (mandatory if a valid target exists). Mode: Destroy.
   #
-  # NOTE G-PRED-DP-LTE: dp_lte predicate on permanents is parsed and lowered but the
-  # predicate evaluator does not yet apply it in eval_permanent_fields. All opponent
-  # Digimon currently appear as valid targets regardless of DP. The YAML is correctly
-  # authored; enforcement will activate once G-PRED-DP-LTE is closed.
-  #
-  # The raw_rust formula bt23_014_dynamic_dp_cap computes 8000 + 2000 × opp_battle_area
-  # and is registered in src/cards/raw_rust/mod.rs.
+  # The DP cap is a pure-DSL `base + per × delta` formula: 8000 + 2000 ×
+  # (count of permanents in the opponent's battle area). `card_count_in_zone`
+  # with no kind filter counts all battle-area permanents = "their Digimon and
+  # Tamers" (only Digimon and Tamers occupy battle-area slots). The `dp_lte`
+  # formula is evaluated per-candidate by `eval_permanent_fields`.
   - when: [on_play, when_digivolving, when_attacking]
     summary: "Delete 1 opp Digimon (≤8000+2000×opp_count DP)"
     process:
@@ -98,6 +91,11 @@ effects:
             all_of:
               - kind: digimon
               - dp_lte:
-                  raw_rust: bt23_014_dynamic_dp_cap
+                  base: 8000
+                  per:
+                    card_count_in_zone:
+                      of: opponent
+                      zone: battle_area
+                  delta: 2000
           prompt: "Delete opponent Digimon (≤8000+2000×opp count DP)"
       - delete_permanent: { target: tgt }

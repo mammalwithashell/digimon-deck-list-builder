@@ -10,6 +10,8 @@ use crate::predicate::Zone;
 pub struct IdentitySpec {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub name_aliases: Vec<NameAliasSpec>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source_name_aliases: Vec<SourceNameAliasSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -17,6 +19,13 @@ pub struct IdentitySpec {
 pub struct NameAliasSpec {
     pub treat_as: String,
     pub when: AliasCondition,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SourceNameAliasSpec {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level_lte: Option<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

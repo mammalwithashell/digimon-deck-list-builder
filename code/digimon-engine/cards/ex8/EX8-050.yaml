@@ -12,10 +12,111 @@ alt_paths:
     from: { level_eq: 4, color_is: black }
     cost: 3
 
-# Printed on-deletion reveal/play and inherited attack-redirection clauses are
-# not authored in this pass.
+# Printed card text (data/cards.json — verbatim):
+#   <Blocker>
+#   [On Deletion] Reveal the top 3 cards of your deck. You may play 1 Digimon
+#   card with the [Mineral] or [Rock] trait and a play cost of 5 or less among
+#   them without paying the cost. Trash the rest.
+#
+# Inherited Effect:
+#   [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon
+#   attacks, you may change the attack target to this Digimon.
+#
+# ─── Source-priority audit ───────────────────────────────────────────────────
+#
+# 1. Printed text governs. No "you may" at the outer trigger level for the
+#    reveal step itself, but "You may play" gates the selection (optional).
+# 2. Inherited redirect: BT19-072 LordKnightmon's on_opponent_attack pattern;
+#    here the destination is always the source permanent (this Digimon), not a
+#    player-selected Digimon — so no select_own_permanent step is needed.
+#
+# ─── Clause A — [On Deletion] reveal + play-from-revealed-free ───────────────
+#
+# GAP — G-PLAY-FROM-REVEALED-FREE (docs/RUST_ENGINE_GAPS.md §344):
+#   `play_from_revealed_free(player, reveal_index)` is not implemented.
+#   The naive workaround `add_to_hand_from_reveal` + `play_from_hand_free`
+#   fires OnAddToHand observers not authorized by the printed text.
+#   Per the no-approximations policy (CLAUDE.md §17) no stub may be used.
+#   The play step is OMITTED; the reveal, select-buckets, and trash-remainder
+#   steps are authored. When the gap closes, insert between
+#   select_reveal_buckets and per_selected:
+#     - play_from_revealed_free: { of: you, card: play_pick }
+#
+# ─── Clause B — Inherited [Opponent's Turn][OPT] attack redirect to self ─────
+#
+# `new_target: source` resolves to the carrier's source permanent at resolution
+# time — i.e. the Digimon carrying this inherited effect ("this Digimon").
+# No select_own_permanent step is needed; the redirect fires deterministically
+# to the source permanent.
+#
+# G-INHERITED-DISPATCH RESOLVED (Phase 2 Track D, 2026-05-06): inherited
+# triggered effects on digivolution-stack sources fire through the normal
+# enqueue path.
 
 effects:
+  # ─── Clause 0 — <Blocker> keyword grant ────────────────────────────────────
   - kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
+
+  # ─── Clause A — [On Deletion] Reveal 3 + optional select + trash rest ───────
+  #
+  # Printed: "Reveal the top 3 cards of your deck. You may play 1 Digimon card
+  # with the [Mineral] or [Rock] trait and a play cost of 5 or less among them
+  # without paying the cost. Trash the rest."
+  #
+  # The trigger and reveal are mandatory — no outer "you may". Only the play
+  # step is optional ("You may play"). Trash the rest is mandatory regardless.
+  #
+  # `select_reveal_buckets` is used instead of `select_reveal` so that the
+  # tail (trash loop) always runs via the callback even when the player picks
+  # nothing (min:0). With plain `select_reveal`, declining would set
+  # `on_decline: None` and the tail would be silently dropped.
+  #
+  # PARTIAL — play step BLOCKED on G-PLAY-FROM-REVEALED-FREE.
+  # When the gap closes, insert between select_reveal_buckets and per_selected:
+  #   - play_from_revealed_free: { of: you, card: play_pick }
+  - when: on_deletion
+    summary: "[On Deletion] Reveal top 3; you may play 1 [Mineral]/[Rock] cost<=5 Digimon free (PARTIAL — play step BLOCKED G-PLAY-FROM-REVEALED-FREE); trash rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_has: Mineral
+                      - trait_has: Rock
+                  - play_cost_lte: 5
+          prompt: "Play 1 [Mineral]/[Rock] Digimon with play cost 5 or less without paying the cost"
+      # GAP G-PLAY-FROM-REVEALED-FREE: play_from_revealed_free not yet implemented.
+      # When closed, insert here:
+      #   - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  # ─── Clause B — Inherited [Opponent's Turn][OPT] attack redirect to self ────
+  #
+  # Printed: "[Opponent's Turn] [Once Per Turn] When one of your opponent's
+  # Digimon attacks, you may change the attack target to this Digimon."
+  #
+  # `new_target: source` resolves to the carrier (source permanent = this
+  # Digimon). No intermediate select_own_permanent step.
+  - scope: inherited
+    when: on_opponent_attack
+    optional: true
+    once_per_turn: true
+    active_when: { opponents_turn: true }
+    summary: "[Opponent's Turn][OPT] When opponent's Digimon attacks, change the attack target to this Digimon"
+    process:
+      - redirect_attack_target: { new_target: source }

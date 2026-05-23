@@ -12,10 +12,32 @@ alt_paths:
     from: { level_eq: 3, color_is: black }
     cost: 2
 
-# Printed [When Digivolving] "if you have 1 or fewer Tamers, play 1 [Close]
-# from hand without paying the cost" is not authored in this pass.
-
 effects:
+  # ─── Clause 1: [When Digivolving] ───────────────────────────────────────────
+  #
+  # Printed text: "If you have 1 or fewer Tamers, you may play 1 [Close] from
+  # your hand without paying the cost."
+  #
+  # optional: true — "you may" makes this player-optional.
+  # condition: count_lte with tamer kind in battle_area ≤ 1 gates activation.
+  # process: select_hand filtered to exact name "Close" → play_from_hand_free.
+  # Pattern: identical shape to BT21-017 Dimetromon (same archetype, same clause).
+  - when: when_digivolving
+    optional: true
+    summary: "If ≤1 Tamer, you may play 1 [Close] from hand without paying the cost"
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            name_is: "Close"
+          prompt: "Play 1 [Close] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:

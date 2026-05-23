@@ -21,11 +21,6 @@
 //!   Closest exemplar: BT21-025 (same timing pattern, different process)
 //!
 //! # Known gaps applied
-//! - G-ADD-TOP-SECURITY-TO-HAND (NEW hybrid): DSL lacks `add_top_security_to_hand`
-//!   verb AND engine lacks `EffectContext::add_top_security_to_hand`. Clause (c)
-//!   process uses `raw_rust: p_137_opp_adds_top_security_to_hand`.
-//!   Behavioral outcomes (opponent hand+1, security-1) are tested normally
-//!   because the raw_rust impl IS provided.
 //! - G-OPT-TRIGGERED: `once_per_turn` not enforced at runtime for triggered
 //!   effects — OPT lockout tests are #[ignore]'d.
 //!
@@ -34,7 +29,7 @@
 //! `dsl_card("P-137")` is available via a build-pack scan of `cards/p/`.
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::DebugRunner;
@@ -161,6 +156,37 @@ fn p_137_clause_c_has_on_attack_target_change_own_opt_mandatory() {
     assert!(
         !clause_c.optional,
         "clause (c) is not optional — opponent MUST add the card (no 'you may')"
+    );
+}
+
+#[test]
+fn p_137_clause_c_uses_native_add_top_security_to_hand_step() {
+    let runner = flamedramon_runner();
+    let compiled = runner.compiled_card("P-137").expect("P-137 must compile");
+
+    let clause_c = compiled.effects.iter().find_map(|c| {
+        if let CompiledClause::Triggered(t) = c {
+            if t.when.contains(&CompiledTiming::OnAttackTargetChange) {
+                return Some(t);
+            }
+        }
+        None
+    });
+
+    let clause_c = clause_c.expect("P-137 clause c");
+    assert!(
+        !clause_c
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::RawRust { .. })),
+        "P-137 must use native DSL for top-security-to-hand, not raw_rust"
+    );
+    assert!(
+        clause_c
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::AddTopSecurityToHand { .. })),
+        "P-137 clause c must move opponent top security with add_top_security_to_hand"
     );
 }
 

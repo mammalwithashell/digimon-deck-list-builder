@@ -1,3 +1,139 @@
+# ST22-08 Offensive Plug-In V — Option, Cost 4, Red, Traits: Plug-In.
+#
+# Printed card text (data/cards.json — authoritative):
+#
+#   While you have a Tamer, you can ignore this card's color requirements.
+#   [Security] Delete 1 of your opponent's Digimon with the lowest DP.
+#     Then, add this card to the hand.
+#   [Main] You may link this card to 1 of your Digimon without paying the
+#     cost. Then, delete 1 of your opponent's Digimon with as much or less
+#     DP as 1 of your Digimon.
+#
+# Inherited (Link Requirements):
+#   Link Requirements [Link] Lv.3 or higher: Cost 2
+#   (Plug this card from the hand or battle area sideways into the specified
+#   Digimon in the battle area.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST22/Red/ST22_08.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# DCGO registers FIVE clause builders:
+#   (1) `EffectTiming.None` → IgnoreColorConditionClass — CanUseCondition:
+#       owner has a Tamer permanent; CardCondition: cardSource == card (only
+#       THIS card's color requirement bypassed). → Clause 1 below.
+#   (2) `EffectTiming.None` → LinkCondition = AddSelfLinkConditionStaticEffect
+#       (permanentCondition: TopCard.HasLevel && Level >= 3; linkCost: 2).
+#       → Clause 4 below — the inherited Link Requirements.
+#   (3) `EffectTiming.OnDeclaration` → LinkAction = CardEffectFactory.LinkEffect
+#       — the generic plug-in / Link declaration. → the Link play mode.
+#   (4) `EffectTiming.SecuritySkill` → SecurityEffect — delete opponent's
+#       lowest-DP Digimon (IsMinDP, canNoSelect: false), then AddThisCardToHand.
+#       → Clause 2 below.
+#   (5) `EffectTiming.OptionSkill` → MainEffect — optional link to one own
+#       Digimon (canNoSelect: true), then select one own Digimon as a DP
+#       comparator (canNoSelect: false), then delete one opponent Digimon with
+#       DP <= the comparator's DP (canNoSelect: false). → Clause 3 below.
+#
+# DCGO ALSO registers `EffectTiming.OnEndTurn` → EndOfTurnLinkedEffect
+# ("[End of Your Turn] this Digimon may attack"). That clause does NOT appear
+# in the printed `effect_description_eng` / `inherited_effect_description_eng`
+# for ST22-08 in `data/cards.json`. Per the project source-priority rule
+# (printed text outranks DCGO C#), it is intentionally NOT implemented.
+#
+# ─── Dual-mode Plug-In Option (G-LINK-OPTION-DUAL-PLAY-MODE RESOLVED) ─────────
+#
+# A Plug-In Option has TWO mutually-exclusive play modes:
+#   (i)  Standard `[Main]` Option — pay the Option use cost (4); resolve the
+#        `[Main]` effect (Clause 3, which itself does an optional FREE link).
+#   (ii) Link play — pay the Link Requirements cost (2); plug ST22-08 sideways
+#        into a Lv.3+ Digimon. No `[Main]` / `[Security]` effect runs.
+#
+# This is faithfully modelled: ST22-08 carries BOTH a Standard `[Main]` body
+# (Clause 3, a `when: main_from_hand` triggered clause that lowers to an
+# `OptionMain` effect) AND a `kind: link_requirement` clause (Clause 4, which
+# lowers to an `OptionMain` effect carrying the link cost + Lv.3+ host filter).
+# `classify_option_modes` sees both and treats ST22-08 as dual-mode: playing it
+# from hand surfaces a mode-select prompt ("Play as a [Main] Option" vs "Plug
+# in via Link Requirements (Cost 2)"). Each branch charges only its own cost
+# (4 vs 2) and routes to its own disposal path (Standard trash vs Link attach).
+# See the `unblock-medusamon-tier3-cards` change design.md (D2).
+#
+# ─── Clause 1: color-requirement bypass conditioned on "you have a Tamer" ─────
+#
+# Printed: "While you have a Tamer, you can ignore this card's color
+# requirements." This is CONDITIONAL (gated on the controller having a Tamer).
+# Two surfaces are needed, mirroring P-206's header note that the field-side
+# `flood_gate` never fires for a card sitting in HAND:
+#
+#   (a) FROM-HAND play-time bypass — `use_requirement` carries the conditional
+#       predicate `any_field_permanent { of: you, predicate: { kind: tamer } }`.
+#       The action mask consults this in `option_use_requirement_or_color_
+#       available`, so ST22-08 becomes playable from hand exactly while a Tamer
+#       is on the controller's field (G-IGNORE-COLOR-MASK from-hand path).
+#   (b) FIELD / face-up scope — `kind: flood_gate` installs the
+#       `IgnoreColorRequirement` modifier while ST22-08 is a face-up permanent
+#       and a Tamer is present (G-IGNORE-COLOR-MASK battle-area path).
+#
+# ─── Clause 2: [Security] delete lowest-DP + add self to hand ─────────────────
+#
+# Printed: "[Security] Delete 1 of your opponent's Digimon with the lowest DP.
+# Then, add this card to the hand."
+#
+# The "lowest DP" filter uses `dp_lte: { aggregate: { selector: lowest_dp,
+# scope: opponent } }` — the same shape BT24-017 / BT22-013 use; the predicate
+# is evaluated against live DP (G-PRED-DP-LTE RESOLVED 2026-05-17), so the
+# select prompt offers only the lowest-DP opponent Digimon (all tied lowest-DP
+# Digimon on a tie — the player resolves the tie-break).
+# The delete is mandatory (DCGO `canNoSelect: false`; [Security] effects have
+# no opt-out per rules §16) — `optional` is not set on the clause.
+# "Then, add this card to the hand" → `add_this_option_to_hand: {}` consumes
+# `Game.pending_security` and routes ST22-08 to its controller's hand instead
+# of the trash (G-ADD-OPTION-SELF-TO-HAND RESOLVED).
+#
+# ─── Clause 3: [Main] optional free link + DP-comparative delete ──────────────
+#
+# Printed: "[Main] You may link this card to 1 of your Digimon without paying
+# the cost. Then, delete 1 of your opponent's Digimon with as much or less DP
+# as 1 of your Digimon."
+#
+# This is the Standard `[Main]` play mode's body. `optional: true` on the
+# clause mirrors the printed "You may link" — the whole [Main] activation is
+# declinable. Inside the process:
+#   - `link_to_own_digimon` with `optional: true` (DCGO `canNoSelect: true` on
+#     the link pick — the player may decline linking even after activating)
+#     and `free: true` (printed "without paying the cost"). G-DSL-LINK-VERB
+#     RESOLVED. The `filter: { level_gte: 3 }` encodes the Link Requirements'
+#     "[Link] Lv.3 or higher" host constraint — the Link Requirements govern
+#     the host eligibility of EVERY link of this Plug-In, including this free
+#     [Main] link (the "without paying the cost" waives only the cost, not the
+#     Lv.3+ host requirement).
+#   - `select_own_permanent` binds the chosen ally Digimon as `ally` — the
+#     "1 of your Digimon" DP comparator (DCGO `canNoSelect: false`).
+#   - `select_opponent_permanent` filtered by `dp_lte: { formula: { binding_dp:
+#     ally } }` — only opponent Digimon with DP <= the chosen ally's effective
+#     DP are eligible (G-BINDING-DP-FORMULA RESOLVED). DCGO `canNoSelect:
+#     false` once a comparator is picked.
+#   - `delete_permanent` removes the chosen opponent Digimon.
+# DCGO gates each select on "any candidate exists" — when no own Digimon
+# exists, or no opponent Digimon has DP <= the highest own DP, the selects
+# install no prompt. The DSL `select_*` steps skip cleanly when their filtered
+# candidate set is empty, matching that behaviour.
+#
+# ─── Clause 4: Link Requirements (the Link play mode) ─────────────────────────
+#
+# Printed (inherited): "Link Requirements [Link] Lv.3 or higher: Cost 2
+# (Plug this card from the hand or battle area sideways into the specified
+# Digimon in the battle area.)"
+#
+# `kind: link_requirement` with `cost: 2` and `filter: { level_gte: 3 }`. This
+# lowers to an `OptionMain`-timing effect carrying the link cost + host filter
+# (no `[Main]` body). It makes ST22-08 dual-mode: chosen at the mode-select
+# prompt, the Link play charges only Cost 2, installs a host-selection over the
+# controller's Lv.3+ Digimon, and attaches ST22-08 sideways to the chosen host
+# — no `[Main]` / `[Security]` effect runs. `scope: inherited` reflects the
+# card's printed "Inherited" Link Requirements block.
+
 card: ST22-08
 name: Offensive Plug-In V
 kind: option
@@ -5,110 +141,101 @@ color: [red]
 cost: 4
 traits: [Plug-In]
 
-# BLOCKED verdict — all clauses require mechanics not yet expressible in the DSL.
-#
-# Clause 1: Color bypass (conditional IgnoreColorRequirement)
-#   DSL: flood_gate with modifier IgnoreColorRequirement can be authored,
-#   but code/digimon-engine/src/action/mask.rs comment at line 596 explicitly
-#   marks IgnoreColorRequirement enforcement as "residual §4.2b work; absent here."
-#   The action mask does not check this modifier, so a flood_gate clause would
-#   compile but have zero runtime effect.
-#   Gap: engine (G-IGNORE-COLOR-MASK)
-#
-# Clause 2: [Security] delete 1 opponent Digimon with lowest DP
-#   Requires dp_lte: { formula: { aggregate: { selector: lowest_dp, scope: opponent } } }
-#   to filter candidates. The dp_lte predicate compiles but is NOT evaluated in
-#   eval_permanent_fields — gap G-PRED-DP-LTE already documented in engine-gaps.md.
-#   Gap: engine (G-PRED-DP-LTE)
-#
-# Clause 3: [Security] add this card to the hand
-#   "Add this card to the hand" after security resolution requires raw_rust
-#   (pattern: ex6_072_add_self_to_hand). No DSL step exists for returning the
-#   played Option to the controller's hand post-security. However, this clause
-#   is secondary to Clause 2 — both must be solved together.
-#   Gap: dsl (G-ADD-OPTION-SELF-TO-HAND — sibling of G-ADD-TOP-SECURITY-TO-HAND)
-#
-# Clause 4: [Main] optionally link this card to 1 of your Digimon free of cost
-#   The engine has link infrastructure (Effect::link_cost, OptionSubtype::Link,
-#   attach_linked_card), but there is no DSL clause kind or step verb for
-#   registering a link cost + filter. EX11-027 Maquinamon (the only existing
-#   DSL link card) uses raw_rust for both link-requirements and the optional
-#   link action step. No declarative link path exists in the DSL vocabulary.
-#   Gap: dsl (G-DSL-LINK-VERB)
-#
-# Clause 5: [Main] delete 1 opponent Digimon with DP ≤ chosen own Digimon's DP
-#   Requires: (a) select_own_permanent to bind a comparator Digimon, then
-#   (b) select_opponent_permanent with filter dp_lte referencing the BOUND
-#   Digimon's DP. The formula system has no "binding_dp: pick" primitive — it
-#   can reference source_permanent's DP via { of: source_permanent, value: dp }
-#   but cannot reference an arbitrary named binding. Furthermore, dp_lte is
-#   not evaluated (G-PRED-DP-LTE). Both gaps apply.
-#   Gap: hybrid (G-BINDING-DP-FORMULA + G-PRED-DP-LTE)
-#
-# Clause 6: Inherited — Link Requirements [Link] Lv.3 or higher: Cost 2
-#   The inherited link-condition (level_gte: 3, cost: 2) is expressed in DCGO
-#   via CardEffectFactory.AddSelfLinkConditionStaticEffect. There is no DSL
-#   clause kind for declaring link requirements (no "kind: link_requirement"
-#   or equivalent in clause.rs TypedDeclarativeBody variants).
-#   Gap: dsl (G-DSL-LINK-VERB)
-#
-# Clause 7: Linked effect — [End of Your Turn] this Digimon may attack
-#   DCGO shows an OnEndTurn effect that fires only when this card is linked
-#   to a Digimon (activateClass.SetIsLinkedEffect(true)). The DSL has no
-#   "scope: linked" clause kind — linked effects are a deployment scope not
-#   represented in CompiledScope (FaceUp / Inherited / Linked is absent).
-#   Gap: dsl (G-DSL-LINKED-SCOPE)
-#
-# Summary: BLOCKED (hybrid)
-# Primary blocking gaps:
-#   - G-DSL-LINK-VERB: no DSL verb/clause-kind for link registration or link action
-#   - G-DSL-LINKED-SCOPE: no DSL scope for linked-card effects
-#   - G-PRED-DP-LTE: dp_lte predicate not evaluated in eval_permanent_fields
-#   - G-IGNORE-COLOR-MASK: IgnoreColorRequirement modifier not enforced in Rust action mask
-#   - G-BINDING-DP-FORMULA: no formula primitive to read a named binding's DP
-#
-# When these gaps are closed, the expected YAML structure would be:
-#
-# effects:
-#   - kind: flood_gate            # Clause 1 (needs G-IGNORE-COLOR-MASK fix)
-#     active_when:
-#       any_permanent: { of: you, kind: tamer }
-#     modifier: IgnoreColorRequirement
-#     target: { card_number_is: "ST22-08" }
-#
-#   - when: on_security           # Clauses 2+3 (needs G-PRED-DP-LTE + G-ADD-OPTION-SELF-TO-HAND)
-#     process:
-#       - select_opponent_permanent:
-#           bind_as: tgt
-#           filter:
-#             all_of:
-#               - kind: digimon
-#               - dp_lte:
-#                   formula:
-#                     aggregate:
-#                       selector: lowest_dp
-#                       scope: opponent
-#           prompt: "Delete opponent's lowest DP Digimon"
-#       - delete_permanent: { target: tgt }
-#       - raw_rust: { fn: st22_08_add_self_to_hand }   # Clause 3
-#
-#   - when: main_from_hand        # Clause 4+5 (needs G-DSL-LINK-VERB + G-BINDING-DP-FORMULA)
-#     optional: true
-#     process:
-#       # Clause 4: optional free link
-#       - raw_rust: { fn: st22_08_main_optional_free_link }
-#       # Clause 5: delete opponent Digimon with DP <= chosen own Digimon's DP
-#       - raw_rust: { fn: st22_08_main_delete_opp_by_ally_dp }
-#
-#   - kind: raw_rust              # Clause 6: Link Requirements (needs G-DSL-LINK-VERB)
-#     fn: st22_08_link_requirements
-#     triggers: [main_from_hand, main_on_field]
-#
-#   - scope: linked               # Clause 7: Linked EOT may attack (needs G-DSL-LINKED-SCOPE)
-#     when: end_of_your_turn
-#     optional: true
-#     once_per_turn: true
-#     process:
-#       - raw_rust: { fn: st22_08_linked_eot_may_attack }
+# Clause 1a — conditional FROM-HAND color bypass: "While you have a Tamer".
+# `any_field_permanent { of: you, kind: tamer }` is true exactly while the
+# controller has a Tamer on the field (the existential's inner predicate is
+# flattened — `kind: tamer` sits directly beside `of:`). The action mask
+# consults this as the Option-use requirement, bypassing the red color
+# requirement.
+use_requirement:
+  any_field_permanent:
+    of: you
+    kind: tamer
 
-effects: []
+effects:
+  # ─── Clause 1b — field-side color bypass (flood_gate) ──────────────────────
+  # Installs the IgnoreColorRequirement modifier on ST22-08 while it is a
+  # face-up permanent and a Tamer is on the controller's field. Card-scoped
+  # via `target: { card_number_is: "ST22-08" }` — mirrors DCGO
+  # IgnoreColorConditionClass(cardCondition: cardSource == card).
+  - kind: flood_gate
+    scope: face_up
+    active_when:
+      any_field_permanent:
+        of: you
+        kind: tamer
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "ST22-08" }
+    summary: "While you have a Tamer, ignore this card's color requirements"
+
+  # ─── Clause 2 — [Security] delete opponent's lowest-DP Digimon; add self ───
+  # Mandatory delete (no `optional:` — [Security] has no opt-out, DCGO
+  # canNoSelect: false). The lowest-DP filter offers only the lowest-DP
+  # opponent Digimon (all tied lowest-DP Digimon on a tie). "Then, add this
+  # card to the hand" routes ST22-08 from pending-security to the hand.
+  - when: on_security
+    summary: "[Security] Delete opponent's lowest-DP Digimon, then add this card to hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  aggregate:
+                    selector: lowest_dp
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's Digimon with the lowest DP"
+      - delete_permanent: { target: victim }
+      - add_this_option_to_hand: {}
+
+  # ─── Clause 3 — [Main] optional free link, then DP-comparative delete ──────
+  # The Standard [Main] play mode's body. `optional: true` — printed "You may
+  # link this card". The link step is itself optional (`optional: true`) and
+  # free (`free: true` — printed "without paying the cost"). The `level_gte: 3`
+  # host filter is the Link Requirements' "[Link] Lv.3 or higher" constraint.
+  # Then pick an own Digimon as the DP comparator and delete one opponent
+  # Digimon with DP <= the ally's DP (binding_dp formula).
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] You may link this card free to a Lv.3+ Digimon; then delete 1 opponent Digimon with DP <= a chosen ally's DP"
+    process:
+      # "You may link this card to 1 of your Digimon without paying the cost."
+      # `filter: { level_gte: 3 }` — the Link Requirements' Lv.3+ host gate.
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter: { level_gte: 3 }
+      # "1 of your Digimon" — the DP comparator (mandatory pick, DCGO
+      # canNoSelect: false). Bound as `ally` for the dp_lte formula below.
+      - select_own_permanent:
+          bind_as: ally
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon (the DP comparator)"
+      # "delete 1 of your opponent's Digimon with as much or less DP as 1 of
+      # your Digimon" — only opponent Digimon with DP <= the chosen ally's
+      # effective DP are eligible (binding_dp formula).
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  formula:
+                    binding_dp: ally
+          prompt: "Delete 1 opponent Digimon with DP <= your chosen Digimon's DP"
+      - delete_permanent: { target: target }
+
+  # ─── Clause 4 — Link Requirements [Link] Lv.3 or higher: Cost 2 ────────────
+  # The Link play mode. `kind: link_requirement` lowers to an OptionMain-timing
+  # effect carrying the link cost (2) and the Lv.3+ host filter. Together with
+  # Clause 3's [Main] body it makes ST22-08 dual-mode: the mode-select prompt
+  # offers "Play as a [Main] Option" (Cost 4) vs "Plug in via Link
+  # Requirements (Cost 2)". Choosing Link charges only 2, installs a
+  # host-selection over the controller's Lv.3+ Digimon, and attaches ST22-08
+  # sideways — no [Main]/[Security] effect runs.
+  - kind: link_requirement
+    scope: inherited
+    cost: 2
+    filter: { level_gte: 3 }
+    summary: "[Link] Lv.3 or higher: Cost 2 — plug in sideways to a Lv.3+ Digimon"

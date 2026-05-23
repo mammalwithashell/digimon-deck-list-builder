@@ -1,5 +1,47 @@
 # BG Imperial Cross-Archetype DSL / Engine Gap Source
 
+> **Phase 0 re-audit — 2026-05-20 (`bg-imperial-substrate-closeout` change):**
+> Every `#[ignore]`'d test and cited gap ID across the 24 BG Imperial cards
+> was re-verified against current `code/digimon-dsl/src/` and
+> `code/digimon-engine/src/`. **Most gaps this document and the BG entries of
+> `qa/dsl-vocab-gaps.md` describe as open are stale** — closed by Phase 2
+> Tracks A–J, DNA Omnimon completion, and the Puppets sweep. Of ~15 cited gap
+> IDs only 6 are genuine substrate gaps (`stack_size_lte_source`,
+> `effect_suspended_any_opponent_digimon`, `event_card_color_has`,
+> `carrier_has_keyword`, `is_carrier_of_source`,
+> `self_digivolution_contains_trait`) plus 3 Tier-2 verbs
+> (`select_opponent_sources`, selected-trash→deck-top, `any_returned_card`).
+> Tier 3 (DNA-origin material/result payloads) is NOT needed by any BG card.
+> The verified per-card classification is the input contract at
+> `openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md` — consult
+> it, not the stale "Remaining Reusable Gap Candidates" below, until this
+> document is rewritten at change closeout.
+>
+> **Substrate landed — 2026-05-20:** 5 genuine substrate gaps closed
+> (`effect_suspended_any_opponent_digimon`, `event_card_color_has`,
+> `select_opponent_sources`, `move_trash_card_to_deck_top`,
+> `returned_card_matching`) — see `qa/resolved-gaps.md` § "BG Imperial substrate
+> closeout". An audit correction found 4 originally-flagged gaps already covered
+> by pre-existing capability (`materials_count_lte`+`source_material_count`
+> formula; `has_keyword` carrier resolution; `scope: inherited`+`target: {}`
+> self-aura; `source_permanent_trait_has`) — no predicate added for those.
+>
+> **Archetype complete — 2026-05-21:** all 24 ledger-owned BG Imperial cards
+> re-authored and IMPLEMENTED.
+> The two follow-up engine gaps (`G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME` →
+> BT12-031, `G-COST-REDUCE-ALLY-DIGIVOLVE` → BT3-103) were also closed — see
+> `qa/resolved-gaps.md` § "Follow-up engine gaps closed (2026-05-21)".
+> **Final ledger-owned tally: 24 / 24 IMPLEMENTED** (from the 9 / 13 / 2 baseline).
+>
+> **Readiness reconciliation — 2026-05-22
+> (`reconcile-bg-imperial-dsl-readiness`):** the live deck-library pool is 25
+> cards because `BT17-077` appears in BG Imperial lists while remaining
+> canonically ledger-owned by `Royal Knights`. All 25 pool cards have YAML and
+> focused behavioral coverage. `BT21-037` moved from stale `PARTIAL` to
+> `IMPLEMENTED` after adding its printed `[Digivolve] [Veemon]: Cost 2`
+> alternate path. Zero live non-comment `raw_rust` YAML references were found
+> in the BG Imperial pool.
+
 > **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
 > #449–#458. Track E DSL verbs landed (PR #454) so `raw_rust` carve-outs
 > for the ten zone-movement verbs in `qa/dsl-vocab-gaps.md` are now
@@ -26,9 +68,13 @@ This is not a card implementation plan. BG Imperial still needs production YAML 
 
 ## Current Verdict
 
-`blocked`
+`historical`
 
-The archetype is blocked primarily by missing card YAML and card-specific tests, not by the original April 2026 reusable primitives. Several previously blocking primitives now have reusable coverage:
+This file is retained as gap provenance. It is no longer the live readiness
+tracker for BG Imperial; use `qa/archetype-qa/dsl/bg_imperial.md` for current
+card status. The archetype is implemented for the 25-card deck-library pool.
+The reusable primitive table below remains useful as history, but the old
+card-authoring backlog has been closed.
 
 | Capability | Current state | Evidence |
 |---|---|---|
@@ -40,7 +86,10 @@ The archetype is blocked primarily by missing card YAML and card-specific tests,
 
 ## Card Authoring Backlog, Not Cross-Archetype Gaps
 
-These are needed to make BG Imperial playable but should not become new shared gap specs unless card implementation proves a missing primitive:
+Closed by the 2026-05-21 BG Imperial re-authoring sweep and the 2026-05-22
+readiness reconciliation. The original backlog rows are retained only to show
+which local card-authoring areas were separated from reusable cross-archetype
+gaps:
 
 | Area | BG Imperial cards | Required local work |
 |---|---|---|

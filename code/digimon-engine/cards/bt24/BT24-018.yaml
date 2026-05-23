@@ -8,7 +8,7 @@ dp: 14000
 traits: [Dragonkin, LIBERATOR]
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 6 }
+    from: { level_eq: 6, color_is: red }
     cost: 4
 
 effects:
@@ -28,28 +28,62 @@ effects:
   - kind: grant_keyword
     keyword: ArmorPurge
 
-  # Clause (e) — [When Digivolving] may trash any 1 opp security; then may unsuspend
+  # Clause (e) — [When Digivolving]
   # "You may trash any 1 of your opponent's security cards.
   #  Then, this Digimon may unsuspend."
-  # Gap: DSL only has trash_top_security; arbitrary-index security trash requires
-  # raw_rust step (G-TRASH-SELECTED-SECURITY).
+  #
+  # The printed clause has two independent "may" sub-actions, modelled as two
+  # separate `when_digivolving` clauses so each keeps its own optionality
+  # (they fire in clause order — trash first, then unsuspend):
+  #
+  #   e1: "You may trash any 1 of your opponent's security cards" —
+  #       select_security (of: opponent, optional) → trash_selected_security.
+  #       G-TRASH-SELECTED-SECURITY resolved 2026-05-21: the
+  #       `trash_selected_security` verb consumes a `select_security` binding
+  #       and `EffectContext::trash_security_card` trashes that exact card
+  #       (addressed by a stable handle, so any security position works — not
+  #       just the top). When the opponent has no security cards
+  #       `select_security` installs no prompt and the clause silently no-ops.
+  #       The filter `any_of: [digimon, tamer, option]` matches every card
+  #       that can be in a security stack ("any 1").
+  #
+  #   e2: "Then, this Digimon may unsuspend" — `optional: true` clause whose
+  #       accept/decline gate is the printed "may". `target: source` resolves
+  #       to the Styracomon permanent (`self`/SelfRef would resolve to the
+  #       Card, not the Permanent — see dsl_cards/binding_ref.rs).
   - when: when_digivolving
     optional: true
+    summary: "[When Digivolving] You may trash any 1 of your opponent's security cards"
     process:
       - select_security:
           of: opponent
-          bind_as: sec_target
-          filter: {}
-          prompt: "Trash 1 of your opponent's security cards"
-      - raw_rust: { fn: bt24_018_trash_selected_security }
-      - optional:
-          - unsuspend: { target: self }
+          bind_as: sec_to_trash
+          optional: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+              - kind: option
+          prompt: "You may trash any 1 of your opponent's security cards"
+      - trash_selected_security:
+          of: opponent
+          card: sec_to_trash
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] This Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }
 
-  # Clause (f) — [All Turns][OPT] When opp security removed, may delete 1 opp Digimon
+  # Clause (f) — [All Turns][Once Per Turn]
+  # "When your opponent's security stack is removed from, you may delete 1 of
+  #  their Digimon."
+  # on_opponent_security_removed fires in the attacker's battle area, so it is
+  # reachable on both turns; `all_turns: true` is the explicit [All Turns] tag.
   - when: on_opponent_security_removed
     active_when: { all_turns: true }
     once_per_turn: true
     optional: true
+    summary: "[All Turns][OPT] Opponent security removed → may delete 1 opp Digimon"
     process:
       - select_opponent_permanent:
           bind_as: tgt
@@ -57,7 +91,19 @@ effects:
           prompt: "Delete 1 of your opponent's Digimon"
       - delete_permanent: { target: tgt }
 
-  # Clause (g) — [All Turns][OPT] When own Reptile/Dragonkin would leave, pay cost
+  # Clause (g) — [All Turns][Once Per Turn]
+  # "When any of your [Reptile] or [Dragonkin] trait Digimon would leave the
+  #  battle area, by deleting 1 of your opponent's lowest DP Digimon, they
+  #  don't leave."
+  #
+  # Replacement clause (kind: replacement, trigger: when_would_leave_battle_area).
+  # `replacement_subject_is_mine: true` scopes the leaving subject to the
+  # controller's own permanents (G-EVENT-TARGET-OWNER — RESOLVED). Card text
+  # has NO "by your opponent's effects" gate, so this fires on ANY removal
+  # cause (no `replacement_cause` predicate). The cost — "by deleting 1 of
+  # your opponent's lowest DP Digimon" — uses the lowest_dp aggregate filter
+  # (G-PRED-DP-LTE — RESOLVED). When the opponent has no Digimon the cost is
+  # unpayable and the replacement prompt does not install.
   - kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
@@ -69,16 +115,12 @@ effects:
         - any_of:
             - trait_has: Reptile
             - trait_has: Dragonkin
+    summary: "[All Turns][OPT] By deleting opp lowest-DP Digimon, your Reptile/Dragonkin doesn't leave"
     process:
       - select_opponent_permanent:
           bind_as: lowest_dp_cost
-          filter:
-            all_of:
-              - kind: digimon
-              - dp_lte:
-                  aggregate:
-                    selector: lowest_dp
-                    scope: opponent
+          filter: { kind: digimon }
+          selector: lowest_dp
           prompt: "Delete 1 of your opponent's lowest DP Digimon"
       - delete_permanent: { target: lowest_dp_cost }
       - cancel_replacement: {}

@@ -57,14 +57,49 @@ effects:
                 prompt: "You may play 1 Digimon with the same color as the chosen Tamer from your trash"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
 
-  # Supported Security slice:
-  # "Then, add this card to your hand."
+  # "[Security] You may play 1 Tamer card from your hand without paying the
+  #  cost. Then, add this card to your hand."
   #
-  # Omitted from this clause:
-  # "You may play 1 Tamer card from your hand without paying the cost."
-  # PUPPETS-G017: current optional select_hand decline handling can skip
-  # mandatory tail steps, so the optional play sub-effect is not represented.
+  # The "you may" governs ONLY the Tamer play. The "add this card to your hand"
+  # tail is unconditional, so the clause itself is mandatory (optional: false) —
+  # the player must never be able to decline the whole Security effect and skip
+  # the mandatory add-to-hand. The Tamer-play optionality lives entirely in the
+  # inner select_effect_choice Play/Decline branch.
+  #
+  # PUPPETS-G017 (partially resolved 2026-05-08): the engine-side outer-tail
+  # rewrap keeps a mandatory sibling tail parked behind any nested pending
+  # selection. The card-shaped adoption uses the proven BT22-042 pattern:
+  #   - count_gte guard so no prompt installs when no Tamer is in hand;
+  #   - explicit visible Play/Decline branch (select_effect_choice) because the
+  #     optional sub-effect has a follow-up hand selection;
+  #   - the mandatory add_this_option_to_hand tail is a sibling step that always
+  #     resolves whether the optional play is performed, declined, or skipped.
   - when: on_security
-    summary: "[Security] Add this card to your hand"
+    optional: false
+    summary: "[Security] You may play 1 Tamer from hand free; then add this card to hand"
     process:
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: you
+                zone: [hand]
+                kind: tamer
+              n: 1
+          then:
+            - select_effect_choice:
+                labels: ["Play Tamer", "Decline"]
+                bind_as: tamer_play_choice
+                prompt: "Play 1 Tamer card from your hand without paying the cost?"
+            - if:
+                condition: { equals: [tamer_play_choice, 0] }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: picked_tamer
+                      filter:
+                        kind: tamer
+                      prompt: "Choose 1 Tamer card to play from your hand"
+                  - play_from_hand_free: { of: you, hand_index: picked_tamer }
+      # "Then, add this card to your hand." — mandatory tail.
       - add_this_option_to_hand: {}

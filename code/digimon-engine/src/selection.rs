@@ -66,15 +66,14 @@ impl std::ops::BitOrAssign for UnionZoneSet {
 /// selection callback so a downstream consumer (e.g. `play_union_bound_free`)
 /// can play the card back from its true origin zone.
 ///
-/// Only `Hand` / `Trash` are modeled — the only two zones the union-zone
-/// selection currently spans (`UnionZoneSet::HAND | UnionZoneSet::TRASH`).
-/// Extend in lockstep with `UnionZoneSet` if future tasks widen the bitfield.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnionZoneOrigin {
     /// The card was picked from the player's hand.
     Hand,
     /// The card was picked from the player's trash.
     Trash,
+    /// The card was picked from beneath the effect source permanent.
+    Material,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -164,7 +163,10 @@ pub enum SelectionKind {
     /// Pick opponent permanents whose total printed play cost is capped by a
     /// remaining budget. Play-cost analog of `DpBudget`.
     /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
-    PlayCostBudget { remaining_play_cost: i32, picked: u8 },
+    PlayCostBudget {
+        remaining_play_cost: i32,
+        picked: u8,
+    },
     /// Pick the selecting player's breeding-area permanent.
     BreedingPermanent,
 }
@@ -447,6 +449,13 @@ pub enum TriggerSource {
         permanent: PermanentHandle,
         card: CardHandle,
     },
+    /// Observer timing scoped to one player's battle area while carrying the
+    /// attacking permanent as event context.
+    PlayerBattleAreaAttack {
+        player: PlayerId,
+        attacker: PermanentHandle,
+        card: CardHandle,
+    },
     /// Observer timing fired after an attack's effective target changes.
     /// Scans battle areas while carrying the attacker plus old/new target
     /// payload for `OnAttackTargetChange` predicates and effect bodies.
@@ -541,6 +550,18 @@ pub struct PendingEffectSecurityRemoval {
     pub discard_security_fired: bool,
 }
 
+/// The resolved play mode of an in-flight Option card. Drives how
+/// `dispose_option` finishes the play and is fixed at the moment the
+/// Option leaves its source zone (so a dual-mode Plug-In does not get
+/// re-classified mid-resolution).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptionSubtype {
+    Standard,
+    Delay(crate::enums::DelayTrigger),
+    Link,
+    Training,
+}
+
 /// Transient state for an Option card mid-resolution. Mirrors
 /// PendingSecurity / PendingAttack. Carries the card between pay-cost
 /// and dispose so effect scripts can reference it via ctx.source_card.
@@ -550,6 +571,11 @@ pub struct PendingOption {
     pub card: CardSource,
     pub source_kind: OptionUseSource,
     pub resolution_phase: OptionResolutionPhase,
+    /// The resolved play mode chosen at play time. `dispose_option`
+    /// branches on this rather than re-classifying the card's effects —
+    /// a dual-mode Plug-In Option (Standard `[Main]` + Link) would
+    /// otherwise be ambiguous.
+    pub subtype: OptionSubtype,
 }
 
 /// Source zone for an in-flight Option use.
@@ -659,6 +685,15 @@ pub struct SecurityResolutionState {
     /// `OnSecurityCheck` observers via `SecurityRevealSnapshot`.
     pub was_face_up: bool,
     pub phase: SecurityPhase,
+    /// Whether the *current* `phase`'s effect-collection step has already
+    /// run. The `*Drain` phases (`SecuritySkillDrain`, `OnSecurityCheckDrain`,
+    /// `OnLoseSecurityDrain`) enqueue their triggered effects exactly once;
+    /// if a drained effect parks on a `pending_selection` the phase stays put
+    /// and is re-entered on resume. Without this guard the re-entry would
+    /// re-enqueue (and re-fire) the same effects — an infinite loop when the
+    /// player declines an optional clause. `set_security_phase` clears it on
+    /// every phase transition so each phase gets a fresh enqueue budget.
+    pub phase_enqueue_done: bool,
     /// Remaining security-check iterations for the owning `Player` attack.
     /// Absorbed from the outer loop counter so a pause inside phase 1
     /// doesn't drop the remaining checks.

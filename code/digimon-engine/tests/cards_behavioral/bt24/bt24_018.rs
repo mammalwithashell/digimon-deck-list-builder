@@ -12,14 +12,25 @@
 //! `lowest DP Digimon, they don't leave.`
 //!
 //! # DCGO C# reference
-//! DCGO/Assets/Scripts/CardEffect/BT24/Red/BT24_018.cs (submodule not initialized)
+//! DCGO/Assets/Scripts/CardEffect/BT24/Red/BT24_018.cs
 //!
 //! # Patterns this test file covers
-//! - H3/H5/H-Progress: Progress + Piercing + Blocker keyword grants (declarative)
-//! - H-ArmorPurge: ArmorPurge keyword grant (declarative; behavior in keyword_phase_d/)
-//! - E2: [When Digivolving] optional select-security trash + optional unsuspend (clause e)
+//! - H-Progress/H-Piercing/H5-Blocker: keyword grants (declarative)
+//! - H-ArmorPurge: ArmorPurge keyword grant (declarative)
+//! - E2: [When Digivolving] optional trash-opponent-security + optional
+//!   `unsuspend` sub-clauses (clause e — two independent `when_digivolving` clauses)
 //! - F-OPT: [All Turns][OPT] OnOpponentSecurityRemoved → optional delete opp Digimon (clause f)
-//! - F3: [All Turns][OPT] WouldLeave replacement (gaps: G-OPT-TRIGGERED, G-EVENT-TARGET-OWNER)
+//! - F3: [All Turns][OPT] WhenWouldLeaveBattleArea replacement (clause g)
+//!
+//! # Clause / gap status
+//!
+//! | Clause | Status | Gap |
+//! |--------|--------|-----|
+//! | (a)-(d) Progress / Piercing / Blocker / ArmorPurge | IMPLEMENTED | — |
+//! | (e) sub-clause (a) trash any 1 opp security card | IMPLEMENTED | G-TRASH-SELECTED-SECURITY resolved 2026-05-21 |
+//! | (e) sub-clause (b) "this Digimon may unsuspend"   | IMPLEMENTED | — |
+//! | (f) [All Turns][OPT] opp security removed → delete | IMPLEMENTED | G-OPT-TRIGGERED closed (Phase 2 Track C) |
+//! | (g) [All Turns][OPT] would-leave replacement       | IMPLEMENTED | G-EVENT-TARGET-OWNER + G-PRED-DP-LTE resolved |
 
 #![allow(dead_code, unused_imports)]
 
@@ -27,9 +38,12 @@ use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::PASS;
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::EffectTiming;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 use crate::dsl_card_data::{card_data_from_compiled, compiled};
 
@@ -61,6 +75,20 @@ fn pass_pending(runner: &mut DebugRunner) {
         .game
         .resolve_selection(player, PASS)
         .expect("decline resolves");
+}
+
+fn make_digimon(id: &str, dp: i32, traits: &[&str]) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.dp = Some(dp);
+    card.traits = traits.iter().map(|s| s.to_string()).collect();
+    card
+}
+
+fn permanent_exists(runner: &DebugRunner, player: usize, card_id: &str) -> bool {
+    runner.game.players[player]
+        .battle_area
+        .iter()
+        .any(|permanent| permanent.top_card().card_id(&runner.game.card_data) == card_id)
 }
 
 // ─── SECTION 1 — Structural assertions ───────────────────────────────────────
@@ -136,7 +164,7 @@ fn bt24_018_has_when_digivolving_clause_that_is_optional() {
     let clause = clause.expect("WhenDigivolving triggered clause (e) must exist");
     assert!(
         clause.optional,
-        "clause (e) must be optional (card text says 'You may')"
+        "clause (e) must be optional (card text says 'may')"
     );
     assert_eq!(
         clause.scope,
@@ -168,120 +196,317 @@ fn bt24_018_has_on_opponent_security_removed_clause_opt_and_optional() {
     );
 }
 
-/// Clause (g) is a Replacement declarative clause on when_would_leave_battle_area.
+/// Clause (g) is a Replacement declarative clause on when_would_leave_battle_area
+/// and is once-per-turn.
 #[test]
 fn bt24_018_has_would_leave_battle_area_replacement_clause() {
     let card = compiled("BT24-018");
 
-    let has_replacement = card.effects.iter().any(|c| {
-        matches!(
-            c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
-                trigger, ..
-            }) if trigger == "when_would_leave_battle_area"
-        )
+    let replacement = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+            trigger,
+            once_per_turn,
+            optional,
+            ..
+        }) if trigger == "when_would_leave_battle_area" => {
+            Some((*once_per_turn, *optional))
+        }
+        _ => None,
     });
 
-    assert!(
-        has_replacement,
+    let (once_per_turn, optional) = replacement.expect(
         "BT24-018 must have a Replacement clause with trigger when_would_leave_battle_area \
-         for clause (g)"
+         for clause (g)",
+    );
+    assert!(once_per_turn, "clause (g) is [Once Per Turn]");
+    assert!(optional, "clause (g) is optional ('you may'-style replacement)");
+}
+
+// ─── SECTION 2 — Clause (e): [When Digivolving] unsuspend + blocked trash ────
+
+/// Clause (e) sub-clause (b): when BT24-018 digivolves while suspended, the
+/// optional [When Digivolving] prompt installs and is declinable.
+#[test]
+fn bt24_018_when_digivolving_installs_optional_prompt() {
+    let mut runner = bt24_018_clause_e_runner();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
+    // BT24-018 enters suspended so the unsuspend body has an observable effect.
+    runner.game.players[0].battle_area[styracomon.index as usize].is_suspended = true;
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+
+    let view = runner
+        .pending_selection_view()
+        .expect("clause (e) optional prompt must install");
+    assert!(
+        view.is_optional,
+        "[When Digivolving] 'may unsuspend' must be declinable"
     );
 }
 
-// ─── SECTION 2 — Clause (e): [When Digivolving] security trash + unsuspend ───
+/// Clause (e) sub-clause (b): accepting the optional prompt unsuspends BT24-018.
+#[test]
+fn bt24_018_when_digivolving_accept_unsuspends_self() {
+    let mut runner = bt24_018_clause_e_runner();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
+    runner.game.players[0].battle_area[styracomon.index as usize].is_suspended = true;
 
-/// Happy path: digivolving into BT24-018 with opponent having security →
-/// optional prompt to trash opp security fires; accept + pick → opp loses 1 sec.
-/// Then optional unsuspend prompt follows.
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+
+    // Accept the optional prompt → unsuspend body runs.
+    resolve_first_pending(&mut runner);
+    runner.auto_resolve().ok();
+
+    assert!(
+        !runner.game.players[0].battle_area[styracomon.index as usize].is_suspended,
+        "accepting [When Digivolving] must unsuspend BT24-018"
+    );
+}
+
+/// Clause (e) sub-clause (b): declining the optional prompt leaves BT24-018
+/// suspended.
+#[test]
+fn bt24_018_when_digivolving_decline_leaves_suspended() {
+    let mut runner = bt24_018_clause_e_runner();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
+    runner.game.players[0].battle_area[styracomon.index as usize].is_suspended = true;
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+
+    // Decline the optional prompt → unsuspend body is skipped.
+    pass_pending(&mut runner);
+    runner.auto_resolve().ok();
+
+    assert!(
+        runner.game.players[0].battle_area[styracomon.index as usize].is_suspended,
+        "declining [When Digivolving] must leave BT24-018 suspended"
+    );
+}
+
+/// Clause (e) sub-clause (a) "You may trash any 1 of your opponent's security
+/// cards" — G-TRASH-SELECTED-SECURITY resolved 2026-05-21. The
+/// `trash_selected_security` DSL verb consumes a `select_security` binding and
+/// `EffectContext::trash_security_card` trashes that exact card by stable
+/// handle, so any security position — not just the top — can be chosen.
 ///
-/// Pending: raw_rust fn bt24_018_trash_selected_security not yet registered.
+/// Clause (e) is modelled as two `when_digivolving` clauses (trash, then
+/// unsuspend) so each printed "may" keeps its own optionality; firing both
+/// installs a harmless `TriggerOrder` prompt (the two actions are independent,
+/// so the order never changes the outcome). The test drives every prompt.
 #[test]
-#[ignore = "pending: raw_rust fn bt24_018_trash_selected_security (G-TRASH-SELECTED-SECURITY)"]
-fn bt24_018_when_digivolving_trash_security_accept() {
-    // Scaffolding (pending G-TRASH-SELECTED-SECURITY):
-    //
-    // 1. Place a Lv6 base on P0's field.
-    // 2. Give P1 3 security cards.
-    // 3. Digivolve BT24-018 on top of the Lv6 base (digivolve_from_hand).
-    // 4. Clause (e): optional prompt installs → accept.
-    // 5. select_security prompt installs → pick the first legal card.
-    // 6. raw_rust step bt24_018_trash_selected_security executes →
-    //    P1 loses exactly 1 security card.
-    // 7. Optional unsuspend sub-prompt installs.
-    todo!("pending G-TRASH-SELECTED-SECURITY: bt24_018_trash_selected_security raw_rust fn")
-}
+fn bt24_018_when_digivolving_trash_chosen_opponent_security() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT24-018")
+        .expect("BT24-018 YAML loads")
+        .add_card(make_digimon("SEC", 1000, &[]))
+        .deck(0, &["SEC"; 5])
+        .deck(1, &["SEC"; 5])
+        .security(1, &["SEC", "SEC", "SEC"])
+        .start();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
 
-/// Declining the optional clause (e) prompt → no security trashed, no
-/// unsuspend prompt (optional-decline short-circuits the entire process).
-#[test]
-#[ignore = "pending: raw_rust fn bt24_018_trash_selected_security (G-TRASH-SELECTED-SECURITY)"]
-fn bt24_018_when_digivolving_decline_trash_skips_chain() {
-    // Scaffolding (pending G-TRASH-SELECTED-SECURITY):
-    //
-    // 1. Setup as above but with P1 having 2 security.
-    // 2. Digivolve BT24-018.
-    // 3. PASS the optional clause prompt → no further selection installs.
-    // 4. P1 security count unchanged.
-    todo!("pending G-TRASH-SELECTED-SECURITY: bt24_018_trash_selected_security raw_rust fn")
-}
+    assert_eq!(
+        runner.security_count(1),
+        3,
+        "precondition: opponent has 3 security cards"
+    );
 
-/// Accepting trash but then accepting the optional unsuspend sub-prompt
-/// unsuspends BT24-018 on the field.
-#[test]
-#[ignore = "pending: raw_rust fn bt24_018_trash_selected_security (G-TRASH-SELECTED-SECURITY)"]
-fn bt24_018_when_digivolving_accept_trash_then_accept_unsuspend() {
-    // Scaffolding (pending G-TRASH-SELECTED-SECURITY):
-    //
-    // 1. Setup: P1 has 2 security. BT24-018 digivolves and is suspended.
-    // 2. Accept trash prompt → pick security → trash fires.
-    // 3. Optional unsuspend prompt installs → accept → BT24-018 unsuspends.
-    todo!("pending G-TRASH-SELECTED-SECURITY: bt24_018_trash_selected_security raw_rust fn")
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+
+    // Drive every prompt, picking valid_action_ids[0] throughout — for the
+    // trash `select_security` that is the BOTTOM (index-0, non-top) security
+    // card, proving an arbitrary security position can be trashed.
+    let mut saw_security_prompt = false;
+    let mut steps = 0;
+    while runner.game.pending_selection.is_some() && steps < 20 {
+        let (player, action, is_security) = {
+            let p = runner.game.pending_selection.as_ref().unwrap();
+            (
+                p.selecting_player,
+                p.valid_action_ids[0],
+                matches!(p.kind, SelectionKind::Security),
+            )
+        };
+        if is_security {
+            saw_security_prompt = true;
+        }
+        runner.game.resolve_selection(player, action).ok();
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    assert!(
+        saw_security_prompt,
+        "the trash clause must install a security-stack selection over the \
+         opponent's 3 cards"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        2,
+        "exactly 1 opponent security card was trashed via trash_selected_security"
+    );
 }
 
 // ─── SECTION 3 — Clause (f): OnOpponentSecurityRemoved → delete Digimon ──────
 
-/// When opponent's security is removed, clause (f) fires with an optional
-/// prompt to delete 1 of their Digimon. Accept + pick → target deleted.
+/// Clause (f): when opponent's security stack is removed, the optional
+/// accept/decline gate installs ('you may'). Accepting opens the
+/// `select_opponent_permanent` (OppField) prompt; picking deletes the target.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — triggered OPT on OnOpponentSecurityRemoved dispatch"]
 fn bt24_018_on_opp_security_removed_delete_digimon_accept() {
-    // Scaffolding (pending G-OPT-TRIGGERED):
-    //
-    // 1. Place BT24-018 on P0's field and an opp Digimon on P1's field.
-    // 2. Give P1 2 security cards.
-    // 3. Call ctx.trash_top_security(1) to fire OnOpponentSecurityRemoved.
-    // 4. Clause (f) optional prompt installs → resolve_first_pending().
-    // 5. select_opponent_permanent prompt for which Digimon to delete → pick.
-    // 6. Opponent's Digimon count decreases by 1.
-    todo!("pending G-OPT-TRIGGERED: clause f test")
+    let mut runner = bt24_018_clause_f_runner();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
+    runner.place_on_field(1, "OPP-DIGI", Some(0));
+
+    let opp_before = runner.battle_area_size(1);
+
+    // Fire OnOpponentSecurityRemoved from BT24-018's battle area (the attacker's
+    // battle area is where this observer is reachable).
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+
+    // The "you may" outer gate installs first and is declinable.
+    let gate = runner
+        .pending_selection_view()
+        .expect("clause (f) optional gate must install");
+    assert!(gate.is_optional, "clause (f) gate is 'you may' — declinable");
+
+    // Accept the gate → the opponent-Digimon selection opens.
+    resolve_first_pending(&mut runner);
+    let target = runner
+        .pending_selection_view()
+        .expect("clause (f) delete-target selection must install after accept");
+    assert_eq!(
+        target.kind,
+        SelectionKind::OppField,
+        "clause (f) selects an opponent Digimon"
+    );
+
+    // Pick the opponent Digimon.
+    resolve_first_pending(&mut runner);
+    runner.auto_resolve().ok();
+
+    assert!(
+        runner.battle_area_size(1) < opp_before,
+        "accepting clause (f) must delete 1 opponent Digimon"
+    );
+    assert!(!permanent_exists(&runner, 1, "OPP-DIGI"));
 }
 
-/// Declining clause (f) optional prompt → no Digimon deleted.
+/// Clause (f): declining the optional prompt deletes nothing.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — triggered OPT on OnOpponentSecurityRemoved dispatch"]
 fn bt24_018_on_opp_security_removed_decline_leaves_digimon() {
-    // Scaffolding (pending G-OPT-TRIGGERED):
-    //
-    // 1. Same setup as above.
-    // 2. OnOpponentSecurityRemoved fires → optional prompt → PASS.
-    // 3. Opponent's Digimon count unchanged.
-    todo!("pending G-OPT-TRIGGERED: clause f decline test")
+    let mut runner = bt24_018_clause_f_runner();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
+    runner.place_on_field(1, "OPP-DIGI", Some(0));
+
+    let opp_before = runner.battle_area_size(1);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+
+    // Decline the optional prompt.
+    pass_pending(&mut runner);
+    runner.auto_resolve().ok();
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        opp_before,
+        "declining clause (f) must leave the opponent's Digimon untouched"
+    );
+    assert!(permanent_exists(&runner, 1, "OPP-DIGI"));
 }
 
-/// OPT lockout: clause (f) fires only once per turn even when multiple
-/// security cards are removed in the same turn.
+/// Clause (f) negative: when the opponent has no Digimon, no delete prompt
+/// installs (the select step has no candidate).
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — OPT hash tracking for triggered observer clauses"]
-fn bt24_018_clause_f_opt_lockout() {
-    // Scaffolding (pending G-OPT-TRIGGERED):
-    //
-    // Two OnOpponentSecurityRemoved events in the same turn must produce
-    // only one optional delete prompt (OPT locks out after the first).
-    todo!("pending G-OPT-TRIGGERED: clause f OPT lockout")
+fn bt24_018_on_opp_security_removed_no_digimon_no_prompt() {
+    let mut runner = bt24_018_clause_f_runner();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
+    // No opponent Digimon placed.
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "clause (f) must not install a prompt when the opponent has no Digimon"
+    );
 }
 
-// ─── SECTION 4 — Clause (g): WouldLeave replacement ─────────────────────────
+/// Clause (f) OPT lockout: two OnOpponentSecurityRemoved events in the same
+/// turn produce only one delete prompt. After end_turn the lockout clears.
+#[test]
+fn bt24_018_clause_f_opt_lockout() {
+    let mut runner = bt24_018_clause_f_runner();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
+    runner.place_on_field(1, "OPP-DIGI", Some(0));
+    runner.place_on_field(1, "OPP-DIGI-2", Some(0));
+
+    // First trigger → prompt installs → resolve (delete one).
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "first clause (f) trigger must install the delete prompt"
+    );
+    resolve_first_pending(&mut runner);
+    runner.auto_resolve().ok();
+
+    // Second trigger same turn → OPT-locked, no prompt.
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "second clause (f) trigger in the same turn must be OPT-locked"
+    );
+
+    // After a full turn cycle the OPT slot resets.
+    runner.end_turn(); // → P1's turn
+    runner.end_turn(); // → back to P0
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "clause (f) OPT lockout must clear after a turn cycle"
+    );
+}
+
+// ─── SECTION 4 — Clause (g): WhenWouldLeaveBattleArea replacement ────────────
 
 /// Own Dragonkin Digimon would be deleted → replacement prompt installs.
 /// Accept + pay cost (delete opp lowest DP) → Dragonkin stays on field.
@@ -430,6 +655,112 @@ fn bt24_018_clause_g_opt_lockout() {
     assert!(!permanent_exists(&runner, 0, "ALLY-REPTILE"));
 }
 
+/// Clause (g)'s cost — "delete 1 of your opponent's lowest DP Digimon" — must
+/// offer ONLY the lowest-DP opponent Digimon, not every opponent Digimon.
+/// Regression for the obsolete `dp_lte` aggregate predicate (G-PRED-DP-LTE),
+/// which silently passed every candidate; the fix uses `selector: lowest_dp`.
+#[test]
+fn bt24_018_clause_g_cost_offers_only_lowest_dp_opponent_digimon() {
+    let mut runner = bt24_018_clause_g_runner();
+    runner.place_on_field(0, "BT24-018", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-DRAGONKIN", Some(0));
+    runner.place_on_field(1, "LOW-DP", Some(0));
+    runner.place_on_field(1, "HIGH-DP", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    accept_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("lowest-DP cost prompt");
+    assert_eq!(cost.kind, SelectionKind::OppField);
+    assert_eq!(
+        cost.valid_action_ids.len(),
+        1,
+        "only the lowest-DP opponent Digimon (LOW-DP, 3000) may be offered, \
+         not HIGH-DP (9000)"
+    );
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete opponent lowest DP");
+    runner.auto_resolve().expect("finish replacement");
+
+    assert!(permanent_exists(&runner, 0, "ALLY-DRAGONKIN"));
+    assert!(!permanent_exists(&runner, 1, "LOW-DP"));
+    assert!(
+        permanent_exists(&runner, 1, "HIGH-DP"),
+        "the higher-DP opponent Digimon must be untouched"
+    );
+}
+
+/// When several opponent Digimon are tied for lowest DP, clause (g) must offer
+/// ALL of them — the controller chooses, no auto-pick — while still excluding
+/// strictly-higher-DP Digimon.
+#[test]
+fn bt24_018_clause_g_cost_offers_all_tied_lowest_dp_no_auto_pick() {
+    let mut runner = bt24_018_clause_g_runner();
+    runner.place_on_field(0, "BT24-018", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-DRAGONKIN", Some(0));
+    runner.place_on_field(1, "LOW-DP", Some(0));
+    runner.place_on_field(1, "LOW-DP-2", Some(0));
+    runner.place_on_field(1, "HIGH-DP", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    accept_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("lowest-DP cost prompt");
+    assert_eq!(
+        cost.valid_action_ids.len(),
+        2,
+        "both DP-3000 Digimon are tied for lowest and must both be offered; \
+         HIGH-DP (9000) must be excluded; no auto-pick"
+    );
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete one tied-lowest opponent Digimon");
+    runner.auto_resolve().expect("finish replacement");
+
+    assert!(permanent_exists(&runner, 0, "ALLY-DRAGONKIN"));
+    assert_eq!(
+        runner.battle_area_size(1),
+        2,
+        "exactly one tied-lowest Digimon deleted; the other low + HIGH-DP remain"
+    );
+    assert!(permanent_exists(&runner, 1, "HIGH-DP"));
+}
+
+// ─── runner builders ─────────────────────────────────────────────────────────
+
+fn bt24_018_clause_e_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("BT24-018")
+        .expect("BT24-018 YAML loads")
+        .start()
+}
+
+fn bt24_018_clause_f_runner() -> DebugRunner {
+    // Decks + security for both players so an end_turn cycle does not deck-out
+    // and end the game before the OPT slot resets (see G-OPT-RESET-VIA-ATTACK-CYCLE
+    // closure note in qa/resolved-gaps.md).
+    DebugRunner::builder()
+        .dsl_card("BT24-018")
+        .expect("BT24-018 YAML loads")
+        .add_card(make_digimon("OPP-DIGI", 5000, &[]))
+        .add_card(make_digimon("OPP-DIGI-2", 6000, &[]))
+        .add_card(make_digimon("FILLER", 1000, &[]))
+        .deck(0, &["FILLER"; 30])
+        .deck(1, &["FILLER"; 30])
+        .security(0, &["FILLER"; 5])
+        .security(1, &["FILLER"; 5])
+        .start()
+}
+
 fn bt24_018_clause_g_runner() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT24-018")
@@ -437,6 +768,7 @@ fn bt24_018_clause_g_runner() -> DebugRunner {
         .add_card(make_digimon("ALLY-DRAGONKIN", 6000, &["Dragonkin"]))
         .add_card(make_digimon("ALLY-REPTILE", 6000, &["Reptile"]))
         .add_card(make_digimon("LOW-DP", 3000, &[]))
+        .add_card(make_digimon("LOW-DP-2", 3000, &[]))
         .add_card(make_digimon("HIGH-DP", 9000, &[]))
         .start()
 }
@@ -450,18 +782,4 @@ fn accept_replacement(runner: &mut DebugRunner) {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("accept replacement");
-}
-
-fn make_digimon(id: &str, dp: i32, traits: &[&str]) -> digimon_engine::card_data::CardData {
-    let mut card = make_test_card(id, id);
-    card.dp = Some(dp);
-    card.traits = traits.iter().map(|s| s.to_string()).collect();
-    card
-}
-
-fn permanent_exists(runner: &DebugRunner, player: usize, card_id: &str) -> bool {
-    runner.game.players[player]
-        .battle_area
-        .iter()
-        .any(|permanent| permanent.top_card().card_id(&runner.game.card_data) == card_id)
 }

@@ -341,17 +341,30 @@ fn evaluate_per(
                 .len()
                 .saturating_sub(1) as i32
         }
-        CompiledPerSelector::SuspendedCount { of } => players_for_ref(*of, ctx)
-            .into_iter()
-            .map(|player| {
-                ctx.game
-                    .player(player)
-                    .battle_area
-                    .iter()
-                    .filter(|perm| perm.is_suspended)
-                    .count() as i32
-            })
-            .sum(),
+        CompiledPerSelector::SuspendedCount { of, exclude_source } => {
+            let source = ctx.source_permanent;
+            players_for_ref(*of, ctx)
+                .into_iter()
+                .map(|player| {
+                    ctx.game
+                        .player(player)
+                        .battle_area
+                        .iter()
+                        .enumerate()
+                        .filter(|(index, perm)| {
+                            perm.is_suspended
+                                && perm.is_digimon(&ctx.game.card_data)
+                                && !(*exclude_source
+                                    && source
+                                        == Some(PermanentHandle {
+                                            player,
+                                            index: *index as u8,
+                                        }))
+                        })
+                        .count() as i32
+                })
+                .sum()
+        }
         CompiledPerSelector::DigivolutionColorCount => {
             let Some(perm) = target_permanent(ctx, target) else {
                 return 0;
@@ -419,17 +432,30 @@ fn evaluate_per_read(
             .battle_area
             .len()
             .saturating_sub(1) as i32,
-        CompiledPerSelector::SuspendedCount { of } => players_for_ref_read(*of, ctx)
-            .into_iter()
-            .map(|player| {
-                ctx.game
-                    .player(player)
-                    .battle_area
-                    .iter()
-                    .filter(|perm| perm.is_suspended)
-                    .count() as i32
-            })
-            .sum(),
+        CompiledPerSelector::SuspendedCount { of, exclude_source } => {
+            let source = ctx.source_permanent;
+            players_for_ref_read(*of, ctx)
+                .into_iter()
+                .map(|player| {
+                    ctx.game
+                        .player(player)
+                        .battle_area
+                        .iter()
+                        .enumerate()
+                        .filter(|(index, perm)| {
+                            perm.is_suspended
+                                && perm.is_digimon(ctx.card_data())
+                                && !(*exclude_source
+                                    && source
+                                        == Some(PermanentHandle {
+                                            player,
+                                            index: *index as u8,
+                                        }))
+                        })
+                        .count() as i32
+                })
+                .sum()
+        }
         CompiledPerSelector::DigivolutionColorCount => {
             let Some(perm) = target_permanent_read(ctx, target) else {
                 return 0;
@@ -1055,6 +1081,7 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.has_inherited.is_some()
         || pred.is_suspended.is_some()
         || pred.is_unsuspended.is_some()
+        || pred.has_face_down_source.is_some()
         || pred.owner.is_some()
         || pred.other.is_some()
         || pred.of_permanent.is_some()
@@ -1062,6 +1089,9 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.source_is_unsuspended.is_some()
         || pred.source_name_contains.is_some()
         || pred.source_permanent_trait_has.is_some()
+        || pred.is_face_down.is_some()
+        || pred.is_bottom_source.is_some()
+        || pred.host_kind_is.is_some()
         || pred.in_breeding.is_some()
         || pred.on_field.is_some()
         || pred.dna_origin.is_some()
@@ -1125,14 +1155,14 @@ fn aggregate_value(
             .get(index)?
             .level(&ctx.game.card_data)
             .map(i32::from),
-        A::LowestPlayCost => Some(i32::from(
-            ctx.game
-                .player(player)
-                .battle_area
-                .get(index)?
-                .top_card()
-                .play_cost(&ctx.game.card_data),
-        )),
+        A::LowestPlayCost => {
+            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`.
+            let perm = ctx.game.player(player).battle_area.get(index)?;
+            if !perm.is_digimon(&ctx.game.card_data) {
+                return None;
+            }
+            Some(i32::from(perm.top_card().play_cost(&ctx.game.card_data)))
+        }
     }
 }
 
@@ -1155,6 +1185,10 @@ fn aggregate_value_read(
             perm.level(ctx.card_data()).map(i32::from)
         }
         CompiledAggregateSelector::LowestPlayCost => {
+            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`.
+            if !perm.is_digimon(ctx.card_data()) {
+                return None;
+            }
             Some(i32::from(perm.top_card().play_cost(ctx.card_data())))
         }
     }

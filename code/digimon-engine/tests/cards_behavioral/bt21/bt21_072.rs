@@ -21,8 +21,9 @@
 //! - H9: Raid keyword grant (declarative)
 //! - D4: Inherited self-aura [Your Turn] +2000 DP
 //! - [When Digivolving] may attack without suspending
-//! - BLOCKED (G-AURA-DP-FORMULA): [All Turns] +1000 DP per digivolution card
-//!   (AuraBody.dp_modifier is Option<i32>; no formula/dynamic variant exists)
+//! - [All Turns] +1000 DP per digivolution card (dp_modifier_fn formula aura)
+//! - xros_req alt-path: Lv.4 cost-4 standard + Lv.4 w/＜Save＞-in-text OR
+//!   [Hero]-trait cost-3 (G-ALT-PATH-SAVE-IN-TEXT — `effect_text_contains`)
 //!
 //! # Known gaps and test status
 //!
@@ -31,8 +32,8 @@
 //! | (1) <Raid> | none | PASS — structural + has_keyword |
 //! | (2) <Piercing> | none | PASS — structural + has_keyword |
 //! | (3) [When Digivolving] may attack without suspending | none | PASS — may_attack_now optional/without_suspending |
-//! | (4) [All Turns] +1000 DP per digivolution card | G-AURA-DP-FORMULA | BLOCKED — #[ignore] |
-//! | (5) Inherited [Your Turn] +2000 DP | G-INHERITED-DISPATCH (triggered only, declarative may be ok) | PASS — structural |
+//! | (4) [All Turns] +1000 DP per digivolution card | none (G-AURA-DP-FORMULA resolved) | PASS — dp_modifier_fn formula aura |
+//! | (5) Inherited [Your Turn] +2000 DP | none (G-INHERITED-DISPATCH resolved for declarative) | PASS — structural + behavioral |
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
@@ -63,11 +64,11 @@ fn arresterdramon_runner() -> DebugRunner {
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BT21-072 must have two declarative GrantKeyword clauses (Raid, Piercing),
-/// one declarative inherited Aura clause ([Your Turn] +2000 DP), and one
-/// triggered [When Digivolving] may-attack clause.
+/// BT21-072 must have four declarative clauses (Raid + Piercing GrantKeyword,
+/// the face-up [All Turns] formula Aura, the inherited [Your Turn] +2000 Aura)
+/// and one triggered [When Digivolving] may-attack clause.
 #[test]
-fn bt21_072_structural_three_declarative_clauses_and_one_triggered() {
+fn bt21_072_structural_four_declarative_clauses_and_one_triggered() {
     let runner = arresterdramon_runner();
     let compiled = runner
         .compiled_card("BT21-072")
@@ -84,8 +85,8 @@ fn bt21_072_structural_three_declarative_clauses_and_one_triggered() {
 
     assert_eq!(
         declaratives.len(),
-        3,
-        "Expected 2 GrantKeyword + 1 Aura (inherited) = 3 declaratives"
+        4,
+        "Expected 2 GrantKeyword + 2 Aura (formula DP + inherited) = 4 declaratives"
     );
 
     let triggered_count = compiled
@@ -134,7 +135,8 @@ fn bt21_072_structural_raid_and_piercing_grant_keyword_clauses() {
     );
 }
 
-/// The inherited Aura must be scope=Inherited, active_when=your_turn, dp_modifier=2000.
+/// The inherited Aura must be scope=Inherited, active_when=your_turn, dp_modifier=2000,
+/// and carry a static (non-formula) DP modifier.
 #[test]
 fn bt21_072_structural_inherited_aura_your_turn_dp_2000() {
     let runner = arresterdramon_runner();
@@ -144,15 +146,22 @@ fn bt21_072_structural_inherited_aura_your_turn_dp_2000() {
 
     let aura = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-            scope,
+            scope: scope @ CompiledScope::Inherited,
             dp_modifier,
+            dp_modifier_fn,
             active_when,
             ..
-        }) => Some((scope.clone(), *dp_modifier, active_when.is_some())),
+        }) => Some((
+            scope.clone(),
+            *dp_modifier,
+            dp_modifier_fn.is_some(),
+            active_when.is_some(),
+        )),
         _ => None,
     });
 
-    let (scope, dp, has_active_when) = aura.expect("Expected an Aura declarative clause");
+    let (scope, dp, has_fn, has_active_when) =
+        aura.expect("Expected an Inherited-scoped Aura declarative clause");
     assert_eq!(
         scope,
         CompiledScope::Inherited,
@@ -161,11 +170,62 @@ fn bt21_072_structural_inherited_aura_your_turn_dp_2000() {
     assert_eq!(
         dp,
         Some(2000),
-        "Inherited aura must carry +2000 dp_modifier"
+        "Inherited aura must carry +2000 static dp_modifier"
+    );
+    assert!(
+        !has_fn,
+        "Inherited +2000 aura is a static literal, not a formula"
     );
     assert!(
         has_active_when,
         "Inherited aura must have active_when (your_turn gate)"
+    );
+}
+
+/// The [All Turns] +1000-DP-per-digivolution-card aura must be a face-up
+/// (non-inherited) self-aura carrying a `dp_modifier_fn` formula — not a static
+/// literal — so the engine recomputes DP continuously as the stack changes.
+#[test]
+fn bt21_072_structural_all_turns_formula_aura_uses_dp_modifier_fn() {
+    let runner = arresterdramon_runner();
+    let compiled = runner
+        .compiled_card("BT21-072")
+        .expect("BT21-072 compiled card present");
+
+    let formula_aura = compiled.effects.iter().find_map(|c| match c {
+        CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+            scope: scope @ CompiledScope::FaceUp,
+            dp_modifier,
+            dp_modifier_fn,
+            active_when,
+            ..
+        }) => Some((
+            scope.clone(),
+            *dp_modifier,
+            dp_modifier_fn.clone(),
+            active_when.is_some(),
+        )),
+        _ => None,
+    });
+
+    let (scope, static_dp, fn_dp, has_active_when) =
+        formula_aura.expect("Expected a face-up Aura declarative clause for [All Turns] +1000 DP");
+    assert_eq!(
+        scope,
+        CompiledScope::FaceUp,
+        "[All Turns] formula aura must be face-up scope (not inherited)"
+    );
+    assert!(
+        static_dp.is_none(),
+        "[All Turns] aura must NOT carry a static dp_modifier — it is formula-valued"
+    );
+    assert!(
+        fn_dp.is_some(),
+        "[All Turns] aura must carry a dp_modifier_fn formula (material_count × 1000)"
+    );
+    assert!(
+        has_active_when,
+        "[All Turns] aura must have an active_when gate (all_turns: true)"
     );
 }
 
@@ -356,9 +416,11 @@ fn bt21_072_inherited_aura_contributes_zero_dp_opponents_turn() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — BLOCKED tests (pending gap closure)
+// Section 4 — [When Digivolving] may attack without suspending (clause 3)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/// Accept path: BT21-072 takes the optional unsuspended attack and resolves
+/// the normal security flow without becoming suspended.
 #[test]
 fn bt21_072_when_digivolving_may_attack_without_suspending() {
     let mut security_card = make_test_card("SEC", "Security");
@@ -418,35 +480,288 @@ fn bt21_072_when_digivolving_may_attack_without_suspending() {
     );
 }
 
+/// Decline path: the printed "may attack" must be fully declinable. Choosing
+/// PASS at the may_attack_now prompt must NOT touch the opponent's security and
+/// must leave BT21-072 unsuspended (no attack ever happened).
+#[test]
+fn bt21_072_when_digivolving_may_attack_can_be_declined() {
+    let mut security_card = make_test_card("SEC", "Security");
+    security_card.dp = Some(2000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-072")
+        .expect("BT21-072 in embedded DSL pack")
+        .add_card(security_card)
+        .security(1, &["SEC"])
+        .memory(9)
+        .start();
+    runner.game.turn_count = 1;
+
+    let attacker = runner.place_on_field(0, "BT21-072", Some(0));
+    let security_before = runner.game.player(1).security.len();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(attacker),
+    );
+    runner.game.drain_effect_queue();
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("When Digivolving should install a may_attack_now prompt");
+    assert!(
+        pending.is_optional,
+        "printed 'may attack' must expose decline/PASS"
+    );
+    assert!(
+        build_action_mask(&runner.game, 0)[PASS as usize] > 0.0,
+        "optional may_attack_now prompt must expose PASS through the action mask"
+    );
+
+    // Decline the optional attack.
+    runner
+        .game
+        .resolve_selection(0, PASS)
+        .expect("declining the optional may_attack_now prompt must succeed");
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "declining must clear the pending selection"
+    );
+    assert_eq!(
+        runner.game.player(1).security.len(),
+        security_before,
+        "declining the may-attack prompt must not resolve any security check"
+    );
+    assert!(
+        !runner.game.player(0).battle_area[attacker.index as usize].is_suspended,
+        "BT21-072 must remain unsuspended when the optional attack is declined"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — [All Turns] +1000 DP per digivolution card (clause 4)
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /// [All Turns] This Digimon gets +1000 DP for each of its digivolution cards.
 ///
-/// BLOCKED (G-AURA-DP-FORMULA): The DSL `kind: aura` declarative with an
-/// empty (self) target only accepts `dp_modifier: <i32>` (a static literal).
-/// There is no `dp_modifier_fn` or `dp_modifier_formula` field on AuraBody.
-/// The DCGO uses `ChangeSelfDPStaticEffect(changeValue: 1000 * count(), ...)`
-/// at EffectTiming.None where count() is a live lambda reading
-/// `PermanentOfThisCard().DigivolutionCards.Count()` (= stack_size - 1 in DSL
-/// terminology, i.e. material_count). This requires the DP to recompute
-/// dynamically after de_digivolve operations, which a snapshot-at-event
-/// `add_dp_modifier` cannot model.
+/// With BT21-072 alone (top card, no digivolution sources beneath it),
+/// material_count == 0, so the formula yields +0 DP. Effective DP == base 10000.
 ///
-/// When gap closes, the YAML clause should be:
-///   - kind: aura
-///     active_when: { all_turns: true }   # or omit for always-on
-///     target: {}                          # self
-///     dp_modifier_fn:                     # NEW: formula-based variant
-///       base: 0
-///       per: material_count
-///       delta: 1000
-///
-/// Test plan when gap closes:
-///   1. Place BT21-072 alone (0 digivolution cards → +0 DP; base 10000).
-///   2. Add 1 digivolution source → DP = 11000.
-///   3. Add 2nd source → DP = 12000.
-///   4. De-digivolve (trash top source) → DP drops to 11000.
-///   5. Assert both own-turn and opponent's-turn snapshots ([All Turns] = no gate).
+/// G-AURA-DP-FORMULA RESOLVED (Group 6): `kind: aura` accepts `dp_modifier_fn`,
+/// a runtime formula closure that `Game::effective_dp` re-evaluates at query
+/// time — so the DP tracks the stack continuously.
 #[test]
-#[ignore = "pending: G-AURA-DP-FORMULA — AuraBody.dp_modifier does not accept a formula"]
-fn bt21_072_all_turns_plus1000_dp_per_digivolution_card_dynamic() {
-    let _ = arresterdramon_runner();
+fn bt21_072_all_turns_dp_zero_bonus_with_no_digivolution_cards() {
+    let mut runner = arresterdramon_runner();
+    let handle = runner.place_on_field(0, "BT21-072", None);
+
+    let effective = runner
+        .effective_dp(handle)
+        .expect("BT21-072 must have an effective DP");
+    assert_eq!(
+        effective, 10000,
+        "With 0 digivolution cards, [All Turns] formula adds +0 DP; effective DP = base 10000"
+    );
+}
+
+/// One digivolution card beneath BT21-072 → material_count == 1 → +1000 DP.
+/// Effective DP == 10000 + 1000 = 11000.
+#[test]
+fn bt21_072_all_turns_dp_plus1000_with_one_digivolution_card() {
+    let mut runner = arresterdramon_runner();
+    let handle = runner.place_on_field(0, "BT21-072", None);
+
+    // push_source inserts a digivolution card beneath the top card.
+    runner.push_source(handle, "BT21-072");
+
+    let effective = runner
+        .effective_dp(handle)
+        .expect("BT21-072 must have an effective DP");
+    assert_eq!(
+        effective, 11000,
+        "With 1 digivolution card, [All Turns] adds +1000 DP; effective DP = 11000"
+    );
+}
+
+/// Two digivolution cards beneath BT21-072 → material_count == 2 → +2000 DP.
+/// Effective DP == 10000 + 2000 = 12000. Proves the formula scales per-card.
+#[test]
+fn bt21_072_all_turns_dp_plus2000_with_two_digivolution_cards() {
+    let mut runner = arresterdramon_runner();
+    let handle = runner.place_on_field(0, "BT21-072", None);
+
+    runner.push_source(handle, "BT21-072");
+    runner.push_source(handle, "BT21-072");
+
+    let effective = runner
+        .effective_dp(handle)
+        .expect("BT21-072 must have an effective DP");
+    assert_eq!(
+        effective, 12000,
+        "With 2 digivolution cards, [All Turns] adds +2000 DP; effective DP = 12000"
+    );
+}
+
+/// The formula is recomputed continuously: removing a digivolution card (the
+/// effect of a de-digivolve) must immediately drop the DP bonus. Starting from
+/// 2 sources (12000), trashing the bottom source returns to 1 source (11000).
+///
+/// This proves the aura is a live formula closure, not an event-time snapshot
+/// — a static `add_dp_modifier` snapshot would leave DP frozen at 12000.
+#[test]
+fn bt21_072_all_turns_dp_recomputes_after_digivolution_card_removed() {
+    let mut runner = arresterdramon_runner();
+    let handle = runner.place_on_field(0, "BT21-072", None);
+
+    runner.push_source(handle, "BT21-072");
+    runner.push_source(handle, "BT21-072");
+    assert_eq!(
+        runner.effective_dp(handle),
+        Some(12000),
+        "precondition: 2 digivolution cards → 12000 DP"
+    );
+
+    // Simulate a de-digivolve: pop one digivolution card from beneath the top.
+    {
+        let perm = &mut runner.game.players[0].battle_area[handle.index as usize];
+        assert!(
+            perm.card_sources.len() >= 3,
+            "precondition: stack has top + 2 digivolution cards"
+        );
+        // Remove the bottom-most digivolution card (index 0), preserving top.
+        perm.card_sources.remove(0);
+    }
+
+    let effective = runner
+        .effective_dp(handle)
+        .expect("BT21-072 must still have an effective DP");
+    assert_eq!(
+        effective, 11000,
+        "After a digivolution card is removed, the formula must recompute: 1 card → 11000 DP"
+    );
+}
+
+/// [All Turns] has no turn gate — the +1000-per-card bonus must apply on the
+/// opponent's turn just as on the controller's turn.
+#[test]
+fn bt21_072_all_turns_dp_bonus_applies_on_opponents_turn() {
+    let mut runner = arresterdramon_runner();
+    let handle = runner.place_on_field(0, "BT21-072", None);
+    runner.push_source(handle, "BT21-072"); // material_count == 1
+
+    assert_eq!(
+        runner.effective_dp(handle),
+        Some(11000),
+        "precondition: on controller's turn, 1 digivolution card → 11000 DP"
+    );
+
+    // Advance to the opponent's turn.
+    runner.end_turn();
+    assert_ne!(
+        runner.turn_player(),
+        0,
+        "precondition: P0 must NOT be the turn player"
+    );
+
+    let effective = runner
+        .effective_dp(handle)
+        .expect("BT21-072 must have an effective DP on opponent's turn");
+    assert_eq!(
+        effective, 11000,
+        "[All Turns] formula aura has no turn gate — +1000 DP must persist on opponent's turn"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 6 — alt-path digivolution requirements (xros_req)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// BT21-072 must register two digivolve alt-paths: the standard Lv.4 cost-4
+/// path and the xros_req "[Digivolve] Lv.4 w/＜Save＞ in text or w/[Hero]
+/// trait: Cost 3". G-ALT-PATH-SAVE-IN-TEXT.
+#[test]
+fn bt21_072_has_two_digivolve_alt_paths_standard_and_xros_req() {
+    use digimon_dsl::compiled::CompiledAltPathKind;
+
+    let runner = arresterdramon_runner();
+    let card = runner
+        .compiled_card("BT21-072")
+        .expect("BT21-072 compiled card present");
+
+    let digivolve_paths: Vec<_> = card
+        .alt_paths
+        .iter()
+        .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
+        .collect();
+
+    assert_eq!(
+        digivolve_paths.len(),
+        2,
+        "BT21-072 must have exactly 2 digivolve alt-paths (standard cost-4 + xros_req cost-3); \
+         got {}",
+        digivolve_paths.len()
+    );
+}
+
+/// The xros_req cost-3 alt-path's `from:` filter must be an OR of
+/// (Lv.4 with ＜Save＞ in its printed text) and (Lv.4 with the [Hero] trait).
+/// The "w/＜Save＞ in text" half uses the existing `effect_text_contains`
+/// predicate — the requirement's own wording ("in text") is a text-presence
+/// check. G-ALT-PATH-SAVE-IN-TEXT.
+#[test]
+fn bt21_072_xros_req_alt_path_gates_on_save_in_text_or_hero_trait() {
+    use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCost};
+
+    let runner = arresterdramon_runner();
+    let card = runner
+        .compiled_card("BT21-072")
+        .expect("BT21-072 compiled card present");
+
+    // The xros_req path is the digivolve alt-path whose `from:` is an OR.
+    let xros_req = card
+        .alt_paths
+        .iter()
+        .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
+        .find(|p| {
+            p.from
+                .as_ref()
+                .is_some_and(|f| !f.any_of.is_empty())
+        })
+        .expect("BT21-072 must have a xros_req digivolve alt-path with an any_of from-filter");
+
+    assert_eq!(
+        xros_req.cost,
+        Some(CompiledCost::Literal(3)),
+        "the xros_req alt-path must cost 3"
+    );
+    assert!(
+        xros_req.ignore_requirements,
+        "the xros_req alt-path replaces the printed digivolution requirement"
+    );
+
+    let from = xros_req
+        .from
+        .as_ref()
+        .expect("xros_req path must carry a from: filter");
+    assert_eq!(
+        from.any_of.len(),
+        2,
+        "xros_req from: must be an any_of of the ＜Save＞-in-text and [Hero]-trait branches"
+    );
+    assert!(
+        from.any_of
+            .iter()
+            .any(|b| b.effect_text_contains.is_some() && b.level_eq == Some(4)),
+        "one branch must gate on Lv.4 + ＜Save＞ in the source card's printed text \
+         (effect_text_contains)"
+    );
+    assert!(
+        from.any_of
+            .iter()
+            .any(|b| b.trait_has.as_deref() == Some("Hero") && b.level_eq == Some(4)),
+        "one branch must gate on Lv.4 + the [Hero] trait"
+    );
 }

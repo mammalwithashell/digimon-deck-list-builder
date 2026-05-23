@@ -465,6 +465,15 @@ fn validate_predicate(
     if let Some(sub) = &pred.not {
         validate_predicate(sub, &format!("{prefix}.not"), card_id, ctx, errors);
     }
+    if let Some(sub) = &pred.returned_card_matching {
+        validate_predicate(
+            sub,
+            &format!("{prefix}.returned_card_matching"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
     if let Some(ex) = &pred.any_permanent {
         validate_predicate(
             &ex.predicate,
@@ -1074,6 +1083,25 @@ fn validate_step_binding_scope(
             );
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::SelectOpponentSources(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            let mut child = scope.clone();
+            declare_optional_binding(&mut child, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::DigiBurst(args) => {
             let mut child = scope.clone();
             declare_optional_binding(&mut child, &args.bind_as);
@@ -1435,6 +1463,15 @@ fn validate_predicate_binding_scope(
     if let Some(sub) = &pred.not {
         validate_predicate_binding_scope(sub, &format!("{prefix}.not"), card_id, scope, errors);
     }
+    if let Some(sub) = &pred.returned_card_matching {
+        validate_predicate_binding_scope(
+            sub,
+            &format!("{prefix}.returned_card_matching"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
     if let Some(inh) = &pred.has_inherited {
         validate_predicate_binding_scope(
             inh,
@@ -1614,6 +1651,7 @@ fn validate_binding_ref(
         permanent,
         source_permanent,
         of_permanent,
+        deck_top,
         ..
     }) = binding_ref
     else {
@@ -1628,10 +1666,15 @@ fn validate_binding_ref(
         });
     }
 
-    let populated = [binding, permanent, of_permanent]
-        .iter()
-        .filter(|field| field.is_some())
-        .count();
+    let populated = [
+        binding.is_some(),
+        permanent.is_some(),
+        of_permanent.is_some(),
+        deck_top.is_some(),
+    ]
+    .iter()
+    .filter(|present| **present)
+    .count();
     if populated == 0 {
         errors.push(ValidationError {
             card_id: card_id.into(),
@@ -1917,6 +1960,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "ChangePermanentLevel",
     "ChangeTraits",
     "ChangeBaseCardName",
+    "SourceNameAliases",
     "ChangeBaseCardColor",
     "ChangeCardLevelForAssembly",
     "ChangeCardNamesForDigiXros",
