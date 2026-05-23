@@ -76,6 +76,10 @@ class TrainingRunMetadata:
     # Aggregate results
     final_win_rate: float | None = None
     final_mean_reward: float | None = None
+    final_draw_rate: float | None = None
+    final_mean_eval_terminal_score: float | None = None
+    final_mean_eval_dense_reward: float | None = None
+    final_mean_eval_episode_length: float | None = None
     total_games: int = 0
 
     # Per-archetype win rates (populated during gauntlet/evaluation)

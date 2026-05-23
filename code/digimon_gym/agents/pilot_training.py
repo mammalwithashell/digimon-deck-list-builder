@@ -329,6 +329,7 @@ class WinRateCallback(BaseCallback):
                  eval_freq: int = 10000,
                  n_eval_episodes: int = 20,
                  eval_suite=None,
+                 eval_suite_path: str | None = None,
                  verbose: int = 1):
         super().__init__(verbose)
         self._eval_env_fn = eval_env_fn
@@ -336,10 +337,16 @@ class WinRateCallback(BaseCallback):
         self.eval_freq = eval_freq
         self.n_eval_episodes = n_eval_episodes
         self.eval_suite = eval_suite
+        self.eval_suite_path = eval_suite_path
         self.games_played = 0
         self._last_eval_step = 0
         self.last_win_rate: float = 0.0
         self.last_mean_reward: float = 0.0
+        self.last_draw_rate: float = 0.0
+        self.last_mean_eval_terminal_score: float = 0.0
+        self.last_mean_eval_dense_reward: float = 0.0
+        self.last_mean_eval_episode_length: float = 0.0
+        self._last_eval_suite_results: dict = {}
         # Per-archetype tracking
         self._archetype_wins: Dict[str, int] = {}
         self._archetype_draws: Dict[str, int] = {}
@@ -362,6 +369,18 @@ class WinRateCallback(BaseCallback):
                 win_rate=wins / max(1, games),
             ))
         return results
+
+    def get_eval_suite_results(self) -> dict:
+        """Return the last held-out eval-suite summary for metadata."""
+        if self._last_eval_suite_results:
+            return self._last_eval_suite_results
+        if self.eval_suite_path:
+            return {
+                "overall_win_rate": None,
+                "suite_path": self.eval_suite_path,
+                "cells": {},
+            }
+        return {}
 
     def _on_step(self) -> bool:
         # Track episode completions from training
@@ -395,6 +414,8 @@ class WinRateCallback(BaseCallback):
         wins = 0
         draws = 0
         total_reward = 0.0
+        total_terminal_score = 0.0
+        total_dense_reward = 0.0
         total_steps = 0
 
         for _ in range(self.n_eval_episodes):
@@ -437,11 +458,15 @@ class WinRateCallback(BaseCallback):
             if winner_id == 1:
                 wins += 1
                 won = True
+                terminal_score = 1.0
             elif winner_id == 2:
-                pass
+                terminal_score = -1.0
             else:
                 draws += 1
                 is_draw = True
+                terminal_score = 0.0
+            total_terminal_score += terminal_score
+            total_dense_reward += episode_reward - terminal_score
 
             # Track per-archetype win rates (when gauntlet is active)
             if opponent_archetype:
@@ -462,13 +487,21 @@ class WinRateCallback(BaseCallback):
         mean_length = total_steps / self.n_eval_episodes
 
         draw_rate = draws / self.n_eval_episodes
+        mean_terminal_score = total_terminal_score / self.n_eval_episodes
+        mean_dense_reward = total_dense_reward / self.n_eval_episodes
 
         self.last_win_rate = win_rate
         self.last_mean_reward = mean_reward
+        self.last_draw_rate = draw_rate
+        self.last_mean_eval_terminal_score = mean_terminal_score
+        self.last_mean_eval_dense_reward = mean_dense_reward
+        self.last_mean_eval_episode_length = mean_length
 
         self.logger.record("pilot/win_rate", win_rate)
         self.logger.record("pilot/draw_rate", draw_rate)
         self.logger.record("pilot/mean_eval_reward", mean_reward)
+        self.logger.record("pilot/mean_eval_terminal_score", mean_terminal_score)
+        self.logger.record("pilot/mean_eval_dense_reward", mean_dense_reward)
         self.logger.record("pilot/mean_eval_episode_length", mean_length)
         self.logger.record("pilot/games_played", self.games_played)
 
@@ -491,6 +524,20 @@ class WinRateCallback(BaseCallback):
                 return int(action)
 
             suite_result = self.eval_suite.run(agent_fn=_agent_fn)
+            self._last_eval_suite_results = {
+                "overall_win_rate": suite_result.overall_win_rate,
+                "suite_path": self.eval_suite_path,
+                "cells": {
+                    name: {
+                        "games_played": cell.games_played,
+                        "wins": cell.wins,
+                        "losses": cell.losses,
+                        "draws": cell.draws,
+                        "win_rate": cell.win_rate,
+                    }
+                    for name, cell in suite_result.cell_results.items()
+                },
+            }
             self.logger.record(
                 "eval_suite/overall_win_rate",
                 suite_result.overall_win_rate,
@@ -1145,6 +1192,7 @@ def train(total_timesteps: int = 100_000,
         eval_freq=eval_freq,
         n_eval_episodes=n_eval_episodes,
         eval_suite=eval_suite,
+        eval_suite_path=cfg.eval_suite,
         verbose=verbose,
     )
     action_validity_cb = ActionValidityCallback()
@@ -1247,6 +1295,10 @@ def train(total_timesteps: int = 100_000,
         } if cfg.init_from else {},
         final_win_rate=win_rate_cb.last_win_rate,
         final_mean_reward=win_rate_cb.last_mean_reward,
+        final_draw_rate=win_rate_cb.last_draw_rate,
+        final_mean_eval_terminal_score=win_rate_cb.last_mean_eval_terminal_score,
+        final_mean_eval_dense_reward=win_rate_cb.last_mean_eval_dense_reward,
+        final_mean_eval_episode_length=win_rate_cb.last_mean_eval_episode_length,
         total_games=win_rate_cb.games_played,
         archetype_results=win_rate_cb.get_archetype_results(),
         hyperparameters={
@@ -1261,10 +1313,7 @@ def train(total_timesteps: int = 100_000,
     if checkpoint_cb is not None:
         meta.checkpoint_timestamps = checkpoint_cb.saved_at
     if eval_suite is not None:
-        meta.eval_suite_results = {
-            "overall_win_rate": None,
-            "suite_path": cfg.eval_suite,
-        }
+        meta.eval_suite_results = win_rate_cb.get_eval_suite_results()
     meta_path = Path(model_path).with_suffix(".meta.json")
     meta.save(meta_path)
     if verbose:

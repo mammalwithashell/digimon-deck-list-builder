@@ -550,6 +550,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 // emits when the Digimon has Overclock AND at least one
                 // other sacrificeable permanent exists on the battle area.
                 if game.has_keyword(handle, Keyword::Overclock)
+                    && !game.is_overclock_declined_for_action_mask(handle)
                     && game.has_overclock_sacrifice(player_id, i)
                 {
                     let bit = FIELD_EFFECT_START

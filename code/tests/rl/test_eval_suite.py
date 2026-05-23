@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
+
 from digimon_gym.agents.eval_suite import EvalCellResult, HeldOutEvalSuite
 
 
@@ -60,3 +62,124 @@ def test_eval_suite_pluggable_via_callback():
     )
     assert cb_with.eval_suite is suite
     assert cb_without.eval_suite is None
+
+
+class _FakeLogger:
+    def __init__(self):
+        self.records = {}
+
+    def record(self, key, value):
+        self.records[key] = value
+
+
+class _FakeModel:
+    def __init__(self):
+        self.logger = _FakeLogger()
+
+    def predict(self, obs, **kwargs):
+        return 0, kwargs.get("state")
+
+
+class _FakeEvalEnv:
+    def __init__(self, episodes):
+        self.episodes = episodes
+        self.episode_index = -1
+        self.step_index = 0
+        self.winner_id = None
+
+    def reset(self):
+        self.episode_index += 1
+        self.step_index = 0
+        self.winner_id = None
+        return np.zeros(1, dtype=np.float32), {"opponent_archetype": "Fake"}
+
+    def action_mask(self):
+        return np.ones(4, dtype=np.int8)
+
+    def step(self, _action):
+        rewards, winner = self.episodes[self.episode_index]
+        reward = rewards[self.step_index]
+        self.step_index += 1
+        terminated = self.step_index == len(rewards)
+        if terminated:
+            self.winner_id = winner
+        return np.zeros(1, dtype=np.float32), reward, terminated, False, {}
+
+    def close(self):
+        pass
+
+
+def test_win_rate_callback_logs_terminal_and_dense_eval_reward(monkeypatch):
+    from digimon_gym.agents import pilot_training
+    from digimon_gym.agents.pilot_training import WinRateCallback
+
+    env = _FakeEvalEnv([
+        ([0.5, 1.0], 1),
+        ([0.25, -1.0], 2),
+    ])
+    monkeypatch.setattr(pilot_training, "_unwrap_to_digimon_env", lambda wrapped: wrapped)
+
+    cb = WinRateCallback(
+        eval_env_fn=lambda: env,
+        eval_freq=1,
+        n_eval_episodes=2,
+        verbose=0,
+    )
+    cb.model = _FakeModel()
+
+    cb._run_evaluation()
+
+    records = cb.model.logger.records
+    assert records["pilot/win_rate"] == 0.5
+    assert records["pilot/mean_eval_reward"] == 0.375
+    assert records["pilot/mean_eval_terminal_score"] == 0.0
+    assert records["pilot/mean_eval_dense_reward"] == 0.375
+
+
+def test_win_rate_callback_exposes_last_eval_suite_results(monkeypatch):
+    from digimon_gym.agents import pilot_training
+    from digimon_gym.agents.eval_suite import EvalCellResult, EvalSuiteResult
+    from digimon_gym.agents.pilot_training import WinRateCallback
+
+    class FakeSuite:
+        def run(self, agent_fn):
+            return EvalSuiteResult(
+                cell_results={
+                    "mirror": EvalCellResult(
+                        matchup="mirror",
+                        games_played=3,
+                        wins=2,
+                        losses=1,
+                        draws=0,
+                    )
+                }
+            )
+
+    env = _FakeEvalEnv([([1.0], 1)])
+    monkeypatch.setattr(pilot_training, "_unwrap_to_digimon_env", lambda wrapped: wrapped)
+
+    cb = WinRateCallback(
+        eval_env_fn=lambda: env,
+        eval_freq=1,
+        n_eval_episodes=1,
+        eval_suite=FakeSuite(),
+        eval_suite_path="configs/training/eval_suite.yaml",
+        verbose=0,
+    )
+    cb.model = _FakeModel()
+
+    cb._run_evaluation()
+
+    assert cb.get_eval_suite_results() == {
+        "overall_win_rate": 2 / 3,
+        "suite_path": "configs/training/eval_suite.yaml",
+        "cells": {
+            "mirror": {
+                "games_played": 3,
+                "wins": 2,
+                "losses": 1,
+                "draws": 0,
+                "win_rate": 2 / 3,
+            }
+        },
+    }

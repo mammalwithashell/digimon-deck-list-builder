@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -438,6 +439,10 @@ def test_train_passes_config_tensor_profile_to_held_out_eval_suite(
             captured["eval_suite"] = eval_suite
             self.last_win_rate = 0.0
             self.last_mean_reward = 0.0
+            self.last_draw_rate = 0.0
+            self.last_mean_eval_terminal_score = 0.0
+            self.last_mean_eval_dense_reward = 0.0
+            self.last_mean_eval_episode_length = 0.0
             self.games_played = 0
 
         def close(self):
@@ -445,6 +450,13 @@ def test_train_passes_config_tensor_profile_to_held_out_eval_suite(
 
         def get_archetype_results(self):
             return []
+
+        def get_eval_suite_results(self):
+            return {
+                "overall_win_rate": 0.75,
+                "suite_path": "from-callback",
+                "cells": {},
+            }
 
     eval_suite_path = tmp_path / "eval.yaml"
     eval_suite_path.write_text("version: 1\nopponent_policy: greedy\ngames_per_cell: 1\n")
@@ -474,6 +486,12 @@ def test_train_passes_config_tensor_profile_to_held_out_eval_suite(
     assert captured["path"] == eval_suite_path
     assert captured["tensor_profile"] == "standard_lite_v2"
     assert isinstance(captured["eval_suite"], FakeSuite)
+    meta = json.loads((tmp_path / "eval-suite-profile-test" / "final.meta.json").read_text())
+    assert meta["eval_suite_results"] == {
+        "overall_win_rate": 0.75,
+        "suite_path": "from-callback",
+        "cells": {},
+    }
 
 
 def test_training_run_metadata_round_trips_tensor_profile_fields(tmp_path):
