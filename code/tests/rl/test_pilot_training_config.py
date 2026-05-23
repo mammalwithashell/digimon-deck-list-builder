@@ -229,11 +229,19 @@ class _FakeDigimonEnv(gymnasium.Env):
         return np.ones(3, dtype=np.int8)
 
 
+def _patch_digimon_env(monkeypatch, fake_cls):
+    """Swap DigimonEnv on every module that binds the name."""
+    from digimon_gym.agents import env_utils, pilot_training
+
+    monkeypatch.setattr(pilot_training, "DigimonEnv", fake_cls)
+    monkeypatch.setattr(env_utils, "DigimonEnv", fake_cls)
+
+
 def test_make_env_passes_tensor_profile(monkeypatch):
     from digimon_gym.agents import pilot_training
 
     _FakeDigimonEnv.created = []
-    monkeypatch.setattr(pilot_training, "DigimonEnv", _FakeDigimonEnv)
+    _patch_digimon_env(monkeypatch, _FakeDigimonEnv)
 
     env = pilot_training.make_env(
         opponent="self-play",
@@ -249,7 +257,7 @@ def test_make_env_defaults_to_standard_lite_v2(monkeypatch):
     from digimon_gym.agents import pilot_training
 
     _FakeDigimonEnv.created = []
-    monkeypatch.setattr(pilot_training, "DigimonEnv", _FakeDigimonEnv)
+    _patch_digimon_env(monkeypatch, _FakeDigimonEnv)
 
     env = pilot_training.make_env(opponent="self-play")
 
@@ -262,7 +270,7 @@ def test_make_env_passes_deck2(monkeypatch):
     from digimon_gym.agents import pilot_training
 
     _FakeDigimonEnv.created = []
-    monkeypatch.setattr(pilot_training, "DigimonEnv", _FakeDigimonEnv)
+    _patch_digimon_env(monkeypatch, _FakeDigimonEnv)
 
     env = pilot_training.make_env(
         opponent="self-play",
@@ -280,7 +288,7 @@ def test_make_env_wraps_generalist_pool(monkeypatch):
     from digimon_gym.agents.gauntlet import DeckEntry, GeneralistDeckPool
 
     _FakeDigimonEnv.created = []
-    monkeypatch.setattr(pilot_training, "DigimonEnv", _FakeDigimonEnv)
+    _patch_digimon_env(monkeypatch, _FakeDigimonEnv)
     pool = GeneralistDeckPool(
         archetypes={
             "A": [DeckEntry("deck-a", "A", ["ST1-01"])],
@@ -303,7 +311,7 @@ def test_make_vec_env_passes_config_tensor_profile(monkeypatch):
     from digimon_gym.agents import pilot_training
 
     _FakeDigimonEnv.created = []
-    monkeypatch.setattr(pilot_training, "DigimonEnv", _FakeDigimonEnv)
+    _patch_digimon_env(monkeypatch, _FakeDigimonEnv)
     cfg = TrainingConfig(
         n_envs=2,
         seed=11,

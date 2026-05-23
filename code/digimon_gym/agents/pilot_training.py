@@ -59,6 +59,7 @@ from digimon_gym.agents.maskable_recurrent import (
     MaskableRecurrentPPO,
     MaskableMlpLstmPolicy,
 )
+from digimon_gym.agents.env_utils import unwrap_to_digimon_env as _unwrap_to_digimon_env
 from digimon_gym.agents.opponent_pool import OpponentPool
 from digimon_gym.agents.training_config import TrainingConfig
 from digimon_gym.agents.training_recording import (
@@ -68,30 +69,6 @@ from digimon_gym.agents.training_recording import (
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
-
-def _unwrap_to_digimon_env(env: gymnasium.Env) -> DigimonEnv:
-    """Walk the wrapper stack until we reach a DigimonEnv.
-
-    Raises RuntimeError if no DigimonEnv is found.
-    """
-    unwrapped = env
-    while True:
-        if isinstance(unwrapped, DigimonEnv):
-            return unwrapped
-        # `importlib.reload(digimon_gym.digimon_gym)` in some tests produces a
-        # fresh `DigimonEnv` class object; modules that imported the name
-        # before the reload hold the stale class and reject ostensibly-matching
-        # instances. Treat any class with the right qualified name as a match.
-        cls = type(unwrapped)
-        if cls.__module__ == "digimon_gym.digimon_gym" and cls.__name__ == "DigimonEnv":
-            return unwrapped  # type: ignore[return-value]
-        if isinstance(unwrapped, gymnasium.Wrapper):
-            unwrapped = unwrapped.env
-        else:
-            raise RuntimeError(
-                f"Could not find DigimonEnv in wrapper stack. "
-                f"Innermost layer is {type(unwrapped).__name__}."
-            )
 
 
 def _seed_everything(seed: int) -> None:
