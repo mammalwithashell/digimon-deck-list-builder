@@ -20,7 +20,9 @@ pub mod schedule_delayed;
 pub mod selections;
 pub mod zone_moves;
 
-use digimon_dsl::compiled::{CompiledPlayerRef, CompiledStackPosition, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledPlayerRef, CompiledStackPosition, CompiledStep, CompiledStepDiscriminant,
+};
 use std::sync::Arc;
 
 use crate::dsl_cards::bindings::Bindings;
@@ -116,11 +118,44 @@ fn park_outer_tail(
     if outer_tail.is_empty() {
         return;
     }
-    debug_assert!(
-        ctx.game.dsl_outer_tail.is_none(),
-        "dsl_outer_tail overwrite: an earlier outer continuation \
-         was never drained — likely a nested-park bug",
-    );
+    if ctx.game.dsl_outer_tail.is_some() {
+        // Always-fire (not gated on debug_assertions): silently
+        // overwriting a parked outer continuation corrupts game state
+        // by dropping the original tail. Better to fail loudly so the
+        // crash recorder captures the offending game; the wrapper
+        // converts the panic to a terminal step so training continues.
+        // Best-effort identity for the card whose effect is currently
+        // resolving. Falls back to the raw handle if the lookup misses
+        // (token rebases, mid-deletion handles, etc.).
+        let source_card_id = ctx
+            .game
+            .card_data_for_handle(ctx.source_card)
+            .map(|cd| cd.card_id.clone())
+            .unwrap_or_else(|| format!("handle:{}", ctx.source_card.0));
+        let parking_step = CompiledStepDiscriminant::from(&steps[i]);
+        let (parked_first, parked_len) = ctx
+            .game
+            .dsl_outer_tail
+            .as_ref()
+            .map(|(t, _, _)| {
+                (
+                    t.first().map(CompiledStepDiscriminant::from),
+                    t.len(),
+                )
+            })
+            .unwrap_or((None, 0));
+        panic!(
+            "dsl_outer_tail overwrite: card={} player={:?} parking_step={:?} \
+             outer_tail_len={} previously_parked_first_step={:?} \
+             previously_parked_len={} — likely a nested-park bug",
+            source_card_id,
+            ctx.player,
+            parking_step,
+            outer_tail.len(),
+            parked_first,
+            parked_len,
+        );
+    }
     ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone(), runtime.clone()));
 }
 
@@ -254,7 +289,18 @@ pub(crate) fn drain_dsl_outer_tail(cb_ctx: &mut EffectContext<'_>) {
                 runtime,
             );
         } else {
+            // Wrap the outer-tail run in a deferred-drain scope so any
+            // `fire_on_*` observer triggered by an outer-tail step routes
+            // through `maybe_drain_effect_queue` and only enqueues — the
+            // exit below flushes them at a safe checkpoint with
+            // `dsl_outer_tail = None`. Without this, a step like
+            // `trash_top_security` could fire `OnLoseSecurity` observers
+            // whose inline drain would process a second triggered effect
+            // and collide on the next park. Post-2026-05-23 G-DSL-OUTER-
+            // TAIL-NESTED-PARK fix.
+            cb_ctx.game.enter_deferred_drain();
             run_steps_with_runtime(&outer_tail, cb_ctx, &mut outer_b, &runtime);
+            cb_ctx.game.exit_deferred_drain_and_flush();
         }
     }
 }

@@ -634,6 +634,43 @@ impl Game {
         }
     }
 
+    /// Open a deferred-drain scope. While `draining_deferred > 0`, every
+    /// `fire_on_*` observer helper that previously inline-drained should
+    /// route through `maybe_drain_effect_queue()` instead — enqueue but
+    /// don't drain, leaving the flush to whichever outer scope exits last.
+    ///
+    /// Always pair with `exit_deferred_drain_and_flush()`. The post-fix
+    /// flush happens only on the final exit (counter going 1 → 0).
+    ///
+    /// Used to prevent the nested-park collision documented at
+    /// `qa/archetype-qa/engine-gaps.md` `G-DSL-OUTER-TAIL-NESTED-PARK`:
+    /// previously, an inline drain inside a select-resolution callback
+    /// could fire a second copy of the calling triggered effect while
+    /// the first's `dsl_outer_tail` was still parked.
+    pub(crate) fn enter_deferred_drain(&mut self) {
+        self.draining_deferred = self.draining_deferred.saturating_add(1);
+    }
+
+    /// Close a deferred-drain scope opened by `enter_deferred_drain()`.
+    /// On the final exit (counter going 1 → 0), drain anything that
+    /// accumulated in the queue during the scope.
+    pub(crate) fn exit_deferred_drain_and_flush(&mut self) {
+        self.draining_deferred = self.draining_deferred.saturating_sub(1);
+        if self.draining_deferred == 0 {
+            self.drain_effect_queue();
+        }
+    }
+
+    /// Drain the effect queue unless we're inside a deferred-drain scope.
+    /// `fire_on_*` observer helpers should call this instead of
+    /// `drain_effect_queue()` directly, so a select-resolution callback
+    /// or outer-tail run can hold the queue back until it exits.
+    pub(crate) fn maybe_drain_effect_queue(&mut self) {
+        if self.draining_deferred == 0 {
+            self.drain_effect_queue();
+        }
+    }
+
     /// Drain the effect queue. Fires each queued effect in order, pausing
     /// when an effect installs a `pending_selection` or when the queue
     /// contains multiple triggers for a single chooser (installs a
@@ -2925,6 +2962,13 @@ impl Game {
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
         self.current_phase = sel.previous_phase;
+        // Wrap the callback in a deferred-drain scope (post-2026-05-23
+        // G-DSL-OUTER-TAIL-NESTED-PARK fix). While the callback runs,
+        // `fire_on_*` observer helpers go through `maybe_drain_effect_queue`
+        // and only enqueue; the exit below flushes any accumulated queue.
+        // Matches DCGO's pattern of deferring trigger drains until after
+        // the resolving coroutine returns to its caller.
+        self.enter_deferred_drain();
         if is_pass {
             if let Some(on_decline) = sel.on_decline {
                 on_decline(self);
@@ -2932,6 +2976,7 @@ impl Game {
         } else {
             (sel.callback)(self, action_id);
         }
+        self.exit_deferred_drain_and_flush();
 
         // Phase C §4.4: drain parked-replacement slot (if any). If the
         // resolved selection was a callback inside a replacement-process,

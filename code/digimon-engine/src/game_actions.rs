@@ -26,7 +26,7 @@ use rand::seq::SliceRandom;
 /// Source zone for `play_option_core`. Private to this module — the public
 /// API is the pair of `play_option_from_hand` / `play_option_from_trash`
 /// entry points.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum OptionSource {
     Hand(usize),
     Trash(usize),
@@ -1125,10 +1125,43 @@ impl Game {
         source: OptionSource,
         chosen_mode: Option<OptionPlayMode>,
     ) -> OptionPlayResult {
-        debug_assert!(
-            self.pending_option.is_none(),
-            "reentrant Option play while another is mid-resolution"
-        );
+        // Always-fire (not gated on debug_assertions): re-entering
+        // play_option_core with `pending_option` still set means the
+        // single-occupancy slot is about to be overwritten, which
+        // silently corrupts the prior in-flight Option's resolution.
+        // Better to fail loudly so the crash recorder names both cards;
+        // the wrapper converts the panic into a terminal step.
+        {
+            if let Some(pending) = self.pending_option.as_ref() {
+                let pending_card_id = pending.card.card_id(&self.card_data).to_string();
+                let incoming_card_id = match source {
+                    OptionSource::Hand(i) => self
+                        .player(player_id)
+                        .hand
+                        .get(i)
+                        .map(|c| c.card_id(&self.card_data).to_string())
+                        .unwrap_or_else(|| format!("hand[{}]:oob", i)),
+                    OptionSource::Trash(i) => self
+                        .player(player_id)
+                        .trash
+                        .get(i)
+                        .map(|c| c.card_id(&self.card_data).to_string())
+                        .unwrap_or_else(|| format!("trash[{}]:oob", i)),
+                };
+                panic!(
+                    "reentrant Option play while another is mid-resolution: \
+                     player={:?} incoming_card={} from_source={:?} \
+                     in_flight_card={} in_flight_resolution_phase={:?} \
+                     in_counter_window={}",
+                    player_id,
+                    incoming_card_id,
+                    source,
+                    pending_card_id,
+                    pending.resolution_phase,
+                    self.in_counter_window,
+                );
+            }
+        }
 
         // 1. Phase gate. Counter-window Option plays bypass the Main-phase
         // gate — they fire during the defender's Counter window, which
@@ -2218,7 +2251,11 @@ impl Game {
                 TriggerSource::PlayerBattleArea(pid as PlayerId),
             );
         }
-        self.drain_effect_queue();
+        // `maybe_drain` defers when inside a select-callback or outer-tail
+        // scope (post-2026-05-23 G-DSL-OUTER-TAIL-NESTED-PARK fix). The
+        // scope's exit hook flushes the queue at a safe checkpoint.
+        // Behavior is unchanged at top-level callers (counter is 0).
+        self.maybe_drain_effect_queue();
         if self.pending_selection.is_some() {
             self.pending_option_placed_turn_check = true;
             return;
@@ -2423,7 +2460,9 @@ impl Game {
             index: field_index as u8,
         };
         self.enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(handle));
-        self.drain_effect_queue();
+        // See G-DSL-OUTER-TAIL-NESTED-PARK fix note in
+        // `fire_on_link_after_option_placed`.
+        self.maybe_drain_effect_queue();
     }
 
     /// Activate a `[Main]` effect on the card at `player_id`'s hand slot
@@ -3102,7 +3141,9 @@ impl Game {
                 trigger.subject = Some(crate::trigger_context::EventSubject::Permanent(handle));
             }
         }
-        self.drain_effect_queue();
+        // G-DSL-OUTER-TAIL-NESTED-PARK: maybe_drain defers when inside
+        // a select-callback / outer-tail scope.
+        self.maybe_drain_effect_queue();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
@@ -3125,6 +3166,13 @@ impl Game {
                 cause,
             },
         );
+        // Intentionally NOT routed through maybe_drain: EX10-036 (and
+        // similar multi-source trash chains) rely on observers firing
+        // synchronously between source trashes so secondary clauses can
+        // pick up the just-trashed cards mid-resolution. Behavioral test
+        // `ex10_036_clause_a_after_source_trash_prompts_opp_field_delete`
+        // documents the expected interleaving. Other observer fires
+        // (place_security, leave_field, link, attack, play) are deferred.
         self.drain_effect_queue();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
@@ -5578,6 +5626,9 @@ impl Game {
                     TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
                 );
             }
+            // Intentionally inline-drain (see `fire_digivolution_card_trashed`):
+            // EX10-036's behavioral test depends on synchronous between-source
+            // observer firing for chained trash-pickup clauses.
             self.drain_effect_queue();
         }
 
@@ -5595,6 +5646,7 @@ impl Game {
                     TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
                 );
             }
+            // Intentionally inline-drain — same rationale as above.
             self.drain_effect_queue();
         }
 
@@ -5722,7 +5774,13 @@ impl Game {
                 cause: crate::trigger_context::EventCause::SecurityPlacement,
             },
         );
-        self.drain_effect_queue();
+        // G-DSL-OUTER-TAIL-NESTED-PARK fix: this was previously the dominant
+        // collision site — `place_on_security` called from inside a Lamiamon
+        // clause-2 inner-tail callback would inline-drain a second copy of
+        // the same triggered effect, parking on top of the first's outer
+        // tail. `maybe_drain` defers the drain to the outer-tail scope's
+        // exit.
+        self.maybe_drain_effect_queue();
     }
 
     pub(crate) fn place_permanent_on_security(

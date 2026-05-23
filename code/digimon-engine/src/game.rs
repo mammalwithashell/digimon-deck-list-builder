@@ -621,6 +621,30 @@ pub struct Game {
     /// EndOfYourTurn effect parks a player selection.
     pub(crate) pending_end_turn_resume: Option<EndTurnResume>,
 
+    /// Deferred-drain depth counter (post-2026-05-23 architectural change).
+    ///
+    /// When non-zero, `fire_on_*` observer helpers must NOT inline-drain the
+    /// effect queue — they should only enqueue, letting whichever outer
+    /// scope (the select callback or the outer-tail runner that incremented
+    /// the counter) flush the queue when it exits.
+    ///
+    /// Mirrors DCGO's pattern (`DCGO/Assets/Scripts/Script/CardController.cs`
+    /// `IAddSecurity.AddSecurity()`): trigger enqueue is separate from drain,
+    /// and the drain happens at explicit checkpoints rather than at every
+    /// observer-fire site. Prevents the nested-park collision documented at
+    /// `qa/archetype-qa/engine-gaps.md` `G-DSL-OUTER-TAIL-NESTED-PARK`:
+    /// `fire_on_place_security`'s inline `drain_effect_queue()` previously
+    /// fired a second copy of the same triggered effect mid-callback while
+    /// `dsl_outer_tail` was still occupied by the first.
+    ///
+    /// Incremented by `enter_deferred_drain()` and decremented by
+    /// `exit_deferred_drain_and_flush()`. The two are intentionally paired —
+    /// the latter flushes on the final exit (counter going 1 → 0) so any
+    /// triggers queued during the deferred scope fire now, at a context
+    /// where `dsl_outer_tail` is empty.
+    #[doc(hidden)]
+    pub(crate) draining_deferred: u32,
+
     until_condition_dirty: bool,
     until_condition_last_cycle_evaluations: usize,
     until_condition_total_evaluations: u64,
@@ -846,6 +870,7 @@ impl Game {
             pending_delayed_option_lifecycle: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             pending_end_turn_resume: None,
+            draining_deferred: 0,
             until_condition_dirty: false,
             until_condition_last_cycle_evaluations: 0,
             until_condition_total_evaluations: 0,
