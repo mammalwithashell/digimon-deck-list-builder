@@ -246,9 +246,39 @@ pub fn lower_for_kind_with_clause_index(
 fn predicate_subject_for_source(
     rctx: &crate::effect_context::EffectReadContext<'_>,
 ) -> PredicateSubject {
-    rctx.source_permanent
-        .map(PredicateSubject::Permanent)
-        .unwrap_or(PredicateSubject::None)
+    let Some(handle) = rctx.source_permanent else {
+        return PredicateSubject::None;
+    };
+    // **Post-batched-deletion (2026-05-23).** Under the DCGO-modeled
+    // batched deletion flow, OnDeletion handlers fire AFTER the carrier
+    // has been trashed. `rctx.source_permanent` still points at the
+    // pre-trash handle, but `battle_area[handle.index]` is now empty.
+    // Permanent-subject predicates would hit `eval_permanent_fields`'s
+    // "slot empty → return false" early-exit and the condition would
+    // spuriously fail.
+    //
+    // When the trigger context carries a `deleted_object` snapshot
+    // (indicating a post-trash OnDeletion fire) AND the source slot is
+    // empty, fall back to `None` so subject-agnostic checks (like
+    // `count_gte` on hand) still evaluate correctly. Subject-dependent
+    // checks (level_eq, dp_lte, etc.) silently no-match under `None`,
+    // matching DCGO behavior for "self is no longer the live card."
+    let source_gone = handle.index as usize
+        >= rctx.game.players[handle.player as usize].battle_area.len()
+        || rctx.game.players[handle.player as usize]
+            .battle_area
+            .get(handle.index as usize)
+            .is_none();
+    let post_deletion = rctx
+        .game
+        .current_trigger_context
+        .as_ref()
+        .and_then(|t| t.deleted_object.as_ref())
+        .is_some();
+    if source_gone && post_deletion {
+        return PredicateSubject::None;
+    }
+    PredicateSubject::Permanent(handle)
 }
 
 fn steps_provide_resource_flow(steps: &[CompiledStep]) -> bool {

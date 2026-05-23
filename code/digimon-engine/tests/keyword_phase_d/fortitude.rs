@@ -282,14 +282,12 @@ fn fortitude_does_not_fire_on_neighbor_deletion() {
 
     r.game.delete_permanent_with_effects(neighbor);
 
-    // The replay slot must be empty after a neighbor deletion — Fortitude
-    // OnDeletion is keyed on `TriggerSource::Permanent(handle)` (self-scoped)
-    // so the neighbor's deletion never enqueues FORTITUDE's OnDeletion
-    // handler, and nothing should have been pushed to the replay slot.
-    assert!(
-        r.game.pending_post_deletion_replays_is_empty_for_test(),
-        "neighbor deletion must not push to pending_post_deletion_replays"
-    );
+    // FORTITUDE's OnDeletion is keyed on `TriggerSource::Permanent(handle)`
+    // (self-scoped) so the neighbor's deletion never enqueues FORTITUDE's
+    // OnDeletion handler. The slot-empty assertion against the now-retired
+    // `pending_post_deletion_replays` is replaced by the field-state
+    // assertions below: FORTITUDE didn't replay anything because its
+    // handler didn't fire.
 
     // NEIGHBOR was deleted normally; FORTITUDE is untouched on field.
     let surviving_ids: Vec<String> = r.game.players[0]

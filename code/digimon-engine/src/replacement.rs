@@ -1319,79 +1319,21 @@ fn commit_permanent_deletion_no_replace(
     cause: ReplacementCause,
     event_cause_override: Option<crate::trigger_context::EventCause>,
 ) {
-    let deleted_top_card = game
-        .player(handle.player)
-        .battle_area
-        .get(handle.index as usize)
-        .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
-
-    // Re-establish the deletion cause for the OnDeletion drain + finalize
-    // (OnAnyDeletion). Mirrors the panic-safe save/restore in
-    // `combat.rs::delete_permanent_with_cause` around `commit_permanent_deletion`.
-    let prior_cause = game.current_deletion_cause;
+    // Re-establish the event cause override so OnDeletion handlers see the
+    // original deletion cause. The deletion-cause save/restore is handled
+    // inside `Game::commit_post_replacement_single`.
     let prior_override = game.current_deletion_event_cause_override;
-    game.current_deletion_cause = Some(cause);
     game.current_deletion_event_cause_override = event_cause_override;
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        commit_permanent_deletion_no_replace_inner(game, handle, deleted_top_card);
+        // Route the deferred-decline path through the batched flow's
+        // post-replacement helper so trash-before-OnDeletion semantics
+        // hold uniformly. The replacement window was already offered (and
+        // declined) at this point; the helper skips stages 1+2 and runs
+        // snapshot → trash → OnDeletion → OnAnyDeletion.
+        game.commit_post_replacement_single(handle, cause);
     }));
-    game.current_deletion_cause = prior_cause;
     game.current_deletion_event_cause_override = prior_override;
     if let Err(payload) = result {
         std::panic::resume_unwind(payload);
     }
-}
-
-/// Body of `commit_permanent_deletion_no_replace`, split out so the
-/// deletion-cause save/restore guard wraps it without obscuring the flow.
-fn commit_permanent_deletion_no_replace_inner(
-    game: &mut crate::game::Game,
-    handle: PermanentHandle,
-    deleted_top_card: Option<CardHandle>,
-) {
-    use crate::enums::EffectTiming;
-    use crate::selection::TriggerSource;
-
-    // Track H §3: enqueue_from_permanent records granted-triggered fires
-    // into `pending_granted_fires`; drain_effect_queue flushes them after
-    // the printed-observer drain settles.
-    game.enqueue_triggered(EffectTiming::OnDeletion, TriggerSource::Permanent(handle));
-    game.drain_effect_queue();
-
-    // Phase D Task 6 followup (2026-04-25): an OnDeletion handler may have
-    // installed a player choice (e.g. printed `<Save>` parks an optional
-    // Tamer-pick). Park the rest of the deletion sequence to be finalized
-    // after the selection resolves; running `Player::delete_permanent`
-    // synchronously here would shift later permanents' indices and
-    // invalidate the parked selection. Mirrors the guard in
-    // `combat.rs::Game::commit_permanent_deletion`.
-    //
-    // Reachable when: a card hosts BOTH an optional `WhenWouldBeDeleted`
-    // replacement (e.g. `<Decoy>`, `<Barrier>`) AND an OnDeletion-parking
-    // handler (`<Save>`). The optional replacement was offered, the user
-    // declined, and the deferred-decline path lands here.
-    //
-    // `Game::resume_pending_deletion` (called from
-    // `effect_queue::resolve_generic_selection` after the parked selection
-    // resolves and the post-callback drain settles) runs
-    // `finalize_permanent_deletion` against the saved handle — the same
-    // resume hook used by the synchronous `commit_permanent_deletion` path,
-    // so `pending_post_deletion_replays` (Fortitude/Partition) and the
-    // linked-card cascade all run uniformly.
-    if game.pending_selection.is_some() {
-        // Always-fire (promoted from debug_assert!): the deferred
-        // deletion slot is single-occupancy. Overwriting silently loses
-        // the prior parked deletion's finalize. Better to fail loudly
-        // so the crash recorder captures the AoE/cascade pattern that
-        // produced nested deferrals; the wrapper converts the panic
-        // into a terminal step.
-        assert!(
-            game.pending_deletion_resume.is_none(),
-            "nested deferred deletion not supported (single-outstanding invariant)"
-        );
-        game.pending_deletion_resume = Some((handle, deleted_top_card));
-        return;
-    }
-
-    game.finalize_permanent_deletion(handle);
 }

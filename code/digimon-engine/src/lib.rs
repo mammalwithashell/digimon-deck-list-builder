@@ -11,6 +11,7 @@ pub mod cards;
 pub mod combat;
 pub mod debug_runner;
 pub mod deck_tools;
+pub mod deletion_batch;
 pub mod digixros;
 pub mod dna_digivolve;
 #[cfg(feature = "dsl-yaml-loader")]

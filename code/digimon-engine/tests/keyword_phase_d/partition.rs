@@ -165,14 +165,14 @@ fn partition_plays_two_picked_sources_on_opponent_effect_deletion() {
 
     r.game.delete_permanent_with_effects(carrier);
 
-    // Mid-deletion: the Partition handler parked a 2-pick selection.
-    // Both the carrier and its sources are still on field — the
-    // pending_deletion_resume substrate hook deferred finalization.
+    // Mid-deletion under the batched flow (2026-05-23): the carrier is
+    // already trashed. Partition reads `snap.digisources_just_before`
+    // (now in trash) and parks a 2-pick.
     {
         assert_eq!(
             r.game.players[0].battle_area.len(),
-            1,
-            "carrier still on field while selection is parked (deletion deferred)"
+            0,
+            "carrier already trashed (batched flow); battle area is empty"
         );
         let pending = r
             .game
@@ -315,10 +315,9 @@ fn partition_does_not_fire_on_own_effect_deletion() {
             id
         );
     }
-    assert!(
-        r.game.pending_post_deletion_replays_is_empty_for_test(),
-        "no entries pushed to post-deletion replay slot"
-    );
+    // Phase 5 (2026-05-23): the `pending_post_deletion_replays` slot was
+    // retired — Partition now plays from trash inline. The "no Partition
+    // replay" semantic is covered by the trash/field assertions above.
 }
 
 // ─── Test 3: battle deletion → Partition does NOT fire ────────────────────
@@ -368,10 +367,9 @@ fn partition_does_not_fire_on_battle_deletion() {
             id
         );
     }
-    assert!(
-        r.game.pending_post_deletion_replays_is_empty_for_test(),
-        "no entries pushed to post-deletion replay slot"
-    );
+    // Phase 5 (2026-05-23): the `pending_post_deletion_replays` slot was
+    // retired — Partition now plays from trash inline. The "no Partition
+    // replay" semantic is covered by the trash/field assertions above.
 }
 
 // ─── Test 4: insufficient sources → Partition gate fails, no replay ───────
@@ -430,8 +428,7 @@ fn partition_does_not_fire_when_fewer_than_two_sources() {
             .any(|c| c.card_id(&r.game.card_data) == "SRC-A"),
         "SRC-A in trash via normal deletion"
     );
-    assert!(
-        r.game.pending_post_deletion_replays_is_empty_for_test(),
-        "no entries pushed to post-deletion replay slot"
-    );
+    // Phase 5 (2026-05-23): the `pending_post_deletion_replays` slot was
+    // retired — Partition now plays from trash inline. The "no Partition
+    // replay" semantic is covered by the trash/field assertions above.
 }

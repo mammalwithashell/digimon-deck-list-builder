@@ -496,71 +496,20 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) in_counter_window: bool,
 
-    /// Phase D Task 6 — deferred-deletion finalizer. Set when an
-    /// `OnDeletion`-timed effect (such as the printed `<Save>` keyword
-    /// auto-install) parks a `pending_selection` mid-deletion. Cleared by
-    /// `resume_pending_deletion` after the parked selection's callback
-    /// resolves and the effect queue drains.
+    /// Active multi-target deletion batch (DCGO `DestroyPermanentsClass`
+    /// equivalent). `Some(batch)` while `delete_permanents_batch` is in
+    /// flight at a top level; `None` otherwise. Carries the kill list,
+    /// snapshots, and stage marker through the 10-step DCGO flow.
     ///
-    /// While set, no further deletions can begin (the carrier slot is in an
-    /// indeterminate state — its top card is mid-flight to trash, and the
-    /// surrounding `commit_permanent_deletion` is paused waiting on the
-    /// player's choice). Single-outstanding invariant. Enforced at the
-    /// deferral site in `commit_permanent_deletion` (debug-asserted on
-    /// duplicate park). A second top-level `delete_permanent_with_cause`
-    /// call while this slot is set is theoretically possible but not
-    /// produced by any existing fire-site under a parked selection.
+    /// **Single-outstanding (top-level):** at most one batch is open at a
+    /// time. A nested `delete_permanents_batch` call from inside an
+    /// OnDeletion handler is bounded by `DeletionBatch::depth` — see
+    /// `deletion_batch.rs` for the rationale.
     ///
-    /// **Single-outstanding invariant.** Deletions don't nest in practice
-    /// (the only way a second deletion could fire mid-Save would be a
-    /// replacement-driven side-effect, which can't happen under a parked
-    /// selection). If this assumption ever breaks, replace the field with
-    /// a stack.
-    ///
-    /// **Coexistence with `parked_replacement`:** `parked_replacement` is
-    /// drained earlier in `resolve_generic_selection`; the two slots
-    /// address orthogonal concerns and do not interfere — a
-    /// `WhenWouldBeDeleted` replacement parking via `parked_replacement`
-    /// runs strictly before any `OnDeletion` handler can fire and park here.
+    /// See `openspec/specs/permanent-deletion-semantics/spec.md` for the
+    /// requirement contract this state implements.
     #[doc(hidden)]
-    pub(crate) pending_deletion_resume: Option<(
-        crate::permanent::PermanentHandle,
-        Option<crate::card_source::CardHandle>,
-    )>,
-
-    /// Phase D Task 8 — deferred replays from a just-deleted permanent's
-    /// trash residency. Set during `OnDeletion` (carrier still on field) by
-    /// triggers like printed `<Fortitude>` that want to replay self from
-    /// trash AFTER the deletion fully commits.
-    ///
-    /// `finalize_permanent_deletion` drains this slot AFTER `delete_permanent`
-    /// has moved the carrier + sources to trash but BEFORE the global
-    /// `OnAnyDeletion` broadcast. Each entry's controller calls
-    /// `EffectContext::play_from_trash_free_unsuspended(card)` to retrieve
-    /// the card from trash and put it on the field unsuspended at zero cost.
-    ///
-    /// Why this slot exists: in the Rust engine, `OnAnyDeletion` is enqueued
-    /// via `TriggerSource::PlayerBattleArea`, which scans only currently-live
-    /// permanents. The just-deleted carrier is in trash, so its OnAnyDeletion
-    /// effects are NOT picked up by that scan. Modeling Fortitude as a pure
-    /// `OnAnyDeletion` observer would therefore silently miss its own
-    /// trigger. This slot is a focused substrate hook for the
-    /// "OnDeletion-detected, post-finalize-applied" pattern.
-    ///
-    /// Drained inside `finalize_permanent_deletion`; never persists across
-    /// turn boundaries.
-    ///
-    /// **Coexistence with `pending_deletion_resume`:** if an `OnDeletion`
-    /// handler parks a selection (Phase D Task 6), `finalize_permanent_deletion`
-    /// is deferred until the selection resolves via `resume_pending_deletion`.
-    /// Any entries pushed to this slot during that OnDeletion batch will be
-    /// drained when `finalize_permanent_deletion` is eventually called — the
-    /// drain ordering guarantee (before `OnAnyDeletion`) still holds, but the
-    /// total wall-clock delay is longer. A card printing both `<Save>` and
-    /// `<Fortitude>` will experience this; it is a known edge case.
-    #[doc(hidden)]
-    pub(crate) pending_post_deletion_replays:
-        Vec<(crate::enums::PlayerId, crate::card_source::CardHandle)>,
+    pub(crate) active_deletion_batch: Option<crate::deletion_batch::DeletionBatch>,
 
     /// Phase 2d Task 7: when a control-flow or iteration step's body parks
     /// a selection, the steps that follow the control-flow step in the
@@ -860,8 +809,7 @@ impl Game {
             parked_replacement: None,
             dsl_replacement_outcome: None,
             in_counter_window: false,
-            pending_deletion_resume: None,
-            pending_post_deletion_replays: Vec::new(),
+            active_deletion_batch: None,
             dsl_outer_tail: None,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
@@ -1521,16 +1469,6 @@ impl Game {
         &self,
     ) -> Option<crate::replacement::ReplacementOutcome> {
         self.parked_replacement.as_ref().map(|p| p.outcome)
-    }
-
-    /// Test-only getter for `pending_post_deletion_replays`. The field is
-    /// `pub(crate)`, so behavioral tests under `digimon-engine/tests/` cannot
-    /// read it directly. Returns `true` when the slot is empty (the steady
-    /// state — the slot is drained inside `finalize_permanent_deletion` and
-    /// never persists across deletion calls).
-    #[doc(hidden)]
-    pub fn pending_post_deletion_replays_is_empty_for_test(&self) -> bool {
-        self.pending_post_deletion_replays.is_empty()
     }
 
     /// Get the next player clockwise from the given player.

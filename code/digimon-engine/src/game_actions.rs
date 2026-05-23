@@ -2971,14 +2971,30 @@ impl Game {
             .and_then(|p| {
                 let top_handle = p.top_card().handle();
                 let data = self.card_data_for_handle(top_handle)?;
+                let mut digisources: Vec<crate::card_source::CardHandle> = Vec::new();
+                for src in p.card_sources.iter() {
+                    let h = src.handle();
+                    if h != top_handle {
+                        digisources.push(h);
+                    }
+                }
+                let source_count = digisources.len();
+                let dp_now = self.effective_dp(handle);
                 Some(crate::trigger_context::DeletedObjectSnapshot {
                     former_controller: handle.player,
                     top_card: top_handle,
                     card_kind: data.card_kind,
                     traits: data.traits.clone(),
                     level: data.level,
-                    dp: self.effective_dp(handle),
+                    dp: dp_now,
                     cause: crate::trigger_context::EventCause::Return,
+                    dp_just_before: dp_now,
+                    level_just_before: data.level,
+                    cost_just_before: Some(data.play_cost),
+                    names_just_before: vec![data.card_name.clone()],
+                    traits_just_before: data.traits.clone(),
+                    source_count_just_before: source_count,
+                    digisources_just_before: digisources,
                 })
             });
 
@@ -3296,19 +3312,35 @@ impl Game {
             .and_then(|p| {
                 let top_handle = p.top_card().handle();
                 let data = self.card_data_for_handle(top_handle)?;
+                let mut digisources: Vec<crate::card_source::CardHandle> = Vec::new();
+                for src in p.card_sources.iter() {
+                    let h = src.handle();
+                    if h != top_handle {
+                        digisources.push(h);
+                    }
+                }
+                let source_count = digisources.len();
+                let dp_now = self.effective_dp(handle);
                 Some(crate::trigger_context::DeletedObjectSnapshot {
                     former_controller: player_id,
                     top_card: top_handle,
                     card_kind: data.card_kind,
                     traits: data.traits.clone(),
                     level: data.level,
-                    dp: self.effective_dp(handle),
+                    dp: dp_now,
                     cause: match position {
                         crate::enums::StackPosition::Bottom => {
                             crate::trigger_context::EventCause::DeckBottom
                         }
                         _ => crate::trigger_context::EventCause::Return,
                     },
+                    dp_just_before: dp_now,
+                    level_just_before: data.level,
+                    cost_just_before: Some(data.play_cost),
+                    names_just_before: vec![data.card_name.clone()],
+                    traits_just_before: data.traits.clone(),
+                    source_count_just_before: source_count,
+                    digisources_just_before: digisources,
                 })
             });
 

@@ -45,6 +45,10 @@ name = "combat"
 path = "tests/combat/main.rs"
 
 [[test]]
+name = "deletion_batching"
+path = "tests/deletion_batching/main.rs"
+
+[[test]]
 name = "selection"
 path = "tests/selection/main.rs"
 
