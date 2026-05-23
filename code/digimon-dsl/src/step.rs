@@ -125,6 +125,7 @@ pub enum StepSpec {
     // Field / permanent
     DeletePermanent(TargetArg),
     DeleteBoundPermanents(DeleteBoundPermanentsArgs),
+    TrashBreedingPermanent(TrashBreedingPermanentArgs),
     ReturnToHand(TargetArg),
     ReturnToDeck(ReturnPermanentArgs),
     Suspend(TargetArg),
@@ -326,6 +327,7 @@ impl Serialize for StepSpec {
             // Field / permanent
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
+            StepSpec::TrashBreedingPermanent(v) => kv!(s, "trash_breeding_permanent", v),
             StepSpec::ReturnToHand(v) => kv!(s, "return_to_hand", v),
             StepSpec::ReturnToDeck(v) => kv!(s, "return_to_deck", v),
             StepSpec::Suspend(v) => kv!(s, "suspend", v),
@@ -543,6 +545,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Field / permanent
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
             "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
+            "trash_breeding_permanent" => StepSpec::TrashBreedingPermanent(map.next_value()?),
             "return_to_hand" => StepSpec::ReturnToHand(map.next_value()?),
             "return_to_deck" => StepSpec::ReturnToDeck(map.next_value()?),
             "suspend" => StepSpec::Suspend(map.next_value()?),
@@ -730,6 +733,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "order_remainder",
                         "delete_permanent",
                         "delete_bound_permanents",
+                        "trash_breeding_permanent",
                         "return_to_hand",
                         "return_to_deck",
                         "suspend",
@@ -852,6 +856,12 @@ pub enum BindingRef {
 #[serde(deny_unknown_fields)]
 pub struct DeleteBoundPermanentsArgs {
     pub binding: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashBreedingPermanentArgs {
+    pub target: BindingRef,
 }
 
 /// Move a selected list of trash cards to the deck. `cards` is the name of a
@@ -1562,6 +1572,9 @@ pub struct PlayUnionBoundFreeArgs {
     /// same body (e.g. a Task 11 cleanup step). `None` preserves no binding.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+    /// When true, the played Digimon's own On Play effects do not activate.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suppress_on_play: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1571,6 +1584,8 @@ pub struct PlayFromMaterialsArgs {
     pub source_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub suppress_on_play: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
 }
@@ -2025,6 +2040,8 @@ pub struct SelectOwnBreedingPermanentArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
     /// Optional predicate the selected breeding permanent must satisfy.
     /// Used by Royal Knights cards like BT13-093 that require the
     /// breeding permanent to be a specific named host (e.g.
@@ -2040,6 +2057,10 @@ pub struct SelectOwnBreedingPermanentArgs {
 pub struct SelectUnionArgs {
     pub of: PlayerRef,
     pub zones: Vec<Zone>,
+    /// Optional carrier binding used when `zones` includes `material`.
+    /// The binding may resolve to a battle-area or breeding-area permanent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub material_of: Option<BindingRef>,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
@@ -2050,6 +2071,11 @@ pub struct SelectUnionArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+    /// Success-only branch. Used for source-placement costs where the
+    /// selected card is the cost payment and the following benefit must not
+    /// resolve when the selection is declined or unpayable.
+    #[serde(default)]
+    pub then: Vec<StepSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

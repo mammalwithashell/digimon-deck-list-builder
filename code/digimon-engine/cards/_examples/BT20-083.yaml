@@ -27,34 +27,36 @@ effects:
           ignore_requirements: true
 
   - when: on_deletion
-    optional: true
+    summary: "[On Deletion] You may place this card under your breeding King Drasil_7D6"
     process:
-      - select_own_permanent:
+      - select_own_breeding_permanent:
           bind_as: kd
-          filter:
-            all_of:
-              - name_is: "King Drasil_7D6"
-              - zone: [breeding]
-          prompt: "Place as King Drasil bottom source"
-      - place_as_bottom_source:
-          source: { permanent: self }
-          target: kd
+          optional: true
+          filter: { name_is: "King Drasil_7D6" }
+          prompt: "Choose your [King Drasil_7D6] in the breeding area"
+          then:
+            - place_as_bottom_source:
+                source: self
+                target: kd
 
   - scope: inherited
-    when: on_opponent_security_removed
+    when: on_own_security_removed
     active_when:
       all_of:
-        - in_breeding: true
         - opponents_turn: true
+        - source_is_unsuspended: true
+        - self_digivolution_sources_contain_name: "Omekamon"
     optional: true
+    summary: "[Breeding][Opponent's Turn] Suspend this Digimon to play an Omekamon from its sources"
     process:
       - suspend: { target: carrier }
-      - select_material:
+      - select_materials:
           of_permanent: carrier
-          bind_as: slot
+          max: 1
           filter: { name_is: "Omekamon" }
-          prompt: "Play Omekamon from materials"
+          bind_as: omekamon_source
+          prompt: "Choose an [Omekamon] source to play"
       - play_from_materials:
           target: carrier
-          source_index: slot
+          source_index: omekamon_source
           cost_delta: free

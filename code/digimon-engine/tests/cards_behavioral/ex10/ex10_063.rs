@@ -530,8 +530,14 @@ fn ex10_063_clause1_returns_self_and_plays_close_from_hand_free() {
         .expect("EX10-063 YAML parses and compiles")
         .add_card(close_card)
         .add_card(make_filler("FILL-C1A"))
-        .deck(0, &["FILL-C1A", "FILL-C1A", "FILL-C1A", "FILL-C1A", "FILL-C1A"])
-        .deck(1, &["FILL-C1A", "FILL-C1A", "FILL-C1A", "FILL-C1A", "FILL-C1A"])
+        .deck(
+            0,
+            &["FILL-C1A", "FILL-C1A", "FILL-C1A", "FILL-C1A", "FILL-C1A"],
+        )
+        .deck(
+            1,
+            &["FILL-C1A", "FILL-C1A", "FILL-C1A", "FILL-C1A", "FILL-C1A"],
+        )
         .memory(5)
         .start();
 
@@ -597,8 +603,14 @@ fn ex10_063_clause1_no_digimon_on_field_plays_sunarizamon_from_trash_free() {
         .add_card(close_card)
         .add_card(sunari)
         .add_card(make_filler("FILL-C1B"))
-        .deck(0, &["FILL-C1B", "FILL-C1B", "FILL-C1B", "FILL-C1B", "FILL-C1B"])
-        .deck(1, &["FILL-C1B", "FILL-C1B", "FILL-C1B", "FILL-C1B", "FILL-C1B"])
+        .deck(
+            0,
+            &["FILL-C1B", "FILL-C1B", "FILL-C1B", "FILL-C1B", "FILL-C1B"],
+        )
+        .deck(
+            1,
+            &["FILL-C1B", "FILL-C1B", "FILL-C1B", "FILL-C1B", "FILL-C1B"],
+        )
         .memory(5)
         .start();
 
@@ -658,8 +670,14 @@ fn ex10_063_clause1_has_digimon_on_field_sunarizamon_tail_does_not_fire() {
         .add_card(sunari)
         .add_card(digimon)
         .add_card(make_filler("FILL-C1C"))
-        .deck(0, &["FILL-C1C", "FILL-C1C", "FILL-C1C", "FILL-C1C", "FILL-C1C"])
-        .deck(1, &["FILL-C1C", "FILL-C1C", "FILL-C1C", "FILL-C1C", "FILL-C1C"])
+        .deck(
+            0,
+            &["FILL-C1C", "FILL-C1C", "FILL-C1C", "FILL-C1C", "FILL-C1C"],
+        )
+        .deck(
+            1,
+            &["FILL-C1C", "FILL-C1C", "FILL-C1C", "FILL-C1C", "FILL-C1C"],
+        )
         .memory(5)
         .start();
 
@@ -727,8 +745,14 @@ fn ex10_063_clause1_no_close_in_hand_cost_still_paid() {
         .expect("EX10-063 YAML parses and compiles")
         .add_card(other_tamer)
         .add_card(make_filler("FILL-C1D"))
-        .deck(0, &["FILL-C1D", "FILL-C1D", "FILL-C1D", "FILL-C1D", "FILL-C1D"])
-        .deck(1, &["FILL-C1D", "FILL-C1D", "FILL-C1D", "FILL-C1D", "FILL-C1D"])
+        .deck(
+            0,
+            &["FILL-C1D", "FILL-C1D", "FILL-C1D", "FILL-C1D", "FILL-C1D"],
+        )
+        .deck(
+            1,
+            &["FILL-C1D", "FILL-C1D", "FILL-C1D", "FILL-C1D", "FILL-C1D"],
+        )
         .memory(5)
         .start();
 

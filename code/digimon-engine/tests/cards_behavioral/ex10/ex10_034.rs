@@ -174,9 +174,7 @@ fn ex10_034_clause_b_has_when_attacking_once_per_turn_optional() {
             _ => None,
         })
         .find(|t| t.when.contains(&CompiledTiming::WhenAttacking))
-        .expect(
-            "EX10-034 must have a triggered clause with WhenAttacking timing (Clause B)",
-        );
+        .expect("EX10-034 must have a triggered clause with WhenAttacking timing (Clause B)");
 
     assert_eq!(
         clause.scope,
@@ -233,9 +231,10 @@ fn ex10_034_clause_b_when_attacking_prompts_source_multi_2_of_2() {
     runner.push_source(blastmon, "SRC-B1");
     runner.push_source(blastmon, "SRC-B2");
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(blastmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(blastmon),
+    );
     runner.game.drain_effect_queue();
 
     // Outer Replacement (optional accept/decline) installed first.
@@ -246,7 +245,9 @@ fn ex10_034_clause_b_when_attacking_prompts_source_multi_2_of_2() {
         runner.pending_kind()
     );
     // Accept the outer optional using accept_optional_trigger (single-step, does NOT drain further).
-    runner.accept_optional_trigger().expect("accept outer optional");
+    runner
+        .accept_optional_trigger()
+        .expect("accept outer optional");
 
     // SourceMulti(2,2) must appear now.
     assert!(
@@ -278,9 +279,10 @@ fn ex10_034_clause_b_on_opponent_attack_prompts_source_multi_2_of_2() {
     runner.push_source(blastmon, "OA-SRC1");
     runner.push_source(blastmon, "OA-SRC2");
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnOpponentAttack, TriggerSource::Permanent(blastmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentAttack,
+        TriggerSource::Permanent(blastmon),
+    );
     runner.game.drain_effect_queue();
 
     // Outer Replacement installed.
@@ -291,7 +293,9 @@ fn ex10_034_clause_b_on_opponent_attack_prompts_source_multi_2_of_2() {
         runner.pending_kind()
     );
     // Accept (single-step — does NOT drain the SourceMulti that follows).
-    runner.accept_optional_trigger().expect("accept outer optional");
+    runner
+        .accept_optional_trigger()
+        .expect("accept outer optional");
 
     assert!(
         matches!(
@@ -326,9 +330,10 @@ fn ex10_034_clause_b_no_source_multi_when_zero_own_sources() {
     let blastmon = runner.place_on_field(0, "EX10-034", None);
     // No sources pushed — stack has only the top card (EX10-034).
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(blastmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(blastmon),
+    );
     runner.game.drain_effect_queue();
 
     // Outer Replacement is installed (no guard suppresses it for SelectOwnSources).
@@ -352,7 +357,10 @@ fn ex10_034_clause_b_no_source_multi_when_zero_own_sources() {
     );
     // No SecurityAttackChange granted.
     assert_eq!(
-        runner.game.modifiers.sum(blastmon, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(blastmon, ModifierType::SecurityAttackChange),
         0,
         "no SecurityAttackChange must be granted when cost cannot be paid"
     );
@@ -374,9 +382,10 @@ fn ex10_034_clause_b_no_source_multi_when_only_one_source() {
     let blastmon = runner.place_on_field(0, "EX10-034", None);
     runner.push_source(blastmon, "ONE-SRC");
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(blastmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(blastmon),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -396,7 +405,10 @@ fn ex10_034_clause_b_no_source_multi_when_only_one_source() {
         runner.pending_kind()
     );
     assert_eq!(
-        runner.game.modifiers.sum(blastmon, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(blastmon, ModifierType::SecurityAttackChange),
         0,
         "no SecurityAttackChange must be granted when cost cannot be paid (1 source < 2 needed)"
     );
@@ -424,9 +436,10 @@ fn ex10_034_clause_b_grants_security_attack_plus_1_after_cost() {
     runner.push_source(blastmon, "SA-SRC1");
     runner.push_source(blastmon, "SA-SRC2");
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(blastmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(blastmon),
+    );
     runner.game.drain_effect_queue();
 
     // Step 1: outer Replacement (accept/decline) installed.
@@ -436,7 +449,9 @@ fn ex10_034_clause_b_grants_security_attack_plus_1_after_cost() {
         "outer Replacement selection must be pending first"
     );
     // Accept the outer optional (single-step — does NOT drain the SourceMulti that follows).
-    runner.accept_optional_trigger().expect("accept outer optional");
+    runner
+        .accept_optional_trigger()
+        .expect("accept outer optional");
 
     // Step 2: SourceMulti(2,2) now pending.
     assert!(
@@ -447,13 +462,14 @@ fn ex10_034_clause_b_grants_security_attack_plus_1_after_cost() {
         "SourceMulti(2,2) must follow the outer accept"
     );
     // Pay the cost: pick both sources.
-    runner
-        .auto_resolve()
-        .expect("source selection resolves");
+    runner.auto_resolve().expect("source selection resolves");
     runner.auto_resolve().ok(); // drain any follow-up
 
     assert_eq!(
-        runner.game.modifiers.sum(blastmon, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(blastmon, ModifierType::SecurityAttackChange),
         1,
         "EX10-034 must gain SecurityAttackChange +1 after paying the 2-source cost"
     );
@@ -483,9 +499,10 @@ fn ex10_034_clause_b_grants_plus_3000_dp_after_cost() {
 
     let dp_before = runner.dp_of(blastmon).unwrap_or(0);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(blastmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(blastmon),
+    );
     runner.game.drain_effect_queue();
 
     // Accept outer optional.
@@ -532,9 +549,10 @@ fn ex10_034_clause_b_removes_2_sources_from_stack() {
     // stack_before should be 2 (2 sources below top card EX10-034).
     // The top card itself is not counted in card_sources (it's the permanent's card_idx).
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(blastmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(blastmon),
+    );
     runner.game.drain_effect_queue();
 
     // Accept outer optional.
@@ -584,9 +602,10 @@ fn ex10_034_clause_b_opt_blocks_second_when_attacking_same_turn() {
     runner.push_source(blastmon, "OPT-SRC4");
 
     // First activation: outer Replacement installs, then SourceMulti after accept.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(blastmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(blastmon),
+    );
     runner.game.drain_effect_queue();
     assert_eq!(
         runner.pending_kind(),
@@ -594,7 +613,9 @@ fn ex10_034_clause_b_opt_blocks_second_when_attacking_same_turn() {
         "First activation must install outer Replacement selection"
     );
     // Accept outer optional (single-step — does NOT drain the SourceMulti that follows).
-    runner.accept_optional_trigger().expect("accept outer optional");
+    runner
+        .accept_optional_trigger()
+        .expect("accept outer optional");
     assert!(
         matches!(
             runner.pending_kind(),
@@ -608,9 +629,10 @@ fn ex10_034_clause_b_opt_blocks_second_when_attacking_same_turn() {
     runner.auto_resolve().ok();
 
     // Second activation same turn: OPT flag blocks it — nothing installed.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(blastmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(blastmon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(

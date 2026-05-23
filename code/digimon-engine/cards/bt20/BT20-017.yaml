@@ -14,11 +14,43 @@ alt_paths:
     from: { level_eq: 5, color_is: red }
     cost: 3
 
-effects: []
+effects:
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] You may play 1 [Atho, René & Por] Token"
+    process:
+      - play_token:
+          controller: you
+          token_name: atho_rene_por
 
-# Stubbed:
-# - [On Play][When Digivolving] may play 1 Atho/Rene/Por token. The token is
-#   not registered in the Rust token registry yet.
-# - [Your Turn][Once Per Turn] when another Digimon is played, delete <=8000 DP
-#   then one of your Digimon may attack. Needs other-ally-played observer and
-#   in-effect attack selection.
+  - when: on_ally_played
+    once_per_turn: true
+    summary: "[Your Turn][OPT] When another own Digimon is played, delete <=8000 DP; then 1 own Digimon may attack"
+    condition:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+        - event_target_is_source: false
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 8000
+          prompt: "Delete 1 opponent Digimon with 8000 DP or less"
+      - delete_permanent: { target: target }
+      - optional:
+          - select_own_permanent:
+              bind_as: attacker
+              filter: { kind: digimon }
+              optional: true
+              prompt: "Choose 1 of your Digimon that may attack"
+          - may_attack_now:
+              attacker: attacker
+              targets: any
+              optional: true
+              prompt: "Have the selected Digimon attack?"

@@ -117,6 +117,7 @@ mod replacement_context;
 mod residual_formula_predicate_vocab;
 mod reveal_buckets;
 mod roundtrip;
+mod royal_knights_union_source_flows;
 mod s2_2_union_hand_trash_name_exclusion;
 mod schema_export;
 mod security_boundary;

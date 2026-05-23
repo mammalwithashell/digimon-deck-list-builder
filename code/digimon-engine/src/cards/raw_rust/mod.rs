@@ -138,7 +138,10 @@ fn ex8_070_delete_lowest_cost_digimon(ctx: &mut EffectContext<'_>, _bindings: &m
 
     // Delete the first Digimon at the minimum cost (lowest battle-area index).
     // Tie-breaking selection pending G-PLAY-COST-AGGREGATE.
-    if let Some((handle, _)) = digimon_costs.into_iter().find(|(_, cost)| *cost == min_cost) {
+    if let Some((handle, _)) = digimon_costs
+        .into_iter()
+        .find(|(_, cost)| *cost == min_cost)
+    {
         ctx.delete_permanent(handle);
     }
 }

@@ -181,7 +181,10 @@ fn ex10_033_clause_b_has_wd_wa_no_opt() {
         .expect("Clause B ([WD][WA], no OPT) must exist");
 
     assert!(!clause_b.once_per_turn, "Clause B must NOT be OPT");
-    assert!(!clause_b.optional, "Clause B is not 'You may' (cost-by prefix)");
+    assert!(
+        !clause_b.optional,
+        "Clause B is not 'You may' (cost-by prefix)"
+    );
     assert_eq!(
         clause_b.scope,
         CompiledScope::FaceUp,
@@ -213,9 +216,10 @@ fn ex10_033_clause_a_placing_one_card_grows_sources_by_one() {
         .len();
 
     // Fire WhenDigivolving — both clauses trigger. TriggerOrder fires first.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     // Clause A fires first — pick 1 Mineral card, then PASS on remaining picks.
@@ -231,15 +235,21 @@ fn ex10_033_clause_a_placing_one_card_grows_sources_by_one() {
         match runner.pending_kind() {
             Some(SelectionKind::Trash) => {
                 if !picked_one {
-                    runner.execute_action(0, TRASH_EFFECT_START).expect("pick first trash card");
+                    runner
+                        .execute_action(0, TRASH_EFFECT_START)
+                        .expect("pick first trash card");
                     picked_one = true;
                 } else {
-                    runner.execute_action(0, PASS).expect("PASS on 2nd trash pick");
+                    runner
+                        .execute_action(0, PASS)
+                        .expect("PASS on 2nd trash pick");
                 }
             }
             Some(SelectionKind::SourceMulti { .. }) => {
                 // Clause B — PASS to skip (no sources available here)
-                runner.execute_action(0, PASS).expect("PASS on Clause B SourceMulti");
+                runner
+                    .execute_action(0, PASS)
+                    .expect("PASS on Clause B SourceMulti");
             }
             Some(SelectionKind::OppField) | Some(SelectionKind::OwnField) => {
                 runner.auto_resolve().expect("field selection resolves");
@@ -289,9 +299,10 @@ fn ex10_033_clause_a_placing_three_cards_grows_sources_by_three() {
         .card_sources
         .len();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     // Pick all 3, then handle Clause B by passing.
@@ -305,14 +316,18 @@ fn ex10_033_clause_a_placing_three_cards_grows_sources_by_three() {
         match runner.pending_kind() {
             Some(SelectionKind::Trash) => {
                 if trash_picks < 3 {
-                    runner.execute_action(0, TRASH_EFFECT_START).expect("pick trash card");
+                    runner
+                        .execute_action(0, TRASH_EFFECT_START)
+                        .expect("pick trash card");
                     trash_picks += 1;
                 } else {
                     runner.execute_action(0, PASS).expect("PASS after 3 picks");
                 }
             }
             Some(SelectionKind::SourceMulti { .. }) => {
-                runner.execute_action(0, PASS).expect("PASS Clause B SourceMulti");
+                runner
+                    .execute_action(0, PASS)
+                    .expect("PASS Clause B SourceMulti");
             }
             Some(SelectionKind::OppField) | Some(SelectionKind::OwnField) => {
                 runner.auto_resolve().expect("field selection resolves");
@@ -363,9 +378,10 @@ fn ex10_033_clause_a_opt_blocks_second_when_attacking_same_turn() {
     push_to_trash(&mut runner, "MIN-TR-OPT2");
 
     // First attack — fire WhenAttacking. Drain all prompts.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     let mut iterations = 0;
@@ -377,7 +393,9 @@ fn ex10_033_clause_a_opt_blocks_second_when_attacking_same_turn() {
         match runner.pending_kind() {
             Some(SelectionKind::Trash) => {
                 // Take first pick.
-                runner.execute_action(0, TRASH_EFFECT_START).expect("pick first trash");
+                runner
+                    .execute_action(0, TRASH_EFFECT_START)
+                    .expect("pick first trash");
                 // PASS subsequent picks.
                 if let Some(SelectionKind::Trash) = runner.pending_kind() {
                     runner.execute_action(0, PASS).expect("pass second pick");
@@ -406,9 +424,10 @@ fn ex10_033_clause_a_opt_blocks_second_when_attacking_same_turn() {
     }
 
     // Second attack same turn — Clause A OPT must be locked.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     // Clause B may still fire (no OPT). Drain it.
@@ -477,9 +496,10 @@ fn ex10_033_clause_b_when_digivolving_prompts_source_multi_when_mineral_source_p
     let pyramidimon = runner.place_on_field(0, "EX10-033", None);
 
     // Fire WhenDigivolving — both clauses trigger.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     // Drain TriggerOrder + Clause A (no trash, both optional picks pass immediately),
@@ -544,9 +564,10 @@ fn ex10_033_clause_b_trash_one_source_reduces_play_cost_by_two() {
     let pyramidimon = runner.place_on_field(0, "EX10-033", None);
     let opp = runner.place_on_field(1, "OPP-DIGI-B2", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     let mut iterations = 0;
@@ -565,7 +586,9 @@ fn ex10_033_clause_b_trash_one_source_reduces_play_cost_by_two() {
                 if picked == 0 && max >= 1 {
                     runner.auto_resolve().expect("select 1 source");
                 } else {
-                    runner.execute_action(0, PASS).expect("done picking sources");
+                    runner
+                        .execute_action(0, PASS)
+                        .expect("done picking sources");
                 }
             }
             Some(SelectionKind::OppField) => {
@@ -584,9 +607,7 @@ fn ex10_033_clause_b_trash_one_source_reduces_play_cost_by_two() {
         }
     }
 
-    let play_cost_reduction = runner
-        .modifiers()
-        .sum(opp, ModifierType::ChangePlayCost);
+    let play_cost_reduction = runner.modifiers().sum(opp, ModifierType::ChangePlayCost);
 
     assert_eq!(
         play_cost_reduction, -2,
@@ -635,9 +656,10 @@ fn ex10_033_clause_b_trash_three_sources_reduces_play_cost_by_six() {
     let pyramidimon = runner.place_on_field(0, "EX10-033", None);
     let opp = runner.place_on_field(1, "OPP-DIGI-3B", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     let mut source_picks = 0u8;
@@ -656,7 +678,9 @@ fn ex10_033_clause_b_trash_three_sources_reduces_play_cost_by_six() {
                     runner.auto_resolve().expect("pick source");
                     source_picks += 1;
                 } else {
-                    runner.execute_action(0, PASS).expect("done picking sources");
+                    runner
+                        .execute_action(0, PASS)
+                        .expect("done picking sources");
                 }
             }
             Some(SelectionKind::OppField) => {
@@ -677,9 +701,7 @@ fn ex10_033_clause_b_trash_three_sources_reduces_play_cost_by_six() {
 
     let _ = source_picks;
 
-    let play_cost_reduction = runner
-        .modifiers()
-        .sum(opp, ModifierType::ChangePlayCost);
+    let play_cost_reduction = runner.modifiers().sum(opp, ModifierType::ChangePlayCost);
 
     assert_eq!(
         play_cost_reduction, -6,
@@ -717,9 +739,10 @@ fn ex10_033_clause_b_play_cost_modifier_expires_after_opponents_turn() {
     let pyramidimon = runner.place_on_field(0, "EX10-033", None);
     let opp = runner.place_on_field(1, "OPP-DIGI-EXP", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     let mut iterations = 0;
@@ -736,7 +759,9 @@ fn ex10_033_clause_b_play_cost_modifier_expires_after_opponents_turn() {
                 if picked == 0 && max >= 1 {
                     runner.auto_resolve().expect("select 1 source");
                 } else {
-                    runner.execute_action(0, PASS).expect("done picking sources");
+                    runner
+                        .execute_action(0, PASS)
+                        .expect("done picking sources");
                 }
             }
             Some(SelectionKind::OppField) => {
@@ -808,9 +833,10 @@ fn ex10_033_clause_b_passing_with_zero_sources_applies_no_modifier() {
     let pyramidimon = runner.place_on_field(0, "EX10-033", None);
     let opp = runner.place_on_field(1, "OPP-DIGI-ZERO", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     let mut iterations = 0;
@@ -825,7 +851,9 @@ fn ex10_033_clause_b_passing_with_zero_sources_applies_no_modifier() {
             }
             Some(SelectionKind::SourceMulti { .. }) => {
                 // PASS immediately — select 0 sources.
-                runner.execute_action(0, PASS).expect("pass Clause B immediately");
+                runner
+                    .execute_action(0, PASS)
+                    .expect("pass Clause B immediately");
             }
             Some(SelectionKind::OppField) | Some(SelectionKind::OwnField) => {
                 runner.auto_resolve().expect("field resolves");
@@ -877,9 +905,10 @@ fn ex10_033_clause_b_when_attacking_reduces_play_cost() {
     let opp = runner.place_on_field(1, "OPP-DIGI-WA", None);
 
     // Fire WhenAttacking.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     let mut iterations = 0;
@@ -915,9 +944,7 @@ fn ex10_033_clause_b_when_attacking_reduces_play_cost() {
         }
     }
 
-    let play_cost_reduction = runner
-        .modifiers()
-        .sum(opp, ModifierType::ChangePlayCost);
+    let play_cost_reduction = runner.modifiers().sum(opp, ModifierType::ChangePlayCost);
 
     assert!(
         play_cost_reduction <= -2,

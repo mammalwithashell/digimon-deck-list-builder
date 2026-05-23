@@ -206,7 +206,11 @@ fn p_215_triggered_clause_has_three_timings() {
         t.when.contains(&CompiledTiming::OnMove),
         "triggered clause must fire on OnMove (when_moving)"
     );
-    assert_eq!(t.when.len(), 3, "triggered clause must have exactly 3 timings");
+    assert_eq!(
+        t.when.len(),
+        3,
+        "triggered clause must have exactly 3 timings"
+    );
 }
 
 /// The triggered clause is optional (the cost is player-driven).
@@ -224,7 +228,10 @@ fn p_215_triggered_clause_is_optional() {
         })
         .expect("triggered clause must exist");
 
-    assert!(t.optional, "P-215's main clause must be optional (player chooses to pay cost)");
+    assert!(
+        t.optional,
+        "P-215's main clause must be optional (player chooses to pay cost)"
+    );
 }
 
 /// The triggered clause is own-scope (FaceUp, not inherited).
@@ -293,7 +300,9 @@ fn p_215_on_play_prompts_union_zone_when_eligible_card_in_hand() {
     // Play P-215 from hand (index 0).
     runner.play(0, 0);
 
-    let kind = runner.pending_kind().expect("a selection must install after playing P-215");
+    let kind = runner
+        .pending_kind()
+        .expect("a selection must install after playing P-215");
     assert!(
         matches!(kind, SelectionKind::UnionZone { .. }),
         "P-215 on_play must install a UnionZone selection (hand ∪ trash cost), got {kind:?}"
@@ -321,7 +330,9 @@ fn p_215_on_play_prompts_union_zone_when_eligible_card_in_trash() {
 
     runner.play(0, 0);
 
-    let kind = runner.pending_kind().expect("a selection must install after playing P-215");
+    let kind = runner
+        .pending_kind()
+        .expect("a selection must install after playing P-215");
     assert!(
         matches!(kind, SelectionKind::UnionZone { .. }),
         "P-215 on_play must install a UnionZone selection when cost card is in trash, got {kind:?}"
@@ -428,23 +439,38 @@ fn p_215_on_play_grants_all_three_protection_modifiers() {
     runner.play(0, 0);
 
     // Resolve cost pick (UnionZone) — one step.
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::UnionZone { .. })
+    ));
     resolve_one(&mut runner).expect("cost pick resolves");
 
     // Resolve protect-target pick (OwnField) — one step.
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     resolve_one(&mut runner).expect("protect target pick resolves");
 
     assert!(
-        runner.game.modifiers.has(protect_handle, ModifierType::CannotBeReturnedToHand),
+        runner
+            .game
+            .modifiers
+            .has(protect_handle, ModifierType::CannotBeReturnedToHand),
         "P-215 must grant CannotBeReturnedToHand to the protect target"
     );
     assert!(
-        runner.game.modifiers.has(protect_handle, ModifierType::CannotBeReturnedToDeck),
+        runner
+            .game
+            .modifiers
+            .has(protect_handle, ModifierType::CannotBeReturnedToDeck),
         "P-215 must grant CannotBeReturnedToDeck to the protect target"
     );
     assert!(
-        runner.game.modifiers.has(protect_handle, ModifierType::CannotBeDeDigivolved),
+        runner
+            .game
+            .modifiers
+            .has(protect_handle, ModifierType::CannotBeDeDigivolved),
         "P-215 must grant CannotBeDeDigivolved to the protect target"
     );
 }
@@ -476,7 +502,10 @@ fn p_215_protection_not_granted_to_non_matching_digimon() {
     runner.play(0, 0);
 
     // Pay cost.
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::UnionZone { .. })
+    ));
     resolve_one(&mut runner).expect("cost pick resolves");
 
     // After cost, P-215 (Ice-Snow) is on field but PLAIN-SKIP is not. The
@@ -487,7 +516,10 @@ fn p_215_protection_not_granted_to_non_matching_digimon() {
     }
 
     assert!(
-        !runner.game.modifiers.has(plain_handle, ModifierType::CannotBeReturnedToHand),
+        !runner
+            .game
+            .modifiers
+            .has(plain_handle, ModifierType::CannotBeReturnedToHand),
         "P-215 must not grant CannotBeReturnedToHand to a non-Ice-Snow/Mineral/Rock Digimon"
     );
 }
@@ -574,28 +606,49 @@ fn p_215_protection_persists_through_own_turn_end() {
     let protect_handle = runner.place_on_field(0, "PROT-EXP1", None);
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::UnionZone { .. })
+    ));
     resolve_one(&mut runner).expect("cost pick resolves");
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     resolve_one(&mut runner).expect("protect target pick resolves");
 
     // Modifiers must be active immediately.
-    assert!(runner.game.modifiers.has(protect_handle, ModifierType::CannotBeReturnedToHand));
-    assert!(runner.game.modifiers.has(protect_handle, ModifierType::CannotBeDeDigivolved));
+    assert!(runner
+        .game
+        .modifiers
+        .has(protect_handle, ModifierType::CannotBeReturnedToHand));
+    assert!(runner
+        .game
+        .modifiers
+        .has(protect_handle, ModifierType::CannotBeDeDigivolved));
 
     // End player 0's turn — modifiers should still be active at start of opponent's turn.
     runner.end_turn();
 
     assert!(
-        runner.game.modifiers.has(protect_handle, ModifierType::CannotBeReturnedToHand),
+        runner
+            .game
+            .modifiers
+            .has(protect_handle, ModifierType::CannotBeReturnedToHand),
         "CannotBeReturnedToHand must still be active at start of opponent's turn"
     );
     assert!(
-        runner.game.modifiers.has(protect_handle, ModifierType::CannotBeReturnedToDeck),
+        runner
+            .game
+            .modifiers
+            .has(protect_handle, ModifierType::CannotBeReturnedToDeck),
         "CannotBeReturnedToDeck must still be active at start of opponent's turn"
     );
     assert!(
-        runner.game.modifiers.has(protect_handle, ModifierType::CannotBeDeDigivolved),
+        runner
+            .game
+            .modifiers
+            .has(protect_handle, ModifierType::CannotBeDeDigivolved),
         "CannotBeDeDigivolved must still be active at start of opponent's turn"
     );
 }
@@ -622,9 +675,15 @@ fn p_215_protection_expires_after_opponents_turn_ends() {
     let protect_handle = runner.place_on_field(0, "PROT-EXP2", None);
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::UnionZone { .. })
+    ));
     resolve_one(&mut runner).expect("cost pick resolves");
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     resolve_one(&mut runner).expect("protect target pick resolves");
 
     // End player 0's turn → player 1's turn.
@@ -633,15 +692,24 @@ fn p_215_protection_expires_after_opponents_turn_ends() {
     runner.end_turn();
 
     assert!(
-        !runner.game.modifiers.has(protect_handle, ModifierType::CannotBeReturnedToHand),
+        !runner
+            .game
+            .modifiers
+            .has(protect_handle, ModifierType::CannotBeReturnedToHand),
         "CannotBeReturnedToHand must expire after opponent's turn ends"
     );
     assert!(
-        !runner.game.modifiers.has(protect_handle, ModifierType::CannotBeReturnedToDeck),
+        !runner
+            .game
+            .modifiers
+            .has(protect_handle, ModifierType::CannotBeReturnedToDeck),
         "CannotBeReturnedToDeck must expire after opponent's turn ends"
     );
     assert!(
-        !runner.game.modifiers.has(protect_handle, ModifierType::CannotBeDeDigivolved),
+        !runner
+            .game
+            .modifiers
+            .has(protect_handle, ModifierType::CannotBeDeDigivolved),
         "CannotBeDeDigivolved must expire after opponent's turn ends"
     );
 }
@@ -679,7 +747,9 @@ fn p_215_when_digivolving_fires_effect() {
     // fire_on_play dispatches the on_play/when_digivolving clause.
     runner.fire_on_play(0, stack.index as usize);
 
-    let kind = runner.pending_kind().expect("when_digivolving must install a selection");
+    let kind = runner
+        .pending_kind()
+        .expect("when_digivolving must install a selection");
     assert!(
         matches!(kind, SelectionKind::UnionZone { .. }),
         "P-215 when_digivolving must install a UnionZone cost selection, got {kind:?}"
@@ -713,7 +783,10 @@ fn p_215_on_play_can_use_trash_card_as_cost() {
     let trash_before = runner.trash_size(0);
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::UnionZone { .. })
+    ));
     resolve_one(&mut runner).expect("cost pick from trash resolves");
 
     // Trash size must have decreased (card moved from trash to digi-source).

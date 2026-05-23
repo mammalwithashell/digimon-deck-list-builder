@@ -1065,7 +1065,9 @@ fn p_206_inherited_security_cost_filter_excludes_high_cost_digimon() {
         "second security prompt is the zone effect choice"
     );
     // Choose "From hand" (branch 0).
-    runner.execute_branch(0).expect("choose the From hand branch");
+    runner
+        .execute_branch(0)
+        .expect("choose the From hand branch");
 
     // The select_hand prompt: only the cost-2 Digimon passes `play_cost_lte: 3`.
     let hand_pick = runner

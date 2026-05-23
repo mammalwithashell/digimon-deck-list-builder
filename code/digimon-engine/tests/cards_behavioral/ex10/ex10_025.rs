@@ -79,9 +79,7 @@ fn push_to_trash(runner: &mut DebugRunner, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .unwrap_or_else(|| panic!("{card_id} not found in card_data"));
     let next = runner.game.next_card_index();
-    runner
-        .game
-        .players[0]
+    runner.game.players[0]
         .trash
         .push(CardSource::new(data_idx, 0, next));
 }
@@ -130,11 +128,7 @@ fn ex10_025_on_play_clause_is_optional_face_up() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnPlay) =>
-            {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay) => Some(t),
             _ => None,
         })
         .expect("EX10-025 must have a Triggered OnPlay clause");
@@ -162,20 +156,17 @@ fn ex10_025_has_inherited_source_trash_delete_clause() {
         .compiled_card("EX10-025")
         .expect("EX10-025 compiled card present");
 
-    let inherited = card
-        .effects
-        .iter()
-        .find_map(|clause| match clause {
-            CompiledClause::Triggered(triggered)
-                if triggered.scope == CompiledScope::Inherited
-                    && triggered
-                        .when
-                        .contains(&CompiledTiming::OnDigivolutionCardTrashed) =>
-            {
-                Some(triggered)
-            }
-            _ => None,
-        });
+    let inherited = card.effects.iter().find_map(|clause| match clause {
+        CompiledClause::Triggered(triggered)
+            if triggered.scope == CompiledScope::Inherited
+                && triggered
+                    .when
+                    .contains(&CompiledTiming::OnDigivolutionCardTrashed) =>
+        {
+            Some(triggered)
+        }
+        _ => None,
+    });
 
     assert!(
         inherited.is_some(),

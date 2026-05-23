@@ -8,24 +8,6 @@ dp: 5000
 traits: [Puppet, X Antibody, LIBERATOR]
 attribute: Data
 
-# Printed clauses still gap-routed:
-#
-# - [On Deletion] You may place this card as the bottom digivolution card
-#   of your [King Drasil_7D6] in the breeding area. RK-G001 filter shipped
-#   in Phase 2 Track J PR 1 — but the surrounding "you may" optionality
-#   needs an `optional: bool` field on `select_own_breeding_permanent`
-#   (or a wrapper that exposes decline before opening the prompt). Today's
-#   `select_own_breeding_permanent` is hardcoded `is_optional: false`, so
-#   authoring the body would silently turn the printed "you may" into
-#   "you must". Tracked as a follow-up to RK-G001.
-#
-# - Inherited [Breeding][Opponent's Turn] security-removed trigger: by
-#   suspending the carrier, play 1 [Omekamon] from this Digimon's sources
-#   for free. The fan-out timing wired 2026-05-08, but the printed body
-#   (suspend the breeding carrier as a cost and play [Omekamon] from
-#   that breeding stack's materials without paying the cost) still needs
-#   card-local plumbing.
-
 effects:
   - kind: grant_keyword
     keyword: Blocker
@@ -45,3 +27,38 @@ effects:
           from_hand: omni_x
           cost: 0
           ignore_requirements: true
+
+  - when: on_deletion
+    summary: "[On Deletion] You may place this card under your breeding King Drasil_7D6"
+    process:
+      - select_own_breeding_permanent:
+          bind_as: kd
+          optional: true
+          filter: { name_is: "King Drasil_7D6" }
+          prompt: "Choose your [King Drasil_7D6] in the breeding area"
+          then:
+            - place_as_bottom_source:
+                source: self
+                target: kd
+
+  - scope: inherited
+    when: on_own_security_removed
+    optional: true
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - source_is_unsuspended: true
+        - self_digivolution_sources_contain_name: "Omekamon"
+    summary: "[Breeding][Opponent's Turn] Suspend this Digimon to play an Omekamon from its sources"
+    process:
+      - suspend: { target: carrier }
+      - select_materials:
+          of_permanent: carrier
+          max: 1
+          filter: { name_is: "Omekamon" }
+          bind_as: omekamon_source
+          prompt: "Choose an [Omekamon] source to play"
+      - play_from_materials:
+          target: carrier
+          source_index: omekamon_source
+          cost_delta: free

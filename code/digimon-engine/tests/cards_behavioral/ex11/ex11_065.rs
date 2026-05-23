@@ -68,18 +68,15 @@ fn ex11_065_is_tamer_cost3_purple() {
 #[test]
 fn ex11_065_has_all_turns_observer_clause() {
     let card = compiled();
-    let observer = card
-        .effects
-        .iter()
-        .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnEnterFieldAnyone)
-                    && t.when.contains(&CompiledTiming::OnDigivolve) =>
-            {
-                Some(t)
-            }
-            _ => None,
-        });
+    let observer = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t)
+            if t.when.contains(&CompiledTiming::OnEnterFieldAnyone)
+                && t.when.contains(&CompiledTiming::OnDigivolve) =>
+        {
+            Some(t)
+        }
+        _ => None,
+    });
     assert!(
         observer.is_some(),
         "EX11-065 must have an all-turns [OnEnterFieldAnyone + OnDigivolve] observer clause"
@@ -516,9 +513,14 @@ fn ex11_065_all_turns_declining_does_not_suspend_close() {
     }
     runner.play(0, 0);
 
-    assert!(runner.pending_selection().is_some(), "prompt should install");
+    assert!(
+        runner.pending_selection().is_some(),
+        "prompt should install"
+    );
     // Pass = decline.
-    runner.execute_action(0, digimon_engine::action::space::PASS).ok();
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .ok();
 
     let close_now = runner
         .game

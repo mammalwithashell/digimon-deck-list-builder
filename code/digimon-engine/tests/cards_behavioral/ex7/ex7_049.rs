@@ -186,10 +186,15 @@ fn ex7_049_when_digivolving_applies_cannot_digivolve_to_opp_level4() {
     let opp_l4 = runner.place_on_field(1, "OPP-L4", None);
 
     fire_when_digivolving(&mut runner, metallic);
-    runner.auto_resolve().expect("WD resolves without selection");
+    runner
+        .auto_resolve()
+        .expect("WD resolves without selection");
 
     assert!(
-        runner.game.modifiers.has(opp_l4, ModifierType::CannotDigivolve),
+        runner
+            .game
+            .modifiers
+            .has(opp_l4, ModifierType::CannotDigivolve),
         "level 4 opp Digimon must receive CannotDigivolve after [When Digivolving]"
     );
 }
@@ -208,10 +213,15 @@ fn ex7_049_when_digivolving_does_not_apply_cannot_digivolve_to_opp_level5() {
     let opp_l5 = runner.place_on_field(1, "OPP-L5", None);
 
     fire_when_digivolving(&mut runner, metallic);
-    runner.auto_resolve().expect("WD resolves without selection");
+    runner
+        .auto_resolve()
+        .expect("WD resolves without selection");
 
     assert!(
-        !runner.game.modifiers.has(opp_l5, ModifierType::CannotDigivolve),
+        !runner
+            .game
+            .modifiers
+            .has(opp_l5, ModifierType::CannotDigivolve),
         "level 5 opp Digimon must NOT receive CannotDigivolve (filter is Lv.4 or lower)"
     );
 }
@@ -235,11 +245,17 @@ fn ex7_049_when_digivolving_cannot_digivolve_only_affects_level4_or_lower() {
     runner.auto_resolve().expect("WD resolves");
 
     assert!(
-        runner.game.modifiers.has(opp_l4, ModifierType::CannotDigivolve),
+        runner
+            .game
+            .modifiers
+            .has(opp_l4, ModifierType::CannotDigivolve),
         "level 4 opp Digimon must receive CannotDigivolve"
     );
     assert!(
-        !runner.game.modifiers.has(opp_l5, ModifierType::CannotDigivolve),
+        !runner
+            .game
+            .modifiers
+            .has(opp_l5, ModifierType::CannotDigivolve),
         "level 5 opp Digimon must NOT receive CannotDigivolve"
     );
 }
@@ -259,7 +275,10 @@ fn ex7_049_when_digivolving_cannot_digivolve_expires_after_opponents_turn() {
     fire_when_digivolving(&mut runner, metallic);
     runner.auto_resolve().expect("WD resolves");
     assert!(
-        runner.game.modifiers.has(opp_l4, ModifierType::CannotDigivolve),
+        runner
+            .game
+            .modifiers
+            .has(opp_l4, ModifierType::CannotDigivolve),
         "CannotDigivolve must be active during opponent's turn"
     );
 
@@ -268,7 +287,10 @@ fn ex7_049_when_digivolving_cannot_digivolve_expires_after_opponents_turn() {
     runner.end_turn();
 
     assert!(
-        !runner.game.modifiers.has(opp_l4, ModifierType::CannotDigivolve),
+        !runner
+            .game
+            .modifiers
+            .has(opp_l4, ModifierType::CannotDigivolve),
         "CannotDigivolve must expire after opponent's turn ends"
     );
 }
@@ -300,7 +322,10 @@ fn ex7_049_has_replacement_leave_clause_once_per_turn_optional() {
         replacement.0, "when_would_leave_battle_area",
         "replacement trigger must be when_would_leave_battle_area"
     );
-    assert!(replacement.1, "replacement clause must be optional (you may)");
+    assert!(
+        replacement.1,
+        "replacement clause must be optional (you may)"
+    );
     assert!(
         replacement.2,
         "replacement clause must be once_per_turn ([Once Per Turn])"

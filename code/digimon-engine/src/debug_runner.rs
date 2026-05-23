@@ -242,9 +242,7 @@ impl DebugRunner {
             host,
             host_card_handle,
             source_handle,
-            crate::trigger_context::EventCause::from(
-                self.game.infer_effect_cause(host.player),
-            ),
+            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(host.player)),
         );
         self.game.drain_effect_queue();
     }

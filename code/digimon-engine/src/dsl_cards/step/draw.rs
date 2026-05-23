@@ -37,10 +37,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
             let n = match count {
                 None => 1,
                 Some(formula) => {
-                    let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
-                        player: ctx.player,
-                        index: 0,
-                    });
+                    let target =
+                        ctx.source_permanent
+                            .unwrap_or(crate::permanent::PermanentHandle {
+                                player: ctx.player,
+                                index: 0,
+                            });
                     crate::dsl_cards::formula_eval::evaluate(formula, ctx, target).max(0) as usize
                 }
             };

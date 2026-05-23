@@ -57,11 +57,13 @@ fn selected_union_zone_card_can_feed_effect_digivolve_from_card_handle() {
         CompiledStep::SelectUnionZone {
             of: CompiledPlayerRef::You,
             zones: vec![CompiledZone::Hand, CompiledZone::Trash],
+            material_of: None,
             filter: CompiledPredicate::default(),
             bind_as: Some("evo".to_string()),
             prompt: "Pick evolution card".to_string(),
             prompt_key: None,
             optional: false,
+            then: vec![],
         },
         CompiledStep::EffectInitiatedDigivolve {
             target: CompiledBindingRef::Permanent("base".to_string()),

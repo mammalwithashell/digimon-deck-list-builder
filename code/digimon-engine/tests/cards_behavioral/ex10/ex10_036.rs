@@ -230,9 +230,10 @@ fn ex10_036_clause_a_when_digivolving_prompts_source_multi_3_of_3() {
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     // Both Clause A and Clause B are enqueued simultaneously (same timing).
     // Drain the TriggerOrder ordering prompt first (picks Clause A).
@@ -281,9 +282,10 @@ fn ex10_036_clause_a_rock_sources_valid_cost() {
     runner.game.players[1].security.push(cs);
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     drain_trigger_order_if_any(&mut runner);
 
@@ -334,9 +336,10 @@ fn ex10_036_clause_a_no_prompt_when_fewer_than_3_mineral_rock_sources() {
     let sec_before = runner.security_count(1);
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     drain_trigger_order_if_any(&mut runner);
 
@@ -390,9 +393,10 @@ fn ex10_036_clause_a_plain_sources_do_not_count() {
     runner.place_on_field(1, "PLAIN-OPP-CA", None);
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     // Drain TriggerOrder → Clause A fires → silently skips (no Mineral/Rock
     // sources). Clause B fires → no Mineral/Rock in trash → silently skips.
@@ -460,9 +464,10 @@ fn ex10_036_clause_a_after_source_trash_prompts_opp_field_delete() {
     runner.game.players[1].security.push(cs);
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     // Both clauses enqueued simultaneously; drain TriggerOrder first (picks Clause A).
     drain_trigger_order_if_any(&mut runner);
@@ -470,14 +475,22 @@ fn ex10_036_clause_a_after_source_trash_prompts_opp_field_delete() {
     // Step 1: SourceMulti(3,3) — pick all 3 sources one at a time.
     for _ in 0..3 {
         assert!(
-            matches!(runner.pending_kind(), Some(SelectionKind::SourceMulti { .. })),
+            matches!(
+                runner.pending_kind(),
+                Some(SelectionKind::SourceMulti { .. })
+            ),
             "must have SourceMulti pending for each source pick; got {:?}",
             runner.pending_kind()
         );
-        let view = runner.pending_selection_view().expect("SourceMulti view present");
+        let view = runner
+            .pending_selection_view()
+            .expect("SourceMulti view present");
         let player = view.selecting_player;
         let action = view.valid_action_ids[0];
-        runner.game.resolve_selection(player, action).expect("source pick resolves");
+        runner
+            .game
+            .resolve_selection(player, action)
+            .expect("source pick resolves");
     }
 
     // After the 3rd source pick, final_callback fires:
@@ -503,7 +516,9 @@ fn ex10_036_clause_a_after_source_trash_prompts_opp_field_delete() {
             "Clause B trash pick {pick}/3 must have SelectTrash pending; got {:?}",
             runner.pending_kind()
         );
-        let view = runner.pending_selection_view().expect("trash pick view present");
+        let view = runner
+            .pending_selection_view()
+            .expect("trash pick view present");
         let player = view.selecting_player;
         let action = view.valid_action_ids[0];
         runner
@@ -557,9 +572,10 @@ fn ex10_036_clause_a_deletes_one_opponent_digimon() {
     runner.game.players[1].security.push(cs);
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     drain_trigger_order_if_any(&mut runner);
 
@@ -615,9 +631,10 @@ fn ex10_036_clause_a_trashes_opponent_top_security() {
     assert_eq!(sec_before, 3, "opponent must start with 3 security");
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     drain_trigger_order_if_any(&mut runner);
 
@@ -672,9 +689,10 @@ fn ex10_036_clause_a_trashes_the_3_selected_sources() {
     runner.game.players[1].security.push(cs);
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     drain_trigger_order_if_any(&mut runner);
 
@@ -733,9 +751,10 @@ fn ex10_036_clause_a_when_attacking_fires_source_trash_delete_security() {
     let sec_before = runner.security_count(1);
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     drain_trigger_order_if_any(&mut runner);
 
@@ -785,9 +804,10 @@ fn ex10_036_clause_b_when_digivolving_prompts_trash_pick_when_3_mineral_in_trash
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     // Both clauses enqueued; drain TriggerOrder (picks Clause A first).
     // Clause A has no Mineral/Rock sources in any digivolution stack here →
@@ -836,9 +856,10 @@ fn ex10_036_clause_b_places_3_trash_cards_as_bottom_sources_and_unsuspends() {
         .len();
     let trash_before = runner.trash_size(0);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     // Drain TriggerOrder (picks Clause A first); Clause A silently skips
     // (no Mineral/Rock sources in stacks). Then Clause B fires.
@@ -902,9 +923,10 @@ fn ex10_036_clause_b_is_optional_first_trash_pick() {
     push_to_trash(&mut runner, 0, "OPT-TRS-B3");
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     // Drain TriggerOrder (picks Clause A first); Clause A silently skips
     // (no Mineral/Rock sources). Clause B fires; its first select_trash
@@ -963,9 +985,10 @@ fn ex10_036_clause_b_opt_blocks_second_activation_same_turn() {
     // Clause A skips (magnet has only 1 source = top card, so
     // has_own_source_candidates returns false → SelectOwnSources TailAlreadyRan).
     // Clause B picks all 3 Mineral cards from trash and unsuspends magnet.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     drain_trigger_order_if_any(&mut runner);
     // One auto_resolve() resolves all 3 trash picks + unsuspend.
@@ -987,9 +1010,10 @@ fn ex10_036_clause_b_opt_blocks_second_activation_same_turn() {
     // auto_resolve() resolves Clause A: picks 3 sources → trashes them →
     // select_opponent_permanent has 0 candidates → Continue → remaining nop.
     // drain_effect_queue then fires Clause B → OPT-blocked → no pending.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     drain_trigger_order_if_any(&mut runner);
     // Resolve Clause A (which now has valid Mineral sources to pick from).
@@ -1032,9 +1056,10 @@ fn ex10_036_clause_b_when_attacking_also_prompts_trash_pick() {
     let magnet = runner.place_on_field(0, "EX10-036", None);
     runner.game.players[0].battle_area[magnet.index as usize].is_suspended = true;
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     // Drain TriggerOrder (picks Clause A first); Clause A silently skips
     // (no Mineral/Rock sources in stacks). Clause B fires.
@@ -1083,9 +1108,10 @@ fn ex10_036_clause_b_no_unsuspend_when_fewer_than_3_mineral_rock_in_trash() {
     let magnet = runner.place_on_field(0, "EX10-036", None);
     runner.game.players[0].battle_area[magnet.index as usize].is_suspended = true;
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     // Drain TriggerOrder (picks Clause A first); Clause A silently skips
     // (no Mineral/Rock sources in stacks). Clause B fires: only 2 Mineral
@@ -1120,8 +1146,7 @@ fn ex10_036_clause_b_no_unsuspend_when_fewer_than_3_mineral_rock_in_trash() {
         .card_sources
         .len();
     assert_eq!(
-        sources_after,
-        3,
+        sources_after, 3,
         "only 2 cards should be placed as bottom sources (src3 binding is empty); \
          expected 1 top + 2 placed = 3 total, got {sources_after}"
     );

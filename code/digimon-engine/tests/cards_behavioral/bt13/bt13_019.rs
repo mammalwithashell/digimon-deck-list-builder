@@ -14,6 +14,6 @@ fn bt13_019_has_blocker_keyword() {
     )));
 }
 
-#[ignore = "pending: G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY — play Sistermon from trash or Royal Knight from breeding sources, excluding names"]
+#[ignore = "pending: G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY — play Sistermon from trash or Royal Knight from breeding sources, excluding names; tracker: qa/dsl-vocab-gaps.md"]
 #[test]
 fn bt13_019_plays_sistermon_or_royal_knight_from_breeding_sources() {}

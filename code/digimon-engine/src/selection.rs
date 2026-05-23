@@ -72,8 +72,11 @@ pub enum UnionZoneOrigin {
     Hand,
     /// The card was picked from the player's trash.
     Trash,
-    /// The card was picked from beneath the effect source permanent.
-    Material,
+    /// The card was picked from a carrier's digivolution sources.
+    Material {
+        carrier: PermanentHandle,
+        source_index: u8,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

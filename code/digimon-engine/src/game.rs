@@ -1712,25 +1712,44 @@ impl Game {
     /// bypasses this path — `StartOfYourTurn` is the canonical timing for
     /// turn-start effects.
     pub fn suspend(&mut self, handle: PermanentHandle) {
-        let event_card = self
-            .players
-            .get(handle.player as usize)
-            .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|perm| perm.top_card().handle());
-        let already = self
-            .players
-            .get(handle.player as usize)
-            .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|perm| perm.is_suspended)
-            .unwrap_or(true); // treat out-of-range as "already suspended" to no-op
+        let is_breeding = handle.index == crate::action::space::BREEDING_TARGET as u8;
+        let event_card = if is_breeding {
+            self.players
+                .get(handle.player as usize)
+                .and_then(|p| p.breeding_area.as_ref())
+                .map(|perm| perm.top_card().handle())
+        } else {
+            self.players
+                .get(handle.player as usize)
+                .and_then(|p| p.battle_area.get(handle.index as usize))
+                .map(|perm| perm.top_card().handle())
+        };
+        let already = if is_breeding {
+            self.players
+                .get(handle.player as usize)
+                .and_then(|p| p.breeding_area.as_ref())
+                .map(|perm| perm.is_suspended)
+                .unwrap_or(true)
+        } else {
+            self.players
+                .get(handle.player as usize)
+                .and_then(|p| p.battle_area.get(handle.index as usize))
+                .map(|perm| perm.is_suspended)
+                .unwrap_or(true)
+        }; // treat out-of-range as "already suspended" to no-op
         if already {
             return;
         }
-        if let Some(perm) = self
-            .players
-            .get_mut(handle.player as usize)
-            .and_then(|p| p.battle_area.get_mut(handle.index as usize))
-        {
+        let perm = if is_breeding {
+            self.players
+                .get_mut(handle.player as usize)
+                .and_then(|p| p.breeding_area.as_mut())
+        } else {
+            self.players
+                .get_mut(handle.player as usize)
+                .and_then(|p| p.battle_area.get_mut(handle.index as usize))
+        };
+        if let Some(perm) = perm {
             perm.is_suspended = true;
         }
         self.mark_until_condition_dirty();

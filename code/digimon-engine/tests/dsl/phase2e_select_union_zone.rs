@@ -38,11 +38,13 @@ fn select_union_zone_picks_from_hand_or_trash() {
         CompiledStep::SelectUnionZone {
             of: CompiledPlayerRef::You,
             zones: vec![CompiledZone::Hand, CompiledZone::Trash],
+            material_of: None,
             filter: CompiledPredicate::default(),
             bind_as: Some("union_pick".to_string()),
             prompt: "Pick from hand or trash".to_string(),
             prompt_key: None,
             optional: false,
+            then: vec![],
         },
         CompiledStep::GainMemory(1),
     ];

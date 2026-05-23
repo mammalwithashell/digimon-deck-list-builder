@@ -26,7 +26,9 @@
 //! - F5-adjacent security delete lowest-play-cost Digimon (raw_rust workaround,
 //!   pending G-PLAY-COST-AGGREGATE from qa/dsl-vocab-gaps.md)
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
+};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{Keyword, ModifierType};
 use digimon_engine::selection::SelectionKind;
@@ -325,7 +327,10 @@ fn ex8_070_grants_collision_after_trash() {
     runner.play(0, 0);
 
     // Select the Mineral Digimon as target.
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     runner.auto_resolve().expect("target selection resolves");
 
     // Source selection may follow.
@@ -358,7 +363,10 @@ fn ex8_070_grants_piercing_after_trash() {
     runner.push_source(host, "SRC-PIE");
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     runner.auto_resolve().expect("target selection resolves");
     if runner.pending_selection().is_some() {
         runner.auto_resolve().expect("source selection resolves");
@@ -389,7 +397,10 @@ fn ex8_070_grants_reboot_after_trash() {
     runner.push_source(host, "SRC-RBT");
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     runner.auto_resolve().expect("target selection resolves");
     if runner.pending_selection().is_some() {
         runner.auto_resolve().expect("source selection resolves");
@@ -422,7 +433,10 @@ fn ex8_070_grants_plus_3000_dp_to_target() {
     let dp_before = runner.dp_of(host).unwrap_or(0);
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     runner.auto_resolve().expect("target selection resolves");
     if runner.pending_selection().is_some() {
         runner.auto_resolve().expect("source selection resolves");
@@ -455,14 +469,20 @@ fn ex8_070_grants_cannot_be_returned_to_hand_modifier() {
     runner.push_source(host, "SRC-RTH");
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     runner.auto_resolve().expect("target selection resolves");
     if runner.pending_selection().is_some() {
         runner.auto_resolve().expect("source selection resolves");
     }
 
     assert!(
-        runner.game.modifiers.has(host, ModifierType::CannotBeReturnedToHand),
+        runner
+            .game
+            .modifiers
+            .has(host, ModifierType::CannotBeReturnedToHand),
         "EX8-070 must grant CannotBeReturnedToHand to target"
     );
 }
@@ -486,14 +506,20 @@ fn ex8_070_grants_cannot_be_returned_to_deck_modifier() {
     runner.push_source(host, "SRC-RTD");
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     runner.auto_resolve().expect("target selection resolves");
     if runner.pending_selection().is_some() {
         runner.auto_resolve().expect("source selection resolves");
     }
 
     assert!(
-        runner.game.modifiers.has(host, ModifierType::CannotBeReturnedToDeck),
+        runner
+            .game
+            .modifiers
+            .has(host, ModifierType::CannotBeReturnedToDeck),
         "EX8-070 must grant CannotBeReturnedToDeck to target"
     );
 }
@@ -519,12 +545,18 @@ fn ex8_070_trashes_selected_source_card() {
     let sources_before = runner.game.player(0).battle_area[host.index as usize]
         .card_sources
         .len();
-    assert!(sources_before >= 2, "host must have at least 1 digivolution source");
+    assert!(
+        sources_before >= 2,
+        "host must have at least 1 digivolution source"
+    );
 
     let trash_before = runner.trash_size(0);
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     runner.auto_resolve().expect("target selection resolves");
     if runner.pending_selection().is_some() {
         runner.auto_resolve().expect("source selection resolves");
@@ -570,7 +602,10 @@ fn ex8_070_buffs_persist_through_own_turn_end() {
     runner.push_source(host, "SRC-EXP");
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     runner.auto_resolve().expect("target selection resolves");
     if runner.pending_selection().is_some() {
         runner.auto_resolve().expect("source selection resolves");
@@ -578,7 +613,10 @@ fn ex8_070_buffs_persist_through_own_turn_end() {
 
     // Buffs should be present immediately.
     assert!(runner.game.has_keyword(host, Keyword::Collision));
-    assert!(runner.game.modifiers.has(host, ModifierType::CannotBeReturnedToHand));
+    assert!(runner
+        .game
+        .modifiers
+        .has(host, ModifierType::CannotBeReturnedToHand));
 
     // End player 0's turn — buffs should still be active during opponent's turn.
     runner.end_turn();
@@ -588,7 +626,10 @@ fn ex8_070_buffs_persist_through_own_turn_end() {
         "Collision must still be active at start of opponent's turn (expiry is end_of_opponents_turn)"
     );
     assert!(
-        runner.game.modifiers.has(host, ModifierType::CannotBeReturnedToHand),
+        runner
+            .game
+            .modifiers
+            .has(host, ModifierType::CannotBeReturnedToHand),
         "CannotBeReturnedToHand must still be active at start of opponent's turn"
     );
 }
@@ -618,7 +659,10 @@ fn ex8_070_buffs_expire_after_opponents_turn_ends() {
     runner.push_source(host, "SRC-EXP2");
 
     runner.play(0, 0);
-    assert!(matches!(runner.pending_kind(), Some(SelectionKind::OwnField)));
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField)
+    ));
     runner.auto_resolve().expect("target selection resolves");
     if runner.pending_selection().is_some() {
         runner.auto_resolve().expect("source selection resolves");
@@ -641,11 +685,17 @@ fn ex8_070_buffs_expire_after_opponents_turn_ends() {
         "Reboot must expire after opponent's turn ends"
     );
     assert!(
-        !runner.game.modifiers.has(host, ModifierType::CannotBeReturnedToHand),
+        !runner
+            .game
+            .modifiers
+            .has(host, ModifierType::CannotBeReturnedToHand),
         "CannotBeReturnedToHand must expire after opponent's turn ends"
     );
     assert!(
-        !runner.game.modifiers.has(host, ModifierType::CannotBeReturnedToDeck),
+        !runner
+            .game
+            .modifiers
+            .has(host, ModifierType::CannotBeReturnedToDeck),
         "CannotBeReturnedToDeck must expire after opponent's turn ends"
     );
     let dp_after_expiry = runner.dp_of(host).unwrap_or(0);
@@ -695,9 +745,10 @@ fn ex8_070_security_deletes_lowest_cost_digimon() {
 
     assert_eq!(runner.battle_area_size(1), 2);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(security_handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(security_handle),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -727,9 +778,10 @@ fn ex8_070_security_no_crash_when_opponent_has_no_digimon() {
 
     let security_handle = runner.place_on_field(0, "EX8-070", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(security_handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(security_handle),
+    );
     runner.game.drain_effect_queue();
 
     assert!(runner.game.pending_selection.is_none());

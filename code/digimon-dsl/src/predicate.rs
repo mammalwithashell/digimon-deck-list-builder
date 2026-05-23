@@ -181,6 +181,12 @@ pub struct PredicateSpec {
     /// G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_digivolution_sources_contain_name: Option<String>,
+    /// Like `self_digivolution_sources_contain_name`, but matches any
+    /// digivolution source card carrying the named trait. Used by Royal
+    /// Knights breeding-source effects to gate carriers that actually contain
+    /// playable [Royal Knight] sources.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_digivolution_sources_trait_has: Option<String>,
     /// True when the carrier Digimon's printed rules text (effect_text +
     /// inherited_text + security_text of the top card) contains the given
     /// substring (case-insensitive). Evaluated against the subject permanent
@@ -258,6 +264,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_is_player: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_is_source: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_was_self: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attack_target_change_reason: Option<String>,
@@ -267,6 +275,10 @@ pub struct PredicateSpec {
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_level_eq: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_level_gte: Option<DpConstraint>,
     /// True when every color of the triggering event card is within the given
     /// set. Used to gate observers on "the just-played card is black/yellow
     /// only" without listing individual card names. Mirrors `color_only` but
@@ -288,6 +300,8 @@ pub struct PredicateSpec {
     pub event_card_color_count: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_cause: Option<EventCauseSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_same_level_as_previous: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub host_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

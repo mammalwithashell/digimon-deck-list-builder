@@ -91,7 +91,11 @@ fn p_039_has_three_clauses_main_delay_inherited_security() {
         .expect("parses")
         .build();
     let compiled = runner.compiled_card("P-039").expect("P-039 compiled");
-    assert_eq!(compiled.effects.len(), 3, "P-039 must have exactly 3 clauses");
+    assert_eq!(
+        compiled.effects.len(),
+        3,
+        "P-039 must have exactly 3 clauses"
+    );
 
     // Clause 0: main_from_hand
     match &compiled.effects[0] {

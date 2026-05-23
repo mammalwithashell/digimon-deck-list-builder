@@ -137,15 +137,11 @@ fn source_index_of(
     carrier: crate::permanent::PermanentHandle,
     card: CardHandle,
 ) -> Option<usize> {
-    ctx.game
-        .player(carrier.player)
-        .battle_area
-        .get(carrier.index as usize)
-        .and_then(|perm| {
-            perm.card_sources
-                .iter()
-                .position(|source| source.handle() == card)
-        })
+    crate::effect_context::material_carrier_permanent(ctx.game, carrier).and_then(|perm| {
+        perm.card_sources
+            .iter()
+            .position(|source| source.handle() == card)
+    })
 }
 
 /// Try to handle `step` as a play / digivolve / placement variant.
@@ -239,7 +235,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         }
 
         // ── Origin-preserving union-zone play (PUPPETS-G014) ──────────────
-        CompiledStep::PlayUnionBoundFree { binding, bind_as } => {
+        CompiledStep::PlayUnionBoundFree {
+            binding,
+            bind_as,
+            suppress_on_play,
+        } => {
             // Resolve the union-zone binding: the picked card, the zone it
             // came from (hand, trash, or material), and the owner of that zone. The
             // binding is read directly (not via `resolve_binding_ref`) so the
@@ -256,7 +256,13 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                             .hand
                             .iter()
                             .position(|c| c.handle() == card)
-                            .and_then(|idx| ctx.play_from_hand_free(owner, idx))
+                            .and_then(|idx| {
+                                ctx.play_from_hand_free_suppress_on_play(
+                                    owner,
+                                    idx,
+                                    *suppress_on_play,
+                                )
+                            })
                     }
                     UnionZoneOrigin::Trash => {
                         // Locate the card in the owner's trash by handle and
@@ -267,36 +273,23 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                             .iter()
                             .position(|c| c.handle() == card)
                             .and_then(|idx| {
-                                ctx.play_from_trash_with_cost(owner, idx, CostDelta::Free)
+                                ctx.play_from_trash_with_cost_suppress_on_play(
+                                    owner,
+                                    idx,
+                                    CostDelta::Free,
+                                    *suppress_on_play,
+                                )
                             })
                     }
-                    UnionZoneOrigin::Material => {
-                        // Locate the selected source by handle under the
-                        // source permanent and play it for free. Union
-                        // material picks are only installed for the current
-                        // source permanent, so no extra action-space state is
-                        // needed in the binding.
-                        let Some(source_permanent) = ctx.source_permanent else {
-                            return true;
-                        };
-                        if source_permanent.player != owner {
-                            None
-                        } else {
-                            ctx.game
-                                .player(source_permanent.player)
-                                .battle_area
-                                .get(source_permanent.index as usize)
-                                .and_then(|perm| {
-                                    perm.card_sources
-                                        .iter()
-                                        .take(perm.card_sources.len().saturating_sub(1))
-                                        .position(|c| c.handle() == card)
-                                })
-                                .and_then(|idx| {
-                                    ctx.play_from_materials(source_permanent, idx, CostDelta::Free)
-                                })
-                        }
-                    }
+                    UnionZoneOrigin::Material {
+                        carrier,
+                        source_index,
+                    } => ctx.play_from_materials_suppress_on_play(
+                        carrier,
+                        source_index as usize,
+                        CostDelta::Free,
+                        *suppress_on_play,
+                    ),
                 };
                 if let Some(played) = played {
                     bindings.record_played(played);
@@ -385,6 +378,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             target,
             source_index,
             cost_delta,
+            suppress_on_play,
             bind_as,
         } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
@@ -404,8 +398,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // removes the consumed source and shifts later indices down.
             match resolve_binding_ref(source_index, ctx, bindings) {
                 Some(ResolvedBinding::Literal(v)) if v >= 0 => {
-                    if let Some(played) = ctx.play_from_materials(target_handle, v as usize, delta)
-                    {
+                    if let Some(played) = ctx.play_from_materials_suppress_on_play(
+                        target_handle,
+                        v as usize,
+                        delta,
+                        *suppress_on_play,
+                    ) {
                         bindings.record_played(played);
                         if let Some(name) = bind_as {
                             bindings.insert_permanent(name, played);
@@ -414,7 +412,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 }
                 Some(ResolvedBinding::Card(card)) => {
                     if let Some(idx) = source_index_of(ctx, target_handle, card) {
-                        if let Some(played) = ctx.play_from_materials(target_handle, idx, delta) {
+                        if let Some(played) = ctx.play_from_materials_suppress_on_play(
+                            target_handle,
+                            idx,
+                            delta,
+                            *suppress_on_play,
+                        ) {
                             bindings.record_played(played);
                             if let Some(name) = bind_as {
                                 bindings.insert_permanent(name, played);
@@ -435,7 +438,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                             // skip it; the remaining picks still play.
                             continue;
                         };
-                        if let Some(played) = ctx.play_from_materials(target_handle, idx, delta) {
+                        if let Some(played) = ctx.play_from_materials_suppress_on_play(
+                            target_handle,
+                            idx,
+                            delta,
+                            *suppress_on_play,
+                        ) {
                             bindings.record_played(played);
                             last_played = Some(played);
                         }

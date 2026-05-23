@@ -7,7 +7,9 @@
 //!   into a [Mineral] or [Rock] trait card, reduce the digivolution cost by 1.
 //!   Substrate: Phase 2 Track H (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET).
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_data::EvoCost;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -192,8 +194,7 @@ fn bt21_055_cost_reduction_fires_when_digivolving_into_mineral() {
         "BT21-055 must digivolve into MINERAL-LV4 (evo cost 1 - 1 reduction = 0)"
     );
     assert_eq!(
-        runner.game.memory,
-        memory_before,
+        runner.game.memory, memory_before,
         "digivolution cost must be 0 after BT21-055 reduction (Mineral trait); \
          memory_before={memory_before}"
     );
@@ -244,8 +245,7 @@ fn bt21_055_cost_reduction_fires_when_digivolving_into_rock() {
         "BT21-055 must digivolve into ROCK-LV4 (evo cost 1 - 1 reduction = 0)"
     );
     assert_eq!(
-        runner.game.memory,
-        memory_before,
+        runner.game.memory, memory_before,
         "digivolution cost must be 0 after BT21-055 reduction (Rock trait); \
          memory_before={memory_before}"
     );

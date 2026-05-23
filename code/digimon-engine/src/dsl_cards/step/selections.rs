@@ -750,6 +750,7 @@ pub fn try_install(
             bind_as,
             prompt,
             filter,
+            optional,
             then,
         } => {
             if !has_own_breeding_candidate_matching(ctx, filter, Some(&bindings)) {
@@ -761,7 +762,10 @@ pub fn try_install(
                 ctx,
                 bind_as.clone(),
                 prompt.clone(),
+                filter.clone(),
+                *optional,
                 inner_tail,
+                tail.to_vec(),
                 bindings,
                 runtime.clone(),
             );
@@ -770,10 +774,12 @@ pub fn try_install(
         CompiledStep::SelectUnionZone {
             of,
             zones,
+            material_of,
             filter,
             bind_as,
             prompt,
             optional,
+            then,
             ..
         } => {
             use crate::selection::UnionZoneSet;
@@ -792,14 +798,18 @@ pub fn try_install(
                 // No supported zones: silent no-op; tail runs synchronously.
                 return InstallResult::Continue;
             }
+            let mut success_tail = then.clone();
+            success_tail.extend_from_slice(tail);
             install_select_union_zone(
                 ctx,
                 *of,
                 zoneset,
+                material_of.clone(),
                 filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                success_tail,
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
@@ -2517,23 +2527,78 @@ fn install_select_own_breeding_permanent(
     ctx: &mut EffectContext<'_>,
     bind_as: Option<String>,
     prompt: String,
-    tail: Vec<CompiledStep>,
+    filter: CompiledPredicate,
+    optional: bool,
+    success_tail: Vec<CompiledStep>,
+    decline_tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
 ) {
-    let tail = Arc::new(tail);
+    let success_tail = Arc::new(success_tail);
+    let decline_tail = Arc::new(decline_tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+    let tail_for_decline = Arc::clone(&decline_tail);
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     ctx.select_own_breeding_permanent(
         &prompt,
-        |_game, _target| true,
+        optional,
+        move |game, target| {
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::BreedingPermanent(target.player),
+                Some(&filter_bindings),
+            )
+        },
         move |cb_ctx, target| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
                 b.insert_breeding_permanent_ref(name, target);
             }
-            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+            run_tail_preserving_trigger_context(
+                cb_ctx,
+                trigger_context,
+                &success_tail,
+                &mut b,
+                &runtime,
+            );
         },
     );
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }));
+        }
+    }
 }
 
 fn install_select_ordered_permutation(
@@ -2557,21 +2622,37 @@ fn install_select_ordered_permutation(
 }
 
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::too_many_arguments)]
 fn install_select_union_zone(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
     zoneset: crate::selection::UnionZoneSet,
+    material_of: Option<CompiledBindingRef>,
     filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
-    tail: Vec<CompiledStep>,
+    success_tail: Vec<CompiledStep>,
+    decline_tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
 ) {
     let target_player = resolve_player(ctx, of);
-    let tail = Arc::new(tail);
+    let material_target = material_of
+        .as_ref()
+        .and_then(
+            |binding| match resolve_binding_ref(binding, ctx, &bindings) {
+                Some(ResolvedBinding::Permanent(handle)) => Some(handle),
+                _ => None,
+            },
+        )
+        .or_else(|| {
+            zoneset
+                .contains(crate::selection::UnionZoneSet::MATERIAL)
+                .then_some(ctx.source_permanent)
+                .flatten()
+        });
+    let success_tail = Arc::new(success_tail);
+    let decline_tail = Arc::new(decline_tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
@@ -2583,13 +2664,14 @@ fn install_select_union_zone(
     // union-zone selection must still run the outer tail so subsequent
     // mandatory steps (e.g. `play_union_bound_free`'s neighboring steps, or
     // a mandatory `gain_memory`) execute. Mirrors `install_select_trash`.
-    let tail_for_decline = Arc::clone(&tail);
+    let tail_for_decline = Arc::clone(&decline_tail);
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
     ctx.select_union_zone(
         target_player,
         zoneset,
+        material_target,
         &prompt,
         optional,
         // PUPPETS-G021: evaluate the compiled predicate against the card's
@@ -2619,7 +2701,13 @@ fn install_select_union_zone(
                 // from its true zone (hand, trash, or material).
                 b.insert_union_card(name, handle, origin, target_player);
             }
-            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+            run_tail_preserving_trigger_context(
+                cb_ctx,
+                trigger_context,
+                &success_tail,
+                &mut b,
+                &runtime,
+            );
         },
     );
     // Attach decline-tail callback for optional selections — carry-over from

@@ -137,9 +137,7 @@ fn p_169_has_on_digivolution_card_trashed_clause() {
         .expect("P-169 compiled card present in registry");
 
     let has_clause = compiled.effects.iter().any(|c| match c {
-        CompiledClause::Triggered(t) => t
-            .when
-            .contains(&CompiledTiming::OnDigivolutionCardTrashed),
+        CompiledClause::Triggered(t) => t.when.contains(&CompiledTiming::OnDigivolutionCardTrashed),
         _ => false,
     });
 
@@ -167,8 +165,7 @@ fn p_169_all_turns_clause_is_optional() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.when
-                    .contains(&CompiledTiming::OnDigivolutionCardTrashed) =>
+                if t.when.contains(&CompiledTiming::OnDigivolutionCardTrashed) =>
             {
                 Some(t)
             }
@@ -200,8 +197,7 @@ fn p_169_all_turns_clause_is_face_up_scope() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.when
-                    .contains(&CompiledTiming::OnDigivolutionCardTrashed) =>
+                if t.when.contains(&CompiledTiming::OnDigivolutionCardTrashed) =>
             {
                 Some(t)
             }
@@ -298,9 +294,16 @@ fn p_169_all_turns_triggers_when_source_trashed_from_mineral_digimon() {
 
     // Seed P0's trash with a Mineral card (needed for body steps).
     {
-        let idx = runner.game.card_data.iter().position(|c| c.card_id == "MTRC").unwrap();
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "MTRC")
+            .unwrap();
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     fire_source_trash(&mut runner, host, src_handle);
@@ -339,9 +342,16 @@ fn p_169_all_turns_triggers_for_rock_trait_digimon() {
     let src_handle = runner.push_source(host, "SRCK");
 
     {
-        let idx = runner.game.card_data.iter().position(|c| c.card_id == "RKTR").unwrap();
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "RKTR")
+            .unwrap();
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     fire_source_trash(&mut runner, host, src_handle);
@@ -453,9 +463,16 @@ fn p_169_all_turns_declining_does_not_suspend_close() {
     let src_handle = runner.push_source(host, "SRC-DCL");
 
     {
-        let idx = runner.game.card_data.iter().position(|c| c.card_id == "MTD").unwrap();
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "MTD")
+            .unwrap();
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     fire_source_trash(&mut runner, host, src_handle);
@@ -463,7 +480,9 @@ fn p_169_all_turns_declining_does_not_suspend_close() {
     assert!(runner.pending_selection().is_some(), "prompt must install");
 
     // Decline via PASS.
-    runner.execute_action(0, digimon_engine::action::space::PASS).ok();
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .ok();
 
     let close_now = runner
         .game
@@ -505,14 +524,24 @@ fn p_169_all_turns_accepting_suspends_close() {
     runner.place_on_field(0, "DEST-ACP", None);
 
     {
-        let idx = runner.game.card_data.iter().position(|c| c.card_id == "MTA").unwrap();
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "MTA")
+            .unwrap();
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     fire_source_trash(&mut runner, host, src_handle);
 
-    assert!(runner.pending_selection().is_some(), "activation prompt must install");
+    assert!(
+        runner.pending_selection().is_some(),
+        "activation prompt must install"
+    );
 
     // Accept the activation (first valid action = accept Close).
     let act = {
@@ -572,9 +601,16 @@ fn p_169_all_turns_placing_from_trash_increases_target_source_count() {
         .unwrap_or(0);
 
     {
-        let idx = runner.game.card_data.iter().position(|c| c.card_id == "MTP").unwrap();
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "MTP")
+            .unwrap();
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     fire_source_trash(&mut runner, host, src_handle);
@@ -583,7 +619,10 @@ fn p_169_all_turns_placing_from_trash_increases_target_source_count() {
     // After effect resolves, MTP (Mineral) leaves trash → trash_after < trash_before.
     let trash_before = runner.trash_size(0);
 
-    assert!(runner.pending_selection().is_some(), "activation prompt must fire");
+    assert!(
+        runner.pending_selection().is_some(),
+        "activation prompt must fire"
+    );
 
     // Step 1: Accept Close (pick P-169 as the suspend-cost confirmation).
     let act = {

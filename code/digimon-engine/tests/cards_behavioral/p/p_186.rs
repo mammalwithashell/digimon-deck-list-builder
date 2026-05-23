@@ -178,8 +178,8 @@ fn p_186_clause_0_is_cost_reduction_before_pay_cost_when_playing_this() {
         _ => None,
     });
 
-    let (reduction_timing, when_playing_this, condition, amount_fn) = cost_red
-        .expect("P-186 must have a CostReduction declarative clause");
+    let (reduction_timing, when_playing_this, condition, amount_fn) =
+        cost_red.expect("P-186 must have a CostReduction declarative clause");
 
     assert_eq!(
         reduction_timing.as_deref(),
@@ -333,7 +333,9 @@ fn p_186_on_field_has_rush() {
         .card_data
         .iter()
         .find(|c| c.card_id == "P-186")
-        .map_or(false, |d| d.keywords.iter().any(|k| matches!(k, Keyword::Rush)));
+        .map_or(false, |d| {
+            d.keywords.iter().any(|k| matches!(k, Keyword::Rush))
+        });
 
     assert!(
         via_modifier || via_card_data,
@@ -362,7 +364,9 @@ fn p_186_on_field_has_blocker() {
         .card_data
         .iter()
         .find(|c| c.card_id == "P-186")
-        .map_or(false, |d| d.keywords.iter().any(|k| matches!(k, Keyword::Blocker)));
+        .map_or(false, |d| {
+            d.keywords.iter().any(|k| matches!(k, Keyword::Blocker))
+        });
 
     assert!(
         via_modifier || via_card_data,

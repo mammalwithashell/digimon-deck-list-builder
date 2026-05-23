@@ -30,7 +30,9 @@
 //! - Negative: inherited clause not triggered when source card is not EX10-028
 //! - Negative: inherited clause not triggered from a non-Mineral/non-Rock host
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
+};
 use digimon_engine::action::space::encode_source_select;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -515,8 +517,7 @@ fn ex10_028_on_play_can_buff_different_digimon_than_source_host() {
         "SourceMulti(1,1) should be pending; got {:?}",
         runner.pending_kind()
     );
-    let source_action =
-        encode_source_select(host.index as u16, 0).expect("encode source slot 0");
+    let source_action = encode_source_select(host.index as u16, 0).expect("encode source slot 0");
     runner
         .execute_action(0, source_action)
         .expect("pick source at slot 0");
@@ -578,9 +579,10 @@ fn ex10_028_when_digivolving_prompts_source_multi() {
     let digi = runner.place_on_field(0, "WD-DIGI", None);
     runner.push_source(digi, "WD-SRC");
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(golemon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(golemon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -617,9 +619,10 @@ fn ex10_028_when_digivolving_grants_all_buffs() {
 
     let dp_before = runner.dp_of(golemon).unwrap_or(0);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(golemon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(golemon),
+    );
     runner.game.drain_effect_queue();
 
     // auto_resolve drives both selections (SourceMulti then OwnField) in one call

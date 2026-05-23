@@ -27,8 +27,8 @@
 //!   until the gap is closed.
 
 use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
-    CompiledTiming, CompiledCardKind,
+    CompiledBindingRef, CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
+    CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::{encode_attack, PASS, SEL_REVEAL_START};
 use digimon_engine::combat::{AttackInitiator, AttackOpen, TargetConstraint};
@@ -115,7 +115,10 @@ fn ex8_050_has_mandatory_on_deletion_clause() {
         CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => Some(t),
         _ => None,
     });
-    assert!(od.is_some(), "EX8-050 must have an OnDeletion triggered clause");
+    assert!(
+        od.is_some(),
+        "EX8-050 must have an OnDeletion triggered clause"
+    );
     assert!(
         !od.unwrap().optional,
         "on_deletion clause must NOT be optional at the clause level \
@@ -132,9 +135,7 @@ fn ex8_050_on_deletion_has_reveal_top_3() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => Some(t),
             _ => None,
         })
         .expect("must have OnDeletion clause");
@@ -158,9 +159,7 @@ fn ex8_050_on_deletion_has_select_reveal_buckets_step() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => Some(t),
             _ => None,
         })
         .expect("must have OnDeletion clause");
@@ -191,9 +190,7 @@ fn ex8_050_on_deletion_has_trash_remainder_loop() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => Some(t),
             _ => None,
         })
         .expect("must have OnDeletion clause");
@@ -229,7 +226,10 @@ fn ex8_050_has_inherited_opt_on_opponent_attack_redirect_clause() {
         "EX8-050 must have an inherited OnOpponentAttack triggered clause"
     );
     let inh = inh.unwrap();
-    assert!(inh.optional, "inherited clause must be optional ('you may')");
+    assert!(
+        inh.optional,
+        "inherited clause must be optional ('you may')"
+    );
     assert!(inh.once_per_turn, "inherited clause must be once_per_turn");
 }
 

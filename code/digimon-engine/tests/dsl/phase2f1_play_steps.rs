@@ -457,6 +457,7 @@ fn play_from_materials_step_extracts_source_and_plays_it_free() {
         target: CompiledBindingRef::Named("tgt".into()),
         source_index: CompiledBindingRef::Named("src_idx".into()),
         cost_delta: Some(CompiledCostDelta::Free),
+        suppress_on_play: false,
         bind_as: None,
     };
 

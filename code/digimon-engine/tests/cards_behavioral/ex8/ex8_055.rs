@@ -176,9 +176,10 @@ fn ex8_055_clause_a_when_digivolving_prompts_source_multi_3_of_3() {
 
     let pyra = runner.place_on_field(0, "EX8-055", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyra));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyra),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -216,9 +217,10 @@ fn ex8_055_clause_a_rock_sources_are_valid_cost() {
 
     let pyra = runner.place_on_field(0, "EX8-055", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyra));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyra),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -255,9 +257,10 @@ fn ex8_055_clause_a_silently_skips_when_fewer_than_3_sources() {
     let pyra = runner.place_on_field(0, "EX8-055", None);
     runner.game.players[0].battle_area[pyra.index as usize].is_suspended = true;
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyra));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyra),
+    );
     runner.game.drain_effect_queue();
 
     // Drain any partial SourceMulti prompts that may appear.
@@ -273,7 +276,10 @@ fn ex8_055_clause_a_silently_skips_when_fewer_than_3_sources() {
         "Clause A must not unsuspend EX8-055 when fewer than 3 Mineral/Rock sources exist"
     );
     assert_eq!(
-        runner.game.modifiers.sum(pyra, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(pyra, ModifierType::SecurityAttackChange),
         0,
         "Clause A must not grant SecurityAttackChange when cost cannot be paid"
     );
@@ -305,9 +311,10 @@ fn ex8_055_clause_a_plain_sources_do_not_count() {
     let pyra = runner.place_on_field(0, "EX8-055", None);
     runner.game.players[0].battle_area[pyra.index as usize].is_suspended = true;
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyra));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyra),
+    );
     runner.game.drain_effect_queue();
 
     for _ in 0..4 {
@@ -321,7 +328,10 @@ fn ex8_055_clause_a_plain_sources_do_not_count() {
         "Plain sources must not satisfy Clause A cost — EX8-055 must remain suspended"
     );
     assert_eq!(
-        runner.game.modifiers.sum(pyra, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(pyra, ModifierType::SecurityAttackChange),
         0,
         "Plain sources must not grant SecurityAttackChange"
     );
@@ -362,9 +372,10 @@ fn ex8_055_clause_a_unsuspends_this_digimon_after_cost() {
         "EX8-055 must be suspended before Clause A fires"
     );
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyra));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyra),
+    );
     runner.game.drain_effect_queue();
 
     // Pay the cost: auto-resolve picks all 3 sources.
@@ -405,15 +416,19 @@ fn ex8_055_clause_a_grants_security_attack_plus_1() {
 
     let pyra = runner.place_on_field(0, "EX8-055", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyra));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyra),
+    );
     runner.game.drain_effect_queue();
 
     runner.auto_resolve().expect("source multi resolves");
 
     assert_eq!(
-        runner.game.modifiers.sum(pyra, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(pyra, ModifierType::SecurityAttackChange),
         1,
         "EX8-055 must gain SecurityAttackChange +1 after paying the 3-source cost"
     );
@@ -447,15 +462,19 @@ fn ex8_055_clause_a_security_attack_change_expires_after_turn() {
 
     let pyra = runner.place_on_field(0, "EX8-055", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyra));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyra),
+    );
     runner.game.drain_effect_queue();
 
     runner.auto_resolve().expect("source multi resolves");
 
     assert_eq!(
-        runner.game.modifiers.sum(pyra, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(pyra, ModifierType::SecurityAttackChange),
         1,
         "SecurityAttackChange must be +1 immediately after cost payment"
     );
@@ -464,7 +483,10 @@ fn ex8_055_clause_a_security_attack_change_expires_after_turn() {
     runner.end_turn();
 
     assert_eq!(
-        runner.game.modifiers.sum(pyra, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(pyra, ModifierType::SecurityAttackChange),
         0,
         "SecurityAttackChange must expire at the end of the turn it was granted"
     );
@@ -502,15 +524,19 @@ fn ex8_055_clause_a_trashes_3_sources_from_carrier() {
         .card_sources
         .len();
     // carrier has 1 card (itself) + 3 pushed mineral sources = 4 total
-    assert_eq!(sources_before, 4, "carrier must start with 4 sources (1 top card + 3 mineral)");
+    assert_eq!(
+        sources_before, 4,
+        "carrier must start with 4 sources (1 top card + 3 mineral)"
+    );
 
     let trash_before = runner.trash_size(0);
 
     let pyra = runner.place_on_field(0, "EX8-055", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyra));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyra),
+    );
     runner.game.drain_effect_queue();
 
     runner.auto_resolve().expect("source multi resolves");
@@ -581,7 +607,10 @@ fn ex8_055_clause_a_when_attacking_also_fires() {
         "EX8-055 must unsuspend when Clause A fires via WhenAttacking"
     );
     assert_eq!(
-        runner.game.modifiers.sum(pyra, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(pyra, ModifierType::SecurityAttackChange),
         1,
         "SecurityAttackChange +1 must be granted when Clause A fires via WhenAttacking"
     );
@@ -683,7 +712,9 @@ fn ex8_055_clause_b_places_one_mineral_card_as_bottom_source() {
     runner.game.drain_effect_queue();
 
     // Accept outer optional.
-    runner.accept_optional_trigger().expect("accept outer optional");
+    runner
+        .accept_optional_trigger()
+        .expect("accept outer optional");
     // Pick 1: the Mineral card from trash.
     runner.auto_resolve().expect("first trash pick resolves");
     // Picks 2 and 3 are optional — drain follow-up (player may pass automatically).
@@ -787,7 +818,9 @@ fn ex8_055_clause_b_places_up_to_3_rock_cards() {
     runner.game.drain_effect_queue();
 
     // Accept outer optional.
-    runner.accept_optional_trigger().expect("accept outer optional");
+    runner
+        .accept_optional_trigger()
+        .expect("accept outer optional");
     // Pick all 3 Rock cards.
     runner.auto_resolve().expect("pick 1 resolves");
     runner.auto_resolve().expect("pick 2 resolves");

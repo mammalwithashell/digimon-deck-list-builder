@@ -429,7 +429,8 @@ fn bt23_059_clause_a_opt_blocks_second_activation_same_turn() {
     fire_timing(&mut r, EffectTiming::OnPlay, handle);
     r.accept_optional_trigger()
         .expect("accept outer optional-trigger prompt for first activation");
-    r.auto_resolve().expect("auto-resolve first activation body");
+    r.auto_resolve()
+        .expect("auto-resolve first activation body");
 
     // Second activation on WhenDigivolving same turn — OPT must block.
     fire_timing(&mut r, EffectTiming::WhenDigivolving, handle);

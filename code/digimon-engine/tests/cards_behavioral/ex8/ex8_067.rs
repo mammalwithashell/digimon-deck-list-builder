@@ -175,9 +175,7 @@ fn fire_digivolve_onto(
 
     // Push the digivolving card onto the base permanent's source stack.
     {
-        let perm = runner
-            .game
-            .players[player]
+        let perm = runner.game.players[player]
             .battle_area
             .get_mut(base_perm.index as usize)
             .expect("base permanent must be on field");
@@ -185,9 +183,10 @@ fn fire_digivolve_onto(
     }
 
     // Fire WhenDigivolving, then OnDigivolve.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(base_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(base_perm),
+    );
     runner.game.drain_effect_queue();
 
     runner.game.enqueue_triggered(
@@ -532,12 +531,7 @@ fn ex8_067_declining_does_not_suspend_close() {
         .execute_action(0, digimon_engine::action::space::PASS)
         .ok();
 
-    let close_now = runner
-        .game
-        .player(0)
-        .battle_area
-        .get(close_index)
-        .unwrap();
+    let close_now = runner.game.player(0).battle_area.get(close_index).unwrap();
     assert!(
         !close_now.is_suspended,
         "Close must NOT be suspended if the player declines"
@@ -567,12 +561,7 @@ fn ex8_067_accepting_suspends_close() {
     // Resolve follow-on prompts (trash multi-select) automatically.
     runner.auto_resolve();
 
-    let close_now = runner
-        .game
-        .player(0)
-        .battle_area
-        .get(close_index)
-        .unwrap();
+    let close_now = runner.game.player(0).battle_area.get(close_index).unwrap();
     assert!(
         close_now.is_suspended,
         "Close must be suspended after activation is accepted"

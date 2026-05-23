@@ -49,7 +49,9 @@
 //!
 //! # Status: IMPLEMENTED
 
-use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledCardKind, CompiledClause, CompiledScope, CompiledStep, CompiledTiming,
+};
 use digimon_engine::action::space::SEL_REVEAL_START;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};

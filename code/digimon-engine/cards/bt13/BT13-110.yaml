@@ -7,19 +7,65 @@ traits: ["Royal Knight"]
 
 effects:
   - when: main_from_hand
-    summary: "[Main] Draw 1; place this card in the battle area"
+    summary: "[Main] Draw 1; may tuck a Digimon from hand under breeding King Drasil; place this card in the battle area"
     process:
       - draw: { of: you, count: 1 }
-      # BLOCKED: G-OPTIONAL-BREEDING-SELECTION — RK-G001 filter shipped (Phase 2
-      # Track J PR 1) but `select_own_breeding_permanent` is hardcoded
-      # `is_optional: false`, so the printed "you may" placement clause can't
-      # surface a decline path. The placement step is omitted until that gap
-      # closes.
+      - select_own_breeding_permanent:
+          bind_as: king_drasil
+          optional: true
+          prompt: "Choose your King Drasil_7D6"
+          filter: { name_is: "King Drasil_7D6" }
+          then:
+            - select_hand:
+                of: you
+                bind_as: hand_digimon
+                optional: true
+                filter: { kind: digimon }
+                prompt: "Choose a Digimon card to place under King Drasil_7D6"
+            - place_as_bottom_source:
+                source: hand_digimon
+                target: king_drasil
       - place_self_as_delay_option: {}
 
-  # BLOCKED: G-BREEDING-SOURCE-PLAY — Delay play from breeding digivolution
-  # sources with On Play suppression and Rush requires breeding-source
-  # selection/play substrate (out of Track J scope).
+  - kind: delay
+    trigger: delayed
+    active_when:
+      count_gte:
+        filter:
+          owner: you
+          zone: [breeding]
+          self_digivolution_sources_trait_has: "Royal Knight"
+        n: 1
+    summary: "[Main]<Delay> Play 1 Royal Knight from breeding sources free; suppress On Play and grant Rush"
+    process:
+      - select_own_breeding_permanent:
+          bind_as: breeding_digimon
+          prompt: "Choose your breeding Digimon"
+          filter:
+            self_digivolution_sources_trait_has: "Royal Knight"
+          then:
+            - select_materials:
+                of_permanent: breeding_digimon
+                max: 1
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Royal Knight"
+                bind_as: royal_knight
+                prompt: "Choose a Royal Knight source to play"
+            - play_from_materials:
+                target: breeding_digimon
+                source_index: royal_knight
+                cost_delta: free
+                suppress_on_play: true
+                bind_as: played_royal_knight
+            - if:
+                condition: { effect_played_any_digimon: true }
+                then:
+                  - grant_keyword:
+                      target: played_royal_knight
+                      keyword: Rush
+                      expiry: end_of_turn
 
   - scope: inherited
     when: on_security

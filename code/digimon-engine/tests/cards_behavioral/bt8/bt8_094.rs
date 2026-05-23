@@ -155,11 +155,7 @@ fn bt8_094_all_turns_offers_suspend_to_draw_when_opponent_lv5_or_lower_deleted()
         runner.game.players[0].battle_area[emperor.index as usize].is_suspended,
         "accepting suspends this Tamer"
     );
-    assert_eq!(
-        runner.hand_size(0),
-        hand_before + 1,
-        "accepting draws 1"
-    );
+    assert_eq!(runner.hand_size(0), hand_before + 1, "accepting draws 1");
 }
 
 /// Negative: opponent's level-6 Digimon deletion must NOT trigger Clause A.
@@ -194,7 +190,11 @@ fn bt8_094_all_turns_does_not_fire_for_opponent_lv6_deletion() {
         runner.pending_selection().is_none(),
         "Lv.6 opponent deletion must NOT offer the suspend-to-draw choice"
     );
-    assert_eq!(runner.hand_size(0), hand_before, "no draw for Lv.6 deletion");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "no draw for Lv.6 deletion"
+    );
 }
 
 /// Negative: own Digimon deletion must NOT trigger Clause A (printed: "your opponent's").
@@ -265,11 +265,12 @@ fn bt8_094_all_turns_player_may_decline_suspend_cost() {
         .game
         .delete_permanent_with_cause(opp, ReplacementCause::OwnEffect);
 
-    let view = runner
-        .pending_selection_view()
-        .expect("must offer choice");
+    let view = runner.pending_selection_view().expect("must offer choice");
     // Decline = last action (PASS or Decline label index).
-    let decline = *view.valid_action_ids.last().expect("decline action present");
+    let decline = *view
+        .valid_action_ids
+        .last()
+        .expect("decline action present");
     runner
         .execute_action(view.selecting_player, decline)
         .expect("decline");
@@ -365,8 +366,7 @@ fn bt8_094_opponents_turn_gains_2_memory_when_opponent_lv3_moves_from_breeding()
         .expect("OPP-LV3-B registered");
     let card_index = runner.game.next_card_index();
     let source = CardSource::new(data_idx, 1, card_index);
-    runner.game.players[1].breeding_area =
-        Some(Permanent::new(source, runner.game.turn_count));
+    runner.game.players[1].breeding_area = Some(Permanent::new(source, runner.game.turn_count));
     runner.move_from_breeding(1);
 
     assert_eq!(
@@ -409,8 +409,7 @@ fn bt8_094_opponents_turn_does_not_fire_for_opponent_non_lv3_from_breeding() {
         .expect("OPP-LV4-B registered");
     let card_index = runner.game.next_card_index();
     let source = CardSource::new(data_idx, 1, card_index);
-    runner.game.players[1].breeding_area =
-        Some(Permanent::new(source, runner.game.turn_count));
+    runner.game.players[1].breeding_area = Some(Permanent::new(source, runner.game.turn_count));
     runner.move_from_breeding(1);
 
     assert_eq!(
@@ -453,8 +452,7 @@ fn bt8_094_does_not_gain_memory_on_own_turn_when_opponent_lv3_moves() {
         .expect("OPP-LV3-OT registered");
     let card_index = runner.game.next_card_index();
     let source = CardSource::new(data_idx, 1, card_index);
-    runner.game.players[1].breeding_area =
-        Some(Permanent::new(source, runner.game.turn_count));
+    runner.game.players[1].breeding_area = Some(Permanent::new(source, runner.game.turn_count));
     runner.move_from_breeding(1);
 
     assert_eq!(

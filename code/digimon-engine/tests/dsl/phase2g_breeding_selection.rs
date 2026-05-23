@@ -3,7 +3,8 @@
 use std::sync::{Arc, Mutex};
 
 use digimon_dsl::compiled::{CompiledPredicate, CompiledStep};
-use digimon_engine::action::space::encode_breeding_select;
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{encode_breeding_select, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::raw_rust::EngineRawRustRegistry;
@@ -26,6 +27,7 @@ fn dsl_select_breeding_permanent_binds_target() {
         bind_as: Some("breeding_target".to_string()),
         prompt: "Choose breeding".to_string(),
         filter: CompiledPredicate::default(),
+        optional: false,
         then: vec![CompiledStep::GainMemory(1)],
     }];
 
@@ -63,6 +65,7 @@ fn select_own_breeding_permanent_binds_selected_ref() {
         bind_as: Some("breeding_target".to_string()),
         prompt: "Choose breeding".to_string(),
         filter: CompiledPredicate::default(),
+        optional: false,
         then: vec![CompiledStep::RawRust {
             fn_name: "assert_breeding_binding".to_string(),
             consumes: vec!["breeding_target".to_string()],
@@ -116,6 +119,7 @@ fn select_own_breeding_permanent_filter_rejects_non_matching_name() {
         bind_as: Some("breeding_target".to_string()),
         prompt: "Choose [King Drasil_7D6]".to_string(),
         filter,
+        optional: false,
         then: vec![CompiledStep::GainMemory(1)],
     }];
 
@@ -154,6 +158,7 @@ fn select_own_breeding_permanent_filter_accepts_matching_name() {
         bind_as: Some("breeding_target".to_string()),
         prompt: "Choose [King Drasil_7D6]".to_string(),
         filter,
+        optional: false,
         then: vec![CompiledStep::GainMemory(1)],
     }];
 
@@ -168,4 +173,158 @@ fn select_own_breeding_permanent_filter_accepts_matching_name() {
         .resolve_selection(p0, encode_breeding_select(p0).unwrap())
         .expect("pick breeding");
     assert_eq!(runner.game.memory, 1, "then-tail runs after selection");
+}
+
+#[test]
+fn optional_select_own_breeding_permanent_accept_runs_success_then_outer_tail() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("KING-DRASIL", "King Drasil_7D6"))
+        .start();
+    let p0 = 0;
+    let source = runner.place_on_field(p0, "SRC", Some(0));
+    let source_card = runner.top_card(source);
+    runner.place_in_breeding(p0, "KING-DRASIL");
+
+    let mut filter = CompiledPredicate::default();
+    filter.name_is = Some("King Drasil_7D6".to_string());
+    let steps = vec![
+        CompiledStep::SelectOwnBreedingPermanent {
+            bind_as: Some("breeding_target".to_string()),
+            prompt: "You may choose [King Drasil_7D6]".to_string(),
+            filter,
+            optional: true,
+            then: vec![CompiledStep::GainMemory(2)],
+        },
+        CompiledStep::GainMemory(1),
+    ];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), p0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+    assert!(runner.game.pending_selection.as_ref().unwrap().is_optional);
+
+    runner
+        .game
+        .resolve_selection(p0, encode_breeding_select(p0).unwrap())
+        .expect("accept optional breeding selection");
+
+    assert_eq!(
+        runner.game.memory, 3,
+        "accepting runs the selection success body and then resumes the outer tail"
+    );
+}
+
+#[test]
+fn optional_select_own_breeding_permanent_decline_skips_success_and_runs_outer_tail() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("KING-DRASIL", "King Drasil_7D6"))
+        .start();
+    let p0 = 0;
+    let source = runner.place_on_field(p0, "SRC", Some(0));
+    let source_card = runner.top_card(source);
+    runner.place_in_breeding(p0, "KING-DRASIL");
+
+    let mut filter = CompiledPredicate::default();
+    filter.name_is = Some("King Drasil_7D6".to_string());
+    let steps = vec![
+        CompiledStep::SelectOwnBreedingPermanent {
+            bind_as: Some("breeding_target".to_string()),
+            prompt: "You may choose [King Drasil_7D6]".to_string(),
+            filter,
+            optional: true,
+            then: vec![CompiledStep::GainMemory(2)],
+        },
+        CompiledStep::GainMemory(1),
+    ];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), p0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+    let mask = build_action_mask(&runner.game, p0);
+    assert_eq!(mask[PASS as usize], 1.0, "optional prompt exposes PASS");
+
+    runner
+        .game
+        .resolve_selection(p0, PASS)
+        .expect("decline optional breeding selection");
+
+    assert_eq!(
+        runner.game.memory, 1,
+        "declining skips the selection success body but still resumes the outer tail"
+    );
+}
+
+#[test]
+fn mandatory_select_own_breeding_permanent_still_hides_pass() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("KING-DRASIL", "King Drasil_7D6"))
+        .start();
+    let p0 = 0;
+    let source = runner.place_on_field(p0, "SRC", Some(0));
+    let source_card = runner.top_card(source);
+    runner.place_in_breeding(p0, "KING-DRASIL");
+
+    let steps = vec![CompiledStep::SelectOwnBreedingPermanent {
+        bind_as: Some("breeding_target".to_string()),
+        prompt: "Choose [King Drasil_7D6]".to_string(),
+        filter: CompiledPredicate::default(),
+        optional: false,
+        then: vec![CompiledStep::GainMemory(1)],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), p0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+    let mask = build_action_mask(&runner.game, p0);
+    assert_eq!(mask[PASS as usize], 0.0, "mandatory prompt hides PASS");
+    assert!(runner.game.resolve_selection(p0, PASS).is_err());
+}
+
+#[test]
+fn optional_select_own_breeding_permanent_no_candidate_runs_outer_tail() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("OTHER", "Other"))
+        .start();
+    let p0 = 0;
+    let source = runner.place_on_field(p0, "SRC", Some(0));
+    let source_card = runner.top_card(source);
+    runner.place_in_breeding(p0, "OTHER");
+
+    let mut filter = CompiledPredicate::default();
+    filter.name_is = Some("King Drasil_7D6".to_string());
+    let steps = vec![
+        CompiledStep::SelectOwnBreedingPermanent {
+            bind_as: Some("breeding_target".to_string()),
+            prompt: "You may choose [King Drasil_7D6]".to_string(),
+            filter,
+            optional: true,
+            then: vec![CompiledStep::GainMemory(2)],
+        },
+        CompiledStep::GainMemory(1),
+    ];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), p0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Synchronous);
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.game.memory, 1,
+        "no matching candidate falls through and runs the surrounding tail"
+    );
 }

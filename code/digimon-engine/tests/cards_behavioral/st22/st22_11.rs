@@ -307,7 +307,11 @@ fn st22_11_security_de_digivolves_and_adds_to_hand() {
     let atk = runner.place_on_field(0, "ATK", Some(0));
     let _opp_digi = runner.place_on_field(1, "OPP-DIGI", Some(0));
 
-    assert_eq!(runner.security_count(1), 1, "precondition: ST22-11 in P1 security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: ST22-11 in P1 security"
+    );
     assert_eq!(runner.hand_size(1), 0, "precondition: P1 hand empty");
 
     let result = runner.attack_player(atk, 1, false);
@@ -353,8 +357,16 @@ fn st22_11_security_adds_to_hand_even_without_opponent_digimon() {
 
     let atk = runner.place_on_field(0, "ATK", Some(0));
 
-    assert_eq!(runner.security_count(1), 1, "precondition: ST22-11 in P1 security");
-    assert_eq!(runner.battle_area_size(1), 0, "precondition: P1 has no Digimon");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: ST22-11 in P1 security"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "precondition: P1 has no Digimon"
+    );
     assert_eq!(runner.hand_size(1), 0, "precondition: P1 hand empty");
 
     let _result = runner.attack_player(atk, 1, false);
@@ -556,7 +568,10 @@ fn st22_11_main_buff_expires_after_opponents_turn() {
     runner.auto_resolve().expect("drains");
 
     // Reboot is active right after.
-    assert!(runner.game.has_keyword(digi, Keyword::Reboot), "Reboot active");
+    assert!(
+        runner.game.has_keyword(digi, Keyword::Reboot),
+        "Reboot active"
+    );
 
     // End P0's turn.
     runner.game.end_turn();

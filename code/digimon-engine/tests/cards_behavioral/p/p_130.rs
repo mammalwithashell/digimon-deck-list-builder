@@ -128,11 +128,7 @@ fn p_130_metadata_matches_printed_text() {
 
     let compiled = runner.compiled_card(CARD_ID).expect("compiled present");
     assert_eq!(compiled.name, "Lui Ohwada", "P-130 name must be Lui Ohwada");
-    assert_eq!(
-        compiled.cost,
-        Some(3),
-        "P-130 prints Cost 3"
-    );
+    assert_eq!(compiled.cost, Some(3), "P-130 prints Cost 3");
     assert!(
         compiled
             .color
@@ -145,10 +141,7 @@ fn p_130_metadata_matches_printed_text() {
         CompiledCardKind::Tamer,
         "P-130 must be a Tamer"
     );
-    assert!(
-        compiled.traits.is_empty(),
-        "P-130 has no printed traits"
-    );
+    assert!(compiled.traits.is_empty(), "P-130 has no printed traits");
 }
 
 /// The on_move clause must be present with CompiledTiming::OnMove, FaceUp scope,
@@ -331,11 +324,7 @@ fn p_130_your_turn_trigger_suspends_self_and_gains_memory_on_move() {
     let p130_perm = runner.game.players[0]
         .battle_area
         .iter()
-        .find(|perm| {
-            perm.top_card()
-                .card_id(&runner.game.card_data)
-                .eq(CARD_ID)
-        })
+        .find(|perm| perm.top_card().card_id(&runner.game.card_data).eq(CARD_ID))
         .expect("P-130 must still be on field after trigger");
     assert!(
         p130_perm.is_suspended,
@@ -361,11 +350,7 @@ fn p_130_your_turn_trigger_does_not_fire_when_suspended() {
     let p130_index = runner.game.players[0]
         .battle_area
         .iter()
-        .position(|perm| {
-            perm.top_card()
-                .card_id(&runner.game.card_data)
-                .eq(CARD_ID)
-        })
+        .position(|perm| perm.top_card().card_id(&runner.game.card_data).eq(CARD_ID))
         .expect("P-130 must be on field");
     runner.game.players[0].battle_area[p130_index].is_suspended = true;
 

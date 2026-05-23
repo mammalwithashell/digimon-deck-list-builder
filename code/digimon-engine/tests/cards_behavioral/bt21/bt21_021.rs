@@ -43,8 +43,7 @@
 //!   uses the declarative path and is unaffected.
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -293,8 +292,7 @@ fn bt21_021_has_on_deletion_optional_triggered_clause() {
 
     let od = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnDeletion)
-                && t.scope == CompiledScope::FaceUp =>
+            if t.when.contains(&CompiledTiming::OnDeletion) && t.scope == CompiledScope::FaceUp =>
         {
             Some(t)
         }
@@ -325,7 +323,10 @@ fn bt21_021_has_inherited_rush_aura() {
             })
         )
     });
-    assert!(has_rush_aura, "must have an inherited Aura clause with grant_keyword");
+    assert!(
+        has_rush_aura,
+        "must have an inherited Aura clause with grant_keyword"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -383,7 +384,9 @@ fn bt21_021_end_of_attack_decline_leaves_self_on_field() {
     );
     runner.game.drain_effect_queue();
 
-    runner.execute_action(0, PASS).expect("decline end_of_attack");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline end_of_attack");
     runner.auto_resolve().expect("post-decline drain");
 
     assert_eq!(
@@ -450,13 +453,17 @@ fn bt21_021_end_of_attack_plays_xros_heart_and_deletes_self() {
     runner.game.drain_effect_queue();
 
     // Select the first valid hand card.
-    let view = runner.pending_selection_view().expect("selection must appear");
+    let view = runner
+        .pending_selection_view()
+        .expect("selection must appear");
     let pick_action = *view
         .valid_action_ids
         .iter()
         .find(|&&a| a >= PLAY_HAND_START)
         .unwrap_or(view.valid_action_ids.first().expect("at least one action"));
-    runner.execute_action(0, pick_action).expect("pick hand card");
+    runner
+        .execute_action(0, pick_action)
+        .expect("pick hand card");
     runner.auto_resolve().expect("resolve play + self-delete");
 
     // OmniShoutmon must be deleted (self-delete after play succeeds).
@@ -493,7 +500,9 @@ fn bt21_021_end_of_attack_self_delete_fires_on_successful_play() {
     runner.game.drain_effect_queue();
 
     // Pick a hand card (>= PLAY_HAND_START) to actually play it, not PASS.
-    let view = runner.pending_selection_view().expect("selection must appear");
+    let view = runner
+        .pending_selection_view()
+        .expect("selection must appear");
     let pick = *view
         .valid_action_ids
         .iter()
@@ -578,7 +587,8 @@ fn bt21_021_on_deletion_decline_leaves_tamer_unchanged() {
     runner.execute_action(0, PASS).expect("decline on_deletion");
     runner.auto_resolve().expect("drain");
 
-    let tamer_stack_after = runner.game.players[tamer_perm.player as usize].battle_area
+    let tamer_stack_after = runner.game.players[tamer_perm.player as usize]
+        .battle_area
         .get(tamer_perm.index as usize)
         .map(|p| p.card_sources.len())
         .unwrap_or(tamer_stack_before);
@@ -636,9 +646,12 @@ fn bt21_021_on_deletion_from_hand_places_xros_heart_under_tamer() {
         .delete_permanent_with_cause(omni_perm, ReplacementCause::OpponentEffect);
 
     // Drive through: pick destination Tamer, pick "From hand" branch, pick card.
-    runner.auto_resolve().expect("resolve on_deletion from hand");
+    runner
+        .auto_resolve()
+        .expect("resolve on_deletion from hand");
 
-    let tamer_stack_after = runner.game.players[tamer_perm.player as usize].battle_area
+    let tamer_stack_after = runner.game.players[tamer_perm.player as usize]
+        .battle_area
         .get(tamer_perm.index as usize)
         .map(|p| p.card_sources.len())
         .unwrap_or(tamer_stack_before);
@@ -685,7 +698,8 @@ fn bt21_021_on_deletion_from_trash_places_xros_heart_under_tamer() {
     // After resolution, at least one of hand or trash should be smaller.
     runner.auto_resolve().ok();
 
-    let tamer_stack_after = runner.game.players[tamer_perm.player as usize].battle_area
+    let tamer_stack_after = runner.game.players[tamer_perm.player as usize]
+        .battle_area
         .get(tamer_perm.index as usize)
         .map(|p| p.card_sources.len())
         .unwrap_or(0);
@@ -811,10 +825,7 @@ fn bt21_021_inherited_rush_applied_to_xros_heart_carrier_on_your_turn() {
     // Refresh declaratives (simulates start-of-turn tick).
     runner.game.tick_declarative_effects();
 
-    let has_rush = runner
-        .game
-        .modifiers
-        .has_keyword(host, Keyword::Rush);
+    let has_rush = runner.game.modifiers.has_keyword(host, Keyword::Rush);
     assert!(
         has_rush,
         "carrier with [Xros Heart] must have Rush from inherited aura during your turn"
@@ -838,10 +849,7 @@ fn bt21_021_no_rush_without_omni_in_stack() {
 
     runner.game.tick_declarative_effects();
 
-    let has_rush = runner
-        .game
-        .modifiers
-        .has_keyword(plain, Keyword::Rush);
+    let has_rush = runner.game.modifiers.has_keyword(plain, Keyword::Rush);
     assert!(
         !has_rush,
         "a carrier without BT21-021 in its stack must not gain Rush"

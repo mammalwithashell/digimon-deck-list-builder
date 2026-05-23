@@ -216,9 +216,9 @@ fn p_107_delay_clause_is_main_phase_activated_structurally() {
             let hand_pick = process
                 .iter()
                 .find_map(|step| match step {
-                    CompiledStep::SelectHand { filter, optional, .. } => {
-                        Some((filter, optional))
-                    }
+                    CompiledStep::SelectHand {
+                        filter, optional, ..
+                    } => Some((filter, optional)),
                     _ => None,
                 })
                 .expect("Delay must include a black Digimon hand pick");
@@ -581,9 +581,7 @@ fn p_107_delay_is_player_visible_main_activation_after_placing_turn() {
     runner.game.drain_effect_queue();
 
     let _ = carrier;
-    let carrier_top = runner
-        .game
-        .players[0]
+    let carrier_top = runner.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.is_digimon(&runner.game.card_data))

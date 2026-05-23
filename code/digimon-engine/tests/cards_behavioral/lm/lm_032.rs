@@ -408,11 +408,8 @@ fn push_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
         .iter()
         .position(|c| c.card_id == card_id)
         .unwrap_or_else(|| panic!("push_trash: unknown card_id {card_id}"));
-    let card = digimon_engine::card_source::CardSource::new(
-        data_idx,
-        p,
-        runner.game.next_card_index(),
-    );
+    let card =
+        digimon_engine::card_source::CardSource::new(data_idx, p, runner.game.next_card_index());
     runner.game.players[p as usize].trash.push(card);
 }
 
@@ -628,13 +625,10 @@ fn lm_032_delay_body_play_from_trash_only_when_no_field_digimon() {
 
     // A purple Digimon must have been played from trash onto P0's field.
     assert!(
-        runner.game.players[0]
-            .battle_area
-            .iter()
-            .any(|p| {
-                let id = p.top_card().card_id(&runner.game.card_data);
-                id == "LM032-PLAY-PURPLE" || id == "LM032-RET-PURPLE"
-            }),
+        runner.game.players[0].battle_area.iter().any(|p| {
+            let id = p.top_card().card_id(&runner.game.card_data);
+            id == "LM032-PLAY-PURPLE" || id == "LM032-RET-PURPLE"
+        }),
         "the conditional branch must play a <=2000 DP purple Digimon from trash"
     );
 }
@@ -719,12 +713,20 @@ fn lm_032_security_installs_trash_selection_when_purple_digimon_in_trash() {
 
     let attacker_handle = runner.place_on_field(0, "LM032-ATK-PURPLE", Some(0));
     assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
-    assert_eq!(runner.security_count(1), 1, "precondition: LM-032 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: LM-032 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
 
-    assert_eq!(runner.security_count(1), 0, "LM-032 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-032 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,
@@ -758,14 +760,30 @@ fn lm_032_security_no_selection_when_trash_is_empty() {
         .start();
 
     let attacker_handle = runner.place_on_field(0, "LM032-ATK-EMPTY", Some(0));
-    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
-    assert_eq!(runner.security_count(1), 1, "precondition: LM-032 in security");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "precondition: defender trash empty"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: LM-032 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
 
-    assert_eq!(runner.battle_area_size(1), 0, "no purple Digimon played from empty trash");
-    assert_eq!(runner.security_count(1), 0, "LM-032 left the security stack");
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "no purple Digimon played from empty trash"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-032 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,
@@ -807,12 +825,20 @@ fn lm_032_security_no_selection_when_only_large_purple_digimon_in_trash() {
     runner.game.players[1].trash.push(trash_seed);
 
     let attacker_handle = runner.place_on_field(0, "LM032-ATK-LARGE", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: LM-032 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: LM-032 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
 
-    assert_eq!(runner.security_count(1), 0, "LM-032 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-032 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,
@@ -823,7 +849,11 @@ fn lm_032_security_no_selection_when_only_large_purple_digimon_in_trash() {
         0,
         "LM-032 Security must not play a >2000 DP Digimon (dp_lte: 2000)"
     );
-    assert_eq!(runner.trash_size(1), 1, "large purple Digimon must remain in trash");
+    assert_eq!(
+        runner.trash_size(1),
+        1,
+        "large purple Digimon must remain in trash"
+    );
 }
 
 /// add_this_option_to_hand must still fire when the player DECLINES the optional

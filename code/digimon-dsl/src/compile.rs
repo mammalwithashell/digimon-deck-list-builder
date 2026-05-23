@@ -611,9 +611,8 @@ fn compile_predicate(
         host_kind_is: p.host_kind_is.map(compile_card_kind),
         rules_text_contains: p.rules_text_contains.clone(),
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
-        self_digivolution_sources_contain_name: p
-            .self_digivolution_sources_contain_name
-            .clone(),
+        self_digivolution_sources_contain_name: p.self_digivolution_sources_contain_name.clone(),
+        self_digivolution_sources_trait_has: p.self_digivolution_sources_trait_has.clone(),
         memory_lte: p
             .memory_lte
             .as_ref()
@@ -649,8 +648,7 @@ fn compile_predicate(
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.no_face_up_security_named"),
-                    message: "exactly one of `card_number_is` / `name_is` must be set"
-                        .to_string(),
+                    message: "exactly one of `card_number_is` / `name_is` must be set".to_string(),
                 });
             }
             CompiledFaceUpSecurityNamed {
@@ -674,6 +672,7 @@ fn compile_predicate(
         event_target_trait_has: p.event_target_trait_has.clone(),
         event_target_name_contains: p.event_target_name_contains.clone(),
         event_target_is_player: p.event_target_is_player,
+        event_target_is_source: p.event_target_is_source,
         event_target_was_self: p.event_target_was_self,
         attack_target_change_reason: p.attack_target_change_reason.clone(),
         attacker_trait_has: p.attacker_trait_has.clone(),
@@ -686,6 +685,10 @@ fn compile_predicate(
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
+        event_card_level_eq: p.event_card_level_eq,
+        event_card_level_gte: p.event_card_level_gte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.event_card_level_gte"), card_id, errors)
+        }),
         event_card_color_only: p
             .event_card_color_only
             .as_ref()
@@ -695,6 +698,7 @@ fn compile_predicate(
             .as_ref()
             .map(|colors| colors.iter().copied().map(compile_color).collect()),
         event_card_color_count: p.event_card_color_count,
+        event_target_same_level_as_previous: p.event_target_same_level_as_previous,
         event_cause: p.event_cause.map(compile_event_cause),
         host_permanent_trait_has: p.host_permanent_trait_has.clone(),
         trashed_source_trait_has: p.trashed_source_trait_has.clone(),
@@ -1630,10 +1634,20 @@ fn compile_step(
         S::LoseMemory(n) => CompiledStep::LoseMemory(*n),
         S::SetMemory(n) => CompiledStep::SetMemory(*n),
         S::GainMemoryFn(a) => CompiledStep::GainMemoryFn {
-            formula: compile_formula(&a.formula, &format!("{prefix}.gain_memory_fn"), card_id, errors),
+            formula: compile_formula(
+                &a.formula,
+                &format!("{prefix}.gain_memory_fn"),
+                card_id,
+                errors,
+            ),
         },
         S::LoseMemoryFn(a) => CompiledStep::LoseMemoryFn {
-            formula: compile_formula(&a.formula, &format!("{prefix}.lose_memory_fn"), card_id, errors),
+            formula: compile_formula(
+                &a.formula,
+                &format!("{prefix}.lose_memory_fn"),
+                card_id,
+                errors,
+            ),
         },
 
         S::Draw(a) => CompiledStep::Draw {
@@ -1706,7 +1720,12 @@ fn compile_step(
         },
         S::ChooseFromReveal(a) => CompiledStep::ChooseFromReveal {
             of: compile_player_ref(a.of),
-            filter: compile_predicate(&a.filter, &format!("{prefix}.choose_from_reveal.filter"), card_id, errors),
+            filter: compile_predicate(
+                &a.filter,
+                &format!("{prefix}.choose_from_reveal.filter"),
+                card_id,
+                errors,
+            ),
             destination: compile_reveal_destination(&a.destination),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
@@ -1748,6 +1767,9 @@ fn compile_step(
         },
         S::DeleteBoundPermanents(a) => CompiledStep::DeleteBoundPermanents {
             binding: a.binding.clone(),
+        },
+        S::TrashBreedingPermanent(a) => CompiledStep::TrashBreedingPermanent {
+            target: compile_binding_ref(&a.target),
         },
         S::ReturnToHand(a) => CompiledStep::ReturnToHand {
             target: compile_binding_ref(&a.target),
@@ -1874,6 +1896,7 @@ fn compile_step(
         S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
             binding: a.binding.clone(),
             bind_as: a.bind_as.clone(),
+            suppress_on_play: a.suppress_on_play,
         },
         S::PlayFromSecurity(_) => CompiledStep::PlayFromSecurity,
         S::PlayFromMaterials(a) => CompiledStep::PlayFromMaterials {
@@ -1883,6 +1906,7 @@ fn compile_step(
                 .cost_delta
                 .as_ref()
                 .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+            suppress_on_play: a.suppress_on_play,
             bind_as: a.bind_as.clone(),
         },
         S::PlaySelectedSourcesFree(a) => CompiledStep::PlaySelectedSourcesFree {
@@ -2263,12 +2287,7 @@ fn compile_step(
         S::SelectOpponentPlayCostBudget(a) => CompiledStep::SelectOpponentPlayCostBudget {
             play_cost_budget: a.play_cost_budget,
             min_picks: a.min_picks,
-            filter: compile_predicate(
-                &a.filter,
-                &format!("{prefix}.filter"),
-                card_id,
-                errors,
-            ),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             then: a
@@ -2281,6 +2300,7 @@ fn compile_step(
         S::SelectOwnBreedingPermanent(a) => CompiledStep::SelectOwnBreedingPermanent {
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
+            optional: a.optional,
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             then: a
                 .then
@@ -2331,11 +2351,18 @@ fn compile_step(
         S::SelectUnionZone(a) => CompiledStep::SelectUnionZone {
             of: compile_player_ref(a.of),
             zones: a.zones.iter().map(|z| compile_zone(*z)).collect(),
+            material_of: a.material_of.as_ref().map(compile_binding_ref),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            then: a
+                .then
+                .iter()
+                .enumerate()
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
+                .collect(),
         },
         S::SelectOrderedPermutation(a) => CompiledStep::SelectOrderedPermutation {
             items: compile_binding_ref(&a.items),

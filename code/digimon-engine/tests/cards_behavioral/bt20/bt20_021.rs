@@ -10,6 +10,6 @@ fn bt20_021_loads_ace_stub() {
         .start();
 }
 
-#[ignore = "pending: G-UNION-HAND-TRASH-SOURCE-COST and G-SOURCE-COUNT-SECURITY-TRASH — Royal Knight source cost, DP compare, unsuspend, and source-count security trash"]
+#[ignore = "pending: G-UNION-HAND-TRASH-SOURCE-COST and G-SOURCE-COUNT-SECURITY-TRASH — Royal Knight source cost, DP compare, unsuspend, and source-count security trash; tracker: qa/dsl-vocab-gaps.md"]
 #[test]
 fn bt20_021_source_cost_delete_and_source_count_security_trash() {}

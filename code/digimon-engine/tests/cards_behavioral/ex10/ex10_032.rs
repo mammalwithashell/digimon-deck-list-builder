@@ -29,8 +29,8 @@
 //! - Inherited source-trash De-Digivolve 1 (retained from prior pass)
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::action::space::HAND_EFFECT_START;
 use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::HAND_EFFECT_START;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect_context::EffectContext;
@@ -198,13 +198,15 @@ fn ex10_032_has_on_play_when_digivolving_when_attacking_clause() {
         .compiled_card("EX10-032")
         .expect("EX10-032 compiled card present");
 
-    let has_clause_2 = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnPlay)
-                && t.when.contains(&CompiledTiming::WhenDigivolving)
-                && t.when.contains(&CompiledTiming::WhenAttacking)
-    ));
+    let has_clause_2 = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnPlay)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving)
+                    && t.when.contains(&CompiledTiming::WhenAttacking)
+        )
+    });
     assert!(
         has_clause_2,
         "EX10-032 must have a clause with OnPlay + WhenDigivolving + WhenAttacking timings"
@@ -655,7 +657,10 @@ fn ex10_032_on_play_removes_source_from_stack() {
         .card_sources
         .len();
     let trash_before = runner.trash_size(0);
-    assert!(sources_before >= 2, "host must have a source before the test");
+    assert!(
+        sources_before >= 2,
+        "host must have a source before the test"
+    );
 
     let proganomon = runner.place_on_field(0, "EX10-032", None);
 
@@ -737,9 +742,10 @@ fn ex10_032_when_digivolving_fires_buff_clause() {
     runner.push_source(host, "MIN-WD-S");
     let proganomon = runner.place_on_field(0, "EX10-032", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(proganomon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(proganomon),
+    );
     runner.game.drain_effect_queue();
 
     let kind = runner
@@ -780,9 +786,10 @@ fn ex10_032_when_attacking_fires_buff_clause() {
     runner.push_source(host, "MIN-WA-S");
     let proganomon = runner.place_on_field(0, "EX10-032", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(proganomon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(proganomon),
+    );
     runner.game.drain_effect_queue();
 
     let kind = runner

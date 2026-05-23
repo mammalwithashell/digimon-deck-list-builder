@@ -264,13 +264,18 @@ fn ex11_044_clause_a_opt_blocks_second_trigger_same_turn() {
                 let view = runner.pending_selection_view().expect("view");
                 let player = view.selecting_player;
                 let action = view.valid_action_ids[0];
-                runner.game.resolve_selection(player, action).expect("resolves");
+                runner
+                    .game
+                    .resolve_selection(player, action)
+                    .expect("resolves");
             }
             Some(SelectionKind::SourceMulti { picked, max, .. }) => {
                 if picked < 3 && picked < max {
                     runner.auto_resolve().expect("pick source");
                 } else {
-                    runner.execute_action(0, digimon_engine::action::space::PASS).expect("done");
+                    runner
+                        .execute_action(0, digimon_engine::action::space::PASS)
+                        .expect("done");
                 }
             }
             Some(SelectionKind::OppField) => {
@@ -285,9 +290,10 @@ fn ex11_044_clause_a_opt_blocks_second_trigger_same_turn() {
     }
 
     // Second trigger same turn.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     let mut saw_source_multi = false;
@@ -296,7 +302,9 @@ fn ex11_044_clause_a_opt_blocks_second_trigger_same_turn() {
         match runner.pending_kind() {
             Some(SelectionKind::SourceMulti { .. }) => {
                 saw_source_multi = true;
-                runner.execute_action(0, digimon_engine::action::space::PASS).expect("pass");
+                runner
+                    .execute_action(0, digimon_engine::action::space::PASS)
+                    .expect("pass");
             }
             Some(SelectionKind::OppField) => {
                 runner.auto_resolve().expect("resolves");
@@ -305,7 +313,10 @@ fn ex11_044_clause_a_opt_blocks_second_trigger_same_turn() {
                 let view = runner.pending_selection_view().expect("view");
                 let player = view.selecting_player;
                 let action = view.valid_action_ids[0];
-                runner.game.resolve_selection(player, action).expect("resolves");
+                runner
+                    .game
+                    .resolve_selection(player, action)
+                    .expect("resolves");
             }
             _ => break,
         }
@@ -347,9 +358,10 @@ fn ex11_044_clause_a_when_digivolving_prompts_source_multi() {
     runner.push_source(pyramidimon, "EX11-044-WD-S3");
     runner.place_on_field(1, "EX11-044-WD-OPP", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pyramidimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pyramidimon),
+    );
     runner.game.drain_effect_queue();
 
     let mut saw_source_multi = false;
@@ -360,11 +372,16 @@ fn ex11_044_clause_a_when_digivolving_prompts_source_multi() {
                 let view = runner.pending_selection_view().expect("view");
                 let player = view.selecting_player;
                 let action = view.valid_action_ids[0];
-                runner.game.resolve_selection(player, action).expect("resolves");
+                runner
+                    .game
+                    .resolve_selection(player, action)
+                    .expect("resolves");
             }
             Some(SelectionKind::SourceMulti { .. }) => {
                 saw_source_multi = true;
-                runner.execute_action(0, digimon_engine::action::space::PASS).expect("pass");
+                runner
+                    .execute_action(0, digimon_engine::action::space::PASS)
+                    .expect("pass");
             }
             Some(SelectionKind::OppField) => {
                 runner.auto_resolve().expect("resolves");
@@ -417,7 +434,9 @@ fn ex11_044_clause_a_skips_when_fewer_than_3_sources_available() {
         match runner.pending_kind() {
             Some(SelectionKind::SourceMulti { .. }) => {
                 saw_source_multi = true;
-                runner.execute_action(0, digimon_engine::action::space::PASS).expect("pass");
+                runner
+                    .execute_action(0, digimon_engine::action::space::PASS)
+                    .expect("pass");
             }
             _ => break,
         }
@@ -530,7 +549,10 @@ fn ex11_044_clause_b_trash_event_on_self_triggers_place_three_from_trash() {
                 let view = runner.pending_selection_view().expect("view");
                 let player = view.selecting_player;
                 let action = view.valid_action_ids[0];
-                runner.game.resolve_selection(player, action).expect("resolves");
+                runner
+                    .game
+                    .resolve_selection(player, action)
+                    .expect("resolves");
             }
             Some(SelectionKind::Trash) => {
                 runner
@@ -694,7 +716,10 @@ fn ex11_044_clause_b_opt_blocks_second_trigger_same_turn() {
                 let view = runner.pending_selection_view().expect("view");
                 let player = view.selecting_player;
                 let action = view.valid_action_ids[0];
-                runner.game.resolve_selection(player, action).expect("resolves");
+                runner
+                    .game
+                    .resolve_selection(player, action)
+                    .expect("resolves");
             }
             Some(SelectionKind::Trash) => {
                 runner
@@ -806,7 +831,10 @@ fn ex11_044_clause_b_declining_places_no_cards() {
                 let view = runner.pending_selection_view().expect("view");
                 let player = view.selecting_player;
                 let action = view.valid_action_ids[0];
-                runner.game.resolve_selection(player, action).expect("resolves");
+                runner
+                    .game
+                    .resolve_selection(player, action)
+                    .expect("resolves");
             }
             Some(SelectionKind::Trash) => {
                 runner
@@ -827,8 +855,7 @@ fn ex11_044_clause_b_declining_places_no_cards() {
         .len();
 
     assert_eq!(
-        sources_after,
-        sources_before,
+        sources_after, sources_before,
         "declining at the first pick must leave sources unchanged"
     );
 }
