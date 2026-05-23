@@ -4492,3 +4492,15 @@ ctx.de_digivolve(target, None, None);
   `Permanent::stack_size() >= 1` is preserved.
 - Popped sources always go to the **target owner**'s trash, not the
   caller's. This matters for Dark Masters' cross-side effects.
+
+## Debugging — CLI and MCP
+
+When `cargo test` isn't enough — when you need to poke at mid-game state, step through a recording, or investigate a training-run crash — use the engine debug surface.
+
+- **`digimon-engine-cli debug`** — interactive REPL. Build a fresh game from decks or load a recording; inspect state, hand, field, pending selection, effect queue; submit actions; see decoded action labels.
+- **`digimon-engine-cli replay <rec.json>`** — single-shot recording viewer. Pick a step + view + perspective, optionally with `--verify` for divergence detection.
+- **`digimon-engine-mcp`** — stdio MCP server. 24 tools covering lifecycle + state + actions, including `deck_cards` (full card metadata for both decks in one call) and `recorded_actions` (decoded action log with optional `decode_labels: true` to compute human labels via temporary replay walk).
+
+Both binaries link the same `LiveGame` wrapper (`code/digimon-engine/src/live_game.rs`) so changes to the engine surface propagate automatically. Card pool defaults to `LiveGame::default_pool()` — same filter as `pilot_training` / `gauntlet`.
+
+Full reference: [docs/DEBUG_MCP.md](DEBUG_MCP.md).

@@ -11,6 +11,7 @@
 | [MODEL_CATALOG.md](MODEL_CATALOG.md) | ONNX model catalog — admin upload, desktop cache, storage backends, integrity |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Hosted API deployment — DigitalOcean topology, env vars, bootstrap |
 | [RUST_ENGINE_API.md](RUST_ENGINE_API.md) | Rust engine scripting reference — `CardEffect`, `EffectContext`, `Expiry`, `ModifierType`, common patterns, DebugRunner |
+| [DEBUG_MCP.md](DEBUG_MCP.md) | Engine debug MCP server + CLI — `digimon-engine-cli` REPL/replay, `digimon-engine-mcp` stdio tools, recipes |
 | [RUST_DSL_AGENT_GUIDE.md](RUST_DSL_AGENT_GUIDE.md) | Practical Rust YAML DSL authoring guide for agents — workflow, clause/step API, archetype patterns, gap filing, and tests |
 | [RUST_DSL_TEST_API.md](RUST_DSL_TEST_API.md) | Rust DSL card test API — per-card behavioral test layout, DebugRunner helpers, and DSL test patterns |
 | [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) | Rust ↔ Python engine parity tracker — every known behavioral divergence with severity and fix order |

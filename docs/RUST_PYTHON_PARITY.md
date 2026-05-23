@@ -1151,7 +1151,7 @@ relocation completed).
 |---|---|---|
 | `engine.runners.headless_game.HeadlessGame` (Python class) | `routers/state.py`, `routers/recordings.py`, `routers/games.py`, `digimon_gym.py` (Python fallback path), `agents/architect_simulator.py` | `RustHeadlessGame` exists but has a different state-shape; per-caller migration is non-trivial. |
 | `engine.runners.interactive_game.InteractiveGame` | `routers/games.py`, `routers/debug_games.py`, `routers/matchmaking.py` (`# noqa: F401` re-export) | Pending — covered by the PvP bindings plan (`docs/superpowers/plans/2026-04-18-pyo3-pvp-bindings.md`). |
-| `engine.runners.replay_runner.ReplayRunner` | `routers/recordings.py` | Not planned. |
+| `engine.runners.replay_runner.ReplayRunner` | `routers/recordings.py` | ✅ Ported as `digimon_engine::runners::replay::ReplayRunner` (Phase 3 of `add-engine-debug-mcp`). Step / seek / run-to-completion / verify-mode all implemented. See `docs/DEBUG_MCP.md`. |
 | `engine.runners.scenario_runner.ScenarioRunner` | `tools/run_scenario.py`, `tools/run_qa_batch.py`, behavioral test infrastructure | Not planned (DebugRunner is the Rust-side parallel). |
 | `engine.data.tensor_layout.*` | `agents/features_extractor.py` | Not planned in scope. Add later if RL trainer survives. |
 | `engine.data.enums.PendingAction` | `digimon_gym.py` (Python fallback path) | Vestigial. Remove when the Python backend is retired. |

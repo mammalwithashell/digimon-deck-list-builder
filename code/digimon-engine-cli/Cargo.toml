@@ -1,0 +1,15 @@
+[package]
+name = "digimon-engine-cli"
+version = "0.1.0"
+edition = "2021"
+description = "Interactive REPL, replay viewer, and scenario runner for the Digimon TCG engine"
+
+[dependencies]
+digimon-engine = { path = "../digimon-engine" }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[bin]]
+name = "digimon-engine-cli"
+path = "src/main.rs"

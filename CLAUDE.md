@@ -252,6 +252,12 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test security_effects
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test test_cards_behavioral
 
+# Engine debug CLI + MCP (see docs/DEBUG_MCP.md)
+cargo build -p digimon-engine-cli -p digimon-engine-mcp
+target/debug/digimon-engine-cli debug                      # interactive REPL
+target/debug/digimon-engine-cli replay rec.json --step 47  # recording viewer
+target/debug/digimon-engine-mcp --pool implemented         # MCP stdio server
+
 # PyO3 bindings (build + install into active Python env)
 cd code/digimon-engine-py && maturin develop
 
