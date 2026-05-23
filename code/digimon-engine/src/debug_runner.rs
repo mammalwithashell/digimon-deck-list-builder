@@ -208,6 +208,47 @@ impl DebugRunner {
         handle
     }
 
+    /// Test-only: remove the bottom digivolution source from `host`'s stack,
+    /// route it to its owner's trash, fire `OnDigivolutionCardTrashed`, and
+    /// drain the effect queue.
+    ///
+    /// This lets behavioral tests trigger source-trash observers without
+    /// constructing an `EffectContext`.
+    ///
+    /// Panics if `host` has fewer than 2 cards (the top card is never removed).
+    #[cfg(any(test, feature = "test-helpers"))]
+    pub fn trash_one_source(&mut self, host: PermanentHandle) {
+        let (removed, host_card_handle) = {
+            let permanent = self
+                .game
+                .player_mut(host.player)
+                .battle_area
+                .get_mut(host.index as usize)
+                .expect("trash_one_source: host permanent not found");
+            assert!(
+                permanent.card_sources.len() >= 2,
+                "trash_one_source: permanent must have >= 2 cards (top card + at least 1 source)"
+            );
+            // Remove the bottom source (index 0); the top card is the last element.
+            let removed = permanent.card_sources.remove(0);
+            let host_card = permanent.card_sources.last().unwrap().handle();
+            (removed, host_card)
+        };
+        let source_handle = removed.handle();
+        let owner = removed.owner;
+        self.game.player_mut(owner).trash.push(removed);
+        self.game.fire_digivolution_card_trashed(
+            host.player,
+            host,
+            host_card_handle,
+            source_handle,
+            crate::trigger_context::EventCause::from(
+                self.game.infer_effect_cause(host.player),
+            ),
+        );
+        self.game.drain_effect_queue();
+    }
+
     /// Test-only: simulates a control-transfer effect by relocating an
     /// existing permanent from `from.player`'s battle area to
     /// `to_player`'s battle area while preserving every `CardSource.owner`

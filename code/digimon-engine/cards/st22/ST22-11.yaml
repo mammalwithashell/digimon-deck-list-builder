@@ -1,3 +1,52 @@
+# ST22-11 Defense Plug-In F — Option, Black, Cost 3.
+# Traits: [Plug-In]
+#
+# Printed card text (data/cards.json):
+#
+#   While you have a Tamer, you can ignore this card's color requirements.
+#   [Main] Optionally link this card to 1 of your Digimon without paying the
+#   link cost. Then, 1 of your Digimon gets +3000 DP and gains <Reboot> until
+#   the end of your opponent's turn.
+#
+# Inherited (Link):
+#   [Link] If the linked Digimon is Lv.3 or higher, the link cost of this card
+#   is reduced by 2.
+#
+# Inherited (Security):
+#   [Security] De-Digivolve 2 one of your opponent's Digimon. Then, add this
+#   card to your hand.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                              | Status        |
+# |------------------------------------------------|---------------|
+# | Color bypass while you have a Tamer            | IMPLEMENTED   |
+# | [Main] optional free link to own Digimon       | IMPLEMENTED   |
+# | [Main] 1 own Digimon +3000 DP until EoOT       | IMPLEMENTED   |
+# | [Main] 1 own Digimon gains Reboot until EoOT   | IMPLEMENTED   |
+# | [Link] Lv.3+ host: link cost 2                 | IMPLEMENTED   |
+# | [Security] De-Digivolve 2 opponent Digimon     | IMPLEMENTED   |
+# | [Security] Add this card to hand               | IMPLEMENTED   |
+#
+# ─── DSL precedent notes ─────────────────────────────────────────────────────
+#
+# Clause 0 (color bypass): `kind: flood_gate` + `modifier: IgnoreColorRequirement` +
+#   `target: { card_number_is: "ST22-11" }` gated by `any_permanent: { of: you, kind: tamer }`.
+#   Mirror of BT22-099 Clause 0 (CS Digimon/Tamer gate) but simpler — just "a Tamer",
+#   no trait requirement. G-IGNORE-COLOR-MASK RESOLVED 2026-05-02.
+#
+# Clause 1 ([Security]): pre-existing from initial pass. condition-gated De-Digivolve 2
+#   + add_this_option_to_hand.
+#
+# Clause 2 ([Main]): `link_to_own_digimon` (optional, free) + `select_own_permanent` +
+#   `grant_keyword Reboot expiry: end_of_opponents_turn` + `add_dp_modifier 3000
+#   expiry: end_of_opponents_turn`. Pattern from EX8-070 / BT16-055.
+#   G-DSL-LINK-VERB RESOLVED 2026-05-02.
+#
+# Clause 3 ([Link] requirement): `kind: link_requirement, scope: inherited, cost: 2,
+#   filter: all_of [kind: digimon, level_gte: 3]`. Lowers to Effect::link(2, filter).
+#   G-DSL-LINK-VERB RESOLVED 2026-05-02.
+
 card: ST22-11
 name: "Defense Plug-In F"
 kind: option
@@ -5,10 +54,29 @@ color: [black]
 cost: 3
 traits: [Plug-In]
 
-# Printed color-bypass, Link requirements, and Main link/Reboot/+3000 DP clause
-# are not authored in this pass.
-
 effects:
+  # ─── Clause 0: Color bypass ───────────────────────────────────────────────
+  #
+  # "While you have a Tamer, you can ignore this card's color requirements."
+  #
+  # flood_gate installs a player-scoped IgnoreColorRequirement modifier whenever
+  # the controller has any Tamer in play. Target restricts bypass to THIS card only.
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        kind: tamer
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "ST22-11" }
+    summary: "While you have a Tamer, ignore color requirements for this card"
+
+  # ─── Clause 1: [Security] De-Digivolve 2 + add to hand ──────────────────
+  #
+  # "[Security] De-Digivolve 2 one of your opponent's Digimon. Then, add this
+  # card to your hand."
+  #
+  # Condition-gated: fires only if the opponent has a Digimon in the battle area.
+  # add_this_option_to_hand always runs (the card goes back to hand regardless).
   - when: on_security
     condition:
       any_permanent:
@@ -26,3 +94,55 @@ effects:
           amount: 2
           stop_at_level: 3
       - add_this_option_to_hand: {}
+
+  # ─── Clause 2: [Main] optional free link + buff 1 own Digimon ────────────
+  #
+  # "[Main] Optionally link this card to 1 of your Digimon without paying the
+  # link cost. Then, 1 of your Digimon gets +3000 DP and gains <Reboot> until
+  # the end of your opponent's turn."
+  #
+  # link_to_own_digimon is optional and free (no cost). Then, independently
+  # select 1 of your Digimon (may or may not be the linked one) and grant
+  # Reboot + +3000 DP until end of opponent's turn.
+  #
+  # Condition guard: at least 1 own Digimon must be on the field (buff step
+  # requires a selection target).
+  - when: main_from_hand
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Main] Optionally link free; then 1 own Digimon gains Reboot + +3000 DP until EoOT"
+    process:
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter: { kind: digimon }
+      - select_own_permanent:
+          bind_as: buff_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain Reboot and +3000 DP until end of opponent's turn"
+      - grant_keyword:
+          target: buff_target
+          keyword: Reboot
+          expiry: end_of_opponents_turn
+      - add_dp_modifier:
+          target: buff_target
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 3: [Link] requirement (inherited) ────────────────────────────
+  #
+  # "[Link] If the linked Digimon is Lv.3 or higher, the link cost of this card
+  # is reduced by 2."
+  #
+  # Lowers to Effect::link(cost: 2, filter: level_gte: 3) via the link_requirement
+  # DSL clause. scope: inherited — this effect rides on the host Digimon's stack.
+  - kind: link_requirement
+    scope: inherited
+    cost: 2
+    filter:
+      all_of:
+        - kind: digimon
+        - level_gte: 3

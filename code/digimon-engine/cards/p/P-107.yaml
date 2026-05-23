@@ -21,28 +21,28 @@ effects:
           prompt: "Add 1 black card to your hand"
       - add_to_hand_from_reveal: { of: you, card: picked }
       - place_remainder_on_deck: { of: you, position: bottom }
-      # Option self-placement is inferred from the Delay clause. Security
-      # placement remains blocked by G-PLACE-SELF-AS-OPTION-PERMANENT.
+      # Option self-placement is inferred from the Delay clause (engine
+      # classify_option_subtype). No explicit step needed here.
 
+  # [Main] <Delay> — player-visible [Main]-phase activation (PUPPETS-G009).
+  # `trigger: delayed` parks the Option until its controller chooses to trash
+  # it on a later main phase; the body never auto-fires (RULES_CONTEXT 16-16).
   - kind: delay
-    trigger: end_of_your_next_turn
+    trigger: delayed
     summary: "[Main]<Delay> 1 of your Digimon may digivolve into a black Digimon in hand, cost -2"
     process:
       - select_own_permanent:
           bind_as: target
           optional: true
           filter:
-            all_of:
-              - kind: digimon
-              - zone: [battle_area]
+            kind: digimon
           prompt: "Choose 1 of your Digimon to digivolve"
       - select_hand:
           of: you
           bind_as: evo
           filter:
-            all_of:
-              - kind: digimon
-              - color_is: black
+            kind: digimon
+            color_is: black
           prompt: "Choose a black Digimon card to digivolve into"
       - effect_initiated_digivolve:
           target: target
@@ -52,5 +52,7 @@ effects:
 
   - scope: inherited
     when: on_security
+    optional: false
     summary: "[Security] Place this card in the battle area"
-    process: []
+    process:
+      - place_self_as_delay_option: {}

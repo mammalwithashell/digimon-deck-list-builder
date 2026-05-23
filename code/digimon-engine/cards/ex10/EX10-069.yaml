@@ -4,10 +4,32 @@ kind: option
 color: [black]
 cost: 3
 
-# Printed option battle-area placement and [Your Turn] Delay digivolve when
-# Close suspends are not authored in this pass.
+# Printed text (cards.json effect_description_eng):
+# [Main] You may play 1 [Sunarizamon] or [Close] from your hand or trash
+# without paying the cost. Then, place this card in the battle area.
+#
+# [Your Turn] When any of your [Close]s suspend, <Delay> (By trashing
+# this card after the placing turn, activate the effect below.)
+# ・1 of your [Mineral] or [Rock] trait Digimon may digivolve into a Digimon
+# card with the [Mineral] trait and [LIBERATOR] trait in the hand with the
+# digivolution cost reduced by 3.
+#
+# Fully implemented:
+# - [Main] hand/trash play, optional, filtered to [Sunarizamon] or [Close].
+# - "Then, place this card in the battle area": EX10-069 carries a `kind: delay`
+#   clause, so the Option pipeline classifies it as a Delay Option and places it
+#   in the battle area automatically after the [Main] body resolves.
+# - Event-gated Delay activation after the placing turn when your [Close]
+#   suspends, with visible [Mineral]/[Rock] base and [Mineral]+[LIBERATOR]
+#   hand-evolution selections before effect_initiated_digivolve with cost
+#   reduced by 3. (Pattern: BT22-098 Unique Emblem: Fable Waltz, same shape.)
+# - [Security] re-runs the [Main] play, then places this card in the battle
+#   area via `place_self_as_delay_option`.
 
 effects:
+  # [Main] hand/trash play. No explicit placement step: EX10-069 is a Delay
+  # Option (see the `kind: delay` clause below), so the Option pipeline places
+  # it in the battle area automatically once this [Main] body resolves.
   - when: main_from_hand
     optional: true
     summary: "[Main] You may play 1 Sunarizamon or Close from hand or trash free"
@@ -43,9 +65,10 @@ effects:
                 prompt: "Select Sunarizamon or Close from your trash"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
 
-  - when: on_security
-    optional: true
-    summary: "[Security] Activate this card's Main effect"
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Activate [Main]: play Sunarizamon/Close from hand or trash, then place self in battle area"
     process:
       - select_effect_choice:
           labels: ["From hand", "From trash"]
@@ -77,3 +100,42 @@ effects:
                     - name_is: Close
                 prompt: "Select Sunarizamon or Close from your trash"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
+      - place_self_as_delay_option: {}
+
+  # [Your Turn] When any of your [Close]s suspend, <Delay>:
+  # 1 of your [Mineral] or [Rock] trait Digimon may digivolve into a Digimon
+  # card with [Mineral] and [LIBERATOR] traits in hand, cost reduced by 3.
+  - kind: delay
+    trigger: on_suspend
+    active_when:
+      your_turn: true
+      event_target_owner: you
+      event_card_name_contains: "Close"
+    summary: "[Your Turn] When your Close suspends, Delay: Mineral/Rock may digivolve into Mineral+LIBERATOR in hand, cost -3"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Mineral
+                  - trait_has: Rock
+              - zone: [battle_area]
+          prompt: "Choose 1 of your [Mineral] or [Rock] trait Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Mineral
+              - trait_has: LIBERATOR
+          prompt: "Choose a [Mineral] and [LIBERATOR] Digimon card to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false

@@ -1,5 +1,46 @@
+# EX10-028 Golemon — Digimon, Black, Lv.4, Cost 4, DP 4000.
+# Traits: [Mineral, LIBERATOR]
+#
+# Printed card text (data/cards.json):
+#
+#   [On Play] [When Digivolving] By trashing any 1 card with the [Mineral] or
+#   [Rock] trait from your Digimon's digivolution cards, 1 of your Digimon
+#   with the [Mineral] or [Rock] trait gains ＜Reboot＞, ＜Blocker＞ and
+#   +3000 DP until your opponent's turn ends.
+#
+#   Inherited: When effects trash this card from a [Mineral] or [Rock] trait
+#   Digimon's digivolution cards, delete 1 of your opponent's Digimon with a
+#   play cost of 4 or less.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Black/EX10_028.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+# Clause 1 — [On Play][When Digivolving] "By trashing" cost + keyword/DP buff:
+#   1a. select_own_sources (filter: trait Mineral or Rock, min/max 1) → chosen_source
+#   1b. trash_selected_sources: chosen_source
+#   1c. select_own_permanent (Mineral or Rock Digimon) → target_digi
+#   1d. grant_keyword Reboot (expiry: end_of_opponents_turn)
+#   1e. grant_keyword Blocker (expiry: end_of_opponents_turn)
+#   1f. add_dp_modifier +3000 (expiry: end_of_opponents_turn)
+#
+# Clause 2 — [Inherited] when_source_trashed delete ≤4 cost opp Digimon.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                | Status        |
+# |--------------------------------------------------|---------------|
+# | [On Play][When Digivolving] source trash cost    | IMPLEMENTED   |
+# |   (select_own_sources filter: Mineral or Rock)   |               |
+# | [On Play][When Digivolving] select Mineral/Rock  | IMPLEMENTED   |
+# |   Digimon as buff target                         |               |
+# | [On Play][When Digivolving] grant Reboot EoOT    | IMPLEMENTED   |
+# | [On Play][When Digivolving] grant Blocker EoOT   | IMPLEMENTED   |
+# | [On Play][When Digivolving] +3000 DP EoOT        | IMPLEMENTED   |
+# | Inherited: delete 1 opp Digimon cost ≤4          | IMPLEMENTED   |
+
 card: EX10-028
-name: Landramon
+name: Golemon
 kind: digimon
 level: 4
 color: [black]
@@ -12,10 +53,77 @@ alt_paths:
     from: { level_eq: 3, color_is: black }
     cost: 2
 
-# Printed [On Play]/[When Digivolving] source-trash buff clause is not authored
-# in this pass. It needs a source-selection + target-buff pass.
-
 effects:
+  # ─── Clause 1: [On Play][When Digivolving] "By trashing" cost + buff ─────────
+  #
+  # "By trashing any 1 card with [Mineral] or [Rock] trait from your Digimon's
+  # digivolution cards, 1 of your Digimon with [Mineral] or [Rock] trait gains
+  # <Reboot>, <Blocker> and +3000 DP until your opponent's turn ends."
+  #
+  # The "By trashing..." prefix is a cost: the player must select 1 source card
+  # with Mineral or Rock trait from across any of their own Digimon's stacks.
+  # If no such source exists, select_own_sources silently skips (the tail is
+  # never entered), so the effect has no impact — matching the card's intent
+  # that the cost must be payable. The buff-target selection (select_own_permanent)
+  # is a separate subsequent step; if no Mineral/Rock Digimon exists, that step
+  # also silently skips.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash 1 Mineral/Rock source → 1 Mineral/Rock Digimon gains Reboot+Blocker+3000 DP until EoOT"
+    process:
+      # Step 1a: Select 1 source card with Mineral or Rock trait from any of
+      # your Digimon's digivolution stacks. The filter checks the source card's
+      # own traits (not the host permanent's traits). This is the "cost" step:
+      # if no Mineral/Rock source exists the selection silently does nothing
+      # and the `then:` body is never entered, preserving the no-approximations
+      # requirement: subsequent steps (trash + buff) must not fire unless the
+      # cost is successfully paid.
+      - select_own_sources:
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          min: 1
+          max: 1
+          bind_as: chosen_source
+          prompt: "Choose 1 [Mineral] or [Rock] digivolution card to trash"
+          then:
+            # Step 1b: Trash the selected source card (cost payment).
+            - trash_selected_sources: { source_refs: chosen_source }
+
+            # Step 1c: Select 1 of your Digimon with Mineral or Rock trait as
+            # the buff target. Separate from the source host — any of your
+            # Mineral or Rock Digimon may receive the buff.
+            - select_own_permanent:
+                bind_as: target_digi
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Mineral
+                        - trait_has: Rock
+                prompt: "Choose 1 of your [Mineral] or [Rock] Digimon to gain Reboot, Blocker, and +3000 DP"
+
+            # Steps 1d–1f: Grant keywords and DP buff until end of opponent's turn.
+            - grant_keyword:
+                target: target_digi
+                keyword: Reboot
+                expiry: end_of_opponents_turn
+
+            - grant_keyword:
+                target: target_digi
+                keyword: Blocker
+                expiry: end_of_opponents_turn
+
+            - add_dp_modifier:
+                target: target_digi
+                value: 3000
+                expiry: end_of_opponents_turn
+
+  # ─── Clause 2: [Inherited] on_digivolution_card_trashed → delete ────────────
+  #
+  # "When effects trash this card from a [Mineral] or [Rock] trait Digimon's
+  # digivolution cards, delete 1 of your opponent's Digimon with a play cost
+  # of 4 or less."
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:

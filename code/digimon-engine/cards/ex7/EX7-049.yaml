@@ -12,10 +12,8 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 5
 
-# Printed [When Digivolving] digivolve-prevention and leave-battle-area
-# replacement play clauses are not authored in this pass.
-
 effects:
+  # ─── Clause 0: [On Play][When Attacking] <De-Digivolve 4> ───────────────────
   - when: [on_play, when_attacking]
     condition:
       any_permanent:
@@ -32,3 +30,69 @@ effects:
           target: target
           amount: 4
           stop_at_level: 3
+
+  # ─── Clause 1: [When Digivolving] CannotDigivolve all opp Lv.4 or lower ─────
+  #
+  # "None of your opponent's level 4 or lower Digimon can digivolve until the
+  # end of their turn." — printed text.
+  #
+  # DSL: `add_modifier` with a `Filter` target covering all opponent battle_area
+  # Digimon with level_lte: 4, applying `CannotDigivolve` expiring at
+  # `end_of_opponents_turn`. The modifier is applied to each matching permanent
+  # at resolution time via `permanent_scan::scan`. The action mask checks
+  # `CannotDigivolve` on each base permanent when building digivolve bits
+  # (mask.rs §4.7b).
+  - when: when_digivolving
+    summary: "[When Digivolving] Opp Lv.4-or-lower Digimon cannot digivolve until end of their turn"
+    process:
+      - add_modifier:
+          target:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - level_lte: 4
+          modifier: CannotDigivolve
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 2: [All Turns][OPT] When this Digimon would leave battle area ────
+  #
+  # "[All Turns] [Once Per Turn] When this Digimon would leave battle area
+  # other than by one of your effects, you may play 1 Digimon card with the
+  # [Rock Dragon] or [Earth Dragon] trait from your trash without paying the
+  # cost." — printed text.
+  #
+  # DSL: `kind: replacement` / `trigger: when_would_leave_battle_area`, scoped
+  # to face_up (own permanent), once_per_turn, optional. active_when uses
+  # `none_of: [replacement_cause: own_effect]` to exclude own-effect causes.
+  # Because the predicate does NOT set `replacement_subject_is_mine`, the
+  # engine's replacement lowering automatically restricts to the source
+  # permanent itself (replacement_subject_is_source check in lower_replacement.rs).
+  #
+  # When accepted: select 1 Rock Dragon or Earth Dragon Digimon from own trash
+  # (optional selection — if no eligible card in trash, the replacement still
+  # fires but the play step no-ops), then play it free.
+  #
+  # "other than by one of your effects" → `none_of: [replacement_cause: own_effect]`
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "[All Turns][OPT] When this Digimon would leave other than by own effect, may play 1 Rock Dragon/Earth Dragon from trash free"
+    process:
+      - select_trash:
+          of: you
+          bind_as: rock_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Rock Dragon"
+                  - trait_has: "Earth Dragon"
+          prompt: "Play 1 [Rock Dragon] or [Earth Dragon] Digimon from trash without cost"
+      - play_from_trash_free: { of: you, hand_index: rock_pick }

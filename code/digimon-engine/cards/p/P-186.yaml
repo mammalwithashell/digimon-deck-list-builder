@@ -1,3 +1,47 @@
+# P-186 Gallantmon — Digimon, Lv.6, Red+Purple, Cost 12, DP 12000.
+# Traits: [Holy Warrior, Royal Knight]. Attribute: Virus.
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   When this card would be played, if there is a Digimon with 13000 DP or
+#   more, reduce the play cost by 2 for every 5 total cards in both players'
+#   trashes.
+#   ＜Rush＞ (This Digimon can attack the turn it comes into play.)
+#   ＜Blocker＞ (This Digimon can block in the blocker timing.)
+#   [On Play] [When Digivolving] Delete 1 Digimon with 13000 DP or more. If
+#   this effect didn't delete, ＜Recovery +1 (Deck)＞ (Place the top card of
+#   your deck on top of your security stack.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/P_186.cs
+#
+# ─── Implementation notes ─────────────────────────────────────────────────────
+#
+# Clause A — BeforePayCost cost reduction:
+#   "if there is a Digimon with 13000 DP or more" → condition gate using
+#   `any_permanent: { of: any, zone: [battle_area], kind: digimon, dp_gte: 13000 }`.
+#   (G-PRED-DP-LTE resolved 2026-05-17: dp_gte is now evaluated in
+#   eval_permanent_fields via eval_dp_constraints.)
+#
+#   "reduce the play cost by 2 for every 5 total cards in both players' trashes"
+#   → `amount_fn` using BasePerDelta with `shared_trash_count { bucket: 5 }`
+#   and `delta: 2`. shared_trash_count applies bucket_count(total_trash, 5) =
+#   floor(total_trash/5), then result = base + floor(trash/5) * delta = 0 + floor(trash/5)*2.
+#   NOTE: `card_count_in_zone` does NOT apply the `bucket:` from BasePerDelta
+#   (per_with_bucket only handles SharedTrashCount). Use shared_trash_count here.
+#
+# Clause B — [On Play][When Digivolving] delete-or-recover:
+#   Target: 1 Digimon with DP ≥13000 from either player's field, player's choice.
+#   → `select_any_permanent: { optional: true, filter: { kind: digimon, dp_gte: 13000 } }`
+#
+#   "If this effect didn't delete" → gate on `binding_absent: del_target` (absent
+#   when no target was selected or no legal target existed).
+#
+#   ＜Recovery +1 (Deck)＞: `recover: { of: you, count: 1 }`.
+#   Resolved 2026-05-03 (BT24-031 / BT24-101 precedent).
+#
+# ─── Gap notes ────────────────────────────────────────────────────────────────
+# No new engine gaps. All required primitives are resolved.
+
 card: P-186
 name: Gallantmon
 kind: digimon
@@ -12,12 +56,73 @@ alt_paths:
     from: { level_eq: 5, color_is: red }
     cost: 4
 
-# Printed play-cost reduction and [On Play]/[When Digivolving] delete-or-recover
-# clause are not authored in this pass.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - name_contains: "WarGrowlmon"
+    cost: 3
+    ignore_requirements: true
 
 effects:
+  # ─── Clause A: BeforePayCost cost reduction ───────────────────────────────
+  #
+  # "When this card would be played, if there is a Digimon with 13000 DP or
+  #  more, reduce the play cost by 2 for every 5 total cards in both players'
+  #  trashes."
+  #
+  # amount_fn: BasePerDelta with shared_trash_count{bucket:5} * delta:2
+  # = floor(total_trash / 5) * 2.
+  # NOTE: `card_count_in_zone` ignores the outer `bucket:` key in per_with_bucket;
+  # only `SharedTrashCount` applies bucket division. Use shared_trash_count directly.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: any
+        zone: [battle_area]
+        kind: digimon
+        dp_gte: 13000
+    amount_fn:
+      base: 0
+      per:
+        shared_trash_count:
+          bucket: 5
+      delta: 2
+    summary: "-2 per 5 combined-trash cards when played (gated: any Digimon ≥13000 DP)"
+
+  # ─── Printed keywords ─────────────────────────────────────────────────────
   - kind: grant_keyword
     keyword: Rush
 
   - kind: grant_keyword
     keyword: Blocker
+
+  # ─── Clause B: [On Play][When Digivolving] delete-or-recover ──────────────
+  #
+  # "Delete 1 Digimon with 13000 DP or more. If this effect didn't delete,
+  #  ＜Recovery +1 (Deck)＞."
+  #
+  # Player selects any Digimon (either player's) with dp_gte:13000. Selection
+  # is optional so if no target exists the binding is absent and the
+  # `binding_absent` branch triggers recovery.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 Digimon ≥13000 DP; if no deletion, Recovery +1"
+    process:
+      - select_any_permanent:
+          bind_as: del_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_gte: 13000
+          prompt: "Delete 1 Digimon with 13000 DP or more"
+      - if:
+          condition: { binding_present: del_target }
+          then:
+            - delete_permanent: { target: del_target }
+      - if:
+          condition: { binding_absent: del_target }
+          then:
+            - recover: { of: you, count: 1 }

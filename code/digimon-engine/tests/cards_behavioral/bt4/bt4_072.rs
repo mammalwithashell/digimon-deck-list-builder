@@ -1,7 +1,7 @@
 //! BT4-072 Gogmamon
 //!
 //! This pass covers inherited [All Turns] +1000 DP and the face-up
-//! [Main] Digi-Burst 1 source-cost DP buff.
+//! [Main] Digi-Burst 1 source-cost DP buff (expiry: end of opponent's NEXT turn).
 
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
@@ -172,5 +172,70 @@ fn bt4_072_digi_burst_trashes_self_source_then_buffs_own_digimon() {
         runner.game.modifiers.sum(carrier, ModifierType::ChangeDp),
         2000,
         "BT4-072 Digi-Burst should apply +2000 DP to the chosen own Digimon"
+    );
+}
+
+/// Digi-Burst +2000 DP buff lasts "until the end of your opponent's next turn",
+/// meaning it survives the end of player 0's current turn (turn rotation), then
+/// expires at the END of player 1's turn (= the very first opponent turn-end after
+/// installation, since it was installed on player 0's own turn —
+/// `pending_skips_for_install` returns 0 for EndOfOpponentsNextTurn installed on
+/// own turn).
+///
+/// Turn sequence from the point of activation (DebugRunner starts on player 0's turn):
+///   0. Player 0's turn — modifier installed (2000 DP present)
+///   1. end_turn() #1 — player 0's turn ends, player 1's turn begins
+///      modifier must still be present (opponent's turn has not yet ended)
+///   2. end_turn() #2 — player 1's turn ends
+///      modifier must be gone (expired at end of opponent's next turn)
+#[test]
+fn bt4_072_digi_burst_dp_buff_expires_at_end_of_opponents_next_turn() {
+    let mut source = make_test_card("BURST-SRC2", "Burst Source 2");
+    source.dp = Some(2000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT4-072")
+        .expect("BT4-072 YAML parses and compiles")
+        .add_card(source)
+        .build();
+    let carrier = runner.place_stack(0, &["BURST-SRC2", "BT4-072"]);
+
+    // Activate Digi-Burst on player 0's turn
+    assert!(
+        runner.game.activate_field_main(0, carrier.index as usize),
+        "BT4-072 Main Digi-Burst should activate on player 0's turn"
+    );
+    // Pick the only source under the carrier
+    let burst_pick =
+        encode_source_select(carrier.index as u16, 0).expect("carrier source pick action");
+    runner
+        .execute_action(0, burst_pick)
+        .expect("Digi-Burst source selection resolves");
+    // auto-resolve the DP target (only carrier is on field)
+    runner
+        .auto_resolve()
+        .expect("BT4-072 DP target selection resolves");
+
+    // Modifier is present right after activation
+    assert_eq!(
+        runner.game.modifiers.sum(carrier, ModifierType::ChangeDp),
+        2000,
+        "+2000 DP must be present immediately after Digi-Burst"
+    );
+
+    // End player 0's turn → player 1's turn begins. Modifier must still be present.
+    runner.end_turn();
+    assert_eq!(
+        runner.game.modifiers.sum(carrier, ModifierType::ChangeDp),
+        2000,
+        "+2000 DP must persist through the end of player 0's own turn"
+    );
+
+    // End player 1's turn → opponent's next turn has now ended. Modifier expires.
+    runner.end_turn();
+    assert_eq!(
+        runner.game.modifiers.sum(carrier, ModifierType::ChangeDp),
+        0,
+        "+2000 DP must expire at the end of the opponent's next turn"
     );
 }
