@@ -22,9 +22,18 @@
     },
     {
       "family_id": "G-DELETION-RESUME-NESTED",
-      "description": "Two simultaneous deletions both attempting to install pending_deletion_resume (single-outstanding-invariant slot). See engine-gaps.md §Nested Deferred Deletion.",
+      "description": "Two simultaneous deletions both attempting to install pending_deletion_resume (single-outstanding-invariant slot). Resolved 2026-05-23 by PR #525 (DCGO-modeled batched deletion). See engine-gaps.md §Nested Deferred Deletion.",
       "pattern": "nested deferred deletion",
       "panic_site": "code/digimon-engine/src/replacement.rs::deferred-decline branch",
+      "status": "resolved",
+      "first_seen_at": "2026-05-23",
+      "resolved_at": "2026-05-23"
+    },
+    {
+      "family_id": "G-PERMANENT-EMPTY-DURING-BATCH-DELETION",
+      "description": "Permanent::top_card() called on a Permanent whose card_sources Vec has been emptied by PR #525's delete_permanents_batch but whose slot is still in Player::battle_area. Latent pre-#525; surfaced once the noisier G-DELETION-RESUME-NESTED panic was silenced. See engine-gaps.md §Empty Permanent During Batched Deletion.",
+      "pattern": "Permanent must have at least one card",
+      "panic_site": "code/digimon-engine/src/permanent.rs::top_card",
       "status": "open",
       "first_seen_at": "2026-05-23"
     }
