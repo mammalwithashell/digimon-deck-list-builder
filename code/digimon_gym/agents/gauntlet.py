@@ -114,7 +114,12 @@ def _load_fully_implemented_archetypes(path: str = str(_QA_DSL_STATUS_PATH)) -> 
         status = entry.get("status")
         if not archetype or not status:
             continue
-        by_archetype.setdefault(str(archetype), []).append(str(status))
+        # Canonicalize so ledger entries that use an alias (e.g. "Red Hybrid")
+        # match library entries under the canonical name ("Red Hybrid
+        # (AncientGreymon)"). Without this, a ledger / library naming mismatch
+        # silently drops every decklist for the archetype from the pool.
+        canonical = canonicalize_archetype(str(archetype))
+        by_archetype.setdefault(canonical, []).append(str(status))
 
     return {
         archetype
