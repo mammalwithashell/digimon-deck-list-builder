@@ -16,6 +16,7 @@ import gymnasium
 import numpy as np
 
 from digimon_engine import ACTION_SPACE_SIZE
+from digimon_gym.agents.env_utils import unwrap_to_digimon_env
 from digimon_gym.digimon_gym import DigimonEnv
 
 
@@ -176,7 +177,7 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
         return obs, info
 
     def step(self, action):
-        digimon_env = _unwrap_to_digimon_env(self.env)
+        digimon_env = unwrap_to_digimon_env(self.env)
         mask = digimon_env.action_mask()
         action_id = int(action)
         invalid_action = bool(action_id < 0 or action_id >= len(mask) or mask[action_id] <= 0)
@@ -334,22 +335,6 @@ def assert_minimal_training_recording_artifact(artifact: Dict[str, Any]) -> None
             raise AssertionError("win outcome requires winner_id and win_reason")
     if outcome.get("result") == "draw" and not outcome.get("draw_reason"):
         raise AssertionError("draw outcome requires draw_reason")
-
-
-def _unwrap_to_digimon_env(env: gymnasium.Env) -> DigimonEnv:
-    unwrapped = env
-    while True:
-        if isinstance(unwrapped, DigimonEnv):
-            return unwrapped
-        # See the matching helper in `pilot_training.py` — tolerate the stale
-        # class reference left behind by `importlib.reload(digimon_gym.digimon_gym)`.
-        cls = type(unwrapped)
-        if cls.__module__ == "digimon_gym.digimon_gym" and cls.__name__ == "DigimonEnv":
-            return unwrapped  # type: ignore[return-value]
-        if isinstance(unwrapped, gymnasium.Wrapper):
-            unwrapped = unwrapped.env
-        else:
-            raise RuntimeError(f"Could not find DigimonEnv inside {type(env).__name__}")
 
 
 def _safe_slug(value: str) -> str:
