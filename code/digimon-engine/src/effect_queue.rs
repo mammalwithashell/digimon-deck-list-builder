@@ -3012,6 +3012,9 @@ impl Game {
         if self.pending_selection.is_none() && self.pending_attack.is_some() {
             self.advance_pending_attack();
         }
+        if self.pending_selection.is_none() && self.current_phase == crate::enums::GamePhase::Main {
+            self.check_turn_end();
+        }
         Ok(())
     }
 

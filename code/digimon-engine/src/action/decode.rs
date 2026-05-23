@@ -34,6 +34,11 @@ impl Game {
             return;
         }
         self.tick_declarative_effects();
+        if self.pending_selection.is_some() {
+            let _ = self.resolve_selection(player_id, action_id);
+            self.tick_declarative_effects();
+            return;
+        }
         match self.current_phase {
             GamePhase::Mulligan => self.decode_mulligan(action_id),
             GamePhase::Main => self.decode_main(action_id),

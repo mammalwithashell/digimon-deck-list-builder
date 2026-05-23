@@ -43,6 +43,23 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
     let opp_id = game.next_clockwise(player_id);
     let opp = game.player(opp_id);
 
+    // A live PendingSelection is always the current decision, even when the
+    // prompt's previous_phase is Main/Breeding and that phase has already been
+    // restored. The mask must expose only the prompt's valid action ids.
+    if let Some(sel) = &game.pending_selection {
+        if sel.selecting_player == player_id {
+            for &aid in &sel.valid_action_ids {
+                if (aid as usize) < ACTION_SPACE_SIZE {
+                    mask[aid as usize] = 1.0;
+                }
+            }
+            if sel.is_optional {
+                mask[PASS as usize] = 1.0;
+            }
+        }
+        return mask;
+    }
+
     match game.current_phase {
         GamePhase::Mulligan => {
             // Mulligan is sequential: only the currently-deciding player has

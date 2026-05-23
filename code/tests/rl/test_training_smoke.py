@@ -101,7 +101,7 @@ def test_digimon_env_recording_captures_actions():
     assert recording["total_actions"] == len(recording["actions"])
 
 
-def test_training_recording_wrapper_writes_step_limit_draw(tmp_path):
+def test_training_recording_wrapper_writes_step_limit_winner(tmp_path):
     recorder = TrainingGameRecorder(tmp_path, mode="all", max_recordings=1)
     env = TrainingRecordingWrapper(
         DigimonEnv(record_actions=True, max_turns=0),
@@ -117,8 +117,10 @@ def test_training_recording_wrapper_writes_step_limit_draw(tmp_path):
     assert len(files) == 1
     artifact = json.loads(files[0].read_text(encoding="utf-8"))
     assert_minimal_training_recording_artifact(artifact)
-    assert artifact["outcome"]["result"] == "draw"
-    assert artifact["outcome"]["draw_reason"] == "step_limit"
+    assert artifact["outcome"]["result"] == "win"
+    assert artifact["outcome"]["winner_id"] in (1, 2)
+    assert artifact["outcome"]["win_reason"] == "step_limit"
+    assert artifact["outcome"]["draw_reason"] is None
     assert artifact["run"]["env_index"] == 2
 
 

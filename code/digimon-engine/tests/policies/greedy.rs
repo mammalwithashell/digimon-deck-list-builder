@@ -6,11 +6,11 @@ use std::collections::HashMap;
 
 use digimon_engine::action::space::{
     encode_attack, encode_digivolve, ACTION_SPACE_SIZE, MOVE_FROM_BREEDING, PASS, PLAY_HAND_START,
-    SECURITY_TARGET,
+    SECURITY_TARGET, SEL_REVEAL_START,
 };
 use digimon_engine::card_data::CardData;
-use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::GamePhase;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardKind, GamePhase};
 use digimon_engine::permanent::Permanent;
 use digimon_engine::policies::greedy_action;
 use digimon_engine::HeadlessRunner;
@@ -110,6 +110,20 @@ fn breeding_move_or_pass_mask() -> Vec<f32> {
     mask[MOVE_FROM_BREEDING as usize] = 1.0;
     mask[PASS as usize] = 1.0;
     mask
+}
+
+fn free_digimon() -> CardData {
+    let mut card = make_test_card("TEST-FREE", "Free Candidate");
+    card.traits = vec!["Free".to_string()];
+    card
+}
+
+fn ken_tamer() -> CardData {
+    let mut card = make_test_card("TEST-KEN", "Ken Ichijoji");
+    card.card_kind = CardKind::Tamer;
+    card.level = None;
+    card.dp = None;
+    card
 }
 
 #[test]
@@ -236,6 +250,33 @@ fn main_phase_plays_searcher_before_keep_turn_digivolve() {
         PLAY_HAND_START,
         "greedy should play a searcher before spending the turn on a keep-turn digivolve"
     );
+}
+
+#[test]
+fn greedy_selects_pending_reveal_action_after_setup_play_crosses_memory() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-047")
+        .expect("BT12-047 should be in embedded DSL pack")
+        .add_card(free_digimon())
+        .add_card(ken_tamer())
+        .add_card(make_test_card("TEST-FILLER", "Filler"))
+        .hand(0, &["BT12-047"])
+        .deck(0, &["TEST-FILLER", "TEST-KEN", "TEST-FREE"])
+        .memory(0)
+        .start();
+    let player = runner.turn_player();
+    runner.game.enter_main_phase();
+
+    runner.game.decode_action(PLAY_HAND_START, player);
+
+    let mask = digimon_engine::action::build_action_mask(&runner.game, player);
+    let action = greedy_action(&runner.game, &mask);
+    assert!(
+        (SEL_REVEAL_START..SEL_REVEAL_START + 3).contains(&action),
+        "greedy should choose a reveal selection action, got {action}"
+    );
+    assert_eq!(mask[action as usize], 1.0);
+    assert_ne!(action, PASS);
 }
 
 #[test]
