@@ -232,3 +232,43 @@ fn start_main_phase_selection_resumes_to_main_not_breeding() {
         "start-main prompts must resume Main, not re-enter Breeding"
     );
 }
+
+#[test]
+fn end_turn_selection_resolution_resumes_turn_rotation() {
+    let mut r = DebugRunner::builder().add_card(free_digimon()).start();
+    let player = r.turn_player();
+    let opponent = 1 - player;
+    r.game.current_phase = GamePhase::EndTurn;
+    r.game.memory = -7;
+
+    r.game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::EffectChoice,
+        selecting_player: player,
+        previous_phase: GamePhase::EndTurn,
+        valid_action_ids: vec![59],
+        is_optional: false,
+        prompt: "Synthetic end-turn prompt".to_string(),
+        effect_choices: None,
+        source_card: CardHandle(0),
+        source_permanent: None,
+        source_kind: EffectSourceKind::Rule,
+        callback: Box::new(|_game, _action_id| {}),
+        on_decline: None,
+    });
+    r.game.park_end_turn_resume_for_test(player, -7);
+
+    r.game
+        .resolve_selection(player, 59)
+        .expect("synthetic end-turn selection should resolve");
+
+    assert_eq!(
+        r.turn_player(),
+        opponent,
+        "resolving an EndTurn prompt should continue the turn-end state machine"
+    );
+    assert_ne!(
+        r.current_phase(),
+        GamePhase::EndTurn,
+        "EndTurn is internal and must not remain exposed after the prompt resolves"
+    );
+}

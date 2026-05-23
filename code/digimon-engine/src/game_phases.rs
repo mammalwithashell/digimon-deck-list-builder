@@ -13,7 +13,8 @@ use crate::enums::{
     CardKind, DelayTrigger, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw,
 };
 use crate::game::{
-    DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind, Game, OverclockError,
+    DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind, EndTurnResume, Game,
+    OverclockError,
 };
 use crate::permanent::PermanentHandle;
 use crate::selection::{AttackTarget, PendingSelection, SelectionKind};
@@ -222,7 +223,18 @@ impl Game {
         // fire them, then see if an effect restored memory from negative.
         let memory_before = self.memory;
         self.fire_end_of_your_turn(ending_player);
+        if self.pending_selection.is_some() {
+            self.pending_end_turn_resume = Some(EndTurnResume {
+                ending_player,
+                memory_before_end_effects: memory_before,
+            });
+            return;
+        }
 
+        self.continue_end_turn_after_effects(ending_player, memory_before);
+    }
+
+    fn continue_end_turn_after_effects(&mut self, ending_player: PlayerId, memory_before: i16) {
         if memory_before < 0 && self.memory >= 0 && !self.game_over {
             self.current_phase = GamePhase::Main;
             return;
@@ -249,6 +261,7 @@ impl Game {
         // Reveal pool is transient — clear on turn rotation so tensor reveals
         // don't leak across turns. Matches Python's clear in `switch_turn`.
         self.revealed_cards.clear();
+        self.declined_overclock_this_eot.clear();
 
         // Expire end-of-turn modifiers/keywords for the ending player's turn.
         // Track H Phase 4k: collect body_ids from granted-triggered entries
@@ -359,6 +372,31 @@ impl Game {
         self.rotate_turn_player(ending_player);
     }
 
+    pub(crate) fn resume_pending_end_turn(&mut self) {
+        if self.pending_selection.is_some() {
+            return;
+        }
+        let Some(resume) = self.pending_end_turn_resume.take() else {
+            return;
+        };
+        self.continue_end_turn_after_effects(
+            resume.ending_player,
+            resume.memory_before_end_effects,
+        );
+    }
+
+    #[doc(hidden)]
+    pub fn park_end_turn_resume_for_test(
+        &mut self,
+        ending_player: PlayerId,
+        memory_before_end_effects: i16,
+    ) {
+        self.pending_end_turn_resume = Some(EndTurnResume {
+            ending_player,
+            memory_before_end_effects,
+        });
+    }
+
     /// True iff the given player has any permanent with a pending end-of-turn
     /// keyword action (Vortex attack, Overclock sacrifice-and-attack, or
     /// MayAttack). Mirrors Python `_has_end_of_turn_keywords`.
@@ -385,6 +423,7 @@ impl Game {
             }
             // Overclock — needs at least one other sacrificeable permanent.
             if self.has_keyword(handle, Keyword::Overclock)
+                && !self.is_overclock_declined_for_action_mask(handle)
                 && self.has_overclock_sacrifice(player, i)
             {
                 return true;
@@ -644,10 +683,23 @@ impl Game {
 
                 game.resume_overclock_attack(player, source_card, opponent);
             }),
-            on_decline: None,
+            on_decline: Some(Box::new(move |game: &mut Game| {
+                game.declined_overclock_this_eot.insert(source_card);
+            })),
         });
 
         Ok(())
+    }
+
+    pub(crate) fn is_overclock_declined_for_action_mask(&self, handle: PermanentHandle) -> bool {
+        self.players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| {
+                self.declined_overclock_this_eot
+                    .contains(&perm.top_card().handle())
+            })
+            .unwrap_or(false)
     }
 
     pub(crate) fn resume_pending_overclock_attack(&mut self) {

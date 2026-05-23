@@ -2920,6 +2920,7 @@ impl Game {
         if !is_pass && !sel.valid_action_ids.contains(&action_id) {
             return Err(SelectionError::InvalidAction);
         }
+        let was_attack_pending = self.pending_attack.is_some();
 
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
@@ -3004,6 +3005,9 @@ impl Game {
         if self.pending_selection.is_none() {
             self.resume_pending_delayed_option_lifecycle();
         }
+        if self.pending_selection.is_none() {
+            self.resume_pending_end_turn();
+        }
         // Some attack-time selections, especially optional pre-declare
         // replacements, park `pending_attack` before declaration commits. Once
         // the selection callback and any nested drains settle, resume the
@@ -3012,7 +3016,10 @@ impl Game {
         if self.pending_selection.is_none() && self.pending_attack.is_some() {
             self.advance_pending_attack();
         }
-        if self.pending_selection.is_none() && self.current_phase == crate::enums::GamePhase::Main {
+        if self.pending_selection.is_none()
+            && self.current_phase == crate::enums::GamePhase::Main
+            && !was_attack_pending
+        {
             self.check_turn_end();
         }
         Ok(())

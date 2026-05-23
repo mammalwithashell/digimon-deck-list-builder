@@ -1,7 +1,7 @@
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
@@ -128,6 +128,12 @@ pub(crate) struct DelayedOptionLifecycleResume {
     pub(crate) kind: DelayedOptionLifecycleResumeKind,
     pub(crate) pending_delete_key: Option<(PlayerId, u16)>,
     pub(crate) skip_key: Option<(PlayerId, u16)>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct EndTurnResume {
+    pub(crate) ending_player: PlayerId,
+    pub(crate) memory_before_end_effects: i16,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -450,6 +456,11 @@ pub struct Game {
     /// is re-resolved by handle/token instead of trusting the old slot.
     #[doc(hidden)]
     pub(crate) pending_overclock_attack: Option<(PlayerId, CardHandle, PlayerId)>,
+    /// Overclock source cards declined during the current EndOfTurnAction
+    /// window. Decline is a real choice; without this guard the same optional
+    /// cost prompt can be re-opened indefinitely without changing game state.
+    #[doc(hidden)]
+    pub(crate) declined_overclock_this_eot: HashSet<CardHandle>,
 
     /// True while effects are being evaluated from a DNA digivolution event.
     /// Consumed by the DSL `dna_origin` predicate for clauses like
@@ -606,6 +617,9 @@ pub struct Game {
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
     pub(crate) pending_delayed_option_lifecycle_stack: Vec<DelayedOptionLifecycleResume>,
+    /// Continuation for the regular EndTurn state machine when an
+    /// EndOfYourTurn effect parks a player selection.
+    pub(crate) pending_end_turn_resume: Option<EndTurnResume>,
 
     until_condition_dirty: bool,
     until_condition_last_cycle_evaluations: usize,
@@ -817,6 +831,7 @@ impl Game {
             current_deletion_cause: None,
             current_deletion_event_cause_override: None,
             pending_overclock_attack: None,
+            declined_overclock_this_eot: HashSet::new(),
             current_dna_origin: None,
             parked_replacement: None,
             dsl_replacement_outcome: None,
@@ -830,6 +845,7 @@ impl Game {
             scheduled_provenance_deletions_opp: Vec::new(),
             pending_delayed_option_lifecycle: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
+            pending_end_turn_resume: None,
             until_condition_dirty: false,
             until_condition_last_cycle_evaluations: 0,
             until_condition_total_evaluations: 0,

@@ -162,7 +162,7 @@ fn activate_rejects_wrong_phase() {
 }
 
 #[test]
-fn decline_leaves_state_untouched() {
+fn decline_consumes_current_end_turn_overclock_opportunity() {
     let (mut r, tp, oc) = setup_overclock_scenario();
     r.game.activate_overclock(0).unwrap();
 
@@ -184,8 +184,16 @@ fn decline_leaves_state_untouched() {
         "Overclock Digimon not suspended on decline"
     );
 
-    // Still eligible next time — the Overclock bit can be re-emitted.
-    assert!(r.game.has_end_of_turn_keywords(tp));
+    assert!(
+        !r.game.has_end_of_turn_keywords(tp),
+        "declining the Overclock cost should not re-offer the same optional action forever"
+    );
+    r.game.pass_end_of_turn_action();
+    assert_ne!(
+        r.game.turn_player(),
+        tp,
+        "with the declined Overclock consumed, passing the EOT window should rotate"
+    );
 }
 
 #[test]
