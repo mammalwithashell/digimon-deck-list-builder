@@ -62,16 +62,10 @@ effects:
   # Mandatory when eligible targets exist (DCGO: canNoSelect: false in
   # SetUpActivateClass; canEndNotMax: true allows early stop with fewer picks).
   #
-  # BLOCKED: G-MULTI-SELECT-OPP-DP-SUM
-  #   Engine lacks multi-select of opponent battle-area permanents with a running
-  #   DP-sum cap (per-pick remainder tracks remaining budget). DCGO uses
-  #   `SelectPermanentEffect` with `canTargetConditionByPreSelectedList` and
-  #   `canEndSelectCondition` (total ≤ self.DP). `select_count_capped_multi` caps
-  #   pick COUNT, not DP sum. `select_opponent_permanent` is single-target only.
-  #
-  #   This clause is implemented via raw_rust step `lm_021_delete_dp_sum` as an
-  #   escape hatch that falls back to single-pick until the gap is resolved.
-  #   Tracked in qa/archetype-qa/engine-gaps.md under G-MULTI-SELECT-OPP-DP-SUM.
+  # Implemented via raw_rust step `lm_021_delete_dp_sum`. The step uses the
+  # engine's DP-budget multi-select primitive with this Digimon's current
+  # effective DP as the budget, matching DCGO's `PermanentOfThisCard().DP`
+  # and running `canTargetConditionByPreSelectedList` behavior.
   #
   # Condition: ≥1 opponent Digimon on battle area (mirrors DCGO CanActivateCondition).
   - when: [on_play, when_digivolving]

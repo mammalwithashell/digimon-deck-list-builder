@@ -376,47 +376,30 @@ fn bt9_112_delete_lowest_cost_digimon(ctx: &mut EffectContext<'_>, _bindings: &m
 ///   - `canNoSelect: false`: must pick ≥1 when eligible targets exist.
 ///   - `canEndNotMax: true`: can stop picking before all valid candidates are selected.
 ///
-/// BLOCKED: G-DP-BUDGET-MULTI-SELECT
-///   The engine has no `select_opponent_permanent_multi_dp_budget` primitive.
-///   `select_count_capped_multi` caps pick COUNT, not DP sum. A proper
-///   implementation requires:
-///     1. Initial candidate list: all opponent Digimon.
-///     2. After each pick: subtract that Digimon's DP from remaining budget (15000 -
-///        sum_picked), re-filter candidates to those whose DP ≤ remaining budget.
-///     3. On PASS (or when no candidates remain): delete all picked Digimon.
-///   This multi-round incremental selection is not currently supported by
-///   `PendingSelection` — it would require a new selection kind or a looping
-///   raw_rust harness that re-installs selection each round.
-///
-/// Current approximation (no-approximations policy violation — noted for tracking):
-///   This function installs a SINGLE mandatory selection of ONE opponent Digimon
-///   with DP ≤ 15000 (i.e., effectively treats the 15000 budget as a filter on
-///   the single target). It does NOT support multi-pick. This violates the
-///   no-approximations policy for the multi-select aspect, but is the least bad
-///   option until G-DP-BUDGET-MULTI-SELECT closes.
-///
-/// When G-DP-BUDGET-MULTI-SELECT is closed, replace this function with a proper
-/// multi-round selection harness or a new engine primitive, and update BT17-018.yaml.
-///
-/// Tracked in qa/archetype-qa/engine-gaps.md under G-DP-BUDGET-MULTI-SELECT.
+/// Implementation:
+///   Uses `EffectContext::select_opponent_permanents_by_dp_budget`, which mirrors
+///   DCGO's running DP-sum selection: after each pick, the selected Digimon's
+///   effective DP is subtracted from the remaining budget, candidates over the
+///   remainder disappear, and PASS becomes legal after the mandatory first pick.
 fn bt17_018_delete_opp_digimon_dp_budget(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
     use crate::enums::CardKind;
 
-    // Install a single mandatory selection of ONE opponent Digimon with DP ≤ 15000.
-    // BLOCKED: G-DP-BUDGET-MULTI-SELECT — full multi-pick with running DP-sum cap
-    // is not yet supported by the engine. This is a single-pick approximation only.
-    ctx.select_opponent_permanent(
-        "Select 1 of your opponent's Digimon to delete (DP ≤ 15000 budget; multi-pick pending G-DP-BUDGET-MULTI-SELECT)",
-        false, // mandatory (canNoSelect: false)
+    ctx.select_opponent_permanents_by_dp_budget(
+        "Choose any number of your opponent's Digimon whose total DP is 15000 or less to delete",
+        15000,
+        1,
         |game, h| {
-            // Filter: must be Digimon with DP ≤ 15000.
             let perm = &game.player(h.player).battle_area[h.index as usize];
             let top = perm.top_card();
             let data = &game.card_data[top.data_index];
-            data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 15000
+            data.card_kind == CardKind::Digimon
         },
-        |ctx, selected| {
-            ctx.delete_permanent(selected);
+        |ctx, mut selected| {
+            selected.sort_by_key(|h| (h.player, h.index));
+            selected.reverse();
+            for handle in selected {
+                ctx.delete_permanent(handle);
+            }
         },
     );
 }
@@ -484,44 +467,64 @@ fn bt17_018_trash_security_per_ten_trash(ctx: &mut EffectContext<'_>, _bindings:
 ///   - `canNoSelect: false`: must pick ≥1 when eligible targets exist.
 ///   - `canEndNotMax: true`: can stop picking before max candidates.
 ///
-/// BLOCKED: G-MULTI-SELECT-OPP-DP-SUM (same root as G-DP-BUDGET-MULTI-SELECT)
-///   No DSL verb or engine primitive supports multi-select of opponent battle-area
-///   permanents with a running DP-sum cap. This function is a single-pick fallback
-///   (approximation: player picks one opponent Digimon and it is deleted).
-///
-/// When G-MULTI-SELECT-OPP-DP-SUM is closed, replace this raw_rust step in
-/// LM-021.yaml with a native DSL expression and remove this function.
-///
-/// Tracked in qa/archetype-qa/engine-gaps.md under G-MULTI-SELECT-OPP-DP-SUM.
+/// Implementation:
+///   Uses the same DP-budget selection primitive as BT17-018, but derives the
+///   budget from this Digimon's current effective DP. DCGO's `MaxDP()` reads
+///   `PermanentOfThisCard().DP`, not the printed base DP.
 fn lm_021_delete_dp_sum(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
     use crate::enums::CardKind;
 
     let opponent = ctx.opponent_id();
+    let budget = ctx
+        .source_permanent
+        .and_then(|handle| ctx.game.effective_dp(handle))
+        .unwrap_or(0);
 
-    // Check at least one eligible target (Digimon with DP ≤ 14000).
-    let has_target = ctx.game.player(opponent).battle_area.iter().any(|perm| {
-        let top = perm.top_card();
-        let data = &ctx.game.card_data[top.data_index];
-        data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 14000
-    });
+    if budget <= 0 {
+        return;
+    }
+
+    // Check at least one eligible target before installing a mandatory prompt.
+    let has_target = ctx
+        .game
+        .player(opponent)
+        .battle_area
+        .iter()
+        .enumerate()
+        .any(|(index, perm)| {
+            let top = perm.top_card();
+            let data = &ctx.game.card_data[top.data_index];
+            data.card_kind == CardKind::Digimon
+                && ctx
+                    .game
+                    .effective_dp(crate::permanent::PermanentHandle {
+                        player: opponent,
+                        index: index as u8,
+                    })
+                    .unwrap_or(0)
+                    <= budget
+        });
 
     if !has_target {
         return;
     }
 
-    // Single mandatory pick — fallback for G-MULTI-SELECT-OPP-DP-SUM.
-    // Full multi-pick with running DP-sum cap pending engine primitive support.
-    ctx.select_opponent_permanent(
-        "Select 1 of your opponent's Digimon to delete (DP ≤ 14000 budget; multi-pick pending G-MULTI-SELECT-OPP-DP-SUM)",
-        false, // mandatory (canNoSelect: false)
+    ctx.select_opponent_permanents_by_dp_budget(
+        "Choose any number of your opponent's Digimon whose total DP is this Digimon's DP or less to delete",
+        budget,
+        1,
         |game, h| {
             let perm = &game.player(h.player).battle_area[h.index as usize];
             let top = perm.top_card();
             let data = &game.card_data[top.data_index];
-            data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 14000
+            data.card_kind == CardKind::Digimon
         },
-        |ctx, selected| {
-            ctx.delete_permanent(selected);
+        |ctx, mut selected| {
+            selected.sort_by_key(|h| (h.player, h.index));
+            selected.reverse();
+            for handle in selected {
+                ctx.delete_permanent(handle);
+            }
         },
     );
 }

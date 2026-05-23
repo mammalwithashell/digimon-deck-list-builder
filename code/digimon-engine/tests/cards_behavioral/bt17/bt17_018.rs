@@ -16,8 +16,6 @@
 //! Patterns: H12 (Blast Digivolve), H13 (ACE), DP-budget multi-delete, When Attacking OPT.
 //!
 //! Known gaps:
-//! - G-DP-BUDGET-MULTI-SELECT: engine lacks select_opponent_permanent_multi_dp_budget.
-//!   raw_rust bt17_018_delete_opp_digimon_dp_budget is a single-pick approximation.
 //! - G-OPT-TRIGGERED: once_per_turn not enforced for triggered effects.
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
@@ -25,7 +23,7 @@
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::selection::SelectionKind;
@@ -107,16 +105,16 @@ fn runner_with_opp_7k() -> DebugRunner {
         .build()
 }
 
-fn runner_with_opp_7k_and_9k() -> DebugRunner {
+fn runner_with_opp_7k_and_16k() -> DebugRunner {
     let mut opp_7k = make_test_card("OPP-7K", "OppLow7K");
     opp_7k.dp = Some(7000);
-    let mut opp_9k = make_test_card("OPP-9K", "OppMid9K");
-    opp_9k.dp = Some(9000);
+    let mut opp_16k = make_test_card("OPP-16K", "OppHigh16K");
+    opp_16k.dp = Some(16000);
     DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT17-018 YAML loads")
         .add_card(opp_7k)
-        .add_card(opp_9k)
+        .add_card(opp_16k)
         .memory(10)
         .build()
 }
@@ -240,10 +238,9 @@ fn bt17_018_on_play_condition_passes_with_opp_digimon() {
     );
 }
 
-// --- Section 3: DP-budget delete behavioral (BLOCKED) ---
+// --- Section 3: DP-budget delete behavioral ---
 
 #[test]
-#[ignore = "BLOCKED: G-DP-BUDGET-MULTI-SELECT -- engine lacks select_opponent_permanent_multi_dp_budget; raw_rust bridge needed"]
 fn bt17_018_on_play_deletes_selected_digimon_within_dp_budget() {
     let mut r = runner_with_opp_7k();
     let _opp_perm = r.place_on_field(1, "OPP-7K", None);
@@ -259,19 +256,26 @@ fn bt17_018_on_play_deletes_selected_digimon_within_dp_budget() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DP-BUDGET-MULTI-SELECT -- engine lacks select_opponent_permanent_multi_dp_budget; raw_rust bridge needed"]
 fn bt17_018_on_play_cannot_select_digimon_exceeding_dp_budget() {
-    let mut r = runner_with_opp_7k_and_9k();
+    let mut r = runner_with_opp_7k_and_16k();
     let _opp_7k = r.place_on_field(1, "OPP-7K", None);
-    let _opp_9k = r.place_on_field(1, "OPP-9K", None);
+    let opp_16k = r.place_on_field(1, "OPP-16K", None);
     let perm = r.place_on_field(0, "BT17-018", None);
     r.fire_on_play(0, perm.index as usize);
-    let view = r.pending_selection_view();
-    assert!(view.is_some(), "Selection must be pending");
+    let selection = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("selection must be pending");
+    assert!(
+        !selection
+            .valid_action_ids
+            .contains(&encode_attack(0, opp_16k.index as u16)),
+        "16000 DP target must be filtered by the 15000 DP budget"
+    );
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DP-BUDGET-MULTI-SELECT -- engine lacks select_opponent_permanent_multi_dp_budget"]
 fn bt17_018_on_play_zero_pick_is_invalid_when_targets_exist() {
     let mut r = runner_with_opp_7k();
     let _opp = r.place_on_field(1, "OPP-7K", None);
@@ -281,6 +285,80 @@ fn bt17_018_on_play_zero_pick_is_invalid_when_targets_exist() {
     assert!(
         !r.pending_is_optional(),
         "Delete is mandatory (canNoSelect: false)"
+    );
+}
+
+#[test]
+fn bt17_018_on_play_can_delete_multiple_digimon_under_running_dp_budget() {
+    let mut opp_7k = make_test_card("OPP-7K", "OppLow7K");
+    opp_7k.dp = Some(7000);
+    let mut opp_8k = make_test_card("OPP-8K", "OppMid8K");
+    opp_8k.dp = Some(8000);
+    let mut opp_9k = make_test_card("OPP-9K", "OppHigh9K");
+    opp_9k.dp = Some(9000);
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-018 YAML loads")
+        .add_card(opp_7k)
+        .add_card(opp_8k)
+        .add_card(opp_9k)
+        .memory(10)
+        .build();
+
+    let low = r.place_on_field(1, "OPP-7K", None);
+    let mid = r.place_on_field(1, "OPP-8K", None);
+    let high = r.place_on_field(1, "OPP-9K", None);
+    let perm = r.place_on_field(0, "BT17-018", None);
+
+    r.fire_on_play(0, perm.index as usize);
+    r.game
+        .resolve_selection(0, encode_attack(0, low.index as u16))
+        .expect("pick 7000 DP Digimon");
+
+    let selection = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("selection continues with remaining budget");
+    assert_eq!(
+        selection.kind,
+        SelectionKind::DpBudget {
+            remaining_dp: 8000,
+            picked: 1,
+        }
+    );
+    assert!(
+        selection
+            .valid_action_ids
+            .contains(&encode_attack(0, mid.index as u16)),
+        "8000 DP target must remain selectable within 15000 total budget"
+    );
+    assert!(
+        !selection
+            .valid_action_ids
+            .contains(&encode_attack(0, high.index as u16)),
+        "9000 DP target must be filtered after 7000 DP is already selected"
+    );
+    assert!(
+        selection.valid_action_ids.contains(&PASS),
+        "player may stop after selecting at least one Digimon"
+    );
+
+    r.game
+        .resolve_selection(0, encode_attack(0, mid.index as u16))
+        .expect("pick 8000 DP Digimon");
+
+    let remaining_ids: Vec<_> = r
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&r.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        remaining_ids,
+        vec!["OPP-9K".to_string()],
+        "BT17-018 must delete both selected Digimon and leave the over-budget one"
     );
 }
 
