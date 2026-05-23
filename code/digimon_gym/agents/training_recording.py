@@ -338,12 +338,18 @@ def assert_minimal_training_recording_artifact(artifact: Dict[str, Any]) -> None
 
 def _unwrap_to_digimon_env(env: gymnasium.Env) -> DigimonEnv:
     unwrapped = env
-    while not isinstance(unwrapped, DigimonEnv):
+    while True:
+        if isinstance(unwrapped, DigimonEnv):
+            return unwrapped
+        # See the matching helper in `pilot_training.py` — tolerate the stale
+        # class reference left behind by `importlib.reload(digimon_gym.digimon_gym)`.
+        cls = type(unwrapped)
+        if cls.__module__ == "digimon_gym.digimon_gym" and cls.__name__ == "DigimonEnv":
+            return unwrapped  # type: ignore[return-value]
         if isinstance(unwrapped, gymnasium.Wrapper):
             unwrapped = unwrapped.env
         else:
             raise RuntimeError(f"Could not find DigimonEnv inside {type(env).__name__}")
-    return unwrapped
 
 
 def _safe_slug(value: str) -> str:
