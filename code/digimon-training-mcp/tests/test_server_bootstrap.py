@@ -12,6 +12,7 @@ stdio.
 from __future__ import annotations
 
 import json
+from typing import Any, Dict
 
 import pytest
 from mcp.server.lowlevel.server import Server
@@ -65,15 +66,29 @@ def test_build_server_returns_mcp_server(ctx: ServerContext):
 
 
 @pytest.mark.asyncio
-async def test_each_tool_returns_not_implemented_placeholder(ctx: ServerContext):
-    """Confirm every registered tool round-trips end-to-end through the handler
-    layer and returns the structured placeholder. Phase 5 swaps the handlers
-    for real implementations; this test guards the wiring."""
+async def test_each_tool_handler_returns_structured_dict(ctx: ServerContext):
+    """Every registered tool returns a dict with an explicit ok flag.
+
+    With a ServerContext pointing nowhere, each handler should error gracefully
+    rather than raise — confirms the "no run_dir / models_dir found" error path
+    is wired in every handler.
+    """
+    args_by_tool: Dict[str, Dict[str, Any]] = {
+        "list_runs": {},
+        "run_summary": {"name": "missing"},
+        "run_metric": {"name": "missing", "tag": "pilot/win_rate"},
+        "run_tags": {"name": "missing"},
+        "run_recordings": {"name": "missing"},
+        "run_checkpoints": {"name": "missing"},
+        "run_deck_pool": {"name": "missing"},
+    }
     for tool_name, handler in TOOL_HANDLERS.items():
-        result = await handler(ctx, {})
+        result = await handler(ctx, args_by_tool[tool_name])
         assert isinstance(result, dict), f"{tool_name} returned {type(result).__name__}"
-        assert result.get("ok") is False
-        assert "not implemented" in result.get("error", "").lower()
+        assert "ok" in result, f"{tool_name} missing 'ok' key: {result}"
+        # With None runs_dir/models_dir, all handlers should return ok=False.
+        assert result["ok"] is False
+        assert "error" in result and result["error"]
 
 
 def test_run_metric_schema_accepts_string_or_array_tag():

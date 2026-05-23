@@ -5,5 +5,10 @@
 # Install via:
 #   pip install -r requirements-mcp.txt
 #   pip install -e code/digimon-training-mcp
+#
+# CONFLICT NOTE: the mcp SDK pulls in starlette>=0.42, which collides with
+# FastAPI 0.115's starlette<0.42 pin in requirements.txt. If you also run the
+# hosted API locally, install these into a SEPARATE virtualenv. See
+# docs/TRAINING_MCP.md §Install for the venv recipe.
 mcp>=1.0
 tensorboard>=2.14
