@@ -17,6 +17,11 @@
       "type": "stdio",
       "command": "target/debug/digimon-engine-mcp.exe",
       "args": ["--pool", "implemented"]
+    },
+    "digimon-training-mcp": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "digimon_training_mcp", "--runs-dir", "./runs", "--models-dir", "./models"]
     }
   }
 }
