@@ -514,6 +514,24 @@ slots have the same shape but no prediction in their docstrings.
 - **Test results (post-fix):** lib 153/153 ✓, combat 206/206 ✓, keyword_phase_d 41/41 ✓, deletion_batching 7/7 ✓, cards_behavioral 3292/3300 (8 baseline pre-existing failures, 0 new regressions).
 - **Change reference:** `openspec/changes/archive/2026-05-23-align-deletion-with-dcgo-model/` (proposal, design, specs, tasks).
 
+### Empty Permanent During Batched Deletion  [G-PERMANENT-EMPTY-DURING-BATCH-DELETION]
+- **Discovered in:** Generalist v4 training run, 2026-05-23, ~15 minutes after launch (recordings at `C:/Users/james/digimon-training-runs/models/generalist_v4/pilot_ppo_20260523_145133/recordings/train_env_003_game_000017_draw_crash.json` and `train_env_004_game_000024_draw_crash.json`).
+- **Scope:** Rust engine. Latent pre-PR #525; surfaced after `G-DELETION-RESUME-NESTED` was silenced (the deletion panic was firing ~1 per 12k steps in v3, drowning out this rarer empty-permanent case).
+- **Panic site:** [`code/digimon-engine/src/permanent.rs:134`](../../code/digimon-engine/src/permanent.rs) in `Permanent::top_card()` (and the `top_card_mut` sibling at line 141).
+- **Invariant:** `self.card_sources` is non-empty when `top_card()` is called. A Permanent should always have at least one card on its digivolution stack while it sits in the battle area.
+- **Symptom rate:** ~0.17 panics/min in v4 (2 panics in first 12 min across 12 parallel envs). Similar order-of-magnitude to v3's `G-DELETION-RESUME-NESTED` rate (0.27/min) — the underlying frequency of the trigger pattern is probably comparable; the bug was just masked by the noisier deletion panic before PR #525.
+- **What's happening (hypothesis):** PR #525's `delete_permanents_batch` 10-step flow has a window between step 4 (trash the card_sources Vec → `Permanent::card_sources` is now empty) and step 5 (remove the slot from `Player::battle_area`). The `DeletedObjectSnapshot.top_cards` field exists precisely so downstream code can read pre-deletion identity without touching the now-empty Permanent. The panic indicates some code path inside that window still does a live `top_card()` call instead of reading from the snapshot. Most likely a triggered/queued effect that ran before the batch started, fires during the batch's drain phase, looks up a permanent by `PermanentHandle`, and calls `top_card()` while the slot is still in battle_area but emptied.
+- **Affected pattern:** Likely any sequence that combines:
+  1. A queued triggered effect that resolves while a batch deletion is in progress, AND
+  2. That trigger queries a permanent (own or opp) that happens to be in the same deletion batch.
+  Real examples not yet identified — both crash recordings preserved for replay.
+- **Suggested investigation:**
+  - Replay `train_env_003_game_000017_draw_crash.json` against current main with `RUST_BACKTRACE=1`; the backtrace points at the live `top_card()` caller inside the deletion-batch window.
+  - Audit every `top_card()` / `top_card_mut()` call site for "could this Permanent have been emptied by an in-flight batch deletion?" — those sites should read from `DeletedObjectSnapshot.top_cards` instead.
+  - DCGO reference: `DCGO/Assets/Scripts/Script/CardController.cs` `DestroyPermanentsClass.Destroy()` and the snapshot threading PR #525 already mirrors.
+- **Workaround:** Training crash-resilience wrapper catches the panic, writes a crash recording, synthesizes a terminal step → training continues. Each hit costs one game's worth of training samples (~0.5% of games at current rate).
+- **Identifier:** the panic message `Permanent must have at least one card` is verbatim from `.expect(...)` on `Vec::last()` — no card identity surfaces. Adding card identity to the panic message would speed up triage.
+
 ### Family-wide note: Single-Outstanding-Invariant Pattern
 
 The three bugs above plus their predicted siblings (`pending_post_deletion_replays` at [`game.rs:519-551`](../../code/digimon-engine/src/game.rs) is already a `Vec` and works correctly under nesting) all reflect a Phase 8 / Phase 2d design choice: when adding a parked-state slot, default to `Option<T>` with a `debug_assert!` guard, and audit later if nesting surfaces. The audit time is now. Recommend a tracking task to:
