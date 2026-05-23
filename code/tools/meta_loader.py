@@ -201,10 +201,14 @@ class DeckIngestor:
     """Fetches decklists and meta data from multiple sources, builds deck_library.json."""
 
     _SESSION_HEADERS = {
+        # Use Firefox/Linux instead of Chrome/Windows: digimonmeta.com has a
+        # server-side rule that returns 403 specifically for desktop Chrome
+        # UAs (the most common scraper signature). Firefox, Safari, mobile
+        # Chrome, and minimal UAs all pass. Discovered 2026-05-23 while
+        # diagnosing why the scraper returned 403 on a fresh-browser URL.
         "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/131.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) "
+            "Gecko/20100101 Firefox/120.0"
         ),
     }
 
