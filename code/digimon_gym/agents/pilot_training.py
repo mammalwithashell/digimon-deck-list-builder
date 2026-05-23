@@ -18,11 +18,12 @@ Requires: pip install stable-baselines3 sb3-contrib tensorboard
 
 import os
 import argparse
+import json
 import random
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, Optional, List, Union
+from typing import Callable, Dict, Optional, List, Set, Union
 
 import numpy as np
 import gymnasium
@@ -38,8 +39,21 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
 from digimon_gym.tensor_profiles import get_tensor_profile
-from digimon_engine import ACTION_SPACE_SIZE, REGISTRY_CAPACITY, EMBEDDING_DIM
-from digimon_gym.agents.gauntlet import MetaGauntlet, GauntletWrapper
+from digimon_engine import (
+    ACTION_SPACE_SIZE,
+    REGISTRY_CAPACITY,
+    EMBEDDING_DIM,
+    load_implemented_card_ids,
+)
+from digimon_gym.agents.gauntlet import (
+    GeneralistDeckPool,
+    GeneralistDeckPoolWrapper,
+    MetaGauntlet,
+    GauntletWrapper,
+    UnimplementedDeckError,
+    load_generalist_deck_pool,
+    validate_implemented_deck,
+)
 from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
 from digimon_gym.agents.maskable_recurrent import (
     MaskableRecurrentPPO,
@@ -80,6 +94,47 @@ def _seed_everything(seed: int) -> None:
         th.cuda.manual_seed_all(seed)
     th.backends.cudnn.deterministic = True
     th.backends.cudnn.benchmark = False
+
+
+def _model_meta_path(model_path: str | Path) -> Path:
+    """Return the adjacent metadata sidecar path for a saved model."""
+    return Path(model_path).with_suffix(".meta.json")
+
+
+def _validate_checkpoint_contract(
+    model_path: str | Path,
+    observation_layout,
+) -> None:
+    """Reject fine-tune checkpoints with incompatible tensor/action contracts."""
+    meta_path = _model_meta_path(model_path)
+    if not meta_path.exists():
+        raise ValueError(f"Checkpoint metadata sidecar not found: {meta_path}")
+    metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+    checks = {
+        "observation_profile": observation_layout.id,
+        "tensor_layout_hash": observation_layout.layout_hash,
+        "action_space_size": ACTION_SPACE_SIZE,
+    }
+    for key, expected in checks.items():
+        actual = metadata.get(key)
+        if actual != expected:
+            raise ValueError(
+                f"Checkpoint incompatible: {key}={actual!r}, expected {expected!r}"
+            )
+
+
+def _validate_explicit_deck(
+    card_ids: Optional[List[str]],
+    *,
+    label: str,
+    implemented_card_ids: Set[str],
+) -> None:
+    if card_ids is not None:
+        validate_implemented_deck(
+            card_ids,
+            implemented_card_ids,
+            label=label,
+        )
 
 
 # ─── Opponent Policies ──────────────────────────────────────────────
@@ -532,6 +587,8 @@ def make_env(opponent: str = "greedy",
              deck_pool_generate_kwargs: Optional[Dict] = None,
              deck_pool_seed: Optional[int] = None,
              deck_pool_hybrid_max: int = 10,
+             generalist_deck_pool: Optional[GeneralistDeckPool] = None,
+             curriculum_seed: Optional[int] = None,
              tensor_profile: str = "standard_lite_v2") -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
@@ -552,6 +609,8 @@ def make_env(opponent: str = "greedy",
         deck_pool_generate_kwargs: Keyword arguments for generate_fn.
         deck_pool_seed: RNG seed for DeckPoolWrapper reproducibility.
         deck_pool_hybrid_max: Max dynamic variants in hybrid mode (default: 10).
+        generalist_deck_pool: Eligible deck pool for generalist pretraining.
+        curriculum_seed: RNG seed for generalist deck-pair sampling.
         tensor_profile: Observation tensor profile passed to DigimonEnv.
 
     Returns:
@@ -560,6 +619,11 @@ def make_env(opponent: str = "greedy",
     Wrapper chain:
         DigimonEnv -> OpponentWrapper -> DeckPoolWrapper -> GauntletWrapper -> ActionMasker
     """
+    if generalist_deck_pool is not None and gauntlet is not None:
+        raise ValueError("--generalist cannot be combined with --gauntlet")
+    if generalist_deck_pool is not None and deck_pool_variants:
+        raise ValueError("generalist deck sampling cannot be combined with deck_pool_variants")
+
     base_env = DigimonEnv(deck1=deck1, deck2=deck2, tensor_profile=tensor_profile)
 
     if opponent == "self-play":
@@ -593,6 +657,13 @@ def make_env(opponent: str = "greedy",
             seed=deck_pool_seed,
         )
 
+    if generalist_deck_pool is not None:
+        env = GeneralistDeckPoolWrapper(
+            env,
+            deck_pool=generalist_deck_pool,
+            seed=curriculum_seed,
+        )
+
     # Gauntlet wrapper for meta-weighted opponent sampling
     if gauntlet is not None and gauntlet.deck_count > 0:
         player_deck = deck1 if deck1 else base_env._deck1
@@ -609,13 +680,31 @@ def make_env(opponent: str = "greedy",
     return ActionMasker(env, mask_fn)
 
 
-def make_vec_env(cfg: TrainingConfig, opponent_fn: Callable[[DigimonEnv], int]):
+def make_vec_env(
+    cfg: TrainingConfig,
+    opponent_fn: Callable[[DigimonEnv], int],
+    deck1: Optional[List[str]] = None,
+    deck2: Optional[List[str]] = None,
+    generalist_deck_pool: Optional[GeneralistDeckPool] = None,
+    curriculum_seed: Optional[int] = None,
+):
     """Build ActionMasker-wrapped vector environments from TrainingConfig."""
 
     def _factory(rank: int):
         def _init():
-            base_env = DigimonEnv(tensor_profile=cfg.tensor_profile)
+            base_env = DigimonEnv(
+                deck1=deck1,
+                deck2=deck2,
+                tensor_profile=cfg.tensor_profile,
+            )
             wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+            if generalist_deck_pool is not None:
+                seed = None if curriculum_seed is None else curriculum_seed + rank
+                wrapped = GeneralistDeckPoolWrapper(
+                    wrapped,
+                    deck_pool=generalist_deck_pool,
+                    seed=seed,
+                )
 
             def mask_fn(env):
                 return _unwrap_to_digimon_env(env).action_mask()
@@ -668,6 +757,7 @@ def train(total_timesteps: int = 100_000,
           save_dir: str = "models",
           gauntlet: Optional[MetaGauntlet] = None,
           deck1: Optional[List[str]] = None,
+          deck2: Optional[List[str]] = None,
           bounty_threshold: float = 0.15,
           bounty_bonus: float = 0.5,
           use_lstm: bool = False,
@@ -678,6 +768,10 @@ def train(total_timesteps: int = 100_000,
           deck_pool_mode: str = "eager",
           deck_pool_seed: Optional[int] = None,
           deck_pool_hybrid_max: int = 10,
+          generalist_deck_pool: Optional[GeneralistDeckPool] = None,
+          curriculum_seed: Optional[int] = None,
+          eval_seed: Optional[int] = None,
+          deck_pool_snapshot_path: Optional[str] = None,
           cfg: Optional[TrainingConfig] = None,
           ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
     """Train a Pilot Agent using MaskablePPO or MaskableRecurrentPPO.
@@ -697,6 +791,7 @@ def train(total_timesteps: int = 100_000,
         save_dir: Directory for saving model checkpoints.
         gauntlet: MetaGauntlet for meta-weighted opponent sampling.
         deck1: Player 1 deck (card IDs). Defaults to ST1 starter.
+        deck2: Player 2 deck (card IDs). Defaults to ST1 starter.
         bounty_threshold: TI threshold for bounty bonus.
         bounty_bonus: Bonus reward for beating high-TI opponents.
         use_lstm: Use LSTM policy (MaskableRecurrentPPO) instead of MLP.
@@ -707,6 +802,10 @@ def train(total_timesteps: int = 100_000,
         deck_pool_mode: Generation mode ("eager" or "hybrid").
         deck_pool_seed: RNG seed for DeckPoolWrapper reproducibility.
         deck_pool_hybrid_max: Max dynamic variants in hybrid mode (default: 10).
+        generalist_deck_pool: Eligible deck pool for generalist pretraining.
+        curriculum_seed: RNG seed for generalist deck-pair sampling.
+        eval_seed: RNG seed for evaluation deck-pair sampling.
+        deck_pool_snapshot_path: Optional path to write the frozen deck-pool snapshot.
 
     Returns:
         Trained model (MaskablePPO or MaskableRecurrentPPO).
@@ -728,6 +827,8 @@ def train(total_timesteps: int = 100_000,
             checkpoint_every=0,
             models_dir=save_dir,
             tensorboard_log=tensorboard_log,
+            curriculum_seed=curriculum_seed,
+            eval_seed=eval_seed,
         )
     else:
         total_timesteps = cfg.timesteps
@@ -743,10 +844,24 @@ def train(total_timesteps: int = 100_000,
         save_dir = cfg.models_dir
         use_lstm = cfg.algorithm == "lstm"
         lstm_hidden_size = cfg.lstm_hidden_size
+        curriculum_seed = cfg.curriculum_seed if curriculum_seed is None else curriculum_seed
+        eval_seed = cfg.eval_seed if eval_seed is None else eval_seed
 
     _seed_everything(cfg.seed)
     observation_layout = get_tensor_profile(cfg.tensor_profile)
     run_name = cfg.run_name or datetime.now().strftime("pilot_ppo_%Y%m%d_%H%M%S")
+    run_dir = Path(save_dir) / run_name
+    if cfg.resume_from and cfg.init_from:
+        raise ValueError("resume_from and init_from are mutually exclusive")
+    if cfg.init_from:
+        _validate_checkpoint_contract(cfg.init_from, observation_layout)
+    if generalist_deck_pool is not None:
+        if deck_pool_snapshot_path is None:
+            deck_pool_snapshot_path = cfg.curriculum_pool_out
+        if not deck_pool_snapshot_path and not cfg.curriculum_pool:
+            deck_pool_snapshot_path = str(run_dir / "deck_pool_snapshot.json")
+        if deck_pool_snapshot_path:
+            generalist_deck_pool.write_snapshot(deck_pool_snapshot_path)
     algorithm_name = "MaskableRecurrentPPO" if use_lstm else "MaskablePPO"
     if verbose:
         print("=" * 60)
@@ -774,6 +889,12 @@ def train(total_timesteps: int = 100_000,
             print(f"  Gauntlet:       {gauntlet.archetype_count} archetypes, "
                   f"{gauntlet.deck_count} decks")
             print(f"  Bounty:         +{bounty_bonus} if TI > {bounty_threshold}")
+        if generalist_deck_pool is not None:
+            print(
+                f"  Generalist:     {generalist_deck_pool.archetype_count} archetypes, "
+                f"{generalist_deck_pool.deck_count} decks"
+            )
+            print(f"  Curriculum seed:{curriculum_seed}")
         print("=" * 60)
 
     pool_opponent_fn = None
@@ -788,16 +909,31 @@ def train(total_timesteps: int = 100_000,
 
     # Create training environment
     if pool_opponent_fn is not None:
-        env = make_vec_env(cfg, opponent_fn=pool_opponent_fn)
+        env = make_vec_env(
+            cfg,
+            opponent_fn=pool_opponent_fn,
+            deck1=deck1,
+            deck2=deck2,
+            generalist_deck_pool=generalist_deck_pool,
+            curriculum_seed=curriculum_seed,
+        )
     elif cfg.n_envs > 1:
         opponent_policies = {"greedy": greedy_policy, "random": random_policy}
         if opponent not in opponent_policies:
             raise ValueError(f"cfg.n_envs > 1 currently supports greedy/random, got {opponent}")
-        env = make_vec_env(cfg, opponent_fn=opponent_policies[opponent])
+        env = make_vec_env(
+            cfg,
+            opponent_fn=opponent_policies[opponent],
+            deck1=deck1,
+            deck2=deck2,
+            generalist_deck_pool=generalist_deck_pool,
+            curriculum_seed=curriculum_seed,
+        )
     else:
         env = make_env(
             opponent=opponent,
             deck1=deck1,
+            deck2=deck2,
             gauntlet=gauntlet,
             bounty_threshold=bounty_threshold,
             bounty_bonus=bounty_bonus,
@@ -805,6 +941,8 @@ def train(total_timesteps: int = 100_000,
             deck_pool_mode=deck_pool_mode,
             deck_pool_seed=deck_pool_seed,
             deck_pool_hybrid_max=deck_pool_hybrid_max,
+            generalist_deck_pool=generalist_deck_pool,
+            curriculum_seed=curriculum_seed,
             tensor_profile=cfg.tensor_profile,
         )
 
@@ -835,6 +973,13 @@ def train(total_timesteps: int = 100_000,
             model = MaskablePPO.load(cfg.resume_from, env=env, device=device)
         if verbose:
             print(f"  [resume] loaded checkpoint, num_timesteps={model.num_timesteps}")
+    elif cfg.init_from:
+        if use_lstm:
+            model = MaskableRecurrentPPO.load(cfg.init_from, env=env, device=device)
+        else:
+            model = MaskablePPO.load(cfg.init_from, env=env, device=device)
+        if verbose:
+            print(f"  [init] loaded base checkpoint from {cfg.init_from}")
     elif use_lstm:
         model = MaskableRecurrentPPO(
             MaskableMlpLstmPolicy,
@@ -885,21 +1030,33 @@ def train(total_timesteps: int = 100_000,
     # Create evaluation callback
     if pool_opponent_fn is not None:
         def eval_env_fn():
-            base_env = DigimonEnv(deck1=deck1, tensor_profile=cfg.tensor_profile)
+            base_env = DigimonEnv(
+                deck1=deck1,
+                deck2=deck2,
+                tensor_profile=cfg.tensor_profile,
+            )
             wrapped = OpponentWrapper(base_env, opponent_fn=pool_opponent_fn)
+            if generalist_deck_pool is not None:
+                wrapped = GeneralistDeckPoolWrapper(
+                    wrapped,
+                    deck_pool=generalist_deck_pool,
+                    seed=eval_seed if eval_seed is not None else curriculum_seed,
+                )
             return ActionMasker(
                 wrapped,
                 lambda env: _unwrap_to_digimon_env(env).action_mask(),
             )
     else:
         eval_env_fn = lambda: make_env(
-            opponent=opponent, deck1=deck1,
+            opponent=opponent, deck1=deck1, deck2=deck2,
             gauntlet=gauntlet, bounty_threshold=bounty_threshold,
             bounty_bonus=bounty_bonus,
             deck_pool_variants=deck_pool_variants,
             deck_pool_mode=deck_pool_mode,
             deck_pool_seed=deck_pool_seed,
             deck_pool_hybrid_max=deck_pool_hybrid_max,
+            generalist_deck_pool=generalist_deck_pool,
+            curriculum_seed=eval_seed if eval_seed is not None else curriculum_seed,
             tensor_profile=cfg.tensor_profile,
         )
     eval_suite = None
@@ -948,7 +1105,6 @@ def train(total_timesteps: int = 100_000,
 
     # Save model
     if config_driven:
-        run_dir = Path(save_dir) / run_name
         run_dir.mkdir(parents=True, exist_ok=True)
         final_path = run_dir / "final.zip"
         model.save(str(final_path))
@@ -962,6 +1118,28 @@ def train(total_timesteps: int = 100_000,
     from digimon_gym.agents.training_metrics import TrainingRunMetadata
 
     run_id = Path(model_path).stem
+    if generalist_deck_pool is not None:
+        training_mode = "generalist"
+        sampling_policy = "uniform_archetype_then_deck"
+        eligible_archetypes = generalist_deck_pool.archetype_names
+        eligible_deck_count = generalist_deck_pool.deck_count
+        snapshot_path = generalist_deck_pool.snapshot_path
+        snapshot_hash = generalist_deck_pool.snapshot_hash
+    elif cfg.init_from:
+        training_mode = "fine_tune"
+        sampling_policy = ""
+        eligible_archetypes = []
+        eligible_deck_count = 0
+        snapshot_path = ""
+        snapshot_hash = ""
+    else:
+        training_mode = "standard"
+        sampling_policy = ""
+        eligible_archetypes = []
+        eligible_deck_count = 0
+        snapshot_path = ""
+        snapshot_hash = ""
+
     meta = TrainingRunMetadata(
         run_id=run_id,
         started_at=datetime.fromtimestamp(start).isoformat(),
@@ -979,6 +1157,21 @@ def train(total_timesteps: int = 100_000,
         action_space_size=ACTION_SPACE_SIZE,
         card_registry_capacity=REGISTRY_CAPACITY,
         embedding_dim=EMBEDDING_DIM,
+        training_mode=training_mode,
+        sampling_policy=sampling_policy,
+        training_seed=cfg.seed,
+        curriculum_seed=curriculum_seed,
+        eval_seed=eval_seed,
+        deck_pool_snapshot_path=snapshot_path,
+        deck_pool_snapshot_hash=snapshot_hash,
+        eligible_archetypes=eligible_archetypes,
+        eligible_deck_count=eligible_deck_count,
+        base_checkpoint=cfg.init_from or "",
+        fine_tune_deck_config={
+            "deck1_card_count": len(deck1) if deck1 is not None else 0,
+            "deck2_card_count": len(deck2) if deck2 is not None else 0,
+            "uses_gauntlet": gauntlet is not None,
+        } if cfg.init_from else {},
         final_win_rate=win_rate_cb.last_win_rate,
         final_mean_reward=win_rate_cb.last_mean_reward,
         total_games=win_rate_cb.games_played,
@@ -1024,6 +1217,10 @@ def main():
     parser.add_argument(
         "--resume", type=str, default=None,
         help="Resume from a saved checkpoint .zip."
+    )
+    parser.add_argument(
+        "--init-from", type=str, default=None,
+        help="Initialize a fine-tune run from a compatible base checkpoint .zip."
     )
     parser.add_argument(
         "--timesteps", type=int, default=None,
@@ -1072,12 +1269,48 @@ def main():
         help="Enable MetaGauntlet opponent sampling from deck_library.json"
     )
     parser.add_argument(
+        "--gauntlet-sampling", choices=["meta", "random"], default="meta",
+        help="Gauntlet sampling mode: threat-index meta weights or uniform random decks."
+    )
+    parser.add_argument(
+        "--generalist", action="store_true",
+        help="Sample both player decks from eligible Rust DSL archetypes."
+    )
+    parser.add_argument(
+        "--generalist-sampling", choices=["uniform-archetype"], default="uniform-archetype",
+        help="Generalist sampling mode. Currently uniform archetype, then uniform deck."
+    )
+    parser.add_argument(
+        "--curriculum-seed", type=int, default=None,
+        help="Seed controlling generalist deck-pair sampling."
+    )
+    parser.add_argument(
+        "--eval-seed", type=int, default=None,
+        help="Seed controlling evaluation deck-pair sampling."
+    )
+    parser.add_argument(
+        "--curriculum-pool", type=str, default=None,
+        help="Path to a frozen generalist deck-pool snapshot to reuse."
+    )
+    parser.add_argument(
+        "--curriculum-pool-out", type=str, default=None,
+        help="Path to write the frozen generalist deck-pool snapshot."
+    )
+    parser.add_argument(
         "--deck1", type=str, default=None,
         help="Path to player 1 deck file (TTS/text format)"
     )
     parser.add_argument(
-        "--deck-json", type=str, default=None,
-        help="Path to JSON file containing a flat list of card IDs"
+        "--deck-json", "--deck1-json", dest="deck_json", type=str, default=None,
+        help="Path to JSON file containing a flat list of player 1 card IDs"
+    )
+    parser.add_argument(
+        "--deck2", type=str, default=None,
+        help="Path to player 2 deck file (TTS/text format)"
+    )
+    parser.add_argument(
+        "--deck2-json", type=str, default=None,
+        help="Path to JSON file containing a flat list of player 2 card IDs"
     )
     parser.add_argument(
         "--bounty-threshold", type=float, default=0.15,
@@ -1101,6 +1334,14 @@ def main():
     )
 
     args = parser.parse_args()
+    if args.gauntlet and (args.deck2 or args.deck2_json):
+        parser.error("--deck2/--deck2-json cannot be combined with --gauntlet")
+    if args.generalist and args.gauntlet:
+        parser.error("--generalist cannot be combined with --gauntlet")
+    if args.generalist and (args.deck1 or args.deck_json or args.deck2 or args.deck2_json):
+        parser.error("--generalist samples deck1/deck2 and cannot be combined with explicit decks")
+    if args.resume and args.init_from:
+        parser.error("--resume and --init-from are mutually exclusive")
 
     overrides = {}
     for kv in args.overrides:
@@ -1120,6 +1361,11 @@ def main():
         "models_dir": args.save_dir,
         "lstm_hidden_size": args.lstm_hidden_size,
         "tensor_profile": args.tensor_profile,
+        "curriculum_seed": args.curriculum_seed,
+        "eval_seed": args.eval_seed,
+        "curriculum_pool": args.curriculum_pool,
+        "curriculum_pool_out": args.curriculum_pool_out,
+        "init_from": args.init_from,
     }
     overrides.update({key: value for key, value in legacy_overrides.items() if value is not None})
     if args.self_play:
@@ -1130,17 +1376,20 @@ def main():
         overrides["algorithm"] = "lstm"
     if args.resume:
         overrides["resume_from"] = args.resume
+    if args.generalist:
+        overrides["generalist"] = True
 
     cfg = TrainingConfig.from_yaml(Path(args.config), overrides=overrides)
 
     # Load gauntlet if requested
     gauntlet = None
     if args.gauntlet:
-        gauntlet = MetaGauntlet()
+        gauntlet = MetaGauntlet(sampling_mode=args.gauntlet_sampling)
         try:
             gauntlet.load()
             print(f"  MetaGauntlet: {gauntlet.archetype_count} archetypes, "
-                  f"{gauntlet.deck_count} decks loaded")
+                  f"{gauntlet.deck_count} fully implemented decks loaded "
+                  f"({args.gauntlet_sampling} sampling)")
         except FileNotFoundError:
             print("  WARNING: deck_library.json not found. "
                   "Run tools/meta_loader.py --build first.")
@@ -1154,10 +1403,49 @@ def main():
             deck1 = parse_deck(f.read())
         print(f"  Player deck: {len(deck1)} cards from {args.deck1}")
     if args.deck_json:
-        import json as _json
         with open(args.deck_json, "r") as f:
-            deck1 = _json.load(f)
+            deck1 = json.load(f)
         print(f"  Player deck: {len(deck1)} cards from {args.deck_json}")
+
+    deck2 = None
+    if args.deck2:
+        from digimon_engine import parse_deck
+        with open(args.deck2, "r") as f:
+            deck2 = parse_deck(f.read())
+        print(f"  Opponent deck: {len(deck2)} cards from {args.deck2}")
+    if args.deck2_json:
+        with open(args.deck2_json, "r") as f:
+            deck2 = json.load(f)
+        print(f"  Opponent deck: {len(deck2)} cards from {args.deck2_json}")
+
+    try:
+        implemented_ids = load_implemented_card_ids()
+        _validate_explicit_deck(deck1, label="--deck1/--deck-json", implemented_card_ids=implemented_ids)
+        _validate_explicit_deck(deck2, label="--deck2/--deck2-json", implemented_card_ids=implemented_ids)
+    except UnimplementedDeckError as exc:
+        parser.error(str(exc))
+
+    generalist_deck_pool = None
+    if cfg.generalist:
+        try:
+            if cfg.curriculum_pool:
+                generalist_deck_pool = GeneralistDeckPool.from_snapshot(
+                    cfg.curriculum_pool,
+                    implemented_card_ids=load_implemented_card_ids(),
+                )
+                print(
+                    f"  Generalist pool: {generalist_deck_pool.archetype_count} archetypes, "
+                    f"{generalist_deck_pool.deck_count} decks from {cfg.curriculum_pool}"
+                )
+            else:
+                generalist_deck_pool = load_generalist_deck_pool()
+                print(
+                    f"  Generalist pool: {generalist_deck_pool.archetype_count} archetypes, "
+                    f"{generalist_deck_pool.deck_count} fully implemented decks loaded"
+                )
+        except FileNotFoundError:
+            print("  WARNING: deck_library.json not found. Run tools/meta_loader.py --build first.")
+            generalist_deck_pool = None
 
     train(
         total_timesteps=cfg.timesteps,
@@ -1171,10 +1459,15 @@ def main():
         save_dir=cfg.models_dir,
         gauntlet=gauntlet,
         deck1=deck1,
+        deck2=deck2,
         bounty_threshold=args.bounty_threshold,
         bounty_bonus=args.bounty_bonus,
         use_lstm=cfg.algorithm == "lstm",
         lstm_hidden_size=cfg.lstm_hidden_size,
+        generalist_deck_pool=generalist_deck_pool,
+        curriculum_seed=cfg.curriculum_seed,
+        eval_seed=cfg.eval_seed,
+        deck_pool_snapshot_path=cfg.curriculum_pool_out,
         cfg=cfg,
     )
 

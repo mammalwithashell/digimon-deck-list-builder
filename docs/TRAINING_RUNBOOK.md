@@ -54,8 +54,23 @@ python -m digimon_gym.agents.pilot_training --self-play --timesteps 1000000
 # With MetaGauntlet opponent sampling
 python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
 
+# With uniform random sampling across QA-clean gauntlet decks
+python -m digimon_gym.agents.pilot_training --gauntlet --gauntlet-sampling random --timesteps 500000
+
+# Generalist base pilot: sample both player decks from eligible Rust DSL archetypes
+python -m digimon_gym.agents.pilot_training --generalist --curriculum-seed 123 --eval-seed 999 --timesteps 5000000
+
+# Tensor-profile A/B run: reuse the same frozen generalist deck pool
+python -m digimon_gym.agents.pilot_training --generalist --curriculum-pool models/generalist_a/deck_pool_snapshot.json --curriculum-seed 123 --eval-seed 999 --tensor-profile standard_lite_v2 --timesteps 5000000
+
+# Fine-tune an archetype pilot from a compatible generalist base checkpoint
+python -m digimon_gym.agents.pilot_training --init-from models/generalist_a/final.zip --deck1 path/to/deck.txt --gauntlet --gauntlet-sampling meta --lr 0.00005 --timesteps 1000000
+
 # With custom deck
 python -m digimon_gym.agents.pilot_training --deck1 path/to/deck.txt --timesteps 500000
+
+# With a specific opponent deck
+python -m digimon_gym.agents.pilot_training --deck1 path/to/deck.txt --deck2 path/to/opponent.txt --timesteps 500000
 
 # Full LSTM + gauntlet with bounty tuning
 python -m digimon_gym.agents.pilot_training --lstm --lstm-hidden-size 256 \
@@ -77,8 +92,18 @@ python -m digimon_gym.agents.pilot_training --lstm --lstm-hidden-size 256 \
 | `--eval-episodes` | 20 | Games per evaluation |
 | `--log-dir` | `runs/pilot_ppo` | TensorBoard log directory |
 | `--save-dir` | `models` | Model save directory |
-| `--gauntlet` | off | Enable MetaGauntlet opponent sampling |
+| `--gauntlet` | off | Enable MetaGauntlet opponent sampling from QA-clean fully implemented DSL archetypes |
+| `--gauntlet-sampling` | meta | Sampling mode for `--gauntlet`: `meta` threat-index weights or `random` uniform deck sampling |
+| `--generalist` | off | Sample both player decks from eligible fully implemented Rust DSL archetypes |
+| `--curriculum-seed` | none | Seed for generalist deck-pair sampling, independent from the training seed |
+| `--eval-seed` | none | Seed for generalist evaluation deck-pair sampling |
+| `--curriculum-pool` | none | Reuse a frozen generalist deck-pool snapshot |
+| `--curriculum-pool-out` | run directory | Write the frozen generalist deck-pool snapshot to this path |
+| `--init-from` | none | Initialize a fine-tune run from a compatible base checkpoint |
 | `--deck1` | none | Path to player 1 deck file |
+| `--deck-json` / `--deck1-json` | none | Path to JSON file containing a flat list of player 1 card IDs |
+| `--deck2` | none | Path to player 2 deck file; mutually exclusive with `--gauntlet` |
+| `--deck2-json` | none | Path to JSON file containing a flat list of player 2 card IDs |
 | `--bounty-threshold` | 0.15 | TI threshold for bounty bonus |
 | `--bounty-bonus` | 0.5 | Bonus reward for beating high-TI opponents |
 | `--lstm` | off | Use LSTM policy (MaskableRecurrentPPO) |
@@ -97,6 +122,7 @@ python code/tools/meta_loader.py --build
 - Scrapes tournament data from DigiLab, DigimonMeta, Egman Events.
 - Outputs: `data/deck_library.json`.
 - Format: archetypes → decklists + `digilab_stats`.
+- Runtime gauntlet loading keeps only archetypes whose `qa/qa-reports/validated_cards_dsl.json` entries are all `IMPLEMENTED`, then keeps only decklists where every card ID is present in the Rust engine's implemented-card registry.
 
 ### Configuration Parameters
 
@@ -122,7 +148,78 @@ for row in g.get_archetype_summary()[:10]:
 
 ---
 
-## 3. GauntletOrchestrator Pipeline
+## 3. Generalist Pilot Pretraining
+
+Generalist pilot pretraining creates a reusable base weights file by exposing
+the pilot to multiple fully implemented Rust DSL archetypes. Unlike gauntlet
+training, which varies only the opponent deck, generalist mode samples both
+`deck1` and `deck2` on each episode reset.
+
+Sampling is intentionally broad:
+
+1. Choose a fully eligible archetype uniformly.
+2. Choose a deck uniformly from that archetype.
+3. Repeat independently for `deck1` and `deck2`.
+
+This avoids over-weighting archetypes simply because they have more decklists
+in `data/deck_library.json`.
+
+### Pretraining a Base Model
+
+```bash
+python -m digimon_gym.agents.pilot_training \
+  --generalist \
+  --curriculum-seed 123 \
+  --eval-seed 999 \
+  --tensor-profile standard_lite_v2 \
+  --timesteps 5000000
+```
+
+At run start, the trainer writes a frozen `deck_pool_snapshot.json` unless
+`--curriculum-pool` points at an existing snapshot. The snapshot records the
+eligible archetypes, stable content-addressed deck IDs, deck contents, and a
+snapshot hash. Reusing the same snapshot and `--curriculum-seed` keeps the
+deck-pair curriculum stable even after `data/deck_library.json` is rebuilt.
+
+### Tensor-Profile A/B Comparison
+
+Use the same training seed, curriculum seed, eval seed, and frozen pool for
+both runs. The model weights will not be bit-identical across tensor profiles,
+but the sampled deck curriculum is held constant.
+
+```bash
+python -m digimon_gym.agents.pilot_training \
+  --generalist \
+  --curriculum-pool models/generalist_a/deck_pool_snapshot.json \
+  --curriculum-seed 123 \
+  --eval-seed 999 \
+  --tensor-profile standard_lite_v2 \
+  --timesteps 5000000
+```
+
+### Fine-Tuning an Archetype Pilot
+
+Fine-tuning loads a compatible generalist checkpoint, validates the checkpoint's
+tensor profile, tensor layout hash, and action-space size, then trains with the
+requested fixed archetype deck and opponent curriculum.
+
+```bash
+python -m digimon_gym.agents.pilot_training \
+  --init-from models/generalist_a/final.zip \
+  --deck1 path/to/medusamon.txt \
+  --gauntlet \
+  --gauntlet-sampling meta \
+  --lr 0.00005 \
+  --timesteps 1000000
+```
+
+All explicit `--deck1` / `--deck2` inputs are validated against the Rust
+implemented-card registry before training starts. Invalid decks fail fast and
+list the missing card IDs.
+
+---
+
+## 4. GauntletOrchestrator Pipeline
 
 ### Overview
 
@@ -174,7 +271,7 @@ Interpretation: probability of beating a random meta-field opponent.
 
 ---
 
-## 4. DeckPoolWrapper Usage
+## 5. DeckPoolWrapper Usage
 
 ### Core/Flex Analysis
 
@@ -218,7 +315,7 @@ variants = generate_variants(
 
 ---
 
-## 5. LeagueOpponentWrapper
+## 6. LeagueOpponentWrapper
 
 ### Meta-Weighted Mode
 
@@ -234,7 +331,7 @@ variants = generate_variants(
 
 ---
 
-## 6. Wrapper Chain Reference
+## 7. Wrapper Chain Reference
 
 ### Standard Training Chain
 
@@ -252,7 +349,7 @@ See `pilot_training.make_env()` for the full parameter list covering: opponent s
 
 ---
 
-## 7. TensorBoard Monitoring
+## 8. TensorBoard Monitoring
 
 ### Logged Metrics (WinRateCallback)
 
@@ -274,7 +371,7 @@ Default log directory: `runs/pilot_ppo` (override with `--log-dir`).
 
 ---
 
-## 8. Model Artifacts
+## 9. Model Artifacts
 
 ### Save Location
 
@@ -309,7 +406,7 @@ opponent_fn = make_agent_opponent_fn(
 
 ---
 
-## 9. Training Job Worker Operations
+## 10. Training Job Worker Operations
 
 ### Starting the Worker
 
@@ -336,7 +433,7 @@ The DB queue mechanics, job claiming, stale recovery, and gauntlet hooks are ful
 
 ---
 
-## 10. Dependencies
+## 11. Dependencies
 
 Key RL/ML packages:
 

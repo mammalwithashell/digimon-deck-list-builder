@@ -19,8 +19,13 @@ import pytest
 from digimon_gym.agents.gauntlet import (
     ArchetypeStats,
     DeckEntry,
+    GeneralistDeckPool,
+    GeneralistDeckPoolWrapper,
     GauntletWrapper,
     MetaGauntlet,
+    UnimplementedDeckError,
+    stable_deck_id,
+    validate_implemented_deck,
 )
 
 
@@ -63,7 +68,7 @@ def _make_archetype(
     decklists = []
     for i in range(n_decks):
         # Minimal valid deck: 50 main + 5 eggs, stored as TTS format JSON array string
-        card_ids = [f"BT24-{i:03d}"] * 46 + ["ST1-03"] * 4 + ["ST1-01"] * 5
+        card_ids = ["BT12-022"] * 50 + ["BT12-002"] * 5
         tts_decklist = json.dumps(card_ids)
         source = sources.split(",")[i % len(sources.split(","))].strip()
         decklists.append({
@@ -165,6 +170,200 @@ class TestMetaGauntlet:
         g.load(basic_library)
         assert g.archetype_count == 3
         assert g.deck_count == 6  # 3 + 2 + 1
+
+    def test_load_filters_decks_with_unimplemented_cards_by_default(self, tmp_path):
+        lib = _make_deck_library({
+            "Implemented": _make_archetype(
+                "Implemented", n_decks=1,
+                digilab_times_played=10, digilab_conversion_rate=0.20,
+            ),
+            "GapDeck": _make_archetype(
+                "GapDeck", n_decks=1,
+                digilab_times_played=10, digilab_conversion_rate=0.90,
+            ),
+        })
+        gap_deck = ["BT12-022"] * 49 + ["BT99-999"] + ["BT12-002"] * 5
+        lib["archetypes"]["GapDeck"]["decklists"][0]["decklist"] = json.dumps(gap_deck)
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022"})
+        g.load(str(path))
+
+        assert set(g.archetypes) == {"Implemented"}
+        assert g.deck_count == 1
+        assert g._deck_pool[0].archetype_name == "Implemented"
+
+    def test_load_filters_archetypes_with_partial_dsl_verdicts(self, tmp_path):
+        lib = _make_deck_library({
+            "Ready": _make_archetype(
+                "Ready", n_decks=1,
+                digilab_times_played=10, digilab_conversion_rate=0.20,
+            ),
+            "StillPartial": _make_archetype(
+                "StillPartial", n_decks=1,
+                digilab_times_played=10, digilab_conversion_rate=0.90,
+            ),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        g = MetaGauntlet(
+            implemented_card_ids={"BT12-002", "BT12-022"},
+            fully_implemented_archetypes={"Ready"},
+        )
+        g.load(str(path))
+
+        assert set(g.archetypes) == {"Ready"}
+        assert g.deck_count == 1
+        assert g._deck_pool[0].archetype_name == "Ready"
+
+    def test_random_sampling_mode_uses_uniform_deck_weights(self, tmp_path):
+        lib = _make_deck_library({
+            "HighTI": _make_archetype(
+                "HighTI", n_decks=3,
+                digilab_times_played=100, digilab_conversion_rate=0.90,
+            ),
+            "LowTI": _make_archetype(
+                "LowTI", n_decks=1,
+                digilab_times_played=5, digilab_conversion_rate=0.01,
+            ),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        g = MetaGauntlet(
+            sampling_mode="random",
+            implemented_card_ids={"BT12-002", "BT12-022"},
+        )
+        g.load(str(path))
+
+        assert g.deck_count == 4
+        assert np.allclose(g._weights, np.ones(4) / 4)
+        assert g.archetypes["HighTI"].sampling_probability == pytest.approx(0.75)
+        assert g.archetypes["LowTI"].sampling_probability == pytest.approx(0.25)
+
+    def test_loaded_decks_use_stable_content_addressed_ids(self, tmp_path):
+        lib = _make_deck_library({
+            "Ready": _make_archetype("Ready", n_decks=1),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022"})
+        g.load(str(path))
+
+        deck = g._deck_pool[0]
+        assert deck.deck_id == stable_deck_id(deck.card_ids)
+        assert deck.source_deck_id == "ready_000"
+
+    def test_validate_implemented_deck_reports_missing_ids(self):
+        with pytest.raises(UnimplementedDeckError, match="BT99-999"):
+            validate_implemented_deck(
+                ["BT12-022", "BT99-999", "BT99-999"],
+                {"BT12-022"},
+                label="test deck",
+            )
+
+    def test_generalist_snapshot_round_trip_and_hash(self, tmp_path):
+        lib = _make_deck_library({
+            "A": _make_archetype("A", n_decks=1),
+            "B": _make_archetype("B", n_decks=2),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022"})
+        g.load(str(path))
+        pool = g.as_generalist_pool()
+        snapshot = tmp_path / "pool.json"
+
+        written_hash = pool.write_snapshot(snapshot)
+        loaded = GeneralistDeckPool.from_snapshot(
+            snapshot,
+            implemented_card_ids={"BT12-002", "BT12-022"},
+        )
+
+        assert loaded.snapshot_hash == written_hash
+        assert loaded.archetype_names == ["A", "B"]
+        assert loaded.deck_count == 3
+
+    def test_snapshot_reuse_is_independent_of_library_order(self, tmp_path):
+        lib = _make_deck_library({
+            "A": _make_archetype("A", n_decks=1),
+            "B": _make_archetype("B", n_decks=2),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022"})
+        g.load(str(path))
+        snapshot = tmp_path / "pool.json"
+        g.as_generalist_pool().write_snapshot(snapshot)
+
+        pool1 = GeneralistDeckPool.from_snapshot(snapshot)
+        pool2 = GeneralistDeckPool.from_snapshot(snapshot)
+        rng1 = np.random.default_rng(123)
+        rng2 = np.random.default_rng(123)
+
+        seq1 = [pool1.sample_uniform_archetype(rng1).deck_id for _ in range(12)]
+        seq2 = [pool2.sample_uniform_archetype(rng2).deck_id for _ in range(12)]
+
+        assert seq1 == seq2
+
+    def test_different_curriculum_seeds_change_deck_pair_schedule(self, tmp_path):
+        lib = _make_deck_library({
+            "A": _make_archetype("A", n_decks=3),
+            "B": _make_archetype("B", n_decks=3),
+        })
+        variants = [
+            ["BT12-022"] * 50 + ["BT12-002"] * 5,
+            ["BT12-022"] * 49 + ["BT12-031"] + ["BT12-002"] * 5,
+            ["BT12-022"] * 48 + ["BT12-031"] * 2 + ["BT12-002"] * 5,
+        ]
+        for archetype in lib["archetypes"].values():
+            for idx, decklist in enumerate(archetype["decklists"]):
+                decklist["decklist"] = json.dumps(variants[idx])
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022", "BT12-031"})
+        g.load(str(path))
+        pool = g.as_generalist_pool()
+
+        seq1 = [
+            pool.sample_uniform_archetype(np.random.default_rng(seed)).deck_id
+            for seed in range(10, 20)
+        ]
+        seq2 = [
+            pool.sample_uniform_archetype(np.random.default_rng(seed)).deck_id
+            for seed in range(20, 30)
+        ]
+
+        assert seq1 != seq2
+        all_deck_ids = {
+            deck.deck_id
+            for decks in pool.archetypes.values()
+            for deck in decks
+        }
+        assert set(seq1).issubset(all_deck_ids)
+        assert set(seq2).issubset(all_deck_ids)
+
+    def test_uniform_archetype_sampling_ignores_deck_count_bias(self, tmp_path):
+        lib = _make_deck_library({
+            "ManyDecks": _make_archetype("ManyDecks", n_decks=10),
+            "OneDeck": _make_archetype("OneDeck", n_decks=1),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022"})
+        g.load(str(path))
+        pool = g.as_generalist_pool()
+        rng = np.random.default_rng(7)
+
+        counts = {"ManyDecks": 0, "OneDeck": 0}
+        for _ in range(2000):
+            counts[pool.sample_uniform_archetype(rng).archetype_name] += 1
+
+        assert abs(counts["ManyDecks"] / 2000 - 0.5) < 0.06
+        assert abs(counts["OneDeck"] / 2000 - 0.5) < 0.06
 
     def test_ti_uses_digilab_stats_not_scraper(self, basic_library):
         """TI must be computed from DigiLab meta_share/conversion_rate,
@@ -566,6 +765,30 @@ class TestGauntletWrapper:
         wrapper.reset()
         assert wrapper.current_opponent is not None
         assert isinstance(wrapper.current_opponent, DeckEntry)
+
+    def test_generalist_wrapper_injects_both_decks(self, tmp_path):
+        env = self._make_mock_env()
+        g = self._make_gauntlet(tmp_path)
+        pool = g.as_generalist_pool()
+        wrapper = GeneralistDeckPoolWrapper(env, pool, seed=42)
+
+        captured_kwargs = {}
+        original_reset = env.reset
+
+        def spy_reset(**kwargs):
+            captured_kwargs.update(kwargs)
+            return original_reset(**kwargs)
+
+        env.reset = spy_reset
+        _obs, info = wrapper.reset()
+
+        options = captured_kwargs["options"]
+        assert len(options["deck1"]) > 0
+        assert len(options["deck2"]) > 0
+        assert info["deck1_archetype"] in pool.archetype_names
+        assert info["opponent_archetype"] in pool.archetype_names
+        assert info["deck1_deck_id"] == wrapper.current_deck1.deck_id
+        assert info["opponent_deck_id"] == wrapper.current_deck2.deck_id
 
 
 # ─── Override Meta Shares ─────────────────────────────────────────────

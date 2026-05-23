@@ -61,6 +61,17 @@ class TrainingRunMetadata:
     action_space_size: int = 0
     card_registry_capacity: int = 0
     embedding_dim: int = 0
+    training_mode: str = "standard"
+    sampling_policy: str = ""
+    training_seed: int | None = None
+    curriculum_seed: int | None = None
+    eval_seed: int | None = None
+    deck_pool_snapshot_path: str = ""
+    deck_pool_snapshot_hash: str = ""
+    eligible_archetypes: list[str] = field(default_factory=list)
+    eligible_deck_count: int = 0
+    base_checkpoint: str = ""
+    fine_tune_deck_config: dict = field(default_factory=dict)
 
     # Aggregate results
     final_win_rate: float | None = None
