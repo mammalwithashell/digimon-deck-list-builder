@@ -341,7 +341,14 @@ impl Game {
         if self.turn_count > self.rules.max_turns {
             self.game_over = true;
             // Draw - no winner
+            self.terminal_outcome_reason = Some(crate::game::TerminalOutcomeReason::StepLimit);
             self.current_phase = GamePhase::GameOver;
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::GameOver {
+                seq,
+                winner: None,
+                reason: crate::game::TerminalOutcomeReason::StepLimit,
+            });
             return;
         }
 

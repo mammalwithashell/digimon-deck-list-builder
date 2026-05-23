@@ -8,12 +8,19 @@ Requires: pip install stable-baselines3 sb3-contrib
 
 import sys
 import os
+import json
+import tempfile
 
 # Ensure project root is on path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import numpy as np
 from digimon_gym.digimon_gym import DigimonEnv
+from digimon_gym.agents.training_recording import (
+    TrainingGameRecorder,
+    TrainingRecordingWrapper,
+    assert_minimal_training_recording_artifact,
+)
 
 
 def test_manual_loop():
@@ -94,11 +101,53 @@ def test_sb3_maskable_ppo():
     print("  MaskablePPO training (1000 steps): PASSED!")
 
 
+def test_recording_smoke():
+    """Validate a recording-enabled episode emits a replay artifact."""
+    print()
+    print("=" * 60)
+    print("Test 4: Recording-enabled Episode")
+    print("=" * 60)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        recorder = TrainingGameRecorder(tmpdir, mode="all", max_recordings=1)
+        env = TrainingRecordingWrapper(
+            DigimonEnv(record_actions=True),
+            recorder,
+            source="smoke",
+        )
+        obs, info = env.reset(seed=7)
+        steps = 0
+        done = False
+        while not done:
+            mask = info["action_mask"]
+            valid_actions = np.where(mask > 0)[0]
+            action = int(valid_actions[0]) if len(valid_actions) > 0 else 62
+            obs, reward, terminated, truncated, info = env.step(action)
+            steps += 1
+            done = terminated or truncated
+
+        files = [name for name in os.listdir(tmpdir) if name.endswith(".json")]
+        assert len(files) == 1, f"Expected one recording artifact, got {files}"
+        path = os.path.join(tmpdir, files[0])
+        with open(path, "r", encoding="utf-8") as f:
+            artifact = json.load(f)
+        assert_minimal_training_recording_artifact(artifact)
+        recording = artifact["recording"]
+        outcome = artifact["outcome"]
+        assert recording["initial_state"], "Recording must include initial state"
+        assert recording["actions"], "Recording must include action trace"
+        assert recording["total_actions"] == len(recording["actions"])
+        assert outcome["winner_id"] is not None or outcome["draw_reason"]
+        print(f"  Episode finished in {steps} steps")
+        print(f"  Outcome: {outcome}")
+        print("  Recording smoke: PASSED!")
+
+
 def test_sb3_maskable_recurrent_ppo():
     """Validate MaskableRecurrentPPO (LSTM + action masking) on DigimonEnv."""
     print()
     print("=" * 60)
-    print("Test 4: MaskableRecurrentPPO Training (256 steps)")
+    print("Test 5: MaskableRecurrentPPO Training (256 steps)")
     print("=" * 60)
 
     try:
@@ -157,6 +206,7 @@ if __name__ == "__main__":
     test_manual_loop()
     test_gymnasium_env_checker()
     test_sb3_maskable_ppo()
+    test_recording_smoke()
     test_sb3_maskable_recurrent_ppo()
     print()
     print("=" * 60)

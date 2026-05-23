@@ -65,7 +65,7 @@ pub use debug_runner::{DebugRunner, DebugRunnerBuilder};
 pub use effect::{CardEffect, Effect, EffectBuilder};
 pub use effect_context::{CountCappedZone, DistinctByMode, EffectContext, EffectReadContext};
 pub use enums::*;
-pub use game::Game;
+pub use game::{Game, TerminalOutcomeReason};
 pub use inference::{load_policy, InferenceError, OnnxLstmPolicy, OnnxMlpPolicy, OnnxPolicy};
 pub use logger::{GameLogger, SilentLogger, VerboseLogger};
 pub use modifiers::{ModifierEntry, ModifierRegistry, PlayerModifierEntry};

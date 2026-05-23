@@ -28,6 +28,8 @@ def _make_runner(
     deck2: List[str],
     seed: Optional[int] = None,
     tensor_profile: str = "standard_compact_v1",
+    record_actions: bool = False,
+    record_tensors: bool = False,
 ):
     """Build the game runner chosen by the `DIGIMON_BACKEND` env var.
 
@@ -62,6 +64,8 @@ def _make_runner(
         return RustHeadlessGame(
             deck1,
             deck2,
+            record_actions=record_actions,
+            record_tensors=record_tensors,
             seed=seed,
             observation_profile=tensor_profile,
         )
@@ -71,7 +75,7 @@ def _make_runner(
             "or an unset DIGIMON_BACKEND with Rust bindings available"
         )
     if seed is None:
-        return HeadlessGame(deck1, deck2)
+        return HeadlessGame(deck1, deck2, record_actions=record_actions, record_tensors=record_tensors)
     rng_state = random.getstate()
     original_choice = random.choice
 
@@ -83,7 +87,7 @@ def _make_runner(
     try:
         random.seed(seed)
         random.choice = seeded_choice
-        return HeadlessGame(deck1, deck2)
+        return HeadlessGame(deck1, deck2, record_actions=record_actions, record_tensors=record_tensors)
     finally:
         random.choice = original_choice
         random.setstate(rng_state)
@@ -142,7 +146,9 @@ class DigimonEnv(gymnasium.Env):
                  deck2: Optional[List[str]] = None,
                  render_mode: Optional[str] = None,
                  max_turns: int = 100,
-                 tensor_profile: Optional[str] = None):
+                 tensor_profile: Optional[str] = None,
+                 record_actions: bool = False,
+                 record_tensors: bool = False):
         super().__init__()
 
         # Observation and action spaces
@@ -167,6 +173,8 @@ class DigimonEnv(gymnasium.Env):
 
         self.render_mode = render_mode
         self.max_turns = max_turns
+        self.record_actions = bool(record_actions)
+        self.record_tensors = bool(record_tensors)
         self.runner: Optional[HeadlessGame] = None
         self._step_count = 0
 
@@ -201,6 +209,8 @@ class DigimonEnv(gymnasium.Env):
             "p2_security": len(game.player2.security_cards),
             "p1_total_dp": sum((p.dp or 0) for p in game.player1.battle_area),
             "p2_total_dp": sum((p.dp or 0) for p in game.player2.battle_area),
+            "terminal_reason": None,
+            "terminal_result": None,
         }
 
     @property
@@ -217,6 +227,36 @@ class DigimonEnv(gymnasium.Env):
     def winner_id(self) -> Optional[int]:
         winner = self._rl_state().get("winner_id")
         return int(winner) if winner is not None else None
+
+    def terminal_outcome(self) -> Dict[str, Any]:
+        if self.runner is None:
+            return {
+                "game_over": False,
+                "winner_id": None,
+                "result": None,
+                "reason": None,
+            }
+        get_outcome = getattr(self.runner, "get_terminal_outcome", None)
+        if get_outcome is not None:
+            return dict(get_outcome())
+        state = self._rl_state()
+        winner = state.get("winner_id")
+        game_over = bool(state.get("game_over", False))
+        return {
+            "game_over": game_over,
+            "winner_id": winner,
+            "result": "win" if game_over and winner is not None else None,
+            "reason": "unknown_win" if game_over and winner is not None else None,
+        }
+
+    def get_recording(self) -> Optional[Dict[str, Any]]:
+        if self.runner is None:
+            return None
+        get_recording = getattr(self.runner, "get_recording", None)
+        if get_recording is None:
+            return None
+        recording = get_recording()
+        return dict(recording) if recording is not None else None
 
     def greedy_action(self) -> int:
         if self.runner is None:
@@ -258,6 +298,8 @@ class DigimonEnv(gymnasium.Env):
             deck2,
             seed=runner_seed,
             tensor_profile=self.tensor_profile,
+            record_actions=self.record_actions,
+            record_tensors=self.record_tensors,
         )
         self._step_count = 0
 

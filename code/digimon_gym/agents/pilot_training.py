@@ -61,6 +61,10 @@ from digimon_gym.agents.maskable_recurrent import (
 )
 from digimon_gym.agents.opponent_pool import OpponentPool
 from digimon_gym.agents.training_config import TrainingConfig
+from digimon_gym.agents.training_recording import (
+    TrainingGameRecorder,
+    TrainingRecordingWrapper,
+)
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -589,7 +593,10 @@ def make_env(opponent: str = "greedy",
              deck_pool_hybrid_max: int = 10,
              generalist_deck_pool: Optional[GeneralistDeckPool] = None,
              curriculum_seed: Optional[int] = None,
-             tensor_profile: str = "standard_lite_v2") -> gymnasium.Env:
+             tensor_profile: str = "standard_lite_v2",
+             recording_writer: Optional[TrainingGameRecorder] = None,
+             recording_source: str = "train",
+             recording_env_index: int = 0) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -624,7 +631,18 @@ def make_env(opponent: str = "greedy",
     if generalist_deck_pool is not None and deck_pool_variants:
         raise ValueError("generalist deck sampling cannot be combined with deck_pool_variants")
 
-    base_env = DigimonEnv(deck1=deck1, deck2=deck2, tensor_profile=tensor_profile)
+    record_this_source = (
+        recording_writer is not None
+        and recording_writer.enabled
+        and not (recording_source == "train" and recording_writer.mode == "eval")
+    )
+    base_env = DigimonEnv(
+        deck1=deck1,
+        deck2=deck2,
+        tensor_profile=tensor_profile,
+        record_actions=record_this_source,
+        record_tensors=record_this_source and recording_writer.record_tensors,
+    )
 
     if opponent == "self-play":
         env = base_env
@@ -674,6 +692,14 @@ def make_env(opponent: str = "greedy",
             bounty_bonus=bounty_bonus,
         )
 
+    if record_this_source:
+        env = TrainingRecordingWrapper(
+            env,
+            recording_writer,
+            source=recording_source,
+            env_index=recording_env_index,
+        )
+
     def mask_fn(env):
         return _unwrap_to_digimon_env(env).action_mask()
 
@@ -687,15 +713,23 @@ def make_vec_env(
     deck2: Optional[List[str]] = None,
     generalist_deck_pool: Optional[GeneralistDeckPool] = None,
     curriculum_seed: Optional[int] = None,
+    recording_writer: Optional[TrainingGameRecorder] = None,
 ):
     """Build ActionMasker-wrapped vector environments from TrainingConfig."""
 
     def _factory(rank: int):
         def _init():
+            record_this_source = (
+                recording_writer is not None
+                and recording_writer.enabled
+                and recording_writer.mode != "eval"
+            )
             base_env = DigimonEnv(
                 deck1=deck1,
                 deck2=deck2,
                 tensor_profile=cfg.tensor_profile,
+                record_actions=record_this_source,
+                record_tensors=record_this_source and recording_writer.record_tensors,
             )
             wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
             if generalist_deck_pool is not None:
@@ -704,6 +738,13 @@ def make_vec_env(
                     wrapped,
                     deck_pool=generalist_deck_pool,
                     seed=seed,
+                )
+            if record_this_source:
+                wrapped = TrainingRecordingWrapper(
+                    wrapped,
+                    recording_writer,
+                    source="train",
+                    env_index=rank,
                 )
 
             def mask_fn(env):
@@ -851,6 +892,21 @@ def train(total_timesteps: int = 100_000,
     observation_layout = get_tensor_profile(cfg.tensor_profile)
     run_name = cfg.run_name or datetime.now().strftime("pilot_ppo_%Y%m%d_%H%M%S")
     run_dir = Path(save_dir) / run_name
+    recordings_dir = Path(cfg.record_games_dir) if cfg.record_games_dir else run_dir / "recordings"
+    recording_writer = TrainingGameRecorder(
+        recordings_dir,
+        mode=cfg.record_games,
+        max_recordings=cfg.record_games_max,
+        sample_rate=cfg.record_games_sample_rate,
+        record_tensors=cfg.record_game_tensors,
+        run_metadata={
+            "run_name": run_name,
+            "backend": os.environ.get("DIGIMON_BACKEND") or "auto",
+            "tensor_profile": observation_layout.id,
+            "tensor_layout_hash": observation_layout.layout_hash,
+        },
+        seed=cfg.seed,
+    )
     if cfg.resume_from and cfg.init_from:
         raise ValueError("resume_from and init_from are mutually exclusive")
     if cfg.init_from:
@@ -885,6 +941,8 @@ def train(total_timesteps: int = 100_000,
         )
         if observation_layout.layout_hash:
             print(f"  Layout hash:    {observation_layout.layout_hash}")
+        if recording_writer.enabled:
+            print(f"  Record games:   {cfg.record_games} -> {recordings_dir}")
         if gauntlet and gauntlet.deck_count > 0:
             print(f"  Gauntlet:       {gauntlet.archetype_count} archetypes, "
                   f"{gauntlet.deck_count} decks")
@@ -916,6 +974,7 @@ def train(total_timesteps: int = 100_000,
             deck2=deck2,
             generalist_deck_pool=generalist_deck_pool,
             curriculum_seed=curriculum_seed,
+            recording_writer=recording_writer,
         )
     elif cfg.n_envs > 1:
         opponent_policies = {"greedy": greedy_policy, "random": random_policy}
@@ -928,6 +987,7 @@ def train(total_timesteps: int = 100_000,
             deck2=deck2,
             generalist_deck_pool=generalist_deck_pool,
             curriculum_seed=curriculum_seed,
+            recording_writer=recording_writer,
         )
     else:
         env = make_env(
@@ -944,6 +1004,8 @@ def train(total_timesteps: int = 100_000,
             generalist_deck_pool=generalist_deck_pool,
             curriculum_seed=curriculum_seed,
             tensor_profile=cfg.tensor_profile,
+            recording_writer=recording_writer,
+            recording_source="train",
         )
 
     # Load autoencoder embeddings for warm-start (if available)
@@ -1034,6 +1096,8 @@ def train(total_timesteps: int = 100_000,
                 deck1=deck1,
                 deck2=deck2,
                 tensor_profile=cfg.tensor_profile,
+                record_actions=recording_writer.enabled,
+                record_tensors=recording_writer.enabled and recording_writer.record_tensors,
             )
             wrapped = OpponentWrapper(base_env, opponent_fn=pool_opponent_fn)
             if generalist_deck_pool is not None:
@@ -1041,6 +1105,13 @@ def train(total_timesteps: int = 100_000,
                     wrapped,
                     deck_pool=generalist_deck_pool,
                     seed=eval_seed if eval_seed is not None else curriculum_seed,
+                )
+            if recording_writer.enabled:
+                wrapped = TrainingRecordingWrapper(
+                    wrapped,
+                    recording_writer,
+                    source="eval",
+                    env_index=0,
                 )
             return ActionMasker(
                 wrapped,
@@ -1058,6 +1129,8 @@ def train(total_timesteps: int = 100_000,
             generalist_deck_pool=generalist_deck_pool,
             curriculum_seed=eval_seed if eval_seed is not None else curriculum_seed,
             tensor_profile=cfg.tensor_profile,
+            recording_writer=recording_writer,
+            recording_source="eval",
         )
     eval_suite = None
     if cfg.eval_suite:
@@ -1332,6 +1405,28 @@ def main():
         "--tensor-profile", type=str, default=None,
         help="Observation tensor profile, e.g. standard_compact_v1 or standard_lite_v2."
     )
+    parser.add_argument(
+        "--record-games",
+        choices=["off", "all", "sampled", "draws", "anomalies", "eval"],
+        default=None,
+        help="Persist selected training/eval game recording artifacts."
+    )
+    parser.add_argument(
+        "--record-games-dir", type=str, default=None,
+        help="Directory for game recording artifacts. Defaults to <run>/recordings."
+    )
+    parser.add_argument(
+        "--record-game-tensors", action="store_true",
+        help="Include per-step tensor and action-mask snapshots in recordings."
+    )
+    parser.add_argument(
+        "--record-games-max", type=int, default=None,
+        help="Maximum recording artifacts to save for this run."
+    )
+    parser.add_argument(
+        "--record-games-sample-rate", type=float, default=None,
+        help="Sample rate for --record-games sampled."
+    )
 
     args = parser.parse_args()
     if args.gauntlet and (args.deck2 or args.deck2_json):
@@ -1366,8 +1461,14 @@ def main():
         "curriculum_pool": args.curriculum_pool,
         "curriculum_pool_out": args.curriculum_pool_out,
         "init_from": args.init_from,
+        "record_games": args.record_games,
+        "record_games_dir": args.record_games_dir,
+        "record_games_max": args.record_games_max,
+        "record_games_sample_rate": args.record_games_sample_rate,
     }
     overrides.update({key: value for key, value in legacy_overrides.items() if value is not None})
+    if args.record_game_tensors:
+        overrides["record_game_tensors"] = True
     if args.self_play:
         overrides["opponent"] = "self-play"
     elif args.opponent is not None:

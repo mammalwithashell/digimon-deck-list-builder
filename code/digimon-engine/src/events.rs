@@ -13,6 +13,7 @@
 //! `Game::drain_events` (the runner does this around each `step`).
 
 use crate::enums::{GamePhase, PlayerId};
+use crate::game::TerminalOutcomeReason;
 
 /// Tagged event payload. `#[non_exhaustive]` on each variant would force
 /// Python consumers to pattern-match defensively forever; we prefer the
@@ -98,7 +99,11 @@ pub enum GameEvent {
     },
 
     /// The game ended. `winner` is `None` on a draw.
-    GameOver { seq: u64, winner: Option<PlayerId> },
+    GameOver {
+        seq: u64,
+        winner: Option<PlayerId>,
+        reason: TerminalOutcomeReason,
+    },
 }
 
 impl GameEvent {

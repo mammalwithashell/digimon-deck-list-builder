@@ -55,6 +55,38 @@ impl std::fmt::Display for OverclockError {
 
 impl std::error::Error for OverclockError {}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TerminalOutcomeReason {
+    SecurityAttack,
+    DeckOut,
+    EngineDeclared,
+    UnknownWin,
+    StepLimit,
+    Crash,
+    UnknownDraw,
+}
+
+impl TerminalOutcomeReason {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::SecurityAttack => "security_attack",
+            Self::DeckOut => "deck_out",
+            Self::EngineDeclared => "engine_declared",
+            Self::UnknownWin => "unknown_win",
+            Self::StepLimit => "step_limit",
+            Self::Crash => "crash",
+            Self::UnknownDraw => "unknown_draw",
+        }
+    }
+
+    pub fn result(self) -> &'static str {
+        match self {
+            Self::StepLimit | Self::Crash | Self::UnknownDraw => "draw",
+            Self::SecurityAttack | Self::DeckOut | Self::EngineDeclared | Self::UnknownWin => "win",
+        }
+    }
+}
+
 fn face_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     if card_data.effect_text.is_empty()
         && card_data.inherited_text.is_empty()
@@ -170,6 +202,7 @@ pub struct Game {
     pub turn_player_idx: usize,
     pub game_over: bool,
     pub winner: Option<PlayerId>,
+    pub terminal_outcome_reason: Option<TerminalOutcomeReason>,
     /// Shared card data store (all cards in the game reference into this).
     pub card_data: Vec<CardData>,
     /// Compiled DSL alternate digivolution paths keyed by result card id.
@@ -736,6 +769,7 @@ impl Game {
             turn_player_idx: 0,
             game_over: false,
             winner: None,
+            terminal_outcome_reason: None,
             card_data: card_data_store,
             #[cfg(feature = "dsl-yaml-loader")]
             alt_path_registry,
@@ -1632,11 +1666,13 @@ impl Game {
             self.game_over = true;
             let opponents = self.opponents(player_id);
             self.winner = opponents.first().copied();
+            self.terminal_outcome_reason = Some(TerminalOutcomeReason::DeckOut);
             self.current_phase = GamePhase::GameOver;
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::GameOver {
                 seq,
                 winner: self.winner,
+                reason: TerminalOutcomeReason::DeckOut,
             });
         } else {
             // Multiplayer: elimination
@@ -1655,11 +1691,13 @@ impl Game {
         if self.turn_order.len() == 1 {
             self.game_over = true;
             self.winner = Some(self.turn_order[0]);
+            self.terminal_outcome_reason = Some(TerminalOutcomeReason::EngineDeclared);
             self.current_phase = GamePhase::GameOver;
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::GameOver {
                 seq,
                 winner: self.winner,
+                reason: TerminalOutcomeReason::EngineDeclared,
             });
         }
 
@@ -1671,13 +1709,24 @@ impl Game {
 
     /// Declare a winner (e.g., after a direct attack on a player with 0 security).
     pub fn declare_winner(&mut self, winner_id: PlayerId) {
+        self.declare_winner_with_reason(winner_id, TerminalOutcomeReason::EngineDeclared);
+    }
+
+    /// Declare a winner with an explicit terminal reason.
+    pub fn declare_winner_with_reason(
+        &mut self,
+        winner_id: PlayerId,
+        reason: TerminalOutcomeReason,
+    ) {
         self.game_over = true;
         self.winner = Some(winner_id);
+        self.terminal_outcome_reason = Some(reason);
         self.current_phase = GamePhase::GameOver;
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::GameOver {
             seq,
             winner: self.winner,
+            reason,
         });
     }
 

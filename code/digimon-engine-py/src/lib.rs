@@ -686,6 +686,14 @@ impl RustHeadlessGame {
         let d = PyDict::new_bound(py);
         d.set_item("game_over", game.game_over)?;
         d.set_item("winner_id", to_python_pid(game.winner.unwrap_or(u8::MAX)))?;
+        d.set_item(
+            "terminal_reason",
+            game.terminal_outcome_reason.map(|reason| reason.as_str()),
+        )?;
+        d.set_item(
+            "terminal_result",
+            game.terminal_outcome_reason.map(|reason| reason.result()),
+        )?;
         d.set_item("current_player_id", current_player)?;
         d.set_item("phase", game.current_phase.py_name())?;
         d.set_item("memory", game.memory)?;
@@ -806,6 +814,16 @@ impl RustHeadlessGame {
             None => Ok(py.None()),
             Some(v) => json_to_pyobject(py, &v),
         }
+    }
+
+    fn get_terminal_outcome(&self, py: Python) -> PyResult<PyObject> {
+        let d = PyDict::new_bound(py);
+        let reason = self.inner.terminal_outcome_reason();
+        d.set_item("game_over", self.inner.is_game_over())?;
+        d.set_item("winner_id", to_python_pid(self.inner.winner_id()))?;
+        d.set_item("result", reason.map(|r| r.result()))?;
+        d.set_item("reason", reason.map(|r| r.as_str()))?;
+        Ok(d.into_py(py))
     }
 
     #[getter]
@@ -1002,9 +1020,11 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             d.set_item("player", py_pid(*defender))?;
             d.set_item("source_card_id", card_id.as_str())?;
         }
-        GameEvent::GameOver { winner, .. } => {
+        GameEvent::GameOver { winner, reason, .. } => {
             let meta = PyDict::new_bound(py);
             meta.set_item("winner", winner.map(|w| py_pid(w)))?;
+            meta.set_item("reason", reason.as_str())?;
+            meta.set_item("result", reason.result())?;
             d.set_item("meta", meta)?;
         }
         _ => {
