@@ -1,0 +1,189 @@
+# P-118 Wormmon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Larva.
+# Attribute: Free.
+# Evo costs: Lv.2 Green / cost 0.
+#
+# Printed effect text (data/cards.json — verbatim):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 green or blue card
+#   with 2 or more colors and 1 Tamer card with [Ken Ichijoji] in its name
+#   among them to the hand. Return the rest to the bottom of the deck.
+#
+# Inherited effect text (data/cards.json — verbatim):
+#   [End of Your Turn] This Digimon and any of your other Digimon may DNA
+#   digivolve into a Digimon card in the hand.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/P/Green/P_118.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Two blocks in DCGO (P_118.cs):
+#
+#   (A) `EffectTiming.OnEnterFieldAnyone` activate (lines 16-88) — the
+#       [On Play] reveal-3 + 2-bucket selection.
+#
+#       `SetUpActivateClass(..., -1, false, ...)` → `isOptional: false` —
+#       outer trigger is MANDATORY (printed text has no "you may"; the
+#       reveal-and-add fires if the activate condition holds). No
+#       `optional: true` on the clause.
+#
+#       `CanActivateCondition`: `IsExistOnBattleArea(card) &&
+#         card.Owner.LibraryCards.Count >= 1` — requires at least 1 deck
+#         card. Engine already guards this (empty reveal skips buckets).
+#
+#       Bucket 1 — `CanSelectCardCondition` (lines 28-31):
+#         `(cardSource.CardColors.Count >= 2 &&
+#          (cardSource.CardColors.Contains(CardColor.Blue) ||
+#           cardSource.CardColors.Contains(CardColor.Green)))`
+#         → filter: `all_of: [self_color_count_gte: 2, any_of: [color_is: green, color_is: blue]]`
+#         `mode: AddHand`, `maxCount: 1`.
+#
+#       Bucket 2 — `CanSelectCardCondition1` (lines 33-43):
+#         `cardSource.IsTamer && cardSource.ContainsCardName("Ken Ichijoji")`
+#         → filter: `all_of: [kind: tamer, name_contains: "Ken Ichijoji"]`
+#         `mode: AddHand`, `maxCount: 1`.
+#
+#       `remainingCardsPlace: RemainingCardsPlace.DeckBottom` →
+#       `place_remainder_on_deck { position: bottom }`.
+#
+#       DCGO uses `SimplifiedRevealDeckTopCardsAndSelect` with implicit
+#       `mutualConditions` — one card cannot satisfy both buckets.
+#       Authored as `no_duplicate_cards: true`.
+#
+#   (B) `EffectTiming.OnEndTurn` inherited activate (lines 90-174) — the
+#       end-of-your-turn DNA digivolve registration.
+#       `SetUpActivateClass(..., -1, true, ...)` (isOptional: true — DNA
+#       digivolve is always opt-in) and `SetIsInheritedEffect(true)`.
+#       Encoded via `alt_path_registration` declarative (RESOLVED 2026-05-02
+#       in qa/dsl-vocab-gaps.md). Identical shape to BT22-008 and BT22-017.
+#
+# ─── Source-priority audit (printed text wins) ───────────────────────────────
+#
+# Printed [On Play] has no "you may" gate — the outer trigger fires
+# unconditionally when the activate condition holds (deck non-empty).
+# DCGO confirms `isOptional: false` at line 19. → no `optional` flag.
+#
+# Bucket 1: "green OR blue card with 2 or more colors". DCGO models this
+# as `(count >= 2 && (blue || green))`. Printed text makes both the color
+# and the count constraints conjunctive. Encoded as `all_of: [
+#   self_color_count_gte: 2,
+#   any_of: [{color_is: green}, {color_is: blue}]
+# ]`.
+#
+# Bucket 2: "Tamer card with [Ken Ichijoji] in its name". `kind: tamer` +
+# `name_contains: "Ken Ichijoji"`. DCGO `cardSource.IsTamer &&
+# cardSource.ContainsCardName("Ken Ichijoji")` — case-insensitive substring
+# (DCGO `ContainsCardName` uses `.Contains` on the raw name string).
+#
+# Inherited DNA-digivolve "may" is naturally captured by the alt-path
+# framework — DNA digivolve is always an opt-in player action surfaced
+# through the action mask.
+#
+# Sister card: BT22-017 (Gabumon) — identical two-clause structure:
+# `[On Play] reveal-3 + 2-bucket` + `Inherited [EoT] DNA digivolve`.
+# Tests follow the BT22-017 test pattern (bt22_017.rs).
+#
+# ─── Clause 0 status ─────────────────────────────────────────────────────────
+#
+# | Card-text element                                                   | Status     |
+# |---------------------------------------------------------------------|------------|
+# | [On Play] reveal 3, add 1 green/blue 2+color + 1 Ken Ichijoji Tamer | IMPLEMENTED |
+# | Inherited [End of Your Turn] DNA digivolve from hand                | IMPLEMENTED |
+#
+# Both clauses use vocabulary that is already implemented in the DSL:
+#   - `select_reveal_buckets` with two buckets + `no_duplicate_cards`
+#   - `self_color_count_gte: 2` on a card-subject filter (same eval path
+#     as BT12-031 / P-117 — `eval_card_fields` at predicate.rs:1772)
+#   - `any_of: [{color_is: green}, {color_is: blue}]` — standard compound
+#   - `name_contains: "Ken Ichijoji"` — standard name_contains leaf
+#   - `kind: alt_path_registration, scope: inherited, trigger: end_of_your_turn`
+#     (BT22-008 / BT22-017 shape, RESOLVED 2026-05-02)
+
+card: P-118
+name: Wormmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Larva]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  # ─── Clause 0 — [On Play] Reveal 3 + two-bucket selection ──────────────────
+  #
+  # Printed: "[On Play] Reveal the top 3 cards of your deck. Add 1 green or
+  # blue card with 2 or more colors and 1 Tamer card with [Ken Ichijoji] in
+  # its name among them to the hand. Return the rest to the bottom of the deck."
+  #
+  # Mandatory clause (no "you may" — printed text has no optional gate).
+  # DCGO confirms `isOptional: false` on outer ActivateClass (P_118.cs line 19).
+  #
+  # Bucket 1: "green or blue card with 2 or more colors"
+  #   DCGO `CanSelectCardCondition`:
+  #     (CardColors.Count >= 2 && (Blue || Green))
+  #   DSL: `all_of: [self_color_count_gte: 2, any_of: [color_is: green, color_is: blue]]`
+  #   mode: AddHand, maxCount: 1.
+  #
+  # Bucket 2: "Tamer card with [Ken Ichijoji] in its name"
+  #   DCGO `CanSelectCardCondition1`:
+  #     `cardSource.IsTamer && cardSource.ContainsCardName("Ken Ichijoji")`
+  #   DSL: `all_of: [kind: tamer, name_contains: "Ken Ichijoji"]`
+  #   mode: AddHand, maxCount: 1.
+  #
+  # `no_duplicate_cards: true` → DCGO `SimplifiedRevealDeckTopCardsAndSelect`
+  # implicit `mutualConditions` — a single card cannot fill both buckets.
+  #
+  # `place_remainder_on_deck { position: bottom }` → DCGO
+  # `RemainingCardsPlace.DeckBottom`.
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 green/blue 2+color card + 1 Ken Ichijoji Tamer; bottom rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: multicolor_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - self_color_count_gte: 2
+                  - any_of:
+                      - color_is: green
+                      - color_is: blue
+            - bind_as: ken_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: tamer
+                  - name_contains: "Ken Ichijoji"
+          no_duplicate_cards: true
+          prompt: "Add 1 green/blue 2+color card and 1 Ken Ichijoji Tamer to hand"
+      - add_to_hand_from_reveal: { of: you, card: multicolor_pick }
+      - add_to_hand_from_reveal: { of: you, card: ken_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 1 — Inherited [End of Your Turn] DNA digivolve registration ────
+  #
+  # Printed: "[End of Your Turn] This Digimon and any of your other Digimon
+  # may DNA digivolve into a Digimon card in the hand."
+  #
+  # Encoded via the `alt_path_registration` declarative (RESOLVED 2026-05-02
+  # in qa/dsl-vocab-gaps.md, BT22-008 / BT22-017 entry). The optional "may"
+  # semantic is naturally captured by the alt-path framework — DNA digivolve
+  # is always an opt-in player action surfaced through the action mask.
+  # DCGO confirms `isOptional: true` + `SetIsInheritedEffect(true)`.
+  - kind: alt_path_registration
+    scope: inherited
+    trigger: end_of_your_turn
+    registers:
+      kind: dna_digivolve
+    applies_to:
+      of: you
+      zone: [battle_area]

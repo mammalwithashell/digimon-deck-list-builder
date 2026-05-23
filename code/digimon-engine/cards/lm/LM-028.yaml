@@ -1,0 +1,172 @@
+card: LM-028
+name: "Blue Scramble"
+kind: option
+color: [blue]
+cost: 2
+
+# ─── Clause A: [Main] digivolve with cost -3 ──────────────────────────────────
+#
+# "[Main] 1 of your blue Digimon may digivolve into a blue Digimon card in
+# the hand with the digivolution cost reduced by 3. Then, place this card in
+# the battle area."
+#
+# DCGO (LM_028.cs, EffectTiming.OptionSkill):
+#   1. SelectPermanentEffect over controller's battle area (canNoSelect: true —
+#      the entire clause is optional via "may"). Filter: IsDigimon && IsBlue.
+#   2. If selected: DigivolveIntoHandOrTrashCard(isHand: true, reduceCost: 3).
+#   3. PlaceDelayOptionCards — moves LM-028 from hand to battle area as a Delay
+#      permanent.
+#
+# The digivolve choice is supported natively. "Then, place this card in the
+# battle area" needs no explicit step: the `kind: delay` clause (Clause B)
+# below makes the engine classify LM-028 as a Delay Option, so the Option
+# pipeline auto-seats it in the battle area on Main resolution (same shape as
+# BT22-098 / LM-054 / LM-029).
+#
+# ─── Clause B: [Start of Your Turn] Delay ────────────────────────────────────
+#
+# "[Start of Your Turn] If your opponent has a Digimon, ＜Delay＞ (By trashing
+# this card after the placing turn, activate the effect below.)
+# ・Return 1 blue Digimon card from your trash to the top of the deck.
+#   Then, if you don't have a Digimon, you may play 1 blue Digimon card with
+#   2000 DP or less from your trash without paying the cost."
+#
+# `trigger: start_of_your_turn` lowers to DelayTrigger::StartOfYourNextTurn —
+# the body fires at the start of the owner's next turn after the placing turn;
+# trashing LM-028 is the Delay activation cost. `active_when` gates on the
+# opponent controlling >=1 Digimon (DCGO CanUseCondition). Step (a) returns 1
+# blue Digimon from trash to the deck TOP via `move_trash_card_to_deck_top`
+# (G-ZONE-SELECTED-TRASH-TO-DECK-TOP). Step (b) is gated on
+# the controller holding 0 battle-area Digimon; the trash play is optional.
+#
+# ─── Clause C: [Security] (Inherited) ────────────────────────────────────────
+#
+# "Security Effect [Security] You may play 1 blue Digimon card with 2000 DP
+# or less from your trash without paying the cost. Then, add this card to the
+# hand."
+#
+# DCGO (LM_028.cs, EffectTiming.SecuritySkill):
+#   1. SelectTrashCardEffect: controller's trash, filter IsBlue && IsDigimon &&
+#      DP ≤ 2000, canNoSelect: true (optional — "you may").
+#   2. PlayFromTrashEffect (free play of the selected card).
+#   3. AddThisCardToHand — moves LM-028 from security-resolution staging to the
+#      controller's hand.
+#
+# DSL modelling:
+#   - scope: inherited
+#   - when: on_security
+#   - optional: true  (DCGO canNoSelect: true at SelectTrashCardEffect — "you may")
+#   - select_trash (optional, filter: digimon + color_is: blue + dp_lte: 2000)
+#   - play_from_trash_free
+#   - add_this_option_to_hand
+#
+# Both substrate gaps the optional trash play needed are now closed:
+#   - G-PRED-DP-LTE (Phase 2 Track A) — `dp_lte` is evaluated for card-zone
+#     (trash) subjects via `eval_card_fields`, so `dp_lte: 2000` is enforced at
+#     selection time; only blue Digimon ≤ 2000 DP surface as candidates.
+#   - G-OPTIONAL-SELECTION-CONTINUE-TAIL (Phase 2 Track H) — declining the
+#     optional `select_trash` still runs the mandatory "Then, add this card to
+#     the hand" tail. The add-to-hand step always fires regardless of the play.
+
+effects:
+  # ─── Clause A: [Main] ───────────────────────────────────────────────────────
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] You may have 1 blue Digimon digivolve into a blue Digimon in hand, cost -3"
+    process:
+      # Step 1: choose source Digimon (optional — "may").
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: blue
+          prompt: "Choose 1 of your blue Digimon to digivolve"
+      # Step 2: choose the digivolve target from hand.
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: blue
+          prompt: "Choose a blue Digimon card to digivolve into"
+      # Step 3: execute effect-initiated digivolve with cost -3.
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false
+
+  # ─── Clause B: [Start of Your Turn] Delay ──────────────────────────────────
+  - kind: delay
+    trigger: start_of_your_turn
+    active_when:
+      any_permanent:
+        of: opponent
+        kind: digimon
+    summary: "[Start of Your Turn]<Delay> Return 1 blue Digimon from trash to deck top; if you have no Digimon, may free-play a small blue Digimon from trash"
+    process:
+      # Step (a): mandatory — return 1 blue Digimon from trash to deck TOP.
+      - select_trash:
+          of: you
+          bind_as: returned
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: blue
+          prompt: "Return 1 blue Digimon card from your trash to the top of the deck"
+      - move_trash_card_to_deck_top:
+          of: you
+          card: returned
+      # Step (b): if you control no Digimon, may free-play a small blue one.
+      - if:
+          condition:
+            no_permanent:
+              of: you
+              kind: digimon
+          then:
+            - select_trash:
+                of: you
+                bind_as: free_play
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: blue
+                    - dp_lte: 2000
+                prompt: "You may play 1 blue Digimon with 2000 DP or less from your trash without paying the cost"
+            - play_from_trash_free:
+                of: you
+                hand_index: free_play
+
+  # ─── Clause C: [Security] (Inherited) ──────────────────────────────────────
+  # "You may play 1 blue Digimon card with 2000 DP or less from your trash
+  # without paying the cost. Then, add this card to the hand."
+  # optional: true — "you may" gates the trash play; the add-to-hand tail is
+  # mandatory and runs regardless (G-OPTIONAL-SELECTION-CONTINUE-TAIL closed).
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 blue Digimon (≤2000 DP) from trash free; then add this card to hand"
+    process:
+      # Step 1: optional trash selection — blue Digimon with DP ≤ 2000.
+      # G-PRED-DP-LTE closed: dp_lte: 2000 is enforced for trash-card subjects.
+      - select_trash:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: blue
+              - dp_lte: 2000
+          prompt: "You may play 1 blue Digimon with 2000 DP or less from your trash without paying its cost"
+      # Step 2: play the selected card from trash without paying the cost.
+      - play_from_trash_free:
+          of: you
+          hand_index: picked
+      # Step 3: mandatory tail — add this card (LM-028) to the hand.
+      - add_this_option_to_hand: {}

@@ -1,0 +1,98 @@
+# BT16-002 DemiVeemon — Digi-Egg, Lv.2, Blue, Cost 0.
+# Traits: Baby Dragon.
+#
+# Printed card text (data/cards.json effect_description_eng):
+#
+#   Inherited Effect [All Turns] While this Digimon has 2 or more colors,
+#   it gets +1000 DP.
+#
+# Note on layout: the printed text is labeled "Inherited Effect" in
+# effect_description_eng (not inherited_effect_description_eng). This is the
+# standard Digi Egg inherited-clause convention; the text buries with the egg
+# and lifts the carrier's DP when the condition is met.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT16/Blue/BT16_002.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+# Single inherited DP aura:
+#   - scope: inherited — active only when BT16-002 is a digivolution source
+#     under a carrier permanent on the battle area.
+#   - [All Turns] — active on both controllers' turns.
+#   - "While this Digimon has 2 or more colors" — the "this Digimon" refers
+#     to the CARRIER permanent (the permanent whose digivolution stack contains
+#     BT16-002). The condition checks whether the carrier's top-card color set
+#     has at least 2 distinct colors. This is consistent with DCGO's
+#     `PermanentOfThisCard().TopCard.CardColors.Count >= 2` check.
+#   - +1000 DP — a flat bonus; the carrier receives +1000 effective DP while
+#     the condition holds.
+#
+# ─── DSL predicate: self_color_count_gte ─────────────────────────────────────
+#
+# `self_color_count_gte: 2` in `while_condition` evaluates
+# `distinct_color_count(synth_identity.colors) >= 2` against the carrier
+# permanent (PredicateSubject::Permanent). The `while_condition` lowering
+# path (`lower_self_while_condition` in lower_aura.rs) evaluates the predicate
+# with `PredicateSubject::Permanent(target_handle)`, which dispatches to
+# `eval_permanent_fields` and reads the carrier's synthesized top-card colors —
+# matching the DCGO semantics.
+#
+# Note: `active_when` cannot be used here because declarative aura lowering
+# evaluates `active_when` with `PredicateSubject::None`, which dispatches to
+# `eval_no_subject_fields` and returns `false` whenever `self_color_count_gte`
+# is set. `while_condition` is the correct DSL site for this predicate.
+# Confirmed against BT12-031.yaml's `while_condition: { self_color_count_gte: 2 }`.
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                     | Status       |
+# |-------------------------------------------------------|--------------|
+# | Inherited [All Turns] +1000 DP while 2+ colors        | IMPLEMENTED  |
+
+card: BT16-002
+name: DemiVeemon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Baby Dragon]
+form: In-Training
+
+effects:
+  # ─── Inherited [All Turns] +1000 DP while 2+ colors ──────────────────────────
+  #
+  # Printed: "Inherited Effect [All Turns] While this Digimon has 2 or more
+  # colors, it gets +1000 DP."
+  #
+  # "this Digimon" = the carrier permanent (the Digimon stack with BT16-002
+  # buried as a digivolution source). The condition checks the carrier's top
+  # card color count.
+  #
+  # DCGO (BT16_002.cs, EffectTiming.None, ChangeSelfDPStaticEffect):
+  #   isInheritedEffect: true, changeValue: +1000,
+  #   condition: card.PermanentOfThisCard().TopCard.CardColors.Count >= 2.
+  #
+  # DSL: `scope: inherited`, `kind: aura`, `target: {}` (self — the carrier),
+  # `while_condition: { self_color_count_gte: 2 }`, `dp_modifier: 1000`.
+  #
+  # Implementation note: `while_condition` (not `active_when`) is required here.
+  # `active_when` in a declarative aura evaluates the predicate with
+  # `PredicateSubject::None`, which dispatches to `eval_no_subject_fields` and
+  # returns `false` whenever `self_color_count_gte` is set — meaning the aura
+  # would never activate. `while_condition` routes to `lower_self_while_condition`
+  # which evaluates the predicate with `PredicateSubject::Permanent(target_handle)`,
+  # correctly reading the carrier's synthesized top-card colors. This matches
+  # BT12-031.yaml's `while_condition: { self_color_count_gte: 2 }` pattern.
+  #
+  # The `[All Turns]` printed text does not require a separate `active_when:
+  # { all_turns: true }` — the `while_condition` install-once mechanism does
+  # not filter by turn; the modifier stays active on both players' turns until
+  # the `until` predicate evicts it.
+  - scope: inherited
+    kind: aura
+    while_condition:
+      self_color_count_gte: 2
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] +1000 DP while carrier has 2 or more colors"
