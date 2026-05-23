@@ -286,8 +286,9 @@ fn compile_per_selector(
         S::MaterialCount => CompiledPerSelector::MaterialCount,
         S::StackSize => CompiledPerSelector::StackSize,
         S::AllyCount => CompiledPerSelector::AllyCount,
-        S::SuspendedCount { of } => CompiledPerSelector::SuspendedCount {
+        S::SuspendedCount { of, exclude_source } => CompiledPerSelector::SuspendedCount {
             of: compile_player_ref(*of),
+            exclude_source: *exclude_source,
         },
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
         S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
@@ -1923,6 +1924,10 @@ fn compile_step(
 
         S::TrashTopSecurity(a) => CompiledStep::TrashTopSecurity {
             of: compile_player_ref(a.of),
+            count: a
+                .count
+                .as_ref()
+                .map(|f| compile_formula(f, &format!("{prefix}.count"), card_id, errors)),
         },
         S::TrashBottomSecurity(a) => CompiledStep::TrashBottomSecurity {
             of: compile_player_ref(a.of),
@@ -2245,6 +2250,7 @@ fn compile_step(
                 errors,
             ),
             min_picks: a.min_picks,
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             then: a

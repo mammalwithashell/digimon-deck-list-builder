@@ -695,12 +695,13 @@ pub fn try_install(
         CompiledStep::SelectOpponentDpBudget {
             dp_budget,
             min_picks,
+            filter,
             bind_as,
             prompt,
             then,
         } => {
             let dp_budget = formula_value(dp_budget, ctx, &bindings);
-            if !has_opponent_dp_budget_candidates(ctx, dp_budget) {
+            if !has_opponent_dp_budget_candidates(ctx, dp_budget, filter, &bindings) {
                 return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
@@ -709,6 +710,7 @@ pub fn try_install(
                 ctx,
                 dp_budget,
                 *min_picks,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 inner_tail,
@@ -932,8 +934,14 @@ fn has_material_candidates(
         .unwrap_or(false)
 }
 
-fn has_opponent_dp_budget_candidates(ctx: &EffectContext<'_>, dp_budget: i32) -> bool {
+fn has_opponent_dp_budget_candidates(
+    ctx: &EffectContext<'_>,
+    dp_budget: i32,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+) -> bool {
     let opponent = ctx.game.next_clockwise(ctx.player);
+    let read = ctx.as_read();
     ctx.game
         .player(opponent)
         .battle_area
@@ -944,7 +952,15 @@ fn has_opponent_dp_budget_candidates(ctx: &EffectContext<'_>, dp_budget: i32) ->
                 player: opponent,
                 index: index as u8,
             };
-            ctx.game.effective_dp(handle).unwrap_or(0) <= dp_budget
+            if ctx.game.effective_dp(handle).unwrap_or(0) > dp_budget {
+                return false;
+            }
+            eval_predicate_with_bindings(
+                filter,
+                &read,
+                PredicateSubject::Permanent(handle),
+                Some(bindings),
+            )
         })
 }
 
@@ -2406,6 +2422,7 @@ fn install_select_opponent_dp_budget(
     ctx: &mut EffectContext<'_>,
     dp_budget: i32,
     min_picks: u8,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     tail: Vec<CompiledStep>,
@@ -2414,11 +2431,30 @@ fn install_select_opponent_dp_budget(
 ) {
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_opponent_permanents_by_dp_budget(
         &prompt,
         dp_budget,
         min_picks,
-        |_game, _handle| true,
+        move |game, handle| {
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Permanent(handle),
+                Some(&filter_bindings),
+            )
+        },
         move |cb_ctx, handles| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {

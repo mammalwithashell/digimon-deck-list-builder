@@ -67,9 +67,12 @@ effects:
 
   # ─── Clause 4: [When Digivolving] optional — suspend + delete ───────────────
   #
-  # The raw_rust formula `ex8_074_suspended_dp_cap` computes 8000 + 3000 ×
-  # other suspended Digimon count and is shared by both instances of the
-  # When Digivolving body.
+  # The DP cap is a pure-DSL formula: 8000 + 3000 × (count of suspended Digimon
+  # across BOTH battle areas, excluding EX8-074 itself). `suspended_count` is
+  # Digimon-only and `of: any` spans both players — DCGO's
+  # `MatchConditionPermanentCount(IsDigimon && IsSuspended && permanent !=
+  # card.PermanentOfThisCard())`. `exclude_source: true` drops the carrier.
+  # The same formula is used by both instances of the When Digivolving body.
   - when: when_digivolving
     optional: true
     summary: "[When Digivolving] May suspend 1 Digimon; may delete opp Digimon (DP cap)"
@@ -89,7 +92,12 @@ effects:
             all_of:
               - kind: digimon
               - dp_lte:
-                  raw_rust: ex8_074_suspended_dp_cap
+                  base: 8000
+                  per:
+                    suspended_count:
+                      of: any
+                      exclude_source: true
+                  delta: 3000
           prompt: "Delete opponent Digimon (DP <= 8000 + 3000 per other suspended)"
       - delete_permanent: { target: delete_target }
 
@@ -120,6 +128,11 @@ effects:
             all_of:
               - kind: digimon
               - dp_lte:
-                  raw_rust: ex8_074_suspended_dp_cap
+                  base: 8000
+                  per:
+                    suspended_count:
+                      of: any
+                      exclude_source: true
+                  delta: 3000
           prompt: "Delete opponent Digimon (DP <= 8000 + 3000 per other suspended)"
       - delete_permanent: { target: delete_target }
