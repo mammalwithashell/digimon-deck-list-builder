@@ -19,15 +19,14 @@
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API.md §4.3)
 //! - H2 Inherited conditional Jamming keyword grant (conditional aura)
-//! - G2 DNA digivolve target predicate (BLOCKED clause 0)
+//! - G2 DNA digivolve target predicate (implemented clause 0)
 //!
-//! # Verdict: PARTIAL
+//! # Verdict: IMPLEMENTED
 //!
-//! Clause 0 (own effect): BLOCKED — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET +
-//!   G-BEFORE-PAY-COST-GAIN-MEMORY. The "would DNA digivolve into green Digimon,
-//!   gain 1 memory" requires BeforePayCost triggered effect with target-color
-//!   predicate threading. DSL has no triggered gain_memory at BeforePayCost timing
-//!   and no event_card_color_is predicate. See qa/dsl-vocab-gaps.md.
+//! Clause 0 (own effect): IMPLEMENTED — Phase 2 Track H closed the historical
+//!   BeforePayCost target/gain-memory blocker. The clause uses
+//!   `before_pay_cost_observe`, `dna_origin`, `source_is_cost_target_permanent`,
+//!   and a green Digimon `cost_target`.
 //!
 //! Clause 1 (inherited): IMPLEMENTED — `kind: aura, scope: inherited` with a
 //!   materialized self keyword grant. The [Imperialdramon] name arm, [Free]
@@ -103,7 +102,7 @@ fn bt12_022_clause_0_is_present_observer() {
 }
 
 /// BT12-022 has exactly one declarative clause: an inherited Aura that grants
-/// Jamming (clause 1, partial implementation).
+/// Jamming (clause 1).
 #[test]
 fn bt12_022_has_one_inherited_jamming_aura() {
     let runner = DebugRunner::builder()
@@ -141,13 +140,13 @@ fn bt12_022_has_one_inherited_jamming_aura() {
     );
 }
 
-// ─── Section 2 — Clause 0 behavioral (BLOCKED) ───────────────────────────────
+// ─── Section 2 — Clause 0 behavioral ────────────────────────────────────────
 //
 // Clause 0: "[Your Turn] When this Digimon would DNA digivolve into a green
 // Digimon card, gain 1 memory."
 //
-// BLOCKED: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY.
-// All behavioral tests for clause 0 are ignored until both gaps close.
+// Historical blockers G-BEFORE-PAY-COST-DIGIVOLVE-TARGET +
+// G-BEFORE-PAY-COST-GAIN-MEMORY are resolved by Phase 2 Track H.
 
 /// DNA digivolving into a green Digimon gains 1 memory — IMPLEMENTED.
 #[test]

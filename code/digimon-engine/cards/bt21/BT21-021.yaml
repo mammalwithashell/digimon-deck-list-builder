@@ -1,0 +1,217 @@
+# BT21-021 OmniShoutmon — Digimon, Lv.5, Red+Yellow, DP 8000, Cost 8.
+# Traits: [Dragonkin, Xros Heart, Hero]. Attribute: Data.
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   This card is also treated as [Shoutmon] for DigiXros.
+#   [End of Attack] You may play 1 card with the [Xros Heart], [Blue Flare] or
+#   [Hero] trait from your hand with the play cost reduced by 5. If you did,
+#   delete this Digimon.
+#   [On Deletion] You may place 1 Digimon card with the [Xros Heart] or
+#   [Blue Flare] trait from your hand or trash under any of your Tamers.
+#   Then, ＜Save＞ (You may place this card under one of your Tamers.)
+#
+# Inherited Effect:
+#   [Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞.
+#
+# Alt paths (cards.json evo_costs + xros_req):
+#   evo_costs:  Lv.4 Red / Cost 4
+#   xros_req:   [Digivolve][Shoutmon]: Cost 4
+#               [Digivolve] Lv.4 w/[Xros Heart]/[Hero] trait: Cost 3
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Red/BT21_021.cs
+# (submodule uninitialized; implementation derived from printed text + DSL precedents)
+#
+# ─── Source-priority audit ────────────────────────────────────────────────────
+#
+# 1. Printed text governs; no divergence found with expected rules behavior.
+# 2. RULES_CONTEXT.md §16: Save = on_deletion, optional Tamer placement of
+#    THIS card. The printed text extends Save with an additional on_deletion
+#    clause that places a different card from hand/trash.
+# 3. DigiXros aliases: "treated as [Shoutmon] for DigiXros" maps to
+#    `digixros_aliases: [Shoutmon]` (top-level field on CardSpec, NOT identity).
+#
+# ─── Clause implementation notes ──────────────────────────────────────────────
+#
+# [End of Attack] (optional):
+#   - Player may select 1 hand card with [Xros Heart], [Blue Flare], or [Hero].
+#   - If selected (binding_exists: play_pick), play it at cost -5.
+#   - If play was initiated (binding_exists: play_pick gates the delete), delete self.
+#   - Using select_hand (optional: true) so no card selected → play_pick unbound
+#     → binding_exists: play_pick false → delete_permanent skipped.
+#
+# [On Deletion] (optional):
+#   - Player may select from hand or trash (BT21-013 pattern).
+#   - Destination: any of own Tamers (select_own_permanent filter: kind: tamer).
+#   - Source card: Digimon with Xros Heart or Blue Flare.
+#   - Then, Save keyword is auto-installed from printed keyword parser.
+#     No explicit YAML clause for Save.
+#
+# Inherited Rush aura:
+#   - Printed: "This Digimon WITH the [Xros Heart] trait gains Rush."
+#   - Implementation: scope:inherited self-aura (target:{}) gated by
+#     `source_permanent_trait_has: "Xros Heart"` in active_when, so only
+#     carriers whose top card has the [Xros Heart] trait receive Rush.
+#   - G-DSL-AURA-TARGET-SOURCE-PERMANENT is RESOLVED (qa/resolved-gaps.md,
+#     bg-imperial-substrate-closeout 2026-05-21); no approximation needed.
+#
+# ─── Alt-paths (all kind: digivolve) ──────────────────────────────────────────
+#
+# 1. evo_costs entry: Lv.4 Red / Cost 4  (color_is: red, level_eq: 4, cost: 4)
+# 2. xros_req "[Digivolve][Shoutmon]: Cost 4":
+#    name_contains: Shoutmon / Cost 4
+# 3. xros_req "[Digivolve] Lv.4 w/[Xros Heart]/[Hero] trait: Cost 3":
+#    level_eq: 4 + any_of trait_has Xros Heart / Hero / Cost 3
+
+card: BT21-021
+name: OmniShoutmon
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 8
+dp: 8000
+traits: [Dragonkin, Xros Heart, Hero]
+
+digixros_aliases: ["Shoutmon"]
+
+alt_paths:
+  # 1) Standard digivolve: Lv.4 Red / Cost 4 (evo_costs)
+  - kind: digivolve
+    from:
+      level_eq: 4
+      color_is: red
+    cost: 4
+
+  # 2) [Shoutmon] name digivolve: Cost 4 (xros_req)
+  - kind: digivolve
+    from:
+      name_contains: "Shoutmon"
+    cost: 4
+
+  # 3) Lv.4 [Xros Heart] or [Hero] trait digivolve: Cost 3 (xros_req)
+  - kind: digivolve
+    from:
+      level_eq: 4
+      any_of:
+        - trait_has: "Xros Heart"
+        - trait_has: Hero
+    cost: 3
+
+effects:
+  # ─── Clause 1 — [End of Attack] optional play-from-hand cost-5 + self-delete ─
+  #
+  # Printed: "[End of Attack] You may play 1 card with the [Xros Heart], [Blue Flare]
+  # or [Hero] trait from your hand with the play cost reduced by 5. If you did,
+  # delete this Digimon."
+  #
+  # optional: true — the whole clause is "You may".
+  # select_hand optional: true — if no eligible card in hand, player can skip.
+  # binding_exists: play_pick gates the delete so it only fires if a card was
+  # selected and played.
+  - when: end_of_attack
+    optional: true
+    summary: "[End of Attack] You may play 1 [Xros Heart]/[Blue Flare]/[Hero] from hand cost -5; if played, delete self"
+    process:
+      - select_hand:
+          of: you
+          bind_as: play_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Xros Heart"
+                  - trait_has: "Blue Flare"
+                  - trait_has: Hero
+          prompt: "Play 1 [Xros Heart], [Blue Flare], or [Hero] Digimon from hand at cost -5?"
+      - if:
+          condition: { binding_exists: play_pick }
+          then:
+            - play_from_hand:
+                of: you
+                hand_index: play_pick
+                cost_delta: -5
+            - delete_permanent: { target: source }
+
+  # ─── Clause 2 — [On Deletion] optional hand-or-trash place under Tamer ───────
+  #
+  # Printed: "[On Deletion] You may place 1 Digimon card with the [Xros Heart] or
+  # [Blue Flare] trait from your hand or trash under any of your Tamers."
+  #
+  # Pattern: BT21-013 (hand-or-trash place_as_bottom_source).
+  # Destination: any own Tamer (kind: tamer), optional.
+  # Source: Digimon with Xros Heart or Blue Flare.
+  # Save keyword is auto-installed by keyword_effects.rs from the printed "＜Save＞".
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] You may place 1 [Xros Heart]/[Blue Flare] Digimon from hand or trash under any of your Tamers. Then, Save."
+    process:
+      - select_own_permanent:
+          bind_as: dest
+          optional: true
+          filter:
+            kind: tamer
+          prompt: "Choose a Tamer to place a card under"
+      - if:
+          condition: { binding_exists: dest }
+          then:
+            - select_effect_choice:
+                bind_as: zone_choice
+                labels:
+                  - "From hand"
+                  - "From trash"
+                prompt: "Place a [Xros Heart] or [Blue Flare] Digimon from which area?"
+            - if:
+                condition: { equals: [zone_choice, 0] }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: source_card
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - any_of:
+                              - trait_has: "Xros Heart"
+                              - trait_has: "Blue Flare"
+                      prompt: "Choose a [Xros Heart] or [Blue Flare] Digimon from hand"
+                  - place_as_bottom_source:
+                      source: source_card
+                      target: dest
+            - if:
+                condition: { equals: [zone_choice, 1] }
+                then:
+                  - select_trash:
+                      of: you
+                      bind_as: source_card
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - any_of:
+                              - trait_has: "Xros Heart"
+                              - trait_has: "Blue Flare"
+                      prompt: "Choose a [Xros Heart] or [Blue Flare] Digimon from trash"
+                  - place_as_bottom_source:
+                      source: source_card
+                      target: dest
+
+  # ─── Clause 3 — Inherited [Your Turn] Rush aura ───────────────────────────────
+  #
+  # Printed: "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞."
+  #
+  # Implementation: `scope: inherited`, `target: {}` (self-aura — applies only
+  # to the carrier). `active_when` gates the tick-installation on the carrier's
+  # top card having the [Xros Heart] trait, using `source_permanent_trait_has`.
+  # For an inherited self-aura, the `active_when` predicate is evaluated with
+  # `PredicateSubject::None` so `source_permanent_trait_has` resolves against
+  # `rctx.source_permanent()` — the carrier permanent. This is the same pattern
+  # as BT12-022 (`source_permanent_trait_has: "Free"` in `active_when`).
+  # Gap G-DSL-AURA-TARGET-SOURCE-PERMANENT is RESOLVED (qa/resolved-gaps.md,
+  # bg-imperial-substrate-closeout 2026-05-21).
+  - scope: inherited
+    kind: aura
+    active_when:
+      your_turn: true
+      source_permanent_trait_has: "Xros Heart"
+    target: {}
+    grant_keyword: { keyword: Rush }
+    summary: "[Your Turn] This Digimon with the [Xros Heart] trait gains <Rush>"

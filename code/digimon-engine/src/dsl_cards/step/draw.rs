@@ -32,9 +32,24 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
             ctx.hatch(p);
             true
         }
-        CompiledStep::TrashTopSecurity { of } => {
+        CompiledStep::TrashTopSecurity { of, count } => {
             let p = resolve_player(ctx, *of);
-            ctx.trash_top_security(p);
+            let n = match count {
+                None => 1,
+                Some(formula) => {
+                    let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
+                        player: ctx.player,
+                        index: 0,
+                    });
+                    crate::dsl_cards::formula_eval::evaluate(formula, ctx, target).max(0) as usize
+                }
+            };
+            for _ in 0..n {
+                if ctx.game.player(p).security.is_empty() {
+                    break;
+                }
+                ctx.trash_top_security(p);
+            }
             true
         }
         CompiledStep::TrashBottomSecurity { of } => {

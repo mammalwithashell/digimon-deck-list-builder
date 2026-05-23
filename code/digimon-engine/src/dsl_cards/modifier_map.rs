@@ -98,6 +98,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "ChangePermanentLevel" => ModifierType::ChangePermanentLevel,
         "ChangeTraits" => ModifierType::ChangeTraits,
         "ChangeBaseCardName" => ModifierType::ChangeBaseCardName,
+        "SourceNameAliases" => ModifierType::SourceNameAliases,
         "ChangeBaseCardColor" => ModifierType::ChangeBaseCardColor,
         "ChangeCardLevelForAssembly" => ModifierType::ChangeCardLevelForAssembly,
         "ChangeCardNamesForDigiXros" => ModifierType::ChangeCardNamesForDigiXros,
@@ -204,6 +205,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::ChangePermanentLevel
         | ModifierType::ChangeTraits
         | ModifierType::ChangeBaseCardName
+        | ModifierType::SourceNameAliases
         | ModifierType::ChangeBaseCardColor
         | ModifierType::ChangeCardLevelForAssembly
         | ModifierType::ChangeCardNamesForDigiXros => {}
@@ -311,6 +313,7 @@ mod tests {
             ModifierType::ChangePermanentLevel,
             ModifierType::ChangeTraits,
             ModifierType::ChangeBaseCardName,
+            ModifierType::SourceNameAliases,
             ModifierType::ChangeBaseCardColor,
             ModifierType::ChangeCardLevelForAssembly,
             ModifierType::ChangeCardNamesForDigiXros,

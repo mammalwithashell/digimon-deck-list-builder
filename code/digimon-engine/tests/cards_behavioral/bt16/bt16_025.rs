@@ -26,15 +26,16 @@
 //! - Partition declarative (inherited scope) — same sources
 //! - DNA digivolve alt-path (Blue Lv.4 + Green Lv.4, cost 0)
 //! - [When Digivolving] triggered clause:
-//!     - Primary suspend-by-stack-size-comparison: BLOCKED G-DSL-STACK-SIZE-LTE-SOURCE
-//!     - No WhenDigivolving clause is shipped in the YAML (body is fully blocked)
+//!     - Primary suspend-by-stack-size-comparison: IMPLEMENTED via
+//!       `materials_count_lte` + `source_material_count`
+//!     - WhenDigivolving clause is shipped in YAML
 //! - [On DNA Digivolve] CannotUnsuspend all opp Digimon: IMPLEMENTED
 //!     - Modeled as `on_dna_digivolve` timing rather than a conditional inside
 //!       `when_digivolving`, because the `dna_origin` predicate in process-step
 //!       `if` conditions is not evaluated by the engine (G-ENGINE-DNA-ORIGIN-PRED gap).
-//! - [When Attacking][OPT] triggered clause — PARTIAL:
+//! - [When Attacking][OPT] triggered clause — IMPLEMENTED:
 //!     - Suspend 1 opp unsuspended Digimon: IMPLEMENTED
-//!     - Unsuspend-self fallback "if this effect didn't suspend": BLOCKED
+//!     - Unsuspend-self fallback "if this effect didn't suspend": IMPLEMENTED
 //!       G-DSL-EFFECT-SUSPENDED-RESULT
 //!
 //! # Engine gaps that block full clause implementation
@@ -52,7 +53,7 @@
 //! "If this effect didn't suspend, unsuspend this Digimon" requires branching on
 //! whether the current effect actually suspended an opponent/any Digimon. The DSL
 //! now has `binding_is_none` / `binding_absent`, but using selection absence would
-//! approximate the printed result check and miss cases where a selected target was
+//! historically approximated the printed result check and missed cases where a selected target was
 //! not suspended. The current result-log predicate family includes
 //! `effect_suspended_any_own_digimon`; BT16-025 needs an opponent/any-Digimon
 //! suspend-result predicate before this fallback can be authored faithfully.
@@ -734,7 +735,7 @@ fn bt16_025_when_attacking_opt_blocks_second_activation_same_turn() {
     );
 }
 
-// ─── SECTION 4 — Gap-blocked tests ───────────────────────────────────────────
+// ─── SECTION 4 — Former gap-blocked tests ───────────────────────────────────
 
 /// [When Digivolving] "Suspend all opp Digimon with as many or fewer
 /// digivolution cards as this Digimon" — authored via `for_each` over opponent

@@ -12,12 +12,71 @@ alt_paths:
     from: { level_eq: 2, color_is: black }
     cost: 0
 
-# Printed [On Play] source-placement clause is not authored in this pass:
-# "You may place 2 [Mineral]/[Rock] cards from trash as one of your
-# [Mineral]/[Rock] Digimon's bottom sources." It needs a source-placement
-# authoring pass with target + two-card trash selection.
-
 effects:
+  # ─── [On Play] clause ─────────────────────────────────────────────────────
+  #
+  # Printed text: "You may place 2 cards with the [Mineral] or [Rock] trait
+  # from your trash as 1 of your [Mineral] or [Rock] trait Digimon's bottom
+  # digivolution cards."
+  #
+  # Modelling rationale:
+  #   - "You may" → optional: true; the first step is an optional
+  #     select_own_permanent gate that doubles as the target pick.
+  #   - Target: one of your own Digimon on the field with [Mineral] or [Rock].
+  #   - Source: 2 cards from own trash with [Mineral] or [Rock] trait.
+  #   - Sequence: pick target → pick 1st trash card + place → pick 2nd trash
+  #     card + place.  The 1st card moves to the digivolution stack before the
+  #     2nd pick, so the 2nd select_trash naturally excludes it (the card is
+  #     no longer in trash).
+  #   - Pattern matches BT24-016 (select_trash → place_as_bottom_source from
+  #     trash) repeated twice.
+  - when: on_play
+    optional: true
+    summary: "[On Play] You may place 2 [Mineral]/[Rock] cards from trash as a [Mineral]/[Rock] Digimon's bottom digivolution cards"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        any_of:
+          - trait_has: Mineral
+          - trait_has: Rock
+    process:
+      # Gate + target selection: pick the destination Digimon (optional — PASS declines).
+      - select_own_permanent:
+          bind_as: dest
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Mineral
+                  - trait_has: Rock
+          prompt: "Choose 1 of your [Mineral] or [Rock] Digimon to place trash cards under"
+      # First trash pick + placement.
+      - select_trash:
+          of: you
+          bind_as: source1
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Choose the first [Mineral] or [Rock] card from your trash (1/2)"
+      - place_as_bottom_source:
+          source: source1
+          target: dest
+      # Second trash pick + placement.
+      - select_trash:
+          of: you
+          bind_as: source2
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Choose the second [Mineral] or [Rock] card from your trash (2/2)"
+      - place_as_bottom_source:
+          source: source2
+          target: dest
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:

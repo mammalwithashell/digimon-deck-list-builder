@@ -1,3 +1,74 @@
+# EX10-033 Pyramidimon — Digimon, Black, Level 6, Cost 11, DP 11000.
+# Traits: [Mineral, LIBERATOR]
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   ＜Fragment (3)＞ (When this Digimon would be deleted, by trashing any 3 of
+#   its digivolution cards, it isn't deleted.)
+#
+#   [When Digivolving] [When Attacking] [Once Per Turn]
+#   You may place up to 3 [Mineral] or [Rock] trait cards from your trash as
+#   this Digimon's bottom digivolution cards.
+#
+#   [When Digivolving] [When Attacking]
+#   By trashing up to 3 [Mineral] or [Rock] trait cards from any of your
+#   Digimon's digivolution cards, to 1 of your opponent's Digimon, reduce
+#   the play cost by 2 until their turn ends for each card trashed.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Black/EX10_033.cs
+#
+# ─── Clause A: [WD][WA][OPT] place up to 3 Mineral/Rock from trash ────────────
+#
+# "You may place up to 3 [Mineral] or [Rock] trait cards from your trash as
+#  this Digimon's bottom digivolution cards."
+#
+# Step layout:
+#   Each of up to 3 picks: optional select_trash (filter: Mineral or Rock)
+#   → place_as_bottom_source: { source: <binding>, target: source }
+#   `target: source` resolves to ctx.source_permanent (this Digimon).
+#
+# Pattern matches BT13-007 (place_as_bottom_source with target: source).
+# Each select_trash step is optional:true so the player may stop early —
+# this correctly implements "up to 3" without extra machinery. PASS on any
+# pick halts the sequence (subsequent pairs are inside the prior pick's
+# implicit continuation; by not binding any card, the place step silently
+# skips). Placing stops when the player passes.
+#
+# Implementation note: three optional select_trash + place_as_bottom_source
+# pairs model "up to 3" faithfully. Pick 1 is optional; if the player
+# passes the first pick, no cards are placed. If they pick 1, they are
+# offered pick 2 (also optional), and so on up to pick 3.
+#
+# ─── Clause B: [WD][WA] source-trash → cost reduction on opp Digimon ──────────
+#
+# "By trashing up to 3 [Mineral] or [Rock] trait cards from any of your
+#  Digimon's digivolution cards, to 1 of your opponent's Digimon, reduce
+#  the play cost by 2 until their turn ends for each card trashed."
+#
+# Step layout:
+#   1. select_own_sources (filter: Mineral or Rock, min: 0, max: 3, bind_as: chosen_sources)
+#      → prompts SourceMulti with PASS immediately available (up-to-3).
+#   2. trash_selected_sources: { source_refs: chosen_sources }
+#   3. select_opponent_permanent: 1 opponent Digimon → bind_as: target_digi
+#   4. per_selected over chosen_sources, bind_as: _src:
+#        add_modifier: { target: { binding: target_digi }, modifier: ChangePlayCost,
+#                        value: -2, expiry: end_of_opponents_turn }
+#      (applies -2 per source trashed; stacks additively in the modifier registry)
+#
+# "Until their turn ends" = end_of_opponents_turn (the opponent's next turn end).
+# If no sources are selected (player PASS immediately), no targets are prompted
+# and no modifier is applied — per no-approximations silent-skip contract.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                       | Status       |
+# |---------------------------------------------------------|--------------|
+# | <Fragment (3)>                                          | IMPLEMENTED  |
+# | [WD][WA][OPT] place up to 3 Mineral/Rock from trash    | IMPLEMENTED  |
+# | [WD][WA] trash up to 3 Mineral/Rock sources (cost)     | IMPLEMENTED  |
+# | [WD][WA] select 1 opp Digimon as cost-reduction target | IMPLEMENTED  |
+# | [WD][WA] -2 play cost per trashed source until EoOT    | IMPLEMENTED  |
+
 card: EX10-033
 name: Pyramidimon
 kind: digimon
@@ -12,10 +83,103 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 4
 
-# Printed source-placement and source-trash play-cost reduction clauses are not
-# authored in this pass.
-
 effects:
+  # ─── Fragment (3) ─────────────────────────────────────────────────────────
   - kind: grant_keyword
     keyword: Fragment
     value: 3
+
+  # ─── Clause A: [When Digivolving][When Attacking][Once Per Turn] ──────────
+  #
+  # "You may place up to 3 [Mineral] or [Rock] trait cards from your trash as
+  #  this Digimon's bottom digivolution cards."
+  #
+  # Three sequential optional trash picks + placements. Each pick is optional
+  # so the player may stop at 0, 1, 2, or 3 placements.
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    summary: "[WD][WA][OPT] Place up to 3 Mineral/Rock cards from trash as own bottom sources"
+    process:
+      # Pick 1 (optional — PASS means 0 placements).
+      - select_trash:
+          of: you
+          bind_as: src1
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources (1/3)"
+      - place_as_bottom_source:
+          source: src1
+          target: source
+      # Pick 2 (optional — PASS means stop at 1 placement).
+      - select_trash:
+          of: you
+          bind_as: src2
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources (2/3)"
+      - place_as_bottom_source:
+          source: src2
+          target: source
+      # Pick 3 (optional — PASS means stop at 2 placements).
+      - select_trash:
+          of: you
+          bind_as: src3
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources (3/3)"
+      - place_as_bottom_source:
+          source: src3
+          target: source
+
+  # ─── Clause B: [When Digivolving][When Attacking] source-trash cost reduce ─
+  #
+  # "By trashing up to 3 [Mineral] or [Rock] trait cards from any of your
+  #  Digimon's digivolution cards, to 1 of your opponent's Digimon, reduce
+  #  the play cost by 2 until their turn ends for each card trashed."
+  #
+  # Cost: select 0–3 Mineral/Rock digivolution sources → trash them.
+  # Effect: pick 1 opponent Digimon → apply -2 ChangePlayCost per trashed card.
+  - when: [when_digivolving, when_attacking]
+    summary: "[WD][WA] Trash up to 3 Mineral/Rock sources → 1 opp Digimon -2 play cost each until EoOT"
+    process:
+      # Step 1: Select up to 3 Mineral/Rock sources (cost). min:0 = PASS immediately.
+      - select_own_sources:
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          min: 0
+          max: 3
+          bind_as: chosen_sources
+          prompt: "Choose up to 3 [Mineral] or [Rock] digivolution cards to trash"
+          then:
+            # Step 2: Trash the selected source cards.
+            - trash_selected_sources: { source_refs: chosen_sources }
+
+            # Step 3: Select 1 opponent Digimon as the cost-reduction target.
+            - select_opponent_permanent:
+                bind_as: target_digi
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to reduce play cost by 2 per card trashed"
+
+            # Step 4: Apply -2 ChangePlayCost per trashed source card.
+            # per_selected iterates once per SourceSelectionRef in chosen_sources.
+            - per_selected:
+                selection: chosen_sources
+                bind_as: _src
+                body:
+                  - add_modifier:
+                      target: { binding: target_digi }
+                      modifier: ChangePlayCost
+                      value: -2
+                      expiry: end_of_opponents_turn

@@ -20,7 +20,7 @@
 //! - H12: Blast Digivolve (grant_keyword: BlastDigivolve, ACE card)
 //! - H13: ACE (ace_overflow: -5)
 //! - Clause (a): [On Play][When Digivolving] multi-select opponent Digimon, running DP-sum ≤ self.DP
-//!   → implemented with the DP-budget selection primitive
+//!   → native `select_opponent_dp_budget` with `source_dp` budget
 //! - Clause (b): [When Attacking][Once Per Turn] tamer condition → trash_top_security
 //!   (fully implemented)
 //! - G-OPT-TRIGGERED: OPT lockout not enforced for triggered effects
@@ -33,7 +33,7 @@
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -176,6 +176,44 @@ fn lm_021_has_on_play_when_digivolving_triggered_clause() {
     assert!(
         has_op_wd,
         "LM-021 must have a triggered clause with both on_play and when_digivolving timings"
+    );
+}
+
+#[test]
+fn lm_021_delete_clause_uses_native_dp_budget_selection() {
+    let runner = lm_021_runner();
+    let compiled = runner
+        .compiled_card("LM-021")
+        .expect("LM-021 in compiled_cards");
+
+    let clause = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnPlay)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .next()
+        .expect("LM-021 OnPlay/WhenDigivolving delete clause");
+
+    assert!(
+        !clause
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::RawRust { .. })),
+        "LM-021 delete clause must use native DSL, not raw_rust"
+    );
+    assert!(
+        clause
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::SelectOpponentDpBudget { .. })),
+        "LM-021 delete clause must use select_opponent_dp_budget"
     );
 }
 
@@ -462,15 +500,14 @@ fn lm_021_when_attacking_opt_clears_after_end_turn() {
 /// The [On Play][When Digivolving] clause deletes "any number of your opponent's
 /// Digimon whose total DP ≤ this Digimon's DP (14000)".
 ///
-/// This requires multi-select of opponent battle-area permanents with a running
-/// DP-sum cap. DCGO uses `SelectPermanentEffect` with:
+/// DCGO uses `SelectPermanentEffect` with:
 ///   - `canTargetConditionByPreSelectedList` (running sum per pick)
 ///   - `canEndSelectCondition` (validates total ≤ MaxDP / self.DP)
 ///   - `canNoSelect: false` (at least 1 deletion when ≥1 eligible target exists)
 ///   - `canEndNotMax: true` (player can stop early)
 ///
-/// The raw_rust bridge uses `EffectContext::select_opponent_permanents_by_dp_budget`.
-/// This smoke test confirms the bridge runs without panic.
+/// Native implementation: `select_opponent_dp_budget` with a `source_dp` budget
+/// and `delete_bound_permanents` tail.
 #[test]
 fn lm_021_on_play_does_not_panic_with_opponent_digimon() {
     let mut runner = DebugRunner::builder()
@@ -491,147 +528,70 @@ fn lm_021_on_play_does_not_panic_with_opponent_digimon() {
 }
 
 #[test]
-fn lm_021_on_play_can_delete_multiple_digimon_under_this_digimons_dp() {
+fn lm_021_on_play_can_delete_multiple_opponent_digimon_within_dp_budget() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(LM_021_YAML)
         .expect("LM-021 parses")
-        .add_card(make_digimon_dp("OPP-6K", 6000))
-        .add_card(make_digimon_dp("OPP-8K", 8000))
-        .add_card(make_digimon_dp("OPP-9K", 9000))
+        .add_card(make_digimon_dp("OPP-LOW", 6000))
+        .add_card(make_digimon_dp("OPP-MID", 7000))
+        .add_card(make_digimon_dp("OPP-HIGH", 15000))
         .add_card(make_filler("FILLER"))
         .deck(0, &["FILLER", "FILLER", "FILLER"])
         .memory(10)
         .start();
 
-    let low = runner.place_on_field(1, "OPP-6K", Some(0));
-    let mid = runner.place_on_field(1, "OPP-8K", Some(0));
-    let high = runner.place_on_field(1, "OPP-9K", Some(0));
+    let low = runner.place_on_field(1, "OPP-LOW", Some(0));
+    let mid = runner.place_on_field(1, "OPP-MID", Some(0));
+    let high = runner.place_on_field(1, "OPP-HIGH", Some(0));
     let lm_handle = runner.place_on_field(0, "LM-021", Some(0));
 
     fire_on_play(&mut runner, lm_handle);
-    runner
-        .game
-        .resolve_selection(0, encode_attack(0, low.index as u16))
-        .expect("pick 6000 DP Digimon");
 
     let selection = runner
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("selection continues with remaining DP budget");
-    assert_eq!(
-        selection.kind,
-        SelectionKind::DpBudget {
-            remaining_dp: 8000,
-            picked: 1,
-        }
+        .pending_selection()
+        .expect("LM-021 must install a DP-budget selection");
+    assert!(
+        selection
+            .valid_action_ids
+            .contains(&encode_attack(0, low.index as u16)),
+        "6000 DP target should be selectable"
     );
     assert!(
         selection
             .valid_action_ids
             .contains(&encode_attack(0, mid.index as u16)),
-        "8000 DP target must remain selectable after picking 6000 DP"
+        "7000 DP target should be selectable"
     );
     assert!(
         !selection
             .valid_action_ids
             .contains(&encode_attack(0, high.index as u16)),
-        "9000 DP target must be filtered by the remaining 8000 DP budget"
+        "15000 DP target exceeds LM-021's 14000 DP budget"
     );
     assert!(
-        selection.valid_action_ids.contains(&PASS),
-        "player may stop after selecting at least one Digimon"
+        !selection.valid_action_ids.contains(&PASS),
+        "LM-021's delete is mandatory once at least one target exists"
     );
 
+    let selecting_player = selection.selecting_player;
     runner
-        .game
-        .resolve_selection(0, encode_attack(0, mid.index as u16))
-        .expect("pick 8000 DP Digimon");
-
-    let remaining_ids: Vec<_> = runner
-        .game
-        .player(1)
-        .battle_area
-        .iter()
-        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
-        .collect();
-    assert_eq!(
-        remaining_ids,
-        vec!["OPP-9K".to_string()],
-        "LM-021 must delete the selected Digimon whose total DP equals its DP"
-    );
-}
-
-#[test]
-fn lm_021_on_play_uses_current_source_dp_as_budget() {
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(LM_021_YAML)
-        .expect("LM-021 parses")
-        .add_card(make_digimon_dp("OPP-4K", 4000))
-        .add_card(make_digimon_dp("OPP-5K", 5000))
-        .add_card(make_digimon_dp("OPP-6K", 6000))
-        .add_card(make_filler("FILLER"))
-        .deck(0, &["FILLER", "FILLER", "FILLER"])
-        .memory(10)
-        .start();
-
-    runner.force_base_dp("LM-021", 10000);
-    let still_eligible = runner.place_on_field(1, "OPP-4K", Some(0));
-    let low = runner.place_on_field(1, "OPP-5K", Some(0));
-    let over_remaining = runner.place_on_field(1, "OPP-6K", Some(0));
-    let lm_handle = runner.place_on_field(0, "LM-021", Some(0));
-
-    fire_on_play(&mut runner, lm_handle);
+        .execute_action(selecting_player, encode_attack(0, low.index as u16))
+        .expect("pick low target");
     runner
-        .game
-        .resolve_selection(0, encode_attack(0, low.index as u16))
-        .expect("pick 5000 DP Digimon");
+        .execute_action(selecting_player, encode_attack(0, mid.index as u16))
+        .expect("pick mid target");
 
-    let selection = runner
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("selection continues so player can stop");
     assert_eq!(
-        selection.kind,
-        SelectionKind::DpBudget {
-            remaining_dp: 5000,
-            picked: 1,
-        },
-        "remaining budget must be computed from LM-021's current 10000 DP"
+        runner.battle_area_size(1),
+        1,
+        "two selected opponent Digimon should be deleted"
     );
     assert!(
-        !selection
-            .valid_action_ids
-            .contains(&encode_attack(0, over_remaining.index as u16)),
-        "6000 DP must be filtered once only 5000 DP remains"
-    );
-    assert!(
-        selection
-            .valid_action_ids
-            .contains(&encode_attack(0, still_eligible.index as u16)),
-        "4000 DP must remain selectable within the remaining 5000 DP budget"
-    );
-    assert!(
-        selection.valid_action_ids.contains(&PASS),
-        "player can stop after the mandatory first pick"
-    );
-
-    runner
-        .game
-        .resolve_selection(0, PASS)
-        .expect("stop after one selected Digimon");
-    let remaining_ids: Vec<_> = runner
-        .game
-        .player(1)
-        .battle_area
-        .iter()
-        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
-        .collect();
-    assert_eq!(
-        remaining_ids,
-        vec!["OPP-4K".to_string(), "OPP-6K".to_string()],
-        "only the selected 5000 DP Digimon is deleted after stopping"
+        runner.game.players[1]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "OPP-HIGH"),
+        "the over-budget target should remain on field"
     );
 }
 

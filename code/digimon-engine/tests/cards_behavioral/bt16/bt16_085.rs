@@ -39,10 +39,10 @@
 //! - Clause 0: YAML compiles; start-of-main fires and presents Veemon/Wormmon
 //!   hand selection.
 //! - Clause 0: Free-play consumes zero memory.
-//! - Clause 0: Delayed return blocked (#[ignore]).
+//! - Clause 0: Delayed return implemented.
 //! - Clause 1: Digivolve fires observer; player can optionally suspend for +1 memory.
-//! - Clause 1: Color gate (#[ignore] — G-EVENT-CARD-COLOR-IS).
-//! - Clause 1: DNA trash sub-clause (#[ignore] — G-SELECT-OPPONENT-SOURCES).
+//! - Clause 1: Color gate implemented via `event_card_color_has`.
+//! - Clause 1: DNA trash sub-clause implemented via `select_opponent_sources`.
 //! - Clause 2: Security clause structural shape verified.
 
 use digimon_dsl::compiled::{

@@ -1,0 +1,148 @@
+# EX8-070 Zofr Kabus — Option, Purple, Cost 2.
+# Traits: [LIBERATOR]
+#
+# Printed card text (data/cards.json):
+#
+# [Main] By trashing any 1 digivolution card of 1 of your Digimon with the
+# [Mineral] or [Rock] trait, until the end of your opponent's turn, that
+# Digimon gains ＜Collision＞ (During this Digimon's attack, all of your
+# opponent's Digimon gain ＜Blocker＞, and must block if possible.),
+# ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon
+# and survives the battle, it performs any security checks it normally
+# would.), ＜Reboot＞ (Unsuspend this Digimon during your opponent's
+# unsuspend phase.), and your opponent's effects can't return it to hands
+# or decks, and it gets +3000 DP.
+#
+# Security Effect [Security] Delete 1 of your opponent's Digimon with the
+# lowest play cost.
+#
+# DCGO C# reference: Absent (DCGO submodule uninitialized).
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+# Clause 1 — [Main] "By trashing" cost + keyword/modifier/DP buff:
+#   1a. select_own_permanent (Mineral/Rock trait + stack_size_gte:2) → target Digimon
+#   1b. select_own_sources (from: target Digimon, any source, 1 card) → chosen_source
+#   1c. trash_selected_sources: chosen_source
+#   1d. grant_keyword Collision / Piercing / Reboot (expiry: end_of_opponents_turn)
+#   1e. add_modifier CannotBeReturnedToHand + CannotBeReturnedToDeck (expiry: end_of_opponents_turn)
+#   1f. add_dp_modifier +3000 (expiry: end_of_opponents_turn)
+#
+# Clause 2 — [Security] Delete 1 opponent Digimon with lowest play cost:
+#   raw_rust: ex8_070_delete_lowest_cost_digimon
+#   GAP G-PLAY-COST-AGGREGATE: DSL has no aggregate play_cost min formula for
+#   select_opponent_permanent filter. The raw_rust step auto-selects the
+#   lowest-index Digimon at the minimum play cost. When G-PLAY-COST-AGGREGATE
+#   closes, replace with native DSL verb.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                              | Status        |
+# |------------------------------------------------|---------------|
+# | [Main] target selection (Mineral/Rock + src)   | IMPLEMENTED   |
+# | [Main] trash 1 digivolution source             | IMPLEMENTED   |
+# | [Main] grant Collision until EoOT              | IMPLEMENTED   |
+# | [Main] grant Piercing until EoOT               | IMPLEMENTED   |
+# | [Main] grant Reboot until EoOT                 | IMPLEMENTED   |
+# | [Main] CannotBeReturnedToHand until EoOT       | IMPLEMENTED   |
+# | [Main] CannotBeReturnedToDeck until EoOT       | IMPLEMENTED   |
+# | [Main] +3000 DP until EoOT                     | IMPLEMENTED   |
+# | [Security] delete 1 lowest-play-cost Digimon   | PARTIAL — G-PLAY-COST-AGGREGATE
+# |  (tie-breaking selection auto-picks lowest idx) |               |
+
+card: EX8-070
+name: Zofr Kabus
+kind: option
+color: [purple]
+cost: 2
+traits: [LIBERATOR]
+
+effects:
+  # ─── Clause 1: [Main] "By trashing any 1 digivolution card of 1 of your
+  #              Mineral/Rock Digimon, that Digimon gains buffs until EoOT" ─────
+  #
+  # The "By trashing..." prefix is a cost: the player must select a Mineral/Rock
+  # Digimon that has at least 1 source and trash 1 of its sources.
+  # If no valid target exists (no Mineral/Rock Digimon on field, or none with
+  # digivolution sources), the `select_own_permanent` early-return means the
+  # effect silently does nothing — matching card behavior where the cost cannot
+  # be paid.
+  - when: main_from_hand
+    summary: "[Main] Trash 1 digi-source of a Mineral/Rock Digimon → Collision + Piercing + Reboot + return immunity + +3000 DP until EoOT"
+    process:
+      # Step 1a: Select 1 of your Digimon with Mineral or Rock trait that has
+      # at least 1 digivolution source (stack_size_gte: 2 = top card + ≥1 source).
+      - select_own_permanent:
+          bind_as: target_digi
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Mineral
+                  - trait_has: Rock
+              - stack_size_gte: 2
+          prompt: "Choose 1 of your [Mineral] or [Rock] Digimon with a digivolution card"
+
+      # Step 1b: Select 1 digivolution source from that Digimon to trash.
+      - select_own_sources:
+          from: target_digi
+          min: 1
+          max: 1
+          bind_as: chosen_source
+          prompt: "Choose 1 digivolution card to trash from that Digimon"
+
+      # Step 1c: Trash the selected source card.
+      - trash_selected_sources: { source_refs: chosen_source }
+
+      # Step 1d: Grant Collision, Piercing, and Reboot until end of opponent's turn.
+      - grant_keyword:
+          target: target_digi
+          keyword: Collision
+          expiry: end_of_opponents_turn
+
+      - grant_keyword:
+          target: target_digi
+          keyword: Piercing
+          expiry: end_of_opponents_turn
+
+      - grant_keyword:
+          target: target_digi
+          keyword: Reboot
+          expiry: end_of_opponents_turn
+
+      # Step 1e: Opponent's effects can't return it to hand or deck.
+      - add_modifier:
+          target: target_digi
+          modifier: CannotBeReturnedToHand
+          value: 1
+          expiry: end_of_opponents_turn
+
+      - add_modifier:
+          target: target_digi
+          modifier: CannotBeReturnedToDeck
+          value: 1
+          expiry: end_of_opponents_turn
+
+      # Step 1f: +3000 DP until end of opponent's turn.
+      - add_dp_modifier:
+          target: target_digi
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 2: [Security] Delete 1 of opponent's Digimon with lowest play cost ─
+  #
+  # GAP G-PLAY-COST-AGGREGATE: DSL has no aggregate minimum-play-cost formula for
+  # use as a `play_cost_lte` RHS value. Uses raw_rust workaround per BT9-112 pattern.
+  # When G-PLAY-COST-AGGREGATE closes, replace with:
+  #   - select_opponent_permanent:
+  #       bind_as: target
+  #       filter:
+  #         all_of:
+  #           - kind: digimon
+  #           - play_cost_lte: { formula: { agg: min_opponent_digimon_play_cost } }
+  #       prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
+  #   - delete_permanent: { target: target }
+  - when: on_security
+    summary: "[Security] Delete 1 opponent Digimon with lowest play cost (raw_rust G-PLAY-COST-AGGREGATE)"
+    process:
+      - raw_rust: { fn: ex8_070_delete_lowest_cost_digimon }

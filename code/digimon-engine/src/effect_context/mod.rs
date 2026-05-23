@@ -3712,11 +3712,7 @@ impl<'a> EffectContext<'a> {
     ///
     /// Returns `true` when the source handle was found and moved; `false` if
     /// the permanent slot is gone or the card is not in its stack.
-    pub fn return_card_source_to_hand(
-        &mut self,
-        perm: PermanentHandle,
-        card: CardHandle,
-    ) -> bool {
+    pub fn return_card_source_to_hand(&mut self, perm: PermanentHandle, card: CardHandle) -> bool {
         let removed = {
             let permanent = match self
                 .game
@@ -3746,10 +3742,7 @@ impl<'a> EffectContext<'a> {
     /// keeping parity with `play_selected_sources_without_cost`. Each selected
     /// source ref is returned to its owner's hand. Returns `true` if every
     /// ref was successfully moved.
-    pub fn return_selected_sources_to_hand(
-        &mut self,
-        selected: Vec<SourceSelectionRef>,
-    ) -> bool {
+    pub fn return_selected_sources_to_hand(&mut self, selected: Vec<SourceSelectionRef>) -> bool {
         let mut all_ok = true;
         for source_ref in selected {
             if !self.return_card_source_to_hand(source_ref.permanent, source_ref.card) {
@@ -4383,6 +4376,31 @@ impl<'a> EffectContext<'a> {
                 self.source_permanent,
                 self.player,
             ),
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
+    pub fn add_declarative_modifier_with_payload(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        payload: crate::modifiers::ModifierPayload,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::materialized_declarative(
+                modifier,
+                value,
+                expiry,
+                self.source_permanent,
+                self.player,
+            )
+            .with_payload(payload),
         );
         self.game.mark_until_condition_dirty();
     }

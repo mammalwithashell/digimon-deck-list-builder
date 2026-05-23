@@ -26,14 +26,14 @@
 //!     card remains load-only until the DNA follow-up and inherited predicate
 //!     blockers are wired into the full clause.
 //! - Clause 0b ([When Digivolving] DNA → CannotAttack 2 targets):
-//!     BLOCKED G-DSL-IS-DNA-DIGIVOLVING (qa/dsl-vocab-gaps.md)
+//!     IMPLEMENTED via DNA-origin gating
 //! - Clause 1  ([Inherited][End of Attack] gain memory if carrier name/trait):
-//!     BLOCKED G-DSL-SOURCE-NAME-CONTAINS (qa/dsl-vocab-gaps.md)
+//!     IMPLEMENTED via source-name predicate support
 //!
 //! # Patterns covered
 //! - G2: DNA digivolve alt-path (dna_digivolve with two materials)
 //! - Track E reusable source-trashing verb is covered by the DSL zone-movement tests.
-//! - Inherited End of Attack conditional memory gain (blocked on G-DSL-SOURCE-NAME-CONTAINS)
+//! - Inherited End of Attack conditional memory gain (implemented)
 
 use digimon_dsl::compiled::{CompiledAltPathKind, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
@@ -141,7 +141,7 @@ fn bt12_028_has_dna_digivolve_alt_path() {
 }
 
 #[test]
-fn bt12_028_compiles_implemented_main_clause_but_keeps_inherited_blocked() {
+fn bt12_028_compiles_implemented_main_and_inherited_clauses() {
     let runner = paildramon();
     let compiled = runner.compiled_card("BT12-028").expect("BT12-028 compiled");
     assert_eq!(
@@ -191,7 +191,7 @@ fn bt12_028_when_digivolving_trashes_top_3_source_cards_from_each_opponent_digim
     );
 }
 
-// ─── §3 Behavioral — Clause 0b: DNA sub-condition (BLOCKED) ─────────────────
+// ─── §3 Behavioral — Clause 0b: DNA sub-condition ───────────────────────────
 
 #[test]
 fn bt12_028_dna_digivolve_applies_cannot_attack_to_two_digimon_with_no_sources() {
@@ -371,7 +371,7 @@ fn bt12_028_inherited_end_of_attack_does_not_fire_for_unrelated_carrier() {
     );
 }
 
-// ─── §5 Inherited scope structural check (BLOCKED) ───────────────────────────
+// ─── §5 Inherited scope structural check ────────────────────────────────────
 
 /// Inherited clause shape: scope=Inherited, when=EndOfAttack, not optional,
 /// no OPT flag.

@@ -286,8 +286,9 @@ fn compile_per_selector(
         S::MaterialCount => CompiledPerSelector::MaterialCount,
         S::StackSize => CompiledPerSelector::StackSize,
         S::AllyCount => CompiledPerSelector::AllyCount,
-        S::SuspendedCount { of } => CompiledPerSelector::SuspendedCount {
+        S::SuspendedCount { of, exclude_source } => CompiledPerSelector::SuspendedCount {
             of: compile_player_ref(*of),
+            exclude_source: *exclude_source,
         },
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
         S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
@@ -363,6 +364,11 @@ fn compile_cost_delta(
 fn compile_identity(id: &crate::identity::IdentitySpec) -> CompiledIdentity {
     CompiledIdentity {
         name_aliases: id.name_aliases.iter().map(compile_name_alias).collect(),
+        source_name_aliases: id
+            .source_name_aliases
+            .iter()
+            .map(compile_source_name_alias)
+            .collect(),
     }
 }
 
@@ -380,6 +386,14 @@ fn compile_name_alias(a: &crate::identity::NameAliasSpec) -> CompiledNameAlias {
             .has_inherited
             .as_ref()
             .and_then(|i| i.name_is.clone()),
+    }
+}
+
+fn compile_source_name_alias(
+    a: &crate::identity::SourceNameAliasSpec,
+) -> CompiledSourceNameAlias {
+    CompiledSourceNameAlias {
+        level_lte: a.level_lte,
     }
 }
 
@@ -1910,6 +1924,10 @@ fn compile_step(
 
         S::TrashTopSecurity(a) => CompiledStep::TrashTopSecurity {
             of: compile_player_ref(a.of),
+            count: a
+                .count
+                .as_ref()
+                .map(|f| compile_formula(f, &format!("{prefix}.count"), card_id, errors)),
         },
         S::TrashBottomSecurity(a) => CompiledStep::TrashBottomSecurity {
             of: compile_player_ref(a.of),
@@ -2225,8 +2243,14 @@ fn compile_step(
             }
         }
         S::SelectOpponentDpBudget(a) => CompiledStep::SelectOpponentDpBudget {
-            dp_budget: a.dp_budget,
+            dp_budget: compile_formula(
+                &a.dp_budget,
+                &format!("{prefix}.dp_budget"),
+                card_id,
+                errors,
+            ),
             min_picks: a.min_picks,
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             then: a

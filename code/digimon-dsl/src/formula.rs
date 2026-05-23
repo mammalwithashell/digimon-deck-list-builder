@@ -161,6 +161,12 @@ pub enum PerSelector {
     AllyCount,
     SuspendedCount {
         of: PlayerRef,
+        /// When true, the effect's own source permanent is excluded from the
+        /// count — DCGO `permanent != card.PermanentOfThisCard()`, used by
+        /// EX8-074's "for each *other* suspended Digimon". Omitted → false.
+        /// Only suspended *Digimon* are counted regardless of this flag.
+        #[serde(default)]
+        exclude_source: bool,
     },
     DigivolutionColorCount,
     SameLevelPairsInSources,
@@ -181,13 +187,21 @@ impl Serialize for PerSelector {
             Self::MaterialCount => serializer.serialize_str("material_count"),
             Self::StackSize => serializer.serialize_str("stack_size"),
             Self::AllyCount => serializer.serialize_str("ally_count"),
-            Self::SuspendedCount { of } => {
+            Self::SuspendedCount { of, exclude_source } => {
                 let mut outer = serializer.serialize_map(Some(1))?;
                 #[derive(Serialize)]
                 struct SuspendedPayload {
                     of: PlayerRef,
+                    #[serde(skip_serializing_if = "std::ops::Not::not")]
+                    exclude_source: bool,
                 }
-                outer.serialize_entry("suspended_count", &SuspendedPayload { of: *of })?;
+                outer.serialize_entry(
+                    "suspended_count",
+                    &SuspendedPayload {
+                        of: *of,
+                        exclude_source: *exclude_source,
+                    },
+                )?;
                 outer.end()
             }
             Self::DigivolutionColorCount => serializer.serialize_str("digivolution_color_count"),
@@ -228,8 +242,10 @@ pub enum AggregateSelector {
     HighestDp,
     LowestLevel,
     HighestLevel,
-    /// Lowest printed play cost among the candidate set. Used by
-    /// EX4-073 clause C ("delete 1 opp Digimon/Tamer with the lowest
-    /// play cost"). G-PLAY-COST-AGGREGATE.
+    /// Lowest printed play cost among the scope's **Digimon** (Tamers are
+    /// excluded — DCGO `IsMinCost(.., IsDigimonOnly: true)`). Drives BT9-112's
+    /// "delete all opponent Digimon with the lowest play cost". The DP/Level
+    /// aggregates are already Digimon-only since Tamers lack DP/level.
+    /// G-PLAY-COST-AGGREGATE.
     LowestPlayCost,
 }

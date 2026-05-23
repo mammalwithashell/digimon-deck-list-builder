@@ -17,7 +17,7 @@
 #
 # Clause layout:
 #   Clause 1: [Hand][Counter] <Blast Digivolve> → grant_keyword declarative
-#   Clause 2: [On Play][When Digivolving] DP-sum multi-delete → raw_rust step
+#   Clause 2: [On Play][When Digivolving] DP-sum multi-delete → select_opponent_dp_budget
 #   Clause 3: [When Attacking][Once Per Turn] tamer condition → trash_top_security
 #   Inherited: Ace Overflow <-5>
 
@@ -62,10 +62,10 @@ effects:
   # Mandatory when eligible targets exist (DCGO: canNoSelect: false in
   # SetUpActivateClass; canEndNotMax: true allows early stop with fewer picks).
   #
-  # Implemented via raw_rust step `lm_021_delete_dp_sum`. The step uses the
-  # engine's DP-budget multi-select primitive with this Digimon's current
-  # effective DP as the budget, matching DCGO's `PermanentOfThisCard().DP`
-  # and running `canTargetConditionByPreSelectedList` behavior.
+  # Implemented with `select_opponent_dp_budget`, matching DCGO's running
+  # `canTargetCondition_ByPreSelectedList` and `canEndSelectCondition`: at
+  # least one target is required when candidates exist, and PASS appears only
+  # after the minimum pick is met.
   #
   # Condition: ≥1 opponent Digimon on battle area (mirrors DCGO CanActivateCondition).
   - when: [on_play, when_digivolving]
@@ -76,7 +76,13 @@ effects:
         zone: [battle_area]
         kind: digimon
     process:
-      - raw_rust: { fn: lm_021_delete_dp_sum }
+      - select_opponent_dp_budget:
+          dp_budget: { source_dp: {} }
+          min_picks: 1
+          bind_as: targets
+          prompt: "Delete opponent Digimon whose total DP is 14000 or less"
+          then:
+            - delete_bound_permanents: { binding: targets }
 
   # ─── Clause 3: [When Attacking][Once Per Turn] tamer-gated security trash ────
   # "If you have a Tamer, trash the top card of your opponent's security stack."

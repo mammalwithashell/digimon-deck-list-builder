@@ -125,13 +125,10 @@
 #       selection, violating the printed "by returning 2 ... " required
 #       cost (must be exactly 2 to prevent the deletion).
 #
-#   (b) **G-ZONE-TRASH-TO-DECK**: no DSL verb to move a list of trash cards
-#       to the bottom of the deck (qa/dsl-vocab-gaps.md, LM-027 entry).
-#       The only sister precedent is `ex11_012_return_trash_to_deck_bottom`
-#       which moves a SINGLE card by binding name "r"; no multi-card variant
-#       exists in the engine raw_rust registry, and we are not authoring
-#       new raw_rust functions in this card-only DSL pass (see preamble
-#       constraint: "Files to write (ONLY): YAML + test").
+#   (b) **Historical note**: selected trash-to-deck movement is now available
+#       via `return_trash_list_to_deck_bottom`, but this older omission also
+#       depends on exact/minimum multi-select and atomic replacement-cost
+#       handling below.
 #
 #   (c) **G-DSL-INHERITED-REPLACEMENT-COST-CANCEL**: the standard DSL
 #       replacement primitive `cancel_replacement` runs unconditionally

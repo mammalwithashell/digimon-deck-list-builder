@@ -171,101 +171,92 @@ fn bt23_014_at_least_two_triggered_clauses() {
     );
 }
 
-// ─── Section 2: Floodgate — positive condition (modifiers installed on play) ─
+// ─── Section 2: Floodgate — positive condition (modifier installed on play) ─
 
 #[test]
-fn bt23_014_on_play_installs_cannot_play_digimon_by_effect_on_opponent() {
+fn bt23_014_on_play_installs_cannot_play_from_trash_on_opponent() {
     let mut runner = gallantmon_in_hand();
 
     // No modifier before play.
     assert!(
-        !runner.game.modifiers.player_has(
-            1,
-            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
-        ),
-        "opponent must NOT have CannotPlayDigimonByEffect before Gallantmon is played"
+        !runner
+            .game
+            .modifiers
+            .player_has(1, digimon_engine::enums::ModifierType::CannotPlayFromTrash),
+        "opponent must NOT have CannotPlayFromTrash before Gallantmon is played"
     );
 
     // Play Gallantmon; auto-resolve any pending selection from delete clause.
     let _idx = runner.play(0, 0);
     runner.auto_resolve();
 
-    // Floodgate modifier must be installed on opponent (player 1).
+    // The trash-scoped floodgate modifier must be installed on opponent.
     assert!(
-        runner.game.modifiers.player_has(
-            1,
-            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
-        ),
-        "CannotPlayDigimonByEffect must be installed on opponent after [On Play]"
+        runner
+            .game
+            .modifiers
+            .player_has(1, digimon_engine::enums::ModifierType::CannotPlayFromTrash),
+        "CannotPlayFromTrash must be installed on opponent after [On Play]"
     );
 }
 
+/// The printed text restricts plays "from the trash" only — the broad
+/// hand+trash `CannotPlayDigimonByEffect` / `CannotPlayTamerByEffect`
+/// modifiers (which the old raw_rust installed) must NOT be installed, so
+/// the opponent can still play Digimon/Tamers from HAND by effect.
 #[test]
-fn bt23_014_on_play_installs_cannot_play_tamer_by_effect_on_opponent() {
+fn bt23_014_floodgate_does_not_block_hand_plays() {
     let mut runner = gallantmon_in_hand();
-
-    assert!(
-        !runner.game.modifiers.player_has(
-            1,
-            digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
-        ),
-        "opponent must NOT have CannotPlayTamerByEffect before Gallantmon is played"
-    );
 
     let _idx = runner.play(0, 0);
     runner.auto_resolve();
 
     assert!(
-        runner.game.modifiers.player_has(
+        !runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
+        ),
+        "floodgate must NOT install the broad hand+trash CannotPlayDigimonByEffect modifier"
+    );
+    assert!(
+        !runner.game.modifiers.player_has(
             1,
             digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
         ),
-        "CannotPlayTamerByEffect must be installed on opponent after [On Play]"
+        "floodgate must NOT install the broad hand+trash CannotPlayTamerByEffect modifier"
     );
 }
 
 // ─── Section 3: Floodgate — negative condition (modifiers expire) ─────────────
 
 #[test]
-fn bt23_014_floodgate_modifiers_still_active_during_opponents_turn() {
+fn bt23_014_floodgate_modifier_still_active_during_opponents_turn() {
     let mut runner = gallantmon_in_hand();
 
     let _idx = runner.play(0, 0);
     runner.auto_resolve();
 
-    // Both modifiers installed.
-    assert!(runner.game.modifiers.player_has(
-        1,
-        digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
-    ));
-    assert!(runner.game.modifiers.player_has(
-        1,
-        digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
-    ));
+    assert!(runner
+        .game
+        .modifiers
+        .player_has(1, digimon_engine::enums::ModifierType::CannotPlayFromTrash));
 
     // End player 0's turn → transition to player 1's turn.
     runner.end_turn();
 
-    // During player 1's turn the modifiers should still be active.
+    // During player 1's turn the modifier should still be active.
     // (EndOfOpponentsTurn from P0's view = expires when P1's turn ends, not begins.)
     assert!(
-        runner.game.modifiers.player_has(
-            1,
-            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
-        ),
-        "CannotPlayDigimonByEffect must still be active DURING opponent's turn"
-    );
-    assert!(
-        runner.game.modifiers.player_has(
-            1,
-            digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
-        ),
-        "CannotPlayTamerByEffect must still be active DURING opponent's turn"
+        runner
+            .game
+            .modifiers
+            .player_has(1, digimon_engine::enums::ModifierType::CannotPlayFromTrash),
+        "CannotPlayFromTrash must still be active DURING opponent's turn"
     );
 }
 
 #[test]
-fn bt23_014_floodgate_modifiers_expire_after_opponents_turn_ends() {
+fn bt23_014_floodgate_modifier_expires_after_opponents_turn_ends() {
     let mut runner = gallantmon_in_hand();
 
     let _idx = runner.play(0, 0);
@@ -275,20 +266,13 @@ fn bt23_014_floodgate_modifiers_expire_after_opponents_turn_ends() {
     runner.end_turn();
     runner.end_turn();
 
-    // After opponent's turn fully ends, both modifiers must be gone.
+    // After opponent's turn fully ends, the modifier must be gone.
     assert!(
-        !runner.game.modifiers.player_has(
-            1,
-            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
-        ),
-        "CannotPlayDigimonByEffect must expire after opponent's turn ends"
-    );
-    assert!(
-        !runner.game.modifiers.player_has(
-            1,
-            digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
-        ),
-        "CannotPlayTamerByEffect must expire after opponent's turn ends"
+        !runner
+            .game
+            .modifiers
+            .player_has(1, digimon_engine::enums::ModifierType::CannotPlayFromTrash),
+        "CannotPlayFromTrash must expire after opponent's turn ends"
     );
 }
 
@@ -318,11 +302,11 @@ fn bt23_014_floodgate_blocks_digimon_play_from_trash_by_effect() {
 
     // Verify the floodgate modifier is installed.
     assert!(
-        runner.game.modifiers.player_has(
-            1,
-            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
-        ),
-        "CannotPlayDigimonByEffect must be installed"
+        runner
+            .game
+            .modifiers
+            .player_has(1, digimon_engine::enums::ModifierType::CannotPlayFromTrash),
+        "CannotPlayFromTrash must be installed"
     );
 
     // Attempt to play a Digimon from trash by effect. Should be blocked.

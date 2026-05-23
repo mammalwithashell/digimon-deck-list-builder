@@ -161,7 +161,7 @@ pub enum StepSpec {
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
-    /// true origin zone (hand vs trash), recovered from the binding.
+    /// true origin zone (hand, trash, or material), recovered from the binding.
     PlayUnionBoundFree(PlayUnionBoundFreeArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
@@ -171,7 +171,7 @@ pub enum StepSpec {
     EffectInitiatedDnaDigivolveHandPartner(EffectDnaDigivolveHandPartnerArgs),
 
     // Security
-    TrashTopSecurity(PlayerArg),
+    TrashTopSecurity(TrashTopSecurityArgs),
     TrashBottomSecurity(PlayerArg),
     TrashTopSecurityAndCancelReplacement(PlayerArg),
     BounceSelf(EmptyArgs),
@@ -953,6 +953,19 @@ pub struct PlayerArg {
     pub of: PlayerRef,
 }
 
+/// Args for `trash_top_security`. The optional `count` field trashes N cards
+/// from the top of the security stack, where N is a formula evaluated at run
+/// time; omitting it trashes exactly one (the historical behavior).
+/// Drives BT17-018's "for every 10 cards in both players' trash, trash 1
+/// security" — `count: { floor_div: [ <card_count_in_zone trash any>, 10 ] }`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashTopSecurityArgs {
+    pub of: PlayerRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<crate::formula::FormulaSpec>,
+}
+
 /// Args for `trash_bottom_face_down_source_under_tamer` — bundles "pick one of
 /// `of`'s Tamers that carries a face-down stash → trash its bottom face-down
 /// source". Used as an activation cost by BEATBREAK / DATA SQUAD cards.
@@ -1532,7 +1545,7 @@ pub enum CostDeltaKeyword {
 
 /// `play_union_bound_free:` args — play a card previously picked by a
 /// `select_union_zone` step, **without paying its cost**, from its true
-/// origin zone (hand vs trash). `binding` names the `select_union_zone`
+/// origin zone (hand, trash, or material). `binding` names the `select_union_zone`
 /// binding (a `bind_as` from that step). The origin zone is recorded in the
 /// binding itself, so this step needs no zone parameter.
 ///
@@ -1964,9 +1977,16 @@ pub struct DigiBurstArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOpponentDpBudgetArgs {
-    pub dp_budget: i32,
+    /// Running DP budget. Accepts a literal integer or a formula such as
+    /// `{ source_dp: {} }` for "this Digimon's DP".
+    pub dp_budget: crate::formula::FormulaSpec,
     #[serde(default)]
     pub min_picks: u8,
+    /// Optional per-candidate predicate. Only opponent permanents satisfying
+    /// this filter are eligible (e.g. `{ kind: digimon }` for card text that
+    /// targets "their Digimon" specifically). Empty filter accepts all.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,

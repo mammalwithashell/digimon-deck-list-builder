@@ -100,13 +100,11 @@ effects:
   #   ActivateCoroutine: filter PermanentCondition = CardEffectCommons.IsMinCost(perm, Enemy, true)
   #                      → DestroyPermanentsClass(filtered list)
   #
-  # GAP G-PLAY-COST-LTE: No DSL predicate for play_cost_lte with aggregate formula.
-  # The DSL aggregate formula supports lowest_dp / highest_dp / lowest_level but NOT
-  # lowest_play_cost. Tracked in qa/dsl-vocab-gaps.md.
-  #
-  # Workaround: raw_rust step bt9_112_delete_lowest_cost_digimon implements the
-  # "find minimum play_cost among opp Digimon, delete all at that cost" logic.
-  # When G-PLAY-COST-LTE closes, replace with native DSL verb.
+  # "Delete all opponent Digimon with the lowest play cost." The `lowest_play_cost`
+  # aggregate computes the minimum play cost among the opponent's Digimon only
+  # (DCGO `IsMinCost(.., IsDigimonOnly: true)` — Tamers excluded). The `for_each`
+  # snapshots every opponent Digimon whose play cost is ≤ that minimum (i.e.
+  # exactly equal, since nothing is below the minimum) and deletes each.
   #
   # GAP G-OPT-TRIGGERED: once_per_turn: true is compiled to Effect::max_per_turn=1
   # but triggered OPT lockout is not yet enforced by run_queued_effect_inner.
@@ -115,4 +113,15 @@ effects:
     once_per_turn: true
     summary: "Delete all opp Digimon with lowest play cost (once per turn)"
     process:
-      - raw_rust: { fn: bt9_112_delete_lowest_cost_digimon }
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            play_cost_lte:
+              aggregate:
+                selector: lowest_play_cost
+                scope: opponent
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }

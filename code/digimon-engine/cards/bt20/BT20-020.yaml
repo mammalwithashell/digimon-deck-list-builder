@@ -31,41 +31,20 @@
 #   Clause 2:  [When Digivolving] opp cannot play Digimon/Tamers by  IMPLEMENTED
 #              effect until end of their turn; then if Dragon Mode
 #              in digi-stack, trash opp top security
-#   Clause 3:  [All Turns][OPT] on opp security removed → delete 1   PARTIAL
-#              opp Digimon with DP ≤ this Digimon                    (delete BLOCKED — G-FORMULA-SOURCE-DP)
+#   Clause 3:  [All Turns][OPT] on opp security removed → delete 1   IMPLEMENTED
+#              opp Digimon with DP ≤ this Digimon
 #
-# ─── DSL-GAP — Cannot read source permanent's DP in formula  [G-FORMULA-SOURCE-DP] ─
+# ─── Resolved history — source permanent DP formula [G-FORMULA-SOURCE-DP] ────
 #
 # Clause 3 requires deleting 1 opponent Digimon with DP ≤ this Digimon's
 # current effective DP, not merely BT20-020's printed/base DP.
-# The `dp_lte` predicate accepts literal values or formula-based values, but
-# the `FormulaSpec` enum has no `source_dp: {}` primitive that reads the
-# source permanent's own effective DP at runtime. The engine has the data
-# (`ctx.source_permanent` + `ctx.game.effective_dp(h)`) but the formula layer
-# lacks a primitive to surface it.
+# The `source_dp` formula now reads the source permanent's own effective DP at
+# runtime, so Clause 3 can filter opponent Digimon with `dp_lte:
+# { formula: { source_dp: {} } }`.
 #
-# This gap is shared with BT17-102 Greymon, P-182 WarGreymon, and BT18-087
-# Owen Dreadnought (the latter uses a literal cap; the former two need source DP).
-# All existing cards that need "≤ self DP" deletes are BLOCKED on this gap and
-# omit the delete clause under no-approximations (including a `kind: digimon`
-# delete without the DP filter would over-target opponents with arbitrary DP).
-#
-# Suggested closure:
-#   - Add `SourceDp` variant to `FormulaSpec` / `CompiledFormula` in
-#     `digimon-dsl`, evaluated as:
-#       ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h)).unwrap_or(0)
-#   - Then Clause 3's filter becomes:
-#       filter:
-#         all_of:
-#           - kind: digimon
-#           - dp_lte: { formula: { source_dp: {} } }
-#
-# Until the gap closes, the `select_opponent_permanent` + `delete_permanent`
-# body of Clause 3 is OMITTED. The trigger itself (timing, active_when,
-# once_per_turn) is still compiled so the structural test passes.
-#
-# See also: G-PRED-DP-LTE (G-PRED-DP-LTE-SOURCE is a sister gap naming variant)
-# and qa/dsl-vocab-gaps.md for the BT17-102 / P-182 entry.
+# See `qa/resolved-gaps.md` for the DNA Omnimon completion closure. The old
+# stale verdict wording in this header is retained here only as resolved gap
+# provenance.
 
 card: BT20-020
 name: "Imperialdramon: Fighter Mode"

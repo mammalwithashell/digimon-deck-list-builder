@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-20
+Last updated: 2026-05-22
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -18,6 +18,14 @@ Tracks A–J, DNA Omnimon completion, Puppets sweep) — see
 `openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md`. The 5 genuine
 substrate gaps below landed. Engine/DSL only — no card YAML re-authored (the BG
 card re-authoring sweep runs separately); no `ACTION_SPACE_SIZE` / tensor changes.
+
+**Readiness reconciliation (2026-05-22):** the live `BG Imperial`
+deck-library pool is 25 cards, not 24. The extra pool card is `BT17-077`,
+which remains canonically ledger-owned by `Royal Knights` but is covered for BG
+Imperial deck readiness. `BT21-037` also moved from a stale `PARTIAL`
+ledger entry to `IMPLEMENTED` after adding its printed `[Digivolve] [Veemon]:
+Cost 2` alternate path. The reconciliation found zero live `raw_rust` YAML
+escapes in the 25-card pool.
 
 **Audit correction:** the Phase 0 audit initially flagged 9 gaps, but a second
 review found 4 of them already covered by pre-existing engine capability — they
@@ -86,11 +94,12 @@ bringing the archetype to **24/24 IMPLEMENTED**.
 ## Phase 2 / DNA Omnimon completion closure — 2026-05-20
 
 The `complete-dna-omnimon-archetype` change drove the DNA Omnimon archetype (64 cards)
-from a Phase A baseline of 34 IMPLEMENTED / 25 PARTIAL / 5 BLOCKED to a final ledger of
-**62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED**. Archetype verdict ledger:
-[qa/qa-reports/validated_cards_dsl.json](qa-reports/validated_cards_dsl.json). The two
-remaining PARTIAL cards (BT17-102, BT23-096) are blocked on the two still-open gaps
-recorded at the end of this section.
+from a Phase A baseline of 34 IMPLEMENTED / 25 PARTIAL / 5 BLOCKED to an interim ledger
+of **62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED**. The 2026-05-22
+`close-dna-omnimon-partial-gaps` follow-up resolved the two remaining partial gaps
+(BT17-102, BT23-096), so the current archetype verdict ledger is
+**64 IMPLEMENTED / 0 PARTIAL / 0 BLOCKED**:
+[qa/qa-reports/validated_cards_dsl.json](qa-reports/validated_cards_dsl.json).
 
 DNA Omnimon now has 0 live `raw_rust` escapes — BT20-102's board-wipe/return migrated to
 pure DSL, AD1-025's body migrated, and the unused `bt20_102_boardwipe_and_return` fn was
@@ -168,28 +177,17 @@ behavioral tests, which now pass:
 `G-ADD-OPTION-SELF-TO-HAND`, `G-EVENT-CARD-TAMER-PLAY`, `G-COLOR-MATCH-AGAINST-BOARD`,
 `G-DSL-SELF-NAME-CONTAINS`, `G-EVENT-TARGET-NOT-SOURCE`.
 
-### Gaps STILL OPEN (verified open against code; filed, not closed by this change)
-
-These two gaps remain genuinely open and are tracked in
-[qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md) and
-[docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md). They account for the 2 PARTIAL
-cards in the final ledger:
+### Follow-up gaps CLOSED 2026-05-22
 
 - **G-DYNAMIC-NAME-ALIAS-FROM-STACK** — BT17-102 Greymon `[All Turns]` material-name-alias
-  clause. The DSL identity layer has only static `name_aliases`; there is NO engine
-  consumer for a dynamic alias derived from the live digivolution-source stack. A faithful
-  fix is a cross-cutting engine feature (a Permanent-level effective-name-set query
-  consulted by every name predicate). BT17-102 is otherwise IMPLEMENTED; this one clause
-  is omitted and test `bt17_102_all_turns_aliases_low_level_material_names` is left
-  `#[ignore]`'d.
+  clause. Closed by `identity.source_name_aliases`, synthesized permanent effective names,
+  and name-predicate routing through that synthesized name set. BT17-102 is now fully
+  IMPLEMENTED; `bt17_102_all_turns_aliases_low_level_material_names` is enabled and passing.
 - **G-DSL-DELAY-ON-ATTACK-EVENT** — BT23-096 Comet Hammer `<Delay>`-on-attack clause.
-  3-part engine blocker: `lower_delay.rs` does not map attack timings to
-  `DelayTrigger::OnEvent`; `combat.rs` dispatches `OnAllyAttack` via
-  `TriggerSource::PlayerBattleArea` which `effect_queue.rs` never fans out to event-gated
-  delays; `attacker_trait_has` resolves the attacker only via `attack_target_change()`
-  (unset for a plain attack). `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` are
-  noted as already-present substrate. BT23-096 is otherwise IMPLEMENTED; the clause is
-  omitted and the test is left `#[ignore]`'d.
+  Closed by lowering attack timings to `DelayTrigger::OnEvent`, feeding attack events into
+  event-gated delayed options, and carrying attacker context for `attacker_trait_has`.
+  BT23-096 is now fully IMPLEMENTED; the CS attack Delay and non-CS negative tests are
+  enabled and passing.
 
 ## Phase 2 Track C closure — 2026-05-17
 
@@ -865,10 +863,10 @@ Resolved by Group 3:
 
 - **Discovered in:** Medusamon Batch 10, LM-021 Agumon - Bond of Bravery DSL implementation (2026-04-28)
 - **Scope:** Rust engine + DSL.
-- **Card(s):** LM-021 Agumon - Bond of Bravery — "[On Play][When Digivolving] Delete any number of your opponent's Digimon whose total DP adds up to equal or less than this Digimon's DP." Also BT17-018 Gallantmon Crimson Mode — "[On Play][When Digivolving] Delete any number of your opponent's Digimon with total DP equal to or less than this Digimon's DP." Both cards share the same selection mechanic.
+- **Card(s):** LM-021 Agumon - Bond of Bravery — "[On Play][When Digivolving] Delete any number of your opponent's Digimon whose total DP adds up to equal or less than this Digimon's DP." Also BT17-018 Gallantmon Crimson Mode — "[On Play][When Digivolving] Delete any number of your opponent's Digimon whose total DP adds up to 15000 or less and delete them." Both cards share the same selection mechanic; LM-021 uses a source-DP formula budget and BT17-018 uses a literal 15000 budget.
 - **Effect text (LM-021):** "Delete any number of your opponent's Digimon whose total DP adds up to equal or less than this Digimon's DP."
 - **What's closed:** `EffectContext::select_opponent_permanents_by_dp_budget` provides the iterative multi-select: each pick reduces the remaining DP budget, re-filters candidates, exposes PASS after `min_picks`, and commits all selected handles together.
-- **Consumer cleanup (2026-05-22):** `raw_rust: { fn: lm_021_delete_dp_sum }` and `raw_rust: { fn: bt17_018_delete_opp_digimon_dp_budget }` now call the DP-budget primitive instead of the old single-pick fallback. LM-021 derives the budget from this Digimon's current effective DP; BT17-018 uses the printed 15000 budget. Regression coverage lives in `code/digimon-engine/tests/cards_behavioral/lm/lm_021.rs` and `code/digimon-engine/tests/cards_behavioral/bt17/bt17_018.rs`.
+- **Consumer cleanup (2026-05-22):** the former `raw_rust: { fn: lm_021_delete_dp_sum }` and `raw_rust: { fn: bt17_018_delete_opp_digimon_dp_budget }` fallbacks are gone. LM-021 uses native `select_opponent_dp_budget` with `dp_budget: { source_dp: {} }`; BT17-018 uses native `select_opponent_dp_budget` with `dp_budget: 15000`. Regression coverage lives in `code/digimon-engine/tests/cards_behavioral/lm/lm_021.rs` and `code/digimon-engine/tests/cards_behavioral/bt17/bt17_018.rs`.
 - **Updated 2026-04-29:** Resolved for opponent battle-area DP-budget selection. `EffectContext::select_opponent_permanents_by_dp_budget` installs `SelectionKind::DpBudget`, filters remaining affordable targets after each pick, and exposes PASS after `min_picks`. DSL `select_opponent_dp_budget` binds the chosen permanents and `delete_bound_permanents` consumes them. Covered by `dp_budget_selection_tracks_remaining_dp_and_allows_pass_after_min`, `dp_budget_selection_finishes_when_no_targets_fit`, `dp_budget_selection_mask_exposes_only_remaining_affordable_targets`, and `dsl_select_dp_budget_deletes_bound_permanents`.
 
 ---
@@ -1270,7 +1268,7 @@ Resolved by Group 3:
 - **Effect text:** "opponent adds the top card of their security stack to the hand"
 - **What's missing:** `EffectContext` only exposes `trash_top_security(player)` for security removal. There is no `add_top_security_to_hand(player)` method that pops the top security card and places it in the player's hand while firing the standard security-removed event chain (`OnLoseSecurity` via `SecurityRevealed` + `OnOpponentSecurityRemoved` via `PlayerBattleArea`).
 - **Suggested change:** Add `pub fn add_top_security_to_hand(&mut self, player: PlayerId) -> bool` to `EffectContext`. Implementation: pop `security.last()`, push to `hand`, fire `EffectTiming::OnLoseSecurity` with `TriggerSource::SecurityRevealed { defender: player, card: card_handle }` and `EffectTiming::OnOpponentSecurityRemoved` with `TriggerSource::PlayerBattleArea(controller)`.
-- **Workaround:** `raw_rust: { fn: p_137_opp_adds_top_security_to_hand }` — manually implements the move + event chain in `src/cards/raw_rust/mod.rs`.
+- **Former workaround:** `raw_rust: { fn: p_137_opp_adds_top_security_to_hand }` manually implemented the move + event chain. As of 2026-05-22, P-137 uses native `add_top_security_to_hand` and the raw shim has been removed.
 
 ---
 

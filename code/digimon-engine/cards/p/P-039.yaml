@@ -23,11 +23,13 @@ effects:
           prompt: "Add 1 black Digimon card to your hand"
       - add_to_hand_from_reveal: { of: you, card: picked }
       - place_remainder_on_deck: { of: you, position: bottom }
-      # Option self-placement is inferred from the Delay clause. Security
-      # placement remains blocked by G-PLACE-SELF-AS-OPTION-PERMANENT.
+      # Option self-placement is handled by the engine via classify_option_subtype:
+      # the presence of a kind: delay clause causes the engine to auto-park this
+      # card as a Delayed(MainPhaseActivated) permanent when played from hand.
+      # No explicit place_self_as_delay_option step is needed here.
 
   - kind: delay
-    trigger: end_of_your_next_turn
+    trigger: delayed
     summary: "[Main]<Delay> Gain 2 memory"
     process:
       - gain_memory: 2
@@ -35,4 +37,6 @@ effects:
   - scope: inherited
     when: on_security
     summary: "[Security] Place this card in the battle area"
-    process: []
+    process:
+      # G-PLACE-SELF-AS-OPTION-PERMANENT resolved 2026-05-02.
+      - place_self_as_delay_option: {}
