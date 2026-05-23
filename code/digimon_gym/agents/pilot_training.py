@@ -345,10 +345,22 @@ class WinRateCallback(BaseCallback):
         self._eval_sidecar_path: Optional[Path] = (
             Path(eval_sidecar_path) if eval_sidecar_path is not None else None
         )
-        # Per-archetype tracking
+        # Per-archetype tracking. Three axes:
+        #   _archetype_*           — keyed by opponent archetype (original)
+        #   _agent_archetype_*     — keyed by AGENT's archetype (generalist sampling)
+        #   _matchup_*             — keyed by (agent_arch, opp_arch) tuple — full N×N grid
+        # All three are populated when info contains both deck1_archetype and
+        # opponent_archetype (generalist mode); the opp-axis dicts also populate
+        # in gauntlet mode where only opponent_archetype is set.
         self._archetype_wins: Dict[str, int] = {}
         self._archetype_draws: Dict[str, int] = {}
         self._archetype_games: Dict[str, int] = {}
+        self._agent_archetype_wins: Dict[str, int] = {}
+        self._agent_archetype_draws: Dict[str, int] = {}
+        self._agent_archetype_games: Dict[str, int] = {}
+        self._matchup_wins: Dict[tuple, int] = {}
+        self._matchup_draws: Dict[tuple, int] = {}
+        self._matchup_games: Dict[tuple, int] = {}
 
     def get_archetype_results(self):
         """Return per-archetype results as ArchetypeResult list."""
@@ -422,6 +434,9 @@ class WinRateCallback(BaseCallback):
             steps = 0
             done = False
             opponent_archetype = info.get("opponent_archetype")
+            # In generalist mode the wrapper also sets deck1_archetype; in
+            # gauntlet mode it's absent (agent always plays the same fixed deck).
+            agent_archetype = info.get("deck1_archetype")
 
             # LSTM state management (None for MLP, threaded for LSTM)
             state = None
@@ -466,7 +481,7 @@ class WinRateCallback(BaseCallback):
             total_terminal_score += terminal_score
             total_dense_reward += episode_reward - terminal_score
 
-            # Track per-archetype win rates (when gauntlet is active)
+            # Track per-archetype win rates (when gauntlet OR generalist is active).
             if opponent_archetype:
                 self._archetype_games[opponent_archetype] = (
                     self._archetype_games.get(opponent_archetype, 0) + 1
@@ -479,6 +494,33 @@ class WinRateCallback(BaseCallback):
                     self._archetype_draws[opponent_archetype] = (
                         self._archetype_draws.get(opponent_archetype, 0) + 1
                     )
+            # Agent-archetype + full N×N matchup grid (generalist mode only;
+            # gauntlet mode has a fixed agent deck so agent_archetype is None).
+            if agent_archetype:
+                self._agent_archetype_games[agent_archetype] = (
+                    self._agent_archetype_games.get(agent_archetype, 0) + 1
+                )
+                if won:
+                    self._agent_archetype_wins[agent_archetype] = (
+                        self._agent_archetype_wins.get(agent_archetype, 0) + 1
+                    )
+                elif is_draw:
+                    self._agent_archetype_draws[agent_archetype] = (
+                        self._agent_archetype_draws.get(agent_archetype, 0) + 1
+                    )
+                if opponent_archetype:
+                    matchup = (agent_archetype, opponent_archetype)
+                    self._matchup_games[matchup] = (
+                        self._matchup_games.get(matchup, 0) + 1
+                    )
+                    if won:
+                        self._matchup_wins[matchup] = (
+                            self._matchup_wins.get(matchup, 0) + 1
+                        )
+                    elif is_draw:
+                        self._matchup_draws[matchup] = (
+                            self._matchup_draws.get(matchup, 0) + 1
+                        )
 
         win_rate = wins / self.n_eval_episodes
         mean_reward = total_reward / self.n_eval_episodes
@@ -504,22 +546,53 @@ class WinRateCallback(BaseCallback):
         self.logger.record("pilot/games_played", self.games_played)
 
         # Per-archetype matchup tracking. Populated by GeneralistDeckPoolWrapper
-        # and PoolOpponentWrapper via `info["opponent_archetype"]` in reset.
-        # Logged as TB scalars so trajectory tooling can surface frontrunner /
-        # outlier matchups. Cumulative across all evals so far — divide wins
-        # by games to get the running win rate per archetype.
+        # (deck1_archetype + opponent_archetype) and PoolOpponentWrapper
+        # (opponent_archetype only). Logged as TB scalars so trajectory tooling
+        # can surface frontrunner / outlier matchups. Cumulative across all
+        # evals so far — divide wins by games to get the running win rate.
+        #
+        # Three axes:
+        #   pilot/archetype/<opp>/...                  — agent's win% vs this opp archetype
+        #   pilot/agent_archetype/<agent>/...          — agent's win% piloting this archetype
+        #   pilot/matchup/<agent>_vs_<opp>/...         — full N×N matchup grid
+        def _sanitize(s: str) -> str:
+            # TB tag-name escape: '/' delimits tag components in TB UI,
+            # ' ' / parens look noisy in scalar plots.
+            return s.replace("/", "_").replace(" ", "_").replace("(", "").replace(")", "")
+
         for arch_name in sorted(self._archetype_games.keys()):
             games = self._archetype_games[arch_name]
             if games <= 0:
                 continue
             wins = self._archetype_wins.get(arch_name, 0)
             draws = self._archetype_draws.get(arch_name, 0)
-            # TB scalar names: use a stable tag namespace; sanitize archetype
-            # name (TB barfs on '/' inside tag components).
-            safe = arch_name.replace("/", "_").replace(" ", "_")
+            safe = _sanitize(arch_name)
             self.logger.record(f"pilot/archetype/{safe}/win_rate", wins / games)
             self.logger.record(f"pilot/archetype/{safe}/draw_rate", draws / games)
             self.logger.record(f"pilot/archetype/{safe}/games", float(games))
+
+        for arch_name in sorted(self._agent_archetype_games.keys()):
+            games = self._agent_archetype_games[arch_name]
+            if games <= 0:
+                continue
+            wins = self._agent_archetype_wins.get(arch_name, 0)
+            draws = self._agent_archetype_draws.get(arch_name, 0)
+            safe = _sanitize(arch_name)
+            self.logger.record(f"pilot/agent_archetype/{safe}/win_rate", wins / games)
+            self.logger.record(f"pilot/agent_archetype/{safe}/draw_rate", draws / games)
+            self.logger.record(f"pilot/agent_archetype/{safe}/games", float(games))
+
+        for matchup in sorted(self._matchup_games.keys()):
+            games = self._matchup_games[matchup]
+            if games <= 0:
+                continue
+            wins = self._matchup_wins.get(matchup, 0)
+            draws = self._matchup_draws.get(matchup, 0)
+            agent_arch, opp_arch = matchup
+            tag = f"{_sanitize(agent_arch)}_vs_{_sanitize(opp_arch)}"
+            self.logger.record(f"pilot/matchup/{tag}/win_rate", wins / games)
+            self.logger.record(f"pilot/matchup/{tag}/draw_rate", draws / games)
+            self.logger.record(f"pilot/matchup/{tag}/games", float(games))
 
         if self.eval_suite is not None:
             suite_states = {}
