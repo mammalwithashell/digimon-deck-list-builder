@@ -494,7 +494,7 @@ fn lm_021_when_attacking_opt_clears_after_end_turn() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 6 — On Play / When Digivolving delete clause (PARTIAL)
+// Section 6 — On Play / When Digivolving delete clause
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// The [On Play][When Digivolving] clause deletes "any number of your opponent's

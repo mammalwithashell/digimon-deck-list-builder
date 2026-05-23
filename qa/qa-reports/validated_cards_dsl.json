@@ -765,44 +765,43 @@
     },
     "LM-021": {
       "card_name": "Agumon - Bond of Bravery",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-g-medusamon-pilot-completion",
+      "validated_date": "2026-05-22",
+      "report": "native-dp-budget-yaml-migration",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon Batch 10",
       "yaml_path": "code/digimon-engine/cards/lm/LM-021.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_021.rs",
-      "test_count": 15,
+      "test_count": 17,
       "patterns": [
         "H12-BLAST-DIGIVOLVE",
         "ACE-OVERFLOW",
-        "G-DP-BUDGET-MULTI-DELETE",
-        "E5-TRASH-TOP-SECURITY",
-        "raw_rust"
+        "select_opponent_dp_budget",
+        "source_dp_budget",
+        "E5-TRASH-TOP-SECURITY"
       ],
-      "notes": "Lv7 Red Blast Digivolve ACE — multi-select opp-DP-budget (LM-021 Bond of Bravery) ships via SelectionKind::DpBudget + select_opponent_dp_budget. All 15 tests pass."
+      "notes": "Lv7 Red Blast Digivolve ACE — multi-select opponent DP-budget delete uses native select_opponent_dp_budget with dp_budget: { source_dp: {} } plus delete_bound_permanents. All 17 LM-021 behavioral tests pass."
     },
     "BT17-018": {
       "card_name": "Gallantmon: Crimson Mode",
       "validated_date": "2026-05-22",
       "report": "native-dp-budget-yaml-migration",
       "status": "IMPLEMENTED",
-      "gap_kind": "dsl",
+      "gap_kind": null,
       "archetype": "Medusamon Batch 10",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-018.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_018.rs",
-      "test_count": 17,
-      "tests_passing": 17,
+      "test_count": 18,
+      "tests_passing": 18,
       "tests_ignored": 0,
       "patterns": [
         "H12-BLAST-DIGIVOLVE",
         "ACE-OVERFLOW",
         "select_opponent_dp_budget",
-        "E5-TRASH-TOP-SECURITY-LOOP",
-        "raw_rust",
+        "trash_top_security_count",
         "once_per_turn"
       ],
-      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP ≤ 15000 now uses native select_opponent_dp_budget + delete_bound_permanents and removed raw_rust:bt17_018_delete_opp_digimon_dp_budget; (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security still uses raw_rust:bt17_018_trash_security_per_ten_trash until DSL gap G-LOSE-COUNT-BOUND lands. 17/17 tests pass, 0 ignored."
+      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Alt paths: standard Lv6/Red cost 5, Gallantmon-name Lv6 cost 4, and Blast Digivolve marker path. The [On Play][When Digivolving] delete uses native select_opponent_dp_budget + delete_bound_permanents; the [When Attacking][OPT] security-trash loop uses native trash_top_security count formula over both players' trash. All 18 BT17-018 behavioral tests pass, 0 ignored."
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",

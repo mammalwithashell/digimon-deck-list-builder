@@ -15,10 +15,6 @@
 //!
 //! Patterns: H12 (Blast Digivolve), H13 (ACE), DP-budget multi-delete, When Attacking OPT.
 //!
-//! Known gaps:
-//! - G-LOSE-COUNT-BOUND: the [When Attacking] security-trash loop still needs a
-//!   native computed repeat step, so that clause retains a narrow raw Rust helper.
-
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
