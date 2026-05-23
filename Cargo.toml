@@ -2,6 +2,8 @@
 members = [
     "code/digimon-dsl",
     "code/digimon-engine",
+    "code/digimon-engine-cli",
+    "code/digimon-engine-mcp",
     "code/digimon-engine-py",
     "code/src-tauri",
     "code/tools/dsl-schema-export",

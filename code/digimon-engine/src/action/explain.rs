@@ -574,3 +574,96 @@ fn with_trash_card(
         explanation
     }
 }
+
+/// Enumerate every action_id currently legal for `player_id` and decode each
+/// into an `ActionExplanation` with a human-readable label.
+///
+/// Walks `build_action_mask(game, player_id)`, picks the indices whose mask
+/// bit is set, and calls `explain_action` on each. The decoder is the
+/// single source of truth — `legal_decoded_actions` adds no legality logic
+/// of its own, so the legal set here matches the mask by construction.
+pub fn legal_decoded_actions(game: &Game, player_id: PlayerId) -> Vec<ActionExplanation> {
+    let mask = crate::action::mask::build_action_mask(game, player_id);
+    mask.iter()
+        .enumerate()
+        .filter(|(_, bit)| **bit > 0.5)
+        .map(|(idx, _)| explain_action(game, player_id, idx as u16))
+        .collect()
+}
+
+#[cfg(test)]
+mod legal_actions_tests {
+    use super::*;
+    use crate::action::mask::build_action_mask;
+    use crate::action::space::ACTION_SPACE_SIZE;
+    use crate::debug_runner::DebugRunner;
+
+    fn fixture() -> DebugRunner {
+        DebugRunner::new()
+    }
+
+    #[test]
+    fn legality_matches_mask_exactly() {
+        let r = fixture();
+        let mask = build_action_mask(&r.game, 0);
+        let legal: Vec<u16> = legal_decoded_actions(&r.game, 0)
+            .iter()
+            .map(|e| e.action_id)
+            .collect();
+        let mask_legal: Vec<u16> = mask
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| **b > 0.5)
+            .map(|(i, _)| i as u16)
+            .collect();
+        assert_eq!(legal, mask_legal, "decoded legal set diverges from mask");
+    }
+
+    #[test]
+    fn every_illegal_action_id_is_absent() {
+        let r = fixture();
+        let mask = build_action_mask(&r.game, 0);
+        let legal: std::collections::HashSet<u16> =
+            legal_decoded_actions(&r.game, 0).iter().map(|e| e.action_id).collect();
+        for (idx, bit) in mask.iter().enumerate() {
+            if *bit <= 0.5 {
+                assert!(
+                    !legal.contains(&(idx as u16)),
+                    "illegal action {idx} appeared in decoded legal list"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_legal_action_has_a_decoded_entry() {
+        let r = fixture();
+        let mask = build_action_mask(&r.game, 0);
+        let legal: std::collections::HashSet<u16> =
+            legal_decoded_actions(&r.game, 0).iter().map(|e| e.action_id).collect();
+        for (idx, bit) in mask.iter().enumerate() {
+            if *bit > 0.5 {
+                assert!(
+                    legal.contains(&(idx as u16)),
+                    "legal action {idx} missing from decoded list"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn decoded_actions_are_serializable() {
+        let r = fixture();
+        let actions = legal_decoded_actions(&r.game, 0);
+        let _ = serde_json::to_string(&actions).expect("ActionExplanation is serde::Serialize");
+    }
+
+    #[test]
+    fn explain_action_handles_full_action_space_without_panic() {
+        let r = fixture();
+        for id in 0..ACTION_SPACE_SIZE as u16 {
+            // Should never panic — illegal IDs fall through to Unknown variants.
+            let _ = explain_action(&r.game, 0, id);
+        }
+    }
+}
