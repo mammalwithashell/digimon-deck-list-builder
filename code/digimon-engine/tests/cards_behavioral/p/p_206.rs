@@ -327,9 +327,16 @@ fn p_206_clause_3_is_inherited_security_skill() {
     );
 }
 
-/// Inherited security clause must be optional ("you may").
+/// Inherited security clause outer `optional` flag must be `false`.
+///
+/// The "you may" governs ONLY the optional Digimon play, which is expressed
+/// internally via `select_effect_choice ["Play Digimon", "Decline"]` guarded
+/// by a `count_gte` predicate. The "Then, add this card to the hand" tail is
+/// unconditional — DCGO calls `AddThisCardToHand` regardless of whether a
+/// Digimon was played. Therefore the outer clause is `optional: false`; the
+/// optionality lives entirely inside the process body. (Pattern follows P-156.)
 #[test]
-fn p_206_inherited_security_clause_is_optional() {
+fn p_206_inherited_security_outer_clause_is_mandatory() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -352,8 +359,9 @@ fn p_206_inherited_security_clause_is_optional() {
 
     if let Some(t) = sec_clause {
         assert!(
-            t.optional,
-            "'You may' in inherited security text → optional must be true"
+            !t.optional,
+            "outer clause must be optional=false — the 'you may' is internal \
+             via select_effect_choice; the mandatory tail always fires"
         );
     }
     // If it's a RawRust stub, optionality is handled internally — no assertion needed.
@@ -964,11 +972,12 @@ fn p_206_inherited_security_process_is_non_empty() {
     );
 }
 
-/// Negative: when hand and trash are both empty of cost-≤3 Digimon, the
-/// security clause should not prompt (optional — player may decline or no
-/// candidates). Structural: confirms optional=true means PASS is valid.
+/// Structural: when hand and trash have no eligible Digimon, the `count_gte`
+/// guard short-circuits and the "Play Digimon / Decline" prompt is never
+/// installed. The mandatory `add_this_option_to_hand` tail still fires.
+/// Confirms the outer clause is `optional: false` (no outer PASS gate).
 #[test]
-fn p_206_inherited_security_is_optional_no_mandatory_play() {
+fn p_206_inherited_security_outer_clause_not_optional_structural() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -989,11 +998,12 @@ fn p_206_inherited_security_is_optional_no_mandatory_play() {
         _ => None,
     });
 
-    // If triggered form, must be optional. RawRust handles optionality internally.
+    // Outer clause is mandatory (optional: false); "you may" is internal.
     if let Some(optional) = sec_opt {
         assert!(
-            optional,
-            "'You may' text → inherited security clause must be optional=true"
+            !optional,
+            "outer clause must be optional=false — the add_this_option_to_hand \
+             tail is unconditional; only the inner Digimon play is optional"
         );
     }
 }
@@ -1002,7 +1012,15 @@ fn p_206_inherited_security_is_optional_no_mandatory_play() {
 /// card with a play cost of 3 or less". The `select_hand` filter wires
 /// `play_cost_lte: 3`, so only the cost-2 Digimon — not the cost-5 Digimon —
 /// is a legal candidate. Drive: P-206 in P1's security; P1 hand has one cost-2
-/// and one cost-5 Digimon; P0 attacks; pick the "From hand" branch.
+/// and one cost-5 Digimon; P0 attacks; accept the "Play Digimon" choice, then
+/// pick the "From hand" zone, then confirm only one candidate is offered.
+///
+/// Navigation order (optional: false outer clause):
+///   1. [Security] fires → "Play Digimon / Decline" EffectChoice (first prompt).
+///   2. Choose "Play Digimon" (branch 0).
+///   3. "From hand / From trash" zone EffectChoice.
+///   4. Choose "From hand" (branch 0).
+///   5. select_hand: only cost-2 Digimon is in the valid set.
 #[test]
 fn p_206_inherited_security_cost_filter_excludes_high_cost_digimon() {
     let mut runner = DebugRunner::builder()
@@ -1023,28 +1041,30 @@ fn p_206_inherited_security_cost_filter_excludes_high_cost_digimon() {
     let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
     runner.attack_player(attacker, 1, false);
 
-    // The SecuritySkill fires. The clause is printed "you may", so the first
-    // prompt is the optional accept/decline gate — accept it to proceed.
-    let gate = runner
+    // First prompt: "Play Digimon / Decline" EffectChoice.
+    // The clause is optional: false (mandatory outer), so no outer PASS gate.
+    // The count_gte guard is satisfied (DIG-CHEAP cost=2 passes play_cost_lte: 3).
+    let play_choice = runner
         .pending_selection_view()
-        .expect("optional [Security] effect must install an accept/decline gate");
-    assert!(
-        gate.is_optional,
-        "'You may' [Security] effect surfaces as an optional gate"
-    );
-    runner
-        .execute_action(gate.selecting_player, gate.valid_action_ids[0])
-        .expect("accept the optional [Security] effect");
-
-    // Next prompt is the "From hand" / "From trash" effect choice — branch 0.
-    let choice = runner
-        .pending_selection_view()
-        .expect("SecuritySkill must install the From hand/trash effect choice");
+        .expect("[Security] must install 'Play Digimon / Decline' EffectChoice");
     assert_eq!(
-        choice.kind,
+        play_choice.kind,
+        digimon_engine::selection::SelectionKind::EffectChoice,
+        "first security prompt must be the 'Play Digimon / Decline' EffectChoice"
+    );
+    // Choose "Play Digimon" (branch 0).
+    runner.execute_branch(0).expect("choose 'Play Digimon'");
+
+    // Second prompt: "From hand / From trash" zone EffectChoice.
+    let zone_choice = runner
+        .pending_selection_view()
+        .expect("SecuritySkill must install the 'From hand / From trash' zone EffectChoice");
+    assert_eq!(
+        zone_choice.kind,
         digimon_engine::selection::SelectionKind::EffectChoice,
         "second security prompt is the zone effect choice"
     );
+    // Choose "From hand" (branch 0).
     runner
         .execute_branch(0)
         .expect("choose the From hand branch");
@@ -1145,6 +1165,126 @@ fn p_206_inherited_security_adds_self_to_hand_after_play() {
             .iter()
             .any(|c| c.card_id(&runner.game.card_data) == "P-206"),
         "P-206 must leave the security stack (added to hand, not trashed)"
+    );
+}
+
+/// DRIFT FIX PROOF: "Then, add this card to the hand" fires unconditionally,
+/// even when the player DECLINES the optional Digimon play.
+///
+/// Printed text: "You may play 1 Digimon card … Then, add this card to the
+/// hand." The "Then" is unconditional — DCGO calls AddThisCardToHand at the
+/// END of SecuritySkill's ActivateCoroutine regardless of whether a Digimon was
+/// selected. The previous YAML modelled this as `optional: true`, which with
+/// G-OUTER-OPTIONAL-NOT-INSTALLED resolved would allow a full skip including the
+/// mandatory tail. Fix: `optional: false` outer clause, inner Play/Decline
+/// select_effect_choice. This test is the behavioral proof.
+///
+/// Drive: P-206 sits in P1's security; P1 hand has a cost-3 Digimon (eligible).
+/// P0 attacks; security fires; P1 sees "Play Digimon / Decline". P1 chooses
+/// "Decline" (branch 1). P-206 must still land in P1's hand.
+#[test]
+fn p_206_inherited_security_add_to_hand_fires_even_when_declining_play() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_low_cost("DIG-LOW"))
+        .add_card(make_digimon("ATTACKER"))
+        .add_card(filler("FILL"))
+        .hand(1, &["DIG-LOW"])
+        .security(1, &["P-206"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    runner.attack_player(attacker, 1, false);
+
+    // First prompt: "Play Digimon / Decline" EffectChoice (count_gte guard satisfied).
+    let play_choice = runner
+        .pending_selection_view()
+        .expect("[Security] must install 'Play Digimon / Decline' EffectChoice");
+    assert_eq!(
+        play_choice.kind,
+        digimon_engine::selection::SelectionKind::EffectChoice,
+        "first security prompt must be the 'Play Digimon / Decline' EffectChoice"
+    );
+    // Choose "Decline" (branch 1) — the optional play is skipped.
+    runner.execute_branch(1).expect("choose 'Decline'");
+
+    // No further play prompts should be pending.
+    let _ = runner.auto_resolve();
+
+    // P-206 must be in P1's hand — "Then, add this card to the hand" always fires.
+    let p1_hand: Vec<String> = runner
+        .game
+        .player(1)
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        p1_hand.contains(&"P-206".to_string()),
+        "DRIFT FIX: add_this_option_to_hand must fire even when the optional \
+         Digimon play is declined; P1 hand={p1_hand:?}"
+    );
+    // DIG-LOW was NOT played (the player declined).
+    assert!(
+        p1_hand.contains(&"DIG-LOW".to_string()),
+        "DIG-LOW must still be in hand after declining the optional play"
+    );
+    assert!(
+        !runner
+            .game
+            .player(1)
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "DIG-LOW"),
+        "DIG-LOW must not reach the battle area when the optional play is declined"
+    );
+}
+
+/// DRIFT FIX PROOF (no eligible Digimon): when neither hand nor trash has a
+/// cost-≤3 Digimon, the `count_gte` guard short-circuits the play prompt
+/// entirely — no "Play Digimon / Decline" choice is presented — but
+/// `add_this_option_to_hand` must still fire unconditionally.
+#[test]
+fn p_206_inherited_security_add_to_hand_fires_when_no_eligible_digimon() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_with_cost("DIG-EXPENSIVE", 5))
+        .add_card(make_digimon("ATTACKER"))
+        .add_card(filler("FILL"))
+        .hand(1, &["DIG-EXPENSIVE"])
+        .security(1, &["P-206"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    runner.attack_player(attacker, 1, false);
+
+    // No cost-≤3 Digimon in hand or trash: the count_gte guard is false,
+    // so no "Play Digimon / Decline" prompt is installed.
+    // auto_resolve handles the mandatory add_this_option_to_hand tail.
+    let _ = runner.auto_resolve();
+
+    let p1_hand: Vec<String> = runner
+        .game
+        .player(1)
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        p1_hand.contains(&"P-206".to_string()),
+        "add_this_option_to_hand must fire even when no eligible Digimon exists \
+         (count_gte guard skips the play prompt, but the tail always runs); \
+         P1 hand={p1_hand:?}"
     );
 }
 

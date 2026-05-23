@@ -18,7 +18,7 @@ pub enum BindingValue {
     CardList(Vec<CardHandle>),
     SourceRefs(Vec<SourceSelectionRef>),
     BreedingPermanentRef(BreedingPermanentSelectionRef),
-    /// A card picked via `select_union_zone` (hand ∪ trash), tagged with the
+    /// A card picked via `select_union_zone` (hand ∪ trash ∪ material), tagged with the
     /// `origin` zone it was in and the `owner` of that zone. Carrying the
     /// origin lets a downstream consumer (`play_union_bound_free`) replay
     /// the card from its *true* zone — a bare `CardHandle` cannot.

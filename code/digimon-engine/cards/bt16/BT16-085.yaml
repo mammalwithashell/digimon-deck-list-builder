@@ -54,7 +54,8 @@
 #   Until resolved, the delayed-return step is OMITTED. The free-play half is
 #   implemented; the return obligation is not enforced. Test
 #   `bt16_085_start_of_main_played_digimon_returns_at_opponent_eot` is
-#   #[ignore = "pending: G-PLAY-FROM-HAND-FREE-BIND-AS"].
+#   Historical test note only; G-PLAY-FROM-HAND-FREE-BIND-AS is resolved for
+#   this card's free-play binding flow.
 #
 # ─── Clause 1 — [Your Turn] digivolve observer, suspend-tamer cost, +1 memory;
 #                DNA sub-condition: trash 3 opp Digimon digi-cards

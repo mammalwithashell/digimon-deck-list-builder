@@ -20,27 +20,22 @@
 //! - H12: Blast Digivolve (grant_keyword: BlastDigivolve, ACE card)
 //! - H13: ACE (ace_overflow: -5)
 //! - Clause (a): [On Play][When Digivolving] multi-select opponent Digimon, running DP-sum ≤ self.DP
-//!   → PARTIAL (G-MULTI-SELECT-OPP-DP-SUM): uses raw_rust placeholder
+//!   → native `select_opponent_dp_budget` with `source_dp` budget
 //! - Clause (b): [When Attacking][Once Per Turn] tamer condition → trash_top_security
 //!   (fully implemented)
 //! - G-OPT-TRIGGERED: OPT lockout not enforced for triggered effects
 //! - Alt-path: standard Lv6 digivolve cost 3
 //!
 //! # Known gaps
-//! - **G-MULTI-SELECT-OPP-DP-SUM**: Engine lacks multi-select of opponent battle-area
-//!   permanents with a running DP-sum cap. DCGO uses `SelectPermanentEffect` with
-//!   `canTargetConditionByPreSelectedList` (running sum per pick) + `canEndSelectCondition`
-//!   (total ≤ MaxDP). `select_count_capped_multi` only targets Hand/Trash/Material.
-//!   `select_opponent_permanent` is single-target only. Clause (a) uses `raw_rust`
-//!   placeholder until this gap is resolved.
 //! - **G-OPT-TRIGGERED**: OPT lockout not enforced for triggered effects in queue.
 
 #![allow(unused_imports, dead_code)]
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming};
 use digimon_engine::selection::{SelectionKind, TriggerSource};
@@ -181,6 +176,44 @@ fn lm_021_has_on_play_when_digivolving_triggered_clause() {
     assert!(
         has_op_wd,
         "LM-021 must have a triggered clause with both on_play and when_digivolving timings"
+    );
+}
+
+#[test]
+fn lm_021_delete_clause_uses_native_dp_budget_selection() {
+    let runner = lm_021_runner();
+    let compiled = runner
+        .compiled_card("LM-021")
+        .expect("LM-021 in compiled_cards");
+
+    let clause = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnPlay)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .next()
+        .expect("LM-021 OnPlay/WhenDigivolving delete clause");
+
+    assert!(
+        !clause
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::RawRust { .. })),
+        "LM-021 delete clause must use native DSL, not raw_rust"
+    );
+    assert!(
+        clause
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::SelectOpponentDpBudget { .. })),
+        "LM-021 delete clause must use select_opponent_dp_budget"
     );
 }
 
@@ -461,26 +494,20 @@ fn lm_021_when_attacking_opt_clears_after_end_turn() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 6 — On Play / When Digivolving delete clause (PARTIAL)
+// Section 6 — On Play / When Digivolving delete clause
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// PARTIAL (G-MULTI-SELECT-OPP-DP-SUM):
 /// The [On Play][When Digivolving] clause deletes "any number of your opponent's
 /// Digimon whose total DP ≤ this Digimon's DP (14000)".
 ///
-/// This requires multi-select of opponent battle-area permanents with a running
-/// DP-sum cap. DCGO uses `SelectPermanentEffect` with:
+/// DCGO uses `SelectPermanentEffect` with:
 ///   - `canTargetConditionByPreSelectedList` (running sum per pick)
 ///   - `canEndSelectCondition` (validates total ≤ MaxDP / self.DP)
 ///   - `canNoSelect: false` (at least 1 deletion when ≥1 eligible target exists)
 ///   - `canEndNotMax: true` (player can stop early)
 ///
-/// Gap: `select_count_capped_multi` only covers Hand/Trash/Material zones.
-/// `select_opponent_permanent` is single-target only. No verb for running-DP-sum
-/// multi-select on opponent battle area.
-///
-/// Workaround: clause (a) is implemented as `raw_rust: lm_021_delete_dp_sum`
-/// placeholder. This test confirms the placeholder runs without panic.
+/// Native implementation: `select_opponent_dp_budget` with a `source_dp` budget
+/// and `delete_bound_permanents` tail.
 #[test]
 fn lm_021_on_play_does_not_panic_with_opponent_digimon() {
     let mut runner = DebugRunner::builder()
@@ -498,6 +525,74 @@ fn lm_021_on_play_does_not_panic_with_opponent_digimon() {
     // Must not panic.
     fire_on_play(&mut runner, lm_handle);
     let _ = runner.auto_resolve();
+}
+
+#[test]
+fn lm_021_on_play_can_delete_multiple_opponent_digimon_within_dp_budget() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(LM_021_YAML)
+        .expect("LM-021 parses")
+        .add_card(make_digimon_dp("OPP-LOW", 6000))
+        .add_card(make_digimon_dp("OPP-MID", 7000))
+        .add_card(make_digimon_dp("OPP-HIGH", 15000))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .memory(10)
+        .start();
+
+    let low = runner.place_on_field(1, "OPP-LOW", Some(0));
+    let mid = runner.place_on_field(1, "OPP-MID", Some(0));
+    let high = runner.place_on_field(1, "OPP-HIGH", Some(0));
+    let lm_handle = runner.place_on_field(0, "LM-021", Some(0));
+
+    fire_on_play(&mut runner, lm_handle);
+
+    let selection = runner
+        .pending_selection()
+        .expect("LM-021 must install a DP-budget selection");
+    assert!(
+        selection
+            .valid_action_ids
+            .contains(&encode_attack(0, low.index as u16)),
+        "6000 DP target should be selectable"
+    );
+    assert!(
+        selection
+            .valid_action_ids
+            .contains(&encode_attack(0, mid.index as u16)),
+        "7000 DP target should be selectable"
+    );
+    assert!(
+        !selection
+            .valid_action_ids
+            .contains(&encode_attack(0, high.index as u16)),
+        "15000 DP target exceeds LM-021's 14000 DP budget"
+    );
+    assert!(
+        !selection.valid_action_ids.contains(&PASS),
+        "LM-021's delete is mandatory once at least one target exists"
+    );
+
+    let selecting_player = selection.selecting_player;
+    runner
+        .execute_action(selecting_player, encode_attack(0, low.index as u16))
+        .expect("pick low target");
+    runner
+        .execute_action(selecting_player, encode_attack(0, mid.index as u16))
+        .expect("pick mid target");
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "two selected opponent Digimon should be deleted"
+    );
+    assert!(
+        runner.game.players[1]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "OPP-HIGH"),
+        "the over-budget target should remain on field"
+    );
 }
 
 /// Negative: On Play with NO opponent Digimon → `any_permanent` condition fails,

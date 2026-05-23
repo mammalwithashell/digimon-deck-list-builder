@@ -15,10 +15,80 @@ alt_paths:
     from: { level_eq: 5, color_is: purple }
     cost: 5
 
-# Printed forced-attack grant and attack-triggered source-trash buff clauses
-# are not authored in this pass.
+# Authoritative card text (EX10-034.json / cards.json):
+#
+#   <Collision> / <Fragment (3)> / <Blocker>
+#
+#   [On Play] [When Digivolving] Until your opponent's turn ends, give 1 of
+#     their Digimon "[Start of Your Main Phase] This Digimon attacks."
+#
+#   [All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of
+#     this Digimon's digivolution cards, this Digimon gains <Security A. +1>
+#     and +3000 DP until your turn ends.
+#
+# ─── Clause A: [On Play][When Digivolving] grant forced-attack to 1 opp Digimon ─
+#
+# OMITTED — G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING
+#
+# `grant_triggered_effect.target` is `PredicateSpec`, not a `BindingRef`. The
+# step walks all battle-area permanents matching the predicate and installs the
+# body on EVERY match. There is no DSL surface for "select 1 opponent Digimon,
+# then grant the triggered body to that specific binding" — the selection step
+# and the grant step are decoupled and cannot compose at the per-binding level.
+#
+# Faithful implementation requires:
+#   1. `select_opponent_permanent` → `forced_target` binding
+#   2. `grant_triggered_effect { target: forced_target, ... }` — but `target`
+#      must be a PredicateSpec, not a BindingRef.
+#
+# Using a predicate such as `{ of: opponent, kind: digimon }` would grant the
+# triggered body to ALL opponent Digimon (violating no-approximations by
+# over-firing on the [Start of Your Main Phase] forced-attack relative to the
+# selected 1 Digimon).
+#
+# Per no-approximations policy this clause is BLOCKED until the gap closes.
+# Filed as: G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING
+# See: qa/dsl-vocab-gaps.md § EX10-034 — grant_triggered_effect to selected binding
+#
+# ─── Clause B: [All Turns][OPT] When Digimon attack ─────────────────────────────
+#
+# "[All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this
+# Digimon's digivolution cards, this Digimon gains <Security A. +1> and +3000
+# DP until your turn ends."
+#
+# Timing breakdown:
+#   - `when_attacking`    : fires when the controlling player's Digimon attacks.
+#   - `on_opponent_attack`: fires when the opponent's Digimon attacks (your
+#                           battle area scanned as the observer side).
+#   - `active_when: { all_turns: true }`: remove the default your-turn gate
+#     so the observer fires on both players' turns.
+#   - `once_per_turn: true`: [Once Per Turn] printed on card.
+#   - `optional: true`: "by trashing" = cost-gated optional activation.
+#
+# Cost: `select_own_sources { from: source, min: 2, max: 2 }`.
+#   "from: source" scopes the selection to THIS Digimon's own digivolution cards
+#   only (the permanent carrying EX10-034 as its top card). If fewer than 2
+#   sources exist on this Digimon, `select_own_sources` silently skips per the
+#   no-approximations silent-skip contract — no over-fire.
+#
+# Effect: SecurityAttackChange +1 + +3000 DP, both `expiry: end_of_turn`.
+#   "until your turn ends" = end_of_turn (the turn on which the effect resolves).
+#
+# ─── Implementation status ────────────────────────────────────────────────────────
+#
+# | Card-text element                                         | Status      |
+# |-----------------------------------------------------------|-------------|
+# | <Collision> keyword                                       | IMPLEMENTED |
+# | <Fragment (3)> keyword                                    | IMPLEMENTED |
+# | <Blocker> keyword                                         | IMPLEMENTED |
+# | [OP][WD] grant forced-attack to 1 opp Digimon            | BLOCKED     |
+# |   → G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING              |             |
+# | [All Turns][OPT] when Digimon attack, trash 2 sources     | IMPLEMENTED |
+# | [All Turns][OPT] this Digimon gains SecurityA+1 until EoT | IMPLEMENTED |
+# | [All Turns][OPT] this Digimon gains +3000 DP until EoT   | IMPLEMENTED |
 
 effects:
+  # ─── Printed keywords ──────────────────────────────────────────────────────
   - kind: grant_keyword
     keyword: Collision
 
@@ -28,3 +98,41 @@ effects:
 
   - kind: grant_keyword
     keyword: Blocker
+
+  # ─── Clause A: BLOCKED (G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING) ───────────
+  # See comment block above. Omitted until the DSL can target a specific
+  # binding-ref in grant_triggered_effect rather than a broadcast predicate.
+
+  # ─── Clause B: [All Turns][OPT] When Digimon attack ───────────────────────
+  #
+  # Fires when any Digimon attacks (your turn via when_attacking, opponent's
+  # turn via on_opponent_attack). Once per turn, optional cost of 2 sources.
+  - when: [when_attacking, on_opponent_attack]
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When Digimon attack, trash 2 of this Digimon's sources → SecurityA+1 and +3000 DP until EoT"
+    process:
+      # Cost: select and trash any 2 of THIS Digimon's digivolution cards.
+      # `from: source` restricts the pool to the permanent carrying EX10-034 as
+      # its top card (i.e. EX10-034's own digivolution stack), not all your
+      # Digimon's sources. Silently skips if <2 sources available (min: 2).
+      - select_own_sources:
+          from: source
+          min: 2
+          max: 2
+          bind_as: trashed_sources
+          prompt: "Trash any 2 of this Digimon's digivolution cards to gain Security A. +1 and +3000 DP"
+          then:
+            - trash_selected_sources: { source_refs: trashed_sources }
+            # Security A. +1 until your turn ends.
+            - add_modifier:
+                target: source
+                modifier: SecurityAttackChange
+                value: 1
+                expiry: end_of_turn
+            # +3000 DP until your turn ends.
+            - add_dp_modifier:
+                target: source
+                value: 3000
+                expiry: end_of_turn

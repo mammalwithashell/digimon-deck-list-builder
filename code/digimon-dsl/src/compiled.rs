@@ -88,6 +88,7 @@ pub struct CompiledDualOption {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledIdentity {
     pub name_aliases: Vec<CompiledNameAlias>,
+    pub source_name_aliases: Vec<CompiledSourceNameAlias>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -96,6 +97,11 @@ pub struct CompiledNameAlias {
     pub zone: Vec<CompiledZone>,
     pub has_inherited_card_number: Option<String>,
     pub has_inherited_name: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledSourceNameAlias {
+    pub level_lte: Option<u8>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -483,6 +489,9 @@ pub enum CompiledPerSelector {
     AllyCount,
     SuspendedCount {
         of: CompiledPlayerRef,
+        /// Exclude the effect's own source permanent from the count.
+        #[serde(default)]
+        exclude_source: bool,
     },
     DigivolutionColorCount,
     SameLevelPairsInSources,
@@ -998,7 +1007,7 @@ pub enum CompiledStep {
         suppress_on_play: bool,
     },
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
-    /// true origin zone (hand vs trash). `binding` names a `select_union_zone`
+    /// true origin zone (hand, trash, or material). `binding` names a `select_union_zone`
     /// `bind_as`; the origin zone is carried in the binding value.
     PlayUnionBoundFree {
         binding: String,
@@ -1042,6 +1051,9 @@ pub enum CompiledStep {
     },
     TrashTopSecurity {
         of: CompiledPlayerRef,
+        /// Number of top security cards to trash, as a run-time formula.
+        /// `None` trashes exactly one (the historical behavior).
+        count: Option<CompiledFormula>,
     },
     TrashBottomSecurity {
         of: CompiledPlayerRef,
@@ -1273,8 +1285,9 @@ pub enum CompiledStep {
         then: Vec<CompiledStep>,
     },
     SelectOpponentDpBudget {
-        dp_budget: i32,
+        dp_budget: CompiledFormula,
         min_picks: u8,
+        /// Per-candidate predicate; `CompiledPredicate::default()` accepts all.
         filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,

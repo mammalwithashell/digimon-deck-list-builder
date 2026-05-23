@@ -114,6 +114,16 @@ fn runner_can_use_standard_compact_v1_observation_profile() {
 }
 
 #[test]
+fn runner_can_use_standard_lite_deck_v2_observation_profile() {
+    let runner = sample_runner_with_observation_profile("standard_lite_deck_v2");
+
+    assert_eq!(runner.observation_profile_id(), "standard_lite_deck_v2");
+    assert_eq!(runner.observation_layout().tensor_size, 8850);
+    assert_eq!(runner.get_action_mask().len(), ACTION_SPACE_SIZE);
+    assert_eq!(runner.get_board_tensor(None).len(), 8850);
+}
+
+#[test]
 fn runner_test_setter_accepts_observation_profile_aliases() {
     let mut runner = sample_runner();
 

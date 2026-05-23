@@ -5,10 +5,59 @@ color: [black]
 cost: 3
 traits: [LIBERATOR]
 
-# Printed [Start of Your Main Phase] return-self-to-deck hand-play and trash
-# fallback are not authored in this pass.
+# Printed text:
+# [Start of Your Main Phase] By returning this Tamer to the bottom of the
+# deck, you may play 1 [Close] from your hand without paying the cost. Then,
+# if you don't have a Digimon, you may play 1 [Sunarizamon] from your trash
+# without paying the cost.
+#
+# [All Turns] When effects trash any of your [Mineral] or [Rock] trait
+# Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.
+#
+# Security Effect [Security] Play this card without paying the cost.
+#
+# Supported faithfully:
+# - [Start of Your Main Phase]: optional trigger; activation_cost:
+#   { return_self_to_deck_bottom: true }; then optionally play 1 exact-name
+#   [Close] from hand free; then if no Digimon on field, optionally play 1
+#   exact-name [Sunarizamon] from trash free. (Mirrors PUPPETS-G028 pattern.)
+# - [All Turns] Mineral/Rock digivolution-card trashed observer with
+#   activation_cost: { suspend_self: true } before gain_memory: 1.
+# - [Security] play this card without paying the cost.
 
 effects:
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Your Main Phase] By returning this Tamer to deck bottom, may play 1 [Close] from hand free, then if no Digimon may play 1 [Sunarizamon] from trash free"
+    process:
+      - activation_cost: { return_self_to_deck_bottom: true }
+      - select_hand:
+          of: you
+          bind_as: close_pick
+          optional: true
+          filter:
+            name_is: "Close"
+          prompt: "Play 1 [Close] from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: close_pick
+      - if:
+          condition:
+            no_permanent:
+              of: you
+              kind: digimon
+          then:
+            - select_trash:
+                of: you
+                bind_as: sunari_pick
+                optional: true
+                filter:
+                  name_is: "Sunarizamon"
+                prompt: "Play 1 [Sunarizamon] from your trash without paying the cost"
+            - play_from_trash_free:
+                of: you
+                hand_index: sunari_pick
+
   - when: on_digivolution_card_trashed
     condition:
       all_of:

@@ -4541,6 +4541,31 @@ impl<'a> EffectContext<'a> {
         self.game.mark_until_condition_dirty();
     }
 
+    pub fn add_declarative_modifier_with_payload(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        payload: crate::modifiers::ModifierPayload,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::materialized_declarative(
+                modifier,
+                value,
+                expiry,
+                self.source_permanent,
+                self.player,
+            )
+            .with_payload(payload),
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
     /// Install a `Expiry::UntilCondition`-scoped modifier with a runtime
     /// eviction predicate. Mirrors `add_modifier` (honors the
     /// `can_affect_permanent` guard) but tags the entry with the

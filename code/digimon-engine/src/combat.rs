@@ -3023,9 +3023,21 @@ impl Game {
         // the attacker itself. We piggyback on the PlayerBattleArea scan
         // and filter the attacker's own slot from the queue after enqueue.
         let attacker_queue_start = self.effect_queue.len();
+        let attacker_card = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| perm.top_card().handle());
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnAllyAttack,
-            crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+            attacker_card.map_or(
+                crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+                |card| crate::selection::TriggerSource::PlayerBattleAreaAttack {
+                    player: handle.player,
+                    attacker: handle,
+                    card,
+                },
+            ),
         );
         // Drop any entries whose source_permanent is the attacker itself
         // — the attacker does not fire its own OnAllyAttack observer.
@@ -3048,7 +3060,14 @@ impl Game {
         if (opp as usize) < self.players.len() {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnOpponentAttack,
-                crate::selection::TriggerSource::PlayerBattleArea(opp),
+                attacker_card.map_or(
+                    crate::selection::TriggerSource::PlayerBattleArea(opp),
+                    |card| crate::selection::TriggerSource::PlayerBattleAreaAttack {
+                        player: opp,
+                        attacker: handle,
+                        card,
+                    },
+                ),
             );
             self.drain_effect_queue();
         }

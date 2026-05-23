@@ -66,9 +66,6 @@ impl std::ops::BitOrAssign for UnionZoneSet {
 /// selection callback so a downstream consumer (e.g. `play_union_bound_free`)
 /// can play the card back from its true origin zone.
 ///
-/// Only `Hand` / `Trash` are modeled — the only two zones the union-zone
-/// selection currently spans (`UnionZoneSet::HAND | UnionZoneSet::TRASH`).
-/// Extend in lockstep with `UnionZoneSet` if future tasks widen the bitfield.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnionZoneOrigin {
     /// The card was picked from the player's hand.
@@ -453,6 +450,13 @@ pub enum TriggerSource {
     EventObserved {
         player: PlayerId,
         permanent: PermanentHandle,
+        card: CardHandle,
+    },
+    /// Observer timing scoped to one player's battle area while carrying the
+    /// attacking permanent as event context.
+    PlayerBattleAreaAttack {
+        player: PlayerId,
+        attacker: PermanentHandle,
         card: CardHandle,
     },
     /// Observer timing fired after an attack's effective target changes.

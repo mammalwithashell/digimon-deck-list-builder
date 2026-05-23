@@ -1,6 +1,6 @@
 //! Phase 2g: DSL DP-budget selections bind opponent permanents for later steps.
 
-use digimon_dsl::compiled::CompiledStep;
+use digimon_dsl::compiled::{CompiledFormula, CompiledPredicate, CompiledStep};
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -22,9 +22,9 @@ fn dsl_select_dp_budget_binds_opponent_permanents() {
     let target = runner.place_on_field(p1, "TARGET", Some(0));
 
     let steps = vec![CompiledStep::SelectOpponentDpBudget {
-        dp_budget: 5000,
+        dp_budget: CompiledFormula::Literal(5000),
         min_picks: 1,
-        filter: Default::default(),
+        filter: CompiledPredicate::default(),
         bind_as: Some("targets".to_string()),
         prompt: "Choose opponents".to_string(),
         then: vec![CompiledStep::DeleteBoundPermanents {
@@ -70,9 +70,9 @@ fn dsl_select_dp_budget_updates_remaining_budget_and_deletes_picked_targets() {
     let nine = runner.place_on_field(p1, "OPP-9K", Some(0));
 
     let steps = vec![CompiledStep::SelectOpponentDpBudget {
-        dp_budget: 15000,
+        dp_budget: CompiledFormula::Literal(15000),
         min_picks: 1,
-        filter: Default::default(),
+        filter: CompiledPredicate::default(),
         bind_as: Some("targets".to_string()),
         prompt: "Delete up to 15000 DP".to_string(),
         then: vec![CompiledStep::DeleteBoundPermanents {
@@ -146,9 +146,9 @@ fn dsl_select_dp_budget_min_pick_hides_pass_until_first_pick() {
     runner.place_on_field(p1, "OPP-7K", Some(0));
 
     let steps = vec![CompiledStep::SelectOpponentDpBudget {
-        dp_budget: 15000,
+        dp_budget: CompiledFormula::Literal(15000),
         min_picks: 1,
-        filter: Default::default(),
+        filter: CompiledPredicate::default(),
         bind_as: Some("targets".to_string()),
         prompt: "Delete up to 15000 DP".to_string(),
         then: vec![CompiledStep::DeleteBoundPermanents {

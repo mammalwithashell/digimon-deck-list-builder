@@ -27,7 +27,8 @@
 //! Tests below use `from_dsl_yaml(YAML)` with the YAML loaded via `include_str!`.
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
+    CompiledTiming,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
@@ -69,6 +70,32 @@ fn bt21_037_yaml_parses_and_compiles() {
         .compiled_card("BT21-037")
         .expect("BT21-037 must compile");
     assert_eq!(compiled.card, "BT21-037");
+}
+
+/// BT21-037's `xros_req` is "[Digivolve] [Veemon]: Cost 2".
+/// It must be preserved as an alternate digivolve path in addition to the
+/// standard Lv.3 cost-3 path from `evo_costs`.
+#[test]
+fn bt21_037_has_veemon_cost_2_alt_path() {
+    let runner = lighdramon_runner();
+    let compiled = runner
+        .compiled_card("BT21-037")
+        .expect("BT21-037 must compile");
+
+    let veemon_path = compiled.alt_paths.iter().find(|path| {
+        path.kind == CompiledAltPathKind::Digivolve
+            && path.cost == Some(CompiledCost::Literal(2))
+            && path
+                .from
+                .as_ref()
+                .is_some_and(|from| from.name_contains.as_deref() == Some("Veemon"))
+    });
+
+    assert!(
+        veemon_path.is_some(),
+        "BT21-037 must include the printed [Digivolve] [Veemon]: Cost 2 alt path; alt_paths={:?}",
+        compiled.alt_paths
+    );
 }
 
 /// Clause 1: a GrantKeyword(Piercing) declarative clause must exist with FaceUp scope.

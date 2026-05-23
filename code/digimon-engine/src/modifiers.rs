@@ -32,6 +32,9 @@ pub enum ModifierPayload {
         value: String,
         base: bool,
     },
+    SourceNameAliases {
+        level_lte: Option<u8>,
+    },
     Colors {
         value: Vec<CardColor>,
         base: bool,
@@ -519,6 +522,10 @@ fn payload_matches_modifier(modifier: ModifierType, payload: &ModifierPayload) -
             | (
                 ModifierType::ChangeBaseCardName,
                 ModifierPayload::Name { .. }
+            )
+            | (
+                ModifierType::SourceNameAliases,
+                ModifierPayload::SourceNameAliases { .. }
             )
             | (
                 ModifierType::ChangeBaseCardColor,

@@ -29,13 +29,13 @@
 # |-----------------------------------------------------|-----------------------|
 # | Standard digivolve Lv.3 Red / cost 3                | IMPLEMENTED (alt_paths)
 # | Alt digivolve Lv.3 w/[Agumon] in name / cost 2      | IMPLEMENTED (alt_paths)
-# | [When Digivolving] +3000 DP if name is [Koromon]    | PARTIAL — see G-DSL-SELF-NAME-IS below
-# | [When Digivolving] then delete opp Digimon ≤ self DP| BLOCKED — G-FORMULA-SOURCE-DP
-# | [All Turns] dynamic name aliasing from digi-stack   | BLOCKED — G-DYNAMIC-NAME-ALIAS-FROM-STACK
+# | [When Digivolving] +3000 DP if name is [Koromon]    | IMPLEMENTED
+# | [When Digivolving] then delete opp Digimon ≤ self DP| IMPLEMENTED
+# | [All Turns] dynamic name aliasing from digi-stack   | IMPLEMENTED
 # | [On Deletion] may play Tamer (Tai/Kari) free OR hatch (own clause)        | IMPLEMENTED
 # | [On Deletion] same body, inherited                  | IMPLEMENTED (scope: inherited)
 #
-# ─── DSL-GAP — Cannot read source permanent's DP in formula  [G-FORMULA-SOURCE-DP] ──
+# ─── RESOLVED — Cannot read source permanent's DP in formula  [G-FORMULA-SOURCE-DP] ──
 #
 # The "delete 1 opp Digimon with as much or less DP as this Digimon" clause needs
 # `dp_lte` to compare against THIS card's effective DP. The `binding_dp` formula
@@ -50,11 +50,8 @@
 # (RESOLVED) handles user-picked bindings; this one is the source-permanent
 # variant of the same shape.
 #
-# The cleanest closure is to add a `source_dp: {}` (or `binding_dp: source` with
-# special handling) variant to `FormulaSpec`/`CompiledFormula` that reads
-# `ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h))`. Until then the
-# delete sub-clause is OMITTED (printed text would over-fire on opponents with
-# arbitrary DP if we used `kind: digimon` alone — violates no-approximations).
+# Implemented with `source_dp: {}` in `FormulaSpec`/`CompiledFormula`, which
+# reads `ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h))`.
 #
 # ─── DSL-GAP — Self-name-is predicate  [G-DSL-SELF-NAME-IS] ─────────────────
 #
@@ -75,16 +72,12 @@
 # in the standard play pattern (Koromon → Greymon BT17-102) and stays false
 # when Koromon is not in the digivolution material stack.
 #
-# Limitation: if BT17-102 is itself the bottom card (e.g. dropped via an effect
-# that bypasses the standard digivolution chain), the "name is Koromon" gate
-# would fail under DCGO too (the printed top-card name "Greymon" alone never
-# equals "Koromon"). The dynamic [All Turns] alias is the only path that would
-# make the gate fire when no Koromon is in the stack — and that's BLOCKED below.
-# Conclusion: `self_digivolution_contains_name: "Koromon"` is faithful for the
-# normal case and matches the [All Turns] alias semantics for the typical
-# Koromon-Agumon-Greymon line.
+# The dynamic [All Turns] alias is now implemented below through
+# `identity.source_name_aliases`; this trigger still uses the direct stack
+# predicate because the printed condition is evaluated during BT17-102's own
+# when-digivolving timing.
 #
-# ─── DSL-GAP — Dynamic name aliases from material stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK] ──
+# ─── RESOLVED — Dynamic name aliases from material stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK] ──
 #
 # "[All Turns] This Digimon has all the names of level 3 and lower cards in its
 # digivolution cards." This is a dynamic NAME ALIAS effect that recomputes the
@@ -97,29 +90,9 @@
 # appends each material's `CardNames`. Name predicates like `EqualsCardName`
 # and `ContainsCardName` then consult this dynamic alias set.
 #
-# The DSL identity layer (`code/digimon-dsl/src/identity.rs`) has only
-# `IdentitySpec.name_aliases: Vec<NameAliasSpec>` where each `NameAliasSpec`
-# has `treat_as: String` + `when: AliasCondition { zone, has_inherited }`.
-# These aliases are STATIC (zone-conditional) and authored at YAML compile
-# time. There is no runtime closure that derives an alias from the carrier's
-# material stack.
-#
-# Because every name-gated effect that touches BT17-102 is affected by this
-# (e.g. cards that say "if you have a Koromon-named Digimon"), it is a
-# wide-reach gap. Closure requires:
-#   1. New `kind: dynamic_name_alias` declarative clause OR an extension to
-#      `IdentitySpec` allowing `derive_from: { material_filter: { level_lte: 3 } }`.
-#   2. Engine name-predicate evaluators (`name_is`, `name_contains`,
-#      `name_in`, alias resolvers in `Permanent::contains_card_name`,
-#      `EqualsCardName`-equivalent paths) read the dynamic alias set in
-#      addition to the static one.
-#   3. The alias set is recomputed on every material-stack mutation (digivolve,
-#      de-digivolve, source-trash, source-add).
-#
-# Workaround: NONE that preserves no-approximations. Omitting the clause means
-# other cards that name-check BT17-102 will not see the dynamic alias names.
-# Including it as a static `name_aliases: [ {treat_as: Agumon}, {treat_as: Koromon} ]`
-# would over-claim names when those cards are NOT in the digivolution stack.
+# Implemented via `identity.source_name_aliases` with `level_lte: 3`. The
+# engine's synthesized identity now includes printed names, static aliases,
+# and source-derived aliases when name predicates are evaluated.
 
 card: BT17-102
 name: Greymon
@@ -129,6 +102,10 @@ color: [white]
 cost: 5
 dp: 5000
 traits: [Dinosaur]
+
+identity:
+  source_name_aliases:
+    - level_lte: 3
 
 # ─── Alt-paths ────────────────────────────────────────────────────────────────
 # - Standard digivolve: Lv.3 Red / Cost 3 (printed default).
@@ -202,16 +179,12 @@ effects:
                 prompt: "Delete 1 opp Digimon (DP ≤ this Digimon)"
             - delete_permanent: { target: tgt }
 
-  # ─── Clause 2 — [All Turns] Dynamic name aliasing  [BLOCKED] ───────────────
+  # ─── Clause 2 — [All Turns] Dynamic name aliasing ─────────────────────────
   #
   # Printed text: "[All Turns] This Digimon has all the names of level 3 and
   # lower cards in its digivolution cards."
   #
-  # BLOCKED: G-DYNAMIC-NAME-ALIAS-FROM-STACK (see header docs).
-  # No DSL/engine surface for runtime-derived name aliases. Omitted entirely
-  # rather than represented partially — a static alias would over-claim names
-  # when materials aren't present, and any approximation breaks every
-  # name-gated card that interacts with BT17-102.
+  # Implemented declaratively through `identity.source_name_aliases` above.
 
   # ─── Clause 3 — [On Deletion] may play Tai/Kari Tamer free OR hatch ────────
   #

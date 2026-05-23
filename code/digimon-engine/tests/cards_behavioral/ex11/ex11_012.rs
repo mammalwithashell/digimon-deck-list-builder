@@ -21,7 +21,9 @@
 #[path = "../../support/dsl_card_data.rs"]
 mod dsl_card_data;
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledStep, CompiledTiming,
+};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::CardKind;
 use digimon_engine::replacement::ReplacementCause;
@@ -87,6 +89,40 @@ fn ex11_012_compiles_with_end_of_attack_triggered_clause() {
                 && t.optional
         }),
         "EX11-012 must have optional WhenDigivolving+EndOfAttack clause; got: {triggered:?}"
+    );
+}
+
+#[test]
+fn ex11_012_delete_trash_token_clause_uses_native_trash_return_step() {
+    let card = compiled();
+    let clause = card
+        .effects
+        .iter()
+        .filter_map(|clause| match clause {
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::EndOfAttack)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .next()
+        .expect("EX11-012 optional delete/trash-return/token clause");
+
+    assert!(
+        !clause
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::RawRust { .. })),
+        "EX11-012 trash-return clause must use native DSL, not raw_rust"
+    );
+    assert!(
+        clause
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::ReturnTrashListToDeckBottom { .. })),
+        "EX11-012 must return the selected trash binding with return_trash_list_to_deck_bottom"
     );
 }
 

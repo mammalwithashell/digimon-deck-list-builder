@@ -4,14 +4,85 @@ kind: option
 color: [purple]
 cost: 2
 
-# Printed start-turn Delay and Security play-from-trash/add-self-to-hand clauses
-# are not authored in this pass. Start-turn Delay needs G-DELAY-START-OF-TURN.
+# ─── Clause A: [Main] digivolve with cost -3 ──────────────────────────────────
+#
+# "[Main] 1 of your purple Digimon may digivolve into a purple Digimon card in
+# the hand with the digivolution cost reduced by 3. Then, place this card in
+# the battle area."
+#
+# DCGO (LM_032.cs, EffectTiming.OptionSkill):
+#   1. SelectPermanentEffect over controller's battle area (canNoSelect: true —
+#      the entire clause is optional via "may"). Filter: IsDigimon && IsPurple.
+#   2. If selected: DigivolveIntoHandOrTrashCard(
+#          targetPermanent: selected,
+#          cardCondition: IsPurple,
+#          isHand: true,
+#          reduceCost: 3).
+#   3. PlaceDelayOptionCards — moves LM-032 from hand to battle area as a
+#      Delay permanent.
+#
+# DSL modelling:
+#   - when: main_from_hand
+#   - optional: true  (DCGO canNoSelect: true at the SelectPermanentEffect level)
+#   - select_own_permanent (optional: true, filter: digimon + color_is: purple)
+#   - select_hand (filter: digimon + color_is: purple)
+#   - effect_initiated_digivolve { cost: { reduce: 3 }, ignore_requirements: false }
+#
+# "Then, place this card in the battle area" — Delay-Option auto-placement.
+# The engine classifies this Option as a Delay-Option (Clause B delay clause)
+# and auto-seats it in battle area at MainEffectDrain. No explicit step needed.
+#
+# ─── Clause B: [Start of Your Turn] Delay ────────────────────────────────────
+#
+# "[Start of Your Turn] If your opponent has a Digimon, ＜Delay＞ (By trashing
+# this card after the placing turn, activate the effect below.)
+# ・Return 1 purple Digimon card from your trash to the top of the deck.
+#   Then, if you don't have a Digimon, you may play 1 purple Digimon card with
+#   2000 DP or less from your trash without paying the cost."
+#
+# DCGO (LM_032.cs, EffectTiming.OnStartTurn):
+#   CanUseCondition:
+#     IsOwnerTurn + IsExistOnBattleArea (self) + opponent HasAtLeastOneDigimon +
+#     CanDeclareOptionDelayEffect (this card is a Delay option permanent)
+#   ActivateCoroutine:
+#     1. Trash this Delay card (DeletePeremanentAndProcessAccordingToResult).
+#     2. SelectTrashCardEffect: controller's trash, filter IsPurple && IsDigimon,
+#        canNoSelect: false (mandatory — must pick if eligible exists).
+#     3. AddLibraryTopCards (move selected card to top of deck).
+#     4. If HasNoDigimon(controller):
+#          SelectTrashCardEffect: controller's trash, filter IsPurple && IsDigimon
+#          && DP ≤ 2000, canNoSelect: true (optional).
+#          PlayFromTrashEffect (free play of selected card).
+#
+# Timing status:
+#   Start-of-turn Delay timing: `kind: delay` with `trigger: start_of_your_turn`.
+#   Resolved gap: G-DELAY-START-OF-TURN (resolved 2026-05-02).
+#
+# Body substrate (available):
+#   `move_trash_card_to_deck_top` — resolved G-ZONE-SELECTED-TRASH-TO-DECK-TOP
+#   `dp_lte: 2000` — resolved G-PRED-DP-LTE for trash card subjects
+#
+# ─── Clause C: [Security] (Inherited) ────────────────────────────────────────
+#
+# "Security Effect [Security] You may play 1 purple Digimon card with 2000 DP
+# or less from your trash without paying the cost. Then, add this card to the
+# hand."
+#
+# DSL modelling:
+#   - scope: inherited
+#   - when: on_security
+#   - optional: true  (DCGO canNoSelect: true at SelectTrashCardEffect — "you may")
+#   - select_trash (filter: digimon + color_is: purple + dp_lte: 2000)
+#   - play_from_trash_free
+#   - add_this_option_to_hand  (resolved G-ADD-OPTION-SELF-TO-HAND 2026-05-01)
 
 effects:
+  # ─── Clause A: [Main] ───────────────────────────────────────────────────────
   - when: main_from_hand
     optional: true
-    summary: "[Main] 1 purple Digimon may digivolve into a purple Digimon in hand, cost -3"
+    summary: "[Main] You may have 1 purple Digimon digivolve into a purple Digimon in hand, cost -3; place this in battle area"
     process:
+      # Step 1: choose source Digimon (optional — "may").
       - select_own_permanent:
           bind_as: target
           optional: true
@@ -20,6 +91,7 @@ effects:
               - kind: digimon
               - color_is: purple
           prompt: "Choose 1 of your purple Digimon to digivolve"
+      # Step 2: choose the digivolve target from hand.
       - select_hand:
           of: you
           bind_as: evo
@@ -28,8 +100,76 @@ effects:
               - kind: digimon
               - color_is: purple
           prompt: "Choose a purple Digimon card to digivolve into"
+      # Step 3: execute effect-initiated digivolve with cost -3.
       - effect_initiated_digivolve:
           target: target
           from_hand: evo
           cost: { reduce: 3 }
           ignore_requirements: false
+
+  # ─── Clause B: [Start of Your Turn] Delay ──────────────────────────────────
+  - kind: delay
+    trigger: start_of_your_turn
+    active_when:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Start of Your Turn] If opponent has Digimon, <Delay>: return a purple Digimon from trash to deck top; if you have no Digimon, may play a ≤2000 DP purple Digimon from trash free"
+    process:
+      # Step 1: return 1 purple Digimon card from trash to the top of the deck.
+      - select_trash:
+          of: you
+          bind_as: to_return
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+          prompt: "Return 1 purple Digimon card from your trash to the top of the deck"
+      - move_trash_card_to_deck_top:
+          of: you
+          card: to_return
+      # Step 2: if you have no Digimon, optionally play a small purple Digimon.
+      - if:
+          condition:
+            not:
+              any_permanent:
+                of: you
+                zone: [battle_area]
+                kind: digimon
+          then:
+            - select_trash:
+                of: you
+                bind_as: to_play
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: purple
+                    - dp_lte: 2000
+                prompt: "You may play 1 purple Digimon with 2000 DP or less from your trash without paying its cost"
+            - play_from_trash_free:
+                of: you
+                hand_index: to_play
+
+  # ─── Clause C: [Security] (Inherited) ──────────────────────────────────────
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 purple Digimon (≤2000 DP) from trash free; then add this card to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+              - dp_lte: 2000
+          prompt: "You may play 1 purple Digimon with 2000 DP or less from your trash without paying its cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: picked
+      - add_this_option_to_hand: {}

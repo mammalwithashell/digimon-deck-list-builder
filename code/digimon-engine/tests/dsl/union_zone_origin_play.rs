@@ -1,7 +1,7 @@
 //! Task 7 (PUPPETS-G014 substrate): origin-preserving union-zone play
 //! consumer.
 //!
-//! A `select_union_zone` (hand ∪ trash) selection now records the *origin*
+//! A `select_union_zone` (hand ∪ trash ∪ material) selection now records the *origin*
 //! zone of the chosen card, not just its `CardHandle`. The new
 //! `play_union_bound_free` step consumes that binding and plays the card
 //! for free from its true origin zone — `play_from_hand_free` for a
@@ -137,6 +137,27 @@ fn union_zone_origin_play_plays_hand_card_from_hand() {
         memory_before + 1,
         "play_union_bound_free must not pay cost; only tail GainMemory(1) applies"
     );
+}
+
+fn material_fixture_steps() -> Vec<CompiledStep> {
+    vec![
+        CompiledStep::SelectUnionZone {
+            of: CompiledPlayerRef::You,
+            zones: vec![CompiledZone::Material],
+            material_of: None,
+            filter: CompiledPredicate::default(),
+            bind_as: Some("union_pick".to_string()),
+            prompt: "Pick from materials".to_string(),
+            prompt_key: None,
+            optional: true,
+            then: vec![],
+        },
+        CompiledStep::PlayUnionBoundFree {
+            binding: "union_pick".to_string(),
+            bind_as: Some("played".to_string()),
+            suppress_on_play: false,
+        },
+    ]
 }
 
 /// (b) Selecting the TRASH card must play it from trash: trash shrinks by 1,
@@ -280,5 +301,83 @@ fn union_zone_origin_play_decline_runs_mandatory_tail() {
         runner.game.memory,
         memory_before + 1,
         "declining the optional union pick must still run the mandatory tail GainMemory(1)"
+    );
+}
+
+/// (d) Selecting a MATERIAL card must expose source-select action IDs and
+/// play the selected digivolution card from the source stack for free.
+#[test]
+fn union_zone_origin_play_plays_material_card_from_source_stack() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .add_card(make_test_card("MATERIAL-CARD", "MaterialCard"))
+        .memory(5)
+        .build();
+
+    let host = runner.place_stack(0, &["MATERIAL-CARD", "SRC"]);
+    let src_card = runner.top_card(host);
+
+    let hand_before = runner.game.players[0].hand.len();
+    let battle_before = runner.game.players[0].battle_area.len();
+    let source_count_before = runner.game.players[0].battle_area[host.index as usize]
+        .card_sources
+        .len();
+    let memory_before = runner.game.memory;
+
+    let steps = material_fixture_steps();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, Some(host), 0);
+        let mut bindings = Bindings::new();
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("material union selection must install a pending selection");
+    assert_eq!(pending.valid_action_ids.len(), 1);
+    let selecting_player = pending.selecting_player;
+
+    let source_action = digimon_engine::action::space::encode_source_select(host.index as u16, 0)
+        .expect("source action id");
+    assert!(
+        pending.valid_action_ids.contains(&source_action),
+        "material union selection must expose the source-select action"
+    );
+
+    runner
+        .game
+        .resolve_selection(selecting_player, source_action)
+        .expect("resolve material-origin pick");
+
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        hand_before,
+        "material-origin pick must not consume a hand card"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[host.index as usize]
+            .card_sources
+            .len(),
+        source_count_before - 1,
+        "material-origin pick must remove the selected source card"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        battle_before + 1,
+        "the material card must be played as a new permanent"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "MATERIAL-CARD"),
+        "the battle-area permanent must be the material card"
+    );
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "play_union_bound_free must not pay the material card's play cost"
     );
 }

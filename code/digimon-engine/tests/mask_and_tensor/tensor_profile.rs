@@ -12,7 +12,7 @@ use digimon_engine::tensor_profiles::standard;
 use digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorFieldKind, TensorSectionKind,
     COMPACT_V1_LEGACY_PROFILE_ID, STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_FULL_V2_PROFILE_ID,
-    STANDARD_LITE_V2_PROFILE_ID, STANDARD_V1_LEGACY_PROFILE_ID,
+    STANDARD_LITE_DECK_V2_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID, STANDARD_V1_LEGACY_PROFILE_ID,
 };
 
 #[test]
@@ -79,6 +79,7 @@ fn registry_lists_only_canonical_profile_ids() {
         vec![
             STANDARD_COMPACT_V1_PROFILE_ID,
             STANDARD_LITE_V2_PROFILE_ID,
+            STANDARD_LITE_DECK_V2_PROFILE_ID,
             STANDARD_FULL_V2_PROFILE_ID,
         ]
     );

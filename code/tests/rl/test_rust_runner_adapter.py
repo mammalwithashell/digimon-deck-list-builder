@@ -41,6 +41,19 @@ def test_digimon_env_uses_requested_standard_lite_v2_profile(monkeypatch):
     assert info["tensor_layout_hash"].startswith("sha256:")
 
 
+def test_digimon_env_uses_requested_standard_lite_deck_v2_profile(monkeypatch):
+    env = _rust_env(monkeypatch, tensor_profile="standard_lite_deck_v2")
+    obs, info = env.reset(seed=7)
+
+    assert env.tensor_profile == "standard_lite_deck_v2"
+    assert env.observation_space.shape == (8850,)
+    assert obs.shape == (8850,)
+    assert info["tensor_profile"] == "standard_lite_deck_v2"
+    assert info["tensor_feature_schema_version"] == "standard_lite_deck_v2.1"
+    assert info["tensor_layout_hash"].startswith("sha256:")
+    assert info["action_mask"].shape == (env.action_space.n,)
+
+
 def test_legacy_env_rejects_standard_lite_v2_profile(monkeypatch):
     monkeypatch.setenv("DIGIMON_BACKEND", "py")
     import digimon_gym.digimon_gym as gym_mod

@@ -42,6 +42,18 @@ fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Opti
     })
 }
 
+fn formula_value(
+    formula: &digimon_dsl::compiled::CompiledFormula,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> i32 {
+    let target = ctx.source_permanent.unwrap_or(PermanentHandle {
+        player: ctx.player,
+        index: u8::MAX,
+    });
+    formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
+}
+
 fn collect_matching_permanents(
     ctx: &EffectContext<'_>,
     player: u8,
@@ -592,8 +604,21 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if min > max || *max == 0 || !has_own_source_candidates(ctx) {
+            if min > max || *max == 0 {
                 return InstallResult::Continue;
+            }
+            // When no digivolution sources exist at all (unfiltered), and the
+            // clause requires at least one pick (min > 0), the cost cannot be
+            // paid: abort the outer continuation silently. For min == 0, no
+            // sources means the player implicitly picks 0 — the `then` body
+            // with an empty binding is a no-op anyway, so advancing to the
+            // outer tail (`Continue`) is correct for that case.
+            if !has_own_source_candidates(ctx) {
+                return if *min > 0 {
+                    InstallResult::TailAlreadyRan
+                } else {
+                    InstallResult::Continue
+                };
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
@@ -609,7 +634,19 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            selection_result(ctx)
+            // The outer tail was captured inside `inner_tail` and passed
+            // entirely into `install_select_own_sources`. The outer loop must
+            // NOT advance into those same steps again. If a selection was
+            // installed, `Parked` stops the loop. If no selection was
+            // installed (callback ran synchronously for min=0, or filtered
+            // candidates = 0 for min>0 so the callback was dropped), the
+            // outer tail already ran or was intentionally discarded —
+            // `TailAlreadyRan` stops the loop in both sub-cases.
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else {
+                InstallResult::TailAlreadyRan
+            }
         }
         CompiledStep::SelectOpponentSources {
             target,
@@ -620,8 +657,17 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if min > max || *max == 0 || !has_opponent_source_candidates(ctx) {
+            if min > max || *max == 0 {
                 return InstallResult::Continue;
+            }
+            // Mirror of SelectOwnSources early-abort logic: when no opponent
+            // sources exist and min > 0, the cost cannot be paid — abort.
+            if !has_opponent_source_candidates(ctx) {
+                return if *min > 0 {
+                    InstallResult::TailAlreadyRan
+                } else {
+                    InstallResult::Continue
+                };
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
@@ -637,7 +683,14 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            selection_result(ctx)
+            // Same tail-capture semantics as SelectOwnSources: the outer tail
+            // is embedded in inner_tail, so the outer loop must not advance
+            // into those steps regardless of how the install resolved.
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else {
+                InstallResult::TailAlreadyRan
+            }
         }
         CompiledStep::SelectOpponentDpBudget {
             dp_budget,
@@ -647,14 +700,15 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if !has_opponent_dp_budget_candidates(ctx, *dp_budget, filter, &bindings) {
+            let dp_budget = formula_value(dp_budget, ctx, &bindings);
+            if !has_opponent_dp_budget_candidates(ctx, dp_budget, filter, &bindings) {
                 return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
             install_select_opponent_dp_budget(
                 ctx,
-                *dp_budget,
+                dp_budget,
                 *min_picks,
                 filter.clone(),
                 bind_as.clone(),
@@ -736,6 +790,7 @@ pub fn try_install(
                     CompiledZone::Trash => zoneset |= UnionZoneSet::TRASH,
                     CompiledZone::Material => zoneset |= UnionZoneSet::MATERIAL,
                     // Other zones not yet exposed by UnionZoneSet bitfield.
+                    // Silently skip — future tasks widen engine API as needed.
                     _ => {}
                 }
             }
@@ -907,12 +962,15 @@ fn has_opponent_dp_budget_candidates(
                 player: opponent,
                 index: index as u8,
             };
+            if ctx.game.effective_dp(handle).unwrap_or(0) > dp_budget {
+                return false;
+            }
             eval_predicate_with_bindings(
                 filter,
                 &read,
                 PredicateSubject::Permanent(handle),
                 Some(bindings),
-            ) && ctx.game.effective_dp(handle).unwrap_or(0) <= dp_budget
+            )
         })
 }
 
@@ -2640,7 +2698,7 @@ fn install_select_union_zone(
             if let Some(name) = &bind_as {
                 // PUPPETS-G014: record the origin zone alongside the handle
                 // so a `play_union_bound_free` tail step can replay the card
-                // from its true zone (hand vs trash).
+                // from its true zone (hand, trash, or material).
                 b.insert_union_card(name, handle, origin, target_player);
             }
             run_tail_preserving_trigger_context(

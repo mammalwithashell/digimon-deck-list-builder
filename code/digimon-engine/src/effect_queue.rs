@@ -397,6 +397,18 @@ impl Game {
                     );
                 }
             }
+            TriggerSource::PlayerBattleAreaAttack { player, .. } => {
+                let count = self.player(player).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player,
+                        index: i as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+            }
             TriggerSource::EventObserved { .. } | TriggerSource::AttackTargetChanged { .. } => {
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
@@ -503,6 +515,7 @@ impl Game {
         if matches!(
             source,
             TriggerSource::EventObserved { .. }
+                | TriggerSource::PlayerBattleAreaAttack { .. }
                 | TriggerSource::AttackTargetChanged { .. }
                 | TriggerSource::EnteredField { .. }
         ) {
@@ -882,6 +895,18 @@ impl Game {
             TriggerSource::PlayerBattleArea(player) => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::PlayerBattleAreaAttack {
+                player,
+                attacker,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(attacker),
+                event_card: Some(card),
                 source_player: Some(player),
                 ..TriggerContext::default()
             },

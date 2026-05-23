@@ -988,10 +988,10 @@ impl<'a> EffectContext<'a> {
     /// chosen card.
     ///
     /// Action IDs reuse existing ranges: hand slots map to `PLAY_HAND_START +
-    /// i`; trash slots map to `TRASH_EFFECT_START + i`. The inner callback
-    /// disambiguates by range before invoking the user callback. No new action
-    /// range is introduced. This matches Python's `effect_play_from_zone`
-    /// dual-range approach.
+    /// i`, trash slots map to `TRASH_EFFECT_START + i`, and source-material
+    /// slots map to `SOURCE_SELECT_START + field * SOURCES_PER_FIELD + i`.
+    /// The inner callback disambiguates by range before invoking the user
+    /// callback. No new action range is introduced.
     ///
     /// If no card passes the filter (across all zones), this is a no-op —
     /// matching the silent-empty contract used by the other select_* helpers.
@@ -1000,12 +1000,12 @@ impl<'a> EffectContext<'a> {
     /// `usize` index), this helper's filter receives `&CardSource` so cross-zone
     /// predicates can inspect the card directly without branching on whether the
     /// index is a hand or trash index.
-    /// Prompt for a card from the union of `zones` (hand ∪ trash). The
+    /// Prompt for a card from the union of `zones` (hand ∪ trash ∪ material). The
     /// `callback` receives the picked card's `CardHandle` **and** the
     /// [`UnionZoneOrigin`](crate::selection::UnionZoneOrigin) of the zone it
     /// came from, so a downstream consumer can act on the card's true origin
-    /// (e.g. play it back from hand vs trash). The origin is recovered from
-    /// the encoded `action_id` range (`PLAY_HAND` vs `TRASH_EFFECT`).
+    /// (e.g. play it back from hand, trash, or source materials). The origin is
+    /// recovered from the encoded `action_id` range.
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
@@ -1028,7 +1028,8 @@ impl<'a> EffectContext<'a> {
         use crate::action::space::{
             decode_breeding_source_select, decode_source_select, encode_breeding_source_select,
             encode_source_select, HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START,
-            TRASH_EFFECT_END, TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
+            SOURCE_SELECT_END, SOURCE_SELECT_START, TRASH_EFFECT_END, TRASH_EFFECT_START,
+            TRASH_MAIN_LIMIT,
         };
         use crate::selection::UnionZoneSet;
 
@@ -1124,9 +1125,14 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 debug_assert!(
-                    action_id < PLAY_HAND_END || action_id >= TRASH_EFFECT_START,
-                    "select_union_zone: action_id {} falls in gap between PLAY_HAND ({}..{}) and TRASH_EFFECT ({}..); valid_action_ids was populated incorrectly",
-                    action_id, PLAY_HAND_START, PLAY_HAND_END, TRASH_EFFECT_START
+                    action_id < PLAY_HAND_END
+                        || action_id >= TRASH_EFFECT_START
+                        || (crate::action::space::BREEDING_SOURCE_SELECT_START
+                            ..crate::action::space::BREEDING_SOURCE_SELECT_END)
+                            .contains(&action_id)
+                        || (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action_id),
+                    "select_union_zone: action_id {} falls outside supported union-zone action ranges; valid_action_ids was populated incorrectly",
+                    action_id
                 );
                 // Disambiguate by range — the action_id range also records
                 // the picked card's origin zone.

@@ -12,12 +12,38 @@ alt_paths:
     from: { level_eq: 2, color_is: black }
     cost: 0
 
-# Printed face-up clause not authored in this pass:
-# [Your Turn] When this Digimon would digivolve into a [Mineral]/[Rock] card,
-# reduce the digivolution cost by 1. This needs a before-digivolve
-# target-card trait reduction shape.
+# ─── Clause 0 — [Your Turn] CostReduction when digivolving into Mineral/Rock ──
+#
+# Printed text (cards.json):
+#   "[Your Turn] When this Digimon would digivolve into a card with the
+#   [Mineral] or [Rock] trait, reduce the digivolution cost by 1."
+#
+# Substrate: Phase 2 Track H (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — RESOLVED
+# 2026-05-17). Pattern: `kind: cost_reduction` with `reduction_timing:
+# before_pay_cost`, gated on `source_is_cost_target_permanent: true` (this
+# permanent is the one being digivolved from) and `cost_target: { any_of:
+# [{ trait_has: Mineral }, { trait_has: Rock }] }` (the target hand card
+# has at least one of the required traits). No Tamer condition; no
+# once_per_turn annotation in printed text.
+#
+# Proof-of-substrate exemplar: code/digimon-engine/cards/p/P-117.yaml
+# (P-117 clause 0 uses the identical shape for [Free] trait).
 
 effects:
+  # ─── Clause 0 — [Your Turn] digivolve-cost reduction for Mineral/Rock target ─
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+    amount: 1
+    summary: "[Your Turn] When digivolving into Mineral or Rock, reduce digivolution cost by 1"
+
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:

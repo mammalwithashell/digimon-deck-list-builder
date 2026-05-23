@@ -1,13 +1,59 @@
+# P-169 Close — Tamer, Black, Cost 4. Traits: [LIBERATOR]
+#
+# Printed card text (data/cards.json / authoritative):
+#
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#
+#   [All Turns] When effects trash digivolution cards of any of your [Mineral]
+#     or [Rock] trait Digimon, by suspending this Tamer, place 1 card with the
+#     [Mineral] or [Rock] trait from your trash as any of your Digimon's bottom
+#     digivolution card.
+#
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# --- Clause 1: [Start of Your Main Phase] ------------------------------------
+#
+# Condition: opponent has at least one Digimon in battle area.
+# Body: gain 1 memory (mandatory, no optionality printed).
+#
+# --- Clause 2: [All Turns] on_digivolution_card_trashed observer -------------
+#
+# Trigger: on_digivolution_card_trashed fires when an effect trashes a
+#   digivolution card from any Digimon's stack.
+#
+# Condition (three-part):
+#   1. event_target_owner: you — the Digimon whose source was trashed belongs
+#      to P-169's controller.
+#   2. host_permanent_trait_has: Mineral OR host_permanent_trait_has: Rock
+#      — the Digimon that lost the source must carry [Mineral] or [Rock] trait.
+#   3. any_permanent of:you / card_number_is:"P-169" / is_unsuspended:true
+#      — P-169 itself must be on the field AND unsuspended (can pay the cost).
+#
+# Optionality gate (EX11-065 lesson):
+#   The first step is select_own_permanent: optional: true so PASS skips
+#   the suspend cost. When the player accepts (picks P-169), the tail runs.
+#   When PASS is sent, no suspend occurs.
+#
+# Body (after gate):
+#   1. suspend: { target: source } — suspend this Tamer.
+#   2. select_trash: filter Mineral/Rock — player picks 1 card from own trash.
+#   3. select_own_permanent: filter kind: digimon — player picks which Digimon
+#      to place the card under ("as any of your Digimon's").
+#   4. place_as_bottom_source: source: source_card, target: target_digi
+#
+# --- Clause 3: [Security] ----------------------------------------------------
+#
+# Standard play_from_security (EX10-063, EX11-065, EX8-067, ST21-13 precedent).
+
 card: P-169
 name: Close
 kind: tamer
 color: [black]
 cost: 4
-
-# Printed All Turns source-trash trigger that suspends this Tamer to place a
-# Mineral/Rock card from trash as a bottom source is not authored in this pass.
+traits: [LIBERATOR]
 
 effects:
+  # --- Clause 1: [Start of Your Main Phase] ----------------------------------
   - when: start_of_your_main_phase
     condition:
       any_permanent:
@@ -18,6 +64,59 @@ effects:
     process:
       - gain_memory: 1
 
+  # --- Clause 2: [All Turns] on_digivolution_card_trashed observer -----------
+  #
+  # Optionality gate: select_own_permanent optional:true is the FIRST step
+  # so PASS skips the suspend cost. Mirrors EX11-065 pattern exactly.
+  - when: on_digivolution_card_trashed
+    active_when: { all_turns: true }
+    optional: true
+    summary: "[All Turns] When effects trash a source of own Mineral/Rock Digimon, optionally suspend self to place a Mineral/Rock from trash as any own Digimon's bottom source"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - host_permanent_trait_has: Mineral
+            - host_permanent_trait_has: Rock
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "P-169"
+            is_unsuspended: true
+    process:
+      # Accept/decline gate: select P-169 itself (optional) to confirm.
+      # Installs is_optional:true OwnField selection before the suspend cost.
+      - select_own_permanent:
+          filter:
+            all_of:
+              - card_number_is: "P-169"
+              - is_unsuspended: true
+          optional: true
+          bind_as: _close_confirm
+          prompt: "Activate: suspend Close to place a [Mineral] or [Rock] card from trash as a Digimon's bottom source?"
+      # Cost: suspend this Tamer.
+      - suspend: { target: source }
+      # Body step 1: pick 1 Mineral/Rock card from own trash.
+      - select_trash:
+          of: you
+          bind_as: source_card
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Choose a [Mineral] or [Rock] card from your trash"
+      # Body step 2: pick which of your Digimon to place the card under.
+      - select_own_permanent:
+          filter:
+            kind: digimon
+          bind_as: target_digi
+          prompt: "Choose 1 of your Digimon to place the card as its bottom digivolution card"
+      # Body step 3: place the card as the chosen Digimon's bottom source.
+      - place_as_bottom_source:
+          source: source_card
+          target: target_digi
+
+  # --- Clause 3: [Security] Play this card without paying the cost -----------
   - scope: inherited
     when: on_security
     summary: "[Security] Play this card without paying the cost"

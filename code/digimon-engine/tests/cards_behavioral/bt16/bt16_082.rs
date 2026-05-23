@@ -17,11 +17,28 @@
 //!   1. Ukkomon is in the battle area (IsExistOnBattleArea).
 //!   2. It is the owner's turn (IsOwnerTurn).
 //!   3. The breeding-to-battle move event matches the trigger (CanTriggerOnMove).
+//!      PermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon — the
+//!      moved permanent must be a Digimon owned by the same player.
 //! Effect body (ActivateCoroutine):
 //!   1. RevealDeckTopCardsAndSelect: reveal 3, pick 1 Digimon or Tamer → hand,
-//!      remainder → DeckBottom.
+//!      remainder → DeckBottom (with player-chosen ordering per
+//!      ReturnRevealedCardsToLibraryBottom).
 //!   2. If card.Owner.CanHatch: present yes/no ("Hatch" / "Not hatch").
 //!      If yes → HatchDigiEggClass.Hatch().
+//!
+//! # AUDITED-DRIFT resolution (2026-05-22)
+//!
+//! Drift found: the `condition` block was `{ event_target_owner: you }` only.
+//! The printed text says "one of your **Digimon** moves" — the word "Digimon"
+//! constrains the event target to kind == Digimon. DCGO's PermanentCondition
+//! calls `IsPermanentExistsOnOwnerBattleAreaDigimon`, explicitly checking the
+//! moved permanent is a Digimon. In practice this predicate never fires
+//! differently (game_actions::move_from_breeding requires level >= 3, so only
+//! Digimon can be in the breeding area), but the printed text and DCGO both
+//! encode the Digimon-kind gate. The condition is now an `all_of` combining
+//! `event_target_owner: you` and `event_target_kind: digimon`. The new
+//! structural test `bt16_082_condition_requires_event_target_kind_digimon`
+//! verifies the predicate is compiled.
 //!
 //! # Patterns this test covers
 //! - OnMove dispatch and DSL event context are covered by shared timing_dispatch
@@ -31,12 +48,10 @@
 //! - B-hatch: "you may hatch" step — behavioral body documented
 //!
 //! # Status: IMPLEMENTED
-//!
-//! The YAML uses native `on_move`, reveal/select/add/remainder steps, and a
-//! `can_hatch`-guarded EffectChoice so the hatch prompt only appears when the
-//! controller can legally hatch.
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledCardKind, CompiledClause, CompiledScope, CompiledStep, CompiledTiming,
+};
 use digimon_engine::action::space::SEL_REVEAL_START;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};
@@ -261,6 +276,49 @@ fn bt16_082_clause_has_your_turn_active_when() {
     assert!(
         clause.active_when.is_some(),
         "Ukkomon's clause must have active_when ([Your Turn] gate)"
+    );
+}
+
+/// The condition must include `event_target_kind: digimon` — the printed text
+/// says "one of your **Digimon** moves", not "one of your permanents".
+/// DCGO's PermanentCondition calls `IsPermanentExistsOnOwnerBattleAreaDigimon`,
+/// explicitly gating on the moved card being a Digimon.
+///
+/// Drift fixed 2026-05-22: the previous condition was `{ event_target_owner: you }`
+/// only; the Digimon-kind gate was missing.
+#[test]
+fn bt16_082_condition_requires_event_target_kind_digimon() {
+    let runner = ukkomon();
+    let compiled = runner
+        .compiled_card("BT16-082")
+        .expect("BT16-082 compiled card present");
+
+    let triggered: Vec<_> = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .collect();
+
+    let clause = triggered[0];
+    let condition = clause
+        .condition
+        .as_ref()
+        .expect("Ukkomon's clause must have a condition");
+
+    // The condition is an all_of block; check that at least one leaf in the
+    // all_of has event_target_kind == Digimon.
+    let has_digimon_kind_gate = condition
+        .all_of
+        .iter()
+        .any(|pred| pred.event_target_kind == Some(CompiledCardKind::Digimon));
+
+    assert!(
+        has_digimon_kind_gate,
+        "Ukkomon's condition must include event_target_kind: digimon — \
+         printed text says 'your Digimon moves' (DCGO: IsPermanentExistsOnOwnerBattleAreaDigimon)"
     );
 }
 

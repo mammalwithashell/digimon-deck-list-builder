@@ -318,14 +318,13 @@ Regression files were added under:
 
 ### Aggregate-Sum Multi-Select
 
-- **Gap:** Select any number of targets constrained by a running aggregate sum, such as total DP.
-- **Type:** `engine-gap`
+- **Status:** Resolved on 2026-05-22 for `BT17-018` via native `select_opponent_dp_budget`.
+- **Former gap:** Select any number of targets constrained by a running aggregate sum, such as total DP.
+- **Type:** `resolved-engine-gap`
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` / `qa/archetype-qa/engine-gaps.md` (`G-DP-BUDGET-MULTI-SELECT`)
-- **Blocks:** `BT17-018` Gallantmon: Crimson Mode, a common Royal Knights tech.
+- **Unblocked:** `BT17-018` Gallantmon: Crimson Mode, a common Royal Knights tech.
 - **Why it matters:** A single-pick fallback is not faithful when the player may choose any number of opposing Digimon whose total DP is at most 15000.
-- **Evidence:** `code/digimon-engine/cards/bt17/BT17-018.yaml` documents the raw Rust fallback and ignored behavioral tests for the DP-budget selection.
-- **First test:** Present opponent Digimon with 7000, 8000, and 9000 DP, resolve `BT17-018`, and assert the action mask allows 7000+8000 but not any combination above 15000.
-- **Implementation hint:** Add a pending multi-select kind that validates a running aggregate over selected permanents and supports "finish early" once at least one legal target is chosen.
+- **Evidence:** `code/digimon-engine/cards/bt17/BT17-018.yaml` now uses `select_opponent_dp_budget` with `dp_budget: 15000`; `bt17_018_delete_clause_uses_native_dp_budget_selection` and the active 7000/8000/9000 DP behavioral tests cover the running-sum mask.
 
 ## Resolved Reusable Gaps To Avoid Reopening
 

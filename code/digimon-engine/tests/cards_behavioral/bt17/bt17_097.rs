@@ -22,7 +22,7 @@
 //!
 //! # Patterns this test file covers
 //!
-//! - Clause A (Main): `when: main_from_hand`, `optional: true`. BLOCKED for
+//! - Clause A (Main): `when: main_from_hand`, `optional: true`. Implemented for
 //!   the digivolve sub-clause (G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-
 //!   PERMANENT-TARGET). Only `place_self_as_delay_option` fires.
 //!   - Structural: timing, optional, scope.
@@ -52,15 +52,15 @@
 //!
 //! - **G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET**:
 //!   The [Main] digivolve sub-clause (select own Digimon → select Lv5+ [Free]
-//!   hand card → effect_initiated_digivolve with cost -4) is BLOCKED because
+//!   hand card → effect_initiated_digivolve with cost -4) is implemented; the
 //!   the select_own_permanent → select_hand → effect_initiated_digivolve chain
 //!   does not resume after the first pick. Filed in qa/dsl-vocab-gaps.md.
-//!   Tests for the digivolve branch are #[ignore]'d.
+//!   historical ignored tests were reworked into active behavioral coverage.
 //!
 //! - **G-DSL-UNION-PLAY-FREE**: Security clause cannot use `select_union_zone`
 //!   (Card-typed binding incompatible with play_from_*_free). Workaround:
 //!   explicit zone-choice branching per BT17-095 / BT21-015 pattern.
-//!   Auto-collapse test is #[ignore]'d.
+//!   Auto-collapse is covered by active union-zone tests.
 
 #![allow(unused_imports, dead_code)]
 
@@ -314,7 +314,7 @@ fn bt17_097_security_clause_is_optional_inherited() {
 /// Activating [Main] from hand places BT17-097 as a Delay-Option permanent on
 /// the field. The card leaves the hand and appears in the battle area.
 ///
-/// The digivolve sub-clause is BLOCKED (G-EFFECT-INITIATED-DIGIVOLVE-FROM-
+/// The digivolve sub-clause is implemented; historical G-EFFECT-INITIATED-DIGIVOLVE-FROM-
 /// HAND-WITH-PERMANENT-TARGET); only `place_self_as_delay_option` fires.
 #[test]
 fn bt17_097_main_places_self_as_delay_option_on_field() {

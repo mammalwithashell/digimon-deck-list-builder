@@ -241,7 +241,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             suppress_on_play,
         } => {
             // Resolve the union-zone binding: the picked card, the zone it
-            // came from (hand vs trash), and the owner of that zone. The
+            // came from (hand, trash, or material), and the owner of that zone. The
             // binding is read directly (not via `resolve_binding_ref`) so the
             // origin tag is preserved — `ResolvedBinding` has no zone-tagged
             // card variant. Missing / wrong-kind binding: silent no-op, per

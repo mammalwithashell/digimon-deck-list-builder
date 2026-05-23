@@ -25,7 +25,8 @@
 #   0a. for_each over opp Digimon with no divi-cards → suspend: IMPLEMENTED
 #   0b. Return 1 opp suspended Digimon to hand: IMPLEMENTED
 #   0c. Alt-cost: By returning 1 [Dragon Mode] from own divi-cards → return ALL
-#       suspended to bottom of decks instead: BLOCKED G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME
+#       suspended to bottom of decks instead: IMPLEMENTED via
+#       `return_selected_sources_to_hand`
 #       (narrowed: selected own source refs cannot currently be returned to hand)
 #
 # Clause 1 — [All Turns] DP formula + conditional keyword aura:

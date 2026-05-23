@@ -1,7 +1,9 @@
 """MetaGauntlet: meta-weighted opponent deck sampling for RL training.
 
-Loads the deck library (produced by tools/meta_loader.py), computes a Threat
-Index for each archetype, and samples opponent decks weighted by TI.
+Loads the deck library (produced by tools/meta_loader.py), filters it to
+QA-clean DSL archetypes whose cards are all registered in the Rust engine,
+computes a Threat Index for each archetype, and samples opponent decks weighted
+by TI or uniformly.
 
 **Survivorship Bias Fix (v2):**
   - Statistical weights (Threat Index) are derived ONLY from DigiLab tournament
@@ -36,13 +38,17 @@ from __future__ import annotations
 import json
 import logging
 import os
+import hashlib
+from collections import Counter
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
 import gymnasium
 
-from digimon_engine import parse_tts
+from digimon_engine import load_implemented_card_ids, parse_tts
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +59,12 @@ from data_paths import (
 
 DECK_LIBRARY_PATH = str(_DECK_LIBRARY_PATH)
 ARCHETYPE_ALIASES_PATH = str(_ARCHETYPE_ALIASES_PATH)
+_QA_DSL_STATUS_PATH = (
+    _DECK_LIBRARY_PATH.parent.parent
+    / "qa"
+    / "qa-reports"
+    / "validated_cards_dsl.json"
+)
 
 
 def _load_alias_map() -> Dict[str, str]:
@@ -81,9 +93,93 @@ def canonicalize_archetype(name: str) -> str:
         _ALIAS_MAP = _load_alias_map()
     return _ALIAS_MAP.get(name.lower(), name)
 
+
+def _load_fully_implemented_archetypes(path: str = str(_QA_DSL_STATUS_PATH)) -> Optional[Set[str]]:
+    """Return archetypes whose DSL ledger entries are all IMPLEMENTED.
+
+    Missing status files return None so non-standard test/library callers can
+    still load synthetic data. An existing file with no entry for an archetype
+    means that archetype is not considered ready.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        logger.warning("DSL validation ledger not found: %s", path)
+        return None
+
+    by_archetype: Dict[str, List[str]] = {}
+    for entry in raw.get("cards", {}).values():
+        archetype = entry.get("archetype")
+        status = entry.get("status")
+        if not archetype or not status:
+            continue
+        by_archetype.setdefault(str(archetype), []).append(str(status))
+
+    return {
+        archetype
+        for archetype, statuses in by_archetype.items()
+        if statuses and all(status == "IMPLEMENTED" for status in statuses)
+    }
+
 # Deck source priority for within-archetype selection (higher = preferred).
 # DigimonMeta lists are highly-optimised top-cut builds.
 _SOURCE_PREFERENCE = {"digimonmeta": 3, "egman": 2, "digimoncard_io": 1, "file": 0, "manual": 0, "test": 0}
+SNAPSHOT_SCHEMA_VERSION = 1
+
+
+class UnimplementedDeckError(ValueError):
+    """Raised when a training deck contains cards outside the Rust registry."""
+
+
+def canonical_deck_counts(card_ids: List[str]) -> Dict[str, int]:
+    """Return a stable card-count mapping for deck identity and snapshots."""
+    return dict(sorted(Counter(card_ids).items()))
+
+
+def stable_deck_id(card_ids: List[str]) -> str:
+    """Content-address a deck by its canonical card counts."""
+    payload = json.dumps(
+        {"card_counts": canonical_deck_counts(card_ids)},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def missing_unimplemented_card_ids(
+    card_ids: List[str],
+    implemented_card_ids: Set[str],
+) -> List[str]:
+    """Return sorted unique card IDs that are absent from the Rust registry."""
+    return sorted({cid for cid in card_ids if cid not in implemented_card_ids})
+
+
+def validate_implemented_deck(
+    card_ids: List[str],
+    implemented_card_ids: Set[str],
+    *,
+    label: str = "deck",
+) -> None:
+    """Fail fast if a deck contains unimplemented card IDs."""
+    missing = missing_unimplemented_card_ids(card_ids, implemented_card_ids)
+    if missing:
+        raise UnimplementedDeckError(
+            f"{label} contains unimplemented card IDs: {', '.join(missing)}"
+        )
+
+
+def _parse_library_decklist(dl: Dict[str, Any]) -> List[str]:
+    """Parse a deck_library decklist record into flat card IDs."""
+    tts_str = dl.get("decklist", "")
+    if tts_str:
+        return parse_tts(tts_str)
+    return list(dl.get("card_ids", []))
+
+
+def _snapshot_hash(payload: Dict[str, Any]) -> str:
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 # ─── Data Classes ────────────────────────────────────────────────────
@@ -96,6 +192,12 @@ class DeckEntry:
     card_ids: List[str]  # Flat list ready for HeadlessGame
     source: str = ""
     threat_index: float = 0.0
+    source_deck_id: str = ""
+    source_url: str = ""
+
+    @property
+    def card_counts(self) -> Dict[str, int]:
+        return canonical_deck_counts(self.card_ids)
 
 
 @dataclass
@@ -115,6 +217,152 @@ class ArchetypeStats:
     decks: List[DeckEntry] = field(default_factory=list)
 
 
+@dataclass
+class GeneralistDeckPool:
+    """Implementation-safe deck pool for generalist pilot curricula."""
+
+    archetypes: Dict[str, List[DeckEntry]]
+    snapshot_hash: str = ""
+    snapshot_path: str = ""
+
+    @property
+    def archetype_names(self) -> List[str]:
+        return sorted(self.archetypes)
+
+    @property
+    def deck_count(self) -> int:
+        return sum(len(decks) for decks in self.archetypes.values())
+
+    @property
+    def archetype_count(self) -> int:
+        return len(self.archetypes)
+
+    def sample_uniform_archetype(self, rng: np.random.Generator) -> DeckEntry:
+        """Sample archetype uniformly, then deck uniformly within archetype."""
+        names = self.archetype_names
+        if not names:
+            raise RuntimeError("GeneralistDeckPool has no eligible archetypes.")
+        arch = str(rng.choice(names))
+        decks = sorted(self.archetypes[arch], key=lambda d: d.deck_id)
+        return decks[int(rng.integers(0, len(decks)))]
+
+    def to_snapshot(self) -> Dict[str, Any]:
+        records: List[Dict[str, Any]] = []
+        for arch in self.archetype_names:
+            for deck in sorted(self.archetypes[arch], key=lambda d: d.deck_id):
+                records.append({
+                    "deck_id": deck.deck_id,
+                    "archetype": arch,
+                    "card_counts": deck.card_counts,
+                    "card_ids": list(deck.card_ids),
+                    "source": deck.source,
+                    "source_deck_id": deck.source_deck_id,
+                    "source_url": deck.source_url,
+                })
+        content = {
+            "schema_version": SNAPSHOT_SCHEMA_VERSION,
+            "sampling_policy": "uniform_archetype_then_deck",
+            "eligible_archetypes": self.archetype_names,
+            "decks": records,
+        }
+        snapshot_hash = _snapshot_hash(content)
+        return {
+            **content,
+            "snapshot_hash": snapshot_hash,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    def write_snapshot(self, path: str | Path) -> str:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot = self.to_snapshot()
+        path.write_text(json.dumps(snapshot, indent=2, sort_keys=True), encoding="utf-8")
+        self.snapshot_hash = str(snapshot["snapshot_hash"])
+        self.snapshot_path = str(path)
+        return self.snapshot_hash
+
+    @classmethod
+    def from_snapshot(
+        cls,
+        path: str | Path,
+        *,
+        implemented_card_ids: Optional[Set[str]] = None,
+    ) -> "GeneralistDeckPool":
+        path = Path(path)
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        if raw.get("schema_version") != SNAPSHOT_SCHEMA_VERSION:
+            raise ValueError(
+                f"Unsupported deck-pool snapshot schema_version={raw.get('schema_version')!r}"
+            )
+        content = {
+            "schema_version": raw.get("schema_version"),
+            "sampling_policy": raw.get("sampling_policy"),
+            "eligible_archetypes": raw.get("eligible_archetypes", []),
+            "decks": raw.get("decks", []),
+        }
+        expected_hash = _snapshot_hash(content)
+        if raw.get("snapshot_hash") != expected_hash:
+            raise ValueError("Deck-pool snapshot hash mismatch.")
+
+        archetypes: Dict[str, List[DeckEntry]] = {}
+        for record in raw.get("decks", []):
+            card_ids = list(record.get("card_ids", []))
+            if not card_ids and record.get("card_counts"):
+                for cid, count in sorted(record["card_counts"].items()):
+                    card_ids.extend([cid] * int(count))
+            if implemented_card_ids is not None:
+                validate_implemented_deck(
+                    card_ids,
+                    implemented_card_ids,
+                    label=f"snapshot deck {record.get('deck_id', '?')}",
+                )
+            deck_id = stable_deck_id(card_ids)
+            if record.get("deck_id") != deck_id:
+                raise ValueError(
+                    f"Snapshot deck_id mismatch for {record.get('deck_id', '?')}"
+                )
+            arch = str(record["archetype"])
+            archetypes.setdefault(arch, []).append(DeckEntry(
+                deck_id=deck_id,
+                archetype_name=arch,
+                card_ids=card_ids,
+                source=record.get("source", ""),
+                source_deck_id=record.get("source_deck_id", ""),
+                source_url=record.get("source_url", ""),
+            ))
+        pool = cls(archetypes=archetypes, snapshot_hash=expected_hash, snapshot_path=str(path))
+        return pool
+
+    @classmethod
+    def from_archetype_stats(
+        cls,
+        archetypes: Dict[str, ArchetypeStats],
+    ) -> "GeneralistDeckPool":
+        return cls(
+            archetypes={
+                name: list(stats.decks)
+                for name, stats in archetypes.items()
+                if stats.decks
+            }
+        )
+
+
+def load_generalist_deck_pool(
+    path: str = DECK_LIBRARY_PATH,
+    *,
+    implemented_card_ids: Optional[Set[str]] = None,
+    fully_implemented_archetypes: Optional[Set[str]] = None,
+) -> GeneralistDeckPool:
+    """Load the same implementation-safe eligible pool used by MetaGauntlet."""
+    gauntlet = MetaGauntlet(
+        sampling_mode="random",
+        implemented_card_ids=implemented_card_ids,
+        fully_implemented_archetypes=fully_implemented_archetypes,
+    )
+    gauntlet.load(path)
+    return gauntlet.as_generalist_pool()
+
+
 # ─── MetaGauntlet ───────────────────────────────────────────────────
 
 class MetaGauntlet:
@@ -132,6 +380,11 @@ class MetaGauntlet:
 
     Deck Pool Routing: when sampling within an archetype, decks from higher-
     quality sources (digimonmeta > egman > others) are preferred.
+
+    sampling_mode:
+      - "meta": normalize Threat Index by archetype, then split each archetype's
+        probability evenly across its decklists.
+      - "random": sample uniformly across all fully implemented decklists.
     """
 
     def __init__(
@@ -142,12 +395,22 @@ class MetaGauntlet:
         sleeper_floor: float = 0.05,
         confidence_min_appearances: int = 5,
         seed: Optional[int] = None,
+        sampling_mode: str = "meta",
+        implemented_only: bool = True,
+        implemented_card_ids: Optional[Set[str]] = None,
+        fully_implemented_archetypes: Optional[Set[str]] = None,
     ) -> None:
+        if sampling_mode not in {"meta", "random"}:
+            raise ValueError("sampling_mode must be 'meta' or 'random'")
         self.alpha = alpha
         self.beta = beta
         self.sleeper_threshold = sleeper_threshold
         self.sleeper_floor = sleeper_floor
         self.confidence_min_appearances = confidence_min_appearances
+        self.sampling_mode = sampling_mode
+        self.implemented_only = implemented_only
+        self._implemented_card_ids = implemented_card_ids
+        self._fully_implemented_archetypes = fully_implemented_archetypes
 
         self.archetypes: Dict[str, ArchetypeStats] = {}
         self._deck_pool: List[DeckEntry] = []
@@ -163,6 +426,20 @@ class MetaGauntlet:
         """
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
+
+        self.archetypes = {}
+        self._deck_pool = []
+        self._weights = None
+        implemented = None
+        if self.implemented_only:
+            implemented = (
+                self._implemented_card_ids
+                if self._implemented_card_ids is not None
+                else load_implemented_card_ids()
+            )
+        fully_implemented_archetypes = self._fully_implemented_archetypes
+        if fully_implemented_archetypes is None and os.path.abspath(path) == os.path.abspath(DECK_LIBRARY_PATH):
+            fully_implemented_archetypes = _load_fully_implemented_archetypes()
 
         # First pass: gather DigiLab total_appearances for meta_share denominator
         # Aggregate aliased entries under canonical names
@@ -200,6 +477,12 @@ class MetaGauntlet:
 
         # Second pass: build archetype stats and deck pools
         for arch_name, group in canonical_groups.items():
+            if (
+                fully_implemented_archetypes is not None
+                and arch_name not in fully_implemented_archetypes
+            ):
+                logger.debug("Skipping non-ready DSL archetype %s", arch_name)
+                continue
             # Merge all entries in the group
             arch_data_merged = {}
             for _, ad in group:
@@ -210,24 +493,32 @@ class MetaGauntlet:
             arch_data = arch_data_merged
             decks: List[DeckEntry] = []
             for dl in arch_data.get("decklists", []):
-                # Parse TTS format decklist (JSON array string from digimoncard.io export)
-                tts_str = dl.get("decklist", "")
-                if tts_str:
-                    try:
-                        card_ids = parse_tts(tts_str)
-                    except ValueError:
-                        logger.warning("Invalid TTS decklist in %s, skipping", dl.get("deck_id", "?"))
-                        continue
-                else:
-                    # Backward compat: fall back to legacy card_ids field
-                    card_ids = dl.get("card_ids", [])
+                try:
+                    card_ids = _parse_library_decklist(dl)
+                except ValueError:
+                    logger.warning("Invalid TTS decklist in %s, skipping", dl.get("deck_id", "?"))
+                    continue
                 if not card_ids:
                     continue
+                if implemented is not None:
+                    missing = missing_unimplemented_card_ids(card_ids, implemented)
+                else:
+                    missing = []
+                if missing:
+                    logger.debug(
+                        "Skipping unimplemented decklist %s for %s: %s",
+                        dl.get("deck_id", "?"),
+                        arch_name,
+                        ", ".join(missing),
+                    )
+                    continue
                 decks.append(DeckEntry(
-                    deck_id=dl.get("deck_id", ""),
+                    deck_id=stable_deck_id(card_ids),
                     archetype_name=arch_name,
                     card_ids=card_ids,
                     source=dl.get("source", ""),
+                    source_deck_id=dl.get("deck_id", ""),
+                    source_url=dl.get("source_url", ""),
                 ))
 
             if not decks:
@@ -306,6 +597,19 @@ class MetaGauntlet:
         conversion_rate > sleeper_threshold get minimum sleeper_floor.
         """
         self._deck_pool = []
+
+        if self.sampling_mode == "random":
+            for stats in self.archetypes.values():
+                self._deck_pool.extend(stats.decks)
+            n = len(self._deck_pool)
+            if n == 0:
+                self._weights = np.array([], dtype=np.float64)
+                return
+            self._weights = np.ones(n, dtype=np.float64) / n
+            for stats in self.archetypes.values():
+                stats.sampling_probability = len(stats.decks) / n
+            return
+
         archetype_weights: Dict[str, float] = {}
 
         # Step 1: Raw TI weights per archetype
@@ -408,6 +712,10 @@ class MetaGauntlet:
             )
         ]
 
+    def as_generalist_pool(self) -> GeneralistDeckPool:
+        """Return this loaded gauntlet as a generalist deck pool."""
+        return GeneralistDeckPool.from_archetype_stats(self.archetypes)
+
     @property
     def deck_count(self) -> int:
         """Total number of playable decks in the pool."""
@@ -477,3 +785,43 @@ class GauntletWrapper(gymnasium.Wrapper):
     def current_opponent(self) -> Optional[DeckEntry]:
         """The opponent deck for the current episode."""
         return self._current_opponent
+
+
+class GeneralistDeckPoolWrapper(gymnasium.Wrapper):
+    """Samples both player decks from a GeneralistDeckPool each episode."""
+
+    def __init__(
+        self,
+        env: gymnasium.Env,
+        deck_pool: GeneralistDeckPool,
+        seed: Optional[int] = None,
+    ) -> None:
+        super().__init__(env)
+        self.deck_pool = deck_pool
+        self._rng = np.random.default_rng(seed)
+        self._current_deck1: Optional[DeckEntry] = None
+        self._current_deck2: Optional[DeckEntry] = None
+
+    def reset(self, **kwargs):
+        self._current_deck1 = self.deck_pool.sample_uniform_archetype(self._rng)
+        self._current_deck2 = self.deck_pool.sample_uniform_archetype(self._rng)
+
+        options = kwargs.get("options") or {}
+        options["deck1"] = self._current_deck1.card_ids
+        options["deck2"] = self._current_deck2.card_ids
+        kwargs["options"] = options
+
+        obs, info = self.env.reset(**kwargs)
+        info["deck1_archetype"] = self._current_deck1.archetype_name
+        info["deck1_deck_id"] = self._current_deck1.deck_id
+        info["opponent_archetype"] = self._current_deck2.archetype_name
+        info["opponent_deck_id"] = self._current_deck2.deck_id
+        return obs, info
+
+    @property
+    def current_deck1(self) -> Optional[DeckEntry]:
+        return self._current_deck1
+
+    @property
+    def current_deck2(self) -> Optional[DeckEntry]:
+        return self._current_deck2

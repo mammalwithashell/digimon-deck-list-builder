@@ -1118,14 +1118,24 @@ fn eval_event_fields(
         }
     }
     if let Some(ref trait_name) = pred.attacker_trait_has {
-        let Some(change) = rctx.attack_target_change() else {
+        let attacker = rctx
+            .attack_target_change()
+            .map(|change| change.attacker)
+            .or_else(|| {
+                rctx.game
+                    .current_trigger_context
+                    .as_ref()
+                    .and_then(|trigger| trigger.event_permanent)
+            })
+            .or_else(|| rctx.attack_attacker());
+        let Some(attacker) = attacker else {
             return false;
         };
         let Some(card) = rctx
             .game
-            .player(change.attacker.player)
+            .player(attacker.player)
             .battle_area
-            .get(change.attacker.index as usize)
+            .get(attacker.index as usize)
             .map(|perm| perm.top_card().handle())
         else {
             return false;
@@ -2055,7 +2065,11 @@ fn field_digimon_has_name(
             if !kind_matches_field(CompiledCardKind::Digimon, identity.kind) {
                 continue;
             }
-            if identity.card_name == candidate_name {
+            if identity
+                .card_names
+                .iter()
+                .any(|name| name == candidate_name)
+            {
                 return true;
             }
         }
@@ -2141,17 +2155,18 @@ fn eval_permanent_fields(
     let name_is_overlay_match = pred
         .name_is
         .as_ref()
-        .is_some_and(|n| synth_identity.card_name == *n);
+        .is_some_and(|n| synth_identity.card_names.iter().any(|name| name == n));
     let name_contains_overlay_match = pred.name_contains.as_ref().is_some_and(|n| {
         synth_identity
-            .card_name
-            .to_lowercase()
-            .contains(&n.to_lowercase())
+            .card_names
+            .iter()
+            .any(|name| name.to_lowercase().contains(&n.to_lowercase()))
     });
-    let name_in_overlay_match = pred
-        .name_in
-        .as_ref()
-        .is_some_and(|names| names.iter().any(|n| synth_identity.card_name == *n));
+    let name_in_overlay_match = pred.name_in.as_ref().is_some_and(|names| {
+        names
+            .iter()
+            .any(|n| synth_identity.card_names.iter().any(|name| name == n))
+    });
     let color_is_overlay_match = pred.color_is.is_some_and(|want| {
         synth_identity
             .colors

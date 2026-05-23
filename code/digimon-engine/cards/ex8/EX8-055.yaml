@@ -12,11 +12,144 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 4
 
-# Printed [When Digivolving]/[When Attacking] source-trash cost,
-# unsuspend/Security A. +1 grant, and [End of Your Turn] trash-to-source
-# placement clauses are not authored in this pass.
+# Authoritative card text (EX8-055.json / cards.json — verbatim):
+#
+#   ＜Fragment (3)＞
+#
+#   [When Digivolving] [When Attacking]
+#   By trashing any 3 digivolution cards with the [Mineral] or [Rock] trait
+#   from your Digimon, this Digimon unsuspends and gains ＜Security A. +1＞
+#   for the turn.
+#
+#   [End of Your Turn] [Once Per Turn]
+#   You may place up to 3 cards with the [Mineral] or [Rock] trait from your
+#   trash as this Digimon's bottom digivolution cards.
+#
+# ─── Clause A: [WD][WA] trash 3 Mineral/Rock sources → unsuspend + SecurityA+1 ─
+#
+# "By trashing any 3 digivolution cards with the [Mineral] or [Rock] trait
+#  from your Digimon, this Digimon unsuspends and gains <Security A. +1>
+#  for the turn."
+#
+# Cost: select exactly 3 Mineral/Rock trait source cards from any of your own
+# Digimon's digivolution stacks (no `from:` restricts to the carrier — all
+# own Digimon's stacks are scanned). If fewer than 3 qualify, the SourceMulti
+# silently skips per no-approximations silent-skip contract.
+#
+# Effect (inside `then:` block, runs only after full cost is paid):
+#   1. trash_selected_sources
+#   2. unsuspend this Digimon  (`target: source`)
+#   3. SecurityAttackChange +1 for the turn (`expiry: end_of_turn`)
+#
+# "For the turn" = until end of the current turn = `expiry: end_of_turn`.
+#
+# ─── Clause B: [End of Your Turn][OPT] place up to 3 Mineral/Rock from trash ──
+#
+# "You may place up to 3 cards with the [Mineral] or [Rock] trait from your
+#  trash as this Digimon's bottom digivolution cards."
+#
+# Timing: `when: end_of_your_turn`, `once_per_turn: true`, `optional: true`.
+#
+# Three sequential optional `select_trash` + `place_as_bottom_source` pairs.
+# Pick 1 is optional; if the player passes, no cards are placed and the
+# remaining picks are skipped. If they pick 1, they are offered pick 2
+# (also optional), and so on up to pick 3. This correctly models "up to 3"
+# without extra machinery — the same pattern as EX10-033 Clause A.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                               | Status      |
+# |-----------------------------------------------------------------|-------------|
+# | <Fragment (3)> keyword                                          | IMPLEMENTED |
+# | [WD][WA] trash 3 Mineral/Rock sources from your Digimon (cost) | IMPLEMENTED |
+# | [WD][WA] this Digimon unsuspends                               | IMPLEMENTED |
+# | [WD][WA] SecurityAttackChange +1 for the turn                  | IMPLEMENTED |
+# | [EOT][OPT] place up to 3 Mineral/Rock from trash as sources    | IMPLEMENTED |
 
 effects:
+  # ─── Fragment (3) ─────────────────────────────────────────────────────────
   - kind: grant_keyword
     keyword: Fragment
     value: 3
+
+  # ─── Clause A: [When Digivolving][When Attacking] source-trash → unsuspend + SecurityA+1 ─
+  #
+  # Cost: trash exactly 3 Mineral/Rock trait cards from any of your Digimon's
+  # digivolution stacks. Effect: unsuspend this Digimon + SecurityAttackChange +1
+  # until end of turn. Both effects are inside `then:` so they only run if the
+  # full cost is paid.
+  - when: [when_digivolving, when_attacking]
+    summary: "[WD][WA] Trash 3 Mineral/Rock sources from your Digimon → unsuspend + SecurityA+1 for the turn"
+    process:
+      - select_own_sources:
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          min: 3
+          max: 3
+          bind_as: cost_sources
+          prompt: "Trash any 3 [Mineral] or [Rock] digivolution cards from your Digimon to unsuspend and gain Security A. +1"
+          then:
+            # Step 1: Trash the selected source cards.
+            - trash_selected_sources: { source_refs: cost_sources }
+            # Step 2: Unsuspend this Digimon.
+            - unsuspend: { target: source }
+            # Step 3: SecurityAttackChange +1 until end of this turn.
+            - add_modifier:
+                target: source
+                modifier: SecurityAttackChange
+                value: 1
+                expiry: end_of_turn
+
+  # ─── Clause B: [End of Your Turn][OPT] place up to 3 Mineral/Rock from trash ─
+  #
+  # "You may place up to 3 [Mineral] or [Rock] trait cards from your trash as
+  #  this Digimon's bottom digivolution cards."
+  #
+  # Three sequential optional trash picks + placements. Each pick is optional
+  # so the player may stop at 0, 1, 2, or 3 placements.
+  - when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    summary: "[EOT][OPT] Place up to 3 Mineral/Rock cards from trash as this Digimon's bottom sources"
+    process:
+      # Pick 1 (optional — PASS means 0 placements).
+      - select_trash:
+          of: you
+          bind_as: src1
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources (1/3)"
+      - place_as_bottom_source:
+          source: src1
+          target: source
+      # Pick 2 (optional — PASS means stop at 1 placement).
+      - select_trash:
+          of: you
+          bind_as: src2
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources (2/3)"
+      - place_as_bottom_source:
+          source: src2
+          target: source
+      # Pick 3 (optional — PASS means stop at 2 placements).
+      - select_trash:
+          of: you
+          bind_as: src3
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Choose up to 3 [Mineral] or [Rock] cards from your trash to place as this Digimon's bottom sources (3/3)"
+      - place_as_bottom_source:
+          source: src3
+          target: source

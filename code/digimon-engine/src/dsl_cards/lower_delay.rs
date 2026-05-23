@@ -74,11 +74,14 @@ pub fn lower_with_raw(
         // gating event is observed after the placing turn. `on_ally_played`
         // closes the engine half of PUPPETS-G004 (see `effect_queue.rs`
         // `enqueue_triggered` for the `EnteredField` dispatch fan-out).
-        CompiledTiming::OnSuspend | CompiledTiming::OnUnsuspend | CompiledTiming::OnAllyPlayed => {
-            compiled_timing_to_engine(trigger)
-                .map(DelayTrigger::OnEvent)
-                .unwrap_or(DelayTrigger::EndOfYourNextTurn)
-        }
+        CompiledTiming::OnSuspend
+        | CompiledTiming::OnUnsuspend
+        | CompiledTiming::OnAllyPlayed
+        | CompiledTiming::OnAttack
+        | CompiledTiming::OnAllyAttack
+        | CompiledTiming::OnOpponentAttack => compiled_timing_to_engine(trigger)
+            .map(DelayTrigger::OnEvent)
+            .unwrap_or(DelayTrigger::EndOfYourNextTurn),
         _ => DelayTrigger::EndOfYourNextTurn,
     };
     let process_arc: Arc<[CompiledStep]> = Arc::from(process_steps);

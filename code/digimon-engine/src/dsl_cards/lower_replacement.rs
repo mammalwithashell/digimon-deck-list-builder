@@ -10,6 +10,7 @@ use std::sync::Arc;
 use crate::action::space::{HAND_EFFECT_START, HAND_MAIN_LIMIT};
 use crate::card_source::{CardHandle, CardSource};
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::dsl_cards::step::{resolve_player, run_steps_with_runtime, StepRuntime};
@@ -444,7 +445,18 @@ fn required_selection_step_has_candidate(
             dp_budget,
             min_picks,
             ..
-        } => *min_picks == 0 || has_opponent_dp_budget_candidate(ctx, *dp_budget),
+        } => {
+            let budget = formula_eval::evaluate_read_with_bindings(
+                dp_budget,
+                ctx,
+                ctx.source_permanent.unwrap_or(PermanentHandle {
+                    player: ctx.player,
+                    index: u8::MAX,
+                }),
+                Some(bindings),
+            );
+            *min_picks == 0 || has_opponent_dp_budget_candidate(ctx, budget)
+        }
         CompiledStep::SelectOpponentPlayCostBudget {
             play_cost_budget,
             min_picks,

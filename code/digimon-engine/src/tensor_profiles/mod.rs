@@ -4,6 +4,7 @@ pub mod standard;
 
 pub const STANDARD_COMPACT_V1_PROFILE_ID: &str = standard::v1::PROFILE_ID;
 pub const STANDARD_LITE_V2_PROFILE_ID: &str = standard::v2_lite::PROFILE_ID;
+pub const STANDARD_LITE_DECK_V2_PROFILE_ID: &str = standard::v2_lite_deck::PROFILE_ID;
 pub const STANDARD_FULL_V2_PROFILE_ID: &str = standard::v2_full::PROFILE_ID;
 pub const STANDARD_V1_LEGACY_PROFILE_ID: &str = "standard_v1";
 pub const COMPACT_V1_LEGACY_PROFILE_ID: &str = "compact_v1";
@@ -221,6 +222,7 @@ pub fn all_profile_ids() -> Vec<&'static str> {
     vec![
         standard::v1::PROFILE_ID,
         standard::v2_lite::PROFILE_ID,
+        standard::v2_lite_deck::PROFILE_ID,
         standard::v2_full::PROFILE_ID,
     ]
 }
@@ -233,6 +235,7 @@ pub fn profile_by_id(id: &str) -> Option<TensorProfile> {
         standard::v2_lite::PROFILE_ID | V2_LITE_TRANSITION_PROFILE_ID => {
             Some(standard::v2_lite::PROFILE)
         }
+        standard::v2_lite_deck::PROFILE_ID => Some(standard::v2_lite_deck::PROFILE),
         standard::v2_full::PROFILE_ID => Some(standard::v2_full::PROFILE),
         _ => None,
     }
