@@ -41,6 +41,12 @@ class TrainingConfig:
     checkpoint_every: int = 50_000
     keep_last_checkpoints: int = 3
     resume_from: Optional[str] = None
+    init_from: Optional[str] = None
+    generalist: bool = False
+    curriculum_seed: Optional[int] = None
+    eval_seed: Optional[int] = None
+    curriculum_pool: Optional[str] = None
+    curriculum_pool_out: Optional[str] = None
     models_dir: str = "models"
     tensorboard_log: str = "runs/pilot_ppo"
     run_name: Optional[str] = None
