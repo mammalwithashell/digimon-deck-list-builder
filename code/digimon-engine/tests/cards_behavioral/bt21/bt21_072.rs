@@ -725,11 +725,7 @@ fn bt21_072_xros_req_alt_path_gates_on_save_in_text_or_hero_trait() {
         .alt_paths
         .iter()
         .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
-        .find(|p| {
-            p.from
-                .as_ref()
-                .is_some_and(|f| !f.any_of.is_empty())
-        })
+        .find(|p| p.from.as_ref().is_some_and(|f| !f.any_of.is_empty()))
         .expect("BT21-072 must have a xros_req digivolve alt-path with an any_of from-filter");
 
     assert_eq!(

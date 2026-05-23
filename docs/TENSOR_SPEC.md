@@ -22,6 +22,8 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 
 The default pilot observation profile is `standard_lite_v2`: an `8410`-float, fair-information Standard-mode tensor. It is selected by the Rust observation API via `observation::default_observation_profile()` and is exposed to Python as `digimon_engine.DEFAULT_OBSERVATION_PROFILE`.
 
+`standard_lite_deck_v2` is an opt-in `8850`-float profile derived from `standard_lite_v2`. It adds the observing pilot's original submitted decklist as orderless unique-card rows. It does not change the default pilot profile, action masks, or action-space size.
+
 `standard_compact_v1` remains the `1375`-float compact compatibility and baseline profile. The Rust `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE` constants still describe this compact profile for legacy imports and compact-profile checks; new pilot training and model metadata should use observation layout metadata instead of assuming that global constant is the active profile size.
 
 ### `standard_lite_v2`
@@ -65,6 +67,58 @@ Top-level sections:
 | `reserved` | 8154 | `[256]` | 256 |
 
 `standard_lite_v2` card ID positions total `572`; scalar positions total `7838`. These lists, the section table, layout hash, tensor version, and feature schema version are exported by `digimon_engine.get_observation_layout("standard_lite_v2")`.
+
+### `standard_lite_deck_v2`
+
+`standard_lite_deck_v2` is an opt-in fair-information profile for experiments where the pilot should know the composition of the deck it is playing. It reuses all `standard_lite_v2` sections and appends `own_original_decklist[55][8]` before `reserved`. It does not change `ACTION_SPACE_SIZE`, action masks, action decoding, or the default pilot observation profile.
+
+The decklist section encodes the observer's original submitted deck composition only:
+
+- Rows represent unique card IDs, not physical copy rows.
+- Rows are sorted by stable card-registry index, not submitted order or shuffled order.
+- Opponent decklist composition is not encoded.
+- Current shuffled deck order, topdeck identity, and face-down security identity are not encoded.
+- Counts are original submitted counts; this profile does not encode remaining-count inference.
+
+| Field | Value |
+|---|---:|
+| `id` | `standard_lite_deck_v2` |
+| `version` | 2 |
+| `tensor_version` | 2 |
+| `feature_schema_version` | `standard_lite_deck_v2.1` |
+| `tensor_size` | 8850 |
+| `field_slots` | 15 |
+| `slot_size` | 99 |
+| `max_sources` | 12 |
+| `card_id_slot_count` | 627 |
+| `scalar_slot_count` | 8223 |
+
+Top-level sections:
+
+| Section id | Start offset | Shape | Size |
+|---|---:|---:|---:|
+| `global_features` | 0 | `[64]` | 64 |
+| `player_summary` | 64 | `[2][32]` | 64 |
+| `permanent_slots` | 128 | `[2][15][99]` | 2970 |
+| `own_hand` | 3098 | `[30][32]` | 960 |
+| `known_zone_cards` | 4058 | `[120][8]` | 960 |
+| `decision_context` | 5018 | `[64]` | 64 |
+| `pending_choice_features` | 5082 | `[32][96]` | 3072 |
+| `own_original_decklist` | 8154 | `[55][8]` | 440 |
+| `reserved` | 8594 | `[256]` | 256 |
+
+`own_original_decklist[row]` fields:
+
+| Offset | Field |
+|---:|---|
+| 0 | Present flag |
+| 1 | Card ID registry index |
+| 2 | Original copy count divided by `4.0` |
+| 3 | Main-deck flag |
+| 4 | Digi-Egg flag |
+| 5-7 | Reserved, currently `0.0` |
+
+`standard_lite_deck_v2` card ID positions total `627`; scalar positions total `8223`. The 55 decklist card ID offsets are included in `card_id_positions` so `CardEmbeddingExtractor` embeds them like other card identities.
 
 ### `standard_full_v2`
 
@@ -150,7 +204,7 @@ Top-level sections:
 
 `standard_v1` and `compact_v1` are compatibility aliases for older code and design notes. New compact-profile code and model metadata should write `standard_compact_v1`.
 
-Canonical tensor profile definitions live under `code/digimon-engine/src/tensor_profiles/<game_mode>/<version>.rs`. `standard_lite_v2` is defined in `code/digimon-engine/src/tensor_profiles/standard/v2_lite.rs`; `standard_full_v2` is defined in `code/digimon-engine/src/tensor_profiles/standard/v2_full.rs`; `standard_compact_v1` is defined in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`. `code/digimon-engine/src/tensor.rs` is the Standard compact v1 tensor writer and compatibility surface; it re-exports compact layout constants but does not define the default pilot observation profile.
+Canonical tensor profile definitions live under `code/digimon-engine/src/tensor_profiles/<game_mode>/<version>.rs`. `standard_lite_v2` is defined in `code/digimon-engine/src/tensor_profiles/standard/v2_lite.rs`; `standard_lite_deck_v2` is defined in `code/digimon-engine/src/tensor_profiles/standard/v2_lite_deck.rs`; `standard_full_v2` is defined in `code/digimon-engine/src/tensor_profiles/standard/v2_full.rs`; `standard_compact_v1` is defined in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`. `code/digimon-engine/src/tensor.rs` is the Standard compact v1 tensor writer and compatibility surface; it re-exports compact layout constants but does not define the default pilot observation profile.
 
 `standard_compact_v1` owns its structured layout tables in the registry: top-level sections, slot header fields, source fields, and the source stride live together with the profile so the card-ID and scalar positions are easy to audit. These tables use named offsets defined with the profile-owned layout constants instead of magic numeric indices.
 
@@ -340,4 +394,4 @@ The `CardEmbeddingExtractor` is layout-driven. Training code passes the active o
 4. Concatenates embedded card IDs with scalar positions.
 5. Projects through `Linear(..., 512) + ReLU` to produce the 512-dim feature vector used by MLP or LSTM policy/value heads.
 
-For `standard_lite_v2`, this means `572` card-ID positions embedded to `572 × 16 = 9152` floats, concatenated with `7838` scalar positions before projection. For `standard_compact_v1`, the compatibility path remains `520` card-ID positions and `855` scalar positions.
+For `standard_lite_v2`, this means `572` card-ID positions embedded to `572 × 16 = 9152` floats, concatenated with `7838` scalar positions before projection. For `standard_lite_deck_v2`, this means `627` card-ID positions embedded to `627 × 16 = 10032` floats, concatenated with `8223` scalar positions before projection. For `standard_compact_v1`, the compatibility path remains `520` card-ID positions and `855` scalar positions.

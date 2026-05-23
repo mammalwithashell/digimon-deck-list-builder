@@ -632,9 +632,7 @@ fn bt20_016_deletion_replacement_clause_is_optional_and_non_cancelling() {
                 optional,
                 process,
                 ..
-            }) if trigger == "when_would_leave_battle_area" => {
-                Some((*optional, process.clone()))
-            }
+            }) if trigger == "when_would_leave_battle_area" => Some((*optional, process.clone())),
             _ => None,
         })
         .expect("BT20-016 must have a when_would_leave_battle_area replacement clause");

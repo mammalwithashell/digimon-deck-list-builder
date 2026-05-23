@@ -470,7 +470,11 @@ fn p_156_security_can_play_tamer_from_hand_then_add_this_option_to_hand() {
         .start();
 
     let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: P-156 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: P-156 in security"
+    );
     assert_eq!(
         runner.battle_area_size(1),
         0,
@@ -589,7 +593,11 @@ fn p_156_security_no_tamer_in_hand_skips_prompt_but_still_adds_this_option_to_ha
         .start();
 
     let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: P-156 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: P-156 in security"
+    );
 
     let _ = runner.attack_player(attacker, 1, false);
 

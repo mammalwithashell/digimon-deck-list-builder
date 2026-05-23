@@ -366,14 +366,22 @@ fn bt13_101_all_turns_suspends_draws_and_gains_memory_for_two_color_black_yellow
     let tamer = runner.place_on_field(0, "BT13-101", Some(0));
     let memory_before = runner.memory();
 
-    runner.play(0, 0).expect("2-color B/Y Digimon plays from hand");
-    runner.auto_resolve().expect("activation_cost + Draw 1 + gain 1 memory resolve");
+    runner
+        .play(0, 0)
+        .expect("2-color B/Y Digimon plays from hand");
+    runner
+        .auto_resolve()
+        .expect("activation_cost + Draw 1 + gain 1 memory resolve");
 
     assert!(
         runner.game.player(0).battle_area[tamer.index as usize].is_suspended,
         "BT13-101 must be suspended as the activation cost"
     );
-    assert_eq!(runner.hand_size(0), 1, "Draw 1 must put the deck card into hand");
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "Draw 1 must put the deck card into hand"
+    );
     assert_eq!(runner.deck_size(0), 0, "Draw 1 must consume the deck card");
     assert_eq!(
         runner.memory(),
@@ -446,14 +454,20 @@ fn bt13_101_all_turns_does_not_trigger_when_tamer_is_already_suspended() {
     let memory_before = runner.memory();
 
     runner.play(0, 0).expect("2-color B/Y Digimon plays");
-    runner.auto_resolve().expect("settle with pre-suspended Tamer");
+    runner
+        .auto_resolve()
+        .expect("settle with pre-suspended Tamer");
 
     assert!(
         runner.game.player(0).battle_area[tamer.index as usize].is_suspended,
         "pre-suspended Tamer must remain suspended"
     );
     assert_eq!(runner.hand_size(0), 0, "cost failure must not draw");
-    assert_eq!(runner.deck_size(0), 1, "cost failure must not consume deck card");
+    assert_eq!(
+        runner.deck_size(0),
+        1,
+        "cost failure must not consume deck card"
+    );
     assert_eq!(
         runner.memory(),
         memory_before - 4, // only the Digimon's play cost, no gain_memory

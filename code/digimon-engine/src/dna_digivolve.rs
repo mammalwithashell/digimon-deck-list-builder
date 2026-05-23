@@ -218,7 +218,9 @@ impl Game {
             // ── Direction::Into (Phase 2 Track F): paths registered on the
             // SOURCE (carrier) card; `from:` filters the HAND-card
             // candidate. We resolve the base's top-card id to look these up.
-            let into_paths = self.alt_path_registry.get(base_top.card_id(&self.card_data));
+            let into_paths = self
+                .alt_path_registry
+                .get(base_top.card_id(&self.card_data));
 
             for (path, direction) in from_paths
                 .into_iter()
@@ -247,12 +249,8 @@ impl Game {
                 // base-top side or an `Into` path looked up from the hand
                 // side is not applicable to this digivolve attempt.
                 let path_direction = match path.direction {
-                    digimon_dsl::compiled::CompiledAltPathDirection::From => {
-                        LookupDirection::From
-                    }
-                    digimon_dsl::compiled::CompiledAltPathDirection::Into => {
-                        LookupDirection::Into
-                    }
+                    digimon_dsl::compiled::CompiledAltPathDirection::From => LookupDirection::From,
+                    digimon_dsl::compiled::CompiledAltPathDirection::Into => LookupDirection::Into,
                 };
                 if path_direction != direction {
                     continue;
@@ -282,11 +280,7 @@ impl Game {
                 // Dreadnought]") evaluated on top of the source-filter
                 // and material/extra-cost gates.
                 if let Some(condition) = path.condition.as_ref() {
-                    if !eval_predicate(
-                        condition,
-                        &rctx,
-                        PredicateSubject::Permanent(base_handle),
-                    ) {
+                    if !eval_predicate(condition, &rctx, PredicateSubject::Permanent(base_handle)) {
                         continue;
                     }
                 }

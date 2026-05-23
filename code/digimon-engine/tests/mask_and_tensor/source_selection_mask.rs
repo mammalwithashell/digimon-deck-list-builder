@@ -77,7 +77,11 @@ fn breeding_source_select_ids_survive_the_mask() {
     }
 
     // Every pending action ID is in the breeding-source range.
-    let sel = r.game.pending_selection.as_ref().expect("pending installed");
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("pending installed");
     for &aid in &sel.valid_action_ids {
         assert!(
             (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),

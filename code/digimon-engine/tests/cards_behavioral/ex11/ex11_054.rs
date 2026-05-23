@@ -272,7 +272,11 @@ fn ex11_054_security_play_puts_tamer_on_field() {
 
 /// Build a runner with Owen on P0's field and a Reptile Digimon ready in
 /// P0's hand. Returns the runner, Owen's handle, and the Reptile hand index.
-fn reptile_observer_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle, usize) {
+fn reptile_observer_runner() -> (
+    DebugRunner,
+    digimon_engine::permanent::PermanentHandle,
+    usize,
+) {
     use digimon_engine::card_source::CardSource;
     use digimon_engine::enums::CardKind;
 

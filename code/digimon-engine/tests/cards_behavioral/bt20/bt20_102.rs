@@ -831,7 +831,10 @@ fn bt20_102_end_of_turn_opt_lockout() {
 
     let mut runner = runner_with_omnimon_on_field();
     // BT20-102 is placed at index 0 by `runner_with_omnimon_on_field`.
-    let omnimon = PermanentHandle { player: 0, index: 0 };
+    let omnimon = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
 
     // ── First fire: the EOT clause installs its outer optional prompt.
     runner.game.enqueue_triggered(

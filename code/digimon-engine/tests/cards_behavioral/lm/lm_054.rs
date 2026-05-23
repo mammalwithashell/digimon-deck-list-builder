@@ -570,7 +570,12 @@ fn lm_054_delay_is_main_phase_action_after_placing_turn() {
         .from_dsl_yaml(&yaml)
         .expect("LM-054 YAML parses")
         .add_card(digimon("BASE", CardColor::Yellow, 3))
-        .add_card(lv4_evo("YELLOW-EVO", CardColor::Yellow, CardColor::Yellow, 3))
+        .add_card(lv4_evo(
+            "YELLOW-EVO",
+            CardColor::Yellow,
+            CardColor::Yellow,
+            3,
+        ))
         .add_card(filler("FILL"))
         .hand(0, &["YELLOW-EVO"])
         .deck(0, &["FILL"; 6])
@@ -609,7 +614,10 @@ fn lm_054_delay_is_main_phase_action_after_placing_turn() {
     runner.game.set_memory(5);
 
     let mask = build_action_mask(&runner.game, 0);
-    assert_eq!(mask[bit], 1.0, "LM-054 <Delay> activation is a legal action");
+    assert_eq!(
+        mask[bit], 1.0,
+        "LM-054 <Delay> activation is a legal action"
+    );
     assert_eq!(mask[PASS as usize], 1.0, "declining stays legal");
 
     // Take the activation — trashes LM-054 as cost, installs the digivolve.
@@ -637,7 +645,10 @@ fn lm_054_delay_is_main_phase_action_after_placing_turn() {
         .find(|permanent| permanent.is_digimon(&runner.game.card_data))
         .expect("base Digimon remains in battle area");
     assert_eq!(base.stack_size(), 2, "LM-054 <Delay> digivolved the base");
-    assert_eq!(base.top_card().card_id(&runner.game.card_data), "YELLOW-EVO");
+    assert_eq!(
+        base.top_card().card_id(&runner.game.card_data),
+        "YELLOW-EVO"
+    );
     assert_eq!(
         runner.memory(),
         4,

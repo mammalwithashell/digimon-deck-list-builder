@@ -48,16 +48,16 @@
 //!   count comparison for the [On Play][When Digivolving] return clause
 //! - `self_digivolution_contains_name`: gates the Dragon Mode End of Attack rider
 
-use digimon_engine::action::build_action_mask;
-use digimon_engine::action::space::encode_attack;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::EffectTiming;
-use digimon_engine::selection::{SelectionKind, TriggerSource};
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
     CompiledTiming,
 };
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::encode_attack;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::EffectTiming;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────
 
@@ -201,14 +201,15 @@ fn bt16_027_end_of_attack_clause_is_once_per_turn() {
     let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
     let end_of_attack = compiled.effects.iter().find_map(|clause| match clause {
-        CompiledClause::Triggered(t) => {
-            t.when.contains(&CompiledTiming::EndOfAttack).then_some(t)
-        }
+        CompiledClause::Triggered(t) => t.when.contains(&CompiledTiming::EndOfAttack).then_some(t),
         _ => None,
     });
     let clause = end_of_attack.expect("end_of_attack clause must be authored");
     assert!(clause.once_per_turn, "printed End of Attack effect is OPT");
-    assert!(!clause.optional, "printed End of Attack effect is mandatory");
+    assert!(
+        !clause.optional,
+        "printed End of Attack effect is mandatory"
+    );
 }
 
 // ─── [On Play][When Digivolving] behavioural tests ───────────────────────────
@@ -327,10 +328,7 @@ fn is_suspended(runner: &DebugRunner, handle: PermanentHandle) -> bool {
 
 fn end_of_attack_runner() -> DebugRunner {
     fighter_mode_runner()
-        .add_card(make_test_card(
-            "DRAGON-MODE",
-            "Imperialdramon: Dragon Mode",
-        ))
+        .add_card(make_test_card("DRAGON-MODE", "Imperialdramon: Dragon Mode"))
         .add_card(make_test_card("PLAIN-SOURCE", "Plain Source"))
         .add_card(make_test_card("OPP-SUSPENDED", "Opponent Suspended"))
         .add_card(make_test_card("OPP-UNSUSPENDED", "Opponent Unsuspended"))

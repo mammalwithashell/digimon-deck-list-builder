@@ -58,7 +58,10 @@ fn make_named_digimon(id: &str, name: &str, traits: &[&str]) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(5);
     card.dp = Some(8000);
-    card.traits = traits.iter().map(|trait_name| trait_name.to_string()).collect();
+    card.traits = traits
+        .iter()
+        .map(|trait_name| trait_name.to_string())
+        .collect();
     card
 }
 

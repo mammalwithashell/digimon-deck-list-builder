@@ -317,9 +317,7 @@ fn ex7_027_inherited_replacement_opt_locks_second_use_same_turn() {
     // Second leave attempt the SAME turn: [Once Per Turn] locks the clause,
     // so no replacement prompt installs and the carrier leaves. A second token
     // is still on the field, proving the lockout is not a missing-cost artifact.
-    let carrier = runner
-        .game
-        .players[0]
+    let carrier = runner.game.players[0]
         .battle_area
         .iter()
         .position(|perm| perm.top_card().card_id(&runner.game.card_data) == "CARRIER")

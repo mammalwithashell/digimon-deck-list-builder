@@ -211,8 +211,7 @@ fn ex11_071_main_clause_uses_activation_cost_and_reduced_play_from_hand() {
         "select filter requires play_cost_gte: 4"
     );
     assert!(
-        predicate_contains_trait(sel, "Royal Knight")
-            && predicate_contains_trait(sel, "LIBERATOR"),
+        predicate_contains_trait(sel, "Royal Knight") && predicate_contains_trait(sel, "LIBERATOR"),
         "hand filter accepts Royal Knight or LIBERATOR"
     );
 

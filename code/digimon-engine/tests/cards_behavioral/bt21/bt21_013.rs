@@ -114,10 +114,14 @@ fn runner() -> DebugRunner {
 
 /// Fire the [When Digivolving] triggered batch for a permanent that carries
 /// (or is) Agunimon, mirroring what the digivolution flow does.
-fn fire_when_digivolving(runner: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+fn fire_when_digivolving(
+    runner: &mut DebugRunner,
+    handle: digimon_engine::permanent::PermanentHandle,
+) {
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 

@@ -10,13 +10,11 @@
 //! pre-cost decision must evaluate the effect's condition against the
 //! queued effect's trigger context (PUPPETS-G028 review, Issue 1).
 
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl::compile::compile;
-use digimon_engine::dsl::compiled::{
-    CompiledActivationCostKind, CompiledClause, CompiledStep,
-};
+use digimon_engine::dsl::compiled::{CompiledActivationCostKind, CompiledClause, CompiledStep};
 use digimon_engine::dsl::spec::CardSpec;
 use digimon_engine::dsl::step::StepSpec;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::CardKind;
 use digimon_engine::selection::SelectionKind;
 

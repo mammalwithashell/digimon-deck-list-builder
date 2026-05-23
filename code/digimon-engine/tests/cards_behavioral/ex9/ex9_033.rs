@@ -23,8 +23,8 @@
 //! - E2: optional EndOfYourTurn trash play
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledCost,
-    CompiledDeclarativeClause, CompiledPredicate, CompiledTiming,
+    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledCost, CompiledDeclarativeClause,
+    CompiledPredicate, CompiledTiming,
 };
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::action::space::{PASS, TRASH_EFFECT_START};
@@ -340,7 +340,10 @@ fn ex9_033_deletion_observer_is_once_per_turn() {
     let first_prompt = runner
         .pending_selection_view()
         .expect("first eligible deletion should trigger");
-    assert_eq!(first_prompt.valid_action_ids, vec![encode_permanent(lowest)]);
+    assert_eq!(
+        first_prompt.valid_action_ids,
+        vec![encode_permanent(lowest)]
+    );
     runner
         .execute_action(0, first_prompt.valid_action_ids[0])
         .expect("select first lowest-level target");
@@ -419,10 +422,7 @@ fn encode_permanent(handle: PermanentHandle) -> u16 {
     encode_attack(0, handle.index as u16)
 }
 
-fn predicate_has_event_target_kind(
-    predicate: &CompiledPredicate,
-    kind: CompiledCardKind,
-) -> bool {
+fn predicate_has_event_target_kind(predicate: &CompiledPredicate, kind: CompiledCardKind) -> bool {
     predicate.event_target_kind == Some(kind)
         || predicate
             .all_of
@@ -434,10 +434,7 @@ fn predicate_has_event_target_kind(
             .any(|child| predicate_has_event_target_kind(child, kind))
 }
 
-fn predicate_has_event_permanent_is_source(
-    predicate: &CompiledPredicate,
-    expected: bool,
-) -> bool {
+fn predicate_has_event_permanent_is_source(predicate: &CompiledPredicate, expected: bool) -> bool {
     predicate.event_permanent_is_source == Some(expected)
         || predicate
             .all_of

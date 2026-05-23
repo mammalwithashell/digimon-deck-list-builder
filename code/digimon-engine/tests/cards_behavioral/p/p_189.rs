@@ -986,7 +986,10 @@ fn p_189_progress_keyword_active_on_field() {
 /// the whole attack to completion, so by the time the test could observe
 /// `current_attacker()` it is already `None`; this mirrors the established
 /// pattern in `tests/keyword_phase_f/progress.rs`.
-fn inject_p189_as_attacker(runner: &mut DebugRunner, attacker: digimon_engine::permanent::PermanentHandle) {
+fn inject_p189_as_attacker(
+    runner: &mut DebugRunner,
+    attacker: digimon_engine::permanent::PermanentHandle,
+) {
     use digimon_engine::selection::{AttackState, AttackTarget, PendingAttack};
     runner.game.pending_attack = Some(PendingAttack {
         attacker,

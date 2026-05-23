@@ -208,9 +208,7 @@ fn bt24_018_has_would_leave_battle_area_replacement_clause() {
             once_per_turn,
             optional,
             ..
-        }) if trigger == "when_would_leave_battle_area" => {
-            Some((*once_per_turn, *optional))
-        }
+        }) if trigger == "when_would_leave_battle_area" => Some((*once_per_turn, *optional)),
         _ => None,
     });
 
@@ -219,7 +217,10 @@ fn bt24_018_has_would_leave_battle_area_replacement_clause() {
          for clause (g)",
     );
     assert!(once_per_turn, "clause (g) is [Once Per Turn]");
-    assert!(optional, "clause (g) is optional ('you may'-style replacement)");
+    assert!(
+        optional,
+        "clause (g) is optional ('you may'-style replacement)"
+    );
 }
 
 // ─── SECTION 2 — Clause (e): [When Digivolving] unsuspend + blocked trash ────
@@ -388,7 +389,10 @@ fn bt24_018_on_opp_security_removed_delete_digimon_accept() {
     let gate = runner
         .pending_selection_view()
         .expect("clause (f) optional gate must install");
-    assert!(gate.is_optional, "clause (f) gate is 'you may' — declinable");
+    assert!(
+        gate.is_optional,
+        "clause (f) gate is 'you may' — declinable"
+    );
 
     // Accept the gate → the opponent-Digimon selection opens.
     resolve_first_pending(&mut runner);

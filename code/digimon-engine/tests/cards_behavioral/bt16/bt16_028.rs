@@ -431,7 +431,10 @@ fn bt16_028_when_digivolving_by_suspending_opp_unsuspend_own_digimon() {
         "by-suspending cost selection must be optional so the player can decline"
     );
     runner
-        .execute_action(suspend_cost.selecting_player, suspend_cost.valid_action_ids[0])
+        .execute_action(
+            suspend_cost.selecting_player,
+            suspend_cost.valid_action_ids[0],
+        )
         .expect("pay suspend cost");
 
     assert!(

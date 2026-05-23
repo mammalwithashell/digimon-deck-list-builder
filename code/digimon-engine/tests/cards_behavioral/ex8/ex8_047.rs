@@ -132,10 +132,7 @@ fn ex8_047_has_on_play_reveal_two_pick_clause() {
         choose_count, 2,
         "must have 2 choose_from_reveal picks (Mineral/Rock, LIBERATOR); got {choose_count}"
     );
-    assert!(
-        has_order,
-        "must order_remainder for bottom placement"
-    );
+    assert!(has_order, "must order_remainder for bottom placement");
 }
 
 /// Behavioral: with a Mineral card + a LIBERATOR card + a filler in the top

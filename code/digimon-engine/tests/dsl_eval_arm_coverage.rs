@@ -230,7 +230,10 @@ fn no_wildcard_catchalls_in_eval_formula() {
     // The top-level public entry points are `evaluate_with_bindings`
     // and `evaluate_read_with_raw_and_bindings`. Both ultimately match
     // over `CompiledFormula` — neither may contain a wildcard catch-all.
-    for fn_name in ["evaluate_with_bindings", "evaluate_read_with_raw_and_bindings"] {
+    for fn_name in [
+        "evaluate_with_bindings",
+        "evaluate_read_with_raw_and_bindings",
+    ] {
         let body = extract_fn_body(FORMULA_SRC, fn_name).unwrap_or_else(|| {
             panic!("formula_eval.rs must contain `{}`", fn_name);
         });
@@ -246,12 +249,18 @@ fn step_variants_have_exec_arms() {
     // `run_step_with_runtime` rather than via a `match` arm in a
     // step/*.rs module. Their textual marker is the inline `matches!`
     // or a prose comment in mod.rs.
-    let inline_handled: HashSet<&str> = ["RawRust", "PlaceSelfAsDelayOption"].iter().copied().collect();
+    let inline_handled: HashSet<&str> = ["RawRust", "PlaceSelfAsDelayOption"]
+        .iter()
+        .copied()
+        .collect();
     for variant in CompiledStepDiscriminant::iter() {
         let name = format!("{:?}", variant);
         let pat1 = format!("CompiledStep::{}", name);
         let pat2 = format!("Self::{}", name);
-        if !corpus.contains(&pat1) && !corpus.contains(&pat2) && !inline_handled.contains(name.as_str()) {
+        if !corpus.contains(&pat1)
+            && !corpus.contains(&pat2)
+            && !inline_handled.contains(name.as_str())
+        {
             missing.push(name);
         }
     }

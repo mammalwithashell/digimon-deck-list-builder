@@ -226,9 +226,7 @@ fn st20_15_clause_1_is_security_scope_aura_with_dp_modifier() {
 
     match &card.effects[1] {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-            scope,
-            dp_modifier,
-            ..
+            scope, dp_modifier, ..
         }) => {
             assert_eq!(
                 *scope,

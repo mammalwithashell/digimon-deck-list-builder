@@ -608,8 +608,15 @@ impl Game {
                     }
                     processed.push(accept_key);
                     let _ = game.continue_play_from_hand_cost_reduction_chain(
-                        player_id, hand_index, target, cost_delta, source, origin,
-                        suppress_on_play, reduction, processed,
+                        player_id,
+                        hand_index,
+                        target,
+                        cost_delta,
+                        source,
+                        origin,
+                        suppress_on_play,
+                        reduction,
+                        processed,
                     );
                 }),
                 on_decline,
@@ -896,13 +903,7 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
     ) -> Option<usize> {
-        self.play_from_trash_with_cost_suppress(
-            player_id,
-            trash_index,
-            cost_delta,
-            source,
-            false,
-        )
+        self.play_from_trash_with_cost_suppress(player_id, trash_index, cost_delta, source, false)
     }
 
     /// As [`Self::play_from_trash_with_cost`], but threads a `suppress_on_play`
@@ -1013,17 +1014,18 @@ impl Game {
             if perm.linked_cards.len() >= link_max {
                 continue;
             }
-            let filter_ok = effects
-                .iter()
-                .find(|e| e.link_cost.is_some())
-                .map_or(true, |link_effect| {
-                    if let Some(f) = &link_effect.link_filter {
-                        let read_ctx = EffectReadContext::new(self, source_card, None, owner);
-                        f(&read_ctx, handle)
-                    } else {
-                        true
-                    }
-                });
+            let filter_ok =
+                effects
+                    .iter()
+                    .find(|e| e.link_cost.is_some())
+                    .map_or(true, |link_effect| {
+                        if let Some(f) = &link_effect.link_filter {
+                            let read_ctx = EffectReadContext::new(self, source_card, None, owner);
+                            f(&read_ctx, handle)
+                        } else {
+                            true
+                        }
+                    });
             if filter_ok {
                 out.push(handle);
             }
@@ -1245,9 +1247,9 @@ impl Game {
             // `ChangeLinkCost` modifier delta). The printed Option use cost
             // and BeforePayCost `OptionUse` reductions do not apply when
             // plugging the card in via Link Requirements.
-            OptionPlayMode::Link { cost } => (cost as i32
-                + self.modifiers.link_cost_delta_for_player(player_id))
-            .max(0) as u16,
+            OptionPlayMode::Link { cost } => {
+                (cost as i32 + self.modifiers.link_cost_delta_for_player(player_id)).max(0) as u16
+            }
             // Standard / Delay / Training: the printed use cost, less any
             // BeforePayCost reduction.
             _ => ((printed_cost as i32) - total_reduction).max(0) as u16,
@@ -1384,7 +1386,10 @@ impl Game {
             source_kind: EffectSourceKind::Option,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let index = action_id.saturating_sub(HAND_EFFECT_START) as usize;
-                let mode = modes.get(index).copied().unwrap_or(OptionPlayMode::Standard);
+                let mode = modes
+                    .get(index)
+                    .copied()
+                    .unwrap_or(OptionPlayMode::Standard);
                 let _ = game.play_option_core(player_id, source, Some(mode));
             }),
             on_decline: None,
@@ -3499,7 +3504,11 @@ impl Game {
         // with `player_reducer_resolved = true`.
         if !player_reducer_resolved
             && self.try_prompt_player_digivolve_cost_reducer(
-                player_id, handle, hand_index, field_index, source,
+                player_id,
+                handle,
+                hand_index,
+                field_index,
+                source,
             )
         {
             return false;
@@ -3706,13 +3715,7 @@ impl Game {
         // at the unreduced cost.
         let decline = move |game: &mut Game| {
             game.pending_player_digivolve_reduction = 0;
-            game.digivolve_from_hand_inner(
-                acting_player,
-                hand_index,
-                field_index,
-                source,
-                true,
-            );
+            game.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, true);
         };
 
         let previous_phase = self.current_phase;
@@ -4567,10 +4570,9 @@ impl Game {
                 is_digivolve: false,
                 target_permanents: [None, None],
             });
-            if let Some(amount) = self.apply_cost_reduction_candidate(
-                &candidate.key,
-                resolved_target,
-            ) {
+            if let Some(amount) =
+                self.apply_cost_reduction_candidate(&candidate.key, resolved_target)
+            {
                 total += amount;
             }
         }
@@ -4925,8 +4927,8 @@ impl Game {
                     .card_sources
                     .len();
                 for source_idx in 0..stack_size {
-                    let source = &self.player(player_id).battle_area[perm_idx].card_sources
-                        [source_idx];
+                    let source =
+                        &self.player(player_id).battle_area[perm_idx].card_sources[source_idx];
                     self.push_observer_source_info(
                         &mut infos,
                         Some(perm_handle),
@@ -5053,8 +5055,7 @@ impl Game {
             // semantics; the Track H gap closure does not need it.)
             return;
         }
-        let infos =
-            self.before_pay_cost_observer_infos(acting_player, cost_target.map(|t| t.card));
+        let infos = self.before_pay_cost_observer_infos(acting_player, cost_target.map(|t| t.card));
         for info in infos {
             let Some(effects) = self.effects_for_card(&info.card_id, info.source_card) else {
                 continue;

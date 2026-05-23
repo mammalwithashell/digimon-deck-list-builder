@@ -9,6 +9,13 @@ use crate::enums::PlayerId;
 use crate::permanent::Permanent;
 use crate::rules::Rules;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OriginalDeckCardCount {
+    pub card_id: String,
+    pub count: u16,
+    pub is_digitama: bool,
+}
+
 /// A player in the game with all their zones.
 #[derive(Debug, Clone)]
 pub struct Player {
@@ -20,6 +27,7 @@ pub struct Player {
     pub trash: Vec<CardSource>,
     pub battle_area: Vec<Permanent>,
     pub breeding_area: Option<Permanent>,
+    pub original_deck: Vec<OriginalDeckCardCount>,
 
     /// `CardSource.card_index` of security cards currently face-up (visible
     /// to this player and encoded into the observation tensor). Security is
@@ -53,6 +61,7 @@ impl Player {
             trash: Vec::new(),
             battle_area: Vec::new(),
             breeding_area: None,
+            original_deck: Vec::new(),
             face_up_security: HashSet::new(),
             last_security_reveal: None,
             commander_zone: None,

@@ -409,8 +409,8 @@ fn lm_030_main_decline_leaves_field_and_hand_unchanged() {
 // Section 3 — Clause B: Delay ([Start of Your Turn])
 // ═══════════════════════════════════════════════════════════════════════════════
 
-use digimon_engine::permanent::OptionState;
 use digimon_engine::enums::DelayTrigger;
+use digimon_engine::permanent::OptionState;
 
 /// Place LM-030 on P0's field as a Delay-Option whose `StartOfYourNextTurn`
 /// trigger matures at the start of P0's next turn. Driven via two `end_turn()`
@@ -443,11 +443,8 @@ fn push_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
         .iter()
         .position(|c| c.card_id == card_id)
         .unwrap_or_else(|| panic!("push_trash: unknown card_id {card_id}"));
-    let card = digimon_engine::card_source::CardSource::new(
-        data_idx,
-        p,
-        runner.game.next_card_index(),
-    );
+    let card =
+        digimon_engine::card_source::CardSource::new(data_idx, p, runner.game.next_card_index());
     runner.game.players[p as usize].trash.push(card);
 }
 
@@ -674,13 +671,10 @@ fn lm_030_delay_body_play_from_trash_only_when_no_field_digimon() {
 
     // A green Digimon must have been played from trash onto P0's field.
     assert!(
-        runner.game.players[0]
-            .battle_area
-            .iter()
-            .any(|p| {
-                let id = p.top_card().card_id(&runner.game.card_data);
-                id == "LM030-PLAY-GREEN" || id == "LM030-RET-GREEN"
-            }),
+        runner.game.players[0].battle_area.iter().any(|p| {
+            let id = p.top_card().card_id(&runner.game.card_data);
+            id == "LM030-PLAY-GREEN" || id == "LM030-RET-GREEN"
+        }),
         "the conditional branch must play a ≤2000 DP green Digimon from trash"
     );
 }
@@ -775,7 +769,11 @@ fn lm_030_security_installs_trash_selection_when_green_digimon_in_trash() {
 
     let attacker_handle = runner.place_on_field(0, "LM030-ATK-GREEN", Some(0));
     assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
-    assert_eq!(runner.security_count(1), 1, "precondition: LM-030 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: LM-030 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -783,7 +781,11 @@ fn lm_030_security_installs_trash_selection_when_green_digimon_in_trash() {
     // The [Security] clause must have run: LM-030 left the security stack and
     // its mandatory tail ("Then, add this card to the hand") routed LM-030 to
     // the defender's hand.
-    assert_eq!(runner.security_count(1), 0, "LM-030 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-030 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,
@@ -838,8 +840,16 @@ fn lm_030_security_no_selection_when_trash_is_empty() {
 
     let attacker_handle = runner.place_on_field(0, "LM030-ATK-EMPTY", Some(0));
     assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
-    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
-    assert_eq!(runner.security_count(1), 1, "precondition: LM-030 in security");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "precondition: defender trash empty"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: LM-030 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -851,7 +861,11 @@ fn lm_030_security_no_selection_when_trash_is_empty() {
         "no green Digimon played from an empty trash"
     );
     // The mandatory tail still ran: LM-030 left security and went to hand.
-    assert_eq!(runner.security_count(1), 0, "LM-030 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-030 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,
@@ -860,7 +874,10 @@ fn lm_030_security_no_selection_when_trash_is_empty() {
     let hand_id = runner.game.players[1].hand[0]
         .card_id(&runner.game.card_data)
         .to_string();
-    assert_eq!(hand_id, "LM-030", "the card added to hand must be LM-030 itself");
+    assert_eq!(
+        hand_id, "LM-030",
+        "the card added to hand must be LM-030 itself"
+    );
 }
 
 /// DP filter test: when the defender's trash contains ONLY a large green
@@ -903,13 +920,21 @@ fn lm_030_security_no_selection_when_only_large_green_digimon_in_trash() {
     runner.game.players[1].trash.push(trash_seed);
 
     let attacker_handle = runner.place_on_field(0, "LM030-ATK-LARGE", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: LM-030 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: LM-030 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
 
     // The mandatory tail must always run: LM-030 added to the defender's hand.
-    assert_eq!(runner.security_count(1), 0, "LM-030 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-030 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,

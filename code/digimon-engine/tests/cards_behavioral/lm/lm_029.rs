@@ -149,7 +149,9 @@ fn lm_029_has_main_delay_and_security_clauses_without_raw_rust() {
         .iter()
         .find_map(|clause| match clause {
             CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
-                scope, trigger, ..
+                scope,
+                trigger,
+                ..
             }) => Some((scope, trigger)),
             _ => None,
         })
@@ -403,7 +405,11 @@ fn lm_029_security_plays_small_yellow_digimon_from_trash_then_adds_to_hand() {
 
     let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
     assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
-    assert_eq!(runner.security_count(1), 1, "precondition: LM-029 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: LM-029 in security"
+    );
 
     let _ = runner.attack_player(attacker, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -426,7 +432,11 @@ fn lm_029_security_plays_small_yellow_digimon_from_trash_then_adds_to_hand() {
     );
 
     // The mandatory tail must always run: LM-029 left security and went to hand.
-    assert_eq!(runner.security_count(1), 0, "LM-029 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-029 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,
@@ -435,7 +445,10 @@ fn lm_029_security_plays_small_yellow_digimon_from_trash_then_adds_to_hand() {
     let hand_id = runner.game.players[1].hand[0]
         .card_id(&runner.game.card_data)
         .to_string();
-    assert_eq!(hand_id, "LM-029", "the card added to hand must be LM-029 itself");
+    assert_eq!(
+        hand_id, "LM-029",
+        "the card added to hand must be LM-029 itself"
+    );
 }
 
 /// Negative DP filter: when the defender's trash contains ONLY a yellow Digimon
@@ -469,7 +482,11 @@ fn lm_029_security_does_not_play_over_dp_yellow_digimon_from_trash() {
     runner.game.players[1].trash.push(large);
 
     let attacker = runner.place_on_field(0, "ATTACKER-LARGE", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: LM-029 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: LM-029 in security"
+    );
 
     let _ = runner.attack_player(attacker, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -487,7 +504,11 @@ fn lm_029_security_does_not_play_over_dp_yellow_digimon_from_trash() {
     );
 
     // The mandatory tail must always run: LM-029 added to the defender's hand.
-    assert_eq!(runner.security_count(1), 0, "LM-029 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-029 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,
@@ -496,7 +517,10 @@ fn lm_029_security_does_not_play_over_dp_yellow_digimon_from_trash() {
     let hand_id = runner.game.players[1].hand[0]
         .card_id(&runner.game.card_data)
         .to_string();
-    assert_eq!(hand_id, "LM-029", "the card added to hand must be LM-029 itself");
+    assert_eq!(
+        hand_id, "LM-029",
+        "the card added to hand must be LM-029 itself"
+    );
 }
 
 /// Non-yellow trash candidates are excluded by the `color_is: yellow` filter,
@@ -550,7 +574,11 @@ fn lm_029_security_excludes_non_yellow_trash_candidates() {
     );
 
     // The mandatory tail still runs.
-    assert_eq!(runner.security_count(1), 0, "LM-029 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "LM-029 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,
@@ -580,8 +608,16 @@ fn lm_029_security_adds_this_option_to_hand_with_empty_trash() {
         .start();
 
     let attacker = runner.place_on_field(0, "ATTACKER-EMPTY", Some(0));
-    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
-    assert_eq!(runner.security_count(1), 1, "precondition: LM-029 in security");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "precondition: defender trash empty"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: LM-029 in security"
+    );
 
     let result = runner.attack_player(attacker, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -691,9 +727,11 @@ fn push_to_trash(runner: &mut DebugRunner, player: u8, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .unwrap_or_else(|| panic!("push_to_trash: unknown card_id {card_id}"));
     let card_index = runner.game.next_card_index();
-    runner.game.players[player as usize].trash.push(
-        digimon_engine::card_source::CardSource::new(data_idx, player, card_index),
-    );
+    runner.game.players[player as usize]
+        .trash
+        .push(digimon_engine::card_source::CardSource::new(
+            data_idx, player, card_index,
+        ));
 }
 
 /// Seat LM-029 (at player 0's `hand[0]`) as a Delay Option through the real
@@ -711,15 +749,13 @@ fn seat_lm_029_as_delay_option(runner: &mut DebugRunner) {
 }
 
 fn lm_029_is_delayed_option(runner: &DebugRunner) -> bool {
-    runner
-        .game
-        .player(0)
-        .battle_area
-        .iter()
-        .any(|perm| {
-            perm.top_card().card_id(&runner.game.card_data) == "LM-029"
-                && matches!(perm.option_state, digimon_engine::permanent::OptionState::Delayed { .. })
-        })
+    runner.game.player(0).battle_area.iter().any(|perm| {
+        perm.top_card().card_id(&runner.game.card_data) == "LM-029"
+            && matches!(
+                perm.option_state,
+                digimon_engine::permanent::OptionState::Delayed { .. }
+            )
+    })
 }
 
 /// [Main] "Then, place this card in the battle area." Adding a `kind: delay`
@@ -1025,9 +1061,12 @@ fn lm_029_delay_skips_optional_play_when_you_already_have_a_digimon() {
         "only the pre-existing Digimon remains; no extra card was played"
     );
     assert!(
-        runner.game.player(0).battle_area.iter().all(|perm| {
-            perm.top_card().card_id(&runner.game.card_data) == "BLUE-DIGIMON"
-        }),
+        runner
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .all(|perm| { perm.top_card().card_id(&runner.game.card_data) == "BLUE-DIGIMON" }),
         "no yellow Digimon from trash was played"
     );
     // Step (a) still ran: one yellow Digimon left the trash; LM-029 (Delay

@@ -240,7 +240,10 @@ fn effect_play_puppet_from_hand(
         .expect("effect should play Puppet from hand")
 }
 
-fn effect_play_familiar_token(runner: &mut DebugRunner, source: PermanentHandle) -> PermanentHandle {
+fn effect_play_familiar_token(
+    runner: &mut DebugRunner,
+    source: PermanentHandle,
+) -> PermanentHandle {
     let source_card = runner.top_card(source);
     let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
     ctx.play_token(0, "familiar")
@@ -313,7 +316,9 @@ fn steps_grant_rush_to_event_target(steps: &[CompiledStep]) -> bool {
         } => keyword.eq_ignore_ascii_case("Rush") && expiry == "end_of_turn",
         CompiledStep::If {
             then, else_branch, ..
-        } => steps_grant_rush_to_event_target(then) || steps_grant_rush_to_event_target(else_branch),
+        } => {
+            steps_grant_rush_to_event_target(then) || steps_grant_rush_to_event_target(else_branch)
+        }
         CompiledStep::AsSelectingPlayer { body, .. }
         | CompiledStep::ForEach { body, .. }
         | CompiledStep::PerSelected { body, .. }

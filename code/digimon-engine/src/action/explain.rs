@@ -421,9 +421,7 @@ fn explain_selection(game: &Game, player_id: PlayerId, action_id: u16) -> Action
             player_id,
             action_id,
             ActionKind::SourceSelect,
-            format!(
-                "Select source {source} of player {carrier_owner}'s breeding-area Digimon"
-            ),
+            format!("Select source {source} of player {carrier_owner}'s breeding-area Digimon"),
         );
         e.source_zone = Some(ActionZone::Source);
         e.source_index = Some(source);

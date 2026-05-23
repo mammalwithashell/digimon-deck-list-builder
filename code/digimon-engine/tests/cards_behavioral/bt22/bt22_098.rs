@@ -843,9 +843,7 @@ fn bt22_098_main_can_choose_shoemon_or_arisa_from_hand_or_trash_in_one_masked_ch
     runner.auto_resolve().expect("resolve Main");
 
     // The selected card must be on the field; cost must not be paid.
-    let field_ids: Vec<_> = runner
-        .game
-        .players[0]
+    let field_ids: Vec<_> = runner.game.players[0]
         .battle_area
         .iter()
         .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())

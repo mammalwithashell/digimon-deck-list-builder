@@ -211,7 +211,10 @@ fn bt24_017_grants_raid_keyword() {
         }) => keyword.eq_ignore_ascii_case("Raid"),
         _ => false,
     });
-    assert!(has_raid, "BT24-017 must declare a GrantKeyword(Raid) clause");
+    assert!(
+        has_raid,
+        "BT24-017 must declare a GrantKeyword(Raid) clause"
+    );
 }
 
 /// BT24-017 must declare Progress as a native keyword grant.
@@ -735,7 +738,7 @@ fn bt24_017_more_than_two_trash_returns_exactly_two() {
 
     trigger_when_digivolving(&mut runner, bt24_handle);
     resolve_first(&mut runner); // delete
-    // 4 pushed + the deleted OPP-D = 5 trash cards.
+                                // 4 pushed + the deleted OPP-D = 5 trash cards.
     assert_eq!(runner.trash_size(1), 5, "4 pushed + deleted Digimon = 5");
 
     // The multi-select must cap at max=2 even though 5 trash cards exist.

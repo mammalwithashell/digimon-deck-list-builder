@@ -642,9 +642,7 @@ fn p_105_delay_is_player_visible_main_activation_after_placing_turn() {
     // P-105 Option was trashed as the cost, so the carrier's field index may
     // have shifted — find it by Digimon kind rather than the stale handle.
     let _ = carrier;
-    let carrier_top = runner
-        .game
-        .players[0]
+    let carrier_top = runner.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.is_digimon(&runner.game.card_data))

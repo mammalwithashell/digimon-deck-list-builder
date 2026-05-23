@@ -155,11 +155,7 @@ fn gain_memory_fn_with_floor_div_and_card_count_yields_quotient() {
         let card = runner.game.players[0].hand[0].handle();
         let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
         let mut b = Bindings::new();
-        run_step(
-            &CompiledStep::GainMemoryFn { formula },
-            &mut ctx,
-            &mut b,
-        );
+        run_step(&CompiledStep::GainMemoryFn { formula }, &mut ctx, &mut b);
     }
     assert_eq!(
         runner.game.memory,

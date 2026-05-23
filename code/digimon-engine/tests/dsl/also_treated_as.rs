@@ -180,7 +180,9 @@ dp: 3000
         "Sistermon Ciel must be selectable via its [Sistermon Noir] alias"
     );
     assert!(
-        !view.valid_action_ids.contains(&encode_permanent(plain_perm)),
+        !view
+            .valid_action_ids
+            .contains(&encode_permanent(plain_perm)),
         "a card with no matching name/alias must not be selectable"
     );
 }

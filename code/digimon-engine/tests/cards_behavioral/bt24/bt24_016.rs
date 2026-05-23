@@ -242,7 +242,11 @@ fn bt24_016_own_triggered_clause_has_correct_shape() {
                 && t.when.contains(&CompiledTiming::WhenAttacking)
         })
         .expect("clause 2 must be present: [WhenDigivolving, WhenAttacking]");
-    assert_eq!(clause2.scope, CompiledScope::FaceUp, "clause 2 is own-scope");
+    assert_eq!(
+        clause2.scope,
+        CompiledScope::FaceUp,
+        "clause 2 is own-scope"
+    );
     assert!(clause2.once_per_turn, "clause 2 must be OPT");
     assert!(
         !clause2.optional,
@@ -466,23 +470,19 @@ fn clause2_runner(opp_security: usize, opp_hand: usize) -> (DebugRunner, Permane
     (runner, lamiamon)
 }
 
-fn trigger_when_digivolving(
-    runner: &mut DebugRunner,
-    handle: PermanentHandle,
-) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+fn trigger_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
-fn trigger_when_attacking(
-    runner: &mut DebugRunner,
-    handle: PermanentHandle,
-) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(handle));
+fn trigger_when_attacking(runner: &mut DebugRunner, handle: PermanentHandle) {
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -687,8 +687,7 @@ fn clause3_runner(hand_card: CardData) -> (DebugRunner, PermanentHandle) {
 /// play it free — accepting the optional prompt plays the card.
 #[test]
 fn bt24_016_inherited_on_security_removed_play_free_positive() {
-    let (mut runner, carrier) =
-        clause3_runner(make_trait_digimon("REPTILE-3K", "Reptile", 3000));
+    let (mut runner, carrier) = clause3_runner(make_trait_digimon("REPTILE-3K", "Reptile", 3000));
 
     let hand_before = runner.hand_size(0);
     let field_before = runner.battle_area_size(0);
@@ -738,8 +737,7 @@ fn bt24_016_inherited_high_dp_digimon_not_a_legal_target() {
 /// must NOT be a legal free-play target.
 #[test]
 fn bt24_016_inherited_non_matching_trait_digimon_not_a_legal_target() {
-    let (mut runner, carrier) =
-        clause3_runner(make_trait_digimon("CYBORG-3K", "Cyborg", 3000));
+    let (mut runner, carrier) = clause3_runner(make_trait_digimon("CYBORG-3K", "Cyborg", 3000));
 
     let hand_before = runner.hand_size(0);
     let field_before = runner.battle_area_size(0);
@@ -759,8 +757,7 @@ fn bt24_016_inherited_non_matching_trait_digimon_not_a_legal_target() {
 /// prompt (PASS) plays nothing even with a qualifying card in hand.
 #[test]
 fn bt24_016_inherited_decline_plays_nothing() {
-    let (mut runner, carrier) =
-        clause3_runner(make_trait_digimon("REPTILE-3K", "Reptile", 3000));
+    let (mut runner, carrier) = clause3_runner(make_trait_digimon("REPTILE-3K", "Reptile", 3000));
 
     let hand_before = runner.hand_size(0);
     let field_before = runner.battle_area_size(0);
@@ -805,8 +802,7 @@ fn bt24_016_inherited_decline_plays_nothing() {
 /// inherited clause must still dispatch.
 #[test]
 fn bt24_016_inherited_all_turns_fires_on_opponents_turn() {
-    let (mut runner, _carrier) =
-        clause3_runner(make_trait_digimon("REPTILE-3K", "Reptile", 3000));
+    let (mut runner, _carrier) = clause3_runner(make_trait_digimon("REPTILE-3K", "Reptile", 3000));
 
     // Advance to the opponent's (player 1's) turn.
     runner.end_turn();

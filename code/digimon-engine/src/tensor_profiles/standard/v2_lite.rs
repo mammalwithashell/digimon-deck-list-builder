@@ -283,6 +283,15 @@ pub fn positions_for_section(
                 );
             }
         }
+        "own_original_decklist" => {
+            for row in 0..super::v2_lite_deck::DECKLIST_ROWS {
+                mark_card(
+                    section.start
+                        + row * super::v2_lite_deck::DECKLIST_ROW_SIZE
+                        + super::v2_lite_deck::DECKLIST_CARD_ID_OFFSET,
+                );
+            }
+        }
         _ => panic!("unsupported standard_lite_v2 row section {}", section.id),
     }
 

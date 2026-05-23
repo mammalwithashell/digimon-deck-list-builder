@@ -56,7 +56,8 @@
 use digimon_dsl::compiled::{
     CompiledActivationCostKind, CompiledCardKind, CompiledClause, CompiledCostDelta,
     CompiledCountAggregate, CompiledDeclarativeClause, CompiledDpConstraint, CompiledFieldSelector,
-    CompiledPlayerRef, CompiledPredicate, CompiledScope, CompiledStep, CompiledTiming, CompiledZone,
+    CompiledPlayerRef, CompiledPredicate, CompiledScope, CompiledStep, CompiledTiming,
+    CompiledZone,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::EffectTiming;
@@ -77,7 +78,12 @@ fn runner() -> DebugRunner {
 }
 
 /// Build a Red Digimon test card with an explicit DP and trait set.
-fn digimon(card_id: &str, name: &str, dp: i32, traits: &[&str]) -> digimon_engine::card_data::CardData {
+fn digimon(
+    card_id: &str,
+    name: &str,
+    dp: i32,
+    traits: &[&str],
+) -> digimon_engine::card_data::CardData {
     let mut d = make_test_card(card_id, name);
     d.dp = Some(dp);
     d.traits = traits.iter().map(|t| t.to_string()).collect();
@@ -195,7 +201,10 @@ fn bt21_093_main_clause_is_pure_dsl_highest_dp_delete() {
     }
     // Step 1: delete the bound target.
     assert!(
-        matches!(main.process.get(1), Some(CompiledStep::DeletePermanent { .. })),
+        matches!(
+            main.process.get(1),
+            Some(CompiledStep::DeletePermanent { .. })
+        ),
         "[Main] clause must delete the selected highest-DP Digimon"
     );
     // "Then, place this card in the battle area" — implicit via the `kind:
@@ -281,9 +290,7 @@ fn bt21_093_event_gated_delay_clause_is_all_turns_on_opponent_security_removed()
         "Delay body condition gates on both on_field and a Reptile/Dragonkin Digimon"
     );
     assert!(
-        cond.all_of
-            .iter()
-            .any(|c| c.on_field == Some(true)),
+        cond.all_of.iter().any(|c| c.on_field == Some(true)),
         "Delay body must require BT21-093 be on field as a Delay option"
     );
     assert!(
@@ -466,12 +473,10 @@ fn bt21_093_main_deletes_highest_dp_opponent_digimon() {
     // OPP-HIGH (the 11000-DP Digimon) is the one that left.
     let remaining_dp: Vec<i32> = (0..runner.battle_area_size(1))
         .filter_map(|i| {
-            runner
-                .game
-                .effective_dp(PermanentHandle {
-                    player: 1,
-                    index: i as u8,
-                })
+            runner.game.effective_dp(PermanentHandle {
+                player: 1,
+                index: i as u8,
+            })
         })
         .collect();
     assert!(
@@ -560,11 +565,7 @@ fn bt21_093_main_places_self_in_battle_area_as_delay() {
         1,
         "Raging Serpentine must be placed in its controller's battle area"
     );
-    assert_eq!(
-        runner.hand_size(0),
-        0,
-        "the Option leaves hand once placed"
-    );
+    assert_eq!(runner.hand_size(0), 0, "the Option leaves hand once placed");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -583,7 +584,12 @@ fn bt21_093_delay_activates_on_opp_security_removed() {
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
         .add_card(digimon("MY-REPTILE", "MyReptile", 4000, &["Reptile"]))
-        .add_card(digimon("EVO-DRAGONKIN", "EvoDragonkin", 9000, &["Dragonkin"]))
+        .add_card(digimon(
+            "EVO-DRAGONKIN",
+            "EvoDragonkin",
+            9000,
+            &["Dragonkin"],
+        ))
         .hand(0, &["EVO-DRAGONKIN"])
         .memory(20)
         .start();
@@ -713,7 +719,11 @@ fn bt21_093_delay_activates_on_opp_security_removed() {
         "EVO-DRAGONKIN",
         "the chosen hand card is now the top card"
     );
-    assert_eq!(runner.hand_size(0), 0, "the evolution hand card was consumed");
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "the evolution hand card was consumed"
+    );
 
     // The Delay activation observably mutated game state: BT21-093 left the
     // battle area into the trash (the mandatory Delay cost) and a digivolve
@@ -733,7 +743,12 @@ fn bt21_093_delay_digivolve_is_optional_decline_keeps_trash() {
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
         .add_card(digimon("MY-REPTILE", "MyReptile", 4000, &["Reptile"]))
-        .add_card(digimon("EVO-DRAGONKIN", "EvoDragonkin", 9000, &["Dragonkin"]))
+        .add_card(digimon(
+            "EVO-DRAGONKIN",
+            "EvoDragonkin",
+            9000,
+            &["Dragonkin"],
+        ))
         .hand(0, &["EVO-DRAGONKIN"])
         .memory(20)
         .start();
@@ -824,7 +839,12 @@ fn bt21_093_delay_can_be_declined() {
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
         .add_card(digimon("MY-REPTILE", "MyReptile", 4000, &["Reptile"]))
-        .add_card(digimon("EVO-DRAGONKIN", "EvoDragonkin", 9000, &["Dragonkin"]))
+        .add_card(digimon(
+            "EVO-DRAGONKIN",
+            "EvoDragonkin",
+            9000,
+            &["Dragonkin"],
+        ))
         .hand(0, &["EVO-DRAGONKIN"])
         .memory(20)
         .start();
@@ -984,12 +1004,10 @@ fn bt21_093_inherited_security_deletes_highest_dp_opponent_digimon() {
     );
     let remaining_dp: Vec<i32> = (0..runner.battle_area_size(0))
         .filter_map(|i| {
-            runner
-                .game
-                .effective_dp(PermanentHandle {
-                    player: 0,
-                    index: i as u8,
-                })
+            runner.game.effective_dp(PermanentHandle {
+                player: 0,
+                index: i as u8,
+            })
         })
         .collect();
     assert!(

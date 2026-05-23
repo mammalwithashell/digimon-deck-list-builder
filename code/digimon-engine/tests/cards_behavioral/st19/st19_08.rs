@@ -150,15 +150,18 @@ fn st19_08_overclock_end_of_turn_masks_only_token_or_other_puppet_costs() {
     // The Overclock cost prompt: delete 1 Token or other Puppet Digimon.
     let cost_mask = build_action_mask(&runner.game, 0);
     assert_eq!(
-        cost_mask[encode_attack(0, 1) as usize], 1.0,
+        cost_mask[encode_attack(0, 1) as usize],
+        1.0,
         "a Token is a legal Overclock sacrifice cost"
     );
     assert_eq!(
-        cost_mask[encode_attack(0, 2) as usize], 0.0,
+        cost_mask[encode_attack(0, 2) as usize],
+        0.0,
         "a non-Puppet non-token Digimon is not a legal Overclock cost"
     );
     assert_eq!(
-        cost_mask[encode_attack(0, 3) as usize], 1.0,
+        cost_mask[encode_attack(0, 3) as usize],
+        1.0,
         "another Puppet Digimon is a legal Overclock cost"
     );
     assert_eq!(
@@ -336,7 +339,11 @@ fn digimon_security_card(id: &str, dp: i32) -> CardData {
 
 /// Insert a registered `card_id` as an inherited card (index 0, under the top)
 /// of the permanent at `handle`.
-fn insert_inherited(runner: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle, card_id: &str) {
+fn insert_inherited(
+    runner: &mut DebugRunner,
+    handle: digimon_engine::permanent::PermanentHandle,
+    card_id: &str,
+) {
     let game = runner.game_mut();
     let data_idx = game
         .card_data
@@ -435,9 +442,9 @@ fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
         .dsl_card("ST19-08")
         .expect("ST19-08 YAML loads")
         .add_card(strong_attacker("ATK"))
-        .add_card(liberator_cost4("LIB_HAND"))    // legal hand candidate
-        .add_card(liberator_cost4("LIB_TRASH"))   // legal trash candidate
-        .add_card(non_liberator("NONLIB_HAND"))   // illegal: wrong trait
+        .add_card(liberator_cost4("LIB_HAND")) // legal hand candidate
+        .add_card(liberator_cost4("LIB_TRASH")) // legal trash candidate
+        .add_card(non_liberator("NONLIB_HAND")) // illegal: wrong trait
         .add_card(liberator_cost5("LIB_COST5_TRASH")) // illegal: cost > 4
         // Player 1's hand: one legal, one wrong-trait (cost≤4 but no LIBERATOR)
         .hand(1, &["LIB_HAND", "NONLIB_HAND"])
@@ -558,8 +565,8 @@ fn st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate
         .dsl_card("ST19-08")
         .expect("ST19-08 YAML loads")
         .add_card(strong_attacker("ATK"))
-        .add_card(liberator_cost4("LIB_TRASH"))   // legal trash candidate
-        .add_card(non_liberator("NONLIB_HAND"))   // illegal: wrong trait
+        .add_card(liberator_cost4("LIB_TRASH")) // legal trash candidate
+        .add_card(non_liberator("NONLIB_HAND")) // illegal: wrong trait
         // Player 1's hand: one wrong-trait card — no legal hand candidate.
         .hand(1, &["NONLIB_HAND"])
         .deck(0, &[])

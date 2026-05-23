@@ -137,7 +137,11 @@ fn test_030_play_token_spawns_atho_rene_por_with_printed_keywords() {
     assert_eq!(r.battle_area_size(0), 0);
     r.play(0, 0);
 
-    assert_eq!(r.battle_area_size(0), 2, "test card + Atho, René & Por token");
+    assert_eq!(
+        r.battle_area_size(0),
+        2,
+        "test card + Atho, René & Por token"
+    );
 
     let token_perm = r
         .game
@@ -196,7 +200,10 @@ fn test_031_play_token_spawns_hinukamuy_with_printed_keywords() {
         .find(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
         .expect("token missing from battle_area");
     let card_data = &r.game.card_data;
-    assert_eq!(token_perm.top_card().card_name(card_data), "Hinukamuy Token");
+    assert_eq!(
+        token_perm.top_card().card_name(card_data),
+        "Hinukamuy Token"
+    );
     assert_eq!(token_perm.base_dp(card_data), Some(6000));
 
     // Printed keywords must be visible to the unified `has_keyword` query.

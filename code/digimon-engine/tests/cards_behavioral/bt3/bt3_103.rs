@@ -328,7 +328,10 @@ fn bt3_103_main_arms_digivolve_cost_reduction_for_turn() {
     assert!(r.game.player_digivolve_cost_reducers.is_empty());
 
     let fired = r.game.activate_hand_main(0, 0);
-    assert!(fired, "activate_hand_main must fire BT3-103's [Main] clause");
+    assert!(
+        fired,
+        "activate_hand_main must fire BT3-103's [Main] clause"
+    );
 
     assert_eq!(
         r.game.player_digivolve_cost_reducers.len(),
@@ -504,7 +507,10 @@ fn bt3_103_cost_reduction_fires_at_most_once_per_play() {
     let ok = r
         .game
         .digivolve_from_hand(0, 1, base_b, PlaySource::ByDigivolve);
-    assert!(ok, "second green digivolution succeeds outright (no prompt)");
+    assert!(
+        ok,
+        "second green digivolution succeeds outright (no prompt)"
+    );
     assert!(r.game.pending_selection.is_none());
     assert_eq!(
         r.memory(),

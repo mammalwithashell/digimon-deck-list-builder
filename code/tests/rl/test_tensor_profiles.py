@@ -100,6 +100,32 @@ def test_get_standard_full_v2_tensor_profile_from_rust():
         assert "standard_full_v2" in digimon_engine.list_observation_profiles()
 
 
+def test_get_standard_lite_deck_v2_tensor_profile_from_rust():
+    pytest.importorskip("digimon_engine")
+    from digimon_gym.tensor_profiles import get_tensor_profile, list_tensor_profiles
+
+    profile = get_tensor_profile("standard_lite_deck_v2")
+
+    assert profile.id == "standard_lite_deck_v2"
+    assert profile.tensor_size == 8850
+    assert profile.tensor_version == 2
+    assert profile.feature_schema_version == "standard_lite_deck_v2.1"
+    assert profile.card_id_slot_count == 627
+    assert profile.scalar_slot_count == 8223
+    assert len(profile.card_id_positions) == 627
+    assert len(profile.scalar_positions) == 8223
+    assert "standard_lite_deck_v2" in list_tensor_profiles()
+
+    deck_section = next(
+        section
+        for section in profile.sections
+        if section.name == "own_original_decklist"
+    )
+    assert deck_section.offset == 8154
+    assert deck_section.shape == (55, 8)
+    assert deck_section.offset + 1 in profile.card_id_positions
+
+
 def test_tensor_profile_positions_cover_tensor():
     from digimon_gym.tensor_profiles import get_tensor_profile
 
@@ -227,6 +253,27 @@ def test_digimon_env_accepts_standard_full_v2_under_rust_backend(monkeypatch):
     assert info["tensor_profile"] == "standard_full_v2"
 
 
+def test_digimon_env_accepts_standard_lite_deck_v2_under_rust_backend(monkeypatch):
+    pytest.importorskip("digimon_engine")
+    monkeypatch.setenv("DIGIMON_BACKEND", "rust")
+    monkeypatch.delenv("DIGIMON_TENSOR_PROFILE", raising=False)
+
+    from digimon_gym.digimon_gym import DigimonEnv
+
+    env = DigimonEnv(
+        deck1=DECK,
+        deck2=DECK,
+        tensor_profile="standard_lite_deck_v2",
+    )
+    obs, info = env.reset(seed=7)
+
+    assert env.tensor_profile == "standard_lite_deck_v2"
+    assert env.observation_space.shape == (8850,)
+    assert obs.shape == (8850,)
+    assert info["tensor_profile"] == "standard_lite_deck_v2"
+    assert info["action_mask"].shape == (env.action_space.n,)
+
+
 def test_feature_extractor_accepts_observation_layout():
     import torch
     from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
@@ -267,6 +314,28 @@ def test_feature_extractor_accepts_standard_full_v2():
 
     assert extractor.card_id_indices.numel() == 572
     assert extractor.scalar_indices.numel() == 42910
+    assert tuple(out.shape) == (2, 512)
+
+
+def test_feature_extractor_accepts_standard_lite_deck_v2():
+    pytest.importorskip("digimon_engine")
+    import torch
+    from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
+    from digimon_gym.tensor_profiles import get_tensor_profile
+
+    profile = get_tensor_profile("standard_lite_deck_v2")
+    space = spaces.Box(
+        low=-10.0,
+        high=20001.0,
+        shape=(profile.tensor_size,),
+        dtype=np.float32,
+    )
+    extractor = CardEmbeddingExtractor(space, observation_layout=profile)
+    with torch.no_grad():
+        out = extractor(torch.zeros((2, profile.tensor_size), dtype=torch.float32))
+
+    assert extractor.card_id_indices.numel() == 627
+    assert extractor.scalar_indices.numel() == 8223
     assert tuple(out.shape) == (2, 512)
 
 

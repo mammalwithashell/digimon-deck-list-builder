@@ -35,6 +35,16 @@ def _profile() -> SimpleNamespace:
     )
 
 
+def _deck_profile() -> SimpleNamespace:
+    return SimpleNamespace(
+        id="standard_lite_deck_v2",
+        tensor_version=2,
+        feature_schema_version="standard_lite_deck_v2.1",
+        tensor_size=8850,
+        layout_hash="sha256:test-deck-layout",
+    )
+
+
 def test_export_onnx_parser_accepts_tensor_profile() -> None:
     export_onnx = _load_tool("export_onnx")
 
@@ -165,3 +175,16 @@ def test_export_random_onnx_writes_profile_metadata(tmp_path) -> None:
         "card_registry_capacity": export_random_onnx.REGISTRY_CAPACITY,
         "embedding_dim": export_random_onnx.EMBEDDING_DIM,
     }
+
+
+def test_export_onnx_writes_standard_lite_deck_v2_metadata(tmp_path) -> None:
+    export_onnx = _load_tool("export_onnx")
+    output_path = tmp_path / "deck-model.onnx"
+
+    export_onnx.write_export_metadata(output_path, _deck_profile())
+
+    metadata = json.loads((tmp_path / "deck-model.onnx.meta.json").read_text())
+    assert metadata["observation_profile"] == "standard_lite_deck_v2"
+    assert metadata["feature_schema_version"] == "standard_lite_deck_v2.1"
+    assert metadata["tensor_size"] == 8850
+    assert metadata["tensor_layout_hash"] == "sha256:test-deck-layout"

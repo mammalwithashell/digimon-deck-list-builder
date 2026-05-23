@@ -39,9 +39,7 @@
 //! with no prompt — so the attack does NOT end for free — and it attaches no
 //! decline tail, so declining the optional pick also leaves the attack intact.
 
-use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::action::space::{PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
@@ -131,11 +129,7 @@ fn ex9_024_inherited_clause_is_opponent_attack_opt() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Inherited =>
-            {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.scope == CompiledScope::Inherited => Some(t),
             _ => None,
         })
         .expect("an inherited clause exists");
@@ -164,10 +158,7 @@ fn ex9_024_has_kyaromon_cost_zero_alt_digivolve() {
         .iter()
         .find(|p| {
             p.kind == CompiledAltPathKind::Digivolve
-                && p.from
-                    .as_ref()
-                    .and_then(|f| f.name_contains.as_deref())
-                    == Some("Kyaromon")
+                && p.from.as_ref().and_then(|f| f.name_contains.as_deref()) == Some("Kyaromon")
         })
         .expect("a [Kyaromon] alt-digivolve path exists");
 

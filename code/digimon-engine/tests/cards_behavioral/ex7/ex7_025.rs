@@ -18,7 +18,9 @@
 //!   (G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008 — resolved 2026-05-17 Track I,
 //!    DSL bridge `applies_to_opponent_security_dp: true`)
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -290,7 +292,10 @@ fn digimon_security_card(id: &str, dp: i32) -> digimon_engine::card_data::CardDa
 /// Slot an EX7-025 card source underneath the attacker stack so its inherited
 /// `[Your Turn]` security-DP aura is in scope for the security battle. Mirrors
 /// the ST19-03 sibling test's stack-insertion idiom.
-fn insert_inherited_ex7_025(runner: &mut DebugRunner, atk: digimon_engine::permanent::PermanentHandle) {
+fn insert_inherited_ex7_025(
+    runner: &mut DebugRunner,
+    atk: digimon_engine::permanent::PermanentHandle,
+) {
     let game = runner.game_mut();
     let data_idx = game
         .card_data

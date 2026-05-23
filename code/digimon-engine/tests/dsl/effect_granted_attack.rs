@@ -484,7 +484,10 @@ effects:
         "attacker: event_target must lower to the EventTarget binding so the \
          attack is granted to the event-played Digimon, not the observer source"
     );
-    assert!(*optional, "the may-attack must stay an optional decision (§17)");
+    assert!(
+        *optional,
+        "the may-attack must stay an optional decision (§17)"
+    );
 }
 
 /// A minimal `on_any_digimon_played` observer that grants `may_attack_now` to
@@ -685,7 +688,12 @@ effects:
     let pending = runner
         .pending_selection_view()
         .expect("may_attack_now must install an attack-target selection");
-    for action in pending.valid_action_ids.iter().copied().filter(|&a| a != PASS) {
+    for action in pending
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+    {
         let (attacker_index, _) = decode_attack(action);
         assert_eq!(
             attacker_index as u8, observer.index,
