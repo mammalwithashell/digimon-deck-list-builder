@@ -591,9 +591,7 @@ effects:
 
 /// Locate the single `PlayFromTrashFree` step inside a compiled card's first
 /// triggered clause's `process`.
-fn find_play_from_trash_free_step(
-    compiled: &digimon_dsl::compiled::CompiledCard,
-) -> &CompiledStep {
+fn find_play_from_trash_free_step(compiled: &digimon_dsl::compiled::CompiledCard) -> &CompiledStep {
     use digimon_dsl::compiled::CompiledClause;
     compiled
         .effects
@@ -677,8 +675,9 @@ effects:
     let err = digimon_dsl::compile::compile(&spec)
         .expect_err("suppress_on_play on play_from_trash must fail compilation");
     assert!(
-        err.iter()
-            .any(|e| e.message.contains("suppress_on_play is only supported on play_from_trash_free")),
+        err.iter().any(|e| e
+            .message
+            .contains("suppress_on_play is only supported on play_from_trash_free")),
         "expected a play_from_trash suppress_on_play rejection, got {err:?}"
     );
 }

@@ -506,12 +506,10 @@ fn digivolve_and_measure_memory(
 ) -> i16 {
     let hand_idx = find_hand_index(runner, 0, target_id);
     let memory_before = runner.game.memory;
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        ally.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, ally.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand into {target_id} must succeed");
     runner.game.drain_effect_queue();
     memory_before - runner.game.memory

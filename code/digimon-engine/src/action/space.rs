@@ -272,7 +272,10 @@ mod tests {
         assert_eq!(BREEDING_SOURCE_SELECT_END as usize, ACTION_SPACE_SIZE);
 
         // Out-of-range carriers / source slots are rejected.
-        assert_eq!(encode_breeding_source_select(BREEDING_SOURCE_CARRIERS as u8, 0), None);
+        assert_eq!(
+            encode_breeding_source_select(BREEDING_SOURCE_CARRIERS as u8, 0),
+            None
+        );
         assert_eq!(encode_breeding_source_select(2, 0), None);
         assert_eq!(encode_breeding_source_select(0, SOURCES_PER_FIELD), None);
         assert_eq!(encode_breeding_source_select(0, 99), None);

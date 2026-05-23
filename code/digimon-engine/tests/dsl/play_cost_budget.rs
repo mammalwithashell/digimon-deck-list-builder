@@ -74,10 +74,7 @@ fn play_cost_budget_caps_running_sum() {
     // Before any pick, both Digimon are eligible (each individually ≤ 6).
     let view = runner.pending_selection().expect("budget selection open");
     assert_eq!(
-        view.valid_action_ids
-            .iter()
-            .filter(|a| **a != PASS)
-            .count(),
+        view.valid_action_ids.iter().filter(|a| **a != PASS).count(),
         2,
         "both opponent Digimon eligible before any pick"
     );

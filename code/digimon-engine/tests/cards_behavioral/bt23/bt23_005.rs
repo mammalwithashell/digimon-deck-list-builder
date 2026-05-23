@@ -283,7 +283,11 @@ fn bt23_005_inherited_dp_active_on_your_turn() {
     let elizamon_src_idx = 0;
 
     // It is currently player 0's turn (turn 1 starts with player 0).
-    assert_eq!(runner.turn_player(), 0, "precondition: it is player 0's turn");
+    assert_eq!(
+        runner.turn_player(),
+        0,
+        "precondition: it is player 0's turn"
+    );
 
     let contribution = runner
         .game
@@ -366,12 +370,10 @@ fn bt23_005_cost_reduction_fires_digivolving_into_reptile() {
     let hand_idx = push_to_hand(&mut runner, 0, "REPTILE-LV4");
 
     let memory_before = runner.game.memory;
-    let digivolved = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        elizamon.index as usize,
-        PlaySource::ByHand,
-    );
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, elizamon.index as usize, PlaySource::ByHand);
     assert!(
         digivolved,
         "Elizamon must digivolve into REPTILE-LV4 (effective cost 1 - 1 = 0)"
@@ -401,12 +403,10 @@ fn bt23_005_cost_reduction_fires_digivolving_into_dragonkin() {
     let hand_idx = push_to_hand(&mut runner, 0, "DRAGONKIN-LV4");
 
     let memory_before = runner.game.memory;
-    let digivolved = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        elizamon.index as usize,
-        PlaySource::ByHand,
-    );
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, elizamon.index as usize, PlaySource::ByHand);
     assert!(
         digivolved,
         "Elizamon must digivolve into DRAGONKIN-LV4 (effective cost 1 - 1 = 0)"
@@ -434,12 +434,10 @@ fn bt23_005_cost_reduction_does_not_fire_for_non_trait_target() {
     let hand_idx = push_to_hand(&mut runner, 0, "PLAIN-LV4");
 
     let memory_before = runner.game.memory;
-    let _ = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        elizamon.index as usize,
-        PlaySource::ByHand,
-    );
+    let _ =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, elizamon.index as usize, PlaySource::ByHand);
 
     // Target lacks Reptile/Dragonkin → reduction must not apply; memory drops by 1.
     assert_eq!(
@@ -526,12 +524,9 @@ fn bt23_005_cost_reduction_does_not_fire_for_different_source() {
     let hand_idx = push_to_hand(&mut runner, 0, "REPTILE-LV4");
 
     let memory_before = runner.game.memory;
-    let _ = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        plain.index as usize,
-        PlaySource::ByHand,
-    );
+    let _ = runner
+        .game
+        .digivolve_from_hand(0, hand_idx, plain.index as usize, PlaySource::ByHand);
 
     // The digivolving permanent is PLAIN-LV3, not Elizamon → reduction must
     // not apply; full evo cost 1 is paid.
@@ -562,12 +557,10 @@ fn bt23_005_cost_reduction_digivolve_emits_digivolve_event() {
     let hand_idx = push_to_hand(&mut runner, 0, "REPTILE-LV4");
 
     let cp = runner.event_checkpoint();
-    let digivolved = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        elizamon.index as usize,
-        PlaySource::ByHand,
-    );
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, elizamon.index as usize, PlaySource::ByHand);
     assert!(digivolved, "digivolve must succeed");
 
     let events = runner.events_since(cp);

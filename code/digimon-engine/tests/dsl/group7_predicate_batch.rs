@@ -187,8 +187,11 @@ effects:
         "name_contains leaf must survive into the compiled union-zone filter"
     );
     assert!(
-        filter.all_of.iter().any(|p| p.name_not_shared_by_field_digimon
-            == Some(digimon_dsl::compiled::CompiledPlayerRef::You)),
+        filter
+            .all_of
+            .iter()
+            .any(|p| p.name_not_shared_by_field_digimon
+                == Some(digimon_dsl::compiled::CompiledPlayerRef::You)),
         "name_not_shared_by_field_digimon leaf must compile into the union-zone filter"
     );
 }
@@ -1294,11 +1297,10 @@ fn event_card_color_has_matches_when_any_listed_color_present() {
         .build();
     let source_card = runner.game.players[0].hand[0].handle();
     let event_card = runner.game.players[0].hand[1].handle();
-    runner.game.current_trigger_context =
-        Some(digimon_engine::trigger_context::TriggerContext {
-            event_card: Some(event_card),
-            ..Default::default()
-        });
+    runner.game.current_trigger_context = Some(digimon_engine::trigger_context::TriggerContext {
+        event_card: Some(event_card),
+        ..Default::default()
+    });
     let rctx = EffectReadContext::new(&runner.game, source_card, None, 0);
 
     let has_blue_green = CompiledPredicate {

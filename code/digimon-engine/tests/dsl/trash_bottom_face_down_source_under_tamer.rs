@@ -71,9 +71,16 @@ fn trash_bottom_face_down_source_under_tamer_single_tamer_installs_one_option_se
     // Seed: the effect card in P0's hand (the OnPlay source), plus exactly ONE
     // own Tamer carrying a face-down bottom source (a stash).
     let mut runner = DebugRunner::builder()
-        .add_card(make_test_card("TST-TBFDSUT", "TrashBottomFaceDownUnderTamer"))
+        .add_card(make_test_card(
+            "TST-TBFDSUT",
+            "TrashBottomFaceDownUnderTamer",
+        ))
         .add_card(make_test_card("STASH-SRC", "Stash Source"))
-        .add_card(make_test_card_kind("TAMER-TOP", "Hosting Tamer", CardKind::Tamer))
+        .add_card(make_test_card_kind(
+            "TAMER-TOP",
+            "Hosting Tamer",
+            CardKind::Tamer,
+        ))
         .hand(0, &["TST-TBFDSUT"])
         .start();
 
@@ -170,7 +177,10 @@ fn trash_bottom_face_down_source_under_tamer_single_tamer_installs_one_option_se
 fn trash_bottom_face_down_source_under_tamer_multi_tamer_offers_both_and_trashes_only_picked() {
     // Seed: TWO own Tamers, each carrying a face-down bottom source.
     let mut runner = DebugRunner::builder()
-        .add_card(make_test_card("TST-TBFDSUT", "TrashBottomFaceDownUnderTamer"))
+        .add_card(make_test_card(
+            "TST-TBFDSUT",
+            "TrashBottomFaceDownUnderTamer",
+        ))
         .add_card(make_test_card("STASH-A", "Stash A"))
         .add_card(make_test_card_kind("TAMER-A", "Tamer A", CardKind::Tamer))
         .add_card(make_test_card("STASH-B", "Stash B"))
@@ -220,14 +230,8 @@ fn trash_bottom_face_down_source_under_tamer_multi_tamer_offers_both_and_trashes
 
     let action_a = digimon_engine::action::space::encode_attack(0, tamer_a.index as u16);
     let action_b = digimon_engine::action::space::encode_attack(0, tamer_b.index as u16);
-    assert!(
-        valid_ids.contains(&action_a),
-        "Tamer A must be a candidate"
-    );
-    assert!(
-        valid_ids.contains(&action_b),
-        "Tamer B must be a candidate"
-    );
+    assert!(valid_ids.contains(&action_a), "Tamer A must be a candidate");
+    assert!(valid_ids.contains(&action_b), "Tamer B must be a candidate");
 
     // Pick Tamer A.
     runner
@@ -284,8 +288,15 @@ fn trash_bottom_face_down_source_under_tamer_no_eligible_tamer_aborts_clause() {
     // face-up card). The cost is unpayable: nothing is trashed AND the tail
     // (gain_memory) must NOT run — the `TailAlreadyRan` behavior.
     let mut runner = DebugRunner::builder()
-        .add_card(make_test_card("TST-TBFDSUT", "TrashBottomFaceDownUnderTamer"))
-        .add_card(make_test_card_kind("TAMER-FU", "Tamer Without Stash", CardKind::Tamer))
+        .add_card(make_test_card(
+            "TST-TBFDSUT",
+            "TrashBottomFaceDownUnderTamer",
+        ))
+        .add_card(make_test_card_kind(
+            "TAMER-FU",
+            "Tamer Without Stash",
+            CardKind::Tamer,
+        ))
         .hand(0, &["TST-TBFDSUT"])
         .start();
 
@@ -362,10 +373,17 @@ fn trash_bottom_face_down_source_under_tamer_face_up_bottom_desync_does_not_run_
     // Seed: an own Tamer carrying a 3-card stack. We fabricate the desync stack
     // state below: bottom source face-UP, middle source face-DOWN.
     let mut runner = DebugRunner::builder()
-        .add_card(make_test_card("TST-TBFDSUT", "TrashBottomFaceDownUnderTamer"))
+        .add_card(make_test_card(
+            "TST-TBFDSUT",
+            "TrashBottomFaceDownUnderTamer",
+        ))
         .add_card(make_test_card("BOTTOM-SRC", "Face-Up Bottom Source"))
         .add_card(make_test_card("MIDDLE-SRC", "Face-Down Middle Source"))
-        .add_card(make_test_card_kind("TAMER-DESYNC", "Desync Tamer", CardKind::Tamer))
+        .add_card(make_test_card_kind(
+            "TAMER-DESYNC",
+            "Desync Tamer",
+            CardKind::Tamer,
+        ))
         .hand(0, &["TST-TBFDSUT"])
         .start();
 

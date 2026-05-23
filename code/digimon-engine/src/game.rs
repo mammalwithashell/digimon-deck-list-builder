@@ -1,7 +1,7 @@
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
@@ -11,7 +11,7 @@ use crate::enums::{GamePhase, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
-use crate::player::Player;
+use crate::player::{OriginalDeckCardCount, Player};
 use crate::rules::Rules;
 use crate::selection::{
     EffectQueue, PendingAttack, PendingEffectSecurityRemoval, PendingOption, PendingPayCostEffect,
@@ -75,8 +75,12 @@ fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DelayedOptionLifecycleResumeKind {
     StartTurn,
-    EndTurn { ending_player: PlayerId },
-    Event { timing: crate::enums::EffectTiming },
+    EndTurn {
+        ending_player: PlayerId,
+    },
+    Event {
+        timing: crate::enums::EffectTiming,
+    },
     /// Standard `<Delay>` activated by a player `[Main]`-phase action
     /// (PUPPETS-G009). The Option's `DelayEffect` body installed a pending
     /// selection; once it resolves, the Option is trashed as the activation
@@ -555,8 +559,7 @@ pub struct Game {
     /// shift. Drained by `scheduled_effects::fire_scheduled_provenance_deletions`
     /// from `fire_end_of_your_turn`; the queue is cleared each turn so a
     /// played permanent that already left is a silent no-op.
-    pub scheduled_provenance_deletions:
-        Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
+    pub scheduled_provenance_deletions: Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
     /// PUPPETS-G016 — provenance-keyed deletions scheduled for the end of the
     /// **opponent's** turn. Mirror of `scheduled_provenance_deletions` but
     /// drained from `rotate_turn_player` (after `EndOfOpponentsTurn` observers
@@ -641,6 +644,7 @@ impl Game {
         for (player_idx, deck_ids) in deck_card_ids.iter().enumerate() {
             let player_id = player_idx as PlayerId;
             let mut player = Player::new(player_id);
+            let mut original_deck_counts: BTreeMap<String, (u16, bool)> = BTreeMap::new();
 
             for card_id in deck_ids {
                 let data_idx = data_index_map
@@ -654,10 +658,28 @@ impl Game {
                 // Route to correct deck based on card kind
                 if card_data.card_kind == crate::enums::CardKind::DigiEgg {
                     player.digitama_deck.push(card);
+                    let entry = original_deck_counts
+                        .entry(card_id.clone())
+                        .or_insert((0, true));
+                    entry.0 += 1;
+                    entry.1 = true;
                 } else {
                     player.deck.push(card);
+                    let entry = original_deck_counts
+                        .entry(card_id.clone())
+                        .or_insert((0, false));
+                    entry.0 += 1;
                 }
             }
+
+            player.original_deck = original_deck_counts
+                .into_iter()
+                .map(|(card_id, (count, is_digitama))| OriginalDeckCardCount {
+                    card_id,
+                    count,
+                    is_digitama,
+                })
+                .collect();
 
             // Shuffle decks
             player.shuffle_deck(&mut rng);

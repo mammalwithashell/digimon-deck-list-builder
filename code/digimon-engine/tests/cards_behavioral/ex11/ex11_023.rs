@@ -171,7 +171,10 @@ fn ex11_023_has_optional_opt_on_any_deletion_observer_with_self_exclusion() {
         })
         .expect("OnAnyDeletion trash-play observer should exist");
 
-    assert!(observer.once_per_turn, "printed observer is [Once Per Turn]");
+    assert!(
+        observer.once_per_turn,
+        "printed observer is [Once Per Turn]"
+    );
     let condition = observer
         .condition
         .as_ref()
@@ -513,10 +516,7 @@ fn trash_ids(runner: &DebugRunner, player: usize) -> Vec<String> {
         .collect()
 }
 
-fn predicate_has_event_target_kind(
-    predicate: &CompiledPredicate,
-    kind: CompiledCardKind,
-) -> bool {
+fn predicate_has_event_target_kind(predicate: &CompiledPredicate, kind: CompiledCardKind) -> bool {
     predicate.event_target_kind == Some(kind)
         || predicate
             .all_of
@@ -528,10 +528,7 @@ fn predicate_has_event_target_kind(
             .any(|child| predicate_has_event_target_kind(child, kind))
 }
 
-fn predicate_has_event_permanent_is_source(
-    predicate: &CompiledPredicate,
-    value: bool,
-) -> bool {
+fn predicate_has_event_permanent_is_source(predicate: &CompiledPredicate, value: bool) -> bool {
     predicate.event_permanent_is_source == Some(value)
         || predicate
             .all_of

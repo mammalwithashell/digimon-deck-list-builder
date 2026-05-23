@@ -514,10 +514,7 @@ fn p_206_main_digimon_filter_excludes_non_digimon_cards() {
          hand kinds={hand_kinds:?}"
     );
     assert_eq!(
-        hand_kinds
-            .iter()
-            .filter(|k| **k == CardKind::Tamer)
-            .count(),
+        hand_kinds.iter().filter(|k| **k == CardKind::Tamer).count(),
         1,
         "the Tamer slot still adds exactly 1 Tamer"
     );
@@ -750,8 +747,8 @@ fn p_206_delay_filter_uses_resolved_color_match_predicate() {
          (printed: 'same color as any of your Digimon on the field')"
     );
 
-    let restricts_to_tamer = filter.all_of.iter().any(|p| p.kind.is_some())
-        || filter.kind.is_some();
+    let restricts_to_tamer =
+        filter.all_of.iter().any(|p| p.kind.is_some()) || filter.kind.is_some();
     assert!(
         restricts_to_tamer,
         "P-206 Delay select_hand filter must also restrict to Tamer cards"
@@ -1363,7 +1360,11 @@ fn run_p206_delay_tamer_play(tamer_cost: u16, play_it: bool) -> i16 {
     let view = runner
         .pending_selection_view()
         .expect("Delay must expose a select_hand prompt for the Tamer");
-    let action = if play_it { view.valid_action_ids[0] } else { PASS };
+    let action = if play_it {
+        view.valid_action_ids[0]
+    } else {
+        PASS
+    };
     runner
         .execute_action(view.selecting_player, action)
         .expect("resolve the Delay Tamer selection");

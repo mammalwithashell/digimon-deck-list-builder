@@ -158,10 +158,12 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
         // `effective_dp`). Consumers that mean only "battle-area permanent"
         // already filter by `h.index != BREEDING_TARGET as u8`. This unblocks
         // `place_as_bottom_source: { target: <breeding-binding> }`.
-        BindingValue::BreedingPermanentRef(r) => Some(ResolvedBinding::Permanent(PermanentHandle {
-            player: r.player,
-            index: crate::action::space::BREEDING_TARGET as u8,
-        })),
+        BindingValue::BreedingPermanentRef(r) => {
+            Some(ResolvedBinding::Permanent(PermanentHandle {
+                player: r.player,
+                index: crate::action::space::BREEDING_TARGET as u8,
+            }))
+        }
         // A union-zone pick surfaces to generic handle-consuming steps as a
         // plain `Card` (just the handle). `play_union_bound_free` reads the
         // binding directly via `Bindings::get_union_card` when it needs the

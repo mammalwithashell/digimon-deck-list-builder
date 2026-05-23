@@ -77,8 +77,8 @@ pub fn lower_all(
             builder = builder.inherited();
         }
         if let Some(aw) = active_when.map(Arc::new) {
-            builder = builder
-                .condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
+            builder =
+                builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
         }
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);

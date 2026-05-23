@@ -275,10 +275,7 @@ fn bt13_012_clause1_when_digivolving_is_blocked() {
         );
         (
             pending.selecting_player,
-            *pending
-                .valid_action_ids
-                .first()
-                .expect("a Tamer pick"),
+            *pending.valid_action_ids.first().expect("a Tamer pick"),
         )
     };
     runner

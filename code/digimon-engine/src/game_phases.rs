@@ -269,8 +269,7 @@ impl Game {
         // digivolve cost reducers installed by the ending player.
         self.player_digivolve_cost_reducers.retain(|r| {
             !(r.player == ending_player
-                && r.expiry
-                    == crate::player_cost_reducer::PlayerCostReducerExpiry::EndOfTurn)
+                && r.expiry == crate::player_cost_reducer::PlayerCostReducerExpiry::EndOfTurn)
         });
         self.mark_until_condition_dirty();
 

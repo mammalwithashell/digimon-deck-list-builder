@@ -163,9 +163,7 @@ fn trash_bottom_face_down_source_pops_and_routes_to_owner_trash() {
 
     let perm = &r.game.player(0).battle_area[tamer.index as usize];
     assert!(
-        perm.card_sources
-            .iter()
-            .all(|c| c.handle() != stash_handle),
+        perm.card_sources.iter().all(|c| c.handle() != stash_handle),
         "the stashed source is no longer in the Tamer's stack"
     );
     assert_eq!(
@@ -229,9 +227,7 @@ fn trash_bottom_face_down_source_no_face_down_returns_false() {
 ///    so "bottom face-down source" does not exist → false, no mutation.
 #[test]
 fn trash_bottom_face_down_source_empty_or_missing_returns_false() {
-    let mut r = DebugRunner::builder()
-        .add_card(make_tamer("TAMER"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(make_tamer("TAMER")).start();
 
     let tamer = seed_permanent(&mut r, "TAMER");
     // Un-stashed tamer: card_sources[0] is the Tamer's own card (face-up).

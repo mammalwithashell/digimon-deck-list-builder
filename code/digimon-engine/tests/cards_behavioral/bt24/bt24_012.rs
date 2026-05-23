@@ -681,7 +681,10 @@ fn bt24_012_inherited_clause_opt_blocks_second_activation() {
     let m1 = runner.memory();
     let first_delta = m1 - m0;
 
-    assert!(first_delta >= 1, "first attack must gain memory; delta={first_delta}");
+    assert!(
+        first_delta >= 1,
+        "first attack must gain memory; delta={first_delta}"
+    );
 
     if runner.game_over() {
         return;

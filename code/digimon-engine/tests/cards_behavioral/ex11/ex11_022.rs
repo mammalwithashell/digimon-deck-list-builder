@@ -341,7 +341,10 @@ fn ex11_022_on_play_union_selection_filter_excludes_non_puppet_and_high_dp() {
         },
         "pending selection must be a union-zone prompt"
     );
-    assert!(view.is_optional, "the selection must be optional ('you may')");
+    assert!(
+        view.is_optional,
+        "the selection must be optional ('you may')"
+    );
 
     // Exactly 2 eligible candidates: PUPPET-HAND (hand[0]) + PUPPET-TRASH (trash[0]).
     assert_eq!(
@@ -397,7 +400,11 @@ fn ex11_022_on_play_selected_puppet_is_played_free_and_deleted_at_turn_end() {
     let view = runner
         .pending_selection_view()
         .expect("On Play union-zone selection installs");
-    assert_eq!(view.valid_action_ids.len(), 1, "only PUPPET-HAND is eligible");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "only PUPPET-HAND is eligible"
+    );
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("pick PUPPET-HAND");

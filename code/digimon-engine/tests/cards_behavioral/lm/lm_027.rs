@@ -512,7 +512,9 @@ fn lm_027_main_decline_leaves_field_and_hand_unchanged() {
     runner
         .execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline the optional Main digivolve");
-    runner.auto_resolve().expect("effect completes after decline");
+    runner
+        .auto_resolve()
+        .expect("effect completes after decline");
 
     assert_eq!(
         runner.hand_size(0),

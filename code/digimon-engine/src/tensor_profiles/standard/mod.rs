@@ -3,6 +3,7 @@ use crate::tensor_profiles::TensorProfile;
 pub mod v1;
 pub mod v2_full;
 pub mod v2_lite;
+pub mod v2_lite_deck;
 
 pub const DEFAULT_PROFILE: TensorProfile = v1::PROFILE;
 

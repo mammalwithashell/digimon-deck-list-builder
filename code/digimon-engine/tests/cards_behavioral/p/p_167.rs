@@ -296,9 +296,7 @@ fn p_167_reveal_clause_body_executes_full_flow() {
 /// chaining). Used to verify the cost selection installs before the rest of
 /// the clause body fires.
 impl ExecuteOneStep for DebugRunner {
-    fn auto_resolve_one_step(
-        &mut self,
-    ) -> Result<(), digimon_engine::selection::SelectionError> {
+    fn auto_resolve_one_step(&mut self) -> Result<(), digimon_engine::selection::SelectionError> {
         let Some(sel) = self.pending_selection() else {
             return Ok(());
         };
@@ -313,7 +311,5 @@ impl ExecuteOneStep for DebugRunner {
 }
 
 trait ExecuteOneStep {
-    fn auto_resolve_one_step(
-        &mut self,
-    ) -> Result<(), digimon_engine::selection::SelectionError>;
+    fn auto_resolve_one_step(&mut self) -> Result<(), digimon_engine::selection::SelectionError>;
 }

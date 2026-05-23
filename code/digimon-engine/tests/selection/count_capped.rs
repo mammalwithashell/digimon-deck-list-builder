@@ -697,7 +697,11 @@ fn breeding_carrier_multi_select_installs_pending() {
         matches!(sel.kind, SelectionKind::CountCappedMultiSelect { .. }),
         "kind must be CountCappedMultiSelect"
     );
-    assert_eq!(sel.valid_action_ids.len(), 2, "two breeding sources offered");
+    assert_eq!(
+        sel.valid_action_ids.len(),
+        2,
+        "two breeding sources offered"
+    );
     for &aid in &sel.valid_action_ids {
         assert!(
             (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),

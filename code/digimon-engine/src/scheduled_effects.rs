@@ -200,8 +200,7 @@ pub fn fire_scheduled_provenance_deletions(game: &mut Game) {
     let queued = std::mem::take(&mut game.scheduled_provenance_deletions);
     let mut iter = queued.into_iter();
     while let Some(entry) = iter.next() {
-        let Some(EventSubject::Permanent(handle)) =
-            game.resolve_provenance_token(entry.token)
+        let Some(EventSubject::Permanent(handle)) = game.resolve_provenance_token(entry.token)
         else {
             continue;
         };
@@ -240,8 +239,7 @@ pub fn fire_scheduled_provenance_deletions_opp(game: &mut Game, ending_player: P
         // Resolve the stable identity to a current battle-area permanent.
         // Anything else (card moved to trash/hand/etc., or unresolvable) is a
         // no-op — the played Digimon already left.
-        let Some(EventSubject::Permanent(handle)) =
-            game.resolve_provenance_token(entry.token)
+        let Some(EventSubject::Permanent(handle)) = game.resolve_provenance_token(entry.token)
         else {
             continue;
         };
@@ -258,4 +256,3 @@ pub fn fire_scheduled_provenance_deletions_opp(game: &mut Game, ending_player: P
     // Restore entries that are waiting for a future opponent-turn boundary.
     game.scheduled_provenance_deletions_opp = still_pending;
 }
-

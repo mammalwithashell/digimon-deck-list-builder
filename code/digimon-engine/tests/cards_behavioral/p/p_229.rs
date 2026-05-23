@@ -431,7 +431,10 @@ fn p_229_delay_is_event_gated_on_own_mirai_played() {
             _ => None,
         })
         .expect("Delay body must select a Digimon base");
-    assert!(*own_perm.1, "printed Delay digivolve says '1 of your Digimon may'");
+    assert!(
+        *own_perm.1,
+        "printed Delay digivolve says '1 of your Digimon may'"
+    );
     assert!(predicate_contains_kind(
         own_perm.0,
         CompiledCardKind::Digimon
@@ -653,7 +656,10 @@ fn p_229_delay_triggers_after_mirai_is_played_and_offers_reduced_cost_digivolve(
         .add_card(high_liberator_evo("BIGEVO"))
         .add_card(filler("FILL"))
         .hand(0, &["P-229", "MIRAI", "EVO", "BIGEVO"])
-        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL", "PUP", "LIB", "FILL"])
+        .deck(
+            0,
+            &["FILL", "FILL", "FILL", "FILL", "FILL", "PUP", "LIB", "FILL"],
+        )
         .deck(1, &["FILL"; 10])
         .memory(10)
         .start();
@@ -816,7 +822,10 @@ fn p_229_delay_does_not_fire_when_a_non_mirai_is_played() {
         .add_card(liberator_evo("EVO"))
         .add_card(filler("FILL"))
         .hand(0, &["P-229", "OTHER", "EVO"])
-        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL", "PUP", "LIB", "FILL"])
+        .deck(
+            0,
+            &["FILL", "FILL", "FILL", "FILL", "FILL", "PUP", "LIB", "FILL"],
+        )
         .deck(1, &["FILL"; 10])
         .memory(10)
         .start();
@@ -871,7 +880,10 @@ fn p_229_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
         .add_card(liberator_evo("EVO"))
         .add_card(filler("FILL"))
         .hand(0, &["P-229", "MIRAI", "EVO"])
-        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL", "PUP", "LIB", "FILL"])
+        .deck(
+            0,
+            &["FILL", "FILL", "FILL", "FILL", "FILL", "PUP", "LIB", "FILL"],
+        )
         .deck(1, &["FILL"; 10])
         .memory(10)
         .start();

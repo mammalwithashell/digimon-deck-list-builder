@@ -1,6 +1,6 @@
 use digimon_engine::tensor_profiles::{
     all_profile_ids, profile_by_id, TensorSectionKind, STANDARD_COMPACT_V1_PROFILE_ID,
-    STANDARD_FULL_V2_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID,
+    STANDARD_FULL_V2_PROFILE_ID, STANDARD_LITE_DECK_V2_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID,
 };
 
 #[test]
@@ -71,6 +71,7 @@ fn profile_list_includes_compact_lite_v2_and_full_v2() {
         vec![
             STANDARD_COMPACT_V1_PROFILE_ID,
             STANDARD_LITE_V2_PROFILE_ID,
+            STANDARD_LITE_DECK_V2_PROFILE_ID,
             STANDARD_FULL_V2_PROFILE_ID,
         ]
     );

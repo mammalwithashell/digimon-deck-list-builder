@@ -196,9 +196,7 @@ fn place_deck_top_under_permanent_face_up_leaves_flag_clear() {
 /// leaves the target's stack untouched.
 #[test]
 fn place_deck_top_under_permanent_empty_deck_returns_none() {
-    let mut r = DebugRunner::builder()
-        .add_card(make_tamer("TAMER"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(make_tamer("TAMER")).start();
 
     let tamer = seed_permanent(&mut r, "TAMER");
     assert_eq!(r.deck_size(0), 0, "deck is empty before");

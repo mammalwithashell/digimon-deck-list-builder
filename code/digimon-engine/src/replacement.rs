@@ -871,7 +871,8 @@ fn install_optional_selection(
         event_cause_override,
         original_destination,
     );
-    let on_decline = make_decline_callback(subject, cause, event_cause_override, original_destination);
+    let on_decline =
+        make_decline_callback(subject, cause, event_cause_override, original_destination);
 
     game.pending_selection = Some(PendingSelection {
         kind: SelectionKind::Replacement,

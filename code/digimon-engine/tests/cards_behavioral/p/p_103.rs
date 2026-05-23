@@ -547,13 +547,10 @@ fn p_103_main_no_red_card_in_top2_no_add_to_hand() {
 
     // Neither blue card may be added to hand — only red cards qualify.
     assert!(
-        !runner.game.players[0]
-            .hand
-            .iter()
-            .any(|cs| {
-                let id = cs.card_id(&runner.game.card_data);
-                id == "BLUE1" || id == "BLUE2"
-            }),
+        !runner.game.players[0].hand.iter().any(|cs| {
+            let id = cs.card_id(&runner.game.card_data);
+            id == "BLUE1" || id == "BLUE2"
+        }),
         "No blue card may be added to hand when no red card appears in the top 2"
     );
     // Both revealed blues must be returned to the deck — the deck loses only
@@ -665,7 +662,10 @@ fn p_103_main_placement_dispatches_on_option_placed() {
         .memory(10)
         .start();
 
-    runner.register_effect("P103-OBSERVER", Arc::new(OptionPlacedWitness(witness.clone())));
+    runner.register_effect(
+        "P103-OBSERVER",
+        Arc::new(OptionPlacedWitness(witness.clone())),
+    );
     // Seat the observer so its OnOptionPlaced effect is live on the field.
     runner.place_on_field(1, "P103-OBSERVER", Some(0));
 
@@ -706,9 +706,7 @@ fn p_103_delay_clause_is_declarative_delay() {
     });
 
     match delay_clause {
-        Some(CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
-            trigger, ..
-        })) => {
+        Some(CompiledClause::Declarative(CompiledDeclarativeClause::Delay { trigger, .. })) => {
             assert_eq!(
                 *trigger,
                 CompiledTiming::Delayed,
@@ -938,13 +936,18 @@ fn p_103_delay_activation_digivolves_via_main_phase_action() {
         mask[bit], 1.0,
         "P-103 <Delay> activation must be a legal action after the placing turn"
     );
-    assert_eq!(mask[PASS as usize], 1.0, "declining the <Delay> stays legal");
+    assert_eq!(
+        mask[PASS as usize], 1.0,
+        "declining the <Delay> stays legal"
+    );
 
     // Take the activation: trash P-103 as cost, then run the Delay body.
     runner.game.decode_action(bit as u16, 0);
     // The Delay body installs select_own_permanent → select_hand chained
     // selections (digivolve a Digimon into a red Digimon in hand).
-    runner.auto_resolve().expect("resolve Delay body selections");
+    runner
+        .auto_resolve()
+        .expect("resolve Delay body selections");
 
     // P-103 must be trashed as the <Delay> activation cost — no delayed Option
     // permanent remains.

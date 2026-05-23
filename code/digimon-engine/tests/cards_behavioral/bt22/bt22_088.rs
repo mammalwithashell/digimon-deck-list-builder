@@ -6,8 +6,8 @@
 //! - [Security] Play this card without paying the cost.
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledColor, CompiledPredicate,
-    CompiledScope, CompiledStep, CompiledTiming,
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledPredicate, CompiledScope,
+    CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
@@ -47,7 +47,11 @@ fn bt22_088_exposes_security_and_token_or_puppet_played_observer() {
         })
         .collect();
 
-    assert_eq!(triggered.len(), 3, "security, start-of-main, and played-observer slices are live");
+    assert_eq!(
+        triggered.len(),
+        3,
+        "security, start-of-main, and played-observer slices are live"
+    );
     let security = triggered
         .iter()
         .find(|triggered| triggered.when.contains(&CompiledTiming::OnSecurity))
@@ -58,11 +62,7 @@ fn bt22_088_exposes_security_and_token_or_puppet_played_observer() {
 
     let observer = triggered
         .iter()
-        .find(|triggered| {
-            triggered
-                .when
-                .contains(&CompiledTiming::OnAnyDigimonPlayed)
-        })
+        .find(|triggered| triggered.when.contains(&CompiledTiming::OnAnyDigimonPlayed))
         .expect("All Turns Token/Puppet played observer is present");
     let condition = observer
         .condition
@@ -276,19 +276,24 @@ fn bt22_088_start_of_main_accepts_cost_then_plays_exact_arisa_from_hand() {
     runner.auto_resolve().expect("settle Arisa play");
 
     // BT22-088 is NOT on field (returned as activation cost).
-    let arisa_on_field = runner.game.players[0].battle_area.iter().any(|perm| {
-        perm.top_card().card_id(&runner.game.card_data) == "BT22-088"
-    });
+    let arisa_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "BT22-088");
     assert!(
         !arisa_on_field,
         "BT22-088 must have left the field as the return-self activation cost"
     );
 
     // The Arisa copy is now on field (played for free).
-    let copy_on_field = runner.game.players[0].battle_area.iter().any(|perm| {
-        perm.top_card().card_id(&runner.game.card_data) == "ARISA-COPY-BT22088"
-    });
-    assert!(copy_on_field, "Arisa Kinosaki copy must be on field after free play");
+    let copy_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "ARISA-COPY-BT22088");
+    assert!(
+        copy_on_field,
+        "Arisa Kinosaki copy must be on field after free play"
+    );
 
     // Memory must not have been deducted for Arisa's play cost.
     // (Memory changes from activation_cost and game phase transitions are OK;
@@ -350,21 +355,35 @@ fn bt22_088_start_of_main_no_digimon_branch_plays_exact_shoemon_from_trash() {
     runner.place_on_field(0, "BT22-088", Some(0));
 
     // Manually place Shoemon and ShoeShoemon in player 0's trash.
-    let shoemon_data_idx = runner.game.card_data.iter()
+    let shoemon_data_idx = runner
+        .game
+        .card_data
+        .iter()
         .position(|c| c.card_id == "SHOEMON-BT22088")
         .expect("Shoemon registered");
-    let other_data_idx = runner.game.card_data.iter()
+    let other_data_idx = runner
+        .game
+        .card_data
+        .iter()
         .position(|c| c.card_id == "OTHER-TRASH-BT22088")
         .expect("ShoeShoemon registered");
 
     let next1 = runner.game.next_card_index();
-    runner.game.players[0].trash.push(
-        digimon_engine::card_source::CardSource::new(shoemon_data_idx, 0, next1)
-    );
+    runner.game.players[0]
+        .trash
+        .push(digimon_engine::card_source::CardSource::new(
+            shoemon_data_idx,
+            0,
+            next1,
+        ));
     let next2 = runner.game.next_card_index();
-    runner.game.players[0].trash.push(
-        digimon_engine::card_source::CardSource::new(other_data_idx, 0, next2)
-    );
+    runner.game.players[0]
+        .trash
+        .push(digimon_engine::card_source::CardSource::new(
+            other_data_idx,
+            0,
+            next2,
+        ));
 
     let trash_before = runner.trash_size(0);
 
@@ -376,7 +395,9 @@ fn bt22_088_start_of_main_no_digimon_branch_plays_exact_shoemon_from_trash() {
         let sel = runner.pending_selection().unwrap();
         sel.valid_action_ids[0]
     };
-    runner.execute_action(0, trigger_action).expect("accept trigger");
+    runner
+        .execute_action(0, trigger_action)
+        .expect("accept trigger");
     // Accepting the TriggerOrder drains through the body:
     //   - activation_cost fires → BT22-088 returns to deck bottom;
     //   - the optional select_hand for [Arisa Kinosaki] has no valid target
@@ -411,19 +432,26 @@ fn bt22_088_start_of_main_no_digimon_branch_plays_exact_shoemon_from_trash() {
     );
 
     // Pick Shoemon.
-    runner.execute_action(0, valid[0]).expect("select Shoemon from trash");
+    runner
+        .execute_action(0, valid[0])
+        .expect("select Shoemon from trash");
     runner.auto_resolve().expect("settle Shoemon play");
 
     // Shoemon is now on field (played free from trash).
-    let shoemon_on_field = runner.game.players[0].battle_area.iter().any(|perm| {
-        perm.top_card().card_id(&runner.game.card_data) == "SHOEMON-BT22088"
-    });
-    assert!(shoemon_on_field, "Shoemon must be on field after free play from trash");
+    let shoemon_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "SHOEMON-BT22088");
+    assert!(
+        shoemon_on_field,
+        "Shoemon must be on field after free play from trash"
+    );
 
     // BT22-088 is not on field (returned as activation cost).
-    let arisa_on_field = runner.game.players[0].battle_area.iter().any(|perm| {
-        perm.top_card().card_id(&runner.game.card_data) == "BT22-088"
-    });
+    let arisa_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "BT22-088");
     assert!(
         !arisa_on_field,
         "BT22-088 must have left the field as the return-self activation cost"
@@ -443,7 +471,9 @@ fn bt22_088_all_turns_token_or_puppet_played_suspends_this_tamer_to_draw() {
     let arisa = runner.place_on_field(0, "BT22-088", Some(0));
 
     runner.play(0, 0).expect("own Puppet plays");
-    runner.auto_resolve().expect("finish activation_cost + Draw 1");
+    runner
+        .auto_resolve()
+        .expect("finish activation_cost + Draw 1");
 
     assert!(
         runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
@@ -488,7 +518,11 @@ fn bt22_088_played_observer_silently_skips_when_arisa_already_suspended() {
         "pre-suspended Arisa stays suspended (cost cannot be paid again)"
     );
     assert_eq!(runner.hand_size(0), 0, "cost failure must not draw");
-    assert_eq!(runner.deck_size(0), 1, "cost failure leaves the deck untouched");
+    assert_eq!(
+        runner.deck_size(0),
+        1,
+        "cost failure leaves the deck untouched"
+    );
 }
 
 #[test]
@@ -516,13 +550,18 @@ fn bt22_088_played_observer_rejects_non_puppet_and_opponent_puppet() {
 
 #[test]
 fn bt22_088_suspend_cost_preflight_is_bound_to_this_tamer() {
-    let mut runner = observer_runner(&["PUPPET-HAND-BT22-088"], &["DRAW-BT22-088", "DRAW-BT22-088"]);
+    let mut runner = observer_runner(
+        &["PUPPET-HAND-BT22-088"],
+        &["DRAW-BT22-088", "DRAW-BT22-088"],
+    );
     let suspended = runner.place_on_field(0, "BT22-088", Some(0));
     let unsuspended = runner.place_on_field(0, "BT22-088", Some(1));
     runner.game.player_mut(0).battle_area[suspended.index as usize].is_suspended = true;
 
     runner.play(0, 0).expect("own Puppet plays");
-    runner.auto_resolve().expect("finish source-bound activation");
+    runner
+        .auto_resolve()
+        .expect("finish source-bound activation");
 
     assert!(
         runner.game.player(0).battle_area[suspended.index as usize].is_suspended,
@@ -632,8 +671,5 @@ fn steps_lead_with_activation_cost_suspend_self_then_draw(steps: &[CompiledStep]
     if !leads_with_suspend_self {
         return false;
     }
-    matches!(
-        iter.next(),
-        Some(CompiledStep::Draw { count: 1, .. })
-    )
+    matches!(iter.next(), Some(CompiledStep::Draw { count: 1, .. }))
 }

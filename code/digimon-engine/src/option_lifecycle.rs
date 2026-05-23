@@ -12,7 +12,7 @@
 
 use crate::card_source::CardSource;
 use crate::enums::{DelayTrigger, EffectTiming, PlayerId};
-use crate::game::{Game, DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind};
+use crate::game::{DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind, Game};
 use crate::permanent::{OptionState, Permanent, PermanentHandle};
 use crate::selection::TriggerSource;
 

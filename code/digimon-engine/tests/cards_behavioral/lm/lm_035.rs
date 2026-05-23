@@ -322,7 +322,10 @@ fn lm_035_delay_activation_gains_2_memory_via_main_phase_action() {
     runner.game.set_memory(0);
 
     let mask = build_action_mask(&runner.game, 0);
-    assert_eq!(mask[bit], 1.0, "LM-035 <Delay> activation is a legal action");
+    assert_eq!(
+        mask[bit], 1.0,
+        "LM-035 <Delay> activation is a legal action"
+    );
     assert_eq!(mask[PASS as usize], 1.0, "declining stays legal");
 
     runner.game.decode_action(bit as u16, 0);

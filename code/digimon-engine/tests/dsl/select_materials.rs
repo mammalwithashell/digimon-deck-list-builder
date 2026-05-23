@@ -707,7 +707,10 @@ fn select_materials_breeding_carrier_distinct_by_exercises_recursive_path() {
 
     // Finish the two remaining distinct-name picks.
     let next = pending.valid_action_ids[0];
-    runner.game.resolve_selection(sp, next).expect("second pick");
+    runner
+        .game
+        .resolve_selection(sp, next)
+        .expect("second pick");
     let pending = runner.game.pending_selection.as_ref().unwrap();
     assert_eq!(pending.valid_action_ids.len(), 1, "one distinct name left");
     let last = pending.valid_action_ids[0];

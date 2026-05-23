@@ -94,29 +94,25 @@ fn bt16_055_metadata_paths_and_supported_clause_shape_match_printed_text() {
         "both the <=3 keyword-grant slice and the >=3 protection slice must be present; got={on_play_when_digivolving_clauses:?}"
     );
 
-    let low_security_clause = on_play_when_digivolving_clauses
-        .iter()
-        .find(|triggered| {
-            triggered
-                .condition
-                .as_ref()
-                .and_then(|p| p.security_count_lte.clone())
-                == Some(CompiledDpConstraint::Literal(3))
-        });
+    let low_security_clause = on_play_when_digivolving_clauses.iter().find(|triggered| {
+        triggered
+            .condition
+            .as_ref()
+            .and_then(|p| p.security_count_lte.clone())
+            == Some(CompiledDpConstraint::Literal(3))
+    });
     assert!(
         low_security_clause.is_some(),
         "<=3 security Blocker+Reboot clause must be present"
     );
 
-    let high_security_clause = on_play_when_digivolving_clauses
-        .iter()
-        .find(|triggered| {
-            triggered
-                .condition
-                .as_ref()
-                .and_then(|p| p.security_count_gte.clone())
-                == Some(CompiledDpConstraint::Literal(3))
-        });
+    let high_security_clause = on_play_when_digivolving_clauses.iter().find(|triggered| {
+        triggered
+            .condition
+            .as_ref()
+            .and_then(|p| p.security_count_gte.clone())
+            == Some(CompiledDpConstraint::Literal(3))
+    });
     assert!(
         high_security_clause.is_some(),
         ">=3 security DP-reduction/De-Digivolve protection clause must be present"
@@ -211,10 +207,10 @@ fn bt16_055_when_digivolving_uses_same_low_security_keyword_grant() {
     assert_has_low_security_keywords(&runner, namakemon);
     // And ImmuneFromDPMinus+CannotBeDeDigivolved from high branch.
     assert!(
-        runner
-            .game
-            .modifiers
-            .has(namakemon, digimon_engine::enums::ModifierType::ImmuneFromDPMinus),
+        runner.game.modifiers.has(
+            namakemon,
+            digimon_engine::enums::ModifierType::ImmuneFromDPMinus
+        ),
         "at exactly 3 security, high branch also fires — ImmuneFromDPMinus expected"
     );
 }
@@ -303,10 +299,10 @@ fn bt16_055_at_four_security_fires_high_security_branch_not_low_security() {
         "ally must have ImmuneFromDPMinus after high-security protection"
     );
     assert!(
-        runner
-            .game
-            .modifiers
-            .has(ally, digimon_engine::enums::ModifierType::CannotBeDeDigivolved),
+        runner.game.modifiers.has(
+            ally,
+            digimon_engine::enums::ModifierType::CannotBeDeDigivolved
+        ),
         "ally must have CannotBeDeDigivolved after high-security protection"
     );
     assert!(
@@ -365,10 +361,10 @@ fn bt16_055_high_security_selects_one_digimon_for_dp_reduction_and_de_digivolve_
     );
     // (c) CannotBeDeDigivolved installed.
     assert!(
-        runner
-            .game
-            .modifiers
-            .has(ally, digimon_engine::enums::ModifierType::CannotBeDeDigivolved),
+        runner.game.modifiers.has(
+            ally,
+            digimon_engine::enums::ModifierType::CannotBeDeDigivolved
+        ),
         "ally must have CannotBeDeDigivolved"
     );
     // (d) Narrowness: blanket CannotBeAffected must NOT be installed.
@@ -432,10 +428,10 @@ fn bt16_055_high_security_protection_absent_below_three_security() {
         "ImmuneFromDPMinus must NOT be granted at 2 security"
     );
     assert!(
-        !runner
-            .game
-            .modifiers
-            .has(ally, digimon_engine::enums::ModifierType::CannotBeDeDigivolved),
+        !runner.game.modifiers.has(
+            ally,
+            digimon_engine::enums::ModifierType::CannotBeDeDigivolved
+        ),
         "CannotBeDeDigivolved must NOT be granted at 2 security"
     );
 }

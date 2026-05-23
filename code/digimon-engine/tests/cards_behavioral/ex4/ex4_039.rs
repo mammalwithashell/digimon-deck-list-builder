@@ -706,9 +706,12 @@ fn ex4_039_inherited_opt_lockout_blocks_second_fire_same_turn() {
             .unwrap();
         let next_idx = runner.game.next_card_index();
         let card = CardSource::new(idx, 0, next_idx);
-        runner.game.players[0].battle_area.push(
-            digimon_engine::permanent::Permanent::new(card, runner.game.turn_count),
-        );
+        runner.game.players[0]
+            .battle_area
+            .push(digimon_engine::permanent::Permanent::new(
+                card,
+                runner.game.turn_count,
+            ));
         PermanentHandle {
             player: 0,
             index: (runner.game.players[0].battle_area.len() - 1) as u8,

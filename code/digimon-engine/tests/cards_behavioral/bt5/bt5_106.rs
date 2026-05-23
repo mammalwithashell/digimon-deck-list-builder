@@ -271,7 +271,9 @@ fn yellow_l3(id: &str) -> digimon_engine::card_data::CardData {
 /// P1's trash is seeded with the supplied card ids. P1's deck is stocked so a
 /// draw is observable. Returns the runner with an attacker already on P0's
 /// field (turn 0 → no summoning sickness).
-fn security_runner(trash_ids: &[&str]) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+fn security_runner(
+    trash_ids: &[&str],
+) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
     let mut attacker = make_test_card("ATTACKER", "Attacker");
     attacker.card_kind = CardKind::Digimon;
     attacker.level = Some(4);
@@ -314,8 +316,7 @@ fn security_runner(trash_ids: &[&str]) -> (DebugRunner, digimon_engine::permanen
 /// trash must not be offered as candidates.
 #[test]
 fn bt5_106_security_prompts_for_level_3_purple_digimon_in_trash() {
-    let (mut runner, attacker) =
-        security_runner(&["ONPLAY-PURPLE-L3", "PURPLE-L4", "YELLOW-L3"]);
+    let (mut runner, attacker) = security_runner(&["ONPLAY-PURPLE-L3", "PURPLE-L4", "YELLOW-L3"]);
 
     runner.attack_player(attacker, 1, false);
 
@@ -362,8 +363,7 @@ fn bt5_106_security_suppresses_on_play_effects_of_played_digimon() {
         runner.game.players[1]
             .battle_area
             .iter()
-            .any(|perm| perm.top_card().card_id(&runner.game.card_data)
-                == "ONPLAY-PURPLE-L3"),
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "ONPLAY-PURPLE-L3"),
         "the level-3 purple Digimon must enter the defender's battle area"
     );
     // The played Digimon left the trash (BT5-106 itself lands in the trash as

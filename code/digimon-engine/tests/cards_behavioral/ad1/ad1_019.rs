@@ -431,7 +431,8 @@ fn ad1_019_clause2_suspend_play_adventure() {
     // = floor(2/2) = 1 → 5 memory spent on the play.
     let spent = mem_after_digivolve - runner.memory();
     assert_eq!(
-        spent, 5,
+        spent,
+        5,
         "ADVENTURE card (printed cost 6) must be played at cost 6 - floor(2/2) = 5; \
          memory went {mem_after_digivolve} -> {} (spent {spent})",
         runner.memory()
