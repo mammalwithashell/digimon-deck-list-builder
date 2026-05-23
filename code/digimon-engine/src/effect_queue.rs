@@ -2322,6 +2322,23 @@ impl Game {
         let Some(perm_handle) = qe.source_permanent else {
             return true;
         };
+        // **Post-batched-deletion bypass (2026-05-23).** `OnDeletion`
+        // entries enqueued by `delete_permanents_batch` carry the
+        // `deleted_object` snapshot in their trigger context. The
+        // batched flow trashes the carrier *before* the drain runs, so
+        // the standard "is permanent still on field" check fails for
+        // every batched OnDeletion entry. Bypass when the trigger
+        // context proves this is a post-deletion fire: handler bodies
+        // either read live state (gracefully bail when the carrier is
+        // gone) or read the snapshot via `ctx.deleted_self_*()`.
+        if qe.timing == EffectTiming::OnDeletion
+            && qe
+                .trigger_context
+                .as_ref()
+                .is_some_and(|t| t.deleted_object.is_some())
+        {
+            return true;
+        }
         if perm_handle.index == BREEDING_TARGET as u8 {
             return self
                 .players

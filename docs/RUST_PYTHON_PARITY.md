@@ -295,6 +295,25 @@ Phase 3 landed unified keyword lookup (see §2.1b). The security DP battle in `c
 
 Planned in [plan-out-the-security-sorted-storm.md](../.claude/plans/plan-out-the-security-sorted-storm.md) as a `scenario_runner` Rust binary + `tests/behavioral/test_parity_scenarios.py` pytest driver + `tests/scenarios/parity/security/*.yaml` fixture set, diffing JSON snapshots after each step. Deferred — scope is substantial (new Rust binary crate target, serde_yaml integration, JSON snapshot schema design, subprocess bridge, pytest parameterization). Parity is proved manually today via the per-engine pilot tests listed above.
 
+### 2.6 🟢 Permanent deletion — DCGO-batched flow with trash-before-OnDeletion — implemented 2026-05-23
+
+**Python** — single-target deletion fires `OnDeletion` *before* the permanent moves to trash. The carrier is still on its battle-area slot when handlers run; handlers read live carrier state (`card_sources.last()`, DP, etc.). Multi-target deletions decompose into N sequential per-handle calls, so each carrier's OnDeletion sees its own pre-trash live state plus whatever earlier carriers' deletions already mutated.
+
+**Rust (post `align-deletion-with-dcgo-model`, 2026-05-23)** — full DCGO `DestroyPermanentsClass.Destroy()` parity:
+
+- `Game::delete_permanents_batch(handles, cause) -> DeletionBatchOutcome` is the primary deletion API. Single-target callers shim through as one-element batches. Multi-target callers (battle mutual destruction, DSL `DeleteBoundPermanents`, AoE Option effects) pass full kill lists.
+- 10-step flow per call: filter → stage 1 (WhenWouldLeaveBattleArea per-handle, Phase 3 v1.5 will batch the cut-in) → stage 2 (WhenWouldBeDeleted) → re-filter → snapshot capture (`DeletedObjectSnapshot` with `*_just_before` pre-removal fields) → `enter_deferred_drain` → enqueue OnDeletion per survivor with snapshot in trigger context → trash all survivors (linked-card cascade, ACE overflow, `delete_permanent`, modifier cleanup) → `exit_deferred_drain_and_flush` (handlers run post-trash, DCGO parity) → OnAnyDeletion + OnLeaveField with snapshots → drain.
+- Handlers reading "this Digimon's" pre-removal state use `EffectContext::deleted_self_dp()` / `_level()` / `_cost()` / `_names()` / `_traits()` / `_source_count()` / `_digisources()` accessors against the snapshot (live battle-area reads return None — carrier is gone).
+- DSL OnDeletion conditions whose `predicate_subject_for_source` would land on a stale permanent subject fall back to `PredicateSubject::None`, so subject-agnostic predicates (count_gte on hand, etc.) still evaluate correctly under the new timing.
+- `Keyword::Save`, `Keyword::Fortitude`, `Keyword::Partition` rewritten to read snapshot+trash inline; the legacy `Game::pending_post_deletion_replays` Vec slot was retired.
+- Multiple OnDeletion-parking permanents in one batch (e.g., 2+ `<Save>` permanents from an AoE Option) resolve sequentially via the active-batch state machine in `Game::resume_pending_deletion`. Previously panicked on `pending_deletion_resume.is_none()` debug-assert (`G-DELETION-RESUME-NESTED`); resolved here.
+
+**Parity status:** Rust is the correct model (DCGO faithfulness). Python's OnDeletion-before-trash timing is a known divergence that won't be fixed — Python is sunsetting. No cross-engine test mode currently exercises this divergence.
+
+**Tests:** [`tests/deletion_batching/`](../code/digimon-engine/tests/deletion_batching/) (7 tests, all passing) — `aoe_save_park` (AoE-Saves regression), `mutual_destruction` (kill-list batching).
+
+**Out of v1 (deferred to v1.5):** strict DCGO `StackSkillInfos` cut-in semantics where ALL kill-list handles' WhenWould* triggers stack before ANY drain runs. Today's per-handle dispatch within the batched scope is a behavioral approximation; no test exercises a case where the ordering matters. Also deferred: snapshot-on-`CardSource` cross-source reference identity (DCGO `PermanentJustBeforeRemoveField`).
+
 ---
 
 ## 3. Tensor encoding (1375 floats)

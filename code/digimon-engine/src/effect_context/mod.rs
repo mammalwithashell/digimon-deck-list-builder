@@ -403,6 +403,57 @@ impl<'a> EffectReadContext<'a> {
             .and_then(|trigger| trigger.deleted_object.as_ref())
     }
 
+    /// Pre-removal effective DP of the deleted permanent (modifier-aware).
+    /// `None` when no `deleted_object` snapshot is on the current trigger
+    /// context or when the permanent had no DP value (e.g. Tamer).
+    pub fn deleted_self_dp(&self) -> Option<i32> {
+        self.deleted_object_snapshot()
+            .and_then(|s| s.dp_just_before)
+    }
+
+    /// Pre-removal level of the deleted permanent.
+    pub fn deleted_self_level(&self) -> Option<u8> {
+        self.deleted_object_snapshot()
+            .and_then(|s| s.level_just_before)
+    }
+
+    /// Pre-removal printed play cost of the deleted permanent's top card.
+    pub fn deleted_self_cost(&self) -> Option<u16> {
+        self.deleted_object_snapshot()
+            .and_then(|s| s.cost_just_before)
+    }
+
+    /// Pre-removal top-card card names. Returns an empty slice when no
+    /// `deleted_object` snapshot is on the current trigger context.
+    pub fn deleted_self_names(&self) -> &[String] {
+        self.deleted_object_snapshot()
+            .map(|s| s.names_just_before.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Pre-removal top-card traits.
+    pub fn deleted_self_traits(&self) -> &[String] {
+        self.deleted_object_snapshot()
+            .map(|s| s.traits_just_before.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Count of digi-source cards BELOW the top at deletion time
+    /// (`card_sources.len() - 1`). Returns 0 when no snapshot is present.
+    pub fn deleted_self_source_count(&self) -> usize {
+        self.deleted_object_snapshot()
+            .map(|s| s.source_count_just_before)
+            .unwrap_or(0)
+    }
+
+    /// Pre-removal digivolution-card handles in stack order (bottom-most
+    /// first), excluding the top card.
+    pub fn deleted_self_digisources(&self) -> &[crate::card_source::CardHandle] {
+        self.deleted_object_snapshot()
+            .map(|s| s.digisources_just_before.as_slice())
+            .unwrap_or(&[])
+    }
+
     pub fn event_affected_player(&self) -> Option<PlayerId> {
         self.game
             .current_trigger_context
@@ -1234,6 +1285,49 @@ impl<'a> EffectContext<'a> {
             .current_trigger_context
             .as_ref()
             .and_then(|trigger| trigger.deleted_object.as_ref())
+    }
+
+    pub fn deleted_self_dp(&self) -> Option<i32> {
+        self.as_read().deleted_self_dp()
+    }
+
+    pub fn deleted_self_level(&self) -> Option<u8> {
+        self.as_read().deleted_self_level()
+    }
+
+    pub fn deleted_self_cost(&self) -> Option<u16> {
+        self.as_read().deleted_self_cost()
+    }
+
+    pub fn deleted_self_names(&self) -> &[String] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+            .map(|s| s.names_just_before.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn deleted_self_traits(&self) -> &[String] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+            .map(|s| s.traits_just_before.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn deleted_self_source_count(&self) -> usize {
+        self.as_read().deleted_self_source_count()
+    }
+
+    pub fn deleted_self_digisources(&self) -> &[crate::card_source::CardHandle] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+            .map(|s| s.digisources_just_before.as_slice())
+            .unwrap_or(&[])
     }
 
     pub fn event_affected_player(&self) -> Option<PlayerId> {

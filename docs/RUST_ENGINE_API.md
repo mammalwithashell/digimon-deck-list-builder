@@ -658,6 +658,90 @@ Effect::on_deletion(card)
 
 The slot is populated by `Game::current_deletion_cause`, set by the deletion fire-site for the duration of the OnDeletion drain and cleared once the queue is empty. See `code/code/digimon-engine/tests/combat/deletion_cause_observer.rs` for the canonical regression.
 
+### Deletion lifecycle — batched flow (2026-05-23)
+
+**Mental model:** permanent deletion runs as a DCGO-modeled batched flow. Whether you call `delete_permanent_with_effects(handle)`, `delete_permanent_with_cause(handle, cause)`, or the batched API directly, every deletion goes through `Game::delete_permanents_batch(handles, cause)` and follows the same 10-step sequence:
+
+```
+1. Filter         — drop handles whose battle_area slot is empty
+2. Stage 1        — fire WhenWouldLeaveBattleArea per survivor
+                    (cancel/redirect/substitute mutates the kill list)
+3. Stage 2        — fire WhenWouldBeDeleted per survivor
+4. Re-filter      — drop cancelled / redirected entries
+5. Snapshot       — capture DeletedObjectSnapshot per survivor
+                    (pre-removal DP, level, cost, names, traits,
+                    source_count, digisources)
+6. Enter scope    — enter_deferred_drain() opens the OnDeletion scope
+7. Enqueue        — enqueue_triggered(OnDeletion, Permanent(handle))
+                    for each survivor with snapshot threaded into
+                    its trigger context
+8. Trash          — linked-card cascade, ACE overflow, delete_permanent
+                    for each survivor (highest-index-first per player)
+9. Exit + drain   — exit_deferred_drain_and_flush() runs the OnDeletion
+                    handlers POST-TRASH (DCGO IsTopCardInTrashOnDeletion
+                    parity). Handlers that park selections unwind through
+                    pending_selection; the active-batch state machine
+                    resumes them in order via resume_pending_deletion.
+10. Global        — enqueue + drain OnAnyDeletion and OnLeaveField per
+                    survivor with snapshots. Clear active_deletion_batch.
+```
+
+**Writing an `OnDeletion` handler:** Handler bodies fire AFTER the carrier has moved to trash. Read pre-removal state via the snapshot accessors on `EffectContext` (not via `ctx.game.player(handle.player).battle_area.get(handle.index)` — that returns `None`).
+
+```rust
+pub fn deleted_self_dp(&self) -> Option<i32>
+pub fn deleted_self_level(&self) -> Option<u8>
+pub fn deleted_self_cost(&self) -> Option<u16>
+pub fn deleted_self_names(&self) -> &[String]
+pub fn deleted_self_traits(&self) -> &[String]
+pub fn deleted_self_source_count(&self) -> usize    // count BELOW the top
+pub fn deleted_self_digisources(&self) -> &[CardHandle]   // bottom-most first
+```
+
+Plus `ctx.deleted_object_snapshot() -> Option<&DeletedObjectSnapshot>` for direct access.
+
+**Example — Fortitude reads source count, plays from trash:**
+
+```rust
+Effect::on_deletion(card)
+    .name("<Fortitude>")
+    .process(|ctx| {
+        let Some(snap) = ctx.deleted_object_snapshot().cloned() else { return; };
+        if snap.source_count_just_before < 1 { return; }   // gate: ≥1 source under top
+        let _ = ctx.play_from_trash_free_unsuspended(snap.top_card);
+    })
+    .build()
+```
+
+**Example — Save retrieves self_card from trash, places under chosen Tamer:**
+
+```rust
+Effect::on_deletion(card)
+    .name("<Save>")
+    .process(|ctx| {
+        let Some(snap) = ctx.deleted_object_snapshot().cloned() else { return; };
+        let self_card = snap.top_card;
+        let owner = snap.former_controller;
+        ctx.select_own_permanent(
+            "place this card under one of your Tamers",
+            /*is_optional=*/ true,
+            move |g, h| /* filter: is_tamer */ { /* … */ },
+            move |ctx, tamer| {
+                // place_card_under_permanent_bottom walks the trash zone
+                // and lifts the card from trash → tucks under Tamer.
+                ctx.place_card_under_permanent_bottom(self_card, tamer, false);
+            },
+        );
+    })
+    .build()
+```
+
+**DSL-side considerations:** DSL `on_deletion` clauses whose `predicate_subject_for_source` would dereference the now-trashed carrier automatically fall back to `PredicateSubject::None` so subject-agnostic predicates (`count_gte` on hand, etc.) still evaluate. Clauses needing "this Digimon's pre-removal X" should use the equivalent `event_target_*` predicate (reads from the trigger context's snapshot).
+
+**Multiple OnDeletion-parking permanents in one batch:** AoE Options that delete N permanents whose handlers each park a selection (printed `<Save>` cascades, etc.) work correctly. The active-batch state machine in `Game::resume_pending_deletion` continues the OnDeletion drain after each selection resolves, so N parking permanents resolve in sequence. Regression coverage: [`tests/deletion_batching/aoe_save_park.rs`](../code/digimon-engine/tests/deletion_batching/aoe_save_park.rs).
+
+**Retired patterns (2026-05-23):** The pre-batched substrate had two side-channel slots — `pending_post_deletion_replays` (for Fortitude/Partition post-finalize replays) and `pending_deletion_resume` (Vec stack for nested OnDeletion parks). Both were retired by the batched flow; new code MUST NOT add similar workaround slots. If a new keyword needs "post-trash work to run before OnAnyDeletion," do it inline in the OnDeletion handler body — the batched flow already runs that handler post-trash.
+
 ### Replacement-process outcome-setters
 
 Inside a `WhenWouldBe*` replacement-process closure, after installing a

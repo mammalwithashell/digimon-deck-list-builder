@@ -163,17 +163,15 @@ fn save_accept_places_card_under_tamer_post_deletion() {
 
     r.game.delete_permanent_with_effects(saved);
 
-    // Mid-deletion: the Save handler parked the optional Tamer-pick and
-    // the rest of `commit_permanent_deletion` was deferred. Both the
-    // carrier AND the Tamer are still on field — this is the substrate
-    // change that lets the parked selection's frozen `valid_action_ids`
-    // map cleanly back to live permanents.
+    // Mid-deletion under the batched flow (2026-05-23): the carrier was
+    // trashed FIRST, then OnDeletion fired and Save parked the optional
+    // Tamer-pick. Only the Tamer remains on field; the saved card's
+    // handle lives in the snapshot threaded into the trigger context.
     {
         assert_eq!(
             r.game.players[0].battle_area.len(),
-            2,
-            "carrier + Tamer both still on field while Tamer-pick is parked \
-             (deletion is deferred via pending_deletion_resume)"
+            1,
+            "carrier already trashed (batched flow); only the Tamer remains on field"
         );
         let pending = r
             .game
@@ -187,17 +185,16 @@ fn save_accept_places_card_under_tamer_post_deletion() {
         );
     }
 
-    // Pick the Tamer (originally and still at index 1 — no shift yet).
+    // Pick the Tamer (only field permanent — at index 0 after the
+    // carrier's removal).
     let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     r.game.resolve_selection(0, action).expect("pick Tamer");
 
-    // After resolution: the saved card is under the Tamer, and the
-    // carrier was finalized (removed from battle_area). Only the Tamer
-    // remains on field.
+    // After resolution: the saved card is under the Tamer.
     assert_eq!(
         r.game.players[0].battle_area.len(),
         1,
-        "carrier finalized (removed) after the parked selection resolved"
+        "Tamer remains on field with the saved card tucked underneath"
     );
     let surviving = &r.game.players[0].battle_area[0];
     assert_eq!(
@@ -443,23 +440,22 @@ fn save_under_decoy_decline_defers_via_no_replace_path() {
     assert!(pending.is_optional, "Decoy is optional");
     r.game.resolve_selection(0, PASS).expect("decline Decoy");
 
-    // (4) After declining Decoy, the no-replace path ran: OnDeletion fired
-    // and Save parked a Tamer-pick. The deferred guard MUST have stashed
-    // the carrier handle and returned without calling delete_permanent —
-    // both the carrier and the Tamer are still on field at their original
-    // indices (otherwise Save's `valid_action_ids`, encoded against the
-    // original layout, would now point at the wrong slot).
+    // (4) Under the batched flow (2026-05-23): after declining Decoy,
+    // the no-replace post-replacement commit ran — the carrier has
+    // already been trashed by `commit_post_replacement_single`. OnDeletion
+    // then fired and Save parked a Tamer-pick using the snapshot's
+    // `top_card` handle.
     assert_eq!(
         r.game.players[0].battle_area.len(),
-        2,
-        "carrier + Tamer both still on field while Save's Tamer-pick is parked"
+        1,
+        "carrier already trashed (batched no-replace path); only Tamer remains"
     );
     assert_eq!(
-        r.game.players[0].battle_area[1]
+        r.game.players[0].battle_area[0]
             .top_card()
             .card_id(&r.game.card_data),
         "TAMER",
-        "Tamer is still at the same index — no synchronous mid-stream delete"
+        "Tamer is the sole surviving permanent"
     );
     let pending = r
         .game

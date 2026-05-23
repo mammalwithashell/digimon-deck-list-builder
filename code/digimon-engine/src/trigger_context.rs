@@ -100,6 +100,12 @@ pub struct MovedCardSet {
 
 /// Snapshot captured before a permanent leaves the board. Observers must use
 /// this for deletion predicates after the live battle-area slot is gone.
+///
+/// The `*_just_before` fields mirror DCGO's `PermanentJustBeforeRemoveField` /
+/// `DPJustBeforeRemoveField` / `LevelJustBeforeRemoveField` / etc. captured at
+/// step 7 of `DestroyPermanentsClass.Destroy()`. They let OnDeletion handlers
+/// answer "what was this Digimon's DP / level / cost / names / traits / source
+/// list immediately before deletion?" after the permanent has been trashed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeletedObjectSnapshot {
     pub former_controller: PlayerId,
@@ -109,6 +115,25 @@ pub struct DeletedObjectSnapshot {
     pub level: Option<u8>,
     pub dp: Option<i32>,
     pub cause: EventCause,
+    /// Pre-removal effective DP (modifier-aware). `None` when the permanent
+    /// did not have a DP value (e.g. Tamer).
+    pub dp_just_before: Option<i32>,
+    /// Pre-removal level. `None` for non-Digimon kinds.
+    pub level_just_before: Option<u8>,
+    /// Pre-removal printed play cost of the top card. `None` when not
+    /// applicable. Matches `CardData::play_cost` (u16).
+    pub cost_just_before: Option<u16>,
+    /// Pre-removal top-card card-names list.
+    pub names_just_before: Vec<String>,
+    /// Pre-removal top-card traits list. Duplicates `traits` for legacy
+    /// callers; new code should prefer this field for clarity.
+    pub traits_just_before: Vec<String>,
+    /// Pre-removal source count BELOW the top (i.e. `card_sources.len() - 1`).
+    /// 0 when the carrier had only its top card.
+    pub source_count_just_before: usize,
+    /// Pre-removal digivolution-card handles in stack order (bottom-most
+    /// first), excluding the top card.
+    pub digisources_just_before: Vec<CardHandle>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

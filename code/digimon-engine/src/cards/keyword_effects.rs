@@ -515,41 +515,31 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // here restricts to (a) same controller as the carrier and (b)
         // Tamer kind. `select_own_permanent` does not auto-scope by owner
         // — the closure must.
+        // **Post-batched-refactor (2026-05-23):** Save fires AFTER the
+        // carrier's top card has moved to trash (DCGO parity:
+        // `IsTopCardInTrashOnDeletion` predicate). The handler reads
+        // `self_card` from the snapshot's `top_card` field, then uses
+        // `place_card_under_permanent_bottom` whose zone-walker locates
+        // the card in trash and moves it under the chosen Tamer.
+        //
+        // No live `battle_area.get(subject.index)` lookup — the carrier
+        // is gone from the field by the time OnDeletion handlers fire.
         Keyword::Save => vec![Effect::on_deletion(card)
             .name("<Save>")
             .process(|ctx| {
-                // OnDeletion is keyed on the carrier's permanent handle —
-                // `enqueue_from_permanent` only enumerates effects on the
-                // specific deleted permanent, so this trigger is naturally
-                // self-scoped (no `subject != me` guard required as in
-                // the replacement-window mounting).
-                let Some(subject) = ctx.source_permanent else {
-                    // Defensive — OnDeletion always carries source_permanent.
+                // Read the carrier's identity from the snapshot, not from
+                // the field. `deleted_object` is threaded in by
+                // `delete_permanents_batch`'s OnDeletion enqueue stage.
+                let Some(snap) = ctx.deleted_object_snapshot().cloned() else {
+                    // Defensive — batched OnDeletion always carries a snapshot.
                     return;
                 };
-                let owner = subject.player;
+                let owner = snap.former_controller;
+                let self_card = snap.top_card;
 
-                // Snapshot the carrier's top-card handle. The card hasn't
-                // moved to trash yet (deletion is paused on this trigger);
-                // when the callback fires, the card is still in the
-                // carrier's `card_sources`.
-                let self_card = match ctx
-                    .game
-                    .player(owner)
-                    .battle_area
-                    .get(subject.index as usize)
-                {
-                    Some(p) => p.top_card().handle(),
-                    None => return,
-                };
-
-                // Park the optional Tamer-pick. `is_optional=true` admits
-                // PASS as "decline Save". `select_own_permanent` no-ops
-                // silently when the candidate filter yields zero matches
-                // (no own Tamers) — handler returns; the OnDeletion drain
-                // unwinds with no `pending_selection` set;
-                // `commit_permanent_deletion` continues to natural
-                // finalization on the same call frame.
+                // Park the optional Tamer-pick. `select_own_permanent`
+                // no-ops silently with no parking when the candidate
+                // filter yields zero matches (no own Tamers).
                 ctx.select_own_permanent(
                     "you may place this card under one of your Tamers",
                     /*is_optional=*/ true,
@@ -567,18 +557,9 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         p.is_tamer(&g.card_data)
                     },
                     move |ctx, tamer| {
-                        // Lift the saved top card off the carrier and
-                        // place it at the bottom of the chosen Tamer's
-                        // stack. Indices are stable here: the deferred
-                        // `delete_permanent` hasn't run yet; both the
-                        // carrier and the Tamer are still on field.
-                        //
-                        // After this returns, `resolve_generic_selection`
-                        // calls `resume_pending_deletion`, which removes
-                        // the (now empty-stacked) carrier from
-                        // `battle_area` and fires `OnAnyDeletion` — so
-                        // observers like Fortitude will see the
-                        // deletion event.
+                        // Retrieve `self_card` from trash via the
+                        // zone-walking helper and tuck it under the
+                        // chosen Tamer's stack.
                         ctx.place_card_under_permanent_bottom(self_card, tamer, false);
                     },
                 );
@@ -740,38 +721,31 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // covers only the top-card case (most common). Source-card
         // Fortitude is rare and can be covered by a hand-rolled
         // `CardEffect` override.
+        // **Post-batched-refactor (2026-05-23):** Fortitude reads the
+        // snapshot's `source_count_just_before` for the "≥1 source under
+        // the top" gate and plays `self_card` from trash directly inside
+        // the OnDeletion drain. The legacy `pending_post_deletion_replays`
+        // slot is no longer pushed — Phase 5 will retire the slot.
+        //
+        // DCGO `Fortitude.cs:14-63`: `CanActivateFortitude` requires
+        // `IsExistOnTrash(card)` — the card must be in trash at fire time.
+        // Under the batched flow, that's automatically true: the
+        // OnDeletion drain runs post-trash.
         Keyword::Fortitude => vec![Effect::on_deletion(card)
             .name("<Fortitude>")
             .process(|ctx| {
-                // Self-scope: OnDeletion is keyed on the carrier's handle, so
-                // `source_permanent` should be Some(carrier).
-                let Some(handle) = ctx.source_permanent else {
+                let Some(snap) = ctx.deleted_object_snapshot().cloned() else {
                     return;
                 };
-                let owner = handle.player;
-
-                // Gate: deleted stack had ≥1 source under the top — i.e.
-                // `card_sources.len() >= 2`. The carrier is still in
-                // `battle_area` at this timing (OnDeletion fires before
-                // `delete_permanent`).
-                let Some(perm) = ctx
-                    .game
-                    .player(owner)
-                    .battle_area
-                    .get(handle.index as usize)
-                else {
-                    return;
-                };
-                if perm.card_sources.len() < 2 {
+                // Gate: ≥1 source UNDER the top — i.e. snapshot's
+                // pre-removal `source_count_just_before >= 1`. (The
+                // snapshot records sources *under* the top, so 1 source
+                // under means stack length 2.)
+                if snap.source_count_just_before < 1 {
                     return;
                 }
-
-                // Capture self_card (the carrier's top card handle) and
-                // stash for the post-finalize replay.
-                let self_card = perm.top_card().handle();
-                ctx.game
-                    .pending_post_deletion_replays
-                    .push((owner, self_card));
+                // Play `self_card` from trash, free + unsuspended.
+                let _ = ctx.play_from_trash_free_unsuspended(snap.top_card);
             })
             .build()],
 
@@ -842,14 +816,21 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // on the specific deleted permanent. So the trigger is naturally
         // self-scoped (a neighbor's deletion doesn't fire Partition on
         // this carrier). No subject-mismatch guard required.
+        // **Post-batched-refactor (2026-05-23):** Partition reads the
+        // snapshot's `digisources_just_before` (which are now in the
+        // controller's trash) and picks 2 to play from trash inline
+        // during the OnDeletion drain. No more `pending_post_deletion_replays`
+        // push — the replay happens here.
+        //
+        // DCGO `Partition.cs:9-23, 71-162`: fires post-trash, walks the
+        // permanent's pre-removal `cardSources` (preserved via
+        // `PermanentJustBeforeRemoveField`) — we mirror via the snapshot.
         Keyword::Partition => vec![Effect::on_deletion(card)
             .name("<Partition>")
             .process(|ctx| {
                 use crate::replacement::ReplacementCause;
 
                 // Cause filter: skip Battle and same-controller (OwnEffect).
-                // Note: this matches DCGO exactly. SecurityCheck / Cost
-                // causes DO trigger Partition (rare in practice).
                 let cause = ctx.deletion_cause();
                 if matches!(
                     cause,
@@ -858,57 +839,38 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     return;
                 }
 
-                // Self-scope: OnDeletion is keyed on the carrier handle.
-                let Some(carrier) = ctx.source_permanent else {
+                let Some(snap) = ctx.deleted_object_snapshot().cloned() else {
                     return;
                 };
-                let owner = carrier.player;
+                let owner = snap.former_controller;
 
-                // Gate: ≥2 selectable sources under the top
-                // (`card_sources.len() >= 3` = top + 2+ sources).
-                // `Material` zone excludes the top, so the actual
-                // candidate count is `card_sources.len() - 1`.
-                let stack_len = match ctx
-                    .game
-                    .player(owner)
-                    .battle_area
-                    .get(carrier.index as usize)
-                {
-                    Some(p) => p.card_sources.len(),
-                    None => return,
-                };
-                if stack_len < 3 {
+                // Gate: ≥2 selectable sources under the top.
+                if snap.source_count_just_before < 2 {
                     return;
                 }
 
-                // Park the 2-pick. `select_count_capped_multi` auto-commits
-                // when `picked == max` so the callback runs after exactly
-                // two picks. The carrier is still on field — the parked
-                // selection's `valid_action_ids` map cleanly to live
-                // `card_sources` indices on `carrier`.
+                // Pick 2 from the snapshot's digisources. They've already
+                // been trashed by the batched flow's trash stage, so the
+                // candidate filter checks "in this player's trash AND
+                // a member of the pre-removal source list."
+                let candidate_set: std::collections::HashSet<crate::card_source::CardHandle> =
+                    snap.digisources_just_before.iter().copied().collect();
+                let candidate_set_for_filter = candidate_set.clone();
                 ctx.select_count_capped_multi(
                     owner,
-                    CountCappedZone::Material(carrier),
+                    CountCappedZone::Trash,
                     /*max=*/ 2,
                     "select 2 cards to play",
                     /*is_optional_zero=*/ false,
                     /*distinct_by=*/ None,
-                    |_g, _src| true,
+                    move |_g, src| candidate_set_for_filter.contains(&src.handle()),
                     move |ctx, picks| {
-                        // Defensive: only act on a complete 2-pick. The
-                        // helper will short-circuit and pass an incomplete
-                        // accum if all candidates were exhausted (gate
-                        // ensures ≥2 candidates, so this should be
-                        // unreachable in practice).
                         if picks.len() != 2 {
                             return;
                         }
-
-                        // Stash the picks for post-finalize replay. The
-                        // drain in `finalize_permanent_deletion` plays
-                        // each from trash, free, unsuspended.
+                        // Play each picked source from trash directly.
                         for handle in picks {
-                            ctx.game.pending_post_deletion_replays.push((owner, handle));
+                            let _ = ctx.play_from_trash_free_unsuspended(handle);
                         }
                     },
                 );
