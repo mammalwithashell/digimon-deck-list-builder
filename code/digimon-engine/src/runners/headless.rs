@@ -9,7 +9,7 @@ use crate::action::build_action_mask;
 use crate::card_data::CardData;
 use crate::card_registry::CardRegistry;
 use crate::enums::{GamePhase, PlayerId};
-use crate::game::Game;
+use crate::game::{Game, TerminalOutcomeReason};
 use crate::observation::{
     build_observation_tensor, default_observation_profile, observation_layout,
     parse_observation_profile, ObservationProfileId,
@@ -236,6 +236,10 @@ impl HeadlessRunner {
     /// maps this to the Python `1/2/0` convention.
     pub fn winner_id(&self) -> u8 {
         self.game.winner.unwrap_or(u8::MAX)
+    }
+
+    pub fn terminal_outcome_reason(&self) -> Option<TerminalOutcomeReason> {
+        self.game.terminal_outcome_reason
     }
 
     pub fn accept_mulligan(&mut self, pid: PlayerId, keep: bool) -> Result<(), &'static str> {

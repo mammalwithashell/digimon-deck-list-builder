@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import numpy as np
 import pytest
 from sb3_contrib import MaskablePPO
@@ -9,6 +10,12 @@ from sb3_contrib.common.wrappers import ActionMasker
 
 from digimon_gym.agents.pilot_training import _seed_everything
 from digimon_gym.digimon_gym import DigimonEnv
+from digimon_gym.agents.training_recording import (
+    TrainingGameRecorder,
+    TrainingRecordingWrapper,
+    assert_minimal_training_recording_artifact,
+    build_outcome_metadata,
+)
 
 
 def _mask_fn(env):
@@ -70,6 +77,62 @@ def test_action_validity_callback_records_rate():
     model.learn(total_timesteps=128, callback=callback)
     assert callback.total_count > 0
     assert callback.valid_count / callback.total_count > 0.99
+
+
+def test_digimon_env_recording_is_default_off():
+    env = DigimonEnv()
+    env.reset(seed=1)
+    assert env.get_recording() is None
+
+
+def test_digimon_env_recording_captures_actions():
+    env = DigimonEnv(record_actions=True)
+    _obs, info = env.reset(seed=1)
+    for _ in range(4):
+        valid = np.where(info["action_mask"] > 0)[0]
+        _obs, _reward, terminated, truncated, info = env.step(int(valid[0]))
+        if terminated or truncated:
+            break
+
+    recording = env.get_recording()
+    assert recording is not None
+    assert "initial_state" in recording
+    assert len(recording["actions"]) > 0
+    assert recording["total_actions"] == len(recording["actions"])
+
+
+def test_training_recording_wrapper_writes_step_limit_draw(tmp_path):
+    recorder = TrainingGameRecorder(tmp_path, mode="all", max_recordings=1)
+    env = TrainingRecordingWrapper(
+        DigimonEnv(record_actions=True, max_turns=0),
+        recorder,
+        source="smoke",
+        env_index=2,
+    )
+    _obs, info = env.reset(seed=2)
+    valid = np.where(info["action_mask"] > 0)[0]
+    env.step(int(valid[0]))
+
+    files = list(tmp_path.glob("*.json"))
+    assert len(files) == 1
+    artifact = json.loads(files[0].read_text(encoding="utf-8"))
+    assert_minimal_training_recording_artifact(artifact)
+    assert artifact["outcome"]["result"] == "draw"
+    assert artifact["outcome"]["draw_reason"] == "step_limit"
+    assert artifact["run"]["env_index"] == 2
+
+
+def test_unknown_draw_reason_is_explicit():
+    env = DigimonEnv(record_actions=True)
+    env.reset(seed=3)
+    outcome = build_outcome_metadata(
+        env,
+        step_count=1,
+        terminated=True,
+        truncated=False,
+    )
+    assert outcome["result"] == "draw"
+    assert outcome["draw_reason"] == "unknown_draw"
 
 
 def test_dummy_vec_env_runs():

@@ -371,7 +371,54 @@ Default log directory: `runs/pilot_ppo` (override with `--log-dir`).
 
 ---
 
-## 9. Model Artifacts
+## 9. Game Recording Artifacts
+
+Pilot training can optionally write deterministic per-game recording artifacts
+for bug triage. Recording is disabled by default so normal training runs do not
+pay the storage or serialization cost.
+
+Useful modes:
+
+```bash
+# Record only evaluation games
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training \
+  --record-games eval --timesteps 100000
+
+# Record draws/crashes/anomalies from train and eval episodes
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training \
+  --record-games anomalies --record-games-max 25
+
+# Sample ordinary games as well
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training \
+  --record-games sampled --record-games-sample-rate 0.01
+```
+
+CLI/config controls:
+
+| Option | Default | Description |
+|---|---:|---|
+| `--record-games` | `off` | One of `off`, `all`, `sampled`, `draws`, `anomalies`, or `eval` |
+| `--record-games-dir` | `<run>/recordings` | Output directory for JSON artifacts |
+| `--record-game-tensors` | false | Include per-step tensor and action-mask snapshots |
+| `--record-games-max` | 25 | Maximum artifacts to save |
+| `--record-games-sample-rate` | 0.01 | Sample rate for `sampled` mode |
+
+Each artifact wraps the engine recording with run metadata and outcome metadata:
+
+- `recording.initial_state`: post-shuffle deck, digitama, security, and opening-hand order.
+- `recording.actions`: action IDs with player, phase, turn, and memory metadata.
+- `outcome`: `winner_id`, `win_reason`, `draw_reason`, `terminated`, `truncated`, and step count.
+- `run`: backend, tensor profile, action-space size, source split, environment index, and game index.
+
+Tensor snapshots are useful for model debugging but can be large; keep them off
+unless you need to inspect exact observations and masks. The current server
+replay endpoints still use the legacy Python replay runner, so Rust training
+recordings should be treated as deterministic bug artifacts first. A Rust-native
+replay/seek tool can consume the same JSON contract in a follow-up.
+
+---
+
+## 10. Model Artifacts
 
 ### Save Location
 
@@ -406,7 +453,7 @@ opponent_fn = make_agent_opponent_fn(
 
 ---
 
-## 10. Training Job Worker Operations
+## 11. Training Job Worker Operations
 
 ### Starting the Worker
 
@@ -433,7 +480,7 @@ The DB queue mechanics, job claiming, stale recovery, and gauntlet hooks are ful
 
 ---
 
-## 11. Dependencies
+## 12. Dependencies
 
 Key RL/ML packages:
 

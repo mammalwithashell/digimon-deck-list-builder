@@ -8,7 +8,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::observation::parse_observation_profile;
 use digimon_engine::tensor::TENSOR_SIZE;
-use digimon_engine::HeadlessRunner;
+use digimon_engine::{HeadlessRunner, TerminalOutcomeReason};
 
 use crate::dsl_card_data::card_data_from_compiled;
 
@@ -180,6 +180,39 @@ fn step_is_noop_after_game_over() {
     runner.step(62);
     assert!(runner.is_game_over());
     assert_eq!(runner.winner_id(), 1);
+}
+
+#[test]
+fn declared_winner_exposes_terminal_outcome_reason() {
+    let mut runner = sample_runner();
+
+    runner.game.declare_winner(1);
+
+    assert!(runner.is_game_over());
+    assert_eq!(runner.winner_id(), 1);
+    assert_eq!(
+        runner.terminal_outcome_reason(),
+        Some(TerminalOutcomeReason::EngineDeclared)
+    );
+}
+
+#[test]
+fn deckout_exposes_terminal_outcome_reason() {
+    let mut runner = sample_runner();
+    let first = runner.mulligan_current_player().expect("mulligan pending");
+    runner.accept_mulligan(first, true).unwrap();
+    let second = runner.mulligan_current_player().expect("second decision");
+    runner.accept_mulligan(second, true).unwrap();
+
+    runner.game.player_mut(0).deck.clear();
+    runner.game.player_mut(1).deck.clear();
+    runner.run_until_conclusion::<fn(&_, &[f32]) -> u16>(20, None);
+
+    assert!(runner.is_game_over());
+    assert_eq!(
+        runner.terminal_outcome_reason(),
+        Some(TerminalOutcomeReason::DeckOut)
+    );
 }
 
 #[test]

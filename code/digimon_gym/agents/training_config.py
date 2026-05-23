@@ -11,6 +11,7 @@ import yaml
 
 VALID_ALGORITHMS = {"mlp", "lstm"}
 VALID_OPPONENTS = {"greedy", "random", "agent", "pool", "self-play"}
+VALID_RECORD_GAME_MODES = {"off", "all", "sampled", "draws", "anomalies", "eval"}
 
 
 @dataclass
@@ -51,6 +52,11 @@ class TrainingConfig:
     tensorboard_log: str = "runs/pilot_ppo"
     run_name: Optional[str] = None
     tensor_profile: str = "standard_lite_v2"
+    record_games: str = "off"
+    record_games_dir: Optional[str] = None
+    record_game_tensors: bool = False
+    record_games_max: int = 25
+    record_games_sample_rate: float = 0.01
 
     def __post_init__(self) -> None:
         self._validate()
@@ -97,6 +103,15 @@ class TrainingConfig:
             raise ValueError("opponent=pool requires opponent_pool_manifest")
         if not isinstance(self.tensor_profile, str) or not self.tensor_profile.strip():
             raise ValueError("tensor_profile must be a non-blank string")
+        if self.record_games not in VALID_RECORD_GAME_MODES:
+            raise ValueError(
+                f"record_games must be one of {sorted(VALID_RECORD_GAME_MODES)}, "
+                f"got {self.record_games}"
+            )
+        if self.record_games_max < 0:
+            raise ValueError("record_games_max must be >= 0")
+        if not 0.0 <= self.record_games_sample_rate <= 1.0:
+            raise ValueError("record_games_sample_rate must be between 0 and 1")
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

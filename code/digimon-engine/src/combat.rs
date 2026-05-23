@@ -2416,7 +2416,10 @@ impl Game {
             Some(c) => c,
             None => {
                 let winner = attacker.player;
-                self.declare_winner(winner);
+                self.declare_winner_with_reason(
+                    winner,
+                    crate::game::TerminalOutcomeReason::SecurityAttack,
+                );
                 return false;
             }
         };
