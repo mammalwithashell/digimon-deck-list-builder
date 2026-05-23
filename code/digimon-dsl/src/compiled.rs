@@ -282,6 +282,9 @@ pub struct CompiledPredicate {
     pub dna_origin: Option<bool>,
     pub event_target_kind: Option<CompiledCardKind>,
     pub event_target_trait_has: Option<String>,
+    pub event_target_level_eq: Option<u8>,
+    pub event_target_level_lte: Option<CompiledDpConstraint>,
+    pub event_target_level_gte: Option<CompiledDpConstraint>,
     /// Case-insensitive substring scan against the event-target
     /// permanent's card name. G-EVENT-TARGET-NAME-CONTAINS.
     pub event_target_name_contains: Option<String>,
@@ -302,6 +305,7 @@ pub struct CompiledPredicate {
     /// The triggering event card must have exactly this many distinct colors.
     pub event_card_color_count: Option<u8>,
     pub event_permanent_is_source: Option<bool>,
+    pub event_host_permanent_is_source: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
     pub event_target_same_level_as_previous: Option<bool>,
     pub event_cause: Option<CompiledEventCause>,
@@ -729,10 +733,12 @@ pub enum CompiledTiming {
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
     OnSecurityCheck,
+    OnCheckFaceUpSecurity,
     OnLoseSecurity,
     OnDiscardSecurity,
     OnSecurity,
     OnOptionPlaced,
+    OnOptionTrashed,
     OnPlaceSecurity,
     OnAddedToSecurity,
     Main,
@@ -788,6 +794,9 @@ pub enum CompiledFieldSelector {
     /// Lowest printed play cost among the candidate permanents.
     /// G-PLAY-COST-AGGREGATE.
     LowestPlayCost,
+    /// Highest printed play cost among the candidate permanents.
+    /// G-HIGHEST-PLAY-COST-SELECTOR.
+    HighestPlayCost,
 }
 
 // ── Steps ───────────────────────────────────────────────────────────
@@ -981,6 +990,9 @@ pub enum CompiledStep {
     Hatch {
         of: CompiledPlayerRef,
     },
+    MoveFromBreeding {
+        of: CompiledPlayerRef,
+    },
     PlayFromHand {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
@@ -992,6 +1004,12 @@ pub enum CompiledStep {
         /// Bind the just-played permanent handle for use in later steps.
         /// `None` preserves prior behavior (no binding insert).
         /// G-PLAY-FROM-HAND-FREE-BIND-AS (Phase 2 Track H closure).
+        bind_as: Option<String>,
+    },
+    PlayFromRevealedFree {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        /// Bind the just-played permanent handle for use in later steps.
         bind_as: Option<String>,
     },
     PlayFromTrash {
@@ -1014,6 +1032,9 @@ pub enum CompiledStep {
         /// Bind the just-played permanent handle for use in later steps.
         bind_as: Option<String>,
         suppress_on_play: bool,
+    },
+    TrashUnionBound {
+        binding: String,
     },
     PlayFromSecurity,
     PlayFromMaterials {
@@ -1149,6 +1170,9 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    FlipSecurityFaceUp {
+        of: CompiledPlayerRef,
+    },
     AddDpModifier {
         target: CompiledBindingRef,
         value: CompiledModifierValue,
@@ -1185,9 +1209,10 @@ pub enum CompiledStep {
         expiry: String,
     },
     /// Track H §3 — install a granted triggered effect on each
-    /// permanent matching `target`. DCGO `AddSkillClass.cs` analog.
+    /// permanent matching `target`, or on one bound permanent.
+    /// DCGO `AddSkillClass.cs` analog.
     GrantTriggeredEffect {
-        target: CompiledPredicate,
+        target: CompiledModifierTarget,
         timing: String,
         expiry: String,
         body: Vec<CompiledStep>,

@@ -479,8 +479,16 @@ fn ex8_055_clause_a_security_attack_change_expires_after_turn() {
         "SecurityAttackChange must be +1 immediately after cost payment"
     );
 
-    // End player 0's turn — end_of_turn modifier must expire.
+    // End player 0's turn. Pyramidimon's EOT source-placement clause can
+    // park an optional prompt before turn rotation; decline it so cleanup
+    // reaches the modifier expiry pass.
     runner.end_turn();
+    while runner.game.pending_selection.is_some() {
+        runner
+            .game
+            .resolve_selection(0, digimon_engine::action::space::PASS)
+            .expect("decline optional EOT source placement");
+    }
 
     assert_eq!(
         runner

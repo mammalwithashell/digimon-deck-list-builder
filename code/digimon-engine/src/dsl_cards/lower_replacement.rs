@@ -566,7 +566,7 @@ enum SelectedField {
 }
 
 /// Read a permanent's value in the unit of the given field selector:
-/// effective DP for DP selectors, printed play cost for `LowestPlayCost`.
+/// effective DP for DP selectors, printed play cost for play-cost selectors.
 fn field_value(
     ctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
@@ -576,7 +576,7 @@ fn field_value(
         CompiledFieldSelector::LowestDp | CompiledFieldSelector::HighestDp => {
             ctx.game.effective_dp(handle)
         }
-        CompiledFieldSelector::LowestPlayCost => ctx
+        CompiledFieldSelector::LowestPlayCost | CompiledFieldSelector::HighestPlayCost => ctx
             .game
             .player(handle.player)
             .battle_area
@@ -598,7 +598,7 @@ fn selected_field_extreme(
         .filter_map(|handle| field_value(ctx, *handle, selector));
     let extreme = match selector {
         CompiledFieldSelector::LowestDp | CompiledFieldSelector::LowestPlayCost => values.min(),
-        CompiledFieldSelector::HighestDp => values.max(),
+        CompiledFieldSelector::HighestDp | CompiledFieldSelector::HighestPlayCost => values.max(),
     };
     extreme
         .map(SelectedField::Exact)

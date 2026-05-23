@@ -1063,7 +1063,26 @@ impl<'a> EffectContext<'a> {
         }
 
         if zones.contains(UnionZoneSet::MATERIAL) {
-            if let Some(carrier) = material_of {
+            let material_carriers: Vec<crate::permanent::PermanentHandle> =
+                if let Some(carrier) = material_of {
+                    vec![carrier]
+                } else {
+                    self.game
+                        .player(of_player)
+                        .battle_area
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(index, perm)| {
+                            (perm.top_card().is_digimon(&self.game.card_data)
+                                && perm.card_sources.len() > 1)
+                                .then_some(crate::permanent::PermanentHandle {
+                                    player: of_player,
+                                    index: index as u8,
+                                })
+                        })
+                        .collect()
+                };
+            for carrier in material_carriers {
                 let candidates: Vec<(usize, CardSource)> =
                     material_carrier_permanent(self.game, carrier)
                         .map(|perm| {

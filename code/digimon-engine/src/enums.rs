@@ -193,6 +193,9 @@ pub enum EffectTiming {
     /// for security checks (e.g. "When security is checked, gain 1 memory").
     /// Mirrors Python's `OnSecurityCheck`.
     OnSecurityCheck,
+    /// Attacker-side observer timing fired when one of the controller's
+    /// Digimon checks a card that was already face-up in security.
+    OnCheckFaceUpSecurity,
     /// Fires when a card leaves the security stack — whether it's trashed
     /// after resolution or played from security by an effect. Mirrors
     /// Python's `OnLoseSecurity`.

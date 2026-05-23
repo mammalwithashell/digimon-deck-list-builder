@@ -13,10 +13,6 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 3
 
-# The On Play / When Digivolving branch authors the De-Digivolve and
-# low-source deletion pieces. The security flip rider still needs a no-choice
-# "mark opponent top face-down security face-up" step; do not approximate it
-# with a player choice.
 effects:
   - scope: security
     when: end_of_opponents_turn
@@ -35,6 +31,8 @@ effects:
           target: dedigivolve_target
           amount: 2
           stop_at_level: 3
+      - flip_security_face_up:
+          of: opponent
       - select_opponent_permanent:
           bind_as: delete_target
           filter:
@@ -43,3 +41,17 @@ effects:
               - materials_count_lte: 1
           prompt: "Choose 1 opponent Digimon with 1 or fewer digivolution cards to delete"
       - delete_permanent: { target: delete_target }
+
+  - when: on_check_face_up_security
+    optional: true
+    condition:
+      all_of:
+        - your_turn: true
+        - materials_count_gte: 1
+    summary: "When your Digimon checks face-up security, place this Digimon's top stacked card as bottom security face-up"
+    process:
+      - security_place_top_stacked_card:
+          carrier: source
+          of: you
+          position: bottom
+          face: up

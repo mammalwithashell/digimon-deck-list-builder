@@ -239,10 +239,10 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 |---|---|---|---|
 | [Selection: aggregate-sum residual sub-shapes (self-stack material / cost-time placement)](#selection-aggregate-sum-residual-sub-shapes) | 🟡 | 2+ | `effect_context.rs`, `action/` |
 | [Selection: `select_any_permanent` curated helper + `select_dna_pair` plumbing audit](#selection-select_any_permanent-curated-helper--select_dna_pair-plumbing-audit) | 🟡 | 4+ | `effect_context.rs`, `dsl_cards/step/selections.rs` |
-| [`play_from_revealed_free` (EX8-050 Gogmamon)](#play_from_revealed_free-ex8-050-gogmamon) | 🟡 | 1 | `effect_context.rs` |
+| ~~[`play_from_revealed_free` (EX8-050 Gogmamon)](#play_from_revealed_free-ex8-050-gogmamon)~~ — RESOLVED 2026-05-23 | ✅ | — | — |
 | [`play_from_security_at(index)` (BT13-012 GeoGreymon, BT14-033 Patamon)](#play_from_security_atindex-bt13-012-geogreymon-bt14-033-patamon) | 🟡 | 2 | `effect_context.rs` |
 | [Zone-manipulation: return-to-deck-top / self-return-as-cost](#zone-manipulation-return-to-deck-top--self-return-as-cost) | 🟡 | 4+ | `effect_context.rs`, `permanent.rs` |
-| [Zone-manipulation: reveal-top-N residual (`play_from_revealed_free`)](#zone-manipulation-reveal-top-n-residual-play_from_revealed_free) | 🟡 | 1 | `effect_context.rs`, `game.rs` |
+| ~~[Zone-manipulation: reveal-top-N residual (`play_from_revealed_free`)](#zone-manipulation-reveal-top-n-residual-play_from_revealed_free)~~ — RESOLVED 2026-05-23 | ✅ | — | — |
 | [Zone-manipulation: top-N security trash + face-up security flip/extraction](#zone-manipulation-top-n-security-trash--face-up-security-flipextraction) | 🟡 | 3+ | `effect_context.rs`, `combat.rs` |
 | [Alt-digivolve with override-cost + ignore-reqs + face-down placement](#alt-digivolve-with-override-cost--ignore-reqs--face-down-placement) | 🟡 | 4+ | `effect_context.rs`, `permanent.rs`, `game.rs` |
 | [`<Training>` keyword](#training-keyword) | 🔴 | 1 | `enums.rs`, `card_source.rs`, `effect_context.rs`, `action/` |
@@ -342,14 +342,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Related:** Parity §4.6d-residual.
 
 ### `play_from_revealed_free` (EX8-050 Gogmamon)
-- **Severity:** 🟡 PARTIAL — sub-shape spun off from "Zone-manipulation: play-from-hand / trash without paying cost" headline closure (2026-05-15)
-- **Discovered in:** Rocks (2026-04-18)
-- **Card(s):** EX8-050 Gogmamon
-- **Effect text:** "play from revealed" — picks one of the just-revealed top-N deck cards and plays it without paying cost.
-- **What's missing:** A `play_from_revealed_free(player, reveal_index)` curated helper. Reveal-zone is wired (`reveal_top_deck` / `revealed_cards`) but no helper consumes a chosen reveal index, removes it from `Game.revealed_cards`, and routes the card through `play_from_hand_with_cost(..., CostDelta::Reduce(printed_cost))`-equivalent semantics without first detouring through the hand. Naïve `add_to_hand_from_deck` + `play_from_hand_free` puts the card briefly in hand and fires OnAddToHand observers that the printed text does not authorize.
-- **Suggested API shape:** `ctx.play_from_revealed_free(player, reveal_index) -> Option<PermanentHandle>` analogous to the existing `play_from_hand_with_cost`, but consuming from the reveal pool.
-- **Workaround:** None faithful; hand-transit fix-up violates §17 no-approximations.
-- **Related:** "Zone-manipulation: play-from-hand / trash without paying cost" (closed headline — see [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-zone-manipulation-play-from-hand--trash-without-paying-cost--cost-override--resolved-2026-05-15-phase-2-pr-track-a-2026-05-08)).
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine--dsl-gap-play_from_revealed_free-ex8-050-gogmamon--resolved-2026-05-23-complete-rocks-archetype) by `complete-rocks-archetype` task 10.6. `ctx.play_from_revealed_free(player, card)` and DSL `play_from_revealed_free: { of, card }` now consume a reveal-pool card and route it through the normal effect-initiated play pipeline.
 
 ### `play_from_security_at(index)` (BT13-012 GeoGreymon, BT14-033 Patamon)
 - **Severity:** 🟡 PARTIAL — sub-shape spun off from "Zone-manipulation: play-from-hand / trash without paying cost" headline closure (2026-05-15)
@@ -378,25 +371,20 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Related:** "Generic `.activation_cost(...)` builder hook for triggered abilities" (sibling).
 
 ### Zone-manipulation: reveal-top-N residual (`play_from_revealed_free`)
-- **Severity:** 🟡 PARTIAL (residual — headline reveal-top-N + add-to-hand + hatch closed by Phase 2)
-- **Discovered in:** Rocks (2026-04-18)
-- **Card(s):** EX8-050 Gogmamon (reveal 3 + play-from-revealed-free with cost/trait filter)
-- **Effect text:** "Reveal the top 3 cards of your deck. You may play 1 [Rock] trait Digimon with cost 4 or less from them without paying the cost."
-- **What's missing:** Headline reveal-top-N primitives shipped (see [`qa/resolved-gaps.md`](../qa/resolved-gaps.md) — `EffectContext::reveal_top_deck`, `add_to_hand_from_deck`, `add_to_hand_from_trash`, `hatch`). Residual: `play_from_revealed_free` (consume a reveal index, route through the play pipeline without hand transit). Tracked under "[`play_from_revealed_free` (EX8-050 Gogmamon)](#play_from_revealed_free-ex8-050-gogmamon)" above.
-- **Related:** "[`play_from_revealed_free` (EX8-050 Gogmamon)](#play_from_revealed_free-ex8-050-gogmamon)" — same sub-shape.
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine--dsl-gap-play_from_revealed_free-ex8-050-gogmamon--resolved-2026-05-23-complete-rocks-archetype) by `complete-rocks-archetype` task 10.6.
 
-### Zone-manipulation: top-N security trash + face-up security flip/extraction
+### Zone-manipulation: top-N security trash + face-up security extraction
 - **Severity:** 🟡 PARTIAL (residual — headline security-stack operations closed by Phase 2 + Track A/E)
 - **Discovered in:** DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
-- **Card(s):** EX4-073 Omnimon Alter-B (trash top 2 opp security — multi-N variant), BT20-055 Invisimon (flip opp top face-down security face-up), EX10-061 Apocalymon (security-card extraction with face-up filter)
-- **Effect text:** "trash top 2 opp security" / "flip opp top face-down security face-up" / "place 1 of each face-up [Dark Masters] trait card with different names from your security stack under this card"
-- **What's missing:** Headline security primitives shipped — `place_on_security` (Top/Bottom/Random), `trash_top_security` (single-card), `add_top_security_to_hand`, `recover_from_deck`, `place_self_at_security`, `place_self_option_at_security`, `security_place_stacked_card`, `security_place_top_stacked_card`, `place_permanent_on_security`, `search_own_security_stack`. Residual: a multi-N `trash_top_security(player, N)` form (today's helper trashes exactly 1), face-up security extraction with filter, and face-down → face-up flip primitive.
-- **Suggested API shape:** Generalize `trash_top_security(player, count)` to handle N>1; add `extract_face_up_security(filter, callback)`; add `flip_security_face_up(player, index)`.
-- **Workaround:** Loop single-card `trash_top_security` for the multi-N case where order is irrelevant; face-up flip and extraction have no faithful workaround.
+- **Card(s):** EX4-073 Omnimon Alter-B (trash top 2 opp security — multi-N variant), EX10-061 Apocalymon (security-card extraction with face-up filter)
+- **Effect text:** "trash top 2 opp security" / "place 1 of each face-up [Dark Masters] trait card with different names from your security stack under this card"
+- **What's missing:** Headline security primitives shipped — `place_on_security` (Top/Bottom/Random), `trash_top_security` (single-card), `add_top_security_to_hand`, `recover_from_deck`, `place_self_at_security`, `place_self_option_at_security`, `security_place_stacked_card`, `security_place_top_stacked_card`, `place_permanent_on_security`, `search_own_security_stack`, `flip_security_face_up`, and attacker-side `on_check_face_up_security` dispatch. Residual: a multi-N `trash_top_security(player, N)` form (today's helper trashes exactly 1) and face-up security extraction with filter.
+- **Suggested API shape:** Generalize `trash_top_security(player, count)` to handle N>1; add `extract_face_up_security(filter, callback)`.
+- **Workaround:** Loop single-card `trash_top_security` for the multi-N case where order is irrelevant; face-up extraction has no faithful workaround.
 - **Related:** Closed core in [`qa/resolved-gaps.md`](../qa/resolved-gaps.md).
 
 ### Zone-manipulation: security stack operations (trash top, place top/bottom, trash N, Recovery +N, shuffle security)
-> Core security-stack primitives moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md) by the 2026-05-15 hygiene sweep. Residual top-N security trash + face-up extraction/flip tracked above as "[Zone-manipulation: top-N security trash + face-up security flip/extraction](#zone-manipulation-top-n-security-trash--face-up-security-flipextraction)".
+> Core security-stack primitives moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md) by the 2026-05-15 hygiene sweep. Residual top-N security trash + face-up extraction tracked above as "[Zone-manipulation: top-N security trash + face-up security extraction](#zone-manipulation-top-n-security-trash--face-up-security-extraction)".
 
 ### Token creation + `CardKind::Token` + Petrification Token definition
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-token-creation--cardkindtoken--petrification-token-definition--resolved-2026-05-15-phase-10) by the 2026-05-15 hygiene sweep.
@@ -927,14 +915,14 @@ Items where the existing primitive **likely works** but no behavioral test cover
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-source-scoped-return-immunity-modifiers-cannotbereturnedtohand--cannotbereturnedtodeck--cannotbededigivolved-by-opponent-effects-only--resolved-2026-05-15) by the 2026-05-15 hygiene sweep.
 
 ### Conditional security-in-stack trigger (`[Security] [End of Opponent's Turn]` / `[Security] [Start of Your Turn]` etc.)
-- **Severity:** 🟡 PARTIAL (audit 2026-05-15: narrowed; [Security] [End of Opponent's Turn] self-play closed by BT20-055. Residual: Start-of-turn / Start-of-opponent-turn security-stack timing variants need boundary-iteration extension to `begin_turn` / `rotate_turn_player` plus face-up security lifecycle/visibility.)
+- **Severity:** 🟡 PARTIAL (audit 2026-05-23: narrowed; BT20-055's `[Security] [End of Opponent's Turn]` self-play and face-up security rider are closed. Residual: start-of-turn / start-of-opponent-turn security-stack timing variants need boundary-iteration extension to `begin_turn` / `rotate_turn_player`.)
 - **Discovered in:** Rocks (2026-04-18)
-- **Card(s):** BT20-055 Invisimon (`[Security] [End of Opponent's Turn] Play this card without paying the cost.`)
+- **Card(s):** No active Rocks blocker remains. Originally surfaced by BT20-055 Invisimon; residual timing variants are kept for future security-stack cards with start-of-turn style text.
 - **Effect text:** As above.
 - **What's missing:** Current security-effect plumbing (RUST_PYTHON_PARITY §2.5a) fires `SecuritySkill` effects only when a security card is revealed during an attack's security check. A subset of cards carry security-slot effects that gate on **global turn-phase timings** while the card remains face-down in the stack. No scheduling pass iterates each security card's effects at turn boundaries. A dedicated `play_from_security_at(player, security_index)` path is required (distinct from the attack-time `play_from_security()` which reads `pending_security`).
 - **Suggested API shape:** Add `EffectTiming::SecurityOnStartYourTurn` / `SecurityOnEndYourTurn` / `SecurityOnStartOpponentsTurn` / `SecurityOnEndOpponentsTurn` variants (or extend `SecuritySkill` with a turn-boundary gate). Iterate each player's security stack at `begin_turn` / `end_turn`, enqueue matching effects (the iterator must include face-down cards; the card text explicitly activates from security without being revealed by an attack). Add `ctx.play_from_security_at(player, index)` popping the indexed security card and playing it without paying cost.
 - **Status (2026-05-08):** Narrowed for `[Security] [End of Opponent's Turn]` self-play. DSL `scope: security` now compiles to security-zone effects; `rotate_turn_player` scans the non-ending player's persistent security stack for `EndOfOpponentsTurn`; `play_from_security` removes the exact source card rather than blindly popping the top. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- security_scope_end_of_opponents_turn_plays_this_security_card`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_055_security_end_of_opponents_turn_plays_self_from_security`.
-- **Remaining:** start-of-turn/start-of-opponent-turn security-stack timing variants, face-up security lifecycle/visibility, and BT20-055's security-flip rider from its On Play/When Digivolving branch.
+- **Remaining:** start-of-turn/start-of-opponent-turn security-stack timing variants.
 - **Workaround:** None — BLOCKED. Without boundary iteration, Invisimon's defining control text never activates.
 - **Related:** RUST_PYTHON_PARITY §2.5 (security-effect execution); existing "Zone-manipulation: play-from-hand / trash without paying cost" (free-play entry needed for the play path).
 
@@ -978,16 +966,8 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Workaround:** None — BLOCKED.
 - **Related:** Existing "Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic".
 
-### `ctx.move_from_breeding()` EffectContext helper
-- **Severity:** 🟡 PARTIAL — Group 4 primitive landed (`move_from_breeding_by_effect`, `play_to_breeding_from_hand`, `place_as_bottom_source` with BREEDING_TARGET). Residual: optional level-filtered prompt wrapper for P-130-style "you may move 1 of your level 3 or higher Digimon" text + broader breeding-area trigger fan-out.
-- **Discovered in:** Rocks (2026-04-18)
-- **Card(s):** P-130 Lui Ohwada (`[On Play] You may move 1 of your level 3 or higher Digimon from the breeding area to the battle area.`)
-- **Effect text:** As above.
-- **What's missing:** `Game::move_from_breeding(player_id)` exists only as an action-decoder entry point (invoked by the action space's `MOVE_FROM_BREEDING = 61` bit). Scripts cannot initiate the move from a `process` closure. Additionally, P-130 imposes a level filter (level 3 or higher in breeding) that isn't a standard move-from-breeding rule and must be enforced by the effect-initiated variant. Optional-prompt wrapping is also needed ("You may move…" → the mask must surface a choose/decline so the RL action space sees the choice).
-- **Suggested API shape:** `ctx.move_from_breeding(player: PlayerId) -> bool` delegating to the existing `Game::move_from_breeding`. Optional-prompt variant: `ctx.offer_move_from_breeding(player, filter: Fn(&Permanent, &[CardData]) -> bool, is_optional: bool, callback: Fn(&mut EffectContext, bool))` — installs an `EffectChoice` (Yes, move / No, skip) gated on the filter, runs the move inside the Yes branch. The move must fire `OnEnterField` + `OnEnterFieldAnyone` + the new `[When Moving]` observer so downstream observers see the event (including P-130's own second effect).
-- **Workaround:** `ctx.game.move_from_breeding(player)` via the escape hatch (`ctx.game: &mut Game`) bypasses the curated API (RUST_ENGINE_API §2/§3), skips the optional-prompt gate (violates §17 no-auto-selections), and doesn't enforce the level-3 filter. Not ship-worthy.
-- **Related:** Existing "Observer timings tied to specific events" (`[When Moving]` observer side); existing "Zone-manipulation: reveal-top-N deck + add-to-hand + hatch" (parallel `ctx.hatch` helper gap).
-- **Updated 2026-05-02:** Group 4 added `EffectContext::move_from_breeding_by_effect`, `EffectContext::play_to_breeding_from_hand`, and `BREEDING_TARGET` support in `place_as_bottom_source`. The real breeding slot is used, source stacks stay intact, and movement observers fire. Covered by `breeding_zone_movement::{move_from_breeding_by_effect_moves_real_breeding_stack_and_fires_move_observers,play_to_breeding_from_hand_uses_real_breeding_slot_and_rejects_occupied_slot,place_as_bottom_source_with_breeding_target_tucks_under_real_breeding_stack}`. Remaining work is the optional level-filtered prompt wrapper for P-130-style "you may move..." text and broader breeding-area trigger fan-out.
+### ~~`ctx.move_from_breeding()` EffectContext helper~~ — RESOLVED 2026-05-23
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#rocks-b2-move-from-breeding-dsl-step--resolved-2026-05-23). The P-130 optional level-filtered prompt wrapper now ships through the `move_from_breeding` DSL step and the existing `EffectContext::move_from_breeding_by_effect` path.
 
 ### `ModifierType::CannotAddSecurityByEffect` (player-scoped opponent-security-placement block)
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-modifiertypecannotaddsecuritybyeffect-player-scoped-opponent-security-placement-block--resolved-2026-05-15-track-cd-2026-05-08) by the 2026-05-15 hygiene sweep.
@@ -1057,17 +1037,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
   - A3 — `is_face_down` / `is_bottom_source` / `host_kind_is` / `has_face_down_source` predicate leaves + `PredicateSubject::Source`.
   - A4 — `trash_bottom_face_down_source` helper + `trash_bottom_face_down_source_under_tamer` DSL verb. The helper does not honor `ImmuneFromStackTrashing` (voluntary cost, not involuntary peeling).
   - A5 — Tamer-host `OnDigivolutionCardTrashed` dispatch coverage confirmed.
-  The placement + cost-form trash + DSL predicate trio called out as "what's missing" in this entry is now closed. The engine/DSL API surface is documented in `docs/RUST_ENGINE_API.md` (§ Placement, § Track E zone-movement DSL verbs, § DSL Tamer Face-Down Stash Substrate). The remaining ST-23/ST-24 gaps (Phases B–F of the fix-plan: the `event_host_permanent_is_source` predicate, the Option-lifecycle exit, unified play-or-use, `BeforePayCost` selection-bearing `pay_cost_fn`, and the cost-reduction target-card predicate trigger — each filed as its own entry below) are NOT addressed by Phase A and remain open. The 🔴 BLOCKING severity now applies only to those residual non-substrate gaps.
-
-### `event_host_permanent_is_source` DSL predicate for `OnDigivolutionCardTrashed` observers
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** ST-23 BEATBREAK (2026-05-17); ST-24 DATA SQUAD (2026-05-17)
-- **Card(s):** ST23-13 Tomoro Tenma & Kyo Sawashiro, ST23-14 Reina Sakuya & Makoto Kuonji, ST24-11 Rosemon (clause 2 source-trash branch), ST24-13 Marcus Damon & Thomas H. Norstein, ST24-14 Yoshino Fujieda & Keenan Crier. Sibling Tamers BT16-085 Davis & Ken, BT22-088 Arisa Kinosaki share the substrate need.
-- **Effect text:** "When effects trash cards from under this Tamer, by suspending this Tamer, ..." — the observer must gate on "this Tamer is the host of the trashed source", otherwise it fires on every Tamer-source trash across both battle areas.
-- **What's missing:** `PredicateSpec` has `event_permanent_is_source` for non-host event timings (where `TriggerContext.event_permanent` is populated). The `SourceTrashedFromStack` trigger populates `event_host_permanent` (not `event_permanent`), so the existing predicate returns false. The fanout in `effect_queue.rs::dispatch` walks all battle-area permanents on both players, so without a host-self-equality gate the observer over-fires. Add `event_host_permanent_is_source: Option<bool>` to `PredicateSpec`, evaluated against `current_trigger_context.event_host_permanent == rctx.source_permanent`.
-- **Suggested API shape:** Add `event_host_permanent_is_source: Option<bool>` to `PredicateSpec` (DSL) and `CompiledPredicate` (lowered); same shape as the existing `event_permanent_is_source` but reading the host-permanent slot of the trigger context.
-- **Workaround:** None faithful — without the host-self gate, the observer fires on opponent source-trashes and on other-own-Tamer source-trashes too, multiplying the suspend-self cost / rider body fan-out.
-- **Related:** Existing `event_permanent_is_source` predicate (sibling shape on non-host event timings); existing `Rocks archetype refresh — event-card predicates` (qa/dsl-vocab-gaps.md G-ROCKS-EVENT-CARD-PREDICATES — neighbor leaves `host_permanent_trait_has`, `trashed_source_trait_has`, `trashed_source_card_id_is`).
+  The placement + cost-form trash + DSL predicate trio called out as "what's missing" in this entry is now closed. The engine/DSL API surface is documented in `docs/RUST_ENGINE_API.md` (§ Placement, § Track E zone-movement DSL verbs, § DSL Tamer Face-Down Stash Substrate). The remaining ST-23/ST-24 gaps (Phases C–F of the fix-plan: the Option-lifecycle exit, unified play-or-use, `BeforePayCost` selection-bearing `pay_cost_fn`, and the cost-reduction target-card predicate trigger — each filed as its own entry below) are NOT addressed by Phase A and remain open. The 🔴 BLOCKING severity now applies only to those residual non-substrate gaps. `event_host_permanent_is_source` closed on 2026-05-23; see `qa/resolved-gaps.md`.
 
 ### Move existing field-Option face-down under chosen own permanent (new Option-lifecycle exit, distinct from trash)
 - **Severity:** 🔴 BLOCKING
@@ -1148,10 +1118,10 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Discovered in:** ST-24 DATA SQUAD (2026-05-17)
 - **Card(s):** ST24-11 Rosemon clause 2 ("[All Turns] [Once Per Turn] When any of your opponent's Digimon or Tamers suspend, or effects trash cards from under your Tamers, trash your opponent's top security card")
 - **Effect text:** As above. DCGO implements this as two `ActivateClass` instances (one for `OnTappedAnyone`, one for `OnDigivolutionCardDiscarded`) that share `SetHashString("ST24_11_AT")` — DCGO's hash-keyed cross-effect OPT.
-- **What's missing:** A way for a single DSL clause to (a) bind `when: [on_suspend, on_digivolution_card_trashed]` (already supported via `TimingSet::Multi`), (b) gate `condition` on the firing timing — apply the suspend-event condition when fired by `OnSuspend` (`event_permanent` populated) and the source-trash condition when fired by `OnDigivolutionCardTrashed` (`event_host_permanent` populated). Today the clause-level `condition` is a single predicate AST evaluated against `current_trigger_context`. An `any_of` composition can approximate it (suspend branch reads `event_permanent`, source-trash branch reads `event_host_permanent`), but only once `event_host_permanent_is_source` exists (separate entry above) — and the composition is fragile because predicate leaves silently return false on the wrong timing.
+- **What's missing:** A way for a single DSL clause to (a) bind `when: [on_suspend, on_digivolution_card_trashed]` (already supported via `TimingSet::Multi`), (b) gate `condition` on the firing timing — apply the suspend-event condition when fired by `OnSuspend` (`event_permanent` populated) and the source-trash condition when fired by `OnDigivolutionCardTrashed` (`event_host_permanent` populated). Today the clause-level `condition` is a single predicate AST evaluated against `current_trigger_context`. An `any_of` composition can approximate it using `event_permanent_is_source` and the now-resolved `event_host_permanent_is_source`, but the composition is fragile because predicate leaves silently return false on the wrong timing.
 - **Suggested API shape:** Either (a) add a `when_is: <Timing>` predicate leaf so authors can write `condition: { any_of: [{ all_of: [{when_is: on_suspend}, ...] }, { all_of: [{when_is: on_digivolution_card_trashed}, ...] }] }`; or (b) allow per-timing condition blocks: `triggers: [{ when: on_suspend, condition: {...} }, { when: on_digivolution_card_trashed, condition: {...} }]` inside a single clause, sharing the OPT counter. Option (b) is the cleaner authoring surface.
 - **Workaround:** Split into two clauses — each gets its own OPT counter, violating printed "[Once Per Turn]" because the same security trash could fire twice in one turn (once from a suspend, once from a source-trash). Not faithful.
-- **Related:** Existing OPT identity model (`(card_id, clause_index)`); existing `event_permanent_is_source` predicate; companion gap `event_host_permanent_is_source` (above).
+- **Related:** Existing OPT identity model (`(card_id, clause_index)`); existing `event_permanent_is_source` predicate; resolved companion predicate `event_host_permanent_is_source`.
 
 ### "Also treated as [X]/[Y]" Tamer name-rule (declarative card-name alias)
 - **Severity:** 🟡 PARTIAL

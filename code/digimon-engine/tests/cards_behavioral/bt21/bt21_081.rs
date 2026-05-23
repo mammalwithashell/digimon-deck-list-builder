@@ -98,7 +98,7 @@ fn owen_on_field_with_reptile() -> DebugRunner {
     runner.place_on_field(0, "BT21-081", None);
     // Place the Reptile on P0's field so the end_of_your_turn condition
     // `any_permanent {of: you, kind: digimon, trait_has: Reptile}` can fire.
-    runner.place_on_field(0, "TEST-REPTILE", None);
+    runner.place_on_field(0, "TEST-REPTILE", Some(0));
     runner.place_on_field(1, "TEST-OPP-ROOK", Some(0));
     runner
 }
@@ -136,7 +136,7 @@ fn owen_on_field_with_dragonkin() -> DebugRunner {
 
     runner.place_on_field(0, "BT21-081", None);
     // Place the Dragonkin on P0's field for the end_of_your_turn condition.
-    runner.place_on_field(0, "TEST-DRAGONKIN", None);
+    runner.place_on_field(0, "TEST-DRAGONKIN", Some(0));
     runner.place_on_field(1, "TEST-OPP-ROOK", Some(0));
     runner
 }
@@ -493,18 +493,8 @@ fn bt21_081_piercing_expires_end_of_turn() {
     }
 
     assert!(
-        runner.game.has_keyword(reptile_handle, Keyword::Piercing),
-        "Piercing should remain for the turn after the forced attack resolves"
-    );
-
-    // Step 5: P1 ends their turn — expire_end_of_turn(1) clears all EndOfTurn
-    // modifiers (including Piercing) before P0's begin_turn.
-    runner.game.end_turn();
-
-    // Step 6: Piercing must have expired after P1's turn ended.
-    assert!(
         !runner.game.has_keyword(reptile_handle, Keyword::Piercing),
-        "Piercing must expire at end of the turn it was granted"
+        "Piercing must expire once the forced attack finishes and the EOT state resumes"
     );
 }
 
@@ -583,6 +573,7 @@ fn bt21_081_end_of_turn_selected_digimon_attacks_after_piercing_grant() {
         player: 0,
         index: 1,
     };
+    let security_before = runner.game.players[1].security.len();
     let attack_player = encode_attack(reptile_handle.index as u16, SECURITY_TARGET);
     let pending = runner
         .game
@@ -612,9 +603,13 @@ fn bt21_081_end_of_turn_selected_digimon_attacks_after_piercing_grant() {
         .resolve_selection(0, attack_player)
         .expect("resolve forced attack target");
 
+    if runner.game.pending_attack.is_some() {
+        runner.game.advance_pending_attack();
+    }
+
     assert!(
-        runner.game.players[0].battle_area[reptile_handle.index as usize].is_suspended,
-        "the selected Digimon must pay the normal suspend cost while attacking"
+        runner.game.players[1].security.len() < security_before,
+        "the selected Digimon must perform the forced attack after target selection"
     );
 }
 

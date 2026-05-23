@@ -20,25 +20,9 @@
 //!
 //! # Gap status
 //!
-//! ## Clause A: BLOCKED — G-HIGHEST-PLAY-COST-SELECTOR
-//!
-//! `selector: highest_play_cost` is not in `CompiledFieldSelector`. Only
-//! `LowestPlayCost` exists (added for G-PLAY-COST-AGGREGATE). Adding
-//! `HighestPlayCost` requires changes to FieldSelector, CompiledFieldSelector,
-//! compile_field_selector(), field_value(), selected_field_extreme().
-//! Tests: #[ignore = "pending: G-HIGHEST-PLAY-COST-SELECTOR"]
-//!
-//! ## Clause B: BLOCKED — event_host_permanent_is_source
-//!
-//! Without `event_host_permanent_is_source: true` in the condition, an
-//! on_digivolution_card_trashed face-up clause cannot gate on "the host is
-//! THIS Digimon" — it would fire on all own-Digimon source trashes, violating
-//! CLAUDE.md section 17 no-approximations.
-//! Documented: docs/RUST_ENGINE_GAPS.md "event_host_permanent_is_source DSL
-//! predicate for OnDigivolutionCardTrashed observers" (BLOCKING, 2026-05-17).
-//! Fix: add `event_host_permanent_is_source: Option<bool>` to PredicateSpec /
-//! CompiledPredicate; check trigger.event_host_permanent == ctx.source_permanent.
-//! Tests: #[ignore = "pending: event_host_permanent_is_source"]
+//! Clause A is implemented with `selector: highest_play_cost`.
+//! Clause B is implemented with `event_host_permanent_is_source: true` so the
+//! on_digivolution_card_trashed observer only fires for this Digimon's stack.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_source::CardSource;
@@ -108,15 +92,10 @@ fn ex11_044_on_field_has_reboot_and_fragment_three() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 2 — Clause A: [OP][WD][WA][OPT] source-trash -> delete highest play cost
 //
-// BLOCKED: G-HIGHEST-PLAY-COST-SELECTOR
-//
-// CompiledFieldSelector has LowestPlayCost but not HighestPlayCost.
-// YAML would use: selector: highest_play_cost in select_opponent_permanent.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Clause A shape: [OP][WD][WA][OPT], FaceUp scope.
 #[test]
-#[ignore = "pending: G-HIGHEST-PLAY-COST-SELECTOR (HighestPlayCost selector not in CompiledFieldSelector)"]
 fn ex11_044_clause_a_has_on_play_wd_wa_opt_shape() {
     let runner = runner();
     let card = runner
@@ -143,7 +122,6 @@ fn ex11_044_clause_a_has_on_play_wd_wa_opt_shape() {
 
 /// Clause A positive: two opp Digimon at costs 8 and 12; only cost-12 offered.
 #[test]
-#[ignore = "pending: G-HIGHEST-PLAY-COST-SELECTOR (HighestPlayCost selector not in CompiledFieldSelector)"]
 fn ex11_044_clause_a_on_play_deletes_highest_play_cost_opp_permanent() {
     let src1 = make_mineral_source("EX11-044-A-SRC1");
     let src2 = make_mineral_source("EX11-044-A-SRC2");
@@ -180,6 +158,11 @@ fn ex11_044_clause_a_on_play_deletes_highest_play_cost_opp_permanent() {
     let mut iterations = 0;
     loop {
         match runner.pending_kind() {
+            Some(SelectionKind::Replacement) => {
+                runner
+                    .accept_optional_trigger()
+                    .expect("accept optional Clause A trigger");
+            }
             Some(SelectionKind::TriggerOrder) => {
                 let view = runner.pending_selection_view().expect("TriggerOrder view");
                 let player = view.selecting_player;
@@ -227,7 +210,6 @@ fn ex11_044_clause_a_on_play_deletes_highest_play_cost_opp_permanent() {
 
 /// Clause A OPT lockout — second trigger same turn must NOT fire.
 #[test]
-#[ignore = "pending: G-HIGHEST-PLAY-COST-SELECTOR (HighestPlayCost selector not in CompiledFieldSelector)"]
 fn ex11_044_clause_a_opt_blocks_second_trigger_same_turn() {
     let src1 = make_mineral_source("EX11-044-OPT-S1");
     let src2 = make_mineral_source("EX11-044-OPT-S2");
@@ -260,6 +242,11 @@ fn ex11_044_clause_a_opt_blocks_second_trigger_same_turn() {
     let mut iterations = 0;
     loop {
         match runner.pending_kind() {
+            Some(SelectionKind::Replacement) => {
+                runner
+                    .accept_optional_trigger()
+                    .expect("accept optional Clause A trigger");
+            }
             Some(SelectionKind::TriggerOrder) => {
                 let view = runner.pending_selection_view().expect("view");
                 let player = view.selecting_player;
@@ -300,11 +287,14 @@ fn ex11_044_clause_a_opt_blocks_second_trigger_same_turn() {
     let mut iterations2 = 0;
     loop {
         match runner.pending_kind() {
+            Some(SelectionKind::Replacement) => {
+                runner
+                    .accept_optional_trigger()
+                    .expect("accept optional Clause A trigger if present");
+            }
             Some(SelectionKind::SourceMulti { .. }) => {
                 saw_source_multi = true;
-                runner
-                    .execute_action(0, digimon_engine::action::space::PASS)
-                    .expect("pass");
+                break;
             }
             Some(SelectionKind::OppField) => {
                 runner.auto_resolve().expect("resolves");
@@ -334,7 +324,6 @@ fn ex11_044_clause_a_opt_blocks_second_trigger_same_turn() {
 
 /// Clause A multi-timing: WhenDigivolving fires the clause.
 #[test]
-#[ignore = "pending: G-HIGHEST-PLAY-COST-SELECTOR (HighestPlayCost selector not in CompiledFieldSelector)"]
 fn ex11_044_clause_a_when_digivolving_prompts_source_multi() {
     let src1 = make_mineral_source("EX11-044-WD-S1");
     let src2 = make_mineral_source("EX11-044-WD-S2");
@@ -368,6 +357,11 @@ fn ex11_044_clause_a_when_digivolving_prompts_source_multi() {
     let mut iterations = 0;
     loop {
         match runner.pending_kind() {
+            Some(SelectionKind::Replacement) => {
+                runner
+                    .accept_optional_trigger()
+                    .expect("accept optional Clause A trigger");
+            }
             Some(SelectionKind::TriggerOrder) => {
                 let view = runner.pending_selection_view().expect("view");
                 let player = view.selecting_player;
@@ -379,9 +373,7 @@ fn ex11_044_clause_a_when_digivolving_prompts_source_multi() {
             }
             Some(SelectionKind::SourceMulti { .. }) => {
                 saw_source_multi = true;
-                runner
-                    .execute_action(0, digimon_engine::action::space::PASS)
-                    .expect("pass");
+                break;
             }
             Some(SelectionKind::OppField) => {
                 runner.auto_resolve().expect("resolves");
@@ -402,7 +394,6 @@ fn ex11_044_clause_a_when_digivolving_prompts_source_multi() {
 
 /// Clause A: fewer than 3 sources -> silent skip.
 #[test]
-#[ignore = "pending: G-HIGHEST-PLAY-COST-SELECTOR (HighestPlayCost selector not in CompiledFieldSelector)"]
 fn ex11_044_clause_a_skips_when_fewer_than_3_sources_available() {
     let src1 = make_mineral_source("EX11-044-SKIP-S1");
     let src2 = make_mineral_source("EX11-044-SKIP-S2");
@@ -460,14 +451,10 @@ fn ex11_044_clause_a_skips_when_fewer_than_3_sources_available() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 3 — Clause B: [All Turns][OPT] on_digivolution_card_trashed
 //
-// BLOCKED: event_host_permanent_is_source predicate missing in DSL.
-// See docs/RUST_ENGINE_GAPS.md "event_host_permanent_is_source DSL predicate
-// for OnDigivolutionCardTrashed observers" (BLOCKING, 2026-05-17).
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Clause B shape: on_digivolution_card_trashed, FaceUp, once_per_turn, optional.
 #[test]
-#[ignore = "pending: event_host_permanent_is_source (DSL predicate for OnDigivolutionCardTrashed host-self gate)"]
 fn ex11_044_clause_b_has_on_digivolution_card_trashed_opt_shape() {
     let runner = runner();
     let card = runner
@@ -493,7 +480,6 @@ fn ex11_044_clause_b_has_on_digivolution_card_trashed_opt_shape() {
 
 /// Clause B positive: fire with THIS Pyramidimon as host; 3 picks grow sources.
 #[test]
-#[ignore = "pending: event_host_permanent_is_source (DSL predicate for OnDigivolutionCardTrashed host-self gate)"]
 fn ex11_044_clause_b_trash_event_on_self_triggers_place_three_from_trash() {
     let src_on_stack = make_mineral_source("EX11-044-B-STACK");
     let trash1 = make_mineral_trash_card("EX11-044-B-T1");
@@ -589,7 +575,6 @@ fn ex11_044_clause_b_trash_event_on_self_triggers_place_three_from_trash() {
 /// Clause B: must NOT fire when trashed source belongs to a different Digimon.
 /// This is the correctness test requiring event_host_permanent_is_source.
 #[test]
-#[ignore = "pending: event_host_permanent_is_source (DSL predicate for OnDigivolutionCardTrashed host-self gate)"]
 fn ex11_044_clause_b_does_not_fire_when_source_trashed_from_other_digimon() {
     let other_src = make_mineral_source("EX11-044-OTHER-SRC");
     let trash1 = make_mineral_trash_card("EX11-044-OTHER-T1");
@@ -667,7 +652,6 @@ fn ex11_044_clause_b_does_not_fire_when_source_trashed_from_other_digimon() {
 
 /// Clause B OPT lockout: second trigger same turn must not re-install.
 #[test]
-#[ignore = "pending: event_host_permanent_is_source (DSL predicate for OnDigivolutionCardTrashed host-self gate)"]
 fn ex11_044_clause_b_opt_blocks_second_trigger_same_turn() {
     let src1 = make_mineral_source("EX11-044-BOPT-S1");
     let trash1 = make_mineral_trash_card("EX11-044-BOPT-T1");
@@ -778,7 +762,6 @@ fn ex11_044_clause_b_opt_blocks_second_trigger_same_turn() {
 
 /// Clause B: declining at the first optional trash pick places 0 cards.
 #[test]
-#[ignore = "pending: event_host_permanent_is_source (DSL predicate for OnDigivolutionCardTrashed host-self gate)"]
 fn ex11_044_clause_b_declining_places_no_cards() {
     let src = make_mineral_source("EX11-044-BDECL-SRC");
     let trash1 = make_mineral_trash_card("EX11-044-BDECL-T1");

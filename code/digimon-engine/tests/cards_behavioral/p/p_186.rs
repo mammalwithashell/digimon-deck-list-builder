@@ -488,7 +488,11 @@ fn p_186_no_cost_reduction_when_fewer_than_5_combined_trash() {
     let _ = runner.auto_resolve();
 
     let mem_after = runner.memory();
-    let paid = mem_before - mem_after;
+    let paid = if runner.game.turn_player() == 0 {
+        mem_before - mem_after
+    } else {
+        mem_before + mem_after
+    };
     assert_eq!(
         paid, 12,
         "with only 3 combined trash, no reduction applies; full cost 12; \

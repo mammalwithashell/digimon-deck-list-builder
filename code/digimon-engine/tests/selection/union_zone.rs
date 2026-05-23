@@ -73,6 +73,7 @@ fn install_sets_phase_and_kind() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
+            None,
             "pick one",
             false,
             |_, _| true,
@@ -115,6 +116,7 @@ fn valid_action_ids_covers_both_zones() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
+            None,
             "pick",
             false,
             |_, _| true,
@@ -170,6 +172,7 @@ fn filter_restricts_valid_action_ids() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
+            None,
             "trash only",
             false,
             |game, card| game.card_data[card.data_index].card_id.starts_with('T'),
@@ -207,6 +210,7 @@ fn empty_filter_is_noop() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
+            None,
             "none eligible",
             true,
             |_, _| false,
@@ -241,6 +245,7 @@ fn hand_only_zone_excludes_trash() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::HAND,
+            None,
             "hand only",
             false,
             |_, _| true,
@@ -268,6 +273,7 @@ fn trash_only_zone_excludes_hand() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::TRASH,
+            None,
             "trash only",
             false,
             |_, _| true,
@@ -307,6 +313,7 @@ fn callback_receives_correct_handle_for_trash_pick() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
+            None,
             "pick",
             false,
             |_, _| true,
@@ -355,6 +362,7 @@ fn callback_receives_correct_handle_for_hand_pick() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
+            None,
             "pick",
             false,
             |_, _| true,
@@ -390,6 +398,7 @@ fn mandatory_rejects_pass() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::HAND,
+            None,
             "must pick",
             false,
             |_, _| true,
@@ -418,6 +427,7 @@ fn optional_accepts_pass() {
         ctx.select_union_zone(
             tp,
             UnionZoneSet::HAND,
+            None,
             "optional",
             true,
             |_, _| true,

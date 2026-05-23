@@ -241,11 +241,9 @@ fn bt23_014_floodgate_modifier_still_active_during_opponents_turn() {
         .modifiers
         .player_has(1, digimon_engine::enums::ModifierType::CannotPlayFromTrash));
 
-    // End player 0's turn → transition to player 1's turn.
-    runner.end_turn();
-
+    // The 11-cost play crosses memory, so player 1's turn has already begun.
     // During player 1's turn the modifier should still be active.
-    // (EndOfOpponentsTurn from P0's view = expires when P1's turn ends, not begins.)
+    // (EndOfOpponentsTurn from P0's view = expires when P1's turn ends.)
     assert!(
         runner
             .game

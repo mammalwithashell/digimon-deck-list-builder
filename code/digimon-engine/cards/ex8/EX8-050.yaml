@@ -32,15 +32,9 @@ alt_paths:
 #
 # ─── Clause A — [On Deletion] reveal + play-from-revealed-free ───────────────
 #
-# GAP — G-PLAY-FROM-REVEALED-FREE (docs/RUST_ENGINE_GAPS.md §344):
-#   `play_from_revealed_free(player, reveal_index)` is not implemented.
-#   The naive workaround `add_to_hand_from_reveal` + `play_from_hand_free`
-#   fires OnAddToHand observers not authorized by the printed text.
-#   Per the no-approximations policy (CLAUDE.md §17) no stub may be used.
-#   The play step is OMITTED; the reveal, select-buckets, and trash-remainder
-#   steps are authored. When the gap closes, insert between
-#   select_reveal_buckets and per_selected:
-#     - play_from_revealed_free: { of: you, card: play_pick }
+# `play_from_revealed_free` consumes the selected reveal-pool card directly
+# and routes it through the normal effect-initiated play pipeline without
+# firing add-to-hand observers.
 #
 # ─── Clause B — Inherited [Opponent's Turn][OPT] attack redirect to self ─────
 #
@@ -73,11 +67,8 @@ effects:
   # nothing (min:0). With plain `select_reveal`, declining would set
   # `on_decline: None` and the tail would be silently dropped.
   #
-  # PARTIAL — play step BLOCKED on G-PLAY-FROM-REVEALED-FREE.
-  # When the gap closes, insert between select_reveal_buckets and per_selected:
-  #   - play_from_revealed_free: { of: you, card: play_pick }
   - when: on_deletion
-    summary: "[On Deletion] Reveal top 3; you may play 1 [Mineral]/[Rock] cost<=5 Digimon free (PARTIAL — play step BLOCKED G-PLAY-FROM-REVEALED-FREE); trash rest"
+    summary: "[On Deletion] Reveal top 3; you may play 1 [Mineral]/[Rock] cost<=5 Digimon free; trash rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
       - select_reveal_buckets:
@@ -94,9 +85,7 @@ effects:
                       - trait_has: Rock
                   - play_cost_lte: 5
           prompt: "Play 1 [Mineral]/[Rock] Digimon with play cost 5 or less without paying the cost"
-      # GAP G-PLAY-FROM-REVEALED-FREE: play_from_revealed_free not yet implemented.
-      # When closed, insert here:
-      #   - play_from_revealed_free: { of: you, card: play_pick }
+      - play_from_revealed_free: { of: you, card: play_pick }
       - per_selected:
           selection: revealed
           bind_as: rest

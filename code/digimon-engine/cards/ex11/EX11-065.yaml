@@ -12,22 +12,6 @@
 #
 #   Security Effect [Security] Play this card without paying the cost.
 #
-# ─── Clause 0: [Start of Your Main Phase] — OMITTED ─────────────────────────
-#
-# Effect text: "By trashing 1 [Mineral] or [Rock] trait card from your hand
-# or your Digimon's digivolution cards, gain 1 memory."
-#
-# The printed cost is a union of two source zones: (a) own hand (filtered by
-# Mineral/Rock trait), and (b) any of own Digimon's digivolution card stacks
-# (also filtered by Mineral/Rock trait). The DSL step `select_own_sources`
-# resolves the digivolution-stack side but currently carries no `filter:` field
-# (gap: G-DSL-SELECT-OWN-SOURCES-FILTER, qa/dsl-vocab-gaps.md). Without trait
-# filtering, the source-zone side would allow picking non-Mineral/Rock sources,
-# which is unfaithful per the no-approximations policy. The clause is therefore
-# omitted until the gap closes. Tests in ex11_065.rs use
-# #[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER ..."] for all
-# Start-of-Main-Phase behavioral assertions.
-#
 # ─── Clause 1: [All Turns] on play/digivolve observer ────────────────────────
 #
 # Effect text: "When your Digimon are played or digivolve, if any of them have
@@ -75,6 +59,30 @@ cost: 3
 traits: [LIBERATOR]
 
 effects:
+  # ─── Clause 0: [Start of Your Main Phase] ────────────────────────────────
+  #
+  # Cost/benefit: choose a Mineral/Rock card from hand or from any own
+  # Digimon's digivolution-card stack, trash it, then gain 1 memory.
+  # `select_union_zone` preserves the origin so `trash_union_bound` can move
+  # the selected card from the correct zone without a second prompt.
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] Trash 1 Mineral/Rock from hand or own Digimon sources to gain 1 memory"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          optional: true
+          bind_as: cost_card
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Trash 1 [Mineral] or [Rock] card from hand or your Digimon's digivolution cards?"
+          then:
+            - trash_union_bound:
+                binding: cost_card
+            - gain_memory: 1
+
   # ─── Clause 1: [All Turns] Mineral/Rock ally observer ────────────────────
   #
   # Triggers when an own Mineral/Rock Digimon is played or digivolves.

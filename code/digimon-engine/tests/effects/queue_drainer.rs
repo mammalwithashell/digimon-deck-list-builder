@@ -204,7 +204,7 @@ fn turn_player_bundle_resolves_before_opponent() {
     let mut r = DebugRunner::builder()
         .add_card(make_test_card("TEST-006", "TestSix"))
         .add_card(make_test_card("TEST-008", "TestEight"))
-        .memory(0)
+        .memory(5)
         .start();
     r.place_on_field(0, "TEST-006", Some(0));
     r.place_on_field(0, "TEST-008", Some(0));

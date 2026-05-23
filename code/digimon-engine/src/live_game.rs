@@ -242,12 +242,16 @@ impl LiveGame {
         // DebugRunner doesn't directly expose a "first_player" setter; we
         // adjust turn_order after construction. The rotation puts
         // `first_player` at index 0 of turn_order.
-        if let Some(pos) = runner.game.turn_order.iter().position(|&p| p == first_player) {
+        if let Some(pos) = runner
+            .game
+            .turn_order
+            .iter()
+            .position(|&p| p == first_player)
+        {
             runner.game.turn_order.rotate_left(pos);
             runner.game.turn_player_idx = 0;
             if runner.game.turn_order.len() >= 2 {
-                runner.game.memory_pair =
-                    (runner.game.turn_order[0], runner.game.turn_order[1]);
+                runner.game.memory_pair = (runner.game.turn_order[0], runner.game.turn_order[1]);
             }
         }
 
@@ -315,10 +319,7 @@ impl LiveGame {
     /// in the PyO3 bindings, so the CLI / MCP defaults align with what
     /// `pilot_training`, `gauntlet`, and the architect agents use.
     pub fn default_pool() -> HashSet<String> {
-        build_registry()
-            .registered_card_ids()
-            .into_iter()
-            .collect()
+        build_registry().registered_card_ids().into_iter().collect()
     }
 
     // ── view accessors ───────────────────────────────────────────────────
@@ -363,11 +364,7 @@ impl LiveGame {
     }
 
     pub fn inspect_card(&self, card_id: &str) -> Option<CardInspection> {
-        let cd = self
-            .game
-            .card_data
-            .iter()
-            .find(|c| c.card_id == card_id)?;
+        let cd = self.game.card_data.iter().find(|c| c.card_id == card_id)?;
         let has_rust_effect = self.game.effect_registry.get(card_id).is_some();
         Some(CardInspection {
             card_id: cd.card_id.clone(),
@@ -405,8 +402,7 @@ impl LiveGame {
             .get(player_idx)
             .map(|v| v.as_slice())
             .unwrap_or(&[]);
-        let mut counts: std::collections::BTreeMap<&str, u16> =
-            std::collections::BTreeMap::new();
+        let mut counts: std::collections::BTreeMap<&str, u16> = std::collections::BTreeMap::new();
         for id in ids {
             *counts.entry(id.as_str()).or_insert(0) += 1;
         }
@@ -487,16 +483,13 @@ impl LiveGame {
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string(),
-                memory_before: a
-                    .get("memory_before")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(0) as i32,
-                memory_after: a
-                    .get("memory_after")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(0) as i32,
+                memory_before: a.get("memory_before").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
+                memory_after: a.get("memory_after").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
                 turn_number: a.get("turn").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
-                is_game_over: a.get("is_game_over").and_then(|v| v.as_bool()).unwrap_or(false),
+                is_game_over: a
+                    .get("is_game_over")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
                 winner_id: a
                     .get("winner_id")
                     .and_then(|v| v.as_u64())
@@ -622,12 +615,7 @@ impl LiveGame {
 
     // ── internals ────────────────────────────────────────────────────────
 
-    fn make_result(
-        &self,
-        ok: bool,
-        error: Option<String>,
-        before_seq: u64,
-    ) -> ActionResult {
+    fn make_result(&self, ok: bool, error: Option<String>, before_seq: u64) -> ActionResult {
         let events_emitted: Vec<String> = events_since(&self.game, before_seq)
             .map(|e| format!("{:?}", e))
             .collect();
@@ -698,7 +686,10 @@ fn collect_player_ids_from_recording(initial: Option<&Value>, key: &str) -> Vec<
     };
     // Prefer the pre-shuffle deck_list when present (more authoritative).
     if let Some(arr) = p.get("deck_list").and_then(|v| v.as_array()) {
-        let ids: Vec<String> = arr.iter().filter_map(|v| v.as_str().map(String::from)).collect();
+        let ids: Vec<String> = arr
+            .iter()
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect();
         if !ids.is_empty() {
             return ids;
         }
@@ -835,7 +826,9 @@ mod tests {
     #[test]
     fn from_decks_missing_card_reports_offender() {
         let db = minimal_db();
-        let bad_deck = std::iter::repeat("UNKNOWN-X".to_string()).take(50).collect();
+        let bad_deck = std::iter::repeat("UNKNOWN-X".to_string())
+            .take(50)
+            .collect();
         match LiveGame::from_decks(bad_deck, small_deck(), None, &db) {
             Err(LiveGameError::MissingCards(ids)) => {
                 assert!(ids.contains(&"UNKNOWN-X".to_string()));
@@ -885,7 +878,11 @@ mod tests {
         let _ = lg.step(0);
         let _ = lg.step(0);
         let r = lg.pass_turn();
-        assert!(r.ok, "pass_turn should succeed in any non-terminal phase, got {:?}", r);
+        assert!(
+            r.ok,
+            "pass_turn should succeed in any non-terminal phase, got {:?}",
+            r
+        );
     }
 
     #[test]
@@ -1020,7 +1017,9 @@ mod tests {
         let recording = hr.get_recording().unwrap();
         let lg = LiveGame::from_recording(recording, &db).unwrap();
         assert!(lg.has_recording());
-        let actions = lg.recorded_actions(false).expect("recorded actions present");
+        let actions = lg
+            .recorded_actions(false)
+            .expect("recorded actions present");
         // 2 mulligan + 1 pass = 3 actions.
         assert_eq!(actions.len(), 3);
         // Labels off → all None.
@@ -1082,8 +1081,8 @@ mod tests {
 
         // Step ahead to step 1 and confirm the live game advances past the
         // first recorded post-mulligan action.
-        let lg2 = LiveGame::from_recording_at_step(recording, 1, &db)
-            .expect("from_recording_at_step");
+        let lg2 =
+            LiveGame::from_recording_at_step(recording, 1, &db).expect("from_recording_at_step");
         assert!(lg2.game.turn_count >= 1);
     }
 }

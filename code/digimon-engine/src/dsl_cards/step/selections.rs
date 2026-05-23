@@ -111,7 +111,7 @@ fn collect_matching_any_permanents(
 }
 
 /// Read a permanent's value in the unit of the given field selector:
-/// effective DP for DP selectors, printed play cost for `LowestPlayCost`.
+/// effective DP for DP selectors, printed play cost for play-cost selectors.
 fn field_value(
     game: &crate::game::Game,
     handle: PermanentHandle,
@@ -121,7 +121,7 @@ fn field_value(
         CompiledFieldSelector::LowestDp | CompiledFieldSelector::HighestDp => {
             game.effective_dp(handle)
         }
-        CompiledFieldSelector::LowestPlayCost => game
+        CompiledFieldSelector::LowestPlayCost | CompiledFieldSelector::HighestPlayCost => game
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
@@ -139,7 +139,7 @@ fn selected_field_extreme(
         .filter_map(|h| field_value(game, *h, selector));
     match selector {
         CompiledFieldSelector::LowestDp | CompiledFieldSelector::LowestPlayCost => values.min(),
-        CompiledFieldSelector::HighestDp => values.max(),
+        CompiledFieldSelector::HighestDp | CompiledFieldSelector::HighestPlayCost => values.max(),
     }
 }
 
@@ -2637,20 +2637,12 @@ fn install_select_union_zone(
     runtime: StepRuntime,
 ) {
     let target_player = resolve_player(ctx, of);
-    let material_target = material_of
-        .as_ref()
-        .and_then(
-            |binding| match resolve_binding_ref(binding, ctx, &bindings) {
-                Some(ResolvedBinding::Permanent(handle)) => Some(handle),
-                _ => None,
-            },
-        )
-        .or_else(|| {
-            zoneset
-                .contains(crate::selection::UnionZoneSet::MATERIAL)
-                .then_some(ctx.source_permanent)
-                .flatten()
-        });
+    let material_target = material_of.as_ref().and_then(|binding| {
+        match resolve_binding_ref(binding, ctx, &bindings) {
+            Some(ResolvedBinding::Permanent(handle)) => Some(handle),
+            _ => None,
+        }
+    });
     let success_tail = Arc::new(success_tail);
     let decline_tail = Arc::new(decline_tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
