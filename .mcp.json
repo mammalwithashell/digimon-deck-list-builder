@@ -13,10 +13,9 @@
       "command": "npx",
       "args": ["-y", "@mauricio.wolff/mcp-obsidian@latest", "C:\\Users\\james\\OneDrive\\Documents\\Obsidian Vault"]
     },
-    "_digimon-engine-mcp": {
-      "_comment": "Engine debug/replay MCP — built by `cargo build -p digimon-engine-mcp`. Rename the key to 'digimon-engine-mcp' (drop the leading underscore) to enable. The path below assumes you ran the workspace build from this repo's root; adjust if your target dir differs.",
+    "digimon-engine-mcp": {
       "type": "stdio",
-      "command": "target/debug/digimon-engine-mcp",
+      "command": "target/debug/digimon-engine-mcp.exe",
       "args": ["--pool", "implemented"]
     }
   }

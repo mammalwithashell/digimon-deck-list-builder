@@ -269,14 +269,17 @@ class OpponentWrapper(gymnasium.Wrapper):
         if terminated or truncated:
             return obs, reward, terminated, truncated, info
 
-        # Auto-play opponent turns. Only terminal outcomes (win/loss)
-        # are attributed to this timestep — intermediate dense shaping
-        # from opponent moves reflects board changes the agent can't
-        # control, so we exclude those to keep reward signal clean.
-        obs, info, terminal_reward, terminated, truncated = (
+        # Auto-play opponent turns. With the event-based reward shape
+        # (post-2026-05-23 rework), dense signal fires ONLY on security
+        # count changes — including opponent attacks that remove our
+        # security. Accumulating opp-step rewards passes those losses to
+        # the agent so it learns to defend; under the prior dp_delta-
+        # based shape, opp-step rewards were noise (board changes the
+        # agent can't directly control) and were therefore discarded.
+        obs, info, opp_reward, terminated, truncated = (
             self._play_opponent(obs, info)
         )
-        reward = float(reward) + float(terminal_reward)
+        reward = float(reward) + float(opp_reward)
 
         return obs, reward, terminated, truncated, info
 
@@ -294,8 +297,14 @@ class OpponentWrapper(gymnasium.Wrapper):
         return obs, info
 
     def _play_opponent(self, obs, info):
-        """Auto-play Player 2 turns until Player 1 acts or game ends."""
-        terminal_reward = 0.0
+        """Auto-play Player 2 turns until Player 1 acts or game ends.
+
+        Accumulates EVERY step's reward (not just terminal) so the agent
+        sees dense feedback from opponent actions — primarily own-security
+        losses when opp attacks succeed. Required by the event-based
+        reward shape (digimon_gym.py `_compute_reward`).
+        """
+        accumulated_reward = 0.0
 
         while (
             not self._unwrapped_env.is_game_over
@@ -303,11 +312,11 @@ class OpponentWrapper(gymnasium.Wrapper):
         ):
             opp_action = self.opponent_fn(self._unwrapped_env)
             obs, reward, terminated, truncated, info = self.env.step(int(opp_action))
+            accumulated_reward += float(reward)
             if terminated or truncated:
-                terminal_reward = reward
-                return obs, info, terminal_reward, terminated, truncated
+                return obs, info, accumulated_reward, terminated, truncated
 
-        return obs, info, terminal_reward, self._unwrapped_env.is_game_over, False
+        return obs, info, accumulated_reward, self._unwrapped_env.is_game_over, False
 
 
 # ─── Callbacks ───────────────────────────────────────────────────────

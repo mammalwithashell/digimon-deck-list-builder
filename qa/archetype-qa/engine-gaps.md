@@ -446,3 +446,76 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Suggested change:** When `optional: true`, pass the `tail` as the `on_decline` callback in `install_select_hand` (and the sibling installers) — e.g. `on_decline: Some(Box::new(|game| { run_tail(tail, game); }))` — so PASS triggers the same continuation as the no-eligible-cards path.
 - **Cards affected:** any card whose YAML has trailing unconditional steps after an optional `select_hand` / `select_trash` / etc. step.
 - **Workaround:** None faithful. The BT21-102 test `bt21_102_main_opt_decline_hand_card_tai_stays_on_field` documents the divergence as observed behavior (Tai stays on field after PASS) rather than the printed-text outcome.
+
+## Sweep notes (2026-05-23 — generalist training smoke surfacing)
+
+Three single-outstanding-invariant violations surfaced from a generalist
+pretraining smoke run over the 4 eligible Rust-DSL archetypes
+(Medusamon, Puppets, DNA Omnimon, BG Imperial — 188 decks). All three
+are debug-assertion panics that fire in real card chains the existing
+behavioral tests don't cover. They share the same architectural shape:
+a `Game::*` slot designed as single-outstanding (`debug_assert!` on
+overwrite) is overwritten by a second resolution that fires before the
+first drains. The [`game.rs:553-577`](../../code/digimon-engine/src/game.rs)
+docstring on `dsl_outer_tail` already predicts this: *"a future change
+that allows nested parks ... will need to either (a) make this a
+`Vec<(_, _)>` stack, or (b) refuse the second park with a clear
+validation error."* Phase 8 deferred-deletion and Phase 8 Option-play
+slots have the same shape but no prediction in their docstrings.
+
+### Nested DSL Outer-Tail Park  [G-DSL-OUTER-TAIL-NESTED-PARK] — RESOLVED 2026-05-23
+- **Discovered in:** Generalist training smoke run, 2026-05-23 (mixed-archetype game across Medusamon / Puppets / DNA Omnimon / BG Imperial). Reliably reproducible via BT24-016 Lamiamon's clause-2 path.
+- **Scope:** Rust engine.
+- **Panic site:** [`code/digimon-engine/src/dsl_cards/step/mod.rs:119`](../../code/digimon-engine/src/dsl_cards/step/mod.rs) in `park_outer_tail`.
+- **Invariant:** `ctx.game.dsl_outer_tail.is_none()` before writing — see [`game.rs:561-571`](../../code/digimon-engine/src/game.rs).
+- **Card(s) surfaced:** BT24-016 Lamiamon (Medusamon shell) is the dominant trigger; clause 2 (`[When Digivolving][When Attacking][Once Per Turn]`) has body `[as_selecting_player { body: [select_hand, place_on_security] }, trash_top_security]`. Other archetype cards with the same "selection step with sibling continuation, inner body that calls a fire-and-inline-drain helper" shape are latent triggers too.
+- **Root cause (identified 2026-05-23):** This is NOT a card-script bug — it's an engine architectural issue. `park_outer_tail`'s single-slot invariant is violated whenever an observer-fire helper does an INLINE `drain_effect_queue()` while a previous step's outer tail is still parked. Concretely for Lamiamon:
+  1. Lamiamon clause 2 fires. Body step 0 `AsSelectingPlayer` returns Parked. `park_outer_tail([TrashTopSecurity])` stashes the outer tail; `dsl_outer_tail = Some(...)`.
+  2. Player resolves the inner `select_hand`. Install-callback runs the inner tail `[place_on_security]`.
+  3. `EffectContext::place_on_security` → `Game::place_on_security_observed` → eventually [`Game::fire_on_place_security` at `game_actions.rs:5743`](../../code/digimon-engine/src/game_actions.rs#L5743), which does `enqueue_triggered(OnPlaceSecurity, ...); self.drain_effect_queue();` **inline**, while we are still mid-callback and `dsl_outer_tail` is still set.
+  4. That inline `drain_effect_queue` processes whatever is already queued — frequently a second Lamiamon clause-2 firing (e.g. a parallel `when_digivolving` from the same attack chain, or another Lamiamon's `when_attacking` queued from the same attack event). The second clause 2 body's step 0 `AsSelectingPlayer` calls `park_outer_tail([TrashTopSecurity])` → assertion trips because the first park is still parked.
+- **Broader scope:** [`game_actions.rs`](../../code/digimon-engine/src/game_actions.rs) has 30+ inline `self.drain_effect_queue()` call sites, most inside `fire_on_*` observer helpers (`fire_on_play`, `fire_on_leave_field`, `fire_on_place_security`, `fire_on_link_after_option_placed`, etc.) and inside `play_option_core` / `dispose_option`. Every one of them is a potential nested-park trigger when called from inside an outer-tail-parked callback. Lamiamon happens to be the most-frequently-hit because of its specific body shape + frequency in eligible decks (the same card appears 4× in many Medusamon decks).
+- **DCGO reference (2026-05-23):** [`DCGO/Assets/Scripts/Script/CardController.cs:5506`](../../DCGO/Assets/Scripts/Script/CardController.cs#L5506) `IAddSecurity.AddSecurity()` just **enqueues** OnAddSecurity triggers via `autoProcessing.StackSkillInfos` and does **not** drain them. The drain happens later at an explicit checkpoint (`TriggeredSkillProcess`). DCGO's architectural answer is "defer trigger drains to safe checkpoints" rather than "stack the parked-tail slot" — the C# coroutine system makes the call-stack implicit and the trigger queue is processed at well-defined moments, so the collision can't happen.
+- **Suggested fix (immediate, narrow — Option A):** Convert [`Game::dsl_outer_tail`](../../code/digimon-engine/src/game.rs#L573) from `Option<(Vec<CompiledStep>, Bindings, StepRuntime)>` to `Vec<...>` — a stack of parked tails. `park_outer_tail` pushes; `drain_dsl_outer_tail` pops the most recent. Stack depth tracks nesting; add a sanity cap (e.g. 8) to surface runaway recursion. The docstring at [`game.rs:561-571`](../../code/digimon-engine/src/game.rs) prescribes exactly this fix. Same shape applies to sibling slots `pending_option` and `pending_deletion_resume` (the other two single-outstanding-invariant bugs in this family).
+- **Suggested fix (architectural, wider — Option B):** Match DCGO's deferred-drain pattern: remove inline `self.drain_effect_queue()` from `fire_on_*` observer helpers and let drains happen at higher-level checkpoints (after a step's process body completes, after a selection resolves). Each removed inline drain needs an audit to ensure no downstream code depends on observers having already fired. Wider surgery, but eliminates the entire class of nested-park collisions instead of just paving over them with a stack.
+- **Recommended order:** Option A now (small, contained, closes the panic). Option B later as broader architectural cleanup when there's appetite — they're not mutually exclusive; stacking the slot makes B safer to refactor in pieces.
+- **Fix (landed 2026-05-23):** Option B chosen — deferred-drain mechanism mirroring DCGO's pattern. Added [`Game::draining_deferred: u32`](../../code/digimon-engine/src/game.rs) counter, plus `enter_deferred_drain()` / `exit_deferred_drain_and_flush()` / `maybe_drain_effect_queue()` helpers. `resolve_generic_selection` wraps its callback in enter/exit; `drain_dsl_outer_tail` wraps its outer-tail run the same way; `fire_on_*` observer helpers (`fire_on_link_after_option_placed`, `fire_on_play`, `fire_on_leave_field`, `fire_on_place_security`, `combat::fire_on_attack`) call `maybe_drain` so triggers enqueued mid-callback defer to the scope's exit. Two helpers — `fire_digivolution_card_trashed` and `place_permanent_on_security`'s OnDigivolutionCardTrashed / OnLinkedCardTrashed fires — INTENTIONALLY retain inline drain because behavioral test `ex10::ex10_036::ex10_036_clause_a_after_source_trash_prompts_opp_field_delete` depends on synchronous between-source observer firing for chained trash-pickup clauses.
+- **Verification (2026-05-23):** Replayed all 84 BT24-016 crash recordings against the fixed engine — 84/84 no longer crash. Engine test suite shows 3292 passing, 8 pre-existing failures (same as `main` baseline), 0 new regressions.
+- **Workaround:** Training crash-resilience wrapper catches the panic, writes a crash recording, and synthesizes a terminal step so training continues. Each hit costs one game's worth of training samples (≈0.5%/game frequency in current run).
+- **Identifier:** the panic message includes the source card via the 2026-05-23 instrumentation patch (`card={card_id} player={pid} parking_step={discriminant} previously_parked_first_step={discriminant} ...`).
+
+### Reentrant Option Play While Another Is Mid-Resolution  [G-OPTION-PLAY-REENTRANT] — RESOLVED 2026-05-23
+- **Discovered in:** Generalist training smoke run, 2026-05-23.
+- **Scope:** Rust engine.
+- **Panic site:** [`code/digimon-engine/src/game_actions.rs:1148`](../../code/digimon-engine/src/game_actions.rs) in `play_option_core`.
+- **Invariant:** `self.pending_option.is_none()` at play start — single in-flight Option.
+- **Card(s) surfaced:** P-103 Offense Training (Medusamon shell; appears in 91/188 eligible decks). The panic instrumentation reported both the in-flight and incoming card, in the observed case both `P-103` with `in_flight_resolution_phase=MainEffectDrain` and `in_counter_window=false`.
+- **Root cause (identified 2026-05-23):** Not a `play_option_core` overlap per se — the real bug was upstream in the end-turn state machine. `Game::end_turn` returned early at the old `game_phases.rs:214` `if self.pending_selection.is_some() { return; }` when an `EndOfYourTurn`-triggered effect parked a player selection, but the end-turn machinery never resumed after the selection unwound. The turn was left in an inconsistent state: `pending_option` from P-103's `<Delay>` activation chain stayed occupied, and the agent's next Option-play action tripped the assertion. P-103 was the trigger card because its `<Delay>` body runs at end-of-turn and clause 1's `select_own_permanent` installs exactly the selection the unresumed-end-turn bug needed.
+- **Fix:** PR #520 (commit `008386f1`, 2026-05-23) added [`Game::pending_end_turn_resume: Option<EndTurnResume>`](../../code/digimon-engine/src/game.rs) and `Game::resume_pending_end_turn()`, wired into `effect_queue::resolve_generic_selection` after the parked selection resolves. End-turn now parks → selection resolves → resume → end-turn completes → turn rotates. `pending_option` no longer leaks across the resume boundary.
+- **Regression test:** [`code/digimon-engine/tests/phase_flow/pending_selection_turn_end.rs::end_turn_selection_resolution_resumes_turn_rotation`](../../code/digimon-engine/tests/phase_flow/pending_selection_turn_end.rs).
+- **Empirical confirmation:** post-`008386f1` generalist training run observed 16 panics across 12 parallel envs in the first ~10 minutes; zero were `reentrant Option play`. The other two single-outstanding-invariant bugs in this family (`G-DSL-OUTER-TAIL-NESTED-PARK` and `G-DELETION-RESUME-NESTED`) remain open and continue to surface.
+
+### Nested Deferred Deletion (OnDeletion-Parked Selection)  [G-DELETION-RESUME-NESTED]
+- **Discovered in:** Generalist training smoke run, 2026-05-23 (turn 17, mixed-archetype game; recording at `models/generalist_smoke/pilot_ppo_20260523_014433/recordings/train_env_000_game_000034_draw_crash.json`).
+- **Scope:** Rust engine.
+- **Panic site:** [`code/digimon-engine/src/replacement.rs:1382`](../../code/digimon-engine/src/replacement.rs) in the deferred-decline branch.
+- **Invariant:** `game.pending_deletion_resume.is_none()` when parking a new deferred deletion — single in-flight OnDeletion-parked deletion.
+- **What's missing:** Phase D Task 6 carved out the `pending_deletion_resume` slot for "an `OnDeletion`-timed effect (such as the printed `<Save>` keyword) parks a `pending_selection` mid-deletion". The docstring at [`game.rs:486-518`](../../code/digimon-engine/src/game.rs) acknowledges: *"Deletions don't nest in practice ... If this assumption ever breaks, replace the field with a stack."* That assumption breaks in training game 34: two permanents with `<Save>`-style OnDeletion handlers are deleted simultaneously (e.g., from an AoE Option), and both attempt to park.
+- **Affected pattern:** Any board-wipe / multi-target deletion where ≥2 affected permanents own an `OnDeletion`-timed effect that installs a `pending_selection`. Includes printed `<Save>` cascades, `<Fortitude>` interactions, and DSL-authored OnDeletion handlers with selection bodies.
+- **Suggested change:** Convert `pending_deletion_resume: Option<(...)>` to `Vec<(...)>` and process LIFO (most recently parked deletion resumes first). Cap at field-slot count as sanity rail. The fix is mechanical — `commit_permanent_deletion` (the only writer) and `resume_pending_deletion` (the only reader) are the only touch sites.
+- **Workaround:** Currently none — debug-assertion panic.
+
+### Family-wide note: Single-Outstanding-Invariant Pattern
+
+The three bugs above plus their predicted siblings (`pending_post_deletion_replays` at [`game.rs:519-551`](../../code/digimon-engine/src/game.rs) is already a `Vec` and works correctly under nesting) all reflect a Phase 8 / Phase 2d design choice: when adding a parked-state slot, default to `Option<T>` with a `debug_assert!` guard, and audit later if nesting surfaces. The audit time is now. Recommend a tracking task to:
+
+1. Audit every `pub(crate) ... : Option<T>` field on `Game` that represents in-flight resolution state.
+2. For each, decide stack-vs-refuse based on whether the action surface should expose nesting to the RL agent.
+3. Where stack semantics are chosen, write a behavioral test that exercises nesting depth ≥ 2 before promoting the field.
+
+Crash recordings from the 2026-05-23 training smoke are preserved under
+`models/generalist_smoke/pilot_ppo_*/recordings/*draw_crash.json` and contain
+the exact action sequences (initial state, deck contents, action ids,
+selection prompts) that reach each panic site — useful starting points
+for the failing tests.
+

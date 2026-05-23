@@ -177,6 +177,11 @@ class DigimonEnv(gymnasium.Env):
         self.record_tensors = bool(record_tensors)
         self.runner: Optional[HeadlessGame] = None
         self._step_count = 0
+        # Event-based reward shaping: track security counts at end of last
+        # env.step so we can compute deltas (security removed / lost). `None`
+        # until the first step records counts, then maintained per-step.
+        self._prev_p1_security: Optional[int] = None
+        self._prev_p2_security: Optional[int] = None
 
     @property
     def game(self):
@@ -302,6 +307,10 @@ class DigimonEnv(gymnasium.Env):
             record_tensors=self.record_tensors,
         )
         self._step_count = 0
+        # Reset event-based reward tracking: deltas computed from the first
+        # post-reset step onward, no carryover from prior episode.
+        self._prev_p1_security = None
+        self._prev_p2_security = None
 
         obs = self.runner.get_board_tensor(1)
         info = {"action_mask": self.action_mask(), **self._tensor_info()}
@@ -365,26 +374,69 @@ class DigimonEnv(gymnasium.Env):
         return np.ones(ACTION_SPACE_SIZE, dtype=bool)
 
     def _compute_reward(self, terminated: bool) -> float:
-        """Compute reward with dense shaping and terminal bonuses.
+        """Compute reward — terminal-dominant, event-based dense.
 
-        Terminal: +1.0 for win, -1.0 for loss, 0.0 for draw.
-        Dense (per-step):
-            - Security delta: (my_security - opp_security) × 0.01
-            - Board presence: (my_total_DP - opp_total_DP) × 0.0001
+        Goal: agent should optimize for *winning*, not for maintaining a
+        dominant board state. Prior shape rewarded `dp_delta × 0.0001` and
+        `sec_delta × 0.01` every step, which made stalling with a fat
+        board (~30k DP advantage × 200 steps = +600 reward) score much
+        higher than actually winning (+1.0 terminal). The agent learned
+        to camp on a dominant board instead of closing games.
+
+        New shape:
+          Terminal:
+            +10.0 base for win, plus up to +5.0 fast-win bonus
+              (linear in (200 - step_count) / 200, clamped ≥ 0).
+              A typical ~150-step win ≈ +11.25; a ~50-step crush ≈ +13.75.
+            −10.0 for loss.
+            −1.0 for draw (mild stalling penalty; the engine's new
+              "force step-limit wins" should make pure draws rare).
+          Dense (only fires on the step where security count changed):
+            +2.0 per opponent security card removed (real progress toward win).
+            −2.0 per own security card lost (real progress toward loss).
+            With 5 security cards each, total dense magnitude is bounded
+            at ±10 per game — comparable to terminal but only fires on
+            game-state-progressing events, never on stalling.
+          Step penalty:
+            −0.001 per step. Caps at ~−0.3 over the 300-step soft limit,
+            negligible vs terminal but provides a tiebreaker toward
+            shorter wins on top of the fast-win bonus.
         """
         state = self._rl_state()
 
         if terminated and bool(state.get("game_over", False)):
             winner_id = state.get("winner_id")
             if winner_id == 1:
-                return 1.0
+                # Fast-win bonus: 200-step par; faster gets more, max +5
+                time_bonus = max(0.0, (200.0 - float(self._step_count)) / 200.0) * 5.0
+                return 10.0 + time_bonus
             if winner_id == 2:
-                return -1.0
-            return 0.0
+                return -10.0
+            # Draw (rare with force-step-limit-wins, but bias against)
+            return -1.0
 
-        sec_delta = int(state.get("p1_security", 0)) - int(state.get("p2_security", 0))
-        dp_delta = int(state.get("p1_total_dp", 0)) - int(state.get("p2_total_dp", 0))
-        return float(sec_delta * 0.01 + dp_delta * 0.0001)
+        # Event-based dense signal: security-count change since last step.
+        p1_sec = int(state.get("p1_security", 0))
+        p2_sec = int(state.get("p2_security", 0))
+
+        dense_reward = 0.0
+        if self._prev_p1_security is not None and self._prev_p2_security is not None:
+            # Opponent security removed → progress toward winning.
+            opp_removed = self._prev_p2_security - p2_sec
+            if opp_removed > 0:
+                dense_reward += float(opp_removed) * 2.0
+            # Own security lost → progress toward losing.
+            own_lost = self._prev_p1_security - p1_sec
+            if own_lost > 0:
+                dense_reward -= float(own_lost) * 2.0
+            # Security gained (effects that move cards to security) is not
+            # rewarded — it's a defensive maneuver, not progress toward win.
+
+        self._prev_p1_security = p1_sec
+        self._prev_p2_security = p2_sec
+
+        # Per-step stalling penalty (small but non-zero).
+        return dense_reward - 0.001
 
     def render(self) -> Optional[str]:
         """Render the current game state.

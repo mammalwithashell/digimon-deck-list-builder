@@ -3003,7 +3003,8 @@ impl Game {
             crate::enums::EffectTiming::OnAttack,
             crate::selection::TriggerSource::Permanent(handle),
         );
-        self.drain_effect_queue();
+        // G-DSL-OUTER-TAIL-NESTED-PARK: defer when inside select/outer-tail scope.
+        self.maybe_drain_effect_queue();
         if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
             return;
         }
@@ -3016,7 +3017,7 @@ impl Game {
             crate::enums::EffectTiming::WhenAttacking,
             crate::selection::TriggerSource::PlayerBattleArea(handle.player),
         );
-        self.drain_effect_queue();
+        self.maybe_drain_effect_queue();
         if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
             return;
         }

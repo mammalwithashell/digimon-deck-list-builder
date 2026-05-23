@@ -1379,7 +1379,13 @@ fn commit_permanent_deletion_no_replace_inner(
     // so `pending_post_deletion_replays` (Fortitude/Partition) and the
     // linked-card cascade all run uniformly.
     if game.pending_selection.is_some() {
-        debug_assert!(
+        // Always-fire (promoted from debug_assert!): the deferred
+        // deletion slot is single-occupancy. Overwriting silently loses
+        // the prior parked deletion's finalize. Better to fail loudly
+        // so the crash recorder captures the AoE/cascade pattern that
+        // produced nested deferrals; the wrapper converts the panic
+        // into a terminal step.
+        assert!(
             game.pending_deletion_resume.is_none(),
             "nested deferred deletion not supported (single-outstanding invariant)"
         );

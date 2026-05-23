@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import random
 import re
+import sys
 import traceback
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import gymnasium
+import numpy as np
 
 from digimon_engine import ACTION_SPACE_SIZE
 from digimon_gym.digimon_gym import DigimonEnv
@@ -133,7 +135,16 @@ class TrainingGameRecorder:
 
 
 class TrainingRecordingWrapper(gymnasium.Wrapper):
-    """Captures completed episode recordings before vector env auto-reset."""
+    """Captures completed episode recordings before vector env auto-reset.
+
+    Also converts engine panics into terminal steps so training survives
+    `pyo3_runtime.PanicException` (which derives from `BaseException`).
+    The crash is recorded as a draw artifact and the episode terminates;
+    SB3's VecEnv auto-resets and training continues with a fresh game.
+    """
+
+    # Class-level tally so multiple env factories share visibility.
+    crash_count: int = 0
 
     def __init__(
         self,
@@ -149,10 +160,20 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
         self.env_index = env_index
         self.game_index = 0
         self.episode_steps = 0
+        # Cached last-good observation, used as the terminal observation
+        # when the engine panics mid-step. The post-crash Rust state may
+        # be poisoned, so we cannot safely query the engine for a fresh
+        # tensor; an in-distribution snapshot from the prior step is the
+        # least-bad terminal obs for value bootstrapping.
+        self._last_obs: Optional[np.ndarray] = None
+        self._last_info: Dict[str, Any] = {}
 
     def reset(self, **kwargs):
         self.episode_steps = 0
-        return self.env.reset(**kwargs)
+        obs, info = self.env.reset(**kwargs)
+        self._last_obs = obs
+        self._last_info = dict(info)
+        return obs, info
 
     def step(self, action):
         digimon_env = _unwrap_to_digimon_env(self.env)
@@ -161,21 +182,66 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
         invalid_action = bool(action_id < 0 or action_id >= len(mask) or mask[action_id] <= 0)
         try:
             obs, reward, terminated, truncated, info = self.env.step(action)
-        except Exception as exc:
-            if self.recorder is not None:
-                self.recorder.write(
-                    digimon_env,
-                    source=self.source,
-                    env_index=self.env_index,
-                    game_index=self.game_index,
-                    step_count=self.episode_steps,
-                    terminated=False,
-                    truncated=False,
-                    invalid_action=invalid_action,
-                    error=exc,
-                )
+        except (KeyboardInterrupt, SystemExit):
+            # User-initiated; never swallow.
             raise
+        except BaseException as exc:
+            # Engine panic (PyO3 PanicException derives from
+            # BaseException in <0.20, Exception in >=0.20 — BaseException
+            # covers both). Record the crash, log loudly, and synthesize
+            # a terminal step so SB3 auto-resets and training continues.
+            TrainingRecordingWrapper.crash_count += 1
+            exc_type = type(exc).__name__
+            exc_msg = str(exc)
+            print(
+                f"[recorder env={self.env_index} game={self.game_index} "
+                f"step={self.episode_steps}] ENGINE PANIC "
+                f"#{TrainingRecordingWrapper.crash_count}: {exc_type}: "
+                f"{exc_msg[:200]}",
+                file=sys.stderr,
+                flush=True,
+            )
+            if self.recorder is not None:
+                try:
+                    self.recorder.write(
+                        digimon_env,
+                        source=self.source,
+                        env_index=self.env_index,
+                        game_index=self.game_index,
+                        step_count=self.episode_steps,
+                        terminated=False,
+                        truncated=False,
+                        invalid_action=invalid_action,
+                        error=exc,
+                    )
+                except BaseException:
+                    # A poisoned Rust state after a panic may make
+                    # get_recording / terminal_outcome themselves
+                    # panic. Suppress so we still synthesize the
+                    # terminal step.
+                    pass
+            self.game_index += 1
+            # Synthesize terminal step. terminated=True signals natural
+            # episode end (SB3 will not bootstrap V(s) — appropriate
+            # because the engine state is invalid). Reward 0 — the crash
+            # is not a learning signal.
+            term_obs = (
+                self._last_obs
+                if self._last_obs is not None
+                else np.zeros_like(digimon_env.observation_space.sample())
+            )
+            term_info = dict(self._last_info)
+            term_info["engine_crash"] = True
+            term_info["engine_crash_type"] = exc_type
+            term_info["engine_crash_message"] = exc_msg
+            # Zero out the action mask on the terminal step — no valid
+            # actions in a crashed game state. The reset-side mask is
+            # what the policy will see after auto-reset.
+            term_info["action_mask"] = np.zeros(ACTION_SPACE_SIZE, dtype=np.float32)
+            return term_obs, 0.0, True, False, term_info
         self.episode_steps += 1
+        self._last_obs = obs
+        self._last_info = dict(info)
         if terminated or truncated:
             if self.recorder is not None:
                 self.recorder.write(
