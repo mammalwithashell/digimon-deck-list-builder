@@ -528,3 +528,11 @@ the exact action sequences (initial state, deck contents, action ids,
 selection prompts) that reach each panic site — useful starting points
 for the failing tests.
 
+A machine-readable index of these families lives next to this file at
+[`panic-families.json`](panic-families.json) — used by `digimon-training-mcp`
+to group panics in training console logs by family. This markdown is the
+prose source-of-truth; the JSON is the index that points back to it. When
+adding a new family entry above, add a matching record to the JSON (the same
+`family_id`, a distinctive substring pattern, a panic-site reference, and a
+status).
+

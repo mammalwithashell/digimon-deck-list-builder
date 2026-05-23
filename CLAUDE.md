@@ -190,9 +190,14 @@ commands on desktop):
 **DB-dependent agent modules** (hosted API only):
 - `training_worker`, `gauntlet_orchestrator`
 
+**Read-only operator MCPs** (local + dev only — no DB, no HTTP):
+- `digimon-engine-mcp` (Rust binary, `code/digimon-engine-mcp/`) — per-game engine forensics over `LiveGame` and recordings.
+- `digimon-training-mcp` (Python package, `code/digimon-training-mcp/`) — cross-game / time-series inspection of `runs/` + `models/` filesystem artifacts. Does not import from `server.*`, `digimon_gym.db.*`, or any binding crate.
+
 **Requirements files:**
 - `requirements.txt` — full hosted API (all deps)
 - `requirements-training.txt` — training CLI (engine + torch/SB3, no FastAPI/DB)
+- `requirements-mcp.txt` — training-inspection MCP (`mcp` SDK + `tensorboard`, kept out of the training CLI's lean dep set)
 
 ## Commands
 
@@ -257,6 +262,13 @@ cargo build -p digimon-engine-cli -p digimon-engine-mcp
 target/debug/digimon-engine-cli debug                      # interactive REPL
 target/debug/digimon-engine-cli replay rec.json --step 47  # recording viewer
 target/debug/digimon-engine-mcp --pool implemented         # MCP stdio server
+
+# Training inspection MCP (see docs/TRAINING_MCP.md) — read-only cross-game
+# inspection of RL training runs. Parallel to the engine MCP: engine MCP owns
+# per-game forensics, this one owns runs/ + models/ filesystem artifacts
+# (eval sidecars, TensorBoard metrics, recordings inventory, checkpoints).
+pip install -r requirements-mcp.txt && pip install -e code/digimon-training-mcp
+python -m digimon_training_mcp --runs-dir ./runs --models-dir ./models
 
 # PyO3 bindings (build + install into active Python env)
 cd code/digimon-engine-py && maturin develop

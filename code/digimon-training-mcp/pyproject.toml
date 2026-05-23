@@ -1,0 +1,31 @@
+[project]
+name = "digimon-training-mcp"
+version = "0.1.0"
+description = "Read-only MCP stdio server for inspecting Digimon RL training runs (runs/, models/)."
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0",
+    "tensorboard>=2.14",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.scripts]
+digimon-training-mcp = "digimon_training_mcp.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["digimon_training_mcp*"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.package-data]
+"digimon_training_mcp" = ["py.typed"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
