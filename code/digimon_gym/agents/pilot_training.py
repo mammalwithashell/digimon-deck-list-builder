@@ -339,6 +339,7 @@ class WinRateCallback(BaseCallback):
                  n_eval_episodes: int = 20,
                  eval_suite=None,
                  eval_suite_path: str | None = None,
+                 eval_sidecar_path: Optional[Path] = None,
                  verbose: int = 1):
         super().__init__(verbose)
         self._eval_env_fn = eval_env_fn
@@ -356,6 +357,9 @@ class WinRateCallback(BaseCallback):
         self.last_mean_eval_dense_reward: float = 0.0
         self.last_mean_eval_episode_length: float = 0.0
         self._last_eval_suite_results: dict = {}
+        self._eval_sidecar_path: Optional[Path] = (
+            Path(eval_sidecar_path) if eval_sidecar_path is not None else None
+        )
         # Per-archetype tracking
         self._archetype_wins: Dict[str, int] = {}
         self._archetype_draws: Dict[str, int] = {}
@@ -561,6 +565,32 @@ class WinRateCallback(BaseCallback):
                 f"Mean reward: {mean_reward:.3f} | "
                 f"Games played: {self.games_played}"
             )
+
+        if self._eval_sidecar_path is not None:
+            row: Dict[str, object] = {
+                "step": int(self.num_timesteps),
+                "wall_time": time.time(),
+                "win_rate": win_rate,
+                "mean_reward": mean_reward,
+                "draw_rate": draw_rate,
+                "mean_terminal_score": mean_terminal_score,
+                "mean_dense_reward": mean_dense_reward,
+                "mean_eval_episode_length": mean_length,
+                "games_played": self.games_played,
+            }
+            if self._archetype_games:
+                row["by_archetype"] = {
+                    name: {
+                        "wins": self._archetype_wins.get(name, 0),
+                        "draws": self._archetype_draws.get(name, 0),
+                        "games": games,
+                        "win_rate": self._archetype_wins.get(name, 0) / max(1, games),
+                    }
+                    for name, games in self._archetype_games.items()
+                }
+            self._eval_sidecar_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self._eval_sidecar_path, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(row, separators=(",", ":")) + "\n")
 
 
 class PeriodicCheckpointCallback(BaseCallback):
@@ -1196,12 +1226,16 @@ def train(total_timesteps: int = 100_000,
             Path(cfg.eval_suite),
             tensor_profile=cfg.tensor_profile,
         )
+    eval_sidecar_path: Optional[Path] = (
+        Path(tensorboard_log) / "evals.jsonl" if tensorboard_log else None
+    )
     win_rate_cb = WinRateCallback(
         eval_env_fn=eval_env_fn,
         eval_freq=eval_freq,
         n_eval_episodes=n_eval_episodes,
         eval_suite=eval_suite,
         eval_suite_path=cfg.eval_suite,
+        eval_sidecar_path=eval_sidecar_path,
         verbose=verbose,
     )
     action_validity_cb = ActionValidityCallback()

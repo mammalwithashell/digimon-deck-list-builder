@@ -1,0 +1,32 @@
+{
+  "$schema_version": 1,
+  "$documentation": "Machine-readable index of Rust engine panic families. Authoritative prose lives in engine-gaps.md; this file exists so digimon-training-mcp can group panics in training console logs by family. Each entry's `pattern` is a Python re.compile-compatible regex matched against the panic message text (the part after `<ExcType>: ` in the [recorder env=... ENGINE PANIC #N: ...] log line). Add new entries here when engine-gaps.md gains a new family; CI smoke (planned) cross-checks consistency.",
+  "families": [
+    {
+      "family_id": "G-DSL-OUTER-TAIL-NESTED-PARK",
+      "description": "DSL outer-tail park assertion overwritten — a nested park collided with an existing parked tail. See engine-gaps.md §Nested DSL Outer-Tail Park.",
+      "pattern": "dsl_outer_tail overwrite",
+      "panic_site": "code/digimon-engine/src/dsl_cards/step/mod.rs::park_outer_tail",
+      "status": "resolved",
+      "first_seen_at": "2026-05-23",
+      "resolved_at": "2026-05-23"
+    },
+    {
+      "family_id": "G-OPTION-PLAY-REENTRANT",
+      "description": "play_option_core invoked while another Option is mid-resolution. Resolved via pending_end_turn_resume in PR #520. See engine-gaps.md §Reentrant Option Play.",
+      "pattern": "reentrant Option play",
+      "panic_site": "code/digimon-engine/src/game_actions.rs::play_option_core",
+      "status": "resolved",
+      "first_seen_at": "2026-05-23",
+      "resolved_at": "2026-05-23"
+    },
+    {
+      "family_id": "G-DELETION-RESUME-NESTED",
+      "description": "Two simultaneous deletions both attempting to install pending_deletion_resume (single-outstanding-invariant slot). See engine-gaps.md §Nested Deferred Deletion.",
+      "pattern": "nested deferred deletion",
+      "panic_site": "code/digimon-engine/src/replacement.rs::deferred-decline branch",
+      "status": "open",
+      "first_seen_at": "2026-05-23"
+    }
+  ]
+}

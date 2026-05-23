@@ -1,0 +1,9 @@
+# Dependencies for code/digimon-training-mcp (the training-inspection MCP server).
+# Kept separate from requirements-training.txt so the training CLI stays lean —
+# the MCP is opt-in for operators who want to inspect runs/ and models/ artifacts.
+#
+# Install via:
+#   pip install -r requirements-mcp.txt
+#   pip install -e code/digimon-training-mcp
+mcp>=1.0
+tensorboard>=2.14

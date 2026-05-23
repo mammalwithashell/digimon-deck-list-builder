@@ -79,6 +79,59 @@ def test_action_validity_callback_records_rate():
     assert callback.valid_count / callback.total_count > 0.99
 
 
+def test_eval_sidecar_emits_jsonl_row(tmp_path):
+    """WinRateCallback writes one row per eval to <tensorboard_log>/evals.jsonl."""
+    from digimon_gym.agents.pilot_training import WinRateCallback
+
+    def _eval_env_fn():
+        return ActionMasker(DigimonEnv(), _mask_fn)
+
+    train_env = ActionMasker(DigimonEnv(), _mask_fn)
+    model = MaskablePPO("MlpPolicy", train_env, n_steps=32, batch_size=16, verbose=0)
+    sidecar = tmp_path / "evals.jsonl"
+    callback = WinRateCallback(
+        eval_env_fn=_eval_env_fn,
+        eval_freq=32,
+        n_eval_episodes=1,
+        eval_sidecar_path=sidecar,
+        verbose=0,
+    )
+    model.learn(total_timesteps=64, callback=callback)
+
+    assert sidecar.exists(), "callback did not emit evals.jsonl"
+    lines = [json.loads(line) for line in sidecar.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(lines) >= 1
+    row = lines[0]
+    for key in (
+        "step", "wall_time", "win_rate", "mean_reward", "draw_rate",
+        "mean_terminal_score", "mean_dense_reward", "mean_eval_episode_length",
+        "games_played",
+    ):
+        assert key in row, f"missing key {key} in eval row: {row}"
+    # No gauntlet wrapper attached → by_archetype absent
+    assert "by_archetype" not in row
+
+
+def test_eval_sidecar_disabled_when_path_none(tmp_path):
+    """WinRateCallback with eval_sidecar_path=None does not write a sidecar."""
+    from digimon_gym.agents.pilot_training import WinRateCallback
+
+    def _eval_env_fn():
+        return ActionMasker(DigimonEnv(), _mask_fn)
+
+    train_env = ActionMasker(DigimonEnv(), _mask_fn)
+    model = MaskablePPO("MlpPolicy", train_env, n_steps=32, batch_size=16, verbose=0)
+    callback = WinRateCallback(
+        eval_env_fn=_eval_env_fn,
+        eval_freq=32,
+        n_eval_episodes=1,
+        eval_sidecar_path=None,
+        verbose=0,
+    )
+    model.learn(total_timesteps=64, callback=callback)
+    assert not (tmp_path / "evals.jsonl").exists()
+
+
 def test_digimon_env_recording_is_default_off():
     env = DigimonEnv()
     env.reset(seed=1)
