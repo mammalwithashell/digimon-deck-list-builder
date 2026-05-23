@@ -81,8 +81,9 @@ impl TerminalOutcomeReason {
 
     pub fn result(self) -> &'static str {
         match self {
-            Self::StepLimit | Self::Crash | Self::UnknownDraw => "draw",
+            Self::Crash | Self::UnknownDraw => "draw",
             Self::SecurityAttack | Self::DeckOut | Self::EngineDeclared | Self::UnknownWin => "win",
+            Self::StepLimit => "win",
         }
     }
 }
@@ -1606,6 +1607,9 @@ impl Game {
     /// Call this after a batch of effects resolves (not synchronously inside
     /// `pay_memory`, which would starve effects of their turn).
     pub fn check_turn_end(&mut self) {
+        if self.pending_selection.is_some() {
+            return;
+        }
         if self.memory < 0 && !self.game_over {
             self.end_turn();
         }
@@ -1710,6 +1714,39 @@ impl Game {
     /// Declare a winner (e.g., after a direct attack on a player with 0 security).
     pub fn declare_winner(&mut self, winner_id: PlayerId) {
         self.declare_winner_with_reason(winner_id, TerminalOutcomeReason::EngineDeclared);
+    }
+
+    /// Choose a deterministic winner for non-natural termination.
+    ///
+    /// Training games should always produce a winner. Timeout ranking uses
+    /// visible, stable game-state advantages, then falls back to player order
+    /// so exact ties are still deterministic.
+    pub fn step_limit_tiebreaker_winner(&self) -> PlayerId {
+        fn score(
+            game: &Game,
+            player: PlayerId,
+        ) -> (usize, i32, usize, usize, std::cmp::Reverse<PlayerId>) {
+            let p = game.player(player);
+            (
+                p.security.len(),
+                p.total_field_dp(&game.card_data),
+                p.deck.len(),
+                p.hand.len(),
+                std::cmp::Reverse(player),
+            )
+        }
+
+        self.turn_order
+            .iter()
+            .copied()
+            .max_by_key(|&player| score(self, player))
+            .unwrap_or(0)
+    }
+
+    /// End the game by step/turn limit while still assigning a winner.
+    pub fn declare_step_limit_winner(&mut self) {
+        let winner = self.step_limit_tiebreaker_winner();
+        self.declare_winner_with_reason(winner, TerminalOutcomeReason::StepLimit);
     }
 
     /// Declare a winner with an explicit terminal reason.

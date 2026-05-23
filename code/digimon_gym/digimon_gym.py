@@ -326,11 +326,15 @@ class DigimonEnv(gymnasium.Env):
         obs = self.runner.get_board_tensor(1)
         terminated = self.is_game_over
         truncated = self._step_count >= self.max_turns * 10  # safety limit
-        reward = self._compute_reward(terminated)
 
         if truncated and not terminated:
-            # Force game conclusion on truncation
+            force_winner = getattr(self.runner, "force_step_limit_winner", None)
+            if force_winner is not None:
+                force_winner()
+                obs = self.runner.get_board_tensor(1)
             terminated = True
+
+        reward = self._compute_reward(terminated)
 
         info = {"action_mask": self.action_mask(), **self._tensor_info()}
         return obs, reward, terminated, truncated, info

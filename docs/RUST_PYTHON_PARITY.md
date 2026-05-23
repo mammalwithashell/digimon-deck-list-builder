@@ -60,7 +60,9 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 **Python** — turn end is checked in `check_turn_end` ([__init__.py:336](../code/engine_py_legacy/engine/game/__init__.py#L336)) after effect resolution, not synchronously with payment. This lets OnPlay, WhenDigivolving, etc. resolve on the same turn even if their cost already pushed memory negative.
 
-**Rust** — [game.rs:445](../code/digimon-engine/src/game.rs#L445) `pay_memory` is a pure mutator: it updates `self.memory`, emits a `MemoryChange` event, and returns `true`/`false` — it never calls `end_turn()`. A separate [game.rs:466](../code/digimon-engine/src/game.rs#L466) `check_turn_end` method is provided for callers to invoke at the natural resolution boundary after all effects of a play/action have resolved. This matches the Python contract exactly.
+**Rust** — [game.rs](../code/digimon-engine/src/game.rs) `pay_memory` is a pure mutator: it updates `self.memory`, emits a `MemoryChange` event, and returns `true`/`false` — it never calls `end_turn()`. A separate `check_turn_end` method is provided for callers to invoke at the natural resolution boundary after all effects of a play/action have resolved. `check_turn_end` also defers while `pending_selection` is installed; `resolve_generic_selection` re-runs the turn-end check after a Main-phase selection chain finishes. This keeps mandatory OnPlay choices, such as BT12-047's reveal buckets, visible in the action mask instead of parking the game in `EndTurn`. DCGO's `AutoProcessing.EndTurnCheck` / `EndTurnProcess` similarly waits for automatic processing and pending effect flow before the final turn handoff. This matches the Python contract and the intended DCGO phase flow.
+
+**Coverage:** [tests/phase_flow/pending_selection_turn_end.rs](../code/digimon-engine/tests/phase_flow/pending_selection_turn_end.rs) covers memory crossing into a mandatory reveal-bucket selection, exposes `pending_selection.valid_action_ids` in the headless mask, verifies optional reveal prompts keep PASS legal, and confirms turn rotation after the selection resolves.
 
 ### 1.5 🟢 Memory swing-back on OnEndTurn — implemented
 

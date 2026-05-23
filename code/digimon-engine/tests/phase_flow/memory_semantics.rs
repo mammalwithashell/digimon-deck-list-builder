@@ -6,7 +6,11 @@
 //! - `end_turn` flips the seesaw via `memory = -memory` — no clamp (§1.2).
 //! - Memory swing-back: an OnEndTurn effect that restores memory to ≥ 0 keeps the turn (§1.5).
 
+use digimon_engine::action::space::PLAY_HAND_START;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::GamePhase;
+use digimon_engine::rules::Rules;
+use digimon_engine::TerminalOutcomeReason;
 
 fn empty_runner() -> DebugRunner {
     DebugRunner::builder()
@@ -250,4 +254,56 @@ fn play_from_hand_does_not_auto_end_turn_on_negative_memory() {
         tp_before,
         "turn must not advance during play"
     );
+}
+
+#[test]
+fn decode_play_from_hand_crossing_memory_rotates_past_end_phase() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("FILLER", "Filler")) // cost 3
+        .hand(0, &["FILLER"])
+        .memory(1)
+        .start();
+    let tp_before = r.turn_player();
+    r.game.enter_main_phase();
+
+    r.game.decode_action(PLAY_HAND_START, tp_before);
+
+    assert_ne!(
+        r.turn_player(),
+        tp_before,
+        "decode_action should rotate after a memory-crossing play resolves"
+    );
+    assert_ne!(
+        r.current_phase(),
+        GamePhase::EndTurn,
+        "EndTurn is an internal transient phase and must not be exposed"
+    );
+    assert_eq!(
+        r.memory(),
+        2,
+        "paying 3 from 1 should flip to +2 for the next player"
+    );
+}
+
+#[test]
+fn max_turn_limit_declares_tiebreak_winner() {
+    let mut rules = Rules::standard();
+    rules.max_turns = 1;
+    let mut r = DebugRunner::builder()
+        .with_rules(rules)
+        .add_card(make_test_card("FILLER", "Filler"))
+        .start();
+
+    r.game.end_turn();
+
+    assert!(r.game.game_over);
+    assert!(
+        r.game.winner.is_some(),
+        "max-turn termination should choose a deterministic winner"
+    );
+    assert_eq!(
+        r.game.terminal_outcome_reason,
+        Some(TerminalOutcomeReason::StepLimit)
+    );
+    assert_eq!(TerminalOutcomeReason::StepLimit.result(), "win");
 }

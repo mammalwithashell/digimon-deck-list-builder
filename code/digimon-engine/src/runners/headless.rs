@@ -242,6 +242,13 @@ impl HeadlessRunner {
         self.game.terminal_outcome_reason
     }
 
+    pub fn force_step_limit_winner(&mut self) -> u8 {
+        if !self.game.game_over {
+            self.game.declare_step_limit_winner();
+        }
+        self.winner_id()
+    }
+
     pub fn accept_mulligan(&mut self, pid: PlayerId, keep: bool) -> Result<(), &'static str> {
         self.game.accept_mulligan(pid, keep)
     }

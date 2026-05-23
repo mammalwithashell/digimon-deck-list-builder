@@ -98,6 +98,21 @@ def test_rust_env_step_computes_reward_without_runner_game_attribute(monkeypatch
     assert next_info["action_mask"].shape == (env.action_space.n,)
 
 
+def test_rust_env_truncation_forces_winner(monkeypatch):
+    env = _rust_env(monkeypatch, max_turns=0)
+    _obs, info = env.reset(seed=7)
+    valid = np.where(info["action_mask"] > 0)[0]
+
+    _obs, _reward, terminated, truncated, _info = env.step(int(valid[0]))
+
+    assert terminated is True
+    assert truncated is True
+    assert env.winner_id in (1, 2)
+    outcome = env.terminal_outcome()
+    assert outcome["result"] == "win"
+    assert outcome["reason"] == "step_limit"
+
+
 def test_rust_env_greedy_policy_uses_rust_policy_surface(monkeypatch):
     env = _rust_env(monkeypatch)
     _obs, _info = env.reset(seed=7)

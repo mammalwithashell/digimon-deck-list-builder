@@ -163,6 +163,7 @@ impl Game {
     /// Advance from breeding to main phase.
     pub fn enter_main_phase(&mut self) {
         let tp = self.turn_player();
+        self.current_phase = GamePhase::Main;
         // StartOfYourMainPhase fires after Draw/Breeding, before the turn player
         // takes their main-phase actions. Matches Python's OnStartMainPhase.
         self.enqueue_triggered(
@@ -176,8 +177,6 @@ impl Game {
         self.drain_effect_queue();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
-
-        self.current_phase = GamePhase::Main;
     }
 
     /// End the current turn and advance to the next player.
@@ -339,16 +338,7 @@ impl Game {
 
         // Check max turns
         if self.turn_count > self.rules.max_turns {
-            self.game_over = true;
-            // Draw - no winner
-            self.terminal_outcome_reason = Some(crate::game::TerminalOutcomeReason::StepLimit);
-            self.current_phase = GamePhase::GameOver;
-            let seq = self.next_event_seq();
-            self.events.push(crate::events::GameEvent::GameOver {
-                seq,
-                winner: None,
-                reason: crate::game::TerminalOutcomeReason::StepLimit,
-            });
+            self.declare_step_limit_winner();
             return;
         }
 

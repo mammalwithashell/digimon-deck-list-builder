@@ -826,6 +826,10 @@ impl RustHeadlessGame {
         Ok(d.into_py(py))
     }
 
+    fn force_step_limit_winner(&mut self) -> Option<u8> {
+        to_python_pid(self.inner.force_step_limit_winner())
+    }
+
     #[getter]
     fn is_game_over(&self) -> bool {
         self.inner.is_game_over()
