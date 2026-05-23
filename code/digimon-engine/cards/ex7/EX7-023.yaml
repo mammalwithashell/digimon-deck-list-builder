@@ -1,0 +1,216 @@
+# EX7-023 Hexeblaumon — Digimon, Lv.6, Blue, DP 12000, Cost 12.
+# Traits: Magic Knight, Witchelny
+# Evo: Lv.5 Blue / Cost 4 (cards.json evo_costs: [{card_color:1, level:5, memory_cost:4}])
+#
+# Printed card text (data/cards.json effect_text — verbatim):
+#
+#   ＜Iceclad＞ ＜Security A. +1＞
+#   [When Digivolving] Trash any 4 of your opponent's Digimon's digivolution
+#   cards. Then, if your opponent has no Digimon with digivolution cards, return
+#   1 of your opponent's Tamers to the bottom of the deck.
+#   [Opponent's Turn] None of your opponent's Digimon with as many or fewer
+#   digivolution cards as this Digimon can suspend.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/EX7/Blue/EX7_023.cs
+#   (EX7 submodule not available in this worktree; authored from printed text +
+#    RULES_CONTEXT.md + sister-card exemplars.)
+#
+# ─── Keyword note: Iceclad ───────────────────────────────────────────────────
+#
+# ＜Iceclad＞ is parsed automatically from `effect_text` in
+# `card_data.rs` keyword parsing table:
+#   ("Iceclad", Keyword::Iceclad) / ("＜Iceclad＞", Keyword::Iceclad)
+# The keyword is consumed at the combat resolver site
+# (`combat::resolve_battle`) via `game.has_keyword(h, Keyword::Iceclad)`,
+# which reads `CardData.keywords` natively. No DSL clause is needed; adding
+# `kind: grant_keyword, keyword: Iceclad` would fail (Iceclad is absent from
+# `lookup_keyword()` in `modifier_map.rs`) and is moot because the intrinsic
+# keyword resolves automatically from `CardData.keywords`.
+#
+# DSL-vocab gap (informational, not blocking):
+#   G-DSL-GRANT-KEYWORD-ICECLAD — `lookup_keyword()` does not include
+#   Iceclad. A granted-Iceclad keyword (e.g. inherited or temporary) cannot
+#   be expressed in DSL today. Intrinsic Iceclad (parsed from card JSON) is
+#   fully functional without a clause.
+#
+# ─── Keyword note: Security A. +1 (SecurityAttackPlus 1) ────────────────────
+#
+# ＜Security A. +1＞ printed as an intrinsic (face-up) keyword on EX7-023's
+# own card text (not inherited). Lowered as `kind: grant_keyword` without
+# `scope: inherited` — same pattern as AD1-009 intrinsic keyword grants
+# (lines 205-208: Alliance, Piercing, Blocker).
+#
+# ─── Clause analysis ─────────────────────────────────────────────────────────
+#
+# Clause 0: Intrinsic <Security A. +1>
+#   `kind: grant_keyword, keyword: SecurityAttackPlus, value: 1`
+#   No `scope: inherited` — this is an intrinsic face-up keyword on this card.
+#   Resolved at runtime via `game.has_keyword()` stack-walk → 1 extra security
+#   check per attack. AD1-009 lines 205-208 exemplar.
+#
+# Clause 1: [When Digivolving] Trash 4 opp divi-cards + conditional Tamer return
+#   Part A — "Trash any 4 of your opponent's Digimon's digivolution cards."
+#     Step 1: `select_opponent_permanent` (filter: digimon, materials_count_gte: 4)
+#       to pick the target Digimon. The card text is singular ("your opponent's
+#       Digimon's") → one Digimon is the target. The `materials_count_gte: 4`
+#       gate ensures the pick candidate has enough cards to satisfy the trash.
+#     Step 2: `select_opponent_sources` (target: opp_digi, min: 4, max: 4) to
+#       let the player select exactly 4 digivolution cards from that Digimon.
+#     Step 3: `trash_selected_sources` to trash the picked cards.
+#     BT16-085 Clause 1 DNA-branch exemplar (identical shape: pick 1 opp Digimon,
+#     then pick any N of its digivolution cards, then trash them).
+#
+#   Part B — "Then, if your opponent has no Digimon with digivolution cards,
+#              return 1 of your opponent's Tamers to the bottom of the deck."
+#     Condition: `no_permanent` (of: opponent, zone: [battle_area], kind: digimon,
+#       materials_count_gte: 1) — true iff zero opponent Digimon have ≥1
+#       digivolution card under their top.
+#     Step 4: `select_opponent_permanent` (filter: tamer) — pick 1 opp Tamer.
+#     Step 5: `return_to_deck` (target: tamer_pick, position: bottom,
+#       include_sources: false) — return the Tamer to deck bottom.
+#     AD1-025 and BT16-027 `return_to_deck + position: bottom + include_sources:
+#     false` exemplars.
+#
+# Clause 2: [Opponent's Turn] CannotSuspend flood gate
+#   "[Opponent's Turn] None of your opponent's Digimon with as many or fewer
+#    digivolution cards as this Digimon can suspend."
+#   `kind: flood_gate, active_when: { opponents_turn: true }, modifier: CannotSuspend`
+#   `target:` predicate filters to opponent battle-area Digimon whose
+#   `materials_count_lte: { formula: { source_material_count: {} } }` —
+#   this resolves Hexeblaumon's own digivolution-card count (`source_permanent`
+#   in the declarative tick) and compares each candidate's count against it.
+#   BT16-025 (lines 117-126) and BT16-027 (lines 131-138) exemplars for
+#   `materials_count_lte + source_material_count`. BT5-008 exemplar for
+#   `active_when: { opponents_turn: true }` flood gate.
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                            | Status       |
+# |------------------------------------------------------------|--------------|
+# | Intrinsic <Security A. +1>                                  | IMPLEMENTED  |
+# | Intrinsic <Iceclad> (from card JSON, no clause needed)      | IMPLEMENTED  |
+# | [WD] Trash any 4 opp digi-cards from 1 opp Digimon         | IMPLEMENTED  |
+# | [WD] Then if opp has no Digimon with divi-cards, return 1   | IMPLEMENTED  |
+# |       opp Tamer to bottom of deck                           |              |
+# | [Opponent's Turn] opp Digimon with ≤ divi-cards can't       | IMPLEMENTED  |
+# |       suspend (flood gate with source_material_count)       |              |
+#
+# No gaps — all four card-text elements are fully expressible in current DSL.
+
+card: EX7-023
+name: Hexeblaumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+traits: [Magic Knight, Witchelny]
+
+effects:
+  # ─── Clause 0: Intrinsic <Security A. +1> ────────────────────────────────
+  #
+  # Printed: "＜Security A. +1＞" — intrinsic face-up keyword on this card.
+  # No `scope: inherited` — this applies to EX7-023 itself, not to the card
+  # beneath it. DCGO: ChangeSelfSAttackStaticEffect(changeValue: 1,
+  # isInheritedEffect: false). AD1-009 lines 205-208 exemplar (without
+  # `scope: inherited`).
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "Intrinsic <Security A. +1>"
+
+  # ─── Clause 1: [When Digivolving] Trash 4 + conditional Tamer return ─────
+  #
+  # Printed: "[When Digivolving] Trash any 4 of your opponent's Digimon's
+  # digivolution cards. Then, if your opponent has no Digimon with digivolution
+  # cards, return 1 of your opponent's Tamers to the bottom of the deck."
+  #
+  # Mandatory (no "may"). Two-part effect:
+  #   Part A — trash any 4 digivolution cards from one opponent Digimon.
+  #   Part B — conditional: if no opp Digimon has digivolution cards remaining,
+  #              pick 1 opp Tamer and return it to the deck bottom.
+  #
+  # Part A models BT16-085 Clause 1 DNA-branch:
+  #   1. `select_opponent_permanent` gated on `materials_count_gte: 4` so the
+  #      player can only pick a target Digimon with at least 4 divi-cards.
+  #   2. `select_opponent_sources` (target: opp_digi, min/max: 4) presents the
+  #      player with exactly 4 card picks from that Digimon's digivolution stack.
+  #   3. `trash_selected_sources` trashes the picked cards.
+  #
+  # Part B uses `if { condition: { no_permanent: ... } }` to gate on the
+  # post-trash board state. `no_permanent` evaluates in the process step — it
+  # reads the live game state AFTER Part A's trash has resolved, so if Part A
+  # removed ALL divi-cards from the opp's remaining Digimon the gate opens.
+  # Condition: `no_permanent: { of: opponent, zone: [battle_area], kind: digimon,
+  #   materials_count_gte: 1 }` — true iff zero opp Digimon have ≥1 divi-card.
+  # `select_opponent_permanent (filter: tamer, optional: false)` picks the Tamer;
+  # `return_to_deck (position: bottom, include_sources: false)` returns it.
+  - when: when_digivolving
+    summary: "[WD] Trash any 4 opp digi-cards; then if no opp Digimon with divi-cards, return 1 opp Tamer to deck bottom"
+    process:
+      # Part A: Select the target opponent Digimon (must have ≥4 divi-cards).
+      - select_opponent_permanent:
+          bind_as: opp_digi
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_gte: 4
+          prompt: "Choose 1 of your opponent's Digimon to trash 4 of its digivolution cards"
+      # Part A: Select any 4 digivolution cards from that Digimon.
+      - select_opponent_sources:
+          target: opp_digi
+          min: 4
+          max: 4
+          bind_as: trashed_sources
+          prompt: "Choose 4 digivolution cards to trash from that Digimon"
+          then:
+            - trash_selected_sources: { source_refs: trashed_sources }
+      # Part B: If no opponent Digimon has digivolution cards, return 1 Tamer.
+      - if:
+          condition:
+            no_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              materials_count_gte: 1
+          then:
+            - select_opponent_permanent:
+                bind_as: opp_tamer
+                filter: { kind: tamer }
+                prompt: "Return 1 of your opponent's Tamers to the bottom of the deck"
+            - return_to_deck:
+                target: opp_tamer
+                position: bottom
+                include_sources: false
+
+  # ─── Clause 2: [Opponent's Turn] CannotSuspend flood gate ────────────────
+  #
+  # Printed: "[Opponent's Turn] None of your opponent's Digimon with as many
+  # or fewer digivolution cards as this Digimon can suspend."
+  #
+  # Lowered as a declarative `kind: flood_gate` with:
+  #   - `active_when: { opponents_turn: true }` — only active during opp's turn.
+  #   - `modifier: CannotSuspend` — prevents suspension of matching targets.
+  #   - `target:` predicate narrows to opp battle-area Digimon whose
+  #     `materials_count_lte: { formula: { source_material_count: {} } }` is
+  #     satisfied. `source_material_count` reads `ctx.source_permanent` (which
+  #     is Hexeblaumon's handle during `tick_declarative_effects`) and returns
+  #     `card_sources.len().saturating_sub(1)` — exactly Hexeblaumon's own
+  #     digivolution-card count. `materials_count_lte` then gates each opponent
+  #     Digimon: `candidate.card_sources.len() - 1 <= hexeblaumon_divi_count`.
+  #   BT5-008 Clause 2 exemplar for `active_when: { opponents_turn: true }`.
+  #   BT16-025 Clause 1a (lines 117-126) + BT16-027 Clause 2 (lines 131-138)
+  #   exemplars for `materials_count_lte + source_material_count` in target
+  #   predicate.
+  - kind: flood_gate
+    summary: "[Opponent's Turn] Opp Digimon with ≤ digivolution cards as this Digimon can't suspend"
+    active_when: { opponents_turn: true }
+    modifier: CannotSuspend
+    target:
+      of: opponent
+      zone: [battle_area]
+      kind: digimon
+      materials_count_lte:
+        formula:
+          source_material_count: {}

@@ -1,0 +1,61 @@
+card: LM-036
+name: "Jade Memory Boost!"
+kind: option
+color: [green]
+cost: 3
+
+# "Blue also meets this card's color requirements."
+# The engine/DSL use `use_requirement` as the printed alternate Option access
+# hook: a blue Digimon or Tamer in your battle area or breeding area satisfies
+# the use-color requirement in the action mask and execution path.
+use_requirement:
+  any_field_permanent:
+    of: you
+    any_of:
+      - kind: digimon
+      - kind: tamer
+    color_is: blue
+
+effects:
+  # [Main] Reveal the top 3 cards of your deck. Add 1 green or blue Digimon
+  # card among them to the hand. Return the rest to the bottom of deck.
+  # Then, place this card in the battle area.
+  #
+  # Option-as-Delay placement is handled by the engine's Option pipeline after
+  # resolving a main_from_hand body with a `kind: delay` clause.
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add 1 green or blue Digimon; place rest bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 3
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - color_is: green
+                  - color_is: blue
+          prompt: "Add 1 green or blue Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # [Main] <Delay> Gain 2 memory.
+  # `trigger: delayed` — player-visible [Main]-phase activation (PUPPETS-G009):
+  # the controller trashes the parked Option to activate the body on a later
+  # main phase; it never auto-fires (RULES_CONTEXT 16-16).
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  # Security Effect [Security] Place this card in the battle area.
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}
