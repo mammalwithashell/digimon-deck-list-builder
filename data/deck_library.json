@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated_at": "2026-05-03T03:18:10.567891+00:00",
-  "total_entries": 1900,
+  "generated_at": "2026-05-23T19:14:52.320725+00:00",
+  "total_entries": 2019,
   "archetypes": {
     "7GDL": {
       "archetype_name": "7GDL",
@@ -10,7 +10,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 5.0,
@@ -41,7 +41,7 @@
       "display_card_id": "BT20-037",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 10.0,
@@ -78,7 +78,7 @@
       "display_card_id": "BT21-102",
       "stats": {
         "times_played": 29,
-        "meta_share": 0.015263,
+        "meta_share": 0.014364,
         "top_cut_count": 2,
         "conversion_rate": 0.069,
         "avg_placement": 30.97,
@@ -395,7 +395,7 @@
       "display_card_id": "EX9-057",
       "stats": {
         "times_played": 6,
-        "meta_share": 0.003158,
+        "meta_share": 0.002972,
         "top_cut_count": 2,
         "conversion_rate": 0.3333,
         "avg_placement": 10.33,
@@ -549,7 +549,7 @@
       "display_card_id": "EX4-060",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 21.0,
@@ -607,7 +607,7 @@
       "display_card_id": "BT21-101",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 2,
         "conversion_rate": 0.6667,
         "avg_placement": 4.33,
@@ -689,7 +689,7 @@
       "display_card_id": "BT22-028",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 18.0,
@@ -788,7 +788,7 @@
       "display_card_id": "BT17-051",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002105,
+        "meta_share": 0.001981,
         "top_cut_count": 2,
         "conversion_rate": 0.5,
         "avg_placement": 5.75,
@@ -876,7 +876,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 2,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -917,7 +917,7 @@
       "display_card_id": "EX10-059",
       "stats": {
         "times_played": 16,
-        "meta_share": 0.008421,
+        "meta_share": 0.007925,
         "top_cut_count": 9,
         "conversion_rate": 0.5625,
         "avg_placement": 5.94,
@@ -1167,7 +1167,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -1198,7 +1198,7 @@
       "display_card_id": "EX10-074",
       "stats": {
         "times_played": 33,
-        "meta_share": 0.017368,
+        "meta_share": 0.016345,
         "top_cut_count": 8,
         "conversion_rate": 0.2424,
         "avg_placement": 15.53,
@@ -1559,7 +1559,7 @@
       "display_card_id": "BT13-088",
       "stats": {
         "times_played": 13,
-        "meta_share": 0.006842,
+        "meta_share": 0.006439,
         "top_cut_count": 2,
         "conversion_rate": 0.1538,
         "avg_placement": 13.15,
@@ -1766,7 +1766,7 @@
       "display_card_id": "EX10-010",
       "stats": {
         "times_played": 8,
-        "meta_share": 0.004211,
+        "meta_share": 0.003962,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 31.38,
@@ -1873,7 +1873,7 @@
       "display_card_id": "BT10-057",
       "stats": {
         "times_played": 16,
-        "meta_share": 0.008421,
+        "meta_share": 0.007925,
         "top_cut_count": 5,
         "conversion_rate": 0.3125,
         "avg_placement": 25.75,
@@ -2089,7 +2089,7 @@
       "display_card_id": "BT17-028",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002632,
+        "meta_share": 0.002476,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 33.4,
@@ -2166,7 +2166,7 @@
       "display_card_id": "BT22-063",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002105,
+        "meta_share": 0.001981,
         "top_cut_count": 2,
         "conversion_rate": 0.5,
         "avg_placement": 10.0,
@@ -2254,7 +2254,7 @@
       "display_card_id": "BT23-102",
       "stats": {
         "times_played": 12,
-        "meta_share": 0.006316,
+        "meta_share": 0.005944,
         "top_cut_count": 6,
         "conversion_rate": 0.5,
         "avg_placement": 10.67,
@@ -2405,7 +2405,7 @@
       "display_card_id": "BT22-015",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 44.0,
@@ -2483,7 +2483,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -2514,7 +2514,7 @@
       "display_card_id": "BT24-080",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 0.0,
@@ -2551,7 +2551,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 3.0,
@@ -2624,7 +2624,7 @@
       "display_card_id": "BT20-060",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 17.0,
@@ -2671,7 +2671,7 @@
       "display_card_id": "EX10-009",
       "stats": {
         "times_played": 14,
-        "meta_share": 0.007368,
+        "meta_share": 0.006934,
         "top_cut_count": 8,
         "conversion_rate": 0.5714,
         "avg_placement": 6.93,
@@ -2842,7 +2842,7 @@
       "display_card_id": "BT14-068",
       "stats": {
         "times_played": 12,
-        "meta_share": 0.006316,
+        "meta_share": 0.005944,
         "top_cut_count": 1,
         "conversion_rate": 0.0833,
         "avg_placement": 11.09,
@@ -2989,7 +2989,7 @@
       "display_card_id": "EX2-055",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 7.5,
@@ -3057,7 +3057,7 @@
       "display_card_id": "BT22-061",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 0.0,
@@ -3136,7 +3136,7 @@
       "display_card_id": "BT17-078",
       "stats": {
         "times_played": 66,
-        "meta_share": 0.034737,
+        "meta_share": 0.032689,
         "top_cut_count": 18,
         "conversion_rate": 0.2727,
         "avg_placement": 21.06,
@@ -3827,7 +3827,7 @@
       "display_card_id": "BT23-088",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 4.0,
@@ -3864,7 +3864,7 @@
       "display_card_id": "EX10-061",
       "stats": {
         "times_played": 19,
-        "meta_share": 0.01,
+        "meta_share": 0.009411,
         "top_cut_count": 10,
         "conversion_rate": 0.5263,
         "avg_placement": 6.89,
@@ -4106,7 +4106,7 @@
       "display_card_id": "EX8-029",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 12.67,
@@ -4163,7 +4163,7 @@
       "display_card_id": "EX10-073",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 10.67,
@@ -4220,7 +4220,7 @@
       "display_card_id": "EX5-074",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 30.0,
@@ -4277,7 +4277,7 @@
       "display_card_id": "BT17-073",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 11.0,
@@ -4323,10 +4323,10 @@
       "secondary_color": "White",
       "display_card_id": "BT22-064",
       "stats": {
-        "times_played": 41,
-        "meta_share": 0.021579,
+        "times_played": 42,
+        "meta_share": 0.020802,
         "top_cut_count": 16,
-        "conversion_rate": 0.3902,
+        "conversion_rate": 0.381,
         "avg_placement": 9.44,
         "sources": {
           "digimonmeta": {
@@ -4336,6 +4336,10 @@
           "digilab": {
             "count": 35,
             "top_cuts": 10
+          },
+          "egman": {
+            "count": 1,
+            "top_cuts": 0
           }
         }
       },
@@ -4749,6 +4753,16 @@
           "placement": "118",
           "is_top_cut": false,
           "event_date": "2025-10-11"
+        },
+        {
+          "deck_id": "egman_199d84713069",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-052:4,BT22-053:4,BT2-053:2,BT5-059:2,BT22-057:4,BT5-063:4,BT22-059:3,BT24-065:3,BT22-064:3,P-114:2,EX6-043:1,BT5-085:2,P-039:3,P-107:4,BT5-090:4,BT6-104:1,EX6-041:4,BT22-005:4&type=digimon",
+          "decklist": "[\"BT24-065\", \"BT24-065\", \"BT24-065\", \"P-107\", \"P-107\", \"P-107\", \"P-107\", \"BT22-064\", \"BT22-064\", \"BT22-064\", \"BT6-104\", \"BT22-005\", \"BT22-005\", \"BT22-005\", \"BT22-005\", \"P-114\", \"P-114\", \"BT24-052\", \"BT24-052\", \"BT24-052\", \"BT24-052\", \"BT22-059\", \"BT22-059\", \"BT22-059\", \"BT22-053\", \"BT22-053\", \"BT22-053\", \"BT22-053\", \"BT5-090\", \"BT5-090\", \"BT5-090\", \"BT5-090\", \"BT22-057\", \"BT22-057\", \"BT22-057\", \"BT22-057\", \"P-039\", \"P-039\", \"P-039\", \"BT5-085\", \"BT5-085\", \"EX6-041\", \"EX6-041\", \"EX6-041\", \"EX6-041\", \"BT2-053\", \"BT2-053\", \"EX6-043\", \"BT5-063\", \"BT5-063\", \"BT5-063\", \"BT5-063\", \"BT5-059\", \"BT5-059\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -4765,7 +4779,7 @@
       "display_card_id": "BT24-064",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -4802,7 +4816,7 @@
       "display_card_id": "EX8-016",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 21.5,
@@ -4870,7 +4884,7 @@
       "display_card_id": "EX3-014",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 15.0,
@@ -4907,7 +4921,7 @@
       "display_card_id": "BT23-035",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002105,
+        "meta_share": 0.001981,
         "top_cut_count": 1,
         "conversion_rate": 0.25,
         "avg_placement": 7.75,
@@ -4974,7 +4988,7 @@
       "display_card_id": "BT22-079",
       "stats": {
         "times_played": 45,
-        "meta_share": 0.023684,
+        "meta_share": 0.022288,
         "top_cut_count": 17,
         "conversion_rate": 0.3778,
         "avg_placement": 9.91,
@@ -5451,7 +5465,7 @@
       "display_card_id": "BT17-076",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 9.0,
@@ -5498,7 +5512,7 @@
       "display_card_id": "EX11-073",
       "stats": {
         "times_played": 7,
-        "meta_share": 0.003684,
+        "meta_share": 0.003467,
         "top_cut_count": 1,
         "conversion_rate": 0.1429,
         "avg_placement": 15.14,
@@ -5595,7 +5609,7 @@
       "display_card_id": "BT23-047",
       "stats": {
         "times_played": 10,
-        "meta_share": 0.005263,
+        "meta_share": 0.004953,
         "top_cut_count": 1,
         "conversion_rate": 0.1,
         "avg_placement": 12.3,
@@ -5722,7 +5736,7 @@
       "display_card_id": "BT14-081",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002105,
+        "meta_share": 0.001981,
         "top_cut_count": 1,
         "conversion_rate": 0.25,
         "avg_placement": 47.0,
@@ -5810,7 +5824,7 @@
       "display_card_id": "BT6-030",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 9.67,
@@ -5888,7 +5902,7 @@
       "display_card_id": "BT21-101",
       "stats": {
         "times_played": 11,
-        "meta_share": 0.005789,
+        "meta_share": 0.005448,
         "top_cut_count": 2,
         "conversion_rate": 0.1818,
         "avg_placement": 22.27,
@@ -6045,11 +6059,11 @@
       "secondary_color": null,
       "display_card_id": "BT21-062",
       "stats": {
-        "times_played": 15,
-        "meta_share": 0.007895,
+        "times_played": 16,
+        "meta_share": 0.007925,
         "top_cut_count": 6,
-        "conversion_rate": 0.4,
-        "avg_placement": 6.4,
+        "conversion_rate": 0.375,
+        "avg_placement": 6.44,
         "sources": {
           "digilab": {
             "count": 13,
@@ -6060,7 +6074,7 @@
             "top_cuts": 1
           },
           "egman": {
-            "count": 1,
+            "count": 2,
             "top_cuts": 0
           }
         }
@@ -6215,6 +6229,16 @@
           "placement": "5th",
           "is_top_cut": false,
           "event_date": null
+        },
+        {
+          "deck_id": "egman_e29830c38251",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-056:3,BT18-060:4,BT11-061:13,BT18-065:4,BT21-060:3,P-094:3,BT21-062:3,EX11-046:4,BT21-087:2,EX11-066:4,BT18-092:1,BT11-105:2,BT21-098:4,BT21-006:4&type=digimon",
+          "decklist": "[\"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT21-062\", \"BT21-062\", \"BT21-062\", \"BT21-087\", \"BT21-087\", \"BT18-065\", \"BT18-065\", \"BT18-065\", \"BT18-065\", \"BT21-006\", \"BT21-006\", \"BT21-006\", \"BT21-006\", \"EX11-046\", \"EX11-046\", \"EX11-046\", \"EX11-046\", \"P-094\", \"P-094\", \"P-094\", \"BT18-060\", \"BT18-060\", \"BT18-060\", \"BT18-060\", \"BT21-056\", \"BT21-056\", \"BT21-056\", \"BT21-060\", \"BT21-060\", \"BT21-060\", \"EX11-066\", \"EX11-066\", \"EX11-066\", \"EX11-066\", \"BT18-092\", \"BT11-105\", \"BT11-105\", \"BT21-098\", \"BT21-098\", \"BT21-098\", \"BT21-098\"]",
+          "format": null,
+          "placement": "7th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -6231,7 +6255,7 @@
       "display_card_id": "EX5-073",
       "stats": {
         "times_played": 36,
-        "meta_share": 0.018947,
+        "meta_share": 0.017831,
         "top_cut_count": 6,
         "conversion_rate": 0.1667,
         "avg_placement": 24.72,
@@ -6621,11 +6645,11 @@
       "secondary_color": "Purple",
       "display_card_id": "EX8-073",
       "stats": {
-        "times_played": 76,
-        "meta_share": 0.04,
-        "top_cut_count": 31,
-        "conversion_rate": 0.4079,
-        "avg_placement": 18.21,
+        "times_played": 77,
+        "meta_share": 0.038138,
+        "top_cut_count": 32,
+        "conversion_rate": 0.4156,
+        "avg_placement": 18.0,
         "sources": {
           "digimonmeta": {
             "count": 3,
@@ -6636,8 +6660,8 @@
             "top_cuts": 27
           },
           "egman": {
-            "count": 1,
-            "top_cuts": 1
+            "count": 2,
+            "top_cuts": 2
           }
         }
       },
@@ -7401,6 +7425,16 @@
           "placement": "1st Place",
           "is_top_cut": true,
           "event_date": "3/28/2026"
+        },
+        {
+          "deck_id": "egman_aab2c7f35530",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-064:4,EX8-009:3,EX2-008:2,EX4-006:1,EX8-012:4,ST7-05:2,BT19-009:2,BT21-068:1,EX3-057:1,BT12-016:2,EX8-015:2,AD1-003:3,AD1-008:3,EX8-073:3,P-186:1,BT20-102:2,BT17-080:3,P-103:3,LM-055:1,P-035:1,LM-027:2,EX5-070:2,BT8-097:1,BT12-089:1,EX2-001:4&type=Digimon",
+          "decklist": "[\"AD1-008\", \"AD1-008\", \"AD1-008\", \"P-186\", \"EX8-009\", \"EX8-009\", \"EX8-009\", \"EX2-001\", \"EX2-001\", \"EX2-001\", \"EX2-001\", \"EX4-006\", \"EX2-008\", \"EX2-008\", \"EX5-070\", \"EX5-070\", \"EX8-012\", \"EX8-012\", \"EX8-012\", \"EX8-012\", \"BT19-009\", \"BT19-009\", \"EX3-057\", \"BT20-102\", \"BT20-102\", \"ST7-05\", \"ST7-05\", \"LM-027\", \"LM-027\", \"BT12-089\", \"BT21-064\", \"BT21-064\", \"BT21-064\", \"BT21-064\", \"EX8-015\", \"EX8-015\", \"BT17-080\", \"BT17-080\", \"BT17-080\", \"P-103\", \"P-103\", \"P-103\", \"BT12-016\", \"BT12-016\", \"EX8-073\", \"EX8-073\", \"EX8-073\", \"BT8-097\", \"AD1-003\", \"AD1-003\", \"AD1-003\", \"LM-055\", \"P-035\", \"BT21-068\"]",
+          "format": null,
+          "placement": "2nd",
+          "is_top_cut": true,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -7438,7 +7472,7 @@
       "display_card_id": "BT21-010",
       "stats": {
         "times_played": 7,
-        "meta_share": 0.003684,
+        "meta_share": 0.003467,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 12.86,
@@ -7534,19 +7568,19 @@
       "secondary_color": null,
       "display_card_id": "EX9-021",
       "stats": {
-        "times_played": 3,
-        "meta_share": 0.001579,
-        "top_cut_count": 2,
-        "conversion_rate": 0.6667,
-        "avg_placement": 4.0,
+        "times_played": 9,
+        "meta_share": 0.004458,
+        "top_cut_count": 4,
+        "conversion_rate": 0.4444,
+        "avg_placement": 5.33,
         "sources": {
           "digimonmeta": {
             "count": 1,
             "top_cuts": 1
           },
           "egman": {
-            "count": 2,
-            "top_cuts": 1
+            "count": 8,
+            "top_cuts": 3
           }
         }
       },
@@ -7580,6 +7614,66 @@
           "placement": "10th",
           "is_top_cut": false,
           "event_date": null
+        },
+        {
+          "deck_id": "egman_92bf8ff5e497",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX4-038:4,EX4-039:4,AD1-001:4,AD1-010:4,EX9-012:4,EX9-019:4,AD1-009:4,AD1-012:4,EX9-021:4,LM-049:4,LM-033:4,EX4-003:4,EX1-066:3,EX4-051:1,BT15-101:1,EX4-060:1&type=digimon",
+          "decklist": "[\"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"LM-049\", \"LM-049\", \"LM-049\", \"LM-049\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"EX4-051\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX4-060\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"BT15-101\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"LM-033\", \"LM-033\", \"LM-033\", \"LM-033\"]",
+          "format": null,
+          "placement": "9th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_7aa5dc7145f9",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX4-039:4,EX4-038:4,BT16-082:4,AD1-001:4,AD1-010:4,EX9-012:4,EX9-019:4,AD1-009:4,AD1-012:4,LM-049:4,EX4-003:4,EX9-021:3,LM-033:3,BT8-097:2,EX1-068:1,ST2-13:1&type=digimon",
+          "decklist": "[\"EX4-039\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"BT8-097\", \"BT8-097\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"EX1-068\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"LM-033\", \"LM-033\", \"LM-033\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"LM-049\", \"LM-049\", \"LM-049\", \"LM-049\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"ST2-13\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"AD1-012\"]",
+          "format": null,
+          "placement": "4th",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_904a06b58476",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX4-038:4,EX4-039:4,AD1-001:4,AD1-010:4,EX9-012:4,EX9-019:4,EX4-003:4,BT16-082:3,AD1-009:3,EX9-021:3,EX9-066:3,AD1-012:2,BT21-102:2,ST20-15:2,LM-033:2,BT17-095:2,AD1-014:1,ST21-13:1,AD1-019:1,BT22-084:1&type=digimon",
+          "decklist": "[\"ST21-13\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"AD1-012\", \"AD1-012\", \"BT21-102\", \"BT21-102\", \"AD1-019\", \"BT22-084\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"BT17-095\", \"BT17-095\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX9-066\", \"EX9-066\", \"EX9-066\", \"AD1-014\", \"ST20-15\", \"ST20-15\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"LM-033\", \"LM-033\"]",
+          "format": null,
+          "placement": "5th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_8052574048c4",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX9-012:4,EX9-019:4,AD1-001:4,AD1-010:4,EX4-038:4,EX4-039:4,EX4-003:4,EX9-021:3,AD1-009:3,BT16-082:3,EX9-066:3,ST20-14:3,AD1-012:2,ST21-13:2,ST20-15:2,BT21-102:2,AD1-019:2,AD1-014:1&type=digimon",
+          "decklist": "[\"AD1-019\", \"AD1-019\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"BT21-102\", \"BT21-102\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"ST20-14\", \"ST20-14\", \"ST20-14\", \"ST21-13\", \"ST21-13\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"AD1-014\", \"EX9-066\", \"EX9-066\", \"EX9-066\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"ST20-15\", \"ST20-15\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-012\", \"AD1-012\"]",
+          "format": null,
+          "placement": "9th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_4bf336352510",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX9-019:4,AD1-012:4,EX9-021:4,EX4-060:1,AD1-009:3,EX9-012:4,AD1-010:4,EX4-051:2,AD1-001:4,LM-049:4,EX4-039:4,ST20-14:2,BT22-084:2,EX4-038:4,LM-033:4,EX4-003:4&type=digimon",
+          "decklist": "[\"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"BT22-084\", \"BT22-084\", \"LM-049\", \"LM-049\", \"LM-049\", \"LM-049\", \"EX4-051\", \"EX4-051\", \"EX4-060\", \"ST20-14\", \"ST20-14\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"LM-033\", \"LM-033\", \"LM-033\", \"LM-033\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"EX4-039\"]",
+          "format": null,
+          "placement": "2nd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_219ba4b1d5c2",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX4-038:4,EX4-039:4,AD1-001:4,AD1-010:4,BT24-010:1,EX9-012:4,EX9-019:4,AD1-009:4,AD1-012:4,BT17-027:1,EX4-051:1,EX9-021:4,EX4-060:1,BT22-084:2,EX1-066:2,LM-049:4,LM-033:2,EX4-003:4&type=Digimon",
+          "decklist": "[\"EX4-039\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"LM-049\", \"LM-049\", \"LM-049\", \"LM-049\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"LM-033\", \"LM-033\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX1-066\", \"EX1-066\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX4-003\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"BT17-027\", \"EX4-051\", \"EX4-060\", \"BT22-084\", \"BT22-084\", \"BT24-010\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"AD1-010\"]",
+          "format": null,
+          "placement": "7th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -7596,7 +7690,7 @@
       "display_card_id": "EX11-051",
       "stats": {
         "times_played": 22,
-        "meta_share": 0.011579,
+        "meta_share": 0.010896,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 12.32,
@@ -7843,7 +7937,7 @@
       "display_card_id": "BT20-028",
       "stats": {
         "times_played": 10,
-        "meta_share": 0.005263,
+        "meta_share": 0.004953,
         "top_cut_count": 5,
         "conversion_rate": 0.5,
         "avg_placement": 18.2,
@@ -8016,7 +8110,7 @@
       "display_card_id": "BT24-079",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 13.0,
@@ -8073,7 +8167,7 @@
       "display_card_id": "EX11-052",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 2.0,
@@ -8131,7 +8225,7 @@
       "display_card_id": "EX7-023",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 9.0,
@@ -8178,7 +8272,7 @@
       "display_card_id": "P-175",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 8.0,
@@ -8214,15 +8308,15 @@
       "secondary_color": "Yellow",
       "display_card_id": "BT23-101",
       "stats": {
-        "times_played": 140,
-        "meta_share": 0.073684,
-        "top_cut_count": 44,
-        "conversion_rate": 0.3143,
-        "avg_placement": 11.69,
+        "times_played": 148,
+        "meta_share": 0.073304,
+        "top_cut_count": 45,
+        "conversion_rate": 0.3041,
+        "avg_placement": 11.64,
         "sources": {
           "egman": {
-            "count": 22,
-            "top_cuts": 11
+            "count": 30,
+            "top_cuts": 12
           },
           "digimonmeta": {
             "count": 3,
@@ -9634,6 +9728,86 @@
           "placement": "12th",
           "is_top_cut": false,
           "event_date": null
+        },
+        {
+          "deck_id": "egman_655214083ab7",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT23-048:2,BT22-044:4,BT22-043:4,BT23-101:4,BT23-027:4,BT23-050:3,BT23-020:3,BT16-025:2,BT23-032:4,BT22-099:4,BT23-081:4,BT23-090:2,EX1-071:2,BT4-104:1,BT3-103:1,BT22-094:4,BT22-089:2,BT23-002:4&type=digimon",
+          "decklist": "[\"BT23-048\", \"BT23-048\", \"BT23-050\", \"BT23-050\", \"BT23-050\", \"BT22-089\", \"BT22-089\", \"BT22-099\", \"BT22-099\", \"BT22-099\", \"BT22-099\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"EX1-071\", \"EX1-071\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT22-094\", \"BT22-094\", \"BT22-094\", \"BT22-094\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"BT22-043\", \"BT22-043\", \"BT22-043\", \"BT22-043\", \"BT16-025\", \"BT16-025\", \"BT4-104\", \"BT23-090\", \"BT23-090\", \"BT3-103\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\"]",
+          "format": null,
+          "placement": "4th",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_b37c56ae6b08",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT23-048:3,BT22-043:4,BT22-044:4,BT23-020:3,BT23-027:4,BT23-050:2,BT23-101:4,BT23-032:4,BT16-025:2,BT23-081:3,BT22-099:4,EX1-071:1,BT3-103:1,BT1-090:1,BT4-104:1,EX1-068:1,BT6-102:2,BT22-094:4,P-225:2,BT23-002:4&type=digimon",
+          "decklist": "[\"P-225\", \"P-225\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"EX1-071\", \"BT1-090\", \"BT16-025\", \"BT16-025\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"EX1-068\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT6-102\", \"BT6-102\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT4-104\", \"BT3-103\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-050\", \"BT23-050\", \"BT22-099\", \"BT22-099\", \"BT22-099\", \"BT22-099\", \"BT22-043\", \"BT22-043\", \"BT22-043\", \"BT22-043\", \"BT22-094\", \"BT22-094\", \"BT22-094\", \"BT22-094\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_fdedbf215274",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT23-017:2,BT23-048:4,BT22-044:4,BT23-040:2,BT23-020:3,BT23-027:4,BT23-050:2,BT23-101:4,BT23-032:4,BT16-025:1,BT23-081:3,BT23-084:2,BT23-085:2,BT23-091:1,BT23-092:1,BT23-096:1,BT22-089:3,BT22-094:1,BT3-103:1,BT22-099:2,BT23-090:3,BT23-002:4&type=digimon",
+          "decklist": "[\"BT23-040\", \"BT23-040\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"BT23-084\", \"BT23-084\", \"BT23-096\", \"BT22-089\", \"BT22-089\", \"BT22-089\", \"BT22-094\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT16-025\", \"BT23-091\", \"BT23-050\", \"BT23-050\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT23-085\", \"BT23-085\", \"BT23-092\", \"BT3-103\", \"BT22-099\", \"BT22-099\", \"BT23-017\", \"BT23-017\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-002\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_67d4e8280e97",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT22-043:4,BT22-044:1,BT23-048:4,BT23-037:1,BT23-081:4,BT23-084:2,BT23-090:3,BT23-101:4,BT23-020:3,BT23-027:4,BT23-050:3,BT23-032:4,BT16-025:2,BT22-089:2,BT22-099:2,BT23-017:2,BT3-103:1,EX1-071:1,BT22-094:3,BT23-002:4&type=digimon",
+          "decklist": "[\"BT16-025\", \"BT16-025\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-017\", \"BT23-017\", \"BT22-089\", \"BT22-089\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT23-037\", \"EX1-071\", \"BT23-084\", \"BT23-084\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-050\", \"BT23-050\", \"BT23-050\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT22-043\", \"BT22-043\", \"BT22-043\", \"BT22-043\", \"BT22-099\", \"BT22-099\", \"BT22-044\", \"BT3-103\", \"BT22-094\", \"BT22-094\", \"BT22-094\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-002\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_025af48868cc",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT23-048:4,BT22-043:4,BT22-044:4,BT23-101:4,BT23-020:4,BT23-027:4,BT23-050:3,BT23-032:4,BT16-025:2,BT23-081:4,BT23-090:1,BT22-089:2,BT22-094:3,BT22-100:1,BT22-099:4,BT3-103:1,EX1-068:1,BT22-005:4&type=digimon",
+          "decklist": "[\"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT22-043\", \"BT22-043\", \"BT22-043\", \"BT22-043\", \"BT23-050\", \"BT23-050\", \"BT23-050\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"EX1-068\", \"BT23-090\", \"BT22-089\", \"BT22-089\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT22-094\", \"BT22-094\", \"BT22-094\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT22-005\", \"BT22-005\", \"BT22-005\", \"BT22-005\", \"BT16-025\", \"BT16-025\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT22-100\", \"BT22-099\", \"BT22-099\", \"BT22-099\", \"BT22-099\", \"BT3-103\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_8daa74ecd3d2",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT22-043:3,BT22-044:4,BT23-048:1,BT23-017:2,BT23-020:4,BT23-027:4,BT23-050:2,BT23-041:1,BT23-101:4,BT23-032:4,BT16-025:3,BT22-089:1,BT23-081:4,BT23-090:2,BT23-084:1,BT3-103:1,EX1-071:1,BT22-099:4,BT22-094:3,P-225:1,BT23-002:4&type=digimon",
+          "decklist": "[\"BT23-048\", \"BT22-089\", \"BT23-041\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-032\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT23-090\", \"BT23-090\", \"EX1-071\", \"BT22-099\", \"BT22-099\", \"BT22-099\", \"BT22-099\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"BT22-044\", \"BT23-017\", \"BT23-017\", \"BT23-050\", \"BT23-050\", \"BT22-043\", \"BT22-043\", \"BT22-043\", \"P-225\", \"BT3-103\", \"BT23-084\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT22-094\", \"BT22-094\", \"BT22-094\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_9335382b52bf",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT23-037:4,BT23-048:4,BT23-101:4,BT23-090:4,BT23-002:4,BT23-020:3,BT23-027:3,BT16-025:3,BT23-081:3,BT23-084:3,BT22-089:3,BT23-017:2,BT23-040:2,BT23-041:2,BT23-085:2,BT23-096:2,BT23-092:2,BT22-099:2,BT23-032:1,P-238:1&type=digimon",
+          "decklist": "[\"BT23-085\", \"BT23-085\", \"BT23-096\", \"BT23-096\", \"BT23-041\", \"BT23-041\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT23-017\", \"BT23-017\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-092\", \"BT23-092\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-032\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT22-089\", \"BT22-089\", \"BT22-089\", \"BT23-037\", \"BT23-037\", \"BT23-037\", \"BT23-037\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-084\", \"BT23-084\", \"BT23-084\", \"BT23-040\", \"BT23-040\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"P-238\", \"BT22-099\", \"BT22-099\"]",
+          "format": null,
+          "placement": "12th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_13a2db60938c",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT23-037:4,BT23-048:4,BT23-017:3,BT23-040:1,BT23-101:4,BT23-020:4,BT23-027:3,BT23-050:1,BT23-051:1,BT16-025:3,BT23-032:1,BT23-090:4,BT23-084:4,BT23-085:3,BT23-081:2,BT22-089:2,BT22-094:1,BT23-096:2,BT23-091:2,BT23-092:1,BT23-002:4&type=digimon",
+          "decklist": "[\"BT23-032\", \"BT23-096\", \"BT23-096\", \"BT23-017\", \"BT23-017\", \"BT23-017\", \"BT23-040\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-037\", \"BT23-037\", \"BT23-037\", \"BT23-037\", \"BT23-084\", \"BT23-084\", \"BT23-084\", \"BT23-084\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT22-089\", \"BT22-089\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-085\", \"BT23-085\", \"BT23-085\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT23-081\", \"BT23-081\", \"BT23-091\", \"BT23-091\", \"BT23-050\", \"BT23-051\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT22-094\", \"BT23-092\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -9650,7 +9824,7 @@
       "display_card_id": "BT12-083",
       "stats": {
         "times_played": 6,
-        "meta_share": 0.003158,
+        "meta_share": 0.002972,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 30.17,
@@ -9737,7 +9911,7 @@
       "display_card_id": "EX7-023",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 11.5,
@@ -9784,7 +9958,7 @@
       "display_card_id": "BT20-020",
       "stats": {
         "times_played": 19,
-        "meta_share": 0.01,
+        "meta_share": 0.009411,
         "top_cut_count": 4,
         "conversion_rate": 0.2105,
         "avg_placement": 16.53,
@@ -10001,7 +10175,7 @@
       "display_card_id": "BT17-077",
       "stats": {
         "times_played": 36,
-        "meta_share": 0.018947,
+        "meta_share": 0.017831,
         "top_cut_count": 8,
         "conversion_rate": 0.2222,
         "avg_placement": 24.03,
@@ -10388,7 +10562,7 @@
       "display_card_id": "BT20-055",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002105,
+        "meta_share": 0.001981,
         "top_cut_count": 2,
         "conversion_rate": 0.5,
         "avg_placement": 13.0,
@@ -10454,10 +10628,10 @@
       "secondary_color": "White",
       "display_card_id": "BT23-013",
       "stats": {
-        "times_played": 94,
-        "meta_share": 0.049474,
+        "times_played": 96,
+        "meta_share": 0.047548,
         "top_cut_count": 35,
-        "conversion_rate": 0.3723,
+        "conversion_rate": 0.3646,
         "avg_placement": 11.16,
         "sources": {
           "digilab": {
@@ -10467,6 +10641,10 @@
           "digimonmeta": {
             "count": 3,
             "top_cuts": 3
+          },
+          "egman": {
+            "count": 2,
+            "top_cuts": 0
           }
         }
       },
@@ -11410,6 +11588,26 @@
           "placement": "1st Place",
           "is_top_cut": true,
           "event_date": "1/21/2026"
+        },
+        {
+          "deck_id": "egman_a0286f66bb27",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT20-008:4,BT23-006:4,BT6-009:1,BT23-076:3,BT13-009:1,BT7-082:1,BT20-013:3,BT13-013:3,BT6-084:2,BT20-084:2,BT23-077:2,BT20-014:4,BT23-013:4,BT20-057:3,BT20-059:3,BT10-112:1,BT20-021:2,BT23-099:1,ST12-15:4,BT8-097:2,BT14-001:4&type=digimon",
+          "decklist": "[\"BT23-099\", \"BT20-013\", \"BT20-013\", \"BT20-013\", \"BT10-112\", \"BT23-077\", \"BT23-077\", \"BT23-006\", \"BT23-006\", \"BT23-006\", \"BT23-006\", \"BT20-008\", \"BT20-008\", \"BT20-008\", \"BT20-008\", \"BT23-013\", \"BT23-013\", \"BT23-013\", \"BT23-013\", \"BT20-021\", \"BT20-021\", \"BT23-076\", \"BT23-076\", \"BT23-076\", \"BT20-084\", \"BT20-084\", \"BT20-057\", \"BT20-057\", \"BT20-057\", \"ST12-15\", \"ST12-15\", \"ST12-15\", \"ST12-15\", \"BT6-084\", \"BT6-084\", \"BT13-013\", \"BT13-013\", \"BT13-013\", \"BT13-009\", \"BT6-009\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT20-059\", \"BT20-059\", \"BT20-059\", \"BT8-097\", \"BT8-097\", \"BT20-014\", \"BT20-014\", \"BT20-014\", \"BT20-014\", \"BT7-082\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_3fd1365f55c9",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT23-006:4,BT20-008:4,BT13-009:1,BT23-076:2,ST12-12:1,BT20-013:4,BT13-013:3,BT23-077:2,BT20-084:2,AD1-025:1,ST12-13:1,BT6-084:1,BT20-014:4,BT6-015:2,BT20-059:2,BT23-013:4,BT10-016:1,BT20-057:2,BT10-112:1,BT23-099:2,ST12-15:4,LM-027:1,BT8-097:1,BT14-001:4&type=digimon",
+          "decklist": "[\"BT23-076\", \"BT23-076\", \"ST12-13\", \"BT20-084\", \"BT20-084\", \"BT23-099\", \"BT23-099\", \"BT6-084\", \"BT23-077\", \"BT23-077\", \"BT20-057\", \"BT20-057\", \"BT23-013\", \"BT23-013\", \"BT23-013\", \"BT23-013\", \"BT6-015\", \"BT6-015\", \"ST12-15\", \"ST12-15\", \"ST12-15\", \"ST12-15\", \"LM-027\", \"BT20-013\", \"BT20-013\", \"BT20-013\", \"BT20-013\", \"BT8-097\", \"BT20-014\", \"BT20-014\", \"BT20-014\", \"BT20-014\", \"ST12-12\", \"BT13-009\", \"BT13-013\", \"BT13-013\", \"BT13-013\", \"BT10-016\", \"BT10-112\", \"BT23-006\", \"BT23-006\", \"BT23-006\", \"BT23-006\", \"BT20-059\", \"BT20-059\", \"AD1-025\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT20-008\", \"BT20-008\", \"BT20-008\", \"BT20-008\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -11426,7 +11624,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 9,
-        "meta_share": 0.004737,
+        "meta_share": 0.004458,
         "top_cut_count": 8,
         "conversion_rate": 0.8889,
         "avg_placement": 5.11,
@@ -11562,7 +11760,7 @@
       "display_card_id": "P-203",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 21.5,
@@ -11609,7 +11807,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -11661,7 +11859,7 @@
       "display_card_id": "EX5-055",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 110.0,
@@ -11698,7 +11896,7 @@
       "display_card_id": "EX5-063",
       "stats": {
         "times_played": 45,
-        "meta_share": 0.023684,
+        "meta_share": 0.022288,
         "top_cut_count": 10,
         "conversion_rate": 0.2222,
         "avg_placement": 19.02,
@@ -12200,7 +12398,7 @@
       "display_card_id": "EX5-043",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 2,
         "conversion_rate": 0.6667,
         "avg_placement": 7.0,
@@ -12257,7 +12455,7 @@
       "display_card_id": "EX6-054",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 36.5,
@@ -12308,7 +12506,7 @@
       "display_card_id": "EX1-073",
       "stats": {
         "times_played": 30,
-        "meta_share": 0.015789,
+        "meta_share": 0.014859,
         "top_cut_count": 12,
         "conversion_rate": 0.4,
         "avg_placement": 15.6,
@@ -12635,7 +12833,7 @@
       "display_card_id": "P-153",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 4.0,
@@ -12672,7 +12870,7 @@
       "display_card_id": "BT16-102",
       "stats": {
         "times_played": 16,
-        "meta_share": 0.008421,
+        "meta_share": 0.007925,
         "top_cut_count": 3,
         "conversion_rate": 0.1875,
         "avg_placement": 13.31,
@@ -12863,7 +13061,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -12894,7 +13092,7 @@
       "display_card_id": "BT23-102",
       "stats": {
         "times_played": 10,
-        "meta_share": 0.005263,
+        "meta_share": 0.004953,
         "top_cut_count": 3,
         "conversion_rate": 0.3,
         "avg_placement": 12.2,
@@ -13021,7 +13219,7 @@
       "display_card_id": "P-187",
       "stats": {
         "times_played": 28,
-        "meta_share": 0.014737,
+        "meta_share": 0.013868,
         "top_cut_count": 13,
         "conversion_rate": 0.4643,
         "avg_placement": 10.89,
@@ -13331,11 +13529,11 @@
       "secondary_color": null,
       "display_card_id": "BT24-017",
       "stats": {
-        "times_played": 95,
-        "meta_share": 0.05,
-        "top_cut_count": 41,
-        "conversion_rate": 0.4316,
-        "avg_placement": 10.12,
+        "times_played": 111,
+        "meta_share": 0.054978,
+        "top_cut_count": 46,
+        "conversion_rate": 0.4144,
+        "avg_placement": 9.94,
         "sources": {
           "digimonmeta": {
             "count": 9,
@@ -13346,8 +13544,8 @@
             "top_cuts": 32
           },
           "egman": {
-            "count": 1,
-            "top_cuts": 0
+            "count": 17,
+            "top_cuts": 5
           }
         }
       },
@@ -14301,6 +14499,166 @@
           "placement": "8th",
           "is_top_cut": false,
           "event_date": null
+        },
+        {
+          "deck_id": "egman_3122ff41dca1",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT18-087:1,BT21-081:3,BT24-082:2,BT8-097:2,LM-027:2,P-103:4,BT24-008:4,BT21-008:4,BT23-005:2,BT16-082:3,BT21-017:4,BT24-011:1,BT24-012:4,BT24-016:4,BT21-024:1,BT20-016:1,BT24-017:4,BT21-026:1,BT24-018:3,BT21-001:4&type=digimon",
+          "decklist": "[\"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT24-082\", \"BT24-082\", \"LM-027\", \"LM-027\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-011\", \"P-103\", \"P-103\", \"P-103\", \"P-103\", \"BT18-087\", \"BT23-005\", \"BT23-005\", \"BT21-024\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT20-016\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT8-097\", \"BT8-097\", \"BT24-017\", \"BT24-017\", \"BT24-017\", \"BT24-017\", \"BT21-026\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\"]",
+          "format": null,
+          "placement": "2nd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_cd29e755470e",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:4,BT21-008:4,BT24-016:4,EX11-012:4,BT21-001:4,BT21-017:3,P-189:3,BT24-018:3,P-103:3,BT24-082:3,EX11-008:2,BT24-011:2,BT21-024:2,P-035:2,BT8-097:2,LM-027:2,BT21-093:2,BT21-081:2,BT24-017:1,LM-055:1,EX11-054:1&type=digimon",
+          "decklist": "[\"EX11-054\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT21-081\", \"BT21-081\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"P-189\", \"P-189\", \"P-189\", \"P-103\", \"P-103\", \"P-103\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-017\", \"BT21-093\", \"BT21-093\", \"BT24-011\", \"BT24-011\", \"BT8-097\", \"BT8-097\", \"LM-055\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-024\", \"BT21-024\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"EX11-008\", \"EX11-008\", \"P-035\", \"P-035\", \"LM-027\", \"LM-027\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\"]",
+          "format": null,
+          "placement": "1st",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_4b709250b3c0",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-008:4,BT24-008:4,BT24-016:4,EX11-012:4,BT21-001:4,BT21-017:3,BT24-012:3,BT21-024:3,BT24-018:3,BT21-081:3,P-103:3,EX11-008:2,BT16-082:2,BT24-011:2,BT24-082:2,P-035:2,LM-027:2,EX11-054:1,BT24-017:1,BT8-097:1,BT21-093:1&type=digimon",
+          "decklist": "[\"P-035\", \"P-035\", \"BT8-097\", \"BT21-093\", \"P-103\", \"P-103\", \"P-103\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT24-011\", \"BT24-011\", \"BT24-017\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT21-024\", \"BT21-024\", \"BT21-024\", \"BT24-082\", \"BT24-082\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT16-082\", \"BT16-082\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"EX11-054\", \"EX11-008\", \"EX11-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"LM-027\", \"LM-027\"]",
+          "format": null,
+          "placement": "8th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_eb59d0b3f920",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:4,BT21-008:4,BT21-017:4,BT24-016:4,BT21-001:4,EX11-008:3,BT24-012:3,BT21-081:3,EX11-012:3,BT24-018:3,P-103:3,BT24-011:2,BT24-017:2,EX11-054:2,BT24-089:2,BT21-093:2,BT21-024:1,BT21-025:1,BT24-082:1,LM-055:1,LM-027:1,BT8-097:1&type=digimon",
+          "decklist": "[\"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-011\", \"BT24-011\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"EX11-054\", \"EX11-054\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"P-103\", \"P-103\", \"P-103\", \"EX11-008\", \"EX11-008\", \"EX11-008\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT24-089\", \"BT24-089\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT21-025\", \"BT21-024\", \"BT24-082\", \"BT21-093\", \"BT21-093\", \"BT8-097\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT24-017\", \"BT24-017\", \"LM-027\", \"LM-055\", \"BT24-012\", \"BT24-012\", \"BT24-012\"]",
+          "format": null,
+          "placement": "2nd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_0088dc4a9f19",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-008:4,BT21-017:4,BT24-016:4,EX11-012:4,BT21-001:4,BT24-008:3,BT24-018:3,P-103:3,EX11-008:2,BT16-082:2,P-189:2,BT24-012:2,EX11-054:2,BT21-081:2,BT24-082:2,BT8-097:2,LM-027:2,BT24-011:1,BT21-025:1,BT21-024:1,BT24-017:1,BT21-093:1,P-035:1,LM-055:1&type=digimon",
+          "decklist": "[\"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT24-082\", \"BT24-082\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"P-103\", \"P-103\", \"P-103\", \"LM-027\", \"LM-027\", \"P-189\", \"P-189\", \"BT24-017\", \"BT16-082\", \"BT16-082\", \"EX11-054\", \"EX11-054\", \"EX11-008\", \"EX11-008\", \"BT24-011\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"P-035\", \"BT24-012\", \"BT24-012\", \"LM-055\", \"BT21-081\", \"BT21-081\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT8-097\", \"BT8-097\", \"BT21-025\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT21-024\", \"BT21-093\"]",
+          "format": null,
+          "placement": "10th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_9b44cf5aa36d",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:3,EX11-008:3,BT21-008:4,BT16-082:2,BT21-017:4,P-189:2,BT24-012:2,BT24-011:1,BT21-024:2,BT24-016:4,EX11-012:4,BT24-017:1,BT24-018:3,LM-027:1,P-035:1,P-103:1,LM-055:2,BT8-097:2,BT21-093:2,BT21-081:2,EX11-054:1,BT24-082:3,BT21-001:4&type=digimon",
+          "decklist": "[\"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT16-082\", \"BT16-082\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT24-012\", \"BT24-012\", \"BT24-017\", \"P-189\", \"P-189\", \"BT8-097\", \"BT8-097\", \"BT21-093\", \"BT21-093\", \"BT24-011\", \"EX11-054\", \"BT21-024\", \"BT21-024\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT21-081\", \"BT21-081\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"LM-027\", \"P-103\", \"EX11-008\", \"EX11-008\", \"EX11-008\", \"LM-055\", \"LM-055\", \"P-035\"]",
+          "format": null,
+          "placement": "11th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_d872b9dd076d",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:4,BT21-008:4,BT16-082:4,BT24-011:2,BT21-017:4,P-189:3,BT24-016:4,BT21-024:3,EX11-012:4,BT24-017:1,BT24-018:3,BT24-082:2,BT21-081:3,LM-055:1,P-103:3,BT8-097:2,LM-027:1,P-035:2,BT21-001:4&type=digimon",
+          "decklist": "[\"BT24-082\", \"BT24-082\", \"BT8-097\", \"BT8-097\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"LM-027\", \"BT24-017\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"LM-055\", \"P-189\", \"P-189\", \"P-189\", \"BT21-024\", \"BT21-024\", \"BT21-024\", \"P-035\", \"P-035\", \"BT24-011\", \"BT24-011\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"P-103\", \"P-103\", \"P-103\"]",
+          "format": null,
+          "placement": "12th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_cd13ba4f97ee",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:4,BT21-008:4,EX11-008:2,BT24-011:3,BT21-017:4,P-189:2,BT24-016:4,BT21-025:2,EX11-012:4,BT24-017:1,BT24-018:3,BT21-081:2,BT24-082:3,LM-027:2,P-103:3,P-035:2,BT8-097:2,BT21-093:1,LM-055:1,BT1-090:1,BT21-001:4&type=digimon",
+          "decklist": "[\"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"LM-055\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"BT8-097\", \"BT8-097\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-017\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"LM-027\", \"LM-027\", \"P-035\", \"P-035\", \"BT1-090\", \"EX11-008\", \"EX11-008\", \"BT21-025\", \"BT21-025\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT21-081\", \"BT21-081\", \"P-189\", \"P-189\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT24-011\", \"BT24-011\", \"BT24-011\", \"P-103\", \"P-103\", \"P-103\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT21-093\"]",
+          "format": null,
+          "placement": "14th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_32de391d72ab",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:4,BT21-008:4,EX11-008:2,BT16-082:2,BT21-017:4,BT24-012:2,BT24-011:2,BT24-016:4,BT21-025:1,BT21-024:2,EX11-012:4,BT24-017:1,LM-055:1,P-103:3,BT21-093:2,BT18-087:2,BT21-081:3,BT24-082:1,BT24-018:3,BT8-097:2,BT1-090:1,BT21-001:4&type=digimon",
+          "decklist": "[\"P-103\", \"P-103\", \"P-103\", \"LM-055\", \"BT18-087\", \"BT18-087\", \"BT8-097\", \"BT8-097\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"EX11-008\", \"EX11-008\", \"BT21-093\", \"BT21-093\", \"BT24-012\", \"BT24-012\", \"BT21-025\", \"BT21-024\", \"BT21-024\", \"BT1-090\", \"BT16-082\", \"BT16-082\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT24-011\", \"BT24-011\", \"BT24-082\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT24-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_5d9ca4e2b0d2",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT16-082:4,BT21-008:4,BT24-008:3,BT24-012:3,BT21-017:4,BT24-011:2,BT24-016:4,BT21-024:2,EX11-012:4,BT24-017:1,BT24-018:3,BT21-081:4,BT24-082:2,P-103:3,LM-055:1,P-035:2,BT8-097:2,LM-027:1,BT21-093:1,BT21-001:4&type=digimon",
+          "decklist": "[\"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-017\", \"BT8-097\", \"BT8-097\", \"BT24-011\", \"BT24-011\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"P-103\", \"P-103\", \"P-103\", \"BT21-024\", \"BT21-024\", \"P-035\", \"P-035\", \"LM-027\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT21-093\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT24-082\", \"BT24-082\", \"LM-055\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_a5ac5991550b",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-008:4,BT24-008:4,EX11-008:3,BT21-017:3,BT24-012:3,BT24-011:2,P-189:1,BT24-016:4,BT21-024:2,BT21-025:1,BT24-017:1,EX11-012:4,BT24-018:3,BT21-081:3,BT24-082:2,P-103:4,BT8-097:2,LM-027:2,LM-055:1,BT21-093:1,BT21-001:4&type=Digimon",
+          "decklist": "[\"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"EX11-008\", \"EX11-008\", \"EX11-008\", \"BT21-025\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"P-103\", \"P-103\", \"P-103\", \"P-103\", \"BT24-017\", \"LM-027\", \"LM-027\", \"LM-055\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"P-189\", \"BT21-024\", \"BT21-024\", \"BT24-082\", \"BT24-082\", \"BT21-093\", \"BT8-097\", \"BT8-097\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT24-011\", \"BT24-011\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\"]",
+          "format": null,
+          "placement": "1st",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_23096a851714",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:3,BT21-008:4,EX11-008:3,BT16-082:3,BT24-012:3,BT21-017:4,BT24-011:2,BT21-024:1,BT21-025:1,BT24-016:4,BT24-017:1,EX11-012:4,BT24-018:3,BT21-081:3,BT24-082:1,BT21-093:2,EX11-054:2,P-103:3,P-035:2,BT8-097:1,BT21-001:4&type=digimon",
+          "decklist": "[\"BT24-011\", \"BT24-011\", \"EX11-008\", \"EX11-008\", \"EX11-008\", \"BT21-093\", \"BT21-093\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT24-082\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"P-103\", \"P-103\", \"P-103\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-025\", \"BT21-024\", \"EX11-054\", \"EX11-054\", \"BT24-017\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"P-035\", \"P-035\", \"BT8-097\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-081\", \"BT21-081\", \"BT21-081\"]",
+          "format": null,
+          "placement": "3rd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_aa6f28944ac1",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:3,BT23-005:1,BT21-008:4,EX11-008:2,BT24-012:2,BT21-017:4,P-189:2,BT24-011:2,BT24-016:4,BT21-025:1,BT21-024:2,BT24-017:2,EX11-012:3,BT24-018:3,BT21-081:2,BT24-082:3,EX11-054:1,P-103:3,BT24-089:2,LM-027:1,BT8-097:2,P-035:1,BT21-001:4&type=digimon",
+          "decklist": "[\"BT23-005\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT24-012\", \"BT24-012\", \"BT21-081\", \"BT21-081\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"P-189\", \"P-189\", \"LM-027\", \"BT8-097\", \"BT8-097\", \"BT24-017\", \"BT24-017\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-011\", \"BT24-011\", \"P-035\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"EX11-008\", \"EX11-008\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT21-024\", \"BT21-024\", \"EX11-054\", \"BT21-025\", \"P-103\", \"P-103\", \"P-103\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT24-089\", \"BT24-089\"]",
+          "format": null,
+          "placement": "13th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_88e49c779e14",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:4,BT21-008:4,EX11-008:3,BT24-016:4,BT24-082:2,BT24-089:2,BT24-012:2,BT21-017:4,P-189:2,BT24-011:2,BT21-025:3,BT24-018:3,BT24-017:1,EX11-012:4,BT21-081:2,EX11-054:3,P-103:1,BT21-093:2,BT8-097:2,BT21-001:4&type=digimon",
+          "decklist": "[\"BT24-012\", \"BT24-012\", \"BT24-089\", \"BT24-089\", \"EX11-054\", \"EX11-054\", \"EX11-054\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"P-103\", \"BT24-082\", \"BT24-082\", \"BT24-011\", \"BT24-011\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT24-017\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"EX11-008\", \"EX11-008\", \"EX11-008\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"P-189\", \"P-189\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-081\", \"BT21-081\", \"BT8-097\", \"BT8-097\", \"BT21-093\", \"BT21-093\", \"BT21-025\", \"BT21-025\", \"BT21-025\"]",
+          "format": null,
+          "placement": "14th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_ffd4393fc697",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX11-008:3,BT24-008:4,BT21-008:4,BT21-017:4,BT24-012:3,BT24-011:2,BT24-016:4,BT21-025:1,BT21-024:2,BT24-017:2,EX11-012:3,BT24-018:3,EX11-054:2,BT24-082:2,BT21-081:2,P-103:3,P-035:2,BT24-089:1,LM-027:1,BT8-097:2,BT21-001:4&type=digimon",
+          "decklist": "[\"BT24-082\", \"BT24-082\", \"P-103\", \"P-103\", \"P-103\", \"BT21-081\", \"BT21-081\", \"EX11-008\", \"EX11-008\", \"EX11-008\", \"BT21-025\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"EX11-054\", \"EX11-054\", \"P-035\", \"P-035\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-089\", \"LM-027\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-024\", \"BT21-024\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT8-097\", \"BT8-097\", \"BT24-017\", \"BT24-017\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT24-011\", \"BT24-011\"]",
+          "format": null,
+          "placement": "15th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_b54fd7c75b2d",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT16-082:3,ST12-03:2,BT24-008:4,BT21-008:4,BT24-012:3,BT21-017:4,BT24-011:1,BT24-016:4,BT20-016:1,BT21-024:1,BT24-017:1,EX11-012:3,BT24-018:3,EX11-054:1,BT21-081:3,BT24-082:2,BT24-089:1,LM-027:2,P-103:3,BT8-097:2,BT21-093:2,BT21-001:4&type=digimon",
+          "decklist": "[\"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT24-017\", \"BT24-089\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT21-024\", \"EX11-054\", \"ST12-03\", \"ST12-03\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT8-097\", \"BT8-097\", \"BT20-016\", \"LM-027\", \"LM-027\", \"BT24-082\", \"BT24-082\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-011\", \"BT21-093\", \"BT21-093\", \"P-103\", \"P-103\", \"P-103\"]",
+          "format": null,
+          "placement": "16th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -14317,7 +14675,7 @@
       "display_card_id": "BT21-079",
       "stats": {
         "times_played": 7,
-        "meta_share": 0.003684,
+        "meta_share": 0.003467,
         "top_cut_count": 3,
         "conversion_rate": 0.4286,
         "avg_placement": 10.86,
@@ -14418,7 +14776,7 @@
       "display_card_id": "EX5-054",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 16.5,
@@ -14464,14 +14822,30 @@
       "secondary_color": null,
       "display_card_id": "EX10-037",
       "stats": {
-        "times_played": 0,
-        "meta_share": 0.0,
-        "top_cut_count": 0,
-        "conversion_rate": 0.0,
-        "avg_placement": 0.0,
-        "sources": {}
+        "times_played": 1,
+        "meta_share": 0.000495,
+        "top_cut_count": 1,
+        "conversion_rate": 1.0,
+        "avg_placement": 4.0,
+        "sources": {
+          "egman": {
+            "count": 1,
+            "top_cuts": 1
+          }
+        }
       },
-      "decklists": [],
+      "decklists": [
+        {
+          "deck_id": "egman_5a6f306a44d0",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=ST14-02:1,EX2-039:1,BT19-067:1,BT12-073:3,EX10-037:3,EX10-041:2,BT12-078:3,P-077:4,EX10-050:4,ST14-07:3,BT12-085:2,EX6-056:1,EX10-074:3,EX2-044:2,ST14-10:1,BT12-110:1,BT19-088:1,BT19-097:1,EX2-071:4,ST14-12:4,ST14-11:3,EX11-047:1,EX4-074:1,ST14-01:4&type=Digimon",
+          "decklist": "[\"ST14-12\", \"ST14-12\", \"ST14-12\", \"ST14-12\", \"EX2-039\", \"BT12-085\", \"BT12-085\", \"EX4-074\", \"BT12-073\", \"BT12-073\", \"BT12-073\", \"EX11-047\", \"EX2-071\", \"EX2-071\", \"EX2-071\", \"EX2-071\", \"ST14-11\", \"ST14-11\", \"ST14-11\", \"ST14-01\", \"ST14-01\", \"ST14-01\", \"ST14-01\", \"EX6-056\", \"BT19-067\", \"EX10-050\", \"EX10-050\", \"EX10-050\", \"EX10-050\", \"EX10-041\", \"EX10-041\", \"EX10-037\", \"EX10-037\", \"EX10-037\", \"ST14-07\", \"ST14-07\", \"ST14-07\", \"BT12-078\", \"BT12-078\", \"BT12-078\", \"P-077\", \"P-077\", \"P-077\", \"P-077\", \"EX2-044\", \"EX2-044\", \"ST14-10\", \"ST14-02\", \"EX10-074\", \"EX10-074\", \"EX10-074\", \"BT19-088\", \"BT12-110\", \"BT19-097\"]",
+          "format": null,
+          "placement": "4th",
+          "is_top_cut": true,
+          "event_date": null
+        }
+      ],
       "digilab_stats": {
         "times_played": 1,
         "conversion_rate": 1.0,
@@ -14485,11 +14859,11 @@
       "secondary_color": "Black",
       "display_card_id": "P-220",
       "stats": {
-        "times_played": 28,
-        "meta_share": 0.014737,
-        "top_cut_count": 18,
-        "conversion_rate": 0.6429,
-        "avg_placement": 7.29,
+        "times_played": 41,
+        "meta_share": 0.020307,
+        "top_cut_count": 20,
+        "conversion_rate": 0.4878,
+        "avg_placement": 7.78,
         "sources": {
           "digimonmeta": {
             "count": 7,
@@ -14500,8 +14874,8 @@
             "top_cuts": 9
           },
           "egman": {
-            "count": 2,
-            "top_cuts": 2
+            "count": 15,
+            "top_cuts": 4
           }
         }
       },
@@ -14785,6 +15159,136 @@
           "placement": "3rd",
           "is_top_cut": true,
           "event_date": null
+        },
+        {
+          "deck_id": "egman_42eacc7cf09d",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT16-082:4,BT19-070:4,BT18-073:4,P-220:4,BT18-019:4,P-193:4,EX1-066:4,BT15-006:4,EX9-058:3,P-205:3,EX11-055:3,BT13-078:2,BT18-013:2,BT18-015:2,BT19-065:2,BT19-075:2,BT19-101:2,BT19-069:1&type=digimon",
+          "decklist": "[\"P-205\", \"P-205\", \"P-205\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT13-078\", \"BT13-078\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT18-013\", \"BT18-013\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"BT18-015\", \"BT18-015\", \"BT19-065\", \"BT19-065\", \"BT19-101\", \"BT19-101\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"BT19-069\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT19-075\", \"BT19-075\"]",
+          "format": null,
+          "placement": "6th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_49851ec7d339",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=P-220:4,BT18-019:4,BT18-073:4,BT19-070:4,EX11-055:4,EX9-058:4,P-193:4,P-205:4,ST6-01:4,BT19-075:3,EX1-066:3,BT18-007:3,BT19-065:2,BT18-013:2,BT18-015:2,BT3-077:2,BT19-101:1&type=digimon",
+          "decklist": "[\"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"BT18-007\", \"BT18-007\", \"BT18-007\", \"BT19-065\", \"BT19-065\", \"BT18-013\", \"BT18-013\", \"BT19-101\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"ST6-01\", \"ST6-01\", \"ST6-01\", \"ST6-01\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT19-075\", \"BT19-075\", \"BT19-075\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"P-205\", \"P-205\", \"P-205\", \"P-205\", \"BT18-015\", \"BT18-015\", \"BT3-077\", \"BT3-077\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"EX9-058\"]",
+          "format": null,
+          "placement": "11th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_d7771ef09fe6",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT19-070:4,BT18-073:4,P-220:4,EX11-055:4,EX1-066:4,P-193:4,BT19-006:4,EX9-058:3,BT18-007:3,BT19-066:3,BT18-013:3,BT18-019:3,P-205:3,BT19-069:2,BT19-101:2,EX9-074:1,BT11-018:1,BT19-075:1,BT19-099:1&type=digimon",
+          "decklist": "[\"BT18-013\", \"BT18-013\", \"BT18-013\", \"P-205\", \"P-205\", \"P-205\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT19-006\", \"BT19-006\", \"BT19-006\", \"BT19-006\", \"BT19-075\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"BT19-066\", \"BT19-066\", \"BT19-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"BT19-099\", \"BT19-069\", \"BT19-069\", \"BT19-101\", \"BT19-101\", \"BT18-007\", \"BT18-007\", \"BT18-007\", \"BT11-018\", \"EX9-074\"]",
+          "format": null,
+          "placement": "13th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_a0ffc9554d17",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT16-082:4,EX9-058:4,BT19-070:4,BT18-073:4,BT18-019:4,P-220:4,EX11-055:4,P-193:4,P-205:4,BT15-006:4,EX1-066:3,BT18-015:2,BT19-065:2,BT19-075:2,BT18-013:1,BT19-069:1,BT11-018:1,BT19-101:1,EX9-068:1&type=digimon",
+          "decklist": "[\"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"P-205\", \"P-205\", \"P-205\", \"P-205\", \"BT18-013\", \"BT19-069\", \"BT18-015\", \"BT18-015\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX9-068\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"BT19-075\", \"BT19-075\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT19-065\", \"BT19-065\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"BT11-018\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT19-101\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\"]",
+          "format": null,
+          "placement": "3rd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_d979c50eecdb",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT19-070:4,BT18-073:4,P-220:4,BT15-006:4,BT3-077:3,EX9-058:3,BT18-019:3,P-193:3,P-205:3,EX11-055:3,EX1-066:3,BT18-007:2,BT18-013:2,BT19-069:2,BT13-083:2,BT19-075:2,BT8-107:2,BT18-015:1,BT19-065:1,BT19-101:1,BT19-099:1,ST16-14:1,BT3-006:1&type=digimon",
+          "decklist": "[\"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT19-075\", \"BT19-075\", \"BT18-007\", \"BT18-007\", \"BT19-069\", \"BT19-069\", \"BT13-083\", \"BT13-083\", \"BT3-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT8-107\", \"BT8-107\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"BT18-015\", \"P-205\", \"P-205\", \"P-205\", \"ST16-14\", \"BT18-013\", \"BT18-013\", \"BT19-065\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"BT3-077\", \"BT3-077\", \"BT3-077\", \"P-193\", \"P-193\", \"P-193\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"BT19-099\", \"BT19-101\"]",
+          "format": null,
+          "placement": "14th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_84638aadfbed",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX10-040:4,BT3-077:2,EX9-058:1,BT18-013:1,BT19-069:2,BT18-015:3,BT19-070:3,BT18-073:3,BT19-065:3,BT16-082:2,P-220:4,BT19-075:3,BT19-101:1,BT18-019:4,EX11-055:4,P-193:4,P-205:2,EX1-066:4,BT15-006:4&type=digimon",
+          "decklist": "[\"P-205\", \"P-205\", \"BT18-015\", \"BT18-015\", \"BT18-015\", \"BT19-101\", \"BT19-069\", \"BT19-069\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"EX10-040\", \"EX10-040\", \"EX10-040\", \"EX10-040\", \"BT19-065\", \"BT19-065\", \"BT19-065\", \"BT16-082\", \"BT16-082\", \"BT19-075\", \"BT19-075\", \"BT19-075\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT18-013\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"EX9-058\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT3-077\", \"BT3-077\", \"BT19-070\", \"BT19-070\", \"BT19-070\"]",
+          "format": null,
+          "placement": "1st",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_a40226ff8099",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX9-058:4,BT16-082:4,BT9-070:2,BT18-013:1,BT13-083:3,BT18-015:1,BT19-070:4,BT18-073:4,BT19-065:1,P-220:4,BT18-019:4,BT19-075:3,BT19-101:1,P-193:4,P-205:3,EX11-055:3,BT8-107:1,EX1-066:3,BT15-006:4&type=digimon",
+          "decklist": "[\"BT8-107\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT19-065\", \"BT18-015\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT19-075\", \"BT19-075\", \"BT19-075\", \"BT9-070\", \"BT9-070\", \"BT13-083\", \"BT13-083\", \"BT13-083\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"BT18-013\", \"BT19-101\", \"P-205\", \"P-205\", \"P-205\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\"]",
+          "format": null,
+          "placement": "6th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_261fbe8d0077",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT18-007:3,BT19-066:4,EX9-058:1,BT18-013:3,BT19-069:2,BT18-015:2,BT19-070:4,BT18-073:4,BT19-065:2,P-220:4,BT18-019:4,BT19-075:2,BT19-101:1,P-193:3,P-205:4,EX11-055:4,EX1-066:3,BT19-006:4&type=digimon",
+          "decklist": "[\"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT19-066\", \"BT19-066\", \"BT19-066\", \"BT19-066\", \"BT18-015\", \"BT18-015\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"BT19-006\", \"BT19-006\", \"BT19-006\", \"BT19-006\", \"BT19-101\", \"P-193\", \"P-193\", \"P-193\", \"EX9-058\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"BT19-065\", \"BT19-065\", \"BT18-007\", \"BT18-007\", \"BT18-007\", \"P-205\", \"P-205\", \"P-205\", \"P-205\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT18-013\", \"BT18-013\", \"BT18-013\", \"BT19-069\", \"BT19-069\", \"BT19-075\", \"BT19-075\"]",
+          "format": null,
+          "placement": "7th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_73b15ea726a3",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT16-082:4,BT3-077:1,EX9-058:4,BT18-013:2,BT18-015:2,BT19-070:4,BT18-073:4,BT19-065:2,P-220:4,BT18-019:4,BT19-075:2,BT19-101:2,BT8-107:1,P-193:4,BT19-099:1,P-205:3,EX11-055:3,EX1-066:3,BT15-006:4&type=digimon",
+          "decklist": "[\"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"P-205\", \"P-205\", \"P-205\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT18-015\", \"BT18-015\", \"BT3-077\", \"BT8-107\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"BT18-013\", \"BT18-013\", \"BT19-101\", \"BT19-101\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"BT19-075\", \"BT19-075\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT19-065\", \"BT19-065\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT19-099\", \"EX1-066\", \"EX1-066\", \"EX1-066\"]",
+          "format": null,
+          "placement": "9th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_26ce96ac3fd3",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT3-077:1,EX9-058:4,BT9-070:2,BT13-083:3,BT18-013:1,BT16-082:3,BT19-070:4,BT18-015:1,BT18-073:4,BT19-075:2,BT19-065:1,P-205:3,P-220:4,BT18-019:4,BT19-101:1,P-193:4,EX11-055:4,EX1-066:4,BT15-006:4&type=digimon",
+          "decklist": "[\"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT9-070\", \"BT9-070\", \"BT3-077\", \"BT13-083\", \"BT13-083\", \"BT13-083\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT19-075\", \"BT19-075\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"P-205\", \"P-205\", \"P-205\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT19-065\", \"BT18-013\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"BT18-015\", \"BT19-101\"]",
+          "format": null,
+          "placement": "16th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_18a30fa9effd",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT18-073:4,P-193:3,P-205:4,BT18-007:3,BT18-015:1,BT19-070:4,BT18-019:4,BT19-065:1,BT19-075:2,BT19-101:1,P-220:4,EX11-055:4,EX9-058:3,BT18-013:3,BT19-066:3,BT19-069:2,EX1-066:4,BT19-006:4&type=digimon",
+          "decklist": "[\"BT19-065\", \"BT19-101\", \"BT18-013\", \"BT18-013\", \"BT18-013\", \"BT19-075\", \"BT19-075\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"BT19-069\", \"BT19-069\", \"BT18-007\", \"BT18-007\", \"BT18-007\", \"BT19-006\", \"BT19-006\", \"BT19-006\", \"BT19-006\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"BT19-066\", \"BT19-066\", \"BT19-066\", \"P-193\", \"P-193\", \"P-193\", \"P-205\", \"P-205\", \"P-205\", \"P-205\", \"BT18-015\"]",
+          "format": null,
+          "placement": "7th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_fb8f4823ab54",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX9-058:4,BT9-070:2,BT16-082:3,BT3-077:1,BT13-083:3,BT18-013:1,BT18-015:1,BT19-070:4,BT11-072:1,BT18-073:4,BT18-019:4,P-220:4,BT19-101:1,BT19-075:2,P-193:3,BT19-099:2,EX11-055:3,EX1-066:4,P-205:3,BT15-006:4&type=Digimon",
+          "decklist": "[\"P-220\", \"P-220\", \"P-220\", \"P-220\", \"BT3-077\", \"BT18-013\", \"P-205\", \"P-205\", \"P-205\", \"BT18-015\", \"BT19-075\", \"BT19-075\", \"BT13-083\", \"BT13-083\", \"BT13-083\", \"P-193\", \"P-193\", \"P-193\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT19-101\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT19-099\", \"BT19-099\", \"BT9-070\", \"BT9-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT11-072\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\"]",
+          "format": null,
+          "placement": "16th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_e8e908ab786e",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT18-007:3,BT19-066:3,EX9-058:3,BT18-013:3,BT19-069:3,BT18-015:1,BT19-070:4,BT18-073:4,BT19-065:1,P-220:4,BT18-019:4,BT19-075:2,BT19-101:1,P-193:4,P-205:3,EX1-066:3,EX11-055:4,BT19-006:4&type=digimon",
+          "decklist": "[\"EX9-058\", \"EX9-058\", \"EX9-058\", \"BT18-015\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT19-065\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"BT18-013\", \"BT18-013\", \"BT18-013\", \"P-205\", \"P-205\", \"P-205\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"BT19-006\", \"BT19-006\", \"BT19-006\", \"BT19-006\", \"BT19-075\", \"BT19-075\", \"BT19-101\", \"BT19-069\", \"BT19-069\", \"BT19-069\", \"BT18-007\", \"BT18-007\", \"BT18-007\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT19-066\", \"BT19-066\", \"BT19-066\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\"]",
+          "format": null,
+          "placement": "6th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -14801,7 +15305,7 @@
       "display_card_id": "BT11-033",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002632,
+        "meta_share": 0.002476,
         "top_cut_count": 4,
         "conversion_rate": 0.8,
         "avg_placement": 5.8,
@@ -14878,7 +15382,7 @@
       "display_card_id": "EX10-011",
       "stats": {
         "times_played": 20,
-        "meta_share": 0.010526,
+        "meta_share": 0.009906,
         "top_cut_count": 8,
         "conversion_rate": 0.4,
         "avg_placement": 16.2,
@@ -15130,7 +15634,7 @@
       "display_card_id": "EX8-064",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 9.0,
@@ -15177,7 +15681,7 @@
       "display_card_id": "BT22-031",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002105,
+        "meta_share": 0.001981,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 12.5,
@@ -15243,15 +15747,15 @@
       "secondary_color": "Yellow",
       "display_card_id": "BT24-102",
       "stats": {
-        "times_played": 2,
-        "meta_share": 0.001053,
-        "top_cut_count": 0,
-        "conversion_rate": 0.0,
-        "avg_placement": 14.0,
+        "times_played": 10,
+        "meta_share": 0.004953,
+        "top_cut_count": 2,
+        "conversion_rate": 0.2,
+        "avg_placement": 9.29,
         "sources": {
           "egman": {
-            "count": 2,
-            "top_cuts": 0
+            "count": 10,
+            "top_cuts": 2
           }
         }
       },
@@ -15273,6 +15777,86 @@
           "decklist": "[\"P-213\", \"P-213\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-094\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-101\", \"BT24-101\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-090\", \"BT24-084\", \"BT24-084\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"P-194\", \"P-194\", \"P-194\", \"P-197\", \"P-197\", \"P-197\", \"BT24-051\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-102\"]",
           "format": null,
           "placement": "15th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_f2dbbaafc08a",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=P-198:4,BT24-043:3,P-197:1,BT24-031:3,BT24-035:2,BT8-084:1,BT24-046:3,BT24-011:3,BT24-034:4,BT24-037:4,BT24-014:2,BT24-041:3,BT24-040:1,BT24-101:1,BT24-030:2,BT10-042:2,BT24-085:1,BT24-100:2,BT24-102:3,BT24-083:4,BT4-104:1,BT24-003:4&type=digimon",
+          "decklist": "[\"BT4-104\", \"P-197\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"P-198\", \"P-198\", \"P-198\", \"P-198\", \"BT24-030\", \"BT24-030\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-040\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-014\", \"BT24-014\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT8-084\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-011\", \"BT24-011\", \"BT24-011\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT24-035\", \"BT24-035\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT10-042\", \"BT10-042\", \"BT24-101\", \"BT24-085\", \"BT24-100\", \"BT24-100\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_1685ca056b57",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-020:3,BT24-031:4,BT24-043:4,BT24-034:4,BT24-058:2,BT24-063:3,BT24-030:3,BT24-040:3,BT24-041:4,BT24-051:1,BT24-085:3,BT24-100:4,BT24-102:4,BT24-083:4,BT24-090:4,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-058\", \"BT24-058\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-063\", \"BT24-063\", \"BT24-063\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-051\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-090\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_4bdb62ce24c5",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-031:4,BT24-046:4,BT24-037:4,BT24-040:4,BT24-102:4,BT24-004:4,P-198:3,BT24-034:3,BT24-041:3,BT24-030:3,BT24-085:3,BT24-090:3,BT24-100:3,BT24-043:2,BT24-051:2,EX4-074:2,BT24-020:1,BT24-035:1,BT24-088:1&type=digimon",
+          "decklist": "[\"BT24-043\", \"BT24-043\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-051\", \"BT24-051\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"P-198\", \"P-198\", \"P-198\", \"EX4-074\", \"EX4-074\", \"BT24-035\", \"BT24-088\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-020\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-090\", \"BT24-090\", \"BT24-090\"]",
+          "format": null,
+          "placement": "2nd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_cab13a6e25cf",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-020:4,BT24-031:4,P-196:2,BT24-011:1,BT24-034:4,BT24-090:3,BT24-046:3,BT24-037:4,BT24-030:2,BT24-040:3,BT24-041:3,BT24-051:2,BT10-042:1,BT24-085:3,BT24-088:3,BT24-100:3,BT24-102:4,BT8-097:1,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-051\", \"BT24-051\", \"BT24-030\", \"BT24-030\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-011\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT10-042\", \"BT8-097\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"P-196\", \"P-196\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-090\", \"BT24-090\", \"BT24-090\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_8bd006c05a8f",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-020:4,BT24-030:3,BT24-031:4,BT24-034:4,BT24-037:4,BT24-040:3,BT10-042:2,BT24-041:4,BT24-046:4,BT24-051:1,BT24-085:3,BT24-090:2,BT24-100:3,BT24-102:4,P-197:3,EX4-074:1,BT24-094:1,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-094\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT10-042\", \"BT10-042\", \"BT24-051\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-090\", \"BT24-090\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"P-197\", \"P-197\", \"P-197\", \"EX4-074\"]",
+          "format": null,
+          "placement": "3rd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_a491b812f726",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-020:2,BT24-031:4,BT24-043:2,P-196:3,BT24-034:4,P-194:4,BT24-014:4,P-213:4,BT24-040:2,BT24-041:2,BT24-030:2,BT24-101:2,EX4-074:1,BT24-102:3,BT24-085:2,BT24-084:2,BT24-090:3,BT24-100:3,BT24-097:1,BT24-003:4&type=Digimon",
+          "decklist": "[\"BT24-030\", \"BT24-030\", \"BT24-084\", \"BT24-084\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-020\", \"BT24-020\", \"P-196\", \"P-196\", \"P-196\", \"BT24-041\", \"BT24-041\", \"EX4-074\", \"BT24-101\", \"BT24-101\", \"BT24-097\", \"P-194\", \"P-194\", \"P-194\", \"P-194\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-043\", \"BT24-043\", \"BT24-085\", \"BT24-085\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-040\", \"BT24-040\", \"P-213\", \"P-213\", \"P-213\", \"P-213\"]",
+          "format": null,
+          "placement": "15th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_954f18838a94",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=P-198:4,BT24-031:4,BT24-043:2,BT24-014:4,BT24-034:4,BT24-084:3,P-194:4,P-213:3,BT24-085:1,BT24-083:2,BT24-102:3,BT24-088:2,BT24-030:1,BT24-090:1,BT24-040:2,BT10-042:1,BT24-101:3,BT24-041:2,BT24-100:2,BT4-104:1,BT24-097:1,BT24-003:4&type=digimon",
+          "decklist": "[\"BT24-097\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-088\", \"BT24-088\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"P-213\", \"P-213\", \"P-213\", \"BT4-104\", \"BT24-030\", \"BT24-040\", \"BT24-040\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT24-083\", \"BT24-083\", \"BT24-090\", \"BT24-085\", \"BT10-042\", \"P-198\", \"P-198\", \"P-198\", \"P-198\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-041\", \"BT24-041\", \"BT24-043\", \"BT24-043\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-100\", \"BT24-100\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"P-194\", \"P-194\", \"P-194\", \"P-194\"]",
+          "format": null,
+          "placement": "5th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_fc67f7391db4",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-014:1,BT24-020:2,BT24-030:3,BT24-031:4,BT24-034:4,BT24-037:4,BT24-040:3,BT24-041:4,BT24-043:2,BT24-046:4,BT24-051:2,BT24-085:3,BT24-090:3,BT24-100:3,BT24-102:4,P-197:3,EX4-074:1,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-020\", \"BT24-020\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-051\", \"BT24-051\", \"EX4-074\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-043\", \"BT24-043\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-014\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"P-197\", \"P-197\", \"P-197\"]",
+          "format": null,
+          "placement": "12th",
           "is_top_cut": false,
           "event_date": null
         }
@@ -15333,7 +15917,7 @@
       "display_card_id": "BT16-015",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002632,
+        "meta_share": 0.002476,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 22.6,
@@ -15410,7 +15994,7 @@
       "display_card_id": "BT23-024",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 5.67,
@@ -15467,7 +16051,7 @@
       "display_card_id": "BT20-029",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 17.0,
@@ -15503,19 +16087,19 @@
       "secondary_color": null,
       "display_card_id": "BT22-042",
       "stats": {
-        "times_played": 25,
-        "meta_share": 0.013158,
-        "top_cut_count": 7,
-        "conversion_rate": 0.28,
-        "avg_placement": 11.44,
+        "times_played": 34,
+        "meta_share": 0.01684,
+        "top_cut_count": 9,
+        "conversion_rate": 0.2647,
+        "avg_placement": 10.84,
         "sources": {
           "digilab": {
             "count": 23,
             "top_cuts": 7
           },
           "egman": {
-            "count": 2,
-            "top_cuts": 0
+            "count": 11,
+            "top_cuts": 2
           }
         }
       },
@@ -15769,6 +16353,96 @@
           "placement": "14th",
           "is_top_cut": false,
           "event_date": null
+        },
+        {
+          "deck_id": "egman_a378b45c5aaa",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX11-019:4,EX7-024:4,ST19-03:4,P-165:4,EX11-021:4,EX9-032:4,EX11-024:4,EX9-067:4,P-229:4,BT15-003:4,EX11-022:3,P-105:3,BT22-042:2,EX9-033:1,EX6-011:1,EX11-061:1,LM-054:1,LM-029:1,BT4-104:1&type=digimon",
+          "decklist": "[\"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"BT4-104\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX11-022\", \"EX11-022\", \"EX11-022\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"BT22-042\", \"BT22-042\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"P-105\", \"P-105\", \"P-105\", \"LM-029\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"EX9-033\", \"EX11-061\", \"LM-054\", \"EX6-011\"]",
+          "format": null,
+          "placement": "14th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_e7f3e7b5e27b",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX7-024:4,P-165:4,EX11-021:4,EX9-032:4,EX11-024:4,P-229:4,EX9-067:4,BT15-003:4,EX11-022:3,EX11-019:2,EX9-033:2,P-105:2,EX11-061:2,EX11-020:1,EX9-024:1,EX9-027:1,BT6-084:1,BT16-055:1,BT22-042:1,EX4-074:1,ST19-03:4&type=digimon",
+          "decklist": "[\"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"EX9-033\", \"EX9-033\", \"EX11-020\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"BT16-055\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"BT6-084\", \"EX9-027\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"P-105\", \"P-105\", \"EX11-022\", \"EX11-022\", \"EX11-022\", \"EX11-061\", \"EX11-061\", \"EX11-019\", \"EX11-019\", \"BT22-042\", \"EX4-074\"]",
+          "format": null,
+          "placement": "16th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_8dce85790042",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX7-024:3,ST19-03:4,EX11-019:3,EX11-020:1,EX11-021:4,P-165:4,BT6-084:1,BT16-055:1,EX11-022:2,EX9-032:4,EX11-024:4,EX9-033:2,BT22-042:1,EX4-074:1,EX6-011:1,EX11-061:1,P-229:4,EX9-067:4,LM-029:2,P-105:2,LM-054:1,BT15-003:4&type=digimon",
+          "decklist": "[\"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"BT6-084\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"EX9-033\", \"EX9-033\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"LM-029\", \"LM-029\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"EX11-061\", \"BT16-055\", \"EX11-022\", \"EX11-022\", \"BT22-042\", \"EX4-074\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX11-020\", \"EX6-011\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"LM-054\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"P-105\", \"P-105\"]",
+          "format": null,
+          "placement": "1st",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_dbafd653cda0",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT16-082:4,EX11-019:3,EX7-024:4,ST19-03:4,P-165:4,EX11-021:4,BT6-084:2,EX11-022:2,EX9-032:4,BT4-104:1,EX11-024:4,EX9-033:2,BT22-042:1,P-229:4,LM-054:1,EX11-061:2,EX9-067:4,BT15-003:4&type=digimon",
+          "decklist": "[\"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"EX11-022\", \"EX11-022\", \"BT6-084\", \"BT6-084\", \"EX9-033\", \"EX9-033\", \"LM-054\", \"BT22-042\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT4-104\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"EX11-061\", \"EX11-061\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"P-165\", \"P-165\", \"P-165\", \"P-165\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_03f88e41eb41",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX7-024:4,ST19-03:4,EX11-019:3,EX9-024:1,EX11-021:4,P-165:4,BT6-084:1,BT16-055:1,EX11-022:2,EX9-032:4,EX9-033:2,EX11-024:3,BT22-042:2,P-229:4,EX11-061:2,EX9-067:4,P-105:4,LM-054:1,BT15-003:4&type=digimon",
+          "decklist": "[\"EX11-022\", \"EX11-022\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"BT16-055\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"EX9-033\", \"EX9-033\", \"BT22-042\", \"BT22-042\", \"EX11-061\", \"EX11-061\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"EX9-024\", \"LM-054\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"BT6-084\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"P-105\", \"P-105\", \"P-105\", \"P-105\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_4220326e99b0",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX7-024:4,EX11-019:4,ST19-03:4,P-165:4,BT16-082:4,EX11-021:4,BT6-084:2,EX9-032:4,EX11-022:2,EX11-024:4,EX9-033:1,BT22-042:2,P-229:4,EX11-061:2,EX9-067:4,BT4-104:1,BT15-003:4&type=digimon",
+          "decklist": "[\"EX11-022\", \"EX11-022\", \"EX11-061\", \"EX11-061\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"BT6-084\", \"BT6-084\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT4-104\", \"BT22-042\", \"BT22-042\", \"EX9-033\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\"]",
+          "format": null,
+          "placement": "5th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_07e380d595bf",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX7-024:4,ST19-03:4,EX9-024:1,EX11-019:2,P-165:4,EX11-021:4,BT6-084:1,BT20-084:1,EX9-032:4,EX11-022:2,EX9-033:1,BT22-042:2,EX4-074:1,EX9-067:4,LM-029:2,P-105:4,EX11-061:1,EX11-024:4,P-229:4,BT15-003:4&type=Digimon",
+          "decklist": "[\"EX9-033\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"EX11-061\", \"EX11-019\", \"EX11-019\", \"EX11-022\", \"EX11-022\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"BT22-042\", \"BT22-042\", \"EX4-074\", \"EX9-024\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"BT20-084\", \"LM-029\", \"LM-029\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"P-105\", \"P-105\", \"P-105\", \"P-105\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"BT6-084\", \"P-165\", \"P-165\", \"P-165\", \"P-165\"]",
+          "format": null,
+          "placement": "3rd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_f1b0e5cee010",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX11-061:1,EX9-067:4,LM-029:1,BT4-104:1,P-229:4,P-105:2,LM-054:1,BT22-042:1,EX4-074:1,EX9-033:2,EX11-024:4,EX9-032:4,EX11-022:2,BT20-084:1,BT6-084:1,EX11-021:4,P-165:4,EX9-024:1,EX7-024:4,ST19-03:4,EX11-019:2,BT16-055:1,BT15-003:4,BT22-002:1&type=Digimon",
+          "decklist": "[\"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"LM-029\", \"P-105\", \"P-105\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT6-084\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"EX4-074\", \"BT4-104\", \"LM-054\", \"EX11-061\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"BT16-055\", \"BT22-002\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"BT22-042\", \"EX11-022\", \"EX11-022\", \"BT20-084\", \"EX9-033\", \"EX9-033\", \"EX9-024\", \"EX11-019\", \"EX11-019\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\"]",
+          "format": null,
+          "placement": "12th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_03af26c7460f",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX7-024:4,ST19-03:4,EX11-019:3,EX9-024:1,EX11-021:4,P-165:4,BT6-084:1,BT20-084:1,BT16-055:1,EX11-022:2,EX9-032:4,EX11-024:4,EX9-033:1,BT22-042:2,EX11-061:1,P-229:4,EX9-067:4,P-105:4,LM-029:1,BT15-003:4&type=digimon",
+          "decklist": "[\"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"P-105\", \"P-105\", \"P-105\", \"P-105\", \"LM-029\", \"EX11-061\", \"BT6-084\", \"EX9-024\", \"BT16-055\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"BT22-042\", \"BT22-042\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT20-084\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX9-033\", \"EX11-022\", \"EX11-022\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\"]",
+          "format": null,
+          "placement": "10th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -15785,7 +16459,7 @@
       "display_card_id": "BT18-079",
       "stats": {
         "times_played": 38,
-        "meta_share": 0.02,
+        "meta_share": 0.018821,
         "top_cut_count": 9,
         "conversion_rate": 0.2368,
         "avg_placement": 14.63,
@@ -16233,15 +16907,19 @@
       "secondary_color": "Red",
       "display_card_id": "EX6-011",
       "stats": {
-        "times_played": 3,
-        "meta_share": 0.001579,
-        "top_cut_count": 0,
-        "conversion_rate": 0.0,
-        "avg_placement": 12.0,
+        "times_played": 4,
+        "meta_share": 0.001981,
+        "top_cut_count": 1,
+        "conversion_rate": 0.25,
+        "avg_placement": 9.75,
         "sources": {
           "digilab": {
             "count": 3,
             "top_cuts": 0
+          },
+          "egman": {
+            "count": 1,
+            "top_cuts": 1
           }
         }
       },
@@ -16275,6 +16953,16 @@
           "placement": "8",
           "is_top_cut": false,
           "event_date": "2025-10-28"
+        },
+        {
+          "deck_id": "egman_e559305f596a",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX7-024:4,ST19-03:4,EX11-019:2,BT9-033:2,P-165:4,EX11-021:4,EX9-032:4,EX11-022:2,EX11-024:4,EX9-033:1,BT22-042:1,BT6-084:1,EX6-011:2,EX9-067:4,BT4-104:1,P-229:4,P-105:4,LM-054:2,BT15-003:4&type=digimon",
+          "decklist": "[\"BT6-084\", \"P-105\", \"P-105\", \"P-105\", \"P-105\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"LM-054\", \"LM-054\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"EX9-033\", \"EX11-022\", \"EX11-022\", \"EX6-011\", \"EX6-011\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"EX11-019\", \"EX11-019\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"BT9-033\", \"BT9-033\", \"BT4-104\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"BT22-042\"]",
+          "format": null,
+          "placement": "3rd",
+          "is_top_cut": true,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -16291,7 +16979,7 @@
       "display_card_id": "BT16-101",
       "stats": {
         "times_played": 15,
-        "meta_share": 0.007895,
+        "meta_share": 0.007429,
         "top_cut_count": 4,
         "conversion_rate": 0.2667,
         "avg_placement": 14.67,
@@ -16468,7 +17156,7 @@
       "display_card_id": "BT17-017",
       "stats": {
         "times_played": 15,
-        "meta_share": 0.007895,
+        "meta_share": 0.007429,
         "top_cut_count": 3,
         "conversion_rate": 0.2,
         "avg_placement": 18.2,
@@ -16669,19 +17357,19 @@
       "secondary_color": null,
       "display_card_id": "EX10-036",
       "stats": {
-        "times_played": 118,
-        "meta_share": 0.062105,
-        "top_cut_count": 38,
-        "conversion_rate": 0.322,
-        "avg_placement": 12.45,
+        "times_played": 123,
+        "meta_share": 0.060921,
+        "top_cut_count": 43,
+        "conversion_rate": 0.3496,
+        "avg_placement": 12.06,
         "sources": {
           "digimonmeta": {
             "count": 2,
             "top_cuts": 2
           },
           "egman": {
-            "count": 8,
-            "top_cuts": 4
+            "count": 13,
+            "top_cuts": 9
           },
           "digilab": {
             "count": 108,
@@ -17869,6 +18557,56 @@
           "placement": "5",
           "is_top_cut": false,
           "event_date": "2025-10-07"
+        },
+        {
+          "deck_id": "egman_93d45b8a048f",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-055:3,EX10-025:1,EX8-047:4,BT16-082:3,EX8-046:1,P-167:4,EX8-048:3,P-215:1,EX10-032:4,EX8-051:1,BT4-072:1,EX10-033:2,EX10-034:1,BT23-059:1,EX10-036:3,LM-031:2,P-107:2,EX8-067:4,EX10-063:2,EX10-069:4,BT9-103:2,P-039:1,EX8-005:4&type=digimon",
+          "decklist": "[\"EX8-005\", \"EX8-005\", \"EX8-005\", \"EX8-005\", \"EX8-048\", \"EX8-048\", \"EX8-048\", \"EX8-067\", \"EX8-067\", \"EX8-067\", \"EX8-067\", \"P-167\", \"P-167\", \"P-167\", \"P-167\", \"EX10-036\", \"EX10-036\", \"EX10-036\", \"P-215\", \"BT21-055\", \"BT21-055\", \"BT21-055\", \"BT9-103\", \"BT9-103\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"EX10-025\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"EX8-046\", \"BT4-072\", \"P-039\", \"EX10-063\", \"EX10-063\", \"EX10-069\", \"EX10-069\", \"EX10-069\", \"EX10-069\", \"EX8-047\", \"EX8-047\", \"EX8-047\", \"EX8-047\", \"EX8-051\", \"EX10-033\", \"EX10-033\", \"EX10-034\", \"LM-031\", \"LM-031\", \"P-107\", \"P-107\", \"BT23-059\"]",
+          "format": null,
+          "placement": "3rd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_4385e0c8c32b",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX8-047:4,EX11-038:4,P-167:4,EX10-032:4,EX10-069:4,P-107:4,EX8-005:4,BT21-055:3,EX10-036:3,EX8-067:3,EX8-048:2,P-215:2,EX8-050:2,EX10-033:2,EX11-044:2,EX11-065:2,EX10-063:2,P-130:1,LM-054:1,LM-031:1&type=digimon",
+          "decklist": "[\"EX8-047\", \"EX8-047\", \"EX8-047\", \"EX8-047\", \"EX10-069\", \"EX10-069\", \"EX10-069\", \"EX10-069\", \"LM-031\", \"P-167\", \"P-167\", \"P-167\", \"P-167\", \"P-107\", \"P-107\", \"P-107\", \"P-107\", \"BT21-055\", \"BT21-055\", \"BT21-055\", \"EX10-036\", \"EX10-036\", \"EX10-036\", \"EX11-065\", \"EX11-065\", \"EX8-050\", \"EX8-050\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"EX8-067\", \"EX8-067\", \"EX8-067\", \"P-215\", \"P-215\", \"EX8-048\", \"EX8-048\", \"EX10-033\", \"EX10-033\", \"EX11-044\", \"EX11-044\", \"EX11-038\", \"EX11-038\", \"EX11-038\", \"EX11-038\", \"EX8-005\", \"EX8-005\", \"EX8-005\", \"EX8-005\", \"EX10-063\", \"EX10-063\", \"P-130\", \"LM-054\"]",
+          "format": null,
+          "placement": "4th",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_a406e97ff16c",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX8-047:4,EX11-038:3,BT21-055:2,EX10-025:1,P-167:4,EX8-048:3,P-215:2,EX10-032:4,EX8-051:1,EX8-050:1,EX10-033:1,EX11-044:3,EX10-034:1,EX10-036:3,EX8-067:3,EX11-065:2,EX10-063:2,EX10-069:4,LM-031:2,P-039:1,LM-054:1,P-130:1,P-107:1,EX8-005:4&type=digimon",
+          "decklist": "[\"P-039\", \"EX8-005\", \"EX8-005\", \"EX8-005\", \"EX8-005\", \"EX11-044\", \"EX11-044\", \"EX11-044\", \"LM-054\", \"EX10-033\", \"EX10-034\", \"P-167\", \"P-167\", \"P-167\", \"P-167\", \"BT21-055\", \"BT21-055\", \"P-130\", \"EX10-036\", \"EX10-036\", \"EX10-036\", \"EX11-065\", \"EX11-065\", \"EX8-050\", \"EX11-038\", \"EX11-038\", \"EX11-038\", \"EX10-063\", \"EX10-063\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"P-215\", \"P-215\", \"EX10-025\", \"EX8-051\", \"EX8-067\", \"EX8-067\", \"EX8-067\", \"EX8-047\", \"EX8-047\", \"EX8-047\", \"EX8-047\", \"LM-031\", \"LM-031\", \"P-107\", \"EX10-069\", \"EX10-069\", \"EX10-069\", \"EX10-069\", \"EX8-048\", \"EX8-048\", \"EX8-048\"]",
+          "format": null,
+          "placement": "2nd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_5038b99329da",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX8-047:4,BT21-055:2,EX10-025:1,EX11-038:4,P-215:2,EX10-028:1,EX8-048:2,P-167:4,EX8-050:2,EX10-032:4,EX8-051:1,EX11-044:4,EX10-036:3,EX11-065:2,EX10-063:2,EX10-069:4,EX8-067:3,P-130:1,LM-054:1,LM-031:2,P-039:1,EX8-005:4&type=digimon",
+          "decklist": "[\"P-039\", \"EX11-038\", \"EX11-038\", \"EX11-038\", \"EX11-038\", \"EX11-044\", \"EX11-044\", \"EX11-044\", \"EX11-044\", \"EX8-067\", \"EX8-067\", \"EX8-067\", \"EX10-063\", \"EX10-063\", \"EX8-051\", \"P-167\", \"P-167\", \"P-167\", \"P-167\", \"EX8-050\", \"EX8-050\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"EX10-028\", \"EX8-005\", \"EX8-005\", \"EX8-005\", \"EX8-005\", \"BT21-055\", \"BT21-055\", \"EX10-025\", \"P-215\", \"P-215\", \"EX8-047\", \"EX8-047\", \"EX8-047\", \"EX8-047\", \"LM-054\", \"P-130\", \"EX10-036\", \"EX10-036\", \"EX10-036\", \"LM-031\", \"LM-031\", \"EX10-069\", \"EX10-069\", \"EX10-069\", \"EX10-069\", \"EX11-065\", \"EX11-065\", \"EX8-048\", \"EX8-048\"]",
+          "format": null,
+          "placement": "4th",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_8c0191537d41",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT16-082:4,EX8-047:4,EX11-038:4,P-033:1,EX10-028:1,EX8-048:2,P-167:4,P-215:2,EX8-050:1,EX8-051:2,EX10-032:4,EX10-036:3,EX11-044:3,EX8-067:2,EX11-065:3,EX10-063:1,EX10-069:2,P-107:3,LM-031:2,BT9-103:1,P-161:1,EX8-005:4&type=digimon",
+          "decklist": "[\"EX8-050\", \"P-167\", \"P-167\", \"P-167\", \"P-167\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"EX10-032\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"EX11-038\", \"EX11-038\", \"EX11-038\", \"EX11-038\", \"P-107\", \"P-107\", \"P-107\", \"EX10-069\", \"EX10-069\", \"LM-031\", \"LM-031\", \"EX8-005\", \"EX8-005\", \"EX8-005\", \"EX8-005\", \"EX10-063\", \"BT9-103\", \"EX10-036\", \"EX10-036\", \"EX10-036\", \"EX10-028\", \"EX8-051\", \"EX8-051\", \"EX11-065\", \"EX11-065\", \"EX11-065\", \"P-161\", \"P-215\", \"P-215\", \"EX11-044\", \"EX11-044\", \"EX11-044\", \"EX8-067\", \"EX8-067\", \"EX8-048\", \"EX8-048\", \"P-033\", \"EX8-047\", \"EX8-047\", \"EX8-047\", \"EX8-047\"]",
+          "format": null,
+          "placement": "2nd",
+          "is_top_cut": true,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -17885,7 +18623,7 @@
       "display_card_id": "BT23-046",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002632,
+        "meta_share": 0.002476,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 9.4,
@@ -17962,7 +18700,7 @@
       "display_card_id": "BT23-045",
       "stats": {
         "times_played": 32,
-        "meta_share": 0.016842,
+        "meta_share": 0.015849,
         "top_cut_count": 6,
         "conversion_rate": 0.1875,
         "avg_placement": 10.88,
@@ -18308,18 +19046,18 @@
       "secondary_color": null,
       "display_card_id": "BT13-007",
       "stats": {
-        "times_played": 51,
-        "meta_share": 0.026842,
+        "times_played": 52,
+        "meta_share": 0.025755,
         "top_cut_count": 29,
-        "conversion_rate": 0.5686,
-        "avg_placement": 7.76,
+        "conversion_rate": 0.5577,
+        "avg_placement": 7.84,
         "sources": {
           "digimonmeta": {
             "count": 5,
             "top_cuts": 5
           },
           "egman": {
-            "count": 9,
+            "count": 10,
             "top_cuts": 8
           },
           "digilab": {
@@ -18838,6 +19576,16 @@
           "placement": "1st Place",
           "is_top_cut": true,
           "event_date": "3/28/2026"
+        },
+        {
+          "deck_id": "egman_1c28731abd1c",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT20-100:4,BT20-091:4,BT20-102:4,BT20-083:4,EX11-053:4,BT13-007:4,BT13-112:3,ST15-16:3,BT23-054:3,BT8-094:2,BT20-060:2,BT20-056:2,BT13-075:2,BT20-017:2,AD1-018:2,EX11-071:2,P-186:1,BT23-035:1,AD1-017:1,BT19-072:1,AD1-025:1,BT8-097:1,BT13-110:1&type=digimon",
+          "decklist": "[\"BT8-094\", \"BT8-094\", \"ST15-16\", \"ST15-16\", \"ST15-16\", \"BT13-075\", \"BT13-075\", \"EX11-053\", \"EX11-053\", \"EX11-053\", \"EX11-053\", \"AD1-017\", \"EX11-071\", \"EX11-071\", \"BT20-017\", \"BT20-017\", \"BT20-102\", \"BT20-102\", \"BT20-102\", \"BT20-102\", \"BT23-035\", \"BT20-083\", \"BT20-083\", \"BT20-083\", \"BT20-083\", \"BT23-054\", \"BT23-054\", \"BT23-054\", \"BT20-100\", \"BT20-100\", \"BT20-100\", \"BT20-100\", \"BT20-091\", \"BT20-091\", \"BT20-091\", \"BT20-091\", \"BT13-112\", \"BT13-112\", \"BT13-112\", \"BT20-056\", \"BT20-056\", \"AD1-018\", \"AD1-018\", \"P-186\", \"BT13-007\", \"BT13-007\", \"BT13-007\", \"BT13-007\", \"BT19-072\", \"AD1-025\", \"BT20-060\", \"BT20-060\", \"BT8-097\", \"BT13-110\"]",
+          "format": null,
+          "placement": "12th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -18875,7 +19623,7 @@
       "display_card_id": "ST22-05",
       "stats": {
         "times_played": 90,
-        "meta_share": 0.047368,
+        "meta_share": 0.044577,
         "top_cut_count": 38,
         "conversion_rate": 0.4222,
         "avg_placement": 8.16,
@@ -19806,7 +20554,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 2,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -19847,7 +20595,7 @@
       "display_card_id": "BT1-107",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 13.67,
@@ -19904,7 +20652,7 @@
       "display_card_id": "EX6-073",
       "stats": {
         "times_played": 12,
-        "meta_share": 0.006316,
+        "meta_share": 0.005944,
         "top_cut_count": 2,
         "conversion_rate": 0.1667,
         "avg_placement": 26.25,
@@ -20051,7 +20799,7 @@
       "display_card_id": "BT16-063",
       "stats": {
         "times_played": 17,
-        "meta_share": 0.008947,
+        "meta_share": 0.00842,
         "top_cut_count": 6,
         "conversion_rate": 0.3529,
         "avg_placement": 8.65,
@@ -20248,7 +20996,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 3,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -20298,15 +21046,19 @@
       "secondary_color": "Red",
       "display_card_id": "BT12-043",
       "stats": {
-        "times_played": 6,
-        "meta_share": 0.003158,
+        "times_played": 8,
+        "meta_share": 0.003962,
         "top_cut_count": 2,
-        "conversion_rate": 0.3333,
-        "avg_placement": 10.83,
+        "conversion_rate": 0.25,
+        "avg_placement": 10.0,
         "sources": {
           "digilab": {
             "count": 6,
             "top_cuts": 2
+          },
+          "egman": {
+            "count": 2,
+            "top_cuts": 0
           }
         }
       },
@@ -20370,6 +21122,26 @@
           "placement": "14",
           "is_top_cut": false,
           "event_date": "2025-11-25"
+        },
+        {
+          "deck_id": "egman_04072430de41",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT12-034:4,EX4-005:4,BT21-044:4,AD1-021:4,BT21-004:4,BT16-082:3,BT21-042:3,BT12-038:3,AD1-016:3,BT12-092:3,P-105:3,BT17-037:2,BT13-020:2,BT12-043:2,EX4-074:2,BT1-087:2,P-206:2,BT13-012:1,LM-054:1,BT4-104:1,BT1-090:1&type=digimon",
+          "decklist": "[\"EX4-074\", \"EX4-074\", \"AD1-021\", \"AD1-021\", \"AD1-021\", \"AD1-021\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT12-043\", \"BT12-043\", \"BT17-037\", \"BT17-037\", \"P-105\", \"P-105\", \"P-105\", \"BT13-020\", \"BT13-020\", \"BT21-042\", \"BT21-042\", \"BT21-042\", \"AD1-016\", \"AD1-016\", \"AD1-016\", \"BT12-092\", \"BT12-092\", \"BT12-092\", \"LM-054\", \"BT13-012\", \"P-206\", \"P-206\", \"BT12-034\", \"BT12-034\", \"BT12-034\", \"BT12-034\", \"BT1-090\", \"BT4-104\", \"EX4-005\", \"EX4-005\", \"EX4-005\", \"EX4-005\", \"BT12-038\", \"BT12-038\", \"BT12-038\", \"BT1-087\", \"BT1-087\", \"BT21-044\", \"BT21-044\", \"BT21-044\", \"BT21-044\", \"BT21-004\", \"BT21-004\", \"BT21-004\", \"BT21-004\"]",
+          "format": null,
+          "placement": "7th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_4f289d4dd40b",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT13-020:1,EX4-074:3,BT12-043:1,AD1-016:4,BT17-037:2,BT21-044:4,BT12-038:4,BT13-012:1,BT21-042:4,BT13-008:2,BT12-034:4,EX4-005:2,BT13-095:1,BT12-092:3,P-105:1,BT21-040:1,BT16-029:2,AD1-021:4,LM-054:1,P-206:4,LM-029:1,BT21-004:4&type=digimon",
+          "decklist": "[\"BT13-020\", \"AD1-016\", \"AD1-016\", \"AD1-016\", \"AD1-016\", \"P-206\", \"P-206\", \"P-206\", \"P-206\", \"BT13-095\", \"BT12-092\", \"BT12-092\", \"BT12-092\", \"BT12-034\", \"BT12-034\", \"BT12-034\", \"BT12-034\", \"BT21-040\", \"BT21-044\", \"BT21-044\", \"BT21-044\", \"BT21-044\", \"BT13-012\", \"BT13-008\", \"BT13-008\", \"P-105\", \"LM-054\", \"BT17-037\", \"BT17-037\", \"BT21-042\", \"BT21-042\", \"BT21-042\", \"BT21-042\", \"EX4-074\", \"EX4-074\", \"EX4-074\", \"BT21-004\", \"BT21-004\", \"BT21-004\", \"BT21-004\", \"BT12-043\", \"BT16-029\", \"BT16-029\", \"LM-029\", \"EX4-005\", \"EX4-005\", \"BT12-038\", \"BT12-038\", \"BT12-038\", \"BT12-038\", \"AD1-021\", \"AD1-021\", \"AD1-021\", \"AD1-021\"]",
+          "format": null,
+          "placement": "8th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -20386,7 +21158,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -20417,7 +21189,7 @@
       "display_card_id": "BT16-012",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002105,
+        "meta_share": 0.001981,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 17.25,
@@ -20484,7 +21256,7 @@
       "display_card_id": "BT23-076",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 4.0,
@@ -20531,7 +21303,7 @@
       "display_card_id": "BT24-051",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 12.0,
@@ -20578,7 +21350,7 @@
       "display_card_id": "BT24-101",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002632,
+        "meta_share": 0.002476,
         "top_cut_count": 5,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -20655,7 +21427,7 @@
       "display_card_id": "BT24-051",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 2,
         "conversion_rate": 1.0,
         "avg_placement": 1.5,
@@ -20702,7 +21474,7 @@
       "display_card_id": "BT24-030",
       "stats": {
         "times_played": 10,
-        "meta_share": 0.005263,
+        "meta_share": 0.004953,
         "top_cut_count": 10,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -20828,11 +21600,11 @@
       "secondary_color": null,
       "display_card_id": "BT24-101",
       "stats": {
-        "times_played": 66,
-        "meta_share": 0.034737,
+        "times_played": 73,
+        "meta_share": 0.036157,
         "top_cut_count": 27,
-        "conversion_rate": 0.4091,
-        "avg_placement": 9.67,
+        "conversion_rate": 0.3699,
+        "avg_placement": 9.94,
         "sources": {
           "digilab": {
             "count": 59,
@@ -20843,7 +21615,7 @@
             "top_cuts": 5
           },
           "egman": {
-            "count": 2,
+            "count": 9,
             "top_cuts": 0
           }
         }
@@ -21508,6 +22280,76 @@
           "placement": "11th",
           "is_top_cut": false,
           "event_date": null
+        },
+        {
+          "deck_id": "egman_96874fe92fbf",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-014:4,BT24-031:4,BT24-034:4,BT24-040:3,BT24-043:3,BT24-084:2,BT24-083:3,BT24-088:2,P-213:4,P-194:4,BT24-101:3,BT24-100:3,BT24-102:3,BT4-104:1,P-198:2,P-196:3,BT10-042:2,BT24-003:4&type=digimon",
+          "decklist": "[\"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT10-042\", \"BT10-042\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT24-084\", \"BT24-084\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"P-213\", \"P-213\", \"P-213\", \"P-213\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT4-104\", \"P-196\", \"P-196\", \"P-196\", \"BT24-088\", \"BT24-088\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"P-194\", \"P-194\", \"P-194\", \"P-194\", \"P-198\", \"P-198\", \"BT24-043\", \"BT24-043\", \"BT24-043\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_f98bf8809da6",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-031:4,BT24-034:4,P-194:4,BT24-014:4,BT24-003:4,BT24-043:3,P-197:3,BT16-082:3,BT24-084:3,P-213:3,BT24-101:3,BT24-083:3,BT24-102:3,BT24-041:3,BT24-088:2,BT24-040:2,EX4-074:2,BT4-104:1&type=digimon",
+          "decklist": "[\"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-088\", \"BT24-088\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"P-194\", \"P-194\", \"P-194\", \"P-194\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-040\", \"BT24-040\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"P-197\", \"P-197\", \"P-197\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"P-213\", \"P-213\", \"P-213\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT4-104\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"EX4-074\", \"EX4-074\", \"BT16-082\", \"BT16-082\", \"BT16-082\"]",
+          "format": null,
+          "placement": "15th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_9484a064f890",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-014:4,BT24-031:4,BT24-034:4,P-194:4,BT24-003:4,BT24-043:3,BT24-084:3,BT24-088:3,BT24-101:3,BT24-102:3,BT24-083:3,P-213:3,P-198:3,BT24-040:2,BT24-041:2,BT24-030:2,EX4-074:2,BT10-042:1,BT4-104:1&type=digimon",
+          "decklist": "[\"P-194\", \"P-194\", \"P-194\", \"P-194\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT24-040\", \"BT24-040\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"P-198\", \"P-198\", \"P-198\", \"BT24-030\", \"BT24-030\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT10-042\", \"P-213\", \"P-213\", \"P-213\", \"BT4-104\", \"BT24-041\", \"BT24-041\", \"EX4-074\", \"EX4-074\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\"]",
+          "format": null,
+          "placement": "11th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_ad6dc4c3e940",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-034:4,P-194:4,P-213:4,BT24-014:4,BT24-101:4,BT24-031:4,BT15-003:4,EX4-074:3,BT24-083:3,BT24-084:3,BT7-032:3,BT24-102:2,BT24-040:2,BT24-088:2,BT9-033:2,P-197:2,BT24-041:1,BT10-042:1,BT4-104:1,BT4-105:1&type=digimon",
+          "decklist": "[\"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT7-032\", \"BT7-032\", \"BT7-032\", \"BT24-088\", \"BT24-088\", \"BT9-033\", \"BT9-033\", \"P-194\", \"P-194\", \"P-194\", \"P-194\", \"P-197\", \"P-197\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT4-104\", \"P-213\", \"P-213\", \"P-213\", \"P-213\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"EX4-074\", \"EX4-074\", \"EX4-074\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT10-042\", \"BT24-041\", \"BT24-102\", \"BT24-102\", \"BT24-040\", \"BT24-040\", \"BT4-105\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT24-101\"]",
+          "format": null,
+          "placement": "13th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_9a1ad7b62db2",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=P-198:4,BT24-031:4,BT24-034:4,P-194:4,BT24-014:4,BT24-100:4,BT24-003:4,BT24-043:3,P-213:3,BT24-101:3,BT24-088:3,BT24-040:2,BT24-041:2,BT24-102:2,BT24-085:2,BT24-084:2,BT10-042:1,BT24-030:1,BT8-097:1,BT4-104:1&type=digimon",
+          "decklist": "[\"BT24-085\", \"BT24-085\", \"BT24-084\", \"BT24-084\", \"BT24-030\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-041\", \"BT24-041\", \"BT10-042\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"P-198\", \"P-198\", \"P-198\", \"P-198\", \"P-213\", \"P-213\", \"P-213\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT4-104\", \"P-194\", \"P-194\", \"P-194\", \"P-194\", \"BT24-040\", \"BT24-040\", \"BT8-097\", \"BT24-102\", \"BT24-102\"]",
+          "format": null,
+          "placement": "15th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_d033426ab730",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-014:4,P-213:4,BT24-034:4,P-194:4,P-198:4,BT24-031:4,BT24-003:4,BT24-101:3,BT24-043:3,BT24-102:3,BT24-084:3,BT24-083:3,BT24-088:3,EX4-074:2,BT24-040:2,BT10-042:1,BT24-041:1,BT24-030:1,BT4-104:1&type=digimon",
+          "decklist": "[\"P-213\", \"P-213\", \"P-213\", \"P-213\", \"BT24-040\", \"BT24-040\", \"BT10-042\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT24-041\", \"BT24-030\", \"P-198\", \"P-198\", \"P-198\", \"P-198\", \"EX4-074\", \"EX4-074\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT4-104\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"P-194\", \"P-194\", \"P-194\", \"P-194\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-102\", \"BT24-102\", \"BT24-102\"]",
+          "format": null,
+          "placement": "16th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_571184aa349b",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX4-074:2,BT24-041:1,BT24-040:2,BT24-101:4,BT24-014:4,P-213:4,BT24-011:1,BT24-034:4,P-194:3,P-197:4,BT24-031:4,BT24-033:1,BT7-032:2,BT24-084:3,BT24-088:2,BT24-083:2,BT24-102:1,BT4-104:1,BT4-105:1,BT24-092:1,BT24-100:3,BT15-003:4&type=digimon",
+          "decklist": "[\"BT24-102\", \"BT4-104\", \"BT24-041\", \"BT24-011\", \"P-197\", \"P-197\", \"P-197\", \"P-197\", \"BT7-032\", \"BT7-032\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-033\", \"BT24-088\", \"BT24-088\", \"P-194\", \"P-194\", \"P-194\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-083\", \"BT24-083\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT24-040\", \"BT24-040\", \"P-213\", \"P-213\", \"P-213\", \"P-213\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT4-105\", \"EX4-074\", \"EX4-074\", \"BT24-092\"]",
+          "format": null,
+          "placement": "8th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -21523,14 +22365,70 @@
       "secondary_color": null,
       "display_card_id": "BT24-085",
       "stats": {
-        "times_played": 0,
-        "meta_share": 0.0,
-        "top_cut_count": 0,
-        "conversion_rate": 0.0,
-        "avg_placement": 0.0,
-        "sources": {}
+        "times_played": 5,
+        "meta_share": 0.002476,
+        "top_cut_count": 3,
+        "conversion_rate": 0.6,
+        "avg_placement": 2.0,
+        "sources": {
+          "egman": {
+            "count": 5,
+            "top_cuts": 3
+          }
+        }
       },
-      "decklists": [],
+      "decklists": [
+        {
+          "deck_id": "egman_d5ca88d5bb72",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-020:1,BT24-030:2,BT24-031:4,BT24-034:4,BT24-035:1,BT24-037:4,BT24-041:3,BT24-043:3,BT24-046:3,BT24-051:2,BT24-083:2,BT24-085:3,BT24-091:1,BT24-090:1,BT24-095:1,BT24-100:4,BT24-102:3,BT24-088:1,BT24-040:2,P-197:3,BT10-042:1,BT24-011:1,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-090\", \"BT24-011\", \"BT24-030\", \"BT24-030\", \"BT24-091\", \"BT24-040\", \"BT24-040\", \"P-197\", \"P-197\", \"P-197\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-088\", \"BT24-095\", \"BT24-020\", \"BT24-051\", \"BT24-051\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT10-042\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-035\", \"BT24-083\", \"BT24-083\", \"BT24-102\", \"BT24-102\", \"BT24-102\"]",
+          "format": null,
+          "placement": "1st",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_d6595035b68f",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-031:4,BT24-043:2,P-198:4,BT24-034:4,BT24-035:1,BT24-046:4,BT24-037:4,BT24-050:2,BT24-040:2,BT24-041:3,BT24-051:2,BT24-030:2,BT24-088:1,BT24-083:1,BT24-085:3,BT24-100:4,BT24-102:3,BT24-090:3,BT8-097:1,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-083\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"P-198\", \"P-198\", \"P-198\", \"P-198\", \"BT24-035\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-050\", \"BT24-050\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-051\", \"BT24-051\", \"BT24-043\", \"BT24-043\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-040\", \"BT24-040\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-088\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT8-097\", \"BT24-030\", \"BT24-030\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_f3af1f9d5236",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-030:2,BT24-031:4,BT24-034:4,BT24-040:4,BT24-043:4,BT24-041:4,BT24-046:2,BT24-085:3,BT24-090:4,BT24-088:3,BT24-100:4,BT24-102:3,P-197:3,P-199:2,BT8-097:2,P-194:2,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-046\", \"BT24-046\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"P-199\", \"P-199\", \"BT24-030\", \"BT24-030\", \"P-197\", \"P-197\", \"P-197\", \"BT8-097\", \"BT8-097\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"P-194\", \"P-194\"]",
+          "format": null,
+          "placement": "4th",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_bcb3e4204c15",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-031:4,P-197:2,BT24-043:4,BT24-037:4,BT24-034:3,BT24-030:2,BT24-035:2,BT24-046:4,BT24-040:3,BT24-041:3,BT24-051:2,BT24-085:3,BT24-090:2,BT24-094:1,BT24-100:3,BT24-102:3,BT24-083:1,BT24-088:1,BT24-011:1,P-198:1,BT10-042:1,BT24-004:4&type=digimon",
+          "decklist": "[\"P-198\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-030\", \"BT24-030\", \"BT24-083\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT10-042\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-094\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-090\", \"BT24-090\", \"BT24-088\", \"BT24-011\", \"BT24-051\", \"BT24-051\", \"P-197\", \"P-197\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-035\", \"BT24-035\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_f34bd5776c3d",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-031:3,BT24-034:2,BT24-035:3,BT24-037:4,BT24-041:3,BT24-043:4,BT24-046:3,BT24-050:2,BT24-051:1,BT24-095:2,BT24-083:2,BT24-094:3,BT24-085:3,BT24-088:2,BT24-092:1,BT24-100:3,P-198:3,P-207:2,BT24-011:2,BT24-102:1,BT24-030:1,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-051\", \"BT24-095\", \"BT24-095\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"P-207\", \"P-207\", \"BT24-011\", \"BT24-011\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-050\", \"BT24-050\", \"BT24-092\", \"BT24-030\", \"BT24-034\", \"BT24-034\", \"P-198\", \"P-198\", \"P-198\", \"BT24-088\", \"BT24-088\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-094\", \"BT24-094\", \"BT24-094\", \"BT24-102\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-035\", \"BT24-035\", \"BT24-035\", \"BT24-083\", \"BT24-083\"]",
+          "format": null,
+          "placement": "1st",
+          "is_top_cut": true,
+          "event_date": null
+        }
+      ],
       "digilab_stats": {
         "times_played": 91,
         "conversion_rate": 0.6264,
@@ -21544,14 +22442,50 @@
       "secondary_color": null,
       "display_card_id": "BT24-030",
       "stats": {
-        "times_played": 0,
-        "meta_share": 0.0,
-        "top_cut_count": 0,
-        "conversion_rate": 0.0,
-        "avg_placement": 0.0,
-        "sources": {}
+        "times_played": 3,
+        "meta_share": 0.001486,
+        "top_cut_count": 2,
+        "conversion_rate": 0.6667,
+        "avg_placement": 4.67,
+        "sources": {
+          "egman": {
+            "count": 3,
+            "top_cuts": 2
+          }
+        }
       },
-      "decklists": [],
+      "decklists": [
+        {
+          "deck_id": "egman_1d94240edae3",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-020:4,BT24-030:4,BT24-031:4,BT24-034:3,BT24-040:4,BT24-041:3,BT24-043:4,BT24-051:2,BT24-085:4,BT24-088:3,BT24-092:2,BT24-091:2,BT24-090:3,BT24-094:4,BT24-102:4,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-091\", \"BT24-091\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT24-092\", \"BT24-092\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-051\", \"BT24-051\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-094\", \"BT24-094\", \"BT24-094\", \"BT24-094\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-102\"]",
+          "format": null,
+          "placement": "2nd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_a621ca9ddbea",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-020:4,BT24-031:4,BT24-043:2,P-197:3,BT24-034:4,BT24-046:4,BT24-037:4,BT24-030:3,BT24-040:3,BT10-042:1,BT24-041:3,EX4-074:1,BT24-085:3,BT24-090:3,BT24-092:1,BT24-100:3,BT24-102:3,BT8-097:1,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT8-097\", \"BT24-092\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"P-197\", \"P-197\", \"P-197\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"EX4-074\", \"BT24-043\", \"BT24-043\", \"BT10-042\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-102\", \"BT24-102\", \"BT24-102\"]",
+          "format": null,
+          "placement": "8th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_d881567cd51d",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-030:3,BT24-031:4,BT24-034:3,BT24-041:3,BT24-020:1,BT24-035:3,BT24-037:4,BT24-040:2,BT24-043:3,BT24-046:4,BT24-051:2,BT24-050:1,BT24-085:3,BT24-088:3,BT24-100:3,BT24-090:2,BT24-102:2,P-196:2,P-197:1,BT10-042:1,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-040\", \"BT24-040\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-051\", \"BT24-051\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"P-196\", \"P-196\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT10-042\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-102\", \"BT24-102\", \"P-197\", \"BT24-050\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-035\", \"BT24-035\", \"BT24-035\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-090\", \"BT24-090\", \"BT24-020\"]",
+          "format": null,
+          "placement": "4th",
+          "is_top_cut": true,
+          "event_date": null
+        }
+      ],
       "digilab_stats": {
         "times_played": 120,
         "conversion_rate": 0.45,
@@ -21566,7 +22500,7 @@
       "display_card_id": "BT24-081",
       "stats": {
         "times_played": 8,
-        "meta_share": 0.004211,
+        "meta_share": 0.003962,
         "top_cut_count": 1,
         "conversion_rate": 0.125,
         "avg_placement": 14.62,
@@ -21694,7 +22628,7 @@
       "display_card_id": "BT17-101",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002105,
+        "meta_share": 0.001981,
         "top_cut_count": 1,
         "conversion_rate": 0.25,
         "avg_placement": 9.0,
@@ -21782,7 +22716,7 @@
       "display_card_id": "P-170",
       "stats": {
         "times_played": 6,
-        "meta_share": 0.003158,
+        "meta_share": 0.002972,
         "top_cut_count": 1,
         "conversion_rate": 0.1667,
         "avg_placement": 9.67,
@@ -21869,7 +22803,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 2,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -21910,7 +22844,7 @@
       "display_card_id": "BT16-048",
       "stats": {
         "times_played": 14,
-        "meta_share": 0.007368,
+        "meta_share": 0.006934,
         "top_cut_count": 3,
         "conversion_rate": 0.2143,
         "avg_placement": 15.14,
@@ -22077,7 +23011,7 @@
       "display_card_id": "BO-70",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001053,
+        "meta_share": 0.000991,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 13.5,
@@ -22124,7 +23058,7 @@
       "display_card_id": "BT22-025",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001579,
+        "meta_share": 0.001486,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 14.33,
@@ -22180,15 +23114,15 @@
       "secondary_color": null,
       "display_card_id": null,
       "stats": {
-        "times_played": 2,
-        "meta_share": 0.001053,
-        "top_cut_count": 1,
-        "conversion_rate": 0.5,
-        "avg_placement": 10.0,
+        "times_played": 17,
+        "meta_share": 0.00842,
+        "top_cut_count": 5,
+        "conversion_rate": 0.2941,
+        "avg_placement": 8.33,
         "sources": {
           "egman": {
-            "count": 2,
-            "top_cuts": 1
+            "count": 17,
+            "top_cuts": 5
           }
         }
       },
@@ -22212,6 +23146,156 @@
           "placement": "16th",
           "is_top_cut": false,
           "event_date": null
+        },
+        {
+          "deck_id": "egman_509ee62b1e03",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT12-021:4,P-117:4,BT12-047:4,BT12-022:4,BT12-050:4,BT16-025:4,AD1-011:4,BT16-085:4,BT12-002:4,ST9-06:3,AD1-024:3,BT21-037:2,BT3-093:2,BT17-097:2,BT16-040:1,P-118:1,ST9-09:1,BT16-028:1,LM-028:1,ST2-13:1&type=digimon",
+          "decklist": "[\"P-117\", \"P-117\", \"P-117\", \"P-117\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT21-037\", \"BT21-037\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"ST9-06\", \"ST9-06\", \"ST9-06\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-028\", \"ST9-09\", \"AD1-024\", \"AD1-024\", \"AD1-024\", \"BT17-097\", \"BT17-097\", \"BT16-040\", \"P-118\", \"LM-028\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"ST2-13\", \"BT3-093\", \"BT3-093\"]",
+          "format": null,
+          "placement": "3rd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_5d452d59dbe1",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-008:4,BT24-008:4,BT21-017:4,BT24-016:4,EX11-012:4,BT21-001:4,EX11-008:3,BT24-011:3,BT24-018:3,BT21-081:3,BT24-082:3,P-103:3,P-189:2,BT21-024:2,BT8-097:2,BT21-093:2,P-035:2,LM-055:1,LM-027:1&type=digimon",
+          "decklist": "[\"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT21-024\", \"BT21-024\", \"BT8-097\", \"BT8-097\", \"P-035\", \"P-035\", \"LM-055\", \"BT21-093\", \"BT21-093\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-011\", \"BT24-011\", \"BT24-011\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"LM-027\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"P-189\", \"P-189\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"EX11-008\", \"EX11-008\", \"EX11-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"P-103\", \"P-103\", \"P-103\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\"]",
+          "format": null,
+          "placement": "10th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_2074641519e1",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-008:4,BT21-017:4,BT24-016:4,EX11-012:4,P-103:4,BT21-001:4,BT24-008:3,P-189:3,BT21-024:3,BT24-018:3,BT21-081:3,BT24-082:3,EX11-008:2,BT24-011:2,BT8-097:2,P-035:2,LM-027:2,BT5-008:1,BT21-093:1&type=digimon",
+          "decklist": "[\"P-035\", \"P-035\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"BT8-097\", \"BT8-097\", \"LM-027\", \"LM-027\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT5-008\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT24-011\", \"BT24-011\", \"BT21-024\", \"BT21-024\", \"BT21-024\", \"BT21-093\", \"P-189\", \"P-189\", \"P-189\", \"EX11-008\", \"EX11-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"P-103\", \"P-103\", \"P-103\", \"P-103\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-018\", \"BT24-018\", \"BT24-018\"]",
+          "format": null,
+          "placement": "7th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_d60fe5034175",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-008:4,BT24-008:3,EX11-008:3,BT21-017:4,P-189:2,BT24-012:1,BT24-011:2,BT24-016:4,BT21-024:2,EX11-012:4,BT24-018:3,BT21-081:3,BT24-082:2,EX11-054:1,BT24-089:1,BT21-093:2,P-103:3,LM-055:1,P-035:2,LM-027:1,BT8-097:1,BT1-090:1,BT21-001:4&type=digimon",
+          "decklist": "[\"P-189\", \"P-189\", \"BT21-024\", \"BT21-024\", \"EX11-054\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT24-082\", \"BT24-082\", \"BT21-093\", \"BT21-093\", \"LM-055\", \"P-035\", \"P-035\", \"LM-027\", \"BT1-090\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT24-011\", \"BT24-011\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"P-103\", \"P-103\", \"P-103\", \"BT24-089\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT8-097\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"EX11-008\", \"EX11-008\", \"EX11-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT24-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\"]",
+          "format": null,
+          "placement": "13th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_0a6279f7d895",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:3,BT21-008:4,EX11-008:2,BT5-008:1,BT24-011:2,BT21-017:4,P-189:3,BT24-016:4,BT21-024:2,EX11-012:4,BT24-018:3,BT24-082:3,P-103:3,LM-027:2,BT8-097:3,BT21-081:3,BT21-093:1,P-035:2,LM-055:1,BT21-001:4&type=digimon",
+          "decklist": "[\"BT24-011\", \"BT24-011\", \"LM-055\", \"EX11-008\", \"EX11-008\", \"BT21-024\", \"BT21-024\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"P-103\", \"P-103\", \"P-103\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"LM-027\", \"LM-027\", \"BT8-097\", \"BT8-097\", \"BT8-097\", \"P-035\", \"P-035\", \"BT5-008\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"BT21-093\", \"P-189\", \"P-189\", \"P-189\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\"]",
+          "format": null,
+          "placement": "3rd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_11f8542e085e",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT12-021:4,P-117:2,BT12-047:4,BT16-040:2,P-118:2,EX1-014:2,BT12-022:4,ST9-09:1,BT12-050:4,BT16-025:4,AD1-011:3,BT16-028:3,AD1-024:4,BT16-085:4,BT3-093:3,BT17-097:4,BT12-002:4&type=digimon",
+          "decklist": "[\"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT16-040\", \"BT16-040\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"ST9-09\", \"AD1-024\", \"AD1-024\", \"AD1-024\", \"AD1-024\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT3-093\", \"BT3-093\", \"BT3-093\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"EX1-014\", \"EX1-014\", \"P-118\", \"P-118\", \"P-117\", \"P-117\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"BT16-028\", \"BT16-028\", \"BT16-028\", \"BT17-097\", \"BT17-097\", \"BT17-097\", \"BT17-097\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT12-050\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_c1ccc01d6fc4",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT16-082:2,BT5-008:1,BT24-008:3,BT21-008:4,EX11-008:2,BT21-017:4,BT24-012:4,BT24-011:1,BT24-016:4,BT21-024:2,EX11-012:4,BT24-018:3,BT24-082:3,BT21-081:3,BT21-093:1,BT8-097:2,LM-027:2,P-103:4,LM-055:1,BT21-001:4&type=digimon",
+          "decklist": "[\"P-103\", \"P-103\", \"P-103\", \"P-103\", \"LM-055\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT16-082\", \"BT16-082\", \"BT5-008\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT21-024\", \"BT21-024\", \"BT24-011\", \"LM-027\", \"LM-027\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT8-097\", \"BT8-097\", \"EX11-008\", \"EX11-008\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT21-093\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_0414dc893360",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT12-002:4,BT12-021:4,BT12-022:4,P-117:4,BT16-040:1,BT12-047:4,P-118:1,BT12-050:4,ST9-09:1,BT21-037:2,BT16-025:4,AD1-011:3,ST9-06:3,AD1-024:3,BT16-085:4,BT3-093:3,BT17-097:2,ST2-13:1,LM-036:2&type=digimon",
+          "decklist": "[\"LM-036\", \"LM-036\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT17-097\", \"BT17-097\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT3-093\", \"BT3-093\", \"BT3-093\", \"ST9-09\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"P-117\", \"P-117\", \"P-117\", \"P-117\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"P-118\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"AD1-024\", \"AD1-024\", \"AD1-024\", \"ST2-13\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT21-037\", \"BT21-037\", \"ST9-06\", \"ST9-06\", \"ST9-06\", \"BT16-040\"]",
+          "format": null,
+          "placement": "1st",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_e6a387ef2a2a",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT18-010:2,BT17-009:2,BT16-082:4,P-123:1,BT21-012:3,BT21-013:4,BT18-011:2,BT21-014:2,BT17-012:3,BT18-049:1,AD1-002:4,BT21-020:4,BT18-018:2,P-185:1,AD1-020:4,BT21-082:4,BT18-088:1,BT21-091:3,BT8-097:1,BT18-022:1,BT18-048:1,BT14-001:4&type=digimon",
+          "decklist": "[\"BT21-012\", \"BT21-012\", \"BT21-012\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"BT21-091\", \"BT21-091\", \"BT21-091\", \"BT21-082\", \"BT21-082\", \"BT21-082\", \"BT21-082\", \"BT18-018\", \"BT18-018\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"BT17-009\", \"BT17-009\", \"BT18-010\", \"BT18-010\", \"BT18-048\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT17-012\", \"BT17-012\", \"BT17-012\", \"P-123\", \"BT18-011\", \"BT18-011\", \"BT21-014\", \"BT21-014\", \"BT18-049\", \"BT18-088\", \"P-185\", \"BT21-020\", \"BT21-020\", \"BT21-020\", \"BT21-020\", \"BT8-097\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"BT18-022\"]",
+          "format": null,
+          "placement": "4th",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_08fea6cd08f1",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:3,BT21-008:4,BT16-082:4,BT24-012:3,BT21-017:4,BT24-011:2,BT24-016:4,BT21-024:2,EX11-012:4,BT24-018:3,BT24-082:3,BT21-081:2,EX11-054:1,BT21-093:2,P-103:3,P-035:2,LM-027:1,BT8-097:2,LM-055:1,BT21-001:4&type=Digimon",
+          "decklist": "[\"LM-027\", \"P-103\", \"P-103\", \"P-103\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-024\", \"BT21-024\", \"P-035\", \"P-035\", \"LM-055\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"EX11-054\", \"BT24-011\", \"BT24-011\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"BT21-081\", \"BT21-081\", \"BT8-097\", \"BT8-097\", \"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT21-093\", \"BT21-093\"]",
+          "format": null,
+          "placement": "5th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_28c801804f56",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT12-021:4,BT12-047:4,P-117:4,P-118:1,BT16-040:1,BT12-022:4,BT12-050:4,ST9-09:1,BT21-037:2,BT16-025:4,BT16-085:4,AD1-011:4,BT16-028:2,ST9-06:2,AD1-024:3,BT3-093:2,BT17-097:3,ST2-13:1,BT12-002:4&type=Digimon",
+          "decklist": "[\"ST9-09\", \"P-117\", \"P-117\", \"P-117\", \"P-117\", \"BT21-037\", \"BT21-037\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"ST2-13\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT16-040\", \"ST9-06\", \"ST9-06\", \"P-118\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT3-093\", \"BT3-093\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-028\", \"BT16-028\", \"AD1-024\", \"AD1-024\", \"AD1-024\", \"BT17-097\", \"BT17-097\", \"BT17-097\"]",
+          "format": null,
+          "placement": "10th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_dc738955ac9f",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX11-021:4,EX11-022:2,EX11-024:4,EX11-061:1,P-229:4,EX9-024:1,EX9-032:4,EX9-033:2,EX9-067:4,EX7-024:3,ST19-03:4,EX11-019:4,P-165:3,BT16-055:1,EX4-074:2,P-105:2,LM-054:2,LM-029:1,BT23-077:1,BT20-084:1,BT15-003:4&type=Digimon",
+          "decklist": "[\"EX4-074\", \"EX4-074\", \"LM-054\", \"LM-054\", \"BT16-055\", \"BT23-077\", \"EX11-022\", \"EX11-022\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"EX9-033\", \"EX9-033\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"BT20-084\", \"EX9-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"LM-029\", \"EX11-061\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"P-165\", \"P-165\", \"P-165\", \"P-105\", \"P-105\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\"]",
+          "format": null,
+          "placement": "11th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_9165ac26d6b9",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-012:4,BT17-009:4,BT6-022:2,BT21-013:4,BT17-012:2,BT18-011:2,BT18-022:2,BT18-048:2,BT18-025:1,BT18-049:1,AD1-002:4,BT7-014:2,P-185:1,BT18-018:2,EX7-014:1,EX7-049:1,BT17-094:1,AD1-020:4,BT21-082:3,BT21-091:2,BT18-088:1,BT18-095:2,BT8-097:2,BT14-001:4&type=Digimon",
+          "decklist": "[\"AD1-020\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"BT21-082\", \"BT21-082\", \"BT21-082\", \"BT18-088\", \"BT18-095\", \"BT18-095\", \"BT8-097\", \"BT8-097\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT18-049\", \"BT17-012\", \"BT17-012\", \"BT6-022\", \"BT6-022\", \"BT21-091\", \"BT21-091\", \"BT7-014\", \"BT7-014\", \"BT18-018\", \"BT18-018\", \"BT17-094\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"BT18-022\", \"BT18-022\", \"BT18-011\", \"BT18-011\", \"BT18-048\", \"BT18-048\", \"BT18-025\", \"BT21-012\", \"BT21-012\", \"BT21-012\", \"BT21-012\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"P-185\", \"EX7-049\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"EX7-014\"]",
+          "format": null,
+          "placement": "13th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_e0621135f27b",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT18-018:3,BT21-020:1,BT17-014:1,AD1-002:4,BT21-013:4,BT18-011:2,BT18-022:2,BT16-082:4,BT18-048:2,BT18-049:2,BT17-012:2,BT21-012:3,BT17-009:4,BT6-010:1,BT21-082:4,BT12-088:1,AD1-020:4,BT8-097:2,EX7-049:2,BT18-095:2,BT14-001:4&type=Digimon",
+          "decklist": "[\"BT18-022\", \"BT18-022\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"BT18-095\", \"BT18-095\", \"BT6-010\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"EX7-049\", \"EX7-049\", \"BT21-020\", \"BT18-018\", \"BT18-018\", \"BT18-018\", \"BT18-011\", \"BT18-011\", \"BT18-049\", \"BT18-049\", \"BT21-012\", \"BT21-012\", \"BT21-012\", \"BT21-082\", \"BT21-082\", \"BT21-082\", \"BT21-082\", \"BT12-088\", \"BT8-097\", \"BT8-097\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"BT17-014\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"BT17-012\", \"BT17-012\", \"BT18-048\", \"BT18-048\"]",
+          "format": null,
+          "placement": "14th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_5bc96d0f8f34",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-008:3,BT21-008:4,BT5-008:1,EX11-008:2,BT21-017:4,BT24-011:2,P-189:3,BT21-024:1,BT24-016:4,EX11-012:4,BT24-018:3,LM-027:3,P-035:2,P-103:4,BT21-093:1,BT8-097:3,BT24-082:3,BT21-081:3,BT21-001:4&type=digimon",
+          "decklist": "[\"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT8-097\", \"BT8-097\", \"BT8-097\", \"P-103\", \"P-103\", \"P-103\", \"P-103\", \"BT21-093\", \"BT21-081\", \"BT21-081\", \"BT21-081\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT24-011\", \"BT24-011\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT5-008\", \"P-189\", \"P-189\", \"P-189\", \"BT21-024\", \"EX11-008\", \"EX11-008\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"LM-027\", \"LM-027\", \"LM-027\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"BT24-082\", \"BT24-082\", \"BT24-082\", \"P-035\", \"P-035\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\"]",
+          "format": null,
+          "placement": "11th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ]
     },
@@ -22221,14 +23305,50 @@
       "secondary_color": "Purple",
       "display_card_id": "BT20-020",
       "stats": {
-        "times_played": 0,
-        "meta_share": 0.0,
+        "times_played": 3,
+        "meta_share": 0.001486,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
-        "avg_placement": 0.0,
-        "sources": {}
+        "avg_placement": 6.5,
+        "sources": {
+          "egman": {
+            "count": 3,
+            "top_cuts": 0
+          }
+        }
       },
-      "decklists": [],
+      "decklists": [
+        {
+          "deck_id": "egman_6627a127d84f",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=P-117:3,BT12-021:4,BT12-047:4,P-118:1,BT16-040:1,BT12-022:4,BT12-050:4,ST9-09:1,BT21-037:2,AD1-011:3,BT16-025:4,ST9-06:1,BT16-028:3,AD1-024:3,BT20-020:1,BT16-085:4,BT3-093:2,BT17-097:2,LM-028:1,LM-036:2,BT12-002:4&type=digimon",
+          "decklist": "[\"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"BT21-037\", \"BT21-037\", \"LM-036\", \"LM-036\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"BT16-040\", \"ST9-09\", \"P-118\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT20-020\", \"LM-028\", \"BT3-093\", \"BT3-093\", \"P-117\", \"P-117\", \"P-117\", \"BT16-028\", \"BT16-028\", \"BT16-028\", \"ST9-06\", \"AD1-024\", \"AD1-024\", \"AD1-024\", \"BT17-097\", \"BT17-097\"]",
+          "format": null,
+          "placement": "5th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_09a84dd97d00",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-012:4,BT6-022:2,BT18-011:3,BT21-013:4,BT18-022:3,BT18-048:2,BT18-025:3,BT7-014:2,AD1-002:4,P-185:1,BT21-082:3,BT21-091:3,BT18-088:3,BT17-094:1,BT4-098:2,AD1-020:4,BT17-009:3,BT20-020:1,EX7-014:1,EX7-049:1,BT14-001:4&type=digimon",
+          "decklist": "[\"BT18-048\", \"BT18-048\", \"P-185\", \"BT18-011\", \"BT18-011\", \"BT18-011\", \"EX7-014\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"BT7-014\", \"BT7-014\", \"EX7-049\", \"BT21-082\", \"BT21-082\", \"BT21-082\", \"BT4-098\", \"BT4-098\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"BT18-025\", \"BT18-025\", \"BT18-025\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT17-094\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"BT6-022\", \"BT6-022\", \"BT20-020\", \"BT21-091\", \"BT21-091\", \"BT21-091\", \"BT18-022\", \"BT18-022\", \"BT18-022\", \"BT18-088\", \"BT18-088\", \"BT18-088\", \"BT21-012\", \"BT21-012\", \"BT21-012\", \"BT21-012\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_9c2cc288cb60",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT16-017:2,P-117:4,BT12-021:4,BT12-047:4,BT21-037:2,BT12-022:4,EX1-014:1,BT12-050:4,ST9-09:1,BT16-025:4,AD1-011:3,AD1-024:2,ST9-06:2,BT20-020:1,BT16-028:2,BT17-077:1,BT16-085:4,BT3-093:2,BT17-097:3,BT3-002:1,BT12-002:4&type=Digimon",
+          "decklist": "[\"BT16-017\", \"BT16-017\", \"BT3-002\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"EX1-014\", \"ST9-09\", \"BT3-093\", \"BT3-093\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT16-028\", \"BT16-028\", \"P-117\", \"P-117\", \"P-117\", \"P-117\", \"AD1-024\", \"AD1-024\", \"ST9-06\", \"ST9-06\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT17-077\", \"BT20-020\", \"BT21-037\", \"BT21-037\", \"BT17-097\", \"BT17-097\", \"BT17-097\"]",
+          "format": null,
+          "placement": "8th",
+          "is_top_cut": false,
+          "event_date": null
+        }
+      ],
       "digilab_stats": {
         "times_played": 3,
         "conversion_rate": 0.0,
@@ -22243,7 +23363,7 @@
       "display_card_id": "BT14-101",
       "stats": {
         "times_played": 15,
-        "meta_share": 0.007895,
+        "meta_share": 0.007429,
         "top_cut_count": 1,
         "conversion_rate": 0.0667,
         "avg_placement": 17.73,
@@ -22419,19 +23539,19 @@
       "secondary_color": "Yellow",
       "display_card_id": "BT19-014",
       "stats": {
-        "times_played": 27,
-        "meta_share": 0.014211,
-        "top_cut_count": 8,
-        "conversion_rate": 0.2963,
-        "avg_placement": 8.59,
+        "times_played": 31,
+        "meta_share": 0.015354,
+        "top_cut_count": 9,
+        "conversion_rate": 0.2903,
+        "avg_placement": 8.19,
         "sources": {
           "digimonmeta": {
             "count": 1,
             "top_cuts": 1
           },
           "egman": {
-            "count": 1,
-            "top_cuts": 1
+            "count": 5,
+            "top_cuts": 2
           },
           "digilab": {
             "count": 25,
@@ -22709,6 +23829,46 @@
           "placement": "12",
           "is_top_cut": false,
           "event_date": "2025-10-06"
+        },
+        {
+          "deck_id": "egman_7f8a23e0023b",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT19-008:4,BT12-011:4,BT21-021:4,AD1-006:4,BT10-087:4,BT21-083:4,BT10-003:4,BT19-057:3,BT10-029:3,BT19-061:3,BT19-038:3,BT19-051:3,AD1-013:3,P-224:3,BT19-014:2,BT8-095:2,BT19-079:1&type=digimon",
+          "decklist": "[\"BT21-021\", \"BT21-021\", \"BT21-021\", \"BT21-021\", \"BT10-003\", \"BT10-003\", \"BT10-003\", \"BT10-003\", \"BT19-057\", \"BT19-057\", \"BT19-057\", \"BT19-079\", \"BT19-051\", \"BT19-051\", \"BT19-051\", \"BT8-095\", \"BT8-095\", \"BT12-011\", \"BT12-011\", \"BT12-011\", \"BT12-011\", \"BT19-038\", \"BT19-038\", \"BT19-038\", \"BT19-008\", \"BT19-008\", \"BT19-008\", \"BT19-008\", \"BT10-087\", \"BT10-087\", \"BT10-087\", \"BT10-087\", \"BT10-029\", \"BT10-029\", \"BT10-029\", \"BT21-083\", \"BT21-083\", \"BT21-083\", \"BT21-083\", \"AD1-013\", \"AD1-013\", \"AD1-013\", \"BT19-061\", \"BT19-061\", \"BT19-061\", \"AD1-006\", \"AD1-006\", \"AD1-006\", \"AD1-006\", \"P-224\", \"P-224\", \"P-224\", \"BT19-014\", \"BT19-014\"]",
+          "format": null,
+          "placement": "5th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_206a8ba153a5",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT19-008:4,BT19-057:4,BT19-061:4,BT21-021:4,AD1-006:4,BT10-087:4,BT21-083:4,BT10-003:4,BT19-038:3,BT19-051:3,AD1-013:3,P-224:3,BT10-029:2,BT19-035:2,BT19-014:2,BT8-095:2,BT19-079:1,BT11-095:1&type=digimon",
+          "decklist": "[\"BT19-038\", \"BT19-038\", \"BT19-038\", \"BT19-008\", \"BT19-008\", \"BT19-008\", \"BT19-008\", \"BT19-057\", \"BT19-057\", \"BT19-057\", \"BT19-057\", \"BT19-061\", \"BT19-061\", \"BT19-061\", \"BT19-061\", \"BT10-003\", \"BT10-003\", \"BT10-003\", \"BT10-003\", \"BT21-083\", \"BT21-083\", \"BT21-083\", \"BT21-083\", \"BT10-087\", \"BT10-087\", \"BT10-087\", \"BT10-087\", \"BT19-051\", \"BT19-051\", \"BT19-051\", \"P-224\", \"P-224\", \"P-224\", \"BT10-029\", \"BT10-029\", \"AD1-006\", \"AD1-006\", \"AD1-006\", \"AD1-006\", \"BT19-035\", \"BT19-035\", \"BT19-014\", \"BT19-014\", \"BT8-095\", \"BT8-095\", \"BT11-095\", \"AD1-013\", \"AD1-013\", \"AD1-013\", \"BT21-021\", \"BT21-021\", \"BT21-021\", \"BT21-021\", \"BT19-079\"]",
+          "format": null,
+          "placement": "1st",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_4f7fbadccea4",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT19-008:4,BT19-057:4,BT10-029:2,BT19-035:2,BT21-021:3,BT19-012:1,BT19-051:3,BT19-038:3,BT19-061:4,AD1-013:3,BT19-014:2,AD1-006:4,BT21-083:4,BT10-087:3,BT11-095:2,P-224:3,BT8-095:2,BT19-079:1,BT19-001:4&type=digimon",
+          "decklist": "[\"BT19-012\", \"BT19-061\", \"BT19-061\", \"BT19-061\", \"BT19-061\", \"BT10-029\", \"BT10-029\", \"BT11-095\", \"BT11-095\", \"BT19-051\", \"BT19-051\", \"BT19-051\", \"BT10-087\", \"BT10-087\", \"BT10-087\", \"BT19-057\", \"BT19-057\", \"BT19-057\", \"BT19-057\", \"BT19-035\", \"BT19-035\", \"AD1-013\", \"AD1-013\", \"AD1-013\", \"P-224\", \"P-224\", \"P-224\", \"BT19-001\", \"BT19-001\", \"BT19-001\", \"BT19-001\", \"AD1-006\", \"AD1-006\", \"AD1-006\", \"AD1-006\", \"BT19-038\", \"BT19-038\", \"BT19-038\", \"BT21-083\", \"BT21-083\", \"BT21-083\", \"BT21-083\", \"BT8-095\", \"BT8-095\", \"BT19-008\", \"BT19-008\", \"BT19-008\", \"BT19-008\", \"BT21-021\", \"BT21-021\", \"BT21-021\", \"BT19-079\", \"BT19-014\", \"BT19-014\"]",
+          "format": null,
+          "placement": "10th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_5a3b5aad4db4",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT19-008:4,BT19-057:2,BT11-076:2,BT10-029:2,BT19-035:3,BT19-061:3,BT21-021:4,BT19-012:1,BT19-038:3,BT19-051:3,AD1-006:4,AD1-013:3,BT19-014:3,P-224:3,BT21-083:3,BT10-087:3,BT11-095:2,BT8-095:2,BT10-003:4&type=Digimon",
+          "decklist": "[\"BT11-076\", \"BT11-076\", \"P-224\", \"P-224\", \"P-224\", \"BT8-095\", \"BT8-095\", \"BT19-038\", \"BT19-038\", \"BT19-038\", \"BT11-095\", \"BT11-095\", \"BT10-003\", \"BT10-003\", \"BT10-003\", \"BT10-003\", \"BT21-083\", \"BT21-083\", \"BT21-083\", \"BT19-061\", \"BT19-061\", \"BT19-061\", \"BT19-014\", \"BT19-014\", \"BT19-014\", \"BT19-012\", \"BT19-057\", \"BT19-057\", \"BT10-087\", \"BT10-087\", \"BT10-087\", \"BT19-035\", \"BT19-035\", \"BT19-035\", \"BT19-051\", \"BT19-051\", \"BT19-051\", \"BT10-029\", \"BT10-029\", \"AD1-006\", \"AD1-006\", \"AD1-006\", \"AD1-006\", \"BT21-021\", \"BT21-021\", \"BT21-021\", \"BT21-021\", \"BT19-008\", \"BT19-008\", \"BT19-008\", \"BT19-008\", \"AD1-013\", \"AD1-013\", \"AD1-013\"]",
+          "format": null,
+          "placement": "6th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -22725,7 +23885,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000526,
+        "meta_share": 0.000495,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -22755,15 +23915,19 @@
       "secondary_color": null,
       "display_card_id": "BT14-033",
       "stats": {
-        "times_played": 12,
-        "meta_share": 0.006316,
+        "times_played": 14,
+        "meta_share": 0.006934,
         "top_cut_count": 1,
-        "conversion_rate": 0.0833,
-        "avg_placement": 19.33,
+        "conversion_rate": 0.0714,
+        "avg_placement": 18.54,
         "sources": {
           "digilab": {
             "count": 12,
             "top_cuts": 1
+          },
+          "egman": {
+            "count": 2,
+            "top_cuts": 0
           }
         }
       },
@@ -22887,6 +24051,26 @@
           "placement": "64",
           "is_top_cut": false,
           "event_date": "2025-10-11"
+        },
+        {
+          "deck_id": "egman_142e8c7ff5ea",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT14-033:4,EX8-030:2,BT9-033:2,ST10-04:4,EX6-020:4,BT22-034:2,BT23-031:4,BT11-042:3,BT23-067:4,ST10-12:2,BT11-083:1,EX10-051:2,BT23-102:3,P-187:3,BT18-071:1,BT22-089:3,EX6-074:3,BT11-094:3,BT14-003:4&type=digimon",
+          "decklist": "[\"BT22-034\", \"BT22-034\", \"ST10-12\", \"ST10-12\", \"EX10-051\", \"EX10-051\", \"BT11-094\", \"BT11-094\", \"BT11-094\", \"BT14-003\", \"BT14-003\", \"BT14-003\", \"BT14-003\", \"BT23-031\", \"BT23-031\", \"BT23-031\", \"BT23-031\", \"BT23-067\", \"BT23-067\", \"BT23-067\", \"BT23-067\", \"BT11-083\", \"BT23-102\", \"BT23-102\", \"BT23-102\", \"BT14-033\", \"BT14-033\", \"BT14-033\", \"BT14-033\", \"ST10-04\", \"ST10-04\", \"ST10-04\", \"ST10-04\", \"BT11-042\", \"BT11-042\", \"BT11-042\", \"EX6-074\", \"EX6-074\", \"EX6-074\", \"BT9-033\", \"BT9-033\", \"P-187\", \"P-187\", \"P-187\", \"EX8-030\", \"EX8-030\", \"BT22-089\", \"BT22-089\", \"BT22-089\", \"EX6-020\", \"EX6-020\", \"EX6-020\", \"EX6-020\", \"BT18-071\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_990928ce7e10",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=P-197:3,BT14-033:4,BT24-031:4,P-194:4,BT24-034:4,P-213:4,BT24-014:4,BT24-101:4,BT24-040:2,EX4-074:4,BT24-102:2,BT24-084:4,BT24-088:4,LM-045:2,BT4-104:1,BT15-003:4&type=digimon",
+          "decklist": "[\"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT24-040\", \"BT24-040\", \"P-197\", \"P-197\", \"P-197\", \"P-194\", \"P-194\", \"P-194\", \"P-194\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT14-033\", \"BT14-033\", \"BT14-033\", \"BT14-033\", \"BT24-102\", \"BT24-102\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"LM-045\", \"LM-045\", \"P-213\", \"P-213\", \"P-213\", \"P-213\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"EX4-074\", \"EX4-074\", \"EX4-074\", \"EX4-074\", \"BT4-104\"]",
+          "format": null,
+          "placement": "9th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -22923,11 +24107,11 @@
       "secondary_color": null,
       "display_card_id": "EX11-074",
       "stats": {
-        "times_played": 54,
-        "meta_share": 0.028421,
+        "times_played": 59,
+        "meta_share": 0.029222,
         "top_cut_count": 18,
-        "conversion_rate": 0.3333,
-        "avg_placement": 11.31,
+        "conversion_rate": 0.3051,
+        "avg_placement": 11.19,
         "sources": {
           "digilab": {
             "count": 49,
@@ -22936,6 +24120,10 @@
           "digimonmeta": {
             "count": 5,
             "top_cuts": 5
+          },
+          "egman": {
+            "count": 5,
+            "top_cuts": 0
           }
         }
       },
@@ -23479,6 +24667,56 @@
           "placement": "1st Place",
           "is_top_cut": true,
           "event_date": "1/18/2026"
+        },
+        {
+          "deck_id": "egman_c48e1db542cc",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX11-032:4,EX11-028:4,P-166:4,EX7-031:4,ST18-04:4,EX7-004:4,EX11-074:3,EX11-026:3,EX11-072:3,EX11-062:3,EX7-064:3,EX8-074:2,EX11-035:2,EX7-034:2,ST22-13:2,P-106:2,P-038:2,EX7-032:1,LM-030:1,BT3-103:1&type=digimon",
+          "decklist": "[\"EX8-074\", \"EX8-074\", \"EX11-028\", \"EX11-028\", \"EX11-028\", \"EX11-028\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"EX11-074\", \"EX11-074\", \"EX11-074\", \"EX7-034\", \"EX7-034\", \"P-106\", \"P-106\", \"EX7-004\", \"EX7-004\", \"EX7-004\", \"EX7-004\", \"EX7-032\", \"ST22-13\", \"ST22-13\", \"EX7-031\", \"EX7-031\", \"EX7-031\", \"EX7-031\", \"LM-030\", \"BT3-103\", \"EX11-026\", \"EX11-026\", \"EX11-026\", \"EX11-032\", \"EX11-032\", \"EX11-032\", \"EX11-032\", \"P-038\", \"P-038\", \"EX11-035\", \"EX11-035\", \"EX11-062\", \"EX11-062\", \"EX11-062\", \"P-166\", \"P-166\", \"P-166\", \"P-166\", \"EX11-072\", \"EX11-072\", \"EX11-072\", \"EX7-064\", \"EX7-064\", \"EX7-064\"]",
+          "format": null,
+          "placement": "8th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_bf26601fd422",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX11-074:3,BT20-101:1,ST18-12:2,EX8-074:2,EX11-032:4,ST22-13:3,EX11-028:4,EX7-032:1,P-166:2,BT24-047:1,EX11-026:1,EX7-031:3,ST18-04:4,BT24-044:2,EX11-062:4,EX7-064:2,BT3-103:1,EX11-072:3,P-038:1,P-106:2,LM-055:1,LM-030:1,EX2-066:2,EX4-002:4&type=digimon",
+          "decklist": "[\"EX11-032\", \"EX11-032\", \"EX11-032\", \"EX11-032\", \"EX7-031\", \"EX7-031\", \"EX7-031\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"EX2-066\", \"EX2-066\", \"P-106\", \"P-106\", \"BT24-044\", \"BT24-044\", \"ST22-13\", \"ST22-13\", \"ST22-13\", \"LM-030\", \"P-038\", \"EX11-062\", \"EX11-062\", \"EX11-062\", \"EX11-062\", \"BT3-103\", \"EX8-074\", \"EX8-074\", \"EX7-032\", \"P-166\", \"P-166\", \"EX11-072\", \"EX11-072\", \"EX11-072\", \"EX7-064\", \"EX7-064\", \"BT24-047\", \"EX11-026\", \"EX4-002\", \"EX4-002\", \"EX4-002\", \"EX4-002\", \"LM-055\", \"EX11-028\", \"EX11-028\", \"EX11-028\", \"EX11-028\", \"EX11-074\", \"EX11-074\", \"EX11-074\", \"ST18-12\", \"ST18-12\", \"BT20-101\"]",
+          "format": null,
+          "placement": "15th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_29762abdc8c1",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX11-026:1,ST18-04:4,EX7-031:2,BT24-044:2,BT1-068:2,EX11-028:3,P-166:4,BT24-047:2,EX11-032:1,EX7-034:3,ST22-13:3,BT20-101:2,EX11-035:1,ST18-12:2,EX8-074:1,EX11-074:3,EX11-072:3,P-106:3,P-038:1,LM-030:1,EX11-062:4,EX7-064:2,EX7-004:4&type=digimon",
+          "decklist": "[\"LM-030\", \"EX11-062\", \"EX11-062\", \"EX11-062\", \"EX11-062\", \"P-106\", \"P-106\", \"P-106\", \"ST18-12\", \"ST18-12\", \"EX7-004\", \"EX7-004\", \"EX7-004\", \"EX7-004\", \"BT1-068\", \"BT1-068\", \"EX11-028\", \"EX11-028\", \"EX11-028\", \"ST22-13\", \"ST22-13\", \"ST22-13\", \"EX7-031\", \"EX7-031\", \"EX8-074\", \"EX11-072\", \"EX11-072\", \"EX11-072\", \"P-166\", \"P-166\", \"P-166\", \"P-166\", \"BT24-047\", \"BT24-047\", \"BT24-044\", \"BT24-044\", \"EX11-032\", \"BT20-101\", \"BT20-101\", \"EX7-034\", \"EX7-034\", \"EX7-034\", \"EX11-074\", \"EX11-074\", \"EX11-074\", \"P-038\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"EX11-035\", \"EX7-064\", \"EX7-064\", \"EX11-026\"]",
+          "format": null,
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_a32ad27a1d4e",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX7-031:3,ST18-04:4,EX11-026:2,BT24-044:2,EX11-032:4,ST22-13:3,P-166:4,EX11-028:4,BT24-047:2,BT20-101:2,EX11-035:2,LM-030:2,EX8-074:2,EX11-074:3,EX11-072:3,BT3-103:1,EX11-062:4,EX7-064:3,EX4-002:4&type=digimon",
+          "decklist": "[\"EX7-064\", \"EX7-064\", \"EX7-064\", \"BT24-047\", \"BT24-047\", \"EX11-074\", \"EX11-074\", \"EX11-074\", \"EX4-002\", \"EX4-002\", \"EX4-002\", \"EX4-002\", \"EX11-032\", \"EX11-032\", \"EX11-032\", \"EX11-032\", \"EX7-031\", \"EX7-031\", \"EX7-031\", \"P-166\", \"P-166\", \"P-166\", \"P-166\", \"EX11-026\", \"EX11-026\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"EX11-035\", \"EX11-035\", \"EX11-062\", \"EX11-062\", \"EX11-062\", \"EX11-062\", \"BT24-044\", \"BT24-044\", \"EX11-028\", \"EX11-028\", \"EX11-028\", \"EX11-028\", \"EX8-074\", \"EX8-074\", \"EX11-072\", \"EX11-072\", \"EX11-072\", \"ST22-13\", \"ST22-13\", \"ST22-13\", \"LM-030\", \"LM-030\", \"BT3-103\", \"BT20-101\", \"BT20-101\"]",
+          "format": null,
+          "placement": "6th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_7e16e545adbf",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-044:2,BT24-047:2,BT20-101:1,EX11-026:2,EX11-035:3,EX11-074:3,EX11-062:4,EX11-072:3,ST22-13:3,ST18-04:4,EX8-074:1,EX7-034:2,EX7-064:2,EX7-031:3,EX11-032:2,EX11-028:3,EX7-032:1,P-166:3,P-106:3,P-038:1,P-133:1,LM-030:1,EX4-002:1,EX7-004:3&type=Digimon",
+          "decklist": "[\"BT24-044\", \"BT24-044\", \"EX11-072\", \"EX11-072\", \"EX11-072\", \"P-106\", \"P-106\", \"P-106\", \"EX11-035\", \"EX11-035\", \"EX11-035\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"ST18-04\", \"EX7-031\", \"EX7-031\", \"EX7-031\", \"EX11-028\", \"EX11-028\", \"EX11-028\", \"BT20-101\", \"EX11-062\", \"EX11-062\", \"EX11-062\", \"EX11-062\", \"EX7-034\", \"EX7-034\", \"P-133\", \"EX11-074\", \"EX11-074\", \"EX11-074\", \"EX7-032\", \"P-166\", \"P-166\", \"P-166\", \"P-038\", \"EX11-026\", \"EX11-026\", \"EX11-032\", \"EX11-032\", \"BT24-047\", \"BT24-047\", \"ST22-13\", \"ST22-13\", \"ST22-13\", \"EX8-074\", \"LM-030\", \"EX4-002\", \"EX7-064\", \"EX7-064\", \"EX7-004\", \"EX7-004\", \"EX7-004\"]",
+          "format": null,
+          "placement": "9th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {

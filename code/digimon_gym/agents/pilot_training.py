@@ -514,6 +514,24 @@ class WinRateCallback(BaseCallback):
         self.logger.record("pilot/mean_eval_episode_length", mean_length)
         self.logger.record("pilot/games_played", self.games_played)
 
+        # Per-archetype matchup tracking. Populated by GeneralistDeckPoolWrapper
+        # and PoolOpponentWrapper via `info["opponent_archetype"]` in reset.
+        # Logged as TB scalars so trajectory tooling can surface frontrunner /
+        # outlier matchups. Cumulative across all evals so far — divide wins
+        # by games to get the running win rate per archetype.
+        for arch_name in sorted(self._archetype_games.keys()):
+            games = self._archetype_games[arch_name]
+            if games <= 0:
+                continue
+            wins = self._archetype_wins.get(arch_name, 0)
+            draws = self._archetype_draws.get(arch_name, 0)
+            # TB scalar names: use a stable tag namespace; sanitize archetype
+            # name (TB barfs on '/' inside tag components).
+            safe = arch_name.replace("/", "_").replace(" ", "_")
+            self.logger.record(f"pilot/archetype/{safe}/win_rate", wins / games)
+            self.logger.record(f"pilot/archetype/{safe}/draw_rate", draws / games)
+            self.logger.record(f"pilot/archetype/{safe}/games", float(games))
+
         if self.eval_suite is not None:
             suite_states = {}
 
