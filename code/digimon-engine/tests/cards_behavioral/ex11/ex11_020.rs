@@ -189,6 +189,39 @@ fn ex11_020_inherited_decline_does_not_delete_or_end_attack() {
     );
 }
 
+#[test]
+fn ex11_020_inherited_lone_carrier_does_not_end_attack_for_free() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-020")
+        .expect("EX11-020 YAML loads")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("ATTACKER", "Attacker"))
+        .add_card(make_test_card("SECURITY", "Security"))
+        .security(0, &["SECURITY"])
+        .start();
+    // Lone carrier: EX11-020 is the only stack on field, no OTHER Digimon.
+    runner.place_stack(0, &["EX11-020", "CARRIER"]);
+    let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
+    runner.end_turn();
+
+    runner.attack_player(attacker, 0, false);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no other Digimon exists to delete, so no attack-cancel prompt is offered"
+    );
+    runner
+        .auto_resolve()
+        .expect("attack resolves with no cancel selection");
+
+    assert_eq!(
+        runner.security_count(0),
+        0,
+        "ending the attack is a paid effect — with no other Digimon to delete, \
+         the attack must NOT end for free; security is checked"
+    );
+}
+
 /// Regression for PUPPETS-G012 review Issue 2 — the deferred-replacement
 /// decline path must preserve the deletion cause.
 ///
