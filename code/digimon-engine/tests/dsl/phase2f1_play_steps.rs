@@ -11,7 +11,7 @@ use std::sync::Arc;
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCostDelta, CompiledPlayerRef, CompiledStep,
 };
-use digimon_engine::card_source::CardHandle;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::{run_step, run_steps, RunOutcome};
@@ -251,12 +251,66 @@ fn play_from_hand_free_step_uses_bound_hand_owner() {
     );
 }
 
+#[test]
+fn play_from_revealed_free_step_consumes_reveal_and_keeps_memory() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TST-PFRF", "PlayFromRevealedFreeTest"))
+        .memory(2)
+        .start();
+
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "TST-PFRF")
+        .unwrap();
+    let card_index = runner.game.next_card_index();
+    let card = CardSource::new(data_idx, 0, card_index);
+    let src_card = card.handle();
+    runner.game.revealed_cards.push(card);
+
+    let memory_before = runner.game.memory;
+    let reveal_before = runner.game.revealed_cards.len();
+    let battle_before = runner.game.players[0].battle_area.len();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_card("pick", src_card);
+
+    let step = CompiledStep::PlayFromRevealedFree {
+        of: CompiledPlayerRef::You,
+        card: CompiledBindingRef::Named("pick".into()),
+        bind_as: Some("played".into()),
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "PlayFromRevealedFree must not pay the revealed card's play cost"
+    );
+    assert_eq!(
+        runner.game.revealed_cards.len(),
+        reveal_before - 1,
+        "reveal pool shrinks by 1"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        battle_before + 1,
+        "battle area gains 1 permanent"
+    );
+    assert!(
+        bindings.get_permanent("played").is_some(),
+        "bind_as records the played permanent"
+    );
+}
+
 // ─── PlayFromTrash ───────────────────────────────────────────────────────────
 
 #[test]
 fn play_from_trash_step_with_free_cost_delta_consumes_trash_and_keeps_memory() {
-    use digimon_engine::card_source::CardSource;
-
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("TST-PFT", "PlayFromTrashTest"))
         .memory(5)

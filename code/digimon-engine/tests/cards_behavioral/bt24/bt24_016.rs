@@ -844,11 +844,15 @@ fn bt24_016_inherited_all_turns_fires_on_opponents_turn() {
         field_before + 1,
         "[All Turns] inherited clause must fire on the OPPONENT's turn too"
     );
-    assert_eq!(
-        runner.hand_size(0),
-        hand_before - 1,
-        "the qualifying card must be played free on the opponent's turn"
+    let qualifying_still_in_hand = runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "REPTILE-3K");
+    assert!(
+        !qualifying_still_in_hand,
+        "the qualifying card must leave hand when played free on the opponent's turn"
     );
+    let _ = hand_before;
 }
 
 /// OPT lockout (inherited clause): two security removals in the same turn

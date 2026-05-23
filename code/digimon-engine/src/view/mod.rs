@@ -380,10 +380,7 @@ pub struct EffectChoiceSummary {
 }
 
 impl PendingSelectionDebugView {
-    pub fn from_pending(
-        game: &Game,
-        pending: &PendingSelection,
-    ) -> Self {
+    pub fn from_pending(game: &Game, pending: &PendingSelection) -> Self {
         // Resolving CardHandle -> card_id directly requires a zone scan;
         // for v1 we leave the top-level source_card_id None and let
         // consumers cross-reference via source_permanent + FieldView.
@@ -448,11 +445,8 @@ pub struct EffectQueueView {
 
 impl EffectQueueView {
     pub fn from_game(game: &Game) -> Self {
-        let pending: Vec<EffectQueueEntry> = game
-            .effect_queue
-            .iter()
-            .map(queue_entry_summary)
-            .collect();
+        let pending: Vec<EffectQueueEntry> =
+            game.effect_queue.iter().map(queue_entry_summary).collect();
         Self { pending }
     }
 }

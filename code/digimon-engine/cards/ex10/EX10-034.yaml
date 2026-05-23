@@ -28,27 +28,11 @@ alt_paths:
 #
 # ─── Clause A: [On Play][When Digivolving] grant forced-attack to 1 opp Digimon ─
 #
-# OMITTED — G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING
-#
-# `grant_triggered_effect.target` is `PredicateSpec`, not a `BindingRef`. The
-# step walks all battle-area permanents matching the predicate and installs the
-# body on EVERY match. There is no DSL surface for "select 1 opponent Digimon,
-# then grant the triggered body to that specific binding" — the selection step
-# and the grant step are decoupled and cannot compose at the per-binding level.
-#
-# Faithful implementation requires:
-#   1. `select_opponent_permanent` → `forced_target` binding
-#   2. `grant_triggered_effect { target: forced_target, ... }` — but `target`
-#      must be a PredicateSpec, not a BindingRef.
-#
-# Using a predicate such as `{ of: opponent, kind: digimon }` would grant the
-# triggered body to ALL opponent Digimon (violating no-approximations by
-# over-firing on the [Start of Your Main Phase] forced-attack relative to the
-# selected 1 Digimon).
-#
-# Per no-approximations policy this clause is BLOCKED until the gap closes.
-# Filed as: G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING
-# See: qa/dsl-vocab-gaps.md § EX10-034 — grant_triggered_effect to selected binding
+# Selects exactly 1 opponent Digimon, then grants that selected binding
+# "[Start of Your Main Phase] This Digimon attacks." until the opponent's
+# turn ends. `grant_triggered_effect.target` accepts either the older
+# predicate broadcast shape or a binding ref; this card uses the binding ref
+# to avoid over-granting to every opponent Digimon.
 #
 # ─── Clause B: [All Turns][OPT] When Digimon attack ─────────────────────────────
 #
@@ -81,8 +65,7 @@ alt_paths:
 # | <Collision> keyword                                       | IMPLEMENTED |
 # | <Fragment (3)> keyword                                    | IMPLEMENTED |
 # | <Blocker> keyword                                         | IMPLEMENTED |
-# | [OP][WD] grant forced-attack to 1 opp Digimon            | BLOCKED     |
-# |   → G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING              |             |
+# | [OP][WD] grant forced-attack to 1 opp Digimon            | IMPLEMENTED |
 # | [All Turns][OPT] when Digimon attack, trash 2 sources     | IMPLEMENTED |
 # | [All Turns][OPT] this Digimon gains SecurityA+1 until EoT | IMPLEMENTED |
 # | [All Turns][OPT] this Digimon gains +3000 DP until EoT   | IMPLEMENTED |
@@ -99,9 +82,24 @@ effects:
   - kind: grant_keyword
     keyword: Blocker
 
-  # ─── Clause A: BLOCKED (G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING) ───────────
-  # See comment block above. Omitted until the DSL can target a specific
-  # binding-ref in grant_triggered_effect rather than a broadcast predicate.
+  # ─── Clause A: [OP][WD] grant forced attack to selected opponent Digimon ───
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Give 1 opponent Digimon a mandatory Start of Main attack until opponent turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: forced_target
+          filter:
+            kind: digimon
+          prompt: "Choose 1 of your opponent's Digimon to gain '[Start of Your Main Phase] This Digimon attacks.'"
+      - grant_triggered_effect:
+          target: forced_target
+          timing: start_of_your_main_phase
+          expiry: end_of_opponents_turn
+          body:
+            - force_attack:
+                attacker: carrier
+                targets: any
+                prompt: "This Digimon attacks"
 
   # ─── Clause B: [All Turns][OPT] When Digimon attack ───────────────────────
   #

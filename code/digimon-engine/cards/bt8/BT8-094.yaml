@@ -4,65 +4,50 @@ kind: tamer
 color: [black]
 cost: 3
 
-# ─── Clause A: [All Turns] opponent's Lv.5-or-lower deletion observer ─────────
+# ─── Clause A: [All Turns] opponent's Lv.5-or-lower deletion observer ───────
 #
 # Printed text: "When one of your opponent's level 5 or lower Digimon is
 # deleted, you may suspend this Tamer to <Draw 1>."
 #
-# BLOCKED — G-EVENT-TARGET-LEVEL-LTE
-#
-# The level filter on the deleted permanent requires an
-# `event_target_level_lte: 5` predicate in the DSL. No such leaf exists in
-# `predicate.rs` or `compiled.rs` as of 2026-05-22. Without it, the clause
-# would fire on ALL opponent Digimon deletions (including Lv.6+), violating
-# the no-approximations policy.
-#
-# Intended YAML shape (once G-EVENT-TARGET-LEVEL-LTE closes):
-#   - when: on_any_deletion
-#     active_when: { all_turns: true }
-#     optional: true
-#     summary: "[All Turns] When opponent's Lv.5- Digimon is deleted, may suspend self to Draw 1"
-#     condition:
-#       all_of:
-#         - event_target_owner: opponent
-#         - event_target_kind: digimon
-#         - event_target_level_lte: 5         # G-EVENT-TARGET-LEVEL-LTE
-#         - source_is_unsuspended: true
-#     process:
-#       - activation_cost: { suspend_self: true }
-#       - draw: { of: you, count: 1 }
+# Uses `event_target_level_lte` against the deleted-object snapshot so Lv.6+
+# deletions do not offer the suspend cost. `optional: true` ensures the
+# activation-cost prompt exposes PASS before this Tamer is suspended.
 #
 # ─── Clause B: [Opponent's Turn] opponent's Lv.3 breeding-move observer ───────
 #
 # Printed text: "When one of your opponent's level 3 Digimon is moved from
 # their breeding area to their battle area, gain 2 memory."
 #
-# BLOCKED — G-EVENT-TARGET-LEVEL-LTE
-#
-# The `on_move` timing is resolved (G-ON-MOVE: RESOLVED 2026-04-29).
-# The dispatch fires on the mover's own battle area; `event_target_owner:
-# opponent` scopes to the opponent's board (pattern: P-130 clause 2 uses
-# `event_target_owner: you` for own-player moves).
-#
-# The level-3 filter on the moved permanent requires `event_target_level_eq: 3`
-# (or `event_target_level_lte: 3` + `event_target_level_gte: 3`). No such
-# leaf exists in the DSL. Without it, the clause would fire on ALL opponent
-# Digimon moves from breeding (including Lv.4+), violating the
-# no-approximations policy.
-#
-# Intended YAML shape (once G-EVENT-TARGET-LEVEL-LTE closes):
-#   - when: on_move
-#     active_when: { opponents_turn: true }
-#     summary: "[Opponent's Turn] When opponent's Lv.3 moves from breeding, gain 2 memory"
-#     condition:
-#       all_of:
-#         - event_target_owner: opponent
-#         - event_target_kind: digimon
-#         - event_target_level_eq: 3          # G-EVENT-TARGET-LEVEL-LTE
-#     process:
-#       - gain_memory: 2
+# `on_move` dispatch carries the moved permanent as the event target.
+# `event_target_owner: opponent` scopes to the opponent's board and
+# `event_target_level_eq: 3` pins the printed Lv.3 requirement.
 
 effects:
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    optional: true
+    summary: "[All Turns] When opponent's Lv.5 or lower Digimon is deleted, may suspend self to Draw 1"
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_target_level_lte: 5
+        - source_is_unsuspended: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }
+
+  - when: on_move
+    active_when: { opponents_turn: true }
+    summary: "[Opponent's Turn] When opponent's Lv.3 Digimon moves from breeding, gain 2 memory"
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_target_level_eq: 3
+    process:
+      - gain_memory: 2
+
   - when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:

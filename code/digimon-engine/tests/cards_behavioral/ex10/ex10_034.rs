@@ -17,7 +17,7 @@
 //! | Clause | Pattern | Status |
 //! |--------|---------|--------|
 //! | Keywords Collision/Fragment(3)/Blocker | declarative grant_keyword | PASS |
-//! | Clause A [OP][WD] grant forced-attack to 1 opp Digimon | G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING | BLOCKED |
+//! | Clause A [OP][WD] grant forced-attack to 1 opp Digimon | grant_triggered_effect target binding | PASS |
 //! | Clause B [All Turns][OPT] when_attacking + on_opponent_attack + all_turns | observer multi-timing | PASS |
 //! | Clause B once_per_turn + optional structural flags | compiled struct | PASS |
 //! | Clause B positive: SourceMulti(2,2) prompt with ≥2 own sources | select_own_sources from:source | PASS |
@@ -27,7 +27,11 @@
 //! | Clause B: 2 sources removed from stack after cost | trash_selected_sources | PASS |
 //! | Clause B OPT lockout: second when_attacking same turn no prompt | once_per_turn | PASS |
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledClause, CompiledModifierTarget, CompiledScope, CompiledStep,
+    CompiledTiming,
+};
+use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{EffectTiming, Keyword, ModifierType};
 use digimon_engine::selection::{SelectionKind, TriggerSource};
@@ -64,54 +68,73 @@ fn ex10_034_on_field_has_collision_fragment_and_blocker() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 2 — Clause A: structural assertions (BLOCKED)
+// Section 2 — Clause A: structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Clause A grants "1 of opponent's Digimon [Start of Your Main Phase] attack"
-// until opponent's turn ends. Requires `grant_triggered_effect` targeting a
-// *specific selected binding*, which the DSL cannot express — `target` on
-// `GrantTriggeredEffectArgs` is `PredicateSpec`, not `BindingRef`.
-//
-// All Clause A tests are ignored under G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING.
+// until opponent's turn ends. It selects exactly 1 opponent Digimon, then
+// grants the triggered body to that selected binding only.
 
 /// Clause A structural: EX10-034 must have a triggered clause with
 /// `on_play` or `when_digivolving` timing containing a
 /// `grant_triggered_effect` step.
 ///
-/// BLOCKED pending: G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING.
-/// `grant_triggered_effect.target` is PredicateSpec, not BindingRef.
-/// Cannot faithfully express "grant to the 1 selected opponent Digimon."
 #[test]
-#[ignore = "pending: G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING from qa/dsl-vocab-gaps.md"]
 fn ex10_034_clause_a_has_on_play_when_digivolving_grant_triggered_effect() {
     let runner = blastmon_runner();
     let card = runner
         .compiled_card("EX10-034")
         .expect("EX10-034 in embedded pack");
 
-    let has_grant_triggered = card.effects.iter().any(|clause| match clause {
-        CompiledClause::Triggered(t) => {
-            (t.when.contains(&CompiledTiming::OnPlay)
-                || t.when.contains(&CompiledTiming::WhenDigivolving))
-                && t.when
-                    .iter()
-                    .any(|_| true /* grant_triggered_effect step check */)
-        }
-        _ => false,
-    });
+    let clause = card
+        .effects
+        .iter()
+        .filter_map(|clause| match clause {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| {
+            t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::WhenDigivolving)
+        })
+        .expect("EX10-034 must have a shared on_play/when_digivolving Clause A");
+
+    let grant = clause
+        .process
+        .iter()
+        .find_map(|step| match step {
+            CompiledStep::GrantTriggeredEffect {
+                target,
+                timing,
+                expiry,
+                body,
+            } => Some((target, timing, expiry, body)),
+            _ => None,
+        })
+        .expect("Clause A must contain grant_triggered_effect");
 
     assert!(
-        has_grant_triggered,
-        "EX10-034 must have a grant_triggered_effect clause on on_play/when_digivolving"
+        matches!(
+            grant.0,
+            CompiledModifierTarget::Binding(CompiledBindingRef::Named(name)) if name == "forced_target"
+        ),
+        "Clause A must grant to the selected binding, not broadcast to a predicate"
+    );
+    assert_eq!(grant.1, "start_of_your_main_phase");
+    assert_eq!(grant.2, "end_of_opponents_turn");
+    assert!(
+        grant
+            .3
+            .iter()
+            .any(|step| matches!(step, CompiledStep::ForceAttack { .. })),
+        "granted body must force the carrier to attack"
     );
 }
 
 /// Clause A behavioral: [OP][WD] installs a selection to choose 1 opp Digimon
 /// when fired on on_play timing.
 ///
-/// BLOCKED pending: G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING from qa/dsl-vocab-gaps.md
 #[test]
-#[ignore = "pending: G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING from qa/dsl-vocab-gaps.md"]
 fn ex10_034_clause_a_on_play_prompts_opp_digimon_selection() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX10-034")
@@ -133,9 +156,7 @@ fn ex10_034_clause_a_on_play_prompts_opp_digimon_selection() {
 
 /// Clause A behavioral: [OP][WD] does nothing when opponent has no Digimon.
 ///
-/// BLOCKED pending: G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING from qa/dsl-vocab-gaps.md
 #[test]
-#[ignore = "pending: G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING from qa/dsl-vocab-gaps.md"]
 fn ex10_034_clause_a_no_selection_when_no_opp_digimon() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX10-034")
@@ -149,6 +170,80 @@ fn ex10_034_clause_a_no_selection_when_no_opp_digimon() {
     assert!(
         runner.pending_selection().is_none(),
         "Clause A must not install a selection when no opponent Digimon exist"
+    );
+}
+
+/// Clause A grants the forced Start of Main attack only to the selected
+/// opponent Digimon. A second opponent Digimon must not receive the grant.
+#[test]
+fn ex10_034_clause_a_selected_digimon_attacks_at_start_of_main_phase() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-034")
+        .expect("EX10-034 YAML parses and compiles")
+        .add_card(make_test_card("OPP-A", "Opponent A"))
+        .add_card(make_test_card("OPP-B", "Opponent B"))
+        .add_card(make_test_card("FILL-034", "Filler"))
+        .hand(0, &["EX10-034"])
+        .deck(0, &["FILL-034", "FILL-034", "FILL-034"])
+        .deck(1, &["FILL-034", "FILL-034", "FILL-034"])
+        .memory(20)
+        .start();
+
+    let opp_a = runner.place_on_field(1, "OPP-A", None);
+    let opp_b = runner.place_on_field(1, "OPP-B", None);
+    runner.play(0, 0).expect("play Blastmon");
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Clause A should ask P0 to choose 1 opponent Digimon");
+    assert_eq!(pending.selecting_player, 0);
+    let select_opp_a = encode_attack(0, opp_a.index as u16);
+    assert!(pending.valid_action_ids.contains(&select_opp_a));
+    runner
+        .game
+        .resolve_selection(0, select_opp_a)
+        .expect("select first opponent Digimon");
+
+    assert_eq!(
+        runner
+            .game
+            .modifiers
+            .granted_triggered_for_timing(opp_a, EffectTiming::StartOfYourMainPhase)
+            .len(),
+        1,
+        "selected opponent Digimon should carry the granted Start of Main attack"
+    );
+    assert!(
+        runner
+            .game
+            .modifiers
+            .granted_triggered_for_timing(opp_b, EffectTiming::StartOfYourMainPhase)
+            .is_empty(),
+        "unselected opponent Digimon must not receive the granted attack"
+    );
+
+    runner.end_turn(); // P0 -> P1; fires StartOfYourMainPhase for P1.
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("granted forced attack should ask the carrier controller for a target");
+    assert_eq!(pending.kind, SelectionKind::Target);
+    assert_eq!(pending.selecting_player, 1);
+    assert!(
+        !pending.is_optional,
+        "printed granted attack is mandatory once a legal attack exists"
+    );
+    assert!(pending
+        .valid_action_ids
+        .contains(&encode_attack(opp_a.index as u16, SECURITY_TARGET)));
+    assert!(
+        !pending
+            .valid_action_ids
+            .contains(&encode_attack(opp_b.index as u16, SECURITY_TARGET)),
+        "the unselected Digimon must not be the forced attacker"
     );
 }
 

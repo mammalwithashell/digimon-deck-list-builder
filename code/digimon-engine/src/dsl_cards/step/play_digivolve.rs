@@ -184,6 +184,33 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::PlayFromRevealedFree { of, card, bind_as } => {
+            let owner = resolve_player(ctx, *of);
+            match resolve_binding_ref(card, ctx, bindings) {
+                Some(ResolvedBinding::Card(handle)) => {
+                    if let Some(played) = ctx.play_from_revealed_free(owner, handle) {
+                        bindings.record_played(played);
+                        if let Some(name) = bind_as {
+                            bindings.insert_permanent(name, played);
+                        }
+                    }
+                }
+                Some(ResolvedBinding::CardList(handles)) => {
+                    let mut last_played = None;
+                    for handle in handles {
+                        if let Some(played) = ctx.play_from_revealed_free(owner, handle) {
+                            bindings.record_played(played);
+                            last_played = Some(played);
+                        }
+                    }
+                    if let (Some(name), Some(played)) = (bind_as, last_played) {
+                        bindings.insert_permanent(name, played);
+                    }
+                }
+                _ => {}
+            }
+            true
+        }
 
         // ── Play primitives (trash) ───────────────────────────────────────
         CompiledStep::PlayFromTrash {

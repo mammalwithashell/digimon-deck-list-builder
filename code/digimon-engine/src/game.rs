@@ -161,6 +161,9 @@ pub(crate) enum PendingWouldPlayOrigin {
     SecurityTop {
         was_face_up: bool,
     },
+    Reveal {
+        index: usize,
+    },
     Source {
         permanent: PermanentHandle,
         source_index: usize,
@@ -2381,6 +2384,13 @@ impl Game {
         self.modifiers.clear_permanent(handle);
         let mut removed = 0usize;
         for id in body_ids {
+            if self
+                .effect_queue
+                .iter()
+                .any(|queued| queued.granted_effect_id == Some(id))
+            {
+                continue;
+            }
             if self.granted_effect_bodies.remove(id).is_some() {
                 removed += 1;
             }

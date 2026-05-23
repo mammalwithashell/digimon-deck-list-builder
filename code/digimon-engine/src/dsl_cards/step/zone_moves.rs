@@ -13,7 +13,7 @@ use crate::dsl_cards::step::{resolve_player, run_steps_with_runtime, StepRuntime
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
-use crate::selection::{PendingSelection, SelectionKind};
+use crate::selection::{PendingSelection, SelectionKind, UnionZoneOrigin};
 
 fn singleton_card(resolved: ResolvedBinding) -> Option<crate::card_source::CardHandle> {
     match resolved {
@@ -292,6 +292,32 @@ pub fn try_run(
             true
         }
 
+        CompiledStep::TrashUnionBound { binding } => {
+            if let Some((card, origin, owner)) = bindings.get_union_card(binding) {
+                match origin {
+                    UnionZoneOrigin::Hand => {
+                        if let Some(index) = ctx
+                            .game
+                            .player(owner)
+                            .hand
+                            .iter()
+                            .position(|source| source.handle() == card)
+                        {
+                            ctx.trash_from_hand_by_index(owner, index);
+                        }
+                    }
+                    UnionZoneOrigin::Material { carrier, .. } => {
+                        ctx.trash_card_source(carrier, card);
+                    }
+                    UnionZoneOrigin::Trash => {
+                        // Already in trash; a trash-origin union binding is a
+                        // paid cost with no additional zone move.
+                    }
+                }
+            }
+            true
+        }
+
         CompiledStep::MarkSecurityFaceUp { of, card } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;
@@ -317,6 +343,11 @@ pub fn try_run(
                     ctx.game.player_mut(p).face_up_security.insert(h.0);
                 }
             }
+            true
+        }
+        CompiledStep::FlipSecurityFaceUp { of } => {
+            let p = resolve_player(ctx, *of);
+            let _ = ctx.flip_security_face_up(p);
             true
         }
         CompiledStep::PlacePermanentOnSecurityObserved {

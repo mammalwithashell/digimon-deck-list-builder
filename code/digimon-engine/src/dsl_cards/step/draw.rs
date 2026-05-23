@@ -32,6 +32,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
             ctx.hatch(p);
             true
         }
+        CompiledStep::MoveFromBreeding { of } => {
+            let p = resolve_player(ctx, *of);
+            ctx.move_from_breeding_by_effect(p);
+            true
+        }
         CompiledStep::TrashTopSecurity { of, count } => {
             let p = resolve_player(ctx, *of);
             let n = match count {

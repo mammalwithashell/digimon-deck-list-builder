@@ -1639,6 +1639,27 @@ impl<'a> EffectContext<'a> {
         )
     }
 
+    /// Flip the topmost still-face-down card in `player`'s security stack
+    /// face-up without opening a player choice. If every security card is
+    /// already face-up, this is a no-op.
+    pub fn flip_security_face_up(&mut self, player: PlayerId) -> bool {
+        let Some(card) = self.game.player(player).security.iter().rev().find(|card| {
+            !self
+                .game
+                .player(player)
+                .face_up_security
+                .contains(&card.card_index)
+        }) else {
+            return false;
+        };
+        let card_index = card.card_index;
+        self.game
+            .player_mut(player)
+            .face_up_security
+            .insert(card_index);
+        true
+    }
+
     /// (Track E) Replacement-aware sibling of `place_self_at_security`. When
     /// invoked inside a parked replacement (e.g. a "would leave" replacement
     /// whose subject is the source permanent), runs the move and then
@@ -3093,6 +3114,61 @@ impl<'a> EffectContext<'a> {
             .iter()
             .position(|c| c.handle() == card)?;
         self.play_from_security_index(player, security_index)
+    }
+
+    /// Play a specific card from the transient reveal pool without paying its
+    /// memory cost. Used by effects like EX8-050 that reveal cards, allow one
+    /// revealed card to be played, then move the remainder elsewhere.
+    ///
+    /// This mirrors the established security/material hand-transit strategy:
+    /// remove the card from `revealed_cards`, park it at the end of `player`'s
+    /// hand, and route through the normal play pipeline so floodgates,
+    /// OnPlay, OnEnterField, and would-play replacement hooks stay aligned
+    /// with every other effect-initiated play. The card is restored to the
+    /// reveal pool if the play is immediately rejected or later cancelled.
+    pub fn play_from_revealed_free(
+        &mut self,
+        player: PlayerId,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        let reveal_index = self
+            .game
+            .revealed_cards
+            .iter()
+            .position(|revealed| revealed.handle() == card)?;
+        let mut revealed = self.game.revealed_cards.remove(reveal_index);
+        revealed.clear_reveal_overlay();
+
+        self.game.player_mut(player).hand.push(revealed);
+        let hand_index = self.game.player(player).hand.len() - 1;
+
+        match self.game.play_from_hand_with_cost_result_from_origin(
+            player,
+            hand_index,
+            crate::enums::CostDelta::Free,
+            PlaySource::ByEffect,
+            false,
+            PendingWouldPlayOrigin::Reveal {
+                index: reveal_index,
+            },
+        ) {
+            PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
+                player,
+                index: field_index as u8,
+            }),
+            PlayFromHandCostResult::Pending => None,
+            PlayFromHandCostResult::Failed => {
+                let card = self
+                    .game
+                    .player_mut(player)
+                    .hand
+                    .pop()
+                    .expect("invariant: revealed card was just pushed to hand");
+                let insert_at = reveal_index.min(self.game.revealed_cards.len());
+                self.game.revealed_cards.insert(insert_at, card);
+                None
+            }
+        }
     }
 
     fn play_from_security_index(

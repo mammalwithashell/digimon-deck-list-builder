@@ -29,9 +29,8 @@ pub fn resolve_binding_ref(
 ) -> Option<ResolvedBinding> {
     match r {
         CompiledBindingRef::SelfRef => Some(ResolvedBinding::Card(ctx.source_card)),
-        CompiledBindingRef::Source | CompiledBindingRef::Carrier => {
-            resolve_source_permanent(ctx).map(ResolvedBinding::Permanent)
-        }
+        CompiledBindingRef::Source => resolve_source_permanent(ctx).map(ResolvedBinding::Permanent),
+        CompiledBindingRef::Carrier => ctx.source_permanent.map(ResolvedBinding::Permanent),
         CompiledBindingRef::Named(name)
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)

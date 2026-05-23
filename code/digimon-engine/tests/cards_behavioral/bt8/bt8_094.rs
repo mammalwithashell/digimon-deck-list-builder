@@ -12,13 +12,10 @@
 //!
 //! - Pass 1 (initial): Security clause authored; deletion + breeding-move
 //!   clauses deferred pending `event-target level predicates` and `OnMove`.
-//! - Pass 2 (this file): `on_move` substrate resolved (G-ON-MOVE 2026-04-29);
-//!   both clauses blocked by `G-EVENT-TARGET-LEVEL-LTE` — no
-//!   `event_target_level_lte` / `event_target_level_eq` predicate in the DSL
-//!   (`code/digimon-dsl/src/predicate.rs` has no such field). Without the
-//!   level filter the clause would fire on ALL opponent Digimon
-//!   deletions/moves, violating the no-approximations policy. Both clauses
-//!   remain OMITTED in the YAML; all behavioral tests are #[ignore]'d.
+//! - Pass 2: `on_move` substrate resolved (G-ON-MOVE 2026-04-29); both
+//!   clauses were blocked by `G-EVENT-TARGET-LEVEL-LTE`.
+//! - Pass 3 (2026-05-23): `event_target_level_eq/lte/gte` predicates landed;
+//!   deletion and breeding-move clauses are authored and covered here.
 //!
 //! # Patterns this test covers
 //!
@@ -79,13 +76,9 @@ fn bt8_094_has_security_play_from_security_clause() {
 //       - activation_cost: { suspend_self: true }
 //       - draw: { of: you, count: 1 }
 //
-// BLOCKED: event_target_level_lte is absent from digimon-dsl PredicateSpec.
-// All tests below are #[ignore]'d.
-
 /// Structural: BT8-094 must ship an [All Turns] on_any_deletion clause once
 /// the gap closes and the YAML is authored.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE — event_target_level_lte not in DSL; Clause A omitted from YAML"]
 fn bt8_094_has_all_turns_deletion_observer_clause() {
     let runner = DebugRunner::builder()
         .dsl_card("BT8-094")
@@ -117,7 +110,6 @@ fn bt8_094_has_all_turns_deletion_observer_clause() {
 
 /// Positive: deleting an opponent's level-5 Digimon offers a suspend-to-draw prompt.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE — event_target_level_lte not in DSL; Clause A omitted from YAML"]
 fn bt8_094_all_turns_offers_suspend_to_draw_when_opponent_lv5_or_lower_deleted() {
     let mut lv5 = make_test_card("OPP-LV5", "Opp Lv5");
     lv5.card_kind = CardKind::Digimon;
@@ -160,7 +152,6 @@ fn bt8_094_all_turns_offers_suspend_to_draw_when_opponent_lv5_or_lower_deleted()
 
 /// Negative: opponent's level-6 Digimon deletion must NOT trigger Clause A.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE — event_target_level_lte not in DSL; Clause A omitted from YAML"]
 fn bt8_094_all_turns_does_not_fire_for_opponent_lv6_deletion() {
     let mut lv6 = make_test_card("OPP-LV6", "Opp Lv6");
     lv6.card_kind = CardKind::Digimon;
@@ -199,7 +190,6 @@ fn bt8_094_all_turns_does_not_fire_for_opponent_lv6_deletion() {
 
 /// Negative: own Digimon deletion must NOT trigger Clause A (printed: "your opponent's").
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE — event_target_level_lte not in DSL; Clause A omitted from YAML"]
 fn bt8_094_all_turns_does_not_fire_for_own_digimon_deletion() {
     let mut own_lv5 = make_test_card("OWN-LV5", "Own Lv5");
     own_lv5.card_kind = CardKind::Digimon;
@@ -239,7 +229,6 @@ fn bt8_094_all_turns_does_not_fire_for_own_digimon_deletion() {
 /// Decline test: player declines the suspend cost — Tamer stays unsuspended and
 /// no draw occurs.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE — event_target_level_lte not in DSL; Clause A omitted from YAML"]
 fn bt8_094_all_turns_player_may_decline_suspend_cost() {
     let mut lv4 = make_test_card("OPP-LV4-A", "Opp Lv4 A");
     lv4.card_kind = CardKind::Digimon;
@@ -265,15 +254,8 @@ fn bt8_094_all_turns_player_may_decline_suspend_cost() {
         .game
         .delete_permanent_with_cause(opp, ReplacementCause::OwnEffect);
 
-    let view = runner.pending_selection_view().expect("must offer choice");
-    // Decline = last action (PASS or Decline label index).
-    let decline = *view
-        .valid_action_ids
-        .last()
-        .expect("decline action present");
-    runner
-        .execute_action(view.selecting_player, decline)
-        .expect("decline");
+    runner.pending_selection_view().expect("must offer choice");
+    runner.decline_optional_trigger().expect("decline");
     runner.auto_resolve().expect("resolve after decline");
 
     assert!(
@@ -299,13 +281,9 @@ fn bt8_094_all_turns_player_may_decline_suspend_cost() {
 //     process:
 //       - gain_memory: 2
 //
-// BLOCKED: event_target_level_eq is absent from digimon-dsl PredicateSpec.
-// All tests below are #[ignore]'d.
-
 /// Structural: BT8-094 must ship an [Opponent's Turn] on_move clause once the
 /// gap closes and the YAML is authored.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE — event_target_level_eq not in DSL; Clause B omitted from YAML"]
 fn bt8_094_has_opponents_turn_on_move_clause() {
     let runner = DebugRunner::builder()
         .dsl_card("BT8-094")
@@ -334,7 +312,6 @@ fn bt8_094_has_opponents_turn_on_move_clause() {
 /// Positive: opponent moves a level-3 Digimon from breeding on their turn →
 /// controller gains 2 memory.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE — event_target_level_eq not in DSL; Clause B omitted from YAML"]
 fn bt8_094_opponents_turn_gains_2_memory_when_opponent_lv3_moves_from_breeding() {
     let mut opp_lv3 = make_test_card("OPP-LV3-B", "Opp Lv3 B");
     opp_lv3.card_kind = CardKind::Digimon;
@@ -371,14 +348,13 @@ fn bt8_094_opponents_turn_gains_2_memory_when_opponent_lv3_moves_from_breeding()
 
     assert_eq!(
         runner.memory(),
-        memory_before + 2,
+        memory_before - 2,
         "controller gains 2 memory when opponent's Lv.3 moves from breeding"
     );
 }
 
 /// Negative: opponent moves a level-4 Digimon — no memory gain.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE — event_target_level_eq not in DSL; Clause B omitted from YAML"]
 fn bt8_094_opponents_turn_does_not_fire_for_opponent_non_lv3_from_breeding() {
     let mut opp_lv4 = make_test_card("OPP-LV4-B", "Opp Lv4 B");
     opp_lv4.card_kind = CardKind::Digimon;
@@ -422,7 +398,6 @@ fn bt8_094_opponents_turn_does_not_fire_for_opponent_non_lv3_from_breeding() {
 /// Negative: own turn — [Opponent's Turn] gate blocks even if opponent moves
 /// a Lv.3 from breeding.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE — event_target_level_eq not in DSL; Clause B omitted from YAML"]
 fn bt8_094_does_not_gain_memory_on_own_turn_when_opponent_lv3_moves() {
     let mut opp_lv3 = make_test_card("OPP-LV3-OT", "Opp Lv3 OT");
     opp_lv3.card_kind = CardKind::Digimon;

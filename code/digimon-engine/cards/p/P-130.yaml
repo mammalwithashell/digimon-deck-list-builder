@@ -14,40 +14,17 @@ cost: 3
 #
 # Security Effect [Security] Play this card without paying the cost.
 #
-# DCGO C# reference: absent (submodule uninitialized).
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/White/P_130.cs
 #
-# ─── Clause 1: [On Play] — BLOCKED ──────────────────────────────────────────
+# ─── Clause 1: [On Play] — IMPLEMENTED ─────────────────────────────────────
 #
 # Effect: "You may move 1 of your level 3 or higher Digimon from the breeding
 #          area to the battle area."
 #
-# Two DSL gaps prevent faithful implementation:
-#
-#   G-MOVE-BREEDING-DSL: No DSL step lowers to
-#     `EffectContext::move_from_breeding_by_effect(player)`.
-#     The engine method exists at effect_context/mod.rs:2798 but no
-#     CompiledStep variant or YAML verb surfaces it.
-#     Suggested future syntax:
-#       - move_from_breeding: { of: you }
-#
-#   G-SELECT-BREEDING-FILTER: `select_own_breeding_permanent` (step.rs:1391)
-#     has no `filter` field, so the "level 3 or higher" constraint cannot be
-#     expressed in YAML. Even if `move_from_breeding` were added, we still
-#     cannot restrict the selection to Lv.3+ without this predicate.
-#     Suggested future syntax:
-#       - select_own_breeding_permanent:
-#           bind_as: target
-#           filter: { level_gte: 3 }
-#           prompt: "Move 1 Lv.3+ Digimon to battle area"
-#           then:
-#             - move_from_breeding: { of: you }
-#
-#   No-approximations policy: we may not use raw_rust or select_own_breeding
-#   without the level-3 filter — that would promote any breeding Digimon
-#   regardless of level, violating the printed clause.
-#
-# Clause 1 is therefore emitted as an empty on_play clause (load-only).
-# All behavioral On Play tests are #[ignore]'d in p_130.rs.
+# Surface the "you may" choice through an optional breeding-permanent prompt.
+# The filter enforces "level 3 or higher"; accepting runs the new
+# move_from_breeding DSL step, which delegates to the effect-initiated engine
+# move path and fires the same OnMove observers as the normal breeding action.
 #
 # ─── Clause 2: [Your Turn] on_move — IMPLEMENTED ────────────────────────────
 #
@@ -84,11 +61,17 @@ cost: 3
 # Standard play_from_security shape (same as BT18-087, BT22-084, P-128).
 
 effects:
-  # ─── Clause 1: [On Play] — BLOCKED (G-MOVE-BREEDING-DSL + G-SELECT-BREEDING-FILTER)
+  # ─── Clause 1: [On Play] — IMPLEMENTED ───────────────────────────────────
   - when: on_play
-    optional: true
-    summary: "[On Play] BLOCKED: move Lv.3+ breeding Digimon — no DSL verb for move_from_breeding_by_effect; no filter on select_own_breeding_permanent"
-    process: []
+    summary: "[On Play] You may move 1 Lv.3+ Digimon from breeding to battle"
+    process:
+      - select_own_breeding_permanent:
+          bind_as: breeding_target
+          optional: true
+          filter: { level_gte: 3 }
+          prompt: "Move 1 Lv.3+ Digimon from breeding to battle?"
+          then:
+            - move_from_breeding: { of: you }
 
   # ─── Clause 2: [Your Turn] on_move — IMPLEMENTED ─────────────────────────
   - when: on_move

@@ -56,7 +56,11 @@ fn mutual_destruction_two_handle_batch_trashes_both() {
         .delete_permanents_batch(vec![a, b], ReplacementCause::Battle);
 
     // Both completed; nothing cancelled or substituted.
-    assert_eq!(outcome.completed.len(), 2, "both permanents reported completed");
+    assert_eq!(
+        outcome.completed.len(),
+        2,
+        "both permanents reported completed"
+    );
     assert_eq!(outcome.cancelled.len(), 0);
     assert_eq!(outcome.substituted_in.len(), 0);
 
@@ -103,7 +107,10 @@ fn empty_batch_no_ops() {
         .delete_permanents_batch(Vec::new(), ReplacementCause::OpponentEffect);
     assert_eq!(outcome.completed.len(), 0);
     assert_eq!(outcome.cancelled.len(), 0);
-    assert_eq!(r.game.memory, memory_before, "memory unchanged on empty batch");
+    assert_eq!(
+        r.game.memory, memory_before,
+        "memory unchanged on empty batch"
+    );
     assert!(
         r.game.pending_selection.is_none(),
         "no selection installed on empty batch"

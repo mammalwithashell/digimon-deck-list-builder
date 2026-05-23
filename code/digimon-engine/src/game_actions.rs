@@ -769,6 +769,11 @@ impl Game {
                         .insert(card_index);
                 }
             }
+            PendingWouldPlayOrigin::Reveal { index } => {
+                let card = self.player_mut(resume.player).hand.remove(hand_index);
+                let insert_at = index.min(self.revealed_cards.len());
+                self.revealed_cards.insert(insert_at, card);
+            }
             PendingWouldPlayOrigin::Source {
                 permanent,
                 source_index,

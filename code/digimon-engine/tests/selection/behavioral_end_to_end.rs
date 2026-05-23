@@ -272,6 +272,7 @@ fn permutation_then_opponent_union_zone_tech_flow() {
         ctx.as_selecting_player(p1).select_union_zone(
             p0,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
+            None,
             "Opponent: choose a card from your opponent's hand or trash",
             false,
             |_, _| true,

@@ -81,39 +81,14 @@ effects:
   #              area are trashed, this Digimon unsuspends. Then, your
   #              opponent's Digimon's effects don't affect this Digimon for
   #              the turn. ────────────────────────────────────────────────────
-  #
-  # BLOCKED: G-ON-OPTION-TRASHED-DSL
-  #
-  # The engine fires `EffectTiming::OnOptionTrashed` via `Game::trash_field_option`
-  # in `code/digimon-engine/src/option_lifecycle.rs:349`. However the DSL
-  # `Timing` enum in `code/digimon-dsl/src/clause.rs` has no `on_option_trashed`
-  # variant, so this timing cannot be expressed in a YAML `when:` field.
-  #
-  # The intended YAML once the gap is closed:
-  #
-  # - when: on_option_trashed
-  #   active_when: { all_turns: true }
-  #   once_per_turn: true
-  #   summary: "[All Turns][OPT] When own option is trashed, unsuspend self and
-  #             gain immunity from opponent Digimon effects for the turn"
-  #   process:
-  #     # Unsuspend this Digimon.
-  #     - unsuspend: { target: source }
-  #     # Opponent's Digimon's effects don't affect this Digimon for the turn.
-  #     # `expiry: end_of_turn` covers "for the turn" (expires at end of either
-  #     # player's turn — as printed "[All Turns]" means it can fire on either
-  #     # player's turn, and "for the turn" means until the current turn ends).
-  #     - grant_effect_immunity:
-  #         target: source
-  #         source_kind: digimon
-  #         source_controller: opponent
-  #         expiry: end_of_turn
-  #
-  # To close this gap:
-  #   A. Add `OnOptionTrashed` variant to `code/digimon-dsl/src/clause.rs` Timing enum
-  #      with `#[serde(rename = "on_option_trashed")]`.
-  #   B. Add the mapping `S::OnOptionTrashed => CompiledTiming::OnOptionTrashed`
-  #      in `code/digimon-dsl/src/compile.rs` lower_timing function.
-  #   C. Ensure `CompiledTiming::OnOptionTrashed` maps to `EffectTiming::OnOptionTrashed`
-  #      in `code/digimon-engine/src/dsl_cards/lower_triggered.rs`.
-  #   D. Remove this comment block and author the clause above.
+  - when: on_option_trashed
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] When an Option in battle area is trashed, unsuspend self and gain immunity from opponent Digimon effects for the turn"
+    process:
+      - unsuspend: { target: source }
+      - grant_effect_immunity:
+          target: source
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_turn

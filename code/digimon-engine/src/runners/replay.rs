@@ -478,7 +478,11 @@ fn restore_player_zone(
         &data["digitama_library_order"],
         next_card_index,
     )?;
-    push_zone(&mut player.security, &data["security_order"], next_card_index)?;
+    push_zone(
+        &mut player.security,
+        &data["security_order"],
+        next_card_index,
+    )?;
     push_zone(&mut player.hand, &data["initial_hand"], next_card_index)?;
     Ok(())
 }

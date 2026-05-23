@@ -259,7 +259,10 @@ fn aoe_delete_two_save_permanents_both_declined() {
             id == "SAVE-1" || id == "SAVE-2"
         })
         .count();
-    assert_eq!(trash_save_count, 2, "both declined Save cards landed in trash");
+    assert_eq!(
+        trash_save_count, 2,
+        "both declined Save cards landed in trash"
+    );
     let tamer_perm = &r.game.players[0].battle_area[0];
     assert_eq!(
         tamer_perm.card_sources.len(),

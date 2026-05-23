@@ -292,16 +292,31 @@ impl Game {
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
-            TriggerSource::MovedFromBreeding { player, .. } => {
-                let count = self.player(player).battle_area.len();
+            TriggerSource::OnCheckFaceUpSecurity { attacker, .. } => {
+                let count = self.player(attacker.player).battle_area.len();
                 for i in 0..count {
                     let handle = PermanentHandle {
-                        player,
+                        player: attacker.player,
                         index: i as u8,
                     };
                     let trigger_context =
                         self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+            }
+            TriggerSource::MovedFromBreeding { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
                 }
             }
             TriggerSource::Digivolved { .. } => {
@@ -972,6 +987,18 @@ impl Game {
                 defender,
                 revealed_card,
                 ..
+            } => TriggerContext {
+                target_permanent: Some(attacker),
+                target_card: Some(revealed_card),
+                event_card: Some(revealed_card),
+                source_player: Some(defender),
+                was_security_skill: false,
+                ..TriggerContext::default()
+            },
+            TriggerSource::OnCheckFaceUpSecurity {
+                attacker,
+                defender,
+                revealed_card,
             } => TriggerContext {
                 target_permanent: Some(attacker),
                 target_card: Some(revealed_card),
@@ -1925,6 +1952,9 @@ impl Game {
         if self.effect_queue.is_empty() {
             return None;
         }
+        if let Some(qe) = self.effect_queue.iter().find(|qe| qe.is_turn_player) {
+            return Some(qe.controller);
+        }
         let n = self.turn_order.len();
         for offset in 0..n {
             let idx = (self.turn_player_idx + offset) % n;
@@ -1990,6 +2020,9 @@ impl Game {
                 qe.controller,
             );
             body(&mut ctx);
+            if !self.modifiers.contains_granted_triggered_body_id(body_id) {
+                self.granted_effect_bodies.remove(body_id);
+            }
             return;
         }
         // Track K cross-card refire support (from main): attribution

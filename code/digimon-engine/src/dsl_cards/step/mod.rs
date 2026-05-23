@@ -137,12 +137,7 @@ fn park_outer_tail(
             .game
             .dsl_outer_tail
             .as_ref()
-            .map(|(t, _, _)| {
-                (
-                    t.first().map(CompiledStepDiscriminant::from),
-                    t.len(),
-                )
-            })
+            .map(|(t, _, _)| (t.first().map(CompiledStepDiscriminant::from), t.len()))
             .unwrap_or((None, 0));
         panic!(
             "dsl_outer_tail overwrite: card={} player={:?} parking_step={:?} \

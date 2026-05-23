@@ -238,6 +238,15 @@ pub struct PredicateSpec {
     pub event_target_kind: Option<CardKind>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_trait_has: Option<String>,
+    /// Match the event-target permanent's printed level. Works for live
+    /// event targets (played/digivolved/moved/suspended permanents) and
+    /// deleted-object snapshots. G-EVENT-TARGET-LEVEL-LTE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_level_eq: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_level_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_level_gte: Option<DpConstraint>,
     /// Case-insensitive substring scan against the *event target*
     /// permanent's card name — i.e. the digivolving / played / deleted
     /// permanent carried on the triggered-effect read context. Used by
@@ -259,6 +268,12 @@ pub struct PredicateSpec {
     pub event_target_color_any_of: Option<Vec<ColorSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_permanent_is_source: Option<bool>,
+    /// True when the triggering event's host permanent is this effect's
+    /// source permanent. Used by OnDigivolutionCardTrashed observers that
+    /// care about "this Digimon's digivolution cards" rather than any own
+    /// stack.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_host_permanent_is_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

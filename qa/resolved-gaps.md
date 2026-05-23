@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-22
+Last updated: 2026-05-23
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,67 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## Rocks EX10-034 grant-triggered binding closure — 2026-05-23
+
+- **G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING** — `grant_triggered_effect.target`
+  now accepts the existing predicate broadcast shape or a binding ref. Binding
+  targets resolve through `dsl_cards::binding_ref` and install exactly one
+  granted-triggered entry on the selected permanent, preserving the previous
+  predicate behavior for EX1-068-style "all matching Digimon gain..." text.
+- **Carrier binding:** `CompiledBindingRef::Carrier` now resolves directly to
+  `ctx.source_permanent`, while `source` keeps its stable source-card relocation
+  behavior. Granted-triggered bodies can therefore use `carrier` for printed
+  "this Digimon" while retaining grantor source attribution for effect-origin
+  checks.
+- **Driver:** EX10-034 Blastmon Clause A is now production YAML: select exactly
+  1 opponent Digimon, grant `[Start of Your Main Phase] This Digimon attacks.`
+  until the opponent's turn ends, and force that selected carrier to attack when
+  the timing fires. The unselected opponent Digimon does not receive the grant.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex10_034 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- grant_triggered_effect --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage -- --nocapture`.
+
+## Rocks EX11-044 substrate closure — 2026-05-23
+
+- **G-HIGHEST-PLAY-COST-SELECTOR** — `FieldSelector::HighestPlayCost` and
+  `CompiledFieldSelector::HighestPlayCost` now parse, compile, and evaluate
+  as the max printed play cost among a field-selection candidate set. Runtime
+  coverage mirrors the existing lowest-play-cost path in both normal step
+  selection and replacement helper selection.
+- **event_host_permanent_is_source** — `PredicateSpec` /
+  `CompiledPredicate` now expose `event_host_permanent_is_source`, evaluated
+  against `current_trigger_context.event_host_permanent == ctx.source_permanent`.
+  This lets `OnDigivolutionCardTrashed` observers faithfully express "this
+  Digimon/Tamer's source was trashed" instead of firing for every source-trash
+  event seen by the observer fanout.
+- **Driver:** EX11-044 Pyramidimon Clause A and Clause B are now production
+  YAML, with no ignored tests.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_044 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage -- --nocapture`.
+
+## Rocks B2 move-from-breeding DSL step — RESOLVED 2026-05-23
+
+- **G-MOVE-BREEDING-DSL** — the DSL now exposes `move_from_breeding`, lowering
+  to the existing effect-initiated breeding movement path rather than the player
+  phase action. The step supports an optional accept/decline prompt and a
+  compiled breeding-permanent filter, so P-130's "level 3 or higher" choice is
+  surfaced through `pending_selection`.
+- **Driver:** P-130 Lui Ohwada's `[On Play]` clause is production YAML:
+  eligible breeding Digimon can be moved to the battle area by effect, the move
+  observers fire, and declining or having no eligible permanent leaves the
+  breeding area unchanged.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_130 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2g_breeding_selection --nocapture`.
+
+## Rocks B3 hand-or-source union-zone cost selector — RESOLVED 2026-05-23
+
+- **G-DSL-SELECT-OWN-SOURCES-FILTER / hand-or-source union cost** — the DSL and
+  engine can now install a single cost prompt over a filtered union of cards in
+  hand and cards under the controller's own Digimon. The selected card is
+  trashed as a cost from its original zone, and all legal candidates remain
+  visible through the action mask.
+- **Driver:** EX11-065 Close's `[Start of Your Main Phase]` memory clause can
+  trash a `[Mineral]` or `[Rock]` card from hand or from a digivolution stack.
+  EX11-038 Sunarizamon reuses the same selector shape for its union-zone draw
+  clause.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_065 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_038 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- union_zone_cost --nocapture`.
 
 ## BG Imperial substrate closeout — 2026-05-20
 
@@ -2336,3 +2397,40 @@ execution route is still genuinely missing for the 3 out-of-scope cards
 - **Resolution:** Added card-level DSL field `also_treated_as: [Name, ...]` to `CardSpec`, lowered to `CompiledCard.also_treated_as` and threaded into a new static `CardData.also_treated_as` by the DSL→engine bridges (`dsl_bridge::enrich_card_data_with_dsl_alt_paths`, `debug_runner::card_data_from_compiled`, `tests/support/dsl_card_data.rs`). Generic name-matching honors the alias set: `eval_card_fields` `name_is` / `name_contains` / `name_in`, and `CardSource::card_names` / `contains_card_name`. Unlike `digixros_aliases` (DigiXros-recipe-scoped, deliberately overlay-blind to generic name predicates — see the DigiXros name-alias entry above), `also_treated_as` is an always-on identity alias visible to generic name predicates in every zone. `BT23-077.yaml` authored with `also_treated_as: [Sistermon Noir]`. Supersedes the legacy Python `CardSource.also_treated_as_names` resolution (2026-03-14) for the Rust engine.
 - **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- also_treated_as`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt23_077`.
 - **Closed by:** branch `claude/laughing-lehmann-5771d9`, 2026-05-21.
+
+## Rocks B4 face-up security lifecycle — RESOLVED 2026-05-23
+
+- **Severity:** 🟡 PARTIAL engine/DSL security lifecycle gap.
+- **Discovered in:** Rocks archetype pass (`BT20-055` Invisimon).
+- **Card(s):** `BT20-055` Invisimon.
+- **Effect text:** "flip your opponent's top face-down security card face up" and "When your Digimon checks a face-up security card, you may place the top card of this Digimon face-up at the bottom of your security stack."
+- **Resolution:** Added the no-choice `flip_security_face_up` DSL step (`StepSpec` -> `CompiledStep` -> `EffectContext::flip_security_face_up`) that marks the topmost still-face-down card in the target player's security stack. Added attacker-side `when: on_check_face_up_security` timing, dispatched from combat only when the checked security card was already face-up and scanning the attacker's battle area. Authored `BT20-055.yaml` with the flip rider and optional top-stacked-card-to-bottom-security face-up clause.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- face_up_security_lifecycle`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_055`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage -- step_variants_have_exec_arms`.
+- **Residual:** Top-N security trash and face-up security extraction/filtering remain open in `docs/RUST_ENGINE_GAPS.md`.
+
+## G-EVENT-TARGET-LEVEL-LTE — RESOLVED 2026-05-23
+
+- **Severity:** 🟡 PARTIAL DSL predicate / event-observer gap.
+- **Discovered in:** Rocks archetype pass (`BT8-094` Digimon Emperor); also benefits `RB1-035`.
+- **Card(s):** `BT8-094` Digimon Emperor.
+- **Effect text:** "[All Turns] When one of your opponent's level 5 or lower Digimon is deleted, you may suspend this Tamer to <Draw 1>." / "[Opponent's Turn] When one of your opponent's level 3 Digimon is moved from their breeding area to their battle area, gain 2 memory."
+- **Resolution:** Added `event_target_level_eq`, `event_target_level_lte`, and `event_target_level_gte` to `PredicateSpec`, `CompiledPredicate`, compiler lowering, and the runtime predicate evaluator. The evaluator reads the event-target card snapshot, so deleted-object and moved-permanent contexts can gate on printed level. Authored both `BT8-094` omitted clauses. `MovedFromBreeding` dispatch now scans all battle areas, matching other cross-player event observers and allowing opponent Tamers to observe a moved event target.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt8_094 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt16_082 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_130 --nocapture`.
+
+## G-ON-OPTION-TRASHED-DSL — RESOLVED 2026-05-23
+
+- **Severity:** 🟡 PARTIAL DSL timing gap over existing option-lifecycle engine substrate.
+- **Discovered in:** Rocks archetype pass (`BT23-059` Justimon: Blitz Arm).
+- **Card(s):** `BT23-059` Justimon: Blitz Arm.
+- **Effect text:** "[All Turns] [Once Per Turn] When Option cards in the battle area are trashed, this Digimon unsuspends. Then, your opponent's Digimon's effects don't affect this Digimon for the turn."
+- **Resolution:** Added `Timing::OnOptionTrashed` / `CompiledTiming::OnOptionTrashed`, compiler lowering, and `compiled_timing_to_engine` mapping to `EffectTiming::OnOptionTrashed`. Authored `BT23-059` Clause B with `when: on_option_trashed`, `unsuspend: { target: source }`, and `grant_effect_immunity` from opponent Digimon effects until end of turn.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt23_059 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- lifecycle_state_machine::trash_field_option_fires_on_option_trashed_with_last_state --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage -- --nocapture`.
+
+## Engine + DSL Gap: `play_from_revealed_free` (EX8-050 Gogmamon) — RESOLVED 2026-05-23 (`complete-rocks-archetype`)
+
+- **Severity:** 🟡 PARTIAL reveal-zone free-play gap.
+- **Discovered in:** Rocks archetype pass (`EX8-050` Gogmamon).
+- **Card(s):** `EX8-050` Gogmamon.
+- **Effect text:** "[On Deletion] Reveal the top 3 cards of your deck. You may play 1 Digimon card with the [Mineral] or [Rock] trait and a play cost of 5 or less among them without paying the cost. Trash the rest."
+- **Resolution:** Added `EffectContext::play_from_revealed_free(player, card)` plus DSL `play_from_revealed_free: { of, card, bind_as? }`. The helper consumes the selected `CardHandle` from `Game::revealed_cards`, clears its reveal overlay, parks it only inside the synchronous play pipeline, and calls the normal effect-initiated free-play path so floodgates, would-play replacements, OnPlay, and OnEnterField behavior match other free plays. `PendingWouldPlayOrigin::Reveal` restores cancelled replacement paths back to the reveal pool. Authored `EX8-050.yaml` to play the selected reveal bucket before trashing the rest.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2f1_play_steps --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex8_050 --nocapture`.
