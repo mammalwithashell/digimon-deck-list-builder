@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
-import importlib
-import os
-
 import numpy as np
 import pytest
 
 pytest.importorskip("digimon_engine")
 
-os.environ["DIGIMON_BACKEND"] = "rust"
 import digimon_gym.digimon_gym as gym_mod  # noqa: E402
 
-importlib.reload(gym_mod)
+
+@pytest.fixture(autouse=True)
+def _rust_backend(monkeypatch):
+    # `DIGIMON_BACKEND` is read at `_make_runner` call time (env.reset/step),
+    # so setting it via monkeypatch is sufficient — no `importlib.reload` is
+    # needed, and the module-top reload that used to live here poisoned
+    # already-imported `DigimonEnv` symbols in sibling test modules.
+    monkeypatch.setenv("DIGIMON_BACKEND", "rust")
 
 
 def test_player1_and_player2_observations_differ_after_asymmetric_play():

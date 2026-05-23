@@ -75,7 +75,16 @@ def _unwrap_to_digimon_env(env: gymnasium.Env) -> DigimonEnv:
     Raises RuntimeError if no DigimonEnv is found.
     """
     unwrapped = env
-    while not isinstance(unwrapped, DigimonEnv):
+    while True:
+        if isinstance(unwrapped, DigimonEnv):
+            return unwrapped
+        # `importlib.reload(digimon_gym.digimon_gym)` in some tests produces a
+        # fresh `DigimonEnv` class object; modules that imported the name
+        # before the reload hold the stale class and reject ostensibly-matching
+        # instances. Treat any class with the right qualified name as a match.
+        cls = type(unwrapped)
+        if cls.__module__ == "digimon_gym.digimon_gym" and cls.__name__ == "DigimonEnv":
+            return unwrapped  # type: ignore[return-value]
         if isinstance(unwrapped, gymnasium.Wrapper):
             unwrapped = unwrapped.env
         else:
@@ -83,7 +92,6 @@ def _unwrap_to_digimon_env(env: gymnasium.Env) -> DigimonEnv:
                 f"Could not find DigimonEnv in wrapper stack. "
                 f"Innermost layer is {type(unwrapped).__name__}."
             )
-    return unwrapped
 
 
 def _seed_everything(seed: int) -> None:
