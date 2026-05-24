@@ -1,0 +1,53 @@
+card: BT24-085
+name: "Dan Yuki & Kanan Yuki"
+kind: tamer
+color: [yellow, red]
+cost: 4
+traits: [ADAMAS, TS]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory"
+    condition: { memory_lte: 4 }
+    process:
+      - gain_memory: 1
+
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] Suspend this Tamer to use 1 TS Option from hand under opponent-memory ceiling; then 1 TS Digimon may attack"
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            trait_has: TS
+    process:
+      - activation_cost: { suspend_self: true }
+      - use_option_from_hand:
+          of: you
+          optional: true
+          use_cost_lte_opponent_memory: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: TS
+          prompt: "You may use 1 [TS] trait Option card from your hand without paying the cost"
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+          prompt: "Choose 1 of your [TS] Digimon that may attack"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          optional: true
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

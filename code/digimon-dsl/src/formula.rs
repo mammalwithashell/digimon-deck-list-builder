@@ -242,6 +242,7 @@ pub enum AggregateSelector {
     HighestDp,
     LowestLevel,
     HighestLevel,
+    FewestMaterials,
     /// Lowest printed play cost among the scope's **Digimon** (Tamers are
     /// excluded — DCGO `IsMinCost(.., IsDigimonOnly: true)`). Drives BT9-112's
     /// "delete all opponent Digimon with the lowest play cost". The DP/Level

@@ -188,6 +188,19 @@ Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`),
 > **64 IMPLEMENTED / 0 PARTIAL / 0 BLOCKED** with zero live
 > `raw_rust` escapes.
 
+> **TS Olympos representative unlock — 2026-05-24:** The
+> `close-ts-olympos-rust-gaps` change closes the representative-deck
+> blockers called out by the TS Olympos DSL gap input: source-stack
+> material aggregates, formula-valued De-Digivolve amounts,
+> predicate-scoped `[When Attacking]` / `[When Digivolving]` timing
+> suppression, effect-driven Option use from hand through the normal
+> Option lifecycle, face-up-security count predicates, and bottom-security
+> to-hand movement. The resolver snapshot is now 23/23 representative
+> cards authored in Rust YAML, with 62/117 broad-pool cards authored and
+> 55 broad residuals documented in
+> `qa/archetype-qa/dsl/ts-olympos-2026-05-03-dsl-engine-gaps.md`.
+> No tensor or action-space contract changed.
+
 There are two related assessment workflows:
 
 - `.codex/skills/assess-rust-engine-archetype/` is the Codex read-only readiness workflow. It inspects printed text, current DSL schema/lowering, engine action/pending-selection support, and tests, then reports `ready`, `dsl-gap`, `engine-gap`, `rules-gap`, `test-gap`, or `data-gap` findings. It should cite this tracker when a known primitive blocks an archetype, but it does not modify files.
@@ -213,7 +226,7 @@ Each entry lists the cards that surfaced it, but the entry itself describes a re
 |---|---|---|---|---|---|
 | Medusamon | 2026-04-17 | — | — | — | — |
 | DNA Omnimon | 2026-04-17; completed 2026-05-20; partial gaps closed 2026-05-22 | 64 | 64 | 0 | 0 |
-| TS Olympos | 2026-04-18 | 105 | 1 | 4 | 100 |
+| TS Olympos | 2026-04-18; representative unlock 2026-05-24 | 117 broad / 23 representative | 62 broad / 23 representative | 0 representative | 55 broad residuals |
 | Rocks | 2026-04-18; refreshed 2026-04-28 | 47 | 0 | 0 | 47 |
 | Dark Masters | 2026-04-18 | 58 | 0 | 0 | 58 |
 | ST-23 BEATBREAK | 2026-05-17 | 15 | 2 | 4 | 9 |

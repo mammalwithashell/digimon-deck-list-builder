@@ -26,6 +26,21 @@ effects:
 "#
 }
 
+fn bottom_security_steps_yaml() -> &'static str {
+    r#"
+card: TEST-BOTTOM-SECURITY
+name: Bottom Security Step
+kind: option
+color: [yellow]
+cost: 0
+use_requirement: { all_turns: true }
+effects:
+  - when: main_from_hand
+    process:
+      - add_bottom_security_to_hand: { of: you }
+"#
+}
+
 #[test]
 fn dsl_may_add_top_security_to_hand_then_recover_models_bt24_031_inherited_shape() {
     let yaml = security_steps_yaml();
@@ -49,6 +64,44 @@ fn dsl_may_add_top_security_to_hand_then_recover_models_bt24_031_inherited_shape
         then.as_slice(),
         [CompiledStep::Recover { count: 1, .. }]
     ));
+}
+
+#[test]
+fn dsl_add_bottom_security_to_hand_moves_bottom_card_only() {
+    let yaml = bottom_security_steps_yaml();
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("yaml parses");
+    let compiled = compile(&spec).expect("bottom security step YAML compiles");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("bottom security step compiles as a triggered effect");
+    };
+    assert!(matches!(
+        triggered.process.as_slice(),
+        [CompiledStep::AddBottomSecurityToHand { .. }]
+    ));
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("test YAML loads")
+        .add_card(make_test_card("BOTTOM", "Bottom"))
+        .add_card(make_test_card("TOP", "Top"))
+        .hand(0, &["TEST-BOTTOM-SECURITY"])
+        .security(0, &["BOTTOM", "TOP"])
+        .memory(10)
+        .start();
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        digimon_engine::selection::OptionPlayResult::Trashed
+    );
+
+    let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
+    assert!(hand_ids.contains(&"BOTTOM".to_string()));
+    assert_eq!(
+        runner.game.players[0].security[0].card_id(&runner.game.card_data),
+        "TOP",
+        "top security should remain after bottom security is added to hand"
+    );
 }
 
 #[test]

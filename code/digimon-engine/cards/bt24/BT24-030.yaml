@@ -1,0 +1,83 @@
+card: BT24-030
+name: Neptunemon
+kind: digimon
+level: 6
+color: [blue, purple]
+cost: 12
+dp: 12000
+traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: Aqua
+            - trait_has: Sea Animal
+            - trait_has: TS
+    cost: 3
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      count_gte:
+        filter: { of: opponent, zone: [battle_area], kind: digimon }
+        n: 2
+    amount: 5
+    summary: "When played while opponent has 2 or more Digimon, reduce play cost by 5"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Return all opponent Digimon with the fewest digivolution cards to deck bottom"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            materials_count_matches_aggregate:
+              selector: fewest_materials
+              of: opponent
+          bind_as: bottom_target
+          body:
+            - return_to_deck:
+                target: bottom_target
+                position: bottom
+                include_sources: true
+
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns][OPT] When this Digimon suspends, it may unsuspend"
+    process:
+      - unsuspend: { target: source }
+
+  - kind: replacement
+    timing: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - replacement_cause: opponent_effect
+        - kind: digimon
+        - any_of:
+            - trait_has: TS
+            - trait_has: Aqua
+            - trait_has: Sea Animal
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "BT24-030"
+            is_unsuspended: true
+    summary: "[All Turns] By suspending this Digimon, your TS/Aqua/Sea Animal Digimon does not leave by opponent effects"
+    process:
+      - suspend: { target: source }
+      - cancel_replacement: {}

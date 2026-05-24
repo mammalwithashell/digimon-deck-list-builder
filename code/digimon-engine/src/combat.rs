@@ -497,6 +497,9 @@ impl Game {
                 {
                     return AttackResult::Invalid;
                 }
+                if self.attack_target_blocked_by_modifier(attacker, d) {
+                    return AttackResult::Invalid;
+                }
             }
             AttackTarget::Player(_) => {
                 if self
@@ -1119,10 +1122,7 @@ impl Game {
         }
         self.validate_attack_target(attacker, target)?;
         if let AttackTarget::Digimon(target_handle) = target {
-            if self
-                .modifiers
-                .has(target_handle, ModifierType::CannotAttackTarget)
-            {
+            if self.attack_target_blocked_by_modifier(attacker, target_handle) {
                 return Err(AttackError::InvalidTarget);
             }
             if self.modifiers.has(

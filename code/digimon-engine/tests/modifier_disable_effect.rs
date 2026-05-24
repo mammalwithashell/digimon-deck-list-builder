@@ -18,7 +18,8 @@ use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, ModifierType};
 use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 
@@ -55,6 +56,20 @@ impl CardEffect for AttackingMemoryGain {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         vec![Effect::when_attacking(card)
             .name("+1 when attacking")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+/// Inherited `WhenAttacking -> +1 memory` source effect.
+struct InheritedAttackingMemoryGain;
+impl CardEffect for InheritedAttackingMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_attacking(card)
+            .inherited()
+            .name("+1 inherited when attacking")
             .process(|ctx| {
                 ctx.gain_memory(1);
             })
@@ -150,5 +165,105 @@ fn disable_effect_modifier_for_a_different_timing_does_not_suppress_when_attacki
     assert!(
         r.memory() > before,
         "DisableEffect for an unrelated timing must NOT block WhenAttacking"
+    );
+}
+
+#[test]
+fn cannot_activate_when_attacking_suppresses_inherited_timing_effects() {
+    let mut top = plain_digimon("TOP", "Top", 5);
+    top.level = Some(5);
+    top.dp = Some(8000);
+    let inherited = plain_digimon("INH", "Inherited", 2);
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(top)
+        .add_card(inherited)
+        .add_card(plain_digimon("F", "F", 1))
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("INH", Arc::new(InheritedAttackingMemoryGain));
+
+    let attacker = r.place_stack(0, &["INH", "TOP"]);
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(
+            ModifierType::CannotActivateWhenAttackingEffects,
+            0,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+
+    let before = r.memory();
+    let result = r.attack_player(attacker, 1, /* vortex */ true);
+    assert_ne!(
+        result,
+        AttackResult::Invalid,
+        "test setup must perform a legal attack before checking inherited suppression"
+    );
+    assert_eq!(
+        r.memory(),
+        before,
+        "CannotActivateWhenAttackingEffects must suppress inherited effects on the gated stack"
+    );
+}
+
+#[test]
+fn cannot_activate_when_attacking_suppresses_granted_timing_effects() {
+    let mut attacker_data = plain_digimon("ATK-GRANTED", "AttackerGranted", 5);
+    attacker_data.level = Some(5);
+    attacker_data.dp = Some(8000);
+    let grantor = plain_digimon("GRANTOR", "Grantor", 3);
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(attacker_data)
+        .add_card(grantor)
+        .add_card(plain_digimon("F", "F", 1))
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+
+    let grantor_handle = r.place_on_field(0, "GRANTOR", Some(0));
+    let attacker = r.place_on_field(0, "ATK-GRANTED", Some(0));
+    let grantor_top = r.game.players[0].battle_area[grantor_handle.index as usize]
+        .top_card()
+        .handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, grantor_top, Some(grantor_handle), 0);
+        ctx.grant_triggered_effect(
+            attacker,
+            EffectTiming::WhenAttacking,
+            Expiry::Permanent,
+            |inner| inner.gain_memory(1),
+        );
+    }
+
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(
+            ModifierType::CannotActivateWhenAttackingEffects,
+            0,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+
+    let before = r.memory();
+    let result = r.attack_player(attacker, 1, /* vortex */ true);
+    assert_ne!(
+        result,
+        AttackResult::Invalid,
+        "test setup must perform a legal attack before checking granted suppression"
+    );
+    assert_eq!(
+        r.memory(),
+        before,
+        "CannotActivateWhenAttackingEffects must suppress granted effects on the gated Digimon"
     );
 }

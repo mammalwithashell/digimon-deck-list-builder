@@ -1,6 +1,11 @@
 //! Phase 2c — permanent mutation step dispatch.
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledCardKind, CompiledClause, CompiledFormula, CompiledPerSelector,
+    CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone,
+};
+use digimon_dsl::formula::{CardCountInZoneSpec, FormulaSpec, PerSelector};
+use digimon_dsl::predicate::Zone;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_step;
@@ -208,6 +213,7 @@ fn de_digivolve_amount_one_pops_one_source() {
     let step = CompiledStep::DeDigivolve {
         target: CompiledBindingRef::Named("tgt".into()),
         amount: Some(1),
+        amount_fn: None,
         stop_at_level: None,
     };
     let mut bindings = Bindings::new();
@@ -223,4 +229,134 @@ fn de_digivolve_amount_one_pops_one_source() {
         1,
         "de_digivolve(amount=1) should have popped exactly one source"
     );
+}
+
+#[test]
+fn de_digivolve_amount_fn_compiles_from_yaml() {
+    let yaml = r#"
+card: DSL-DEDE-FN
+name: Formula De-Digivolve
+kind: digimon
+color: [yellow]
+level: 6
+cost: 11
+dp: 11000
+effects:
+  - when: when_digivolving
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: Pick target
+      - de_digivolve:
+          target: target
+          amount_fn:
+            base: 0
+            per:
+              card_count_in_zone:
+                zone: battle_area
+                of: you
+                filter: { kind: digimon }
+            delta: 1
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("amount_fn yaml parses");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("amount_fn yaml compiles");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::DeDigivolve {
+        amount: None,
+        amount_fn: Some(CompiledFormula::BasePerDelta { per, .. }),
+        ..
+    } = &triggered.process[1]
+    else {
+        panic!("expected de_digivolve amount_fn step");
+    };
+    assert!(matches!(
+        per,
+        CompiledPerSelector::FilteredCardCountInZoneScoped {
+            zone: CompiledZone::BattleArea,
+            of: CompiledPlayerRef::You,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn de_digivolve_amount_fn_uses_own_digimon_count_and_caps_to_sources() {
+    let mut target_base = make_test_card("OPP-BASE", "OPP-BASE");
+    target_base.card_kind = digimon_engine::enums::CardKind::Digimon;
+    let mut target_mid_a = make_test_card("OPP-MID-A", "OPP-MID-A");
+    target_mid_a.card_kind = digimon_engine::enums::CardKind::Digimon;
+    let mut target_mid_b = make_test_card("OPP-MID-B", "OPP-MID-B");
+    target_mid_b.card_kind = digimon_engine::enums::CardKind::Digimon;
+    let mut target_top = make_test_card("OPP-TOP", "OPP-TOP");
+    target_top.card_kind = digimon_engine::enums::CardKind::Digimon;
+    let mut src = make_test_card("SRC", "SRC");
+    src.card_kind = digimon_engine::enums::CardKind::Digimon;
+    let mut ally_a = make_test_card("ALLY-A", "ALLY-A");
+    ally_a.card_kind = digimon_engine::enums::CardKind::Digimon;
+    let mut ally_b = make_test_card("ALLY-B", "ALLY-B");
+    ally_b.card_kind = digimon_engine::enums::CardKind::Digimon;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(target_base)
+        .add_card(target_mid_a)
+        .add_card(target_mid_b)
+        .add_card(target_top)
+        .add_card(src)
+        .add_card(ally_a)
+        .add_card(ally_b)
+        .build();
+    let target = runner.place_stack(1, &["OPP-BASE", "OPP-MID-A", "OPP-MID-B", "OPP-TOP"]);
+    let source = runner.place_on_field(0, "SRC", None);
+    runner.place_on_field(0, "ALLY-A", None);
+    runner.place_on_field(0, "ALLY-B", None);
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let step = CompiledStep::DeDigivolve {
+        target: CompiledBindingRef::Named("target".into()),
+        amount: None,
+        amount_fn: Some(CompiledFormula::BasePerDelta {
+            base: 0,
+            per: CompiledPerSelector::FilteredCardCountInZoneScoped {
+                zone: CompiledZone::BattleArea,
+                of: CompiledPlayerRef::You,
+                filter: Box::new(CompiledPredicate {
+                    kind: Some(CompiledCardKind::Digimon),
+                    ..Default::default()
+                }),
+            },
+            delta: 1,
+        }),
+        stop_at_level: None,
+    };
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", target);
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, Some(source), 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.players[1].battle_area[target.index as usize].stack_size(),
+        1,
+        "own three Digimon should produce amount 3 and peel all three materials"
+    );
+
+    let serializable = FormulaSpec::BasePerDelta {
+        base: 0,
+        per: PerSelector::CardCountInZone(CardCountInZoneSpec {
+            zone: Zone::BattleArea,
+            of: digimon_dsl::common::PlayerRef::You,
+            filter: None,
+        }),
+        bucket: None,
+        delta: 1,
+    };
+    assert!(serde_yml::to_string(&serializable)
+        .expect("formula serializes")
+        .contains("card_count_in_zone"));
 }

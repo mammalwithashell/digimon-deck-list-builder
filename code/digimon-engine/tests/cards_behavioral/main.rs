@@ -22,6 +22,7 @@ mod sample_bt17_015;
 // Per-set per-card test modules (added by /batch-implement-cards-rust-dsl)
 mod ad1;
 mod bt1;
+mod bt10;
 mod bt12;
 mod bt13;
 mod bt14;

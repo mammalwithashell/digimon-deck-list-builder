@@ -188,6 +188,20 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(cap) = &pred.face_up_security_count_lte {
+        if face_up_security_count(rctx, rctx.player) as i32
+            > eval_int_constraint_read(cap, rctx, None, bindings)
+        {
+            return false;
+        }
+    }
+    if let Some(floor) = &pred.face_up_security_count_gte {
+        if (face_up_security_count(rctx, rctx.player) as i32)
+            < eval_int_constraint_read(floor, rctx, None, bindings)
+        {
+            return false;
+        }
+    }
     if let Some(spec) = &pred.no_face_up_security_named {
         // G-PRED-NO-FACE-UP-SECURITY-NAMED — fails if the named player has
         // ANY face-up security card matching the identity filter. Face-up
@@ -644,7 +658,7 @@ fn eval_result_bound_fields(
         }
     }
     if let Some(want) = pred.effect_returned_any_card {
-        let actual = !log.returned_to_deck.is_empty();
+        let actual = !log.returned_cards.is_empty();
         if actual != want {
             return false;
         }
@@ -655,7 +669,7 @@ fn eval_result_bound_fields(
     // returned `CardHandle` is resolved to its identity via
     // `card_data_for_handle` (zone-agnostic) and evaluated as a `Card` subject.
     if let Some(inner) = &pred.returned_card_matching {
-        let any_match = log.returned_to_deck.iter().any(|&handle| {
+        let any_match = log.returned_cards.iter().any(|&handle| {
             eval_predicate_with_bindings(
                 inner,
                 rctx,
@@ -853,6 +867,15 @@ fn resolve_predicate_players(of: CompiledPlayerRef, rctx: &EffectReadContext<'_>
     }
 }
 
+fn face_up_security_count(rctx: &EffectReadContext<'_>, player_id: PlayerId) -> usize {
+    let player = rctx.game.player(player_id);
+    player
+        .security
+        .iter()
+        .filter(|card| player.face_up_security.contains(&card.card_index))
+        .count()
+}
+
 fn count_matching(
     aggregate: &CompiledCountAggregate,
     rctx: &EffectReadContext<'_>,
@@ -996,6 +1019,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.level_lte.is_none()
         && pred.level_gte.is_none()
         && pred.level_matches_aggregate.is_none()
+        && pred.materials_count_matches_aggregate.is_none()
         && pred.color_is.is_none()
         && pred.color_only.is_none()
         && pred.color_matches_any_field_digimon.is_none()
@@ -1008,6 +1032,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.effect_text_contains.is_none()
         && pred.name_in.is_none()
         && pred.name_not_shared_by_field_digimon.is_none()
+        && pred.name_not_shared_by_field_tamer.is_none()
         && pred.card_number_is.is_none()
         && pred.play_cost_lte.is_none()
         && pred.play_cost_gte.is_none()
@@ -1899,6 +1924,14 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(of) = pred.name_not_shared_by_field_tamer {
+        let candidate_name = overlay
+            .and_then(|o| o.name.as_deref())
+            .unwrap_or(data.card_name.as_str());
+        if field_tamer_has_name(rctx, of, candidate_name) {
+            return false;
+        }
+    }
     if let Some(ref cn) = pred.card_number_is {
         if data.card_id != *cn {
             return false;
@@ -2124,6 +2157,33 @@ fn field_digimon_has_name(
     false
 }
 
+fn field_tamer_has_name(
+    rctx: &EffectReadContext<'_>,
+    of: CompiledPlayerRef,
+    candidate_name: &str,
+) -> bool {
+    for player in existential_players(of, rctx) {
+        for (index, permanent) in rctx.game.player(player).battle_area.iter().enumerate() {
+            let handle = crate::permanent::PermanentHandle {
+                player,
+                index: index as u8,
+            };
+            let identity = permanent.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
+            if !kind_matches_field(CompiledCardKind::Tamer, identity.kind) {
+                continue;
+            }
+            if identity
+                .card_names
+                .iter()
+                .any(|name| name == candidate_name)
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 fn card_shares_color_with_bound_permanent(
     rctx: &EffectReadContext<'_>,
     bindings: Option<&Bindings>,
@@ -2277,6 +2337,9 @@ fn eval_permanent_fields(
     if !eval_level_aggregate_match(pred, rctx, synth_identity.level) {
         return false;
     }
+    if !eval_materials_aggregate_match(pred, rctx, handle) {
+        return false;
+    }
     if !eval_dp_constraints(pred, rctx, handle, bindings) {
         return false;
     }
@@ -2301,6 +2364,11 @@ fn eval_permanent_fields(
             return false;
         };
         if !rctx.game.has_keyword(handle, kw) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.has_security_attack_change {
+        if rctx.game.has_security_attack_change(handle) != want {
             return false;
         }
     }
@@ -2427,6 +2495,50 @@ fn aggregate_level(
         CompiledAggregateSelector::HighestLevel => levels.max(),
         CompiledAggregateSelector::LowestDp
         | CompiledAggregateSelector::HighestDp
+        | CompiledAggregateSelector::FewestMaterials
+        | CompiledAggregateSelector::LowestPlayCost => None,
+    }
+}
+
+fn eval_materials_aggregate_match(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+) -> bool {
+    let Some((selector, of)) = pred.materials_count_matches_aggregate else {
+        return true;
+    };
+    let Some(perm) = permanent_for_handle(rctx, handle) else {
+        return false;
+    };
+    let Some(aggregate_count) = aggregate_material_count(selector, of, rctx) else {
+        return false;
+    };
+    let materials_count = perm.card_sources.len().saturating_sub(1) as i32;
+    materials_count == aggregate_count
+}
+
+fn aggregate_material_count(
+    selector: CompiledAggregateSelector,
+    of: CompiledPlayerRef,
+    rctx: &EffectReadContext<'_>,
+) -> Option<i32> {
+    let counts = existential_players(of, rctx)
+        .into_iter()
+        .flat_map(|player| {
+            rctx.game
+                .player(player)
+                .battle_area
+                .iter()
+                .filter(|perm| perm.is_digimon(rctx.card_data()))
+                .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
+        });
+    match selector {
+        CompiledAggregateSelector::FewestMaterials => counts.min(),
+        CompiledAggregateSelector::LowestDp
+        | CompiledAggregateSelector::HighestDp
+        | CompiledAggregateSelector::LowestLevel
+        | CompiledAggregateSelector::HighestLevel
         | CompiledAggregateSelector::LowestPlayCost => None,
     }
 }
@@ -2521,6 +2633,9 @@ fn eval_breeding_permanent_fields(
         player,
         index: crate::action::space::BREEDING_TARGET as u8,
     };
+    if !eval_materials_aggregate_match(pred, rctx, handle) {
+        return false;
+    }
     if !eval_dp_constraints(pred, rctx, handle, bindings) {
         return false;
     }

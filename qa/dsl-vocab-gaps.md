@@ -4,6 +4,15 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+> **TS Olympos representative unlock — 2026-05-24:** The
+> `close-ts-olympos-rust-gaps` change added and consumed the DSL surfaces
+> needed for the representative TS Olympos deck: `materials_count_matches_aggregate`,
+> `de_digivolve.amount_fn`, predicate-scoped timing suppression,
+> effect-driven `use_option_from_hand`, `face_up_security_count_lte/gte`,
+> and `add_bottom_security_to_hand`. These are closed for the
+> representative deck and should not be re-filed as open DSL vocabulary
+> gaps unless a future broad-pool card proves a distinct missing variant.
+
 > **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
 > #449–#458. The Track E zone-movement DSL verb table (below) is
 > current as of PR #454. The Track C modifier-payload schema gap is

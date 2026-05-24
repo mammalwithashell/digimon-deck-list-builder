@@ -1,0 +1,63 @@
+card: BT24-034
+name: Aegiomon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+traits: [Shaman, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: TS
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+
+  - when: [on_move, on_play, when_digivolving]
+    condition:
+      all_of:
+        - security_count_gte: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: tamer
+              trait_has: TS
+              name_not_shared_by_field_tamer: { of: you }
+            n: 1
+    summary: "[When Moving][On Play][When Digivolving] Add top security to hand to play a TS Tamer from hand free, excluding names of your Tamers"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Add top security to hand and play a TS Tamer"
+            - "Decline"
+          prompt: "Use Aegiomon's TS Tamer play effect?"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - add_top_security_to_hand: { of: you }
+            - select_hand:
+                of: you
+                bind_as: pick
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - trait_has: TS
+                    - name_not_shared_by_field_tamer: { of: you }
+                prompt: "Play 1 TS Tamer from your hand without paying the cost"
+            - play_from_hand_free: { of: you, hand_index: pick }

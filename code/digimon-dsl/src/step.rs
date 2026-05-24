@@ -50,6 +50,7 @@ use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
 
 use crate::common::PlayerRef;
+use crate::formula::FormulaSpec;
 use crate::predicate::{PredicateSpec, Zone};
 
 /// A single step. Parsed from a one-key YAML map via a custom `Deserialize`
@@ -164,6 +165,7 @@ pub enum StepSpec {
     // Play / digivolve
     PlayFromHand(PlayFromHandArgs),
     PlayFromHandFree(PlayFromHandFreeArgs),
+    UseOptionFromHand(UseOptionFromHandArgs),
     PlayFromRevealedFree(PlayFromRevealedFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
@@ -184,6 +186,7 @@ pub enum StepSpec {
     // Security
     TrashTopSecurity(TrashTopSecurityArgs),
     TrashBottomSecurity(PlayerArg),
+    AddBottomSecurityToHand(PlayerArg),
     TrashTopSecurityAndCancelReplacement(PlayerArg),
     BounceSelf(EmptyArgs),
     PlaceSelfAtSecurity(SelfSecurityPlacementArgs),
@@ -363,6 +366,7 @@ impl Serialize for StepSpec {
             // Play / digivolve
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
+            StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
             StepSpec::PlayFromRevealedFree(v) => kv!(s, "play_from_revealed_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
@@ -379,6 +383,7 @@ impl Serialize for StepSpec {
             // Security
             StepSpec::TrashTopSecurity(v) => kv!(s, "trash_top_security", v),
             StepSpec::TrashBottomSecurity(v) => kv!(s, "trash_bottom_security", v),
+            StepSpec::AddBottomSecurityToHand(v) => kv!(s, "add_bottom_security_to_hand", v),
             StepSpec::TrashTopSecurityAndCancelReplacement(v) => {
                 kv!(s, "trash_top_security_and_cancel_replacement", v)
             }
@@ -584,6 +589,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Play / digivolve
             "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
+            "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
             "play_from_revealed_free" => StepSpec::PlayFromRevealedFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
@@ -603,6 +609,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Security
             "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
             "trash_bottom_security" => StepSpec::TrashBottomSecurity(map.next_value()?),
+            "add_bottom_security_to_hand" => {
+                StepSpec::AddBottomSecurityToHand(map.next_value()?)
+            }
             "trash_top_security_and_cancel_replacement" => {
                 StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
             }
@@ -764,6 +773,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "hatch",
                         "play_from_hand",
                         "play_from_hand_free",
+                        "use_option_from_hand",
                         "play_from_revealed_free",
                         "play_from_trash",
                         "play_from_trash_free",
@@ -776,6 +786,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "effect_initiated_dna_digivolve_hand_partner",
                         "trash_top_security",
                         "trash_bottom_security",
+                        "add_bottom_security_to_hand",
                         "trash_top_security_and_cancel_replacement",
                         "bounce_self",
                         "place_self_at_security",
@@ -1367,6 +1378,8 @@ pub struct DeDigivolveArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub amount: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount_fn: Option<FormulaSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stop_at_level: Option<u8>,
 }
 
@@ -1560,6 +1573,23 @@ pub struct PlayFromRevealedFreeArgs {
     /// same body. None (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseOptionFromHandArgs {
+    pub of: PlayerRef,
+    pub filter: crate::predicate::PredicateSpec,
+    /// When true, candidate Options must have a printed use cost less than or
+    /// equal to the next clockwise opponent's current memory. This is the
+    /// BT24-085 shape ("with a use cost no greater than your opponent's
+    /// memory") without adding a one-off formula primitive.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub use_cost_lte_opponent_memory: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

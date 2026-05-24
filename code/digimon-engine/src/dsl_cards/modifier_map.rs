@@ -25,6 +25,9 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CanAttackUnsuspended" => ModifierType::CanAttackUnsuspended,
         "CanAttackActivePlayer" => ModifierType::CanAttackActivePlayer,
         "CannotAttackTarget" => ModifierType::CannotAttackTarget,
+        "CannotBeAttackedBySecurityAttackChanged" => {
+            ModifierType::CannotBeAttackedBySecurityAttackChanged
+        }
         "CannotBeRedirectedAsAttackTarget" => ModifierType::CannotBeRedirectedAsAttackTarget,
         "CanNotSwitchAttackTarget" => ModifierType::CanNotSwitchAttackTarget,
         "CannotSuspend" => ModifierType::CannotSuspend,
@@ -135,6 +138,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CanAttackUnsuspended
         | ModifierType::CanAttackActivePlayer
         | ModifierType::CannotAttackTarget
+        | ModifierType::CannotBeAttackedBySecurityAttackChanged
         | ModifierType::CannotSuspend
         | ModifierType::CannotUnsuspend
         | ModifierType::CannotBeSelectedByEffect
@@ -243,6 +247,7 @@ mod tests {
             ModifierType::CanAttackUnsuspended,
             ModifierType::CanAttackActivePlayer,
             ModifierType::CannotAttackTarget,
+            ModifierType::CannotBeAttackedBySecurityAttackChanged,
             ModifierType::CannotSuspend,
             ModifierType::CannotUnsuspend,
             ModifierType::CannotBeSelectedByEffect,

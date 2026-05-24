@@ -26,11 +26,30 @@ Target: `data/deck_library.json` archetype `TS Olympos`, using the current 66-li
 
 ## Verdict
 
-`blocked`
+`representative-ready; broad-pool residual`
 
-TS Olympos is not currently faithfully implementable as executable Rust YAML DSL. The old QA report marks the archetype as faithful/fixed in the Python lane, but the current Rust DSL pack has only a small BT24 production slice and does not include the TS Olympos core cards.
+The representative TS Olympos deck resolved from `code/tools/resolve_deck.py "TS Olympos" --json` is now faithfully authored in executable Rust YAML DSL. The representative training unlock target has 23 unique cards, all present under `code/digimon-engine/cards/` with focused behavioral coverage. The broader resolved TS Olympos pool still has unauthored cards and remains tracked separately.
 
-The remaining most important blockers are reusable: cross-card effect re-firing, remaining cross-permanent replacement variants, source-stack aggregate predicates/dynamic amounts, effect-timing suppression variants, and dynamic option-use-from-hand flows. Top-security-to-hand, Recovery, multi-bucket reveal selection, immediate may-attack prompts, BT24-040 targeted timing lock/protection, and BT24-101 security-loss protection now have focused Rust coverage and should stay out of the remaining-blocker backlog unless a new card exposes a new primitive gap.
+As of the 2026-05-24 closure pass, the representative-blocking reusable gaps for source-stack aggregate predicates, formula-valued De-Digivolve amounts, predicate-scoped timing suppression, and effect-driven Option use from hand are closed by tests and production card YAML. Top-security-to-hand, bottom-security-to-hand, Recovery, multi-bucket reveal selection, immediate may-attack prompts, cross-card refiring, BT24-040 targeted timing lock/protection, and BT24-101 security-loss protection also have focused Rust coverage and should stay out of the remaining-blocker backlog unless a new card exposes a new primitive gap.
+
+## 2026-05-24 Representative Unlock Snapshot
+
+- Resolver command: `PYTHONIOENCODING=utf-8 python code/tools/resolve_deck.py "TS Olympos" --json`.
+- Current resolver pool: 98 local TS Olympos decklists, 117 broad unique cards.
+- Representative unique cards: 23/23 Rust YAML implemented.
+- Representative card IDs: `BT10-042`, `BT24-004`, `BT24-011`, `BT24-020`, `BT24-030`, `BT24-031`, `BT24-034`, `BT24-035`, `BT24-037`, `BT24-040`, `BT24-041`, `BT24-043`, `BT24-046`, `BT24-051`, `BT24-083`, `BT24-085`, `BT24-088`, `BT24-090`, `BT24-091`, `BT24-095`, `BT24-100`, `BT24-102`, `P-197`.
+- Broad pool Rust YAML implemented count: 62/117.
+- Broad pool residual count: 55 cards.
+- Broad pool residual IDs: `BT13-106`, `BT14-033`, `BT16-063`, `BT17-041`, `BT20-037`, `BT24-002`, `BT24-003`, `BT24-010`, `BT24-014`, `BT24-015`, `BT24-019`, `BT24-022`, `BT24-023`, `BT24-024`, `BT24-025`, `BT24-027`, `BT24-028`, `BT24-029`, `BT24-033`, `BT24-039`, `BT24-050`, `BT24-058`, `BT24-059`, `BT24-063`, `BT24-084`, `BT24-092`, `BT24-093`, `BT24-094`, `BT24-097`, `BT25-009`, `BT25-011`, `BT25-022`, `BT25-028`, `BT25-044`, `BT4-105`, `BT5-087`, `BT7-032`, `BT7-082`, `BT8-084`, `BT9-069`, `BT9-110`, `EX2-067`, `EX2-070`, `EX6-003`, `EX7-068`, `EX9-068`, `LM-028`, `LM-045`, `P-104`, `P-195`, `P-199`, `P-207`, `P-210`, `P-213`, `ST20-07`.
+- Representative card evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_034 bt24_035 bt24_051 bt24_083 bt24_088 bt24_090 bt24_095 --nocapture` (26 passed), plus the final representative batch commands recorded below.
+
+### Verification Commands
+
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- parse_leaf_predicates use_option_from_hand_step_parses_filter_and_cost_ceiling use_option_from_hand_filters_by_trait_and_opponent_memory_ceiling materials_count_matches_aggregate_predicate_compiles de_digivolve_amount_fn_compiles_from_yaml de_digivolve_amount_fn_uses_own_digimon_count_and_caps_to_sources add_modifier_filter_can_install_timing_suppression_modifier dsl_add_bottom_security_to_hand_moves_bottom_card_only face_up_security_count_lte_reads_only_face_up_own_security_cards --nocapture` — 9 passed.
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_030 bt24_041 bt24_085 bt24_091 bt10_042 --nocapture` — 21 passed.
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_034 bt24_035 bt24_051 bt24_083 bt24_088 bt24_090 bt24_095 --nocapture` — 26 passed.
+- `python -m maturin build --release` from `code/digimon-engine-py/`, then `python -m pip install --force-reinstall target/wheels/digimon_engine-0.1.0-cp311-abi3-win_amd64.whl`.
+- `python -c "import digimon_engine; ids=digimon_engine.load_implemented_card_ids(); ..."` over the 23 representative IDs — 378 implemented IDs loaded, representative missing list empty.
 
 ## Coverage Snapshot
 
@@ -181,14 +200,13 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
 
 ### G-TS-SOURCE-STACK-AGGREGATES
 
-- **Type:** hybrid engine / DSL gap
-- **Blocks TS Olympos cards:** `BT24-041`, `BT24-030`, `BT24-059`, `BT24-090`. `BT24-040` is no longer blocked by the trash-all-sources slice after the 2026-05-03 production YAML/tests.
+- **Type:** resolved hybrid engine / DSL primitive; remaining broad-pool card-authoring gap
+- **Blocks TS Olympos representative cards:** none after 2026-05-24.
+- **Broad-pool residual cards:** `BT24-059` and other unauthored broad-pool source-stack cards still need card-shaped YAML/tests if they are selected for future training pools.
 - **Cross-archetype reuse:** source-control archetypes, De-Digivolve variants, Mineral/Rock source-trash effects, "fewest sources" board clears.
 - **Printed shape:** trash all digivolution cards of one permanent; De-Digivolve by a dynamic count; return all opponent Digimon with the fewest digivolution cards; place/remove source cards from security or under permanents.
-- **Current evidence:** `trash_all_sources` is implemented and verified for `BT24-040`, and `de_digivolve` supports bounded peeling. `BT24-030` still needs an aggregate predicate over opponent permanents' source counts. `BT24-041` still needs a dynamic amount equal to the controller's Digimon count.
-- **Required capability:** remaining stack-source aggregate predicates and formula-backed mutations:
-  - `stack_size_matches_aggregate: lowest` predicates over battle-area Digimon;
-  - formula-backed `de_digivolve.amount`.
+- **Current evidence:** `trash_all_sources` is implemented and verified for `BT24-040`; `materials_count_matches_aggregate` supports tied fewest-material predicates and drives `BT24-030`; `de_digivolve.amount_fn` supports formula-valued peel counts and drives `BT24-041`. `BT24-090` uses the new face-up-security predicate plus bottom-security movement rather than a source-stack blocker.
+- **Required capability:** closed for the representative deck.
 - **Suggested DSL shape:**
 
   ```yaml
@@ -210,17 +228,18 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
   ```
 
 - **First test:** For `BT24-030`, set opponent stacks with 0, 1, and 2 sources and assert only the 0-source Digimon are bottom-decked. For `BT24-041`, control three Digimon, resolve the dynamic De-Digivolve branch, and assert exactly three peel attempts are made subject to normal De-Digivolve caps.
-- **Spec note:** Split this into smaller implementation tasks if needed: source-count aggregate predicate, then dynamic De-Digivolve formula. Do not reopen the closed `trash_all_sources` slice unless a new card proves a missing source-trash variant.
-- **Updated 2026-05-03:** The unbounded `trash_all_sources` slice is implemented and verified for `BT24-040` by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- source_stack_aggregates --nocapture` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`. Source-count aggregate predicates and dynamic De-Digivolve formulas remain open for the other listed cards.
+- **Spec note:** Do not reopen the representative-deck source-stack primitive. Future broad-pool cards should file only newly verified missing variants.
+- **Updated 2026-05-03:** The unbounded `trash_all_sources` slice is implemented and verified for `BT24-040` by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- source_stack_aggregates --nocapture` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`.
+- **Updated 2026-05-24:** Source-count aggregate predicates and dynamic De-Digivolve formulas are implemented for representative TS Olympos and verified by focused DSL tests plus `BT24-030` and `BT24-041` behavioral tests.
 
 ### G-TS-TIMING-SUPPRESSION-MODIFIERS
 
-- **Type:** engine / DSL gap
-- **Blocks TS Olympos cards:** `BT10-042` and tech cards that suppress `[When Digivolving]` / `[When Attacking]` effects. `BT24-040` is no longer blocked by this item after the 2026-05-03 production YAML/tests.
+- **Type:** resolved engine / DSL primitive for representative TS Olympos
+- **Blocks TS Olympos representative cards:** none after 2026-05-24.
 - **Cross-archetype reuse:** Venusmon variants, Dark Masters, Queen Device, and other per-permanent effect-locking cards.
 - **Printed shape:** selected opponent Digimon or Tamers cannot suspend and/or cannot activate effects of a named timing until an expiry.
-- **Current evidence:** `docs/RUST_ENGINE_GAPS.md` already tracks permanent-scoped timing suppression. Existing modifier mappings include some coarse suppressors, but the queue fan-out must consult a timing-parametric modifier at enqueue time.
-- **Required capability:** `ModifierType::CannotActivateEffectsByTiming(EffectTiming)` or equivalent, plus DSL lowering for targeted and aura-like grants. The dispatch layer must skip suppressed effects while leaving unrelated timings legal.
+- **Current evidence:** targeted timing suppression exists for `BT24-040`; predicate-scoped suppression for `[When Attacking]` and `[When Digivolving]` is now wired through the shared timing dispatch path and covers `BT10-042`.
+- **Required capability:** closed for the representative deck. Future aura/other-timing variants should file a new focused gap only after a failing Rust test proves a missing shape.
 - **Suggested DSL shape:**
 
   ```yaml
@@ -245,7 +264,8 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
 
 - **First test:** Resolve `BT24-040`, select an opponent Digimon with a When Digivolving effect, then digivolve it. Assert the When Digivolving effect is not enqueued, while its On Deletion or When Attacking effects remain unaffected unless separately suppressed.
 - **Spec note:** Avoid encoding this as player-wide effect lockout; Venusmon targets specific permanents.
-- **Updated 2026-05-03:** Targeted `CannotSuspend` plus `CannotActivateEffectsByTiming(WhenDigivolving)` is implemented for `BT24-040` and verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`. Aura-style suppression and other timing/card variants remain open until separately tested.
+- **Updated 2026-05-03:** Targeted `CannotSuspend` plus `CannotActivateEffectsByTiming(WhenDigivolving)` is implemented for `BT24-040` and verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`.
+- **Updated 2026-05-24:** Predicate-scoped suppression for `[When Attacking]` and `[When Digivolving]` is implemented and verified by `BT10-042` behavioral coverage.
 
 ### G-TS-IMMEDIATE-MAY-ATTACK
 
@@ -274,12 +294,12 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
 
 ### G-TS-OPTION-USE-FROM-HAND-BY-COST-CEILING
 
-- **Type:** hybrid engine / DSL gap
-- **Blocks TS Olympos cards:** `BT24-085` Dan Yuki & Kanan Yuki and TS Option-heavy variants.
+- **Type:** resolved hybrid engine / DSL primitive for representative TS Olympos
+- **Blocks TS Olympos representative cards:** none after 2026-05-24.
 - **Cross-archetype reuse:** Tamer effects that use an Option from hand without paying cost under a dynamic cost ceiling.
 - **Printed shape:** at end of turn, suspend the Tamer, use one TS Option from hand with use cost less than or equal to the opponent's memory, then open a may-attack branch.
-- **Current evidence:** Option play flow and Delay lifecycle have improved, but this exact "use an Option from hand as an effect with a dynamic ceiling" needs card-level proof and likely DSL sugar for filtering by opponent memory.
-- **Required capability:** select an Option in hand by trait and use-cost formula, then invoke its Main/Security-equivalent effect path without paying cost, preserving option disposition and pending selections.
+- **Current evidence:** `use_option_from_hand` selects an Option in hand by trait and use-cost formula, then invokes the normal Option lifecycle without paying cost, preserving mode selection, disposal, Delay/Link paths, and parent-effect continuation.
+- **Required capability:** closed for the representative deck.
 - **Suggested DSL shape:**
 
   ```yaml
@@ -302,7 +322,7 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
   ```
 
 - **First test:** With opponent memory at 3, `BT24-085` suspended as cost, and TS Options of use cost 2 and 4 in hand, assert only the cost-2 Option is selectable and that its printed Option flow/disposition resolves before the may-attack prompt.
-- **Spec note:** Promote only the dynamic use-from-hand capability. Specific TS Option bodies remain card migration work.
+- **Spec note:** Keep broad-pool TS Option bodies as card migration work unless they require a newly verified Option lifecycle variant.
 
 ## Card-Local Authoring And Test Backlog
 
@@ -314,20 +334,20 @@ Batch production-authoring update (2026-05-10): `BT24-004`, `BT24-020`, `BT24-04
 
 | Card(s) | Status | Next Rust test |
 |---|---|---|
-| `BT24-034` Aegiomon | blocked by top-security-to-hand + duplicate-name Tamer filter | Optional cost branch, non-duplicate TS Tamer selection, free play, OnMove/OnPlay/WhenDigivolving all share body |
+| `BT24-034` Aegiomon | implemented 2026-05-24; production YAML and focused behavioral tests pass | Optional cost branch, non-duplicate TS Tamer selection, free play, OnMove/OnPlay/WhenDigivolving shared body, and Barrier coverage are active. |
 | `BT24-102` Homeros | YAML fixture landed; Track K refire primitive closed for this shape | Start-main memory/draw, TS DP aura, EOT reactivation with Homeros suspend cost |
 | `BT24-100` In-Between Theater | implemented 2026-05-10; production YAML and 4 focused behavioral tests pass | Keep in validated-cards report as implemented; color bypass, reveal-add TS, delayed-option placement, Delay gain 2, and Security placement are covered. |
 | `BT24-031` Elecmon | implemented 2026-05-03; production YAML and 5 focused behavioral tests pass | Keep in validated-cards report as implemented; no remaining BT24-031-specific blocker from this audit. |
 | `BT24-043`, `BT24-020` | implemented 2026-05-10; production YAML and focused behavioral tests pass | Keep in validated-cards report as implemented; reveal bucket choices, duplicate prevention, bottom remainder, alt paths, and inherited effects are covered. |
 | `BT24-040` Venusmon | implemented 2026-05-03; production YAML and 10 focused behavioral tests pass | Keep in validated-cards report as implemented; no-cost-body and CannotAddSecurityByEffect replacement preflight are covered; no remaining BT24-040-specific blocker from this audit. |
-| `BT24-041` Minervamon | blocked by dynamic De-Digivolve count + play-cost reduction + aura keywords | Free-play Iliad cost <=5, De-Digivolve count equals own Digimon count, Reboot/Blocker aura on opponent turn |
-| `BT24-030` Neptunemon | blocked by source-count aggregate + cross-permanent protection | Bottom-deck all fewest-source opponent Digimon, unsuspend self once, opponent-effect protection by suspending self |
+| `BT24-041` Minervamon | implemented 2026-05-24; production YAML and focused behavioral tests pass | Free-play Iliad cost <=5, De-Digivolve count equals own Digimon count, and Reboot/Blocker aura on opponent turn are active. |
+| `BT24-030` Neptunemon | implemented 2026-05-24; production YAML and focused behavioral tests pass | Bottom-deck all fewest-material opponent Digimon, self-unsuspend, and opponent-effect protection are active. |
 | `BT24-101` Jupitermon | implemented 2026-05-03; production YAML and 12 focused behavioral tests pass | Keep in validated-cards report as implemented; standard Lv5 yellow cost-5, Lv5 TS cost-3, and dynamic Aegiochusmon route precedence are covered; no remaining BT24-101-specific blocker from this audit. |
-| `BT24-085` Dan Yuki & Kanan Yuki | blocked by Option use from hand and may-attack | End-turn suspend cost, dynamic Option use ceiling, then TS may-attack |
+| `BT24-085` Dan Yuki & Kanan Yuki | implemented 2026-05-24; production YAML and focused behavioral tests pass | End-turn suspend cost, dynamic TS Option use ceiling, normal Option lifecycle, and TS may-attack are active. |
 | `BT24-037` Silphymon | implemented Track D slice 2026-05-08; shared On Play/WD -5000 DP + may-attack branch and DNA-origin Security A.+1/+5000 DP rider covered | Track D proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_037`. |
 | `BT24-004`, `BT24-046`, `P-194`, `P-196`, `P-197`, `P-198` | implemented 2026-05-10; production YAML and focused behavioral tests pass | Keep in validated-cards report as implemented; evidence command covers all eight 2026-05-10 batch cards. |
-| `BT24-083`, `BT24-088` | authoring / test gap with existing play-from-hand/trash helpers | Return Tamer to deck as cost, free-play matching card, On Play search/trash-draw |
-| `BT24-090` Abyss Sanctuary | blocked by top/bottom security movement and option self-disposition tests | Main bottom-security-to-hand, self face-up bottom security, reduced-cost play, Security hand/trash free play |
+| `BT24-083`, `BT24-088` | implemented 2026-05-24; production YAML and focused behavioral tests pass | Return Tamer to deck as cost, free-play matching card, On Play search, and trash-draw flows are active. |
+| `BT24-090` Abyss Sanctuary | implemented 2026-05-24; production YAML and focused behavioral tests pass | Main bottom-security-to-hand, self face-up bottom security, reduced-cost play, security auras, and Security hand/trash free play are active. |
 
 ## Stale Tracker Cleanup Candidates
 

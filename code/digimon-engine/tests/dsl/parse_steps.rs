@@ -169,3 +169,18 @@ fn add_modifier_target_as_predicate_filter() {
         _ => panic!("expected AddModifier"),
     }
 }
+
+#[test]
+fn use_option_from_hand_step_parses_filter_and_cost_ceiling() {
+    let step = parse_single_step(
+        r#"use_option_from_hand: { of: you, filter: { kind: option, trait_has: TS }, use_cost_lte_opponent_memory: true, optional: true }"#,
+    );
+    match step {
+        StepSpec::UseOptionFromHand(args) => {
+            assert!(args.use_cost_lte_opponent_memory);
+            assert!(args.optional);
+            assert_eq!(args.filter.trait_has.as_deref(), Some("TS"));
+        }
+        _ => panic!("expected UseOptionFromHand"),
+    }
+}

@@ -1,9 +1,7 @@
 //! Phase 2g source-selection DSL verbs parse and lower into compiled steps.
 
 use digimon_dsl::compile::compile;
-use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledClause, CompiledPredicate, CompiledStep,
-};
+use digimon_dsl::compiled::{CompiledBindingRef, CompiledClause, CompiledPredicate, CompiledStep};
 use digimon_dsl::spec::CardSpec;
 
 fn compile_first_step(yaml: &str) -> CompiledStep {

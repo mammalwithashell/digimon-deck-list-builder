@@ -58,3 +58,48 @@ fn add_modifier_filter_targets_every_match() {
     }
     assert_eq!(total, 3, "all 3 digimon should carry CannotBeAffected");
 }
+
+#[test]
+fn add_modifier_filter_can_install_timing_suppression_modifier() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .add_card(make_test_card("D1", "D1"))
+        .add_card(make_test_card("D2", "D2"))
+        .hand(0, &["SRC"])
+        .build();
+
+    let first = runner.place_on_field(0, "D1", None);
+    let second = runner.place_on_field(1, "D2", None);
+    let src_card = runner.game.players[0].hand[0].handle();
+
+    let steps = vec![CompiledStep::AddModifier {
+        target: CompiledModifierTarget::Filter(CompiledPredicate {
+            kind: Some(CompiledCardKind::Digimon),
+            ..CompiledPredicate::default()
+        }),
+        modifier: "CannotActivateWhenAttackingEffects".to_string(),
+        value: CompiledModifierValue::Literal(0),
+        expiry: "end_of_turn".to_string(),
+    }];
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        let mut bindings = Bindings::new();
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    assert!(
+        runner
+            .game
+            .modifiers
+            .has(first, ModifierType::CannotActivateWhenAttackingEffects),
+        "filter-target add_modifier should install timing suppression on the first Digimon"
+    );
+    assert!(
+        runner
+            .game
+            .modifiers
+            .has(second, ModifierType::CannotActivateWhenAttackingEffects),
+        "filter-target add_modifier should install timing suppression on the second Digimon"
+    );
+}

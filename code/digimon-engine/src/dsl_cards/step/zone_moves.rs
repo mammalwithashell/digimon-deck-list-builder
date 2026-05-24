@@ -144,6 +144,11 @@ pub fn try_run(
             ctx.add_top_security_to_hand(p);
             true
         }
+        CompiledStep::AddBottomSecurityToHand { of } => {
+            let p = resolve_player(ctx, *of);
+            ctx.add_bottom_security_to_hand(p);
+            true
+        }
         CompiledStep::MayAddTopSecurityToHand { of } => {
             let p = resolve_player(ctx, *of);
             install_may_add_top_security_to_hand(ctx, p);

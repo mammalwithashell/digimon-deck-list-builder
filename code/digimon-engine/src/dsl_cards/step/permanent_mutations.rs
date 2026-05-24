@@ -61,6 +61,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
                 if let Some(card) = ctx.return_to_hand(h) {
+                    bindings.record_returned_card(card);
                     bindings.record_added_to_hand(card);
                 }
             }
@@ -134,13 +135,24 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::DeDigivolve {
             target,
             amount,
+            amount_fn,
             stop_at_level,
         } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
+                let resolved_amount = amount_fn.as_ref().map(|formula| {
+                    let raw = crate::dsl_cards::formula_eval::evaluate_with_bindings(
+                        formula,
+                        ctx,
+                        h,
+                        Some(bindings),
+                    );
+                    raw.clamp(0, i32::from(u8::MAX)) as u8
+                });
+                let amount = resolved_amount.or(*amount);
                 // Engine signature is (target, stop_at_level, amount) — note stop_at_level
                 // precedes amount here, opposite to CompiledStep field order.
-                ctx.de_digivolve(h, *stop_at_level, *amount);
+                ctx.de_digivolve(h, *stop_at_level, amount);
             }
             true
         }

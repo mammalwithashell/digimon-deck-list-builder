@@ -1,0 +1,100 @@
+card: BT24-090
+name: "Abyss Sanctuary: Throne Room"
+kind: option
+color: [blue, yellow]
+cost: 3
+traits: [Iliad, TS]
+
+use_requirement:
+  face_up_security_count_lte: 0
+
+effects:
+  - kind: flood_gate
+    active_when:
+      face_up_security_count_lte: 0
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT24-090" }
+    summary: "While you have no face-up security cards, ignore color requirements for this card"
+
+  - kind: aura
+    scope: security
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: blue
+        - color_is: yellow
+    grant_keyword: { keyword: Blocker }
+    summary: "[Security][All Turns] Your blue/yellow TS Digimon gain Blocker"
+
+  - kind: aura
+    scope: security
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - name_is: "Neptunemon"
+              - name_is: "Venusmon"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: blue
+        - color_is: yellow
+    grant_keyword: { keyword: Alliance }
+    summary: "[Security][All Turns] With Neptunemon or Venusmon, your blue/yellow TS Digimon gain Alliance"
+
+  - when: main_from_hand
+    summary: "[Main] Add bottom security to hand, place this face-up as bottom security, then may play a blue/yellow TS Digimon for -3"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_self_option_at_security:
+          position: bottom
+          face: up
+      - select_hand:
+          of: you
+          bind_as: picked_digimon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+              - any_of:
+                  - color_is: blue
+                  - color_is: yellow
+          prompt: "You may play 1 blue or yellow [TS] Digimon card from hand with the play cost reduced by 3"
+      - play_from_hand:
+          of: you
+          hand_index: picked_digimon
+          cost_delta: { reduce: 3 }
+
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 level 4 or lower blue/yellow TS Digimon from hand or trash free"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: TS
+              - any_of:
+                  - color_is: blue
+                  - color_is: yellow
+          prompt: "You may play 1 level 4 or lower blue or yellow [TS] Digimon from hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked

@@ -1531,6 +1531,13 @@ impl Game {
         handle: PermanentHandle,
         trigger_context: Option<TriggerContext>,
     ) {
+        let Some(perm) = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+        else {
+            return;
+        };
         // Layer-2 defensive guard: a "zombie" permanent (slot exists in
         // battle_area but `card_sources` is empty, left over from some
         // body-moving operation that hasn't finished cleanup) has no
@@ -1540,15 +1547,20 @@ impl Game {
         // pattern (e.g. Permanent.cs:2093 `CanAttack` guard). See
         // `G-PERMANENT-EMPTY-DURING-BATCH-DELETION` in
         // `qa/archetype-qa/engine-gaps.md`.
-        let perm_is_live = self
-            .player(handle.player)
-            .battle_area
-            .get(handle.index as usize)
-            .map(|p| !p.card_sources.is_empty())
-            .unwrap_or(false);
-        if !perm_is_live {
+        if perm.card_sources.is_empty() {
             return;
         }
+        let top = perm.top_card();
+        let card_id = top.card_id(&self.card_data).to_string();
+        let source_card = top.handle();
+        let top_source_kind = source_kind_for_card_kind(top.card_kind(&self.card_data));
+
+        let tp = self.turn_player();
+        let is_turn_player = handle.player == tp;
+        if permanent_activation_blocked_for_timing(self, handle, timing) {
+            return;
+        }
+
         // Track H §3 Phase 4i — push granted-triggered-effect entries
         // as QueuedEffect with `granted_effect_id` set. The drainer
         // recognizes these and fetches the body from
@@ -1585,23 +1597,6 @@ impl Game {
                 bypass_once_per_turn: false,
                 granted_effect_id: Some(body_id),
             });
-        }
-        let Some(perm) = self
-            .players
-            .get(handle.player as usize)
-            .and_then(|p| p.battle_area.get(handle.index as usize))
-        else {
-            return;
-        };
-        let top = perm.top_card();
-        let card_id = top.card_id(&self.card_data).to_string();
-        let source_card = top.handle();
-        let top_source_kind = source_kind_for_card_kind(top.card_kind(&self.card_data));
-
-        let tp = self.turn_player();
-        let is_turn_player = handle.player == tp;
-        if permanent_activation_blocked_for_timing(self, handle, timing) {
-            return;
         }
 
         if let Some(effects) = self.effects_for_card(&card_id, source_card) {
@@ -1859,6 +1854,23 @@ impl Game {
         handle: PermanentHandle,
         trigger_context: Option<TriggerContext>,
     ) {
+        let Some(perm) = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.breeding_area.as_ref())
+        else {
+            return;
+        };
+        let top = perm.top_card();
+        let card_id = top.card_id(&self.card_data).to_string();
+        let source_card = top.handle();
+        let source_kind = source_kind_for_card_kind(top.card_kind(&self.card_data));
+        let is_turn_player = handle.player == self.turn_player();
+
+        if permanent_activation_blocked_for_timing(self, handle, timing) {
+            return;
+        }
+
         // Track H §3 Phase 4i — same queue-based granted dispatch as
         // `enqueue_from_permanent`; breeding-area carriers are valid
         // grant targets via the breeding permanent's handle.
@@ -1892,18 +1904,6 @@ impl Game {
                 granted_effect_id: Some(body_id),
             });
         }
-        let Some(perm) = self
-            .players
-            .get(handle.player as usize)
-            .and_then(|p| p.breeding_area.as_ref())
-        else {
-            return;
-        };
-        let top = perm.top_card();
-        let card_id = top.card_id(&self.card_data).to_string();
-        let source_card = top.handle();
-        let source_kind = source_kind_for_card_kind(top.card_kind(&self.card_data));
-        let is_turn_player = handle.player == self.turn_player();
 
         if let Some(effects) = self.effects_for_card(&card_id, source_card) {
             for (slot, effect) in effects.iter().enumerate() {

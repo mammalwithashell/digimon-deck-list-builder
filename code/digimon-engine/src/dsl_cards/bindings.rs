@@ -38,11 +38,23 @@ pub struct Bindings {
 #[derive(Debug, Default, Clone)]
 pub struct EffectResultLog {
     pub suspended: Vec<PermanentHandle>,
+    pub returned_cards: Vec<CardHandle>,
     pub returned_to_deck: Vec<CardHandle>,
     pub deleted: Vec<PermanentHandle>,
     pub played: Vec<PermanentHandle>,
     pub digivolved: Vec<PermanentHandle>,
     pub added_to_hand: Vec<CardHandle>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EffectResultLogCursor {
+    suspended: usize,
+    returned_cards: usize,
+    returned_to_deck: usize,
+    deleted: usize,
+    played: usize,
+    digivolved: usize,
+    added_to_hand: usize,
 }
 
 impl Bindings {
@@ -71,12 +83,29 @@ impl Bindings {
         &self.result_log
     }
 
+    pub fn result_log_cursor(&self) -> EffectResultLogCursor {
+        EffectResultLogCursor {
+            suspended: self.result_log.suspended.len(),
+            returned_cards: self.result_log.returned_cards.len(),
+            returned_to_deck: self.result_log.returned_to_deck.len(),
+            deleted: self.result_log.deleted.len(),
+            played: self.result_log.played.len(),
+            digivolved: self.result_log.digivolved.len(),
+            added_to_hand: self.result_log.added_to_hand.len(),
+        }
+    }
+
     pub fn record_suspended(&mut self, handle: PermanentHandle) {
         self.result_log.suspended.push(handle);
     }
 
     pub fn record_returned_to_deck(&mut self, card: CardHandle) {
+        self.record_returned_card(card);
         self.result_log.returned_to_deck.push(card);
+    }
+
+    pub fn record_returned_card(&mut self, card: CardHandle) {
+        self.result_log.returned_cards.push(card);
     }
 
     pub fn record_deleted(&mut self, handle: PermanentHandle) {
@@ -93,6 +122,40 @@ impl Bindings {
 
     pub fn record_added_to_hand(&mut self, card: CardHandle) {
         self.result_log.added_to_hand.push(card);
+    }
+
+    pub fn merge_result_log_from_since(&mut self, other: &Bindings, cursor: EffectResultLogCursor) {
+        self.result_log.suspended.extend(
+            other.result_log.suspended[cursor.suspended..]
+                .iter()
+                .copied(),
+        );
+        self.result_log.returned_cards.extend(
+            other.result_log.returned_cards[cursor.returned_cards..]
+                .iter()
+                .copied(),
+        );
+        self.result_log.returned_to_deck.extend(
+            other.result_log.returned_to_deck[cursor.returned_to_deck..]
+                .iter()
+                .copied(),
+        );
+        self.result_log
+            .deleted
+            .extend(other.result_log.deleted[cursor.deleted..].iter().copied());
+        self.result_log
+            .played
+            .extend(other.result_log.played[cursor.played..].iter().copied());
+        self.result_log.digivolved.extend(
+            other.result_log.digivolved[cursor.digivolved..]
+                .iter()
+                .copied(),
+        );
+        self.result_log.added_to_hand.extend(
+            other.result_log.added_to_hand[cursor.added_to_hand..]
+                .iter()
+                .copied(),
+        );
     }
 
     pub fn get_permanent(&self, name: &str) -> Option<PermanentHandle> {

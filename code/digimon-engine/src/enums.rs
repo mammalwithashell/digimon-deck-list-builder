@@ -548,6 +548,7 @@ pub enum ModifierType {
     CanAttackUnsuspended,
     CanAttackActivePlayer,
     CannotAttackTarget,
+    CannotBeAttackedBySecurityAttackChanged,
     CannotBeRedirectedAsAttackTarget,
     CanNotSwitchAttackTarget,
 

@@ -510,6 +510,76 @@ fn return_all_trash_to_deck_bottom_records_returned_cards_in_result_log() {
 }
 
 #[test]
+fn return_to_hand_records_returned_card_in_result_log() {
+    // Bounce effects are still "returned" effects. Keep that separate from
+    // generic add-to-hand/search logging so result riders do not overmatch.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("TARGET", "Target"))
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let target = runner.place_on_field(1, "TARGET", Some(1));
+    let target_card = runner.game.player(1).battle_area[target.index as usize]
+        .top_card()
+        .handle();
+    let source_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+
+    let steps = compile_steps(r#"      - return_to_hand: { target: target }"#);
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", target);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert!(
+        bindings.result_log().returned_cards.contains(&target_card),
+        "return_to_hand must feed effect_returned_any_card / returned_card_matching"
+    );
+    assert!(
+        bindings.result_log().added_to_hand.contains(&target_card),
+        "return_to_hand also remains visible to add-to-hand result predicates"
+    );
+}
+
+#[test]
+fn for_each_merges_body_result_log_into_parent_bindings() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("A", "Target A"))
+        .add_card(make_test_card("B", "Target B"))
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let a = runner.place_on_field(1, "A", Some(1));
+    let b = runner.place_on_field(1, "B", Some(1));
+    let a_card = runner.game.player(1).battle_area[a.index as usize]
+        .top_card()
+        .handle();
+    let b_card = runner.game.player(1).battle_area[b.index as usize]
+        .top_card()
+        .handle();
+    let source_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+
+    let steps = compile_steps(
+        r#"      - for_each:
+          over: { of: opponent, zone: [battle_area], kind: digimon }
+          bind_as: target
+          body:
+            - return_to_hand: { target: target }
+"#,
+    );
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
+    let mut bindings = Bindings::new();
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    let logged = &bindings.result_log().returned_cards;
+    assert!(logged.contains(&a_card) && logged.contains(&b_card));
+    assert_eq!(logged.len(), 2);
+}
+
+#[test]
 fn returned_card_matching_fires_when_a_matching_card_was_returned() {
     // BT17-077 clause 1c shape: return all trash, then "if this effect
     // returned a white level 7 card, gain 3 memory".

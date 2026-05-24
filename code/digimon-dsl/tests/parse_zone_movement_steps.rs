@@ -155,10 +155,7 @@ fn gain_memory_fn_parses_and_compiles() {
               - 4
 "#;
     let steps = compile_steps(yaml);
-    assert!(matches!(
-        &steps[0],
-        CompiledStep::GainMemoryFn { .. }
-    ));
+    assert!(matches!(&steps[0], CompiledStep::GainMemoryFn { .. }));
 
     let spec = parse_first_step(yaml);
     assert!(matches!(spec, StepSpec::GainMemoryFn(_)));
@@ -171,10 +168,7 @@ fn lose_memory_fn_parses_and_compiles() {
           formula: 3
 "#,
     );
-    assert!(matches!(
-        &steps[0],
-        CompiledStep::LoseMemoryFn { .. }
-    ));
+    assert!(matches!(&steps[0], CompiledStep::LoseMemoryFn { .. }));
 }
 
 #[test]

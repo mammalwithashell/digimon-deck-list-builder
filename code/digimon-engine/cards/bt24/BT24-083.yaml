@@ -1,0 +1,47 @@
+card: BT24-083
+name: Hiroko Sagisaka
+kind: tamer
+color: [red]
+cost: 3
+traits: [TS]
+
+effects:
+  - when: start_of_your_turn
+    optional: true
+    condition: { memory_lte: 4 }
+    summary: "[Start of Your Turn] If memory <=4, return this Tamer to deck bottom to play Hiroko or a TS Digimon with 5000 DP or less from hand free"
+    process:
+      - activation_cost: { return_self_to_deck_bottom: true }
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - name_is: "Hiroko Sagisaka"
+              - all_of:
+                  - kind: digimon
+                  - trait_has: TS
+                  - dp_lte: 5000
+          prompt: "Play 1 [Hiroko Sagisaka] or TS Digimon with 5000 DP or less from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  - when: on_play
+    summary: "[On Play] Reveal top 3; add 1 TS card; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: ts_pick
+              min: 1
+              max: 1
+              filter: { trait_has: TS }
+          prompt: "Add 1 card with the [TS] trait to your hand"
+      - add_to_hand_from_reveal: { of: you, card: ts_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

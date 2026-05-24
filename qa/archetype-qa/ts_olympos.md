@@ -5,6 +5,15 @@ Total cards: 105
 ## Summary
 See TS Jupitermon and TS Neptunemon reviews for shared card verdicts.
 
+## Rust Representative Training Unlock (2026-05-24)
+
+The Rust DSL representative unlock is tracked in `qa/archetype-qa/dsl/ts-olympos-2026-05-03-dsl-engine-gaps.md`.
+
+- Representative deck: 23/23 unique cards have production Rust YAML and focused behavioral coverage.
+- Broad TS Olympos pool: 62/117 unique cards have production Rust YAML.
+- Broad residual cards: 55, listed in the Rust DSL tracker.
+- Training implication: no additional representative cards are needed before TS Olympos can be admitted to Rust-backed representative training runs; the local PyO3 registry was rebuilt and verified during the closure pass.
+
 This archetype shares most cards with TS Jupitermon (30 cards) and TS Neptunemon (30 cards), plus additional Olympos XII support. The 5 cards fixed in the cross-archetype pass (BT24-051, BT24-090, BT24-094, BT24-085, BT24-101) are documented in their respective archetype QA files.
 
 - FAITHFUL: 90+ (combined from TS Jupitermon + TS Neptunemon + unique Olympos cards)
