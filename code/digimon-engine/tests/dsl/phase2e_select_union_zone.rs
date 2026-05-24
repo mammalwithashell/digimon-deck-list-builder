@@ -44,6 +44,7 @@ fn select_union_zone_picks_from_hand_or_trash() {
             prompt: "Pick from hand or trash".to_string(),
             prompt_key: None,
             optional: false,
+            cost: false,
             then: vec![],
         },
         CompiledStep::GainMemory(1),

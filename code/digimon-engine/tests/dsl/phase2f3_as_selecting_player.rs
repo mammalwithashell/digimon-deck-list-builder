@@ -104,6 +104,7 @@ fn as_selecting_player_chained_selects_all_route_to_override() {
             prompt: "pick hand".to_string(),
             prompt_key: None,
             optional: false,
+            cost: false,
         },
     ];
     let steps = vec![CompiledStep::AsSelectingPlayer {

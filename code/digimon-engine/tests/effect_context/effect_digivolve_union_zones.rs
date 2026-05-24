@@ -63,6 +63,7 @@ fn selected_union_zone_card_can_feed_effect_digivolve_from_card_handle() {
             prompt: "Pick evolution card".to_string(),
             prompt_key: None,
             optional: false,
+            cost: false,
             then: vec![],
         },
         CompiledStep::EffectInitiatedDigivolve {

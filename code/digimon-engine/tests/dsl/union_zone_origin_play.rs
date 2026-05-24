@@ -46,6 +46,7 @@ fn fixture_steps() -> Vec<CompiledStep> {
             prompt: "Pick from hand or trash".to_string(),
             prompt_key: None,
             optional: true,
+            cost: false,
             then: vec![],
         },
         CompiledStep::PlayUnionBoundFree {
@@ -150,6 +151,7 @@ fn material_fixture_steps() -> Vec<CompiledStep> {
             prompt: "Pick from materials".to_string(),
             prompt_key: None,
             optional: true,
+            cost: false,
             then: vec![],
         },
         CompiledStep::PlayUnionBoundFree {

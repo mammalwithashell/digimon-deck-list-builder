@@ -28,10 +28,14 @@ effects:
             - trait_has: LIBERATOR
         n: 1
     process:
+      # cost: true — the printed text is "BY trashing 1 [...] card, <Draw 2>".
+      # Declining this prompt is declining the whole cost, so the trash AND
+      # the draw must NOT run. See `G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE`.
       - select_hand:
           of: you
           bind_as: discard
           optional: true
+          cost: true
           filter:
             any_of:
               - trait_has: Reptile

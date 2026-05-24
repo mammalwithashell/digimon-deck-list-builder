@@ -341,6 +341,18 @@ fn run_steps_with_runtime_inner(
 ) -> RunOutcome {
     let mut i = 0;
     while i < steps.len() {
+        // Cost-pay abort short-circuit (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).
+        // When the player PASSes on an optional cost-pay prompt
+        // (`select_hand`/`select_trash`/`select_union_zone` with
+        // `optional: true`), the install's `on_decline` sets
+        // `dsl_clause_aborted = true`. Every subsequent step in this clause
+        // body — and any outer-tail draining that comes after — must skip,
+        // so a "By trashing X, Y" cost does not run Y when X was declined.
+        // The flag is scoped to the `on_decline` invocation by
+        // `effect_queue::resolve_generic_selection` (save+restore).
+        if ctx.game.dsl_clause_aborted {
+            return RunOutcome::Synchronous;
+        }
         let step = &steps[i];
 
         if let Some(outcome) = control_flow::try_run(step, ctx, bindings, runtime) {
