@@ -187,8 +187,13 @@ return ActionMasker(env, mask_fn)
 
 A small `MulliganLogConfig` value object (just `output_dir`, `enabled`,
 `run_metadata`) is constructed once in `train()` and threaded through
-`make_env` / `make_vec_env`. The env factory then constructs a
-`MulliganLogWriter` *per env* with the correct `env_index`:
+`make_env` / `make_vec_env`, plus through the eval env factory
+(`eval_env_fn` inside `train()`) so that periodic eval games also get
+logged with `source="eval"`. Eval and `env_index=0` training records
+mix into the same `mulligan_log_env_000.jsonl` file but are
+distinguishable by the `source` column at analysis time. The env factory
+then constructs a `MulliganLogWriter` *per env* with the correct
+`env_index`:
 
 ```python
 mulligan_log_cfg = MulliganLogConfig(
