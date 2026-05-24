@@ -375,6 +375,20 @@ class WinRateCallback(BaseCallback):
         self._matchup_wins: Dict[tuple, int] = {}
         self._matchup_draws: Dict[tuple, int] = {}
         self._matchup_games: Dict[tuple, int] = {}
+        # Per-archetype digivolve activity counters. Cumulative across all evals
+        # since callback construction, same lifecycle as the wins dicts above.
+        # See openspec/changes/digivolve-eval-telemetry/ for the surface spec.
+        #
+        # Opponent-keyed (bucketed by opp archetype, mirrors _archetype_wins):
+        #   *_agent_digivolves    — AGENT's digivolves in games vs this opp (p1)
+        #   *_opponent_digivolves — OPPONENT's digivolves in those games (p2)
+        self._archetype_agent_digivolves: Dict[str, int] = {}
+        self._archetype_agent_dna_digivolves: Dict[str, int] = {}
+        self._archetype_opponent_digivolves: Dict[str, int] = {}
+        self._archetype_opponent_dna_digivolves: Dict[str, int] = {}
+        # Agent-keyed (bucketed by agent archetype, generalist mode only):
+        self._agent_archetype_digivolves: Dict[str, int] = {}
+        self._agent_archetype_dna_digivolves: Dict[str, int] = {}
 
     def get_archetype_results(self):
         """Return per-archetype results as ArchetypeResult list."""
@@ -447,6 +461,8 @@ class WinRateCallback(BaseCallback):
         # docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
         total_digivolves = 0
         total_dna_digivolves = 0
+        total_opponent_digivolves = 0
+        total_opponent_dna_digivolves = 0
 
         for _ in range(self.n_eval_episodes):
             obs, info = eval_env.reset()
@@ -482,13 +498,24 @@ class WinRateCallback(BaseCallback):
             total_reward += episode_reward
             total_steps += steps
 
-            # Read final digivolve counters from the agent (p1). Robust to
-            # backends that don't surface the keys (defaults to 0).
+            # Read final digivolve counters from agent (p1) and opponent (p2).
+            # Robust to backends that don't surface the keys (defaults to 0).
+            # Per-game values are also bucketed by archetype below.
+            p1_digi_game = 0
+            p1_dna_game = 0
+            p2_digi_game = 0
+            p2_dna_game = 0
             if eval_env is not None:
                 try:
                     final_state = _unwrap_to_digimon_env(eval_env)._rl_state()
-                    total_digivolves += int(final_state.get("p1_digivolutions", 0))
-                    total_dna_digivolves += int(final_state.get("p1_dna_digivolutions", 0))
+                    p1_digi_game = int(final_state.get("p1_digivolutions", 0))
+                    p1_dna_game = int(final_state.get("p1_dna_digivolutions", 0))
+                    p2_digi_game = int(final_state.get("p2_digivolutions", 0))
+                    p2_dna_game = int(final_state.get("p2_dna_digivolutions", 0))
+                    total_digivolves += p1_digi_game
+                    total_dna_digivolves += p1_dna_game
+                    total_opponent_digivolves += p2_digi_game
+                    total_opponent_dna_digivolves += p2_dna_game
                 except Exception:
                     pass
 
@@ -524,6 +551,27 @@ class WinRateCallback(BaseCallback):
                     self._archetype_draws[opponent_archetype] = (
                         self._archetype_draws.get(opponent_archetype, 0) + 1
                     )
+                # Per-opponent digivolve tally. Agent (p1) AND opponent (p2)
+                # counts are bucketed by opponent archetype so the sidecar
+                # `by_archetype[opp]` can carry both "agent's digivolves vs
+                # this opp" and "this opp's digivolves" without a separate
+                # axis. See openspec/changes/digivolve-eval-telemetry/.
+                self._archetype_agent_digivolves[opponent_archetype] = (
+                    self._archetype_agent_digivolves.get(opponent_archetype, 0)
+                    + p1_digi_game
+                )
+                self._archetype_agent_dna_digivolves[opponent_archetype] = (
+                    self._archetype_agent_dna_digivolves.get(opponent_archetype, 0)
+                    + p1_dna_game
+                )
+                self._archetype_opponent_digivolves[opponent_archetype] = (
+                    self._archetype_opponent_digivolves.get(opponent_archetype, 0)
+                    + p2_digi_game
+                )
+                self._archetype_opponent_dna_digivolves[opponent_archetype] = (
+                    self._archetype_opponent_dna_digivolves.get(opponent_archetype, 0)
+                    + p2_dna_game
+                )
             # Agent-archetype + full N×N matchup grid (generalist mode only;
             # gauntlet mode has a fixed agent deck so agent_archetype is None).
             if agent_archetype:
@@ -538,6 +586,17 @@ class WinRateCallback(BaseCallback):
                     self._agent_archetype_draws[agent_archetype] = (
                         self._agent_archetype_draws.get(agent_archetype, 0) + 1
                     )
+                # Per-agent-archetype digivolve tally — only the agent side,
+                # since the opponent's archetype is the natural index for
+                # opponent digivolves (handled in the opp guard above).
+                self._agent_archetype_digivolves[agent_archetype] = (
+                    self._agent_archetype_digivolves.get(agent_archetype, 0)
+                    + p1_digi_game
+                )
+                self._agent_archetype_dna_digivolves[agent_archetype] = (
+                    self._agent_archetype_dna_digivolves.get(agent_archetype, 0)
+                    + p1_dna_game
+                )
                 if opponent_archetype:
                     matchup = (agent_archetype, opponent_archetype)
                     self._matchup_games[matchup] = (
@@ -561,6 +620,8 @@ class WinRateCallback(BaseCallback):
         mean_dense_reward = total_dense_reward / self.n_eval_episodes
         mean_digivolves = total_digivolves / self.n_eval_episodes
         mean_dna_digivolves = total_dna_digivolves / self.n_eval_episodes
+        mean_opp_digivolves = total_opponent_digivolves / self.n_eval_episodes
+        mean_opp_dna_digivolves = total_opponent_dna_digivolves / self.n_eval_episodes
 
         self.last_win_rate = win_rate
         self.last_mean_reward = mean_reward
@@ -570,6 +631,8 @@ class WinRateCallback(BaseCallback):
         self.last_mean_eval_episode_length = mean_length
         self.last_mean_eval_digivolves_per_game = mean_digivolves
         self.last_mean_eval_dna_digivolves_per_game = mean_dna_digivolves
+        self.last_mean_eval_opponent_digivolves_per_game = mean_opp_digivolves
+        self.last_mean_eval_opponent_dna_digivolves_per_game = mean_opp_dna_digivolves
 
         self.logger.record("pilot/win_rate", win_rate)
         self.logger.record("pilot/draw_rate", draw_rate)
@@ -579,6 +642,13 @@ class WinRateCallback(BaseCallback):
         self.logger.record("pilot/mean_eval_episode_length", mean_length)
         self.logger.record("pilot/mean_eval_digivolves_per_game", mean_digivolves)
         self.logger.record("pilot/mean_eval_dna_digivolves_per_game", mean_dna_digivolves)
+        self.logger.record(
+            "pilot/mean_eval_opponent_digivolves_per_game", mean_opp_digivolves
+        )
+        self.logger.record(
+            "pilot/mean_eval_opponent_dna_digivolves_per_game",
+            mean_opp_dna_digivolves,
+        )
         self.logger.record("pilot/games_played", self.games_played)
 
         # Per-archetype matchup tracking. Populated by GeneralistDeckPoolWrapper
@@ -606,6 +676,20 @@ class WinRateCallback(BaseCallback):
             self.logger.record(f"pilot/archetype/{safe}/win_rate", wins / games)
             self.logger.record(f"pilot/archetype/{safe}/draw_rate", draws / games)
             self.logger.record(f"pilot/archetype/{safe}/games", float(games))
+            # Opponent-side digivolve rates — how often THIS opponent archetype
+            # digivolves on average in games against the agent. Surfaced under
+            # the existing pilot/archetype/<opp>/... namespace so dashboards
+            # group with the existing win/draw scalars.
+            opp_digi = self._archetype_opponent_digivolves.get(arch_name, 0)
+            opp_dna = self._archetype_opponent_dna_digivolves.get(arch_name, 0)
+            self.logger.record(
+                f"pilot/archetype/{safe}/opponent_digivolves_per_game",
+                opp_digi / games,
+            )
+            self.logger.record(
+                f"pilot/archetype/{safe}/opponent_dna_digivolves_per_game",
+                opp_dna / games,
+            )
 
         for arch_name in sorted(self._agent_archetype_games.keys()):
             games = self._agent_archetype_games[arch_name]
@@ -617,6 +701,18 @@ class WinRateCallback(BaseCallback):
             self.logger.record(f"pilot/agent_archetype/{safe}/win_rate", wins / games)
             self.logger.record(f"pilot/agent_archetype/{safe}/draw_rate", draws / games)
             self.logger.record(f"pilot/agent_archetype/{safe}/games", float(games))
+            # Agent-side digivolve rates — how often the AGENT digivolves when
+            # piloting this archetype. Sibling to win_rate above.
+            agent_digi = self._agent_archetype_digivolves.get(arch_name, 0)
+            agent_dna = self._agent_archetype_dna_digivolves.get(arch_name, 0)
+            self.logger.record(
+                f"pilot/agent_archetype/{safe}/digivolves_per_game",
+                agent_digi / games,
+            )
+            self.logger.record(
+                f"pilot/agent_archetype/{safe}/dna_digivolves_per_game",
+                agent_dna / games,
+            )
 
         for matchup in sorted(self._matchup_games.keys()):
             games = self._matchup_games[matchup]
@@ -689,14 +785,51 @@ class WinRateCallback(BaseCallback):
                 "mean_dense_reward": mean_dense_reward,
                 "mean_eval_episode_length": mean_length,
                 "games_played": self.games_played,
+                # Digivolve activity per eval window. Fired unconditionally
+                # (observational, not gated on digivolve_shaping) so the
+                # sidecar schema is stable across shaped/unshaped runs.
+                "mean_eval_digivolves_per_game": float(
+                    getattr(self, "last_mean_eval_digivolves_per_game", 0.0)
+                ),
+                "mean_eval_dna_digivolves_per_game": float(
+                    getattr(self, "last_mean_eval_dna_digivolves_per_game", 0.0)
+                ),
+                "mean_eval_opponent_digivolves_per_game": float(
+                    getattr(
+                        self, "last_mean_eval_opponent_digivolves_per_game", 0.0
+                    )
+                ),
+                "mean_eval_opponent_dna_digivolves_per_game": float(
+                    getattr(
+                        self,
+                        "last_mean_eval_opponent_dna_digivolves_per_game",
+                        0.0,
+                    )
+                ),
             }
             if self._archetype_games:
+                # Per-opponent-archetype cumulative tallies. `digivolves` /
+                # `dna_digivolves` are the AGENT's counts when facing this
+                # opponent (sourced from p1_*). `opponent_*` are this opp's
+                # counts in those games (sourced from p2_*). Asymmetry is
+                # intentional — see openspec/changes/digivolve-eval-telemetry/
+                # design.md Decision 5.
                 row["by_archetype"] = {
                     name: {
                         "wins": self._archetype_wins.get(name, 0),
                         "draws": self._archetype_draws.get(name, 0),
                         "games": games,
                         "win_rate": self._archetype_wins.get(name, 0) / max(1, games),
+                        "digivolves": self._archetype_agent_digivolves.get(name, 0),
+                        "dna_digivolves": self._archetype_agent_dna_digivolves.get(
+                            name, 0
+                        ),
+                        "opponent_digivolves": self._archetype_opponent_digivolves.get(
+                            name, 0
+                        ),
+                        "opponent_dna_digivolves": self._archetype_opponent_dna_digivolves.get(
+                            name, 0
+                        ),
                     }
                     for name, games in self._archetype_games.items()
                 }

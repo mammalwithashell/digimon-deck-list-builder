@@ -133,6 +133,8 @@ Compose the four headline pieces.
 
 Header keys are normalized: `"Algorithm"` → `"algorithm"`, `"Total steps"` → `"total_steps"`, `"Layout hash"` → `"layout_hash"`. Panic families are sourced from [`qa/archetype-qa/panic-families.json`](../qa/archetype-qa/panic-families.json); unmatched panics roll up under `"other"`. If the eval sidecar is absent (older runs), `evals` falls back to regex-parsing `[Eval @ N steps] ...` lines from the console — the row shape is a subset of the sidecar shape (no `draw_rate`, no `by_archetype`).
 
+Sidecar rows are surfaced verbatim, so any fields the `WinRateCallback` writes appear in `evals` without an MCP code change. Per-archetype digivolve counts (`by_archetype[opp].digivolves` / `dna_digivolves` / `opponent_digivolves` / `opponent_dna_digivolves`) and the four `mean_eval_*_digivolves_per_game` top-level fields are surfaced this way — see [`TRAINING_RUNBOOK.md §8`](TRAINING_RUNBOOK.md) for the field semantics.
+
 ### `run_metric(name, tag, since_step?)`
 
 TensorBoard scalar time-series. `tag` may be a string or an array.

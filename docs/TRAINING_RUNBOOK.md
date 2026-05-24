@@ -360,6 +360,16 @@ See `pilot_training.make_env()` for the full parameter list covering: opponent s
 | `pilot/mean_eval_reward` | Average episode reward in eval |
 | `pilot/mean_eval_episode_length` | Average steps per eval episode |
 | `pilot/games_played` | Cumulative training episodes |
+| `pilot/mean_eval_digivolves_per_game` | Agent (p1) regular digivolves per eval game |
+| `pilot/mean_eval_dna_digivolves_per_game` | Agent (p1) DNA digivolves per eval game |
+| `pilot/mean_eval_opponent_digivolves_per_game` | Opponent (p2) regular digivolves per eval game |
+| `pilot/mean_eval_opponent_dna_digivolves_per_game` | Opponent (p2) DNA digivolves per eval game |
+| `pilot/agent_archetype/<X>/digivolves_per_game` | Cumulative agent digivolves piloting `<X>` ÷ games as `<X>` |
+| `pilot/agent_archetype/<X>/dna_digivolves_per_game` | Cumulative agent DNA digivolves piloting `<X>` ÷ games as `<X>` |
+| `pilot/archetype/<X>/opponent_digivolves_per_game` | Cumulative opponent digivolves when opp is `<X>` ÷ games vs `<X>` |
+| `pilot/archetype/<X>/opponent_dna_digivolves_per_game` | Cumulative opponent DNA digivolves when opp is `<X>` ÷ games vs `<X>` |
+
+Digivolve telemetry fires unconditionally — it is observational, not gated on `digivolve_shaping`. Runs with shaping off emit the same scalar set with their actual (often zero) values, so the shaping-on vs. shaping-off A/B compare uses an identical schema.
 
 ### Viewing Logs
 
@@ -368,6 +378,37 @@ tensorboard --logdir runs/pilot_ppo
 ```
 
 Default log directory: `runs/pilot_ppo` (override with `--log-dir`).
+
+### Eval Sidecar (`runs/<name>/evals.jsonl`)
+
+One JSON line per eval window. Top-level fields include the headline scalars plus four per-eval digivolve means:
+
+| Field | Description |
+|---|---|
+| `step` / `wall_time` / `games_played` | Training-step, time, cumulative episodes |
+| `win_rate` / `draw_rate` / `mean_reward` | Headline outcomes |
+| `mean_terminal_score` / `mean_dense_reward` / `mean_eval_episode_length` | Reward decomposition |
+| `mean_eval_digivolves_per_game` | Agent (p1) regular digivolves per game, this eval window |
+| `mean_eval_dna_digivolves_per_game` | Agent (p1) DNA digivolves per game, this eval window |
+| `mean_eval_opponent_digivolves_per_game` | Opponent (p2) regular digivolves per game |
+| `mean_eval_opponent_dna_digivolves_per_game` | Opponent (p2) DNA digivolves per game |
+| `by_archetype` | Object keyed by opponent archetype; see below |
+
+`by_archetype` carries cumulative-since-callback-construction counts per opponent archetype:
+
+```json
+"by_archetype": {
+  "DNA Omnimon": {
+    "wins": 12, "draws": 1, "games": 30, "win_rate": 0.4,
+    "digivolves": 28, "dna_digivolves": 0,
+    "opponent_digivolves": 22, "opponent_dna_digivolves": 1
+  }
+}
+```
+
+**Naming asymmetry — important.** Within a `by_archetype` value, `digivolves` and `dna_digivolves` are the **agent's** counts in games where this entry's key was the opponent (sourced from `p1_*`). `opponent_digivolves` / `opponent_dna_digivolves` are the **opponent's** counts in those same games (sourced from `p2_*`). This mirrors the existing `wins` semantic (the agent's wins vs this opponent) — the `by_archetype` block is opponent-indexed, but its agent-side counters and opponent-side counters live side by side.
+
+**Forward compatibility.** Sidecar rows written before this change lack the four top-level mean fields and the four per-archetype count fields. Lenient readers (the training MCP, ad-hoc `json.loads`-and-`.get`) work unchanged; strict whitelist readers need to widen.
 
 ---
 
