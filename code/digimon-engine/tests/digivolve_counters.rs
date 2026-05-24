@@ -83,3 +83,26 @@ fn dna_digivolve_increments_both_active_player_counters_once() {
     assert_eq!(runner.game.n_digivolutions, [1u32, 0u32]);
     assert_eq!(runner.game.n_dna_digivolutions, [1u32, 0u32]);
 }
+
+/// If a DNA digivolve is rejected for a phase-illegality reason (here:
+/// invoking it outside the Main phase), the counters must stay at zero.
+/// This locks the implementation choice "increment after legality
+/// validation, before state mutation" — any refactor that moves the
+/// bump earlier in the function will fail this test.
+#[test]
+fn rejected_dna_digivolve_does_not_increment_counters() {
+    let dna = make_test_dna_card("TST-DNA", "DnaDigi", 5, 6, 0);
+    let mut runner = DebugRunner::builder()
+        .add_card(dna)
+        .hand(0, &["TST-DNA"])
+        .start();
+
+    // Non-Main phase: initiate_dna_digivolve should reject up-front.
+    runner.game.current_phase = GamePhase::EndTurn;
+
+    let ok = runner.game.initiate_dna_digivolve(0, 0);
+    assert!(!ok, "non-Main phase must reject the DNA digivolve");
+
+    assert_eq!(runner.game.n_digivolutions, [0u32, 0u32]);
+    assert_eq!(runner.game.n_dna_digivolutions, [0u32, 0u32]);
+}
