@@ -773,7 +773,10 @@ def make_env(opponent: str = "greedy",
              recording_writer: Optional[TrainingGameRecorder] = None,
              recording_source: str = "train",
              recording_env_index: int = 0,
-             mulligan_log_cfg: Optional[_MulliganLogConfig] = None) -> gymnasium.Env:
+             mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
+             digivolve_shaping: bool = False,
+             digivolve_reward: float = 0.1,
+             dna_digivolve_bonus: float = 0.3) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -819,6 +822,9 @@ def make_env(opponent: str = "greedy",
         tensor_profile=tensor_profile,
         record_actions=record_this_source,
         record_tensors=record_this_source and recording_writer.record_tensors,
+        digivolve_shaping=digivolve_shaping,
+        digivolve_reward=digivolve_reward,
+        dna_digivolve_bonus=dna_digivolve_bonus,
     )
 
     if opponent == "self-play":
@@ -922,6 +928,9 @@ def make_vec_env(
                 tensor_profile=cfg.tensor_profile,
                 record_actions=record_this_source,
                 record_tensors=record_this_source and recording_writer.record_tensors,
+                digivolve_shaping=cfg.digivolve_shaping,
+                digivolve_reward=cfg.digivolve_reward,
+                dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             )
             wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
             if generalist_deck_pool is not None:
@@ -1232,6 +1241,9 @@ def train(total_timesteps: int = 100_000,
             recording_writer=recording_writer,
             recording_source="train",
             mulligan_log_cfg=mulligan_log_cfg,
+            digivolve_shaping=cfg.digivolve_shaping,
+            digivolve_reward=cfg.digivolve_reward,
+            dna_digivolve_bonus=cfg.dna_digivolve_bonus,
         )
 
     # Load autoencoder embeddings for warm-start (if available)
@@ -1324,6 +1336,9 @@ def train(total_timesteps: int = 100_000,
                 tensor_profile=cfg.tensor_profile,
                 record_actions=recording_writer.enabled,
                 record_tensors=recording_writer.enabled and recording_writer.record_tensors,
+                digivolve_shaping=cfg.digivolve_shaping,
+                digivolve_reward=cfg.digivolve_reward,
+                dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             )
             wrapped = OpponentWrapper(base_env, opponent_fn=pool_opponent_fn)
             if generalist_deck_pool is not None:
@@ -1371,6 +1386,9 @@ def train(total_timesteps: int = 100_000,
             recording_writer=recording_writer,
             recording_source="eval",
             mulligan_log_cfg=mulligan_log_cfg,
+            digivolve_shaping=cfg.digivolve_shaping,
+            digivolve_reward=cfg.digivolve_reward,
+            dna_digivolve_bonus=cfg.dna_digivolve_bonus,
         )
     eval_suite = None
     if cfg.eval_suite:

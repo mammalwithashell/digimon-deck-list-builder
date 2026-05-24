@@ -194,3 +194,39 @@ def test_shaping_off_default_matches_baseline_reward_path() -> None:
         assert math.isclose(reward, expected, abs_tol=1e-9), (
             f"shaping-off reward {reward} != baseline {expected} for state {state}"
         )
+
+
+# ─── pilot_training.make_env wiring smoke (Task 10) ──────────────────────
+
+
+def _unwrap_to_digimon_env(env) -> DigimonEnv:
+    inner = env
+    while hasattr(inner, "env") and not isinstance(inner, DigimonEnv):
+        inner = inner.env
+    assert isinstance(inner, DigimonEnv)
+    return inner
+
+
+def test_make_env_threads_shaping_kwargs_through_to_digimon_env() -> None:
+    from digimon_gym.agents.pilot_training import make_env
+
+    env = make_env(
+        opponent="greedy",
+        digivolve_shaping=True,
+        digivolve_reward=0.15,
+        dna_digivolve_bonus=0.5,
+    )
+    inner = _unwrap_to_digimon_env(env)
+    assert inner.digivolve_shaping is True
+    assert inner.digivolve_reward == 0.15
+    assert inner.dna_digivolve_bonus == 0.5
+
+
+def test_make_env_defaults_keep_shaping_off() -> None:
+    from digimon_gym.agents.pilot_training import make_env
+
+    env = make_env(opponent="greedy")
+    inner = _unwrap_to_digimon_env(env)
+    assert inner.digivolve_shaping is False
+    assert inner.digivolve_reward == 0.1
+    assert inner.dna_digivolve_bonus == 0.3
