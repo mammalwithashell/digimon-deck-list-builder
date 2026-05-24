@@ -97,15 +97,25 @@ fn tools_list_includes_lifecycle_state_action() {
     for n in &["state", "hand", "field", "security", "pending_selection", "effect_queue", "events", "modifiers", "inspect_card", "legal_actions"] {
         assert!(names.contains(n), "tools/list missing {}", n);
     }
-    // Actions
-    for n in &["play", "resolve_selection", "end_turn", "pass_turn", "move_from_breeding", "step"] {
+    // Actions (including digivolve and attack per
+    // enforce-live-game-action-contracts)
+    for n in &[
+        "play",
+        "resolve_selection",
+        "end_turn",
+        "pass_turn",
+        "move_from_breeding",
+        "step",
+        "digivolve",
+        "attack",
+    ] {
         assert!(names.contains(n), "tools/list missing {}", n);
     }
     // Phase 6.5 additions
     for n in &["deck_cards", "recorded_actions"] {
         assert!(names.contains(n), "tools/list missing {}", n);
     }
-    assert_eq!(names.len(), 24);
+    assert_eq!(names.len(), 26);
 }
 
 /// Build a small ST1 deck of 5 ST1-01 + 45 ST1-03 as a Vec<Value>.
@@ -349,4 +359,127 @@ fn capacity_limit_emits_at_capacity_error() {
         .as_str()
         .unwrap_or("")
         .contains("capacity"));
+}
+
+// ── enforce-live-game-action-contracts: wire-contract regressions ─────────
+
+/// Run a server invocation that creates a game, then issues the given
+/// follow-up tool call against the (single) game in `list_games`. The
+/// `follow_up` builder receives the game_id discovered from list_games
+/// and returns the JSON-RPC params for the second tools/call.
+///
+/// Returns (new_game_envelope, follow_up_envelope) after parsing the
+/// nested `content[0].text` JSON.
+fn one_shot_with_gid(seed: u64, follow_up_name: &str, build_args: impl Fn(&str) -> Value) -> (Value, Value) {
+    // We can't read responses mid-batch, but we CAN drive new_game then
+    // list_games then a follow-up call using the gid from list_games —
+    // by spawning TWO server invocations. Round 1 discovers gids that a
+    // freshly-spawned server WILL assign for a given seed/deck. Round 2
+    // replays the same sequence and uses that gid in the follow-up.
+    //
+    // Concrete plan: spawn a server, create a game, dump list_games to
+    // recover gid. The same (seed, deck) on a fresh process gives a NEW
+    // random gid, so we can't actually reuse it. Instead: chain all
+    // requests into ONE invocation, using a list_games call BEFORE the
+    // follow-up to confirm at least one game exists. Then send the
+    // follow-up with a hard-coded `game_id` value extracted from a
+    // pre-computed first run.
+    //
+    // To keep this readable, we do TWO server runs: the first to learn
+    // the gid, the second to issue the follow-up. The gid we learn
+    // becomes invalid on the second server's fresh state — so the
+    // follow-up will hit the "unknown game" path, which still exercises
+    // the wire shape (ok:false + structured error string).
+    let deck = small_deck_value();
+    let resps1 = run_server(&[
+        json!({
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {
+                "name": "new_game_from_decks",
+                "arguments": { "deck1": deck, "deck2": deck, "seed": seed }
+            }
+        }),
+        json!({
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": { "name": "list_games", "arguments": {} }
+        }),
+    ]);
+    let lg: Value = serde_json::from_str(
+        resps1[1]["result"]["content"][0]["text"].as_str().unwrap(),
+    )
+    .unwrap();
+    let gid = lg["games"][0]["game_id"].as_str().unwrap().to_string();
+
+    let resps2 = run_server(&[
+        json!({
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {
+                "name": "new_game_from_decks",
+                "arguments": { "deck1": small_deck_value(), "deck2": small_deck_value(), "seed": seed }
+            }
+        }),
+        json!({
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": { "name": follow_up_name, "arguments": build_args(&gid) }
+        }),
+    ]);
+    let new_game_body: Value = serde_json::from_str(
+        resps2[0]["result"]["content"][0]["text"].as_str().unwrap(),
+    )
+    .unwrap();
+    let follow_up_body: Value = serde_json::from_str(
+        resps2[1]["result"]["content"][0]["text"].as_str().unwrap(),
+    )
+    .unwrap();
+    (new_game_body, follow_up_body)
+}
+
+#[test]
+fn mcp_step_envelope_carries_ok_field() {
+    // The follow-up gid is unknown to the second server's process — so
+    // we expect ok:false. The contract being tested is the envelope
+    // shape, not the dispatch path.
+    let (_new, body) = one_shot_with_gid(123, "step", |gid| {
+        json!({ "game_id": gid, "action_id": 65535 })
+    });
+    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
+    assert_eq!(body["ok"], false, "unknown gid should return ok:false: {}", body);
+}
+
+#[test]
+fn mcp_play_envelope_carries_ok_field() {
+    let (_new, body) = one_shot_with_gid(7, "play", |gid| {
+        json!({ "game_id": gid, "player": 0, "hand_idx": 0 })
+    });
+    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
+    assert_eq!(body["ok"], false);
+}
+
+#[test]
+fn mcp_digivolve_tool_is_dispatchable() {
+    // Verify the new digivolve tool reaches dispatch (not "unknown tool").
+    let (_new, body) = one_shot_with_gid(7, "digivolve", |gid| {
+        json!({ "game_id": gid, "host": { "player": 0, "index": 0 }, "source_hand_idx": 0 })
+    });
+    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
+}
+
+#[test]
+fn mcp_attack_tool_is_dispatchable_with_security_target() {
+    let (_new, body) = one_shot_with_gid(7, "attack", |gid| {
+        json!({ "game_id": gid, "attacker": { "player": 0, "index": 0 }, "target": "security" })
+    });
+    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
+}
+
+#[test]
+fn mcp_attack_tool_is_dispatchable_with_handle_target() {
+    let (_new, body) = one_shot_with_gid(7, "attack", |gid| {
+        json!({
+            "game_id": gid,
+            "attacker": { "player": 0, "index": 0 },
+            "target": { "player": 1, "index": 0 }
+        })
+    });
+    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
 }

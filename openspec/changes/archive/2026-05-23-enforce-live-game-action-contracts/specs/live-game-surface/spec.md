@@ -1,97 +1,4 @@
-### Requirement: LiveGame Construction From Four Sources
-
-The system SHALL provide a `LiveGame` type in `digimon-engine` constructable from four distinct sources so that all debug, smoke-test, and forensic workflows share a single live-game surface.
-
-The four constructors SHALL be:
-
-- `LiveGame::from_decks(deck1, deck2, seed)` — fresh game with shuffled libraries and dealt hands. `seed` is optional; when `None`, the engine's default RNG seeding applies.
-- `LiveGame::from_debug(hands, decks, first_player)` — fresh game with deterministic ordering: `hands[player_id]` is the exact opening hand (no shuffle), `decks[player_id]` is the post-shuffle library (index 0 = top), and `first_player` selects who acts first. Mirrors the existing `DebugRunnerBuilder` shape.
-- `LiveGame::from_recording(recording_json)` — game reconstructed deterministically from a `GameRecorder` recording, paused at step 0 (initial post-shuffle state, no actions applied).
-- `LiveGame::from_recording_at_step(recording_json, step_n)` — same as `from_recording` but with the first `step_n` recorded actions already replayed.
-
-Each constructor SHALL accept a card pool (set of `card_id` strings whose `CardData` is loaded into the game). When the pool is omitted, the default SHALL be the result of `digimon_engine::cards::build_registry().registered_card_ids()` — the same filter `pilot_training`, `gauntlet`, and the architect agents use.
-
-A constructor SHALL return `Err(...)` when any required card is not in the pool. The error SHALL identify the missing card IDs so callers can suggest `--all-cards` or remediate.
-
-#### Scenario: Construct from decks with default pool
-
-- **WHEN** a caller invokes `LiveGame::from_decks(deck1, deck2, None)` with two 50-card decks whose every card is in `load_implemented_card_ids()`
-- **THEN** the constructor returns `Ok(LiveGame)` and the resulting game is in the mulligan phase with hands dealt
-
-#### Scenario: Construct from debug hands
-
-- **WHEN** a caller invokes `LiveGame::from_debug({0: ["BT1-001"], 1: []}, {0: ["FILLER"; 50], 1: ["FILLER"; 50]}, 0)`
-- **THEN** the resulting game has `BT1-001` as `hands[0][0]`, no shuffling has occurred, and player 0 acts first
-
-#### Scenario: Construct from recording at step 0
-
-- **WHEN** a caller invokes `LiveGame::from_recording(recording_json)` with a valid recording
-- **THEN** the resulting game's state matches the recording's `initial_state` exactly, with `step_number == 0` and no actions applied
-
-#### Scenario: Construct from recording at intermediate step
-
-- **WHEN** a caller invokes `LiveGame::from_recording_at_step(recording_json, 47)` with a recording containing at least 47 actions
-- **THEN** the resulting game's state matches what would be observed after replaying actions 1..=47 against the initial state
-
-#### Scenario: Missing card in default pool
-
-- **WHEN** a caller invokes `LiveGame::from_decks(deck1, deck2, None)` and `deck1` contains a card not present in `load_implemented_card_ids()`
-- **THEN** the constructor returns `Err` and the error message names every missing card ID
-
-#### Scenario: Custom pool override
-
-- **WHEN** a caller passes a custom pool that omits an otherwise-implemented card
-- **THEN** any deck referencing the omitted card fails construction with the missing-card error
-
----
-
-### Requirement: View Serialization Layer
-
-The system SHALL expose a `view` module providing compact, stable JSON-serializable views over `Game` state. These views are distinct from the frontend-oriented `to_ui_json` (which is lossy and player-perspective-specific) and exist specifically for tool consumers (CLI, MCP) that need precise state for debugging.
-
-The following views SHALL exist:
-
-- `StateView { phase, turn_count, memory, turn_player, game_over, winner, ... }`
-- `HandView { player, cards: [{card_id, card_index, name}] }`
-- `FieldView { player, permanents: [{handle, top_card_id, stack_card_ids, modifiers, summoning_sick, ...}] }`
-- `SecurityView { player, count, card_ids_if_god_view }`
-- `PendingSelectionView { kind, source, min, max, options: [{label, payload}], cancellable }`
-- `EffectQueueView { pending: [{source, trigger, kind}] }`
-- `ModifierView { handle, modifiers: [{type, source, value, expiry}] }`
-- `EventLogView { events: [GameEvent], since_seq }`
-
-Every view SHALL be serializable to JSON via `serde`. Field names SHALL be stable; renaming any field is a breaking change to consumers and SHALL be reflected in a spec delta.
-
-`GameEvent` and every type it contains SHALL derive `serde::Serialize` with `#[serde(tag = "type")]` so that `events: [GameEvent]` in `EventLogView` and `events_emitted: Vec<GameEvent>` in `ActionResult` are emitted as structured JSON objects (NOT `Debug`-formatted strings). The `type` field SHALL match the variant name as returned by `GameEvent::type_str()` (e.g., `"MemoryChange"`, `"Play"`, `"GameOver"`). Variant-specific fields SHALL appear as siblings of `type` at the top level (no `meta` wrapper). A new `EffectFizzled` variant SHALL be added with fields `seq`, `source_permanent: Option<PermanentHandle>`, and `reason: String` to support the mandatory-selection fizzle path above.
-
-A view SHALL accept a `perspective` parameter: `Perspective::Player(PlayerId)` filters opponent-hidden information (opponent hand IDs, opponent security IDs, opponent decklist order); `Perspective::God` exposes everything.
-
-#### Scenario: Player perspective hides opponent hand
-
-- **WHEN** a caller requests `LiveGame::hand(opponent, Perspective::Player(me))`
-- **THEN** the returned `HandView` contains card *count* but **not** `card_id` or `name` values
-
-#### Scenario: God perspective exposes everything
-
-- **WHEN** a caller requests `LiveGame::security(opponent, Perspective::God)`
-- **THEN** the returned `SecurityView` includes the full `card_ids` array (bottom-up ordering)
-
-#### Scenario: Pending selection view enumerates options
-
-- **WHEN** a `PendingSelection` is active on a `LiveGame`
-- **THEN** `LiveGame::pending_selection()` returns a `PendingSelectionView` with one entry per legal option, each entry's `label` is a human-readable string, and `payload` carries the integer index the engine expects for `resolve_selection`
-
-#### Scenario: Effect queue view preserves order
-
-- **WHEN** multiple triggered effects are queued
-- **THEN** `LiveGame::effect_queue()` returns them in the same order the engine will resolve them, with no items dropped or reordered
-
-#### Scenario: Event log is structured
-
-- **WHEN** a caller requests `LiveGame::events(since_seq)` after actions that emitted events
-- **THEN** each entry in `events` is a JSON object with at least a `type` field naming the variant (matching `GameEvent::type_str()`, e.g., `"MemoryChange"`, `"Play"`) and per-variant fields at the top level (e.g., `MemoryChange` exposes `seq`, `player`, `delta`, `total`; `Play` exposes `seq`, `player`, `card_id`, `field_index`) — entries are NOT `Debug`-formatted strings and there is no `meta` sub-object
-
----
+## MODIFIED Requirements
 
 ### Requirement: Action Submission Surface
 
@@ -235,3 +142,51 @@ The engine already fizzles at install time when the target-filter passes zero en
 
 - **WHEN** a mandatory pending selection has more than one legal option AND `step` on one option is a no-op AND other options exist in `legal_actions`
 - **THEN** the engine does NOT fizzle; it returns `ok: false, error: "action <id> not legal in current state"` (per the general step-validation rule above), leaving the pending selection intact so the caller can try another option
+
+---
+
+### Requirement: View Serialization Layer
+
+The system SHALL expose a `view` module providing compact, stable JSON-serializable views over `Game` state. These views are distinct from the frontend-oriented `to_ui_json` (which is lossy and player-perspective-specific) and exist specifically for tool consumers (CLI, MCP) that need precise state for debugging.
+
+The following views SHALL exist:
+
+- `StateView { phase, turn_count, memory, turn_player, game_over, winner, ... }`
+- `HandView { player, cards: [{card_id, card_index, name}] }`
+- `FieldView { player, permanents: [{handle, top_card_id, stack_card_ids, modifiers, summoning_sick, ...}] }`
+- `SecurityView { player, count, card_ids_if_god_view }`
+- `PendingSelectionView { kind, source, min, max, options: [{label, payload}], cancellable }`
+- `EffectQueueView { pending: [{source, trigger, kind}] }`
+- `ModifierView { handle, modifiers: [{type, source, value, expiry}] }`
+- `EventLogView { events: [GameEvent], since_seq }`
+
+Every view SHALL be serializable to JSON via `serde`. Field names SHALL be stable; renaming any field is a breaking change to consumers and SHALL be reflected in a spec delta.
+
+`GameEvent` and every type it contains SHALL derive `serde::Serialize` with `#[serde(tag = "type")]` so that `events: [GameEvent]` in `EventLogView` and `events_emitted: Vec<GameEvent>` in `ActionResult` are emitted as structured JSON objects (NOT `Debug`-formatted strings). The `type` field SHALL match the variant name as returned by `GameEvent::type_str()` (e.g., `"MemoryChange"`, `"Play"`, `"GameOver"`). Variant-specific fields SHALL appear as siblings of `type` at the top level (no `meta` wrapper). A new `EffectFizzled` variant SHALL be added with fields `seq`, `source_permanent: Option<PermanentHandle>`, and `reason: String` to support the mandatory-selection fizzle path above.
+
+A view SHALL accept a `perspective` parameter: `Perspective::Player(PlayerId)` filters opponent-hidden information (opponent hand IDs, opponent security IDs, opponent decklist order); `Perspective::God` exposes everything.
+
+#### Scenario: Player perspective hides opponent hand
+
+- **WHEN** a caller requests `LiveGame::hand(opponent, Perspective::Player(me))`
+- **THEN** the returned `HandView` contains card *count* but **not** `card_id` or `name` values
+
+#### Scenario: God perspective exposes everything
+
+- **WHEN** a caller requests `LiveGame::security(opponent, Perspective::God)`
+- **THEN** the returned `SecurityView` includes the full `card_ids` array (bottom-up ordering)
+
+#### Scenario: Pending selection view enumerates options
+
+- **WHEN** a `PendingSelection` is active on a `LiveGame`
+- **THEN** `LiveGame::pending_selection()` returns a `PendingSelectionView` with one entry per legal option, each entry's `label` is a human-readable string, and `payload` carries the integer index the engine expects for `resolve_selection`
+
+#### Scenario: Effect queue view preserves order
+
+- **WHEN** multiple triggered effects are queued
+- **THEN** `LiveGame::effect_queue()` returns them in the same order the engine will resolve them, with no items dropped or reordered
+
+#### Scenario: Event log is structured
+
+- **WHEN** a caller requests `LiveGame::events(since_seq)` after actions that emitted events
+- **THEN** each entry in `events` is a JSON object with at least a `type` field naming the variant (matching `GameEvent::type_str()`, e.g., `"MemoryChange"`, `"Play"`) and per-variant fields at the top level (e.g., `MemoryChange` exposes `seq`, `player`, `delta`, `total`; `Play` exposes `seq`, `player`, `card_id`, `field_index`) — entries are NOT `Debug`-formatted strings and there is no `meta` sub-object

@@ -1669,9 +1669,19 @@ impl<'a> EffectContext<'a> {
             }
         }
 
-        // Empty valid set → silently no-op. The RL policy never sees a
-        // "mandatory prompt with no legal answer" state, matching Python.
+        // Empty valid set → fizzle. The RL policy never sees a "mandatory
+        // prompt with no legal answer" state, matching Python. We emit a
+        // structured `EffectFizzled` event so debug/MCP consumers can
+        // observe the fizzle without diffing state.
         if valid_action_ids.is_empty() {
+            let seq = self.game.next_event_seq();
+            self.game
+                .events
+                .push(crate::events::GameEvent::EffectFizzled {
+                    seq,
+                    source_permanent: self.source_permanent,
+                    reason: "no valid target".into(),
+                });
             return;
         }
 
