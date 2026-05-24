@@ -231,3 +231,15 @@ def test_wrapper_increments_game_index_across_resets(tmp_path):
     assert len(lines) == 4
     indices = [line["game_index"] for line in lines[1:]]
     assert indices == [0, 1, 2]
+
+
+def test_wrapper_records_eval_source(tmp_path):
+    writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
+    inner = DigimonEnv()
+    opp = OpponentWrapper(inner, opponent_fn=greedy_policy)
+    wrapped = MulliganLogWrapper(opp, writer=writer, source="eval", env_index=0)
+    _drive_to_first_pilot_step(wrapped)
+    wrapped.step(0)
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
+    assert len(lines) == 2
+    assert lines[1]["source"] == "eval"

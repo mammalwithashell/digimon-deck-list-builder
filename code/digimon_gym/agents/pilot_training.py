@@ -1339,6 +1339,19 @@ def train(total_timesteps: int = 100_000,
                     source="eval",
                     env_index=0,
                 )
+            if mulligan_log_cfg is not None and mulligan_log_cfg.enabled:
+                writer = MulliganLogWriter(
+                    output_dir=mulligan_log_cfg.output_dir,
+                    env_index=0,
+                    enabled=mulligan_log_cfg.enabled,
+                    run_metadata=mulligan_log_cfg.run_metadata,
+                )
+                wrapped = MulliganLogWrapper(
+                    wrapped,
+                    writer=writer,
+                    source="eval",
+                    env_index=0,
+                )
             return ActionMasker(
                 wrapped,
                 lambda env: _unwrap_to_digimon_env(env).action_mask(),
@@ -1357,6 +1370,7 @@ def train(total_timesteps: int = 100_000,
             tensor_profile=cfg.tensor_profile,
             recording_writer=recording_writer,
             recording_source="eval",
+            mulligan_log_cfg=mulligan_log_cfg,
         )
     eval_suite = None
     if cfg.eval_suite:
