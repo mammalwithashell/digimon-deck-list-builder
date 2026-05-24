@@ -448,6 +448,50 @@ One JSON line per eval window. Top-level fields include the headline scalars plu
 
 **Forward compatibility.** Sidecar rows written before this change lack the four top-level mean fields and the four per-archetype count fields. Lenient readers (the training MCP, ad-hoc `json.loads`-and-`.get`) work unchanged; strict whitelist readers need to widen.
 
+### Per-Game Eval Log (`models/<name>/eval_game_log.jsonl`)
+
+One JSON line per **completed eval game** (not per eval window). Written by `WinRateCallback._run_evaluation` immediately after each per-game iteration of the eval loop computes its outcome. Default on; toggle with `--eval-game-log {on,off}`.
+
+This is the *raw* layer under the eval-window means above. The mean of 0.4 digivolves/game in the sidecar can't distinguish "one whale game with 4 digivolves" from "consistent 0.4 across 10 games" — the per-game rows here answer those questions.
+
+**One row = one inner game, including in BO3 mode** — a 3-game match emits 3 rows.
+
+| Field | Description |
+|---|---|
+| `step` | Training step at the moment the eval window started; same for all rows in one window |
+| `eval_window_idx` | 0-based monotonic index of the eval window within the run |
+| `game_idx` | 0-based game index within the eval window (monotonic across the whole window; in BO3, increments per inner game, not per match) |
+| `source` | Always `"eval"` for v1; schema-stable for future training-side rows |
+| `match_format` | `"single"` or `"bo3"` — the run's `TrainingConfig.match_format` |
+| `match_idx` | BO3 only: 0-based index of the BO3 match this row belongs to within the window. Null in single mode. |
+| `game_in_match_idx` | BO3 only: 0/1/2 — which inner game of the BO3 match. Null in single mode. |
+| `agent_archetype` / `opponent_archetype` | From the env's `info` dict (null outside generalist/gauntlet modes) |
+| `digivolves_agent` / `dna_digivolves_agent` | Agent's (p1) per-game counts captured at the moment that inner game ended (BO3: via `MatchEnv.match_game_history`; single: via `_rl_state()` at episode end) |
+| `digivolves_opponent` / `dna_digivolves_opponent` | Same for opponent (p2) |
+| `result` | `"win"` / `"loss"` / `"draw"` — per inner game |
+| `episode_length` | Env steps inside the inner game (BO3) or the whole episode (single) |
+| `terminal_score` | ±1.0 / 0.0 per inner game (no dense shaping) |
+| `recording_path` | Absolute path to the recording file. In BO3 mode, recordings are written at match end so all rows from one match share the same path. Null when recording is off. |
+
+```jsonl
+// single mode
+{"step": 100000, "eval_window_idx": 4, "game_idx": 0, "source": "eval", "match_format": "single", "match_idx": null, "game_in_match_idx": null, "agent_archetype": "BlueFlare", "opponent_archetype": "Omnimon", "digivolves_agent": 2, "dna_digivolves_agent": 1, "digivolves_opponent": 3, "dna_digivolves_opponent": 0, "result": "win", "episode_length": 18, "terminal_score": 1.0, "recording_path": ".../win_decked_out.json"}
+
+// BO3 mode — one match producing three rows
+{"step": 100000, "eval_window_idx": 4, "game_idx": 0, "source": "eval", "match_format": "bo3", "match_idx": 0, "game_in_match_idx": 0, "agent_archetype": "BlueFlare", "opponent_archetype": "Omnimon", "digivolves_agent": 2, "dna_digivolves_agent": 1, "digivolves_opponent": 1, "dna_digivolves_opponent": 0, "result": "win", "episode_length": 21, "terminal_score": 1.0, "recording_path": ".../match_recording.json"}
+{"step": 100000, "eval_window_idx": 4, "game_idx": 1, "source": "eval", "match_format": "bo3", "match_idx": 0, "game_in_match_idx": 1, ..., "result": "loss", "terminal_score": -1.0, "recording_path": ".../match_recording.json"}
+{"step": 100000, "eval_window_idx": 4, "game_idx": 2, "source": "eval", "match_format": "bo3", "match_idx": 0, "game_in_match_idx": 2, ..., "result": "win", "terminal_score": 1.0, "recording_path": ".../match_recording.json"}
+```
+
+Query via the training MCP:
+
+```
+run_per_game_evals(name="generalist_v2", filter={dna_digivolves_agent_min: 3})
+  → row.recording_path → digimon-engine-mcp:load_recording → step through
+```
+
+See [TRAINING_MCP.md](TRAINING_MCP.md#run_per_game_evalsname-filter-limit) for the full filter set.
+
 ---
 
 ## 9. Game Recording Artifacts

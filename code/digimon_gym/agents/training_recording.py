@@ -184,6 +184,10 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
         # least-bad terminal obs for value bootstrapping.
         self._last_obs: Optional[np.ndarray] = None
         self._last_info: Dict[str, Any] = {}
+        # Path of the most recently written recording, or None. Read by
+        # WinRateCallback's eval game-log emission to populate the
+        # `recording_path` field. Reset per episode in step() on game end.
+        self.last_recording_path: Optional[Path] = None
 
     def reset(self, **kwargs):
         self.episode_steps = 0
@@ -220,7 +224,7 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
             )
             if self.recorder is not None:
                 try:
-                    self.recorder.write(
+                    self.last_recording_path = self.recorder.write(
                         digimon_env,
                         source=self.source,
                         env_index=self.env_index,
@@ -236,7 +240,7 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
                     # get_recording / terminal_outcome themselves
                     # panic. Suppress so we still synthesize the
                     # terminal step.
-                    pass
+                    self.last_recording_path = None
             self.game_index += 1
             # Synthesize terminal step. terminated=True signals natural
             # episode end (SB3 will not bootstrap V(s) — appropriate
@@ -261,7 +265,7 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
         self._last_info = dict(info)
         if terminated or truncated:
             if self.recorder is not None:
-                self.recorder.write(
+                self.last_recording_path = self.recorder.write(
                     digimon_env,
                     source=self.source,
                     env_index=self.env_index,
@@ -271,6 +275,8 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
                     truncated=bool(truncated),
                     invalid_action=invalid_action,
                 )
+            else:
+                self.last_recording_path = None
             self.game_index += 1
         return obs, reward, terminated, truncated, info
 

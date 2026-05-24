@@ -30,7 +30,7 @@ def ctx() -> ServerContext:
     return ServerContext(runs_dir=None, models_dir=None, repo_root=None)
 
 
-def test_tool_definitions_has_seven_entries():
+def test_tool_definitions_has_eight_entries():
     names = [tool.name for tool in TOOL_DEFINITIONS]
     assert sorted(names) == sorted([
         "list_runs",
@@ -40,6 +40,7 @@ def test_tool_definitions_has_seven_entries():
         "run_recordings",
         "run_checkpoints",
         "run_deck_pool",
+        "run_per_game_evals",
     ])
 
 
@@ -81,14 +82,20 @@ async def test_each_tool_handler_returns_structured_dict(ctx: ServerContext):
         "run_recordings": {"name": "missing"},
         "run_checkpoints": {"name": "missing"},
         "run_deck_pool": {"name": "missing"},
+        "run_per_game_evals": {"name": "missing"},
     }
+    # run_per_game_evals returns ok=True with empty rows for missing runs
+    # (consistent with the spec's "empty list, not error" scenario).
+    ok_true_tools = {"run_per_game_evals"}
     for tool_name, handler in TOOL_HANDLERS.items():
         result = await handler(ctx, args_by_tool[tool_name])
         assert isinstance(result, dict), f"{tool_name} returned {type(result).__name__}"
         assert "ok" in result, f"{tool_name} missing 'ok' key: {result}"
-        # With None runs_dir/models_dir, all handlers should return ok=False.
-        assert result["ok"] is False
-        assert "error" in result and result["error"]
+        if tool_name in ok_true_tools:
+            assert result["ok"] is True, f"{tool_name} expected ok=True for missing run"
+        else:
+            assert result["ok"] is False
+            assert "error" in result and result["error"]
 
 
 def test_run_metric_schema_accepts_string_or_array_tag():

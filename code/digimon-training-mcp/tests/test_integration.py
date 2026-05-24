@@ -97,7 +97,7 @@ def _call_tool(proc: subprocess.Popen, call_id: int, name: str, arguments: Dict[
     return _extract_tool_payload(_recv(proc))
 
 
-def test_tools_list_returns_seven_tools(server_proc):
+def test_tools_list_returns_eight_tools(server_proc):
     _send(server_proc, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     resp = _recv(server_proc)
     tools = resp["result"]["tools"]
@@ -105,6 +105,7 @@ def test_tools_list_returns_seven_tools(server_proc):
     assert names == {
         "list_runs", "run_summary", "run_metric", "run_tags",
         "run_recordings", "run_checkpoints", "run_deck_pool",
+        "run_per_game_evals",
     }
 
 

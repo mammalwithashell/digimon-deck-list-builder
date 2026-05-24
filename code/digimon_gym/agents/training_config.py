@@ -13,6 +13,7 @@ VALID_ALGORITHMS = {"mlp", "lstm"}
 VALID_OPPONENTS = {"greedy", "random", "agent", "pool", "self-play"}
 VALID_RECORD_GAME_MODES = {"off", "all", "sampled", "draws", "anomalies", "eval"}
 VALID_MULLIGAN_LOG_MODES = {"on", "off"}
+VALID_EVAL_GAME_LOG_MODES = {"on", "off"}
 VALID_MATCH_FORMATS = {"bo3", "single"}
 
 
@@ -62,6 +63,10 @@ class TrainingConfig:
     # When set via YAML, quote the value ("on" / "off") — unquoted `off`/`on`
     # are YAML 1.1 booleans and would fail validation as bool literals.
     mulligan_log: str = "on"
+    # Per-game eval-game-log emission. See
+    # openspec/changes/add-per-game-eval-log/. Writes one row per
+    # completed eval game to models/<run>/eval_game_log.jsonl.
+    eval_game_log: str = "on"
     # Digivolve reward shaping (asymmetric — agent only, never opponent).
     # All three default OFF/zero so existing runs are byte-identical when
     # users don't set them. See
@@ -129,6 +134,11 @@ class TrainingConfig:
             raise ValueError(
                 f"mulligan_log must be one of {sorted(VALID_MULLIGAN_LOG_MODES)}, "
                 f"got {self.mulligan_log}"
+            )
+        if self.eval_game_log not in VALID_EVAL_GAME_LOG_MODES:
+            raise ValueError(
+                f"eval_game_log must be one of {sorted(VALID_EVAL_GAME_LOG_MODES)}, "
+                f"got {self.eval_game_log}"
             )
         if self.record_games_max < 0:
             raise ValueError("record_games_max must be >= 0")
