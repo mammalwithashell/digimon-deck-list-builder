@@ -151,7 +151,7 @@ class DigimonEnv(gymnasium.Env):
                  record_tensors: bool = False,
                  digivolve_shaping: bool = False,
                  digivolve_reward: float = 0.1,
-                 dna_digivolve_bonus: float = 0.3):
+                 dna_digivolve_bonus: float = 3.9):
         super().__init__()
 
         # Observation and action spaces

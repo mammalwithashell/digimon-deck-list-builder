@@ -99,7 +99,7 @@ class TrainingRunMetadata:
     # downstream tooling can filter/group shaped vs. unshaped runs without
     # introspecting the hyperparameters dict). Defaults are zero/False so
     # pre-feature sidecars round-trip with correct unshaped semantics; the
-    # numeric defaults differ from TrainingConfig (0.1 / 0.3) on purpose —
+    # numeric defaults differ from TrainingConfig (0.1 / 3.9) on purpose —
     # legacy sidecars must NOT be mis-tagged as 'shaped at default values'.
     # See docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
     digivolve_shaping: bool = False

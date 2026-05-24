@@ -16,12 +16,12 @@ def test_constructor_accepts_shaping_kwargs_and_resets_prev_state() -> None:
     env = DigimonEnv(
         digivolve_shaping=True,
         digivolve_reward=0.1,
-        dna_digivolve_bonus=0.3,
+        dna_digivolve_bonus=3.9,
     )
 
     assert env.digivolve_shaping is True
     assert env.digivolve_reward == 0.1
-    assert env.dna_digivolve_bonus == 0.3
+    assert env.dna_digivolve_bonus == 3.9
     assert env._prev_p1_digivolutions is None
     assert env._prev_p1_dna_digivolutions is None
 
@@ -34,7 +34,7 @@ def test_constructor_defaults_are_off() -> None:
     env = DigimonEnv()
     assert env.digivolve_shaping is False
     assert env.digivolve_reward == 0.1
-    assert env.dna_digivolve_bonus == 0.3
+    assert env.dna_digivolve_bonus == 3.9
 
 
 # ─── _compute_reward math (Task 8) ───────────────────────────────────────
@@ -44,7 +44,7 @@ def _make_shaped_env() -> DigimonEnv:
     return DigimonEnv(
         digivolve_shaping=True,
         digivolve_reward=0.1,
-        dna_digivolve_bonus=0.3,
+        dna_digivolve_bonus=3.9,
     )
 
 
@@ -109,8 +109,8 @@ def test_dna_digivolve_credits_full_dna_band() -> None:
     }
     env._rl_state = lambda: state  # type: ignore[method-assign]
     reward = env._compute_reward(terminated=False)
-    # +0.1 regular + 0.3 DNA bonus − 0.001 step penalty.
-    assert math.isclose(reward, 0.4 - 0.001, abs_tol=1e-9)
+    # +0.1 regular + 3.9 DNA bonus - 0.001 step penalty.
+    assert math.isclose(reward, 4.0 - 0.001, abs_tol=1e-9)
 
 
 def test_non_digivolve_step_has_no_shaping_credit() -> None:
@@ -234,4 +234,4 @@ def test_make_env_defaults_keep_shaping_off() -> None:
     inner = _unwrap_to_digimon_env(env)
     assert inner.digivolve_shaping is False
     assert inner.digivolve_reward == 0.1
-    assert inner.dna_digivolve_bonus == 0.3
+    assert inner.dna_digivolve_bonus == 3.9
