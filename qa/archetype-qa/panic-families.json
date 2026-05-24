@@ -30,12 +30,24 @@
       "resolved_at": "2026-05-23"
     },
     {
-      "family_id": "G-PERMANENT-EMPTY-DURING-BATCH-DELETION",
-      "description": "Permanent::top_card() called on a Permanent whose card_sources Vec has been emptied by PR #525's delete_permanents_batch but whose slot is still in Player::battle_area. Latent pre-#525; surfaced once the noisier G-DELETION-RESUME-NESTED panic was silenced. See engine-gaps.md §Empty Permanent During Batched Deletion.",
+      "family_id": "G-PERMANENT-EMPTY-DIGIVOLVE-FROM-MATERIAL",
+      "description": "Permanent::top_card() called on a Permanent whose card_sources Vec was emptied by a `Material(carrier, i)` extraction in `effect_initiated_digivolve_from_source_inner`. Resolved 2026-05-23 by PR #533 (introduced `Game::soft_remove_if_emptied`). The original `G-PERMANENT-EMPTY-DURING-BATCH-DELETION` family ID was a misnomer (the cause was material extraction, not batch deletion); renamed in the 2026-05-24 family split. See engine-gaps.md §Empty Permanent During Batched Deletion — digivolve-from-material zombie.",
       "pattern": "Permanent must have at least one card",
       "panic_site": "code/digimon-engine/src/permanent.rs::top_card",
-      "status": "open",
-      "first_seen_at": "2026-05-23"
+      "status": "resolved",
+      "first_seen_at": "2026-05-23",
+      "resolved_at": "2026-05-23",
+      "resolved_by": "PR #533"
+    },
+    {
+      "family_id": "G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION",
+      "description": "Permanent::top_card() called on a zombie permanent left in `battle_area` after a sibling material-extraction path (play_from_materials, place_as_bottom_source, replacement-redirect-to-Trash, place-into-security from material, trash_source_ref, trash_card_source) emptied its `card_sources` without invoking `Game::soft_remove_if_emptied`. Sibling family of `G-PERMANENT-EMPTY-DIGIVOLVE-FROM-MATERIAL`; latent pre-fix; surfaced once PR #533 silenced the digivolve variant. Same panic message — disambiguate via RUST_BACKTRACE or recording replay. See engine-gaps.md §Empty Permanent During Material Extraction (sibling class).",
+      "pattern": "Permanent must have at least one card",
+      "panic_site": "code/digimon-engine/src/permanent.rs::top_card",
+      "status": "resolved",
+      "first_seen_at": "2026-05-23",
+      "resolved_at": "2026-05-24",
+      "resolved_by": "openspec/changes/fix-zombie-permanent-siblings"
     }
   ]
 }

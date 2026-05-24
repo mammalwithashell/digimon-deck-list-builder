@@ -3349,15 +3349,58 @@ impl<'a> EffectContext<'a> {
                 },
                 suppress_on_play,
             ) {
-            PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
-                player,
-                index: field_index as u8,
-            }),
-            PlayFromHandCostResult::Pending => None,
+            PlayFromHandCostResult::Played(field_index) => {
+                let played = PermanentHandle {
+                    player,
+                    index: field_index as u8,
+                };
+                // Soft-remove the carrier slot if `play_from_materials` just
+                // consumed its only source. Sibling of the digivolve-from-
+                // material fix landed in PR #533. The carrier permanent has
+                // empty `card_sources` post-extraction and would panic any
+                // downstream `top_card()` reader; the helper drops the slot
+                // and routes linked cards to trash per the same contract as
+                // `Game::soft_remove_if_emptied`. See
+                // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
+                // `qa/archetype-qa/engine-gaps.md` (and the change
+                // `fix-zombie-permanent-siblings`).
+                //
+                // The `played` handle is NOT affected by the soft-remove:
+                // play_from_hand_with_cost_result_from_origin_suppress
+                // pushes the new permanent at `battle_area.len()` AFTER the
+                // source extraction, so any soft-remove of an earlier slot
+                // has already shifted the played handle's index downward
+                // and the returned `field_index` reflects the post-shift
+                // position. But the soft-remove here happens AFTER the
+                // play, removing the now-empty carrier, which may shift
+                // `played.index` down by 1 if the carrier sat at a lower
+                // index than the played permanent.
+                let played = Self::shift_handle_after_soft_remove_check(
+                    self.game,
+                    target,
+                    played,
+                );
+                Some(played)
+            }
+            PlayFromHandCostResult::Pending => {
+                // Decision 2 in `design.md`: do NOT soft-remove on the
+                // Pending branch. A parked selection may resume and either
+                // commit the play (cleanup happens then via a separate
+                // post-resume path) or fail (rollback restores the source
+                // into the carrier). Soft-removing now would leave the
+                // rollback path with no slot to restore into. The Layer 2
+                // guards on `enqueue_from_permanent`,
+                // `queued_effect_source_is_live`, and (via this change)
+                // `find_event_gated_delay_permanent` /
+                // `event_gated_delay_source` tolerate a transient zombie
+                // carrier for the duration of the parked selection.
+                None
+            }
             PlayFromHandCostResult::Failed => {
                 // Rollback: pop the card out of hand and reinsert it at
                 // its original index in `target.card_sources` so the
-                // failure is a clean no-op for callers.
+                // failure is a clean no-op for callers. Soft-remove MUST
+                // NOT have run before this — Decision 2 in `design.md`.
                 let card = self
                     .game
                     .player_mut(player)
@@ -3372,6 +3415,23 @@ impl<'a> EffectContext<'a> {
                     .insert(source_index, card);
                 None
             }
+        }
+    }
+
+    /// Sibling-fix helper: run `Game::soft_remove_if_emptied(carrier)` and,
+    /// if it removed the slot, shift `other_handle` for the same-player
+    /// index shift via `Game::shift_handle_after_soft_remove`. Returns the
+    /// possibly-shifted handle. The carrier handle is irrelevant after a
+    /// successful soft-remove, so callers that don't need it can discard.
+    fn shift_handle_after_soft_remove_check(
+        game: &mut crate::game::Game,
+        carrier: PermanentHandle,
+        other: PermanentHandle,
+    ) -> PermanentHandle {
+        if game.soft_remove_if_emptied(carrier) {
+            crate::game::Game::shift_handle_after_soft_remove(carrier, other)
+        } else {
+            other
         }
     }
 
@@ -4037,6 +4097,14 @@ impl<'a> EffectContext<'a> {
             source_card,
             crate::trigger_context::EventCause::from(self.game.infer_effect_cause(perm.player)),
         );
+        // Soft-remove the carrier slot if the trash emptied it. Sibling
+        // of the digivolve-from-material fix landed in PR #533. The
+        // `fire_digivolution_card_trashed` observer dispatch above runs
+        // BEFORE the slot removal, so observers see the source-trash
+        // event attributed to the correct host. See
+        // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
+        // `qa/archetype-qa/engine-gaps.md`.
+        let _ = self.game.soft_remove_if_emptied(perm);
     }
 
     /// Remove a single digivolution source card from `perm`'s stack and route

@@ -2316,6 +2316,16 @@ impl Game {
             .get(handle.player as usize)?
             .battle_area
             .get(handle.index as usize)?;
+        // Layer-2 zombie-permanent guard. A transient zombie (e.g. a
+        // carrier between `play_from_materials`'s `Pending` park and its
+        // resume) trips `top_card()`'s panic; gracefully report no source.
+        // Mirrors `enqueue_from_permanent` (effect_queue.rs ~line 1550) and
+        // `queued_effect_source_is_live` (effect_queue.rs ~line 2444). See
+        // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
+        // `qa/archetype-qa/engine-gaps.md`.
+        if perm.card_sources.is_empty() {
+            return None;
+        }
         let OptionState::Delayed {
             owner,
             trigger: DelayTrigger::OnEvent(timing),
@@ -2359,6 +2369,15 @@ impl Game {
         timing: EffectTiming,
     ) -> Option<PermanentHandle> {
         for (index, perm) in self.player(owner).battle_area.iter().enumerate() {
+            // Layer-2 zombie-permanent guard. The iter scans EVERY perm in
+            // battle_area; a single zombie (empty `card_sources`) trips
+            // `top_card()`'s panic. Skip the zombie and continue. Mirrors
+            // `enqueue_from_permanent` and `queued_effect_source_is_live`.
+            // See `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
+            // `qa/archetype-qa/engine-gaps.md`.
+            if perm.card_sources.is_empty() {
+                continue;
+            }
             if perm.top_card().card_index != card_index {
                 continue;
             }

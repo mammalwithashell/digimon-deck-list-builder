@@ -1074,6 +1074,13 @@ impl Game {
             .push(removed);
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
+        // Soft-remove the carrier slot if the trash emptied it. Sibling of
+        // the digivolve-from-material fix landed in PR #533. This path is
+        // hit by agent-selected "trash 1 of your digivolution sources"
+        // effects (Rocks archetype). See
+        // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
+        // `qa/archetype-qa/engine-gaps.md`.
+        let _ = self.soft_remove_if_emptied(source_ref.permanent);
         true
     }
 

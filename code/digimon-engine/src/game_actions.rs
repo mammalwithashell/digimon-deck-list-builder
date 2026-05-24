@@ -4448,6 +4448,14 @@ impl Game {
             let mut card = taken.card;
             card.face_down = face_down;
             breeding.push_under(card);
+            // Soft-remove the carrier slot if Material extraction emptied it.
+            // Target is in breeding (not battle_area), so no shift needed.
+            // Sibling of the digivolve-from-material fix landed in PR #533.
+            // See `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
+            // `qa/archetype-qa/engine-gaps.md`.
+            if let crate::enums::CardSourceRef::Material(carrier, _) = source {
+                let _ = self.soft_remove_if_emptied(carrier);
+            }
             return true;
         }
 
@@ -4459,6 +4467,18 @@ impl Game {
         let mut card = taken.card;
         card.face_down = face_down;
         target_player.battle_area[target.index as usize].push_under(card);
+        // Soft-remove the carrier slot if Material extraction emptied it.
+        // Sibling of the digivolve-from-material fix landed in PR #533. The
+        // soft-remove runs AFTER push_under so the target index is still
+        // valid for the push; the soft-remove of the carrier (which is now
+        // empty AND distinct from the target — the target just received the
+        // pushed card so it's non-empty) only shifts unrelated indices, not
+        // this function's `target` (which we've already finished mutating).
+        // See `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
+        // `qa/archetype-qa/engine-gaps.md`.
+        if let crate::enums::CardSourceRef::Material(carrier, _) = source {
+            let _ = self.soft_remove_if_emptied(carrier);
+        }
         true
     }
 
@@ -6159,6 +6179,14 @@ impl Game {
                 };
                 let owner = taken.owner;
                 self.player_mut(owner).trash.push(taken);
+                // Soft-remove the carrier slot if Material extraction
+                // emptied it. Sibling of the digivolve-from-material fix
+                // landed in PR #533. See
+                // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
+                // `qa/archetype-qa/engine-gaps.md`.
+                if let crate::enums::CardSourceRef::Material(carrier, _) = source {
+                    let _ = self.soft_remove_if_emptied(carrier);
+                }
                 return false;
             }
             ReplacementOutcome::Redirected(other) => {
@@ -6235,6 +6263,16 @@ impl Game {
             self.player_mut(player_id)
                 .face_up_security
                 .insert(face_up_key);
+        }
+        // Soft-remove the carrier slot if Material extraction emptied it.
+        // Sibling of the digivolve-from-material fix landed in PR #533.
+        // The push to security is already complete; we just need to clean
+        // up the now-empty carrier slot before any downstream trigger
+        // observers iterate `battle_area`. See
+        // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
+        // `qa/archetype-qa/engine-gaps.md`.
+        if let crate::enums::CardSourceRef::Material(carrier, _) = source {
+            let _ = self.soft_remove_if_emptied(carrier);
         }
         self.fire_on_place_security(player_id, observer_player, source_card);
         true
