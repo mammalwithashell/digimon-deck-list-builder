@@ -514,20 +514,51 @@ slots have the same shape but no prediction in their docstrings.
 - **Test results (post-fix):** lib 153/153 ✓, combat 206/206 ✓, keyword_phase_d 41/41 ✓, deletion_batching 7/7 ✓, cards_behavioral 3292/3300 (8 baseline pre-existing failures, 0 new regressions).
 - **Change reference:** `openspec/changes/archive/2026-05-23-align-deletion-with-dcgo-model/` (proposal, design, specs, tasks).
 
-### Empty Permanent During Batched Deletion  [G-PERMANENT-EMPTY-DURING-BATCH-DELETION]
+### ~~Empty Permanent During Batched Deletion~~  [G-PERMANENT-EMPTY-DURING-BATCH-DELETION] — RESOLVED 2026-05-23 (mis-named; actually digivolve-from-material zombie)
 - **Discovered in:** Generalist v4 training run, 2026-05-23, ~15 minutes after launch (recordings at `C:/Users/james/digimon-training-runs/models/generalist_v4/pilot_ppo_20260523_145133/recordings/train_env_003_game_000017_draw_crash.json` and `train_env_004_game_000024_draw_crash.json`).
 - **Scope:** Rust engine. Latent pre-PR #525; surfaced after `G-DELETION-RESUME-NESTED` was silenced (the deletion panic was firing ~1 per 12k steps in v3, drowning out this rarer empty-permanent case).
 - **Panic site:** [`code/digimon-engine/src/permanent.rs:134`](../../code/digimon-engine/src/permanent.rs) in `Permanent::top_card()` (and the `top_card_mut` sibling at line 141).
 - **Invariant:** `self.card_sources` is non-empty when `top_card()` is called. A Permanent should always have at least one card on its digivolution stack while it sits in the battle area.
 - **Symptom rate:** ~0.17 panics/min in v4 (2 panics in first 12 min across 12 parallel envs). Similar order-of-magnitude to v3's `G-DELETION-RESUME-NESTED` rate (0.27/min) — the underlying frequency of the trigger pattern is probably comparable; the bug was just masked by the noisier deletion panic before PR #525.
-- **What's happening (hypothesis):** PR #525's `delete_permanents_batch` 10-step flow has a window between step 4 (trash the card_sources Vec → `Permanent::card_sources` is now empty) and step 5 (remove the slot from `Player::battle_area`). The `DeletedObjectSnapshot.top_cards` field exists precisely so downstream code can read pre-deletion identity without touching the now-empty Permanent. The panic indicates some code path inside that window still does a live `top_card()` call instead of reading from the snapshot. Most likely a triggered/queued effect that ran before the batch started, fires during the batch's drain phase, looks up a permanent by `PermanentHandle`, and calls `top_card()` while the slot is still in battle_area but emptied.
-- **Affected pattern:** Likely any sequence that combines:
-  1. A queued triggered effect that resolves while a batch deletion is in progress, AND
-  2. That trigger queries a permanent (own or opp) that happens to be in the same deletion batch.
-  Real examples not yet identified — both crash recordings preserved for replay.
-- **Suggested investigation:**
-  - Replay `train_env_003_game_000017_draw_crash.json` against current main with `RUST_BACKTRACE=1`; the backtrace points at the live `top_card()` caller inside the deletion-batch window.
-  - Audit every `top_card()` / `top_card_mut()` call site for "could this Permanent have been emptied by an in-flight batch deletion?" — those sites should read from `DeletedObjectSnapshot.top_cards` instead.
+- **Initial hypothesis (DISPROVEN 2026-05-23):** that PR #525's `delete_permanents_batch` had an unsafe window between trash and slot-removal where downstream code still did a live `top_card()` call.
+- **Actual root cause (identified 2026-05-23 by replaying `train_env_003_game_000017_draw_crash.json --step 96` with `RUST_BACKTRACE=full`):** the panic is NOT a deletion-batching bug. The backtrace points at the DSL `effect_initiated_digivolve` path:
+
+  ```
+  permanent.rs:134                Permanent::top_card                (panic site)
+  effect_queue.rs:1220            Game::top_card_handle
+  effect_queue.rs:1003            trigger_context_for_source (Digivolved arm)
+  effect_queue.rs:317             Game::enqueue_triggered (OnDigivolve fan-out)
+  game_actions.rs:6438            effect_initiated_digivolve_from_source_inner
+  game_actions.rs:6266            …_ignore_requirements
+  dsl_cards/step/play_digivolve.rs:480  CompiledStep::EffectInitiatedDigivolve
+  ```
+
+  Mechanism: `effect_initiated_digivolve_from_source_inner` calls `take_card_source_ref(Material(src, i))` which uses `card_sources.remove(i)` ([`game_actions.rs:4249`](../../code/digimon-engine/src/game_actions.rs#L4249)). When the source permanent has only one card and `i == 0`, the take leaves `src.card_sources` empty but the slot remains in `battle_area`. The subsequent `enqueue_triggered(OnDigivolve, …)` then iterates EVERY permanent in BOTH players' battle areas ([`effect_queue.rs:307-321`](../../code/digimon-engine/src/effect_queue.rs#L307-L321)) and calls `top_card_handle(observer)` per observer, panicking on the now-empty carrier with `Permanent must have at least one card`.
+
+  PR #525's deletion-batching refactor merely silenced the noisier `G-DELETION-RESUME-NESTED` panic; this latent zombie-permanent bug is now the dominant residual. It will fire on any code path that empties a permanent's `card_sources` without also removing the slot from `battle_area` — digivolve-from-material is the surfaced case; play-from-material via `play_from_materials_suppress_on_play` is a likely sibling.
+
+- **Affected card surface:** 41 YAML cards use the DSL `effect_initiated_digivolve` step (BT24-016, P-103, LM-027/029/030/031/032/054/055, BT21-001/013/093, BT22-013/026/036/098, EX9-012/019/032, EX10-032/069, BT16-028/040, BT17-015/027/097, BT20-083/084, AD1-001/010, …). Any of them hits this path when their `source` binding resolves to a single-card Material ref.
+- **Regression test (failing on `main` as of 2026-05-23):** [`code/digimon-engine/tests/effect_context/effect_digivolve_from_zones.rs::effect_digivolve_from_material_emptying_source_does_not_leave_zombie_permanent`](../../code/digimon-engine/tests/effect_context/effect_digivolve_from_zones.rs). Asserts the carrier is removed from `battle_area` after a `Material(src, 0)` digivolve consumes its only card. Panics with the exact `Permanent must have at least one card` on current `main`.
+- **Fix (landed 2026-05-23, two layers — both implemented):**
+  1. **Root cause:** [`Game::soft_remove_if_emptied`](../../code/digimon-engine/src/game.rs) helper, called from `effect_initiated_digivolve_from_source_inner` ([`game_actions.rs:6418-6440`](../../code/digimon-engine/src/game_actions.rs#L6418)) after step 4's `digivolve` mutation. If `source_ref` was `Material(src, _)` and `src`'s `card_sources` is now empty, the helper removes the slot from `battle_area` BEFORE firing WhenDigivolving / OnDigivolve. Linked cards on the removed carrier flow to trash + fire `OnLinkedCardTrashed` per the same pattern as `trash_single_for_batch`. `target.index` is shifted via [`Game::shift_handle_after_soft_remove`](../../code/digimon-engine/src/game.rs) when the removal shifts later same-player indices.
+  2. **Defensive guardrail (general):**
+     - [`Game::top_card_handle`](../../code/digimon-engine/src/effect_queue.rs) and [`EffectContext::permanent_top_card_handle`](../../code/digimon-engine/src/effect_context/mod.rs) — both now `.and_then(card_sources.last())` instead of `.map(top_card())`. Returns `None` for zombie permanents instead of panicking; all callers already wrap in `Option::and_then`/`let Some(…) else`.
+     - [`Game::enqueue_from_permanent`](../../code/digimon-engine/src/effect_queue.rs) — early-return guard if the target slot is missing or has empty `card_sources`. No effects to enqueue for a zombie.
+     - [`Game::queued_effect_source_is_live`](../../code/digimon-engine/src/effect_queue.rs) — replaced 3 direct `perm.top_card().card_index` calls with `perm.card_sources.last().map(|c| c.card_index)` patterns (breeding-area branch, battle-area branch, Training scan). Zombie permanents now correctly fail the liveness check instead of panicking.
+- **Regression tests (in [`code/digimon-engine/tests/effect_context/effect_digivolve_from_zones.rs`](../../code/digimon-engine/tests/effect_context/effect_digivolve_from_zones.rs)):**
+  - `effect_digivolve_from_material_emptying_source_does_not_leave_zombie_permanent` — the original reproduction
+  - `effect_digivolve_from_material_emptying_lower_indexed_source_shifts_target_index` — target-index shift case
+  - `effect_digivolve_from_material_emptying_source_with_linked_cards_trashes_them` — linked-card cleanup
+  - `effect_digivolve_from_material_taking_bottom_of_multi_card_stack_keeps_carrier_alive` — boundary (no cleanup needed)
+  - `ondigivolve_fanout_tolerates_pre_existing_empty_permanent_in_battle_area` — Layer 2 synthetic guard
+- **DCGO reference (informed the fix):**
+  - [`DCGO/Assets/Scripts/Script/Permanent.cs:1352-1367`](../../DCGO/Assets/Scripts/Script/Permanent.cs#L1352) — DCGO's `TopCard` returns `null` for empty stacks rather than asserting; all callers null-check. Inspired Layer 2's `Option`-returning `top_card_handle`.
+  - [`DCGO/Assets/Scripts/Script/CardController.cs:1509`](../../DCGO/Assets/Scripts/Script/CardController.cs#L1509) — Jogress uses caller-side `CardObjectController.RemoveField(permanent)` to explicitly remove a permanent whose body was absorbed. Inspired Layer 1's `soft_remove_if_emptied` (the DCGO `RemoveField` analog — distinct from `DestroyPermanentsClass.Destroy()`).
+  - [`DCGO/Assets/Scripts/Script/CardObjectController.cs:370-447`](../../DCGO/Assets/Scripts/Script/CardObjectController.cs#L370) — `RemoveFromAllArea` also leaves zombie permanents (same `Vec.Remove` pattern as Rust's `take_card_source_ref`). Confirms the zombie risk is shared across both engines; DCGO survives because consumers null-check `TopCard` everywhere and there's no global `OnDigivolve` fan-out (`EffectTiming` enum at `ICardEffect.cs:969-1032` has no `OnDigivolve` value).
+- **Empirical confirmation:** all 4 known crash recordings replay cleanly post-fix (v4 003_017 and v4 004_024 from the `G-PERMANENT-EMPTY` family, plus 2 from the user's currently-running training that were stale-binding panics from PR #525 not yet being installed). Engine test suite: 3292 cards_behavioral pass + 153 lib + 614 across 9 other test binaries = 4059 tests, 0 new regressions, 8 pre-existing baseline failures unchanged.
+- **Previous-hypothesis (deletion-batching) suggested investigation (RETAINED for context):**
+  - Replay `train_env_003_game_000017_draw_crash.json` against current main with `RUST_BACKTRACE=1`; the backtrace points at the live `top_card()` caller — and now we know it's the digivolve fan-out, not the deletion drain.
+  - Audit every `top_card()` / `top_card_mut()` call site for "could this Permanent have been emptied by an in-flight batch deletion?" — most callers are fine post-PR-#525; the zombie-permanent class above is a separate concern from deletion-batching.
   - DCGO reference: `DCGO/Assets/Scripts/Script/CardController.cs` `DestroyPermanentsClass.Destroy()` and the snapshot threading PR #525 already mirrors.
 - **Workaround:** Training crash-resilience wrapper catches the panic, writes a crash recording, synthesizes a terminal step → training continues. Each hit costs one game's worth of training samples (~0.5% of games at current rate).
 - **Identifier:** the panic message `Permanent must have at least one card` is verbatim from `.expect(...)` on `Vec::last()` — no card identity surfaces. Adding card identity to the panic message would speed up triage.

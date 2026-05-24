@@ -6419,6 +6419,25 @@ impl Game {
         let turn = self.turn_count;
         self.player_mut(target.player).battle_area[target.index as usize]
             .digivolve(taken.card, turn);
+
+        // 4a. Soft-remove an emptied Material source. If `source_ref` was
+        // `Material(src, _)`, `take_card_source_ref` may have removed the
+        // source permanent's only card. Left in `battle_area`, that "zombie"
+        // permanent panics any trigger fan-out that iterates all permanents
+        // and calls `top_card()`. NOT a deletion: no OnDeletion fires, no
+        // replacement window, no trash for the body card (already moved to
+        // target). Matches DCGO's caller-side `RemoveField(permanent)`
+        // pattern (e.g. Jogress at
+        // `DCGO/Assets/Scripts/Script/CardController.cs:1509`). See
+        // `Game::soft_remove_if_emptied` doc + the `G-PERMANENT-EMPTY-…`
+        // entry in `qa/archetype-qa/engine-gaps.md`.
+        let mut target = target;
+        if let crate::enums::CardSourceRef::Material(src_handle, _) = source_ref {
+            if self.soft_remove_if_emptied(src_handle) {
+                target = Self::shift_handle_after_soft_remove(src_handle, target);
+            }
+        }
+
         let event_card = self
             .player(target.player)
             .battle_area
