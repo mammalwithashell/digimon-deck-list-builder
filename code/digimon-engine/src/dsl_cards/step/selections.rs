@@ -233,6 +233,7 @@ pub fn try_install(
             bind_as,
             prompt,
             optional,
+            cost,
             ..
         } => {
             install_select_hand(
@@ -242,6 +243,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                *cost,
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
@@ -254,6 +256,7 @@ pub fn try_install(
             bind_as,
             prompt,
             optional,
+            cost,
             ..
         } => {
             install_select_trash(
@@ -263,6 +266,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                *cost,
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
@@ -800,6 +804,7 @@ pub fn try_install(
             bind_as,
             prompt,
             optional,
+            cost,
             then,
             ..
         } => {
@@ -830,6 +835,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                *cost,
                 success_tail,
                 tail.to_vec(),
                 bindings,
@@ -1117,6 +1123,7 @@ fn count_capped_candidate_count(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn install_select_hand(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
@@ -1124,6 +1131,7 @@ fn install_select_hand(
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
+    cost: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -1173,6 +1181,20 @@ fn install_select_hand(
     if optional {
         if let Some(pending) = ctx.game.pending_selection.as_mut() {
             pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                // Cost-pay selects (`cost: true` in YAML) abort the clause
+                // on decline: set `dsl_clause_aborted = true` so the step
+                // runner short-circuits the captured tail AND any parked
+                // outer tail. See `G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE`
+                // and DCGO `ActivateClass.SetUpICardEffect`. Non-cost
+                // optional picks keep the historical "decline runs the
+                // tail" semantic so mandatory housekeeping steps (e.g.
+                // `add_this_option_to_hand` after a "you may" trash play)
+                // execute regardless. The captured tail is always invoked
+                // — when `cost: true` it short-circuits via the flag; when
+                // not, it runs the tail directly.
+                if cost {
+                    game.dsl_clause_aborted = true;
+                }
                 let mut decline_ctx = EffectContext::new_with_source_kind(
                     game,
                     source_card,
@@ -1336,6 +1358,7 @@ pub(crate) fn select_hand_candidate_count(
         .count()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn install_select_trash(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
@@ -1343,6 +1366,7 @@ fn install_select_trash(
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
+    cost: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -1402,6 +1426,15 @@ fn install_select_trash(
     if optional {
         if let Some(pending) = ctx.game.pending_selection.as_mut() {
             pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                // See `install_select_hand` for the cost vs. continue-tail
+                // distinction. `cost: true` sets the abort flag and the
+                // captured tail short-circuits; otherwise the existing
+                // mandatory-tail semantics for `G-OPTIONAL-SELECTION-CONTINUE-TAIL`
+                // (e.g. `add_this_option_to_hand` after a "you may" trash
+                // play) keep working.
+                if cost {
+                    game.dsl_clause_aborted = true;
+                }
                 let mut decline_ctx = EffectContext::new_with_source_kind(
                     game,
                     source_card,
@@ -2792,6 +2825,7 @@ fn install_select_union_zone(
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
+    cost: bool,
     success_tail: Vec<CompiledStep>,
     decline_tail: Vec<CompiledStep>,
     bindings: Bindings,
@@ -2868,6 +2902,12 @@ fn install_select_union_zone(
     if optional {
         if let Some(pending) = ctx.game.pending_selection.as_mut() {
             pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                // See `install_select_hand` for the cost vs. continue-tail
+                // distinction. `cost: true` sets the abort flag and the
+                // captured decline_tail short-circuits.
+                if cost {
+                    game.dsl_clause_aborted = true;
+                }
                 let mut decline_ctx = EffectContext::new_with_source_kind(
                     game,
                     source_card,

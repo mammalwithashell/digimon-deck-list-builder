@@ -550,6 +550,23 @@ pub struct Game {
         crate::dsl_cards::step::StepRuntime,
     )>,
 
+    /// Cost-pay abort flag — set when the player PASSes on a cost-pay
+    /// selection (a `select_hand` / `select_trash` / `select_union_zone`
+    /// with `cost: true`). The DSL step runner checks this at the top of
+    /// every iteration and short-circuits the rest of the clause body, so a
+    /// declined "By trashing X, Y" cost does NOT run Y (no trash, no draw,
+    /// no zone-move). Non-cost optional selects (the "you may pick X; then
+    /// always do Y" pattern) leave this flag false, so their tails still
+    /// run on decline.
+    ///
+    /// Scope: per `on_decline` invocation in
+    /// `effect_queue::resolve_generic_selection` (save+clear on entry,
+    /// restore on exit). The save/restore prevents a parent clause's
+    /// abort from leaking into an unrelated child clause that fires
+    /// downstream of the resolved selection.
+    #[doc(hidden)]
+    pub(crate) dsl_clause_aborted: bool,
+
     /// Phase 2f4 Task 1 — one-shot delayed-effect queue. Entries are scheduled
     /// via `EffectContext::schedule_delayed` and drained by
     /// `scheduled_effects::fire_scheduled_for_timing` whose `when:` matches.
@@ -826,6 +843,7 @@ impl Game {
             in_counter_window: false,
             active_deletion_batch: None,
             dsl_outer_tail: None,
+            dsl_clause_aborted: false,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
             scheduled_provenance_deletions: Vec::new(),

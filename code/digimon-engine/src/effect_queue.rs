@@ -3106,7 +3106,17 @@ impl Game {
         self.enter_deferred_drain();
         if is_pass {
             if let Some(on_decline) = sel.on_decline {
+                // Scope the cost-pay abort flag to this on_decline. Save
+                // and clear on entry, restore on exit — so a NESTED decline
+                // (rare: inner clause's decline fires from inside an outer
+                // accept callback) doesn't leak its abort state up to the
+                // outer continuation, and a stale flag from a prior decline
+                // cannot suppress this one. The flag itself is set by the
+                // install_select_* on_decline closures (cost-pay aborts) and
+                // checked by the DSL step runner.
+                let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
                 on_decline(self);
+                self.dsl_clause_aborted = prev_aborted;
             }
         } else {
             (sel.callback)(self, action_id);

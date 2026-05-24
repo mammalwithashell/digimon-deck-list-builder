@@ -54,6 +54,7 @@ fn select_trash_then_add_to_hand_from_trash_round_trip() {
                 prompt: "Pick a card from trash".to_string(),
                 prompt_key: None,
                 optional: false,
+                cost: false,
             },
             CompiledStep::AddToHandFromTrash {
                 of: CompiledPlayerRef::You,
@@ -124,6 +125,7 @@ fn select_hand_parks_selection_and_fires_callback() {
             prompt: "Pick a card from hand".to_string(),
             prompt_key: None,
             optional: false,
+            cost: false,
         }];
         run_steps(&steps, &mut ctx, &mut bindings);
     }

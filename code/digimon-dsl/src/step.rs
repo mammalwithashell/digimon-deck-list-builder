@@ -1916,6 +1916,15 @@ pub struct SelectZoneArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Mark this prompt as a cost-pay (only meaningful when
+    /// `optional: true`). When set, declining the prompt aborts the rest of
+    /// the clause body — the printed text pattern "By trashing X, do Y"
+    /// where declining means Y does NOT run. Default `false` preserves the
+    /// "you may pick X; then always do Y" semantics where the tail runs
+    /// regardless. See `G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE` and the
+    /// DCGO `ActivateClass.SetUpICardEffect` cost/effect split.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub cost: bool,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2146,6 +2155,14 @@ pub struct SelectUnionArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Mark this prompt as a cost-pay (only meaningful when
+    /// `optional: true`). When set, declining the prompt aborts the rest of
+    /// the clause body (any steps following this one AND the captured outer
+    /// tail). See `SelectZoneArgs::cost` for the printed-text pattern this
+    /// models, and prefer `then:` for steps that should only run on accept
+    /// when the cost-pay is local to a sub-block.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub cost: bool,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
