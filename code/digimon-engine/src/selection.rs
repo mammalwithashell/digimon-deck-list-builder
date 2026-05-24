@@ -705,10 +705,12 @@ pub struct SecurityResolutionState {
     /// player declines an optional clause. `set_security_phase` clears it on
     /// every phase transition so each phase gets a fresh enqueue budget.
     pub phase_enqueue_done: bool,
-    /// Remaining security-check iterations for the owning `Player` attack.
-    /// Absorbed from the outer loop counter so a pause inside phase 1
-    /// doesn't drop the remaining checks.
-    pub checks_remaining: u8,
+    /// Cumulative number of security-check iterations the loop has popped
+    /// for this attack. Survives pause/resume so the post-effect recompute
+    /// of the attacker's effective `<Security A.>` can compare against it.
+    /// See `fix-security-check-recompute-mid-attack` (DCGO parity:
+    /// `Permanent.Strike` is re-read every loop iteration).
+    pub checks_performed: u8,
     /// Running outcome for the current card's resolution. Updated when the
     /// DP battle concludes; returned at `Dispose`.
     pub outcome_so_far: crate::combat::AttackResult,

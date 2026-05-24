@@ -26,6 +26,7 @@
 
 use crate::card_source::CardHandle;
 use crate::enums::{CardKind, EffectTiming, Expiry, GamePhase, Keyword, ModifierType, PlayerId};
+use crate::events::GameEvent;
 use crate::game::Game;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::PermanentHandle;
@@ -2336,6 +2337,11 @@ impl Game {
     /// `cleanup_attack`.
     fn enter_piercing_security_check(&mut self, attacker: PermanentHandle) -> AttackResult {
         let defender_player: PlayerId = 1 - attacker.player;
+        // `<Security A.>` recompute: piercing follow-ups delegate to
+        // `resolve_player_security_loop`, so they automatically inherit
+        // the per-iteration recompute from
+        // `fix-security-check-recompute-mid-attack`. Mid-piercing-attack
+        // digivolves / modifier grants land via the same path.
         self.resolve_player_security_loop(attacker, defender_player)
     }
 
@@ -2348,11 +2354,64 @@ impl Game {
     /// combat when the selection resolves.
     ///
     /// See RUST_PYTHON_PARITY §2.5j for the park-and-resume motivation.
+    ///
+    /// `<Security A.>` recomputation: matches DCGO's
+    /// `Permanent.Strike` getter ([`CardController.cs:3956-3987`] +
+    /// [`Permanent.cs:1818-1951`]). The effective strike is re-read at
+    /// each iteration boundary by [`Self::current_security_strike`],
+    /// so mid-attack digivolves / modifier gains / `ChangeSAttack`
+    /// effects that land between checks extend (or shorten) the loop
+    /// as DCGO would. See change `fix-security-check-recompute-mid-attack`.
     fn resolve_player_security_loop(
         &mut self,
         attacker: PermanentHandle,
         defender_player: PlayerId,
     ) -> AttackResult {
+        // Start with `checks_performed = 0`. The first iteration's
+        // pre-pop guard below re-reads the live strike; if it is 0 we
+        // skip the loop entirely (handles `<Jamming>` and `0 base_checks`
+        // attackers without popping any security cards).
+        let initial_strike = self.current_security_strike(attacker);
+        if initial_strike == 0 {
+            return AttackResult::SecurityCheckSurvived;
+        }
+
+        // Pop the first card and install the resolution state. Deck-out
+        // declares the attacker's controller the winner immediately.
+        if !self.pop_and_start_security_check(attacker, defender_player, 0) {
+            return AttackResult::GameWon;
+        }
+
+        // Drive the state machine. `None` means a `SecuritySkill` (or any
+        // subsequent phase) installed a `pending_selection`; resumption
+        // happens via `advance_security_resolution` after the selection
+        // resolves. `Some(outcome)` means the whole security loop finished.
+        match self.drive_security_resolution() {
+            None => AttackResult::InProgress,
+            Some(outcome) => outcome,
+        }
+    }
+
+    /// Effective `<Security A.>` total for `attacker` right now, in DCGO
+    /// `Permanent.Strike` shape: `base_checks (aura bonus or 1) +
+    /// SecurityAttackChange modifier sum + ChangeSAttack payload deltas
+    /// (with invert honored) + native/printed Security-Attack keyword
+    /// bonus`, clamped to `[0, MAX_SECURITY_CHECKS]`.
+    ///
+    /// Returns `0` when the attacker handle is no longer valid (e.g.
+    /// deleted or returned to hand mid-resolution). The `DisposeFinalize`
+    /// arm of [`Self::drive_security_resolution`] treats `0` as
+    /// "loop done" and routes through the existing
+    /// `AttackerDeletedBySecurity` / `SecurityCheckSurvived` decision.
+    ///
+    /// Bounded by [`Self::MAX_SECURITY_CHECKS`] as a belt-and-braces
+    /// safety cap: any future modifier interaction that produces a
+    /// runaway strike value is clamped here and an `EffectFizzled`
+    /// event is emitted on first overflow.
+    fn current_security_strike(&mut self, attacker: PermanentHandle) -> u8 {
+        if !self.handle_valid(attacker) {
+            return 0;
+        }
         let sa_modifier = self
             .modifiers
             .sum(attacker, ModifierType::SecurityAttackChange);
@@ -2376,26 +2435,36 @@ impl Game {
         let base_checks = self
             .dynamic_security_attack_aura_bonus(attacker)
             .unwrap_or(1);
-        let checks = (base_checks + sa_modifier + change_s_attack + sa_keyword).max(0) as u8;
-        if checks == 0 {
-            return AttackResult::SecurityCheckSurvived;
+        let raw = base_checks + sa_modifier + change_s_attack + sa_keyword;
+        let clamped = raw.max(0) as u32;
+        if clamped > Self::MAX_SECURITY_CHECKS as u32 {
+            // Safety cap. Log + emit a single fizzle so test runners and
+            // recordings can surface the abnormal state. Cap the return
+            // value so the caller terminates cleanly.
+            self.logger.log(&format!(
+                "[Safety] current_security_strike clamped {} -> {} for attacker P{} slot {}",
+                clamped,
+                Self::MAX_SECURITY_CHECKS,
+                attacker.player,
+                attacker.index,
+            ));
+            let seq = self.next_event_seq();
+            self.events.push(GameEvent::EffectFizzled {
+                seq,
+                source_permanent: Some(attacker),
+                reason: "security strike exceeds safety cap".to_string(),
+            });
+            return Self::MAX_SECURITY_CHECKS;
         }
-
-        // Pop the first card and install the resolution state. Deck-out
-        // declares the attacker's controller the winner immediately.
-        if !self.pop_and_start_security_check(attacker, defender_player, checks - 1) {
-            return AttackResult::GameWon;
-        }
-
-        // Drive the state machine. `None` means a `SecuritySkill` (or any
-        // subsequent phase) installed a `pending_selection`; resumption
-        // happens via `advance_security_resolution` after the selection
-        // resolves. `Some(outcome)` means the whole security loop finished.
-        match self.drive_security_resolution() {
-            None => AttackResult::InProgress,
-            Some(outcome) => outcome,
-        }
+        clamped as u8
     }
+
+    /// Belt-and-braces upper bound on the `<Security A.>` recompute. No
+    /// printed effect today produces anywhere near this much — checks
+    /// rarely exceed 2 — but the loop is bound to a `u8` and we want a
+    /// deterministic break if a future modifier interaction ever produces
+    /// a runaway value.
+    const MAX_SECURITY_CHECKS: u8 = 16;
 
     /// Pop the top security card from `defender`, snapshot its face-up
     /// state on the defender, and install `Game::security_resolution` for
@@ -2403,14 +2472,16 @@ impl Game {
     /// was empty — the caller is responsible for `declare_winner` + the
     /// `GameWon` / `Invalid` distinction.
     ///
-    /// `checks_remaining` is the number of *additional* checks queued
-    /// behind this one; the installed state records it so pause-and-resume
-    /// survives across `drive_security_resolution` re-entries.
+    /// `checks_performed` is the cumulative iteration counter prior to
+    /// this pop — the post-pop counter is `checks_performed + 1`. Stored
+    /// on the installed state so pause-and-resume survives across
+    /// `drive_security_resolution` re-entries; the next iteration's
+    /// `current_security_strike` comparison reads it back.
     fn pop_and_start_security_check(
         &mut self,
         attacker: PermanentHandle,
         defender: PlayerId,
-        checks_remaining: u8,
+        checks_performed: u8,
     ) -> bool {
         let sec_card = match self.player_mut(defender).security.pop() {
             Some(c) => c,
@@ -2460,7 +2531,7 @@ impl Game {
             was_face_up,
             phase: SecurityPhase::SecuritySkillDrain,
             phase_enqueue_done: false,
-            checks_remaining,
+            checks_performed,
             outcome_so_far: AttackResult::SecurityCheckSurvived,
         });
 
@@ -2732,10 +2803,24 @@ impl Game {
                     // Post-observer finalization. `security_resolution` is
                     // still live; drain it now and decide the terminal
                     // outcome (or loop to the next card).
+                    //
+                    // DCGO parity: the security-attack count is NOT a
+                    // declaration-time snapshot. We recompute the active
+                    // attacker's effective `<Security A.>` every iteration
+                    // (see `Self::current_security_strike`) so that a
+                    // post-effect digivolve / modifier grant / ChangeSAttack
+                    // that lands during this card's drain extends (or
+                    // shortens) the loop on the next iteration. Mirrors
+                    // `Permanent.Strike` re-read in DCGO
+                    // `CardController.cs:3956-3987`. See
+                    // `fix-security-check-recompute-mid-attack`.
                     let state = self.security_resolution.take().expect("checked Some above");
                     let defender = state.defender;
                     let attacker_opt = state.attacker;
-                    let remaining = state.checks_remaining;
+                    // `checks_performed` was the counter BEFORE this card
+                    // was popped; we just resolved that card, so the new
+                    // cumulative count is +1.
+                    let checks_performed = state.checks_performed.saturating_add(1);
                     let outcome = state.outcome_so_far;
 
                     // Hard terminal: attacker was deleted mid-check.
@@ -2743,11 +2828,6 @@ impl Game {
                         return Some(outcome);
                     }
 
-                    // Continue the outer loop if more checks remain and
-                    // the attacker is still on the field.
-                    if remaining == 0 {
-                        return Some(AttackResult::SecurityCheckSurvived);
-                    }
                     let attacker = match attacker_opt {
                         Some(a) => a,
                         None => {
@@ -2758,7 +2838,15 @@ impl Game {
                     if !self.handle_valid(attacker) {
                         return Some(AttackResult::AttackerDeletedBySecurity);
                     }
-                    if !self.pop_and_start_security_check(attacker, defender, remaining - 1) {
+
+                    // Recompute the live strike. Terminate when we've
+                    // already popped enough cards for the current
+                    // attacker; otherwise pop another.
+                    let current_strike = self.current_security_strike(attacker);
+                    if checks_performed >= current_strike {
+                        return Some(AttackResult::SecurityCheckSurvived);
+                    }
+                    if !self.pop_and_start_security_check(attacker, defender, checks_performed) {
                         // Deck out on the next card: attacker wins the game.
                         return Some(AttackResult::GameWon);
                     }
