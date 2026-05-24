@@ -448,6 +448,28 @@ class DigimonEnv(gymnasium.Env):
         self._prev_p1_security = p1_sec
         self._prev_p2_security = p2_sec
 
+        # Digivolve reward shaping — asymmetric (agent only) and opt-in.
+        # See docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
+        if self.digivolve_shaping:
+            p1_digi = int(state.get("p1_digivolutions", 0))
+            p1_dna = int(state.get("p1_dna_digivolutions", 0))
+
+            if (
+                self._prev_p1_digivolutions is not None
+                and self._prev_p1_dna_digivolutions is not None
+            ):
+                # DNA stacks on regular in the engine, so the regular reward
+                # always fires and the DNA bonus is additive.
+                d_digi = p1_digi - self._prev_p1_digivolutions
+                d_dna = p1_dna - self._prev_p1_dna_digivolutions
+                if d_digi > 0:
+                    dense_reward += float(d_digi) * self.digivolve_reward
+                if d_dna > 0:
+                    dense_reward += float(d_dna) * self.dna_digivolve_bonus
+
+            self._prev_p1_digivolutions = p1_digi
+            self._prev_p1_dna_digivolutions = p1_dna
+
         # Per-step stalling penalty (small but non-zero).
         return dense_reward - 0.001
 
