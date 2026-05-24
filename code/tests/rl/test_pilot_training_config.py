@@ -730,12 +730,23 @@ def test_training_config_mulligan_log_default_and_validation(tmp_path):
     cfg = TrainingConfig()
     assert cfg.mulligan_log == "on"
 
-    # Override via yaml
+    # Override via yaml — quote the value so YAML 1.1 doesn't treat it as bool
     path = tmp_path / "training.yaml"
-    path.write_text("mulligan_log: off\n")
+    path.write_text('mulligan_log: "off"\n')
     loaded = TrainingConfig.from_yaml(path)
     assert loaded.mulligan_log == "off"
 
     # Invalid value rejected
     with pytest.raises(ValueError, match="mulligan_log"):
         TrainingConfig(mulligan_log="maybe")
+
+
+def test_training_config_bool_yaml_field_still_loads_as_bool(tmp_path):
+    """Guard against a regression where stripping YAML's bool resolver
+    silently turned `record_game_tensors: false` into the truthy string
+    `"false"`."""
+    path = tmp_path / "training.yaml"
+    path.write_text("record_game_tensors: false\n")
+    loaded = TrainingConfig.from_yaml(path)
+    assert loaded.record_game_tensors is False
+    assert isinstance(loaded.record_game_tensors, bool)

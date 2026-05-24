@@ -9,22 +9,6 @@ from typing import Any, Dict, Optional
 import yaml
 
 
-class _StrSafeLoader(yaml.SafeLoader):
-    """SafeLoader variant that does not resolve YAML 1.1 booleans.
-
-    PyYAML's SafeLoader maps bare ``off``/``on``/``yes``/``no``/``true``/
-    ``false`` to Python booleans. String-typed config fields such as
-    ``mulligan_log`` and ``record_games`` need the raw string token instead.
-    Removing the bool resolver forces those tokens to remain plain strings.
-    """
-
-
-_StrSafeLoader.yaml_implicit_resolvers = {
-    tag: [(r, regexp) for r, regexp in resolvers if r != "tag:yaml.org,2002:bool"]
-    for tag, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
-}
-
-
 VALID_ALGORITHMS = {"mlp", "lstm"}
 VALID_OPPONENTS = {"greedy", "random", "agent", "pool", "self-play"}
 VALID_RECORD_GAME_MODES = {"off", "all", "sampled", "draws", "anomalies", "eval"}
@@ -74,6 +58,8 @@ class TrainingConfig:
     record_game_tensors: bool = False
     record_games_max: int = 25
     record_games_sample_rate: float = 0.01
+    # When set via YAML, quote the value ("on" / "off") — unquoted `off`/`on`
+    # are YAML 1.1 booleans and would fail validation as bool literals.
     mulligan_log: str = "on"
 
     def __post_init__(self) -> None:
@@ -85,7 +71,7 @@ class TrainingConfig:
         path: Path,
         overrides: Optional[Dict[str, Any]] = None,
     ) -> "TrainingConfig":
-        raw = yaml.load(Path(path).read_text(), Loader=_StrSafeLoader) or {}
+        raw = yaml.safe_load(Path(path).read_text()) or {}
         merged = {**raw, **(overrides or {})}
         known = {k: v for k, v in merged.items() if k in cls.__dataclass_fields__}
         cfg = cls(**known)
