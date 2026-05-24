@@ -95,6 +95,17 @@ class TrainingRunMetadata:
     eval_suite_results: dict = field(default_factory=dict)
     checkpoint_timestamps: list[dict] = field(default_factory=list)
 
+    # Digivolve reward shaping config (persisted from TrainingConfig so
+    # downstream tooling can filter/group shaped vs. unshaped runs without
+    # introspecting the hyperparameters dict). Defaults are zero/False so
+    # pre-feature sidecars round-trip with correct unshaped semantics; the
+    # numeric defaults differ from TrainingConfig (0.1 / 0.3) on purpose —
+    # legacy sidecars must NOT be mis-tagged as 'shaped at default values'.
+    # See docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
+    digivolve_shaping: bool = False
+    digivolve_reward: float = 0.0
+    dna_digivolve_bonus: float = 0.0
+
     def save(self, path: Path) -> None:
         """Write metadata to a JSON file."""
         path.write_text(json.dumps(asdict(self), indent=2))

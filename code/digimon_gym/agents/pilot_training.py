@@ -1546,6 +1546,9 @@ def train(total_timesteps: int = 100_000,
             "n_epochs": n_epochs,
             "gamma": gamma,
         },
+        digivolve_shaping=cfg.digivolve_shaping,
+        digivolve_reward=cfg.digivolve_reward,
+        dna_digivolve_bonus=cfg.dna_digivolve_bonus,
     )
     if checkpoint_cb is not None:
         meta.checkpoint_timestamps = checkpoint_cb.saved_at
