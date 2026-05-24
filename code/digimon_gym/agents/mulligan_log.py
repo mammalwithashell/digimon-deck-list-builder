@@ -69,23 +69,32 @@ def _derive_has_tamer(card_ids: List[str]) -> bool:
 class MulliganLogWriter:
     """Owns the JSONL file handle for a training run's mulligan log.
 
+    One writer instance per env_index. Under SubprocVecEnv, each subprocess
+    holds its own writer pointing at its own per-env-index file (e.g.
+    ``mulligan_log_env_000.jsonl``, ``mulligan_log_env_001.jsonl``, ...)
+    so concurrent appends never contend on the same file. Analysis tools
+    glob ``mulligan_log_env_*.jsonl`` to recover the cross-env dataset.
+
     A single header line is written lazily on the first ``append()`` per
-    process. Subsequent appends write one JSON record per line. Failures
-    (disk full, permission denied) flip ``enabled`` to ``False`` and log
-    once to stderr so training is never killed by observability code.
+    writer instance. Subsequent appends write one JSON record per line.
+    Failures (disk full, permission denied) flip ``enabled`` to ``False``
+    and log once to stderr so training is never killed by observability
+    code.
     """
 
     def __init__(
         self,
         output_dir: str | Path,
         *,
+        env_index: int = 0,
         enabled: bool = True,
         run_metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.output_dir = Path(output_dir)
+        self.env_index = int(env_index)
         self.enabled = bool(enabled)
         self.run_metadata = dict(run_metadata or {})
-        self._path: Path = self.output_dir / "mulligan_log.jsonl"
+        self._path: Path = self.output_dir / f"mulligan_log_env_{self.env_index:03d}.jsonl"
         self._wrote_header = False
         self._failed = False
 

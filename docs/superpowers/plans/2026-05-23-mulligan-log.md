@@ -4,7 +4,7 @@
 
 **Goal:** Add live per-game starting-hand + mulligan-choice JSONL logging during pilot training so we can plot how the agent's mulligan policy evolves over time.
 
-**Architecture:** New `MulliganLogWrapper` (Gymnasium wrapper) sits in the env stack alongside `TrainingRecordingWrapper` inside `make_env()`. On `reset()` it snapshots the pilot's starting hand via `runner.to_ui_json()['player1']['handIds']`; on the first matching `step()` (pre-step `mulligan_current_player == 1`) it appends a record with the chosen action to `models/<run>/mulligan_log.jsonl`. A parallel `MulliganLogWriter` helper owns the lazy-opened file handle and writes a one-time header line.
+**Architecture:** New `MulliganLogWrapper` (Gymnasium wrapper) sits in the env stack alongside `TrainingRecordingWrapper` inside `make_env()`. On `reset()` it snapshots the pilot's starting hand via `runner.to_ui_json()['player1']['handIds']`; on the first matching `step()` (pre-step `mulligan_current_player == 1`) it appends a record with the chosen action to `models/<run>/mulligan_log_env_<NNN>.jsonl` (one file per SubprocVecEnv worker, zero-padded to three digits). A parallel `MulliganLogWriter` helper owns the lazy-opened file handle and writes a one-time header line. Each subprocess holds its own writer constructed from a shared `_MulliganLogConfig` dataclass so there is no cross-process file contention.
 
 **Tech Stack:** Python 3.13, gymnasium, sb3-contrib (MaskablePPO), PyO3-bound Rust engine via `digimon_engine.RustHeadlessGame`, pytest.
 
@@ -188,21 +188,23 @@ def _read_jsonl(path: Path) -> list:
 def test_writer_disabled_does_nothing(tmp_path):
     writer = MulliganLogWriter(
         output_dir=tmp_path,
+        env_index=0,
         enabled=False,
         run_metadata={"run_name": "test_run"},
     )
     writer.append({"action": 0, "agent_archetype": None})
-    assert not (tmp_path / "mulligan_log.jsonl").exists()
+    assert not (tmp_path / "mulligan_log_env_000.jsonl").exists()
 
 
 def test_writer_writes_header_then_record(tmp_path):
     writer = MulliganLogWriter(
         output_dir=tmp_path,
+        env_index=0,
         enabled=True,
         run_metadata={"run_name": "test_run", "started_at": "2026-05-23T00:00:00+00:00"},
     )
     writer.append({"action": 0, "agent_archetype": "Puppets"})
-    lines = _read_jsonl(tmp_path / "mulligan_log.jsonl")
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
     assert len(lines) == 2
     assert lines[0]["kind"] == "mulligan_log_header"
     assert lines[0]["schema_version"] == 1
@@ -214,13 +216,14 @@ def test_writer_writes_header_then_record(tmp_path):
 def test_writer_writes_header_only_once_across_appends(tmp_path):
     writer = MulliganLogWriter(
         output_dir=tmp_path,
+        env_index=0,
         enabled=True,
         run_metadata={"run_name": "test_run"},
     )
     writer.append({"action": 0})
     writer.append({"action": 1})
     writer.append({"action": 0})
-    lines = _read_jsonl(tmp_path / "mulligan_log.jsonl")
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
     assert len(lines) == 4
     assert lines[0]["kind"] == "mulligan_log_header"
     # All subsequent records are data rows, not headers
@@ -230,6 +233,7 @@ def test_writer_writes_header_only_once_across_appends(tmp_path):
 def test_writer_failure_disables_for_rest_of_run(tmp_path, capsys, monkeypatch):
     writer = MulliganLogWriter(
         output_dir=tmp_path,
+        env_index=0,
         enabled=True,
         run_metadata={"run_name": "test_run"},
     )
@@ -237,7 +241,7 @@ def test_writer_failure_disables_for_rest_of_run(tmp_path, capsys, monkeypatch):
     original_open = Path.open
 
     def _exploding_open(self, *args, **kwargs):
-        if self.name == "mulligan_log.jsonl":
+        if self.name == "mulligan_log_env_000.jsonl":
             raise OSError("simulated disk-full")
         return original_open(self, *args, **kwargs)
 
@@ -248,6 +252,22 @@ def test_writer_failure_disables_for_rest_of_run(tmp_path, capsys, monkeypatch):
     assert writer.enabled is False
     stderr = capsys.readouterr().err
     assert "mulligan_log" in stderr.lower()
+
+
+def test_writer_env_index_in_filename(tmp_path):
+    writer0 = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
+    writer3 = MulliganLogWriter(output_dir=tmp_path, env_index=3, enabled=True, run_metadata={"run_name": "t"})
+    assert writer0.path == tmp_path / "mulligan_log_env_000.jsonl"
+    assert writer3.path == tmp_path / "mulligan_log_env_003.jsonl"
+    # Each writer writes its own header independently.
+    writer0.append({"action": 0})
+    writer3.append({"action": 1})
+    lines0 = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
+    lines3 = _read_jsonl(tmp_path / "mulligan_log_env_003.jsonl")
+    assert lines0[0]["kind"] == "mulligan_log_header"
+    assert lines3[0]["kind"] == "mulligan_log_header"
+    assert lines0[1]["action"] == 0
+    assert lines3[1]["action"] == 1
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -263,23 +283,32 @@ Append to `code/digimon_gym/agents/mulligan_log.py`:
 class MulliganLogWriter:
     """Owns the JSONL file handle for a training run's mulligan log.
 
+    One writer instance per env_index. Under SubprocVecEnv, each subprocess
+    holds its own writer pointing at its own per-env-index file (e.g.
+    ``mulligan_log_env_000.jsonl``, ``mulligan_log_env_001.jsonl``, ...)
+    so concurrent appends never contend on the same file. Analysis tools
+    glob ``mulligan_log_env_*.jsonl`` to recover the cross-env dataset.
+
     A single header line is written lazily on the first ``append()`` per
-    process. Subsequent appends write one JSON record per line. Failures
-    (disk full, permission denied) flip ``enabled`` to ``False`` and log
-    once to stderr so training is never killed by observability code.
+    writer instance. Subsequent appends write one JSON record per line.
+    Failures (disk full, permission denied) flip ``enabled`` to ``False``
+    and log once to stderr so training is never killed by observability
+    code.
     """
 
     def __init__(
         self,
         output_dir: str | Path,
         *,
+        env_index: int = 0,
         enabled: bool = True,
         run_metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.output_dir = Path(output_dir)
+        self.env_index = int(env_index)
         self.enabled = bool(enabled)
         self.run_metadata = dict(run_metadata or {})
-        self._path: Path = self.output_dir / "mulligan_log.jsonl"
+        self._path: Path = self.output_dir / f"mulligan_log_env_{self.env_index:03d}.jsonl"
         self._wrote_header = False
         self._failed = False
 
@@ -364,13 +393,13 @@ def _build_wrapped_env(writer):
 
 
 def test_wrapper_captures_pilot_mulligan_keep(tmp_path):
-    writer = MulliganLogWriter(output_dir=tmp_path, enabled=True, run_metadata={"run_name": "t"})
+    writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
     wrapped, inner = _build_wrapped_env(writer)
     _drive_to_first_pilot_step(wrapped)
     # Pilot picks KEEP (action 0). We bypass policy here and submit directly.
     assert inner.runner.mulligan_current_player == 1
     wrapped.step(0)
-    lines = _read_jsonl(tmp_path / "mulligan_log.jsonl")
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
     # 1 header + 1 record
     assert len(lines) == 2
     rec = lines[1]
@@ -386,7 +415,7 @@ def test_wrapper_captures_pilot_mulligan_keep(tmp_path):
 
 
 def test_wrapper_captures_pilot_mulligan_mull_when_opp_first(tmp_path):
-    writer = MulliganLogWriter(output_dir=tmp_path, enabled=True, run_metadata={"run_name": "t"})
+    writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
     wrapped, inner = _build_wrapped_env(writer)
     # Find a seed where P2 truly goes first (read true initial state from
     # the recording, NOT the post-advance to_ui_json).
@@ -401,7 +430,7 @@ def test_wrapper_captures_pilot_mulligan_mull_when_opp_first(tmp_path):
         pytest.skip("no seed in 0..39 produced P2-goes-first; try a wider range")
     # Pilot picks MULL (action 1).
     wrapped.step(1)
-    lines = _read_jsonl(tmp_path / "mulligan_log.jsonl")
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
     rec = lines[-1]
     assert rec["action"] == 1
     assert rec["source"] == "train"
@@ -409,20 +438,20 @@ def test_wrapper_captures_pilot_mulligan_mull_when_opp_first(tmp_path):
 
 
 def test_wrapper_disabled_writer_writes_nothing(tmp_path):
-    writer = MulliganLogWriter(output_dir=tmp_path, enabled=False, run_metadata={"run_name": "t"})
+    writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=False, run_metadata={"run_name": "t"})
     wrapped, inner = _build_wrapped_env(writer)
     _drive_to_first_pilot_step(wrapped)
     wrapped.step(0)
-    assert not (tmp_path / "mulligan_log.jsonl").exists()
+    assert not (tmp_path / "mulligan_log_env_000.jsonl").exists()
 
 
 def test_wrapper_increments_game_index_across_resets(tmp_path):
-    writer = MulliganLogWriter(output_dir=tmp_path, enabled=True, run_metadata={"run_name": "t"})
+    writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
     wrapped, inner = _build_wrapped_env(writer)
     for _ in range(3):
         wrapped.reset(seed=1)
         wrapped.step(0)
-    lines = _read_jsonl(tmp_path / "mulligan_log.jsonl")
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
     # 1 header + 3 records
     assert len(lines) == 4
     indices = [line["game_index"] for line in lines[1:]]
@@ -712,10 +741,18 @@ In `code/digimon_gym/agents/pilot_training.py`, add the import near the top with
 from digimon_gym.agents.mulligan_log import MulliganLogWrapper, MulliganLogWriter
 ```
 
-In `train()`, locate where `recording_writer = TrainingGameRecorder(...)` is constructed and `run_dir` is defined. Immediately after the `recording_writer` line, add:
+In `train()`, locate where `recording_writer = TrainingGameRecorder(...)` is constructed and `run_dir` is defined. Immediately after the `recording_writer` line, add a config dataclass (not a single writer — SubprocVecEnv requires per-env-index files):
 
 ```python
-    mulligan_log_writer = MulliganLogWriter(
+    from dataclasses import dataclass as _dc
+
+    @_dc
+    class _MulliganLogConfig:
+        output_dir: Path
+        enabled: bool
+        run_metadata: dict
+
+    mulligan_log_cfg = _MulliganLogConfig(
         output_dir=run_dir,
         enabled=(cfg.mulligan_log != "off"),
         run_metadata={
@@ -730,7 +767,7 @@ In `train()`, locate where `recording_writer = TrainingGameRecorder(...)` is con
 
 (`datetime` and `timezone` should already be imported; if not, add `from datetime import datetime, timezone` at the top.)
 
-In `make_env()` (the function that returns the wrapped env), find the block:
+In `make_env()` and the env factory inside `make_vec_env`, each subprocess constructs its own `MulliganLogWriter` from the config, keyed by the per-env `rank` / `recording_env_index` so each subprocess owns a separate file. Find the block:
 
 ```python
     if record_this_source:
@@ -745,28 +782,34 @@ In `make_env()` (the function that returns the wrapped env), find the block:
 Immediately after that block, add:
 
 ```python
-    if mulligan_log_writer is not None and mulligan_log_writer.enabled:
+    if mulligan_log_cfg is not None and mulligan_log_cfg.enabled:
+        writer = MulliganLogWriter(
+            output_dir=mulligan_log_cfg.output_dir,
+            env_index=rank,
+            enabled=mulligan_log_cfg.enabled,
+            run_metadata=mulligan_log_cfg.run_metadata,
+        )
         env = MulliganLogWrapper(
             env,
-            writer=mulligan_log_writer,
+            writer=writer,
             source=recording_source,
-            env_index=recording_env_index,
+            env_index=rank,
         )
 ```
 
-Update `make_env`'s signature to accept `mulligan_log_writer: Optional[MulliganLogWriter] = None` (mirror `recording_writer` argument exactly).
+Update `make_env`'s signature to accept `mulligan_log_cfg=None` (mirror `recording_writer` argument exactly). The `MulliganLogWriter` is constructed inside the factory (one per `rank`/`env_index`), not in `train()` once.
 
-Do the same modification in `make_vec_env` — find the inner env-factory function (the one that constructs `wrapped = OpponentWrapper(...)` etc. inside `make_vec_env`'s closure or loop), and add the `MulliganLogWrapper` wrap immediately after the `TrainingRecordingWrapper` block, using the same `mulligan_log_writer` passed via closure.
+Do the same modification in `make_vec_env` — find the inner env-factory function (the one that constructs `wrapped = OpponentWrapper(...)` etc. inside `make_vec_env`'s closure or loop), and add the `MulliganLogWrapper` wrap immediately after the `TrainingRecordingWrapper` block, capturing `mulligan_log_cfg` via closure.
 
-In `train()`, find every call to `make_env(...)` and `make_vec_env(...)` and add `mulligan_log_writer=mulligan_log_writer` as a kwarg.
+In `train()`, find every call to `make_env(...)` and `make_vec_env(...)` and add `mulligan_log_cfg=mulligan_log_cfg` as a kwarg.
 
 - [ ] **Step 7: Update the startup banner**
 
 In `train()`, find the block printing `if recording_writer.enabled: print(f"  Record games:   ...")`. Immediately after, add:
 
 ```python
-        if mulligan_log_writer.enabled:
-            print(f"  Mulligan log:   on -> {mulligan_log_writer.path}")
+        if mulligan_log_cfg.enabled:
+            print(f"  Mulligan log:   on -> {mulligan_log_cfg.output_dir}/mulligan_log_env_*.jsonl")
         else:
             print(f"  Mulligan log:   off")
 ```
@@ -785,11 +828,11 @@ PYTHONIOENCODING=utf-8 python -u -m digimon_gym.agents.pilot_training \
 Expected: completes (or near-completes) without raising. Then:
 
 ```bash
-ls /tmp/mulligan_smoke/pilot_ppo_*/mulligan_log.jsonl
-head -3 /tmp/mulligan_smoke/pilot_ppo_*/mulligan_log.jsonl
+ls /tmp/mulligan_smoke/pilot_ppo_*/mulligan_log_env_*.jsonl
+head -3 /tmp/mulligan_smoke/pilot_ppo_*/mulligan_log_env_000.jsonl
 ```
 
-Expected: file exists; line 1 is the header (`"kind":"mulligan_log_header"`); lines 2+ are records with `action`, `hand_card_ids`, `agent_archetype`.
+Expected: per-env files exist (one per SubprocVecEnv worker); line 1 is the header (`"kind":"mulligan_log_header"`); lines 2+ are records with `action`, `hand_card_ids`, `agent_archetype`.
 
 - [ ] **Step 9: Run the full RL test suite for regressions**
 
@@ -807,13 +850,20 @@ git commit -m "feat(rl): wire MulliganLogWrapper into pilot_training, default on
 
 ## Done criteria
 
-After Task 5 commits, a fresh generalist training run produces `models/<run>/mulligan_log.jsonl` with one header line plus one record per game. A 5-line pandas snippet answers any question of the form "mulligan rate by archetype / step bucket / hand feature".
+After Task 5 commits, a fresh generalist training run produces `models/<run>/mulligan_log_env_*.jsonl` — one file per SubprocVecEnv worker — each with one header line plus one record per game. A 5-line pandas snippet answers any question of the form "mulligan rate by archetype / step bucket / hand feature".
 
 Example post-hoc analysis:
 
 ```python
-import pandas as pd, json
-records = [json.loads(line) for line in open("models/<run>/mulligan_log.jsonl") if '"kind"' not in line]
+import glob, json
+import pandas as pd
+
+records = [
+    json.loads(line)
+    for f in glob.glob("models/<run>/mulligan_log_env_*.jsonl")
+    for line in open(f)
+    if '"kind"' not in line
+]
 df = pd.DataFrame(records)
 df["step_bucket"] = (df["global_step"] // 25000) * 25000
 df.groupby(["step_bucket", "agent_archetype"])["action"].mean()  # mull rate by bucket+archetype

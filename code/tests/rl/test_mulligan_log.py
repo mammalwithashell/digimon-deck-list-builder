@@ -55,21 +55,23 @@ def _read_jsonl(path: Path) -> list:
 def test_writer_disabled_does_nothing(tmp_path):
     writer = MulliganLogWriter(
         output_dir=tmp_path,
+        env_index=0,
         enabled=False,
         run_metadata={"run_name": "test_run"},
     )
     writer.append({"action": 0, "agent_archetype": None})
-    assert not (tmp_path / "mulligan_log.jsonl").exists()
+    assert not (tmp_path / "mulligan_log_env_000.jsonl").exists()
 
 
 def test_writer_writes_header_then_record(tmp_path):
     writer = MulliganLogWriter(
         output_dir=tmp_path,
+        env_index=0,
         enabled=True,
         run_metadata={"run_name": "test_run", "started_at": "2026-05-23T00:00:00+00:00"},
     )
     writer.append({"action": 0, "agent_archetype": "Puppets"})
-    lines = _read_jsonl(tmp_path / "mulligan_log.jsonl")
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
     assert len(lines) == 2
     assert lines[0]["kind"] == "mulligan_log_header"
     assert lines[0]["schema_version"] == 1
@@ -81,13 +83,14 @@ def test_writer_writes_header_then_record(tmp_path):
 def test_writer_writes_header_only_once_across_appends(tmp_path):
     writer = MulliganLogWriter(
         output_dir=tmp_path,
+        env_index=0,
         enabled=True,
         run_metadata={"run_name": "test_run"},
     )
     writer.append({"action": 0})
     writer.append({"action": 1})
     writer.append({"action": 0})
-    lines = _read_jsonl(tmp_path / "mulligan_log.jsonl")
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
     assert len(lines) == 4
     assert lines[0]["kind"] == "mulligan_log_header"
     # All subsequent records are data rows, not headers
@@ -97,6 +100,7 @@ def test_writer_writes_header_only_once_across_appends(tmp_path):
 def test_writer_failure_disables_for_rest_of_run(tmp_path, capsys, monkeypatch):
     writer = MulliganLogWriter(
         output_dir=tmp_path,
+        env_index=0,
         enabled=True,
         run_metadata={"run_name": "test_run"},
     )
@@ -104,7 +108,7 @@ def test_writer_failure_disables_for_rest_of_run(tmp_path, capsys, monkeypatch):
     original_open = Path.open
 
     def _exploding_open(self, *args, **kwargs):
-        if self.name == "mulligan_log.jsonl":
+        if self.name == "mulligan_log_env_000.jsonl":
             raise OSError("simulated disk-full")
         return original_open(self, *args, **kwargs)
 
@@ -115,3 +119,19 @@ def test_writer_failure_disables_for_rest_of_run(tmp_path, capsys, monkeypatch):
     assert writer.enabled is False
     stderr = capsys.readouterr().err
     assert "mulligan_log" in stderr.lower()
+
+
+def test_writer_env_index_in_filename(tmp_path):
+    writer0 = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
+    writer3 = MulliganLogWriter(output_dir=tmp_path, env_index=3, enabled=True, run_metadata={"run_name": "t"})
+    assert writer0.path == tmp_path / "mulligan_log_env_000.jsonl"
+    assert writer3.path == tmp_path / "mulligan_log_env_003.jsonl"
+    # Each writer writes its own header independently.
+    writer0.append({"action": 0})
+    writer3.append({"action": 1})
+    lines0 = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
+    lines3 = _read_jsonl(tmp_path / "mulligan_log_env_003.jsonl")
+    assert lines0[0]["kind"] == "mulligan_log_header"
+    assert lines3[0]["kind"] == "mulligan_log_header"
+    assert lines0[1]["action"] == 0
+    assert lines3[1]["action"] == 1
