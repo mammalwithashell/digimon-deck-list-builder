@@ -117,6 +117,12 @@ class MatchEnv(gymnasium.Wrapper):
         # `_info_with_match_metadata` can compute `match_score_before`
         # accurately by rolling back the just-applied delta.
         self._last_game_score_delta: List[int] = [0, 0]
+        # Per-inner-game stats captured at game-termination time. Consumed
+        # by `WinRateCallback._run_evaluation` to emit one per-game-eval-log
+        # row per game in BO3 mode (since the callback's outer loop only
+        # sees the match-level terminated=True). See
+        # `openspec/changes/add-per-game-eval-log/`.
+        self.match_game_history: List[Dict[str, Any]] = []
 
     # ─── Reset ─────────────────────────────────────────────────────────
 
@@ -307,6 +313,25 @@ class MatchEnv(gymnasium.Wrapper):
         win_reason = outcome.get("win_reason") or outcome.get("reason") or "unknown"
         agent_conceded = bool(win_reason == "concede" and winner_id_python == 2)
         self.concede_history[self.current_game_index] = agent_conceded
+
+        # Snapshot per-game stats BEFORE the inner env's reset (between
+        # games or at match end). Engine counters reset on the next game's
+        # reset(), so we must read them here.
+        try:
+            rl_state = self._inner_digimon_env._rl_state()
+        except Exception:
+            rl_state = {}
+        self.match_game_history.append({
+            "game_in_match_idx": int(self.current_game_index),
+            "winner_id": winner_id_python,
+            "win_reason": win_reason,
+            "agent_conceded": agent_conceded,
+            "digivolves_agent": int(rl_state.get("p1_digivolutions", 0)),
+            "dna_digivolves_agent": int(rl_state.get("p1_dna_digivolutions", 0)),
+            "digivolves_opponent": int(rl_state.get("p2_digivolutions", 0)),
+            "dna_digivolves_opponent": int(rl_state.get("p2_dna_digivolutions", 0)),
+            "steps": int(self.match_step_count_in_current_game),
+        })
 
         # Per-game terminal adjustment: replace `DigimonEnv`'s ±10 (+ up
         # to +5 fast bonus, par 200) with BO3's ±12 (+ up to +3 fast

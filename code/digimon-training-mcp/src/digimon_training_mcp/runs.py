@@ -79,8 +79,13 @@ def _started_at(console_log: Path, fallback: Optional[float]) -> Optional[str]:
     return datetime.fromtimestamp(candidate_ts, tz=timezone.utc).isoformat(timespec="seconds")
 
 
-def list_runs(runs_dir: Optional[Path]) -> Dict[str, Any]:
+def list_runs(
+    runs_dir: Optional[Path],
+    models_dir: Optional[Path] = None,
+) -> Dict[str, Any]:
     """List every direct subdirectory of ``runs_dir`` as a logical run."""
+    from .per_game import has_eval_game_log
+
     if runs_dir is None or not runs_dir.is_dir():
         return {"ok": False, "error": "runs_dir not found — pass --runs-dir or run from a directory whose ancestor contains ./runs"}
 
@@ -125,6 +130,7 @@ def list_runs(runs_dir: Optional[Path]) -> Dict[str, Any]:
             "active": active,
             "latest_step": latest_step,
             "latest_win_rate": latest_win_rate,
+            "has_eval_game_log": has_eval_game_log(models_dir, child.name),
         })
 
     entries.sort(key=lambda e: e["last_modified_epoch"], reverse=True)

@@ -71,6 +71,7 @@ from digimon_gym.agents.training_recording import (
     TrainingRecordingWrapper,
 )
 from digimon_gym.agents.mulligan_log import MulliganLogWrapper, MulliganLogWriter
+from digimon_gym.agents.game_log import GameLogWriter
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -86,6 +87,74 @@ class _MulliganLogConfig:
     output_dir: Path
     enabled: bool
     run_metadata: Dict[str, Any]
+
+
+def _find_eval_recording_path(eval_env) -> Optional[Path]:
+    """Walk the env wrapper chain to find a TrainingRecordingWrapper and
+    return its `last_recording_path`. Returns None if no recording
+    wrapper is in the stack."""
+    cur = eval_env
+    while cur is not None:
+        if isinstance(cur, TrainingRecordingWrapper):
+            return cur.last_recording_path
+        cur = getattr(cur, "env", None)
+    return None
+
+
+def _build_game_log_row(
+    *,
+    step: int,
+    eval_window_idx: int,
+    game_idx: int,
+    agent_archetype: Optional[str],
+    opponent_archetype: Optional[str],
+    p1_digi: int,
+    p1_dna: int,
+    p2_digi: int,
+    p2_dna: int,
+    winner_id: Optional[int],
+    terminal_score: float,
+    steps: int,
+    recording_path: Optional[Path],
+    match_format: str = "single",
+    match_idx: Optional[int] = None,
+    game_in_match_idx: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Construct one row for the eval game log. See
+    `openspec/changes/add-per-game-eval-log/specs/per-game-eval-log/spec.md`
+    for the schema.
+
+    In `match_format="bo3"` runs, `match_idx` / `game_in_match_idx` group
+    rows into the BO3 match they came from; in `match_format="single"`
+    runs both fields are null and one row = one game = one episode."""
+    if winner_id == 1:
+        result = "win"
+    elif winner_id == 2:
+        result = "loss"
+    else:
+        result = "draw"
+    rec_str: Optional[str] = None
+    if recording_path is not None:
+        rec_str = str(Path(recording_path).resolve())
+    return {
+        "step": int(step),
+        "eval_window_idx": int(eval_window_idx),
+        "game_idx": int(game_idx),
+        "source": "eval",
+        "match_format": match_format,
+        "match_idx": int(match_idx) if match_idx is not None else None,
+        "game_in_match_idx": int(game_in_match_idx) if game_in_match_idx is not None else None,
+        "agent_archetype": agent_archetype,
+        "opponent_archetype": opponent_archetype,
+        "digivolves_agent": int(p1_digi),
+        "dna_digivolves_agent": int(p1_dna),
+        "digivolves_opponent": int(p2_digi),
+        "dna_digivolves_opponent": int(p2_dna),
+        "result": result,
+        "episode_length": int(steps),
+        "terminal_score": float(terminal_score),
+        "recording_path": rec_str,
+    }
 
 
 def _seed_everything(seed: int) -> None:
@@ -365,6 +434,7 @@ class WinRateCallback(BaseCallback):
                  eval_suite=None,
                  eval_suite_path: str | None = None,
                  eval_sidecar_path: Optional[Path] = None,
+                 game_log_writer: Optional[GameLogWriter] = None,
                  verbose: int = 1):
         super().__init__(verbose)
         self._eval_env_fn = eval_env_fn
@@ -375,6 +445,11 @@ class WinRateCallback(BaseCallback):
         self.eval_suite_path = eval_suite_path
         self.games_played = 0
         self._last_eval_step = 0
+        # Per-game eval-log writer. None means emission is disabled.
+        # `_eval_window_idx` is incremented at entry to each
+        # `_run_evaluation` call so all rows in one window share an idx.
+        self._game_log_writer = game_log_writer
+        self._eval_window_idx = 0
         self.last_win_rate: float = 0.0
         self.last_mean_reward: float = 0.0
         self.last_draw_rate: float = 0.0
@@ -513,8 +588,16 @@ class WinRateCallback(BaseCallback):
         total_dna_digivolves = 0
         total_opponent_digivolves = 0
         total_opponent_dna_digivolves = 0
+        # Per-game eval-log identity captured once per window so all rows
+        # share the same (step, eval_window_idx). `_games_in_window`
+        # increments per ROW (per game), not per episode — necessary in
+        # BO3 mode where one episode emits 2-3 rows.
+        window_step = int(self.num_timesteps)
+        window_idx = self._eval_window_idx
+        self._eval_window_idx += 1
+        self._games_in_window = 0
 
-        for _ in range(self.n_eval_episodes):
+        for game_idx in range(self.n_eval_episodes):
             obs, info = eval_env.reset()
             episode_reward = 0.0
             steps = 0
@@ -671,6 +754,63 @@ class WinRateCallback(BaseCallback):
                     terminal_score = 0.0
             total_terminal_score += terminal_score
             total_dense_reward += episode_reward - terminal_score
+
+            # Per-game eval log emission. Observational; no-op when no
+            # writer is configured (CLI flag `--eval-game-log off`).
+            # In BO3 mode, iterate `match_env_instance.match_game_history`
+            # to emit ONE ROW PER GAME (not per match) — the callback's
+            # outer loop only sees match-level terminations, so per-game
+            # stats are captured by MatchEnv at each inner-game terminal.
+            if self._game_log_writer is not None:
+                recording_path = _find_eval_recording_path(eval_env)
+                if match_env_instance is not None:
+                    for g_in_match, snap in enumerate(match_env_instance.match_game_history):
+                        g_winner = snap.get("winner_id")
+                        if g_winner == 1:
+                            g_terminal = 1.0
+                        elif g_winner == 2:
+                            g_terminal = -1.0
+                        else:
+                            g_terminal = 0.0
+                        row = _build_game_log_row(
+                            step=window_step,
+                            eval_window_idx=window_idx,
+                            game_idx=self._games_in_window,
+                            agent_archetype=agent_archetype,
+                            opponent_archetype=opponent_archetype,
+                            p1_digi=snap.get("digivolves_agent", 0),
+                            p1_dna=snap.get("dna_digivolves_agent", 0),
+                            p2_digi=snap.get("digivolves_opponent", 0),
+                            p2_dna=snap.get("dna_digivolves_opponent", 0),
+                            winner_id=g_winner,
+                            terminal_score=g_terminal,
+                            steps=snap.get("steps", 0),
+                            recording_path=recording_path,
+                            match_format="bo3",
+                            match_idx=game_idx,
+                            game_in_match_idx=g_in_match,
+                        )
+                        self._game_log_writer.append(row)
+                        self._games_in_window += 1
+                else:
+                    row = _build_game_log_row(
+                        step=window_step,
+                        eval_window_idx=window_idx,
+                        game_idx=self._games_in_window,
+                        agent_archetype=agent_archetype,
+                        opponent_archetype=opponent_archetype,
+                        p1_digi=p1_digi_game,
+                        p1_dna=p1_dna_game,
+                        p2_digi=p2_digi_game,
+                        p2_dna=p2_dna_game,
+                        winner_id=winner_id,
+                        terminal_score=terminal_score,
+                        steps=steps,
+                        recording_path=recording_path,
+                        match_format="single",
+                    )
+                    self._game_log_writer.append(row)
+                    self._games_in_window += 1
 
             # Track per-archetype win rates (when gauntlet OR generalist is active).
             if opponent_archetype:
@@ -1566,6 +1706,11 @@ def train(total_timesteps: int = 100_000,
         },
     )
 
+    eval_game_log_writer: Optional[GameLogWriter] = None
+    if cfg.eval_game_log != "off":
+        run_dir.mkdir(parents=True, exist_ok=True)
+        eval_game_log_writer = GameLogWriter(run_dir / "eval_game_log.jsonl")
+
     if cfg.resume_from and cfg.init_from:
         raise ValueError("resume_from and init_from are mutually exclusive")
     if cfg.init_from:
@@ -1606,6 +1751,10 @@ def train(total_timesteps: int = 100_000,
             print(f"  Mulligan log:   on -> {mulligan_log_cfg.output_dir}/mulligan_log_env_*.jsonl")
         else:
             print(f"  Mulligan log:   off")
+        if eval_game_log_writer is not None:
+            print(f"  Eval game log:  on -> {eval_game_log_writer.path}")
+        else:
+            print(f"  Eval game log:  off")
         if gauntlet and gauntlet.deck_count > 0:
             print(f"  Gauntlet:       {gauntlet.archetype_count} archetypes, "
                   f"{gauntlet.deck_count} decks")
@@ -1847,6 +1996,7 @@ def train(total_timesteps: int = 100_000,
         eval_suite=eval_suite,
         eval_suite_path=cfg.eval_suite,
         eval_sidecar_path=eval_sidecar_path,
+        game_log_writer=eval_game_log_writer,
         verbose=verbose,
     )
     action_validity_cb = ActionValidityCallback()
@@ -2155,6 +2305,14 @@ def _build_argparser() -> argparse.ArgumentParser:
             "one-game-per-episode behavior."
         ),
     )
+    parser.add_argument(
+        "--eval-game-log",
+        choices=["on", "off"],
+        default="on",
+        help="Write per-game eval outcomes (winner, digivolves, archetypes, "
+             "recording path) to models/<run>/eval_game_log.jsonl. One row "
+             "per eval game. Default: on.",
+    )
     return parser
 
 
@@ -2202,6 +2360,8 @@ def main():
     overrides.update({key: value for key, value in legacy_overrides.items() if value is not None})
     # --mulligan-log always has a value (choices default "on"); always propagate it.
     overrides["mulligan_log"] = args.mulligan_log
+    # Same for --eval-game-log.
+    overrides["eval_game_log"] = args.eval_game_log
     if args.record_game_tensors:
         overrides["record_game_tensors"] = True
     if args.self_play:

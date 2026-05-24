@@ -320,6 +320,43 @@ def test_integration_match_completes_within_few_steps_via_concede() -> None:
     assert any(env.concede_history), "at least one concede must be recorded"
 
 
+def test_integration_match_game_history_populated_per_game() -> None:
+    """`match_game_history` gains one entry per inner-game terminal,
+    populated with the digivolve counts / winner / step count at the
+    moment that game ended. Consumed by `WinRateCallback` to emit
+    per-game eval-game-log rows in BO3 mode. See
+    `openspec/changes/add-per-game-eval-log/`.
+    """
+    env = _make_match_env_with_greedy_opponent(seed=29)
+    env.reset()
+    assert env.match_game_history == []  # empty at match start
+
+    terminated = False
+    steps = 0
+    while not terminated and steps < 20:
+        action = 94 if env._pending_play_order_pick else 93
+        _, _, terminated, _, _ = env.step(action)
+        steps += 1
+    assert terminated
+
+    # Concede-every-game ends 0-2 in two inner games; history must have
+    # exactly two entries with strictly-increasing game_in_match_idx.
+    assert len(env.match_game_history) == 2
+    assert [g["game_in_match_idx"] for g in env.match_game_history] == [0, 1]
+    for g in env.match_game_history:
+        # Every entry carries the full schema.
+        for key in (
+            "winner_id", "win_reason", "agent_conceded",
+            "digivolves_agent", "dna_digivolves_agent",
+            "digivolves_opponent", "dna_digivolves_opponent",
+            "steps",
+        ):
+            assert key in g, f"missing key {key} in match_game_history entry"
+        assert g["agent_conceded"] is True
+        # Concede yields opp win in BO3 conventions: Python pid 2.
+        assert g["winner_id"] == 2
+
+
 def test_integration_match_terminal_reward_in_expected_range() -> None:
     """End-to-end reward sanity: a full match's grand-total reward
     should land in the design's predicted range (`±50` for typical
