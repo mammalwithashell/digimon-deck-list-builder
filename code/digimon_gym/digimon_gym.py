@@ -148,7 +148,10 @@ class DigimonEnv(gymnasium.Env):
                  max_turns: int = 100,
                  tensor_profile: Optional[str] = None,
                  record_actions: bool = False,
-                 record_tensors: bool = False):
+                 record_tensors: bool = False,
+                 digivolve_shaping: bool = False,
+                 digivolve_reward: float = 0.1,
+                 dna_digivolve_bonus: float = 0.3):
         super().__init__()
 
         # Observation and action spaces
@@ -182,6 +185,14 @@ class DigimonEnv(gymnasium.Env):
         # until the first step records counts, then maintained per-step.
         self._prev_p1_security: Optional[int] = None
         self._prev_p2_security: Optional[int] = None
+        # Digivolve reward-shaping config. Asymmetric (agent only) — we
+        # mirror p1 prev-state only. See
+        # docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
+        self.digivolve_shaping = bool(digivolve_shaping)
+        self.digivolve_reward = float(digivolve_reward)
+        self.dna_digivolve_bonus = float(dna_digivolve_bonus)
+        self._prev_p1_digivolutions: Optional[int] = None
+        self._prev_p1_dna_digivolutions: Optional[int] = None
 
     @property
     def game(self):
@@ -311,6 +322,8 @@ class DigimonEnv(gymnasium.Env):
         # post-reset step onward, no carryover from prior episode.
         self._prev_p1_security = None
         self._prev_p2_security = None
+        self._prev_p1_digivolutions = None
+        self._prev_p1_dna_digivolutions = None
 
         obs = self.runner.get_board_tensor(1)
         info = {"action_mask": self.action_mask(), **self._tensor_info()}
@@ -434,6 +447,28 @@ class DigimonEnv(gymnasium.Env):
 
         self._prev_p1_security = p1_sec
         self._prev_p2_security = p2_sec
+
+        # Digivolve reward shaping — asymmetric (agent only) and opt-in.
+        # See docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
+        if self.digivolve_shaping:
+            p1_digi = int(state.get("p1_digivolutions", 0))
+            p1_dna = int(state.get("p1_dna_digivolutions", 0))
+
+            if (
+                self._prev_p1_digivolutions is not None
+                and self._prev_p1_dna_digivolutions is not None
+            ):
+                # DNA stacks on regular in the engine, so the regular reward
+                # always fires and the DNA bonus is additive.
+                d_digi = p1_digi - self._prev_p1_digivolutions
+                d_dna = p1_dna - self._prev_p1_dna_digivolutions
+                if d_digi > 0:
+                    dense_reward += float(d_digi) * self.digivolve_reward
+                if d_dna > 0:
+                    dense_reward += float(d_dna) * self.dna_digivolve_bonus
+
+            self._prev_p1_digivolutions = p1_digi
+            self._prev_p1_dna_digivolutions = p1_dna
 
         # Per-step stalling penalty (small but non-zero).
         return dense_reward - 0.001

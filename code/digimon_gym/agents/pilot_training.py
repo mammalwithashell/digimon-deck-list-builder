@@ -441,6 +441,12 @@ class WinRateCallback(BaseCallback):
         total_terminal_score = 0.0
         total_dense_reward = 0.0
         total_steps = 0
+        # Digivolve activity counters — observational, logged regardless of
+        # whether the shaping reward is enabled (so unshaped runs produce
+        # a baseline curve for comparison). See
+        # docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
+        total_digivolves = 0
+        total_dna_digivolves = 0
 
         for _ in range(self.n_eval_episodes):
             obs, info = eval_env.reset()
@@ -475,6 +481,16 @@ class WinRateCallback(BaseCallback):
 
             total_reward += episode_reward
             total_steps += steps
+
+            # Read final digivolve counters from the agent (p1). Robust to
+            # backends that don't surface the keys (defaults to 0).
+            if eval_env is not None:
+                try:
+                    final_state = _unwrap_to_digimon_env(eval_env)._rl_state()
+                    total_digivolves += int(final_state.get("p1_digivolutions", 0))
+                    total_dna_digivolves += int(final_state.get("p1_dna_digivolutions", 0))
+                except Exception:
+                    pass
 
             # Use the actual game outcome instead of reward as a proxy
             won = False
@@ -543,6 +559,8 @@ class WinRateCallback(BaseCallback):
         draw_rate = draws / self.n_eval_episodes
         mean_terminal_score = total_terminal_score / self.n_eval_episodes
         mean_dense_reward = total_dense_reward / self.n_eval_episodes
+        mean_digivolves = total_digivolves / self.n_eval_episodes
+        mean_dna_digivolves = total_dna_digivolves / self.n_eval_episodes
 
         self.last_win_rate = win_rate
         self.last_mean_reward = mean_reward
@@ -550,6 +568,8 @@ class WinRateCallback(BaseCallback):
         self.last_mean_eval_terminal_score = mean_terminal_score
         self.last_mean_eval_dense_reward = mean_dense_reward
         self.last_mean_eval_episode_length = mean_length
+        self.last_mean_eval_digivolves_per_game = mean_digivolves
+        self.last_mean_eval_dna_digivolves_per_game = mean_dna_digivolves
 
         self.logger.record("pilot/win_rate", win_rate)
         self.logger.record("pilot/draw_rate", draw_rate)
@@ -557,6 +577,8 @@ class WinRateCallback(BaseCallback):
         self.logger.record("pilot/mean_eval_terminal_score", mean_terminal_score)
         self.logger.record("pilot/mean_eval_dense_reward", mean_dense_reward)
         self.logger.record("pilot/mean_eval_episode_length", mean_length)
+        self.logger.record("pilot/mean_eval_digivolves_per_game", mean_digivolves)
+        self.logger.record("pilot/mean_eval_dna_digivolves_per_game", mean_dna_digivolves)
         self.logger.record("pilot/games_played", self.games_played)
 
         # Per-archetype matchup tracking. Populated by GeneralistDeckPoolWrapper
@@ -773,7 +795,10 @@ def make_env(opponent: str = "greedy",
              recording_writer: Optional[TrainingGameRecorder] = None,
              recording_source: str = "train",
              recording_env_index: int = 0,
-             mulligan_log_cfg: Optional[_MulliganLogConfig] = None) -> gymnasium.Env:
+             mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
+             digivolve_shaping: bool = False,
+             digivolve_reward: float = 0.1,
+             dna_digivolve_bonus: float = 0.3) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -819,6 +844,9 @@ def make_env(opponent: str = "greedy",
         tensor_profile=tensor_profile,
         record_actions=record_this_source,
         record_tensors=record_this_source and recording_writer.record_tensors,
+        digivolve_shaping=digivolve_shaping,
+        digivolve_reward=digivolve_reward,
+        dna_digivolve_bonus=dna_digivolve_bonus,
     )
 
     if opponent == "self-play":
@@ -922,6 +950,9 @@ def make_vec_env(
                 tensor_profile=cfg.tensor_profile,
                 record_actions=record_this_source,
                 record_tensors=record_this_source and recording_writer.record_tensors,
+                digivolve_shaping=cfg.digivolve_shaping,
+                digivolve_reward=cfg.digivolve_reward,
+                dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             )
             wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
             if generalist_deck_pool is not None:
@@ -1232,6 +1263,9 @@ def train(total_timesteps: int = 100_000,
             recording_writer=recording_writer,
             recording_source="train",
             mulligan_log_cfg=mulligan_log_cfg,
+            digivolve_shaping=cfg.digivolve_shaping,
+            digivolve_reward=cfg.digivolve_reward,
+            dna_digivolve_bonus=cfg.dna_digivolve_bonus,
         )
 
     # Load autoencoder embeddings for warm-start (if available)
@@ -1324,6 +1358,9 @@ def train(total_timesteps: int = 100_000,
                 tensor_profile=cfg.tensor_profile,
                 record_actions=recording_writer.enabled,
                 record_tensors=recording_writer.enabled and recording_writer.record_tensors,
+                digivolve_shaping=cfg.digivolve_shaping,
+                digivolve_reward=cfg.digivolve_reward,
+                dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             )
             wrapped = OpponentWrapper(base_env, opponent_fn=pool_opponent_fn)
             if generalist_deck_pool is not None:
@@ -1371,6 +1408,9 @@ def train(total_timesteps: int = 100_000,
             recording_writer=recording_writer,
             recording_source="eval",
             mulligan_log_cfg=mulligan_log_cfg,
+            digivolve_shaping=cfg.digivolve_shaping,
+            digivolve_reward=cfg.digivolve_reward,
+            dna_digivolve_bonus=cfg.dna_digivolve_bonus,
         )
     eval_suite = None
     if cfg.eval_suite:
@@ -1506,6 +1546,9 @@ def train(total_timesteps: int = 100_000,
             "n_epochs": n_epochs,
             "gamma": gamma,
         },
+        digivolve_shaping=cfg.digivolve_shaping,
+        digivolve_reward=cfg.digivolve_reward,
+        dna_digivolve_bonus=cfg.dna_digivolve_bonus,
     )
     if checkpoint_cb is not None:
         meta.checkpoint_timestamps = checkpoint_cb.saved_at

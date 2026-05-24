@@ -4102,6 +4102,14 @@ impl Game {
         );
         self.drain_effect_queue();
 
+        // Reward-shaping counter — bumped here at the user-action choke
+        // point that both `digivolve_from_hand_inner` and the
+        // replacement-resume path (`commit_pending_would_digivolve`)
+        // funnel through. Effect-initiated digivolves (`digivolve_onto`)
+        // intentionally do NOT bump. See
+        // docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
+        self.n_digivolutions[resume.player as usize] += 1;
+
         self.check_turn_end();
         true
     }
@@ -4204,6 +4212,11 @@ impl Game {
             breeding.digivolve(removed, turn);
         }
         player_mut.draw();
+
+        // Reward-shaping counter — see commit_digivolve_from_hand_no_replace
+        // for the design rationale. Bumped here because breeding digivolve
+        // is its own user-action choke point (no separate commit helper).
+        self.n_digivolutions[player_id as usize] += 1;
 
         // Breeding digivolve does NOT fire WhenDigivolving (Python parity).
         self.check_turn_end();

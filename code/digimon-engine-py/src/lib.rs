@@ -701,6 +701,13 @@ impl RustHeadlessGame {
         d.set_item("p2_security", p2.security.len())?;
         d.set_item("p1_total_dp", p1.total_field_dp(&game.card_data))?;
         d.set_item("p2_total_dp", p2.total_field_dp(&game.card_data))?;
+        // Digivolve reward-shaping counters. See
+        // docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
+        // p1 = Rust index 0, p2 = Rust index 1 (Python 1/2 convention).
+        d.set_item("p1_digivolutions", game.n_digivolutions[0])?;
+        d.set_item("p2_digivolutions", game.n_digivolutions[1])?;
+        d.set_item("p1_dna_digivolutions", game.n_dna_digivolutions[0])?;
+        d.set_item("p2_dna_digivolutions", game.n_dna_digivolutions[1])?;
         Ok(d.into_py(py))
     }
 

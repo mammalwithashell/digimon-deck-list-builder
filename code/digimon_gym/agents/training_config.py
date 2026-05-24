@@ -61,6 +61,13 @@ class TrainingConfig:
     # When set via YAML, quote the value ("on" / "off") — unquoted `off`/`on`
     # are YAML 1.1 booleans and would fail validation as bool literals.
     mulligan_log: str = "on"
+    # Digivolve reward shaping (asymmetric — agent only, never opponent).
+    # All three default OFF/zero so existing runs are byte-identical when
+    # users don't set them. See
+    # docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
+    digivolve_shaping: bool = False
+    digivolve_reward: float = 0.1       # per regular digivolve
+    dna_digivolve_bonus: float = 0.3    # additional on top of digivolve_reward
 
     def __post_init__(self) -> None:
         self._validate()
@@ -121,6 +128,10 @@ class TrainingConfig:
             raise ValueError("record_games_max must be >= 0")
         if not 0.0 <= self.record_games_sample_rate <= 1.0:
             raise ValueError("record_games_sample_rate must be between 0 and 1")
+        if self.digivolve_reward < 0:
+            raise ValueError("digivolve_reward must be >= 0")
+        if self.dna_digivolve_bonus < 0:
+            raise ValueError("dna_digivolve_bonus must be >= 0")
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

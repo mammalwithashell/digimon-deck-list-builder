@@ -136,6 +136,81 @@ def test_win_rate_callback_logs_terminal_and_dense_eval_reward(monkeypatch):
     assert records["pilot/mean_eval_dense_reward"] == 0.375
 
 
+class _FakeEvalEnvWithRlState(_FakeEvalEnv):
+    """`_FakeEvalEnv` extended with a per-episode `_rl_state` snapshot —
+    matches the surface the digivolve-counter telemetry reads after each
+    eval game completes.
+    """
+
+    def __init__(self, episodes, per_episode_state):
+        super().__init__(episodes)
+        self._per_episode_state = per_episode_state
+
+    def _rl_state(self):
+        # Episode index is post-incremented in reset() and read here AFTER
+        # the episode's step loop, so episode_index points at the just-
+        # finished episode.
+        return self._per_episode_state[self.episode_index]
+
+
+def test_win_rate_callback_logs_digivolve_telemetry(monkeypatch):
+    """Per-episode digivolve counters surface as mean_eval_*_per_game
+    scalars, averaged over the eval episodes."""
+    from digimon_gym.agents import pilot_training
+    from digimon_gym.agents.pilot_training import WinRateCallback
+
+    env = _FakeEvalEnvWithRlState(
+        episodes=[
+            ([1.0], 1),
+            ([1.0], 2),
+        ],
+        per_episode_state=[
+            {"p1_digivolutions": 3, "p1_dna_digivolutions": 1},
+            {"p1_digivolutions": 5, "p1_dna_digivolutions": 0},
+        ],
+    )
+    monkeypatch.setattr(pilot_training, "_unwrap_to_digimon_env", lambda wrapped: wrapped)
+
+    cb = WinRateCallback(
+        eval_env_fn=lambda: env,
+        eval_freq=1,
+        n_eval_episodes=2,
+        verbose=0,
+    )
+    cb.model = _FakeModel()
+
+    cb._run_evaluation()
+
+    records = cb.model.logger.records
+    # Mean over 2 episodes: (3 + 5) / 2 = 4.0, (1 + 0) / 2 = 0.5.
+    assert records["pilot/mean_eval_digivolves_per_game"] == 4.0
+    assert records["pilot/mean_eval_dna_digivolves_per_game"] == 0.5
+
+
+def test_win_rate_callback_handles_missing_rl_state_gracefully(monkeypatch):
+    """If the eval env doesn't expose `_rl_state` (e.g. a non-Rust backend),
+    the telemetry must not crash — it falls back to zero counts."""
+    from digimon_gym.agents import pilot_training
+    from digimon_gym.agents.pilot_training import WinRateCallback
+
+    env = _FakeEvalEnv([([1.0], 1)])  # no _rl_state on this fake
+    monkeypatch.setattr(pilot_training, "_unwrap_to_digimon_env", lambda wrapped: wrapped)
+
+    cb = WinRateCallback(
+        eval_env_fn=lambda: env,
+        eval_freq=1,
+        n_eval_episodes=1,
+        verbose=0,
+    )
+    cb.model = _FakeModel()
+
+    cb._run_evaluation()
+
+    records = cb.model.logger.records
+    assert records["pilot/mean_eval_digivolves_per_game"] == 0.0
+    assert records["pilot/mean_eval_dna_digivolves_per_game"] == 0.0
+
+
 def test_win_rate_callback_exposes_last_eval_suite_results(monkeypatch):
     from digimon_gym.agents import pilot_training
     from digimon_gym.agents.eval_suite import EvalCellResult, EvalSuiteResult
