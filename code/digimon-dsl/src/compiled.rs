@@ -218,6 +218,9 @@ pub struct CompiledPredicate {
     /// card-subject leaf: true when no battle-area Digimon of the scoped
     /// player shares the candidate card's name.
     pub name_not_shared_by_field_digimon: Option<CompiledPlayerRef>,
+    /// Card-subject leaf: true when no battle-area Tamer of the scoped
+    /// player shares the candidate card's name.
+    pub name_not_shared_by_field_tamer: Option<CompiledPlayerRef>,
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<CompiledDpConstraint>,
     pub play_cost_gte: Option<CompiledDpConstraint>,
@@ -233,6 +236,10 @@ pub struct CompiledPredicate {
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
     pub has_keyword: Option<String>,
+    /// Permanent-subject leaf for printed/granted/temporary Security A.
+    /// deltas. Used by Venusmon-style text that cares about "with
+    /// <Security A.>" rather than a specific keyword spelling.
+    pub has_security_attack_change: Option<bool>,
     /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if the
     /// candidate permanent carries any `EffectTiming::OnDeletion`-timed
     /// triggered effect via a compiled DSL clause or a hand-written
@@ -267,6 +274,8 @@ pub struct CompiledPredicate {
     pub security_count_gte: Option<CompiledDpConstraint>,
     pub opponent_security_count_lte: Option<CompiledDpConstraint>,
     pub opponent_security_count_gte: Option<CompiledDpConstraint>,
+    pub face_up_security_count_lte: Option<CompiledDpConstraint>,
+    pub face_up_security_count_gte: Option<CompiledDpConstraint>,
     /// True when the named player has no face-up security card matching the
     /// identity filter. G-PRED-NO-FACE-UP-SECURITY-NAMED.
     pub no_face_up_security_named: Option<CompiledFaceUpSecurityNamed>,
@@ -339,6 +348,7 @@ pub struct CompiledPredicate {
     pub not: Option<Box<CompiledPredicate>>,
     pub has_alt_path: Option<String>,
     pub level_matches_aggregate: Option<(CompiledAggregateSelector, CompiledPlayerRef)>,
+    pub materials_count_matches_aggregate: Option<(CompiledAggregateSelector, CompiledPlayerRef)>,
     pub self_digivolution_contains_name: Option<String>,
     /// Like `self_digivolution_contains_name` but scans ONLY the
     /// digivolution source cards beneath the carrier — the carrier's
@@ -527,6 +537,7 @@ pub enum CompiledAggregateSelector {
     HighestDp,
     LowestLevel,
     HighestLevel,
+    FewestMaterials,
     /// Lowest printed play cost among the candidate set.
     /// G-PLAY-COST-AGGREGATE.
     LowestPlayCost,
@@ -938,6 +949,7 @@ pub enum CompiledStep {
     DeDigivolve {
         target: CompiledBindingRef,
         amount: Option<u8>,
+        amount_fn: Option<CompiledFormula>,
         stop_at_level: Option<u8>,
     },
     PlaceOnSecurity {
@@ -993,6 +1005,13 @@ pub enum CompiledStep {
         /// `None` preserves prior behavior (no binding insert).
         /// G-PLAY-FROM-HAND-FREE-BIND-AS (Phase 2 Track H closure).
         bind_as: Option<String>,
+    },
+    UseOptionFromHand {
+        of: CompiledPlayerRef,
+        filter: CompiledPredicate,
+        use_cost_lte_opponent_memory: bool,
+        optional: bool,
+        prompt: Option<String>,
     },
     PlayFromTrash {
         of: CompiledPlayerRef,
@@ -1056,6 +1075,9 @@ pub enum CompiledStep {
         count: Option<CompiledFormula>,
     },
     TrashBottomSecurity {
+        of: CompiledPlayerRef,
+    },
+    AddBottomSecurityToHand {
         of: CompiledPlayerRef,
     },
     TrashTopSecurityAndCancelReplacement {

@@ -23,12 +23,13 @@ use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::step::{
-    drain_dsl_outer_tail, resolve_player, run_steps_with_runtime, StepRuntime,
+    drain_dsl_outer_tail, drain_or_rewrap_pending_tail, resolve_player, run_steps_with_runtime,
+    StepRuntime,
 };
 use crate::effect_context::{
     CountCappedZone, DistinctByMode, EffectContext, EffectReadContext, RevealBucketSelection,
 };
-use crate::enums::GamePhase;
+use crate::enums::{CardKind, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind};
 use crate::trigger_context::TriggerContext;
@@ -262,6 +263,26 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            selection_result(ctx)
+        }
+        CompiledStep::UseOptionFromHand {
+            of,
+            filter,
+            use_cost_lte_opponent_memory,
+            optional,
+            prompt,
+        } => {
+            install_use_option_from_hand(
+                ctx,
+                *of,
+                filter.clone(),
+                *use_cost_lte_opponent_memory,
+                *optional,
+                prompt.clone(),
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
@@ -1115,6 +1136,10 @@ fn install_select_hand(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    let tail_for_decline = Arc::clone(&tail);
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     ctx.select_hand(
         target_player,
         &prompt,
@@ -1145,6 +1170,142 @@ fn install_select_hand(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }));
+        }
+    }
+}
+
+fn player_visible_memory(game: &crate::game::Game, player: PlayerId) -> i16 {
+    if game.turn_player() == player {
+        game.memory.max(0)
+    } else {
+        (-game.memory).max(0)
+    }
+}
+
+fn install_use_option_from_hand(
+    ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
+    filter: CompiledPredicate,
+    use_cost_lte_opponent_memory: bool,
+    optional: bool,
+    prompt: Option<String>,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let target_player = resolve_player(ctx, of);
+    let prompt = prompt.unwrap_or_else(|| "Choose an Option card to use".to_string());
+    let tail_for_accept = tail.clone();
+    let tail_for_decline = tail;
+    let runtime_for_accept = runtime.clone();
+    let runtime_for_decline = runtime;
+    let bindings_for_accept = bindings.clone();
+    let bindings_for_decline = bindings.clone();
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let trigger_for_accept = trigger_context.clone();
+    let trigger_for_decline = trigger_context;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+
+    ctx.select_hand(
+        target_player,
+        &prompt,
+        optional,
+        move |game, idx| {
+            let Some(card) = game.player(target_player).hand.get(idx) else {
+                return false;
+            };
+            let kind = card.card_kind(&game.card_data);
+            if !matches!(kind, CardKind::Option | CardKind::Dual) {
+                return false;
+            }
+            if use_cost_lte_opponent_memory {
+                let opponent = game.next_clockwise(player);
+                let ceiling = player_visible_memory(game, opponent);
+                let use_cost = card
+                    .option_use_cost(&game.card_data)
+                    .unwrap_or_else(|| card.play_cost(&game.card_data))
+                    as i16;
+                if use_cost > ceiling {
+                    return false;
+                }
+            }
+            let read_ctx = EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Card(card.handle()),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, idx| {
+            let previous = cb_ctx.game.current_trigger_context.clone();
+            cb_ctx.game.current_trigger_context = trigger_for_accept.clone();
+            let result = cb_ctx
+                .game
+                .use_option_from_hand_without_paying_cost(target_player, idx);
+            cb_ctx.game.current_trigger_context = previous;
+            if matches!(result, crate::selection::OptionPlayResult::Invalid) {
+                return;
+            }
+            drain_or_rewrap_pending_tail(
+                cb_ctx.game,
+                source_card,
+                source_permanent,
+                player,
+                tail_for_accept,
+                bindings_for_accept,
+                runtime_for_accept,
+            );
+        },
+    );
+
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let previous = game.current_trigger_context.clone();
+                game.current_trigger_context = trigger_for_decline.clone();
+                drain_or_rewrap_pending_tail(
+                    game,
+                    source_card,
+                    source_permanent,
+                    player,
+                    tail_for_decline,
+                    bindings_for_decline,
+                    runtime_for_decline,
+                );
+                game.current_trigger_context = previous;
+            }));
+        }
+    }
 }
 
 /// Count how many hand cards of `of`'s player satisfy `filter` under the

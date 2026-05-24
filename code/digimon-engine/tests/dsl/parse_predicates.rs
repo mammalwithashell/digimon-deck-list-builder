@@ -16,6 +16,9 @@ fn parse_leaf_predicates() {
     let p = parse("level_gte: 6");
     assert_eq!(p.level_gte, Some(DpConstraint::Literal(6)));
 
+    let p = parse("face_up_security_count_lte: 0");
+    assert_eq!(p.face_up_security_count_lte, Some(DpConstraint::Literal(0)));
+
     let p = parse("kind: digimon");
     assert_eq!(p.kind, Some(digimon_engine::dsl::spec::CardKind::Digimon));
 
@@ -33,6 +36,12 @@ fn parse_leaf_predicates() {
     let p = parse("name_not_shared_by_field_digimon: { of: you }");
     assert_eq!(
         p.name_not_shared_by_field_digimon.map(|s| s.player()),
+        Some(PlayerRef::You)
+    );
+
+    let p = parse("name_not_shared_by_field_tamer: { of: you }");
+    assert_eq!(
+        p.name_not_shared_by_field_tamer.map(|s| s.player()),
         Some(PlayerRef::You)
     );
 }

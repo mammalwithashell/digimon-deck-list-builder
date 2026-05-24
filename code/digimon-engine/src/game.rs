@@ -7,7 +7,7 @@ use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
-use crate::enums::{GamePhase, PlayerId};
+use crate::enums::{GamePhase, ModifierType, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
@@ -2575,6 +2575,44 @@ impl Game {
     ) -> Option<i32> {
         let (value, found) = self.live_declarative_formula_sum(target, true);
         found.then_some(value)
+    }
+
+    /// True when `target` currently has any Security Attack delta. Printed
+    /// and modifier-granted `<Security A. +/-N>` keywords, temporary
+    /// `SecurityAttackChange` modifiers, and formula-driven declarative
+    /// security-attack auras all count.
+    pub fn has_security_attack_change(&self, target: crate::permanent::PermanentHandle) -> bool {
+        self.security_attack_keyword_bonus(target) != 0
+            || self
+                .modifiers
+                .sum(target, ModifierType::SecurityAttackChange)
+                != 0
+            || self
+                .dynamic_security_attack_aura_bonus(target)
+                .is_some_and(|bonus| bonus != 0)
+    }
+
+    /// Shared Digimon-target attack gate for target-scoped combat
+    /// restrictions. `CanAttackTargetDefendingPermanent` is the established
+    /// affirmative override for target-carried attack bans.
+    pub fn attack_target_blocked_by_modifier(
+        &self,
+        attacker: crate::permanent::PermanentHandle,
+        target: crate::permanent::PermanentHandle,
+    ) -> bool {
+        if self
+            .modifiers
+            .has(target, ModifierType::CanAttackTargetDefendingPermanent)
+        {
+            return false;
+        }
+        if self.modifiers.has(target, ModifierType::CannotAttackTarget) {
+            return true;
+        }
+        self.modifiers.has(
+            target,
+            ModifierType::CannotBeAttackedBySecurityAttackChanged,
+        ) && self.has_security_attack_change(attacker)
     }
 
     fn live_declarative_formula_sum(

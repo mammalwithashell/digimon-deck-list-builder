@@ -124,8 +124,14 @@ fn seek_forward_equivalent_to_sequential_steps() {
     assert_eq!(r_seek.game.current_phase, r_step.game.current_phase);
     assert_eq!(r_seek.game.turn_player(), r_step.game.turn_player());
     for i in 0..2 {
-        assert_eq!(r_seek.game.players[i].hand.len(), r_step.game.players[i].hand.len());
-        assert_eq!(r_seek.game.players[i].deck.len(), r_step.game.players[i].deck.len());
+        assert_eq!(
+            r_seek.game.players[i].hand.len(),
+            r_step.game.players[i].hand.len()
+        );
+        assert_eq!(
+            r_seek.game.players[i].deck.len(),
+            r_step.game.players[i].deck.len()
+        );
         assert_eq!(
             r_seek.game.players[i].battle_area.len(),
             r_step.game.players[i].battle_area.len()
@@ -165,10 +171,7 @@ fn verify_mode_detects_injected_memory_divergence() {
 
     // Inject a synthetic divergence: corrupt the recorded memory_after of
     // the first replayable action so verify mode reports it.
-    let actions = recording["actions"]
-        .as_array()
-        .unwrap()
-        .clone();
+    let actions = recording["actions"].as_array().unwrap().clone();
     // Find the first non-mulligan action and bump memory_after.
     let mut new_actions = Vec::new();
     let mut bumped = false;
@@ -184,10 +187,7 @@ fn verify_mode_detects_injected_memory_divergence() {
 
     let mut replay = ReplayRunner::new(recording, &db, true).expect("constructs");
     let first = replay.step();
-    let mem_div = first
-        .divergences
-        .iter()
-        .find(|d| d.field == "memory_after");
+    let mem_div = first.divergences.iter().find(|d| d.field == "memory_after");
     assert!(
         mem_div.is_some(),
         "expected memory_after divergence in step 1, got: {:?}",
@@ -200,8 +200,7 @@ fn unknown_card_in_recording_errors() {
     let db = minimal_db();
     let mut recording = record_game(2);
     // Replace one card_id in player1's library with something not in `db`.
-    recording["initial_state"]["player1"]["library_order"][0] =
-        serde_json::json!("UNKNOWN-XYZ");
+    recording["initial_state"]["player1"]["library_order"][0] = serde_json::json!("UNKNOWN-XYZ");
     match ReplayRunner::new(recording, &db, false) {
         Err(ReplayError::UnknownCard(ids)) => {
             assert!(ids.contains(&"UNKNOWN-XYZ".to_string()));

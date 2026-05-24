@@ -623,8 +623,10 @@ mod legal_actions_tests {
     fn every_illegal_action_id_is_absent() {
         let r = fixture();
         let mask = build_action_mask(&r.game, 0);
-        let legal: std::collections::HashSet<u16> =
-            legal_decoded_actions(&r.game, 0).iter().map(|e| e.action_id).collect();
+        let legal: std::collections::HashSet<u16> = legal_decoded_actions(&r.game, 0)
+            .iter()
+            .map(|e| e.action_id)
+            .collect();
         for (idx, bit) in mask.iter().enumerate() {
             if *bit <= 0.5 {
                 assert!(
@@ -639,8 +641,10 @@ mod legal_actions_tests {
     fn every_legal_action_has_a_decoded_entry() {
         let r = fixture();
         let mask = build_action_mask(&r.game, 0);
-        let legal: std::collections::HashSet<u16> =
-            legal_decoded_actions(&r.game, 0).iter().map(|e| e.action_id).collect();
+        let legal: std::collections::HashSet<u16> = legal_decoded_actions(&r.game, 0)
+            .iter()
+            .map(|e| e.action_id)
+            .collect();
         for (idx, bit) in mask.iter().enumerate() {
             if *bit > 0.5 {
                 assert!(

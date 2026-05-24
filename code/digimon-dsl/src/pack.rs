@@ -265,6 +265,7 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         CompiledStep::SelectOwnPermanent { filter, .. }
         | CompiledStep::SelectOpponentPermanent { filter, .. }
         | CompiledStep::SelectHand { filter, .. }
+        | CompiledStep::UseOptionFromHand { filter, .. }
         | CompiledStep::SelectTrash { filter, .. }
         | CompiledStep::SelectMaterial { filter, .. }
         | CompiledStep::SelectReveal { filter, .. }
@@ -315,6 +316,11 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         CompiledStep::RawRust { fn_name, .. } => {
             names.insert(fn_name.clone());
         }
+        CompiledStep::DeDigivolve { amount_fn, .. } => {
+            if let Some(formula) = amount_fn {
+                collect_formula_raw_rust_fns(formula, names);
+            }
+        }
         _ => {}
     }
 }
@@ -353,6 +359,8 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
         &predicate.memory_gte,
         &predicate.security_count_lte,
         &predicate.security_count_gte,
+        &predicate.face_up_security_count_lte,
+        &predicate.face_up_security_count_gte,
     ]
     .into_iter()
     .flatten()

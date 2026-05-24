@@ -44,6 +44,12 @@ enum CostReductionKind {
     OptionUse,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OptionCostPolicy {
+    Pay,
+    Free,
+}
+
 impl OptionSource {
     fn use_source(self) -> OptionUseSource {
         match self {
@@ -1090,7 +1096,28 @@ impl Game {
         player_id: PlayerId,
         hand_index: usize,
     ) -> OptionPlayResult {
-        self.play_option_core(player_id, OptionSource::Hand(hand_index), None)
+        self.play_option_core(
+            player_id,
+            OptionSource::Hand(hand_index),
+            None,
+            OptionCostPolicy::Pay,
+        )
+    }
+
+    /// Use an Option from hand without paying its use cost while preserving
+    /// the normal Option lifecycle (OnUseOption, OptionMain/mode selection,
+    /// and subtype disposal). Intended for card effects such as BT24-085.
+    pub fn use_option_from_hand_without_paying_cost(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> OptionPlayResult {
+        self.play_option_core(
+            player_id,
+            OptionSource::Hand(hand_index),
+            None,
+            OptionCostPolicy::Free,
+        )
     }
 
     /// Play an Option card from `player`'s trash (effect-driven).
@@ -1109,7 +1136,12 @@ impl Game {
         {
             return OptionPlayResult::Invalid;
         }
-        self.play_option_core(player_id, OptionSource::Trash(trash_index), None)
+        self.play_option_core(
+            player_id,
+            OptionSource::Trash(trash_index),
+            None,
+            OptionCostPolicy::Pay,
+        )
     }
 
     /// Shared Option-play pipeline. Forks on source zone (hand vs trash)
@@ -1124,6 +1156,7 @@ impl Game {
         player_id: PlayerId,
         source: OptionSource,
         chosen_mode: Option<OptionPlayMode>,
+        cost_policy: OptionCostPolicy,
     ) -> OptionPlayResult {
         // Always-fire (not gated on debug_assertions): re-entering
         // play_option_core with `pending_option` still set means the
@@ -1207,9 +1240,11 @@ impl Game {
                     return OptionPlayResult::Invalid;
                 }
             }
-            if !crate::action::mask::option_use_requirement_or_color_available(
-                card, self, player_id,
-            ) {
+            if cost_policy == OptionCostPolicy::Pay
+                && !crate::action::mask::option_use_requirement_or_color_available(
+                    card, self, player_id,
+                )
+            {
                 return OptionPlayResult::Invalid;
             }
             (
@@ -1249,6 +1284,7 @@ impl Game {
                             source,
                             card_handle,
                             legal_modes,
+                            cost_policy,
                         );
                         return OptionPlayResult::Pending;
                     }
@@ -1283,8 +1319,11 @@ impl Game {
             OptionPlayMode::Link { cost } => {
                 (cost as i32 + self.modifiers.link_cost_delta_for_player(player_id)).max(0) as u16
             }
-            // Standard / Delay / Training: the printed use cost, less any
-            // BeforePayCost reduction.
+            // Standard / Delay / Training: effect-driven "without paying"
+            // uses preserve the lifecycle but bypass the use-cost payment.
+            _ if cost_policy == OptionCostPolicy::Free => 0,
+            // Standard / Delay / Training: ordinary play pays the printed
+            // use cost, less any BeforePayCost reduction.
             _ => ((printed_cost as i32) - total_reduction).max(0) as u16,
         };
         if !self.pay_memory(effective_cost) {
@@ -1377,6 +1416,7 @@ impl Game {
         source: OptionSource,
         card_handle: crate::card_source::CardHandle,
         legal_modes: Vec<OptionPlayMode>,
+        cost_policy: OptionCostPolicy,
     ) {
         use crate::action::space::HAND_EFFECT_START;
 
@@ -1423,7 +1463,7 @@ impl Game {
                     .get(index)
                     .copied()
                     .unwrap_or(OptionPlayMode::Standard);
-                let _ = game.play_option_core(player_id, source, Some(mode));
+                let _ = game.play_option_core(player_id, source, Some(mode), cost_policy);
             }),
             on_decline: None,
         });

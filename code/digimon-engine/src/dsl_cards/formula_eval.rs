@@ -1095,7 +1095,8 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.in_breeding.is_some()
         || pred.on_field.is_some()
         || pred.dna_origin.is_some()
-        || pred.has_alt_path.is_some();
+        || pred.has_alt_path.is_some()
+        || pred.materials_count_matches_aggregate.is_some();
     has_permanent_only_leaf
 }
 
@@ -1111,7 +1112,9 @@ fn evaluate_aggregate(
     });
 
     match sel {
-        A::LowestDp | A::LowestLevel | A::LowestPlayCost => values.min().unwrap_or(0),
+        A::LowestDp | A::LowestLevel | A::LowestPlayCost | A::FewestMaterials => {
+            values.min().unwrap_or(0)
+        }
         A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
     }
 }
@@ -1130,7 +1133,9 @@ fn evaluate_aggregate_read(
         });
 
     match sel {
-        A::LowestDp | A::LowestLevel | A::LowestPlayCost => values.min().unwrap_or(0),
+        A::LowestDp | A::LowestLevel | A::LowestPlayCost | A::FewestMaterials => {
+            values.min().unwrap_or(0)
+        }
         A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
     }
 }
@@ -1163,6 +1168,13 @@ fn aggregate_value(
             }
             Some(i32::from(perm.top_card().play_cost(&ctx.game.card_data)))
         }
+        A::FewestMaterials => {
+            let perm = ctx.game.player(player).battle_area.get(index)?;
+            if !perm.is_digimon(&ctx.game.card_data) {
+                return None;
+            }
+            Some(perm.card_sources.len().saturating_sub(1) as i32)
+        }
     }
 }
 
@@ -1190,6 +1202,12 @@ fn aggregate_value_read(
                 return None;
             }
             Some(i32::from(perm.top_card().play_cost(ctx.card_data())))
+        }
+        CompiledAggregateSelector::FewestMaterials => {
+            if !perm.is_digimon(ctx.card_data()) {
+                return None;
+            }
+            Some(perm.card_sources.len().saturating_sub(1) as i32)
         }
     }
 }

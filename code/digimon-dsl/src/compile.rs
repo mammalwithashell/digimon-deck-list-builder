@@ -334,6 +334,7 @@ fn compile_aggregate_selector(a: crate::formula::AggregateSelector) -> CompiledA
         S::HighestDp => CompiledAggregateSelector::HighestDp,
         S::LowestLevel => CompiledAggregateSelector::LowestLevel,
         S::HighestLevel => CompiledAggregateSelector::HighestLevel,
+        S::FewestMaterials => CompiledAggregateSelector::FewestMaterials,
         S::LowestPlayCost => CompiledAggregateSelector::LowestPlayCost,
     }
 }
@@ -389,9 +390,7 @@ fn compile_name_alias(a: &crate::identity::NameAliasSpec) -> CompiledNameAlias {
     }
 }
 
-fn compile_source_name_alias(
-    a: &crate::identity::SourceNameAliasSpec,
-) -> CompiledSourceNameAlias {
+fn compile_source_name_alias(a: &crate::identity::SourceNameAliasSpec) -> CompiledSourceNameAlias {
     CompiledSourceNameAlias {
         level_lte: a.level_lte,
     }
@@ -522,6 +521,12 @@ fn compile_predicate(
                 compile_player_ref(m.of),
             )
         }),
+        materials_count_matches_aggregate: p.materials_count_matches_aggregate.map(|m| {
+            (
+                compile_aggregate_selector(m.selector),
+                compile_player_ref(m.of),
+            )
+        }),
         color_is: p.color_is.map(compile_color),
         color_only: p
             .color_only
@@ -540,6 +545,9 @@ fn compile_predicate(
         name_in: p.name_in.clone(),
         name_not_shared_by_field_digimon: p
             .name_not_shared_by_field_digimon
+            .map(|s| compile_player_ref(s.player())),
+        name_not_shared_by_field_tamer: p
+            .name_not_shared_by_field_tamer
             .map(|s| compile_player_ref(s.player())),
         card_number_is: p.card_number_is.clone(),
         play_cost_lte: p
@@ -586,6 +594,7 @@ fn compile_predicate(
         is_suspended: p.is_suspended,
         is_unsuspended: p.is_unsuspended,
         has_keyword: p.has_keyword.clone(),
+        has_security_attack_change: p.has_security_attack_change,
         has_on_deletion_effect: p.has_on_deletion_effect,
         self_color_count_gte: p.self_color_count_gte,
         has_face_down_source: p.has_face_down_source,
@@ -643,6 +652,22 @@ fn compile_predicate(
                 errors,
             )
         }),
+        face_up_security_count_lte: p.face_up_security_count_lte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.face_up_security_count_lte"),
+                card_id,
+                errors,
+            )
+        }),
+        face_up_security_count_gte: p.face_up_security_count_gte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.face_up_security_count_gte"),
+                card_id,
+                errors,
+            )
+        }),
         no_face_up_security_named: p.no_face_up_security_named.as_ref().map(|f| {
             if f.card_number_is.is_some() == f.name_is.is_some() {
                 errors.push(ValidationError {
@@ -687,7 +712,12 @@ fn compile_predicate(
         event_card_name_contains: p.event_card_name_contains.clone(),
         event_card_level_eq: p.event_card_level_eq,
         event_card_level_gte: p.event_card_level_gte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.event_card_level_gte"), card_id, errors)
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.event_card_level_gte"),
+                card_id,
+                errors,
+            )
         }),
         event_card_color_only: p
             .event_card_color_only
@@ -1788,6 +1818,10 @@ fn compile_step(
         S::DeDigivolve(a) => CompiledStep::DeDigivolve {
             target: compile_binding_ref(&a.target),
             amount: a.amount,
+            amount_fn: a
+                .amount_fn
+                .as_ref()
+                .map(|f| compile_formula(f, &format!("{prefix}.amount_fn"), card_id, errors)),
             stop_at_level: a.stop_at_level,
         },
         S::PlaceOnSecurity(a) => CompiledStep::PlaceOnSecurity {
@@ -1868,6 +1902,13 @@ fn compile_step(
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
             bind_as: a.bind_as.clone(),
+        },
+        S::UseOptionFromHand(a) => CompiledStep::UseOptionFromHand {
+            of: compile_player_ref(a.of),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            use_cost_lte_opponent_memory: a.use_cost_lte_opponent_memory,
+            optional: a.optional,
+            prompt: a.prompt.clone(),
         },
         // PlayFromTrash reuses PlayFromHandArgs but the compiled form uses `trash_index`
         S::PlayFromTrash(a) => {
@@ -1954,6 +1995,9 @@ fn compile_step(
                 .map(|f| compile_formula(f, &format!("{prefix}.count"), card_id, errors)),
         },
         S::TrashBottomSecurity(a) => CompiledStep::TrashBottomSecurity {
+            of: compile_player_ref(a.of),
+        },
+        S::AddBottomSecurityToHand(a) => CompiledStep::AddBottomSecurityToHand {
             of: compile_player_ref(a.of),
         },
         S::TrashTopSecurityAndCancelReplacement(a) => {

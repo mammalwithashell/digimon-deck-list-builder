@@ -425,6 +425,8 @@ fn validate_predicate(
         ("memory_gte", &pred.memory_gte),
         ("security_count_lte", &pred.security_count_lte),
         ("security_count_gte", &pred.security_count_gte),
+        ("face_up_security_count_lte", &pred.face_up_security_count_lte),
+        ("face_up_security_count_gte", &pred.face_up_security_count_gte),
     ] {
         if let Some(crate::predicate::DpConstraint::Formula(formula)) = dp {
             validate_formula(formula, &format!("{prefix}.{field}"), card_id, ctx, errors);
@@ -449,6 +451,19 @@ fn validate_predicate(
                 card_id: card_id.into(),
                 path: format!("{prefix}.level_matches_aggregate.selector"),
                 message: "level_matches_aggregate selector must be lowest_level or highest_level"
+                    .into(),
+            });
+        }
+    }
+    if let Some(materials_aggregate) = pred.materials_count_matches_aggregate {
+        if !matches!(
+            materials_aggregate.selector,
+            crate::formula::AggregateSelector::FewestMaterials
+        ) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.materials_count_matches_aggregate.selector"),
+                message: "materials_count_matches_aggregate selector must be fewest_materials"
                     .into(),
             });
         }
@@ -727,6 +742,25 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::DeDigivolve(args) => {
+            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+            if args.amount.is_some() && args.amount_fn.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: prefix.into(),
+                    message: "de_digivolve supports either amount or amount_fn, not both".into(),
+                });
+            }
+            if let Some(formula) = &args.amount_fn {
+                validate_formula(
+                    formula,
+                    &format!("{prefix}.amount_fn"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+        }
         StepSpec::SearchOwnSecurityStack(args) => {
             validate_predicate(
                 &args.filter,
@@ -770,6 +804,15 @@ fn validate_step(
         | StepSpec::SelectTrash(args)
         | StepSpec::SelectReveal(args)
         | StepSpec::SelectSecurity(args) => {
+            validate_predicate(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
+        StepSpec::UseOptionFromHand(args) => {
             validate_predicate(
                 &args.filter,
                 &format!("{prefix}.filter"),
@@ -985,6 +1028,18 @@ fn validate_step_binding_scope(
                 errors,
             );
         }
+        StepSpec::DeDigivolve(args) => {
+            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+            if let Some(formula) = &args.amount_fn {
+                validate_formula_binding_scope(
+                    formula,
+                    &format!("{prefix}.amount_fn"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+        }
         StepSpec::SelectOwnPermanent(args)
         | StepSpec::SelectOpponentPermanent(args)
         | StepSpec::SelectAnyPermanent(args) => {
@@ -1009,6 +1064,15 @@ fn validate_step_binding_scope(
                 errors,
             );
             declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::UseOptionFromHand(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
         }
         StepSpec::SelectDnaPair(args) => {
             validate_predicate_binding_scope(
@@ -1890,6 +1954,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CanAttackUnsuspended",
     "CanAttackActivePlayer",
     "CannotAttackTarget",
+    "CannotBeAttackedBySecurityAttackChanged",
     // Suspend / select / affect
     "CannotSuspend",
     "CannotUnsuspend",

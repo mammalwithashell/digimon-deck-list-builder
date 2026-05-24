@@ -1,0 +1,109 @@
+card: BT24-091
+name: "Tidal Stream"
+kind: option
+color: [blue]
+cost: 5
+traits: [TS]
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: TS
+      - all_of:
+          - kind: tamer
+          - trait_has: TS
+
+effects:
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - all_of:
+              - kind: digimon
+              - trait_has: TS
+          - all_of:
+              - kind: tamer
+              - trait_has: TS
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT24-091" }
+    summary: "While you have a TS Digimon or Tamer, ignore color requirements for this card"
+
+  - when: main_from_hand
+    summary: "[Main] Return all opponent lowest-level Digimon; if returned, unsuspend 1 TS Digimon; then optionally link this card"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            level_matches_aggregate:
+              selector: lowest_level
+              of: opponent
+          bind_as: lowest
+          body:
+            - return_to_hand: { target: lowest }
+      - if:
+          condition: { effect_returned_any_card: true }
+          then:
+            - select_own_permanent:
+                bind_as: unsuspend_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: TS
+                prompt: "Choose 1 of your [TS] Digimon to unsuspend"
+            - unsuspend: { target: unsuspend_target }
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate [Main] effects: return all opponent lowest-level Digimon; if returned, unsuspend 1 TS Digimon; then optionally link this card"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            level_matches_aggregate:
+              selector: lowest_level
+              of: opponent
+          bind_as: sec_lowest
+          body:
+            - return_to_hand: { target: sec_lowest }
+      - if:
+          condition: { effect_returned_any_card: true }
+          then:
+            - select_own_permanent:
+                bind_as: sec_unsuspend_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: TS
+                prompt: "Choose 1 of your [TS] Digimon to unsuspend"
+            - unsuspend: { target: sec_unsuspend_target }
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+
+  - kind: link_requirement
+    scope: inherited
+    cost: 3
+    filter:
+      kind: digimon
+      trait_has: TS
+    summary: "[Link] [TS] trait: Cost 3"

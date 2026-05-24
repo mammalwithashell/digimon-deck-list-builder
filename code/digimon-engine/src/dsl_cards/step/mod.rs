@@ -137,12 +137,7 @@ fn park_outer_tail(
             .game
             .dsl_outer_tail
             .as_ref()
-            .map(|(t, _, _)| {
-                (
-                    t.first().map(CompiledStepDiscriminant::from),
-                    t.len(),
-                )
-            })
+            .map(|(t, _, _)| (t.first().map(CompiledStepDiscriminant::from), t.len()))
             .unwrap_or((None, 0));
         panic!(
             "dsl_outer_tail overwrite: card={} player={:?} parking_step={:?} \
@@ -159,7 +154,7 @@ fn park_outer_tail(
     ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone(), runtime.clone()));
 }
 
-fn drain_or_rewrap_pending_tail(
+pub(crate) fn drain_or_rewrap_pending_tail(
     game: &mut Game,
     source_card: crate::card_source::CardHandle,
     source_permanent: Option<PermanentHandle>,

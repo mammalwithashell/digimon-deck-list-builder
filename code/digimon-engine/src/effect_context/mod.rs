@@ -2711,6 +2711,20 @@ impl<'a> EffectContext<'a> {
         self.add_to_hand_from_security(player, card)
     }
 
+    /// Move the bottom card of `player`'s security stack to its owner's hand.
+    pub fn add_bottom_security_to_hand(&mut self, player: PlayerId) -> bool {
+        let Some(card) = self
+            .game
+            .player(player)
+            .security
+            .first()
+            .map(|card| card.handle())
+        else {
+            return false;
+        };
+        self.add_to_hand_from_security(player, card)
+    }
+
     /// Reveal up to `n` cards from the top of `player`'s deck. See
     /// `Game::reveal_top_deck`.
     pub fn reveal_top_deck(

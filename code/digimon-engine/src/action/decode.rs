@@ -328,13 +328,7 @@ impl Game {
         };
         // Track C / D consult site (2026-05-08): `CanAttackTargetDefendingPermanent`
         // overrides `CannotAttackTarget` at attack action decode.
-        if self
-            .modifiers
-            .has(defender, ModifierType::CannotAttackTarget)
-            && !self
-                .modifiers
-                .has(defender, ModifierType::CanAttackTargetDefendingPermanent)
-        {
+        if self.attack_target_blocked_by_modifier(attacker, defender) {
             return None;
         }
         if vortex_legal {

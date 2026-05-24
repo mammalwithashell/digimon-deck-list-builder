@@ -1,0 +1,107 @@
+card: BT24-035
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+traits: [Holy Beast, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: TS
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] -3000 DP, then if your turn may DNA into Silphymon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: debuffed
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP for the turn"
+      - add_dp_modifier:
+          target: debuffed
+          value: -3000
+          expiry: end_of_turn
+      - if:
+          condition:
+            all_of:
+              - your_turn: true
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [hand]
+                    kind: digimon
+                    name_is: "Silphymon"
+                  n: 1
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [battle_area]
+                    kind: digimon
+                    level_eq: 4
+                    color_is: yellow
+                  n: 1
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [battle_area]
+                    kind: digimon
+                    level_eq: 4
+                    any_of:
+                      - color_is: red
+                      - color_is: green
+                  n: 1
+          then:
+            - optional:
+                - select_hand:
+                    of: you
+                    bind_as: dna_card
+                    optional: true
+                    filter:
+                      all_of:
+                        - kind: digimon
+                        - name_is: "Silphymon"
+                    prompt: "Select [Silphymon] in hand to DNA digivolve into"
+                - select_dna_pair:
+                    left_filter:
+                      all_of:
+                        - kind: digimon
+                        - of: you
+                        - level_eq: 4
+                        - color_is: yellow
+                    right_filter:
+                      all_of:
+                        - kind: digimon
+                        - of: you
+                        - level_eq: 4
+                        - any_of:
+                            - color_is: red
+                            - color_is: green
+                    bind_left_as: dna_src_a
+                    bind_right_as: dna_src_b
+                    prompt: "Select 2 of your Digimon to DNA digivolve into [Silphymon]"
+                - effect_initiated_dna_digivolve:
+                    target_a: dna_src_a
+                    target_b: dna_src_b
+                    from_hand: dna_card
+                    cost: 0
+                    ignore_requirements: false
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "Inherited <Barrier>"

@@ -266,6 +266,65 @@ fn level_is_lowest_among_opponent_digimon_filters_only_lowest_level_digimon() {
 }
 
 #[test]
+fn material_count_is_fewest_among_opponent_digimon_filters_all_tied_digimon() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card_with_level("SRC", 3000, 3))
+        .add_card(digimon_card_with_level("OPP-ZERO-A", 3000, 3))
+        .add_card(digimon_card_with_level("OPP-ZERO-B", 3000, 3))
+        .add_card(digimon_card_with_level("OPP-ONE-MAT", 3000, 3))
+        .add_card(digimon_card_with_level("OPP-ONE-TOP", 5000, 4))
+        .add_card(digimon_card_with_level("OPP-TWO-MAT-A", 3000, 3))
+        .add_card(digimon_card_with_level("OPP-TWO-MAT-B", 5000, 4))
+        .add_card(digimon_card_with_level("OPP-TWO-TOP", 7000, 5))
+        .add_card(tamer_card("OPP-TAMER"))
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    let zero_a = runner.place_on_field(1, "OPP-ZERO-A", None);
+    let zero_b = runner.place_on_field(1, "OPP-ZERO-B", None);
+    let one = runner.place_stack(1, &["OPP-ONE-MAT", "OPP-ONE-TOP"]);
+    let two = runner.place_stack(1, &["OPP-TWO-MAT-A", "OPP-TWO-MAT-B", "OPP-TWO-TOP"]);
+    let tamer = runner.place_on_field(1, "OPP-TAMER", None);
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let rctx = EffectReadContext::new(&runner.game, src_card, Some(source), 0);
+    let predicate = CompiledPredicate {
+        kind: Some(CompiledCardKind::Digimon),
+        materials_count_matches_aggregate: Some((
+            CompiledAggregateSelector::FewestMaterials,
+            CompiledPlayerRef::Opponent,
+        )),
+        ..Default::default()
+    };
+
+    assert!(eval_predicate(
+        &predicate,
+        &rctx,
+        PredicateSubject::Permanent(zero_a)
+    ));
+    assert!(eval_predicate(
+        &predicate,
+        &rctx,
+        PredicateSubject::Permanent(zero_b)
+    ));
+    assert!(!eval_predicate(
+        &predicate,
+        &rctx,
+        PredicateSubject::Permanent(one)
+    ));
+    assert!(!eval_predicate(
+        &predicate,
+        &rctx,
+        PredicateSubject::Permanent(two)
+    ));
+    assert!(!eval_predicate(
+        &predicate,
+        &rctx,
+        PredicateSubject::Permanent(tamer)
+    ));
+}
+
+#[test]
 fn same_level_pair_count_formula_reads_source_stack_levels() {
     let mut runner = DebugRunner::builder()
         .add_card(digimon_card_with_level("SRC-4A", 3000, 4))

@@ -1,0 +1,41 @@
+card: BT10-042
+name: Venusmon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 13
+dp: 12000
+traits: [Shaman, Olympos XII]
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Opponent Digimon gain Security A. -1 until the end of their turn"
+    process:
+      - add_modifier:
+          target: { owner: opponent, zone: [battle_area], kind: digimon }
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
+
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target: {}
+    modifier: CannotBeAttackedBySecurityAttackChanged
+    summary: "[Opponent's Turn] Opponent Digimon with Security A. can't attack this Digimon"
+
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target: { owner: opponent, zone: [battle_area], kind: digimon, has_security_attack_change: true }
+    modifier: CannotActivateWhenAttackingEffects
+    summary: "[Opponent's Turn] Opponent Digimon with Security A. can't activate When Attacking effects"
+
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target: { owner: opponent, zone: [battle_area], kind: digimon, has_security_attack_change: true }
+    modifier: CannotActivateWhenDigivolvingEffects
+    summary: "[Opponent's Turn] Opponent Digimon with Security A. can't activate When Digivolving effects"

@@ -212,13 +212,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // `CanAttackTargetDefendingPermanent` overrides this
                     // gate so the affirmative form remains visible to
                     // both mask emission and the action decode path.
-                    if game
-                        .modifiers
-                        .has(t_handle, ModifierType::CannotAttackTarget)
-                        && !game
-                            .modifiers
-                            .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
-                    {
+                    if game.attack_target_blocked_by_modifier(handle, t_handle) {
                         continue;
                     }
                     let action_bit = encode_attack(i as u16, j as u16) as usize;
@@ -608,13 +602,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // affirmative override; when set, the mask must
                     // continue emitting the bit so the granted attack
                     // remains usable.
-                    if game
-                        .modifiers
-                        .has(t_handle, ModifierType::CannotAttackTarget)
-                        && !game
-                            .modifiers
-                            .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
-                    {
+                    if game.attack_target_blocked_by_modifier(handle, t_handle) {
                         continue;
                     }
                     mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
@@ -932,14 +920,7 @@ pub(crate) fn effect_attack_target_action_ids(
             // `CanAttackTargetDefendingPermanent` is the affirmative
             // override of `CannotAttackTarget` at the granted-attack
             // mask emission site too.
-            if game
-                .modifiers
-                .has(target_handle, ModifierType::CannotAttackTarget)
-                && !game.modifiers.has(
-                    target_handle,
-                    ModifierType::CanAttackTargetDefendingPermanent,
-                )
-            {
+            if game.attack_target_blocked_by_modifier(attacker, target_handle) {
                 continue;
             }
             let legal = target.is_suspended
@@ -1088,10 +1069,7 @@ fn apply_force_attack_mask_replacement(
             if !game.permanent_is_digimon_for_rules(t_handle) {
                 continue;
             }
-            if game
-                .modifiers
-                .has(t_handle, ModifierType::CannotAttackTarget)
-            {
+            if game.attack_target_blocked_by_modifier(handle, t_handle) {
                 continue;
             }
             let action_bit = encode_attack(i as u16, j as u16) as usize;

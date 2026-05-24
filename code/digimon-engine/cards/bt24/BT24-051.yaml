@@ -1,0 +1,116 @@
+card: BT24-051
+name: Merukimon
+kind: digimon
+level: 6
+color: [green, blue]
+cost: 12
+dp: 12000
+traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: Beastkin
+            - trait_has: TS
+    cost: 3
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      count_gte:
+        filter: { zone: [battle_area], kind: digimon }
+        n: 3
+    amount: 5
+    summary: "When played while there are 3 or more Digimon, reduce play cost by 5"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Suspend 2 opposing Digimon/Tamers, then 1 own Digimon may get +5000 DP and attack a Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        any_of:
+          - kind: digimon
+          - kind: tamer
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: suspended_targets
+          prompt: "Suspend 2 of your opponent's Digimon or Tamers"
+          optional_zero: false
+      - per_selected:
+          selection: suspended_targets
+          bind_as: suspended_target
+          body:
+            - suspend: { target: suspended_target }
+      - optional:
+          - select_own_permanent:
+              bind_as: attacker
+              filter: { kind: digimon }
+              optional: true
+              prompt: "1 of your Digimon may get +5000 DP and attack an opponent's Digimon"
+          - add_dp_modifier:
+              target: attacker
+              value: 5000
+              expiry: end_of_turn
+          - may_attack_now:
+              attacker: attacker
+              targets: digimon
+              optional: true
+              prompt: "Have the selected Digimon attack an opponent's Digimon?"
+
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    summary: "[When Digivolving][When Attacking][OPT] 1 of your Digimon may unsuspend"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        is_suspended: true
+    process:
+      - select_own_permanent:
+          bind_as: unsuspend_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "1 of your Digimon may unsuspend"
+      - unsuspend: { target: unsuspend_target }
+
+  - kind: aura
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: Iliad
+    grant_keyword: { keyword: Rush }
+    summary: "[Your Turn] Your Iliad Digimon gain Rush"
+
+  - kind: aura
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: Iliad
+    grant_keyword: { keyword: Piercing }
+    summary: "[Your Turn] Your Iliad Digimon gain Piercing"

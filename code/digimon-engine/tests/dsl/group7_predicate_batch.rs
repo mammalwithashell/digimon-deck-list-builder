@@ -1,6 +1,7 @@
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledDpConstraint, CompiledModifierTarget,
-    CompiledModifierValue, CompiledPlayerRef, CompiledPredicate, CompiledStep,
+    CompiledAggregateSelector, CompiledCardKind, CompiledClause, CompiledDpConstraint,
+    CompiledModifierTarget, CompiledModifierValue, CompiledPlayerRef, CompiledPredicate,
+    CompiledStep,
 };
 use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
 use digimon_engine::card_data::{DualCardData, DualDigimonFace, DualOptionFace};
@@ -769,6 +770,97 @@ fn opponent_security_count_lte_evaluates_opponent_stack() {
     assert!(
         !eval_predicate_with_bindings(&pred_self_lte_3, &rctx, PredicateSubject::None, None),
         "controller has 5 > 3 → existing security_count_lte still reads controller"
+    );
+}
+
+#[test]
+fn face_up_security_count_lte_reads_only_face_up_own_security_cards() {
+    let src = make_test_card("PRED-SRC", "Pred Src");
+    let s = make_test_card("SECCARD", "Sec");
+    let mut runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(s)
+        .hand(0, &["PRED-SRC"])
+        .security(0, &["SECCARD", "SECCARD"])
+        .security(1, &["SECCARD"])
+        .build();
+    let own_face_up = runner.game.players[0].security[0].card_index;
+    runner.game.players[0].face_up_security.insert(own_face_up);
+    let opponent_face_up = runner.game.players[1].security[0].card_index;
+    runner.game.players[1]
+        .face_up_security
+        .insert(opponent_face_up);
+    let source_card = runner.game.players[0].hand[0].handle();
+    let rctx = EffectReadContext::new(&runner.game, source_card, None, 0);
+
+    let pred_lte_1 = CompiledPredicate {
+        face_up_security_count_lte: Some(CompiledDpConstraint::Literal(1)),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(&pred_lte_1, &rctx, PredicateSubject::None, None),
+        "controller has exactly 1 face-up security card"
+    );
+
+    let pred_lte_0 = CompiledPredicate {
+        face_up_security_count_lte: Some(CompiledDpConstraint::Literal(0)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_lte_0, &rctx, PredicateSubject::None, None),
+        "controller has 1 face-up security card, so no-face-up gate fails"
+    );
+
+    let pred_gte_2 = CompiledPredicate {
+        face_up_security_count_gte: Some(CompiledDpConstraint::Literal(2)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_gte_2, &rctx, PredicateSubject::None, None),
+        "opponent face-up security must not be counted for the controller"
+    );
+}
+
+#[test]
+fn materials_count_matches_aggregate_predicate_compiles() {
+    let yaml = r#"
+card: DSL-MATERIALS-AGG
+name: Materials Aggregate
+kind: digimon
+color: [blue]
+level: 6
+cost: 11
+dp: 11000
+effects:
+  - when: when_digivolving
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 5
+          bind_as: targets
+          prompt: Pick fewest materials
+          filter:
+            kind: digimon
+            materials_count_matches_aggregate:
+              selector: fewest_materials
+              of: opponent
+"#;
+    let spec: digimon_dsl::CardSpec =
+        serde_yml::from_str(yaml).expect("materials aggregate yaml parses");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("materials aggregate yaml compiles");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::SelectCountCappedMulti { filter, .. } = &triggered.process[0] else {
+        panic!("expected select_count_capped_multi");
+    };
+    assert_eq!(
+        filter.materials_count_matches_aggregate,
+        Some((
+            CompiledAggregateSelector::FewestMaterials,
+            CompiledPlayerRef::Opponent
+        ))
     );
 }
 

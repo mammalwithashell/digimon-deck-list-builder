@@ -84,8 +84,10 @@ pub fn try_run(
                     continue;
                 };
                 let mut iter_bindings = bindings.clone();
+                let cursor = iter_bindings.result_log_cursor();
                 iter_bindings.insert_permanent(bind_as, handle);
                 let outcome = run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime);
+                bindings.merge_result_log_from_since(&iter_bindings, cursor);
                 if matches!(outcome, RunOutcome::Parked) {
                     // v1 semantics: a parked iteration aborts remaining
                     // iterations. Faithful per-iteration resumption is
@@ -105,11 +107,12 @@ pub fn try_run(
                 Some(ResolvedBinding::PermanentList(v)) => {
                     for h in v {
                         let mut iter_bindings = bindings.clone();
+                        let cursor = iter_bindings.result_log_cursor();
                         iter_bindings.insert_permanent(bind_as, h);
-                        if matches!(
-                            run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime),
-                            RunOutcome::Parked
-                        ) {
+                        let outcome =
+                            run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime);
+                        bindings.merge_result_log_from_since(&iter_bindings, cursor);
+                        if matches!(outcome, RunOutcome::Parked) {
                             return Some(RunOutcome::Parked);
                         }
                     }
@@ -117,11 +120,12 @@ pub fn try_run(
                 Some(ResolvedBinding::CardList(v)) => {
                     for c in v {
                         let mut iter_bindings = bindings.clone();
+                        let cursor = iter_bindings.result_log_cursor();
                         iter_bindings.insert_card(bind_as, c);
-                        if matches!(
-                            run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime),
-                            RunOutcome::Parked
-                        ) {
+                        let outcome =
+                            run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime);
+                        bindings.merge_result_log_from_since(&iter_bindings, cursor);
+                        if matches!(outcome, RunOutcome::Parked) {
                             return Some(RunOutcome::Parked);
                         }
                     }
@@ -135,11 +139,12 @@ pub fn try_run(
                     // trashed, activate the effect below".
                     for src in v {
                         let mut iter_bindings = bindings.clone();
+                        let cursor = iter_bindings.result_log_cursor();
                         iter_bindings.insert_card(bind_as, src.card);
-                        if matches!(
-                            run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime),
-                            RunOutcome::Parked
-                        ) {
+                        let outcome =
+                            run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime);
+                        bindings.merge_result_log_from_since(&iter_bindings, cursor);
+                        if matches!(outcome, RunOutcome::Parked) {
                             return Some(RunOutcome::Parked);
                         }
                     }

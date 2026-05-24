@@ -1,0 +1,85 @@
+card: BT24-041
+name: Minervamon
+kind: digimon
+level: 6
+color: [yellow, purple]
+cost: 12
+dp: 12000
+traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: Beastkin
+            - trait_has: Dark Dragon
+            - trait_has: TS
+    cost: 3
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        trait_has: Iliad
+        any_of:
+          - kind: digimon
+          - kind: tamer
+    amount: 5
+    summary: "When played while you have an Iliad Digimon or Tamer, reduce play cost by 5"
+
+  - when: [on_play, when_digivolving, on_deletion]
+    summary: "[On Play][When Digivolving][On Deletion] You may play a cost 5 or lower Iliad card from hand; then De-Digivolve 1 per your Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: iliad_pick
+          optional: true
+          filter:
+            all_of:
+              - trait_has: Iliad
+              - play_cost_lte: 5
+          prompt: "You may play 1 play cost 5 or lower Iliad card from hand for free"
+      - play_from_hand_free: { of: you, hand_index: iliad_pick }
+      - select_opponent_permanent:
+          bind_as: dedigivolve_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1 for each of your Digimon"
+      - de_digivolve:
+          target: dedigivolve_target
+          amount_fn:
+            base: 0
+            per:
+              card_count_in_zone:
+                zone: battle_area
+                of: you
+                filter: { kind: digimon }
+            delta: 1
+
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: Iliad
+    grant_keyword: { keyword: Reboot }
+    summary: "[Opponent's Turn] Your Iliad Digimon gain Reboot"
+
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: Iliad
+    grant_keyword: { keyword: Blocker }
+    summary: "[Opponent's Turn] Your Iliad Digimon gain Blocker"
