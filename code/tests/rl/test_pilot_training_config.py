@@ -724,3 +724,48 @@ def test_train_init_from_records_base_checkpoint(monkeypatch, tmp_path):
     meta = (tmp_path / "fine-tune-meta" / "final.meta.json").read_text()
     assert '"training_mode": "fine_tune"' in meta
     assert f'"base_checkpoint": "{str(base).replace(chr(92), chr(92) + chr(92))}"' in meta
+
+
+def test_training_config_mulligan_log_default_and_validation(tmp_path):
+    cfg = TrainingConfig()
+    assert cfg.mulligan_log == "on"
+
+    # Override via yaml — quote the value so YAML 1.1 doesn't treat it as bool
+    path = tmp_path / "training.yaml"
+    path.write_text('mulligan_log: "off"\n')
+    loaded = TrainingConfig.from_yaml(path)
+    assert loaded.mulligan_log == "off"
+
+    # Invalid value rejected
+    with pytest.raises(ValueError, match="mulligan_log"):
+        TrainingConfig(mulligan_log="maybe")
+
+
+def test_mulligan_log_flag_argparse_default_and_off(monkeypatch, tmp_path):
+    """The --mulligan-log flag flows into TrainingConfig.mulligan_log."""
+    from digimon_gym.agents import pilot_training
+
+    # Default (no flag): expect "on"
+    monkeypatch.setattr("sys.argv", ["pilot_training.py"])
+    parser = pilot_training._build_argparser()
+    args = parser.parse_args([])
+    assert args.mulligan_log == "on"
+
+    # Explicit off
+    args = parser.parse_args(["--mulligan-log", "off"])
+    assert args.mulligan_log == "off"
+
+    # Invalid value rejected by argparse choices
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--mulligan-log", "maybe"])
+
+
+def test_training_config_bool_yaml_field_still_loads_as_bool(tmp_path):
+    """Guard against a regression where stripping YAML's bool resolver
+    silently turned `record_game_tensors: false` into the truthy string
+    `"false"`."""
+    path = tmp_path / "training.yaml"
+    path.write_text("record_game_tensors: false\n")
+    loaded = TrainingConfig.from_yaml(path)
+    assert loaded.record_game_tensors is False
+    assert isinstance(loaded.record_game_tensors, bool)

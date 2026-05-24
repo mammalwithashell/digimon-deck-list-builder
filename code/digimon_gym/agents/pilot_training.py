@@ -21,9 +21,10 @@ import argparse
 import json
 import random
 import time
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Dict, Optional, List, Set, Union
+from typing import Any, Callable, Dict, Optional, List, Set, Union
 
 import numpy as np
 import gymnasium
@@ -66,9 +67,22 @@ from digimon_gym.agents.training_recording import (
     TrainingGameRecorder,
     TrainingRecordingWrapper,
 )
+from digimon_gym.agents.mulligan_log import MulliganLogWrapper, MulliganLogWriter
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
+
+
+@dataclass
+class _MulliganLogConfig:
+    """Per-run config for the mulligan-log subsystem. Constructed once in
+    train(); per-env-index MulliganLogWriter instances are built inside the
+    env factory from this config (writers can't be shared across SubprocVecEnv
+    subprocesses)."""
+
+    output_dir: Path
+    enabled: bool
+    run_metadata: Dict[str, Any]
 
 
 def _seed_everything(seed: int) -> None:
@@ -758,7 +772,8 @@ def make_env(opponent: str = "greedy",
              tensor_profile: str = "standard_lite_v2",
              recording_writer: Optional[TrainingGameRecorder] = None,
              recording_source: str = "train",
-             recording_env_index: int = 0) -> gymnasium.Env:
+             recording_env_index: int = 0,
+             mulligan_log_cfg: Optional[_MulliganLogConfig] = None) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -862,6 +877,20 @@ def make_env(opponent: str = "greedy",
             env_index=recording_env_index,
         )
 
+    if mulligan_log_cfg is not None and mulligan_log_cfg.enabled:
+        writer = MulliganLogWriter(
+            output_dir=mulligan_log_cfg.output_dir,
+            env_index=recording_env_index,
+            enabled=mulligan_log_cfg.enabled,
+            run_metadata=mulligan_log_cfg.run_metadata,
+        )
+        env = MulliganLogWrapper(
+            env,
+            writer=writer,
+            source=recording_source,
+            env_index=recording_env_index,
+        )
+
     def mask_fn(env):
         return _unwrap_to_digimon_env(env).action_mask()
 
@@ -876,6 +905,7 @@ def make_vec_env(
     generalist_deck_pool: Optional[GeneralistDeckPool] = None,
     curriculum_seed: Optional[int] = None,
     recording_writer: Optional[TrainingGameRecorder] = None,
+    mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
 ):
     """Build ActionMasker-wrapped vector environments from TrainingConfig."""
 
@@ -905,6 +935,20 @@ def make_vec_env(
                 wrapped = TrainingRecordingWrapper(
                     wrapped,
                     recording_writer,
+                    source="train",
+                    env_index=rank,
+                )
+
+            if mulligan_log_cfg is not None and mulligan_log_cfg.enabled:
+                writer = MulliganLogWriter(
+                    output_dir=mulligan_log_cfg.output_dir,
+                    env_index=rank,
+                    enabled=mulligan_log_cfg.enabled,
+                    run_metadata=mulligan_log_cfg.run_metadata,
+                )
+                wrapped = MulliganLogWrapper(
+                    wrapped,
+                    writer=writer,
                     source="train",
                     env_index=rank,
                 )
@@ -1069,6 +1113,19 @@ def train(total_timesteps: int = 100_000,
         },
         seed=cfg.seed,
     )
+
+    mulligan_log_cfg = _MulliganLogConfig(
+        output_dir=run_dir,
+        enabled=(cfg.mulligan_log != "off"),
+        run_metadata={
+            "run_name": run_name,
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "backend": os.environ.get("DIGIMON_BACKEND") or "auto",
+            "tensor_profile": observation_layout.id,
+            "tensor_layout_hash": observation_layout.layout_hash,
+        },
+    )
+
     if cfg.resume_from and cfg.init_from:
         raise ValueError("resume_from and init_from are mutually exclusive")
     if cfg.init_from:
@@ -1105,6 +1162,10 @@ def train(total_timesteps: int = 100_000,
             print(f"  Layout hash:    {observation_layout.layout_hash}")
         if recording_writer.enabled:
             print(f"  Record games:   {cfg.record_games} -> {recordings_dir}")
+        if mulligan_log_cfg.enabled:
+            print(f"  Mulligan log:   on -> {mulligan_log_cfg.output_dir}/mulligan_log_env_*.jsonl")
+        else:
+            print(f"  Mulligan log:   off")
         if gauntlet and gauntlet.deck_count > 0:
             print(f"  Gauntlet:       {gauntlet.archetype_count} archetypes, "
                   f"{gauntlet.deck_count} decks")
@@ -1137,6 +1198,7 @@ def train(total_timesteps: int = 100_000,
             generalist_deck_pool=generalist_deck_pool,
             curriculum_seed=curriculum_seed,
             recording_writer=recording_writer,
+            mulligan_log_cfg=mulligan_log_cfg,
         )
     elif cfg.n_envs > 1:
         opponent_policies = {"greedy": greedy_policy, "random": random_policy}
@@ -1150,6 +1212,7 @@ def train(total_timesteps: int = 100_000,
             generalist_deck_pool=generalist_deck_pool,
             curriculum_seed=curriculum_seed,
             recording_writer=recording_writer,
+            mulligan_log_cfg=mulligan_log_cfg,
         )
     else:
         env = make_env(
@@ -1168,6 +1231,7 @@ def train(total_timesteps: int = 100_000,
             tensor_profile=cfg.tensor_profile,
             recording_writer=recording_writer,
             recording_source="train",
+            mulligan_log_cfg=mulligan_log_cfg,
         )
 
     # Load autoencoder embeddings for warm-start (if available)
@@ -1443,7 +1507,8 @@ def train(total_timesteps: int = 100_000,
 
 # ─── CLI ─────────────────────────────────────────────────────────────
 
-def main():
+def _build_argparser() -> argparse.ArgumentParser:
+    """Build and return the CLI argument parser for pilot training."""
     parser = argparse.ArgumentParser(
         description="Train Digimon TCG Pilot Agent (MaskablePPO / MaskableRecurrentPPO)"
     )
@@ -1595,6 +1660,19 @@ def main():
         "--record-games-sample-rate", type=float, default=None,
         help="Sample rate for --record-games sampled."
     )
+    parser.add_argument(
+        "--mulligan-log",
+        choices=["on", "off"],
+        default="on",
+        help="Write per-game starting-hand + mulligan-choice records to "
+             "models/<run>/mulligan_log_env_<NNN>.jsonl (one file per env, "
+             "default: on, ~3 MB per 1M steps across all env files).",
+    )
+    return parser
+
+
+def main():
+    parser = _build_argparser()
 
     args = parser.parse_args()
     if args.gauntlet and (args.deck2 or args.deck2_json):
@@ -1635,6 +1713,8 @@ def main():
         "record_games_sample_rate": args.record_games_sample_rate,
     }
     overrides.update({key: value for key, value in legacy_overrides.items() if value is not None})
+    # --mulligan-log always has a value (choices default "on"); always propagate it.
+    overrides["mulligan_log"] = args.mulligan_log
     if args.record_game_tensors:
         overrides["record_game_tensors"] = True
     if args.self_play:
