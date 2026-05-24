@@ -216,7 +216,8 @@ class MulliganLogWrapper(gymnasium.Wrapper):
         try:
             rec = runner.get_recording()
             if rec is not None:
-                fp = rec.get("initial_state", {}).get("first_player_id")
+                init_state = rec.get("initial_state") or {}
+                fp = init_state.get("first_player_id")
                 if fp is not None:
                     first_player_id = int(fp)
         except (RuntimeError, AttributeError, TypeError, ValueError, KeyError) as exc:

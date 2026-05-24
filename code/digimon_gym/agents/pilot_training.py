@@ -21,9 +21,10 @@ import argparse
 import json
 import random
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Dict, Optional, List, Set, Union
+from typing import Any, Callable, Dict, Optional, List, Set, Union
 
 import numpy as np
 import gymnasium
@@ -70,6 +71,18 @@ from digimon_gym.agents.mulligan_log import MulliganLogWrapper, MulliganLogWrite
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
+
+
+@dataclass
+class _MulliganLogConfig:
+    """Per-run config for the mulligan-log subsystem. Constructed once in
+    train(); per-env-index MulliganLogWriter instances are built inside the
+    env factory from this config (writers can't be shared across SubprocVecEnv
+    subprocesses)."""
+
+    output_dir: Path
+    enabled: bool
+    run_metadata: Dict[str, Any]
 
 
 def _seed_everything(seed: int) -> None:
@@ -760,7 +773,7 @@ def make_env(opponent: str = "greedy",
              recording_writer: Optional[TrainingGameRecorder] = None,
              recording_source: str = "train",
              recording_env_index: int = 0,
-             mulligan_log_cfg=None) -> gymnasium.Env:
+             mulligan_log_cfg: Optional[_MulliganLogConfig] = None) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -892,7 +905,7 @@ def make_vec_env(
     generalist_deck_pool: Optional[GeneralistDeckPool] = None,
     curriculum_seed: Optional[int] = None,
     recording_writer: Optional[TrainingGameRecorder] = None,
-    mulligan_log_cfg=None,
+    mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
 ):
     """Build ActionMasker-wrapped vector environments from TrainingConfig."""
 
@@ -1100,14 +1113,6 @@ def train(total_timesteps: int = 100_000,
         },
         seed=cfg.seed,
     )
-
-    from dataclasses import dataclass as _dc
-
-    @_dc
-    class _MulliganLogConfig:
-        output_dir: Path
-        enabled: bool
-        run_metadata: dict
 
     mulligan_log_cfg = _MulliganLogConfig(
         output_dir=run_dir,
