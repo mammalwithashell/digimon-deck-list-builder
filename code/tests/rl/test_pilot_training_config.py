@@ -741,6 +741,25 @@ def test_training_config_mulligan_log_default_and_validation(tmp_path):
         TrainingConfig(mulligan_log="maybe")
 
 
+def test_mulligan_log_flag_argparse_default_and_off(monkeypatch, tmp_path):
+    """The --mulligan-log flag flows into TrainingConfig.mulligan_log."""
+    from digimon_gym.agents import pilot_training
+
+    # Default (no flag): expect "on"
+    monkeypatch.setattr("sys.argv", ["pilot_training.py"])
+    parser = pilot_training._build_argparser()
+    args = parser.parse_args([])
+    assert args.mulligan_log == "on"
+
+    # Explicit off
+    args = parser.parse_args(["--mulligan-log", "off"])
+    assert args.mulligan_log == "off"
+
+    # Invalid value rejected by argparse choices
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--mulligan-log", "maybe"])
+
+
 def test_training_config_bool_yaml_field_still_loads_as_bool(tmp_path):
     """Guard against a regression where stripping YAML's bool resolver
     silently turned `record_game_tensors: false` into the truthy string
