@@ -127,7 +127,11 @@ impl HeadlessRunner {
     /// Execute a single action for the current player. No-op after
     /// `game_over`, matching `headless_game.py:41`.
     pub fn step(&mut self, action_id: u16) {
-        if self.game.game_over {
+        // Short-circuit when the game is over EXCEPT when a `PendingSelection`
+        // is still installed — the BO3 match wrapper uses the engine's
+        // `SelectPlayOrder` phase between games while `game_over` remains true.
+        // That selection must be resolvable; everything else is a no-op.
+        if self.game.game_over && self.game.pending_selection.is_none() {
             return;
         }
         let pid = self.current_decision_player();
@@ -247,6 +251,33 @@ impl HeadlessRunner {
             self.game.declare_step_limit_winner();
         }
         self.winner_id()
+    }
+
+    /// Concede on behalf of `player_id`. Wrapper around `Game::concede`
+    /// exposed through PyO3 for the Python `MatchEnv` wrapper used by
+    /// BO3 match training. Returns the winner (= conceder's opponent)
+    /// as a Rust 0-based `PlayerId`, or `u8::MAX` if the game was
+    /// already over.
+    pub fn concede(&mut self, player_id: PlayerId) -> u8 {
+        self.game.concede(player_id);
+        self.winner_id()
+    }
+
+    /// Install a `SelectPlayOrder` selection with `loser_id` as the
+    /// chooser. The next `step()` call expecting `loser_id`'s input
+    /// will accept action `PLAY_FIRST` (94) or `PLAY_SECOND` (95) and
+    /// write the result to `self.game.last_play_order_choice`. Wrapper
+    /// around `Game::request_play_order_selection`.
+    pub fn request_play_order_selection(&mut self, loser_id: PlayerId) {
+        self.game.request_play_order_selection(loser_id);
+    }
+
+    /// Read-and-clear the most recent `SelectPlayOrder` outcome. The
+    /// Python `MatchEnv` wrapper calls this after the selection
+    /// resolves to learn the chosen play order for the next game,
+    /// then resets the slot so the next prompt starts clean.
+    pub fn take_play_order_choice(&mut self) -> Option<crate::selection::PlayOrder> {
+        self.game.last_play_order_choice.take()
     }
 
     pub fn accept_mulligan(&mut self, pid: PlayerId, keep: bool) -> Result<(), &'static str> {

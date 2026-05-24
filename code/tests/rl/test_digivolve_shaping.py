@@ -158,9 +158,14 @@ def test_shaping_off_credits_nothing_even_with_digivolve_delta() -> None:
 
 def test_shaping_off_default_matches_baseline_reward_path() -> None:
     """When shaping is OFF (the default for unset callers), `_compute_reward`
-    must produce numerically identical output to the pre-feature shape for
-    any sequence of step states. Protects pre-existing runs from accidental
-    behavior drift.
+    must produce the calibrated baseline for any sequence of step states.
+
+    **Calibration updated 2026-05 by `add-bo3-match-training`**: security
+    delta is now asymmetric (`+1.5` opp-removed, `-0.5` own-lost) instead
+    of the prior symmetric `±2.0`. The change applies regardless of
+    `match_format` because the `DigimonEnv` layer itself doesn't know
+    about matches; the new dense magnitudes are the baseline for every
+    caller. See `openspec/changes/add-bo3-match-training/design.md` §D9.
     """
     env = DigimonEnv()  # defaults; shaping is OFF
     env.reset()
@@ -180,12 +185,12 @@ def test_shaping_off_default_matches_baseline_reward_path() -> None:
             "game_over": False,
             "p1_security": 5, "p2_security": 4,
             "p1_digivolutions": 2, "p1_dna_digivolutions": 2,
-        }, 2.0 - 0.001),             # opponent security removed (+2.0)
+        }, 1.5 - 0.001),             # opponent security removed (+1.5)
         ({
             "game_over": False,
             "p1_security": 4, "p2_security": 4,
             "p1_digivolutions": 3, "p1_dna_digivolutions": 3,
-        }, -2.0 - 0.001),            # own security lost (-2.0)
+        }, -0.5 - 0.001),            # own security lost (-0.5, asymmetric)
     ]
 
     for state, expected in cases:

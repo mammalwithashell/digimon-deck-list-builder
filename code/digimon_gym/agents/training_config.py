@@ -13,6 +13,7 @@ VALID_ALGORITHMS = {"mlp", "lstm"}
 VALID_OPPONENTS = {"greedy", "random", "agent", "pool", "self-play"}
 VALID_RECORD_GAME_MODES = {"off", "all", "sampled", "draws", "anomalies", "eval"}
 VALID_MULLIGAN_LOG_MODES = {"on", "off"}
+VALID_MATCH_FORMATS = {"bo3", "single"}
 
 
 @dataclass
@@ -68,6 +69,11 @@ class TrainingConfig:
     digivolve_shaping: bool = False
     digivolve_reward: float = 0.1       # per regular digivolve
     dna_digivolve_bonus: float = 0.3    # additional on top of digivolve_reward
+    # Best-of-three match training (`add-bo3-match-training`).
+    # `bo3`: one Gym episode = one BO3 match (up to 3 games). Concede
+    #   (action 93) and SelectPlayOrder (actions 94/95) enabled.
+    # `single`: legacy behavior — one Gym episode = one game.
+    match_format: str = "bo3"
 
     def __post_init__(self) -> None:
         self._validate()
@@ -132,6 +138,11 @@ class TrainingConfig:
             raise ValueError("digivolve_reward must be >= 0")
         if self.dna_digivolve_bonus < 0:
             raise ValueError("dna_digivolve_bonus must be >= 0")
+        if self.match_format not in VALID_MATCH_FORMATS:
+            raise ValueError(
+                f"match_format must be one of {sorted(VALID_MATCH_FORMATS)}, "
+                f"got {self.match_format}"
+            )
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

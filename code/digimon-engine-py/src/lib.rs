@@ -176,6 +176,7 @@ pub enum GamePhase {
     SelectPermutation,
     SelectBudgeted,
     SelectBreedingPermanent,
+    SelectPlayOrder,
 }
 
 impl From<RustGamePhase> for GamePhase {
@@ -204,6 +205,7 @@ impl From<RustGamePhase> for GamePhase {
             RustGamePhase::SelectPermutation => GamePhase::SelectPermutation,
             RustGamePhase::SelectBudgeted => GamePhase::SelectBudgeted,
             RustGamePhase::SelectBreedingPermanent => GamePhase::SelectBreedingPermanent,
+            RustGamePhase::SelectPlayOrder => GamePhase::SelectPlayOrder,
         }
     }
 }
@@ -830,11 +832,49 @@ impl RustHeadlessGame {
         d.set_item("winner_id", to_python_pid(self.inner.winner_id()))?;
         d.set_item("result", reason.map(|r| r.result()))?;
         d.set_item("reason", reason.map(|r| r.as_str()))?;
+        // `win_reason` is a stable, Python-friendly alias for `reason`.
+        // BO3 match training consumes this on the per-game recording
+        // artifact (per the `bo3-match-training` spec) — recorders write
+        // it verbatim into `outcome.win_reason`.
+        d.set_item("win_reason", reason.map(|r| r.as_str()))?;
         Ok(d.into_py(py))
     }
 
     fn force_step_limit_winner(&mut self) -> Option<u8> {
         to_python_pid(self.inner.force_step_limit_winner())
+    }
+
+    /// Concede on behalf of `pid` (Python 1/2). The opponent is declared
+    /// the winner with `win_reason = "concede"`. Always-legal at any agent
+    /// decision point; the action mask reports action 93 as legal whenever
+    /// the player has any other legal action. Used by the Python
+    /// `MatchEnv` wrapper to handle BO3 match-training concedes.
+    fn concede(&mut self, pid: u8) -> PyResult<Option<u8>> {
+        let rust_pid = to_rust_pid(pid)?;
+        let winner = self.inner.concede(rust_pid);
+        Ok(to_python_pid(winner))
+    }
+
+    /// Install a `SelectPlayOrder` selection with `loser_pid` (Python 1/2)
+    /// as the chooser. The mask then reports actions 94 (PLAY_FIRST) and
+    /// 95 (PLAY_SECOND) legal for that player. Call this between games
+    /// of a BO3 match; after the next `step()` resolves the selection,
+    /// call `take_play_order_choice()` to read the result.
+    fn request_play_order_selection(&mut self, loser_pid: u8) -> PyResult<()> {
+        let rust_pid = to_rust_pid(loser_pid)?;
+        self.inner.request_play_order_selection(rust_pid);
+        Ok(())
+    }
+
+    /// Read-and-clear the most recent `SelectPlayOrder` outcome. Returns
+    /// `"first"`, `"second"`, or `None` if no selection has been resolved
+    /// since the slot was last taken. The Python `MatchEnv` wrapper uses
+    /// the returned string to decide the first-player for the next game.
+    fn take_play_order_choice(&mut self) -> Option<&'static str> {
+        self.inner.take_play_order_choice().map(|p| match p {
+            ::digimon_engine::selection::PlayOrder::First => "first",
+            ::digimon_engine::selection::PlayOrder::Second => "second",
+        })
     }
 
     #[getter]

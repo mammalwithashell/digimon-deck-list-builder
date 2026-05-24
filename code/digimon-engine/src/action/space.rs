@@ -44,6 +44,16 @@ pub const MOVE_FROM_BREEDING: u16 = 61;
 pub const PASS: u16 = 62;
 pub const DNA_DIGIVOLVE_START: u16 = 63;
 pub const DNA_DIGIVOLVE_END: u16 = 93;
+/// Concede the game. Always legal at agent decision points (per the BO3
+/// match-training spec). Decodes to `Game::concede(player)`. Reserved at
+/// 93 per `docs/ACTION_SPEC.md`.
+pub const CONCEDE_GAME: u16 = 93;
+/// Best-of-three play-order selection: "I will play first." Legal only
+/// during `GamePhase::SelectPlayOrder`. Reserved at 94.
+pub const PLAY_FIRST: u16 = 94;
+/// Best-of-three play-order selection: "I will play second." Legal only
+/// during `GamePhase::SelectPlayOrder`. Reserved at 95.
+pub const PLAY_SECOND: u16 = 95;
 /// Selection-only action id for the controller's breeding-area permanent.
 /// `docs/ACTION_SPEC.md` reserves 99 for this convention.
 pub const BREEDING_SELECTION_TARGET: u16 = 99;

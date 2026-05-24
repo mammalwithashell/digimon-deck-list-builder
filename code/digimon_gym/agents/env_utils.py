@@ -42,3 +42,29 @@ def unwrap_to_digimon_env(env: gymnasium.Env) -> DigimonEnv:
         f"Could not find DigimonEnv in wrapper stack. "
         f"Innermost layer is {type(current).__name__}."
     )
+
+
+def find_match_env(env: gymnasium.Env):
+    """Walk a Gymnasium wrapper stack until a `MatchEnv` is found.
+
+    Returns the `MatchEnv` instance, or `None` if not present in the chain.
+    Used by `WinRateCallback` to detect BO3 eval episodes and emit
+    match-tier metrics (sweep rate, concede counts, play-order picks).
+
+    Reload-safe (matches by module + class name like `_matches_digimon_env`).
+    """
+    target_module = "digimon_gym.agents.match_env"
+    target_name = "MatchEnv"
+
+    def _is_match_env(obj: object) -> bool:
+        cls = type(obj)
+        return cls.__module__ == target_module and cls.__name__ == target_name
+
+    current: gymnasium.Env = env
+    while isinstance(current, gymnasium.Wrapper):
+        if _is_match_env(current):
+            return current
+        current = current.env
+    if _is_match_env(current):
+        return current
+    return None

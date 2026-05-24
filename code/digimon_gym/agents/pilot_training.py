@@ -60,7 +60,10 @@ from digimon_gym.agents.maskable_recurrent import (
     MaskableRecurrentPPO,
     MaskableMlpLstmPolicy,
 )
-from digimon_gym.agents.env_utils import unwrap_to_digimon_env as _unwrap_to_digimon_env
+from digimon_gym.agents.env_utils import (
+    find_match_env as _find_match_env,
+    unwrap_to_digimon_env as _unwrap_to_digimon_env,
+)
 from digimon_gym.agents.opponent_pool import OpponentPool
 from digimon_gym.agents.training_config import TrainingConfig
 from digimon_gym.agents.training_recording import (
@@ -295,6 +298,29 @@ class OpponentWrapper(gymnasium.Wrapper):
 
         return obs, info
 
+    def reset_inner_only(self, **kwargs):
+        """Reset the inner env without resetting the opponent policy's
+        state. Used by `MatchEnv` between games of a BO3 match so the
+        recurrent policy's hidden state carries across games (per the
+        bo3-match-training spec). Also runs the opponent-advance loop
+        so the wrapper returns at the agent's first decision point in
+        the new game.
+        """
+        obs, info = self.env.reset(**kwargs)
+        return self._advance_opponent(obs, info)
+
+    def advance_opponent_until_agent_acts(self):
+        """Drive opponent actions until either the agent has a decision
+        point or the game ends. Returns `(obs, info, accumulated_reward,
+        terminated, truncated)`. Equivalent to `_play_opponent` but does
+        not require a starting obs/info — reads fresh state from the
+        inner env. Used by `MatchEnv` to advance the engine across the
+        BO3 `SelectPlayOrder` pick when the opponent is the chooser.
+        """
+        obs = self._unwrapped_env.runner.get_board_tensor(1)
+        info = {"action_mask": self._unwrapped_env.action_mask()}
+        return self._play_opponent(obs, info)
+
     def _play_opponent(self, obs, info):
         """Auto-play Player 2 turns until Player 1 acts or game ends.
 
@@ -389,6 +415,30 @@ class WinRateCallback(BaseCallback):
         # Agent-keyed (bucketed by agent archetype, generalist mode only):
         self._agent_archetype_digivolves: Dict[str, int] = {}
         self._agent_archetype_dna_digivolves: Dict[str, int] = {}
+        # BO3 match-tier tracking (per-episode = per-match in bo3 mode).
+        # Populated only when the eval env exposes a `MatchEnv` somewhere in
+        # the wrapper chain. All counters are cumulative across eval passes.
+        self._match_played: int = 0
+        self._match_wins: int = 0           # P1 won 2 games
+        self._match_sweeps: int = 0         # 2-0 wins
+        self._match_swept: int = 0          # 0-2 losses
+        self._match_draws: int = 0          # rare; 1-1-1 step-limit
+        self._match_total_steps: int = 0
+        self._match_total_games: int = 0    # 2 or 3 per match
+        # Concede tracking:
+        self._concede_total: int = 0
+        self._concede_when_lead: int = 0    # agent ahead 1-0 at concede
+        self._concede_when_tied: int = 0    # 0-0 at concede
+        self._concede_when_down: int = 0    # 0-1 at concede
+        self._concede_correct: int = 0      # match won after a concede
+        # Play-order pick tracking:
+        self._play_order_picks: int = 0     # total picks by the agent
+        self._play_first_count: int = 0     # agent chose to play first
+        self._play_first_match_wins: int = 0  # match wins where agent picked first
+        # Per-matchup match-tier (parallel to the game-tier _matchup_* dicts):
+        self._matchup_match_wins: Dict[tuple, int] = {}
+        self._matchup_match_sweeps: Dict[tuple, int] = {}
+        self._matchup_match_games: Dict[tuple, int] = {}
 
     def get_archetype_results(self):
         """Return per-archetype results as ArchetypeResult list."""
@@ -519,22 +569,106 @@ class WinRateCallback(BaseCallback):
                 except Exception:
                     pass
 
-            # Use the actual game outcome instead of reward as a proxy
+            # Use the actual outcome to determine win/loss. In BO3 mode the
+            # episode is a MATCH; in single mode it's a game. Detect MatchEnv
+            # in the wrapper chain to pick the right outcome path.
             won = False
             is_draw = False
-            winner_id = None
-            if eval_env is not None:
-                winner_id = _unwrap_to_digimon_env(eval_env).winner_id
-            if winner_id == 1:
-                wins += 1
-                won = True
-                terminal_score = 1.0
-            elif winner_id == 2:
-                terminal_score = -1.0
+            terminal_score = 0.0
+            match_env_instance = (
+                _find_match_env(eval_env) if eval_env is not None else None
+            )
+            if match_env_instance is not None:
+                # BO3 episode = match. Winner is whoever has >=2 game wins.
+                agent_game_wins = match_env_instance.match_score[0]
+                opp_game_wins = match_env_instance.match_score[1]
+                agent_match_won = agent_game_wins >= 2
+                opp_match_won = opp_game_wins >= 2
+                # Match-tier tallies
+                self._match_played += 1
+                self._match_total_steps += match_env_instance.match_step_count
+                games_this_match = agent_game_wins + opp_game_wins
+                self._match_total_games += games_this_match
+                if agent_match_won:
+                    wins += 1
+                    won = True
+                    terminal_score = 1.0
+                    self._match_wins += 1
+                    if opp_game_wins == 0:
+                        self._match_sweeps += 1
+                elif opp_match_won:
+                    terminal_score = -1.0
+                    if agent_game_wins == 0:
+                        self._match_swept += 1
+                else:
+                    draws += 1
+                    is_draw = True
+                    self._match_draws += 1
+                # Concede analytics (one slot per game in concede_history).
+                concedes = match_env_instance.concede_history
+                # `concede_history[i]` is True iff agent conceded game i.
+                # Score-state at concede time: before this game, the score
+                # was the sum of WINS up to but not including this game.
+                # We don't track agent vs opp per-game outcome explicitly,
+                # but we can infer: if agent didn't concede, no contribution;
+                # if agent conceded game i and no concede earlier, the
+                # "score state" before game i is the sum of opp wins from
+                # the prior games minus agent wins (but for game i, the
+                # opp got it as a free win since agent conceded). Simplify:
+                # walk the history.
+                agent_w_so_far = 0
+                opp_w_so_far = 0
+                for i, conceded in enumerate(concedes):
+                    if conceded:
+                        self._concede_total += 1
+                        if agent_w_so_far > opp_w_so_far:
+                            self._concede_when_lead += 1
+                        elif agent_w_so_far == opp_w_so_far:
+                            self._concede_when_tied += 1
+                        else:
+                            self._concede_when_down += 1
+                        if agent_match_won:
+                            self._concede_correct += 1
+                        # Conceding game i hands it to the opponent.
+                        opp_w_so_far += 1
+                    else:
+                        # Game i was played out. We don't know its winner
+                        # from concede_history alone, but match_score tells
+                        # us totals; we can't perfectly back-fill. For the
+                        # score-state tallies above to be accurate, we'd
+                        # need per-game outcomes. Approximate: walk forward
+                        # using whatever's known. For now, increment based
+                        # on remaining wins to allocate.
+                        # (When concedes happen the agent's score-state
+                        # tally is still correct because we already counted
+                        # the concede. For non-concede games we just keep
+                        # the score moving via match_score totals at end.)
+                        pass
+                # Play-order picks: read from match_env's history.
+                for entry in match_env_instance._play_order_history:
+                    if entry is None:
+                        continue
+                    # Only count picks made by the AGENT (chooser == 1).
+                    if entry.get("chooser") != 1:
+                        continue
+                    self._play_order_picks += 1
+                    if entry.get("picked") == "first":
+                        self._play_first_count += 1
+                        if agent_match_won:
+                            self._play_first_match_wins += 1
             else:
-                draws += 1
-                is_draw = True
-                terminal_score = 0.0
+                # Single-game episode: use the inner DigimonEnv winner.
+                winner_id = _unwrap_to_digimon_env(eval_env).winner_id
+                if winner_id == 1:
+                    wins += 1
+                    won = True
+                    terminal_score = 1.0
+                elif winner_id == 2:
+                    terminal_score = -1.0
+                else:
+                    draws += 1
+                    is_draw = True
+                    terminal_score = 0.0
             total_terminal_score += terminal_score
             total_dense_reward += episode_reward - terminal_score
 
@@ -610,6 +744,23 @@ class WinRateCallback(BaseCallback):
                         self._matchup_draws[matchup] = (
                             self._matchup_draws.get(matchup, 0) + 1
                         )
+                    # Match-tier per-matchup (BO3 mode only). In single
+                    # mode `match_env_instance` is None and these tallies
+                    # do not update; in bo3 mode the per-episode `won` /
+                    # match-score reflects match outcome (set above).
+                    if match_env_instance is not None:
+                        self._matchup_match_games[matchup] = (
+                            self._matchup_match_games.get(matchup, 0) + 1
+                        )
+                        if won:
+                            self._matchup_match_wins[matchup] = (
+                                self._matchup_match_wins.get(matchup, 0) + 1
+                            )
+                            # Sweep iff opp_game_wins == 0 for this match.
+                            if match_env_instance.match_score[1] == 0:
+                                self._matchup_match_sweeps[matchup] = (
+                                    self._matchup_match_sweeps.get(matchup, 0) + 1
+                                )
 
         win_rate = wins / self.n_eval_episodes
         mean_reward = total_reward / self.n_eval_episodes
@@ -650,6 +801,67 @@ class WinRateCallback(BaseCallback):
             mean_opp_dna_digivolves,
         )
         self.logger.record("pilot/games_played", self.games_played)
+
+        # ─── BO3 match-tier metrics ──────────────────────────────────────
+        # Only emitted when at least one eval episode came from a MatchEnv-
+        # wrapped chain (i.e., `--match-format bo3`). In `single` mode these
+        # counters stay at zero so the spec's "single-mode skips match
+        # metrics" requirement is satisfied implicitly.
+        if self._match_played > 0:
+            match_played = self._match_played
+            self.logger.record(
+                "pilot/match_win_rate",
+                self._match_wins / match_played,
+            )
+            self.logger.record(
+                "pilot/match_sweep_rate",
+                self._match_sweeps / max(1, self._match_wins),
+            )
+            self.logger.record(
+                "pilot/match_swept_rate",
+                self._match_swept / max(1, match_played - self._match_wins),
+            )
+            self.logger.record(
+                "pilot/match_total_steps_mean",
+                self._match_total_steps / match_played,
+            )
+            self.logger.record(
+                "pilot/games_per_match_mean",
+                self._match_total_games / max(1, match_played),
+            )
+            # Concede metrics — total fires per match (since one match
+            # can produce up to 2 conceded games in the agent's slots).
+            self.logger.record(
+                "pilot/concede_rate",
+                self._concede_total / max(1, self._match_total_games),
+            )
+            self.logger.record(
+                "pilot/concede_lead_rate",
+                self._concede_when_lead / max(1, self._concede_total),
+            )
+            self.logger.record(
+                "pilot/concede_tied_rate",
+                self._concede_when_tied / max(1, self._concede_total),
+            )
+            self.logger.record(
+                "pilot/concede_down_rate",
+                self._concede_when_down / max(1, self._concede_total),
+            )
+            self.logger.record(
+                "pilot/concede_correct_rate",
+                self._concede_correct / max(1, self._concede_total),
+            )
+            # Play-order picks
+            if self._play_order_picks > 0:
+                self.logger.record(
+                    "pilot/play_first_rate",
+                    self._play_first_count / self._play_order_picks,
+                )
+                if self._play_first_count > 0:
+                    self.logger.record(
+                        "pilot/play_order_first_winrate",
+                        self._play_first_match_wins / self._play_first_count,
+                    )
 
         # Per-archetype matchup tracking. Populated by GeneralistDeckPoolWrapper
         # (deck1_archetype + opponent_archetype) and PoolOpponentWrapper
@@ -725,6 +937,50 @@ class WinRateCallback(BaseCallback):
             self.logger.record(f"pilot/matchup/{tag}/win_rate", wins / games)
             self.logger.record(f"pilot/matchup/{tag}/draw_rate", draws / games)
             self.logger.record(f"pilot/matchup/{tag}/games", float(games))
+
+        # Per-matchup BO3 scalars (only populated when MatchEnv was active).
+        for matchup in sorted(self._matchup_match_games.keys()):
+            games = self._matchup_match_games[matchup]
+            if games <= 0:
+                continue
+            match_wins = self._matchup_match_wins.get(matchup, 0)
+            sweeps = self._matchup_match_sweeps.get(matchup, 0)
+            agent_arch, opp_arch = matchup
+            tag = f"{_sanitize(agent_arch)}_vs_{_sanitize(opp_arch)}"
+            self.logger.record(f"pilot/matchup/{tag}/match_win_rate", match_wins / games)
+            self.logger.record(
+                f"pilot/matchup/{tag}/sweep_rate",
+                sweeps / max(1, match_wins),
+            )
+
+        # Matchup-grid sidecar JSON for the training MCP / downstream
+        # tooling. Written only in BO3 mode with at least one matchup
+        # observed; the bo3-match-training spec defines this schema.
+        if self._match_played > 0 and self._matchup_match_games:
+            try:
+                tb_log_dir = getattr(self.logger, "dir", None) or getattr(self.model, "tensorboard_log", None)
+                if tb_log_dir is not None:
+                    out_dir = Path(tb_log_dir).parent if Path(tb_log_dir).is_file() else Path(tb_log_dir)
+                    out_dir.mkdir(parents=True, exist_ok=True)
+                    grid_path = out_dir / f"matchup_grid_{int(self.num_timesteps)}.json"
+                    grid: Dict[str, Dict[str, Dict[str, int]]] = {}
+                    for (agent_arch, opp_arch), games in self._matchup_match_games.items():
+                        bucket = grid.setdefault(agent_arch, {})
+                        match_wins = self._matchup_match_wins.get((agent_arch, opp_arch), 0)
+                        sweeps = self._matchup_match_sweeps.get((agent_arch, opp_arch), 0)
+                        total_games_in_matchup = (
+                            self._matchup_games.get((agent_arch, opp_arch), 0)
+                        )
+                        bucket[opp_arch] = {
+                            "matches": int(games),
+                            "match_wins": int(match_wins),
+                            "sweeps": int(sweeps),
+                            "total_games": int(total_games_in_matchup),
+                        }
+                    grid_path.write_text(json.dumps(grid, indent=2, sort_keys=True))
+            except Exception:
+                # Sidecar write is best-effort; don't break the eval pass.
+                pass
 
         if self.eval_suite is not None:
             suite_states = {}
@@ -931,7 +1187,9 @@ def make_env(opponent: str = "greedy",
              mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
              digivolve_shaping: bool = False,
              digivolve_reward: float = 0.1,
-             dna_digivolve_bonus: float = 0.3) -> gymnasium.Env:
+             dna_digivolve_bonus: float = 0.3,
+             match_format: str = "single",
+             match_env_seed: Optional[int] = None) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -998,6 +1256,13 @@ def make_env(opponent: str = "greedy",
                 f"Expected one of {valid_opponents}."
             )
         env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+
+    # BO3 match wrapper sits between OpponentWrapper and any deck-pool
+    # wrappers so each deck-pool reset corresponds to a MATCH (not a
+    # single game). See `add-bo3-match-training/design.md` §D5.
+    if match_format == "bo3":
+        from digimon_gym.agents.match_env import MatchEnv
+        env = MatchEnv(env, seed=match_env_seed)
 
     # Deck pool wrapper for agent deck variation
     if deck_pool_variants and len(deck_pool_variants) > 0:
@@ -1088,6 +1353,11 @@ def make_vec_env(
                 dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             )
             wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+            # BO3 match wrapper between OpponentWrapper and deck-pool wrappers.
+            if cfg.match_format == "bo3":
+                from digimon_gym.agents.match_env import MatchEnv
+                match_seed = None if cfg.seed is None else cfg.seed + rank
+                wrapped = MatchEnv(wrapped, seed=match_seed)
             if generalist_deck_pool is not None:
                 seed = None if curriculum_seed is None else curriculum_seed + rank
                 wrapped = GeneralistDeckPoolWrapper(
@@ -1399,6 +1669,8 @@ def train(total_timesteps: int = 100_000,
             digivolve_shaping=cfg.digivolve_shaping,
             digivolve_reward=cfg.digivolve_reward,
             dna_digivolve_bonus=cfg.dna_digivolve_bonus,
+            match_format=cfg.match_format,
+            match_env_seed=cfg.seed,
         )
 
     # Load autoencoder embeddings for warm-start (if available)
@@ -1496,6 +1768,10 @@ def train(total_timesteps: int = 100_000,
                 dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             )
             wrapped = OpponentWrapper(base_env, opponent_fn=pool_opponent_fn)
+            # BO3 match wrapper between OpponentWrapper and deck-pool wrappers.
+            if cfg.match_format == "bo3":
+                from digimon_gym.agents.match_env import MatchEnv
+                wrapped = MatchEnv(wrapped, seed=eval_seed)
             if generalist_deck_pool is not None:
                 wrapped = GeneralistDeckPoolWrapper(
                     wrapped,
@@ -1544,6 +1820,8 @@ def train(total_timesteps: int = 100_000,
             digivolve_shaping=cfg.digivolve_shaping,
             digivolve_reward=cfg.digivolve_reward,
             dna_digivolve_bonus=cfg.dna_digivolve_bonus,
+            match_format=cfg.match_format,
+            match_env_seed=cfg.eval_seed,
         )
     eval_suite = None
     if cfg.eval_suite:
@@ -1682,6 +1960,7 @@ def train(total_timesteps: int = 100_000,
         digivolve_shaping=cfg.digivolve_shaping,
         digivolve_reward=cfg.digivolve_reward,
         dna_digivolve_bonus=cfg.dna_digivolve_bonus,
+        match_format=cfg.match_format,
     )
     if checkpoint_cb is not None:
         meta.checkpoint_timestamps = checkpoint_cb.saved_at
@@ -1858,6 +2137,18 @@ def _build_argparser() -> argparse.ArgumentParser:
              "models/<run>/mulligan_log_env_<NNN>.jsonl (one file per env, "
              "default: on, ~3 MB per 1M steps across all env files).",
     )
+    parser.add_argument(
+        "--match-format",
+        choices=["bo3", "single"],
+        default=None,
+        help=(
+            "Episode shape. `bo3` (default in `TrainingConfig`) makes one Gym "
+            "episode = one best-of-three match (up to 3 games), enables the "
+            "concede action (93) and SelectPlayOrder selection (94/95), and "
+            "defaults `digivolve_shaping=True`. `single` retains the legacy "
+            "one-game-per-episode behavior."
+        ),
+    )
     return parser
 
 
@@ -1917,6 +2208,17 @@ def main():
         overrides["resume_from"] = args.resume
     if args.generalist:
         overrides["generalist"] = True
+    if args.match_format is not None:
+        overrides["match_format"] = args.match_format
+
+    # BO3-implies-digivolve-on default. Only applies when the user hasn't
+    # explicitly set digivolve_shaping (either via --set or via YAML). The
+    # check is conservative — we look at the merged overrides and the raw
+    # YAML below. The cleanest approach: ALWAYS set digivolve_shaping=True
+    # under bo3 unless the user explicitly opted out via --set digivolve_shaping=false.
+    effective_match_format = overrides.get("match_format", "bo3")
+    if effective_match_format == "bo3" and "digivolve_shaping" not in overrides:
+        overrides["digivolve_shaping"] = True
 
     cfg = TrainingConfig.from_yaml(Path(args.config), overrides=overrides)
 

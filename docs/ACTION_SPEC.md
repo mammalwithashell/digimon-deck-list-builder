@@ -12,7 +12,10 @@ The engine exposes `2192` discrete action IDs. Legal actions are provided by `ge
 | `61` | 1 | Move from breeding |
 | `62` | 1 | Pass / decline |
 | `63-92` | 30 | Initiate DNA Digivolve | `63 + hand_idx` |
-| `93-99` | 7 | Unused |
+| `93` | 1 | Concede game (always legal at agent decision points) |
+| `94` | 1 | Play first (BO3 `SelectPlayOrder` only) |
+| `95` | 1 | Play second (BO3 `SelectPlayOrder` only) |
+| `96-99` | 4 | Unused |
 | `100-399` | 300 | Attack / block / alliance (phase-dependent) | `100 + slot * 15 + target` |
 | `400-999` | 600 | Digivolve | `400 + hand_idx * 15 + field_idx` |
 | `1000-1999` | 1000 | Effect activation | `1000 + perm_idx * 10 + effect_idx` |
@@ -80,6 +83,17 @@ Action IDs are intentionally reused across phases.
 
 - `100-113`: choose ally to suspend for Alliance bonus
 - `62`: decline Alliance
+
+### SelectPlayOrder (BO3 match training only)
+
+- `94`: play first in the next game
+- `95`: play second in the next game
+
+Entered between games of a best-of-three match by `Game::request_play_order_selection(loser_id)`. Only the loser of the previous game is the chooser; the mask reports `94`/`95` legal only for that player. The chosen `PlayOrder` is written to `Game::last_play_order_choice` for the Python `MatchEnv` wrapper to consume.
+
+### Concede (always legal)
+
+- `93`: concede the game (`Game::concede(player)`). Mask reports `93 = 1` whenever the player has any other legal action — i.e., at every agent decision point (mulligan, main, breeding, block / counter / alliance timing, end-of-turn-action, every selection variant including `SelectPlayOrder`). The engine decoder accepts `93` regardless of `pending_selection` state — concede during a pending selection clears the selection, drains the effect queue, emits a `GameEvent::Concede` event before the terminal `GameEvent::GameOver`, and reports `win_reason = "concede"`.
 
 ### Selection Phases
 
