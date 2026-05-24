@@ -53,13 +53,18 @@ wrapper:
 2. On `step()`: passes the action through. When the pre-step phase was
    Mulligan AND the acting player is 1 AND we haven't yet logged this game,
    the wrapper appends the completed record (now including the action) to
-   `models/<run>/mulligan_log.jsonl`. One JSONL append per game; no
-   buffering in memory beyond the single pending record.
+   `models/<run>/mulligan_log_env_<env_index:03d>.jsonl`. One JSONL append
+   per game; no buffering in memory beyond the single pending record.
 
 A parallel `MulliganLogWriter` helper (modeled on `TrainingGameRecorder`)
-owns the JSONL path, the once-per-run header line, and per-`env_index` file
-handles. Constructed once in `train()` and threaded through `make_env` /
-`make_vec_env`.
+owns the JSONL path and the once-per-writer header line. **One writer
+instance per env index** — under `SubprocVecEnv` each subprocess holds
+its own writer pointing at its own per-env-index file
+(`mulligan_log_env_000.jsonl`, `mulligan_log_env_001.jsonl`, ...) so
+concurrent appends never contend on the same file. The env factory
+inside `make_env`/`make_vec_env` constructs the writer with the correct
+`env_index` per env. Analysis tools glob `mulligan_log_env_*.jsonl` to
+recover the cross-env dataset.
 
 ## Wrapper interface
 
@@ -95,6 +100,16 @@ class MulliganLogWrapper(gymnasium.Wrapper):
       "first_player_id": ui.get("currentPlayer"),
   }
   ```
+
+  Note on `first_player_id`: `to_ui_json()["currentPlayer"]` here reports
+  `game.turn_player()` (the first player of the game), not the current
+  mulligan decider — `turn_player` does not advance during the mulligan
+  phase. When the inner DigimonEnv has `record_actions=True`, the wrapper
+  also reads `runner.get_recording()["initial_state"]["first_player_id"]`
+  as an authoritative override. When `record_actions=False` (the default)
+  `get_recording()` returns `None`, and the `currentPlayer` value is the
+  only source — which is correct because both fields trace back to
+  `turn_player` at game start.
 
 - `step(action)`: snapshot `pre_step_player = runner.mulligan_current_player`
   and `pre_step_phase = runner.to_ui_json()["currentPhase"]` **before**
@@ -170,14 +185,23 @@ def mask_fn(env):
 return ActionMasker(env, mask_fn)
 ```
 
-`mulligan_log_writer` is constructed once in `train()`, mirroring
-`recording_writer`:
+A small `MulliganLogConfig` value object (just `output_dir`, `enabled`,
+`run_metadata`) is constructed once in `train()` and threaded through
+`make_env` / `make_vec_env`. The env factory then constructs a
+`MulliganLogWriter` *per env* with the correct `env_index`:
 
 ```python
-mulligan_log_writer = MulliganLogWriter(
+mulligan_log_cfg = MulliganLogConfig(
     output_dir=run_dir,
     enabled=(cfg.mulligan_log != "off"),
     run_metadata={...same shape as recording_writer.run_metadata...},
+)
+# ... inside each per-env factory ...
+writer = MulliganLogWriter(
+    output_dir=mulligan_log_cfg.output_dir,
+    env_index=rank,
+    enabled=mulligan_log_cfg.enabled,
+    run_metadata=mulligan_log_cfg.run_metadata,
 )
 ```
 
@@ -185,8 +209,11 @@ mulligan_log_writer = MulliganLogWriter(
 
 - New CLI flag in argparse: `--mulligan-log {on,off}`, default `on`.
 - New `TrainingConfig` field: `mulligan_log: str = "on"`.
-- Output path: `<save_dir>/<run_name>/mulligan_log.jsonl`.
-- Append-only; safe to leave default-on (~3 MB total for a 1M-step run).
+- Output paths: `<save_dir>/<run_name>/mulligan_log_env_<env_index:03d>.jsonl`
+  (one file per env_index, parallel to `TrainingGameRecorder`'s
+  per-env recordings layout).
+- Append-only; safe to leave default-on (~3 MB total for a 1M-step run,
+  spread across N env files).
 
 ## Testing
 
