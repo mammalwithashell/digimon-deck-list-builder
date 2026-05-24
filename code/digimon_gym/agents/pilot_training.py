@@ -1295,13 +1295,19 @@ def make_env(opponent: str = "greedy",
             bounty_bonus=bounty_bonus,
         )
 
-    if record_this_source:
-        env = TrainingRecordingWrapper(
-            env,
-            recording_writer,
-            source=recording_source,
-            env_index=recording_env_index,
-        )
+    # Always insert TrainingRecordingWrapper — it is the panic safety
+    # rail that converts PyO3 engine panics into synthetic terminal
+    # steps so training survives unexpected engine crashes. Recording is
+    # a separate concern handled inside the wrapper via
+    # `recording_writer.should_record(...)`; when the recorder is
+    # disabled (mode="off") the wrapper is a pure panic-catch with no
+    # artifact writes.
+    env = TrainingRecordingWrapper(
+        env,
+        recording_writer,
+        source=recording_source,
+        env_index=recording_env_index,
+    )
 
     if mulligan_log_cfg is not None and mulligan_log_cfg.enabled:
         writer = MulliganLogWriter(
@@ -1365,13 +1371,13 @@ def make_vec_env(
                     deck_pool=generalist_deck_pool,
                     seed=seed,
                 )
-            if record_this_source:
-                wrapped = TrainingRecordingWrapper(
-                    wrapped,
-                    recording_writer,
-                    source="train",
-                    env_index=rank,
-                )
+            # Panic safety rail — see comment in `make_env` above.
+            wrapped = TrainingRecordingWrapper(
+                wrapped,
+                recording_writer,
+                source="train",
+                env_index=rank,
+            )
 
             if mulligan_log_cfg is not None and mulligan_log_cfg.enabled:
                 writer = MulliganLogWriter(
@@ -1778,13 +1784,13 @@ def train(total_timesteps: int = 100_000,
                     deck_pool=generalist_deck_pool,
                     seed=eval_seed if eval_seed is not None else curriculum_seed,
                 )
-            if recording_writer.enabled:
-                wrapped = TrainingRecordingWrapper(
-                    wrapped,
-                    recording_writer,
-                    source="eval",
-                    env_index=0,
-                )
+            # Panic safety rail — see comment in `make_env` above.
+            wrapped = TrainingRecordingWrapper(
+                wrapped,
+                recording_writer,
+                source="eval",
+                env_index=0,
+            )
             if mulligan_log_cfg is not None and mulligan_log_cfg.enabled:
                 writer = MulliganLogWriter(
                     output_dir=mulligan_log_cfg.output_dir,
