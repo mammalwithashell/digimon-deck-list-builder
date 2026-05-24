@@ -6,7 +6,7 @@ use digimon_dsl::compiled::{
     CompiledStep, CompiledTiming, CompiledZone,
 };
 use digimon_engine::action::space::{encode_attack, PASS, PLAY_HAND_START};
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword};
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 use digimon_engine::PermanentHandle;
@@ -101,6 +101,7 @@ fn bt24_041_has_printed_metadata_alt_paths_cost_reduction_formula_and_auras() {
         CompiledStep::DeDigivolve {
             amount: None,
             amount_fn: Some(CompiledFormula::BasePerDelta { per, .. }),
+            stop_at_level: Some(3),
             ..
         } if matches!(
             per,
@@ -208,6 +209,40 @@ fn bt24_041_optional_hand_play_filters_iliad_cost_and_then_formula_de_digivolves
 }
 
 #[test]
+fn bt24_041_formula_de_digivolve_stops_at_lvl3_above_digi_egg() {
+    let mut runner = minervamon_runner()
+        .hand(0, &["ILIAD-CHEAP"])
+        .memory(20)
+        .start();
+    let minervamon = runner.place_on_field(0, "BT24-041", Some(0));
+    runner.place_on_field(0, "ALLY-DIGIMON", Some(0));
+    let opponent = runner.place_stack(1, &["TEST-EGG", "OPP-LV3", "OPP-LV4"]);
+
+    fire_on_play(&mut runner, minervamon);
+    runner
+        .execute_action(0, PLAY_HAND_START)
+        .expect("play eligible Iliad card so formula amount is 3");
+    runner
+        .execute_action(0, target_action(opponent))
+        .expect("select opponent Digimon");
+
+    let perm = &runner.game.players[1].battle_area[opponent.index as usize];
+    assert_eq!(
+        perm.stack_size(),
+        2,
+        "standard De-Digivolve must stop at Lv3 even when amount_fn evaluates above 1"
+    );
+    assert_eq!(perm.top_card().card_id(&runner.game.card_data), "OPP-LV3");
+    assert!(
+        !runner.game.players[1]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "TEST-EGG"),
+        "Minervamon must not expose a bare Digi-Egg in battle area"
+    );
+}
+
+#[test]
 fn bt24_041_declining_hand_play_still_runs_de_digivolve_tail() {
     let mut runner = minervamon_runner()
         .hand(0, &["ILIAD-CHEAP"])
@@ -283,6 +318,9 @@ fn minervamon_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(make_digimon("OPP-MID-A", &[]))
         .add_card(make_digimon("OPP-MID-B", &[]))
         .add_card(make_digimon("OPP-TOP", &[]))
+        .add_card(make_test_egg("TEST-EGG", "Test Egg"))
+        .add_card(make_level_digimon("OPP-LV3", 3))
+        .add_card(make_level_digimon("OPP-LV4", 4))
 }
 
 fn make_digimon(id: &str, traits: &[&str]) -> digimon_engine::CardData {
@@ -308,6 +346,16 @@ fn make_tamer(id: &str, traits: &[&str]) -> digimon_engine::CardData {
     card.level = None;
     card.dp = None;
     card.traits = traits.iter().map(|s| s.to_string()).collect();
+    card
+}
+
+fn make_level_digimon(id: &str, level: u8) -> digimon_engine::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.colors = vec![CardColor::Blue];
+    card.play_cost = 3;
+    card.level = Some(level);
+    card.dp = Some(i32::from(level) * 1000);
     card
 }
 

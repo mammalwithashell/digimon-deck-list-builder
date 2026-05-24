@@ -12,7 +12,8 @@
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};
+use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor, CardKind};
 
 fn lvl_digimon(id: &str, name: &str, level: u8, dp: i32) -> CardData {
@@ -75,6 +76,32 @@ fn de_digivolve_2_pops_two_and_stops_at_lvl3() {
 }
 
 #[test]
+fn standard_de_digivolve_stops_at_lvl3_above_digi_egg() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_egg("EGG", "Egg"))
+        .add_card(lvl_digimon("LVL3", "Three", 3, 2000))
+        .add_card(lvl_digimon("LVL4", "Four", 4, 4000))
+        .add_card(make_test_card("TEST-024", "DeDig2StopAt3"))
+        .hand(0, &["TEST-024"])
+        .memory(5)
+        .start();
+
+    let target = r.place_stack(1, &["EGG", "LVL3", "LVL4"]);
+    let trash_before = r.trash_size(1);
+
+    r.play(0, 0);
+
+    let perm = &r.game.player(1).battle_area[target.index as usize];
+    assert_eq!(perm.stack_size(), 2, "Lv4 is trashed, Lv3 remains over egg");
+    assert_eq!(perm.top_card().card_id(&r.game.card_data), "LVL3");
+    assert_eq!(
+        r.trash_size(1),
+        trash_before + 1,
+        "only the Lv4 should be trashed"
+    );
+}
+
+#[test]
 fn de_digivolve_unbounded_pops_whole_stack() {
     // Stack on P1: [Lv3, Lv4]. TEST-025 OnPlay: (amount=None, stop_at_level=None).
     // Expected: pops LVL4; LVL3 stays because stack_size must be >= 1.
@@ -102,6 +129,72 @@ fn de_digivolve_unbounded_pops_whole_stack() {
         "unbounded pop leaves the base (stack_size >= 1 invariant)"
     );
     assert_eq!(perm.top_card().card_id(&r.game.card_data), "LVL3");
+}
+
+#[test]
+fn exposed_battle_area_digi_egg_leaves_field_after_unbounded_de_digivolve() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_egg("EGG", "Egg"))
+        .add_card(lvl_digimon("LVL3", "Three", 3, 2000))
+        .add_card(make_test_card("TEST-025", "DeDigUnbounded"))
+        .hand(0, &["TEST-025"])
+        .memory(5)
+        .start();
+
+    r.place_stack(1, &["EGG", "LVL3"]);
+
+    r.play(0, 0);
+
+    assert!(
+        r.game.player(1).battle_area.is_empty(),
+        "a bare Digi-Egg must not remain in battle area"
+    );
+    assert!(
+        r.game
+            .player(1)
+            .trash
+            .iter()
+            .any(|card| card.card_id(&r.game.card_data) == "EGG"),
+        "the exposed Digi-Egg should move to its owner's trash"
+    );
+}
+
+#[test]
+fn exposed_battle_area_digi_egg_leaves_field_after_top_source_trash() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_egg("EGG", "Egg"))
+        .add_card(lvl_digimon("LVL3", "Three", 3, 2000))
+        .add_card(lvl_digimon("SRC", "Source", 3, 2000))
+        .build();
+
+    let target = r.place_stack(1, &["EGG", "LVL3"]);
+    let source = r.place_on_field(0, "SRC", Some(0));
+    let src_card = r.game.player(0).battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let top_card = r.game.player(1).battle_area[target.index as usize]
+        .top_card()
+        .handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, src_card, Some(source), 0);
+        ctx.trash_card_source(target, top_card);
+    }
+
+    assert!(
+        r.game.player(1).battle_area.is_empty(),
+        "trashing the Lv3 top source must not leave the exposed Digi-Egg in battle area"
+    );
+    for id in ["LVL3", "EGG"] {
+        assert!(
+            r.game
+                .player(1)
+                .trash
+                .iter()
+                .any(|card| card.card_id(&r.game.card_data) == id),
+            "{id} should be in the target owner's trash"
+        );
+    }
 }
 
 #[test]

@@ -267,11 +267,17 @@ effects:
     let CompiledStep::DeDigivolve {
         amount: None,
         amount_fn: Some(CompiledFormula::BasePerDelta { per, .. }),
+        stop_at_level,
         ..
     } = &triggered.process[1]
     else {
         panic!("expected de_digivolve amount_fn step");
     };
+    assert_eq!(
+        *stop_at_level,
+        Some(3),
+        "DSL de_digivolve should default to the standard level-3 floor"
+    );
     assert!(matches!(
         per,
         CompiledPerSelector::FilteredCardCountInZoneScoped {

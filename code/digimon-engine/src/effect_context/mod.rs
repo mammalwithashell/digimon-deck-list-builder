@@ -2289,6 +2289,23 @@ impl<'a> EffectContext<'a> {
                 .permanent_is_unaffected_by_effect(target, self.player, self.source_kind)
     }
 
+    fn cleanup_exposed_battle_area_digi_egg(&mut self, target: PermanentHandle) -> bool {
+        let exposed = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .is_some_and(|perm| {
+                perm.top_card().card_kind(&self.game.card_data) == CardKind::DigiEgg
+            });
+        if !exposed {
+            return false;
+        }
+
+        self.game.delete_permanent_with_effects(target);
+        true
+    }
+
     pub fn delete_permanent(&mut self, target: PermanentHandle) {
         if !self.can_affect_permanent(target) {
             return;
@@ -2445,6 +2462,10 @@ impl<'a> EffectContext<'a> {
                 crate::trigger_context::EventCause::from(self.game.infer_effect_cause(owner)),
             );
             popped += 1;
+
+            if self.cleanup_exposed_battle_area_digi_egg(target) {
+                break;
+            }
         }
 
         popped
@@ -3375,11 +3396,7 @@ impl<'a> EffectContext<'a> {
                 // play, removing the now-empty carrier, which may shift
                 // `played.index` down by 1 if the carrier sat at a lower
                 // index than the played permanent.
-                let played = Self::shift_handle_after_soft_remove_check(
-                    self.game,
-                    target,
-                    played,
-                );
+                let played = Self::shift_handle_after_soft_remove_check(self.game, target, played);
                 Some(played)
             }
             PlayFromHandCostResult::Pending => {
@@ -4141,7 +4158,9 @@ impl<'a> EffectContext<'a> {
         // event attributed to the correct host. See
         // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
         // `qa/archetype-qa/engine-gaps.md`.
-        let _ = self.game.soft_remove_if_emptied(perm);
+        if !self.game.soft_remove_if_emptied(perm) {
+            let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
+        }
         true
     }
 
@@ -4191,6 +4210,7 @@ impl<'a> EffectContext<'a> {
         };
         let owner = removed.owner;
         self.game.player_mut(owner).hand.push(removed);
+        let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
         true
     }
 
@@ -4318,6 +4338,7 @@ impl<'a> EffectContext<'a> {
             source_card,
             crate::trigger_context::EventCause::from(self.game.infer_effect_cause(target.player)),
         );
+        let _ = self.cleanup_exposed_battle_area_digi_egg(target);
         true
     }
 

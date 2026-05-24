@@ -65,7 +65,6 @@ fn make_veemon(id: &str) -> CardData {
     c.play_cost = 3;
     c
 }
-
 fn make_wormmon(id: &str) -> CardData {
     let mut c = make_test_card(id, "Wormmon");
     c.card_kind = CardKind::Digimon;
@@ -178,7 +177,6 @@ fn bt16_085_metadata_matches_printed_text() {
         "must include green"
     );
 }
-
 #[test]
 fn bt16_085_has_three_clauses_matching_printed_text() {
     let runner = base_runner();
@@ -1231,4 +1229,3 @@ fn bt16_085_optional_outer_prompt_accept_runs_body_with_trigger_ctx() {
         "accept → exactly +1 memory from Clause 1"
     );
 }
-

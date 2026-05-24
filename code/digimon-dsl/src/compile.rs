@@ -1844,7 +1844,7 @@ fn compile_step(
                 .amount_fn
                 .as_ref()
                 .map(|f| compile_formula(f, &format!("{prefix}.amount_fn"), card_id, errors)),
-            stop_at_level: a.stop_at_level,
+            stop_at_level: a.stop_at_level.or(Some(3)),
         },
         S::PlaceOnSecurity(a) => CompiledStep::PlaceOnSecurity {
             of: compile_player_ref(a.of),
