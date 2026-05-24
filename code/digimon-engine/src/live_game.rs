@@ -675,6 +675,18 @@ impl LiveGame {
         } else {
             Some("play_from_hand rejected: insufficient memory, field full, or play blocked".into())
         };
+        if ok {
+            // The `decode_action` path runs `tick_declarative_effects` on
+            // every successful action so filter-aura state (e.g., Homeros's
+            // `[All Turns] +1000 DP to TS Digimon`) stays consistent with
+            // the post-action board. This wrapper dispatches directly to
+            // `play_from_hand` to keep the phase/decision-player validation
+            // local, so we mirror the tick discipline explicitly. Without
+            // this, the aura installs one MCP/API action late and any
+            // [On Play] effect that queries effective_dp / modifiers
+            // immediately after the play reads stale state.
+            self.game.tick_declarative_effects();
+        }
         self.make_result(ok, error, before_seq)
     }
 
@@ -689,7 +701,14 @@ impl LiveGame {
         }
         let before_seq = self.game.event_seq;
         match self.game.resolve_selection(player, action_id) {
-            Ok(_) => self.make_result(true, None, before_seq),
+            Ok(_) => {
+                // Same tick-discipline reasoning as `play()` — selections
+                // can land new permanents (free play, place-as-source) or
+                // mutate the field; filter-auras must see the post-action
+                // state without waiting for the next decode_action call.
+                self.game.tick_declarative_effects();
+                self.make_result(true, None, before_seq)
+            }
             Err(_) => self.make_result(
                 false,
                 Some("selection rejected: invalid choice for current prompt".into()),
@@ -723,6 +742,12 @@ impl LiveGame {
         }
         let before_seq = self.game.event_seq;
         self.game.end_turn();
+        // Match the tick discipline of decode_action (`code/digimon-engine/src/action/decode.rs:72`):
+        // end-of-turn triggers may install new modifiers (e.g., aura sources
+        // entering via end-of-turn effects), so filter-aura state must
+        // refresh before the wrapper returns. Without the explicit tick,
+        // callers observing the post-end-of-turn state see stale modifiers.
+        self.game.tick_declarative_effects();
         self.make_result(true, None, before_seq)
     }
 
@@ -767,6 +792,15 @@ impl LiveGame {
         } else {
             Some("move_from_breeding rejected: no carrier or breeding not legal".into())
         };
+        if moved {
+            // Mirror the tick discipline of decode_action. The carrier
+            // landing in the battle area may install or invalidate
+            // filter-auras (e.g., a TS Digimon moving in becomes the
+            // target of an existing Homeros +1000 DP aura, or a moved
+            // carrier IS the aura source). Without this tick the aura
+            // delta lags one MCP/API action.
+            self.game.tick_declarative_effects();
+        }
         self.make_result(moved, error, before_seq)
     }
 

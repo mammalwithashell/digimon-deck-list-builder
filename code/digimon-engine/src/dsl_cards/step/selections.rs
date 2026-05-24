@@ -2897,6 +2897,25 @@ fn install_select_union_zone(
 // every Training / Memory Boost / search effect. Both lower as selection
 // installs that consume the existing `select_reveal` / `select_effect_choice`
 // / `select_ordered_permutation` engine surface — no new substrate hooks.
+//
+// AUTHOR NOTE — `optional: true` semantics:
+// `choose_from_reveal { optional: true }` is permissible ONLY when the
+// printed card text explicitly grants the player a "may" at THAT specific
+// pick (e.g. "you may add 1 ... to your hand"). When the printed text says
+// "Add 1 card ..." without "may", the pick is mandatory and `optional`
+// MUST be `false` (or omitted — `false` is the default). The "no eligible
+// candidates" case is handled by the engine's natural fizzle path
+// (`install_choose_from_reveal` returns `false` and skips the pending
+// install), NOT by a player-driven decline.
+//
+// For the canonical "Add 1 X and 1 Y" two-pick reveal-search pattern,
+// prefer `select_reveal_buckets` (see BT24-031 Elecmon's YAML for the
+// reference): one combined bucket prompt, `min: 1, max: 1` per bucket,
+// `no_duplicate_cards: true`, mandatory by construction.
+//
+// See `openspec/specs/dsl-card-scripting-vocabulary/spec.md` for the
+// requirement ("`choose_from_reveal { optional: true }` requires
+// printed-text 'may'") added by `fix-qa-bugs-aura-tick-reveal-picks`.
 // ───────────────────────────────────────────────────────────────────────────
 
 fn revealed_owner_matches_for_choose(

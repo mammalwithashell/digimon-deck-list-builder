@@ -1,3 +1,9 @@
+# live-game-surface
+
+## Purpose
+
+Defines the public `LiveGame` type that the engine debug CLI, the MCP server, the PyO3 bindings, and any future tool consumer use to drive a real game state. Distinct from the lossy frontend `to_ui_json` surface and the fire-and-forget RL `HeadlessRunner::step`.
+## Requirements
 ### Requirement: LiveGame Construction From Four Sources
 
 The system SHALL provide a `LiveGame` type in `digimon-engine` constructable from four distinct sources so that all debug, smoke-test, and forensic workflows share a single live-game surface.
@@ -126,6 +132,10 @@ Illegal actions include but are not limited to:
 
 The `LiveGame::step` semantic explicitly diverges from `HeadlessRunner::step` (which is fire-and-forget for the RL pipeline) — `LiveGame::step` SHALL validate and surface rejections so debug/MCP callers can detect failed actions.
 
+Every action method that successfully mutates engine state SHALL invoke `Game::tick_declarative_effects()` after the mutation completes and before returning the `ActionResult`. This guarantees that filter-aura state (e.g., `[All Turns]` DP buffs targeting trait-matched permanents) is consistent with the post-action board state observable through `LiveGame::modifiers`, `LiveGame::field`, and any subsequent action method called on the same `LiveGame` instance. The tick discipline mirrors `Game::decode_action`, which invokes `tick_declarative_effects` both before and after dispatch (`code/digimon-engine/src/action/decode.rs:36,39,72`). Methods that already route through `decode_action` / `step` inherit this discipline for free; direct-dispatch wrappers SHALL invoke the tick explicitly.
+
+Aura state SHALL NOT lag behind the action that installed its source. A caller invoking `LiveGame::play(homeros)` while a TS-trait Digimon is on field SHALL see the +1000 DP `ChangeDp` modifier on that Digimon via `LiveGame::modifiers(handle)` immediately after the `play` call returns, without needing to issue a subsequent action to force a tick.
+
 #### Scenario: Successful play emits events
 
 - **WHEN** a caller invokes `LiveGame::play(0, 2)` during P0's Main phase and hand index 2 is legal to play
@@ -171,7 +181,15 @@ The `LiveGame::step` semantic explicitly diverges from `HeadlessRunner::step` (w
 - **WHEN** no selection is active and the caller invokes `LiveGame::resolve_selection(player, action_id)`
 - **THEN** the result has `ok == false` and `error` is `"no pending selection"`
 
----
+#### Scenario: Filter-aura installs on the same call that lands its source
+
+- **WHEN** P0 has a TS-trait Lv3 Digimon (e.g., Tapirmon, base DP 1000) on field and the caller invokes `LiveGame::play(0, hand_idx)` to play Homeros (BT24-102), a Tamer carrying the `[All Turns] +1000 DP to your TS Digimon` filter-aura
+- **THEN** the `ActionResult` is `ok == true` and an immediate follow-up call to `LiveGame::modifiers({player: 0, index: <Tapirmon-index>})` returns a `ModifierView` whose `modifiers` array contains exactly one `ChangeDp` entry with `value: 1000` and `source_permanent` pointing at Homeros, with no intervening action required to force a tick.
+
+#### Scenario: Filter-aura installs after move_from_breeding lands a buff source
+
+- **WHEN** P0 has a TS-trait Digimon in the breeding area carrying a filter-aura targeting battle-area TS Digimon, an unrelated TS Digimon is on P0's battle area, and the caller invokes `LiveGame::move_from_breeding(0)` to move the breeding-area carrier
+- **THEN** the `ActionResult` is `ok == true` and an immediate follow-up call to `LiveGame::modifiers` on the battle-area TS Digimon reflects the aura's contribution without requiring a follow-up action.
 
 ### Requirement: Legal Actions Enumeration
 
@@ -235,3 +253,4 @@ The engine already fizzles at install time when the target-filter passes zero en
 
 - **WHEN** a mandatory pending selection has more than one legal option AND `step` on one option is a no-op AND other options exist in `legal_actions`
 - **THEN** the engine does NOT fizzle; it returns `ok: false, error: "action <id> not legal in current state"` (per the general step-validation rule above), leaving the pending selection intact so the caller can try another option
+

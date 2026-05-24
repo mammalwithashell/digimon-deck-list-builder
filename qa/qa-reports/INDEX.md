@@ -1,6 +1,6 @@
 # QA Issue Resolution Index
 
-**Last updated**: 2026-03-22
+**Last updated**: 2026-05-24
 
 ## Summary
 
@@ -527,3 +527,13 @@ Post-fix verification of Issues 46-51. Confirmed 5 fixes, 1 known limitation (WO
 |---|-------|-----|--------|-------|
 | 90 | EX8-074 MedievalGallantmon "suspend 2 to reduce cost" auto-fires | high | OUTSTANDING | Same systemic "by" cost auto-acceptance as #86/#88. BeforePayCost suspend effects auto-fire. |
 | 91 | SYSTEMIC: OnEndTurn effects never fire (phase_end skipped) | crit | OUTSTANDING | `pass_turn()` and `check_turn_end()` both skip `phase_end()`. All [End of Your Turn] effects across entire card pool are broken. |
+
+## Report 42: TS Olympos + Rocks MCP QA (2026-05-24)
+
+3 bugs found across ~10 played scenarios spanning the freshly-landed TS Olympos and Rocks Rust ports. Driven via the `digimon-engine-mcp` server. Fixes land in OpenSpec change `fix-qa-bugs-aura-tick-reveal-picks`.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 92 | BT24-102 Homeros `[All Turns] +1000 DP to TS Digimon` aura lags one MCP action | high | FIXED | `LiveGame::play()`, `move_from_breeding()`, `resolve_selection()`, and `end_turn()` did not invoke `tick_declarative_effects` post-action, so filter-aura modifiers installed one MCP call late. Risk: any [On Play] effect querying `effective_dp` mid-action read stale state. All 4 wrappers now tick post-action; regression coverage in `bt24_102_aura_installs_on_same_play_call` + `bt24_102_aura_installs_on_move_from_breeding`. |
+| 93 | EX8-047 Sunarizamon searcher both buckets `optional: true` | high | FIXED | Printed text says "Add 1 [Mineral]/[Rock] and 1 [LIBERATOR]" with no "may" — picks are mandatory when candidates exist. YAML migrated from two sequential `choose_from_reveal { optional: true }` calls to a single `select_reveal_buckets` block (BT24-031 Elecmon pattern). Regression coverage: `ex8_047_on_play_pick_is_mandatory_when_candidates_exist` + `ex8_047_on_play_fizzles_when_no_candidates_in_top_three`. |
+| 94 | P-167 Landramon post-cost-paid reveal pick `optional: true` | high | FIXED | After paying the "by trashing 1 [Mineral]/[Rock] source" optional cost, the inner `choose_from_reveal` was still marked optional, letting players decline the mandatory add-to-hand / place-as-source step. Dropped `optional: true` from both dest_choice branches; top-level effect's cost-driven `optional: true` retained. Regression coverage: `p_167_post_cost_inner_reveal_pick_is_mandatory` + `p_167_top_level_effect_remains_optional`. Spec rule landed in `dsl-card-scripting-vocabulary`: `choose_from_reveal { optional: true }` requires a printed-text "may". |
