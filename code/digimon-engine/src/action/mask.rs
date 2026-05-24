@@ -56,6 +56,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             if sel.is_optional {
                 mask[PASS as usize] = 1.0;
             }
+            // CONCEDE_GAME (93) is always-legal at any agent decision point
+            // (per the BO3 match-training spec). A pending selection IS a
+            // decision point for the selecting_player.
+            mask[CONCEDE_GAME as usize] = 1.0;
         }
         return mask;
     }
@@ -653,6 +657,21 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // handled above). PASS-only keeps the engine from soft-locking.
             mask[PASS as usize] = 1.0;
         }
+    }
+
+    // CONCEDE_GAME (93) is always-legal at any agent decision point
+    // (per the BO3 match-training spec). We detect "has decision point"
+    // as "at least one other action is legal in the mask." Players with
+    // no agency (e.g., not their turn during Main) get an all-zero mask,
+    // so concede stays zero too. The soft-lock PASS rail does set PASS=1
+    // and so will surface concede=1 alongside — harmless: in those rare
+    // states the agent step shouldn't be advancing the game anyway.
+    let has_other_legal = mask
+        .iter()
+        .enumerate()
+        .any(|(i, &v)| v > 0.0 && i != CONCEDE_GAME as usize);
+    if has_other_legal {
+        mask[CONCEDE_GAME as usize] = 1.0;
     }
 
     mask

@@ -183,6 +183,27 @@ def tail_console(console_log: Path, n: int = 50) -> List[str]:
     return list(buf)
 
 
+def _list_matchup_grid_sidecars(run_dir: Path) -> List[Dict[str, Any]]:
+    """Return a list of `matchup_grid_<step>.json` sidecars present in
+    `run_dir`, sorted by step. Each entry is `{"step": int, "path": str}`.
+    Emitted under the BO3 match-training feature; not present in
+    pre-BO3 / single-game runs.
+    """
+    out: List[Dict[str, Any]] = []
+    if not run_dir.exists():
+        return out
+    for p in sorted(run_dir.glob("matchup_grid_*.json")):
+        try:
+            stem = p.stem  # e.g. "matchup_grid_50000"
+            step_str = stem.rsplit("_", 1)[-1]
+            step = int(step_str)
+        except (ValueError, IndexError):
+            continue
+        out.append({"step": step, "path": str(p)})
+    out.sort(key=lambda entry: entry["step"])
+    return out
+
+
 def run_summary(run_dir: Path, tail_evals: int, families: Iterable[PanicFamily]) -> Dict[str, Any]:
     """Compose the full ``run_summary`` response per spec §run_summary tool."""
     console_log = run_dir / "console.log"
@@ -198,4 +219,7 @@ def run_summary(run_dir: Path, tail_evals: int, families: Iterable[PanicFamily])
         "evals_source": "sidecar" if sidecar_present else "console",
         "panics": count_panics(console_log, families),
         "recent_console_tail": tail_console(console_log, 50),
+        # BO3 match-training artifacts (`add-bo3-match-training`). Empty
+        # list for pre-BO3 / single-game runs.
+        "matchup_grids": _list_matchup_grid_sidecars(run_dir),
     }

@@ -434,14 +434,23 @@ class DigimonEnv(gymnasium.Env):
 
         dense_reward = 0.0
         if self._prev_p1_security is not None and self._prev_p2_security is not None:
-            # Opponent security removed → progress toward winning.
+            # Asymmetric security signal calibrated for BO3 match training.
+            # Opponent security removed → progress toward winning the game.
+            # Per-event +1.5 (cumulative max +7.5 for clearing all 5) keeps
+            # the dense signal strictly below the per-game terminal (±12)
+            # so recovery decks can't bait the agent into "clear all opp
+            # security and still lose ≈ winning" trajectories.
             opp_removed = self._prev_p2_security - p2_sec
             if opp_removed > 0:
-                dense_reward += float(opp_removed) * 2.0
-            # Own security lost → progress toward losing.
+                dense_reward += float(opp_removed) * 1.5
+            # Own security lost → smaller per-event penalty (−0.5). Losing
+            # security is partly the opponent's action; the asymmetry keeps
+            # the agent from over-weighting defense at the expense of
+            # offense. See add-bo3-match-training/design.md §D9 for
+            # the calibration rationale.
             own_lost = self._prev_p1_security - p1_sec
             if own_lost > 0:
-                dense_reward -= float(own_lost) * 2.0
+                dense_reward -= float(own_lost) * 0.5
             # Security gained (effects that move cards to security) is not
             # rewarded — it's a defensive maneuver, not progress toward win.
 

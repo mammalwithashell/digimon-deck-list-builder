@@ -89,7 +89,8 @@ pub fn explain_action(game: &Game, player_id: PlayerId, action_id: u16) -> Actio
         | GamePhase::SelectUnion
         | GamePhase::SelectPermutation
         | GamePhase::SelectBudgeted
-        | GamePhase::SelectBreedingPermanent => explain_selection(game, player_id, action_id),
+        | GamePhase::SelectBreedingPermanent
+        | GamePhase::SelectPlayOrder => explain_selection(game, player_id, action_id),
         GamePhase::Unsuspend | GamePhase::Draw | GamePhase::EndTurn | GamePhase::GameOver => base(
             game,
             player_id,

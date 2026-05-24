@@ -521,7 +521,78 @@ The DB queue mechanics, job claiming, stale recovery, and gauntlet hooks are ful
 
 ---
 
-## 12. Dependencies
+## 12. Best-of-three Match Training
+
+Default Gym episode shape (since `add-bo3-match-training`, 2026-05). One episode = one best-of-three match; deck pair sampled once per match and held across all games; LSTM hidden state carries across games within a match. Legacy single-game episodes still available via `--match-format single`.
+
+### CLI
+
+```bash
+# Default — BO3 with concede + play-order selection enabled
+python -m digimon_gym.agents.pilot_training --generalist --timesteps 500000
+
+# Opt out — legacy single-game episodes
+python -m digimon_gym.agents.pilot_training --generalist --match-format single
+
+# Override digivolve shaping default (BO3 turns it on)
+python -m digimon_gym.agents.pilot_training --set digivolve_shaping=false
+```
+
+### Action surface
+
+| Action | Meaning | Mask rule |
+|---|---|---|
+| `93` | Concede game (`Game::concede(player)`) | Legal whenever player has any other legal action |
+| `94` | Play first in next game | Legal only during `SelectPlayOrder` |
+| `95` | Play second in next game | Legal only during `SelectPlayOrder` |
+
+`ACTION_SPACE_SIZE` is unchanged at `2192`; actions `93`/`94`/`95` occupy the previously-unused `93-99` range. Existing checkpoints can be loaded but will produce near-random behavior on the new actions until additional fine-tune timesteps.
+
+### Reward calibration
+
+```
+Per-step dense:
+  +1.5 per opponent security removed (asymmetric — was ±2.0 symmetric)
+  -0.5 per own security lost
+  +0.1 per agent digivolve, +0.4 per DNA digivolve (default ON in BO3)
+  -0.001 step penalty
+
+Per-game terminal (BO3 only — replaces DigimonEnv's ±10 + up to +5 fast):
+  +12 win, -12 loss, + up to +3 fast-game bonus (par 50, zero at 150)
+
+Per-match terminal (fires at match end):
+  +30 match win, -30 match loss, -1 draw (rare, hard step-limit only)
+  +10 sweep bonus (2-0 wins)
+  +5 smart-concede bonus (won match AND any conceded game)
+  -10 scared-concede penalty (0-2 loss AND any conceded game)
+  + up to +15 fast-match bonus (par 150, zero at 450, win only)
+```
+
+See `openspec/changes/add-bo3-match-training/design.md` §D9 for the full calibration rationale and the scenario-by-scenario payoff table.
+
+### Eval cost
+
+In BO3 mode, `--eval-episodes N` evaluates `N` matches ≈ `2.5 × N` games. Default eval frequency is unchanged; consider reducing `--eval-episodes` for match-format runs if eval cost becomes prohibitive.
+
+### Wrapper chain
+
+```
+DigimonEnv → OpponentWrapper → MatchEnv → GeneralistDeckPoolWrapper (or DeckPoolWrapper)
+                                        → GauntletWrapper → TrainingRecordingWrapper
+                                        → MulliganLogWrapper → ActionMasker
+```
+
+`MatchEnv` sits immediately above `OpponentWrapper` so OpponentWrapper sees one continuous episode (= one match) and LSTM hidden state threads normally across games-within-match. The deck-pool wrappers sit ABOVE `MatchEnv` so deck sampling fires once per match (not per game). `OpponentWrapper.reset_inner_only(...)` is the per-game inner-reset path used by `MatchEnv` between games — it resets `DigimonEnv` without resetting `opponent_fn.reset_state`, preserving the opponent's recurrent state.
+
+### Checkpoint compatibility
+
+Loading a pre-BO3 checkpoint into a BO3 run will:
+- ✅ Work — observation tensor and action space size unchanged.
+- ⚠️ Produce near-random behavior on actions 93/94/95 because those were never seen during the checkpoint's training.
+
+Recommended fine-tune procedure: load checkpoint, run ~100k–500k timesteps in `--match-format bo3` to teach the policy when concede + play-order picks are valuable, evaluate, then continue full training.
+
+## 13. Dependencies
 
 Key RL/ML packages:
 

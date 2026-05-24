@@ -33,6 +33,15 @@ impl Game {
         if action_id as usize >= ACTION_SPACE_SIZE {
             return;
         }
+        // CONCEDE_GAME (93) is always-legal at any agent decision point.
+        // Intercept BEFORE the pending_selection routing so a concede during
+        // a selection clears the selection and ends the game cleanly. The
+        // action mask publishes this bit whenever the player has any other
+        // legal action; the engine accepts it regardless of mask state.
+        if action_id == crate::action::space::CONCEDE_GAME {
+            self.concede(player_id);
+            return;
+        }
         self.tick_declarative_effects();
         if self.pending_selection.is_some() {
             let _ = self.resolve_selection(player_id, action_id);
@@ -60,7 +69,11 @@ impl Game {
             | GamePhase::SelectUnion
             | GamePhase::SelectPermutation
             | GamePhase::SelectBudgeted
-            | GamePhase::SelectBreedingPermanent => {
+            | GamePhase::SelectBreedingPermanent
+            // BO3 play-order pick: routes through resolve_selection like
+            // every other selection phase. The callback installed by
+            // `request_play_order_selection` maps action 94/95 to PlayOrder.
+            | GamePhase::SelectPlayOrder => {
                 let _ = self.resolve_selection(player_id, action_id);
             }
             GamePhase::EndOfTurnAction => self.decode_end_of_turn_action(action_id),

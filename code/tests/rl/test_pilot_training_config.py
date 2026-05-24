@@ -317,6 +317,10 @@ def test_make_vec_env_passes_config_tensor_profile(monkeypatch):
         seed=11,
         opponent="greedy",
         tensor_profile="standard_lite_v2",
+        # MatchEnv requires a real DigimonEnv in the wrapper chain;
+        # this test uses a fake env to capture tensor_profile threading,
+        # so we explicitly opt out of BO3 wrapping.
+        match_format="single",
     )
 
     env = pilot_training.make_vec_env(cfg, opponent_fn=lambda _env: 0)

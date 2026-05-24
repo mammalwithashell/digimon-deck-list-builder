@@ -105,6 +105,9 @@ class TrainingRunMetadata:
     digivolve_shaping: bool = False
     digivolve_reward: float = 0.0
     dna_digivolve_bonus: float = 0.0
+    # BO3 match training (`add-bo3-match-training`). Default `"single"` so
+    # pre-feature sidecars load with the correct semantics.
+    match_format: str = "single"
 
     def save(self, path: Path) -> None:
         """Write metadata to a JSON file."""

@@ -77,6 +77,10 @@ def test_train_writes_mulligan_log_jsonl_end_to_end(tmp_path):
         run_name=run_name,
         mulligan_log="on",
         curriculum_seed=1,
+        # BO3 makes action 93 (concede) legal during mulligan; this test
+        # asserts the mulligan choice is in {0, 1}, so opt back to the
+        # single-game mode where mulligan is still the only decision.
+        match_format="single",
     )
 
     train(cfg=cfg, generalist_deck_pool=pool, verbose=0)
@@ -97,12 +101,19 @@ def test_train_writes_mulligan_log_jsonl_end_to_end(tmp_path):
     assert header["schema_version"] == 1
     assert header["run_name"] == run_name
 
-    assert len(records) >= 3, (
+    # BO3 match-training added action 93 (CONCEDE_GAME) as always-legal at
+    # every agent decision point including mulligan. The mulligan log writer
+    # records every action taken in the mulligan phase, including concedes
+    # — those aren't real mulligan choices so filter them out before the
+    # core assertions.
+    mulligan_records = [r for r in records if r["action"] in (0, 1)]
+    assert len(mulligan_records) >= 3, (
         f"expected >=3 mulligan records from 2000 timesteps of greedy "
-        f"play; got {len(records)}. file contents: {lines!r}"
+        f"play; got {len(mulligan_records)} (total records {len(records)}). "
+        f"file contents: {lines!r}"
     )
 
-    for i, rec in enumerate(records):
+    for i, rec in enumerate(mulligan_records):
         missing = [k for k in REQUIRED_RECORD_FIELDS if k not in rec]
         assert not missing, f"record {i} missing fields {missing}: {rec!r}"
         assert rec["source"] == "train", f"record {i} source != 'train': {rec!r}"
