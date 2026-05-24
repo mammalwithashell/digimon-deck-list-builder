@@ -504,6 +504,14 @@ fn bt24_082_clause2_fires_only_for_reptile_dragonkin_digivolve() {
 
     enqueue_digivolve_event_for(&mut runner, target);
 
+    // Post `fix-outer-optional-prompt-trigger-ctx`: Clause 2 is optional
+    // ("by suspending this Tamer"), so an outer accept/decline prompt now
+    // installs before the body runs. Accept it so the suspend + DP buff fire.
+    runner
+        .accept_optional_trigger()
+        .expect("accept Owen's optional activation");
+    runner.game.drain_effect_queue();
+
     assert!(
         runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
         "Owen should pay the suspend cost when a Reptile/Dragonkin digivolve event is observed"
@@ -542,6 +550,14 @@ fn bt24_082_clause2_may_attack_prompt_installs_after_dp_buff() {
     let security_before = runner.game.players[1].security.len();
 
     enqueue_digivolve_event_for(&mut runner, target);
+
+    // Post `fix-outer-optional-prompt-trigger-ctx`: accept the outer
+    // accept/decline prompt so Owen's body (suspend + DP buff + may-attack)
+    // actually runs.
+    runner
+        .accept_optional_trigger()
+        .expect("accept Owen's optional activation");
+    runner.game.drain_effect_queue();
 
     assert!(
         runner.game.players[0].battle_area[tamer.index as usize].is_suspended,

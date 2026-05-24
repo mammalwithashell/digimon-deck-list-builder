@@ -2830,7 +2830,7 @@ impl Game {
     /// AND the effect would actually do something if run — i.e. its source is
     /// live, its OPT counter is not exhausted, and its `condition` passes.
     /// An optional effect whose preconditions already fail must not prompt.
-    fn queued_effect_wants_outer_optional_prompt(&self, qe: &QueuedEffect) -> bool {
+    fn queued_effect_wants_outer_optional_prompt(&mut self, qe: &QueuedEffect) -> bool {
         // Granted inline bodies have no Effect metadata and never carry the
         // outer-prompt flag — never prompt for them.
         if qe.granted_effect_id.is_some() {
@@ -2863,8 +2863,22 @@ impl Game {
         // condition means the body would no-op — do not prompt.
         let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
         let attribution_source_kind = qe.attribution_source_kind.unwrap_or(qe.source_kind);
+        // Install the queued effect's trigger context BEFORE evaluating the
+        // condition / outer_optional_guard closures. DSL predicates like
+        // `event_target_owner`, `event_target_kind`, `event_card_color_has`,
+        // and deleted-object snapshots read `current_trigger_context`. The
+        // real evaluation path (`run_queued_effect` → `run_queued_effect_inner`)
+        // sets it before the body's condition gate; if the outer-prompt
+        // decision uses the ambient (likely `None` or stale) context, the
+        // condition fails here even though it would pass at body run time,
+        // and the optional prompt is silently skipped — the body then
+        // auto-fires inside `run_queued_effect`. The RAII guard restores
+        // the previous value even on panic. See
+        // `G-OUTER-OPTIONAL-TRIGGER-CTX` (proposal
+        // `fix-outer-optional-prompt-trigger-ctx`).
+        let guard = TriggerContextGuard::install(self, qe.trigger_context.clone());
         let rctx = EffectReadContext::new_with_source_kind(
-            self,
+            &*guard.game,
             attribution_source_card,
             qe.source_permanent,
             attribution_source_kind,
@@ -2880,8 +2894,11 @@ impl Game {
         // Body-actionability guard: when the body's first step is a
         // selection, only prompt if it has at least one candidate — DCGO
         // does not prompt for an optional ability with no legal target.
-        if let Some(guard) = &effect.outer_optional_guard {
-            if !guard(&rctx) {
+        // Must see the same trigger context as the condition above so a
+        // guard predicate that itself references event_* fields evaluates
+        // consistently.
+        if let Some(outer_guard) = &effect.outer_optional_guard {
+            if !outer_guard(&rctx) {
                 return false;
             }
         }

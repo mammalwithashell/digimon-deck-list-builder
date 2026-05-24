@@ -934,6 +934,9 @@ fn ex9_066_observer_greymon_present_gains_one_memory() {
     runner.place_on_field(0, "OWN-GREY", Some(0));
 
     push_to_hand(&mut runner, 0, "OWN-PLAIN");
+    // Lower starting memory below the +10 cap so the observer's +1 gain is
+    // observable (`fix-outer-optional-prompt-trigger-ctx`).
+    runner.game.set_memory(5);
     let memory_before = runner.memory();
 
     let hand_idx = runner
@@ -946,19 +949,13 @@ fn ex9_066_observer_greymon_present_gains_one_memory() {
     runner.play(0, hand_idx).expect("plays plain digimon");
 
     let mut steps = 0;
-    let mut accepted = false;
     while runner.game.pending_selection.is_some() && steps < 10 {
         let pending = runner.game.pending_selection.as_ref().unwrap();
         let player = pending.selecting_player;
         let action = pending.valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
-        accepted = true;
         steps += 1;
-    }
-
-    if !accepted {
-        return;
     }
 
     assert!(
@@ -988,6 +985,7 @@ fn ex9_066_observer_garurumon_present_gains_one_memory() {
     runner.place_on_field(0, "OWN-GARU", Some(0));
 
     push_to_hand(&mut runner, 0, "OWN-PLAIN");
+    runner.game.set_memory(5);
     let memory_before = runner.memory();
 
     let hand_idx = runner
@@ -1000,19 +998,13 @@ fn ex9_066_observer_garurumon_present_gains_one_memory() {
     runner.play(0, hand_idx).expect("plays plain digimon");
 
     let mut steps = 0;
-    let mut accepted = false;
     while runner.game.pending_selection.is_some() && steps < 10 {
         let pending = runner.game.pending_selection.as_ref().unwrap();
         let player = pending.selecting_player;
         let action = pending.valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
-        accepted = true;
         steps += 1;
-    }
-
-    if !accepted {
-        return;
     }
 
     assert!(
@@ -1047,6 +1039,8 @@ fn ex9_066_observer_both_greymon_and_garurumon_gains_two_memory() {
     runner.place_on_field(0, "OWN-GARU", Some(0));
 
     push_to_hand(&mut runner, 0, "OWN-PLAIN");
+    // Lower starting memory so the +2 gain stays below the cap.
+    runner.game.set_memory(5);
     let memory_before = runner.memory();
 
     let hand_idx = runner
@@ -1059,19 +1053,13 @@ fn ex9_066_observer_both_greymon_and_garurumon_gains_two_memory() {
     runner.play(0, hand_idx).expect("plays plain digimon");
 
     let mut steps = 0;
-    let mut accepted = false;
     while runner.game.pending_selection.is_some() && steps < 10 {
         let pending = runner.game.pending_selection.as_ref().unwrap();
         let player = pending.selecting_player;
         let action = pending.valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
-        accepted = true;
         steps += 1;
-    }
-
-    if !accepted {
-        return;
     }
 
     assert!(

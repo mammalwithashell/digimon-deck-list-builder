@@ -533,6 +533,9 @@ fn ex4_061_clause1_own_gabumon_play_suspends_and_gains_memory() {
     push_to_hand(&mut runner, 0, "OWN-GABU");
 
     let mt = runner.place_on_field(0, "EX4-061", Some(0));
+    // Lower starting memory below the +10 cap so the observer's +1 gain is
+    // observable (`fix-outer-optional-prompt-trigger-ctx`).
+    runner.game.set_memory(5);
     let memory_before = runner.memory();
 
     let hand_idx = runner
@@ -544,13 +547,7 @@ fn ex4_061_clause1_own_gabumon_play_suspends_and_gains_memory() {
         .expect("OWN-GABU in hand");
     runner.play(0, hand_idx).expect("Gabumon plays");
 
-    let accepted = drain_accepting_all(&mut runner);
-    if !accepted {
-        // Observer didn't install — likely a not-yet-closed event_card path.
-        // The test is moot in that case; structural tests still cover the
-        // condition shape.
-        return;
-    }
+    drain_accepting_all(&mut runner);
     assert!(
         runner.game.players[0].battle_area[mt.index as usize].is_suspended,
         "Matt & Tai must be suspended after activation accepted"
@@ -573,6 +570,7 @@ fn ex4_061_clause1_own_agumon_play_suspends_and_gains_memory() {
     push_to_hand(&mut runner, 0, "OWN-AGU");
 
     let mt = runner.place_on_field(0, "EX4-061", Some(0));
+    runner.game.set_memory(5);
     let memory_before = runner.memory();
 
     let hand_idx = runner
@@ -584,10 +582,7 @@ fn ex4_061_clause1_own_agumon_play_suspends_and_gains_memory() {
         .expect("OWN-AGU in hand");
     runner.play(0, hand_idx).expect("Agumon plays");
 
-    let accepted = drain_accepting_all(&mut runner);
-    if !accepted {
-        return;
-    }
+    drain_accepting_all(&mut runner);
     assert!(
         runner.game.players[0].battle_area[mt.index as usize].is_suspended,
         "Matt & Tai must be suspended after activation accepted"
