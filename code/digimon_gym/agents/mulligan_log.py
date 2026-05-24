@@ -10,10 +10,15 @@ from __future__ import annotations
 
 import json
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import gymnasium
+
 from data_paths import CARDS_JSON
+from digimon_gym.agents.env_utils import unwrap_to_digimon_env
 
 
 SCHEMA_VERSION = 1
@@ -129,3 +134,108 @@ class MulliganLogWriter:
                 file=sys.stderr,
                 flush=True,
             )
+
+
+class MulliganLogWrapper(gymnasium.Wrapper):
+    """Capture pilot's starting-hand + mulligan choice per game.
+
+    Sits in the env stack outside OpponentWrapper / GeneralistDeckPoolWrapper
+    / TrainingRecordingWrapper. On ``reset()`` it stashes a pending record
+    with the pilot's hand snapshot. On ``step()`` it finalizes the record
+    with the action if the pre-step state shows pilot is the mulligan
+    decider.
+    """
+
+    def __init__(
+        self,
+        env: gymnasium.Env,
+        writer: MulliganLogWriter,
+        *,
+        source: str = "train",
+        env_index: int = 0,
+    ) -> None:
+        super().__init__(env)
+        self._writer = writer
+        self.source = source
+        self.env_index = env_index
+        self._inner = unwrap_to_digimon_env(env)
+        self._pending: Optional[Dict[str, Any]] = None
+        self._game_counter = 0
+
+    # ─── Gymnasium API ───────────────────────────────────────────
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        self._pending = None  # drop any unfinalized record from a crashed game
+        if not self._writer.enabled:
+            return obs, info
+        runner = self._inner.runner
+        if runner is None:
+            return obs, info
+        # Only snapshot if pilot is about to face a mulligan decision.
+        if runner.mulligan_current_player != 1:
+            return obs, info
+        try:
+            ui = runner.to_ui_json()
+        except Exception:
+            return obs, info
+        hand_ids = list(ui.get("player1", {}).get("handIds", []) or [])
+        # `current_player_id` from _rl_state() is always 1 here (OpponentWrapper
+        # advanced to P1's decision). Use `currentPlayer` from to_ui_json() instead:
+        # that field tracks game.turn_player() = turn_order[0], which is the actual
+        # first player and doesn't change during mulligan steps.
+        first_player_id: Optional[int] = None
+        try:
+            first_player_id = ui.get("currentPlayer")
+            if first_player_id is not None:
+                first_player_id = int(first_player_id)
+        except Exception:
+            first_player_id = None
+        # If recording is enabled, prefer the recording's initial_state which is
+        # the canonical source and validates our derivation.
+        try:
+            rec = runner.get_recording()
+            if rec is not None:
+                fp = rec.get("initial_state", {}).get("first_player_id")
+                if fp is not None:
+                    first_player_id = int(fp)
+        except Exception:
+            pass
+        self._pending = {
+            "schema_version": SCHEMA_VERSION,
+            "wall_time": time.time(),
+            "iso_time": datetime.now(timezone.utc).isoformat(),
+            "global_step": self._infer_global_step(),
+            "source": self.source,
+            "env_index": self.env_index,
+            "game_index": self._game_counter,
+            "agent_archetype": info.get("deck1_archetype"),
+            "opp_archetype": info.get("opponent_archetype"),
+            "hand_card_ids": hand_ids,
+            "hand_lvl_counts": _derive_lvl_counts(hand_ids),
+            "hand_has_tamer": _derive_has_tamer(hand_ids),
+            "hand_size": len(hand_ids),
+            "first_player_id": first_player_id,
+        }
+        return obs, info
+
+    def step(self, action):
+        # Snapshot pre-step state so we know whether this step resolves a
+        # pilot mulligan.
+        pre_player: Optional[int] = None
+        runner = self._inner.runner if self._inner else None
+        if runner is not None and self._pending is not None:
+            pre_player = runner.mulligan_current_player
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        if self._pending is not None and pre_player == 1:
+            self._pending["action"] = int(action)
+            self._writer.append(self._pending)
+            self._pending = None
+            self._game_counter += 1
+        return obs, reward, terminated, truncated, info
+
+    # ─── Internals ───────────────────────────────────────────────
+
+    def _infer_global_step(self) -> Optional[int]:
+        """Best-effort: SB3 attaches `num_timesteps` to the env in some setups."""
+        return getattr(self.unwrapped, "num_timesteps", None)

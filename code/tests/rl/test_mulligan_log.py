@@ -135,3 +135,92 @@ def test_writer_env_index_in_filename(tmp_path):
     assert lines3[0]["kind"] == "mulligan_log_header"
     assert lines0[1]["action"] == 0
     assert lines3[1]["action"] == 1
+
+
+from digimon_gym.agents.mulligan_log import MulliganLogWrapper
+from digimon_gym.digimon_gym import DigimonEnv, greedy_policy
+from digimon_gym.agents.pilot_training import OpponentWrapper
+
+
+def _drive_to_first_pilot_step(env):
+    """Reset env and skip opponent's leading turns until pilot acts.
+
+    OpponentWrapper already does this on reset, so this is a no-op here
+    but documents the contract: after reset returns, the next step()
+    submitted is the pilot's first decision (mulligan if first turn).
+    """
+    obs, info = env.reset(seed=1)
+    return obs, info
+
+
+def _build_wrapped_env(writer):
+    inner = DigimonEnv()
+    opp = OpponentWrapper(inner, opponent_fn=greedy_policy)
+    wrapped = MulliganLogWrapper(opp, writer=writer, source="train", env_index=0)
+    return wrapped, inner
+
+
+def test_wrapper_captures_pilot_mulligan_keep(tmp_path):
+    writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
+    wrapped, inner = _build_wrapped_env(writer)
+    _drive_to_first_pilot_step(wrapped)
+    # Pilot picks KEEP (action 0). We bypass policy here and submit directly.
+    assert inner.runner.mulligan_current_player == 1
+    wrapped.step(0)
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
+    # 1 header + 1 record
+    assert len(lines) == 2
+    rec = lines[1]
+    assert rec["action"] == 0
+    assert rec["source"] == "train"
+    assert rec["env_index"] == 0
+    assert rec["game_index"] == 0
+    assert rec["hand_size"] == 5
+    assert isinstance(rec["hand_card_ids"], list) and len(rec["hand_card_ids"]) == 5
+    assert "hand_lvl_counts" in rec
+    assert "hand_has_tamer" in rec
+    assert rec["schema_version"] == 1
+
+
+def test_wrapper_captures_pilot_mulligan_mull_when_opp_first(tmp_path):
+    writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
+    wrapped, inner = _build_wrapped_env(writer)
+    # Find a seed where P2 truly goes first (read true initial state from
+    # the recording, NOT the post-advance to_ui_json).
+    found_seed = None
+    for s in range(40):
+        wrapped.reset(seed=s)
+        rec = inner.runner.to_ui_json()
+        if rec.get("currentPlayer") == 2:
+            found_seed = s
+            break
+    if found_seed is None:
+        pytest.skip("no seed in 0..39 produced P2-goes-first; try a wider range")
+    # Pilot picks MULL (action 1).
+    wrapped.step(1)
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
+    rec = lines[-1]
+    assert rec["action"] == 1
+    assert rec["source"] == "train"
+    assert rec["first_player_id"] == 2  # the bug we fixed: this would be 1 if we used current_player_id
+
+
+def test_wrapper_disabled_writer_writes_nothing(tmp_path):
+    writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=False, run_metadata={"run_name": "t"})
+    wrapped, inner = _build_wrapped_env(writer)
+    _drive_to_first_pilot_step(wrapped)
+    wrapped.step(0)
+    assert not (tmp_path / "mulligan_log_env_000.jsonl").exists()
+
+
+def test_wrapper_increments_game_index_across_resets(tmp_path):
+    writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
+    wrapped, inner = _build_wrapped_env(writer)
+    for _ in range(3):
+        wrapped.reset(seed=1)
+        wrapped.step(0)
+    lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
+    # 1 header + 3 records
+    assert len(lines) == 4
+    indices = [line["game_index"] for line in lines[1:]]
+    assert indices == [0, 1, 2]
