@@ -1327,7 +1327,7 @@ def make_env(opponent: str = "greedy",
              mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
              digivolve_shaping: bool = False,
              digivolve_reward: float = 0.1,
-             dna_digivolve_bonus: float = 0.3,
+             dna_digivolve_bonus: float = 3.9,
              match_format: str = "single",
              match_env_seed: Optional[int] = None) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.

@@ -24,7 +24,7 @@ The current shape (digimon_gym.py:376) is **deliberately terminal-dominant** aft
 |---|---|---|
 | 1 | Reward digivolutions **directly**, not card-draws-as-proxy | Card draws fire on auto start-of-turn draw + effect draws — too noisy to attribute to digivolve behavior. |
 | 2 | **Asymmetric** — agent only, never opponent | Security shape is symmetric (±2.0 own/opp) because both halves of "real progress." Digivolve nudge is a policy-shaping prior, not a state-progression signal; rewarding agent for opponent's digivolves would teach a perverse correlation. |
-| 3 | **Subtle band**: +0.1 per regular digivolve, +0.3 additional for DNA (DNA total = +0.4) | Expected per-game contribution +0.3 to +1.5. Mostly under +1.5. Vs. terminal ±10, this is ~10% — visible to the gradient, cannot outweigh winning. |
+| 3 | **Loud DNA band**: +0.1 per regular digivolve, +3.9 additional for DNA (DNA total = +4.0) | DNA digivolves are rare and strategically important, so they need a clear signal. +4.0 is much louder than the old +0.4 and louder than a single opponent security removal (+1.5), while staying below cumulative security progress (+7.5) and well below a game win (+10 to +15). |
 | 4 | **Approach A**: Rust cumulative counters on `Game`, exposed via `get_rl_state()` PyO3 dict, Python takes per-step delta | Mirrors the existing security-delta pattern (`_prev_p1_security` / `_prev_p2_security` in digimon_gym.py:183–184, 423–436) exactly. One pattern across both shaped signals. |
 | 5 | **DNA stacks on regular**: a DNA digivolve bumps both counters | Means a single `digivolve_reward` line in `_compute_reward` always fires, plus a separate `dna_digivolve_bonus` line for DNAs. Avoids branching in the reward function. |
 
@@ -128,7 +128,7 @@ Three flat fields in `code/digimon_gym/agents/training_config.py:63` (after `mul
 # All three default OFF/zero so existing runs are byte-identical.
 digivolve_shaping: bool = False
 digivolve_reward: float = 0.1       # per regular digivolve
-dna_digivolve_bonus: float = 0.3    # additional on top of digivolve_reward
+dna_digivolve_bonus: float = 3.9    # additional on top of digivolve_reward
 ```
 
 Validation in `_validate`:
@@ -147,7 +147,7 @@ Three new kwargs in `DigimonEnv.__init__` (digimon_gym.py:145), all defaulting O
 ```python
 digivolve_shaping: bool = False,
 digivolve_reward: float = 0.1,
-dna_digivolve_bonus: float = 0.3,
+dna_digivolve_bonus: float = 3.9,
 ```
 
 Stored on `self`. New prev-state mirror next to the security mirror (digimon_gym.py:183–184):
@@ -192,13 +192,14 @@ First step (`_prev_*=None`) credits nothing — matches security handling exactl
 | Event | Reward |
 |---|---|
 | Regular digivolve | +0.1 |
-| DNA digivolve | +0.4 (0.1 + 0.3 from the stacked counters) |
-| Per-game total (3–15 digivolves, 0–3 DNAs) | +0.3 to +2.7, mostly +0.3 to +1.5 |
+| DNA digivolve | +4.0 (0.1 + 3.9 from the stacked counters) |
+| Per-game total (3–15 digivolves, 0–3 DNAs) | +0.3 to +13.2, with each DNA event still below a game win |
 | Terminal win | +10 to +15 |
-| Security ±10 band | unchanged |
+| Cumulative opponent-security progress | +7.5 max |
 | Step penalty | −0.001 unchanged |
 
-Shaping band is ~10% of terminal — visible to the gradient, dominated by terminal.
+DNA shaping is intentionally loud because the event is rare, but the single-event
+signal remains well below the terminal win band.
 
 ### `pilot_training.py` wiring
 
@@ -220,7 +221,7 @@ python -m digimon_gym.agents.pilot_training \
   --config configs/training/default.yaml \
   --set digivolve_shaping=true \
   --set digivolve_reward=0.1 \
-  --set dna_digivolve_bonus=0.3
+  --set dna_digivolve_bonus=3.9
 ```
 
 Consistent with how `tensor_profile`, `record_games`, `mulligan_log`, etc. are already configured.
@@ -254,7 +255,7 @@ Two runs with the same hyperparameters but different shaping must never be confu
 
 New `code/tests/rl/test_digivolve_shaping.py`:
 
-1. Construct `DigimonEnv(digivolve_shaping=True, digivolve_reward=0.1, dna_digivolve_bonus=0.3)`. Drive one regular digivolve step → assert step reward delta is `+0.1` (after subtracting the −0.001 step penalty). Drive one DNA digivolve → assert `+0.4`. Drive a non-digivolve step → assert `−0.001` only.
+1. Construct `DigimonEnv(digivolve_shaping=True, digivolve_reward=0.1, dna_digivolve_bonus=3.9)`. Drive one regular digivolve step → assert step reward delta is `+0.1` (after subtracting the −0.001 step penalty). Drive one DNA digivolve → assert `+4.0`. Drive a non-digivolve step → assert `−0.001` only.
 2. **Byte-identical default**: construct `DigimonEnv()` with no shaping kwargs; verify a seeded game produces identical step-reward sums to the pre-change baseline. Snapshot test.
 3. **First-step `_prev_*=None`**: assert no credit on the very first step even if a digivolve happens immediately.
 

@@ -73,7 +73,7 @@ class TrainingConfig:
     # docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
     digivolve_shaping: bool = False
     digivolve_reward: float = 0.1       # per regular digivolve
-    dna_digivolve_bonus: float = 0.3    # additional on top of digivolve_reward
+    dna_digivolve_bonus: float = 3.9    # additional on top of digivolve_reward
     # Best-of-three match training (`add-bo3-match-training`).
     # `bo3`: one Gym episode = one BO3 match (up to 3 games). Concede
     #   (action 93) and SelectPlayOrder (actions 94/95) enabled.

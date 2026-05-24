@@ -133,12 +133,12 @@ def test_digivolve_shaping_defaults_off_in_env_constructor() -> None:
     env = DigimonEnv()
     assert env.digivolve_shaping is False
     assert env.digivolve_reward == 0.1
-    assert env.dna_digivolve_bonus == 0.3
+    assert env.dna_digivolve_bonus == 3.9
 
 
-def test_dna_digivolve_credits_zero_point_four_total() -> None:
+def test_dna_digivolve_credits_four_total() -> None:
     """Confirm digivolve magnitudes survived the BO3 recalibration of
-    security signals. DNA event = +0.1 (regular bump) + +0.3 (DNA bonus)."""
+    security signals. DNA event = +0.1 (regular bump) + +3.9 (DNA bonus)."""
     env = _setup_env(shaping=True)
     env._rl_state = lambda: {  # type: ignore[method-assign]
         "game_over": False,
@@ -148,8 +148,8 @@ def test_dna_digivolve_credits_zero_point_four_total() -> None:
         "p1_dna_digivolutions": 1,
     }
     reward = env._compute_reward(terminated=False)
-    # +0.1 + 0.3 = +0.4, minus the step penalty.
-    assert math.isclose(reward, 0.4 - 0.001, abs_tol=1e-9)
+    # +0.1 + 3.9 = +4.0, minus the step penalty.
+    assert math.isclose(reward, 4.0 - 0.001, abs_tol=1e-9)
 
 
 def test_regular_digivolve_credits_zero_point_one() -> None:
@@ -170,21 +170,22 @@ def test_regular_digivolve_credits_zero_point_one() -> None:
 
 def test_hierarchy_dense_event_below_cumulative_game_dense() -> None:
     """The design hierarchy is:
-        step penalty < digivolve < security event < cumulative game dense
+        step penalty < digivolve < security event < DNA < cumulative game dense
         < game terminal < match terminal
     Pin this with simple magnitude inequalities so a future tweak that
     breaks the ordering trips a test."""
     step = 0.001
     digivolve_regular = 0.1
-    digivolve_dna_total = 0.4  # 0.1 + 0.3
+    digivolve_dna_total = 4.0  # 0.1 + 3.9
     sec_event_pos = 1.5
     sec_event_neg = 0.5
     cumulative_dense_max = 5 * sec_event_pos  # 7.5
 
     assert step < digivolve_regular
-    assert digivolve_regular < digivolve_dna_total
-    assert digivolve_dna_total < sec_event_neg
+    assert digivolve_regular < sec_event_neg
     assert sec_event_neg < sec_event_pos
+    assert sec_event_pos < digivolve_dna_total
+    assert digivolve_dna_total < cumulative_dense_max
     assert sec_event_pos < cumulative_dense_max
     # Game terminal magnitude is asserted indirectly: cumulative dense
     # must stay strictly below the eventual +12 game-terminal magnitude.

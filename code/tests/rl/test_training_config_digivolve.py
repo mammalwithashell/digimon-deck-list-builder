@@ -11,7 +11,7 @@ def test_defaults_are_off_and_unshaped() -> None:
     cfg = TrainingConfig()
     assert cfg.digivolve_shaping is False
     assert cfg.digivolve_reward == 0.1
-    assert cfg.dna_digivolve_bonus == 0.3
+    assert cfg.dna_digivolve_bonus == 3.9
 
 
 def test_negative_digivolve_reward_rejected() -> None:

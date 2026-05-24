@@ -28,7 +28,7 @@ def test_sidecar_round_trips_digivolve_fields(tmp_path: Path) -> None:
 def test_sidecar_legacy_file_loads_with_unshaped_defaults(tmp_path: Path) -> None:
     """A pre-feature sidecar (no digivolve_* keys) must load and produce
     correct unshaped semantics. Note `digivolve_reward` / `dna_digivolve_bonus`
-    default to 0.0 on TrainingRunMetadata (not 0.1 / 0.3 as on TrainingConfig)
+    default to 0.0 on TrainingRunMetadata (not 0.1 / 3.9 as on TrainingConfig)
     so a legacy run is never mis-tagged as 'shaped with default values'."""
     legacy = tmp_path / "legacy.json"
     legacy.write_text('{"run_id": "legacy", "started_at": "2026-04-01T00:00:00Z"}')
