@@ -151,3 +151,46 @@ def test_shaping_off_credits_nothing_even_with_digivolve_delta() -> None:
     env._rl_state = lambda: state  # type: ignore[method-assign]
     reward = env._compute_reward(terminated=False)
     assert math.isclose(reward, -0.001, abs_tol=1e-9)
+
+
+# ─── Byte-identical default (Task 9) ──────────────────────────────────────
+
+
+def test_shaping_off_default_matches_baseline_reward_path() -> None:
+    """When shaping is OFF (the default for unset callers), `_compute_reward`
+    must produce numerically identical output to the pre-feature shape for
+    any sequence of step states. Protects pre-existing runs from accidental
+    behavior drift.
+    """
+    env = DigimonEnv()  # defaults; shaping is OFF
+    env.reset()
+    env._prev_p1_security = 5
+    env._prev_p2_security = 5
+    env._prev_p1_digivolutions = 0
+    env._prev_p1_dna_digivolutions = 0
+
+    cases = [
+        # (state, expected_reward)
+        ({
+            "game_over": False,
+            "p1_security": 5, "p2_security": 5,
+            "p1_digivolutions": 1, "p1_dna_digivolutions": 1,
+        }, -0.001),                  # only step penalty
+        ({
+            "game_over": False,
+            "p1_security": 5, "p2_security": 4,
+            "p1_digivolutions": 2, "p1_dna_digivolutions": 2,
+        }, 2.0 - 0.001),             # opponent security removed (+2.0)
+        ({
+            "game_over": False,
+            "p1_security": 4, "p2_security": 4,
+            "p1_digivolutions": 3, "p1_dna_digivolutions": 3,
+        }, -2.0 - 0.001),            # own security lost (-2.0)
+    ]
+
+    for state, expected in cases:
+        env._rl_state = lambda s=state: s  # type: ignore[method-assign]
+        reward = env._compute_reward(terminated=False)
+        assert math.isclose(reward, expected, abs_tol=1e-9), (
+            f"shaping-off reward {reward} != baseline {expected} for state {state}"
+        )
