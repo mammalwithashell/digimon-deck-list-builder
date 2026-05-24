@@ -584,8 +584,12 @@ fn bt16_085_digivolve_observer_suspends_tamer_and_gains_1_memory() {
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
 
-    // Drive any pending selection (the optional on_digivolve observer; if an
-    // outer accept/decline prompt installs, accepting it runs the body).
+    // Drive the outer accept/decline prompt. Post
+    // `fix-outer-optional-prompt-trigger-ctx`, this prompt MUST install for the
+    // optional on_digivolve observer when the event matches its condition;
+    // accepting runs the suspend+gain_memory body. The sharper invariants are
+    // pinned by `bt16_085_optional_outer_prompt_installs_on_normal_digivolve`
+    // and friends in Section 7 below.
     let mut steps = 0;
     while let Some(view) = runner.pending_selection_view() {
         if steps > 10 {
@@ -959,3 +963,272 @@ fn bt16_085_security_clause_fires_without_panic() {
 
     // No assertion beyond not panicking.
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 7 — Outer-optional trigger prompt installation
+//
+// These tests pin down the contract that Clause 1 ("by suspending this Tamer,
+// gain 1 memory") is a player decision, not an auto-fire. The bug they regress
+// against: `Game::queued_effect_wants_outer_optional_prompt` evaluated the
+// clause's condition without installing `qe.trigger_context`, so every
+// `event_*` predicate returned None, the condition appeared to fail, and the
+// outer accept/decline prompt was skipped — even though `run_queued_effect`
+// then installed the correct context and silently ran the body. The new tests
+// assert that the prompt IS installed and is the only decline gate.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Normal (non-DNA) digivolve: when player 0 digivolves an own Lv.3 base into
+/// a blue Lv.4 Digimon, Davis & Ken's `on_digivolve` clause MUST install an
+/// outer optional accept/decline prompt before the suspend cost is paid.
+#[test]
+fn bt16_085_optional_outer_prompt_installs_on_normal_digivolve() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses and compiles")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_digimon_lv3("BASE"))
+        .add_card(make_digimon_lv4("EVOLVED")) // blue Lv.4 — satisfies color gate
+        .hand(0, &["EVOLVED"])
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(3)
+        .start();
+
+    let tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    runner.game.enter_main_phase();
+
+    let suspended_before =
+        runner.game.players[0].battle_area[tamer.index as usize].is_suspended;
+    assert!(
+        !suspended_before,
+        "precondition: Davis & Ken must be unsuspended before the digivolve"
+    );
+
+    let hand_idx = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "EVOLVED")
+        .expect("EVOLVED in hand");
+    assert!(
+        runner.game.digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve),
+        "digivolve_from_hand must succeed"
+    );
+    runner.game.drain_effect_queue();
+
+    // The fix: the outer optional accept/decline prompt MUST install before any
+    // body steps run. Today (pre-fix) this assertion fails — the body auto-fires
+    // and `pending_selection` is `None`.
+    let view = runner
+        .pending_selection_view()
+        .expect("outer optional accept/decline prompt MUST install after digivolve drain");
+    assert_eq!(
+        view.kind,
+        SelectionKind::Replacement,
+        "outer optional prompt must be SelectionKind::Replacement"
+    );
+    assert!(
+        view.is_optional,
+        "outer optional prompt must be is_optional=true so PASS declines"
+    );
+    assert_eq!(
+        view.selecting_player, 0,
+        "the controller of the optional triggered effect is selecting"
+    );
+
+    // Critical: the suspend cost MUST NOT have been paid yet. Today the body
+    // runs before this check and Davis & Ken is already suspended.
+    assert!(
+        !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "Davis & Ken must NOT yet be suspended — the cost only pays after accept"
+    );
+}
+
+/// DNA digivolve path: same prompt-installation contract under the DNA flow.
+/// Uses `effect_initiated_dna_digivolve(_, _, _, _, ignore_requirements=true)`
+/// to bypass DNA-cost validation since the test cards do not declare DNA
+/// alt-paths — the on_digivolve trigger still fires and Davis & Ken's clause
+/// still queues.
+#[test]
+fn bt16_085_optional_outer_prompt_installs_on_dna_digivolve() {
+    let mut mat_a = make_test_card("MAT-A", "MaterialA");
+    mat_a.card_kind = CardKind::Digimon;
+    mat_a.level = Some(4);
+    mat_a.dp = Some(4000);
+    mat_a.colors = vec![CardColor::Blue];
+
+    let mut mat_b = make_test_card("MAT-B", "MaterialB");
+    mat_b.card_kind = CardKind::Digimon;
+    mat_b.level = Some(4);
+    mat_b.dp = Some(4000);
+    mat_b.colors = vec![CardColor::Green];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses and compiles")
+        .dsl_card("BT16-025")
+        .expect("BT16-025 (Paildramon) YAML parses and compiles")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(mat_a)
+        .add_card(mat_b)
+        .hand(0, &["BT16-025"])
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(5)
+        .start();
+
+    let tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    let material_a = runner.place_on_field(0, "MAT-A", None);
+    let material_b = runner.place_on_field(0, "MAT-B", None);
+
+    assert!(
+        !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "precondition: Davis & Ken unsuspended"
+    );
+
+    let hand_card = runner.game.player(0).hand[0].handle();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
+        ctx.effect_initiated_dna_digivolve(material_a, material_b, hand_card, 0, true);
+    }
+    // `effect_initiated_dna_digivolve` runs the three drains (WhenDigivolving,
+    // OnDnaDigivolve, OnDigivolve) internally; the OnDigivolve drain is where
+    // Davis & Ken's clause queues. After the call returns, the outer optional
+    // prompt should be pending.
+
+    let view = runner
+        .pending_selection_view()
+        .expect("outer optional accept/decline prompt MUST install after DNA digivolve drains");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(view.is_optional);
+    assert_eq!(view.selecting_player, 0);
+
+    // Locate Davis & Ken in the (possibly-reshuffled) battle_area by top card.
+    let tamer_slot = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "BT16-085")
+        .expect("Davis & Ken still on field after DNA digivolve");
+    assert!(
+        !runner.game.players[0].battle_area[tamer_slot].is_suspended,
+        "Davis & Ken must NOT be suspended before the prompt is accepted"
+    );
+}
+
+/// Declining the outer optional prompt MUST skip the body entirely: Davis & Ken
+/// stays unsuspended and no MemoryChange event from this clause is emitted.
+#[test]
+fn bt16_085_optional_outer_prompt_decline_skips_body() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses and compiles")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_digimon_lv3("BASE"))
+        .add_card(make_digimon_lv4("EVOLVED"))
+        .hand(0, &["EVOLVED"])
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(3)
+        .start();
+
+    let tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    runner.game.enter_main_phase();
+    let memory_before = runner.memory();
+
+    let hand_idx = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "EVOLVED")
+        .expect("EVOLVED in hand");
+    runner
+        .game
+        .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection().is_some(),
+        "outer optional prompt MUST install before decline test"
+    );
+
+    runner
+        .decline_optional_trigger()
+        .expect("decline must succeed");
+    runner.game.drain_effect_queue();
+
+    assert!(
+        !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "decline → Davis & Ken must NOT be suspended"
+    );
+
+    // The +1 memory branch must NOT have fired. We compare gross memory; any
+    // memory delta from the digivolve action itself (cost reduction etc.)
+    // would NOT match this clause's +1 contribution. With EVOLVED's evo cost
+    // of 0, the digivolve memory delta should be 0, and a strict equality
+    // check pins the no-fire contract.
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "decline → no memory gain (Clause 1's +1 must not have run)"
+    );
+}
+
+/// Accepting the outer optional prompt MUST run the body with the queued
+/// trigger context installed: Davis & Ken suspends and exactly one +1 memory
+/// event is emitted from this clause.
+#[test]
+fn bt16_085_optional_outer_prompt_accept_runs_body_with_trigger_ctx() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses and compiles")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_digimon_lv3("BASE"))
+        .add_card(make_digimon_lv4("EVOLVED"))
+        .hand(0, &["EVOLVED"])
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(3)
+        .start();
+
+    let tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    runner.game.enter_main_phase();
+    let memory_before = runner.memory();
+
+    let hand_idx = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "EVOLVED")
+        .expect("EVOLVED in hand");
+    runner
+        .game
+        .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection().is_some(),
+        "outer optional prompt MUST install before accept test"
+    );
+
+    runner
+        .accept_optional_trigger()
+        .expect("accept must succeed");
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "accept → Davis & Ken must be suspended (the by-suspending cost was paid)"
+    );
+    assert_eq!(
+        runner.memory(),
+        memory_before + 1,
+        "accept → exactly +1 memory from Clause 1"
+    );
+}
+
