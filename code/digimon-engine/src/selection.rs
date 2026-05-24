@@ -172,6 +172,26 @@ pub enum SelectionKind {
     },
     /// Pick the selecting player's breeding-area permanent.
     BreedingPermanent,
+
+    /// Best-of-three play-order pick: the loser of the previous game chooses
+    /// to play first (action 94) or second (action 95) in the next game.
+    /// Installed by `Game::request_play_order_selection`; the resolution
+    /// callback records the pick in `Game::last_play_order_choice`. Match
+    /// state itself lives in the Python `MatchEnv` wrapper — the engine is
+    /// BO3-agnostic apart from this phase.
+    PlayOrder,
+}
+
+/// Best-of-three play-order pick result. Surfaced via
+/// `Game::last_play_order_choice` after a `SelectionKind::PlayOrder` prompt
+/// resolves; consumed by the Python `MatchEnv` wrapper when it constructs
+/// the next game with `Game::new_with_first_player(...)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum PlayOrder {
+    /// The chooser will play first in the next game.
+    First,
+    /// The chooser will play second in the next game.
+    Second,
 }
 
 /// One branch of a `SelectionKind::EffectChoice` prompt.
@@ -705,10 +725,12 @@ pub struct SecurityResolutionState {
     /// player declines an optional clause. `set_security_phase` clears it on
     /// every phase transition so each phase gets a fresh enqueue budget.
     pub phase_enqueue_done: bool,
-    /// Remaining security-check iterations for the owning `Player` attack.
-    /// Absorbed from the outer loop counter so a pause inside phase 1
-    /// doesn't drop the remaining checks.
-    pub checks_remaining: u8,
+    /// Cumulative number of security-check iterations the loop has popped
+    /// for this attack. Survives pause/resume so the post-effect recompute
+    /// of the attacker's effective `<Security A.>` can compare against it.
+    /// See `fix-security-check-recompute-mid-attack` (DCGO parity:
+    /// `Permanent.Strike` is re-read every loop iteration).
+    pub checks_performed: u8,
     /// Running outcome for the current card's resolution. Updated when the
     /// DP battle concludes; returned at `Dispose`.
     pub outcome_so_far: crate::combat::AttackResult,

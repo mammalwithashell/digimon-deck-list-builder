@@ -96,9 +96,18 @@ def test_initial_action_mask_parity():
     rs_mask = rs_env.action_mask()
 
     assert py_mask.shape == rs_mask.shape
-    diff = np.where(py_mask != rs_mask)[0]
+
+    # BO3 match-training adds three Rust-only actions in the (formerly
+    # unused) 93–95 range: 93 = CONCEDE_GAME (always-legal at decision
+    # points), 94 = PLAY_FIRST, 95 = PLAY_SECOND. The legacy Python
+    # engine will never receive these (per CLAUDE.md rule #21 — cards
+    # migrate one direction only). Mask the indices out of the parity
+    # comparison so the cross-engine check stays meaningful for the
+    # shared action surface.
+    BO3_RUST_ONLY = {93, 94, 95}
+    diff = [i for i in np.where(py_mask != rs_mask)[0] if int(i) not in BO3_RUST_ONLY]
     assert len(diff) == 0, (
-        f"action mask diverges at indices {diff[:20].tolist()} "
+        f"action mask diverges at indices {diff[:20]} "
         f"(py={py_mask[diff[:5]].tolist()}, rs={rs_mask[diff[:5]].tolist()})"
     )
 
@@ -109,12 +118,15 @@ def test_multi_step_action_mask_parity():
     _py_obs, py_info = py_env.reset(seed=SEED)
     _rs_obs, rs_info = rs_env.reset(seed=SEED)
 
+    # BO3 match-training adds Rust-only actions 93/94/95 (see
+    # `test_initial_action_mask_parity` for details). Mask them out.
+    BO3_RUST_ONLY = {93, 94, 95}
     for step_i in range(50):
         py_mask = py_info["action_mask"]
         rs_mask = rs_info["action_mask"]
-        diff = np.where(py_mask != rs_mask)[0]
+        diff = [i for i in np.where(py_mask != rs_mask)[0] if int(i) not in BO3_RUST_ONLY]
         assert len(diff) == 0, (
-            f"mask diverges at step {step_i}, indices {diff[:20].tolist()}"
+            f"mask diverges at step {step_i}, indices {diff[:20]}"
         )
 
         valid = np.where(py_mask > 0)[0]

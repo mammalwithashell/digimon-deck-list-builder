@@ -23,10 +23,13 @@ effects:
           trait_has: Puppet
         n: 1
     process:
+      # cost: true — the printed text is "by trashing 1 Puppet card [...], Draw 2".
+      # Declining the cost prompt aborts both the trash AND the draw.
       - select_hand:
           of: you
           bind_as: discard
           optional: true
+          cost: true
           filter: { trait_has: Puppet }
           prompt: "Trash 1 Puppet card from hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }

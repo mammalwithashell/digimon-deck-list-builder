@@ -66,6 +66,8 @@ impl GamePhase {
             GamePhase::SelectPermutation => 6.0,
             GamePhase::SelectBudgeted => 6.0,
             GamePhase::SelectBreedingPermanent => 6.0,
+            // BO3 match training — placeholder under SelectEffectChoice (13).
+            GamePhase::SelectPlayOrder => 13.0,
         }
     }
 }

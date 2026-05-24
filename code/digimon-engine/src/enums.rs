@@ -138,6 +138,13 @@ pub enum GamePhase {
     SelectPermutation,
     SelectBudgeted,
     SelectBreedingPermanent,
+
+    /// Best-of-three play-order pick. Entered between games of a BO3 match
+    /// by `Game::request_play_order_selection`; the loser of the previous
+    /// game picks first or second for the next game via actions 94 / 95.
+    /// The engine itself is BO3-agnostic apart from this phase; match state
+    /// lives in the Python `MatchEnv` wrapper.
+    SelectPlayOrder,
 }
 
 impl GamePhase {
@@ -169,6 +176,7 @@ impl GamePhase {
             GamePhase::SelectPermutation => "SelectPermutation",
             GamePhase::SelectBudgeted => "SelectBudgeted",
             GamePhase::SelectBreedingPermanent => "SelectBreedingPermanent",
+            GamePhase::SelectPlayOrder => "SelectPlayOrder",
         }
     }
 }

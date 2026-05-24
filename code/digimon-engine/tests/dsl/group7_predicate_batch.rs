@@ -596,6 +596,7 @@ fn select_hand_uses_play_cost_lte_for_valid_actions() {
         prompt: "Pick cheap".to_string(),
         prompt_key: None,
         optional: false,
+        cost: false,
     }];
 
     let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
@@ -903,6 +904,7 @@ fn select_hand_play_cost_lte_formula_reads_bound_permanent_play_cost() {
         prompt: "Pick matching play cost".to_string(),
         prompt_key: None,
         optional: false,
+        cost: false,
     }];
 
     let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
@@ -1098,6 +1100,7 @@ fn select_hand_color_matches_any_field_digimon_filters_by_live_board_colors() {
         prompt: "Pick matching Tamer".to_string(),
         prompt_key: None,
         optional: false,
+        cost: false,
     }];
     let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
     let mut bindings = Bindings::new();
@@ -1139,6 +1142,7 @@ fn select_hand_color_matches_binding_filters_against_bound_tamer_colors() {
         prompt: "Pick matching Digimon".to_string(),
         prompt_key: None,
         optional: false,
+        cost: false,
     }];
     let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
     let mut bindings = Bindings::new();
@@ -1200,6 +1204,7 @@ fn color_matches_any_field_digimon_uses_dual_digimon_face_colors() {
         prompt: "Pick matching Tamer".to_string(),
         prompt_key: None,
         optional: false,
+        cost: false,
     }];
     let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
     let mut bindings = Bindings::new();
@@ -1228,6 +1233,7 @@ fn select_trash_uses_play_cost_lte_for_valid_actions() {
         prompt: "Pick cheap trash".to_string(),
         prompt_key: None,
         optional: false,
+        cost: false,
     }];
 
     let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);

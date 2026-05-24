@@ -1,5 +1,5 @@
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::encode_breeding_select;
+use digimon_engine::action::space::{encode_breeding_select, CONCEDE_GAME};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect_context::EffectContext;
 
@@ -24,5 +24,14 @@ fn breeding_selection_mask_exposes_only_breeding_select_action() {
         .enumerate()
         .filter_map(|(idx, value)| if *value > 0.5 { Some(idx) } else { None })
         .collect();
-    assert_eq!(legal, vec![encode_breeding_select(p0).unwrap() as usize]);
+    // CONCEDE_GAME (93) is always-legal at any agent decision point per the
+    // BO3 match-training spec — so the mask carries it alongside the
+    // selection-specific action. Asserted in canonical sorted order.
+    assert_eq!(
+        legal,
+        vec![
+            encode_breeding_select(p0).unwrap() as usize,
+            CONCEDE_GAME as usize,
+        ]
+    );
 }

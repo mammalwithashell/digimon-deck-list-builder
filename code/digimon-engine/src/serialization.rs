@@ -64,6 +64,9 @@ fn phase_int(p: GamePhase) -> i64 {
         GamePhase::SelectPermutation => 5,
         GamePhase::SelectBudgeted => 5,
         GamePhase::SelectBreedingPermanent => 5,
+        // BO3 match training — no Python equivalent. Placeholder under
+        // SelectEffectChoice (13) since play-order is a binary effect-choice.
+        GamePhase::SelectPlayOrder => 13,
     }
 }
 

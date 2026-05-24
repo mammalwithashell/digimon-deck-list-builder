@@ -64,6 +64,10 @@ pub enum TerminalOutcomeReason {
     StepLimit,
     Crash,
     UnknownDraw,
+    /// The losing player chose to concede the game (action `93` /
+    /// `Game::concede`). Emitted with a winner equal to the conceder's
+    /// opponent. Surfaces to Python as `win_reason = "concede"`.
+    Concede,
 }
 
 impl TerminalOutcomeReason {
@@ -76,6 +80,7 @@ impl TerminalOutcomeReason {
             Self::StepLimit => "step_limit",
             Self::Crash => "crash",
             Self::UnknownDraw => "unknown_draw",
+            Self::Concede => "concede",
         }
     }
 
@@ -84,6 +89,7 @@ impl TerminalOutcomeReason {
             Self::Crash | Self::UnknownDraw => "draw",
             Self::SecurityAttack | Self::DeckOut | Self::EngineDeclared | Self::UnknownWin => "win",
             Self::StepLimit => "win",
+            Self::Concede => "win",
         }
     }
 }
@@ -367,6 +373,12 @@ pub struct Game {
     /// on decline. See `replacement::try_replace_impl`.
     #[doc(hidden)]
     pub replacement_pending_outcome: Option<crate::replacement::ReplacementOutcome>,
+    /// Outcome slot written by `SelectionKind::PlayOrder` resolution. Read
+    /// by the Python `MatchEnv` wrapper (BO3 match training) to determine
+    /// which side plays first in the next game. `None` until a play-order
+    /// selection has been resolved; the wrapper takes the value and resets
+    /// the slot. The engine itself is BO3-agnostic.
+    pub last_play_order_choice: Option<crate::selection::PlayOrder>,
     /// Fire-site continuation for optional `WhenPermanentWouldPlay`
     /// replacements whose subject is a card in hand.
     #[doc(hidden)]
@@ -549,6 +561,23 @@ pub struct Game {
         crate::dsl_cards::bindings::Bindings,
         crate::dsl_cards::step::StepRuntime,
     )>,
+
+    /// Cost-pay abort flag — set when the player PASSes on a cost-pay
+    /// selection (a `select_hand` / `select_trash` / `select_union_zone`
+    /// with `cost: true`). The DSL step runner checks this at the top of
+    /// every iteration and short-circuits the rest of the clause body, so a
+    /// declined "By trashing X, Y" cost does NOT run Y (no trash, no draw,
+    /// no zone-move). Non-cost optional selects (the "you may pick X; then
+    /// always do Y" pattern) leave this flag false, so their tails still
+    /// run on decline.
+    ///
+    /// Scope: per `on_decline` invocation in
+    /// `effect_queue::resolve_generic_selection` (save+clear on entry,
+    /// restore on exit). The save/restore prevents a parent clause's
+    /// abort from leaking into an unrelated child clause that fires
+    /// downstream of the resolved selection.
+    #[doc(hidden)]
+    pub(crate) dsl_clause_aborted: bool,
 
     /// Phase 2f4 Task 1 — one-shot delayed-effect queue. Entries are scheduled
     /// via `EffectContext::schedule_delayed` and drained by
@@ -805,6 +834,7 @@ impl Game {
             event_seq: 0,
             replacement_depth: 0,
             replacement_pending_outcome: None,
+            last_play_order_choice: None,
             pending_would_play_resume: None,
             pending_would_link_resume: None,
             pending_would_digivolve_resume: None,
@@ -826,6 +856,7 @@ impl Game {
             in_counter_window: false,
             active_deletion_batch: None,
             dsl_outer_tail: None,
+            dsl_clause_aborted: false,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
             scheduled_provenance_deletions: Vec::new(),
@@ -1748,6 +1779,121 @@ impl Game {
     pub fn declare_step_limit_winner(&mut self) {
         let winner = self.step_limit_tiebreaker_winner();
         self.declare_winner_with_reason(winner, TerminalOutcomeReason::StepLimit);
+    }
+
+    /// Concede the game on behalf of `player_id`. The opponent is declared the
+    /// winner with `TerminalOutcomeReason::Concede`. Always-legal at every
+    /// agent decision point — the action mask reports action `93` as legal in
+    /// every phase. Safe to call mid-selection: any pending selection is
+    /// cleared, the effect queue is dropped, and any in-progress combat /
+    /// attack-timing state is short-circuited by the terminal phase change.
+    ///
+    /// Event ordering: a `GameEvent::Concede { player }` event is pushed
+    /// **before** the `GameOver` event so listeners can observe the concede
+    /// before the terminal-outcome notification. This mirrors the
+    /// surrender-event-before-declare_winner pattern used by the legacy
+    /// Python engine (see `CLAUDE.md` working rule #16).
+    ///
+    /// No-op if the game is already over.
+    pub fn concede(&mut self, player_id: PlayerId) {
+        if self.game_over {
+            return;
+        }
+        // Clear pending selection and effect queue so the game terminates
+        // cleanly even when concede fires mid-selection or with queued
+        // triggered effects waiting to resolve.
+        self.pending_selection = None;
+        self.effect_queue.clear();
+        // Emit the Concede event before declare_winner so its seq is
+        // strictly less than the GameOver event's seq.
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Concede {
+            seq,
+            player: player_id,
+        });
+        // Resolve the winner: opponent of the conceder. In 2-player play
+        // there is exactly one opponent; in multiplayer we fall back to the
+        // first non-eliminated opponent in turn order.
+        let opponents = self.opponents(player_id);
+        let winner_id = opponents.first().copied().unwrap_or(player_id);
+        self.declare_winner_with_reason(winner_id, TerminalOutcomeReason::Concede);
+    }
+
+    /// Install a `SelectionKind::PlayOrder` prompt with `loser_id` as the
+    /// chooser. The engine enters `GamePhase::SelectPlayOrder`; the action
+    /// mask reports actions `PLAY_FIRST` (94) and `PLAY_SECOND` (95) as legal
+    /// for `loser_id` only. On resolution, the callback writes the chosen
+    /// `PlayOrder` to `self.last_play_order_choice` and the standard
+    /// selection unwind restores `previous_phase` (typically `GameOver`).
+    ///
+    /// The wrapper (Python `MatchEnv` for BO3 match training) is expected to
+    /// call this method between games of a match, then read
+    /// `self.last_play_order_choice` once the selection resolves to decide
+    /// which side plays first in the next game.
+    ///
+    /// Any existing `pending_selection` is dropped — when a game terminates
+    /// via a win condition mid-effect (security depleted by a triggered
+    /// effect, deck-out during a chain), the engine can leave a
+    /// `pending_selection` installed; the BO3 wrapper calls this method
+    /// after termination, and we just discard the stale prompt since the
+    /// game it belonged to is over.
+    pub fn request_play_order_selection(&mut self, loser_id: PlayerId) {
+        self.pending_selection = None;
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectPlayOrder;
+        self.pending_selection = Some(crate::selection::PendingSelection {
+            kind: crate::selection::SelectionKind::PlayOrder,
+            selecting_player: loser_id,
+            previous_phase,
+            valid_action_ids: vec![
+                crate::action::space::PLAY_FIRST,
+                crate::action::space::PLAY_SECOND,
+            ],
+            is_optional: false,
+            prompt: "Choose play order for the next game".to_string(),
+            effect_choices: None,
+            // No real card source — this prompt is driven by the BO3 match
+            // rules, not by a card effect. We use a sentinel `CardHandle(0)`
+            // (CardHandle is a `pub u16` newtype) and `EffectSourceKind::Rule`.
+            source_card: crate::card_source::CardHandle(0),
+            source_permanent: None,
+            source_kind: crate::enums::EffectSourceKind::Rule,
+            callback: Box::new(|game: &mut Game, action_id: u16| {
+                let picked = if action_id == crate::action::space::PLAY_FIRST {
+                    crate::selection::PlayOrder::First
+                } else {
+                    // PLAY_SECOND (95) is the only other valid id; the
+                    // selection installation gates this through valid_action_ids.
+                    crate::selection::PlayOrder::Second
+                };
+                game.last_play_order_choice = Some(picked);
+            }),
+            on_decline: None,
+        });
+    }
+
+    /// Convenience entry point that resolves a pending play-order selection
+    /// directly (without routing through the action-id interface). Useful for
+    /// programmatic testing and for wrapper code that already knows the pick.
+    ///
+    /// Returns `Err` if no `PlayOrder` selection is currently installed.
+    pub fn resolve_play_order_selection(
+        &mut self,
+        picked: crate::selection::PlayOrder,
+    ) -> Result<(), SelectionError> {
+        let action_id = match picked {
+            crate::selection::PlayOrder::First => crate::action::space::PLAY_FIRST,
+            crate::selection::PlayOrder::Second => crate::action::space::PLAY_SECOND,
+        };
+        let pending = self
+            .pending_selection
+            .as_ref()
+            .ok_or(SelectionError::NoPendingSelection)?;
+        if !matches!(pending.kind, crate::selection::SelectionKind::PlayOrder) {
+            return Err(SelectionError::NoPendingSelection);
+        }
+        let player = pending.selecting_player;
+        self.resolve_selection(player, action_id)
     }
 
     /// Declare a winner with an explicit terminal reason.

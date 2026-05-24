@@ -219,6 +219,7 @@ fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -
         ace_overflow,
         dual: _,
         digixros_aliases,
+        also_treated_as: _,
     } = &data[card.data_index];
     CardDto {
         card_id: card_id.clone(),
@@ -324,6 +325,7 @@ fn synth_card(id: &str, name: &str, kind: CardKind, dp: Option<i32>, cost: u16) 
         ace_overflow: None,
         dual: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

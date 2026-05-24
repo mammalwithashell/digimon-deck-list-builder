@@ -133,6 +133,8 @@ Compose the four headline pieces.
 
 Header keys are normalized: `"Algorithm"` → `"algorithm"`, `"Total steps"` → `"total_steps"`, `"Layout hash"` → `"layout_hash"`. Panic families are sourced from [`qa/archetype-qa/panic-families.json`](../qa/archetype-qa/panic-families.json); unmatched panics roll up under `"other"`. If the eval sidecar is absent (older runs), `evals` falls back to regex-parsing `[Eval @ N steps] ...` lines from the console — the row shape is a subset of the sidecar shape (no `draw_rate`, no `by_archetype`).
 
+Sidecar rows are surfaced verbatim, so any fields the `WinRateCallback` writes appear in `evals` without an MCP code change. Per-archetype digivolve counts (`by_archetype[opp].digivolves` / `dna_digivolves` / `opponent_digivolves` / `opponent_dna_digivolves`) and the four `mean_eval_*_digivolves_per_game` top-level fields are surfaced this way — see [`TRAINING_RUNBOOK.md §8`](TRAINING_RUNBOOK.md) for the field semantics.
+
 ### `run_metric(name, tag, since_step?)`
 
 TensorBoard scalar time-series. `tag` may be a string or an array.
@@ -242,6 +244,62 @@ Read `deck_pool_snapshot.json` verbatim, plus derived `deck_count`.
 
 Returns `{ok: false}` for non-gauntlet runs (no snapshot file).
 
+### `run_per_game_evals(name, filter?, limit?)`
+
+Per-game rows from `models/<name>/eval_game_log.jsonl`, written by
+`WinRateCallback._run_evaluation` at the end of every eval game (default
+`--eval-game-log on`). Each row is **one inner game** — including in
+BO3 mode, where a single Gym episode emits 2-3 rows (one per inner
+game), distinguished by `match_idx` + `game_in_match_idx`. Sorted by
+`(step, eval_window_idx, game_idx)` ascending.
+
+Use this when an eval-window mean alone can't answer the question:
+- "Did the agent ever DNA-digivolve as Omnimon during training?"
+- "What fraction of games had ≥1 digivolve?"
+- "Show me games where the agent triple DNA-digivolved → then `load_recording`."
+
+```json
+{
+  "ok": true,
+  "model_run_id": "pilot_ppo_20260523_100355",
+  "count": 50,
+  "rows": [
+    {
+      "step": 100000,
+      "eval_window_idx": 4,
+      "game_idx": 0,
+      "source": "eval",
+      "agent_archetype": "BlueFlare",
+      "opponent_archetype": "Omnimon",
+      "digivolves_agent": 2,
+      "dna_digivolves_agent": 1,
+      "digivolves_opponent": 3,
+      "dna_digivolves_opponent": 0,
+      "result": "win",
+      "episode_length": 18,
+      "terminal_score": 1.0,
+      "recording_path": "/abs/path/eval_env_000_game_000007_win_decked_out.json"
+    },
+    ...
+  ]
+}
+```
+
+`filter` (object, all keys optional, combined AND-style):
+
+| Key | Type | Effect |
+|-----|------|--------|
+| `agent_archetype` | string | exact match |
+| `opponent_archetype` | string | exact match |
+| `result` | `"win"`/`"loss"`/`"draw"` | exact match |
+| `digivolves_agent_min` | int | keep rows where `digivolves_agent >= N` |
+| `dna_digivolves_agent_min` | int | keep rows where `dna_digivolves_agent >= N` |
+| `step_min` / `step_max` | int | inclusive step-range bounds |
+
+Returns `{ok: true, count: 0, rows: []}` for runs that predate this
+feature (no `eval_game_log.jsonl`); `list_runs` advertises presence via
+the `has_eval_game_log` flag on each entry.
+
 ## Path resolution
 
 `<runs-dir>` and `<models-dir>` are independent — the operator typically names them similarly (`runs/generalist_v2` paired with `models/generalist_v2`) but the MCP doesn't enforce that. For model-side tools (`run_recordings` / `run_checkpoints` / `run_deck_pool`), `<models-dir>/<name>/` may either contain `recordings/` / `checkpoints/` / `deck_pool_snapshot.json` directly (flat layout) or wrap a timestamped subdirectory (e.g. `pilot_ppo_<timestamp>/`) that holds them (nested layout — the default). The MCP picks the most-recently-modified marker-bearing subdirectory when multiple exist and surfaces the choice in the `model_run_id` field of every response.
@@ -274,6 +332,21 @@ run_recordings(name, filter="crash", limit=1)
 **"Which checkpoint should I export for ONNX?"**
 ```
 run_checkpoints(name) → pick the latest step with confirmed good metrics from run_metric()
+```
+
+**"Did the agent ever triple DNA-digivolve, and can I see the replay?"**
+```
+run_per_game_evals(name, filter={dna_digivolves_agent_min: 3})
+  → rows[0].recording_path
+→ pass that path to digimon-engine-mcp:load_recording
+→ step through the turn where the digivolve fired
+```
+
+**"What's the distribution of digivolves per game at step 500k?"**
+```
+run_per_game_evals(name, filter={step_min: 500000, step_max: 500000})
+  → bucket rows by digivolves_agent count locally / in your notebook
+→ compare against the mean from run_metric(name, "pilot/mean_eval_digivolves_per_game")
 ```
 
 ## Caveats and limits

@@ -1279,6 +1279,13 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// When `optional && cost`, declining this prompt aborts the rest of
+        /// the clause body via `Game::dsl_clause_aborted`. See
+        /// `digimon_dsl::step::SelectZoneArgs::cost` for the printed-text
+        /// pattern. Default `false` keeps the historical "decline runs tail"
+        /// behavior for non-cost optional picks.
+        #[serde(default)]
+        cost: bool,
     },
     SelectTrash {
         of: CompiledPlayerRef,
@@ -1287,6 +1294,9 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// See `SelectHand::cost`.
+        #[serde(default)]
+        cost: bool,
     },
     SelectMaterial {
         of_permanent: CompiledBindingRef,
@@ -1406,6 +1416,12 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// See `SelectHand::cost`. Prefer `then:` for steps that should only
+        /// run on accept when the cost-pay is local; use `cost: true` when the
+        /// printed text is "By picking X, do Y" where Y AND any further clause
+        /// steps must abort on decline.
+        #[serde(default)]
+        cost: bool,
         then: Vec<CompiledStep>,
     },
     SelectOrderedPermutation {

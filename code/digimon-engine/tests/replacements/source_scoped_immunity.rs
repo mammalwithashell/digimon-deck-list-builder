@@ -17,7 +17,9 @@ fn active_security_resolution(defender: u8) -> SecurityResolutionState {
         was_face_up: false,
         phase: SecurityPhase::SecuritySkillDrain,
         phase_enqueue_done: false,
-        checks_remaining: 0,
+        // Renamed by `fix-security-check-recompute-mid-attack`: countdown
+        // -> performed counter. `0` here means "no checks performed yet".
+        checks_performed: 0,
         outcome_so_far: digimon_engine::combat::AttackResult::SecurityCheckSurvived,
     }
 }

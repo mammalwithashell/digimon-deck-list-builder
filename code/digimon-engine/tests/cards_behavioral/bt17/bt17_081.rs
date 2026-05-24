@@ -460,6 +460,11 @@ fn bt17_081_observer_greymon_present_gains_one_memory() {
     runner.place_on_field(0, "OWN-GREY", Some(0));
 
     push_to_hand(&mut runner, 0, "OWN-PLAIN");
+    // Lower starting memory below the +10 cap so the observer's +1 gain is
+    // observable. `taimatt_runner()` defaults to memory(10); at the cap, a
+    // mandatory +1 from the body becomes a 0-net no-op
+    // (`fix-outer-optional-prompt-trigger-ctx`).
+    runner.game.set_memory(5);
     let memory_before = runner.memory();
 
     let hand_idx = runner
@@ -471,23 +476,17 @@ fn bt17_081_observer_greymon_present_gains_one_memory() {
         .expect("OWN-PLAIN in hand");
     runner.play(0, hand_idx).expect("plays plain digimon");
 
-    // Accept the optional activation if it installs.
+    // Accept the optional activation. With the
+    // `fix-outer-optional-prompt-trigger-ctx` fix this prompt always installs;
+    // pre-fix it was tolerated to be absent.
     let mut steps = 0;
-    let mut accepted = false;
     while runner.game.pending_selection.is_some() && steps < 10 {
         let pending = runner.game.pending_selection.as_ref().unwrap();
         let player = pending.selecting_player;
-        // Find the first non-PASS action (accept the activation).
         let action = pending.valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
-        accepted = true;
         steps += 1;
-    }
-
-    if !accepted {
-        // No activation prompt fired — observer didn't install. Test is moot.
-        return;
     }
 
     assert!(
@@ -517,6 +516,7 @@ fn bt17_081_observer_garurumon_present_gains_one_memory() {
     runner.place_on_field(0, "OWN-GARU", Some(0));
 
     push_to_hand(&mut runner, 0, "OWN-PLAIN");
+    runner.game.set_memory(5);
     let memory_before = runner.memory();
 
     let hand_idx = runner
@@ -529,19 +529,13 @@ fn bt17_081_observer_garurumon_present_gains_one_memory() {
     runner.play(0, hand_idx).expect("plays plain digimon");
 
     let mut steps = 0;
-    let mut accepted = false;
     while runner.game.pending_selection.is_some() && steps < 10 {
         let pending = runner.game.pending_selection.as_ref().unwrap();
         let player = pending.selecting_player;
         let action = pending.valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
-        accepted = true;
         steps += 1;
-    }
-
-    if !accepted {
-        return;
     }
 
     assert!(
@@ -576,6 +570,9 @@ fn bt17_081_observer_both_greymon_and_garurumon_gains_two_memory() {
     runner.place_on_field(0, "OWN-GARU", Some(0));
 
     push_to_hand(&mut runner, 0, "OWN-PLAIN");
+    // Lower starting memory below the cap so the observer's +2 gain is
+    // observable (taimatt_runner defaults to memory(10) = cap).
+    runner.game.set_memory(5);
     let memory_before = runner.memory();
 
     let hand_idx = runner
@@ -588,19 +585,13 @@ fn bt17_081_observer_both_greymon_and_garurumon_gains_two_memory() {
     runner.play(0, hand_idx).expect("plays plain digimon");
 
     let mut steps = 0;
-    let mut accepted = false;
     while runner.game.pending_selection.is_some() && steps < 10 {
         let pending = runner.game.pending_selection.as_ref().unwrap();
         let player = pending.selecting_player;
         let action = pending.valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
-        accepted = true;
         steps += 1;
-    }
-
-    if !accepted {
-        return;
     }
 
     assert!(
@@ -817,5 +808,70 @@ fn bt17_081_security_clause_uses_play_from_security_step() {
     assert!(
         has_play_from_security,
         "on_security clause must include play_from_security step"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 7 — Outer-optional trigger prompt installation
+//
+// Sibling test to `bt16_085_optional_outer_prompt_installs_on_normal_digivolve`.
+// Clause 1's condition is `all_of [event_target_owner: you, event_target_kind:
+// digimon]` — both event_* predicates. The bug they regress against: the
+// outer-optional condition check in `queued_effect_wants_outer_optional_prompt`
+// runs without the queued trigger context installed, so these predicates
+// return None → condition fails → prompt skipped → body auto-fires.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// When player 0 plays an own Digimon, BT17-081's `on_enter_field_anyone`
+/// clause MUST install an outer optional accept/decline prompt before the
+/// suspend cost is paid. The +1-memory body branches (Greymon / Garurumon) are
+/// orthogonal to whether the prompt installs — the player must be given the
+/// choice in all cases.
+#[test]
+fn bt17_081_optional_outer_prompt_installs_on_own_digivolve() {
+    let mut runner = taimatt_runner();
+    let mut own = make_named_digimon("OWN-PLAIN", "PlainDigimon", 3, 3000);
+    own.play_cost = 0;
+    runner.game.card_data.push(own);
+
+    let tamer = runner.place_on_field(0, "BT17-081", Some(0));
+    push_to_hand(&mut runner, 0, "OWN-PLAIN");
+
+    let suspended_before =
+        runner.game.players[0].battle_area[tamer.index as usize].is_suspended;
+    assert!(
+        !suspended_before,
+        "precondition: Tai & Matt must be unsuspended before the play"
+    );
+
+    let hand_idx = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "OWN-PLAIN")
+        .expect("OWN-PLAIN in hand");
+    runner.play(0, hand_idx).expect("plain Digimon plays");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("outer optional accept/decline prompt MUST install after own Digimon play");
+    assert_eq!(
+        view.kind,
+        SelectionKind::Replacement,
+        "BT17-081 outer optional prompt must be SelectionKind::Replacement"
+    );
+    assert!(
+        view.is_optional,
+        "outer optional prompt must be is_optional=true so PASS declines"
+    );
+    assert_eq!(
+        view.selecting_player, 0,
+        "the controller of the triggered effect is selecting"
+    );
+
+    assert!(
+        !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "Tai & Matt must NOT yet be suspended — the cost only pays after accept"
     );
 }

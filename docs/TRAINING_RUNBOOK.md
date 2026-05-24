@@ -37,6 +37,44 @@ For architecture details, see `../AGENTS.md`.
 
 ---
 
+## 0. Pre-flight: release-mode bindings
+
+Always train against a **release-mode** build of the Rust engine + PyO3 bindings. The `dev` profile is ~10× slower per engine step and turns a 1M-step training run into days. Recompile after every engine change (and after every checkout of new commits):
+
+```bash
+# Build the release wheel
+cd code/digimon-engine-py
+python -m maturin build --release
+
+# Install it into the current Python env (overwrites prior install)
+pip install --force-reinstall --no-deps \
+  ../../target/wheels/digimon_engine-0.1.0-cp311-abi3-win_amd64.whl
+# (substitute the actual wheel filename — abi3 wheel is platform-tagged
+#  and the version may have moved; pick the freshest from target/wheels/)
+```
+
+If you have a `.venv` configured, `python -m maturin develop --release` does both steps in one command (compile + install). Without a venv, the build+pip flow above is the equivalent. Either way, **never train against a `--debug` or default-profile wheel**.
+
+### Verifying release mode
+
+```bash
+python -c "
+from digimon_engine import RustHeadlessGame
+# A fresh game in release mode should construct in well under 100ms.
+import time
+t = time.perf_counter()
+g = RustHeadlessGame(['ST1-01']*5 + ['ST1-03']*45, ['ST1-01']*5 + ['ST1-03']*45, seed=1)
+print(f'Constructed in {(time.perf_counter() - t)*1000:.1f}ms')
+"
+# Dev-mode build: ~500–1000ms. Release build: <100ms.
+```
+
+### Panic safety rail (always on)
+
+`pilot_training` inserts `TrainingRecordingWrapper` into the env chain unconditionally — it catches PyO3 `PanicException` (and any other `BaseException` from the inner engine step), logs the crash to stderr, increments a class-level `crash_count`, and synthesises a terminal step so SB3's VecEnv auto-resets and the run continues. **You don't need `--record-games anomalies` to get this protection**; that flag controls whether the crash is also persisted as a JSON artifact for triage. Set `--record-games anomalies` (or `--record-games all`) on long unattended runs if you want post-mortem artifacts.
+
+---
+
 ## 1. Quick Reference Commands
 
 ### CLI Training (pilot_training.py)
@@ -360,6 +398,16 @@ See `pilot_training.make_env()` for the full parameter list covering: opponent s
 | `pilot/mean_eval_reward` | Average episode reward in eval |
 | `pilot/mean_eval_episode_length` | Average steps per eval episode |
 | `pilot/games_played` | Cumulative training episodes |
+| `pilot/mean_eval_digivolves_per_game` | Agent (p1) regular digivolves per eval game |
+| `pilot/mean_eval_dna_digivolves_per_game` | Agent (p1) DNA digivolves per eval game |
+| `pilot/mean_eval_opponent_digivolves_per_game` | Opponent (p2) regular digivolves per eval game |
+| `pilot/mean_eval_opponent_dna_digivolves_per_game` | Opponent (p2) DNA digivolves per eval game |
+| `pilot/agent_archetype/<X>/digivolves_per_game` | Cumulative agent digivolves piloting `<X>` ÷ games as `<X>` |
+| `pilot/agent_archetype/<X>/dna_digivolves_per_game` | Cumulative agent DNA digivolves piloting `<X>` ÷ games as `<X>` |
+| `pilot/archetype/<X>/opponent_digivolves_per_game` | Cumulative opponent digivolves when opp is `<X>` ÷ games vs `<X>` |
+| `pilot/archetype/<X>/opponent_dna_digivolves_per_game` | Cumulative opponent DNA digivolves when opp is `<X>` ÷ games vs `<X>` |
+
+Digivolve telemetry fires unconditionally — it is observational, not gated on `digivolve_shaping`. Runs with shaping off emit the same scalar set with their actual (often zero) values, so the shaping-on vs. shaping-off A/B compare uses an identical schema.
 
 ### Viewing Logs
 
@@ -369,6 +417,81 @@ tensorboard --logdir runs/pilot_ppo
 
 Default log directory: `runs/pilot_ppo` (override with `--log-dir`).
 
+### Eval Sidecar (`runs/<name>/evals.jsonl`)
+
+One JSON line per eval window. Top-level fields include the headline scalars plus four per-eval digivolve means:
+
+| Field | Description |
+|---|---|
+| `step` / `wall_time` / `games_played` | Training-step, time, cumulative episodes |
+| `win_rate` / `draw_rate` / `mean_reward` | Headline outcomes |
+| `mean_terminal_score` / `mean_dense_reward` / `mean_eval_episode_length` | Reward decomposition |
+| `mean_eval_digivolves_per_game` | Agent (p1) regular digivolves per game, this eval window |
+| `mean_eval_dna_digivolves_per_game` | Agent (p1) DNA digivolves per game, this eval window |
+| `mean_eval_opponent_digivolves_per_game` | Opponent (p2) regular digivolves per game |
+| `mean_eval_opponent_dna_digivolves_per_game` | Opponent (p2) DNA digivolves per game |
+| `by_archetype` | Object keyed by opponent archetype; see below |
+
+`by_archetype` carries cumulative-since-callback-construction counts per opponent archetype:
+
+```json
+"by_archetype": {
+  "DNA Omnimon": {
+    "wins": 12, "draws": 1, "games": 30, "win_rate": 0.4,
+    "digivolves": 28, "dna_digivolves": 0,
+    "opponent_digivolves": 22, "opponent_dna_digivolves": 1
+  }
+}
+```
+
+**Naming asymmetry — important.** Within a `by_archetype` value, `digivolves` and `dna_digivolves` are the **agent's** counts in games where this entry's key was the opponent (sourced from `p1_*`). `opponent_digivolves` / `opponent_dna_digivolves` are the **opponent's** counts in those same games (sourced from `p2_*`). This mirrors the existing `wins` semantic (the agent's wins vs this opponent) — the `by_archetype` block is opponent-indexed, but its agent-side counters and opponent-side counters live side by side.
+
+**Forward compatibility.** Sidecar rows written before this change lack the four top-level mean fields and the four per-archetype count fields. Lenient readers (the training MCP, ad-hoc `json.loads`-and-`.get`) work unchanged; strict whitelist readers need to widen.
+
+### Per-Game Eval Log (`models/<name>/eval_game_log.jsonl`)
+
+One JSON line per **completed eval game** (not per eval window). Written by `WinRateCallback._run_evaluation` immediately after each per-game iteration of the eval loop computes its outcome. Default on; toggle with `--eval-game-log {on,off}`.
+
+This is the *raw* layer under the eval-window means above. The mean of 0.4 digivolves/game in the sidecar can't distinguish "one whale game with 4 digivolves" from "consistent 0.4 across 10 games" — the per-game rows here answer those questions.
+
+**One row = one inner game, including in BO3 mode** — a 3-game match emits 3 rows.
+
+| Field | Description |
+|---|---|
+| `step` | Training step at the moment the eval window started; same for all rows in one window |
+| `eval_window_idx` | 0-based monotonic index of the eval window within the run |
+| `game_idx` | 0-based game index within the eval window (monotonic across the whole window; in BO3, increments per inner game, not per match) |
+| `source` | Always `"eval"` for v1; schema-stable for future training-side rows |
+| `match_format` | `"single"` or `"bo3"` — the run's `TrainingConfig.match_format` |
+| `match_idx` | BO3 only: 0-based index of the BO3 match this row belongs to within the window. Null in single mode. |
+| `game_in_match_idx` | BO3 only: 0/1/2 — which inner game of the BO3 match. Null in single mode. |
+| `agent_archetype` / `opponent_archetype` | From the env's `info` dict (null outside generalist/gauntlet modes) |
+| `digivolves_agent` / `dna_digivolves_agent` | Agent's (p1) per-game counts captured at the moment that inner game ended (BO3: via `MatchEnv.match_game_history`; single: via `_rl_state()` at episode end) |
+| `digivolves_opponent` / `dna_digivolves_opponent` | Same for opponent (p2) |
+| `result` | `"win"` / `"loss"` / `"draw"` — per inner game |
+| `episode_length` | Env steps inside the inner game (BO3) or the whole episode (single) |
+| `terminal_score` | ±1.0 / 0.0 per inner game (no dense shaping) |
+| `recording_path` | Absolute path to the recording file. In BO3 mode, recordings are written at match end so all rows from one match share the same path. Null when recording is off. |
+
+```jsonl
+// single mode
+{"step": 100000, "eval_window_idx": 4, "game_idx": 0, "source": "eval", "match_format": "single", "match_idx": null, "game_in_match_idx": null, "agent_archetype": "BlueFlare", "opponent_archetype": "Omnimon", "digivolves_agent": 2, "dna_digivolves_agent": 1, "digivolves_opponent": 3, "dna_digivolves_opponent": 0, "result": "win", "episode_length": 18, "terminal_score": 1.0, "recording_path": ".../win_decked_out.json"}
+
+// BO3 mode — one match producing three rows
+{"step": 100000, "eval_window_idx": 4, "game_idx": 0, "source": "eval", "match_format": "bo3", "match_idx": 0, "game_in_match_idx": 0, "agent_archetype": "BlueFlare", "opponent_archetype": "Omnimon", "digivolves_agent": 2, "dna_digivolves_agent": 1, "digivolves_opponent": 1, "dna_digivolves_opponent": 0, "result": "win", "episode_length": 21, "terminal_score": 1.0, "recording_path": ".../match_recording.json"}
+{"step": 100000, "eval_window_idx": 4, "game_idx": 1, "source": "eval", "match_format": "bo3", "match_idx": 0, "game_in_match_idx": 1, ..., "result": "loss", "terminal_score": -1.0, "recording_path": ".../match_recording.json"}
+{"step": 100000, "eval_window_idx": 4, "game_idx": 2, "source": "eval", "match_format": "bo3", "match_idx": 0, "game_in_match_idx": 2, ..., "result": "win", "terminal_score": 1.0, "recording_path": ".../match_recording.json"}
+```
+
+Query via the training MCP:
+
+```
+run_per_game_evals(name="generalist_v2", filter={dna_digivolves_agent_min: 3})
+  → row.recording_path → digimon-engine-mcp:load_recording → step through
+```
+
+See [TRAINING_MCP.md](TRAINING_MCP.md#run_per_game_evalsname-filter-limit) for the full filter set.
+
 ---
 
 ## 9. Game Recording Artifacts
@@ -376,6 +499,13 @@ Default log directory: `runs/pilot_ppo` (override with `--log-dir`).
 Pilot training can optionally write deterministic per-game recording artifacts
 for bug triage. Recording is disabled by default so normal training runs do not
 pay the storage or serialization cost.
+
+**Note**: the underlying `TrainingRecordingWrapper` is now inserted into the env
+chain unconditionally — it is the **panic safety rail** that survives engine
+crashes regardless of the `--record-games` setting (see §0). The
+`--record-games` flag controls only whether the wrapper PERSISTS crash + game
+artifacts to disk. Set it to `anomalies` (or `all`) on long unattended runs if
+you want JSON artifacts to triage from after a crash.
 
 Useful modes:
 
@@ -480,7 +610,78 @@ The DB queue mechanics, job claiming, stale recovery, and gauntlet hooks are ful
 
 ---
 
-## 12. Dependencies
+## 12. Best-of-three Match Training
+
+Default Gym episode shape (since `add-bo3-match-training`, 2026-05). One episode = one best-of-three match; deck pair sampled once per match and held across all games; LSTM hidden state carries across games within a match. Legacy single-game episodes still available via `--match-format single`.
+
+### CLI
+
+```bash
+# Default — BO3 with concede + play-order selection enabled
+python -m digimon_gym.agents.pilot_training --generalist --timesteps 500000
+
+# Opt out — legacy single-game episodes
+python -m digimon_gym.agents.pilot_training --generalist --match-format single
+
+# Override digivolve shaping default (BO3 turns it on)
+python -m digimon_gym.agents.pilot_training --set digivolve_shaping=false
+```
+
+### Action surface
+
+| Action | Meaning | Mask rule |
+|---|---|---|
+| `93` | Concede game (`Game::concede(player)`) | Legal whenever player has any other legal action |
+| `94` | Play first in next game | Legal only during `SelectPlayOrder` |
+| `95` | Play second in next game | Legal only during `SelectPlayOrder` |
+
+`ACTION_SPACE_SIZE` is unchanged at `2192`; actions `93`/`94`/`95` occupy the previously-unused `93-99` range. Existing checkpoints can be loaded but will produce near-random behavior on the new actions until additional fine-tune timesteps.
+
+### Reward calibration
+
+```
+Per-step dense:
+  +1.5 per opponent security removed (asymmetric — was ±2.0 symmetric)
+  -0.5 per own security lost
+  +0.1 per agent digivolve, +0.4 per DNA digivolve (default ON in BO3)
+  -0.001 step penalty
+
+Per-game terminal (BO3 only — replaces DigimonEnv's ±10 + up to +5 fast):
+  +12 win, -12 loss, + up to +3 fast-game bonus (par 50, zero at 150)
+
+Per-match terminal (fires at match end):
+  +30 match win, -30 match loss, -1 draw (rare, hard step-limit only)
+  +10 sweep bonus (2-0 wins)
+  +5 smart-concede bonus (won match AND any conceded game)
+  -10 scared-concede penalty (0-2 loss AND any conceded game)
+  + up to +15 fast-match bonus (par 150, zero at 450, win only)
+```
+
+See `openspec/changes/add-bo3-match-training/design.md` §D9 for the full calibration rationale and the scenario-by-scenario payoff table.
+
+### Eval cost
+
+In BO3 mode, `--eval-episodes N` evaluates `N` matches ≈ `2.5 × N` games. Default eval frequency is unchanged; consider reducing `--eval-episodes` for match-format runs if eval cost becomes prohibitive.
+
+### Wrapper chain
+
+```
+DigimonEnv → OpponentWrapper → MatchEnv → GeneralistDeckPoolWrapper (or DeckPoolWrapper)
+                                        → GauntletWrapper → TrainingRecordingWrapper
+                                        → MulliganLogWrapper → ActionMasker
+```
+
+`MatchEnv` sits immediately above `OpponentWrapper` so OpponentWrapper sees one continuous episode (= one match) and LSTM hidden state threads normally across games-within-match. The deck-pool wrappers sit ABOVE `MatchEnv` so deck sampling fires once per match (not per game). `OpponentWrapper.reset_inner_only(...)` is the per-game inner-reset path used by `MatchEnv` between games — it resets `DigimonEnv` without resetting `opponent_fn.reset_state`, preserving the opponent's recurrent state.
+
+### Checkpoint compatibility
+
+Loading a pre-BO3 checkpoint into a BO3 run will:
+- ✅ Work — observation tensor and action space size unchanged.
+- ⚠️ Produce near-random behavior on actions 93/94/95 because those were never seen during the checkpoint's training.
+
+Recommended fine-tune procedure: load checkpoint, run ~100k–500k timesteps in `--match-format bo3` to teach the policy when concede + play-order picks are valuable, evaluate, then continue full training.
+
+## 13. Dependencies
 
 Key RL/ML packages:
 

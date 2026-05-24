@@ -1,10 +1,10 @@
 """MCP server bootstrap and tool registration.
 
-Phase 4 skeleton: the seven tools are declared with their JSON schemas so
+Phase 4 skeleton: the tools are declared with their JSON schemas so
 ``tools/list`` round-trips end-to-end, but the handlers return a structured
 ``{"ok": false, "error": "not implemented yet"}`` placeholder. Phase 5 wires
 in the real handlers from ``runs``, ``summary``, ``tb_metrics``, ``recordings``,
-``checkpoints``, ``deck_pool`` modules.
+``checkpoints``, ``deck_pool``, ``per_game`` modules.
 
 Protocol implementation uses the official ``mcp`` Python SDK (decorator-driven
 ``@server.list_tools()`` / ``@server.call_tool()``) — see design.md §Decision 6
@@ -26,6 +26,7 @@ from mcp.server.stdio import stdio_server
 from .checkpoints import run_checkpoints as _run_checkpoints
 from .deck_pool import run_deck_pool as _run_deck_pool
 from .panic_families import load_panic_families
+from .per_game import run_per_game_evals as _run_per_game_evals
 from .recordings import run_recordings as _run_recordings
 from .runs import list_runs as _list_runs
 from .summary import run_summary as _run_summary
@@ -137,6 +138,37 @@ TOOL_DEFINITIONS: list[mcp_types.Tool] = [
         description="Return the parsed contents of deck_pool_snapshot.json for a run.",
         inputSchema=_NAME_SCHEMA,
     ),
+    mcp_types.Tool(
+        name="run_per_game_evals",
+        description=(
+            "Per-game rows from eval_game_log.jsonl with optional filter / limit. "
+            "Surfaces individual game outcomes (digivolve counts, archetypes, "
+            "result, episode_length, recording_path) that the per-window means "
+            "in evals.jsonl hide. Sorted by (step, eval_window_idx, game_idx)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "filter": {
+                    "type": "object",
+                    "properties": {
+                        "agent_archetype": {"type": "string"},
+                        "opponent_archetype": {"type": "string"},
+                        "result": {"type": "string", "enum": ["win", "loss", "draw"]},
+                        "digivolves_agent_min": {"type": "integer", "minimum": 0},
+                        "dna_digivolves_agent_min": {"type": "integer", "minimum": 0},
+                        "step_min": {"type": "integer", "minimum": 0},
+                        "step_max": {"type": "integer", "minimum": 0},
+                    },
+                    "additionalProperties": False,
+                },
+                "limit": {"type": "integer", "minimum": 1},
+            },
+            "required": ["name"],
+            "additionalProperties": False,
+        },
+    ),
 ]
 
 
@@ -160,7 +192,7 @@ def _resolve_run_dir(ctx: ServerContext, name: str) -> Optional[Path]:
 
 
 async def _h_list_runs(ctx: ServerContext, args: Dict[str, Any]) -> Dict[str, Any]:
-    return _list_runs(ctx.runs_dir)
+    return _list_runs(ctx.runs_dir, ctx.models_dir)
 
 
 async def _h_run_summary(ctx: ServerContext, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -224,6 +256,18 @@ async def _h_run_deck_pool(ctx: ServerContext, args: Dict[str, Any]) -> Dict[str
     return _run_deck_pool(ctx.models_dir, name)
 
 
+async def _h_run_per_game_evals(ctx: ServerContext, args: Dict[str, Any]) -> Dict[str, Any]:
+    name = args.get("name")
+    if not isinstance(name, str) or not name:
+        return {"ok": False, "error": "missing or invalid 'name' argument"}
+    filt = args.get("filter") or {}
+    if not isinstance(filt, dict):
+        return {"ok": False, "error": "'filter' must be an object"}
+    limit = args.get("limit")
+    limit_int = int(limit) if limit is not None else None
+    return _run_per_game_evals(ctx.models_dir, name, filt, limit_int)
+
+
 TOOL_HANDLERS: Dict[str, ToolHandler] = {
     "list_runs": _h_list_runs,
     "run_summary": _h_run_summary,
@@ -232,6 +276,7 @@ TOOL_HANDLERS: Dict[str, ToolHandler] = {
     "run_recordings": _h_run_recordings,
     "run_checkpoints": _h_run_checkpoints,
     "run_deck_pool": _h_run_deck_pool,
+    "run_per_game_evals": _h_run_per_game_evals,
 }
 
 

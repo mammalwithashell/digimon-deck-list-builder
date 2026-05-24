@@ -23,10 +23,14 @@ effects:
         filter: { of: you, zone: [hand] }
         n: 1
     process:
+      # cost: true — the printed text is "By trashing 1 card in your hand, you
+      # may return 1 [...] from your trash to the hand". Declining the cost
+      # aborts the trash AND the optional recursion that follows.
       - select_hand:
           of: you
           bind_as: discard
           optional: true
+          cost: true
           filter: {}
           prompt: "Trash 1 card from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }

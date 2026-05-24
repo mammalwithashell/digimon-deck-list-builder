@@ -1229,6 +1229,7 @@ fn compile_replacement_process(
             prompt: format!("Choose a card for {card_id}"),
             prompt_key: None,
             optional: true,
+            cost: false,
         });
     }
 
@@ -2261,6 +2262,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            cost: a.cost,
         },
         S::SelectTrash(a) => CompiledStep::SelectTrash {
             of: compile_player_ref(a.of),
@@ -2269,6 +2271,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            cost: a.cost,
         },
         S::SelectMaterial(a) => CompiledStep::SelectMaterial {
             of_permanent: compile_binding_ref(&a.of_permanent),
@@ -2436,6 +2439,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            cost: a.cost,
             then: a
                 .then
                 .iter()

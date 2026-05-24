@@ -2,8 +2,24 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-17
+Last updated: 2026-05-24
 Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
+
+## Closures (2026-05-24)
+
+- **Mid-attack `<Security A. +N>` not recomputed** — CLOSED. The
+  player-attack security-check loop (`resolve_player_security_loop` +
+  `drive_security_resolution`'s `DisposeFinalize` arm in
+  [`code/digimon-engine/src/combat.rs`](../../code/digimon-engine/src/combat.rs))
+  used to snapshot the attacker's effective `<Security A.>` once at
+  attack declaration and decrement that count. DCGO re-reads
+  `Permanent.Strike` every iteration. Exposed by [BT21-001] Gigimon's
+  `on_opponent_security_removed` inherited that may digivolve an
+  attacker into [BT21-029] Medusamon mid-attack — Medusamon's
+  `<Security A. +1>` was ignored by subsequent checks. Closed by change
+  [`fix-security-check-recompute-mid-attack`](../../openspec/changes/fix-security-check-recompute-mid-attack/).
+  Regression test:
+  [`code/digimon-engine/tests/mid_attack_security_attack_recompute.rs`](../../code/digimon-engine/tests/mid_attack_security_attack_recompute.rs).
 
 ## Sweep notes (2026-05-17 — Phase 2 rollup)
 
@@ -425,13 +441,13 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Suggested change:** Add `EffectContext::return_trash_cards_to_deck_top` (mirror the bottom variant but `deck.push`), exposed via a `destination: top|bottom` DSL parameter — see `qa/dsl-vocab-gaps.md`.
 - **Workaround:** LM-027 clause B retains a `raw_rust` no-op; 4 tests `#[ignore]`'d with this gap tag.
 
-### Outer-Optional-Prompt Condition Evaluated Without Trigger Context  [G-OUTER-OPTIONAL-COND-NO-TRIGGER-CONTEXT]
-- **Discovered in:** Medusamon archetype re-attempt run, BT20-016 Paildramon DSL implementation (2026-05-21). Latent — not hit by BT20-016 itself.
+### Outer-Optional-Prompt Condition Evaluated Without Trigger Context  [G-OUTER-OPTIONAL-COND-NO-TRIGGER-CONTEXT] — RESOLVED 2026-05-24
+- **Discovered in:** Medusamon archetype re-attempt run, BT20-016 Paildramon DSL implementation (2026-05-21). Latent — not hit by BT20-016 itself. Reproduced externally via [scripts/mcp_paildramon_dna_confirm_choice.py](../../scripts/mcp_paildramon_dna_confirm_choice.py) driving BT16-085 Davis & Ken's `on_digivolve` clause through the engine MCP.
 - **Scope:** Rust engine.
-- **Card(s):** Any `optional` triggered clause whose body's first step is mandatory (so an outer accept/decline prompt is required) AND whose `condition` reads event-context predicates. BT21-026's deletion arm is a known affected card (its behavioral test is `#[ignore]`'d).
-- **What's missing:** `queued_effect_wants_outer_optional_prompt` (`effect_queue.rs`) builds an `EffectReadContext` and evaluates `effect.condition` WITHOUT installing the queued effect's `trigger_context` — unlike `evaluate_effect_condition` and the pre-cost-prompt branch, which both install it via `TriggerContextGuard`. For an optional triggered clause needing an outer prompt whose `condition` reads event-context predicates (`event_target_owner`, `event_target_kind`, `event_target_name_contains`, deleted-object snapshots), the predicate defaults false → the outer prompt is wrongly suppressed and the clause silently never fires.
-- **Suggested change:** Wrap the condition evaluation in `queued_effect_wants_outer_optional_prompt` with a `TriggerContextGuard::install(qe.trigger_context)` — requires a `&mut self` refactor or a read-only trigger-context override on `EffectReadContext`.
-- **Workaround:** BT20-016 avoids this by making the body's first step a declinable `optional: true` `select_hand` (so `needs_outer_optional_prompt` is false and the inner PASS is the decline path). Not all cards can be restructured this way.
+- **Card(s):** Any `optional` triggered clause whose body's first step is mandatory (so an outer accept/decline prompt is required) AND whose `condition` reads event-context predicates. BT21-026's deletion arm and BT16-085 Davis & Ken's `on_digivolve` clause are known affected cards. BT17-081 and EX4-061 / EX9-066 sister Tamers were impacted but masked by `if !accepted { return; }` lenient test patterns.
+- **What's missing:** `queued_effect_wants_outer_optional_prompt` (`effect_queue.rs`) built an `EffectReadContext` and evaluated `effect.condition` WITHOUT installing the queued effect's `trigger_context` — unlike `evaluate_effect_condition` and the pre-cost-prompt branch, which both install it via `TriggerContextGuard`. For an optional triggered clause needing an outer prompt whose `condition` reads event-context predicates (`event_target_owner`, `event_target_kind`, `event_target_name_contains`, `event_card_color_has`, deleted-object snapshots), the predicate defaulted false → the outer prompt was wrongly suppressed → `run_queued_effect` then installed the correct context and silently ran the body. Player never saw the choice.
+- **Fix (landed 2026-05-24):** Changed `queued_effect_wants_outer_optional_prompt`'s signature from `&self` to `&mut self` and installed `TriggerContextGuard::install(self, qe.trigger_context.clone())` before the condition + `outer_optional_guard` closure evaluations, mirroring the pre-cost-prompt branch. RAII Drop restores the previous context. Implemented under proposal `fix-outer-optional-prompt-trigger-ctx`.
+- **Verification (2026-05-24):** New tests `bt16_085_optional_outer_prompt_installs_on_normal_digivolve` / `bt16_085_optional_outer_prompt_installs_on_dna_digivolve` / `bt16_085_optional_outer_prompt_decline_skips_body` / `bt16_085_optional_outer_prompt_accept_runs_body_with_trigger_ctx` (and sibling `bt17_081_optional_outer_prompt_installs_on_own_digivolve`) PASS post-fix and FAIL on `main`. 10 pre-existing tests with the lenient pattern were updated to drop the `if !accepted { return; }` early-return and lower starting memory below the +10 cap so the +1 gain is observable. Full `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral` shows only 3 pre-existing failures (unchanged from `main`).
 
 ### Optional `select_hand` / `select_trash` Tail Does Not Run on PASS  [G-DSL-OPTIONAL-SELECT-PASS-TAIL]
 - **Discovered in:** BT21-102 Tai Kamiya main clause (2026-05-11)
@@ -605,6 +621,22 @@ PR #533's Layer 1 + Layer 2 pattern is now applied uniformly across the material
 The architectural follow-up — refactoring `Permanent::top_card()` to return `Option<&CardSource>` (DCGO's `Permanent.cs:1352-1367` shape, where every caller null-checks) — remains the long-term direction. Per-site `soft_remove_if_emptied` is a continued whack-a-mole if new material-extraction shapes land; the Option-returning refactor systemically prevents the failure mode. ~40 raw `top_card()` callers across `combat.rs`, `dsl_cards/predicate.rs`, `dna_digivolve.rs`, and `dsl_cards/formula_eval.rs` would be in-scope for that refactor. Tracking this here so the audit picks it up after the panic-family pressure subsides.
 
 One known sibling deferred from `fix-zombie-permanent-siblings`: `EffectContext::trash_top_source` (effect_context/mod.rs:4186) follows the same fix shape but was discovered after scope was set; file a follow-up change to close it.
+
+### §DSL Trash-Selected-Sources Stale Handle (G-DSL-TRASH-SOURCES-STALE-HANDLE)
+
+- **First seen:** 2026-05-24, training run `generalist_1m_v2`, game 9728, recorder action 87 (TS Olympos Magneticdramon-Mineral/Rock vs Yellow Tamer-heavy, turn 10).
+- **Symptom:** `EffectContext::trash_card_source` panics with `"card not in this permanent's stack"`. Family pattern (regex): `trash_card_source: card not in this permanent's stack`. Panic site: [`code/digimon-engine/src/effect_context/mod.rs::trash_card_source`](../../code/digimon-engine/src/effect_context/mod.rs).
+- **Sibling class:** read-side family is `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` (closed 2026-05-24). Same handle-staleness mechanism, distinct manifestation — write-after-shift on `card_sources.position` (this entry) vs read-after-empty on `top_card` (sibling). Discovered as a follow-up while production training surfaced a stale candidate the picker was advertising past observer-cascaded invalidation.
+- **Root cause:** [`install_source_multi_selection`](../../code/digimon-engine/src/effect_context/selections.rs) snapshots candidate `SourceSelectionRef`s at install time into `action_to_source` (line 2564) and never re-validates them. When two `[WD]` triggers fire in sequence on the same play action (player picks ordering at TriggerOrder, then resolves them serially), the first trigger's `trash_selected_sources` can drain the second trigger's snapshotted candidates BEFORE the agent submits. The agent's submit drives `trash_card_source` with a stale `CardHandle` that no longer matches any card in `perm.card_sources`, and the `.expect("card not in this permanent's stack")` panics. Production reproducer: EX10-033 Pyramidimon [WD] Clause B (mandatory `select_own_sources(min=0, max=3) → trash_selected_sources`) ran first and trashed both EX8-050 sources from slot 0; EX10-032 Proganomon [WD] Clause 2 (mandatory `select_own_sources(min=1, max=1)`) then installed its picker — but slot 0 had a captured candidate that was already drained.
+- **Fix landed (`fix-trash-card-source-stale-handle`, 2026-05-24):** DCGO-parity reshape of the trash primitive. `EffectContext::trash_card_source` now returns `bool` (true iff actually trashed) and soft-fails — no panic — on three rules-natural conditions (carrier missing, empty stack, card not in stack). Mirrors DCGO `ITrashDigivolutionCards.TrashDigivolutionCards()` ([`DCGO/Assets/Scripts/Script/CardController.cs:5181`](../../DCGO/Assets/Scripts/Script/CardController.cs)) which guards entry and filters target cards against the live `_permanent.DigivolutionCards`. `install_source_multi_selection`'s pick callback (effect_context/selections.rs:2586) now re-validates the picked `source_ref` against the live `card_sources` and re-installs with refreshed candidates if the pick has vanished — mirrors DCGO `SelectCardEffect.SetUp(... customRootCardList: selectedPermanent.DigivolutionCards ...)` ([`DCGO/Assets/Scripts/Script/CardEffectCommons/TrashDigivolutionCards.cs:125`](../../DCGO/Assets/Scripts/Script/CardEffectCommons/TrashDigivolutionCards.cs)) which reads the live list at display time. DSL `CompiledStep::TrashSelectedSources` and `CompiledStep::TrashUnionBound` discard the new bool with `let _ = ...` — surviving picks trash, stale ones no-op silently.
+- **Regression tests:**
+  - `code/digimon-engine/tests/effect_context/trash_card_source.rs` — three new unit tests: `trash_card_source_returns_false_on_stale_card_handle`, `trash_card_source_returns_false_on_missing_carrier`, `trash_card_source_returns_false_on_empty_stack`. Plus bool-return assertions on the three existing happy-path tests.
+  - `code/digimon-engine/tests/selection/source_multi.rs` — two new picker tests: `source_multi_picker_re_installs_on_stale_pick_min_one_no_op` (verifies clean termination when re-install lands with no candidates and picked < min) and `..._min_zero_finalizes_empty` (verifies final-callback fires with empty Vec when picked >= min).
+  - `code/digimon-engine/tests/recording_replay_regressions.rs` — `replay_g_dsl_trash_sources_stale_handle_does_not_panic`. Replays the captured production crash (fixture: `code/digimon-engine/tests/recordings/g_dsl_trash_sources_stale_handle.json`, 17 KB, 87 actions) to end without panic. Pre-fix, the panic fires mid-seek; post-fix, clean Ok.
+- **Out-of-scope follow-ups (filed in `fix-trash-card-source-stale-handle`/design.md):**
+  - Tier 3: full DCGO-shape two-step picker (`SelectPermanent` outer → `SelectCard` scoped to live `selectedPermanent.card_sources` inner, with per-permanent trash-interleave). Closes the staleness problem at the picker level rather than at the trash primitive. Bigger refactor.
+  - Recorder/replay JSON schema mismatch: `code/digimon-engine/src/runners/replay.rs:134` expects `initial_state` at the top of the JSON; the recorder nests it under `recording`. Worked around in tests by extracting the inner object.
+  - `tracing::debug!` on soft-fail paths for post-hoc analysis (design Q3) — gated on adding `tracing` crate dep.
 
 Crash recordings from the 2026-05-23 training smoke are preserved under
 `models/generalist_smoke/pilot_ppo_*/recordings/*draw_crash.json` and contain

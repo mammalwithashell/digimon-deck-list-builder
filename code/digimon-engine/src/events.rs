@@ -112,6 +112,17 @@ pub enum GameEvent {
         reason: TerminalOutcomeReason,
     },
 
+    /// A player conceded the game. Emitted **before** the subsequent
+    /// `GameOver` event so listeners can observe the concede before the
+    /// terminal-outcome notification. `player` is the conceding player
+    /// (i.e., the loser); the match-level winner is the opponent and
+    /// will be carried by the immediately-following `GameOver` event
+    /// with `reason = TerminalOutcomeReason::Concede`.
+    Concede {
+        seq: u64,
+        player: PlayerId,
+    },
+
     /// A mandatory pending selection was discarded because no executable
     /// option remained. Emitted in two situations:
     /// 1. **Install-time fizzle** — `install_field_selection` (and other
@@ -146,6 +157,7 @@ impl GameEvent {
             | GameEvent::Mill { seq, .. }
             | GameEvent::SecurityReveal { seq, .. }
             | GameEvent::GameOver { seq, .. }
+            | GameEvent::Concede { seq, .. }
             | GameEvent::EffectFizzled { seq, .. } => *seq,
         }
     }
@@ -165,6 +177,7 @@ impl GameEvent {
             GameEvent::Mill { .. } => "Mill",
             GameEvent::SecurityReveal { .. } => "SecurityReveal",
             GameEvent::GameOver { .. } => "GameOver",
+            GameEvent::Concede { .. } => "Concede",
             GameEvent::EffectFizzled { .. } => "EffectFizzled",
         }
     }
