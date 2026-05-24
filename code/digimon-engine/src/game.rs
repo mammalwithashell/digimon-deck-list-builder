@@ -2046,6 +2046,19 @@ impl Game {
         );
         self.drain_effect_queue();
 
+        // Reward-shaping counters — DNA digivolves stack on the regular
+        // counter per spec decision 5: a single `digivolve_reward` line in
+        // DigimonEnv always fires, plus a separate `dna_digivolve_bonus`
+        // line fires only on DNAs. Effect-initiated DNAs (called via
+        // `effect_context::EffectContext::initiate_dna_digivolve`) do not
+        // bump — only user-action DNAs (via `Game::initiate_dna_digivolve`)
+        // credit, matching the regular-digivolve carve-out. See
+        // docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
+        if !effect_initiated {
+            self.n_digivolutions[merged_handle.player as usize] += 1;
+            self.n_dna_digivolutions[merged_handle.player as usize] += 1;
+        }
+
         Some(merged_handle)
     }
 
@@ -2158,6 +2171,13 @@ impl Game {
             },
         );
         self.drain_effect_queue();
+
+        // Reward-shaping counters — see `dna_digivolve_inner` for rationale.
+        // Only user-action DNAs (effect_initiated == false) credit.
+        if !effect_initiated {
+            self.n_digivolutions[merged_handle.player as usize] += 1;
+            self.n_dna_digivolutions[merged_handle.player as usize] += 1;
+        }
 
         Some(merged_handle)
     }

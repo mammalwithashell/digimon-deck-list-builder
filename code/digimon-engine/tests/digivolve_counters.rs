@@ -4,7 +4,7 @@
 //! `docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md`.
 
 use digimon_engine::card_data::EvoCost;
-use digimon_engine::debug_runner::{make_test_card_with_level, DebugRunner};
+use digimon_engine::debug_runner::{make_test_card_with_level, make_test_dna_card, DebugRunner};
 use digimon_engine::enums::{GamePhase, PlaySource};
 
 #[test]
@@ -46,4 +46,40 @@ fn regular_digivolve_from_hand_increments_only_active_player_regular_counter() {
 
     assert_eq!(runner.game.n_digivolutions, [1u32, 0u32]);
     assert_eq!(runner.game.n_dna_digivolutions, [0u32, 0u32]);
+}
+
+/// Drive a successful DNA digivolve via `Game::initiate_dna_digivolve` and
+/// the two selection stages. Assert that **both** counters incremented
+/// for the active player (DNA stacks on regular per spec decision 5),
+/// and the opponent's counters did not move.
+#[test]
+fn dna_digivolve_increments_both_active_player_counters_once() {
+    let lv5 = make_test_card_with_level("TST-LV5", "FiveDigi", 5);
+    let lv6 = make_test_card_with_level("TST-LV6", "SixDigi", 6);
+    let dna = make_test_dna_card("TST-DNA", "DnaDigi", 5, 6, 0);
+
+    let mut runner = DebugRunner::builder()
+        .add_card(lv5)
+        .add_card(lv6)
+        .add_card(dna)
+        .hand(0, &["TST-DNA"])
+        .memory(5)
+        .start();
+
+    let handle_lv5 = runner.place_on_field(0, "TST-LV5", None);
+    let handle_lv6 = runner.place_on_field(0, "TST-LV6", None);
+    runner.game.current_phase = GamePhase::Main;
+
+    assert!(runner.game.initiate_dna_digivolve(0, 0));
+    runner
+        .game
+        .resolve_selection(0, handle_lv5.index as u16)
+        .expect("stage 1");
+    runner
+        .game
+        .resolve_selection(0, handle_lv6.index as u16)
+        .expect("stage 2");
+
+    assert_eq!(runner.game.n_digivolutions, [1u32, 0u32]);
+    assert_eq!(runner.game.n_dna_digivolutions, [1u32, 0u32]);
 }
