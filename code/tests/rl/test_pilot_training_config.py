@@ -724,3 +724,18 @@ def test_train_init_from_records_base_checkpoint(monkeypatch, tmp_path):
     meta = (tmp_path / "fine-tune-meta" / "final.meta.json").read_text()
     assert '"training_mode": "fine_tune"' in meta
     assert f'"base_checkpoint": "{str(base).replace(chr(92), chr(92) + chr(92))}"' in meta
+
+
+def test_training_config_mulligan_log_default_and_validation(tmp_path):
+    cfg = TrainingConfig()
+    assert cfg.mulligan_log == "on"
+
+    # Override via yaml
+    path = tmp_path / "training.yaml"
+    path.write_text("mulligan_log: off\n")
+    loaded = TrainingConfig.from_yaml(path)
+    assert loaded.mulligan_log == "off"
+
+    # Invalid value rejected
+    with pytest.raises(ValueError, match="mulligan_log"):
+        TrainingConfig(mulligan_log="maybe")
