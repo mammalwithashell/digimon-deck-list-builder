@@ -77,8 +77,8 @@ def test_derive_has_tamer_returns_true_when_any_card_is_tamer():
     # in the starter set. If this id is missing from cards.json the test
     # will skip rather than fail spuriously.
     import json
-    from server import data_paths
-    cards = json.loads(Path(data_paths.CARDS_JSON_PATH).read_text(encoding="utf-8"))
+    from data_paths import CARDS_JSON
+    cards = json.loads(Path(CARDS_JSON).read_text(encoding="utf-8"))
     tamer_ids = [cid for cid, c in cards.items() if (c.get("card_type") or "").lower() == "tamer"]
     if not tamer_ids:
         pytest.skip("No Tamer cards in cards.json — cannot exercise has_tamer=True path")
@@ -112,7 +112,7 @@ from typing import Any, Dict, List, Optional
 
 import gymnasium
 
-from server import data_paths
+from data_paths import CARDS_JSON
 
 
 SCHEMA_VERSION = 1
@@ -121,9 +121,7 @@ SCHEMA_VERSION = 1
 def _load_card_metadata() -> Dict[str, Dict[str, Any]]:
     """Load cards.json once at module import; used by helpers below."""
     try:
-        return json.loads(
-            Path(data_paths.CARDS_JSON_PATH).read_text(encoding="utf-8")
-        )
+        return json.loads(Path(CARDS_JSON).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}
 
