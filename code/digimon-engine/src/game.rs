@@ -201,6 +201,16 @@ pub struct Game {
     pub rules: Rules,
     pub players: Vec<Player>,
     pub turn_count: u16,
+    /// Cumulative regular-digivolve count per player. Incremented on every
+    /// successful regular digivolve (including via DNA, which also bumps
+    /// `n_dna_digivolutions`). Indexed by Rust 0-based PlayerId. Monotonic
+    /// per game — never reset, never decremented. Backs the digivolve
+    /// reward-shaping signal in DigimonEnv. See
+    /// `docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md`.
+    pub n_digivolutions: [u32; 2],
+    /// Cumulative DNA-digivolve count per player. Incremented on every
+    /// successful DNA digivolve, on top of `n_digivolutions`.
+    pub n_dna_digivolutions: [u32; 2],
     pub current_phase: GamePhase,
     /// Memory seesaw value. Positive = favor of memory_pair.0, negative = favor of memory_pair.1.
     pub memory: i16,
@@ -753,6 +763,8 @@ impl Game {
             rules,
             players,
             turn_count: 0,
+            n_digivolutions: [0u32, 0u32],
+            n_dna_digivolutions: [0u32, 0u32],
             current_phase: GamePhase::Mulligan,
             memory: 0,
             memory_pair,
