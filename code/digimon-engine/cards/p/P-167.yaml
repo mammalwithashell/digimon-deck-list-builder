@@ -51,6 +51,13 @@ effects:
                 labels: ["Add to hand", "Place as bottom digivolution card"]
                 bind_as: dest_choice
                 prompt: "Add the chosen card to your hand or place it as this Digimon's bottom digivolution card?"
+            # After paying the top-level optional source-trash cost the
+            # reveal-and-route step is mandatory per printed text ("add 1
+            # ... or place 1 ..."). Both `choose_from_reveal` branches
+            # MUST be mandatory (optional: false / omitted) — natural
+            # fizzle handles the "zero matching cards in top-3" case.
+            # See `dsl-card-scripting-vocabulary` spec rule for
+            # `choose_from_reveal { optional: true }`.
             - if:
                 condition: { equals: [dest_choice, 0] }
                 then:
@@ -63,7 +70,6 @@ effects:
                       destination: hand
                       bind_as: picked
                       prompt: "Add 1 Mineral or Rock card to your hand"
-                      optional: true
             - if:
                 condition: { equals: [dest_choice, 1] }
                 then:
@@ -77,7 +83,6 @@ effects:
                         bottom_source_of: { target: this }
                       bind_as: picked
                       prompt: "Place 1 Mineral or Rock card as this Digimon's bottom digivolution card"
-                      optional: true
             - order_remainder:
                 of: you
                 destinations: [deck_top, deck_bottom]

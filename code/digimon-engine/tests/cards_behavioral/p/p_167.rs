@@ -313,3 +313,184 @@ impl ExecuteOneStep for DebugRunner {
 trait ExecuteOneStep {
     fn auto_resolve_one_step(&mut self) -> Result<(), digimon_engine::selection::SelectionError>;
 }
+
+/// Regression: after paying the top-level optional source-trash cost,
+/// the inner reveal pick MUST be mandatory (`is_optional == false`).
+/// Printed text: "add 1 [Mineral] or [Rock] trait card to the hand, OR
+/// place 1 such card as this Digimon's bottom digivolution card" — no
+/// "may" at the pick, so when an eligible candidate is in the revealed
+/// top-3 the player must add or place it; PASS is NOT accepted.
+///
+/// This pins the contract added by `fix-qa-bugs-aura-tick-reveal-picks`
+/// (the `choose_from_reveal { optional: true }` lines in the YAML's two
+/// dest_choice branches were dropped to enforce the no-approximations
+/// policy).
+#[test]
+fn p_167_post_cost_inner_reveal_pick_is_mandatory() {
+    use digimon_engine::action::space::PASS;
+
+    let mut host = make_test_card("ROCK-HOST", "Rock Host");
+    host.traits.push("Rock".to_string());
+    let mut mineral_pick = make_test_card("MIN-PICK", "MIN-PICK");
+    mineral_pick.traits.push("Mineral".to_string());
+    let filler_a = make_test_card("FILL-A", "FILL-A");
+    let filler_b = make_test_card("FILL-B", "FILL-B");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-167")
+        .expect("P-167 YAML parses and compiles")
+        .add_card(host)
+        .add_card(mineral_pick)
+        .add_card(filler_a)
+        .add_card(filler_b)
+        .build();
+
+    let host_handle = runner.place_on_field(0, "ROCK-HOST", None);
+    let _src_idx = runner.push_source(host_handle, "P-167");
+
+    // Stack deck top: MIN-PICK at top, then FILL-A, FILL-B (last pushed = top).
+    {
+        use digimon_engine::card_source::CardSource;
+        for id in ["FILL-B", "FILL-A", "MIN-PICK"] {
+            let data_idx = runner
+                .game
+                .card_data
+                .iter()
+                .position(|c| c.card_id == id)
+                .unwrap();
+            let card_index = runner.game.next_card_index();
+            runner.game.players[0]
+                .deck
+                .push(CardSource::new(data_idx, 0, card_index));
+        }
+    }
+
+    let compiled = runner.compiled_card("P-167").expect("compiled").clone();
+    let process = compiled
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::FaceUp
+                    && t.when.contains(&CompiledTiming::WhenDigivolving) =>
+            {
+                Some(t.process.clone())
+            }
+            _ => None,
+        })
+        .expect("face-up reveal clause present");
+
+    let p_167_top_card_handle = runner.top_card(host_handle);
+    {
+        let mut ctx = EffectContext::new(
+            &mut runner.game,
+            p_167_top_card_handle,
+            Some(host_handle),
+            0,
+        );
+        run_steps(&process, &mut ctx, &mut Bindings::new());
+    }
+
+    // Phase 1: source-trash cost prompt. Resolve to pay the cost.
+    // (Selection kind is SourceMulti — `select_own_sources` with min/max.)
+    assert!(
+        matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::SourceMulti { .. })
+        ),
+        "first pending is the source-trash cost selection (SourceMulti), got {:?}",
+        runner.pending_kind()
+    );
+    runner
+        .auto_resolve_one_step()
+        .expect("source-trash cost resolves");
+
+    // Phase 2: dest_choice effect prompt (Add to hand vs Place as bottom
+    // source). Pick action 0 = "Add to hand" branch — exercises the
+    // post-cost choose_from_reveal at the YAML's first dest_choice arm.
+    let dest_sel = runner
+        .pending_selection()
+        .expect("dest_choice prompt after cost paid");
+    assert_eq!(dest_sel.kind, SelectionKind::EffectChoice);
+    let add_to_hand_action = dest_sel
+        .valid_action_ids
+        .first()
+        .copied()
+        .expect("dest_choice exposes at least one action");
+    runner
+        .execute_action(0, add_to_hand_action)
+        .expect("dest_choice (Add to hand) resolves");
+
+    // Phase 3: the inner choose_from_reveal pick — THIS is where the
+    // mandatory-vs-optional contract lives. Card text has no "may" at the
+    // pick, so post-cost-paid it MUST be mandatory.
+    let pick = runner
+        .pending_selection()
+        .expect("inner reveal pick must surface");
+    assert!(
+        !pick.is_optional,
+        "P-167 post-cost-paid reveal pick must be mandatory (is_optional==false). \
+         Got is_optional={}. This is the regression `fix-qa-bugs-aura-tick-reveal-picks` \
+         closed by dropping `optional: true` from the YAML's two choose_from_reveal calls.",
+        pick.is_optional
+    );
+
+    // PASS=62 must be rejected — there's an eligible Mineral candidate.
+    let hand_before = runner.game.players[0].hand.len();
+    let _ = runner.game.resolve_selection(0, PASS);
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        hand_before,
+        "rejected PASS at mandatory inner pick must not move any card to hand"
+    );
+
+    // Auto-resolve picks MIN-PICK (the only Mineral candidate) and
+    // walks remaining steps (order_remainder).
+    runner
+        .auto_resolve()
+        .expect("inner pick + order_remainder resolve");
+
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "MIN-PICK"),
+        "MIN-PICK must land in hand after the mandatory inner pick is auto-resolved"
+    );
+}
+
+/// Regression: the top-level optional flag (the "by trashing 1 Mineral
+/// or Rock source" optional activation) remains optional. This is the
+/// other half of the printed-text reading — the COST IS optional, only
+/// the post-cost INNER PICK becomes mandatory. We verify this
+/// structurally so the rewrite doesn't accidentally also drop the
+/// top-level `optional: true`.
+#[test]
+fn p_167_top_level_effect_remains_optional() {
+    let runner = runner();
+    let card = runner
+        .compiled_card("P-167")
+        .expect("P-167 compiled card present");
+
+    let face_up = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::FaceUp
+                    && t.when.contains(&CompiledTiming::WhenDigivolving) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("face-up reveal clause present");
+
+    assert!(
+        face_up.optional,
+        "P-167 top-level effect MUST remain optional (printed text: 'by trashing 1 \
+         [Mineral] or [Rock] trait card from any of your Digimon's digivolution \
+         cards, ...' — the 'by trashing' is an optional activation cost). Only the \
+         inner choose_from_reveal post-cost-paid was made mandatory."
+    );
+}

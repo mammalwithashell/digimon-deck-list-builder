@@ -15,6 +15,7 @@ use digimon_dsl::compiled::{CompiledClause, CompiledColor, CompiledStep, Compile
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming};
+use digimon_engine::live_game::LiveGame;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 use digimon_engine::{CardEffect, CardHandle, Effect};
@@ -199,4 +200,170 @@ fn bt24_102_end_of_turn_refire_surfaces_target_then_effect_choice() {
         runner.pending_selection().is_none(),
         "all Homeros refire choices should be resolved"
     );
+}
+
+/// Regression: Homeros's `[All Turns] +1000 DP to your TS Digimon` filter
+/// aura must install on the SAME `LiveGame::play()` call that lands
+/// Homeros. Before the `live_game.rs` tick-discipline fix, the aura was
+/// only materialized on the next action that went through
+/// `decode_action` (e.g., a follow-up `pass_turn`). This test fails on
+/// that pre-fix code and passes after `LiveGame::play()` calls
+/// `tick_declarative_effects()` post-action.
+#[test]
+fn bt24_102_aura_installs_on_same_play_call() {
+    // Synthetic TS-trait Lv3 Digimon that Homeros's aura should buff.
+    // Built inline so the test owns the trait shape independently of any
+    // particular printed card pool.
+    let mut ts_probe = make_test_card("TS-LV3-PROBE", "TS Lv3 Probe");
+    ts_probe.card_kind = CardKind::Digimon;
+    ts_probe.level = Some(3);
+    ts_probe.dp = Some(1000);
+    ts_probe.traits = vec!["TS".to_string()];
+
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-102 YAML parses")
+        .add_card(ts_probe)
+        .add_card(make_test_card("FILL", "filler"))
+        .hand(0, &["BT24-102"])
+        .deck(0, &["FILL"; 10])
+        .deck(1, &["FILL"; 10])
+        .memory(5)
+        .start();
+
+    let mut runner = runner;
+    // Place the TS-trait probe on P0's battle area so Homeros's aura has
+    // an in-zone target the instant Homeros itself enters play.
+    let ts_handle = runner.place_on_field(0, "TS-LV3-PROBE", Some(0));
+
+    // Sanity: no aura modifiers before Homeros lands. The aura is keyed
+    // off Homeros's own presence, so the TS probe sees zero ChangeDp
+    // entries while only fillers / itself are on the field.
+    let mods_before = runner
+        .game
+        .modifiers
+        .permanent_modifiers_iter(ts_handle)
+        .filter(|m| {
+            matches!(
+                m.modifier,
+                digimon_engine::enums::ModifierType::ChangeDp
+            )
+        })
+        .count();
+    assert_eq!(
+        mods_before, 0,
+        "no ChangeDp modifier expected before Homeros enters play"
+    );
+
+    // Move the configured Game into LiveGame and play Homeros via the
+    // public wrapper that the MCP / CLI / PyO3 bindings all consume.
+    let mut lg = LiveGame::from_game(runner.game);
+    let result = lg.play(0, 0);
+    assert!(
+        result.ok,
+        "Homeros play should succeed (memory 5, cost 5): {:?}",
+        result.error
+    );
+
+    // Same-tick assertion: the aura modifier MUST be present without any
+    // follow-up action forcing a tick. This is the contract the
+    // `live-game-surface` spec delta added in
+    // `fix-qa-bugs-aura-tick-reveal-picks`.
+    let mods_view = lg.modifiers(ts_handle);
+    let dp_mods: Vec<_> = mods_view
+        .modifiers
+        .iter()
+        .filter(|m| m.modifier_type == "ChangeDp")
+        .collect();
+    assert_eq!(
+        dp_mods.len(),
+        1,
+        "Homeros aura must install exactly one ChangeDp modifier on the TS Digimon \
+         on the same LiveGame::play() call (no follow-up action). \
+         Got modifiers: {:?}",
+        mods_view.modifiers
+    );
+    assert_eq!(
+        dp_mods[0].value, 1000,
+        "Homeros aura is +1000 DP for TS Digimon"
+    );
+}
+
+/// Regression: `LiveGame::move_from_breeding()` must also tick
+/// declarative effects post-action so a moved breeding-area carrier
+/// either gets aura-buffed or becomes the aura source on the same call.
+#[test]
+fn bt24_102_aura_installs_on_move_from_breeding() {
+    // Same TS probe shape as the play() test.
+    let mut ts_probe = make_test_card("TS-LV3-PROBE", "TS Lv3 Probe");
+    ts_probe.card_kind = CardKind::Digimon;
+    ts_probe.level = Some(3);
+    ts_probe.dp = Some(1000);
+    ts_probe.traits = vec!["TS".to_string()];
+
+    // Breeding-area carrier carries the TS trait so it becomes Homeros's
+    // aura target when it moves into the battle area.
+    let mut bred_carrier = make_test_card("TS-BRED", "TS Bred Carrier");
+    bred_carrier.card_kind = CardKind::Digimon;
+    bred_carrier.level = Some(3);
+    bred_carrier.dp = Some(1000);
+    bred_carrier.traits = vec!["TS".to_string()];
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-102 YAML parses")
+        .add_card(ts_probe)
+        .add_card(bred_carrier)
+        .add_card(make_test_card("FILL", "filler"))
+        .deck(0, &["FILL"; 10])
+        .deck(1, &["FILL"; 10])
+        .memory(5)
+        .start();
+
+    // Stage: place Homeros (aura source) on P0's field, place an
+    // existing TS Digimon on field (already-targeted by the aura), and
+    // place the to-be-moved carrier in P0's breeding area.
+    let _homeros = runner.place_on_field(0, "BT24-102", Some(0));
+    let _existing = runner.place_on_field(0, "TS-LV3-PROBE", Some(0));
+    runner.place_in_breeding(0, "TS-BRED");
+
+    // Force a tick so the existing target picks up its current aura
+    // entry — this isolates the move_from_breeding tick from any earlier
+    // staging side effects.
+    runner.game.tick_declarative_effects();
+
+    // Move the breeding carrier to the battle area through the LiveGame
+    // wrapper.
+    let mut lg = LiveGame::from_game(runner.game);
+    let result = lg.move_from_breeding(0);
+    assert!(
+        result.ok,
+        "move_from_breeding should succeed when breeding has a carrier and battle area has room: {:?}",
+        result.error
+    );
+
+    // After the move, the just-moved TS carrier (a Homeros aura target)
+    // must already carry the +1000 ChangeDp modifier — the
+    // `tick_declarative_effects` call inside the LiveGame wrapper is the
+    // only thing that installs it.
+    let battle_area = &lg.field(0, digimon_engine::view::Perspective::God).battle_area;
+    let moved = battle_area
+        .iter()
+        .find(|p| p.top_card_id == "TS-BRED")
+        .map(|p| p.handle)
+        .expect("moved carrier appears in battle area after move_from_breeding");
+    let mods_view = lg.modifiers(moved);
+    let dp_mods: Vec<_> = mods_view
+        .modifiers
+        .iter()
+        .filter(|m| m.modifier_type == "ChangeDp")
+        .collect();
+    assert_eq!(
+        dp_mods.len(),
+        1,
+        "Homeros aura must install ChangeDp on the moved carrier on the same \
+         LiveGame::move_from_breeding() call. Got modifiers: {:?}",
+        mods_view.modifiers
+    );
+    assert_eq!(dp_mods[0].value, 1000);
 }

@@ -18,40 +18,44 @@ alt_paths:
 # [Mineral] or [Rock] trait and 1 card with the [LIBERATOR] trait among
 # them to the hand. Return the rest to the bottom of the deck."
 #
-# Phase 2 Track E (2026-05-17): authored via two sequential
-# `choose_from_reveal` picks (Mineral/Rock first, then LIBERATOR) followed
-# by `order_remainder { destinations: [deck_bottom] }`. Both picks are
-# optional — if no candidate matches the filter, the pick is skipped (the
-# revealed card stays in the pool until order_remainder routes it).
+# Authored via `select_reveal_buckets` matching the canonical
+# BT24-031 Elecmon pattern for "Add 1 [X] and 1 [Y]" two-pick reveals.
+# The printed text contains no "may", so both picks are mandatory when
+# eligible candidates exist; the engine surfaces a single combined
+# bucket prompt and falls through cleanly to `place_remainder_on_deck`
+# when a bucket has zero eligible candidates (natural fizzle).
 #
-# Equivalent to P-206's main reveal clause structure with a different
-# filter pair.
+# Previous revision (2026-05-17 — Phase 2 Track E) used two sequential
+# `choose_from_reveal { optional: true }` calls, which incorrectly let
+# the player decline picks even when eligible cards existed. See
+# `openspec/changes/fix-qa-bugs-aura-tick-reveal-picks` and the
+# `dsl-card-scripting-vocabulary` spec's `choose_from_reveal { optional:
+# true } requires printed-text "may"` requirement for the rule
+# motivating this rewrite.
 effects:
   - when: on_play
-    optional: false
     summary: "[On Play] Reveal top 3; add 1 Mineral/Rock and 1 LIBERATOR to hand; rest to bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
-      - choose_from_reveal:
-          of: you
-          filter:
-            any_of:
-              - trait_has: Mineral
-              - trait_has: Rock
-          destination: hand
-          bind_as: mineral_rock_pick
-          prompt: "Add 1 Mineral or Rock card to your hand"
-          optional: true
-      - choose_from_reveal:
-          of: you
-          filter: { trait_has: LIBERATOR }
-          destination: hand
-          bind_as: liberator_pick
-          prompt: "Add 1 LIBERATOR card to your hand"
-          optional: true
-      - order_remainder:
-          of: you
-          destinations: [deck_bottom]
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: mineral_rock_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_has: Mineral
+                  - trait_has: Rock
+            - bind_as: liberator_pick
+              min: 1
+              max: 1
+              filter: { trait_has: LIBERATOR }
+          no_duplicate_cards: true
+          prompt: "Add 1 [Mineral] or [Rock] and 1 [LIBERATOR] trait card"
+      - add_to_hand_from_reveal: { of: you, card: mineral_rock_pick }
+      - add_to_hand_from_reveal: { of: you, card: liberator_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
 
   - scope: inherited
     when: on_digivolution_card_trashed
