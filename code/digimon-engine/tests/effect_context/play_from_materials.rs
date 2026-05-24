@@ -320,3 +320,178 @@ fn play_from_materials_rollback_restores_source_position_when_play_rejected() {
         "no new permanent must be added on failed play"
     );
 }
+
+/// Regression for `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` —
+/// `play_from_materials` on a single-source carrier (where `source_index` IS
+/// the carrier's only card) must remove the now-emptied carrier slot from
+/// `battle_area` rather than leave a zombie permanent. Sibling of the
+/// digivolve-from-material fix landed in PR #533.
+///
+/// On current main (pre-fix): the carrier slot remains in `battle_area` with
+/// `card_sources.is_empty() == true`. Any subsequent trigger fan-out that
+/// iterates `battle_area` and calls `Permanent::top_card()` panics with
+/// `Permanent must have at least one card`.
+#[test]
+fn play_from_materials_emptying_source_does_not_leave_zombie_permanent() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("T-BASE", "BasePermTest"))
+        .memory(3)
+        .start();
+
+    // Single-source carrier — its only card is what we'll play out.
+    let carrier = runner.place_on_field(0, "T-BASE", None);
+    assert_eq!(
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "precondition: carrier has exactly 1 source"
+    );
+
+    let src_handle = runner.game.players[0].battle_area[carrier.index as usize]
+        .top_card()
+        .handle();
+
+    let played = {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
+        ctx.play_from_materials(carrier, 0, CostDelta::Free)
+    };
+    assert!(
+        played.is_some(),
+        "play_from_materials should succeed when index is in range"
+    );
+
+    // Post-condition: no `Permanent` in any player's `battle_area` may have
+    // empty `card_sources`. A "zombie" carrier (slot present, sources empty)
+    // is what trips `top_card()` in downstream trigger fan-out.
+    for (pid, player) in runner.game.players.iter().enumerate() {
+        for (slot, perm) in player.battle_area.iter().enumerate() {
+            assert!(
+                !perm.card_sources.is_empty(),
+                "zombie permanent at p{}.battle_area[{}]: card_sources is empty",
+                pid,
+                slot
+            );
+        }
+    }
+}
+
+/// Lower-indexed-source variant: the carrier is at a lower battle_area index
+/// than an unrelated permanent. After the soft-remove the unrelated
+/// permanent's index shifts down by 1. Asserts the cleanup leaves no zombie
+/// AND the unrelated permanent is still present at the shifted index.
+#[test]
+fn play_from_materials_emptying_lower_indexed_carrier_shifts_neighbor_index() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("T-BASE", "BasePermTest"))
+        .add_card(make_test_card("T-NEIGHBOR", "NeighborTest"))
+        .memory(3)
+        .start();
+
+    // Carrier at index 0 — will be soft-removed after play.
+    let carrier = runner.place_on_field(0, "T-BASE", None);
+    assert_eq!(carrier.index, 0);
+    // Neighbor at index 1 — should shift down to index 0.
+    let neighbor = runner.place_on_field(0, "T-NEIGHBOR", None);
+    assert_eq!(neighbor.index, 1);
+
+    let src_handle = runner.game.players[0].battle_area[carrier.index as usize]
+        .top_card()
+        .handle();
+    let neighbor_top_pre = runner.game.players[0].battle_area[neighbor.index as usize]
+        .top_card()
+        .handle();
+
+    let played = {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
+        ctx.play_from_materials(carrier, 0, CostDelta::Free)
+    };
+    assert!(played.is_some(), "play should succeed");
+
+    // No zombies anywhere.
+    for (pid, player) in runner.game.players.iter().enumerate() {
+        for (slot, perm) in player.battle_area.iter().enumerate() {
+            assert!(
+                !perm.card_sources.is_empty(),
+                "zombie at p{}.battle_area[{}]",
+                pid,
+                slot
+            );
+        }
+    }
+
+    // Neighbor must still be present (its original body) — at shifted index 0
+    // (carrier removed) with the played card now at the new tail index.
+    let neighbor_still_present = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.card_sources.iter().any(|c| c.handle() == neighbor_top_pre));
+    assert!(
+        neighbor_still_present,
+        "neighbor permanent must survive the carrier's soft-remove"
+    );
+}
+
+/// `Failed` rollback path on a single-source carrier: the play is rejected
+/// (battle area saturated via `field_slots = 1` cap), so the source is
+/// reinserted back into the carrier's stack. The carrier MUST remain in
+/// `battle_area` with its original non-empty `card_sources`; soft-remove
+/// must NOT have run.
+#[test]
+fn play_from_materials_failed_rollback_keeps_single_source_carrier() {
+    let mut rules = Rules::standard();
+    rules.field_slots = 1;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("T-BASE", "BasePermTest"))
+        .with_rules(rules)
+        .memory(3)
+        .start();
+
+    let carrier = runner.place_on_field(0, "T-BASE", None);
+    assert_eq!(
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "precondition: carrier has exactly 1 source"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        1,
+        "precondition: battle area is at field_slots cap (saturated)"
+    );
+
+    let src_handle = runner.game.players[0].battle_area[carrier.index as usize]
+        .top_card()
+        .handle();
+    let original_card_h = src_handle;
+
+    let result = {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
+        ctx.play_from_materials(carrier, 0, CostDelta::Free)
+    };
+
+    assert!(
+        result.is_none(),
+        "play_from_materials must return None when underlying play is rejected (saturated)"
+    );
+
+    // Carrier slot still present.
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        1,
+        "carrier slot must remain — Failed rollback must not soft-remove"
+    );
+    // Carrier still has its source.
+    assert_eq!(
+        runner.game.players[0].battle_area[0].card_sources.len(),
+        1,
+        "card_sources must be restored to 1 after rollback"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[0].card_sources[0].handle(),
+        original_card_h,
+        "rollback must restore the same source card"
+    );
+}

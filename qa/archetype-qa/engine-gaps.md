@@ -514,7 +514,10 @@ slots have the same shape but no prediction in their docstrings.
 - **Test results (post-fix):** lib 153/153 ✓, combat 206/206 ✓, keyword_phase_d 41/41 ✓, deletion_batching 7/7 ✓, cards_behavioral 3292/3300 (8 baseline pre-existing failures, 0 new regressions).
 - **Change reference:** `openspec/changes/archive/2026-05-23-align-deletion-with-dcgo-model/` (proposal, design, specs, tasks).
 
-### ~~Empty Permanent During Batched Deletion~~  [G-PERMANENT-EMPTY-DURING-BATCH-DELETION] — RESOLVED 2026-05-23 (mis-named; actually digivolve-from-material zombie)
+### ~~Empty Permanent During Batched Deletion — digivolve-from-material zombie~~  [G-PERMANENT-EMPTY-DIGIVOLVE-FROM-MATERIAL] — RESOLVED 2026-05-23 by PR #533
+
+> **Family-split note (2026-05-24):** the original `G-PERMANENT-EMPTY-DURING-BATCH-DELETION` family was mis-named (the cause was a digivolve-from-material zombie, not batch deletion). PR #533 closed ONE code path; sibling material-extraction paths (`play_from_materials`, `place_as_bottom_source`, replacement-redirect-to-Trash, place-into-security from material, `trash_source_ref`, `trash_card_source`) plus two effect-queue read-side panic sites remained open and were closed by the `fix-zombie-permanent-siblings` change. The narrative below is preserved verbatim from PR #533 for the digivolve-specific variant. The broader-class entry follows.
+
 - **Discovered in:** Generalist v4 training run, 2026-05-23, ~15 minutes after launch (recordings at `C:/Users/james/digimon-training-runs/models/generalist_v4/pilot_ppo_20260523_145133/recordings/train_env_003_game_000017_draw_crash.json` and `train_env_004_game_000024_draw_crash.json`).
 - **Scope:** Rust engine. Latent pre-PR #525; surfaced after `G-DELETION-RESUME-NESTED` was silenced (the deletion panic was firing ~1 per 12k steps in v3, drowning out this rarer empty-permanent case).
 - **Panic site:** [`code/digimon-engine/src/permanent.rs:134`](../../code/digimon-engine/src/permanent.rs) in `Permanent::top_card()` (and the `top_card_mut` sibling at line 141).
@@ -563,6 +566,30 @@ slots have the same shape but no prediction in their docstrings.
 - **Workaround:** Training crash-resilience wrapper catches the panic, writes a crash recording, synthesizes a terminal step → training continues. Each hit costs one game's worth of training samples (~0.5% of games at current rate).
 - **Identifier:** the panic message `Permanent must have at least one card` is verbatim from `.expect(...)` on `Vec::last()` — no card identity surfaces. Adding card identity to the panic message would speed up triage.
 
+### ~~Empty Permanent During Material Extraction (sibling class)~~  [G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION] — RESOLVED 2026-05-24 by `fix-zombie-permanent-siblings`
+- **Discovered in:** Generalist training run `pilot_ppo_20260523_215003`, started 2026-05-23 ~21:50, ~2h after PR #533 landed. 10 fresh `_draw_crash.json` panics across the first ~50 minutes (~0.25 panics/min — same order as the pre-PR-#533 rate). Recordings: `models/generalist_1m/pilot_ppo_20260523_215003/recordings/*_draw_crash.json` (10 files: game indices 42, 377, 551, 637, 660, 2556, 2619, 3174, 3490 from `train_env_000`; plus 1 from `eval_env_000`). Spread across 5 archetypes (BG Imperial, Rocks, Medusamon, DNA Omnimon, Puppets), confirming class-level rather than card-specific.
+- **Scope:** Rust engine. Latent pre-PR #533; surfaced after the digivolve-from-material variant was silenced (the dominant sibling) — same family-narrowing pattern that surfaced this whole class when PR #525 silenced `G-DELETION-RESUME-NESTED`.
+- **Panic site:** `code/digimon-engine/src/permanent.rs:134` in `Permanent::top_card()`. Identical message to the digivolve variant (`Permanent must have at least one card`); the panic message carries no card identity so disambiguation requires `RUST_BACKTRACE=full` or process-of-elimination via recording replay.
+- **Root cause (audited 2026-05-24, change `fix-zombie-permanent-siblings`):** `Game::soft_remove_if_emptied` (introduced by PR #533) was called from EXACTLY ONE production site — `effect_initiated_digivolve_from_source_inner` at `game_actions.rs:6481`. Six other production code paths mutate `card_sources` in ways that can empty the carrier without cleanup, all matching the same bug pattern PR #533 fixed:
+  1. `EffectContext::play_from_materials_suppress_on_play` (effect_context/mod.rs:3329) — explicit sibling flagged in the original gaps.md prose. 8 YAML cards trigger this: BT22-015 Omnimon `<Decode>`, BT13-110, BT13-112, BT20-083, BT23-072, EX4-060, EX9-021.
+  2. `Game::place_as_bottom_source_observed` (game_actions.rs:4426) — `<Save>` / Stash / BottomReturn. Common across archetypes.
+  3. Replacement-redirect-to-Trash branch (game_actions.rs:6141) — `WhenWouldPlaceInSecurity` replacement outcome.
+  4. Place-into-security from material (game_actions.rs:6192) — `EffectContext::place_on_security` with `CardSourceRef::Material`.
+  5. `Game::trash_source_ref` (game.rs:1058) — agent-selected "trash 1 of your digivolution sources" actions. **Rocks archetype hits this heavily**, accounting for the bulk of post-PR-#533 panics.
+  6. `EffectContext::trash_card_source` (effect_context/mod.rs:4028) — targeted by-handle source-trash.
+- **Layer 2 (read-side) gaps closed in the same change:** PR #533 hardened `enqueue_from_permanent`, `enqueue_from_breeding_permanent`, `queued_effect_source_is_live`, and `top_card_handle` to tolerate zombies. Two more iter callers were still unguarded:
+  - `find_event_gated_delay_permanent` (effect_queue.rs:2361) — iterates ALL battle_area perms calling raw `top_card()` on each; any zombie panics the scan. Likely dominant production panic site for non-Rocks decks.
+  - `event_gated_delay_source` (effect_queue.rs:2327) — raw `top_card()` on `qe.source_permanent`.
+- **Fix landed 2026-05-24:** soft-remove cleanup added at each of the 6 mutation sibling sites; Layer 2 zombie-skip guards added at the 2 effect-queue read sites. Per-sibling regression tests added (5 new files in `code/digimon-engine/tests/effect_context/`).
+- **Regression tests (in [`code/digimon-engine/tests/effect_context/`](../../code/digimon-engine/tests/effect_context/)):**
+  - `play_from_materials.rs` — `play_from_materials_emptying_source_does_not_leave_zombie_permanent`, `play_from_materials_emptying_lower_indexed_carrier_shifts_neighbor_index`, `play_from_materials_failed_rollback_keeps_single_source_carrier`
+  - `place_as_bottom_source_zombie.rs` — `place_as_bottom_source_from_material_emptying_carrier_removes_slot`, `place_as_bottom_source_lower_indexed_carrier_shifts_target_index`
+  - `place_on_security_zombie.rs` — `place_on_security_from_material_emptying_carrier_removes_slot`
+  - `trash_source_ref_zombie.rs` — `trash_source_ref_emptying_carrier_removes_slot`
+  - `trash_card_source.rs` (appended) — `trash_card_source_emptying_carrier_removes_slot`
+- **Remaining sibling out of scope (filed for follow-up):** `EffectContext::trash_top_source` (effect_context/mod.rs:4186) — same fix shape; discovered during the Task 1.1 audit but not bundled into this change to keep scope focused.
+- **Change reference:** `openspec/changes/fix-zombie-permanent-siblings/` (proposal, design, specs, tasks).
+
 ### Family-wide note: Single-Outstanding-Invariant Pattern
 
 The three bugs above plus their predicted siblings (`pending_post_deletion_replays` at [`game.rs:519-551`](../../code/digimon-engine/src/game.rs) is already a `Vec` and works correctly under nesting) all reflect a Phase 8 / Phase 2d design choice: when adding a parked-state slot, default to `Option<T>` with a `debug_assert!` guard, and audit later if nesting surfaces. The audit time is now. Recommend a tracking task to:
@@ -570,6 +597,14 @@ The three bugs above plus their predicted siblings (`pending_post_deletion_repla
 1. Audit every `pub(crate) ... : Option<T>` field on `Game` that represents in-flight resolution state.
 2. For each, decide stack-vs-refuse based on whether the action surface should expose nesting to the RL agent.
 3. Where stack semantics are chosen, write a behavioral test that exercises nesting depth ≥ 2 before promoting the field.
+
+### Family-wide note: Empty-Permanent class (updated 2026-05-24)
+
+PR #533's Layer 1 + Layer 2 pattern is now applied uniformly across the material-extraction surface (`fix-zombie-permanent-siblings`, 2026-05-24). Every production code path that mutates a `Permanent`'s `card_sources` Vec in a way that can empty it now invokes `Game::soft_remove_if_emptied` to drop the carrier slot; the two effect-queue read-side iter callers that previously panicked on zombies (`find_event_gated_delay_permanent`, `event_gated_delay_source`) now skip empty carriers in line with the existing `enqueue_from_permanent` / `queued_effect_source_is_live` pattern.
+
+The architectural follow-up — refactoring `Permanent::top_card()` to return `Option<&CardSource>` (DCGO's `Permanent.cs:1352-1367` shape, where every caller null-checks) — remains the long-term direction. Per-site `soft_remove_if_emptied` is a continued whack-a-mole if new material-extraction shapes land; the Option-returning refactor systemically prevents the failure mode. ~40 raw `top_card()` callers across `combat.rs`, `dsl_cards/predicate.rs`, `dna_digivolve.rs`, and `dsl_cards/formula_eval.rs` would be in-scope for that refactor. Tracking this here so the audit picks it up after the panic-family pressure subsides.
+
+One known sibling deferred from `fix-zombie-permanent-siblings`: `EffectContext::trash_top_source` (effect_context/mod.rs:4186) follows the same fix shape but was discovered after scope was set; file a follow-up change to close it.
 
 Crash recordings from the 2026-05-23 training smoke are preserved under
 `models/generalist_smoke/pilot_ppo_*/recordings/*draw_crash.json` and contain

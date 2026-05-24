@@ -182,3 +182,64 @@ fn trash_card_source_removes_bottom_card() {
         "BASE went to trash"
     );
 }
+
+// ── Test 3: Trashing the only remaining card removes the zombie carrier ──────
+
+/// Regression for `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` —
+/// `trash_card_source` removing the carrier's only card must soft-remove
+/// the now-empty slot rather than leave a zombie permanent in battle_area.
+///
+/// Setup: single-card permanent (stack = [ONLY]).
+/// Call: `trash_card_source(perm, ONLY)`.
+/// Expected post: no permanent in any battle_area has `card_sources.is_empty()`;
+/// ONLY is in trash; `OnDigivolutionCardTrashed` was fired BEFORE the slot
+/// removal so observers attribute the event to the correct host.
+#[test]
+fn trash_card_source_emptying_carrier_removes_slot() {
+    let mut r = DebugRunner::builder().add_card(make_digimon("ONLY")).start();
+
+    let tp = r.game.turn_player();
+    let perm_handle = r.place_on_field(tp, "ONLY", Some(0));
+    let only_handle = r.game.players[tp as usize].battle_area[perm_handle.index as usize]
+        .card_sources[0]
+        .handle();
+    assert_eq!(
+        r.game.players[tp as usize].battle_area[perm_handle.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "precondition: carrier has exactly 1 source"
+    );
+
+    {
+        let dummy_handle = only_handle;
+        let mut ctx = EffectContext::new(&mut r.game, dummy_handle, Some(perm_handle), tp);
+        ctx.trash_card_source(perm_handle, only_handle);
+    }
+
+    // No zombies anywhere.
+    for (pid, player) in r.game.players.iter().enumerate() {
+        for (slot, perm) in player.battle_area.iter().enumerate() {
+            assert!(
+                !perm.card_sources.is_empty(),
+                "zombie permanent at p{}.battle_area[{}]: card_sources is empty",
+                pid,
+                slot
+            );
+        }
+    }
+
+    // Carrier slot removed; ONLY is in trash.
+    assert_eq!(
+        r.game.players[tp as usize].battle_area.len(),
+        0,
+        "carrier slot must be soft-removed"
+    );
+    let trash = &r.game.players[tp as usize].trash;
+    assert_eq!(trash.len(), 1, "ONLY routed to trash");
+    assert_eq!(
+        trash[0].card_id(&r.game.card_data),
+        "ONLY",
+        "ONLY went to trash"
+    );
+}
