@@ -47,7 +47,7 @@
 #![allow(dead_code)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::card_data::CardData;
@@ -156,8 +156,10 @@ fn bt12_021_yaml_compiles_and_metadata_matches_printed() {
     );
 }
 
-/// Exactly one triggered clause exists, firing at OnPlay with own (FaceUp) scope.
+/// Exactly one OnPlay triggered clause exists, with own (FaceUp) scope.
 /// Printed has no "you may" → mandatory (not optional).
+/// Filter by OnPlay so we ignore the inherited EOT DNA-digivolve triggered
+/// clause (G-DSL-EOT-DNA-INLINE, 2026-05-24).
 #[test]
 fn bt12_021_has_one_on_play_triggered_clause_mandatory() {
     let runner = veemon_runner();
@@ -167,15 +169,12 @@ fn bt12_021_has_one_on_play_triggered_clause_mandatory() {
     let triggered: Vec<_> = card
         .effects
         .iter()
-        .filter_map(|c| {
-            if let CompiledClause::Triggered(t) = c {
-                Some(t)
-            } else {
-                None
-            }
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay) => Some(t),
+            _ => None,
         })
         .collect();
-    assert_eq!(triggered.len(), 1, "Exactly one triggered clause");
+    assert_eq!(triggered.len(), 1, "Exactly one OnPlay triggered clause");
     let clause = triggered[0];
     assert_eq!(clause.when, vec![CompiledTiming::OnPlay]);
     assert_eq!(
@@ -187,36 +186,50 @@ fn bt12_021_has_one_on_play_triggered_clause_mandatory() {
     assert!(!clause.once_per_turn, "No [Once Per Turn] on this clause");
 }
 
-/// One inherited alt_path_registration for DNA digivolve at end of own turn.
-/// Resolved gap 2026-05-02 in qa/dsl-vocab-gaps.md.
+/// G-DSL-EOT-DNA-INLINE (2026-05-24): inherited end-of-your-turn DNA
+/// digivolve is now authored via the `may_dna_digivolve_now` step verb
+/// inside a `Triggered` clause whose `when: end_of_your_turn, scope:
+/// inherited, optional: true`. The body is a single `MayDnaDigivolveNow`
+/// step that orchestrates the partner + target selections at trigger fire.
+///
+/// Predecessor authoring (`alt_path_registration { kind: dna_digivolve,
+/// scope: inherited, trigger: end_of_your_turn }`) registered a next-turn
+/// alt-path action and did not satisfy the printed "AT end of turn"
+/// surface — see proposal `may-dna-digivolve-now-dsl-step`.
 #[test]
-fn bt12_021_has_inherited_dna_digivolve_alt_path_registration() {
+fn bt12_021_has_inherited_dna_digivolve_may_step() {
     let runner = veemon_runner();
     let card = runner
         .compiled_card(CARD_ID)
         .expect("BT12-021 in embedded DSL pack");
-    let registration = card.effects.iter().find_map(|c| match c {
-        CompiledClause::Declarative(CompiledDeclarativeClause::AltPathRegistration {
-            scope,
-            trigger,
-            registers,
-            ..
-        }) if *scope == CompiledScope::Inherited
-            && *trigger == CompiledTiming::EndOfYourTurn
-            && registers.kind == CompiledAltPathKind::DnaDigivolve =>
+    let eot_dna_clause = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t)
+            if t.scope == CompiledScope::Inherited
+                && t.when.contains(&CompiledTiming::EndOfYourTurn)
+                && t.optional =>
         {
-            Some(())
+            Some(t)
         }
         _ => None,
     });
+    let t = eot_dna_clause
+        .expect("BT12-021 must carry an inherited optional EoT triggered clause for DNA digivolve");
     assert!(
-        registration.is_some(),
-        "BT12-021 must register an inherited end-of-your-turn DNA digivolve alt-path"
+        t.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::MayDnaDigivolveNow { ignore_requirements: true, cost: 0, .. }
+        )),
+        "BT12-021 EoT inherited body must contain a `MayDnaDigivolveNow` step \
+         with cost=0 and ignore_requirements=true"
     );
 }
 
-/// Card has exactly two effect clauses: one triggered (OnPlay) and one
-/// alt_path_registration declarative (inherited EOYT DNA digivolve).
+/// G-DSL-EOT-DNA-INLINE (2026-05-24): card now prints two triggered
+/// clauses — (1) the [On Play] reveal-3 trigger and (2) the inherited
+/// [End of Your Turn] DNA digivolve trigger (was previously an
+/// alt_path_registration declarative — see proposal
+/// `may-dna-digivolve-now-dsl-step`). No more alt_path_registration
+/// clauses on this card.
 #[test]
 fn bt12_021_clause_count_matches_card_text() {
     let runner = veemon_runner();
@@ -238,10 +251,10 @@ fn bt12_021_clause_count_matches_card_text() {
             )
         })
         .count();
-    assert_eq!(triggered, 1, "Exactly one triggered clause (OnPlay)");
+    assert_eq!(triggered, 2, "Exactly two triggered clauses expected");
     assert_eq!(
-        alt_path_regs, 1,
-        "Exactly one alt_path_registration (inherited EOYT DNA digivolve)"
+        alt_path_regs, 0,
+        "Zero alt_path_registration clauses expected after EoT DNA migration"
     );
 }
 
@@ -552,40 +565,38 @@ fn bt12_021_on_play_remainder_goes_to_deck_bottom_not_trash() {
 // Section 4 — Inherited EOYT alt_path_registration (structural)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// The compiled card carries the inherited alt_path_registration for DNA
-/// digivolve with trigger end_of_your_turn and scope inherited.
-/// (Already asserted in Section 1 — this is an explicit integration confirm
-/// via the structural API, separate test for clear failure attribution.)
+/// G-DSL-EOT-DNA-INLINE (2026-05-24): the inherited EOT DNA digivolve is
+/// authored as a `Triggered` clause with `scope: inherited, when:
+/// end_of_your_turn, optional: true` and a body containing a single
+/// `MayDnaDigivolveNow` step. This test confirms that shape (the same
+/// integration crosscheck as `bt12_021_has_inherited_dna_digivolve_may_step`,
+/// kept as a separate test for clear failure attribution).
 #[test]
-fn bt12_021_alt_path_registration_has_correct_trigger_and_scope() {
+fn bt12_021_inherited_eot_dna_digivolve_has_correct_trigger_and_scope() {
     let runner = veemon_runner();
     let card = runner
         .compiled_card(CARD_ID)
         .expect("BT12-021 in embedded DSL pack");
 
-    let reg = card.effects.iter().find_map(|c| match c {
-        CompiledClause::Declarative(CompiledDeclarativeClause::AltPathRegistration {
-            scope,
-            trigger,
-            registers,
-            ..
-        }) => Some((*scope, *trigger, registers.kind.clone())),
+    let clause = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t)
+            if t.scope == CompiledScope::Inherited
+                && t.when.contains(&CompiledTiming::EndOfYourTurn)
+                && t.optional =>
+        {
+            Some(t)
+        }
         _ => None,
     });
-
-    let Some((scope, trigger, kind)) = reg else {
-        panic!("BT12-021 must have an AltPathRegistration declarative clause");
-    };
-    assert_eq!(scope, CompiledScope::Inherited, "scope must be Inherited");
-    assert_eq!(
-        trigger,
-        CompiledTiming::EndOfYourTurn,
-        "trigger must be EndOfYourTurn"
+    let t = clause.expect(
+        "BT12-021 must have an inherited optional EoT triggered clause for DNA digivolve",
     );
-    assert_eq!(
-        kind,
-        CompiledAltPathKind::DnaDigivolve,
-        "registers.kind must be DnaDigivolve"
+    assert!(
+        t.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::MayDnaDigivolveNow { ignore_requirements: true, cost: 0, .. }
+        )),
+        "process must contain a MayDnaDigivolveNow step with cost=0 and ignore_requirements=true"
     );
 }
 
@@ -632,34 +643,32 @@ fn bt12_021_on_play_by_opponent_does_not_affect_player_0_hand() {
     );
 }
 
-/// The inherited alt_path_registration (clause 2) only registers DNA digivolve
-/// on the *owner's* end of turn, not the opponent's. This is structural and
-/// is enforced by the `of: you` in `applies_to` plus `trigger: end_of_your_turn`.
-/// Verified as a compiled-card check — the `applies_to` must scope to `you`.
+/// G-DSL-EOT-DNA-INLINE (2026-05-24): the inherited EOT DNA digivolve
+/// trigger fires on "end of YOUR turn" — scoped to the owner via the
+/// `EndOfYourTurn` timing on the triggered clause. The behavioral test that
+/// the action only appears for the owner (not the opponent) is handled by
+/// the G2 mechanic-level test suite. Here we assert the timing is
+/// `EndOfYourTurn` (not `EndOfTurn`), which encodes the owner-scoped trigger.
 #[test]
-fn bt12_021_alt_path_registration_applies_to_owner_not_opponent() {
+fn bt12_021_inherited_eot_dna_digivolve_fires_on_owner_turn_only() {
     let runner = veemon_runner();
     let card = runner
         .compiled_card(CARD_ID)
         .expect("BT12-021 in embedded DSL pack");
 
-    let reg = card.effects.iter().find_map(|c| match c {
-        CompiledClause::Declarative(CompiledDeclarativeClause::AltPathRegistration {
-            applies_to,
-            ..
-        }) => Some(applies_to.clone()),
+    let clause = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t)
+            if t.scope == CompiledScope::Inherited
+                && t.when.contains(&CompiledTiming::EndOfYourTurn) =>
+        {
+            Some(t)
+        }
         _ => None,
     });
-
     assert!(
-        reg.is_some(),
-        "AltPathRegistration must have an applies_to field"
+        clause.is_some(),
+        "inherited EoT DNA-digivolve clause must use EndOfYourTurn timing \
+         (owner-scoped); a generic EndOfTurn timing would also fire on the \
+         opponent's end step which the printed text forbids"
     );
-    // The applies_to should scope to the owner's battle area, not the opponent.
-    // We can't directly inspect CompiledAltPathFilter internals here without
-    // knowing the exact field names — the behavioral test is that the DNA
-    // digivolve action appears for player 0 at end of own turn (via action mask)
-    // and not for the opponent. That behavioral assertion is handled by the G2
-    // mechanic-level test suite. Here we assert the registration exists.
-    let _ = reg;
 }

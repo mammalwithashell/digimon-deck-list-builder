@@ -86,7 +86,7 @@
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming, CompiledTriggeredClause,
+    CompiledStep, CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_dsl::{compile::compile, spec::CardSpec};
 use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
@@ -222,18 +222,20 @@ fn bt22_017_has_standard_lv2_blue_digivolve_alt_path_at_cost_zero() {
 #[test]
 fn bt22_017_has_on_play_triggered_clause_mandatory() {
     let card = dsl_card_data::compiled(CARD_ID);
+    // Filter by OnPlay so we ignore the inherited EOT DNA-digivolve triggered
+    // clause (G-DSL-EOT-DNA-INLINE, 2026-05-24).
     let triggered: Vec<&CompiledTriggeredClause> = card
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay) => Some(t),
             _ => None,
         })
         .collect();
     assert_eq!(
         triggered.len(),
         1,
-        "exactly one triggered clause (OnPlay reveal)"
+        "exactly one OnPlay triggered clause (reveal-3 + two-bucket)"
     );
     let clause = triggered[0];
     assert!(
@@ -258,39 +260,48 @@ fn bt22_017_has_on_play_triggered_clause_mandatory() {
 }
 
 #[test]
-fn bt22_017_has_inherited_dna_digivolve_alt_path_registration() {
-    // RESOLVED 2026-05-02 (qa/dsl-vocab-gaps.md BT22-008/BT22-017 entry):
-    // inherited end-of-your-turn DNA digivolve is authored as an
-    // `alt_path_registration` declarative clause with
-    // `kind: dna_digivolve, scope: inherited, trigger: end_of_your_turn`.
+fn bt22_017_has_inherited_dna_digivolve_may_step() {
+    // G-DSL-EOT-DNA-INLINE (2026-05-24): inherited end-of-your-turn DNA
+    // digivolve is now authored via the `may_dna_digivolve_now` step verb
+    // inside a `Triggered` clause whose `when: end_of_your_turn, scope:
+    // inherited, optional: true`. The body is a single `MayDnaDigivolveNow`
+    // step that orchestrates the partner + target selections at trigger fire.
+    //
+    // Predecessor authoring (`alt_path_registration { kind: dna_digivolve,
+    // scope: inherited, trigger: end_of_your_turn }`) registered a next-turn
+    // alt-path action and did not satisfy the printed "AT end of turn"
+    // surface — see proposal `may-dna-digivolve-now-dsl-step`.
     let card = dsl_card_data::compiled(CARD_ID);
-    let registration = card.effects.iter().find_map(|c| match c {
-        CompiledClause::Declarative(CompiledDeclarativeClause::AltPathRegistration {
-            scope,
-            trigger,
-            registers,
-            ..
-        }) if *scope == CompiledScope::Inherited
-            && *trigger == CompiledTiming::EndOfYourTurn
-            && registers.kind == CompiledAltPathKind::DnaDigivolve =>
+    let eot_dna_clause = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t)
+            if t.scope == CompiledScope::Inherited
+                && t.when.contains(&CompiledTiming::EndOfYourTurn)
+                && t.optional =>
         {
-            Some(())
+            Some(t)
         }
         _ => None,
     });
+    let t = eot_dna_clause
+        .expect("BT22-017 must carry an inherited optional EoT triggered clause for DNA digivolve");
     assert!(
-        registration.is_some(),
-        "BT22-017 must register an inherited end-of-your-turn DNA digivolve alt-path \
-         (mirrors BT22-008)"
+        t.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::MayDnaDigivolveNow { ignore_requirements: true, cost: 0, .. }
+        )),
+        "BT22-017 EoT inherited body must contain a `MayDnaDigivolveNow` step \
+         with cost=0 and ignore_requirements=true"
     );
 }
 
 #[test]
 fn bt22_017_clause_count_matches_card_text() {
-    // Card prints exactly two effect clauses:
-    //   (1) the [On Play] reveal-3 + 2-bucket trigger
-    //   (2) the inherited [End of Your Turn] DNA digivolve registration.
-    // No other effects, no aura, no cost reduction, no static keyword grants.
+    // G-DSL-EOT-DNA-INLINE (2026-05-24): card now prints two triggered
+    // clauses — (1) the [On Play] reveal-3 + 2-bucket trigger and (2) the
+    // inherited [End of Your Turn] DNA digivolve trigger (was previously
+    // an alt_path_registration declarative — see proposal
+    // `may-dna-digivolve-now-dsl-step`). No more alt_path_registration
+    // clauses on this card.
     let card = dsl_card_data::compiled(CARD_ID);
     let triggered = card
         .effects
@@ -307,10 +318,10 @@ fn bt22_017_clause_count_matches_card_text() {
             )
         })
         .count();
-    assert_eq!(triggered, 1, "Exactly one triggered clause expected");
+    assert_eq!(triggered, 2, "Exactly two triggered clauses expected");
     assert_eq!(
-        alt_path_regs, 1,
-        "Exactly one alt_path_registration clause expected"
+        alt_path_regs, 0,
+        "Zero alt_path_registration clauses expected after EoT DNA migration"
     );
 }
 

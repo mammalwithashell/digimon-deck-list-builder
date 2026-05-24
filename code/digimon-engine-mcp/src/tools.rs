@@ -44,7 +44,7 @@ pub fn list() -> Vec<Value> {
     ));
     all.push(tool(
         "new_game_debug",
-        "Construct a fresh game from explicit hand + deck per player. No shuffling. Mirrors DebugRunnerBuilder.",
+        "Construct a fresh game from explicit hand + deck per player. No shuffling. Mirrors DebugRunnerBuilder. Optionally seed `security` and `digitama` zones and initial `memory`.",
         json!({
             "type": "object",
             "required": ["hands", "decks", "first_player"],
@@ -56,6 +56,22 @@ pub fn list() -> Vec<Value> {
                 "decks": {
                     "type": "object",
                     "additionalProperties": { "type": "array", "items": { "type": "string" } }
+                },
+                "security": {
+                    "type": "object",
+                    "description": "Per-player security stack (last element = top of stack). Optional.",
+                    "additionalProperties": { "type": "array", "items": { "type": "string" } }
+                },
+                "digitama": {
+                    "type": "object",
+                    "description": "Per-player digi-egg deck (last element = top of deck). Optional.",
+                    "additionalProperties": { "type": "array", "items": { "type": "string" } }
+                },
+                "memory": {
+                    "type": "integer",
+                    "description": "Optional initial memory for the active player (positive = active has memory).",
+                    "minimum": -10,
+                    "maximum": 10
                 },
                 "first_player": { "type": "integer", "minimum": 0, "maximum": 1 }
             }
@@ -528,6 +544,7 @@ fn tool_new_game_debug(
     card_data: &HashMap<String, CardData>,
 ) -> Result<Value, String> {
     let first_player = get_u8(&args, "first_player")?;
+    // Required zone map (errors if missing or wrong shape).
     let parse_zone_map = |key: &str| -> Result<HashMap<u8, Vec<String>>, String> {
         let obj = args
             .get(key)
@@ -548,9 +565,52 @@ fn tool_new_game_debug(
         }
         Ok(out)
     };
+    // Optional zone map (returns empty HashMap if missing, errors only on bad shape).
+    let parse_optional_zone_map = |key: &str| -> Result<HashMap<u8, Vec<String>>, String> {
+        let Some(obj) = args.get(key) else { return Ok(HashMap::new()); };
+        if obj.is_null() {
+            return Ok(HashMap::new());
+        }
+        let obj = obj
+            .as_object()
+            .ok_or_else(|| format!("{} must be an object or omitted", key))?;
+        let mut out = HashMap::new();
+        for (k, v) in obj {
+            let pid: u8 = k
+                .parse()
+                .map_err(|_| format!("{} key '{}' is not a u8", key, k))?;
+            let cards = v
+                .as_array()
+                .ok_or_else(|| format!("{}.{} must be an array", key, k))?
+                .iter()
+                .map(|s| s.as_str().map(String::from).ok_or_else(|| format!("non-string in {}.{}", key, k)))
+                .collect::<Result<Vec<_>, _>>()?;
+            out.insert(pid, cards);
+        }
+        Ok(out)
+    };
     let hands = parse_zone_map("hands")?;
     let decks = parse_zone_map("decks")?;
-    match LiveGame::from_debug(hands, decks, first_player, card_data.clone()) {
+    let securities = parse_optional_zone_map("security")?;
+    let digitamas = parse_optional_zone_map("digitama")?;
+    let initial_memory: Option<i16> = match args.get("memory") {
+        None => None,
+        Some(v) if v.is_null() => None,
+        Some(v) => Some(
+            v.as_i64()
+                .and_then(|n| i16::try_from(n).ok())
+                .ok_or_else(|| "memory must be an integer in i16 range".to_string())?,
+        ),
+    };
+    match LiveGame::from_debug_with_zones(
+        hands,
+        decks,
+        securities,
+        digitamas,
+        first_player,
+        initial_memory,
+        card_data.clone(),
+    ) {
         Ok(lg) => match registry.insert(lg) {
             Ok(id) => Ok(json!({ "ok": true, "game_id": id })),
             Err(e) => Ok(registry_err_to_value(e)),

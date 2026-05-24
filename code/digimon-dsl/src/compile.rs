@@ -2578,6 +2578,25 @@ fn compile_step(
                 security_attack: u.security_attack.unwrap_or(0),
             }),
         },
+        S::MayDnaDigivolveNow(a) => CompiledStep::MayDnaDigivolveNow {
+            anchor: compile_binding_ref(&a.anchor),
+            partner_filter: compile_predicate(
+                &a.partner_filter,
+                &format!("{prefix}.partner_filter"),
+                card_id,
+                errors,
+            ),
+            target_filter: compile_predicate(
+                &a.target_filter,
+                &format!("{prefix}.target_filter"),
+                card_id,
+                errors,
+            ),
+            cost: a.cost,
+            ignore_requirements: a.ignore_requirements,
+            optional: a.optional,
+            prompt: a.prompt.clone(),
+        },
         S::ForceAttack(a) => CompiledStep::ForceAttack {
             attacker: compile_binding_ref(&a.attacker),
             targets: compile_attack_target_spec(a.targets),

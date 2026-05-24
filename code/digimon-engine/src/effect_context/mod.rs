@@ -5873,6 +5873,120 @@ impl<'a> EffectContext<'a> {
         self.force_opponent_attack_with_upgrade(attacker, targets, without_suspending, prompt, None)
     }
 
+    /// G-DSL-EOT-DNA-INLINE — surface an inline DNA digivolve choice at
+    /// trigger fire time. Orchestrates the three-stage selection chain:
+    /// (1) partner permanent from own field (anchor excluded), (2) target
+    /// Digimon card from controller's hand, (3) call to the existing
+    /// `effect_initiated_dna_digivolve` primitive.
+    ///
+    /// `anchor` is the source DNA material (typically the trigger source).
+    /// The partner filter is re-wrapped internally to exclude the anchor
+    /// handle, so callers need not encode that exclusion in the predicate.
+    ///
+    /// `optional` here is the eligibility "skip silently" gate — when
+    /// either no eligible partner exists on own field OR no eligible target
+    /// exists in hand, the step is a clean no-op regardless of this flag.
+    /// The outer triggered clause's own `optional: true` provides the
+    /// player-visible "may" via the trigger-order bundle. When `optional`
+    /// is true, the partner selection prompt allows decline (the player
+    /// can back out at the partner-pick stage).
+    ///
+    /// Backed by `effect_initiated_dna_digivolve`; carries identical
+    /// trigger semantics (`WhenDigivolving → OnDnaDigivolve → OnDigivolve`
+    /// with per-trigger drains).
+    pub fn may_dna_digivolve_now(
+        &mut self,
+        anchor: PermanentHandle,
+        partner_filter: std::sync::Arc<
+            dyn Fn(&Game, PermanentHandle) -> bool + Send + Sync,
+        >,
+        target_filter: std::sync::Arc<dyn Fn(&Game, usize) -> bool + Send + Sync>,
+        cost: u16,
+        ignore_requirements: bool,
+        optional: bool,
+        partner_prompt: Option<&str>,
+        target_prompt: Option<&str>,
+    ) {
+        // Defensive: anchor must still be on its player's battle area.
+        if (anchor.index as usize) >= self.game.player(anchor.player).battle_area.len() {
+            return;
+        }
+
+        // Quick install-time eligibility checks. If either side has zero
+        // candidates the step is a silent no-op (matches DCGO's
+        // `CanActivateCondition` returning false).
+        let controller = self.player;
+        let has_partner = {
+            let battle_len = self.game.player(controller).battle_area.len();
+            (0..battle_len).any(|i| {
+                let h = PermanentHandle {
+                    player: controller,
+                    index: i as u8,
+                };
+                h != anchor && partner_filter(self.game, h)
+            })
+        };
+        if !has_partner {
+            return;
+        }
+        let has_target = {
+            let hand_len = self.game.player(controller).hand.len();
+            (0..hand_len).any(|i| target_filter(self.game, i))
+        };
+        if !has_target {
+            return;
+        }
+
+        // Snapshot the partner/target predicates for the chained closures.
+        let partner_filter_for_install = std::sync::Arc::clone(&partner_filter);
+        let target_filter_for_inner = std::sync::Arc::clone(&target_filter);
+
+        let partner_prompt = partner_prompt
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "Choose a DNA digivolve partner".to_string());
+        let target_prompt = target_prompt
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "Choose a Digimon card from hand to DNA digivolve into".to_string());
+
+        // Install partner selection. The anchor exclusion is enforced inline.
+        self.select_own_permanent(
+            &partner_prompt,
+            optional,
+            move |game, h| h != anchor && partner_filter_for_install(game, h),
+            move |ctx, partner| {
+                // Inner stage: install target hand selection.
+                let target_filter_for_inner = std::sync::Arc::clone(&target_filter_for_inner);
+                ctx.select_hand(
+                    controller,
+                    &target_prompt,
+                    optional,
+                    move |g, i| target_filter_for_inner(g, i),
+                    move |ctx, hand_idx| {
+                        // Final stage: resolve hand_idx to a CardHandle and
+                        // delegate to the existing engine primitive.
+                        let card = match ctx
+                            .game
+                            .player(controller)
+                            .hand
+                            .get(hand_idx)
+                            .map(|c| c.handle())
+                        {
+                            Some(c) => c,
+                            None => return,
+                        };
+                        ctx.effect_initiated_dna_digivolve(
+                            anchor,
+                            partner,
+                            card,
+                            cost as i32,
+                            ignore_requirements,
+                        );
+                    },
+                );
+            },
+        );
+    }
+
     pub fn force_opponent_attack_with_upgrade(
         &mut self,
         attacker: PermanentHandle,

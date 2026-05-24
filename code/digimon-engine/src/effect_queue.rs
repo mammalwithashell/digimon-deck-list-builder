@@ -727,17 +727,57 @@ impl Game {
                 return;
             };
 
+            // Filter queued triggers whose clause-level condition would
+            // currently fail. They would resolve as no-ops if fired
+            // (condition check in `run_queued_effect_inner` skips the
+            // body), so they shouldn't inflate `bundle.len()` and force a
+            // spurious `TriggerOrder` prompt over a single fireable
+            // trigger. Mirrors DCGO's "collect ICardEffects with
+            // CanUseCondition passing" semantic — the trigger queue
+            // should only surface user-visible choices for triggers
+            // that have at least one viable effect path.
+            //
+            // **Non-destructive filter (2026-05-24, may-dna-digivolve-now
+            // follow-up).** The exclusion is transient to this iteration:
+            // entries stay in `effect_queue` so a later iteration can
+            // re-evaluate their condition after a sibling trigger's body
+            // has mutated state. Canonical case: BT22-008's `[EoT]`
+            // inherited DNA digivolve creates an Omnimon-named Digimon
+            // mid-drain → BT17-081's slot 2 `[EoT]` clause (gated on
+            // `any_permanent: { name_contains: Omnimon }`) now passes its
+            // condition and fires the "1 of your Omnimon may attack a
+            // player" prompt in the SAME EoT batch, matching DCGO.
+            //
+            // Source-liveness and once-per-turn checks are NOT applied
+            // here: source-liveness can become false mid-drain due to a
+            // sibling trigger's body trashing the source, and the
+            // run-time check handles that case; OPT lockout is
+            // accounting-only and doesn't change user-visible choice.
+            let non_firing: Vec<usize> =
+                self.non_firing_queued_effect_indices_for(chooser);
+
             let bundle: Vec<usize> = self
                 .effect_queue
                 .iter()
                 .enumerate()
-                .filter_map(|(i, qe)| (qe.controller == chooser).then_some(i))
+                .filter_map(|(i, qe)| {
+                    (qe.controller == chooser && !non_firing.contains(&i)).then_some(i)
+                })
                 .collect();
 
-            debug_assert!(
-                !bundle.is_empty(),
-                "next_chooser returned a player with no queued effects"
-            );
+            if bundle.is_empty() {
+                // Every queued effect for this chooser is currently
+                // non-firing. They can't fire on their own — and no
+                // OTHER chooser's body can mutate state to satisfy them
+                // (the queue is per-chooser-batched). Drop them and
+                // continue with the next chooser.
+                //
+                // Reverse-order removal so earlier indices stay valid.
+                for idx in non_firing.into_iter().rev() {
+                    self.effect_queue.remove(idx);
+                }
+                continue;
+            }
 
             if bundle.len() == 1 {
                 let idx = bundle[0];
@@ -2001,6 +2041,114 @@ impl Game {
         // Defensive fallback — if somehow no turn-order player owns any
         // queued effect (e.g. eliminated controller), use the front entry.
         self.effect_queue.front().map(|qe| qe.controller)
+    }
+
+    /// Return the indices of queued effects owned by `chooser` whose
+    /// clause-level `condition` would currently fail — i.e. those that
+    /// should be EXCLUDED from this drain iteration's bundle.
+    ///
+    /// **Non-destructive (2026-05-24, may-dna-digivolve-now follow-up).**
+    /// Earlier versions removed these entries from `effect_queue`
+    /// outright. That broke the canonical "BT22-008 EoT DNA digivolve
+    /// creates Omnimon → BT17-081 [EoT] `name_contains: Omnimon` clause
+    /// now fires" chain: BT17-081's slot 2 condition currently fails
+    /// (no Omnimon on field), so it was pruned at queue time — even
+    /// though BT22-008's body, scheduled to run earlier in the same
+    /// drain, would create the Omnimon that makes BT17-081's condition
+    /// pass. The DNA-digivolved Omnimon never got attacked because
+    /// BT17-081 slot 2 was already gone from the queue.
+    ///
+    /// The fix: filter the bundle each iteration (read-only) so a
+    /// trigger whose condition currently fails gets a fresh re-check
+    /// after its sibling triggers' bodies mutate state. Entries whose
+    /// condition will never pass cleanly drain at the bottom of the
+    /// loop (`drain_effect_queue` advances past them via the next
+    /// chooser).
+    ///
+    /// Does NOT filter on source-liveness (can change mid-drain due to
+    /// sibling-trigger trashing) or on once-per-turn caps (accounting
+    /// only, doesn't change visible choice). Those keep their existing
+    /// run-time checks inside `run_queued_effect_inner`.
+    ///
+    /// Conditions are evaluated with each queued effect's own
+    /// `trigger_context` installed via `TriggerContextGuard`, mirroring
+    /// the pre-cost-prompt branch's evaluation in `drain_effect_queue`.
+    ///
+    /// Granted-triggered-effect entries (`granted_effect_id.is_some()`)
+    /// are NEVER excluded — their bodies have no `Effect` metadata and
+    /// no clause-level condition, so the "would no-op" predicate is
+    /// undefined for them. They keep their existing run-time path.
+    fn non_firing_queued_effect_indices_for(&mut self, chooser: PlayerId) -> Vec<usize> {
+        let mut to_skip: Vec<usize> = Vec::new();
+        for i in 0..self.effect_queue.len() {
+            let qe = &self.effect_queue[i];
+            if qe.controller != chooser {
+                continue;
+            }
+            if qe.granted_effect_id.is_some() {
+                // Granted effects have no clause condition — keep them.
+                continue;
+            }
+            // Snapshot the fields we need; release the borrow before
+            // entering the trigger-context guard (which needs &mut self).
+            let card_id = qe.card_id.clone();
+            let source_card = qe.source_card;
+            let source_permanent = qe.source_permanent;
+            let source_kind = qe.source_kind;
+            let controller = qe.controller;
+            let effect_slot = qe.effect_slot as usize;
+            let trigger_context = qe.trigger_context.clone();
+            let dna_origin_context = qe.dna_origin_context;
+
+            // Look up the effect's condition closure. If the effect
+            // doesn't exist anymore (carrier removed, registry mutated),
+            // the run-time path returns silently — treat the same here:
+            // keep the queued entry, let run-time handle it.
+            //
+            // `effects_for_card` returns an OWNED `Vec<Effect>` so the
+            // condition closure can be evaluated against `&mut self`
+            // without lifetime conflict — same idiom as the pre-cost
+            // prompt branch's evaluation in `drain_effect_queue`.
+            //
+            // Also temporarily install the queued effect's
+            // `dna_origin_context` onto `Game::current_dna_origin` so
+            // conditions that branch on DNA-origin (e.g. shared
+            // `[When Digivolving]` clauses with DNA-only rider arms)
+            // see the same value the run-time path would. Mirrors the
+            // `prev_dna_origin` save/restore in `run_queued_effect`.
+            let prev_dna_origin = self.current_dna_origin;
+            if dna_origin_context.is_some() {
+                self.current_dna_origin = dna_origin_context;
+            }
+            let condition_passes = if let Some(effects) =
+                self.effects_for_card(&card_id, source_card)
+            {
+                if let Some(eff) = effects.get(effect_slot) {
+                    if let Some(cond) = &eff.condition {
+                        let trigger_guard = TriggerContextGuard::install(self, trigger_context);
+                        let ctx = EffectContext::new_with_source_kind(
+                            &mut *trigger_guard.game,
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller,
+                        );
+                        cond(&ctx.as_read())
+                    } else {
+                        true // no condition → keep
+                    }
+                } else {
+                    true // slot missing → keep, let run-time handle it
+                }
+            } else {
+                true // effects missing → keep
+            };
+            self.current_dna_origin = prev_dna_origin;
+            if !condition_passes {
+                to_skip.push(i);
+            }
+        }
+        to_skip
     }
 
     /// Execute a single queued effect: re-look-up, condition check,

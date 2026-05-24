@@ -226,8 +226,40 @@ impl LiveGame {
         first_player: PlayerId,
         card_data: HashMap<String, CardData>,
     ) -> Result<Self, LiveGameError> {
+        Self::from_debug_with_zones(
+            hands,
+            decks,
+            HashMap::new(),
+            HashMap::new(),
+            first_player,
+            None,
+            card_data,
+        )
+    }
+
+    /// Extended variant of `from_debug` that also lets callers seed the
+    /// security stack, digitama (digi-egg) deck, and starting memory.
+    /// Mirrors `DebugRunnerBuilder::security`, `.digitama`, `.memory`.
+    ///
+    /// Used by the MCP `new_game_debug` tool so debug sessions can
+    /// exercise security-trash effects and memory-seeded mid-game
+    /// shapes without going through gameplay-driven setup.
+    pub fn from_debug_with_zones(
+        hands: HashMap<PlayerId, Vec<String>>,
+        decks: HashMap<PlayerId, Vec<String>>,
+        securities: HashMap<PlayerId, Vec<String>>,
+        digitamas: HashMap<PlayerId, Vec<String>>,
+        first_player: PlayerId,
+        initial_memory: Option<i16>,
+        card_data: HashMap<String, CardData>,
+    ) -> Result<Self, LiveGameError> {
         let mut missing: Vec<String> = Vec::new();
-        for zone in hands.values().chain(decks.values()) {
+        for zone in hands
+            .values()
+            .chain(decks.values())
+            .chain(securities.values())
+            .chain(digitamas.values())
+        {
             for id in zone {
                 if !card_data.contains_key(id) && !missing.iter().any(|m| m == id) {
                     missing.push(id.clone());
@@ -247,6 +279,17 @@ impl LiveGame {
             let refs: Vec<&str> = ids.iter().map(|s| s.as_str()).collect();
             builder = builder.deck(*pid, &refs);
         }
+        for (pid, ids) in &securities {
+            let refs: Vec<&str> = ids.iter().map(|s| s.as_str()).collect();
+            builder = builder.security(*pid, &refs);
+        }
+        for (pid, ids) in &digitamas {
+            let refs: Vec<&str> = ids.iter().map(|s| s.as_str()).collect();
+            builder = builder.digitama(*pid, &refs);
+        }
+        if let Some(m) = initial_memory {
+            builder = builder.memory(m);
+        }
         let mut runner = builder.start();
 
         // DebugRunner doesn't directly expose a "first_player" setter; we
@@ -265,13 +308,13 @@ impl LiveGame {
             }
         }
 
-        // Reconstruct the per-player decklist from the union of hands +
-        // decks. Debug games rarely populate security separately, but
-        // when they do those cards are in their own zone — included for
-        // completeness.
+        // Reconstruct the per-player decklist from the union of hands,
+        // decks, securities, and digitamas — every card that started in
+        // a zone counts as belonging to that player's decklist for
+        // metadata purposes (`deck_cards` / `inspect_card` lookups).
         let deck_card_ids = [
-            collect_for_player(&hands, &decks, 0),
-            collect_for_player(&hands, &decks, 1),
+            collect_for_player_extended(&hands, &decks, &securities, &digitamas, 0),
+            collect_for_player_extended(&hands, &decks, &securities, &digitamas, 1),
         ];
         Ok(Self {
             game: runner.game,
@@ -989,6 +1032,23 @@ fn collect_for_player(
     }
     if let Some(d) = decks.get(&player) {
         ids.extend(d.iter().cloned());
+    }
+    ids
+}
+
+fn collect_for_player_extended(
+    hands: &HashMap<PlayerId, Vec<String>>,
+    decks: &HashMap<PlayerId, Vec<String>>,
+    securities: &HashMap<PlayerId, Vec<String>>,
+    digitamas: &HashMap<PlayerId, Vec<String>>,
+    player: PlayerId,
+) -> Vec<String> {
+    let mut ids = collect_for_player(hands, decks, player);
+    if let Some(s) = securities.get(&player) {
+        ids.extend(s.iter().cloned());
+    }
+    if let Some(t) = digitamas.get(&player) {
+        ids.extend(t.iter().cloned());
     }
     ids
 }

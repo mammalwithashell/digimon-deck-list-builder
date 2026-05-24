@@ -827,13 +827,6 @@ impl Game {
         let perm = crate::permanent::Permanent::new(card, turn);
         self.player_mut(player_id).battle_area.push(perm);
         let field_index = self.player(player_id).battle_area.len() - 1;
-        let entered = PermanentHandle {
-            player: player_id,
-            index: field_index as u8,
-        };
-        let entered_card = self.players[player_id as usize].battle_area[field_index]
-            .top_card()
-            .handle();
 
         let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
             .top_card()
@@ -847,36 +840,14 @@ impl Game {
             field_index: field_index as u8,
         });
 
-        // PUPPETS-G030 — `suppress_on_play` skips ONLY the just-played
-        // permanent's own `[On Play]` enqueue, and only for this play event.
-        // `OnEnterFieldAnyone` / `OnAllyPlayed` broadcasts below, and every
-        // other permanent's triggers, are untouched. Used by BT5-106's
-        // [Security] clause ("Any [On Play] effects on Digimon played with
-        // this effect don't activate.").
-        if !suppress_on_play {
-            self.fire_on_play(player_id, field_index);
-        }
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::OnEnterFieldAnyone,
-            crate::selection::TriggerSource::EnteredField {
-                player: player_id,
-                permanent: entered,
-                card: entered_card,
-                effect_initiated,
-            },
-        );
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::OnAllyPlayed,
-            crate::selection::TriggerSource::EnteredField {
-                player: player_id,
-                permanent: entered,
-                card: entered_card,
-                effect_initiated,
-            },
-        );
-        self.drain_effect_queue();
-        self.mark_until_condition_dirty();
-        self.reevaluate_until_condition_modifiers_if_dirty();
+        // PUPPETS-G030 — `suppress_on_play` skips ONLY the played card's
+        // own `[On Play]` broadcast; observer broadcasts
+        // (`OnEnterFieldAnyone` / `OnAllyPlayed`) are unchanged. The
+        // helper internally wraps all three broadcasts in
+        // `enter_deferred_drain` / `exit_deferred_drain_and_flush` so
+        // simultaneous triggers share a TriggerOrder bundle — see
+        // `Game::fire_play_event_triggers` for the contract.
+        self.fire_play_event_triggers(player_id, field_index, effect_initiated, suppress_on_play);
 
         Some(field_index)
     }
@@ -2508,6 +2479,82 @@ impl Game {
         // See G-DSL-OUTER-TAIL-NESTED-PARK fix note in
         // `fire_on_link_after_option_placed`.
         self.maybe_drain_effect_queue();
+    }
+
+    /// Fire the full play-event trigger bundle for the permanent at
+    /// `(player_id, field_index)`: the played card's own `[On Play]`
+    /// (timing `OnPlay`), plus the broadcast observers `OnEnterFieldAnyone`
+    /// (anyone-reactive) and `OnAllyPlayed` (own-ally-reactive).
+    ///
+    /// All three trigger sources are enqueued BEFORE the queue drains —
+    /// the helper wraps the four engine calls in
+    /// `enter_deferred_drain()` / `exit_deferred_drain_and_flush()` so the
+    /// played card's `[On Play]` and any observer `[All Turns]` triggers
+    /// share a single drain. When the resulting bundle has ≥2 triggers
+    /// for the active chooser, the drainer surfaces a `TriggerOrder`
+    /// selection — restoring DCGO-aligned simultaneous-trigger ordering
+    /// that the previous inline-`fire_on_play`-then-enqueue-observers
+    /// pattern broke (the inline `fire_on_play` drained immediately,
+    /// leaving observers in a follow-up drain that could not be reordered
+    /// against the played card's own `[On Play]`).
+    ///
+    /// `suppress_on_play: true` skips ONLY the played card's own `[On Play]`
+    /// broadcast — used by BT5-106's `[Security]` clause per
+    /// PUPPETS-G030. Observer broadcasts (`OnEnterFieldAnyone` /
+    /// `OnAllyPlayed`) are always enqueued.
+    ///
+    /// Also folds in the post-broadcast `mark_until_condition_dirty()` +
+    /// `reevaluate_until_condition_modifiers_if_dirty()` calls every
+    /// play-event call site needs; the helper is the single source of
+    /// truth for "I just played a Digimon — fire all the play-event
+    /// triggers and finalize state."
+    pub fn fire_play_event_triggers(
+        &mut self,
+        player_id: PlayerId,
+        field_index: usize,
+        effect_initiated: bool,
+        suppress_on_play: bool,
+    ) {
+        if field_index >= self.players[player_id as usize].battle_area.len() {
+            return;
+        }
+        let entered = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        let entered_card = self.players[player_id as usize].battle_area[field_index]
+            .top_card()
+            .handle();
+
+        self.enter_deferred_drain();
+        if !suppress_on_play {
+            // `fire_on_play` uses `maybe_drain_effect_queue` internally,
+            // which no-ops while `draining_deferred > 0` — so OnPlay
+            // triggers enqueue but don't drain until the outer
+            // `exit_deferred_drain_and_flush` below.
+            self.fire_on_play(player_id, field_index);
+        }
+        self.enqueue_triggered(
+            EffectTiming::OnEnterFieldAnyone,
+            TriggerSource::EnteredField {
+                player: player_id,
+                permanent: entered,
+                card: entered_card,
+                effect_initiated,
+            },
+        );
+        self.enqueue_triggered(
+            EffectTiming::OnAllyPlayed,
+            TriggerSource::EnteredField {
+                player: player_id,
+                permanent: entered,
+                card: entered_card,
+                effect_initiated,
+            },
+        );
+        self.exit_deferred_drain_and_flush();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// Activate a `[Main]` effect on the card at `player_id`'s hand slot

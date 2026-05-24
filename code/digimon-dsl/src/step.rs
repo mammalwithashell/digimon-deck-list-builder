@@ -283,6 +283,14 @@ pub enum StepSpec {
     /// prompted to suspend 1 of their own Digimon (a player-visible cost).
     ArmDigivolveCostReducer(ArmDigivolveCostReducerArgs),
 
+    /// G-DSL-EOT-DNA-INLINE — surface the printed `[End of Your Turn] This
+    /// Digimon and any of your other Digimon may DNA digivolve into a Digimon
+    /// card in the hand` flow AS A PLAYER CHOICE AT TRIGGER FIRE, rather than
+    /// registering an alt-path action for a later turn. Used by BT12-021,
+    /// BT12-047, BT17-007, BT17-019, BT22-008, BT22-017. See the
+    /// `CompiledStep::MayDnaDigivolveNow` docstring for the full contract.
+    MayDnaDigivolveNow(MayDnaDigivolveNowArgs),
+
     // Escape hatch (step-level)
     RawRust(RawRustStep),
 
@@ -489,6 +497,7 @@ impl Serialize for StepSpec {
             StepSpec::RedirectReplacement(v) => kv!(s, "redirect_replacement", v),
             StepSpec::SubstituteReplacement(v) => kv!(s, "substitute_replacement", v),
             StepSpec::ArmDigivolveCostReducer(v) => kv!(s, "arm_digivolve_cost_reducer", v),
+            StepSpec::MayDnaDigivolveNow(v) => kv!(s, "may_dna_digivolve_now", v),
             // Escape hatch
             StepSpec::RawRust(v) => kv!(s, "raw_rust", v),
             StepSpec::ActivationCost(v) => kv!(s, "activation_cost", v),
@@ -718,6 +727,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // G-COST-REDUCE-ALLY-DIGIVOLVE
             "arm_digivolve_cost_reducer" => StepSpec::ArmDigivolveCostReducer(map.next_value()?),
 
+            // G-DSL-EOT-DNA-INLINE
+            "may_dna_digivolve_now" => StepSpec::MayDnaDigivolveNow(map.next_value()?),
+
             // Escape hatch
             "raw_rust" => StepSpec::RawRust(map.next_value()?),
 
@@ -853,6 +865,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "redirect_replacement",
                         "substitute_replacement",
                         "arm_digivolve_cost_reducer",
+                        "may_dna_digivolve_now",
                         "raw_rust",
                         "activation_cost",
                     ],
@@ -1154,6 +1167,40 @@ pub struct ForceAttackArgs {
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_upgrade: Option<AttackCostUpgradeArgs>,
+}
+
+/// Args for the `may_dna_digivolve_now` step. See
+/// `CompiledStep::MayDnaDigivolveNow` for the full contract.
+///
+/// `anchor` defaults to `source` (the trigger's source permanent) when
+/// omitted, mirroring the printed "This Digimon" half of the merge.
+/// `partner_filter` constrains the other DNA material on own field — the
+/// engine excludes the anchor as a hard invariant of the verb, so YAML
+/// need not repeat the exclusion. `target_filter` constrains the Digimon
+/// card in the controller's hand that the merge is topped with.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MayDnaDigivolveNowArgs {
+    #[serde(default = "default_anchor_source")]
+    pub anchor: BindingRef,
+    pub partner_filter: PredicateSpec,
+    pub target_filter: PredicateSpec,
+    #[serde(default, skip_serializing_if = "is_zero_u16")]
+    pub cost: u16,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_requirements: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+fn default_anchor_source() -> BindingRef {
+    BindingRef::Named("source".to_string())
+}
+
+fn is_zero_u16(v: &u16) -> bool {
+    *v == 0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]

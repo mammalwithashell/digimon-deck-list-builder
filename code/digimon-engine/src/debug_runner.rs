@@ -120,8 +120,41 @@ impl DebugRunner {
     }
 
     /// Manually fire OnPlay for a permanent that's already on the field.
+    ///
+    /// OnPlay-only — for the full play-event bundle (OnPlay +
+    /// OnEnterFieldAnyone + OnAllyPlayed, wrapped in a deferred-drain so
+    /// simultaneous triggers share a `TriggerOrder` bundle), use
+    /// `fire_play_event_triggers`. Tests that previously chained
+    /// `fire_on_play` + manual `enqueue_triggered(OnEnterFieldAnyone, ...)`
+    /// should migrate to `fire_play_event_triggers` so they match the
+    /// production play-flow semantics.
     pub fn fire_on_play(&mut self, player: PlayerId, field_index: usize) {
         self.game.fire_on_play(player, field_index);
+    }
+
+    /// Manually fire the full play-event trigger bundle (OnPlay +
+    /// OnEnterFieldAnyone + OnAllyPlayed) for a permanent that's already
+    /// on the field. Mirrors the production play-flow exactly — see
+    /// `Game::fire_play_event_triggers` for the contract.
+    ///
+    /// `effect_initiated: true` for effect-driven plays (sets the
+    /// `TriggerSource::EnteredField.effect_initiated` flag);
+    /// `suppress_on_play: true` for the PUPPETS-G030 BT5-106 `[Security]`
+    /// pattern (suppresses the played card's own `[On Play]` only;
+    /// observer broadcasts still fire).
+    pub fn fire_play_event_triggers(
+        &mut self,
+        player: PlayerId,
+        field_index: usize,
+        effect_initiated: bool,
+        suppress_on_play: bool,
+    ) {
+        self.game.fire_play_event_triggers(
+            player,
+            field_index,
+            effect_initiated,
+            suppress_on_play,
+        );
     }
 
     /// Place a card directly on a player's field (bypass hand/play_from_hand).

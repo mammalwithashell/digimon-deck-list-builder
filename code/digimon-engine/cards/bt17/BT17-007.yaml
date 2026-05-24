@@ -83,12 +83,31 @@ effects:
           prompt: "Return a card to hand"
       - add_to_hand_from_trash: { of: you, card: pick }
 
-  # ─── Clause 2: [End of Your Turn] inherited DNA digivolve ─────────────────
-  - kind: alt_path_registration
+  # ─── Clause 2 — Inherited [End of Your Turn] inline DNA digivolve ─────────
+  #
+  # Printed: "[End of Your Turn] This Digimon and any of your other Digimon
+  # may DNA digivolve into a Digimon card in the hand."
+  #
+  # G-DSL-EOT-DNA-INLINE (2026-05-24): authored via `may_dna_digivolve_now`
+  # step so the DNA-digivolve choice surfaces AT end-of-turn (matches DCGO
+  # `EffectTiming.OnEndTurn` activate). Predecessor `alt_path_registration
+  # { kind: dna_digivolve }` (resolved 2026-05-02) registered a next-turn
+  # alt-path and so could not satisfy the printed "AT end of turn" surface.
+  - when: end_of_your_turn
     scope: inherited
-    trigger: end_of_your_turn
-    registers:
-      kind: dna_digivolve
-    applies_to:
-      of: you
-      zone: [battle_area]
+    optional: true
+    summary: "[EoT] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand"
+    process:
+      - may_dna_digivolve_now:
+          partner_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          target_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          cost: 0
+          ignore_requirements: true
+          optional: true
+          prompt: "DNA digivolve at end of turn?"
