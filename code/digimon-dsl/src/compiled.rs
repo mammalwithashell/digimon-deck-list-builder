@@ -1556,6 +1556,40 @@ pub enum CompiledStep {
         target_color: Option<CompiledColor>,
         suspend_cost: bool,
     },
+    /// G-DSL-EOT-DNA-INLINE — inline DNA digivolve choice at trigger fire.
+    ///
+    /// Surfaces the printed "[End of Your Turn] This Digimon and any of your
+    /// other Digimon may DNA digivolve into a Digimon card in the hand"
+    /// pattern (BT12-021/-047, BT17-007/-019, BT22-008/-017) AT the trigger
+    /// drain, not as a registration for a later turn.
+    ///
+    /// The step orchestrates: (1) optional accept/decline prompt, (2)
+    /// partner permanent selection over own field (excluding anchor),
+    /// (3) target card selection from controller's hand, (4) call to the
+    /// `effect_initiated_dna_digivolve` engine primitive.
+    ///
+    /// `anchor` is the source DNA material (typically the trigger's source
+    /// permanent — `CompiledBindingRef::Source`). `partner_filter` constrains
+    /// the OTHER DNA material on own field (the engine excludes anchor as a
+    /// hard invariant of the verb; YAML need not repeat the exclusion).
+    /// `target_filter` constrains the Digimon card in the controller's hand
+    /// that the merged permanent is topped with.
+    ///
+    /// `cost` is the printed memory cost (zero for all 6 currently-known
+    /// affected cards). `ignore_requirements` bypasses normal digivolution
+    /// affordability checks (true for the 6 affected cards' EoT "may DNA
+    /// digivolve"). `optional` controls the outer accept/decline gate
+    /// (true for printed "may"). `prompt` overrides the default accept
+    /// prompt copy.
+    MayDnaDigivolveNow {
+        anchor: CompiledBindingRef,
+        partner_filter: CompiledPredicate,
+        target_filter: CompiledPredicate,
+        cost: u16,
+        ignore_requirements: bool,
+        optional: bool,
+        prompt: Option<String>,
+    },
 }
 
 /// Concrete activation-cost shapes recognized by the DSL. Extensible —

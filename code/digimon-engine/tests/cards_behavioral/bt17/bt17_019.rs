@@ -71,7 +71,8 @@
 #![allow(dead_code)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
+    CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -210,39 +211,50 @@ fn bt17_019_has_start_of_main_phase_triggered_clause() {
     );
 }
 
-/// Inherited end-of-your-turn DNA digivolve registration must be present
-/// (RESOLVED 2026-05-02: alt_path_registration with scope: inherited,
-/// trigger: end_of_your_turn, registers: dna_digivolve).
+/// G-DSL-EOT-DNA-INLINE (2026-05-24): inherited end-of-your-turn DNA
+/// digivolve is now authored via the `may_dna_digivolve_now` step verb
+/// inside a `Triggered` clause whose `when: end_of_your_turn, scope:
+/// inherited, optional: true`. The body is a single `MayDnaDigivolveNow`
+/// step that orchestrates the partner + target selections at trigger fire.
+///
+/// Predecessor authoring (`alt_path_registration { kind: dna_digivolve,
+/// scope: inherited, trigger: end_of_your_turn }`) registered a next-turn
+/// alt-path action and did not satisfy the printed "AT end of turn"
+/// surface — see proposal `may-dna-digivolve-now-dsl-step`.
 #[test]
-fn bt17_019_has_inherited_dna_digivolve_alt_path_registration() {
+fn bt17_019_has_inherited_dna_digivolve_may_step() {
     let runner = gabumon_runner();
     let card = runner
         .compiled_card(CARD_ID)
         .expect("BT17-019 in embedded DSL pack");
-    let registration = card.effects.iter().find_map(|c| match c {
-        CompiledClause::Declarative(CompiledDeclarativeClause::AltPathRegistration {
-            scope,
-            trigger,
-            registers,
-            ..
-        }) if *scope == CompiledScope::Inherited
-            && *trigger == CompiledTiming::EndOfYourTurn
-            && registers.kind == CompiledAltPathKind::DnaDigivolve =>
+    let eot_dna_clause = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t)
+            if t.scope == CompiledScope::Inherited
+                && t.when.contains(&CompiledTiming::EndOfYourTurn)
+                && t.optional =>
         {
-            Some(())
+            Some(t)
         }
         _ => None,
     });
+    let t = eot_dna_clause
+        .expect("BT17-019 must carry an inherited optional EoT triggered clause for DNA digivolve");
     assert!(
-        registration.is_some(),
-        "BT17-019 must register an inherited end-of-your-turn DNA digivolve alt-path"
+        t.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::MayDnaDigivolveNow { ignore_requirements: true, cost: 0, .. }
+        )),
+        "BT17-019 EoT inherited body must contain a `MayDnaDigivolveNow` step \
+         with cost=0 and ignore_requirements=true"
     );
 }
 
-/// Card prints exactly two effect clauses:
-///   (1) the [Start of Your Main Phase] Matt-Ishida-conditional draw trigger
-///   (2) the inherited [End of Your Turn] DNA digivolve registration.
-/// No other effects, no aura, no cost reduction.
+/// G-DSL-EOT-DNA-INLINE (2026-05-24): card now prints two triggered
+/// clauses — (1) the [Start of Your Main Phase] Matt-Ishida-conditional
+/// draw trigger and (2) the inherited [End of Your Turn] DNA digivolve
+/// trigger (was previously an alt_path_registration declarative — see
+/// proposal `may-dna-digivolve-now-dsl-step`). No more alt_path_registration
+/// clauses on this card.
 #[test]
 fn bt17_019_clause_count_matches_card_text() {
     let runner = gabumon_runner();
@@ -264,10 +276,10 @@ fn bt17_019_clause_count_matches_card_text() {
             )
         })
         .count();
-    assert_eq!(triggered, 1, "Exactly one triggered clause expected");
+    assert_eq!(triggered, 2, "Exactly two triggered clauses expected");
     assert_eq!(
-        alt_path_regs, 1,
-        "Exactly one alt_path_registration clause expected"
+        alt_path_regs, 0,
+        "Zero alt_path_registration clauses expected after EoT DNA migration"
     );
 }
 

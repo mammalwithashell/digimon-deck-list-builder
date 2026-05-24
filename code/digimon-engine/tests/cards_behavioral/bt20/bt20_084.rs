@@ -37,6 +37,7 @@ use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::SelectionKind;
 use digimon_engine::TriggerSource;
 
 #[test]
@@ -165,6 +166,26 @@ fn bt20_084_on_play_locks_selected_opponent_digimon_until_their_turn_ends() {
     let opp_option = runner.place_on_field(1, "OPP-OPTION", Some(0));
 
     runner.play(0, 0).expect("play BT20-084");
+
+    // 2026-05-24 (defer-play-event-drain-for-trigger-ordering): playing
+    // BT20-084 now produces a `TriggerOrder` bundle covering both its
+    // `[On Play]` clause AND its own `on_ally_played` observer (which
+    // matches because BT20-084 itself just entered as an own ally). The
+    // play-flow's deferred-drain wraps `OnPlay` + `OnEnterFieldAnyone` +
+    // `OnAllyPlayed` in a single drain, so both clauses share a bundle.
+    // The test now picks the `[On Play]` lock effect first from the
+    // TriggerOrder, then asserts the inner target-selection contract.
+    let view = runner
+        .pending_selection_view()
+        .expect("TriggerOrder bundle for [On Play] + observer");
+    if matches!(view.kind, SelectionKind::TriggerOrder) {
+        // Pick the first entry — the OnPlay clause comes first in the
+        // queue (enqueued before the OnAllyPlayed broadcast).
+        runner
+            .game
+            .resolve_selection(view.selecting_player, view.valid_action_ids[0])
+            .expect("pick OnPlay clause from TriggerOrder");
+    }
 
     let view = runner
         .pending_selection_view()

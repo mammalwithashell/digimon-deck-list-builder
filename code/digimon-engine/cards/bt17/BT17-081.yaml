@@ -51,6 +51,28 @@
 #     when satisfied. DCGO does these checks AFTER the suspend; we mirror that
 #     by placing both inside the process body after the suspend cost.
 #
+#   KNOWN GAP (2026-05-24): the leading body-step `suspend` runs
+#   unconditionally and does NOT gate the gain_memory arms on whether the
+#   suspend cost could actually be paid (T&M not already suspended). When
+#   two simultaneous T&M triggers queue from the same event chain (e.g.
+#   MetalGarurumon's mandatory [On Play] choice digivolving Agumon→WG),
+#   both triggers fire and both grant memory — the printed "by suspending"
+#   cost is paid effectively twice with one suspension. The May 24 2026
+#   engine-MCP QA pass observed +4 memory instead of the printed +2.
+#
+#   Migration to the PUPPETS-G023 `activation_cost: { suspend_self: true }`
+#   leading-body-step idiom (BT13-101 / P-136 pattern) was attempted in
+#   the `fix-tai-matt-cost-gate` openspec change but uncovered a deeper
+#   substrate issue: with the activation_cost lifted onto
+#   `EffectBuilder::activation_cost`, the body's subsequent `if`-wrapped
+#   `gain_memory: 1` arms did not grant memory even though
+#   `suspend_self_as_cost` returned true and BT17-081 visibly suspended.
+#   The cost gate fired but the conditional memory grants in the body did
+#   not. Until that substrate gap is resolved (in a follow-up change), the
+#   YAML stays on the old `suspend:` body-step idiom — accepting the
+#   double-pay bug as a known regression vs DCGO. Tracked in
+#   `qa/archetype-qa/engine-gaps.md`.
+#
 # ─── Clause 2 — [End of Your Turn][OPT] Omnimon may attack a player ───────────
 #
 # DCGO (BT17_081.cs:91-201): ActivateClass on EffectTiming.OnEndTurn with
@@ -106,10 +128,8 @@ effects:
         - event_target_owner: you
         - event_target_kind: digimon
     process:
-      # Cost: suspend this Tamer (the activation cost — "by suspending this
-      # Tamer"). `source` resolves to CompiledBindingRef::Source →
-      # ctx.source_permanent (the Tamer).
-      - suspend: { target: source }
+      # Cost: suspend this Tamer via lifted activation_cost (BT13-101 idiom).
+      - activation_cost: { suspend_self: true }
       # Greymon check: independently grant +1 memory if any own [Greymon]-named
       # Digimon is on the field at resolution time.
       - if:

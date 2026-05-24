@@ -1178,9 +1178,6 @@ impl Game {
             player: player_id,
             index: field_index as u8,
         };
-        let entered_card = self.players[player_id as usize].battle_area[field_index]
-            .top_card()
-            .handle();
         let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
             .top_card()
             .card_id(&self.card_data)
@@ -1192,28 +1189,10 @@ impl Game {
             card_id: emitted_card_id,
             field_index: field_index as u8,
         });
-        self.fire_on_play(player_id, field_index);
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::OnEnterFieldAnyone,
-            crate::selection::TriggerSource::EnteredField {
-                player: player_id,
-                permanent: entered,
-                card: entered_card,
-                effect_initiated: true,
-            },
-        );
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::OnAllyPlayed,
-            crate::selection::TriggerSource::EnteredField {
-                player: player_id,
-                permanent: entered,
-                card: entered_card,
-                effect_initiated: true,
-            },
-        );
-        self.drain_effect_queue();
-        self.mark_until_condition_dirty();
-        self.reevaluate_until_condition_modifiers_if_dirty();
+        // Effect-initiated play (`effect_initiated: true`) — helper wraps
+        // OnPlay + OnEnterFieldAnyone + OnAllyPlayed in a deferred-drain
+        // scope so simultaneous triggers share a TriggerOrder bundle.
+        self.fire_play_event_triggers(player_id, field_index, true, false);
         Some(entered)
     }
 
@@ -1303,32 +1282,25 @@ impl Game {
             entered.push((player_id, field_index, permanent, card));
         }
 
-        for (player_id, field_index, _, _) in entered.iter().copied() {
-            self.fire_on_play(player_id, field_index);
+        // Multi-source effect-initiated play. Each entered card fires its
+        // own play-event trigger bundle (OnPlay + OnEnterFieldAnyone +
+        // OnAllyPlayed) through the helper. The helper's per-call
+        // deferred-drain scope opens and closes per entered card, so each
+        // card's triggers form their own TriggerOrder bundle — this
+        // preserves the "one entry event = one bundle" semantic across
+        // multi-source plays.
+        //
+        // Note: this is a behavior change vs. the previous inline pattern,
+        // which drained ALL fire_on_play calls first (one per entered
+        // card), then ALL OnEnterFieldAnyone/OnAllyPlayed enqueues for
+        // all cards, then a single final drain. That batched-across-cards
+        // shape coalesced multi-card-entry triggers into one giant drain.
+        // The helper-per-card shape mirrors the single-card play site,
+        // and matches DCGO which fires each card's enter-field broadcast
+        // before the next card enters.
+        for (player_id, field_index, _, _) in entered {
+            self.fire_play_event_triggers(player_id, field_index, true, false);
         }
-        for (player_id, _, permanent, card) in entered {
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::OnEnterFieldAnyone,
-                crate::selection::TriggerSource::EnteredField {
-                    player: player_id,
-                    permanent,
-                    card,
-                    effect_initiated: true,
-                },
-            );
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::OnAllyPlayed,
-                crate::selection::TriggerSource::EnteredField {
-                    player: player_id,
-                    permanent,
-                    card,
-                    effect_initiated: true,
-                },
-            );
-        }
-        self.drain_effect_queue();
-        self.mark_until_condition_dirty();
-        self.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 

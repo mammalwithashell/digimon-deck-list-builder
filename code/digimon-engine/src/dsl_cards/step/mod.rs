@@ -6,6 +6,7 @@
 pub mod as_selecting_player;
 pub mod combat;
 pub mod control_flow;
+pub mod dna_digivolve;
 pub mod draw;
 pub mod effects;
 pub mod grant_triggered;
@@ -446,6 +447,9 @@ pub fn run_step_with_runtime(
         return;
     }
     if play_digivolve::try_run(step, ctx, bindings) {
+        return;
+    }
+    if dna_digivolve::try_run(step, ctx, bindings) {
         return;
     }
     if schedule_delayed::try_run(step, ctx, bindings, runtime) {
