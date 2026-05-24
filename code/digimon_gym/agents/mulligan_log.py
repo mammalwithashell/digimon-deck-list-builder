@@ -23,6 +23,24 @@ from digimon_gym.agents.env_utils import unwrap_to_digimon_env
 
 SCHEMA_VERSION = 1
 
+# Module-level flag so we emit at most one warning per process when a snapshot
+# read fails inside reset(). Subsequent failures are silently swallowed so that
+# a persistent bad state (e.g. a runner that always raises on to_ui_json) does
+# not flood stderr during a long training run.
+_snapshot_warned = False
+
+
+def _warn_snapshot_failure(exc: BaseException, what: str) -> None:
+    global _snapshot_warned
+    if _snapshot_warned:
+        return
+    _snapshot_warned = True
+    print(
+        f"[mulligan_log] snapshot failed in {what}: {exc!r}; future failures will be silent",
+        file=sys.stderr,
+        flush=True,
+    )
+
 
 def _load_card_metadata() -> Dict[str, Dict[str, Any]]:
     """Load cards.json once at module import; used by helpers below.
@@ -177,7 +195,8 @@ class MulliganLogWrapper(gymnasium.Wrapper):
             return obs, info
         try:
             ui = runner.to_ui_json()
-        except Exception:
+        except (RuntimeError, AttributeError, TypeError, ValueError, KeyError) as exc:
+            _warn_snapshot_failure(exc, "to_ui_json")
             return obs, info
         hand_ids = list(ui.get("player1", {}).get("handIds", []) or [])
         # `current_player_id` from _rl_state() is always 1 here (OpponentWrapper
@@ -189,7 +208,8 @@ class MulliganLogWrapper(gymnasium.Wrapper):
             first_player_id = ui.get("currentPlayer")
             if first_player_id is not None:
                 first_player_id = int(first_player_id)
-        except Exception:
+        except (TypeError, ValueError) as exc:
+            _warn_snapshot_failure(exc, "int(currentPlayer)")
             first_player_id = None
         # If recording is enabled, prefer the recording's initial_state which is
         # the canonical source and validates our derivation.
@@ -199,8 +219,8 @@ class MulliganLogWrapper(gymnasium.Wrapper):
                 fp = rec.get("initial_state", {}).get("first_player_id")
                 if fp is not None:
                     first_player_id = int(fp)
-        except Exception:
-            pass
+        except (RuntimeError, AttributeError, TypeError, ValueError, KeyError) as exc:
+            _warn_snapshot_failure(exc, "get_recording")
         self._pending = {
             "schema_version": SCHEMA_VERSION,
             "wall_time": time.time(),
@@ -237,5 +257,9 @@ class MulliganLogWrapper(gymnasium.Wrapper):
     # ─── Internals ───────────────────────────────────────────────
 
     def _infer_global_step(self) -> Optional[int]:
-        """Best-effort: SB3 attaches `num_timesteps` to the env in some setups."""
+        """Best-effort: SB3 attaches ``num_timesteps`` to the *model*, not the
+        env, so this returns ``None`` in the standard training loop. The field
+        is kept in the record schema so downstream tooling can plumb it
+        through a callback later without a schema migration.
+        """
         return getattr(self.unwrapped, "num_timesteps", None)

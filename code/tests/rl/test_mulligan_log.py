@@ -11,7 +11,10 @@ from digimon_gym.agents.mulligan_log import (
     _derive_lvl_counts,
     _derive_has_tamer,
     MulliganLogWriter,
+    MulliganLogWrapper,
 )
+from digimon_gym.digimon_gym import DigimonEnv, greedy_policy
+from digimon_gym.agents.pilot_training import OpponentWrapper
 
 
 def test_derive_lvl_counts_counts_each_level_bucket():
@@ -137,11 +140,6 @@ def test_writer_env_index_in_filename(tmp_path):
     assert lines3[1]["action"] == 1
 
 
-from digimon_gym.agents.mulligan_log import MulliganLogWrapper
-from digimon_gym.digimon_gym import DigimonEnv, greedy_policy
-from digimon_gym.agents.pilot_training import OpponentWrapper
-
-
 def _drive_to_first_pilot_step(env):
     """Reset env and skip opponent's leading turns until pilot acts.
 
@@ -153,8 +151,8 @@ def _drive_to_first_pilot_step(env):
     return obs, info
 
 
-def _build_wrapped_env(writer):
-    inner = DigimonEnv()
+def _build_wrapped_env(writer, record_actions: bool = False):
+    inner = DigimonEnv(record_actions=record_actions)
     opp = OpponentWrapper(inner, opponent_fn=greedy_policy)
     wrapped = MulliganLogWrapper(opp, writer=writer, source="train", env_index=0)
     return wrapped, inner
@@ -184,25 +182,34 @@ def test_wrapper_captures_pilot_mulligan_keep(tmp_path):
 
 def test_wrapper_captures_pilot_mulligan_mull_when_opp_first(tmp_path):
     writer = MulliganLogWriter(output_dir=tmp_path, env_index=0, enabled=True, run_metadata={"run_name": "t"})
-    wrapped, inner = _build_wrapped_env(writer)
-    # Find a seed where P2 truly goes first (read true initial state from
-    # the recording, NOT the post-advance to_ui_json).
+    # record_actions=True means get_recording() is available on the runner; after
+    # the first step it exposes initial_state.first_player_id as the authoritative
+    # source (independent of to_ui_json / currentPlayer), letting us cross-check
+    # the wrapper's logged value against the recording's own copy.
+    wrapped, inner = _build_wrapped_env(writer, record_actions=True)
+    # Find a seed where P2 truly goes first.  initial_state is populated only
+    # after the first step, so we use to_ui_json() for the seed oracle (it is
+    # available immediately after reset).
     found_seed = None
     for s in range(40):
         wrapped.reset(seed=s)
-        rec = inner.runner.to_ui_json()
-        if rec.get("currentPlayer") == 2:
+        if inner.runner.to_ui_json().get("currentPlayer") == 2:
             found_seed = s
             break
     if found_seed is None:
         pytest.skip("no seed in 0..39 produced P2-goes-first; try a wider range")
-    # Pilot picks MULL (action 1).
+    # Pilot picks MULL (action 1).  After this step, initial_state is populated
+    # in the recording, giving us an authoritative first_player_id to compare.
     wrapped.step(1)
     lines = _read_jsonl(tmp_path / "mulligan_log_env_000.jsonl")
     rec = lines[-1]
     assert rec["action"] == 1
     assert rec["source"] == "train"
     assert rec["first_player_id"] == 2  # the bug we fixed: this would be 1 if we used current_player_id
+    # Cross-check: wrapper's value must agree with the authoritative recording
+    # source, proving the get_recording() override path is consistent.
+    authoritative_fp = inner.runner.get_recording()["initial_state"]["first_player_id"]
+    assert rec["first_player_id"] == authoritative_fp
 
 
 def test_wrapper_disabled_writer_writes_nothing(tmp_path):
