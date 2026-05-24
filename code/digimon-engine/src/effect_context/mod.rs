@@ -1872,12 +1872,17 @@ impl<'a> EffectContext<'a> {
                 .any(|card| card.handle() == source_card)
     }
 
+    /// Resolve a `PermanentHandle` to its top card handle. Returns `None`
+    /// when the slot is missing OR has empty `card_sources` (zombie).
+    /// All callers wrap in `Option::and_then` / `let Some(…) else`, so the
+    /// zombie case is correctly treated as "no top card." Mirrors the same
+    /// defensive form used by `Game::top_card_handle` in `effect_queue.rs`.
     pub fn permanent_top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
         self.game
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
-            .map(|permanent| permanent.top_card().handle())
+            .and_then(|permanent| permanent.card_sources.last().map(|c| c.handle()))
     }
 
     pub fn find_battle_permanent_containing_card(

@@ -1233,18 +1233,35 @@ impl Game {
         })
     }
 
+    /// Resolve a `PermanentHandle` to its top card. Returns `None` when:
+    /// - the slot doesn't exist (out-of-range index, missing breeding perm), OR
+    /// - the slot exists but its `card_sources` is empty (a "zombie" permanent
+    ///   left over from a body-moving operation that hasn't finished cleanup).
+    ///
+    /// All callers wrap this in `Option::and_then`, treating None as "no card
+    /// for trigger context purposes" — which is the right semantics for both
+    /// missing-slot and zombie cases. Defending here (rather than at every
+    /// iteration site that uses this for observer fan-out) means future
+    /// zombie-producing code paths cannot trip the `permanent.rs:134` assert
+    /// via this code path. See `G-PERMANENT-EMPTY-DURING-BATCH-DELETION` in
+    /// `qa/archetype-qa/engine-gaps.md` for the original surfacing.
+    ///
+    /// Note: this is intentionally `.and_then(card_sources.last())` rather
+    /// than `.map(top_card())` — `Permanent::top_card()` asserts non-empty,
+    /// which is correct for direct accesses but wrong for handle-resolution
+    /// scans across all battle-area slots.
     fn top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
         if handle.index == BREEDING_TARGET as u8 {
             return self
                 .players
                 .get(handle.player as usize)
                 .and_then(|p| p.breeding_area.as_ref())
-                .map(|perm| perm.top_card().handle());
+                .and_then(|perm| perm.card_sources.last().map(|c| c.handle()));
         }
         self.players
             .get(handle.player as usize)
             .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|perm| perm.top_card().handle())
+            .and_then(|perm| perm.card_sources.last().map(|c| c.handle()))
     }
 
     fn enqueue_event_gated_delayed_options(
@@ -1514,6 +1531,24 @@ impl Game {
         handle: PermanentHandle,
         trigger_context: Option<TriggerContext>,
     ) {
+        // Layer-2 defensive guard: a "zombie" permanent (slot exists in
+        // battle_area but `card_sources` is empty, left over from some
+        // body-moving operation that hasn't finished cleanup) has no
+        // effects to enqueue. Skip immediately rather than tripping
+        // `Permanent::top_card()`'s assertion inside `source_kind_for_card_kind`
+        // or `effect_list`. Matches DCGO's `if (TopCard == null) skip`
+        // pattern (e.g. Permanent.cs:2093 `CanAttack` guard). See
+        // `G-PERMANENT-EMPTY-DURING-BATCH-DELETION` in
+        // `qa/archetype-qa/engine-gaps.md`.
+        let perm_is_live = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|p| !p.card_sources.is_empty())
+            .unwrap_or(false);
+        if !perm_is_live {
+            return;
+        }
         // Track H §3 Phase 4i — push granted-triggered-effect entries
         // as QueuedEffect with `granted_effect_id` set. The drainer
         // recognizes these and fetches the body from
@@ -2378,8 +2413,13 @@ impl Game {
                 .get(perm_handle.player as usize)
                 .and_then(|p| p.breeding_area.as_ref())
                 .is_some_and(|perm| {
+                    // Defensive: empty `card_sources` (zombie permanent) →
+                    // no top match. See `G-PERMANENT-EMPTY-DURING-BATCH-DELETION`.
                     let top_matches = !qe.allow_below_top_liveness
-                        && perm.top_card().card_index == qe.source_card.0;
+                        && perm
+                            .card_sources
+                            .last()
+                            .is_some_and(|c| c.card_index == qe.source_card.0);
                     let below_top_source_matches = perm
                         .card_sources
                         .iter()
@@ -2397,6 +2437,13 @@ impl Game {
         else {
             return false;
         };
+        // A zombie permanent (`card_sources` empty) has no live source — bail.
+        // Matches the same pattern in `top_card_handle` /
+        // `enqueue_from_permanent`. See `G-PERMANENT-EMPTY-DURING-BATCH-DELETION`
+        // for the original surfacing.
+        let Some(perm_top) = perm.card_sources.last() else {
+            return false;
+        };
         // Also skip if the specific source card has been shuffled out of the
         // top-card slot (e.g. permanent digivolved mid-batch).
         // Phase 8 Task 4: a sideways-inherited effect's source_card is a card
@@ -2404,8 +2451,7 @@ impl Game {
         // Phase 8 Task 5: a Training-sideways effect's source_card lives on a
         // different `OptionState::Training` permanent the same owner controls;
         // scan the owner's battle_area for it.
-        let top_matches =
-            !qe.allow_below_top_liveness && perm.top_card().card_index == qe.source_card.0;
+        let top_matches = !qe.allow_below_top_liveness && perm_top.card_index == qe.source_card.0;
         let linked_matches = perm
             .linked_cards
             .iter()
@@ -2422,7 +2468,11 @@ impl Game {
             .get(perm_handle.player as usize)
             .map(|p| {
                 p.battle_area.iter().any(|pp| {
-                    if pp.top_card().card_index != qe.source_card.0 {
+                    // Defensive: skip zombie permanents in the Training scan.
+                    let Some(pp_top) = pp.card_sources.last() else {
+                        return false;
+                    };
+                    if pp_top.card_index != qe.source_card.0 {
                         return false;
                     }
                     let crate::permanent::OptionState::Training { trained, .. } = pp.option_state
@@ -2430,8 +2480,7 @@ impl Game {
                         return false;
                     };
                     trained.map_or(true, |binding| {
-                        binding.handle == perm_handle
-                            && perm.top_card().handle() == binding.top_card
+                        binding.handle == perm_handle && perm_top.handle() == binding.top_card
                     })
                 })
             })

@@ -2398,6 +2398,91 @@ impl Game {
         removed
     }
 
+    /// Soft-remove a permanent whose `card_sources` Vec is now empty after
+    /// some effect moved its body card(s) elsewhere. This is the DCGO
+    /// `CardObjectController.RemoveField(permanent)` analog — distinct from
+    /// `DestroyPermanentsClass.Destroy()` (no OnDeletion, no replacement
+    /// window, no trash for the body since it already moved).
+    ///
+    /// Cleans up: granted-triggered-effect bodies, modifiers, linked cards
+    /// (flow to trash + fire `OnLinkedCardTrashed` observers), the battle_area
+    /// slot itself, and shifts modifier indices for surviving permanents.
+    ///
+    /// **Caller must already have moved the body card(s)** — this function
+    /// does not extract or route the body. If `src.card_sources` is non-empty
+    /// when called, returns `false` and does nothing (defensive: also handles
+    /// the case where the slot is already gone).
+    ///
+    /// Returns `true` if a cleanup happened, `false` if no cleanup was needed
+    /// (slot wasn't empty or didn't exist). Callers holding other
+    /// `PermanentHandle`s should call [`Self::shift_handle_after_soft_remove`]
+    /// to fix up handles after a successful cleanup.
+    ///
+    /// See `G-PERMANENT-EMPTY-DURING-BATCH-DELETION` (mis-named — actually
+    /// the digivolve-from-material zombie class) in
+    /// `qa/archetype-qa/engine-gaps.md` for the original surfacing.
+    pub(crate) fn soft_remove_if_emptied(
+        &mut self,
+        src: crate::permanent::PermanentHandle,
+    ) -> bool {
+        let needs_cleanup = self
+            .player(src.player)
+            .battle_area
+            .get(src.index as usize)
+            .map(|p| p.card_sources.is_empty())
+            .unwrap_or(false);
+        if !needs_cleanup {
+            return false;
+        }
+
+        // Capture linked cards before the slot is removed.
+        let linked_cards = std::mem::take(
+            &mut self.player_mut(src.player).battle_area[src.index as usize].linked_cards,
+        );
+        let had_linked = !linked_cards.is_empty();
+
+        // Remove the empty slot BEFORE any drain — slot must not be visible
+        // to subsequent trigger iteration.
+        self.clear_permanent_full(src);
+        self.modifiers.expire_player_on_permanent_leave(src);
+        self.player_mut(src.player)
+            .delete_permanent(src.index as usize);
+        self.modifiers
+            .shift_after_battle_area_remove(src.player, src.index);
+
+        // Linked cards lose their host → trash + OnLinkedCardTrashed observer.
+        // Matches the linked-card flow in `trash_single_for_batch`
+        // (combat.rs:3740-3768). Runs after the slot is gone so the observer
+        // drain is safe.
+        if had_linked {
+            for card in linked_cards {
+                self.player_mut(src.player).trash.push(card);
+            }
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnLinkedCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+                );
+            }
+            self.drain_effect_queue();
+        }
+        true
+    }
+
+    /// Adjust a `PermanentHandle` after a `soft_remove_if_emptied` call.
+    /// If `removed_player == handle.player && removed_index < handle.index`,
+    /// the battle_area `Vec::remove` shifted `handle.index` down by 1.
+    /// Returns the (possibly shifted) handle.
+    pub(crate) fn shift_handle_after_soft_remove(
+        removed: crate::permanent::PermanentHandle,
+        mut handle: crate::permanent::PermanentHandle,
+    ) -> crate::permanent::PermanentHandle {
+        if removed.player == handle.player && removed.index < handle.index {
+            handle.index -= 1;
+        }
+        handle
+    }
+
     /// Track H §3 — fire all granted triggered effects on `carrier`
     /// whose registered timing matches `timing`. Each body runs
     /// inline with `EffectContext::source_card` set to the grantor
