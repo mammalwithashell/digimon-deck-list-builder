@@ -98,7 +98,8 @@ Create `code/digimon_gym/agents/mulligan_log.py`:
 """Per-game mulligan log writer + wrapper.
 
 Captures starting hand + mulligan choice from the pilot seat during
-training, appended live to `models/<run>/mulligan_log.jsonl`. See
+training, appended live to `models/<run>/mulligan_log_env_<NNN>.jsonl`
+(one file per env_index for SubprocVecEnv safety). See
 `docs/superpowers/specs/2026-05-23-mulligan-log-design.md`.
 """
 
@@ -718,7 +719,8 @@ In `_build_argparser()`, find the block where `--record-games` is defined. Immed
         choices=["on", "off"],
         default="on",
         help="Write per-game starting-hand + mulligan-choice records to "
-             "models/<run>/mulligan_log.jsonl (default: on, ~3 MB per 1M steps).",
+             "models/<run>/mulligan_log_env_<NNN>.jsonl (one file per env, "
+             "default: on, ~3 MB per 1M steps across all env files).",
     )
 ```
 

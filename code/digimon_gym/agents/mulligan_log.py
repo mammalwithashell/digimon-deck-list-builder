@@ -1,7 +1,8 @@
 """Per-game mulligan log writer + wrapper.
 
 Captures starting hand + mulligan choice from the pilot seat during
-training, appended live to `models/<run>/mulligan_log.jsonl`. See
+training, appended live to `models/<run>/mulligan_log_env_<NNN>.jsonl`
+(one file per env_index for SubprocVecEnv safety). See
 `docs/superpowers/specs/2026-05-23-mulligan-log-design.md`.
 """
 
