@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from data_paths import CARDS_JSON
 
@@ -64,3 +64,58 @@ def _derive_has_tamer(card_ids: List[str]) -> bool:
         if _CARDS.get(cid, {}).get("card_kind") == 1:
             return True
     return False
+
+
+class MulliganLogWriter:
+    """Owns the JSONL file handle for a training run's mulligan log.
+
+    A single header line is written lazily on the first ``append()`` per
+    process. Subsequent appends write one JSON record per line. Failures
+    (disk full, permission denied) flip ``enabled`` to ``False`` and log
+    once to stderr so training is never killed by observability code.
+    """
+
+    def __init__(
+        self,
+        output_dir: str | Path,
+        *,
+        enabled: bool = True,
+        run_metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self.output_dir = Path(output_dir)
+        self.enabled = bool(enabled)
+        self.run_metadata = dict(run_metadata or {})
+        self._path: Path = self.output_dir / "mulligan_log.jsonl"
+        self._wrote_header = False
+        self._failed = False
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    def _header_record(self) -> Dict[str, Any]:
+        return {
+            "kind": "mulligan_log_header",
+            "schema_version": SCHEMA_VERSION,
+            **self.run_metadata,
+        }
+
+    def append(self, record: Dict[str, Any]) -> None:
+        """Append one JSONL record. No-op if disabled."""
+        if not self.enabled or self._failed:
+            return
+        try:
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            with self._path.open("a", encoding="utf-8") as fh:
+                if not self._wrote_header:
+                    fh.write(json.dumps(self._header_record()) + "\n")
+                    self._wrote_header = True
+                fh.write(json.dumps(record) + "\n")
+        except OSError as exc:
+            self._failed = True
+            self.enabled = False
+            print(
+                f"[mulligan_log] disabled after write failure: {exc!r}",
+                file=sys.stderr,
+                flush=True,
+            )
