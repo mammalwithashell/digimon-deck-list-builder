@@ -211,7 +211,15 @@ pub fn try_run(
         CompiledStep::TrashSelectedSources { source_refs } => {
             if let Some(source_refs) = bindings.get_source_refs(source_refs) {
                 for source_ref in source_refs {
-                    ctx.trash_card_source(source_ref.permanent, source_ref.card);
+                    // Soft-fail bool discarded per
+                    // `fix-trash-card-source-stale-handle`: any pick that
+                    // went stale between SourceMulti submit and this loop
+                    // silently no-ops. Subsequent picks in the loop still
+                    // get their own trash attempt. Mirrors DCGO
+                    // `SelectTrashDigivolutionCards` per-permanent
+                    // interleave + `ITrashDigivolutionCards` filter-then-
+                    // trash-survivors shape.
+                    let _ = ctx.trash_card_source(source_ref.permanent, source_ref.card);
                 }
             }
             true
@@ -312,7 +320,11 @@ pub fn try_run(
                         }
                     }
                     UnionZoneOrigin::Material { carrier, .. } => {
-                        ctx.trash_card_source(carrier, card);
+                        // Soft-fail bool discarded — see TrashSelectedSources
+                        // above. Single-card union bindings (EX11-038) trash
+                        // the picked card if still present; silently no-op
+                        // if an intervening effect already removed it.
+                        let _ = ctx.trash_card_source(carrier, card);
                     }
                     UnionZoneOrigin::Trash => {
                         // Already in trash; a trash-origin union binding is a

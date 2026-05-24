@@ -323,7 +323,13 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         // into the controller's trash via the EffectContext
                         // primitive (stays within the API boundary).
                         for handle in picks {
-                            ctx.trash_card_source(subject, handle);
+                            // Soft-fail bool discarded — picks are validated
+                            // by `select_count_capped_multi` upstream and the
+                            // `<Fragment>` flow is single-carrier (`subject`),
+                            // so a stale handle here would be an engine bug,
+                            // not a rules-natural fizzle. Discard for parity
+                            // with the new `trash_card_source` signature.
+                            let _ = ctx.trash_card_source(subject, handle);
                         }
                         // Cancel the original deletion — carrier survives
                         // with its remaining sources + top.

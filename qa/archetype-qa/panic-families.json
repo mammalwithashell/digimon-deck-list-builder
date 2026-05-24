@@ -48,6 +48,16 @@
       "first_seen_at": "2026-05-23",
       "resolved_at": "2026-05-24",
       "resolved_by": "openspec/changes/fix-zombie-permanent-siblings"
+    },
+    {
+      "family_id": "G-DSL-TRASH-SOURCES-STALE-HANDLE",
+      "description": "EffectContext::trash_card_source panics when the source card is no longer in the carrier's stack. Root cause: install_source_multi_selection snapshots candidate SourceSelectionRefs into action_to_source at install time (effect_context/selections.rs:2564); intervening observer effects between install and the player's submit can drain the picked source. The DSL TrashSelectedSources / TrashUnionBound loops then call trash_card_source with the stale handle and hit the `.expect(\"card not in this permanent's stack\")`. Sibling class of G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION (handle-staleness family) — distinct mechanism (write-after-shift vs read-after-empty). Fixed by DCGO-parity soft-fail in trash_card_source (returns bool, no panic on missing carrier / empty stack / stale card) + live revalidation in install_source_multi_selection's submit callback. See DCGO ITrashDigivolutionCards.TrashDigivolutionCards (CardController.cs:5181) for the canonical shape. Captured fixture: code/digimon-engine/tests/recordings/g_dsl_trash_sources_stale_handle.json (game 9728, TS Olympos turn 10).",
+      "pattern": "trash_card_source: card not in this permanent's stack",
+      "panic_site": "code/digimon-engine/src/effect_context/mod.rs::trash_card_source",
+      "status": "resolved",
+      "first_seen_at": "2026-05-24",
+      "resolved_at": "2026-05-24",
+      "resolved_by": "openspec/changes/fix-trash-card-source-stale-handle"
     }
   ]
 }
