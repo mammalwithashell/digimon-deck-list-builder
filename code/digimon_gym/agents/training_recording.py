@@ -136,12 +136,28 @@ class TrainingGameRecorder:
 
 
 class TrainingRecordingWrapper(gymnasium.Wrapper):
-    """Captures completed episode recordings before vector env auto-reset.
+    """Engine-panic safety rail AND completed-episode recording capture.
 
-    Also converts engine panics into terminal steps so training survives
-    `pyo3_runtime.PanicException` (which derives from `BaseException`).
-    The crash is recorded as a draw artifact and the episode terminates;
-    SB3's VecEnv auto-resets and training continues with a fresh game.
+    Two responsibilities, kept in one wrapper because both hook the same
+    `step()` boundary:
+
+    1. **Panic catcher (always on).** Converts `pyo3_runtime.PanicException`
+       (and any other `BaseException` from the inner step) into a
+       synthetic terminal step. Training survives; SB3's VecEnv
+       auto-resets and the next episode starts fresh. `crash_count` is
+       a class-level counter so multiple env factories share visibility.
+       This path runs even when recording is disabled (`mode="off"`) —
+       only the artifact-write inside the panic handler is gated on
+       `recorder.enabled`.
+
+    2. **Recording artifact writer (opt-in).** When the inner step
+       terminates normally and `recording_writer.should_record(...)`
+       returns True for the outcome, writes one JSON artifact per
+       completed game with the replay actions + outcome metadata.
+
+    `make_env` (and the SubprocVecEnv worker construction paths) insert
+    this wrapper unconditionally so the panic rail is never accidentally
+    missing — pass a `mode="off"` recorder when no artifacts are wanted.
     """
 
     # Class-level tally so multiple env factories share visibility.

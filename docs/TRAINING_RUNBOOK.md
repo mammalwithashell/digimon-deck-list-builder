@@ -37,6 +37,44 @@ For architecture details, see `../AGENTS.md`.
 
 ---
 
+## 0. Pre-flight: release-mode bindings
+
+Always train against a **release-mode** build of the Rust engine + PyO3 bindings. The `dev` profile is ~10× slower per engine step and turns a 1M-step training run into days. Recompile after every engine change (and after every checkout of new commits):
+
+```bash
+# Build the release wheel
+cd code/digimon-engine-py
+python -m maturin build --release
+
+# Install it into the current Python env (overwrites prior install)
+pip install --force-reinstall --no-deps \
+  ../../target/wheels/digimon_engine-0.1.0-cp311-abi3-win_amd64.whl
+# (substitute the actual wheel filename — abi3 wheel is platform-tagged
+#  and the version may have moved; pick the freshest from target/wheels/)
+```
+
+If you have a `.venv` configured, `python -m maturin develop --release` does both steps in one command (compile + install). Without a venv, the build+pip flow above is the equivalent. Either way, **never train against a `--debug` or default-profile wheel**.
+
+### Verifying release mode
+
+```bash
+python -c "
+from digimon_engine import RustHeadlessGame
+# A fresh game in release mode should construct in well under 100ms.
+import time
+t = time.perf_counter()
+g = RustHeadlessGame(['ST1-01']*5 + ['ST1-03']*45, ['ST1-01']*5 + ['ST1-03']*45, seed=1)
+print(f'Constructed in {(time.perf_counter() - t)*1000:.1f}ms')
+"
+# Dev-mode build: ~500–1000ms. Release build: <100ms.
+```
+
+### Panic safety rail (always on)
+
+`pilot_training` inserts `TrainingRecordingWrapper` into the env chain unconditionally — it catches PyO3 `PanicException` (and any other `BaseException` from the inner engine step), logs the crash to stderr, increments a class-level `crash_count`, and synthesises a terminal step so SB3's VecEnv auto-resets and the run continues. **You don't need `--record-games anomalies` to get this protection**; that flag controls whether the crash is also persisted as a JSON artifact for triage. Set `--record-games anomalies` (or `--record-games all`) on long unattended runs if you want post-mortem artifacts.
+
+---
+
 ## 1. Quick Reference Commands
 
 ### CLI Training (pilot_training.py)
@@ -417,6 +455,13 @@ One JSON line per eval window. Top-level fields include the headline scalars plu
 Pilot training can optionally write deterministic per-game recording artifacts
 for bug triage. Recording is disabled by default so normal training runs do not
 pay the storage or serialization cost.
+
+**Note**: the underlying `TrainingRecordingWrapper` is now inserted into the env
+chain unconditionally — it is the **panic safety rail** that survives engine
+crashes regardless of the `--record-games` setting (see §0). The
+`--record-games` flag controls only whether the wrapper PERSISTS crash + game
+artifacts to disk. Set it to `anomalies` (or `all`) on long unattended runs if
+you want JSON artifacts to triage from after a crash.
 
 Useful modes:
 
