@@ -2,8 +2,24 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-17
+Last updated: 2026-05-24
 Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
+
+## Closures (2026-05-24)
+
+- **Mid-attack `<Security A. +N>` not recomputed** — CLOSED. The
+  player-attack security-check loop (`resolve_player_security_loop` +
+  `drive_security_resolution`'s `DisposeFinalize` arm in
+  [`code/digimon-engine/src/combat.rs`](../../code/digimon-engine/src/combat.rs))
+  used to snapshot the attacker's effective `<Security A.>` once at
+  attack declaration and decrement that count. DCGO re-reads
+  `Permanent.Strike` every iteration. Exposed by [BT21-001] Gigimon's
+  `on_opponent_security_removed` inherited that may digivolve an
+  attacker into [BT21-029] Medusamon mid-attack — Medusamon's
+  `<Security A. +1>` was ignored by subsequent checks. Closed by change
+  [`fix-security-check-recompute-mid-attack`](../../openspec/changes/fix-security-check-recompute-mid-attack/).
+  Regression test:
+  [`code/digimon-engine/tests/mid_attack_security_attack_recompute.rs`](../../code/digimon-engine/tests/mid_attack_security_attack_recompute.rs).
 
 ## Sweep notes (2026-05-17 — Phase 2 rollup)
 
