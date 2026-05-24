@@ -144,7 +144,9 @@ very first `append()` call per `env_index`), with `kind:
 run metadata without scanning the body. Helper functions
 `_derive_lvl_counts(card_ids)` and `_derive_has_tamer(card_ids)` live in
 `mulligan_log.py` next to the wrapper; both read from `data/cards.json`
-loaded once at module import. `_infer_global_step()` returns
+loaded once at module import. The relevant cards.json fields are
+`level: int | null` (2 = digi-egg, 3-7 = Digimon) and `card_kind: int`
+(0 = Digimon, 1 = Tamer, 2 = Option, 3 = DigiEgg). `_infer_global_step()` returns
 `getattr(self.unwrapped, 'num_timesteps', None)` if SB3 has attached it,
 else `None` — the field is best-effort, not load-bearing.
 
