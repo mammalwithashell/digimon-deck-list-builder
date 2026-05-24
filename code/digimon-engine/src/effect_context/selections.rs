@@ -2590,7 +2590,40 @@ fn install_source_multi_selection(
                 .copied()
                 .expect("source action must have been in valid_action_ids");
             let mut next_picked = picked_for_pick;
-            next_picked.push(source_ref);
+
+            // DCGO-parity live revalidation. The picker's `action_to_source`
+            // was snapshotted at install time; intervening observer effects
+            // (e.g., a sibling [WD] clause running before this picker is
+            // submitted) can trash, return, or extract the candidate's card
+            // from its carrier. Mirrors DCGO's
+            // `SelectCardEffect.SetUp(... customRootCardList: selectedPermanent.DigivolutionCards ...)`
+            // (DCGO/Assets/Scripts/Script/CardEffectCommons/TrashDigivolutionCards.cs:125)
+            // which reads the live list at display time. If the picked
+            // candidate has vanished, refuse this action (don't add to
+            // `next_picked`) and re-install with refreshed candidates —
+            // preserves prior valid picks while presenting the agent a
+            // truthful menu. See change `fix-trash-card-source-stale-handle`
+            // and family `G-DSL-TRASH-SOURCES-STALE-HANDLE`.
+            let still_present = game
+                .player(source_ref.permanent.player)
+                .battle_area
+                .get(source_ref.permanent.index as usize)
+                .map(|perm| {
+                    perm.card_sources
+                        .iter()
+                        .any(|c| c.handle() == source_ref.card)
+                })
+                .unwrap_or(false);
+            if still_present {
+                next_picked.push(source_ref);
+            }
+            // When `!still_present`, `next_picked` is unchanged (== prior
+            // `picked_for_pick`); the recursive re-install below will
+            // re-enumerate `source_multi_candidates` from the live state
+            // and either present fresh candidates, final-callback with
+            // the prior valid picks (if `picked >= min`), or no-op
+            // (if `picked < min` and no candidates remain). See design
+            // Risk 2 in `openspec/changes/fix-trash-card-source-stale-handle/design.md`.
 
             let next_cb: SourceFinalCallback = Box::new(move |game, picks| {
                 let cb_opt = shared_cb.lock().unwrap().take();

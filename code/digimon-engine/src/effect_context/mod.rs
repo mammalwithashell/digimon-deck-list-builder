@@ -4068,23 +4068,60 @@ impl<'a> EffectContext<'a> {
     /// not just the top — see `armor_purge_top` for the top-card-only variant)
     /// and pushed to the card owner's trash.
     ///
-    /// Panics if `card` is not present in `perm.card_sources`. Token cards
-    /// (`is_token == true`) are still pushed to trash; the caller's gate is
-    /// responsible for any token-aware filtering.
-    pub fn trash_card_source(&mut self, perm: PermanentHandle, card: CardHandle) {
+    /// Returns `true` iff the card was actually trashed. Returns `false` (no
+    /// mutation, no observer dispatch, no `soft_remove` side-effects) for any
+    /// rules-natural fizzle:
+    ///   - the carrier slot is gone (soft-removed or deleted by a sibling
+    ///     effect between handle capture and this call);
+    ///   - the carrier exists but `card_sources` is empty (zombie slot
+    ///     mid-cleanup — also avoids the `top_card()` panic on empty stack);
+    ///   - the carrier's `card_sources` does not contain `card` (the captured
+    ///     handle was invalidated by an intervening observer that trashed,
+    ///     returned, or extracted the source).
+    ///
+    /// This soft-fail contract mirrors DCGO
+    /// `ITrashDigivolutionCards.TrashDigivolutionCards()` (see
+    /// `DCGO/Assets/Scripts/Script/CardController.cs:5181`): the trash
+    /// primitive is declarative ("trash these if possible") and the outcome
+    /// is observable from the return value. Callers that need to branch on
+    /// the actually-trashed set check this bool; callers that don't care
+    /// (e.g., the DSL `TrashSelectedSources` loop and the engine-side
+    /// pre-validated helpers `<Fragment>` install, `trash_all_sources`,
+    /// `trash_top_n_digivolution_cards_of_each`) discard it with `let _ =`.
+    /// See change `fix-trash-card-source-stale-handle` and panic family
+    /// `G-DSL-TRASH-SOURCES-STALE-HANDLE` in
+    /// `qa/archetype-qa/panic-families.json`.
+    ///
+    /// Token cards (`is_token == true`) are still pushed to trash; the
+    /// caller's gate is responsible for any token-aware filtering.
+    pub fn trash_card_source(&mut self, perm: PermanentHandle, card: CardHandle) -> bool {
         let (removed, host_card) = {
-            let permanent = self
+            // Soft-fail: carrier missing (DCGO: `if (_permanent == null) yield break;`).
+            let permanent = match self
                 .game
                 .player_mut(perm.player)
                 .battle_area
                 .get_mut(perm.index as usize)
-                .expect("trash_card_source: permanent not found");
+            {
+                Some(p) => p,
+                None => return false,
+            };
+            // Soft-fail: empty stack (DCGO: `HasNoDigivolutionCards` yield-break).
+            // Guards the `top_card()` call below from panicking on an empty stack.
+            if permanent.card_sources.is_empty() {
+                return false;
+            }
             let host_card = permanent.top_card().handle();
-            let pos = permanent
+            // Soft-fail: card not in stack (DCGO: target dropped by
+            // `_trashTargetCards.Filter(c => _permanent.DigivolutionCards.Contains(c))`).
+            let pos = match permanent
                 .card_sources
                 .iter()
                 .position(|c| c.handle() == card)
-                .expect("trash_card_source: card not in this permanent's stack");
+            {
+                Some(p) => p,
+                None => return false,
+            };
             (permanent.card_sources.remove(pos), host_card)
         };
         let source_card = removed.handle();
@@ -4105,6 +4142,7 @@ impl<'a> EffectContext<'a> {
         // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
         // `qa/archetype-qa/engine-gaps.md`.
         let _ = self.game.soft_remove_if_emptied(perm);
+        true
     }
 
     /// Remove a single digivolution source card from `perm`'s stack and route
@@ -4203,7 +4241,9 @@ impl<'a> EffectContext<'a> {
                 .take(permanent.card_sources.len().saturating_sub(1))
                 .any(|candidate| candidate.handle() == source);
             if still_below_top {
-                self.trash_card_source(target, source);
+                // Bool discarded: pre-validated above; no caller branches
+                // on outcome (return is `true` regardless of per-source success).
+                let _ = self.trash_card_source(target, source);
             }
         }
         true
@@ -5348,7 +5388,10 @@ impl<'a> EffectContext<'a> {
                 if !still_present {
                     continue;
                 }
-                self.trash_card_source(handle, source_card);
+                // Bool discarded: caller counts attempts that passed the
+                // pre-validation gate, not actuals. Aligns with the existing
+                // contract — `total` reflects "trash attempts dispatched".
+                let _ = self.trash_card_source(handle, source_card);
                 total += 1;
             }
         }
