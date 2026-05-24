@@ -9,11 +9,8 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import gymnasium
+from typing import Any, Dict, List
 
 from data_paths import CARDS_JSON
 
@@ -22,10 +19,20 @@ SCHEMA_VERSION = 1
 
 
 def _load_card_metadata() -> Dict[str, Dict[str, Any]]:
-    """Load cards.json once at module import; used by helpers below."""
+    """Load cards.json once at module import; used by helpers below.
+
+    On any I/O or parse failure, log once to stderr and return an empty
+    dict so callers degrade gracefully (helpers return zero histograms
+    and False for tamer) rather than crash training.
+    """
     try:
         return json.loads(Path(CARDS_JSON).read_text(encoding="utf-8"))
-    except FileNotFoundError:
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            f"[mulligan_log] cards.json unavailable; hand features will be empty: {exc!r}",
+            file=sys.stderr,
+            flush=True,
+        )
         return {}
 
 
