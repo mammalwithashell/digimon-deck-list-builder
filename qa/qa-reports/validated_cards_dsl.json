@@ -1240,10 +1240,10 @@
     "BT17-102": {
       "card_name": "Greymon",
       "validated_date": "2026-05-22",
-      "report": "close-dna-omnimon-partial-gaps",
+      "report": "complete-rocks-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "DNA Omnimon",
+      "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-102.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_102.rs",
       "test_count": 15,
@@ -1609,11 +1609,11 @@
     },
     "BT23-096": {
       "card_name": "Comet Hammer",
-      "validated_date": "2026-05-22",
-      "report": "close-dna-omnimon-partial-gaps",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "DNA Omnimon",
+      "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-096.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_096.rs",
       "test_count": 14,
@@ -1621,7 +1621,7 @@
         "D6",
         "E2"
       ],
-      "notes": "DNA Omnimon closure 2026-05-22: G-DSL-DELAY-ON-ATTACK-EVENT resolved via event-backed on_ally_attack Delay dispatch; CS attack and non-CS negative tests enabled and passing; no raw_rust."
+      "notes": "Verified for Rocks: G-DSL-DELAY-ON-ATTACK-EVENT resolved via event-backed on_ally_attack Delay dispatch; CS attack and non-CS negative tests enabled and passing; no raw_rust. Also used by DNA Omnimon closure."
     },
     "EX1-068": {
       "card_name": "Ice Wall!",
@@ -1804,11 +1804,11 @@
     },
     "P-123": {
       "card_name": "Ukkomon",
-      "validated_date": "2026-05-20",
-      "report": "complete-dna-omnimon-archetype",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "DNA Omnimon",
+      "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/p/P-123.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_123.rs",
       "test_count": 15,
@@ -1816,7 +1816,7 @@
         "E2",
         "B3"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "Verified for Rocks: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust. Also used by DNA Omnimon completion."
     },
     "P-182": {
       "card_name": "WarGreymon",
@@ -2225,19 +2225,19 @@
     },
     "BT20-055": {
       "card_name": "Invisimon",
-      "validated_date": "2026-05-04",
-      "report": "rocks-rust-dsl-pool-pass",
-      "status": "BLOCKED",
-      "gap_kind": "engine-gap",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_055.rs",
+      "test_count": 3,
       "patterns": [
         "FACE-UP-SECURITY",
         "SECURITY-END-OPPONENT-TURN"
       ],
-      "notes": "Pass complete: blocked on face-up security lifecycle and security end-of-opponent-turn play timing before faithful YAML."
+      "notes": "Face-up security lifecycle authored: OnPlay/WD flip opponent security face-up and attacker-side on_check_face_up_security self-security placement. Focused tests pass with no ignores."
     },
     "BT21-021": {
       "card_name": "OmniShoutmon",
@@ -2279,10 +2279,10 @@
     },
     "BT23-059": {
       "card_name": "Justimon: Blitz Arm",
-      "validated_date": "2026-05-22",
-      "report": "complete-rocks-archetype (Phase A)",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-059.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_059.rs",
@@ -2290,7 +2290,7 @@
       "patterns": [
         "KEYWORD"
       ],
-      "notes": "Blocker + [OnPlay/WD/WA] lowest-cost-delete clause authored. [All Turns] when-Option-trashed clause BLOCKED on G-ON-OPTION-TRASHED-DSL (DSL Timing enum lacks on_option_trashed)."
+      "notes": "Blocker, [OnPlay/WD/WA] lowest-cost-delete, and [All Turns][OPT] on_option_trashed unsuspend/immunity clauses authored. Focused tests pass with no ignores."
     },
     "BT4-072": {
       "card_name": "Gogmamon",
@@ -2309,10 +2309,10 @@
     },
     "BT8-094": {
       "card_name": "Digimon Emperor",
-      "validated_date": "2026-05-22",
-      "report": "complete-rocks-archetype (Phase A)",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/bt8/BT8-094.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_094.rs",
@@ -2320,7 +2320,7 @@
       "patterns": [
         "SECURITY-PLAY"
       ],
-      "notes": "Security authored. [All Turns] deletion-draw and [Opponent Turn] breeding-move clauses BLOCKED on G-EVENT-TARGET-LEVEL-LTE (no event_target_level predicate family)."
+      "notes": "Security, opponent level-3 breeding-move memory, and opponent level-5-or-lower deletion Draw clauses authored with event_target_level predicates. Focused tests pass with no ignores."
     },
     "BT9-103": {
       "card_name": "Kongou",
@@ -2419,19 +2419,19 @@
     },
     "EX10-034": {
       "card_name": "Blastmon",
-      "validated_date": "2026-05-22",
-      "report": "complete-rocks-archetype (Phase A)",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/ex10/EX10-034.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_034.rs",
-      "test_count": 13,
+      "test_count": 14,
       "patterns": [
         "KEYWORD",
         "FRAGMENT"
       ],
-      "notes": "Keywords + [All Turns] source-trash SecA+1/+3000 clause authored. [OnPlay/WD] grant-forced-attack-effect clause BLOCKED on G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING."
+      "notes": "Keywords, [All Turns] source-trash SecA+1/+3000, and [OnPlay/WD] selected-opponent-Digimon forced StartOfYourMainPhase attack grant authored. Focused tests pass with no ignores."
     },
     "EX10-036": {
       "card_name": "Magneticdramon",
@@ -2483,10 +2483,10 @@
     },
     "EX11-038": {
       "card_name": "Sunarizamon",
-      "validated_date": "2026-05-22",
-      "report": "complete-rocks-archetype (Phase A)",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-038.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_038.rs",
@@ -2495,14 +2495,14 @@
         "SOURCE-TRASH-CONTEXT",
         "DRAW"
       ],
-      "notes": "Inherited source-trash Draw clause authored. [WM]/[OnPlay] hand-OR-digivolution-source union trash cost BLOCKED on G-DSL-SELECT-OWN-SOURCES-FILTER (union shape)."
+      "notes": "Inherited source-trash Draw and [When Moving]/[OnPlay] hand-or-digivolution-source union trash cost Draw clauses authored. Focused tests pass with no ignores."
     },
     "EX11-044": {
       "card_name": "Pyramidimon",
-      "validated_date": "2026-05-22",
-      "report": "complete-rocks-archetype (Phase A)",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-044.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_044.rs",
@@ -2511,25 +2511,25 @@
         "KEYWORD",
         "FRAGMENT"
       ],
-      "notes": "Reboot + Fragment(3) authored. Clause A BLOCKED on G-HIGHEST-PLAY-COST-SELECTOR; Clause B BLOCKED on event_host_permanent_is_source predicate."
+      "notes": "Reboot, Fragment(3), highest-play-cost delete, and event_host_permanent_is_source source-trash memory clauses authored. Focused tests pass with no ignores."
     },
     "EX11-065": {
       "card_name": "Close",
-      "validated_date": "2026-05-21",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-065.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_065.rs",
-      "test_count": 20,
+      "test_count": 18,
       "patterns": [
         "B1",
         "B3",
         "A6",
         "E2"
       ],
-      "notes": "Clause 0 [Start of Your Main Phase] BLOCKED on hand-OR-digivolution-source union trash cost. All Turns observer + security IMPLEMENTED."
+      "notes": "StartOfMain hand-or-digivolution-source union trash cost memory clause, All Turns observer, and Security authored. Focused tests pass with no ignores."
     },
     "EX7-049": {
       "card_name": "Metallicdramon",
@@ -2615,20 +2615,20 @@
     },
     "EX8-050": {
       "card_name": "Gogmamon",
-      "validated_date": "2026-05-22",
-      "report": "complete-rocks-archetype (Phase A)",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/ex8/EX8-050.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_050.rs",
-      "test_count": 16,
+      "test_count": 17,
       "patterns": [
         "KEYWORD",
         "ON_DELETION_REVEAL_SELECT_TRASH",
         "INHERITED_REDIRECT_TO_SELF"
       ],
-      "notes": "Blocker + [On Deletion] reveal/trash authored; play-from-reveal-free sub-step BLOCKED. Inherited attack-redirect authored."
+      "notes": "Blocker, [On Deletion] reveal/select play_from_revealed_free/trash-rest, and inherited attack-redirect authored. Focused tests pass with no ignores."
     },
     "EX8-051": {
       "card_name": "Proganomon",
@@ -2764,10 +2764,10 @@
     },
     "P-130": {
       "card_name": "Lui Ohwada",
-      "validated_date": "2026-05-21",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-23",
+      "report": "complete-rocks-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/p/P-130.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_130.rs",
@@ -2776,7 +2776,7 @@
         "B3",
         "E2"
       ],
-      "notes": "[Your Turn] on_move trigger + security IMPLEMENTED. [On Play] move-from-breeding BLOCKED on G-MOVE-BREEDING-DSL (no DSL step for move_from_breeding_by_effect) + G-SELECT-BREEDING-FILTER (no filter on select_own_breeding_permanent)."
+      "notes": "[On Play] optional level-3+ move-from-breeding, [Your Turn] on_move trigger, and Security authored. Focused tests pass with no ignores."
     },
     "P-167": {
       "card_name": "Landramon",

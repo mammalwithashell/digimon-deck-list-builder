@@ -1087,6 +1087,12 @@ impl ModifierRegistry {
             .unwrap_or_default()
     }
 
+    pub fn contains_granted_triggered_body_id(&self, body_id: u64) -> bool {
+        self.granted_triggered
+            .values()
+            .any(|entries| entries.iter().any(|e| e.body_id == body_id))
+    }
+
     /// Expire modifiers at the end of a player's turn.
     ///
     /// - `Expiry::EndOfTurn` — removed unconditionally.

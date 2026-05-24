@@ -87,7 +87,7 @@ Edit `.mcp.json` and uncomment the `_digimon-engine-mcp` entry (drop the leading
 
 For Claude Code, restart the client after editing `.mcp.json`.
 
-### Tool surface (24 tools)
+### Tool surface (26 tools)
 
 **Lifecycle (6):**
 - `new_game_from_decks(deck1, deck2, seed?)` → `{ game_id }`
@@ -111,13 +111,15 @@ For Claude Code, restart the client after editing `.mcp.json`.
 - `deck_cards(game_id)` — full metadata for both decks (Phase 6.5)
 - `recorded_actions(game_id, decode_labels?)` — recorded action log with optional human labels (Phase 6.5)
 
-**Actions (6):**
+**Actions (8):**
 - `play(game_id, player, hand_idx)`
+- `digivolve(game_id, host, source_hand_idx)` — `host = {player, index}` permanent handle
+- `attack(game_id, attacker, target)` — `attacker = {player, index}`, `target = {player, index} | "security"`
 - `resolve_selection(game_id, player, action_id)`
 - `end_turn(game_id)`
 - `pass_turn(game_id)`
 - `move_from_breeding(game_id, player)`
-- `step(game_id, action_id)` — universal action gate; use for digivolve/attack via action IDs from `legal_actions`
+- `step(game_id, action_id)` — universal action gate; submit a raw `action_id` from `legal_actions`
 
 ### Result envelope
 
@@ -127,6 +129,36 @@ Every tool call returns `{ content: [{ type: "text", text: "<JSON>" }] }` per th
 - **Action tools** return `ActionResult { ok, error, events_emitted, new_phase, pending_selection_after }`.
 - **Tool-level errors** (illegal action, unknown game_id, at-capacity) appear as `{ ok: false, error: "..." }` — they don't escalate to JSON-RPC errors.
 - **Protocol errors** (malformed args) appear as JSON-RPC `error` objects.
+
+### Action validation
+
+Action methods validate before dispatching. `ok: false` with a descriptive `error` is returned (engine state unchanged) for:
+
+- `play()` outside `Main` phase, or by a player who is not `current_decision_player()`
+- `step()` with an `action_id` that's not legal for `current_decision_player()` in the current phase
+- `end_turn()` outside `Main` or `EndOfTurnAction`
+- `pass_turn()` outside `Breeding`, `Main`, or `EndOfTurnAction`
+- `play(player, hand_idx=99)` — hand index out of bounds
+
+`step()`'s validation is intentional divergence from `HeadlessRunner::step` (which is fire-and-forget for the RL training loop). Debug callers need to detect failed actions; RL callers don't.
+
+### Event format
+
+`events_emitted` (in every `ActionResult`) and the `events` read tool return events as **structured JSON objects** with a top-level `type` field (matching `GameEvent::type_str()`) and variant-specific siblings:
+
+```json
+[
+  {"type": "MemoryChange", "seq": 0, "player": 0, "delta": -3, "total": -3},
+  {"type": "Play",         "seq": 1, "player": 0, "card_id": "BT24-008", "field_index": 0},
+  {"type": "Digivolve",    "seq": 2, "player": 0, "top_card_id": "EX9-021", "field_index": 0, "from_stack_top": "BT22-026"},
+  {"type": "GameOver",     "seq": 9, "winner": 0, "reason": "SecurityAttack"},
+  {"type": "EffectFizzled","seq":10, "source_permanent": {"player": 0, "index": 1}, "reason": "no valid target"}
+]
+```
+
+The `EffectFizzled` variant is emitted in two situations:
+- **Install-time**: a selection helper's target filter matched zero entities (effect silently does nothing per existing engine convention, now observable via the event).
+- **Execute-time**: `LiveGame::step` detected that the only option in a mandatory pending selection produced no state change; the wrapper clears the pending and emits the event so callers aren't soft-locked.
 
 ## Recipe cookbook
 
@@ -173,8 +205,6 @@ Every tool call returns `{ content: [{ type: "text", text: "<JSON>" }] }` per th
   `card_data` is `Arc`-wrapped. Today, "what if I had picked differently" requires
   re-loading the recording or rebuilding the game.
 - **`seek` (MCP) is stubbed.** Use `load_recording` with a different step instead.
-- **No dedicated `digivolve`/`attack` tools.** Use `step <action_id>` with an
-  action_id from `legal_actions`.
 - **Verify mode in CLI replay** catches memory/turn/phase/game-over divergences
   but doesn't compare full state.
 - **`scenario` subcommand** is stubbed — Python `ScenarioRunner` port is its own
@@ -189,4 +219,4 @@ Every tool call returns `{ content: [{ type: "text", text: "<JSON>" }] }` per th
 - `code/digimon-engine/src/view/mod.rs` — `Perspective`, `StateView`, `HandView`, `FieldView`, etc.
 - `code/digimon-engine/src/action/explain.rs` — `ActionExplanation`, `legal_decoded_actions`
 - `code/digimon-engine-cli/src/` — REPL, replay viewer, scenario stub
-- `code/digimon-engine-mcp/src/` — JSON-RPC framing, game registry, 24 tools
+- `code/digimon-engine-mcp/src/` — JSON-RPC framing, game registry, 26 tools

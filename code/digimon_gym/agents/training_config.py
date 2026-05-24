@@ -12,6 +12,7 @@ import yaml
 VALID_ALGORITHMS = {"mlp", "lstm"}
 VALID_OPPONENTS = {"greedy", "random", "agent", "pool", "self-play"}
 VALID_RECORD_GAME_MODES = {"off", "all", "sampled", "draws", "anomalies", "eval"}
+VALID_MULLIGAN_LOG_MODES = {"on", "off"}
 
 
 @dataclass
@@ -57,6 +58,9 @@ class TrainingConfig:
     record_game_tensors: bool = False
     record_games_max: int = 25
     record_games_sample_rate: float = 0.01
+    # When set via YAML, quote the value ("on" / "off") — unquoted `off`/`on`
+    # are YAML 1.1 booleans and would fail validation as bool literals.
+    mulligan_log: str = "on"
 
     def __post_init__(self) -> None:
         self._validate()
@@ -107,6 +111,11 @@ class TrainingConfig:
             raise ValueError(
                 f"record_games must be one of {sorted(VALID_RECORD_GAME_MODES)}, "
                 f"got {self.record_games}"
+            )
+        if self.mulligan_log not in VALID_MULLIGAN_LOG_MODES:
+            raise ValueError(
+                f"mulligan_log must be one of {sorted(VALID_MULLIGAN_LOG_MODES)}, "
+                f"got {self.mulligan_log}"
             )
         if self.record_games_max < 0:
             raise ValueError("record_games_max must be >= 0")

@@ -2605,6 +2605,17 @@ impl Game {
                                 was_face_up,
                             };
                             self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger);
+                            if was_face_up {
+                                let trigger = TriggerSource::OnCheckFaceUpSecurity {
+                                    attacker,
+                                    defender,
+                                    revealed_card,
+                                };
+                                self.enqueue_triggered(
+                                    EffectTiming::OnCheckFaceUpSecurity,
+                                    trigger,
+                                );
+                            }
                         }
                         self.drain_effect_queue();
                         if self.pending_selection.is_some() {
@@ -3754,6 +3765,10 @@ impl Game {
             }
         };
         if had_linked {
+            // Keep the already-stacked OnDeletion drain separate from this
+            // immediate linked-card trash event; they are different trigger
+            // windows and should not collapse into one TriggerOrder prompt.
+            let mut deferred_queue = std::mem::take(&mut self.effect_queue);
             for pid in 0..self.players.len() {
                 self.enqueue_triggered(
                     crate::enums::EffectTiming::OnLinkedCardTrashed,
@@ -3761,6 +3776,9 @@ impl Game {
                 );
             }
             self.drain_effect_queue();
+            let mut immediate_queue = std::mem::take(&mut self.effect_queue);
+            immediate_queue.append(&mut deferred_queue);
+            self.effect_queue = immediate_queue;
         }
 
         // Now actually trash.

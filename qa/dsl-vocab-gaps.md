@@ -373,8 +373,8 @@ Format per entry:
 
 ## Rocks pool pass residual DSL/engine gaps
 - Status: PARTIAL pool pass completed on 2026-05-04. After pulling main, production YAML/test slices now exist for 40 of 47 Rocks pool cards; the remaining 7 were explicitly routed as blocked rather than no-op authored.
-- Remaining blocked cards: `BT21-021`, `BT9-103`, `EX11-065`, `EX8-070`, `P-130`. `EX10-003` moved to production YAML/test coverage on 2026-05-08. `BT20-055` is now production YAML/test-covered for its `[Security] [End of Opponent's Turn]` self-play slice, with its security-flip rider still gap-routed.
-- Missing DSL/engine areas: face-up security lifecycle; conditional inherited keyword grants based on host traits; Save/Xros routing; hand-or-source costs beyond own-source filtering; source placement from hand/trash; lowest-play-cost delete; effect move-from-breeding and same-side/costed `[When Moving]` follow-up shapes beyond the resolved base OnMove timing.
+- Remaining blocked cards: `BT9-103`, `EX8-070`. `EX10-003` moved to production YAML/test coverage on 2026-05-08. `P-130`, `EX11-065`, `EX11-038`, `BT20-055`, `BT23-096`, `BT8-094`, `BT23-059`, `EX11-044`, `EX10-034`, and `EX8-050` now have production YAML/test coverage for the slices closed or verified by `complete-rocks-archetype`.
+- Missing DSL/engine areas: Save/Xros routing; source placement from hand/trash; lowest-play-cost delete; and same-side/costed `[When Moving]` follow-up shapes beyond the resolved base OnMove timing.
 - First reported: 2026-05-04 Rocks pool implementation pass.
 
 ## Zephagamon / Vortexdramon — remaining battle-engine prep gaps
@@ -846,33 +846,9 @@ test was already passing through the `count_lte` aggregate over
 
 ---
 
-## P-130 — effect move-from-breeding DSL verb  [G-MOVE-BREEDING-DSL]
+## ~~P-130 — effect move-from-breeding DSL verb~~  [G-MOVE-BREEDING-DSL] — RESOLVED 2026-05-23
 
-- Effect text: P-130 Lui Ohwada: "[On Play] You may move 1 of your level 3 or higher Digimon from the breeding area to the battle area."
-- Missing DSL verb / step kind / predicate: No `CompiledStep` variant or YAML keyword lowers to `EffectContext::move_from_breeding_by_effect(player)`. The engine method exists at `code/digimon-engine/src/effect_context/mod.rs:2798` and works correctly, but has no DSL surface.
-- Secondary gap: `select_own_breeding_permanent` (`step.rs:1391`, `SelectOwnBreedingPermanentArgs`) has no `filter` field, so the level-3+ constraint ("level 3 or higher Digimon") is inexpressible even if the move verb were added. Tracked as `G-SELECT-BREEDING-FILTER` alongside `RK-G001` and `G-BREEDING-PERMANENT-SELECTION`.
-- No-approximations note: using `select_own_breeding_permanent` without a level filter (and promoting any breeding Digimon) violates the printed clause. The `raw_rust` bridge would also lack the level filter. Neither workaround is acceptable.
-- Lowers to engine API: `EffectContext::move_from_breeding_by_effect(player)` — single call moves the player's breeding-area permanent to the battle area with full OnMove event dispatch.
-- Suggested DSL syntax:
-  ```yaml
-  - select_own_breeding_permanent:
-      bind_as: target
-      filter: { level_gte: 3 }
-      optional: true
-      prompt: "Move 1 Lv.3+ Digimon from breeding to battle area"
-      then:
-        - move_from_breeding: { of: you }
-  ```
-  Or as a single atomic step (no player-visible selection needed since there is at most one breeding permanent):
-  ```yaml
-  - move_from_breeding:
-      of: you
-      optional: true
-      filter: { level_gte: 3 }
-  ```
-- Gap kind: dsl (engine primitive exists; no YAML verb; filter support also missing).
-- Cards blocked: P-130 Lui Ohwada [On Play] clause. Behavioral tests in `p_130.rs` tagged `#[ignore = "pending: G-MOVE-BREEDING-DSL"]`.
-- First reported: 2026-05-11 (P-130 Lui Ohwada TDD implementation pass).
+Moved to [`qa/resolved-gaps.md`](resolved-gaps.md). `move_from_breeding` now lowers to `EffectContext::move_from_breeding_by_effect`, and `select_own_breeding_permanent` supports a level filter plus optional accept/decline prompt for P-130's printed `[On Play]` clause.
 
 ---
 
@@ -1120,30 +1096,6 @@ test was already passing through the `count_lte` aggregate over
 - Companion engine gap: tracked in `qa/archetype-qa/engine-gaps.md` line 33 as RESOLVED for Python; OPEN for the Rust engine's modifier registry.
 - Gap kind: hybrid (Rust engine modifier registry needs a typed grant slot; DSL needs the verb + lowering).
 - First reported: 2026-05-03 (EX1-068 Ice Wall!, batch-implement-cards-rust-dsl)
-
-## EX10-034 — grant_triggered_effect to a selected binding  [G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING]
-- Effect text: EX10-034 Blastmon — "[On Play] [When Digivolving] Until your opponent's turn ends, give 1 of their Digimon '[Start of Your Main Phase] This Digimon attacks.'"
-- Status: OPEN (filed 2026-05-22 during EX10-034 Blastmon authoring).
-- Missing DSL verb / step kind / predicate: `grant_triggered_effect` step (`code/digimon-dsl/src/step.rs` `GrantTriggeredEffectArgs`) has `target: PredicateSpec` — it walks the battle area for all permanents matching the predicate and installs the granted body on EVERY match. The card text requires "1 of their Digimon" — a single player-selected opponent Digimon. There is no DSL surface that combines a `select_opponent_permanent` binding step with a `grant_triggered_effect` step targeting the selected binding: `target` cannot be a `BindingRef`.
-- Lowers to engine API: needs a new `target` variant (or sibling step kind) on `GrantTriggeredEffectArgs` that accepts a `BindingRef` in addition to `PredicateSpec`, lowering via `dsl_cards/step/grant_triggered.rs` to a single-target grant on the resolved permanent handle rather than a broadcast foreach loop. The engine substrate for per-permanent granted-triggered-effect entries (Phase 4i queue-based dispatch) already exists; the gap is purely in the DSL target-resolution path.
-- Suggested DSL syntax (option A — binding ref target):
-  ```yaml
-  - select_opponent_permanent:
-      bind_as: forced_target
-      filter: { kind: digimon }
-      prompt: "Choose 1 of your opponent's Digimon"
-  - grant_triggered_effect:
-      target: forced_target          # NEW: accept BindingRef (resolves to a single handle)
-      timing: start_of_main_phase
-      process:
-        - force_attack: { attacker: self, targets: any }
-      expiry: end_of_opponents_turn
-  ```
-  (Option B — `grant_triggered_effect_to_binding` step variant that takes `target: BindingRef` directly and is identical in lowering to the single-target case.)
-- Approximation that would VIOLATE no-approximations: using `target: { of: opponent, kind: digimon }` would install the forced-attack grant on ALL opponent Digimon (over-fires on every opponent Digimon rather than the selected 1). Per no-approximations, EX10-034's [OP][WD] clause is OMITTED entirely until the gap closes.
-- Also blocks: any "[On Play|When Digivolving|etc.] give 1 [specific target] '<timing> body'" card text where the grant target is a player-selected single permanent. Distinct from the EX1-068 gap (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT) which blocks broadcast-to-all — this gap specifically blocks the select-1-then-grant pattern.
-- Gap kind: dsl. Engine substrate (Phase 4i granted-triggered-effect per-permanent slots + queue dispatch) already exists; only the DSL target-resolution path for binding refs is missing.
-- First reported: 2026-05-22 (EX10-034 Blastmon, batch-implement-cards-rust-dsl)
 
 ## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] — RESOLVED 2026-05-17 (Phase 2 Track F)
 
@@ -2605,7 +2557,12 @@ Coverage:
 
 ---
 
-## BT8-094 / RB1-035 — event-target level predicates  [G-EVENT-TARGET-LEVEL-LTE]
+## ~~BT8-094 / RB1-035 — event-target level predicates~~  [G-EVENT-TARGET-LEVEL-LTE] — RESOLVED 2026-05-23
+
+- **Status:** RESOLVED 2026-05-23 (`complete-rocks-archetype` task 10.1). `event_target_level_eq`, `event_target_level_lte`, and `event_target_level_gte` now flow through `PredicateSpec` -> `CompiledPredicate` -> compiler -> runtime evaluator. `BT8-094` Clauses A and B are authored and verified. `MovedFromBreeding` observer dispatch now scans both players' battle areas so opponent-side Tamers can faithfully observe the moved event target.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt8_094 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt16_082 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_130 --nocapture`.
+
+Historical note:
 
 - **Effect text (BT8-094 Clause A):** "[All Turns] When one of your opponent's
   level 5 or lower Digimon is deleted, you may suspend this Tamer to ＜Draw 1＞."

@@ -11,7 +11,7 @@
 //! **[Security]** Play this card without paying the cost.
 //!
 //! # DCGO C# reference
-//! DCGO/ submodule uninitialized — absent.
+//! DCGO/Assets/Scripts/CardEffect/P/White/P_130.cs
 //!
 //! # Patterns this test covers
 //! - **B3**: Trigger-on-event tamer (on_move: MovedFromBreeding)
@@ -20,14 +20,10 @@
 //! - **Structural**: 3 triggered clauses (on_play, on_move, on_security)
 //!
 //! # Known gaps applied
-//! - **G-MOVE-BREEDING-DSL**: No DSL step lowers to
-//!   `ctx.move_from_breeding_by_effect(player)`. Clause 1 ([On Play] promote)
-//!   is BLOCKED — the entire [On Play] clause is emitted as a YAML gap comment
-//!   and ALL On-Play tests are `#[ignore]`'d.
-//! - **G-SELECT-BREEDING-FILTER**: `select_own_breeding_permanent` has no
-//!   `filter` field, so the level-3+ constraint is inexpressible in YAML.
-//!   This is a secondary blocker for Clause 1 (even if move_from_breeding
-//!   were available, we cannot filter by level).
+//! - **G-MOVE-BREEDING-DSL**: Resolved here with the `move_from_breeding` DSL
+//!   step over `ctx.move_from_breeding_by_effect(player)`.
+//! - **G-SELECT-BREEDING-FILTER**: Already resolved; `select_own_breeding_permanent`
+//!   supports `filter`, which gates the level-3+ prompt.
 //! - **G-OPT-TRIGGERED**: `once_per_turn` is NOT printed for Clause 2 — the
 //!   suspend cost naturally limits activation. OPT tests are irrelevant here.
 
@@ -197,17 +193,11 @@ fn p_130_on_security_clause_present() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 2 — [On Play] Clause 1 — BLOCKED (G-MOVE-BREEDING-DSL)
+// Section 2 — [On Play] Clause 1
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// [On Play] — positive: P-130 played with a Lv.3 Rookie in breeding.
-/// BLOCKED: no DSL step for `move_from_breeding_by_effect`.
-/// Even if `select_own_breeding_permanent` were used, the level-3+ filter is
-/// also inexpressible (G-SELECT-BREEDING-FILTER). Violates no-approximations
-/// policy — neither gap may be silently bypassed.
 #[test]
-#[ignore = "pending: G-MOVE-BREEDING-DSL — no DSL step lowers to move_from_breeding_by_effect; \
-            also pending: G-SELECT-BREEDING-FILTER — select_own_breeding_permanent has no filter field"]
 fn p_130_on_play_may_prompt_to_move_lv3_plus_from_breeding() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -244,9 +234,7 @@ fn p_130_on_play_may_prompt_to_move_lv3_plus_from_breeding() {
 }
 
 /// [On Play] — decline path: declining must leave breeding area unchanged.
-/// BLOCKED same as above.
 #[test]
-#[ignore = "pending: G-MOVE-BREEDING-DSL — no DSL step lowers to move_from_breeding_by_effect"]
 fn p_130_on_play_decline_leaves_breeding_unchanged() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -275,9 +263,7 @@ fn p_130_on_play_decline_leaves_breeding_unchanged() {
 }
 
 /// [On Play] — no candidate: when breeding area is empty, no selection is shown.
-/// BLOCKED same as above.
 #[test]
-#[ignore = "pending: G-MOVE-BREEDING-DSL — no DSL step lowers to move_from_breeding_by_effect"]
 fn p_130_on_play_no_selection_when_breeding_empty() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)

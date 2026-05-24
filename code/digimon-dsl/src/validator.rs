@@ -1291,6 +1291,9 @@ fn validate_step_binding_scope(
             // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::PlayFromRevealedFree(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::PlayToken(args) => {
             // The played token's `bind_as` becomes available to later
             // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
@@ -1306,6 +1309,15 @@ fn validate_step_binding_scope(
                 errors,
             );
             declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::TrashUnionBound(args) => {
+            report_if_undeclared_binding(
+                &args.binding,
+                &format!("{prefix}.binding"),
+                card_id,
+                scope,
+                errors,
+            );
         }
         StepSpec::BindPermanentProperty(args) => {
             scope.insert(args.bind_as.clone());

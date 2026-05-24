@@ -15,16 +15,9 @@
 //! # Patterns covered
 //! - <Blocker> keyword grant (Clause 0)
 //! - [On Deletion] reveal top 3, optional select Mineral/Rock cost<=5 Digimon,
-//!   trash remainder (Clause A — PARTIAL, play step BLOCKED on
-//!   G-PLAY-FROM-REVEALED-FREE from docs/RUST_ENGINE_GAPS.md)
+//!   play the selected card without paying the cost, and trash remainder
+//!   (Clause A)
 //! - Inherited [Opponent's Turn][OPT] redirect attack to self (Clause B)
-//!
-//! # Known gaps
-//! - G-PLAY-FROM-REVEALED-FREE (docs/RUST_ENGINE_GAPS.md §344):
-//!   `play_from_revealed_free` is not implemented. The [On Deletion] clause
-//!   reveals and selects correctly, but the "play without paying the cost"
-//!   step cannot be authored. Tests covering that step are `#[ignore]`'d
-//!   until the gap is closed.
 
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
@@ -177,6 +170,32 @@ fn ex8_050_on_deletion_has_select_reveal_buckets_step() {
         bucket_step.is_some(),
         "on_deletion process must contain a SelectRevealBuckets step with \
          one bucket (min:0, max:1) filtering for Digimon"
+    );
+}
+
+/// Clause A — the selected reveal bucket is consumed by PlayFromRevealedFree.
+#[test]
+fn ex8_050_on_deletion_has_play_from_revealed_free_step() {
+    let runner = gogmamon();
+    let card = runner.compiled_card("EX8-050").expect("EX8-050 present");
+    let od = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => Some(t),
+            _ => None,
+        })
+        .expect("must have OnDeletion clause");
+    assert!(
+        od.process.iter().any(|s| matches!(
+            s,
+            CompiledStep::PlayFromRevealedFree {
+                of: _,
+                card: CompiledBindingRef::Named(name),
+                ..
+            } if name == "play_pick"
+        )),
+        "on_deletion process must play the selected reveal bucket for free"
     );
 }
 
@@ -460,16 +479,12 @@ fn ex8_050_on_deletion_decline_trashes_all_3_revealed_cards() {
     );
 }
 
-// ─── BLOCKED tests (pending G-PLAY-FROM-REVEALED-FREE) ─────────────────────
+// ─── On Deletion free-play-from-reveal behavioral coverage ─────────────────
 
 /// [On Deletion] picking an eligible Mineral/Rock Digimon from the bucket
 /// should play it free (field +1) and trash the other 2 cards.
 ///
-/// BLOCKED pending G-PLAY-FROM-REVEALED-FREE (docs/RUST_ENGINE_GAPS.md §344).
-/// `play_from_revealed_free` is not yet implemented; the YAML clause omits the
-/// play step. Un-ignore once the gap is closed.
 #[test]
-#[ignore = "pending: G-PLAY-FROM-REVEALED-FREE — play_from_revealed_free not yet implemented (docs/RUST_ENGINE_GAPS.md §344)"]
 fn ex8_050_on_deletion_plays_eligible_mineral_card_free_and_trashes_rest() {
     let mineral = make_mineral_digimon("MIN-F", 4);
     let filler1 = make_filler("FILL-F1");
@@ -487,13 +502,14 @@ fn ex8_050_on_deletion_plays_eligible_mineral_card_free_and_trashes_rest() {
         .start();
 
     let gog = runner.place_on_field(0, "EX8-050", Some(0));
-    let field_before = runner.battle_area_size(0);
-    let trash_before = runner.trash_size(0);
-
     runner
         .game
         .delete_permanent_with_cause(gog, ReplacementCause::OpponentEffect);
     runner.game.drain_effect_queue();
+
+    let field_after_deletion = runner.battle_area_size(0);
+    let trash_after_deletion = runner.trash_size(0);
+    let memory_before_pick = runner.game.memory;
 
     // Pick MIN-F from the bucket (revealed at index 0 = SEL_REVEAL_START).
     let _ = runner.execute_action(0, SEL_REVEAL_START);
@@ -501,13 +517,17 @@ fn ex8_050_on_deletion_plays_eligible_mineral_card_free_and_trashes_rest() {
 
     assert_eq!(
         runner.battle_area_size(0),
-        field_before + 1,
+        field_after_deletion + 1,
         "eligible Mineral Digimon must be played onto the field"
     );
     assert_eq!(
         runner.trash_size(0),
-        trash_before + 2,
+        trash_after_deletion + 2,
         "the 2 remaining revealed cards must be trashed"
+    );
+    assert_eq!(
+        runner.game.memory, memory_before_pick,
+        "play_from_revealed_free must not spend the revealed card's play cost"
     );
 }
 

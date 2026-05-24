@@ -156,16 +156,26 @@ pub enum StepSpec {
     TrashBottomFaceDownSourceUnderTamer(TrashBottomFaceDownSourceUnderTamerArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
+    /// Move the specified player's eligible breeding-area Digimon to the
+    /// battle area through the effect-initiated engine path. Pair with
+    /// `select_own_breeding_permanent optional: true` when printed text says
+    /// "you may move..." so the accept/decline choice stays visible.
+    MoveFromBreeding(PlayerArg),
 
     // Play / digivolve
     PlayFromHand(PlayFromHandArgs),
     PlayFromHandFree(PlayFromHandFreeArgs),
     UseOptionFromHand(UseOptionFromHandArgs),
+    PlayFromRevealedFree(PlayFromRevealedFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
     /// true origin zone (hand, trash, or material), recovered from the binding.
     PlayUnionBoundFree(PlayUnionBoundFreeArgs),
+    /// Trash a `select_union_zone`-bound card from its true origin zone. Used
+    /// for costs that can be paid by trashing a card from hand or from one of
+    /// your Digimon's digivolution cards.
+    TrashUnionBound(UnionBoundArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
     PlaySelectedSourcesFree(TrashSelectedSourcesArgs),
@@ -195,6 +205,7 @@ pub enum StepSpec {
     SearchOwnSecurityStack(SearchOwnSecurityStackArgs),
     Recover(DrawArgs),
     MarkSecurityFaceUp(MarkSecurityArgs),
+    FlipSecurityFaceUp(PlayerArg),
 
     // Modifiers
     AddDpModifier(AddDpModifierArgs),
@@ -351,13 +362,16 @@ impl Serialize for StepSpec {
             }
             StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
+            StepSpec::MoveFromBreeding(v) => kv!(s, "move_from_breeding", v),
             // Play / digivolve
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
+            StepSpec::PlayFromRevealedFree(v) => kv!(s, "play_from_revealed_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
             StepSpec::PlayUnionBoundFree(v) => kv!(s, "play_union_bound_free", v),
+            StepSpec::TrashUnionBound(v) => kv!(s, "trash_union_bound", v),
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
             StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
             StepSpec::PlaySelectedSourcesFree(v) => kv!(s, "play_selected_sources_free", v),
@@ -412,6 +426,7 @@ impl Serialize for StepSpec {
             StepSpec::SearchOwnSecurityStack(v) => kv!(s, "search_own_security_stack", v),
             StepSpec::Recover(v) => kv!(s, "recover", v),
             StepSpec::MarkSecurityFaceUp(v) => kv!(s, "mark_security_face_up", v),
+            StepSpec::FlipSecurityFaceUp(v) => kv!(s, "flip_security_face_up", v),
             // Modifiers
             StepSpec::AddDpModifier(v) => kv!(s, "add_dp_modifier", v),
             StepSpec::AddModifier(v) => kv!(s, "add_modifier", v),
@@ -569,14 +584,17 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
+            "move_from_breeding" => StepSpec::MoveFromBreeding(map.next_value()?),
 
             // Play / digivolve
             "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
+            "play_from_revealed_free" => StepSpec::PlayFromRevealedFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
             "play_union_bound_free" => StepSpec::PlayUnionBoundFree(map.next_value()?),
+            "trash_union_bound" => StepSpec::TrashUnionBound(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
             "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
@@ -630,6 +648,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "search_own_security_stack" => StepSpec::SearchOwnSecurityStack(map.next_value()?),
             "recover" => StepSpec::Recover(map.next_value()?),
             "mark_security_face_up" => StepSpec::MarkSecurityFaceUp(map.next_value()?),
+            "flip_security_face_up" => StepSpec::FlipSecurityFaceUp(map.next_value()?),
 
             // Modifiers
             "add_dp_modifier" => StepSpec::AddDpModifier(map.next_value()?),
@@ -755,6 +774,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_from_hand",
                         "play_from_hand_free",
                         "use_option_from_hand",
+                        "play_from_revealed_free",
                         "play_from_trash",
                         "play_from_trash_free",
                         "play_union_bound_free",
@@ -785,6 +805,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "search_own_security_stack",
                         "recover",
                         "mark_security_face_up",
+                        "flip_security_face_up",
                         "add_dp_modifier",
                         "add_modifier",
                         "grant_keyword",
@@ -1540,6 +1561,20 @@ pub struct PlayFromHandFreeArgs {
     pub bind_as: Option<String>,
 }
 
+/// Play a card currently in the transient reveal pool without paying its
+/// memory cost. `card` is normally bound by `select_reveal` or
+/// `select_reveal_buckets`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayFromRevealedFreeArgs {
+    pub of: PlayerRef,
+    pub card: BindingRef,
+    /// Bind the resulting permanent handle for use in later steps in the
+    /// same body. None (the default) preserves prior behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UseOptionFromHandArgs {
@@ -1605,6 +1640,15 @@ pub struct PlayUnionBoundFreeArgs {
     /// When true, the played Digimon's own On Play effects do not activate.
     #[serde(default, skip_serializing_if = "is_false")]
     pub suppress_on_play: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UnionBoundArgs {
+    /// Name of the `select_union_zone` binding to consume. The binding carries
+    /// the selected card's origin zone so consumers can move it from the right
+    /// place without re-prompting.
+    pub binding: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1746,10 +1790,10 @@ pub struct GrantKeywordArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GrantTriggeredEffectArgs {
-    /// Predicate selecting which permanents receive the granted body.
-    /// Walks both players' battle areas; combine `owner: opponent` /
-    /// `owner: you` with kind/trait/level filters as needed.
-    pub target: PredicateSpec,
+    /// Permanents that receive the granted body. A predicate target walks both
+    /// players' battle areas and grants to every match; a binding target grants
+    /// to exactly the previously-selected permanent.
+    pub target: ModifierTarget,
     /// The carrier-side timing that triggers the granted body. String
     /// form (snake_case) matching the engine's `EffectTiming` map —
     /// e.g. `when_attacking`, `on_deletion`, `on_suspend`,
@@ -1824,6 +1868,11 @@ pub enum FieldSelector {
     /// your opponent's Digimon or Tamers with the lowest play cost").
     /// G-PLAY-COST-AGGREGATE.
     LowestPlayCost,
+    /// Restrict the selection to the candidate permanent(s) with the
+    /// highest printed play cost. Used by EX11-044 ("delete 1 of your
+    /// opponent's highest play cost Digimon or Tamers").
+    /// G-HIGHEST-PLAY-COST-SELECTOR.
+    HighestPlayCost,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

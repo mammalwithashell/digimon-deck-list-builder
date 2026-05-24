@@ -14,8 +14,9 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::CompiledStep;
+use digimon_dsl::compiled::{CompiledModifierTarget, CompiledStep};
 
+use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::expiry_map::lookup_expiry;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
@@ -27,7 +28,7 @@ use crate::permanent::PermanentHandle;
 pub(crate) fn try_run(
     step: &CompiledStep,
     ctx: &mut EffectContext<'_>,
-    _bindings: &mut Bindings,
+    bindings: &mut Bindings,
 ) -> bool {
     let CompiledStep::GrantTriggeredEffect {
         target,
@@ -60,27 +61,7 @@ pub(crate) fn try_run(
         return true;
     };
 
-    // Snapshot matching permanents from a read borrow before installing
-    // (the install path takes &mut and can't co-exist with the read
-    // borrow).
-    let target_arc = Arc::new(target.clone());
-    let mut matches: Vec<PermanentHandle> = Vec::new();
-    {
-        let rctx = ctx.as_read();
-        let n_players = rctx.game.players.len() as PlayerId;
-        for p in 0..n_players {
-            let m = rctx.game.player(p).battle_area.len();
-            for i in 0..m {
-                let handle = PermanentHandle {
-                    player: p,
-                    index: i as u8,
-                };
-                if eval_predicate(&target_arc, &rctx, PredicateSubject::Permanent(handle)) {
-                    matches.push(handle);
-                }
-            }
-        }
-    }
+    let matches = resolve_target_permanents(target, ctx, bindings);
 
     // Install one granted entry per matching carrier. Body closure
     // captures the compiled step list (Arc-wrapped for cheap clone)
@@ -97,6 +78,43 @@ pub(crate) fn try_run(
         });
     }
     true
+}
+
+fn resolve_target_permanents(
+    target: &CompiledModifierTarget,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> Vec<PermanentHandle> {
+    match target {
+        CompiledModifierTarget::Binding(binding) => {
+            match resolve_binding_ref(binding, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(handle)) => vec![handle],
+                _ => Vec::new(),
+            }
+        }
+        CompiledModifierTarget::Filter(predicate) => {
+            // Snapshot matching permanents from a read borrow before installing
+            // (the install path takes &mut and can't co-exist with the read
+            // borrow).
+            let target_arc = Arc::new(predicate.clone());
+            let mut matches: Vec<PermanentHandle> = Vec::new();
+            let rctx = ctx.as_read();
+            let n_players = rctx.game.players.len() as PlayerId;
+            for p in 0..n_players {
+                let m = rctx.game.player(p).battle_area.len();
+                for i in 0..m {
+                    let handle = PermanentHandle {
+                        player: p,
+                        index: i as u8,
+                    };
+                    if eval_predicate(&target_arc, &rctx, PredicateSubject::Permanent(handle)) {
+                        matches.push(handle);
+                    }
+                }
+            }
+            matches
+        }
+    }
 }
 
 /// Convert a snake_case timing string to the engine's `EffectTiming`.

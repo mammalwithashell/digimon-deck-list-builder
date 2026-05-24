@@ -357,6 +357,7 @@ ctx.play_from_hand_free_with_provenance(player, hand_index) -> Option<(Permanent
 ctx.play_from_trash_with_cost(player, trash_index, CostDelta) -> Option<PermanentHandle>
 ctx.play_from_trash_free_unsuspended(card) -> Option<PermanentHandle>
 ctx.play_from_trash_free_unsuspended_suppress_on_play(card) -> Option<PermanentHandle>
+ctx.play_from_revealed_free(player, card) -> Option<PermanentHandle>
 ctx.play_from_security(player) -> Option<PermanentHandle>
 ctx.play_from_materials(carrier, source_index, CostDelta, bind_target: Option<...>) -> Option<PermanentHandle>
 ctx.play_to_breeding_from_hand(player, hand_index) -> bool
@@ -417,6 +418,9 @@ events. Used by "this Digimon gains [End of Your Turn]: <effect>" text.
 The granted body has no max-per-turn or pay-cost gates in v1 — it
 unconditionally runs when the timing fires, parking on `pending_selection`
 through the standard `select_*` helpers if a player choice is needed.
+In DSL granted bodies, `carrier` resolves to the permanent that received the
+grant while `source` continues to resolve through the grantor card identity;
+use `carrier` for printed "this Digimon" inside the granted text.
 
 ### Selection helpers (full list)
 
@@ -3684,6 +3688,7 @@ Effect::on_play(card).process(|ctx| {
 | `add_to_hand_from_reveal(player, CardHandle)` → `bool` | Same, from the reveal pool. |
 | `trash_from_hand_by_index(player, hand_index)` → `Option<CardHandle>` | Trash a specific hand slot. |
 | `trash_from_reveal(player, CardHandle)` → `bool` | Trash a revealed card. |
+| `play_from_revealed_free(player, CardHandle)` → `Option<PermanentHandle>` | Play a selected reveal-pool card without paying its cost. The card is consumed from `Game::revealed_cards` and routed through the normal effect-initiated play pipeline without an add-to-hand event. |
 | `return_to_hand(PermanentHandle)` → `Option<CardHandle>` | Bounce a permanent: top → hand, sources under → trash. |
 | `bounce_self()` → `Option<CardHandle>` | Sugar over `return_to_hand(self.source_permanent.unwrap())`. Returns `None` if there is no source permanent (Option-card OptionMain effects, rule-source effects) or if the bounce is gated by `CannotBeReturnedToHand` / `CannotBeAffected`. Owner-routed via `Permanent::owner()`. |
 | `return_to_deck(PermanentHandle, StackPosition)` → `bool` | Bounce to deck at Top/Bottom/Random. |
@@ -3702,6 +3707,8 @@ but from the player's Digi-Egg deck. DSL `reveal_top_deck` honors
 `zone: digi_egg_deck` by calling this path.
 
 `revealed() -> &[CardSource]` — read-only snapshot of the pool. Scripts inspect it to decide follow-up moves.
+
+`play_from_revealed_free(player, card) -> Option<PermanentHandle>` — consume the selected `CardHandle` from `game.revealed_cards`, play it for free as an effect-initiated play, and fire normal OnPlay / OnEnterField observers. If a would-play replacement cancels the play, the card is restored to the reveal pool.
 
 ### Placement
 

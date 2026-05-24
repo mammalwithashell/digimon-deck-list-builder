@@ -30,6 +30,23 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 > live coverage in `tests/owner_routing_live.rs`; that test exercises
 > Rust-only zone helpers and does not interact with the Python engine.
 
+> **`LiveGame` vs `HeadlessRunner` step-semantic divergence — intentional, 2026-05-24:**
+> The Rust `HeadlessRunner::step(action_id)` is fire-and-forget (no
+> return) and silently drops `action_id`s not legal for the current
+> decision player. This matches Python's `headless_game.py:41` no-op
+> convention and is what RL training expects (the agent's policy is
+> always action-masked, so out-of-mask IDs never reach the engine).
+>
+> The Rust `LiveGame::step(action_id)` (debug / MCP surface) DIVERGES:
+> it returns `ActionResult { ok: false, error: "action <id> not legal
+> for player <pid> in phase <P>", events_emitted: [], ... }` when the
+> engine's `decode_action` produces no state change and no events.
+> This is required for human/agent-driven MCP callers to detect failed
+> actions; the divergence does NOT affect RL training (which never
+> uses `LiveGame`).
+>
+> Source: `enforce-live-game-action-contracts` (2026-05-24).
+
 ---
 
 ## 1. Core game flow

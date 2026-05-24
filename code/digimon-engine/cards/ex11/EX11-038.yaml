@@ -12,34 +12,61 @@ alt_paths:
     from: { level_eq: 2, color_is: black }
     cost: 0
 
-# ─── Clause 0: [When Moving] [On Play] — OMITTED (BLOCKED) ──────────────────
+# ─── Clause 0: [When Moving] [On Play] ──────────────────────────────────────
 #
 # Printed card text (cards.json / authoritative):
 #   "[When Moving] [On Play] By trashing 1 [Mineral] or [Rock] trait card from
 #    your hand or your Digimon's digivolution cards, <Draw 1>."
 #
-# The cost is a union of two zones: (a) own hand filtered by Mineral/Rock
-# trait, and (b) any of own Digimon's digivolution card stacks filtered by
-# Mineral/Rock trait. No DSL verb exists that presents both zones as a single
-# player-visible selection pool from which exactly one card is trashed:
+# Implemented via the same union-zone cost primitive as EX11-065: one
+# player-visible selection over hand ∪ own Digimon source cards, preserving the
+# origin so `trash_union_bound` moves the selected card from the correct zone.
+# DCGO includes "Do not trash"; `optional: true` models declining the cost.
 #
-#   - `select_union_zone` supports {hand, trash} only — digivolution-card
-#     sources are not a valid `zones:` entry.
-#   - `select_own_sources` (filter: now supported) selects from own sources
-#     only — cannot include hand cards in the same selection.
-#   - Two separate `select_*` steps with an `if/else` zone choice would force
-#     the player to declare the zone before seeing candidates, which is
-#     unfaithful: the printed text presents the choice as a single "from hand
-#     or digivolution cards" menu, not a two-step zone-then-card flow.
-#
-# This is the same gap as EX11-065 Clause 0 and the Rocks pool pass rollup
-# entry (qa/dsl-vocab-gaps.md § "Rocks pool pass residual", "hand-or-source
-# costs beyond own-source filtering"). Gap tag used in ignored tests:
-# G-DSL-SELECT-OWN-SOURCES-FILTER (consistent with EX11-065's ignore tags).
-# A hand-only or source-only proxy would be unfaithful; the clause is omitted
-# until the union-cost verb lands.
+# The timings are split instead of using one multi-timing clause: `on_play`
+# fires directly from the played permanent, while `on_move` is an observer over
+# the move event and must be gated with `event_permanent_is_source: true` so an
+# already-fielded Sunarizamon does not react to a different Digimon moving.
 
 effects:
+  - when: on_play
+    summary: "[On Play] Trash 1 Mineral/Rock from hand or own Digimon sources to Draw 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          optional: true
+          bind_as: cost_card
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Trash 1 [Mineral] or [Rock] card from hand or your Digimon's digivolution cards?"
+          then:
+            - trash_union_bound:
+                binding: cost_card
+            - draw: { of: you, count: 1 }
+
+  - when: on_move
+    condition:
+      event_permanent_is_source: true
+    summary: "[When Moving] Trash 1 Mineral/Rock from hand or own Digimon sources to Draw 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          optional: true
+          bind_as: cost_card
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          prompt: "Trash 1 [Mineral] or [Rock] card from hand or your Digimon's digivolution cards?"
+          then:
+            - trash_union_bound:
+                binding: cost_card
+            - draw: { of: you, count: 1 }
+
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:

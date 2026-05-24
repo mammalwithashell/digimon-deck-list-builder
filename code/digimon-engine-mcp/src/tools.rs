@@ -321,6 +321,58 @@ pub fn list() -> Vec<Value> {
             }
         }),
     ));
+    all.push(tool(
+        "digivolve",
+        "Digivolve a card from hand onto a permanent. `host` must belong to the active player. Resolves the typed args to a legal digivolve action and dispatches via `step`.",
+        json!({
+            "type": "object",
+            "required": ["game_id", "host", "source_hand_idx"],
+            "properties": {
+                "game_id": { "type": "string" },
+                "host": {
+                    "type": "object",
+                    "required": ["player", "index"],
+                    "properties": {
+                        "player": { "type": "integer", "minimum": 0, "maximum": 1 },
+                        "index": { "type": "integer", "minimum": 0 }
+                    }
+                },
+                "source_hand_idx": { "type": "integer", "minimum": 0 }
+            }
+        }),
+    ));
+    all.push(tool(
+        "attack",
+        "Declare an attack. `target` is either a permanent handle (battle-attack) or the literal string \"security\" (security-attack).",
+        json!({
+            "type": "object",
+            "required": ["game_id", "attacker", "target"],
+            "properties": {
+                "game_id": { "type": "string" },
+                "attacker": {
+                    "type": "object",
+                    "required": ["player", "index"],
+                    "properties": {
+                        "player": { "type": "integer", "minimum": 0, "maximum": 1 },
+                        "index": { "type": "integer", "minimum": 0 }
+                    }
+                },
+                "target": {
+                    "oneOf": [
+                        { "type": "string", "enum": ["security"] },
+                        {
+                            "type": "object",
+                            "required": ["player", "index"],
+                            "properties": {
+                                "player": { "type": "integer", "minimum": 0, "maximum": 1 },
+                                "index": { "type": "integer", "minimum": 0 }
+                            }
+                        }
+                    ]
+                }
+            }
+        }),
+    ));
 
     all
 }
@@ -379,6 +431,8 @@ pub fn dispatch(
         "pass_turn" => tool_simple_mut(args, registry, |g| json!(g.pass_turn())),
         "move_from_breeding" => tool_move_from_breeding(args, registry),
         "step" => tool_step(args, registry),
+        "digivolve" => tool_digivolve(args, registry),
+        "attack" => tool_attack(args, registry),
 
         other => Err(format!("unknown tool: {}", other)),
     }
@@ -727,6 +781,52 @@ fn tool_step(args: Value, registry: &mut GameRegistry) -> Result<Value, String> 
     }
 }
 
+fn parse_handle(v: &Value, key: &str) -> Result<digimon_engine::permanent::PermanentHandle, String> {
+    let obj = v
+        .get(key)
+        .and_then(|x| x.as_object())
+        .ok_or_else(|| format!("missing or non-object arg: {}", key))?;
+    let player = obj
+        .get("player")
+        .and_then(|x| x.as_u64())
+        .ok_or_else(|| format!("{}.player missing or not an integer", key))? as u8;
+    let index = obj
+        .get("index")
+        .and_then(|x| x.as_u64())
+        .ok_or_else(|| format!("{}.index missing or not an integer", key))? as u8;
+    Ok(digimon_engine::permanent::PermanentHandle { player, index })
+}
+
+fn tool_digivolve(args: Value, registry: &mut GameRegistry) -> Result<Value, String> {
+    let game_id = get_str(&args, "game_id")?.to_string();
+    let host = parse_handle(&args, "host")?;
+    let source_hand_idx = get_usize(&args, "source_hand_idx")?;
+    match registry.get_mut(&game_id) {
+        Ok(g) => Ok(json!(g.digivolve(host, source_hand_idx))),
+        Err(e) => Ok(registry_err_to_value(e)),
+    }
+}
+
+fn tool_attack(args: Value, registry: &mut GameRegistry) -> Result<Value, String> {
+    let game_id = get_str(&args, "game_id")?.to_string();
+    let attacker = parse_handle(&args, "attacker")?;
+    // target = "security" | { player, index }
+    let target_val = args
+        .get("target")
+        .ok_or_else(|| "missing arg: target".to_string())?;
+    let target = if target_val.as_str() == Some("security") {
+        digimon_engine::live_game::AttackTarget::Security
+    } else if target_val.is_object() {
+        digimon_engine::live_game::AttackTarget::Permanent(parse_handle(&args, "target")?)
+    } else {
+        return Err("target must be either \"security\" or {player, index}".into());
+    };
+    match registry.get_mut(&game_id) {
+        Ok(g) => Ok(json!(g.attack(attacker, target))),
+        Err(e) => Ok(registry_err_to_value(e)),
+    }
+}
+
 // ── tests ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -734,11 +834,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_includes_24_tools() {
+    fn list_includes_26_tools() {
         let tools = list();
         // Expected count: 6 lifecycle + 12 state (10 originals +
-        // deck_cards + recorded_actions) + 6 action = 24.
-        assert_eq!(tools.len(), 24, "tool count drifted");
+        // deck_cards + recorded_actions) + 8 action (6 originals +
+        // digivolve + attack per enforce-live-game-action-contracts) = 26.
+        assert_eq!(tools.len(), 26, "tool count drifted");
     }
 
     #[test]

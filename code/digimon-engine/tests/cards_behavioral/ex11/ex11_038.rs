@@ -11,20 +11,18 @@
 //! # Implementation status
 //!
 //! Clause 0 ([When Moving] / [On Play]):
-//!   BLOCKED — G-DSL-SELECT-OWN-SOURCES-FILTER (qa/dsl-vocab-gaps.md).
-//!   The cost requires trashing 1 Mineral/Rock from hand OR own digivolution
-//!   cards as a single unified selection. `select_union_zone` supports
-//!   {hand, trash} but not digivolution sources; `select_own_sources` (filter
-//!   now supported) covers sources only. No DSL verb spans hand ∪ own
-//!   digivolution sources as one player-visible pool. Clause omitted; all
-//!   tests for it carry the ignore tag below (matching EX11-065 convention).
-//!   A hand-only proxy is not acceptable per the no-approximations policy.
+//!   IMPLEMENTED — uses `select_union_zone` over hand ∪ own Digimon sources,
+//!   then `trash_union_bound` to pay the selected origin-preserving cost.
+//!   OnMove is split into its own clause with `event_permanent_is_source: true`
+//!   so Sunarizamon only reacts to itself moving.
 //!
 //! Clause 1 ([Inherited] source-trash draw):
 //!   IMPLEMENTED — `on_digivolution_card_trashed` with host-trait and
 //!   trashed-source-id conditions, `draw: { of: you, count: 1 }` body.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_engine::action::space::{encode_source_select, PLAY_HAND_START};
+use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect_context::EffectContext;
 
@@ -33,6 +31,12 @@ fn runner() -> DebugRunner {
         .dsl_card("EX11-038")
         .expect("EX11-038 YAML parses and compiles")
         .build()
+}
+
+fn trait_card(card_id: &str, trait_name: &str) -> CardData {
+    let mut card = make_test_card(card_id, card_id);
+    card.traits.push(trait_name.to_string());
+    card
 }
 
 #[test]
@@ -77,21 +81,10 @@ fn ex11_038_source_trash_draws_one() {
     assert_eq!(runner.hand_size(0), hand_before + 1);
 }
 
-// ─── Clause 0: [When Moving] / [On Play] — BLOCKED ───────────────────────────
-//
-// The printed cost is "by trashing 1 [Mineral] or [Rock] trait card from your
-// hand OR your Digimon's digivolution cards." No DSL verb exists for a single
-// player-visible selection spanning hand ∪ own digivolution sources (see
-// qa/dsl-vocab-gaps.md § "Rocks pool pass residual" and EX11-065 Clause 0).
-// All tests for this clause are ignored with the same tag used by EX11-065.
+// ─── Clause 0: [When Moving] / [On Play] ────────────────────────────────────
 
 #[test]
-#[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER from qa/dsl-vocab-gaps.md — when_moving/on_play trash-hand-or-source cost"]
 fn ex11_038_has_on_play_when_moving_draw_clause() {
-    // When G-DSL-SELECT-OWN-SOURCES-FILTER closes and the hand-or-source union
-    // trash cost is expressible, EX11-038 must gain an OnPlay + OnMove clause
-    // with optional: false (printed "By trashing …" mandates the cost) and
-    // draw: { of: you, count: 1 } in its process body.
     let runner = runner();
     let card = runner
         .compiled_card("EX11-038")
@@ -109,31 +102,130 @@ fn ex11_038_has_on_play_when_moving_draw_clause() {
     assert!(
         triggered
             .iter()
-            .any(|t| t.when.contains(&CompiledTiming::OnPlay)
-                && t.when.contains(&CompiledTiming::OnMove)),
-        "EX11-038 must have an [OnPlay, OnMove] clause once the gap closes; got: {triggered:?}"
+            .any(|t| t.when.contains(&CompiledTiming::OnPlay)),
+        "EX11-038 must have an OnPlay clause once the gap closes; got: {triggered:?}"
+    );
+    assert!(
+        triggered
+            .iter()
+            .any(|t| t.when.contains(&CompiledTiming::OnMove)),
+        "EX11-038 must have an OnMove clause once the gap closes; got: {triggered:?}"
     );
 }
 
 #[test]
-#[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER from qa/dsl-vocab-gaps.md — when_moving/on_play trash hand Mineral draws 1 (positive)"]
 fn ex11_038_on_play_trash_hand_mineral_draws_one() {
-    // Positive: have a Mineral card in hand, trash it via on-play trigger → Draw 1.
-    todo!()
+    let filler = make_test_card("FILLER", "Filler");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-038")
+        .expect("EX11-038 YAML parses and compiles")
+        .add_card(trait_card("MIN-HAND", "Mineral"))
+        .add_card(filler)
+        .hand(0, &["EX11-038", "MIN-HAND"])
+        .deck(0, &["FILLER"])
+        .memory(10)
+        .build();
+
+    runner.play(0, 0).expect("play EX11-038");
+    let prompt = runner
+        .pending_selection_view()
+        .expect("EX11-038 hand/source cost prompt opens");
+    assert!(
+        prompt.valid_action_ids.contains(&PLAY_HAND_START),
+        "Mineral card in hand must be a payable cost candidate"
+    );
+
+    runner
+        .execute_action(0, PLAY_HAND_START)
+        .expect("trash Mineral card from hand");
+    runner.auto_resolve().expect("resolve draw");
+
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "MIN-HAND"),
+        "selected hand card should be trashed as the cost"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "FILLER"),
+        "successful cost should draw 1"
+    );
 }
 
 #[test]
-#[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER from qa/dsl-vocab-gaps.md — when_moving/on_play trash own source Rock draws 1 (positive)"]
 fn ex11_038_on_play_trash_own_source_rock_draws_one() {
-    // Positive: have a Rock source in own Digimon's digivolution stack, trash it
-    // via on-play trigger → Draw 1.
-    todo!()
+    let filler = make_test_card("FILLER", "Filler");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-038")
+        .expect("EX11-038 YAML parses and compiles")
+        .add_card(trait_card("ROCK-SRC", "Rock"))
+        .add_card(trait_card("HOST", "Mineral"))
+        .add_card(filler)
+        .hand(0, &["EX11-038"])
+        .deck(0, &["FILLER"])
+        .memory(10)
+        .build();
+    let host = runner.place_stack(0, &["ROCK-SRC", "HOST"]);
+
+    runner.play(0, 0).expect("play EX11-038");
+    let source_action = encode_source_select(host.index as u16, 0).expect("encode source action");
+    let prompt = runner
+        .pending_selection_view()
+        .expect("EX11-038 hand/source cost prompt opens");
+    assert!(
+        prompt.valid_action_ids.contains(&source_action),
+        "Rock source under an own Digimon must be a payable cost candidate"
+    );
+
+    runner
+        .execute_action(0, source_action)
+        .expect("trash Rock source");
+    runner.auto_resolve().expect("resolve draw");
+
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "ROCK-SRC"),
+        "selected source card should be trashed as the cost"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "FILLER"),
+        "successful cost should draw 1"
+    );
 }
 
 #[test]
-#[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER from qa/dsl-vocab-gaps.md — when_moving/on_play no eligible card skips draw (negative)"]
 fn ex11_038_on_play_no_eligible_card_no_draw() {
-    // Negative: no Mineral/Rock in hand and no Mineral/Rock in own sources →
-    // no pending selection and hand count unchanged.
-    todo!()
+    let filler = make_test_card("FILLER", "Filler");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-038")
+        .expect("EX11-038 YAML parses and compiles")
+        .add_card(trait_card("HOST", "Reptile"))
+        .add_card(filler)
+        .hand(0, &["EX11-038"])
+        .deck(0, &["FILLER"])
+        .memory(10)
+        .build();
+    runner.place_stack(0, &["HOST"]);
+
+    runner.play(0, 0).expect("play EX11-038");
+    runner.auto_resolve().expect("unpayable cost no-ops");
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no eligible Mineral/Rock card must not open a cost prompt"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "unpayable cost must not draw from deck"
+    );
 }

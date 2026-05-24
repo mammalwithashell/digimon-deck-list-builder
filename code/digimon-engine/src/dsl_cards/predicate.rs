@@ -1228,6 +1228,32 @@ fn eval_event_fields(
             }
         }
     }
+    if let Some(want) = pred.event_target_level_eq {
+        let Some(level) = event_target_level(rctx) else {
+            return false;
+        };
+        if level != want {
+            return false;
+        }
+    }
+    if let Some(max) = &pred.event_target_level_lte {
+        let Some(level) = event_target_level(rctx) else {
+            return false;
+        };
+        let max = eval_int_constraint(max, rctx, None, None);
+        if i32::from(level) > max {
+            return false;
+        }
+    }
+    if let Some(min) = &pred.event_target_level_gte {
+        let Some(level) = event_target_level(rctx) else {
+            return false;
+        };
+        let min = eval_int_constraint(min, rctx, None, None);
+        if i32::from(level) < min {
+            return false;
+        }
+    }
     if let Some(ref needle) = pred.event_target_name_contains {
         // G-EVENT-TARGET-NAME-CONTAINS: case-insensitive substring scan
         // against the event-target permanent's card name (the digivolving /
@@ -1309,6 +1335,20 @@ fn eval_event_fields(
             return false;
         };
         if (event_permanent == source_permanent) != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_host_permanent_is_source {
+        let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
+            return false;
+        };
+        let Some(event_host_permanent) = trigger.event_host_permanent else {
+            return false;
+        };
+        let Some(source_permanent) = rctx.source_permanent else {
+            return false;
+        };
+        if (event_host_permanent == source_permanent) != want {
             return false;
         }
     }
@@ -1678,6 +1718,13 @@ fn event_card_level(rctx: &EffectReadContext<'_>) -> Option<u8> {
             .as_ref()
             .and_then(|trigger| trigger.event_card)
     })?;
+    rctx.game
+        .card_data_for_handle(card)
+        .and_then(|data| data.level)
+}
+
+fn event_target_level(rctx: &EffectReadContext<'_>) -> Option<u8> {
+    let card = event_target_card(rctx)?;
     rctx.game
         .card_data_for_handle(card)
         .and_then(|data| data.level)

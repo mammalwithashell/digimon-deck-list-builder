@@ -13,7 +13,7 @@
 //! "Security Effect [Security] Play this card without paying the cost."
 //!
 //! # DCGO C# reference
-//! DCGO submodule uninitialized — no C# reference available.
+//! `DCGO/Assets/Scripts/CardEffect/EX11/Black/EX11_065.cs`
 //!
 //! # Patterns this test covers
 //! - B1  Start-of-main tamer (memory swing with cost payment)
@@ -25,11 +25,8 @@
 //! # Implementation status
 //!
 //! Clause 0 (Start of Main Phase):
-//!   BLOCKED — G-DSL-SELECT-OWN-SOURCES-FILTER (qa/dsl-vocab-gaps.md).
-//!   The cost requires trashing 1 Mineral/Rock from hand OR own digivolution
-//!   cards. The `select_own_sources` DSL step exists but carries no `filter:`
-//!   field, so the trait gate on digivolution-card sources cannot be expressed.
-//!   A hand-only approximation would be unfaithful; the clause is omitted.
+//!   IMPLEMENTED — uses select_union_zone over hand ∪ own Digimon sources,
+//!   then trash_union_bound to pay the selected origin-preserving cost.
 //!
 //! Clause 1 (All Turns on play/digivolve):
 //!   IMPLEMENTED — uses the EX11-054 pattern (on_enter_field_anyone +
@@ -44,8 +41,10 @@
 mod dsl_card_data;
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_engine::action::space::{encode_source_select, PLAY_HAND_START};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::CardKind;
+use digimon_engine::enums::{CardKind, EffectTiming};
+use digimon_engine::TriggerSource;
 
 fn compiled() -> digimon_dsl::compiled::CompiledCard {
     dsl_card_data::compiled("EX11-065")
@@ -165,21 +164,10 @@ fn ex11_065_security_clause_is_not_optional() {
     );
 }
 
-// ─── Section 2: Clause 0 (Start of Main Phase) — BLOCKED ─────────────────────
-//
-// The printed cost is "by trashing 1 [Mineral] or [Rock] trait card from
-// your hand OR your Digimon's digivolution cards."  The DSL `select_own_sources`
-// step has no `filter:` field (G-DSL-SELECT-OWN-SOURCES-FILTER), making a
-// faithful source-zone side of the union impossible. The clause is omitted from
-// the YAML entirely; all tests for it carry the ignore tag below.
+// ─── Section 2: Clause 0 (Start of Main Phase) ───────────────────────────────
 
 #[test]
-#[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER from qa/dsl-vocab-gaps.md — start_of_main trash-hand-or-source cost"]
 fn ex11_065_start_of_main_has_clause() {
-    // When G-DSL-SELECT-OWN-SOURCES-FILTER closes and the hand-or-source union
-    // trash cost is expressible, EX11-065 must gain a StartOfYourMainPhase
-    // clause with optional: true (printed "By trashing …") and gain_memory: 1
-    // in its process body.
     let card = compiled();
     let triggered: Vec<_> = card
         .effects
@@ -197,28 +185,136 @@ fn ex11_065_start_of_main_has_clause() {
     );
 }
 
+fn mineral_card(card_id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(card_id, card_id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(2000);
+    card.traits = vec!["Mineral".to_string()];
+    card.play_cost = 3;
+    card
+}
+
+fn rock_host(card_id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(card_id, card_id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(5000);
+    card.traits = vec!["Rock".to_string()];
+    card.play_cost = 4;
+    card
+}
+
+fn fire_close_start_main(
+    runner: &mut DebugRunner,
+    close: digimon_engine::permanent::PermanentHandle,
+) {
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourMainPhase,
+        TriggerSource::Permanent(close),
+    );
+    runner.game.drain_effect_queue();
+}
+
 #[test]
-#[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER from qa/dsl-vocab-gaps.md — start_of_main trash-hand cost only (positive)"]
 fn ex11_065_start_of_main_trash_hand_mineral_gains_memory() {
-    // Positive: have a Mineral card in hand, exercise the hand-trash branch
-    // → gain 1 memory.
-    todo!()
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-065")
+        .expect("EX11-065 in embedded pack")
+        .add_card(mineral_card("MIN-HAND"))
+        .hand(0, &["MIN-HAND"])
+        .memory(5)
+        .start();
+    let close = runner.place_on_field(0, "EX11-065", None);
+
+    fire_close_start_main(&mut runner, close);
+    let memory_before = runner.game.memory;
+    assert!(
+        runner.pending_selection().is_some(),
+        "start-of-main cost should prompt when a Mineral card is in hand"
+    );
+    runner
+        .execute_action(0, PLAY_HAND_START)
+        .expect("choose Mineral card from hand");
+    runner.auto_resolve().expect("resolve memory gain");
+
+    assert_eq!(runner.game.memory, memory_before + 1);
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "MIN-HAND"),
+        "selected Mineral hand card must be trashed"
+    );
 }
 
 #[test]
-#[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER from qa/dsl-vocab-gaps.md — start_of_main trash-source cost only (positive)"]
 fn ex11_065_start_of_main_trash_source_mineral_gains_memory() {
-    // Positive: have a Mineral source in own Digimon's digivolution stack,
-    // exercise the source-trash branch → gain 1 memory.
-    todo!()
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-065")
+        .expect("EX11-065 in embedded pack")
+        .add_card(mineral_card("MIN-SRC"))
+        .add_card(make_test_card("BAD-SRC", "BadSrc"))
+        .add_card(rock_host("HOST"))
+        .memory(5)
+        .start();
+    let host = runner.place_stack(0, &["MIN-SRC", "BAD-SRC", "HOST"]);
+    let close = runner.place_on_field(0, "EX11-065", None);
+
+    fire_close_start_main(&mut runner, close);
+    let memory_before = runner.game.memory;
+    let source_action = encode_source_select(host.index as u16, 0).expect("source action");
+    let bad_action = encode_source_select(host.index as u16, 1).expect("bad source action");
+    let pending = runner
+        .pending_selection()
+        .expect("start-of-main cost should prompt for Mineral source");
+    assert!(pending.valid_action_ids.contains(&source_action));
+    assert!(
+        !pending.valid_action_ids.contains(&bad_action),
+        "non-Mineral/Rock source must not be payable"
+    );
+
+    runner
+        .execute_action(0, source_action)
+        .expect("choose Mineral source");
+    runner.auto_resolve().expect("resolve memory gain");
+
+    assert_eq!(runner.game.memory, memory_before + 1);
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "MIN-SRC"),
+        "selected Mineral source must be trashed"
+    );
+    assert!(
+        !runner.game.players[0].battle_area[host.index as usize]
+            .card_sources
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "MIN-SRC"),
+        "selected source must leave the host stack"
+    );
 }
 
 #[test]
-#[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER from qa/dsl-vocab-gaps.md — start_of_main no eligible card (negative)"]
 fn ex11_065_start_of_main_no_eligible_card_no_prompt() {
-    // Negative: no Mineral/Rock in hand and no Mineral/Rock in own sources →
-    // no pending selection installs and memory is unchanged.
-    todo!()
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-065")
+        .expect("EX11-065 in embedded pack")
+        .add_card(make_test_card("PLAIN", "Plain"))
+        .memory(5)
+        .start();
+    let close = runner.place_on_field(0, "EX11-065", None);
+    let memory_before = runner.game.memory;
+
+    fire_close_start_main(&mut runner, close);
+    runner.auto_resolve().expect("finish no-eligible branch");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no eligible Mineral/Rock card should mean no prompt"
+    );
+    assert_eq!(runner.game.memory, memory_before);
 }
 
 // ─── Section 3: Clause 1 (All Turns observer) ────────────────────────────────

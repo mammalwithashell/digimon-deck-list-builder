@@ -400,6 +400,14 @@ pub enum TriggerSource {
         revealed_card: CardHandle,
         was_face_up: bool,
     },
+    /// Attacker-side sibling of `OnSecurityCheck` for text like "When your
+    /// Digimon checks a face-up security card". Scans the attacker's battle
+    /// area only after a card that was face-up in security is checked.
+    OnCheckFaceUpSecurity {
+        attacker: PermanentHandle,
+        defender: PlayerId,
+        revealed_card: CardHandle,
+    },
     /// Observer timing fired after a breeding-area permanent moves to the
     /// battle area. Scans the moving player's battle area while carrying the
     /// moved permanent/card as event context.

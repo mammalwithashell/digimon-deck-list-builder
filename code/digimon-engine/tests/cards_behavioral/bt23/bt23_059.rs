@@ -22,23 +22,21 @@
 //! - H5 Blocker (declarative grant_keyword)
 //! - Clause A: multi-timing OPT (On Play / When Digivolving / When Attacking),
 //!   pay-cost option trash, lowest-play-cost delete selector
-//! - Clause B: BLOCKED — G-ON-OPTION-TRASHED-DSL (no `on_option_trashed`
-//!   timing in the DSL `Timing` enum)
+//! - Clause B: `on_option_trashed` OPT unsuspend plus opponent-Digimon
+//!   effect immunity
 //!
 //! # Gap summary
-//! - Clause A: IMPLEMENTED (once `selector: lowest_play_cost` is confirmed shipped)
-//! - Clause B: BLOCKED by G-ON-OPTION-TRASHED-DSL (engine has
-//!   `EffectTiming::OnOptionTrashed` but the DSL `Timing` enum has no
-//!   `on_option_trashed` variant — the trigger cannot be expressed in YAML).
+//! - Clause A: IMPLEMENTED.
+//! - Clause B: IMPLEMENTED (G-ON-OPTION-TRASHED-DSL resolved 2026-05-23).
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
-    CompiledTriggeredClause,
+    CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
-use digimon_engine::action::space::{encode_attack, PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::action::space::{encode_attack, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, Keyword, PlayerId};
+use digimon_engine::enums::{CardKind, EffectSourceKind, EffectTiming, Keyword, PlayerId};
+use digimon_engine::option_lifecycle::OptionTrashCause;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -73,6 +71,24 @@ fn fire_timing(runner: &mut DebugRunner, timing: EffectTiming, handle: Permanent
         .game
         .enqueue_triggered(timing, TriggerSource::Permanent(handle));
     runner.game.drain_effect_queue();
+}
+
+fn field_handle_by_card_id(
+    runner: &DebugRunner,
+    player: PlayerId,
+    card_id: &str,
+) -> PermanentHandle {
+    let index = runner
+        .game
+        .player(player)
+        .battle_area
+        .iter()
+        .position(|permanent| permanent.top_card().card_id(&runner.game.card_data) == card_id)
+        .unwrap_or_else(|| panic!("{card_id} must be in player {player}'s battle area"));
+    PermanentHandle {
+        player,
+        index: index as u8,
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -441,66 +457,93 @@ fn bt23_059_clause_a_opt_blocks_second_activation_same_turn() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SECTION 6 — Clause B: BLOCKED (G-ON-OPTION-TRASHED-DSL)
+// SECTION 6 — Clause B: on_option_trashed unsuspend + immunity
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // Printed text: "[All Turns] [Once Per Turn] When Option cards in the battle
 // area are trashed, this Digimon unsuspends. Then, your opponent's Digimon's
 // effects don't affect this Digimon for the turn."
 //
-// Gap: The engine has `EffectTiming::OnOptionTrashed` and dispatches it from
-// `Game::trash_field_option` in `option_lifecycle.rs`. However the DSL
-// `Timing` enum in `code/digimon-dsl/src/clause.rs` has no `on_option_trashed`
-// variant, so the trigger cannot be expressed in a YAML `when:` field. Neither
-// the unsuspend body nor the `grant_effect_immunity` step that follows can be
-// reached from YAML until the DSL `Timing` enum is extended.
-//
-// To close:
-//   A. Add `OnOptionTrashed` variant to `code/digimon-dsl/src/clause.rs`
-//      `Timing` enum, serialized as `"on_option_trashed"`.
-//   B. Add the mapping `S::OnOptionTrashed => CompiledTiming::OnOptionTrashed`
-//      in `code/digimon-dsl/src/compile.rs` (function that lowers Timing).
-//   C. Ensure `CompiledTiming::OnOptionTrashed` maps to
-//      `EffectTiming::OnOptionTrashed` in the engine's lower_triggered.rs.
-//   D. Author Clause B in BT23-059.yaml using:
-//      - when: on_option_trashed
-//        active_when: { all_turns: true }
-//        once_per_turn: true
-//        process:
-//          - unsuspend: { target: source }
-//          - grant_effect_immunity:
-//              target: source
-//              source_kind: digimon
-//              source_controller: opponent
-//              expiry: end_of_turn
+// Uses the DSL `when: on_option_trashed` timing, which lowers to the engine's
+// existing `EffectTiming::OnOptionTrashed` dispatch from `trash_field_option`.
 
-/// Clause B unsuspend body — BLOCKED (G-ON-OPTION-TRASHED-DSL).
-///
-/// When the DSL `on_option_trashed` timing is added, this test should verify
-/// that trashing an own Option card fires `OnOptionTrashed` → the Digimon
-/// unsuspends and gains effect immunity from opponent Digimon for the turn.
 #[test]
-#[ignore = "pending: G-ON-OPTION-TRASHED-DSL — `on_option_trashed` timing not in DSL Timing enum; see clause.rs Timing"]
 fn bt23_059_clause_b_unsuspend_on_option_trashed() {
-    // Once the DSL gap is closed, this test should:
-    // 1. Place BT23-059 on field in suspended state.
-    // 2. Trash an own Option permanent from the battle area via `trash_field_option`.
-    // 3. Assert BT23-059 is now unsuspended.
-    // 4. Assert it has the effect-immunity modifier (opponent Digimon effects
-    //    don't affect it) for the current turn.
-    panic!("requires on_option_trashed DSL timing variant");
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT23-059")
+        .expect("BT23-059 compiles")
+        .add_card(make_option_card("TRASHED-OPT"))
+        .memory(10)
+        .start();
+
+    let blitz = r.place_on_field(0, "BT23-059", Some(0));
+    r.place_on_field(0, "TRASHED-OPT", Some(0));
+    r.game.players[0].battle_area[blitz.index as usize].is_suspended = true;
+
+    let option = field_handle_by_card_id(&r, 0, "TRASHED-OPT");
+    assert!(r.game.trash_field_option(option, OptionTrashCause::Effect));
+
+    assert!(
+        !r.game.players[0].battle_area[blitz.index as usize].is_suspended,
+        "BT23-059 must unsuspend when a battle-area Option is trashed"
+    );
 }
 
-/// Clause B OPT lockout — BLOCKED (G-ON-OPTION-TRASHED-DSL).
 #[test]
-#[ignore = "pending: G-ON-OPTION-TRASHED-DSL — same as above; OPT lockout cannot be tested without the DSL timing"]
 fn bt23_059_clause_b_opt_blocks_second_option_trash_same_turn() {
-    panic!("requires on_option_trashed DSL timing variant");
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT23-059")
+        .expect("BT23-059 compiles")
+        .add_card(make_option_card("TRASHED-OPT-1"))
+        .add_card(make_option_card("TRASHED-OPT-2"))
+        .memory(10)
+        .start();
+
+    let blitz = r.place_on_field(0, "BT23-059", Some(0));
+    r.place_on_field(0, "TRASHED-OPT-1", Some(0));
+    r.place_on_field(0, "TRASHED-OPT-2", Some(0));
+    r.game.players[0].battle_area[blitz.index as usize].is_suspended = true;
+
+    let first = field_handle_by_card_id(&r, 0, "TRASHED-OPT-1");
+    assert!(r.game.trash_field_option(first, OptionTrashCause::Effect));
+    assert!(
+        !r.game.players[0].battle_area[blitz.index as usize].is_suspended,
+        "first Option trash should unsuspend BT23-059"
+    );
+
+    r.game.players[0].battle_area[blitz.index as usize].is_suspended = true;
+    let second = field_handle_by_card_id(&r, 0, "TRASHED-OPT-2");
+    assert!(r.game.trash_field_option(second, OptionTrashCause::Effect));
+
+    assert!(
+        r.game.players[0].battle_area[blitz.index as usize].is_suspended,
+        "OPT lockout must prevent a second unsuspend in the same turn"
+    );
 }
 
-/// Clause B effect immunity — BLOCKED (G-ON-OPTION-TRASHED-DSL).
 #[test]
-#[ignore = "pending: G-ON-OPTION-TRASHED-DSL — opponent Digimon effect immunity cannot be tested without the DSL timing"]
 fn bt23_059_clause_b_grants_effect_immunity_from_opponent_digimon() {
-    panic!("requires on_option_trashed DSL timing variant");
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT23-059")
+        .expect("BT23-059 compiles")
+        .add_card(make_option_card("TRASHED-OPT"))
+        .memory(10)
+        .start();
+
+    let blitz = r.place_on_field(0, "BT23-059", Some(0));
+    r.place_on_field(0, "TRASHED-OPT", Some(0));
+
+    let option = field_handle_by_card_id(&r, 0, "TRASHED-OPT");
+    assert!(r.game.trash_field_option(option, OptionTrashCause::Effect));
+
+    assert!(
+        r.game
+            .permanent_is_unaffected_by_effect(blitz, 1, EffectSourceKind::Digimon),
+        "BT23-059 must be unaffected by opponent Digimon effects for the turn"
+    );
+    assert!(
+        !r.game
+            .permanent_is_unaffected_by_effect(blitz, 1, EffectSourceKind::Option),
+        "BT23-059 should not gain immunity from opponent Option effects"
+    );
 }

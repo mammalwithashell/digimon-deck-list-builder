@@ -79,6 +79,7 @@ fn compile_field_selector(s: crate::step::FieldSelector) -> CompiledFieldSelecto
         crate::step::FieldSelector::LowestDp => CompiledFieldSelector::LowestDp,
         crate::step::FieldSelector::HighestDp => CompiledFieldSelector::HighestDp,
         crate::step::FieldSelector::LowestPlayCost => CompiledFieldSelector::LowestPlayCost,
+        crate::step::FieldSelector::HighestPlayCost => CompiledFieldSelector::HighestPlayCost,
     }
 }
 
@@ -201,10 +202,12 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOwnSecurityRemoved => CompiledTiming::OnOwnSecurityRemoved,
         S::OnDigivolutionCardTrashed => CompiledTiming::OnDigivolutionCardTrashed,
         S::OnSecurityCheck => CompiledTiming::OnSecurityCheck,
+        S::OnCheckFaceUpSecurity => CompiledTiming::OnCheckFaceUpSecurity,
         S::OnLoseSecurity => CompiledTiming::OnLoseSecurity,
         S::OnDiscardSecurity => CompiledTiming::OnDiscardSecurity,
         S::OnSecurity => CompiledTiming::OnSecurity,
         S::OnOptionPlaced => CompiledTiming::OnOptionPlaced,
+        S::OnOptionTrashed => CompiledTiming::OnOptionTrashed,
         S::OnPlaceSecurity => CompiledTiming::OnPlaceSecurity,
         S::OnAddedToSecurity => CompiledTiming::OnAddedToSecurity,
         S::Main => CompiledTiming::Main,
@@ -695,6 +698,23 @@ fn compile_predicate(
         dna_origin: p.dna_origin,
         event_target_kind: p.event_target_kind.map(compile_card_kind),
         event_target_trait_has: p.event_target_trait_has.clone(),
+        event_target_level_eq: p.event_target_level_eq,
+        event_target_level_lte: p.event_target_level_lte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.event_target_level_lte"),
+                card_id,
+                errors,
+            )
+        }),
+        event_target_level_gte: p.event_target_level_gte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.event_target_level_gte"),
+                card_id,
+                errors,
+            )
+        }),
         event_target_name_contains: p.event_target_name_contains.clone(),
         event_target_is_player: p.event_target_is_player,
         event_target_is_source: p.event_target_is_source,
@@ -707,6 +727,7 @@ fn compile_predicate(
             .as_ref()
             .map(|v| v.iter().map(|c| compile_color(*c)).collect()),
         event_permanent_is_source: p.event_permanent_is_source,
+        event_host_permanent_is_source: p.event_host_permanent_is_source,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
@@ -1872,6 +1893,9 @@ fn compile_step(
         S::Hatch(a) => CompiledStep::Hatch {
             of: compile_player_ref(a.of),
         },
+        S::MoveFromBreeding(a) => CompiledStep::MoveFromBreeding {
+            of: compile_player_ref(a.of),
+        },
 
         // PlayFromHand, PlayFromTrash, PlayFromTrashFree all use PlayFromHandArgs
         // (with hand_index field), but the compiled variants use different field
@@ -1910,6 +1934,11 @@ fn compile_step(
             optional: a.optional,
             prompt: a.prompt.clone(),
         },
+        S::PlayFromRevealedFree(a) => CompiledStep::PlayFromRevealedFree {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+            bind_as: a.bind_as.clone(),
+        },
         // PlayFromTrash reuses PlayFromHandArgs but the compiled form uses `trash_index`
         S::PlayFromTrash(a) => {
             if a.suppress_on_play {
@@ -1938,6 +1967,9 @@ fn compile_step(
             binding: a.binding.clone(),
             bind_as: a.bind_as.clone(),
             suppress_on_play: a.suppress_on_play,
+        },
+        S::TrashUnionBound(a) => CompiledStep::TrashUnionBound {
+            binding: a.binding.clone(),
         },
         S::PlayFromSecurity(_) => CompiledStep::PlayFromSecurity,
         S::PlayFromMaterials(a) => CompiledStep::PlayFromMaterials {
@@ -2124,6 +2156,9 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::FlipSecurityFaceUp(a) => CompiledStep::FlipSecurityFaceUp {
+            of: compile_player_ref(a.of),
+        },
 
         S::AddDpModifier(a) => CompiledStep::AddDpModifier {
             target: compile_binding_ref(&a.target),
@@ -2153,7 +2188,7 @@ fn compile_step(
             value: a.value,
         },
         S::GrantTriggeredEffect(a) => CompiledStep::GrantTriggeredEffect {
-            target: compile_predicate(&a.target, &format!("{prefix}.target"), card_id, errors),
+            target: compile_modifier_target(&a.target, &format!("{prefix}.target"), card_id, errors),
             timing: a.timing.clone(),
             expiry: a.expiry.clone(),
             body: a
