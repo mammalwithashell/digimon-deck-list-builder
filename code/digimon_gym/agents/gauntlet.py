@@ -828,23 +828,34 @@ class GauntletWrapper(gymnasium.Wrapper):
 
 
 class GeneralistDeckPoolWrapper(gymnasium.Wrapper):
-    """Samples both player decks from a GeneralistDeckPool each episode."""
+    """Samples player decks from one or two `GeneralistDeckPool`s each episode.
+
+    Symmetric mode (default): both decks sampled from `deck_pool`.
+
+    Asymmetric mode: pass `opponent_pool` to sample P2's deck from a different
+    pool than P1. Used for curricula where the agent should pilot a restricted
+    archetype set but face the full opponent field — e.g.,
+    `--archetypes "DNA Omnimon,BG Imperial"` for the agent paired with an
+    unfiltered opponent pool.
+    """
 
     def __init__(
         self,
         env: gymnasium.Env,
         deck_pool: GeneralistDeckPool,
         seed: Optional[int] = None,
+        opponent_pool: Optional[GeneralistDeckPool] = None,
     ) -> None:
         super().__init__(env)
         self.deck_pool = deck_pool
+        self.opponent_pool = opponent_pool if opponent_pool is not None else deck_pool
         self._rng = np.random.default_rng(seed)
         self._current_deck1: Optional[DeckEntry] = None
         self._current_deck2: Optional[DeckEntry] = None
 
     def reset(self, **kwargs):
         self._current_deck1 = self.deck_pool.sample_uniform_archetype(self._rng)
-        self._current_deck2 = self.deck_pool.sample_uniform_archetype(self._rng)
+        self._current_deck2 = self.opponent_pool.sample_uniform_archetype(self._rng)
 
         options = kwargs.get("options") or {}
         options["deck1"] = self._current_deck1.card_ids
