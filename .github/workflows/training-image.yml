@@ -47,9 +47,8 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}/data:/app/data:ro" \
             -v "${{ github.workspace }}/training_jobs:/app/jobs:ro" \
-            --entrypoint python \
             digimon-trainer:smoke \
-            tools/run_training_job.py /app/jobs/_smoke.json --dry-run
+            python tools/run_training_job.py /app/jobs/_smoke.json --dry-run
 
       - name: Push image to GHCR
         uses: docker/build-push-action@v6
