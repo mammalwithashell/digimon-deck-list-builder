@@ -145,7 +145,11 @@ def test_cli_generalist_pool_reaches_train(monkeypatch, tmp_path):
         captured["curriculum_seed"] = curriculum_seed
 
     monkeypatch.setattr(pilot_training, "train", fake_train)
-    monkeypatch.setattr(pilot_training, "load_generalist_deck_pool", lambda: pool)
+    monkeypatch.setattr(
+        pilot_training,
+        "load_generalist_deck_pool",
+        lambda **_kwargs: pool,
+    )
     monkeypatch.setattr(pilot_training, "load_implemented_card_ids", lambda: set())
     monkeypatch.setattr(
         "sys.argv",
@@ -773,3 +777,73 @@ def test_training_config_bool_yaml_field_still_loads_as_bool(tmp_path):
     loaded = TrainingConfig.from_yaml(path)
     assert loaded.record_game_tensors is False
     assert isinstance(loaded.record_game_tensors, bool)
+
+
+def test_yaml_allowed_archetypes_loads_as_list(tmp_path):
+    path = tmp_path / "training.yaml"
+    path.write_text(
+        "allowed_archetypes:\n  - Rocks\n  - Yellow Hybrid\n"
+    )
+    loaded = TrainingConfig.from_yaml(path)
+    assert loaded.allowed_archetypes == ["Rocks", "Yellow Hybrid"]
+
+
+def test_cli_archetypes_flag_matches_yaml(monkeypatch, tmp_path):
+    """`--archetypes Rocks,Yellow Hybrid` produces the same cfg as YAML."""
+    from digimon_gym.agents import pilot_training
+
+    config_path = tmp_path / "training.yaml"
+    config_path.write_text("timesteps: 1\neval_freq: 0\neval_episodes: 1\n")
+    captured = {}
+
+    def fake_train(*_args, cfg, **_kwargs):
+        captured["cfg"] = cfg
+
+    monkeypatch.setattr(pilot_training, "train", fake_train)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "pilot_training",
+            "--config",
+            str(config_path),
+            "--archetypes",
+            "Rocks, Yellow Hybrid",  # trailing space exercises strip()
+        ],
+    )
+
+    pilot_training.main()
+
+    assert captured["cfg"].allowed_archetypes == ["Rocks", "Yellow Hybrid"]
+
+
+def test_cli_archetypes_overrides_yaml(monkeypatch, tmp_path):
+    """CLI --archetypes wins over the YAML field, matching other override flags."""
+    from digimon_gym.agents import pilot_training
+
+    config_path = tmp_path / "training.yaml"
+    config_path.write_text(
+        "timesteps: 1\n"
+        "eval_freq: 0\n"
+        "eval_episodes: 1\n"
+        "allowed_archetypes:\n  - Old\n  - From\n  - Yaml\n"
+    )
+    captured = {}
+
+    def fake_train(*_args, cfg, **_kwargs):
+        captured["cfg"] = cfg
+
+    monkeypatch.setattr(pilot_training, "train", fake_train)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "pilot_training",
+            "--config",
+            str(config_path),
+            "--archetypes",
+            "Rocks,Yellow Hybrid",
+        ],
+    )
+
+    pilot_training.main()
+
+    assert captured["cfg"].allowed_archetypes == ["Rocks", "Yellow Hybrid"]

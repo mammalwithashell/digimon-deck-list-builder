@@ -52,6 +52,7 @@ from digimon_gym.agents.gauntlet import (
     MetaGauntlet,
     GauntletWrapper,
     UnimplementedDeckError,
+    canonicalize_archetype,
     load_generalist_deck_pool,
     validate_implemented_deck,
 )
@@ -2228,6 +2229,15 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Path to write the frozen generalist deck-pool snapshot."
     )
     parser.add_argument(
+        "--archetypes", type=str, default=None,
+        help=(
+            "Comma-separated archetype names to scope the eligible deck pool. "
+            "Applies to both generalist and gauntlet modes. Names are "
+            "canonicalized via the archetype alias index; unrecognized entries "
+            "log a warning but do not fail the run."
+        ),
+    )
+    parser.add_argument(
         "--deck1", type=str, default=None,
         help="Path to player 1 deck file (TTS/text format)"
     )
@@ -2374,6 +2384,10 @@ def main():
         overrides["resume_from"] = args.resume
     if args.generalist:
         overrides["generalist"] = True
+    if args.archetypes is not None:
+        overrides["allowed_archetypes"] = [
+            name.strip() for name in args.archetypes.split(",") if name.strip()
+        ]
     if args.match_format is not None:
         overrides["match_format"] = args.match_format
 
@@ -2391,12 +2405,30 @@ def main():
     # Load gauntlet if requested
     gauntlet = None
     if args.gauntlet:
-        gauntlet = MetaGauntlet(sampling_mode=args.gauntlet_sampling)
+        allowed_set = (
+            set(cfg.allowed_archetypes) if cfg.allowed_archetypes else None
+        )
+        gauntlet = MetaGauntlet(
+            sampling_mode=args.gauntlet_sampling,
+            allowed_archetypes=allowed_set,
+        )
         try:
             gauntlet.load()
             print(f"  MetaGauntlet: {gauntlet.archetype_count} archetypes, "
                   f"{gauntlet.deck_count} fully implemented decks loaded "
                   f"({args.gauntlet_sampling} sampling)")
+            if allowed_set is not None:
+                resolved = sorted(gauntlet.archetypes.keys())
+                missing = sorted(
+                    {canonicalize_archetype(n) for n in allowed_set}
+                    - set(resolved)
+                )
+                print(
+                    f"  Archetype filter: {len(resolved)} resolved "
+                    f"(declared {len(allowed_set)})"
+                )
+                if missing:
+                    print(f"  Filter dropped (unrecognized or unimplemented): {missing}")
         except FileNotFoundError:
             print("  WARNING: deck_library.json not found. "
                   "Run tools/meta_loader.py --build first.")
@@ -2444,12 +2476,35 @@ def main():
                     f"  Generalist pool: {generalist_deck_pool.archetype_count} archetypes, "
                     f"{generalist_deck_pool.deck_count} decks from {cfg.curriculum_pool}"
                 )
+                if cfg.allowed_archetypes:
+                    print(
+                        "  Note: allowed_archetypes is ignored when --curriculum-pool "
+                        "is set; the snapshot defines the resolved pool."
+                    )
             else:
-                generalist_deck_pool = load_generalist_deck_pool()
+                allowed_set = (
+                    set(cfg.allowed_archetypes) if cfg.allowed_archetypes else None
+                )
+                generalist_deck_pool = load_generalist_deck_pool(
+                    allowed_archetypes=allowed_set,
+                )
                 print(
                     f"  Generalist pool: {generalist_deck_pool.archetype_count} archetypes, "
                     f"{generalist_deck_pool.deck_count} fully implemented decks loaded"
                 )
+                if allowed_set is not None:
+                    resolved = set(generalist_deck_pool.archetype_names)
+                    missing = sorted(
+                        {canonicalize_archetype(n) for n in allowed_set} - resolved
+                    )
+                    print(
+                        f"  Archetype filter: {len(resolved)} resolved "
+                        f"(declared {len(allowed_set)})"
+                    )
+                    if missing:
+                        print(
+                            f"  Filter dropped (unrecognized or unimplemented): {missing}"
+                        )
         except FileNotFoundError:
             print("  WARNING: deck_library.json not found. Run tools/meta_loader.py --build first.")
             generalist_deck_pool = None

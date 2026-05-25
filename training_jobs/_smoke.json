@@ -1,0 +1,21 @@
+{
+  "job_name": "smoke",
+  "description": "Minimal CI smoke job. Uses the ST1 default agent deck and a tiny timestep budget so --dry-run validates the runtime path without depending on external deck files.",
+
+  "agent_deck": {
+    "source": "default"
+  },
+
+  "training": {
+    "timesteps": 100,
+    "opponent": "greedy",
+    "eval_freq": 0,
+    "n_eval_episodes": 1
+  },
+
+  "output": {
+    "name": "smoke",
+    "save_dir": "models",
+    "log_dir": "runs/pilot_ppo"
+  }
+}
