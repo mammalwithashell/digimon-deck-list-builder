@@ -33,7 +33,10 @@ COPY code/digimon-engine/ code/digimon-engine/
 COPY code/digimon-engine-py/ code/digimon-engine-py/
 
 # Trim the workspace so unrelated members don't have to resolve.
-RUN sed -i -E '/"code\/src-tauri"|"code\/tools\/dsl-/d' Cargo.toml
+# Only digimon-dsl + digimon-engine + digimon-engine-py are copied above;
+# the cli, mcp, tauri shell, and dsl-tools crates must be dropped from
+# `members` or cargo metadata fails before maturin can build the wheel.
+RUN sed -i -E '/"code\/(src-tauri|digimon-engine-cli|digimon-engine-mcp|tools\/dsl-[a-z-]+)"/d' Cargo.toml
 
 # Build the wheel — release mode for maximum speed at training time
 RUN cd code/digimon-engine-py && maturin build --release --out /wheels
