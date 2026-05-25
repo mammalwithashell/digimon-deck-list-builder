@@ -68,6 +68,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# openssh-server is required for RunPod's SSH proxy to reach the container.
+# Without it, RunPod's "ssh info" stays "pod not ready" forever even though
+# the container itself is running. For Path B (Hetzner one-shot) this just
+# adds ~5 MB of unused binaries; for Path A (RunPod) it's essential.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-server \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /run/sshd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+
 # Install the compiled PyO3 wheel
 COPY --from=rust-builder /wheels/*.whl /wheels/
 RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
@@ -106,14 +117,12 @@ ENV PYTHONPATH=/app
 #
 # Path B (one-shot on Hetzner / DO via `docker run`):
 #   docker run --rm ... <image> python tools/run_training_job.py /app/jobs/my.json
-#   (the args override CMD; trainer runs and exits)
+#   (the args override CMD; sshd is never started; trainer runs and exits)
 #
 # Path A (RunPod pod, want to SSH in and stage data before training):
 #   runpodctl pod create ...
-#   (no --docker-args needed — CMD keeps the container alive; SSH in and
-#    manually run `python tools/run_training_job.py /workspace/jobs/my.json`)
-#
-# `sleep infinity` rather than `bash` because RunPod's pod runner doesn't
-# attach a TTY, so a non-interactive bash exits in milliseconds and the
-# container CrashLoops. Sleep keeps PID 1 alive indefinitely.
-CMD ["sleep", "infinity"]
+#   (default CMD runs runpod-start.sh: installs $PUBLIC_KEY, starts sshd,
+#    then sleeps forever so RunPod's SSH proxy can connect)
+COPY docker/runpod-start.sh /usr/local/bin/runpod-start.sh
+RUN chmod +x /usr/local/bin/runpod-start.sh
+CMD ["/usr/local/bin/runpod-start.sh"]
