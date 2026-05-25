@@ -1854,6 +1854,10 @@ def train(total_timesteps: int = 100_000,
             model = MaskableRecurrentPPO.load(cfg.resume_from, env=env, device=device)
         else:
             model = MaskablePPO.load(cfg.resume_from, env=env, device=device)
+        # SB3's load() restores the checkpoint's original tensorboard_log path.
+        # Override it so the new run logs under this run's configured --log-dir
+        # rather than polluting the source checkpoint's TB directory.
+        model.tensorboard_log = tensorboard_log
         if verbose:
             print(f"  [resume] loaded checkpoint, num_timesteps={model.num_timesteps}")
     elif cfg.init_from:
@@ -1861,6 +1865,7 @@ def train(total_timesteps: int = 100_000,
             model = MaskableRecurrentPPO.load(cfg.init_from, env=env, device=device)
         else:
             model = MaskablePPO.load(cfg.init_from, env=env, device=device)
+        model.tensorboard_log = tensorboard_log
         if verbose:
             print(f"  [init] loaded base checkpoint from {cfg.init_from}")
     elif use_lstm:
