@@ -71,11 +71,12 @@ The original decision picked Hetzner CCX23 CPU based on a `<30%` GPU utilization
   24h run cost         ~$7                    ~$1
 ```
 
-**Primary target — RunPod RTX 3090 community cloud at ~$0.25–0.35/hr.** Chosen because:
+**Primary target — RunPod RTX 3090 Secure Cloud at $0.46/hr.** Chosen because:
 - 24 GB VRAM provides 2× headroom over current local footprint, with room to scale `n_steps`, `lstm_hidden_size`, or `n_envs` without rebuying compute.
 - Compute is half-used at ~33% on the local 4070, so paying for a 4090 or A100 buys speed we can't consume. 3090 ties 4090 in wall-clock at this workload and is roughly half the price.
 - Per-minute billing; the image cache survives between pod recreations on the same template.
-- Community-tier preemption risk is acceptable because runs are babysat, SB3 writes TB events continuously (lose ≤ 2 min on preempt), and `checkpoint_every` is already configured.
+
+**Original decision was Community Cloud at $0.22-0.35/hr** with the rationale "preemption risk is acceptable because runs are babysat". The first end-to-end deploy invalidated that: on the Community worker we landed on, the 2.78 GB image never finished pulling (`uptime` stuck at `0s` for 8+ minutes), while the same image deployed cleanly to Secure Cloud in 2.5 minutes. The 2× price premium is the cost of "the worker can actually pull the image reliably". Path 11.3 in `tasks.md` is parked to investigate whether the CC failure was transient or systemic; if transient, we may revert to CC default later.
 
 **Operationally, the RunPod path is different from the original Hetzner plan**: RunPod runs our published image **directly as the pod** rather than as a `docker run` invocation inside a Linux VM. The user specifies `ghcr.io/<owner>/digimon-trainer:<tag>` when creating the pod, RunPod handles GPU passthrough, and TB is reached via RunPod's built-in HTTPS proxy (`https://<pod-id>-6006.proxy.runpod.net`) rather than via Tailscale. The trainer is still one-shot per the original Decision 3 rationale, but the entrypoint is overridden to `sleep infinity` so the user can SSH in, start the trainer + TB in `tmux`, detach, and reattach later — RunPod pods don't fit the bare `docker run` lifecycle because the pod itself is the container.
 

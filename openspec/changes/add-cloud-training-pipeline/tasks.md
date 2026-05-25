@@ -69,5 +69,30 @@ A live `nvidia-smi` sweep on the user's LSTM self-play run revealed VRAM (not GP
 - [x] 9.4 Update `design.md` Decision 5 (network) to record the RunPod-HTTPS-proxy access path for Path A alongside the existing Tailscale access path for Path B.
 - [x] 9.5 Update `specs/cloud-training-pipeline/spec.md` access-path requirement and runbook requirement to be regime-aware. (Original "Tailscale is the documented access path" widened to "Network access path is regime-aware and never requires a public TLS exposure"; original "runbook covers the full cycle" widened to cover both paths + Local Mitigations + the routing Decision section.)
 - [x] 9.6 Update `proposal.md` Why and What-Changes blurbs to reflect the GPU pivot.
-- [ ] 9.7 **User action required**: On the first real RunPod smoke (combined with Task 8.4), verify the trainer image's PyTorch wheel sees CUDA inside a RunPod pod. Inside the pod after SSH: `python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"` — expected output is `True 'NVIDIA GeForce RTX 3090'`. If `False`, the `python:3.11-slim` base + default `torch>=2.0` wheel is not CUDA-enabled in this configuration and `Dockerfile.training` needs a base-image change (e.g. `nvidia/cuda:12.x-runtime-ubuntu22.04` + manual Python install) or a torch pin to a CUDA-tagged build. Defer image change until smoke confirms it's needed.
-- [ ] 9.8 **Conditional on 9.7**: If torch ends up CPU-only inside the RunPod pod, file a follow-up tasks.md entry to swap `Dockerfile.training`'s base image and re-publish (`training-v0.2`). Don't pre-emptively change the base; verify the actual behavior first.
+- [x] 9.7 Verified during first real RunPod smoke (pod `7in2f3zvv3toij`, Secure Cloud RTX 3090). `nvidia-smi` showed the 3090 + driver 580 + compute 8.6; `torch.cuda.is_available()` returned `True` with `torch 2.12.0+cu130`. The `python:3.11-slim` + `pip install torch>=2.0` path picks up the CUDA-enabled wheel automatically — no base-image change needed.
+- [x] 9.8 N/A — torch sees CUDA inside the RunPod pod, so the contingency rebase to `nvidia/cuda:*-runtime` is not required.
+
+## 10. Deploy-debug discoveries (training-v0.10 → v0.14)
+
+The first real cloud deploy surfaced ten latent issues across the
+Dockerfile and the operational flow. Each became its own commit on the
+PR; the runbook §A.10 captures them as a troubleshooting table for
+future readers.
+
+- [x] 10.1 v0.11 — drop `ENTRYPOINT ["python", "tools/run_training_job.py"]`. RunPod's `--docker-args` only overrides CMD, not ENTRYPOINT; the original entrypoint made the trainer fail with `python tools/run_training_job.py sleep infinity`.
+- [x] 10.2 v0.12 — bake `CMD ["sleep", "infinity"]` directly so the image doesn't depend on `--docker-args` at all. `CMD ["bash"]` had CrashLooped because RunPod doesn't attach a TTY.
+- [x] 10.3 v0.13 — install `openssh-server` + ship `docker/runpod-start.sh` that drops `$PUBLIC_KEY` into `authorized_keys`, generates host keys, starts `sshd`, then `exec sleep infinity`. Confirmed by control deploy: RunPod's stock `runpod/pytorch:2.4.0` image SSH-ready in 45s vs ours stuck at "pod not ready" indefinitely — root cause was no sshd in the image.
+- [x] 10.4 v0.14 — `printf 'PYTHONPATH=/app\nDIGIMON_DATA_DIR=/app/data\nDIGIMON_BACKEND=rust\n' >> /etc/environment`. Docker `ENV` directives don't survive sshd session creation; PAM's `pam_env` reads `/etc/environment` and injects the vars into every login.
+- [x] 10.5 Document Secure Cloud as the Path A default (not Community). A first-attempt Community deploy of the 2.78 GB v0.13 image sat at `uptime: 0s` for 8+ minutes on the worker we landed on; Secure deployed cleanly in 2.5 minutes. Path A pricing updated from "$0.22-0.30/hr" to "$0.46/hr" and 24h run estimate from "$7" to "$11".
+- [x] 10.6 Document the GHCR repo-vs-user package distinction. Visibility for workflow-published packages lives at `<owner>/<repo>/pkgs/container/<pkg>/settings`, not at the user-packages page. Easy to set the wrong page's visibility and think the change took.
+- [x] 10.7 Document the GHCR `Accept` header gotcha. Bare `curl` on a GHCR manifest URL returns 404 for public packages because the default `Accept` doesn't match the OCI media type. Add `-H "Accept: application/vnd.oci.image.index.v1+json"` to verify.
+- [x] 10.8 Document the MSYS path-translation gotcha on Windows Git Bash. `runpodctl pod create --volume-mount-path /workspace` gets silently rewritten to `C:/Program Files/Git/workspace`. Prefix the invocation with `MSYS_NO_PATHCONV=1`.
+- [x] 10.9 Rewrite Path A runbook around the `runpodctl pod create` CLI instead of the web UI walkthrough. CLI flow is one command + a few `runpodctl ssh info` polls; web UI requires remembering to swap the default template (which silently picks RunPod's stock PyTorch image instead of our custom one).
+- [x] 10.10 Add an §A.10 Troubleshooting table to the runbook listing every failure mode + symptom + fix. Keeps the recovery path findable for whoever does the second deploy.
+
+## 11. Outstanding from this session
+
+- [ ] 11.1 First real (non-smoke) training run on a v0.14 pod — e.g. 100k step generalist scoped to `Rocks` to validate the trainer actually progresses. Deferred from this session because the user terminated the pod to regroup.
+- [ ] 11.2 Live `digimon-training-mcp` query against a mirrored cloud run (originally Task 6.4). Requires #11.1 to have completed.
+- [ ] 11.3 Investigate Community Cloud failure mode. Was it the specific worker we landed on (transient), or a systemic CC issue with multi-GB GHCR images? If transient, we could revert to CC default at $0.22/hr (2× savings).
+- [ ] 11.4 Consider auto-symlinking `/workspace/{data,jobs,runs,models}` → `/app/{data,jobs,runs,models}` inside `runpod-start.sh` so the user doesn't have to do it manually each session.
