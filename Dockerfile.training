@@ -83,10 +83,14 @@ COPY code/data_paths.py .
 COPY training_jobs/ training_jobs/
 
 # Card data is mounted at runtime: -v $(pwd)/data:/app/data
-# The data_paths module resolves cards.json relative to the repo root,
-# which inside the container is /app once code/ is flattened. The
-# default DIGIMON_DATA_DIR (DATA_DIR / "data") therefore points at
-# /app/data and is satisfied by the volume mount.
+#
+# data_paths.py computes REPO_ROOT as `__file__.parent.parent`. In the
+# repo, data_paths.py lives at code/data_paths.py, so the walk reaches
+# the repo root correctly. Inside this image we flatten code/ to /app/,
+# which makes __file__.parent.parent = / (one level too high) and
+# DATA_DIR defaults to /data instead of /app/data. Override explicitly
+# so the data_paths module resolves the runtime volume mount.
+ENV DIGIMON_DATA_DIR=/app/data
 
 # Use the Rust engine backend by default
 ENV DIGIMON_BACKEND=rust
