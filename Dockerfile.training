@@ -11,7 +11,10 @@
 #          digimon-trainer training_jobs/my_job.json
 
 # ── Stage 1: Rust build ───────────────────────────────────────────────────
-FROM rust:1.82-slim AS rust-builder
+# Pinned to match the local developer toolchain (rustc 1.94). Bumps to follow
+# any dep that requires a newer Cargo feature; ureq-proto 0.6 needs
+# edition2024 which only stabilized in 1.85, so 1.82 is below the floor.
+FROM rust:1.94-slim AS rust-builder
 
 WORKDIR /build
 
