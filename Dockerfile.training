@@ -77,7 +77,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /run/sshd \
     && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
-    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config \
+    && printf 'PYTHONPATH=/app\nDIGIMON_DATA_DIR=/app/data\nDIGIMON_BACKEND=rust\n' >> /etc/environment
 
 # Install the compiled PyO3 wheel
 COPY --from=rust-builder /wheels/*.whl /wheels/
