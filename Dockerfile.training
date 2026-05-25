@@ -105,13 +105,15 @@ ENV PYTHONPATH=/app
 # interactive pod.
 #
 # Path B (one-shot on Hetzner / DO via `docker run`):
-#     docker run --rm ... <image> python tools/run_training_job.py /app/jobs/my.json
+#   docker run --rm ... <image> python tools/run_training_job.py /app/jobs/my.json
+#   (the args override CMD; trainer runs and exits)
 #
 # Path A (RunPod pod, want to SSH in and stage data before training):
-#     runpodctl pod create ... --docker-args 'sleep infinity'
-#     # then SSH in and manually run:
-#     python tools/run_training_job.py /workspace/jobs/my.json
+#   runpodctl pod create ...
+#   (no --docker-args needed — CMD keeps the container alive; SSH in and
+#    manually run `python tools/run_training_job.py /workspace/jobs/my.json`)
 #
-# CMD bash means a plain `docker run -it <image>` drops to a shell, which
-# is fine for ad-hoc inspection.
-CMD ["bash"]
+# `sleep infinity` rather than `bash` because RunPod's pod runner doesn't
+# attach a TTY, so a non-interactive bash exits in milliseconds and the
+# container CrashLoops. Sleep keeps PID 1 alive indefinitely.
+CMD ["sleep", "infinity"]
