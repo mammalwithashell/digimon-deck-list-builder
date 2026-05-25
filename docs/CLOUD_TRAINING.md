@@ -26,13 +26,22 @@ runs fine on CPU.
                        lstm / self-play       mlp / vs-greedy
                        ─────────────────      ───────────────
   needs GPU?           yes (VRAM-bound)       no
-  recommended host     RunPod 3090            Hetzner CCX23
-  $/hr (24 GB / 8 vCPU) ~$0.30                ~$0.04
-  24h run cost          ~$7                   ~$1
+  recommended host     RunPod 3090 Secure     Hetzner CCX23
+  $/hr (24 GB / 8 vCPU) $0.46                  ~$0.04
+  24h run cost          ~$11                   ~$1
 ```
 
 Most readers want path A. Path B is documented below for the cases where
 it applies.
+
+**Secure vs Community Cloud on RunPod**: this runbook deploys to **Secure
+Cloud** ($0.46/hr) rather than Community Cloud ($0.22/hr). During the
+first end-to-end smoke we landed on a Community worker that couldn't
+pull our 2.78 GB image — `uptime` sat at `0s` for 8+ minutes while the
+exact same image deployed cleanly to Secure in ~2.5 minutes. The 2×
+price premium is the cost of "the worker can actually pull the image
+reliably" and is worth it for a babysat workflow. Once we have a known-
+good Community worker pattern, we can document a switch back.
 
 ## Why these choices?
 
@@ -40,7 +49,7 @@ The decisions below are recorded in detail in
 `openspec/changes/add-cloud-training-pipeline/design.md`. The short version:
 
 - **RunPod over Hetzner/DO for GPU runs** — RunPod has 24 GB consumer cards
-  (3090/A5000) at $0.25–0.40/hr community pricing. DigitalOcean and Hetzner
+  (3090/A5000) at $0.46/hr secure-cloud pricing. DigitalOcean and Hetzner
   only sell H100-class GPUs ($3+/hr) at this layer, which is overkill for a
   workload that uses ~50% of a 3090's compute.
 - **No domain, no Let's Encrypt** — RunPod's built-in HTTPS proxy gives each
@@ -61,113 +70,213 @@ The decisions below are recorded in detail in
 
 ## A.1 Prerequisites (one-time)
 
-```bash
-# Local CLI tools:
-#   pip install runpod          # optional but handy; web UI works too
-#   brew install rsync ssh      # already on most Unix-likes
+Two CLIs need to be on your laptop's PATH: `runpodctl` (deploys + manages
+pods) and `gh` (publishes the image via the `training-v*` tag). Both are
+fast to install:
 
-# Account setup:
-# 1. Sign up at runpod.io
-# 2. Add a payment method (per-minute billing; $10 minimum top-up)
-# 3. Settings → SSH Public Keys → paste ~/.ssh/id_ed25519.pub
-# 4. Settings → API Keys → generate one if you'll use runpodctl
+```bash
+# runpodctl — download from https://github.com/runpod/runpodctl/releases
+# Windows: drop runpodctl.exe somewhere on PATH (e.g. ~/runpodctl.exe)
+# macOS:   brew install runpodctl
+# Linux:   curl -fsSL https://raw.githubusercontent.com/runpod/runpodctl/main/install.sh | bash
+
+# gh (GitHub CLI) — optional but the rest of this runbook uses it
+brew install gh         # macOS
+# https://cli.github.com/ for Windows / Linux
 ```
 
-## A.2 Push the training image to GHCR
+Account setup, done once:
+
+```
+1. Sign up at runpod.io
+2. Billing → Add payment method, top up at least $10
+3. Settings → SSH Public Keys → paste ~/.ssh/id_ed25519.pub
+4. Settings → API Keys → generate; runpodctl reads it from
+   ~/.runpod/config.toml (created by `runpodctl doctor`) or RUNPOD_API_KEY
+```
+
+Sanity check:
+
+```bash
+runpodctl me            # should show your email + balance
+runpodctl gpu list      # should list available GPU types
+```
+
+## A.2 Publish the training image to GHCR
 
 Tag and push triggers `.github/workflows/training-image.yml`, which builds
 `Dockerfile.training` and publishes to GHCR:
 
 ```bash
-# From your laptop
+# From your laptop, repo root
 git tag training-v0.1
 git push origin training-v0.1
-
-# Wait for the workflow to finish (~5 min). Confirm publication:
-docker pull ghcr.io/<your-handle-lowercase>/digimon-trainer:training-v0.1
+gh run watch                    # ~8 minutes for the first build (Rust + PyO3)
 ```
 
-If your GHCR package is private, you'll need to make it public OR add a
-RunPod container-registry credential under Settings → Container Registry
-Auth so the pod can pull it.
+**Make the GHCR package public** before deploying — RunPod can't pull from
+a private GHCR repo without a registry credential. Important detail: since
+the workflow uses `${{ secrets.GITHUB_TOKEN }}`, the package is owned by
+the **repository**, not your user account. The visibility setting lives
+at the *repo* page, not the user packages page:
 
-## A.3 Create a pod
+```
+https://github.com/<owner>/<repo>/pkgs/container/digimon-trainer/settings
+```
 
-Easiest path is the web UI (Pods → Deploy). Pick:
+Scroll to **Danger Zone** → **Change package visibility** → **Public** →
+type `digimon-trainer` to confirm. Verify it stuck with an anonymous
+manifest probe:
 
-| Field | Value | Notes |
-|-------|-------|-------|
-| GPU | RTX 3090 (24 GB) — community cloud | 4090 / A5000 also fine; A6000 if you'll scale architecture |
-| Instance count | 1 | |
-| Container image | `ghcr.io/<owner>/digimon-trainer:training-v0.1` | Click "Edit Template" if not shown |
-| Container disk | 20 GB | Fits ~600 MB image + work dirs |
-| Volume disk | 40 GB | Mount at `/workspace` — persistent across pod restarts |
-| Expose HTTP ports | `6006` | TensorBoard |
-| Expose TCP ports | `22` | SSH proxy |
-| Docker command | `bash -c "sleep infinity"` | Override the trainer entrypoint; we'll kick off training manually after staging data |
-| Environment vars | `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` | Buys ~200–500 MiB of VRAM on long runs |
+```bash
+TOKEN=$(curl -s "https://ghcr.io/token?service=ghcr.io&scope=repository:<owner-lowercase>/digimon-trainer:pull" | python -c "import json,sys; print(json.load(sys.stdin)['token'])")
+curl -sI \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: application/vnd.oci.image.index.v1+json" \
+  "https://ghcr.io/v2/<owner-lowercase>/digimon-trainer/manifests/training-v0.1" | head -1
+# expected: HTTP/1.1 200 OK
+```
 
-Click **Deploy**. The pod boots in ~30 seconds (image pull dominates on first
-provision).
+If it returns `200 OK` here, RunPod can pull it.
 
-The pod page now shows:
+> **Gotcha — Accept header**: GHCR returns `404 Not Found` for public
+> packages if the `Accept` header is missing the OCI manifest media type.
+> Don't conclude the package is private just because a bare `curl` 404s;
+> include the OCI accept header above.
 
-- An SSH connection string under "Connect" → "SSH" — copy it:
-  `ssh root@<pod>.proxy.runpod.net -p <port> -i ~/.ssh/id_ed25519`
-- An HTTPS URL for port 6006 under "Connect" → "HTTP Service":
-  `https://<pod>-6006.proxy.runpod.net`
+## A.3 Create a pod with runpodctl
 
-Bookmark the HTTPS URL — that's your TensorBoard for the life of this pod.
+One command. **Pin to Secure Cloud (`--cloud-type SECURE`)** because a
+first-attempt Community Cloud deploy of our 2.78 GB image got stuck at
+`uptime: 0s` for 8+ minutes on the worker we landed on; Secure was
+reliable in ~2.5 minutes.
+
+```bash
+# Windows / Git Bash users: prefix with MSYS_NO_PATHCONV=1 so MSYS doesn't
+# auto-rewrite /workspace into C:/Program Files/Git/workspace before the
+# CLI sends it to the API.
+MSYS_NO_PATHCONV=1 runpodctl pod create \
+  --name digimon-train \
+  --image ghcr.io/<owner-lowercase>/digimon-trainer:training-v0.14 \
+  --gpu-id "NVIDIA GeForce RTX 3090" \
+  --cloud-type SECURE \
+  --container-disk-in-gb 20 \
+  --volume-in-gb 40 \
+  --volume-mount-path /workspace \
+  --ports "6006/http,22/tcp" \
+  --env '{"PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"}'
+```
+
+The JSON response includes the pod ID. Save it; you'll use it a lot.
+
+```bash
+POD_ID=<id-from-create-response>
+runpodctl pod get $POD_ID       # full state
+runpodctl ssh info $POD_ID      # SSH host/port (returns "pod not ready"
+                                # until the container starts + sshd is up;
+                                # expect 2-3 minutes on first deploy)
+```
+
+Once `ssh info` returns connection details rather than `"error": "pod not
+ready"`, you'll get back something like:
+
+```json
+{
+  "ip": "213.192.2.75",
+  "port": 40195,
+  "ssh_command": "ssh -i ~/.runpod/ssh/runpodctl-ssh-key root@213.192.2.75 -p 40195"
+}
+```
+
+The TensorBoard URL is derived from the pod ID:
+
+```
+https://<pod-id>-6006.proxy.runpod.net
+```
+
+Bookmark that — it works for the lifetime of this pod.
+
+### Why not the web UI?
+
+You can deploy via the web UI (Pods → Deploy) too. Important if you go
+that route: the "Pod template" dropdown defaults to RunPod's stock
+PyTorch image, **not** your custom image. You must click "Edit" and
+swap in `ghcr.io/<owner-lowercase>/digimon-trainer:training-v0.14`
+yourself. Easy to miss; the CLI flow makes this impossible to mess up.
 
 ## A.4 Stage data and configs
 
-From your laptop, push card data + your job config into the pod's persistent
-volume:
+The pod boots with an empty `/workspace` volume. Push card data + job
+configs over the SSH proxy. `scp` works fine; we'll use that instead of
+`rsync` because Windows Git Bash doesn't ship rsync.
 
 ```bash
-# Convenience: define an alias once
-export DIGIMON_POD="root@<pod>.proxy.runpod.net"
-export DIGIMON_POD_PORT="<port>"
-SCP="scp -P ${DIGIMON_POD_PORT}"
-SSH="ssh -p ${DIGIMON_POD_PORT}"
+# From your laptop, repo root
+SSH_KEY="$HOME/.runpod/ssh/runpodctl-ssh-key"   # or wherever runpodctl put it
+POD_IP=<ip from ssh info>
+POD_PORT=<port from ssh info>
 
-# Card data
-$SSH "${DIGIMON_POD}" "mkdir -p /workspace/{runs,models,data,jobs}"
-rsync -az -e "$SSH" data/ "${DIGIMON_POD}:/workspace/data/"
+# Set up dirs on the pod
+ssh -i "$SSH_KEY" -p $POD_PORT root@$POD_IP \
+  "mkdir -p /workspace/{runs,models,data,jobs}"
 
-# Job configs — cloud-side job_name and output.name should be prefixed
+# Card data — only the JSONs the engine reads at runtime. deck_library.json
+# is the big one (~5 MB). Skip if not staging gauntlet/generalist mode.
+scp -i "$SSH_KEY" -P $POD_PORT \
+  data/cards.json data/deck_library.json data/archetype_aliases.json \
+  data/card_overrides.json data/tested_cards.json \
+  root@$POD_IP:/workspace/data/
+
+# Job configs — cloud-side job_name and output.name SHOULD be prefixed
 # with `cloud_` so mirrored runs are distinguishable on your laptop.
-rsync -az -e "$SSH" training_jobs/ "${DIGIMON_POD}:/workspace/jobs/"
+scp -i "$SSH_KEY" -P $POD_PORT \
+  training_jobs/*.json root@$POD_IP:/workspace/jobs/
 ```
 
 ## A.5 Run the training job
 
+SSH in. From v0.14 onward the env (`PYTHONPATH`, `DIGIMON_DATA_DIR`,
+`DIGIMON_BACKEND`) is persisted in `/etc/environment`, so SSH sessions
+inherit it without manual setup.
+
 ```bash
-$SSH "${DIGIMON_POD}"
+ssh -i "$SSH_KEY" -p $POD_PORT root@$POD_IP
 
-# Inside the pod (your custom image is now the shell)
-cd /app
+# Inside the pod
+echo $PYTHONPATH        # should print /app
+echo $DIGIMON_DATA_DIR  # should print /app/data
 
-# Symlink the persistent volume's dirs into the image's expected locations
+# Symlink the persistent volume's dirs into the image's expected paths.
+# (Workspace data is /workspace/X; the engine + runner expect /app/X.)
 ln -sf /workspace/runs   /app/runs
 ln -sf /workspace/models /app/models
 ln -sf /workspace/data   /app/data
+ln -sf /workspace/jobs   /app/jobs
 
-# Start TensorBoard in the background; serves on :6006 (RunPod-proxied)
+# Verify GPU + CUDA before committing to a long run (Task 9.7)
+nvidia-smi --query-gpu=name,memory.total --format=csv
+python -c "import torch; print('cuda:', torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
+# Expected: cuda: True NVIDIA GeForce RTX 3090
+
+# Start TensorBoard in the background
 tensorboard --logdir /app/runs --bind_all --port 6006 &
 
-# Verify GPU passthrough works inside the container
-nvidia-smi   # should show your 3090, not "No devices found"
-
-# Verify torch sees CUDA before committing to a long run
-python -c "import torch; print('cuda:', torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
-
-# Kick off the trainer
-python tools/run_training_job.py /workspace/jobs/cloud_my_generalist.json
+# Kick off the trainer (in tmux if you'll detach — see A.6)
+python tools/run_training_job.py /app/jobs/cloud_my_generalist.json
 ```
 
 The trainer runs in foreground; TB scalars appear in your browser at the
-HTTPS URL within ~30 seconds.
+`https://<pod-id>-6006.proxy.runpod.net` URL within ~30 seconds.
+
+> **If a pre-v0.14 image is what was published**, the env vars won't be
+> in `/etc/environment` — they're only in Docker's `ENV` which doesn't
+> survive sshd. Quick patch on the pod:
+> ```bash
+> printf 'PYTHONPATH=/app\nDIGIMON_DATA_DIR=/app/data\nDIGIMON_BACKEND=rust\n' \
+>   >> /etc/environment
+> ```
+> Then re-SSH for the change to take effect. Or use inline-env on every
+> command: `PYTHONPATH=/app DIGIMON_DATA_DIR=/app/data python ...`.
 
 ### Example job config: scoped self-play LSTM
 
@@ -219,16 +328,21 @@ python tools/run_training_job.py /workspace/jobs/cloud_my.json
 ```bash
 # On your LAPTOP, in the repo root
 DIGIMON_REMOTE_RUNS=/workspace/runs/ \
-DIGIMON_REMOTE_PORT=${DIGIMON_POD_PORT} \
-scripts/sync_cloud_runs.sh ${DIGIMON_POD}
+DIGIMON_REMOTE_PORT=$POD_PORT \
+scripts/sync_cloud_runs.sh root@$POD_IP
 ```
+
+Note: `scripts/sync_cloud_runs.sh` uses rsync over SSH, which **isn't
+shipped with Windows Git Bash**. On Windows, run the mirror from WSL,
+Cygwin, or any environment where `rsync` is on PATH. (The cloud pod
+itself has rsync, but the pull direction lives on your laptop.)
 
 Cron snippet on your laptop, active while a pod run is alive:
 
 ```cron
 */5 * * * * cd ~/digimon && DIGIMON_REMOTE_RUNS=/workspace/runs/ \
             DIGIMON_REMOTE_PORT=<port> \
-            scripts/sync_cloud_runs.sh <pod-ssh-host> \
+            scripts/sync_cloud_runs.sh root@<ip> \
             >> /tmp/digimon-sync.log 2>&1
 ```
 
@@ -251,7 +365,8 @@ When the trainer exits cleanly:
 ```bash
 # On your LAPTOP
 RUN_ID=cloud_rocks_sp_v1
-$SCP -r "${DIGIMON_POD}:/workspace/models/${RUN_ID}" ./models/
+scp -i "$SSH_KEY" -P $POD_PORT -r \
+  root@$POD_IP:/workspace/models/${RUN_ID} ./models/
 ```
 
 You now have:
@@ -271,13 +386,33 @@ publishing.
 
 ## A.9 Tear down
 
-RunPod web UI → Pods → your pod → **Terminate**. Billing stops at the minute
-the pod is terminated. The volume disk also goes away unless you "Stop" the
-pod instead of "Terminate", in which case storage charges continue at
-~$0.10/GB-month.
+```bash
+runpodctl pod delete $POD_ID
+runpodctl pod list      # confirm — should print [] or "No pods running"
+runpodctl me            # confirm balance + currentSpendPerHr drops to 0
+```
 
-For your one-run-at-a-time workflow, **Terminate**: rsync the model to your
-laptop first, then tear the whole thing down.
+Billing stops within the minute. The volume disk also goes away unless
+you use `runpodctl pod stop` (instead of `delete`), in which case storage
+charges continue at ~$0.10/GB-month. For your one-run-at-a-time workflow,
+**delete**: scp the model to your laptop first, then tear the whole
+thing down.
+
+## A.10 Troubleshooting — gotchas surfaced during first deployment
+
+These are the failure modes we hit and resolved. Skim before your first
+deploy; revisit if symptoms match.
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `runpodctl pod create` returns with `volumeMountPath: "C:/Program Files/Git/workspace"` | MSYS path translation on Windows Git Bash | Prefix with `MSYS_NO_PATHCONV=1` |
+| Pod created, `runpodctl ssh info` returns `"pod not ready"` forever, uptime stuck at `0s` | (a) Image has no sshd, OR (b) Community Cloud worker can't pull our 2.78 GB image | (a) Use v0.13+ which bakes in openssh-server. (b) Switch to `--cloud-type SECURE`. |
+| Anonymous `curl` on GHCR manifest returns 404 | Default `Accept` header doesn't match OCI media type | Add `-H "Accept: application/vnd.oci.image.index.v1+json"` — see A.2 |
+| Visibility says "Public" in the GitHub UI but RunPod still can't pull | Settings were changed at user-packages page; our package is repo-owned | Settings live at `<owner>/<repo>/pkgs/container/<pkg>/settings`, not `users/<user>/packages` |
+| Inside the pod, `import digimon_gym` fails with ModuleNotFoundError | Pre-v0.14 image; Docker `ENV` doesn't survive sshd | Either redeploy with v0.14+, or `printf 'PYTHONPATH=/app\n...' >> /etc/environment` and re-SSH. See A.5 callout. |
+| `tools/run_training_job.py` crashes with `FileNotFoundError: /data/deck_library.json` | `DIGIMON_DATA_DIR` env var missing inside the pod | Same fix as above (env propagation) |
+| `nvidia-smi` works but `torch.cuda.is_available()` returns False | torch on Stage 2 was a CPU-only wheel | Should not happen with v0.10+ — the `pip install torch>=2.0` line pulls the CUDA wheel by default. If it does, switch Stage 2 base to `nvidia/cuda:*-runtime-ubuntu22.04` and republish as `training-vX.Y+1`. |
+| First-time pod boot takes 3+ minutes before SSH ready | Legitimate — 2.78 GB image pull + container init on a cold worker | Patience. Subsequent boots on the same worker use cached layers. |
 
 ---
 
