@@ -19,7 +19,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11-dev python3-pip libssl-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir maturin
+# --break-system-packages is the right idiom for a throwaway build
+# container under Debian Bookworm (PEP 668). The wheel is copied into the
+# Stage 2 image; this Stage 1 Python is never shipped.
+RUN pip install --no-cache-dir --break-system-packages maturin
 
 # Copy workspace manifests and lock file first for better layer caching
 COPY Cargo.toml Cargo.lock ./
