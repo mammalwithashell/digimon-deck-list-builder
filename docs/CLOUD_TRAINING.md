@@ -375,13 +375,15 @@ docker compose -f ops/training/docker-compose.watch.yml up -d
 
 ```bash
 # On the DROPLET (CPU-only: no --gpus flag)
+# The image has no ENTRYPOINT — invoke the trainer explicitly so the same
+# image also serves Path A (`sleep infinity` + interactive SSH).
 docker run --rm \
   -v ~/digimon-training/runs:/app/runs \
   -v ~/digimon-training/models:/app/models \
   -v ~/digimon-training/data:/app/data \
   -v ~/digimon-training/training_jobs:/app/jobs:ro \
   ghcr.io/<owner>/digimon-trainer:training-v0.1 \
-  /app/jobs/cloud_mlp_run.json
+  python tools/run_training_job.py /app/jobs/cloud_mlp_run.json
 ```
 
 If you ever do put a GPU on a Hetzner/DO host (Hetzner does sell GPU instances

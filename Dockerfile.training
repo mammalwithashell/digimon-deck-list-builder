@@ -101,5 +101,17 @@ ENV DIGIMON_BACKEND=rust
 # without requiring the source tree to be pip-installed.
 ENV PYTHONPATH=/app
 
-# Entrypoint: python tools/run_training_job.py <job_config>
-ENTRYPOINT ["python", "tools/run_training_job.py"]
+# No ENTRYPOINT so the image works as both a one-shot trainer and an
+# interactive pod.
+#
+# Path B (one-shot on Hetzner / DO via `docker run`):
+#     docker run --rm ... <image> python tools/run_training_job.py /app/jobs/my.json
+#
+# Path A (RunPod pod, want to SSH in and stage data before training):
+#     runpodctl pod create ... --docker-args 'sleep infinity'
+#     # then SSH in and manually run:
+#     python tools/run_training_job.py /workspace/jobs/my.json
+#
+# CMD bash means a plain `docker run -it <image>` drops to a shell, which
+# is fine for ad-hoc inspection.
+CMD ["bash"]
