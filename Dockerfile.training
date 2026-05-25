@@ -42,6 +42,14 @@ COPY code/digimon-dsl/ code/digimon-dsl/
 COPY code/digimon-engine/ code/digimon-engine/
 COPY code/digimon-engine-py/ code/digimon-engine-py/
 
+# code/digimon-engine/src/deck_tools.rs uses `include_str!` to embed
+# data/cards.json and data/tested_cards.json AT COMPILE TIME (paths are
+# relative to the source file, walking up three levels to the repo root).
+# These two files are required for `cargo build` to succeed; the larger
+# deck_library.json is runtime-only and is intentionally left out of the
+# build context.
+COPY data/cards.json data/tested_cards.json data/
+
 # Trim the workspace so unrelated members don't have to resolve.
 # Only digimon-dsl + digimon-engine + digimon-engine-py are copied above;
 # the cli, mcp, tauri shell, and dsl-tools crates must be dropped from
