@@ -18,8 +18,12 @@ FROM rust:1.94-slim AS rust-builder
 
 WORKDIR /build
 
+# Use Trixie's default Python (3.12) to build the wheel. The PyO3 binding
+# is abi3-py311, so the resulting wheel installs into the Stage 2
+# python:3.11-slim runtime just fine — the wheel filename tags as
+# cp311-abi3-manylinux, NOT cp312, even when built under 3.12.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11-dev python3-pip libssl-dev pkg-config \
+    python3.12-dev python3-pip libssl-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # --break-system-packages is the right idiom for a throwaway build
