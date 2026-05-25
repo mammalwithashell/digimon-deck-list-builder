@@ -846,3 +846,204 @@ class TestOverrideMetaShares:
         # TI = meta_share * alpha + conversion * beta = 0.50 * 1.0 + 0.60 * 2.0 = 1.70
         expected_ti = 0.50 * mg.alpha + 0.60 * mg.beta
         assert abs(rogue_ti - expected_ti) < 1e-6
+
+
+# ─── allowed_archetypes filter ──────────────────────────────────────
+
+
+class TestAllowedArchetypes:
+    """Filter behavior for the declared `allowed_archetypes` scope."""
+
+    def test_filters_pool_to_declared_subset(self, tmp_path):
+        lib = _make_deck_library({
+            "Rocks": _make_archetype("Rocks", n_decks=2),
+            "Yellow Hybrid": _make_archetype("Yellow Hybrid", n_decks=2),
+            "Other": _make_archetype("Other", n_decks=3),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        g = MetaGauntlet(
+            implemented_card_ids={"BT12-002", "BT12-022"},
+            fully_implemented_archetypes={"Rocks", "Yellow Hybrid", "Other"},
+            allowed_archetypes={"Rocks", "Yellow Hybrid"},
+        )
+        g.load(str(path))
+
+        assert set(g.archetypes) == {"Rocks", "Yellow Hybrid"}
+        assert {d.archetype_name for d in g._deck_pool} == {"Rocks", "Yellow Hybrid"}
+
+    def test_alias_canonicalizes_to_library_entry(self, tmp_path):
+        """An alias in allowed_archetypes resolves to the canonical library name."""
+        # "RockClose" is a known alias for "Rocks" in data/archetype_aliases.json.
+        lib = _make_deck_library({
+            "Rocks": _make_archetype("Rocks", n_decks=1),
+            "Other": _make_archetype("Other", n_decks=1),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        g = MetaGauntlet(
+            implemented_card_ids={"BT12-002", "BT12-022"},
+            fully_implemented_archetypes={"Rocks", "Other"},
+            allowed_archetypes={"RockClose"},  # alias for "Rocks"
+        )
+        g.load(str(path))
+
+        assert set(g.archetypes) == {"Rocks"}
+        # Snapshot recording (downstream) should use the canonical name.
+        assert g._deck_pool[0].archetype_name == "Rocks"
+
+    def test_unrecognized_archetype_logs_warning_and_continues(self, tmp_path, caplog):
+        lib = _make_deck_library({
+            "Rocks": _make_archetype("Rocks", n_decks=1),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        with caplog.at_level("WARNING", logger="digimon_gym.agents.gauntlet"):
+            g = MetaGauntlet(
+                implemented_card_ids={"BT12-002", "BT12-022"},
+                fully_implemented_archetypes={"Rocks"},
+                allowed_archetypes={"Rocks", "Definitely Not A Real Archetype"},
+            )
+            g.load(str(path))
+
+        # Recognized entry produces a pool; unrecognized entry produces a warning
+        # but does NOT cause silent fallback to the full pool.
+        assert set(g.archetypes) == {"Rocks"}
+        warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert any(
+            "Definitely Not A Real Archetype" in r.getMessage()
+            for r in warnings
+        ), f"expected warning naming the unrecognized entry; got {[r.getMessage() for r in warnings]}"
+
+    def test_safety_floor_overrides_allowed(self, tmp_path, caplog):
+        """Even if an archetype is allowed, it is excluded if not DSL-implemented."""
+        lib = _make_deck_library({
+            "Implemented": _make_archetype("Implemented", n_decks=1),
+            "NotImplemented": _make_archetype("NotImplemented", n_decks=1),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        with caplog.at_level("INFO", logger="digimon_gym.agents.gauntlet"):
+            g = MetaGauntlet(
+                implemented_card_ids={"BT12-002", "BT12-022"},
+                fully_implemented_archetypes={"Implemented"},
+                allowed_archetypes={"Implemented", "NotImplemented"},
+            )
+            g.load(str(path))
+
+        assert set(g.archetypes) == {"Implemented"}
+        # Spec requires logging the exclusion reason.
+        info_msgs = [r.getMessage() for r in caplog.records if r.levelname == "INFO"]
+        assert any(
+            "NotImplemented" in m and "DSL-implemented" in m for m in info_msgs
+        ), f"expected info log naming dropped archetype; got {info_msgs}"
+
+    def test_allowed_archetypes_empty_set_produces_empty_pool(self, tmp_path):
+        """An explicit empty set scopes to nothing — not 'all'."""
+        lib = _make_deck_library({
+            "Rocks": _make_archetype("Rocks", n_decks=1),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        g = MetaGauntlet(
+            implemented_card_ids={"BT12-002", "BT12-022"},
+            fully_implemented_archetypes={"Rocks"},
+            allowed_archetypes=set(),
+        )
+        g.load(str(path))
+
+        assert g.archetype_count == 0
+        assert g.deck_count == 0
+
+    def test_load_generalist_deck_pool_forwards_filter(self, tmp_path, monkeypatch):
+        """The generalist loader passes allowed_archetypes through to MetaGauntlet."""
+        from digimon_gym.agents.gauntlet import load_generalist_deck_pool
+
+        lib = _make_deck_library({
+            "Rocks": _make_archetype("Rocks", n_decks=2),
+            "Yellow Hybrid": _make_archetype("Yellow Hybrid", n_decks=2),
+            "Other": _make_archetype("Other", n_decks=3),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        pool = load_generalist_deck_pool(
+            str(path),
+            implemented_card_ids={"BT12-002", "BT12-022"},
+            fully_implemented_archetypes={"Rocks", "Yellow Hybrid", "Other"},
+            allowed_archetypes={"Rocks"},
+        )
+
+        assert pool.archetype_names == ["Rocks"]
+        assert pool.deck_count == 2
+
+    def test_snapshot_roundtrip_preserves_filtered_pool(self, tmp_path):
+        """Write a filtered snapshot, mutate library, reload, expect identical pool."""
+        from digimon_gym.agents.gauntlet import load_generalist_deck_pool
+
+        lib = _make_deck_library({
+            "Rocks": _make_archetype("Rocks", n_decks=2),
+            "Yellow Hybrid": _make_archetype("Yellow Hybrid", n_decks=2),
+            "Other": _make_archetype("Other", n_decks=3),
+        })
+        lib_path = tmp_path / "lib.json"
+        lib_path.write_text(json.dumps(lib))
+
+        pool = load_generalist_deck_pool(
+            str(lib_path),
+            implemented_card_ids={"BT12-002", "BT12-022"},
+            fully_implemented_archetypes={"Rocks", "Yellow Hybrid", "Other"},
+            allowed_archetypes={"Rocks", "Yellow Hybrid"},
+        )
+
+        snapshot_path = tmp_path / "snap.json"
+        pool.write_snapshot(snapshot_path)
+
+        # Mutate the library out from under us: add new archetypes, drop Rocks.
+        lib_path.write_text(json.dumps(_make_deck_library({
+            "Other": _make_archetype("Other", n_decks=3),
+            "NewArchetype": _make_archetype("NewArchetype", n_decks=2),
+        })))
+
+        reloaded = GeneralistDeckPool.from_snapshot(
+            snapshot_path,
+            implemented_card_ids={"BT12-002", "BT12-022"},
+        )
+
+        assert set(reloaded.archetype_names) == {"Rocks", "Yellow Hybrid"}
+        assert reloaded.deck_count == pool.deck_count
+        # Deck IDs are content-addressed and must round-trip identically.
+        for arch in reloaded.archetype_names:
+            orig_ids = sorted(d.deck_id for d in pool.archetypes[arch])
+            new_ids = sorted(d.deck_id for d in reloaded.archetypes[arch])
+            assert orig_ids == new_ids
+
+    def test_gauntlet_opponent_sampling_honors_filter(self, tmp_path):
+        """In meta sampling mode, sampled opponents stay inside the filtered subset."""
+        lib = _make_deck_library({
+            "Rocks": _make_archetype("Rocks", n_decks=2),
+            "Yellow Hybrid": _make_archetype("Yellow Hybrid", n_decks=2),
+            "Other": _make_archetype("Other", n_decks=3),
+        })
+        path = tmp_path / "lib.json"
+        path.write_text(json.dumps(lib))
+
+        g = MetaGauntlet(
+            seed=42,
+            sampling_mode="meta",
+            implemented_card_ids={"BT12-002", "BT12-022"},
+            fully_implemented_archetypes={"Rocks", "Yellow Hybrid", "Other"},
+            allowed_archetypes={"Rocks", "Yellow Hybrid"},
+        )
+        g.load(str(path))
+
+        sampled = g.sample_opponents(200)
+        sampled_archetypes = {entry.archetype_name for entry in sampled}
+        assert sampled_archetypes <= {"Rocks", "Yellow Hybrid"}
+        # Verify both members are reachable (not stuck on one).
+        assert sampled_archetypes == {"Rocks", "Yellow Hybrid"}

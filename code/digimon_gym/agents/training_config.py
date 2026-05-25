@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -51,6 +51,12 @@ class TrainingConfig:
     eval_seed: Optional[int] = None
     curriculum_pool: Optional[str] = None
     curriculum_pool_out: Optional[str] = None
+    # Declared scope for the eligible archetype set. Intersected with the
+    # DSL-implemented safety floor at load time. Applies to both generalist
+    # mode (filters the deck pool) and gauntlet mode (filters opponents).
+    # Names are canonicalized via the archetype alias index, so aliases like
+    # "Red Hybrid" resolve to the canonical "Red Hybrid (AncientGreymon)".
+    allowed_archetypes: Optional[List[str]] = None
     models_dir: str = "models"
     tensorboard_log: str = "runs/pilot_ppo"
     run_name: Optional[str] = None

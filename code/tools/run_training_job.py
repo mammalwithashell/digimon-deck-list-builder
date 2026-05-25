@@ -68,12 +68,22 @@ def load_deck(deck_config: Dict[str, Any]) -> Optional[List[str]]:
 # Gauntlet setup
 # ---------------------------------------------------------------------------
 
-def build_gauntlet(meta_scope: Optional[Dict[str, Any]], verbose: bool = True):
+def build_gauntlet(
+    meta_scope: Optional[Dict[str, Any]],
+    verbose: bool = True,
+    allowed_archetypes: Optional[List[str]] = None,
+):
     """Build and optionally scope a MetaGauntlet."""
     from digimon_gym.agents.gauntlet import MetaGauntlet
 
-    gauntlet = MetaGauntlet(alpha=1.0, beta=2.0)
+    allowed_set = set(allowed_archetypes) if allowed_archetypes else None
+    gauntlet = MetaGauntlet(alpha=1.0, beta=2.0, allowed_archetypes=allowed_set)
     gauntlet.load()
+    if verbose and allowed_set is not None:
+        print(
+            f"Archetype filter: declared {len(allowed_set)} entries, "
+            f"resolved {gauntlet.archetype_count} archetypes"
+        )
 
     if not meta_scope:
         if verbose:
@@ -142,6 +152,16 @@ _TRAIN_KWARGS = {
 }
 
 
+def _resolve_allowed_archetypes(config: Dict[str, Any]) -> Optional[List[str]]:
+    """Resolve `allowed_archetypes` from training block or top-level."""
+    training_cfg = config.get("training", {})
+    if "allowed_archetypes" in training_cfg:
+        return list(training_cfg["allowed_archetypes"])
+    if "allowed_archetypes" in config:
+        return list(config["allowed_archetypes"])
+    return None
+
+
 def run_job(config_path: str, dry_run: bool = False) -> None:
     with open(config_path, encoding="utf-8") as f:
         config = json.load(f)
@@ -164,8 +184,35 @@ def run_job(config_path: str, dry_run: bool = False) -> None:
     else:
         print("Agent deck: ST1 default")
 
-    # Gauntlet
-    gauntlet = build_gauntlet(config.get("meta_scope"), verbose=True)
+    allowed_archetypes = _resolve_allowed_archetypes(config)
+
+    # Generalist runs supersede gauntlet runs: build the generalist pool and
+    # pass it through; do not build a gauntlet.
+    generalist_mode = bool(training_cfg.get("generalist", False))
+    gauntlet = None
+    generalist_deck_pool = None
+    if generalist_mode:
+        from digimon_gym.agents.gauntlet import load_generalist_deck_pool
+
+        allowed_set = set(allowed_archetypes) if allowed_archetypes else None
+        generalist_deck_pool = load_generalist_deck_pool(
+            allowed_archetypes=allowed_set,
+        )
+        print(
+            f"Generalist pool: {generalist_deck_pool.archetype_count} archetypes, "
+            f"{generalist_deck_pool.deck_count} decks"
+        )
+        if allowed_set is not None:
+            print(
+                f"Archetype filter: declared {len(allowed_set)} entries, "
+                f"resolved {generalist_deck_pool.archetype_count} archetypes"
+            )
+    else:
+        gauntlet = build_gauntlet(
+            config.get("meta_scope"),
+            verbose=True,
+            allowed_archetypes=allowed_archetypes,
+        )
 
     # Resolve training kwargs
     train_kwargs = {k: training_cfg[k] for k in _TRAIN_KWARGS if k in training_cfg}
@@ -190,6 +237,7 @@ def run_job(config_path: str, dry_run: bool = False) -> None:
         opponent=opponent,
         deck1=agent_deck,
         gauntlet=gauntlet,
+        generalist_deck_pool=generalist_deck_pool,
         save_dir=save_dir,
         tensorboard_log=log_dir,
         job_id=job_id,

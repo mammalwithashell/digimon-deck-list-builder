@@ -3,6 +3,12 @@
 Operational guide for the Digimon TCG RL training pipeline.
 For architecture details, see `../AGENTS.md`.
 
+> **Running training in the cloud?** See [CLOUD_TRAINING.md](CLOUD_TRAINING.md) —
+> end-to-end runbook for Hetzner/DO CPU droplets with Tailscale-based
+> TensorBoard access and rsync-mirrored `runs/` so `digimon-training-mcp`
+> can query cloud runs from your local Claude sessions. Use it for long
+> (>~8h) jobs, off-machine training, or phone-checkable runs.
+
 > ## ⚠️ Action-space break — 2026-05-20 (Task S1.3)
 >
 > The engine action space grew from **2168** to **2192** actions (Task S1.3

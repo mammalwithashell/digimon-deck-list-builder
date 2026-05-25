@@ -357,12 +357,14 @@ def load_generalist_deck_pool(
     *,
     implemented_card_ids: Optional[Set[str]] = None,
     fully_implemented_archetypes: Optional[Set[str]] = None,
+    allowed_archetypes: Optional[Set[str]] = None,
 ) -> GeneralistDeckPool:
     """Load the same implementation-safe eligible pool used by MetaGauntlet."""
     gauntlet = MetaGauntlet(
         sampling_mode="random",
         implemented_card_ids=implemented_card_ids,
         fully_implemented_archetypes=fully_implemented_archetypes,
+        allowed_archetypes=allowed_archetypes,
     )
     gauntlet.load(path)
     return gauntlet.as_generalist_pool()
@@ -404,6 +406,7 @@ class MetaGauntlet:
         implemented_only: bool = True,
         implemented_card_ids: Optional[Set[str]] = None,
         fully_implemented_archetypes: Optional[Set[str]] = None,
+        allowed_archetypes: Optional[Set[str]] = None,
     ) -> None:
         if sampling_mode not in {"meta", "random"}:
             raise ValueError("sampling_mode must be 'meta' or 'random'")
@@ -416,6 +419,7 @@ class MetaGauntlet:
         self.implemented_only = implemented_only
         self._implemented_card_ids = implemented_card_ids
         self._fully_implemented_archetypes = fully_implemented_archetypes
+        self._allowed_archetypes = allowed_archetypes
 
         self.archetypes: Dict[str, ArchetypeStats] = {}
         self._deck_pool: List[DeckEntry] = []
@@ -445,6 +449,31 @@ class MetaGauntlet:
         fully_implemented_archetypes = self._fully_implemented_archetypes
         if fully_implemented_archetypes is None and os.path.abspath(path) == os.path.abspath(DECK_LIBRARY_PATH):
             fully_implemented_archetypes = _load_fully_implemented_archetypes()
+
+        canonical_allowed: Optional[Set[str]] = None
+        if self._allowed_archetypes is not None:
+            canonical_allowed = {
+                canonicalize_archetype(name) for name in self._allowed_archetypes
+            }
+            library_canonical = {
+                canonicalize_archetype(raw_name)
+                for raw_name in data.get("archetypes", {}).keys()
+            }
+            unrecognized = canonical_allowed - library_canonical
+            for name in sorted(unrecognized):
+                logger.warning(
+                    "allowed_archetypes entry %r did not match any archetype in %s",
+                    name, path,
+                )
+            if fully_implemented_archetypes is not None:
+                dropped_by_dsl = (
+                    canonical_allowed & library_canonical
+                ) - fully_implemented_archetypes
+                for name in sorted(dropped_by_dsl):
+                    logger.info(
+                        "allowed_archetypes entry %r excluded: not in DSL-implemented set",
+                        name,
+                    )
 
         # First pass: gather DigiLab total_appearances for meta_share denominator
         # Aggregate aliased entries under canonical names
@@ -487,6 +516,12 @@ class MetaGauntlet:
                 and arch_name not in fully_implemented_archetypes
             ):
                 logger.debug("Skipping non-ready DSL archetype %s", arch_name)
+                continue
+            if canonical_allowed is not None and arch_name not in canonical_allowed:
+                logger.debug(
+                    "Skipping %s: not in allowed_archetypes",
+                    arch_name,
+                )
                 continue
             # Merge all entries in the group
             arch_data_merged = {}
