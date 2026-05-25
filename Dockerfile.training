@@ -91,5 +91,11 @@ COPY training_jobs/ training_jobs/
 # Use the Rust engine backend by default
 ENV DIGIMON_BACKEND=rust
 
+# `python tools/run_training_job.py` puts /app/tools on sys.path[0], but
+# digimon_gym lives at /app/digimon_gym — not on the path otherwise. Make
+# /app itself importable so `from digimon_gym.X import Y` resolves
+# without requiring the source tree to be pip-installed.
+ENV PYTHONPATH=/app
+
 # Entrypoint: python tools/run_training_job.py <job_config>
 ENTRYPOINT ["python", "tools/run_training_job.py"]
