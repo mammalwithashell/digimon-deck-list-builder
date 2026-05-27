@@ -1,0 +1,61 @@
+name: Build and publish training image
+
+# Tag-only trigger keeps training-image releases decoupled from API releases.
+# Use `git tag training-vX.Y && git push --tags` to ship a new training image.
+on:
+  push:
+    tags:
+      - "training-v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase owner for GHCR
+        id: owner
+        run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Build image (load locally for smoke)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.training
+          tags: digimon-trainer:smoke
+          load: true
+          push: false
+
+      - name: Smoke --dry-run inside built image
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/data:/app/data:ro" \
+            -v "${{ github.workspace }}/training_jobs:/app/jobs:ro" \
+            digimon-trainer:smoke \
+            python tools/run_training_job.py /app/jobs/_smoke.json --dry-run
+
+      - name: Push image to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.training
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.value }}/digimon-trainer:${{ github.ref_name }}
+            ghcr.io/${{ steps.owner.outputs.value }}/digimon-trainer:latest

@@ -357,12 +357,14 @@ def load_generalist_deck_pool(
     *,
     implemented_card_ids: Optional[Set[str]] = None,
     fully_implemented_archetypes: Optional[Set[str]] = None,
+    allowed_archetypes: Optional[Set[str]] = None,
 ) -> GeneralistDeckPool:
     """Load the same implementation-safe eligible pool used by MetaGauntlet."""
     gauntlet = MetaGauntlet(
         sampling_mode="random",
         implemented_card_ids=implemented_card_ids,
         fully_implemented_archetypes=fully_implemented_archetypes,
+        allowed_archetypes=allowed_archetypes,
     )
     gauntlet.load(path)
     return gauntlet.as_generalist_pool()
@@ -404,6 +406,7 @@ class MetaGauntlet:
         implemented_only: bool = True,
         implemented_card_ids: Optional[Set[str]] = None,
         fully_implemented_archetypes: Optional[Set[str]] = None,
+        allowed_archetypes: Optional[Set[str]] = None,
     ) -> None:
         if sampling_mode not in {"meta", "random"}:
             raise ValueError("sampling_mode must be 'meta' or 'random'")
@@ -416,6 +419,7 @@ class MetaGauntlet:
         self.implemented_only = implemented_only
         self._implemented_card_ids = implemented_card_ids
         self._fully_implemented_archetypes = fully_implemented_archetypes
+        self._allowed_archetypes = allowed_archetypes
 
         self.archetypes: Dict[str, ArchetypeStats] = {}
         self._deck_pool: List[DeckEntry] = []
@@ -445,6 +449,31 @@ class MetaGauntlet:
         fully_implemented_archetypes = self._fully_implemented_archetypes
         if fully_implemented_archetypes is None and os.path.abspath(path) == os.path.abspath(DECK_LIBRARY_PATH):
             fully_implemented_archetypes = _load_fully_implemented_archetypes()
+
+        canonical_allowed: Optional[Set[str]] = None
+        if self._allowed_archetypes is not None:
+            canonical_allowed = {
+                canonicalize_archetype(name) for name in self._allowed_archetypes
+            }
+            library_canonical = {
+                canonicalize_archetype(raw_name)
+                for raw_name in data.get("archetypes", {}).keys()
+            }
+            unrecognized = canonical_allowed - library_canonical
+            for name in sorted(unrecognized):
+                logger.warning(
+                    "allowed_archetypes entry %r did not match any archetype in %s",
+                    name, path,
+                )
+            if fully_implemented_archetypes is not None:
+                dropped_by_dsl = (
+                    canonical_allowed & library_canonical
+                ) - fully_implemented_archetypes
+                for name in sorted(dropped_by_dsl):
+                    logger.info(
+                        "allowed_archetypes entry %r excluded: not in DSL-implemented set",
+                        name,
+                    )
 
         # First pass: gather DigiLab total_appearances for meta_share denominator
         # Aggregate aliased entries under canonical names
@@ -487,6 +516,12 @@ class MetaGauntlet:
                 and arch_name not in fully_implemented_archetypes
             ):
                 logger.debug("Skipping non-ready DSL archetype %s", arch_name)
+                continue
+            if canonical_allowed is not None and arch_name not in canonical_allowed:
+                logger.debug(
+                    "Skipping %s: not in allowed_archetypes",
+                    arch_name,
+                )
                 continue
             # Merge all entries in the group
             arch_data_merged = {}
@@ -793,23 +828,34 @@ class GauntletWrapper(gymnasium.Wrapper):
 
 
 class GeneralistDeckPoolWrapper(gymnasium.Wrapper):
-    """Samples both player decks from a GeneralistDeckPool each episode."""
+    """Samples player decks from one or two `GeneralistDeckPool`s each episode.
+
+    Symmetric mode (default): both decks sampled from `deck_pool`.
+
+    Asymmetric mode: pass `opponent_pool` to sample P2's deck from a different
+    pool than P1. Used for curricula where the agent should pilot a restricted
+    archetype set but face the full opponent field — e.g.,
+    `--archetypes "DNA Omnimon,BG Imperial"` for the agent paired with an
+    unfiltered opponent pool.
+    """
 
     def __init__(
         self,
         env: gymnasium.Env,
         deck_pool: GeneralistDeckPool,
         seed: Optional[int] = None,
+        opponent_pool: Optional[GeneralistDeckPool] = None,
     ) -> None:
         super().__init__(env)
         self.deck_pool = deck_pool
+        self.opponent_pool = opponent_pool if opponent_pool is not None else deck_pool
         self._rng = np.random.default_rng(seed)
         self._current_deck1: Optional[DeckEntry] = None
         self._current_deck2: Optional[DeckEntry] = None
 
     def reset(self, **kwargs):
         self._current_deck1 = self.deck_pool.sample_uniform_archetype(self._rng)
-        self._current_deck2 = self.deck_pool.sample_uniform_archetype(self._rng)
+        self._current_deck2 = self.opponent_pool.sample_uniform_archetype(self._rng)
 
         options = kwargs.get("options") or {}
         options["deck1"] = self._current_deck1.card_ids

@@ -52,6 +52,7 @@ from digimon_gym.agents.gauntlet import (
     MetaGauntlet,
     GauntletWrapper,
     UnimplementedDeckError,
+    canonicalize_archetype,
     load_generalist_deck_pool,
     validate_implemented_deck,
 )
@@ -1319,6 +1320,7 @@ def make_env(opponent: str = "greedy",
              deck_pool_seed: Optional[int] = None,
              deck_pool_hybrid_max: int = 10,
              generalist_deck_pool: Optional[GeneralistDeckPool] = None,
+             generalist_opponent_pool: Optional[GeneralistDeckPool] = None,
              curriculum_seed: Optional[int] = None,
              tensor_profile: str = "standard_lite_v2",
              recording_writer: Optional[TrainingGameRecorder] = None,
@@ -1423,6 +1425,7 @@ def make_env(opponent: str = "greedy",
             env,
             deck_pool=generalist_deck_pool,
             seed=curriculum_seed,
+            opponent_pool=generalist_opponent_pool,
         )
 
     # Gauntlet wrapper for meta-weighted opponent sampling
@@ -1475,6 +1478,7 @@ def make_vec_env(
     deck1: Optional[List[str]] = None,
     deck2: Optional[List[str]] = None,
     generalist_deck_pool: Optional[GeneralistDeckPool] = None,
+    generalist_opponent_pool: Optional[GeneralistDeckPool] = None,
     curriculum_seed: Optional[int] = None,
     recording_writer: Optional[TrainingGameRecorder] = None,
     mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
@@ -1510,6 +1514,7 @@ def make_vec_env(
                     wrapped,
                     deck_pool=generalist_deck_pool,
                     seed=seed,
+                    opponent_pool=generalist_opponent_pool,
                 )
             # Panic safety rail — see comment in `make_env` above.
             wrapped = TrainingRecordingWrapper(
@@ -1596,6 +1601,7 @@ def train(total_timesteps: int = 100_000,
           deck_pool_seed: Optional[int] = None,
           deck_pool_hybrid_max: int = 10,
           generalist_deck_pool: Optional[GeneralistDeckPool] = None,
+          generalist_opponent_pool: Optional[GeneralistDeckPool] = None,
           curriculum_seed: Optional[int] = None,
           eval_seed: Optional[int] = None,
           deck_pool_snapshot_path: Optional[str] = None,
@@ -1785,6 +1791,7 @@ def train(total_timesteps: int = 100_000,
             deck1=deck1,
             deck2=deck2,
             generalist_deck_pool=generalist_deck_pool,
+            generalist_opponent_pool=generalist_opponent_pool,
             curriculum_seed=curriculum_seed,
             recording_writer=recording_writer,
             mulligan_log_cfg=mulligan_log_cfg,
@@ -1799,6 +1806,7 @@ def train(total_timesteps: int = 100_000,
             deck1=deck1,
             deck2=deck2,
             generalist_deck_pool=generalist_deck_pool,
+            generalist_opponent_pool=generalist_opponent_pool,
             curriculum_seed=curriculum_seed,
             recording_writer=recording_writer,
             mulligan_log_cfg=mulligan_log_cfg,
@@ -1816,6 +1824,7 @@ def train(total_timesteps: int = 100_000,
             deck_pool_seed=deck_pool_seed,
             deck_pool_hybrid_max=deck_pool_hybrid_max,
             generalist_deck_pool=generalist_deck_pool,
+            generalist_opponent_pool=generalist_opponent_pool,
             curriculum_seed=curriculum_seed,
             tensor_profile=cfg.tensor_profile,
             recording_writer=recording_writer,
@@ -1853,6 +1862,10 @@ def train(total_timesteps: int = 100_000,
             model = MaskableRecurrentPPO.load(cfg.resume_from, env=env, device=device)
         else:
             model = MaskablePPO.load(cfg.resume_from, env=env, device=device)
+        # SB3's load() restores the checkpoint's original tensorboard_log path.
+        # Override it so the new run logs under this run's configured --log-dir
+        # rather than polluting the source checkpoint's TB directory.
+        model.tensorboard_log = tensorboard_log
         if verbose:
             print(f"  [resume] loaded checkpoint, num_timesteps={model.num_timesteps}")
     elif cfg.init_from:
@@ -1860,6 +1873,7 @@ def train(total_timesteps: int = 100_000,
             model = MaskableRecurrentPPO.load(cfg.init_from, env=env, device=device)
         else:
             model = MaskablePPO.load(cfg.init_from, env=env, device=device)
+        model.tensorboard_log = tensorboard_log
         if verbose:
             print(f"  [init] loaded base checkpoint from {cfg.init_from}")
     elif use_lstm:
@@ -1932,6 +1946,7 @@ def train(total_timesteps: int = 100_000,
                     wrapped,
                     deck_pool=generalist_deck_pool,
                     seed=eval_seed if eval_seed is not None else curriculum_seed,
+                    opponent_pool=generalist_opponent_pool,
                 )
             # Panic safety rail — see comment in `make_env` above.
             wrapped = TrainingRecordingWrapper(
@@ -1967,6 +1982,7 @@ def train(total_timesteps: int = 100_000,
             deck_pool_seed=deck_pool_seed,
             deck_pool_hybrid_max=deck_pool_hybrid_max,
             generalist_deck_pool=generalist_deck_pool,
+            generalist_opponent_pool=generalist_opponent_pool,
             curriculum_seed=eval_seed if eval_seed is not None else curriculum_seed,
             tensor_profile=cfg.tensor_profile,
             recording_writer=recording_writer,
@@ -2228,6 +2244,26 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Path to write the frozen generalist deck-pool snapshot."
     )
     parser.add_argument(
+        "--archetypes", type=str, default=None,
+        help=(
+            "Comma-separated archetype names to scope the eligible deck pool. "
+            "Applies to both generalist and gauntlet modes. Names are "
+            "canonicalized via the archetype alias index; unrecognized entries "
+            "log a warning but do not fail the run."
+        ),
+    )
+    parser.add_argument(
+        "--opponent-archetypes", type=str, default=None,
+        help=(
+            "Comma-separated archetype names to scope the OPPONENT (P2) deck "
+            "pool independently of the agent (P1) pool defined by --archetypes. "
+            "Use for asymmetric curricula like 'agent pilots DNA archetypes but "
+            "faces the full meta'. Generalist mode only; ignored if "
+            "--curriculum-pool is set. Special value 'all' (or omitting the flag) "
+            "means use the same pool as the agent."
+        ),
+    )
+    parser.add_argument(
         "--deck1", type=str, default=None,
         help="Path to player 1 deck file (TTS/text format)"
     )
@@ -2374,6 +2410,13 @@ def main():
         overrides["resume_from"] = args.resume
     if args.generalist:
         overrides["generalist"] = True
+    if args.archetypes is not None:
+        overrides["allowed_archetypes"] = [
+            name.strip() for name in args.archetypes.split(",") if name.strip()
+        ]
+    # --opponent-archetypes plumbs through args (not config) since
+    # TrainingConfig doesn't carry it; just resolve it in main() below.
+    opponent_archetypes_raw = getattr(args, "opponent_archetypes", None)
     if args.match_format is not None:
         overrides["match_format"] = args.match_format
 
@@ -2391,12 +2434,30 @@ def main():
     # Load gauntlet if requested
     gauntlet = None
     if args.gauntlet:
-        gauntlet = MetaGauntlet(sampling_mode=args.gauntlet_sampling)
+        allowed_set = (
+            set(cfg.allowed_archetypes) if cfg.allowed_archetypes else None
+        )
+        gauntlet = MetaGauntlet(
+            sampling_mode=args.gauntlet_sampling,
+            allowed_archetypes=allowed_set,
+        )
         try:
             gauntlet.load()
             print(f"  MetaGauntlet: {gauntlet.archetype_count} archetypes, "
                   f"{gauntlet.deck_count} fully implemented decks loaded "
                   f"({args.gauntlet_sampling} sampling)")
+            if allowed_set is not None:
+                resolved = sorted(gauntlet.archetypes.keys())
+                missing = sorted(
+                    {canonicalize_archetype(n) for n in allowed_set}
+                    - set(resolved)
+                )
+                print(
+                    f"  Archetype filter: {len(resolved)} resolved "
+                    f"(declared {len(allowed_set)})"
+                )
+                if missing:
+                    print(f"  Filter dropped (unrecognized or unimplemented): {missing}")
         except FileNotFoundError:
             print("  WARNING: deck_library.json not found. "
                   "Run tools/meta_loader.py --build first.")
@@ -2444,15 +2505,72 @@ def main():
                     f"  Generalist pool: {generalist_deck_pool.archetype_count} archetypes, "
                     f"{generalist_deck_pool.deck_count} decks from {cfg.curriculum_pool}"
                 )
+                if cfg.allowed_archetypes:
+                    print(
+                        "  Note: allowed_archetypes is ignored when --curriculum-pool "
+                        "is set; the snapshot defines the resolved pool."
+                    )
             else:
-                generalist_deck_pool = load_generalist_deck_pool()
+                allowed_set = (
+                    set(cfg.allowed_archetypes) if cfg.allowed_archetypes else None
+                )
+                generalist_deck_pool = load_generalist_deck_pool(
+                    allowed_archetypes=allowed_set,
+                )
                 print(
                     f"  Generalist pool: {generalist_deck_pool.archetype_count} archetypes, "
                     f"{generalist_deck_pool.deck_count} fully implemented decks loaded"
                 )
+                if allowed_set is not None:
+                    resolved = set(generalist_deck_pool.archetype_names)
+                    missing = sorted(
+                        {canonicalize_archetype(n) for n in allowed_set} - resolved
+                    )
+                    print(
+                        f"  Archetype filter: {len(resolved)} resolved "
+                        f"(declared {len(allowed_set)})"
+                    )
+                    if missing:
+                        print(
+                            f"  Filter dropped (unrecognized or unimplemented): {missing}"
+                        )
         except FileNotFoundError:
             print("  WARNING: deck_library.json not found. Run tools/meta_loader.py --build first.")
             generalist_deck_pool = None
+
+    # Optional asymmetric opponent pool — agent samples from `generalist_deck_pool`,
+    # opponent samples from `generalist_opponent_pool`. Used for curricula like
+    # "agent pilots a restricted archetype set, opponent draws from full meta".
+    generalist_opponent_pool = None
+    if (
+        cfg.generalist
+        and generalist_deck_pool is not None
+        and opponent_archetypes_raw is not None
+        and not cfg.curriculum_pool  # snapshot mode pins the pool; no asymmetric override
+    ):
+        try:
+            opp_names = opponent_archetypes_raw.strip()
+            if opp_names.lower() in ("all", "*"):
+                # "all" = no filter for opponent
+                generalist_opponent_pool = load_generalist_deck_pool(
+                    allowed_archetypes=None,
+                )
+            else:
+                opp_set = {
+                    name.strip() for name in opp_names.split(",") if name.strip()
+                }
+                generalist_opponent_pool = load_generalist_deck_pool(
+                    allowed_archetypes=opp_set,
+                )
+            print(
+                f"  Opponent pool:    {generalist_opponent_pool.archetype_count} archetypes, "
+                f"{generalist_opponent_pool.deck_count} decks "
+                f"(P2 sampled from this; agent pool above used for P1)"
+            )
+        except FileNotFoundError:
+            print("  WARNING: opponent pool load failed (deck_library.json missing); "
+                  "falling back to symmetric agent pool.")
+            generalist_opponent_pool = None
 
     train(
         total_timesteps=cfg.timesteps,
@@ -2472,6 +2590,7 @@ def main():
         use_lstm=cfg.algorithm == "lstm",
         lstm_hidden_size=cfg.lstm_hidden_size,
         generalist_deck_pool=generalist_deck_pool,
+        generalist_opponent_pool=generalist_opponent_pool,
         curriculum_seed=cfg.curriculum_seed,
         eval_seed=cfg.eval_seed,
         deck_pool_snapshot_path=cfg.curriculum_pool_out,

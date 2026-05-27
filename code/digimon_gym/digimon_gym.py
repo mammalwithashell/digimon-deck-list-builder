@@ -107,6 +107,7 @@ ACTION_TRASH_CARD_END = 59
 ACTION_HATCH = 60
 ACTION_MOVE = 61
 ACTION_PASS_TURN = 62
+ACTION_CONCEDE = 93
 ACTION_ATTACK_START = 100
 ACTION_ATTACK_END = 399
 ACTION_DIGIVOLVE_START = 400
@@ -479,8 +480,11 @@ class DigimonEnv(gymnasium.Env):
             self._prev_p1_digivolutions = p1_digi
             self._prev_p1_dna_digivolutions = p1_dna
 
-        # Per-step stalling penalty (small but non-zero).
-        return dense_reward - 0.001
+        # Per-step stalling penalty: -0.06/step = ~-6 cumulative over a 100-step
+        # game. One power-down from -0.09 (which proved survivable vs greedy but
+        # crashed vs self-play). Combined with boosted DNA shaping (+50 bonus),
+        # designed to drive fast wins through evolution rather than stall.
+        return dense_reward - 0.06
 
     def render(self) -> Optional[str]:
         """Render the current game state.
@@ -604,7 +608,17 @@ def greedy_policy(env) -> int:
         mask = np.asarray(env.get_action_mask())
         rust_greedy = getattr(env.runner, "greedy_action", None) if env.runner else None
         if rust_greedy is not None:
-            return int(rust_greedy())
+            action = int(rust_greedy())
+            # Greedy opponent must not concede — when the Rust heuristic picks
+            # concede (action 93), fall back to a non-concede legal action so
+            # eval recordings reflect real game-ending outcomes rather than
+            # the opponent giving up.
+            if action == ACTION_CONCEDE:
+                valid_actions = np.where(mask > 0)[0].astype(int)
+                for alt in valid_actions:
+                    if int(alt) != ACTION_CONCEDE:
+                        return int(alt)
+            return action
         game = env.game
     else:
         mask = np.asarray(env.get_action_mask())

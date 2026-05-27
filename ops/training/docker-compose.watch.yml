@@ -1,0 +1,29 @@
+# TensorBoard watcher sidecar for cloud training hosts.
+#
+# Brought up once per training droplet at provisioning time. Reads the
+# host's ./runs/ directory **read-only** (no risk of corrupting trainer
+# output) and serves the TensorBoard UI on :6006.
+#
+# Network reach: the host's cloud firewall blocks inbound :6006 from the
+# public internet. The only path to this port is over Tailscale — see
+# docs/CLOUD_TRAINING.md for the tailnet setup.
+#
+# Lifecycle is independent of the trainer container. The trainer is a
+# one-shot `docker run` invocation; the watcher is a long-lived service.
+
+services:
+  tensorboard:
+    image: tensorflow/tensorflow:latest
+    container_name: digimon-trainer-tb
+    restart: unless-stopped
+    command:
+      - tensorboard
+      - --logdir
+      - /runs
+      - --bind_all
+      - --port
+      - "6006"
+    volumes:
+      - ./runs:/runs:ro
+    ports:
+      - "6006:6006"
