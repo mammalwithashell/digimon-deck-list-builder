@@ -2,7 +2,9 @@
 
 **Audience:** AI agents (and humans) implementing Digimon card effects in Rust against `digimon-engine`.
 
-**Last refreshed: 2026-05-15** (Tracks A–K substrate sweep; see §"Tracks A–K Substrate Quick Reference" below for the post-Phase-6 / Tracks A–K landings absorbed in this pass).
+**Last refreshed: 2026-05-25** (Tracks A–K substrate sweep + `add-reward-profiles` engine event wiring; see §"Tracks A–K Substrate Quick Reference" below for the post-Phase-6 / Tracks A–K landings absorbed in this pass).
+
+**Engine event emission (post-`add-reward-profiles`):** `GameEvent::Attack`, `GameEvent::Trash`, and `GameEvent::SecurityReveal` are now emitted at their canonical wiring sites (combat declaration, batched deletion + linked-card cascade + hand discards via `Game::trash_card` / `Game::trash_permanent_stack` helpers, and security-check resolution). `GameEvent::Play` carries `cost_paid: i16`, `cost_printed: i16`, `via_alt_path: Option<String>`. `GameEvent::Digivolve` carries `was_dna: bool`, `was_blast_dna: bool`, `memory_paid: i16`. Alt-path canonical string keys come from `digimon_dsl::compiled::CompiledAltPathKind::as_key()`. See `code/digimon-engine/src/events.rs` for the full variant docs and `docs/REWARD_PROFILES.md` for how the Python `RewardEventBus` consumes these.
 
 This document is the canonical scripting reference. Before writing any card effect, read this in full. The engine intentionally exposes a curated API (`EffectContext`); do not reach around it into `Game` internals.
 

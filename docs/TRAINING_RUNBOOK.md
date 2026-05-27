@@ -681,7 +681,35 @@ Loading a pre-BO3 checkpoint into a BO3 run will:
 
 Recommended fine-tune procedure: load checkpoint, run ~100k–500k timesteps in `--match-format bo3` to teach the policy when concede + play-order picks are valuable, evaluate, then continue full training.
 
-## 13. Dependencies
+## 13. Reward profiles
+
+Composable, YAML-defined reward shaping per archetype. Full reference: [REWARD_PROFILES.md](REWARD_PROFILES.md).
+
+**Default behavior** (no config change): the shipped `_default` profile reproduces legacy `DigimonEnv._compute_reward` byte-for-byte. Existing runs are unchanged.
+
+**Selecting a profile**:
+
+```yaml
+# training_config.yaml — three modes
+# 1) Default (no change): _default profile + legacy reward.
+# 2) Force a specific profile regardless of archetype:
+reward_profile_override: dna_omnimon_combo_v1
+
+# 3) Per-archetype assignment (generalist mode):
+generalist: true
+# `assignments:` in profiles.yaml drives per-episode profile pick from
+# info["deck1_archetype"]. Unknown archetypes fall back to `_default`.
+```
+
+**Authoring a new profile**: edit `code/digimon_gym/agents/reward/profiles.yaml`. Add a profile that `inherits: _default` and declare a `key_cards:` block with the archetype's win-condition cards. Hot-reload (`reward_profiles_hot_reload: true` by default) means edits take effect at the next env reset without restarting training.
+
+**Resume safety**: at run-start, a `<run_dir>/reward_profiles.meta.json` sidecar records the profile hash. On resume the hash is re-checked; mismatch fails with both hashes named. Override with `--reward-profiles-override-mismatch` only when intentionally switching reward shape mid-run.
+
+**Telemetry**: per-component, per-profile, and boss-arrival scalars surface as `pilot/reward/*`, `pilot/profile/*`, and `pilot/mean_eval_digivolves_into_boss_per_game` in TensorBoard. Per-archetype × component drilldowns land in `evals.jsonl` under `by_archetype[X].component_means` and `by_agent_archetype[X]`.
+
+**Deprecation**: `digivolve_reward` / `dna_digivolve_bonus` flat fields warn when set to non-default values. `digivolve_shaping: true` still works (no warning) and silently maps to the shipped `_digivolve_shaped` profile. Removal in v2.
+
+## 14. Dependencies
 
 Key RL/ML packages:
 

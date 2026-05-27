@@ -54,21 +54,50 @@ pub enum GameEvent {
     },
 
     /// A card entered the battle area from hand.
+    ///
+    /// `cost_paid` is the actual memory paid AFTER all cost reductions
+    /// (tamer-driven, alt-path discounts, etc.). May be zero (or even
+    /// negative if a future alt-path grants beyond-free play).
+    /// `cost_printed` is the card's printed `play_cost` from `CardData`
+    /// at the moment of play — captured here so downstream consumers
+    /// (reward components, replay viewers) do not need to re-read
+    /// CardData.
+    /// `via_alt_path` is the canonical key from
+    /// `digimon_dsl::compiled::CompiledAltPathKind::as_key()` when the
+    /// card was played through a registered alt-path that bypassed the
+    /// printed cost, otherwise `None` (standard PLAY action, with or
+    /// without a generic memory cost reduction).
     Play {
         seq: u64,
         player: PlayerId,
         card_id: String,
         field_index: u8,
+        cost_paid: i16,
+        cost_printed: i16,
+        via_alt_path: Option<String>,
     },
 
     /// `player` digivolved `top` onto a permanent at `field_index`.
     /// Emitted by the normal battle-area `Game::digivolve_from_hand` path.
+    ///
+    /// `was_dna` is `true` for any DNA-style digivolve — the standard
+    /// `dna_costs` path, registered end-of-turn DNA alt-paths, Blast DNA,
+    /// and xros_req-driven DNA. `false` for normal evo-cost digivolves
+    /// and for effect-initiated free digivolves.
+    /// `was_blast_dna` is the narrower flag: `true` only when the path
+    /// is `CompiledAltPathKind::BlastDnaDigivolve`. Implies `was_dna`.
+    /// `memory_paid` is the actual memory cost paid for this digivolve.
+    /// May be zero (Blast DNA at cost 0, xros_req at cost 0,
+    /// effect-initiated free digivolves) or the printed evo / DNA cost.
     Digivolve {
         seq: u64,
         player: PlayerId,
         top_card_id: String,
         field_index: u8,
         from_stack_top: String,
+        was_dna: bool,
+        was_blast_dna: bool,
+        memory_paid: i16,
     },
 
     /// A Digimon declared an attack.

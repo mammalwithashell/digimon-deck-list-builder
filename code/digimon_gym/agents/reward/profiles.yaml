@@ -1,0 +1,206 @@
+# Reward profiles for pilot training.
+#
+# Spec: openspec/changes/add-reward-profiles/specs/reward-profiles/spec.md
+#
+# Top-level keys:
+#   - profiles:    name → profile definition (components + optional budget + optional key_cards)
+#   - assignments: archetype_name → profile_name; `_default` key is REQUIRED and
+#                  is the fallback when an episode's `info["deck1_archetype"]`
+#                  is absent or unmapped.
+#
+# Editing this file: changes take effect at the next `env.reset()` when
+# `reward_profiles_hot_reload = true` (default). The active profile is
+# locked at reset and stable for the rest of the episode (under
+# `match_format: bo3`, stable across all 3 games of a match).
+#
+# Naming convention: profiles starting with `_` are private — they can be
+# inherited via `inherits:` but cannot be assigned to real archetypes.
+# The one exception is the `_default` assignment key itself, which is
+# allowed to target the private `_default` profile.
+
+profiles:
+
+  # ----------------------------------------------------------------
+  # Foundation recipe. Every non-private profile inherits this
+  # (transitively through `_default`).
+  # ----------------------------------------------------------------
+  _base_terminal:
+    components:
+      # Terminal magnitudes calibrated to the BO3 match design
+      # (see bo3-match-training/design.md §D9):
+      #   win  ≈ +10 to +15  (base + linear fast-win bonus, capped)
+      #   loss = -10         (symmetric)
+      #   draw = -1          (mild stalling penalty; rare under
+      #                       force-step-limit-wins)
+      - kind: terminal_outcome
+        win_base: 10.0
+        fast_win_bonus_max: 5.0
+        fast_win_par_steps: 200
+        loss: -10.0
+        draw: -1.0
+      - kind: step_penalty
+        weight: -0.001    # ≈ -0.3 over the 300-step soft limit
+
+  # ----------------------------------------------------------------
+  # Byte-identical match for the legacy DigimonEnv._compute_reward
+  # path with digivolve_shaping = False.
+  #
+  # A pytest regression locks this in: 100 seeded episodes run through
+  # both the legacy code path and this profile and assert per-step
+  # reward sequences are equal float-for-float (see Group 9 task 9.1).
+  # ----------------------------------------------------------------
+  _default:
+    inherits: _base_terminal
+    # Legacy `DigimonEnv._compute_reward` short-circuits on the
+    # terminal step — it returns the terminal magnitude WITHOUT
+    # applying step penalty or dense (security) signal. To preserve
+    # byte-identical legacy behavior, the `_default` and
+    # `_digivolve_shaped` profiles opt in to terminal-exclusivity.
+    # Custom profiles leave this flag false (default) so their
+    # shaping components fire normally on the terminal step.
+    legacy_terminal_exclusivity: true
+    components:
+      - kind: security_remove
+        weight: 1.5       # legacy: +1.5 per opp security removed
+      - kind: security_lost
+        weight: -0.5      # legacy: -0.5 per own security lost
+
+  # ----------------------------------------------------------------
+  # Backwards-compat for `TrainingConfig.digivolve_shaping = True`.
+  # The runner wires this profile when the flag is set, matching the
+  # legacy digivolve_reward + dna_digivolve_bonus values.
+  # ----------------------------------------------------------------
+  _digivolve_shaped:
+    inherits: _default
+    components:
+      - kind: digivolve
+        weight: 0.1       # legacy: digivolve_reward
+      - kind: dna_digivolve
+        weight: 3.9       # legacy: dna_digivolve_bonus (additive)
+
+  # ----------------------------------------------------------------
+  # DNA Omnimon archetype profile.
+  #
+  # Win condition: assemble Omnimon (BT17-078, AD1-025, BT13-112,
+  # BT22-015, or BT1-084) via the DNA digivolve chain or the AD1-025
+  # Assembly alt-path. Hardcasting Omnimon at full cost is wasteful.
+  #
+  # Reward shape (see design.md §D15):
+  #   first DNA arrival      : +6.0   (≈60% of a base win)
+  #   second arrival         : +2.4   (decay 0.4)
+  #   asymptotic cap         : +10.0  (= reward / (1 - decay))
+  #   alt-path arrival       : +2.0 with same decay (e.g., AD1-025
+  #                            via Assembly after Partition)
+  #   full-cost hardcast     : -1.5 (capped at 1 fire per match)
+  #
+  # Supporting components:
+  #   climb (WG/MG)          : +0.5 each, max 2 fires, decay 0.7
+  #   tamer plays (Tai&Matt) : +0.3 per play, max 2 fires
+  #   blocks                 : +0.15 each, max 4 fires, decay 0.6
+  #
+  # Profile budget: per_episode_cap = 15 (= asymptotic key + headroom);
+  # per_episode_floor = -3 (caps cumulative hardcast/penalty signal).
+  # ----------------------------------------------------------------
+  dna_omnimon_combo_v1:
+    inherits: _default
+    budget:
+      per_episode_cap: 15.0
+      per_episode_floor: -3.0
+    key_cards:
+      - cards:
+          - BT17-078  # Omnimon (BT17)
+          - AD1-025   # Omnimon (Advance)
+          - BT13-112  # Omnimon
+          - BT22-015  # Omnimon
+          - BT1-084   # Omnimon (classic)
+        reward: 6.0
+        # diminishing_factor: 0.4   # explicit default
+        # max_per_episode: null     # explicit default — decay bounds
+        hardcast_penalty: -1.5
+        # hardcast_max_per_episode: 1  # explicit default
+        alt_path_reward: 2.0
+        alt_paths: [assembly]
+    components:
+      # Material climb — small reward for reaching the Lv6 Greymon /
+      # Garurumon line that feeds the DNA. Diminishing fast so the
+      # signal doesn't dominate.
+      - kind: digivolve_into_named_card
+        match:
+          card_id: [BT17-015, BT17-027]   # WarGreymon, MetalGarurumon
+        min_result_level: 6
+        weight: 0.5
+        budget:
+          max_fires_per_episode: 2
+          diminishing_returns_factor: 0.7
+
+      # Tamer / enabler plays — small flat reward.
+      - kind: play_named_card
+        match:
+          card_id: [BT17-081, BT22-017]   # Tai & Matt, Gabumon (BT22)
+        weight: 0.3
+        budget:
+          max_fires_per_episode: 2
+
+      # Generic disruption signal.
+      - kind: block_event
+        weight: 0.15
+        budget:
+          max_fires_per_episode: 4
+          diminishing_returns_factor: 0.6
+
+  # ----------------------------------------------------------------
+  # BG Imperialdramon archetype profile.
+  #
+  # Win condition: DNA into Paildramon (BT12-028) via Stingmon +
+  # ExVeemon. The Imperialdramon Lv7 typically follows from Paildramon.
+  # Davis & Ken (BT16-085) plays Lv3 materials for free at start of
+  # main phase — reward that arrival shape.
+  # ----------------------------------------------------------------
+  bg_imperialdramon_combo_v1:
+    inherits: _default
+    budget:
+      per_episode_cap: 12.0
+      per_episode_floor: -2.0
+    key_cards:
+      - cards:
+          - BT12-028   # Paildramon
+        reward: 6.0
+        hardcast_penalty: -1.2
+        # No alt-path: Paildramon doesn't have a Partition-style replay
+        # path. Operators who later wire one can edit this entry.
+    components:
+      # Lv4 material climb (Stingmon + ExVeemon).
+      - kind: digivolve_into_named_card
+        match:
+          card_id: [BT12-022, BT12-050]   # ExVeemon, Stingmon (both BT12)
+        min_result_level: 4
+        weight: 0.4
+        budget:
+          max_fires_per_episode: 2
+          diminishing_returns_factor: 0.7
+
+      # Tamer play (Davis & Ken).
+      - kind: play_named_card
+        match:
+          card_id: [BT16-085]             # Davis & Ken
+        weight: 0.3
+        budget:
+          max_fires_per_episode: 1
+
+      # NOTE: rewarding the Veemon/Wormmon free-Lv3 plays specifically
+      # requires `card_name` matching, which depends on `RewardEventBus`
+      # enriching `PlayedCard` with the card name. Until that follow-up
+      # lands, the operator can identify the relevant Lv3 cards by ID
+      # and add them here.
+
+assignments:
+  # Fallback for archetypes without an explicit assignment AND for
+  # any run where `info["deck1_archetype"]` is absent (gauntlet mode,
+  # fixed-deck training). The `_default` assignment key is allowed to
+  # target a private `_default` profile.
+  _default: _default
+
+  # Real-archetype assignments. Names MUST match exactly the
+  # archetype keys in `data/deck_library.json`.
+  "DNA Omnimon": dna_omnimon_combo_v1
+  "Imperialdramon (PR)": bg_imperialdramon_combo_v1

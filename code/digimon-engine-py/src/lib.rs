@@ -1017,24 +1017,53 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             player,
             card_id,
             field_index,
+            cost_paid,
+            cost_printed,
+            via_alt_path,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
             d.set_item("source_slot", *field_index)?;
+            // New per-play payload from the `add-reward-profiles` change
+            // (capability `engine-event-emission`). Surfaces in meta so
+            // the existing top-level keys stay stable.
+            let meta = PyDict::new_bound(py);
+            meta.set_item("cost_paid", *cost_paid)?;
+            meta.set_item("cost_printed", *cost_printed)?;
+            meta.set_item(
+                "via_alt_path",
+                via_alt_path
+                    .as_ref()
+                    .map(|s| s.as_str())
+                    .map(|s| s.into_py(py))
+                    .unwrap_or_else(|| py.None()),
+            )?;
+            d.set_item("meta", meta)?;
         }
         GameEvent::Digivolve {
             player,
             top_card_id,
             field_index,
             from_stack_top,
+            was_dna,
+            was_blast_dna,
+            memory_paid,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", top_card_id.as_str())?;
             d.set_item("source_slot", *field_index)?;
+            // New payload from the `add-reward-profiles` change
+            // (capability `engine-event-emission`). Surfaces in `meta`
+            // alongside the existing `from_stack_top` so top-level keys
+            // stay stable for downstream consumers that don't yet read
+            // the new fields.
             let meta = PyDict::new_bound(py);
             meta.set_item("from_stack_top", from_stack_top.as_str())?;
+            meta.set_item("was_dna", *was_dna)?;
+            meta.set_item("was_blast_dna", *was_blast_dna)?;
+            meta.set_item("memory_paid", *memory_paid)?;
             d.set_item("meta", meta)?;
         }
         GameEvent::Attack {

@@ -1178,16 +1178,22 @@ impl Game {
             player: player_id,
             index: field_index as u8,
         };
-        let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
-            .top_card()
-            .card_id(&self.card_data)
-            .to_string();
+        let top_card = self.players[player_id as usize].battle_area[field_index].top_card();
+        let emitted_card_id = top_card.card_id(&self.card_data).to_string();
+        let cost_printed = self.card_data[top_card.data_index].play_cost as i16;
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Play {
             seq,
             player: player_id,
             card_id: emitted_card_id,
             field_index: field_index as u8,
+            // Effect-initiated free play — no memory paid.
+            cost_paid: 0,
+            cost_printed,
+            // Generic effect-initiated free play is not a registered
+            // alt-path; `via_alt_path` is reserved for
+            // CompiledAltPathKind variants.
+            via_alt_path: None,
         });
         // Effect-initiated play (`effect_initiated: true`) — helper wraps
         // OnPlay + OnEnterFieldAnyone + OnAllyPlayed in a deferred-drain
@@ -1263,6 +1269,7 @@ impl Game {
         for (player_id, card_source) in removed {
             let card = card_source.handle();
             let emitted_card_id = card_source.card_id(&self.card_data).to_string();
+            let cost_printed = self.card_data[card_source.data_index].play_cost as i16;
             let player = self.player_mut(player_id);
             player
                 .battle_area
@@ -1278,6 +1285,10 @@ impl Game {
                 player: player_id,
                 card_id: emitted_card_id,
                 field_index: field_index as u8,
+                // Effect-initiated multi-source free play — no memory paid.
+                cost_paid: 0,
+                cost_printed,
+                via_alt_path: None,
             });
             entered.push((player_id, field_index, permanent, card));
         }
@@ -1542,6 +1553,102 @@ impl Game {
     /// this to checkpoint and assert on incremental event emission.
     pub fn events(&self) -> &[crate::events::GameEvent] {
         &self.events
+    }
+
+    /// Trash a single card to `player`'s trash zone, emitting a
+    /// [`crate::events::GameEvent::Trash`] event.
+    ///
+    /// Per the `engine-event-emission` capability spec, every individual
+    /// card moving into a trash zone SHALL emit a `Trash` event in
+    /// physical-movement order. Token cards (`card.is_token == true`)
+    /// are dropped on the floor with no trash entry and no event,
+    /// matching the existing token-deletion semantic in
+    /// `Player::delete_permanent`.
+    ///
+    /// This helper is the canonical "trash a card" path for any zone
+    /// transition into trash (battle-area cleanup, hand discard, deck
+    /// mill, source manipulation, security-stack effects, etc.). New
+    /// engine code should prefer this over direct `player.trash.push(...)`
+    /// so the event surface stays uniform.
+    pub fn trash_card(&mut self, player: crate::enums::PlayerId, card: crate::card_source::CardSource) {
+        if card.is_token {
+            // Tokens are removed from game — no trash entry, no event.
+            return;
+        }
+        let card_id = card.card_id(&self.card_data).to_string();
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Trash {
+            seq,
+            player,
+            card_id,
+        });
+        self.player_mut(player).trash.push(card);
+    }
+
+    /// Trash an entire permanent stack (top card + digi_sources + linked
+    /// cards, in that physical movement order), emitting one
+    /// [`crate::events::GameEvent::Trash`] per card.
+    ///
+    /// Replaces direct calls to `Player::delete_permanent` from sites
+    /// that want event emission. Mirrors `Player::delete_permanent`'s
+    /// token-semantic (the whole stack drops on the floor when the top
+    /// card is a token — no trash entry, no event) and empty-stack
+    /// tolerance (linked cards still flow to trash).
+    pub fn trash_permanent_stack(&mut self, player: crate::enums::PlayerId, field_index: usize) {
+        let p = self.player_mut(player);
+        if field_index >= p.battle_area.len() {
+            return;
+        }
+        let perm = p.battle_area.remove(field_index);
+
+        // Empty-stack guard (parity with Player::delete_permanent): if the
+        // stack was already drained by a mid-deletion effect, only linked
+        // cards remain to flow to trash.
+        if perm.card_sources.is_empty() {
+            for card in perm.linked_cards {
+                // Linked cards on an empty stack are still real cards —
+                // emit per-card.
+                let card_id = card.card_id(&self.card_data).to_string();
+                let seq = self.next_event_seq();
+                self.events.push(crate::events::GameEvent::Trash {
+                    seq,
+                    player,
+                    card_id,
+                });
+                self.player_mut(player).trash.push(card);
+            }
+            return;
+        }
+
+        // Token semantic: drop the entire stack — no trash, no event.
+        // Mirrors Player::delete_permanent's token branch + Python
+        // `player.py::delete_permanent`.
+        if perm.card_sources[0].is_token {
+            return;
+        }
+
+        // Normal path: emit + push each card in physical movement order.
+        // `card_sources` is stack-top-first per the spec ordering invariant.
+        for card in perm.card_sources {
+            let card_id = card.card_id(&self.card_data).to_string();
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Trash {
+                seq,
+                player,
+                card_id,
+            });
+            self.player_mut(player).trash.push(card);
+        }
+        for card in perm.linked_cards {
+            let card_id = card.card_id(&self.card_data).to_string();
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Trash {
+                seq,
+                player,
+                card_id,
+            });
+            self.player_mut(player).trash.push(card);
+        }
     }
 
     // ─── Memory management ─────────────────────────────────────────
@@ -2119,11 +2226,24 @@ impl Game {
             target_a.index as usize
         };
 
+        // Capture from_stack_top (the OLD top of target_a) before the
+        // merge mutates the stack. Needed for `GameEvent::Digivolve`
+        // emission below per the `engine-event-emission` spec.
+        let from_stack_top = self
+            .player(target_a.player)
+            .battle_area
+            .get(target_a_index_after)
+            .map(|p| p.top_card().card_id(&self.card_data).to_string())
+            .unwrap_or_default();
+
         let perm_b = self
             .player_mut(target_b.player)
             .battle_area
             .remove(target_b.index as usize);
         let new_top = self.player_mut(hand_owner).hand.remove(hand_index);
+        // Capture top_card_id from the removed-hand source before it moves
+        // into the merged permanent's stack.
+        let top_card_id = new_top.card_id(&self.card_data).to_string();
 
         let turn = self.turn_count;
         {
@@ -2137,6 +2257,25 @@ impl Game {
             player: target_a.player,
             index: target_a_index_after as u8,
         };
+
+        // `GameEvent::Digivolve` for the DNA path — emit BEFORE trigger
+        // dispatch so reward components observe the digivolve before any
+        // downstream effects fire. `was_blast_dna` is conservatively
+        // `false` here: distinguishing Blast from standard DNA requires
+        // plumbing the path kind into `dna_digivolve_inner` and is a
+        // focused follow-up (the DNA Omnimon profile uses `was_dna` not
+        // `was_blast_dna` for primary matching).
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Digivolve {
+            seq,
+            player: merged_handle.player,
+            top_card_id,
+            field_index: merged_handle.index,
+            from_stack_top,
+            was_dna: true,
+            was_blast_dna: false,
+            memory_paid: cost as i16,
+        });
 
         if grant_digivolve_bonus {
             self.player_mut(hand_owner).draw();
@@ -2243,6 +2382,14 @@ impl Game {
             return None;
         }
 
+        // Capture from_stack_top before the merge (for Digivolve event).
+        let from_stack_top = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .map(|p| p.top_card().card_id(&self.card_data).to_string())
+            .unwrap_or_default();
+
         // Remove the two hand cards. Remove the higher index first so the
         // lower index is not shifted before its removal.
         let (first, second) = if partner_index > result_index {
@@ -2257,6 +2404,8 @@ impl Game {
         } else {
             (removed_second, removed_first)
         };
+        // Capture top_card_id from the result source before it moves.
+        let top_card_id = result_source.card_id(&self.card_data).to_string();
 
         let turn = self.turn_count;
         {
@@ -2267,6 +2416,21 @@ impl Game {
         }
 
         let merged_handle = target;
+
+        // `GameEvent::Digivolve` for the BT17-095-shape DNA path (one
+        // material on field, one in hand, result also in hand). Same
+        // conservative `was_blast_dna: false` as the both-field DNA path.
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Digivolve {
+            seq,
+            player: merged_handle.player,
+            top_card_id,
+            field_index: merged_handle.index,
+            from_stack_top,
+            was_dna: true,
+            was_blast_dna: false,
+            memory_paid: cost as i16,
+        });
 
         self.enqueue_triggered(
             EffectTiming::WhenDigivolving,

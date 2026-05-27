@@ -2021,19 +2021,12 @@ fn card_has_alt_path(rctx: &EffectReadContext<'_>, card_id: &str, kind_name: &st
 }
 
 fn alt_path_kind_matches(kind: &digimon_dsl::compiled::CompiledAltPathKind, name: &str) -> bool {
-    use digimon_dsl::compiled::CompiledAltPathKind as K;
+    // Single source of truth for alt-path string keys lives on
+    // `CompiledAltPathKind::as_key()` (see `digimon-dsl/src/compiled.rs`).
+    // Reward profiles (`add-reward-profiles` change) reference these same
+    // strings via the `play_named_card.via_alt_path` matcher.
     let normalized = name.to_ascii_lowercase().replace('-', "_");
-    let kind_str = match kind {
-        K::Digivolve => "digivolve",
-        K::DnaDigivolve => "dna_digivolve",
-        K::BlastDnaDigivolve => "blast_dna_digivolve",
-        K::DigiXros => "digixros",
-        K::BurstDigivolve => "burst_digivolve",
-        K::AppFusion => "app_fusion",
-        K::Assembly => "assembly",
-        K::ActivatedDigivolve => "activated_digivolve",
-    };
-    kind_str == normalized
+    kind.as_key() == normalized
 }
 
 fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle) -> bool {

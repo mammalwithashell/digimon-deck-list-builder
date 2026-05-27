@@ -828,16 +828,22 @@ impl Game {
         self.player_mut(player_id).battle_area.push(perm);
         let field_index = self.player(player_id).battle_area.len() - 1;
 
-        let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
-            .top_card()
-            .card_id(&self.card_data)
-            .to_string();
+        let top_card = self.players[player_id as usize].battle_area[field_index].top_card();
+        let emitted_card_id = top_card.card_id(&self.card_data).to_string();
+        let cost_printed = self.card_data[top_card.data_index].play_cost as i16;
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Play {
             seq,
             player: player_id,
             card_id: emitted_card_id,
             field_index: field_index as u8,
+            // Standard PLAY-from-hand path: `effective_cost` is the
+            // post-discount memory actually paid (after tamer / other
+            // generic reductions). Not an alt-path play — `via_alt_path`
+            // is None even when a discount was applied.
+            cost_paid: effective_cost as i16,
+            cost_printed,
+            via_alt_path: None,
         });
 
         // PUPPETS-G030 — `suppress_on_play` skips ONLY the played card's
@@ -4124,6 +4130,10 @@ impl Game {
             top_card_id,
             field_index: field_index as u8,
             from_stack_top,
+            // Regular evo-cost path from hand — not DNA, not Blast DNA.
+            was_dna: false,
+            was_blast_dna: false,
+            memory_paid: resume.effective_cost as i16,
         });
 
         self.player_mut(resume.player).draw();
@@ -4252,6 +4262,18 @@ impl Game {
             return false;
         }
 
+        // Capture event payload (top_card_id from removed; from_stack_top
+        // from the breeding's current top) before the move mutates state.
+        let removed_card_id = self.player(player_id).hand[hand_index]
+            .card_id(&self.card_data)
+            .to_string();
+        let from_stack_top = self
+            .player(player_id)
+            .breeding_area
+            .as_ref()
+            .map(|b| b.top_card().card_id(&self.card_data).to_string())
+            .unwrap_or_default();
+
         let turn = self.turn_count;
         let removed = self.player_mut(player_id).hand.remove(hand_index);
         let player_mut = self.player_mut(player_id);
@@ -4259,6 +4281,23 @@ impl Game {
             breeding.digivolve(removed, turn);
         }
         player_mut.draw();
+
+        // `GameEvent::Digivolve` for the breeding-area digivolve path.
+        // `field_index` uses `BREEDING_TARGET` (the breeding-slot marker
+        // from `crate::action::space`) since breeding is not a regular
+        // battle_area index. Regular evo-cost path — was_dna/was_blast_dna
+        // both false.
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Digivolve {
+            seq,
+            player: player_id,
+            top_card_id: removed_card_id,
+            field_index: crate::action::space::BREEDING_TARGET as u8,
+            from_stack_top,
+            was_dna: false,
+            was_blast_dna: false,
+            memory_paid: effective_cost as i16,
+        });
 
         // Reward-shaping counter — see commit_digivolve_from_hand_no_replace
         // for the design rationale. Bumped here because breeding digivolve

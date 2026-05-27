@@ -555,6 +555,27 @@ impl Game {
             counter_depth: 0,
         });
 
+        // `GameEvent::Attack` emission — spec
+        // `engine-event-emission` requires emission at declaration time,
+        // before any block resolution or interrupt window opens (which
+        // begins at the RaidOpen transition further down). Emitting here
+        // (post-PendingAttack-install, pre-WhenWouldAttack-dispatch)
+        // ensures consumers see every declared attack — including those
+        // later cancelled by a `WhenWouldAttack` replacement — matching
+        // the unconditional-emission contract.
+        let (attack_target_field_index, attack_target_player) = match target {
+            AttackTarget::Digimon(d) => (Some(d.index), Some(d.player)),
+            AttackTarget::Player(p) => (None, Some(p)),
+        };
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Attack {
+            seq,
+            player: attacker.player,
+            attacker_field_index: attacker.index,
+            target_field_index: attack_target_field_index,
+            target_player: attack_target_player,
+        });
+
         // Phase 9: WhenWouldAttack fires on the attacker BEFORE any
         // observable state transitions (suspend / OnAttack / memory). A
         // mandatory cancel at this point rolls the attack back cleanly —
@@ -2513,6 +2534,21 @@ impl Game {
             was_face_up,
         });
 
+        // `GameEvent::SecurityReveal` — spec `engine-event-emission`
+        // requires emission at reveal time, before any security-effect
+        // resolution. Capture card_id from CardData (via the
+        // pre-move `sec_card`) before the card moves into
+        // `pending_security`. Emission is independent of the subsequent
+        // `GameEvent::Trash` that fires when the dispose phase trashes
+        // the revealed card.
+        let revealed_card_id = sec_card.card_id(&self.card_data).to_string();
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::SecurityReveal {
+            seq,
+            defender,
+            card_id: revealed_card_id,
+        });
+
         // Park the revealed card for the duration of the check.
         self.pending_security = Some(PendingSecurity {
             defender,
@@ -3844,8 +3880,10 @@ impl Game {
                     &mut self.player_mut(handle.player).battle_area[handle.index as usize]
                         .linked_cards,
                 );
+                // Route through emission helper so each linked card surfaces
+                // a `GameEvent::Trash` (capability `engine-event-emission`).
                 for card in taken {
-                    self.player_mut(handle.player).trash.push(card);
+                    self.trash_card(handle.player, card);
                 }
                 true
             } else {
@@ -3884,8 +3922,11 @@ impl Game {
             }
             self.clear_permanent_full(handle);
             self.modifiers.expire_player_on_permanent_leave(handle);
-            self.player_mut(handle.player)
-                .delete_permanent(handle.index as usize);
+            // Route stack-to-trash through emission helper so every
+            // card surfaces a `GameEvent::Trash` (capability
+            // `engine-event-emission`). Token-skip + empty-stack
+            // semantics match `Player::delete_permanent`.
+            self.trash_permanent_stack(handle.player, handle.index as usize);
             self.modifiers
                 .shift_after_battle_area_remove(handle.player, handle.index);
         } else {

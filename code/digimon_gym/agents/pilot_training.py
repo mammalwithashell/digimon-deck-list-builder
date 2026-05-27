@@ -62,6 +62,7 @@ from digimon_gym.agents.maskable_recurrent import (
 )
 from digimon_gym.agents.env_utils import (
     find_match_env as _find_match_env,
+    find_reward_profile_wrapper as _find_reward_profile_wrapper,
     unwrap_to_digimon_env as _unwrap_to_digimon_env,
 )
 from digimon_gym.agents.opponent_pool import OpponentPool
@@ -155,6 +156,84 @@ def _build_game_log_row(
         "terminal_score": float(terminal_score),
         "recording_path": rec_str,
     }
+
+
+def _build_reward_profile_factory(cfg: TrainingConfig):
+    """Build a wrapper-applier closure for the reward profiles capability.
+
+    Spec: `openspec/changes/add-reward-profiles/specs/reward-profiles/spec.md`
+    (Group 8 wiring).
+
+    Returns a callable `apply(env) -> Env` that EITHER wraps `env` in a
+    `RewardProfileWrapper` (when `cfg.reward_profiles_path` resolves to
+    a readable YAML file and loads successfully) OR returns `env`
+    unchanged (when the file is missing — letting the legacy reward
+    path run as before).
+
+    A loader-load failure aborts the run (vs silent fallback) — silent
+    fallback would mask configuration bugs in the YAML the operator
+    just edited. Missing-file (path doesn't exist) IS the silent path
+    so legacy runs without a YAML keep working.
+
+    Also resolves `digivolve_shaping`-to-`_digivolve_shaped` mapping
+    per task 8.5: when `cfg.digivolve_shaping=True` and no explicit
+    `reward_profile_override` was set, defaults the override to
+    `_digivolve_shaped`. The shipped YAML defines that profile.
+
+    The returned closure also captures the loader handle so callers
+    that want the metadata (`profiles_path`, `content_hash`,
+    `assignments_snapshot`) can read them via `.loader` /
+    `.effective_override` attributes on the closure.
+    """
+    from digimon_gym.agents.reward.profile_loader import (
+        ProfileConfigError,
+        ProfileLoader,
+    )
+    from digimon_gym.agents.reward.wrapper import RewardProfileWrapper
+
+    path = Path(cfg.reward_profiles_path) if cfg.reward_profiles_path else None
+
+    # Resolve effective override: explicit cfg.reward_profile_override
+    # wins; otherwise digivolve_shaping=True maps to _digivolve_shaped.
+    if cfg.reward_profile_override is not None:
+        effective_override: Optional[str] = cfg.reward_profile_override
+    elif cfg.digivolve_shaping:
+        effective_override = "_digivolve_shaped"
+    else:
+        effective_override = None
+
+    if path is None or not path.exists():
+        # No profiles file — legacy reward path stays active. Return
+        # an identity factory + None loader so downstream code can
+        # detect the "not active" state.
+        def apply_identity(env):
+            return env
+
+        apply_identity.loader = None  # type: ignore[attr-defined]
+        apply_identity.effective_override = None  # type: ignore[attr-defined]
+        apply_identity.active = False  # type: ignore[attr-defined]
+        return apply_identity
+
+    try:
+        loader = ProfileLoader(path)
+    except ProfileConfigError as e:
+        raise RuntimeError(
+            f"Failed to load reward profiles from {path}: {e}. "
+            "Fix the YAML or set `reward_profiles_path: ''` to disable."
+        ) from e
+
+    def apply_wrap(env):
+        return RewardProfileWrapper(
+            env,
+            loader=loader,
+            override=effective_override,
+            hot_reload=cfg.reward_profiles_hot_reload,
+        )
+
+    apply_wrap.loader = loader  # type: ignore[attr-defined]
+    apply_wrap.effective_override = effective_override  # type: ignore[attr-defined]
+    apply_wrap.active = True  # type: ignore[attr-defined]
+    return apply_wrap
 
 
 def _seed_everything(seed: int) -> None:
@@ -514,6 +593,40 @@ class WinRateCallback(BaseCallback):
         self._matchup_match_wins: Dict[tuple, int] = {}
         self._matchup_match_sweeps: Dict[tuple, int] = {}
         self._matchup_match_games: Dict[tuple, int] = {}
+        # `add-reward-profiles` Group 10 telemetry accumulators.
+        # All cumulative across eval cycles since callback construction
+        # (same lifecycle as the wins/digivolve dicts above — no
+        # cross-resume persistence). Sourced from
+        # `info["reward_breakdown"]` written by `RewardProfileWrapper`.
+        self._component_totals: Dict[str, float] = {}
+        self._component_games: Dict[str, int] = {}
+        # Per-profile (the active profile for the game).
+        self._profile_reward_totals: Dict[str, float] = {}
+        self._profile_component_totals: Dict[tuple, float] = {}    # (profile, component) -> sum
+        self._profile_games: Dict[str, int] = {}
+        self._profile_clamp_steps: Dict[str, int] = {}             # steps with clamp this profile
+        self._profile_total_steps: Dict[str, int] = {}             # all eval steps with this profile
+        # Per-archetype × component (axis: opponent archetype).
+        self._archetype_component_totals: Dict[tuple, float] = {}  # (opp_arch, component) -> sum
+        # Per-archetype × component (axis: agent archetype).
+        self._agent_archetype_component_totals: Dict[tuple, float] = {}
+        # Boss-arrival counters (spec D14 + capability
+        # "Boss-cards set and arrival-aware sidecar columns").
+        # Per opponent archetype:
+        self._archetype_digivolves_into_boss: Dict[str, int] = {}
+        self._archetype_digivolves_into_boss_dna: Dict[str, int] = {}
+        self._archetype_hardcasts_of_boss: Dict[str, int] = {}
+        self._archetype_hardcasts_of_boss_full_cost: Dict[str, int] = {}
+        # Per agent archetype:
+        self._agent_archetype_digivolves_into_boss: Dict[str, int] = {}
+        self._agent_archetype_digivolves_into_boss_dna: Dict[str, int] = {}
+        self._agent_archetype_hardcasts_of_boss: Dict[str, int] = {}
+        self._agent_archetype_hardcasts_of_boss_full_cost: Dict[str, int] = {}
+        # Per-eval-window aggregates (reset each window):
+        self._window_total_digivolves_into_boss: int = 0
+        self._window_total_hardcasts_of_boss: int = 0
+        self._window_total_discipline_num: int = 0  # digivolves
+        self._window_total_discipline_denom: int = 0  # digivolves + hardcasts
 
     def get_archetype_results(self):
         """Return per-archetype results as ArchetypeResult list."""
@@ -596,6 +709,12 @@ class WinRateCallback(BaseCallback):
         window_idx = self._eval_window_idx
         self._eval_window_idx += 1
         self._games_in_window = 0
+        # Reset per-window boss-arrival aggregates so window means are
+        # window-scoped (not cumulative across windows).
+        self._window_total_digivolves_into_boss = 0
+        self._window_total_hardcasts_of_boss = 0
+        self._window_total_discipline_num = 0
+        self._window_total_discipline_denom = 0
 
         for game_idx in range(self.n_eval_episodes):
             obs, info = eval_env.reset()
@@ -606,6 +725,31 @@ class WinRateCallback(BaseCallback):
             # In generalist mode the wrapper also sets deck1_archetype; in
             # gauntlet mode it's absent (agent always plays the same fixed deck).
             agent_archetype = info.get("deck1_archetype")
+
+            # `add-reward-profiles` Group 10: per-game reward-breakdown
+            # accumulator. Captures the sum of each component's
+            # contribution across the game. Profile name + hash are
+            # captured from the first step's info (locked at reset by
+            # the wrapper — stable across the game). Boss-cards set is
+            # read from the wrapper to drive per-game boss-arrival counts.
+            game_breakdown: Dict[str, float] = {}
+            game_profile_name: Optional[str] = info.get("reward_profile")
+            game_profile_hash: Optional[str] = info.get("reward_profile_hash")
+            game_clamp_steps: int = 0
+            game_total_steps: int = 0
+            # Boss-cards set + per-game arrival counts. Resolved from
+            # the wrapper instance at game start.
+            _wrapper_profile = _find_reward_profile_wrapper(eval_env)
+            game_boss_cards: frozenset = (
+                _wrapper_profile._active_profile.boss_cards
+                if _wrapper_profile is not None
+                and _wrapper_profile._active_profile is not None
+                else frozenset()
+            )
+            game_digivolves_into_boss = 0
+            game_digivolves_into_boss_dna = 0
+            game_hardcasts_of_boss = 0
+            game_hardcasts_of_boss_full_cost = 0
 
             # LSTM state management (None for MLP, threaded for LSTM)
             state = None
@@ -620,13 +764,48 @@ class WinRateCallback(BaseCallback):
                     obs, state=state, episode_start=episode_start,
                     deterministic=True, action_masks=action_masks,
                 )
-                obs, reward, terminated, truncated, _ = eval_env.step(
+                obs, reward, terminated, truncated, info = eval_env.step(
                     int(action)
                 )
                 episode_reward += float(reward)
                 steps += 1
                 done = terminated or truncated
                 episode_start = np.array([False])
+
+                # Accumulate reward breakdown for telemetry. Wrapper
+                # writes `info["reward_breakdown"]` per step when
+                # active; legacy-reward runs (no wrapper) skip this
+                # branch silently.
+                step_breakdown = info.get("reward_breakdown")
+                if step_breakdown:
+                    game_total_steps += 1
+                    for comp_name, contrib in step_breakdown.items():
+                        game_breakdown[comp_name] = (
+                            game_breakdown.get(comp_name, 0.0) + float(contrib)
+                        )
+                    if info.get("reward_breakdown_clamped"):
+                        game_clamp_steps += 1
+                # Boss-arrival counters — derived from the occurrence
+                # stream so they fire regardless of which profile is
+                # active (works on `_default` games where boss_cards
+                # is empty → all four counts stay at 0).
+                if game_boss_cards:
+                    occ_list = info.get("reward_occurrences", []) or []
+                    from digimon_gym.agents.reward.occurrences import (
+                        Digivolved as _Digivolved,
+                        PlayedCard as _PlayedCard,
+                    )
+                    for ev in occ_list:
+                        if isinstance(ev, _Digivolved) and ev.player == 1 \
+                                and ev.top_card_id in game_boss_cards:
+                            game_digivolves_into_boss += 1
+                            if ev.was_dna:
+                                game_digivolves_into_boss_dna += 1
+                        elif isinstance(ev, _PlayedCard) and ev.player == 1 \
+                                and ev.card_id in game_boss_cards:
+                            game_hardcasts_of_boss += 1
+                            if ev.cost_paid >= ev.cost_printed:
+                                game_hardcasts_of_boss_full_cost += 1
 
             total_reward += episode_reward
             total_steps += steps
@@ -902,6 +1081,97 @@ class WinRateCallback(BaseCallback):
                                     self._matchup_match_sweeps.get(matchup, 0) + 1
                                 )
 
+            # `add-reward-profiles` Group 10: fold this game's
+            # reward-breakdown + boss-arrival stats into the per-component,
+            # per-profile, per-archetype × component accumulators. All
+            # cumulative across eval cycles; reset only on callback
+            # reconstruction (matches the _archetype_wins lifecycle).
+            if game_breakdown:
+                for comp_name, total in game_breakdown.items():
+                    self._component_totals[comp_name] = (
+                        self._component_totals.get(comp_name, 0.0) + total
+                    )
+                    self._component_games[comp_name] = (
+                        self._component_games.get(comp_name, 0) + 1
+                    )
+                    if opponent_archetype:
+                        key = (opponent_archetype, comp_name)
+                        self._archetype_component_totals[key] = (
+                            self._archetype_component_totals.get(key, 0.0) + total
+                        )
+                    if agent_archetype:
+                        key = (agent_archetype, comp_name)
+                        self._agent_archetype_component_totals[key] = (
+                            self._agent_archetype_component_totals.get(key, 0.0) + total
+                        )
+                if game_profile_name:
+                    self._profile_games[game_profile_name] = (
+                        self._profile_games.get(game_profile_name, 0) + 1
+                    )
+                    game_total = sum(game_breakdown.values())
+                    self._profile_reward_totals[game_profile_name] = (
+                        self._profile_reward_totals.get(game_profile_name, 0.0)
+                        + game_total
+                    )
+                    for comp_name, total in game_breakdown.items():
+                        key = (game_profile_name, comp_name)
+                        self._profile_component_totals[key] = (
+                            self._profile_component_totals.get(key, 0.0) + total
+                        )
+                    self._profile_clamp_steps[game_profile_name] = (
+                        self._profile_clamp_steps.get(game_profile_name, 0)
+                        + game_clamp_steps
+                    )
+                    self._profile_total_steps[game_profile_name] = (
+                        self._profile_total_steps.get(game_profile_name, 0)
+                        + game_total_steps
+                    )
+
+            # Boss-arrival per-game counts (Group 10 task 10.6). Fold
+            # into both axis dicts + the window-aggregate counters.
+            if game_boss_cards:
+                self._window_total_digivolves_into_boss += game_digivolves_into_boss
+                self._window_total_hardcasts_of_boss += game_hardcasts_of_boss
+                discipline_denom_game = (
+                    game_digivolves_into_boss + game_hardcasts_of_boss
+                )
+                self._window_total_discipline_num += game_digivolves_into_boss
+                self._window_total_discipline_denom += discipline_denom_game
+                if opponent_archetype:
+                    self._archetype_digivolves_into_boss[opponent_archetype] = (
+                        self._archetype_digivolves_into_boss.get(opponent_archetype, 0)
+                        + game_digivolves_into_boss
+                    )
+                    self._archetype_digivolves_into_boss_dna[opponent_archetype] = (
+                        self._archetype_digivolves_into_boss_dna.get(opponent_archetype, 0)
+                        + game_digivolves_into_boss_dna
+                    )
+                    self._archetype_hardcasts_of_boss[opponent_archetype] = (
+                        self._archetype_hardcasts_of_boss.get(opponent_archetype, 0)
+                        + game_hardcasts_of_boss
+                    )
+                    self._archetype_hardcasts_of_boss_full_cost[opponent_archetype] = (
+                        self._archetype_hardcasts_of_boss_full_cost.get(opponent_archetype, 0)
+                        + game_hardcasts_of_boss_full_cost
+                    )
+                if agent_archetype:
+                    self._agent_archetype_digivolves_into_boss[agent_archetype] = (
+                        self._agent_archetype_digivolves_into_boss.get(agent_archetype, 0)
+                        + game_digivolves_into_boss
+                    )
+                    self._agent_archetype_digivolves_into_boss_dna[agent_archetype] = (
+                        self._agent_archetype_digivolves_into_boss_dna.get(agent_archetype, 0)
+                        + game_digivolves_into_boss_dna
+                    )
+                    self._agent_archetype_hardcasts_of_boss[agent_archetype] = (
+                        self._agent_archetype_hardcasts_of_boss.get(agent_archetype, 0)
+                        + game_hardcasts_of_boss
+                    )
+                    self._agent_archetype_hardcasts_of_boss_full_cost[agent_archetype] = (
+                        self._agent_archetype_hardcasts_of_boss_full_cost.get(agent_archetype, 0)
+                        + game_hardcasts_of_boss_full_cost
+                    )
+
         win_rate = wins / self.n_eval_episodes
         mean_reward = total_reward / self.n_eval_episodes
         mean_length = total_steps / self.n_eval_episodes
@@ -941,6 +1211,60 @@ class WinRateCallback(BaseCallback):
             mean_opp_dna_digivolves,
         )
         self.logger.record("pilot/games_played", self.games_played)
+
+        # ─── add-reward-profiles Group 10 telemetry ──────────────────────
+        # Tier 1: per-component global. One scalar per component that
+        # appeared in any eval game since callback construction.
+        for comp_name, total in self._component_totals.items():
+            games = self._component_games.get(comp_name, 0)
+            if games > 0:
+                self.logger.record(
+                    f"pilot/reward/{comp_name}/mean_per_game",
+                    total / games,
+                )
+        # Tier 2: per-profile aggregate (mean reward + per-component share).
+        for prof_name, prof_total in self._profile_reward_totals.items():
+            games = self._profile_games.get(prof_name, 0)
+            if games == 0:
+                continue
+            mean_prof_reward = prof_total / games
+            self.logger.record(
+                f"pilot/profile/{prof_name}/mean_reward", mean_prof_reward,
+            )
+            # Component share — fractional contribution to this profile's
+            # mean reward. Emit only when the profile's denominator is
+            # non-zero to avoid divide-by-zero on draws.
+            if prof_total != 0:
+                for (p, comp), comp_total in self._profile_component_totals.items():
+                    if p != prof_name:
+                        continue
+                    self.logger.record(
+                        f"pilot/profile/{prof_name}/share_{comp}",
+                        comp_total / prof_total,
+                    )
+            # clamp_share — fraction of steps under this profile where
+            # the per-profile budget clamped at least one component.
+            prof_steps = self._profile_total_steps.get(prof_name, 0)
+            if prof_steps > 0:
+                self.logger.record(
+                    f"pilot/profile/{prof_name}/clamp_share",
+                    self._profile_clamp_steps.get(prof_name, 0) / prof_steps,
+                )
+        # Per-window boss-arrival aggregates.
+        n_episodes = max(1, self.n_eval_episodes)
+        self.logger.record(
+            "pilot/mean_eval_digivolves_into_boss_per_game",
+            self._window_total_digivolves_into_boss / n_episodes,
+        )
+        self.logger.record(
+            "pilot/mean_eval_hardcasts_of_boss_per_game",
+            self._window_total_hardcasts_of_boss / n_episodes,
+        )
+        if self._window_total_discipline_denom > 0:
+            self.logger.record(
+                "pilot/mean_eval_digivolve_discipline",
+                self._window_total_discipline_num / self._window_total_discipline_denom,
+            )
 
         # ─── BO3 match-tier metrics ──────────────────────────────────────
         # Only emitted when at least one eval episode came from a MatchEnv-
@@ -1226,9 +1550,80 @@ class WinRateCallback(BaseCallback):
                         "opponent_dna_digivolves": self._archetype_opponent_dna_digivolves.get(
                             name, 0
                         ),
+                        # `add-reward-profiles` Group 10 task 10.5:
+                        # per-(opp_arch × component) mean contribution
+                        # per game. Only includes components that
+                        # actually contributed to games vs this opp.
+                        "component_means": {
+                            comp: total / max(1, games)
+                            for (a, comp), total in self._archetype_component_totals.items()
+                            if a == name
+                        },
+                        # Group 10 task 10.6: per-(opp_arch) boss-arrival
+                        # counts. Always present (even when 0) so the
+                        # schema is stable across legacy + profile runs.
+                        "digivolves_into_boss": int(
+                            self._archetype_digivolves_into_boss.get(name, 0)
+                        ),
+                        "digivolves_into_boss_dna": int(
+                            self._archetype_digivolves_into_boss_dna.get(name, 0)
+                        ),
+                        "hardcasts_of_boss": int(
+                            self._archetype_hardcasts_of_boss.get(name, 0)
+                        ),
+                        "hardcasts_of_boss_full_cost": int(
+                            self._archetype_hardcasts_of_boss_full_cost.get(name, 0)
+                        ),
                     }
                     for name, games in self._archetype_games.items()
                 }
+            # Group 10 task 10.5: top-level by_agent_archetype map.
+            # Mirrors by_archetype's shape but keyed on AGENT archetype
+            # (generalist mode only — absent when no agent_archetype
+            # was seen).
+            if self._agent_archetype_games:
+                row["by_agent_archetype"] = {
+                    name: {
+                        "games": games,
+                        "wins": self._agent_archetype_wins.get(name, 0),
+                        "draws": self._agent_archetype_draws.get(name, 0),
+                        "win_rate": self._agent_archetype_wins.get(name, 0) / max(1, games),
+                        "digivolves": self._agent_archetype_digivolves.get(name, 0),
+                        "dna_digivolves": self._agent_archetype_dna_digivolves.get(name, 0),
+                        "component_means": {
+                            comp: total / max(1, games)
+                            for (a, comp), total in self._agent_archetype_component_totals.items()
+                            if a == name
+                        },
+                        "digivolves_into_boss": int(
+                            self._agent_archetype_digivolves_into_boss.get(name, 0)
+                        ),
+                        "digivolves_into_boss_dna": int(
+                            self._agent_archetype_digivolves_into_boss_dna.get(name, 0)
+                        ),
+                        "hardcasts_of_boss": int(
+                            self._agent_archetype_hardcasts_of_boss.get(name, 0)
+                        ),
+                        "hardcasts_of_boss_full_cost": int(
+                            self._agent_archetype_hardcasts_of_boss_full_cost.get(name, 0)
+                        ),
+                    }
+                    for name, games in self._agent_archetype_games.items()
+                }
+            # Group 10 task 10.6 + 10.8: top-level window-mean boss-arrival
+            # columns. Always emitted (zero on legacy/_default games).
+            n_eval = max(1, self.n_eval_episodes)
+            row["mean_eval_digivolves_into_boss_per_game"] = (
+                self._window_total_digivolves_into_boss / n_eval
+            )
+            row["mean_eval_hardcasts_of_boss_per_game"] = (
+                self._window_total_hardcasts_of_boss / n_eval
+            )
+            row["mean_eval_digivolve_discipline"] = (
+                self._window_total_discipline_num / self._window_total_discipline_denom
+                if self._window_total_discipline_denom > 0
+                else None
+            )
             self._eval_sidecar_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self._eval_sidecar_path, "a", encoding="utf-8") as fh:
                 fh.write(json.dumps(row, separators=(",", ":")) + "\n")
@@ -1329,7 +1724,8 @@ def make_env(opponent: str = "greedy",
              digivolve_reward: float = 0.1,
              dna_digivolve_bonus: float = 3.9,
              match_format: str = "single",
-             match_env_seed: Optional[int] = None) -> gymnasium.Env:
+             match_env_seed: Optional[int] = None,
+             reward_profile_factory: Optional[Callable] = None) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -1379,6 +1775,12 @@ def make_env(opponent: str = "greedy",
         digivolve_reward=digivolve_reward,
         dna_digivolve_bonus=dna_digivolve_bonus,
     )
+    # `add-reward-profiles` Group 8: insert RewardProfileWrapper between
+    # DigimonEnv and OpponentWrapper when a profile factory is supplied.
+    # Identity factory no-ops; real factory flips DigimonEnv's
+    # `emit_reward_occurrences=True` and `legacy_reward=False` flags.
+    if reward_profile_factory is not None:
+        base_env = reward_profile_factory(base_env)
 
     if opponent == "self-play":
         env = base_env
@@ -1478,6 +1880,7 @@ def make_vec_env(
     curriculum_seed: Optional[int] = None,
     recording_writer: Optional[TrainingGameRecorder] = None,
     mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
+    reward_profile_factory: Optional[Callable] = None,
 ):
     """Build ActionMasker-wrapped vector environments from TrainingConfig."""
 
@@ -1498,6 +1901,9 @@ def make_vec_env(
                 digivolve_reward=cfg.digivolve_reward,
                 dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             )
+            # `add-reward-profiles` Group 8: wrap before OpponentWrapper.
+            if reward_profile_factory is not None:
+                base_env = reward_profile_factory(base_env)
             wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
             # BO3 match wrapper between OpponentWrapper and deck-pool wrappers.
             if cfg.match_format == "bo3":
@@ -1600,6 +2006,7 @@ def train(total_timesteps: int = 100_000,
           eval_seed: Optional[int] = None,
           deck_pool_snapshot_path: Optional[str] = None,
           cfg: Optional[TrainingConfig] = None,
+          reward_profiles_override_mismatch: bool = False,
           ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
     """Train a Pilot Agent using MaskablePPO or MaskableRecurrentPPO.
 
@@ -1678,6 +2085,55 @@ def train(total_timesteps: int = 100_000,
     observation_layout = get_tensor_profile(cfg.tensor_profile)
     run_name = cfg.run_name or datetime.now().strftime("pilot_ppo_%Y%m%d_%H%M%S")
     run_dir = Path(save_dir) / run_name
+
+    # `add-reward-profiles` Group 8: build the reward-profile factory
+    # once at run-start. The factory is an identity no-op when the
+    # configured `reward_profiles_path` doesn't exist (legacy reward
+    # path stays active). Loader failures abort the run — silent
+    # fallback would mask config bugs.
+    reward_profile_factory = _build_reward_profile_factory(cfg)
+    if verbose and reward_profile_factory.active:
+        loader = reward_profile_factory.loader
+        eff = reward_profile_factory.effective_override
+        print(
+            f"  Reward profiles: loaded from {loader.path} "
+            f"(hash={loader.profiles.content_hash[:14]}..., "
+            f"override={eff!r}, hot_reload={cfg.reward_profiles_hot_reload})"
+        )
+
+    # Resume-time reward-profile hash check + run-start sidecar write.
+    # Per spec: when resuming AND the current profiles file's canonical
+    # hash differs from the checkpoint's recorded hash, abort with a
+    # clear error naming both hashes. The CLI flag
+    # `--reward-profiles-override-mismatch` bypasses (caller takes
+    # responsibility for intentional reward-shape changes mid-run).
+    if reward_profile_factory.active:
+        from digimon_gym.agents.reward.run_metadata import (
+            check_resume_hash as _rp_check_resume,
+            write_sidecar as _rp_write_sidecar,
+        )
+        current_hash = reward_profile_factory.loader.profiles.content_hash
+        if cfg.resume_from:
+            # Resolve the resume-target's run_dir from the checkpoint
+            # zip path. The sidecar lives in the parent dir.
+            checkpoint_dir = Path(cfg.resume_from).parent
+            _rp_check_resume(
+                checkpoint_dir,
+                current_hash,
+                override_mismatch=reward_profiles_override_mismatch,
+            )
+        # Always write a fresh sidecar at run-start (new run OR resume
+        # after override). The sidecar reflects the CURRENT hash so
+        # later resumes have an up-to-date reference point.
+        _rp_write_sidecar(
+            run_dir,
+            reward_profiles_path=cfg.reward_profiles_path,
+            reward_profiles_hash=current_hash,
+            reward_profile_override=reward_profile_factory.effective_override,
+            reward_assignments_snapshot=dict(
+                reward_profile_factory.loader.profiles.assignments
+            ),
+        )
     recordings_dir = Path(cfg.record_games_dir) if cfg.record_games_dir else run_dir / "recordings"
     recording_writer = TrainingGameRecorder(
         recordings_dir,
@@ -1788,6 +2244,7 @@ def train(total_timesteps: int = 100_000,
             curriculum_seed=curriculum_seed,
             recording_writer=recording_writer,
             mulligan_log_cfg=mulligan_log_cfg,
+            reward_profile_factory=reward_profile_factory,
         )
     elif cfg.n_envs > 1:
         opponent_policies = {"greedy": greedy_policy, "random": random_policy}
@@ -1802,6 +2259,7 @@ def train(total_timesteps: int = 100_000,
             curriculum_seed=curriculum_seed,
             recording_writer=recording_writer,
             mulligan_log_cfg=mulligan_log_cfg,
+            reward_profile_factory=reward_profile_factory,
         )
     else:
         env = make_env(
@@ -1826,6 +2284,7 @@ def train(total_timesteps: int = 100_000,
             dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             match_format=cfg.match_format,
             match_env_seed=cfg.seed,
+            reward_profile_factory=reward_profile_factory,
         )
 
     # Load autoencoder embeddings for warm-start (if available)
@@ -1922,6 +2381,9 @@ def train(total_timesteps: int = 100_000,
                 digivolve_reward=cfg.digivolve_reward,
                 dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             )
+            # `add-reward-profiles` Group 8: wrap before OpponentWrapper.
+            if reward_profile_factory is not None:
+                base_env = reward_profile_factory(base_env)
             wrapped = OpponentWrapper(base_env, opponent_fn=pool_opponent_fn)
             # BO3 match wrapper between OpponentWrapper and deck-pool wrappers.
             if cfg.match_format == "bo3":
@@ -1977,6 +2439,7 @@ def train(total_timesteps: int = 100_000,
             dna_digivolve_bonus=cfg.dna_digivolve_bonus,
             match_format=cfg.match_format,
             match_env_seed=cfg.eval_seed,
+            reward_profile_factory=reward_profile_factory,
         )
     eval_suite = None
     if cfg.eval_suite:
@@ -2148,6 +2611,15 @@ def _build_argparser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--resume", type=str, default=None,
         help="Resume from a saved checkpoint .zip."
+    )
+    parser.add_argument(
+        "--reward-profiles-override-mismatch", action="store_true",
+        default=False,
+        help=(
+            "Bypass the resume-time reward-profile hash check when the "
+            "current `profiles.yaml` differs from the checkpoint's snapshot. "
+            "Use only when you intend to switch reward shape mid-run."
+        ),
     )
     parser.add_argument(
         "--init-from", type=str, default=None,
@@ -2476,6 +2948,7 @@ def main():
         eval_seed=cfg.eval_seed,
         deck_pool_snapshot_path=cfg.curriculum_pool_out,
         cfg=cfg,
+        reward_profiles_override_mismatch=args.reward_profiles_override_mismatch,
     )
 
 

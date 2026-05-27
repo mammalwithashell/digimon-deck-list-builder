@@ -1413,10 +1413,16 @@ mod tests {
             player: 0,
             card_id: "BT24-008".into(),
             field_index: 0,
+            cost_paid: 3,
+            cost_printed: 4,
+            via_alt_path: None,
         };
         let v = serde_json::to_value(&ev).unwrap();
         assert_eq!(v["type"], "Play");
         assert_eq!(v["card_id"], "BT24-008");
+        assert_eq!(v["cost_paid"], 3);
+        assert_eq!(v["cost_printed"], 4);
+        assert!(v["via_alt_path"].is_null());
 
         let ev = GameEvent::GameOver {
             seq: 22,
