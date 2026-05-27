@@ -47,6 +47,21 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 >
 > Source: `enforce-live-game-action-contracts` (2026-05-24).
 
+> **Additional faithfulness oracle — DCGO replay parity harness (2026-05-26):**
+> A third source of cross-engine validation now exists alongside the
+> Python ↔ Rust comparison: the modded DCGO client records its games as
+> JSONL action streams, and `code/tools/dcgo-replay/` replays them
+> through the Rust engine to assert parity. This catches Rust-engine
+> bugs that Python implementations don't catch (Python may have the
+> same bug, or may not exercise the code path), and surfaces a per-card
+> divergence count over a corpus of bot-vs-bot games. See
+> [DCGO_RECORDING_SCHEMA.md](DCGO_RECORDING_SCHEMA.md) for the
+> recording format, and
+> `openspec/changes/add-dcgo-recording-parity-harness/` for the design.
+> Treat DCGO-surfaced parity failures the same way as Python-surfaced
+> ones: investigate the implicated card, fix the Rust engine or DSL
+> script, and record the fix here when it lands.
+
 ---
 
 ## 1. Core game flow
