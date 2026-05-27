@@ -2395,6 +2395,9 @@ impl Game {
         else {
             return false;
         };
+        // Opaque-aware: materialize before moving to hand so the
+        // resulting hand card has a real identity.
+        self.ensure_security_materialized(player_id, idx);
         let removed = self.player_mut(player_id).security.remove(idx);
         let owner = removed.owner;
         self.player_mut(player_id)
@@ -2421,8 +2424,23 @@ impl Game {
     ) -> Vec<crate::card_source::CardHandle> {
         let mut handles = Vec::new();
         for _ in 0..n {
-            let p = self.player_mut(player_id);
-            let Some(card) = p.deck.pop() else { break };
+            // Opaque-aware: opaque players' reveal-from-top consumes
+            // RevealKind::Effect (peek effects, not draws/security/mill).
+            // For standard players this is a plain `deck.pop()`.
+            let card = match self.take_from_deck_top_for_player(
+                player_id,
+                crate::opaque_deck::RevealKind::Effect,
+            ) {
+                Ok(Some(c)) => c,
+                Ok(None) => break,
+                Err(e) => {
+                    eprintln!(
+                        "[opaque-deck] reveal_top_deck error for player {}: {}",
+                        player_id, e
+                    );
+                    break;
+                }
+            };
             handles.push(card.handle());
             self.revealed_cards.push(card);
         }
@@ -4331,12 +4349,37 @@ impl Game {
                 }
                 player.trash.remove(i)
             }
-            CardSourceRef::DeckTop(p) => self.player_mut(p).deck.pop()?,
+            CardSourceRef::DeckTop(p) => {
+                // Opaque-aware: routes through take_from_deck_top_for_player
+                // so opaque opponents materialize from RevealSource. The
+                // `?` short-circuits on either deck-out (Ok(None)) or
+                // reveal-source error (Err) — both cause the caller to
+                // return None (signaling "couldn't take a card").
+                match self.take_from_deck_top_for_player(
+                    p,
+                    crate::opaque_deck::RevealKind::Effect,
+                ) {
+                    Ok(Some(c)) => c,
+                    Ok(None) => return None,
+                    Err(e) => {
+                        eprintln!(
+                            "[opaque-deck] CardSourceRef::DeckTop take error \
+                             for player {}: {}",
+                            p, e
+                        );
+                        return None;
+                    }
+                }
+            }
             CardSourceRef::Security(p, i) => {
-                let player = self.player_mut(p);
-                if i >= player.security.len() {
+                // Opaque-aware: materialize before removing — this is a
+                // generic "take from this zone" path used by many
+                // effects; downstream routing reads the card's identity.
+                if i >= self.player(p).security.len() {
                     return None;
                 }
+                self.ensure_security_materialized(p, i);
+                let player = self.player_mut(p);
                 let card = player.security.remove(i);
                 if player.face_up_security.remove(&card.card_index) {
                     face_up_security = Some(p);
@@ -4465,10 +4508,15 @@ impl Game {
                 return false;
             }
 
-            let player = self.player_mut(defender);
-            if index >= player.security.len() {
+            // Opaque-aware: materialize before placing-as-bottom-source.
+            // The card becomes a digivolution stack source; its real
+            // identity matters for source-iteration effects and Mind Link
+            // gating.
+            if index >= self.player(defender).security.len() {
                 return false;
             }
+            self.ensure_security_materialized(defender, index);
+            let player = self.player_mut(defender);
             let card = player.security.remove(index);
             player.face_up_security.remove(&card.card_index);
             let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
@@ -4650,6 +4698,10 @@ impl Game {
                 .iter()
                 .position(|c| c.handle() == handle)
             {
+                // Opaque-aware: handle-based generic-zone remove. The
+                // caller routes the returned card somewhere observable;
+                // materialize so it has real identity.
+                self.ensure_security_materialized(pid as PlayerId, pos);
                 return Some(self.players[pid].security.remove(pos));
             }
             // --- battle_area permanent stacks ---
@@ -6183,10 +6235,13 @@ impl Game {
                 // security. Take the source and route it.
                 let taken = match source {
                     crate::enums::CardSourceRef::Security(defender, index) => {
-                        let player = self.player_mut(defender);
-                        if index >= player.security.len() {
+                        // Opaque-aware: materialize before the redirect-
+                        // to-trash so the observer sees real card data.
+                        if index >= self.player(defender).security.len() {
                             return false;
                         }
+                        self.ensure_security_materialized(defender, index);
+                        let player = self.player_mut(defender);
                         let card = player.security.remove(index);
                         player.face_up_security.remove(&card.card_index);
                         let cause = crate::trigger_context::EventCause::from(
@@ -6256,10 +6311,12 @@ impl Game {
         // Take the card out of its source zone. Mirror the pattern from
         // place_as_bottom_source.
         if let crate::enums::CardSourceRef::Security(defender, index) = source {
-            let player = self.player_mut(defender);
-            if index >= player.security.len() {
+            // Opaque-aware: materialize before moving to another zone.
+            if index >= self.player(defender).security.len() {
                 return false;
             }
+            self.ensure_security_materialized(defender, index);
+            let player = self.player_mut(defender);
             let card = player.security.remove(index);
             player.face_up_security.remove(&card.card_index);
             let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));

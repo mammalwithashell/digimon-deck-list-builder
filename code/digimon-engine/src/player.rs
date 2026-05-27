@@ -6,6 +6,7 @@ use rand::Rng;
 use crate::card_data::CardData;
 use crate::card_source::CardSource;
 use crate::enums::PlayerId;
+use crate::opaque_deck::OpaqueDeckState;
 use crate::permanent::Permanent;
 use crate::rules::Rules;
 
@@ -47,6 +48,19 @@ pub struct Player {
     pub commander_zone: Option<CardSource>,
     pub commander_tax: u16,
     pub is_eliminated: bool,
+
+    /// `Some` when this player is in **opaque-deck mode** — the engine
+    /// does not know this player's deck order, only its composition.
+    /// Draws and security pops consult `Game::reveal_source` instead of
+    /// reading from `self.deck`. The `deck` field remains empty in
+    /// opaque mode (kept as `Vec<CardSource>` only to avoid widening
+    /// the type; `deck.is_empty()` does NOT imply deck-out when
+    /// `opaque_deck_state.is_some()` — callers must check
+    /// `opaque_deck_state` first).
+    ///
+    /// See `crate::opaque_deck` for the contract. Set only by
+    /// `Game::new_with_opaque_opponent`.
+    pub opaque_deck_state: Option<OpaqueDeckState>,
 }
 
 impl Player {
@@ -67,7 +81,14 @@ impl Player {
             commander_zone: None,
             commander_tax: 0,
             is_eliminated: false,
+            opaque_deck_state: None,
         }
+    }
+
+    /// True when this player's deck composition is known but its order is
+    /// not — draws must consult `Game::reveal_source` rather than `self.deck`.
+    pub fn is_opaque_deck(&self) -> bool {
+        self.opaque_deck_state.is_some()
     }
 
     /// Draw one card from deck to hand. Returns false if deck is empty (deck-out).

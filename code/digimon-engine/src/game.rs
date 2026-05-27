@@ -640,6 +640,25 @@ pub struct Game {
     until_condition_last_cycle_evaluations: usize,
     until_condition_total_evaluations: u64,
     until_condition_reevaluation_cycles: u64,
+
+    /// Supplier of opaque-deck reveals. `Some` when at least one player
+    /// has `opaque_deck_state == Some(_)` (set by
+    /// `Game::new_with_opaque_opponent`). The engine calls
+    /// `RevealSource::next_reveal` whenever it would draw, mill, or pop
+    /// security from an opaque player's pile.
+    ///
+    /// See `crate::opaque_deck` for the trait contract. `Game` is not
+    /// `Clone`, so the non-`Clone` `Box<dyn RevealSource>` doesn't impose
+    /// any constraint on snapshotting.
+    pub reveal_source: Option<Box<dyn crate::opaque_deck::RevealSource>>,
+
+    /// Cached card-id → data-index lookup, materialized once at
+    /// construction time. Used by opaque-mode draws to turn revealed
+    /// card-id strings into `CardSource` instances. Empty for non-opaque
+    /// games (the standard constructor uses an in-scope `data_index_map`
+    /// directly without caching it on the Game).
+    pub(crate) opaque_data_index_map:
+        Option<std::collections::HashMap<String, usize>>,
 }
 
 impl Game {
@@ -869,6 +888,8 @@ impl Game {
             until_condition_last_cycle_evaluations: 0,
             until_condition_total_evaluations: 0,
             until_condition_reevaluation_cycles: 0,
+            reveal_source: None,
+            opaque_data_index_map: None,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -879,6 +900,493 @@ impl Game {
         }
 
         Ok(game)
+    }
+
+    /// Create a new game where one player's deck composition is known but
+    /// its order is hidden — the engine consults `reveal_source` whenever
+    /// it would draw from that player's pile. Used by the DCGO replay
+    /// harness when replaying PvP recordings (where the local client only
+    /// observes the opponent's reveals incrementally).
+    ///
+    /// ## Arguments
+    /// - `my_player_id`: which side (0 or 1) gets the standard ordered
+    ///   `my_deck`. The other player becomes opaque.
+    /// - `my_deck`: ordered deck for the calling player (drawn from
+    ///   index 0 first — standard `Game::new` semantics).
+    /// - `opp_decklist`: unordered card-ID multiset for the opaque
+    ///   opponent. Must equal the standard deck size for `rules` and
+    ///   contain only card IDs known to `all_card_data`.
+    /// - `reveal_source`: supplier the engine calls whenever it needs a
+    ///   card from the opaque pile. The replay harness preloads a
+    ///   `RevealQueue` with reveals observed from the recording.
+    ///
+    /// ## Integration scope (Phase 1)
+    ///
+    /// This constructor wires opaque draws into:
+    /// - Initial-hand setup (the `draw_many` loop at end of `new`).
+    /// - Mulligan redraws (via the same `draw_many` path post-redraw).
+    /// - Security setup (`setup_security`).
+    ///
+    /// Mid-game draw paths (per-turn draw, effect-driven mill/draw/peek)
+    /// are NOT yet integrated. Games that trigger those paths against the
+    /// opaque player will panic with a clear "opaque mode + this draw
+    /// path not yet supported" message rather than silently consume from
+    /// the empty `deck` Vec. See task 6.6 follow-up.
+    pub fn new_with_opaque_opponent(
+        my_player_id: PlayerId,
+        my_deck: Vec<String>,
+        opp_decklist: Vec<String>,
+        reveal_source: Box<dyn crate::opaque_deck::RevealSource>,
+        all_card_data: &std::collections::HashMap<String, CardData>,
+        rules: Rules,
+        seed: Option<u64>,
+    ) -> Result<Self, String> {
+        // Standard player count is 2; opaque mode is undefined for >2 player
+        // formats and explicitly rejected here.
+        if rules.player_count != 2 {
+            return Err(format!(
+                "opaque-opponent-deck mode requires rules.player_count == 2, got {}",
+                rules.player_count
+            ));
+        }
+        if my_player_id >= 2 {
+            return Err(format!(
+                "my_player_id must be 0 or 1, got {}",
+                my_player_id
+            ));
+        }
+
+        // Validate the opponent decklist size matches what the rules expect.
+        // (Game::new fails downstream if a deck is malformed; we surface
+        // this earlier with a clearer message for the opaque path.)
+        let expected_deck_size = my_deck.len();
+        if opp_decklist.len() != expected_deck_size {
+            return Err(format!(
+                "opponent decklist size {} differs from calling-player deck size {}; \
+                 both must equal the rules-mandated deck size",
+                opp_decklist.len(),
+                expected_deck_size
+            ));
+        }
+        // Validate every card ID in the opponent decklist is known to the
+        // card pool. (Game::new validates this for the in-order deck path
+        // implicitly via the data_index_map lookup; we duplicate the check
+        // here so opaque-mode failures surface at construction time rather
+        // than at the first reveal.)
+        for card_id in &opp_decklist {
+            if !all_card_data.contains_key(card_id) {
+                return Err(format!(
+                    "opponent decklist contains unknown card ID `{}`",
+                    card_id
+                ));
+            }
+        }
+
+        // For Game::new's standpoint, both decks must be provided. We
+        // supply the opaque opponent a deterministic placeholder deck of
+        // their declared composition — Game::new will populate
+        // `player.deck` and shuffle it, then we immediately clear it
+        // below and install the opaque state. This is the simplest
+        // integration that reuses Game::new's effect-registry setup
+        // and avoids forking the constructor.
+        let placeholder_opp_deck = opp_decklist.clone();
+        let decks_for_constructor = if my_player_id == 0 {
+            vec![my_deck.clone(), placeholder_opp_deck]
+        } else {
+            vec![placeholder_opp_deck, my_deck.clone()]
+        };
+
+        let mut game = Self::new(&decks_for_constructor, all_card_data, rules, seed)?;
+
+        // Replace the opponent's ordered deck with opaque state, and drop
+        // the placeholder hand draws — opaque mode redraws via the
+        // reveal source below.
+        let opp_id = if my_player_id == 0 { 1u8 } else { 0u8 };
+        let opp_idx = opp_id as usize;
+
+        // Clear out the standard-path setup the opponent just received.
+        // We're about to redraw their starting hand from the reveal source.
+        // Also dump their digitama deck to be re-populated — wait, actually
+        // digitama is dealt separately and is part of the decklist already
+        // (4-5 DigiEggs interleaved). For Phase 1 we preserve the digitama
+        // deck as-is (it's already shuffled and held in
+        // `player.digitama_deck`) — opaque mode for digitama isn't in scope.
+        let starting_hand = game.rules.starting_hand;
+        game.players[opp_idx].hand.clear();
+        game.players[opp_idx].deck.clear();
+
+        // Cache the card-id → data_index lookup so opaque-mode reveals can
+        // materialize CardSources.
+        let mut data_index_map = std::collections::HashMap::new();
+        for (i, card) in game.card_data.iter().enumerate() {
+            data_index_map.insert(card.card_id.clone(), i);
+        }
+        game.opaque_data_index_map = Some(data_index_map);
+
+        // Install the opaque deck state. Note: the digitama cards have
+        // already been pulled out of the decklist by Game::new's per-card
+        // routing (card_kind == DigiEgg goes to digitama_deck, others go
+        // to deck). The opaque-deck multiset should reflect ONLY the
+        // non-digitama portion to stay consistent.
+        let non_digitama: Vec<String> = opp_decklist
+            .iter()
+            .filter(|id| {
+                let data = match all_card_data.get(*id) {
+                    Some(d) => d,
+                    None => return false, // already validated above; unreachable
+                };
+                data.card_kind != crate::enums::CardKind::DigiEgg
+            })
+            .cloned()
+            .collect();
+        game.players[opp_idx].opaque_deck_state =
+            Some(crate::opaque_deck::OpaqueDeckState::from_decklist(&non_digitama));
+
+        game.reveal_source = Some(reveal_source);
+
+        // Redraw the opaque opponent's starting hand from the reveal
+        // source. This is the first place real reveals get consumed.
+        for _ in 0..starting_hand {
+            game.draw_one_for_player(opp_id)?;
+        }
+
+        Ok(game)
+    }
+
+    /// Draw one card for `pid`. Branches on opaque mode: when
+    /// `player.opaque_deck_state` is `Some`, consumes from the reveal
+    /// source; otherwise pops from the ordered deck.
+    ///
+    /// Returns `Ok(true)` on successful draw, `Ok(false)` on deck-out
+    /// (no cards remaining — either Vec is empty or opaque multiset is
+    /// zero), or `Err(message)` for a reveal-source error.
+    ///
+    /// This is the single chokepoint setup-time draws use. Effect-driven
+    /// draws still go through `Player::draw` directly — when one of those
+    /// fires for an opaque player it will see an empty `deck` Vec and
+    /// return false, which the engine treats as deck-out. That's the
+    /// "panic with a clear message" deferred until task 6.6 follow-up;
+    /// for now it manifests as the engine declaring deck-out, which is
+    /// at least an obvious symptom.
+    pub fn draw_one_for_player(&mut self, pid: PlayerId) -> Result<bool, String> {
+        if (pid as usize) >= self.players.len() {
+            return Err(format!("invalid player id {}", pid));
+        }
+        if self.players[pid as usize].opaque_deck_state.is_none() {
+            // Standard path.
+            return Ok(self.players[pid as usize].draw());
+        }
+        self.reveal_into_hand(pid, crate::opaque_deck::RevealKind::Draw)
+    }
+
+    /// Internal: request one reveal for `pid` and append the materialized
+    /// CardSource to that player's hand. Used by `draw_one_for_player`
+    /// in opaque mode.
+    fn reveal_into_hand(
+        &mut self,
+        pid: PlayerId,
+        kind: crate::opaque_deck::RevealKind,
+    ) -> Result<bool, String> {
+        let card = self.materialize_reveal(pid, kind)?;
+        self.players[pid as usize].hand.push(card);
+        Ok(true)
+    }
+
+    /// General-purpose "take one card from the top of `pid`'s deck" that
+    /// branches on opaque mode. The caller decides which zone to push the
+    /// returned CardSource into (trash for mill, revealed-list for peek,
+    /// etc.) — this helper does NOT route to hand.
+    ///
+    /// Returns `Ok(Some(card))` on success, `Ok(None)` on deck-out (the
+    /// standard-mode Vec is empty, or the opaque multiset is depleted —
+    /// the latter currently surfaces as Err but may become Ok(None) once
+    /// the engine has a typed deck-out vs reveal-error split).
+    ///
+    /// Used by effect-driven draws/mills/peeks that consume from the deck
+    /// top but don't go through the hand. Each call site picks the right
+    /// `kind` — `Mill` for trash-from-top, `Effect` for peek-and-reveal,
+    /// `Draw` for "draw to hand" semantics (though `draw_one_for_player`
+    /// is the convenience wrapper for that case).
+    pub fn take_from_deck_top_for_player(
+        &mut self,
+        pid: PlayerId,
+        kind: crate::opaque_deck::RevealKind,
+    ) -> Result<Option<CardSource>, String> {
+        if (pid as usize) >= self.players.len() {
+            return Err(format!("invalid player id {}", pid));
+        }
+        if self.players[pid as usize].opaque_deck_state.is_none() {
+            // Standard path — just pop from the ordered deck Vec.
+            return Ok(self.players[pid as usize].deck.pop());
+        }
+        // Opaque path — materialize from reveal source.
+        let card = self.materialize_reveal(pid, kind)?;
+        Ok(Some(card))
+    }
+
+    /// Internal: request one reveal for `pid` and materialize a
+    /// `CardSource`, without inserting it into any zone. The caller
+    /// chooses which zone to push to (hand for draw, security for
+    /// security-setup, trash for mill, etc.).
+    fn materialize_reveal(
+        &mut self,
+        pid: PlayerId,
+        kind: crate::opaque_deck::RevealKind,
+    ) -> Result<CardSource, String> {
+        let card_id = {
+            let source = self
+                .reveal_source
+                .as_mut()
+                .ok_or_else(|| "opaque mode but no reveal_source on Game".to_string())?;
+            match source.next_reveal(kind) {
+                Ok(c) => c,
+                Err(e) => return Err(e.to_string()),
+            }
+        };
+
+        // Consume from the player's multiset.
+        let state = self.players[pid as usize]
+            .opaque_deck_state
+            .as_mut()
+            .expect("caller verified opaque mode");
+        if let Err(e) = state.consume(&card_id) {
+            return Err(e.to_string());
+        }
+
+        // Materialize a CardSource from the card_id.
+        let data_idx = self
+            .opaque_data_index_map
+            .as_ref()
+            .and_then(|m| m.get(&card_id))
+            .copied()
+            .ok_or_else(|| {
+                format!(
+                    "opaque reveal returned card_id `{}` but it's not in the data index map",
+                    card_id
+                )
+            })?;
+        let card_index = self.next_card_index;
+        self.next_card_index += 1;
+        Ok(CardSource::new(data_idx, pid, card_index))
+    }
+
+    /// Set up `count` security cards for `pid`, branching on opaque mode.
+    /// In standard mode, defers to `Player::setup_security`. In opaque
+    /// mode, pushes `count` **placeholder** CardSources — their identities
+    /// are materialized **lazily** when SecurityCheck flips them. This
+    /// matches DCGO's PvP information model: the local client doesn't
+    /// know the opponent's security cards' identities at setup time, only
+    /// when they're flipped during gameplay.
+    ///
+    /// The opaque pile's multiset is also debited by `count` here, since
+    /// these N cards are physically in the security stack (just hidden).
+    /// When the placeholder is later materialized via
+    /// [`Self::materialize_opaque_security_placeholder`], the multiset
+    /// has already been debited and no further change happens — the
+    /// materialization just resolves identity.
+    pub fn setup_security_for_player(
+        &mut self,
+        pid: PlayerId,
+        count: u8,
+    ) -> Result<(), String> {
+        if (pid as usize) >= self.players.len() {
+            return Err(format!("invalid player id {}", pid));
+        }
+        if self.players[pid as usize].opaque_deck_state.is_none() {
+            // Standard path.
+            self.players[pid as usize].setup_security(count);
+            return Ok(());
+        }
+        // Opaque path: push placeholders, debit the multiset for the
+        // count (the cards exist in security; we just don't know which).
+        // The multiset is debited by `count` total via repeated
+        // pop-from-multiset-without-supplier — but we don't actually
+        // know WHICH cards moved to security. The honest accounting:
+        // decrement `total_remaining` by `count`, leave per-card counts
+        // alone. When a placeholder is later materialized with a
+        // specific card_id, that card's multiset count gets decremented
+        // at that point. This double-counts slightly: total_remaining
+        // is decremented at setup, then again at flip-materialization.
+        // We compensate by NOT decrementing total in
+        // materialize_opaque_security_placeholder.
+        let state = self.players[pid as usize]
+            .opaque_deck_state
+            .as_mut()
+            .expect("checked above");
+        // Decrement total_remaining via a public helper to avoid
+        // bypassing accounting. (OpaqueDeckState exposes restore()
+        // but not direct count manipulation — add a "debit_without_id"
+        // method or thread accordingly.) For now we use the existing
+        // multiset structure: we can't decrement per-card without
+        // knowing which cards, so instead we track a separate
+        // "placeholder count" on the state that subtracts from the
+        // effective total. See OpaqueDeckState::reserve_placeholders.
+        state.reserve_placeholders(count as usize);
+
+        for _ in 0..count {
+            let card_index = self.next_card_index;
+            self.next_card_index += 1;
+            self.players[pid as usize].security.push(
+                CardSource::new_opaque_security_placeholder(pid, card_index),
+            );
+        }
+        Ok(())
+    }
+
+    /// Convenience wrapper around [`materialize_opaque_security_placeholder`]
+    /// for effect-driven security access sites — the common pattern of
+    /// "I'm about to remove security[idx]; if it's an opaque placeholder,
+    /// resolve its identity first so subsequent reads of its fields
+    /// (card_id, color, type, replacement-effect lookups, observer
+    /// firings) see real data instead of garbage `data_index = 0`."
+    ///
+    /// Silently no-ops on:
+    ///   - invalid pid / idx (caller is about to surface that anyway)
+    ///   - non-opaque player (standard-mode security has no placeholders)
+    ///   - already-materialized placeholder (idempotent inner helper)
+    ///
+    /// Errors from the underlying materialization are logged-and-ignored
+    /// (the calling effect proceeds with garbage data, replay surfaces
+    /// the divergence). Lifting these to typed errors would require
+    /// fallible signatures on every effect-driven security path — out
+    /// of scope for the Phase-1-lazy mechanism.
+    pub fn ensure_security_materialized(&mut self, pid: PlayerId, security_idx: usize) {
+        if (pid as usize) >= self.players.len() {
+            return;
+        }
+        let needs = self.players[pid as usize]
+            .security
+            .get(security_idx)
+            .map(|c| c.is_opaque_placeholder)
+            .unwrap_or(false);
+        if !needs {
+            return;
+        }
+        if let Err(e) = self.materialize_opaque_security_placeholder(pid, security_idx) {
+            eprintln!(
+                "[opaque-deck] effect-driven security materialize error for player {} \
+                 idx {}: {}",
+                pid, security_idx, e
+            );
+        }
+    }
+
+    /// Materialize a placeholder security card at position `security_idx`
+    /// by consuming a `RevealKind::Security` reveal from the source. The
+    /// placeholder's `card_index` is preserved (face_up_security tracking
+    /// stays consistent); all other fields are overwritten.
+    ///
+    /// No-op if the position doesn't hold a placeholder (already
+    /// materialized, or in standard-mode game).
+    ///
+    /// Called by the engine's security-pop path BEFORE reading the
+    /// security card's data: when about to flip security[0], if it's a
+    /// placeholder, materialize first, then proceed with normal flip
+    /// semantics.
+    pub fn materialize_opaque_security_placeholder(
+        &mut self,
+        pid: PlayerId,
+        security_idx: usize,
+    ) -> Result<bool, String> {
+        if (pid as usize) >= self.players.len() {
+            return Err(format!("invalid player id {}", pid));
+        }
+        if self.players[pid as usize].opaque_deck_state.is_none() {
+            return Ok(false);
+        }
+        let needs_materialization = self.players[pid as usize]
+            .security
+            .get(security_idx)
+            .map(|c| c.is_opaque_placeholder)
+            .unwrap_or(false);
+        if !needs_materialization {
+            return Ok(false);
+        }
+
+        // Pull the next Security reveal from the source.
+        let card_id = {
+            let source = self
+                .reveal_source
+                .as_mut()
+                .ok_or_else(|| "opaque security flip but no reveal_source on Game".to_string())?;
+            source
+                .next_reveal(crate::opaque_deck::RevealKind::Security)
+                .map_err(|e| e.to_string())?
+        };
+        // Consume from the per-card multiset. Note: total_remaining was
+        // already debited at setup_security_for_player via
+        // reserve_placeholders, so this consume call only decrements
+        // the per-card slot, not total_remaining.
+        {
+            let state = self.players[pid as usize]
+                .opaque_deck_state
+                .as_mut()
+                .expect("checked above");
+            state.consume_per_card_only(&card_id).map_err(|e| e.to_string())?;
+        }
+        // Look up data_index and overwrite the placeholder's fields,
+        // preserving card_index for face_up_security continuity.
+        let data_idx = self
+            .opaque_data_index_map
+            .as_ref()
+            .and_then(|m| m.get(&card_id))
+            .copied()
+            .ok_or_else(|| {
+                format!(
+                    "security reveal returned card_id `{}` but it's not in the data index map",
+                    card_id
+                )
+            })?;
+        let slot = &mut self.players[pid as usize].security[security_idx];
+        slot.data_index = data_idx;
+        slot.is_opaque_placeholder = false;
+        // face_down stays true (security is still face-down post-materialization
+        // until it's actually flipped to face-up via face_up_security set
+        // mutation; the engine's existing flip path handles that).
+        Ok(true)
+    }
+
+    /// Mulligan-path helper: fold the opaque opponent's hand back into
+    /// the opaque pile (restoring multiset counts), clear the hand, and
+    /// redraw `starting_hand` cards via the reveal source.
+    ///
+    /// This is the opaque counterpart to the standard `redraw_hand`'s
+    /// "drain hand into deck, shuffle, draw N" sequence — the conceptual
+    /// equivalent without an ordered deck to shuffle. Reveals fold into
+    /// hand in arrival order; consume errors bubble up. Used only when
+    /// `players[pid].opaque_deck_state.is_some()`.
+    fn redraw_hand_opaque(&mut self, pid: PlayerId) -> Result<(), String> {
+        let starting_hand = self.rules.starting_hand;
+
+        // Snapshot hand card IDs before mutating (the borrow checker
+        // forbids holding `&card_data` + `&mut players` together).
+        let cards_to_restore: Vec<String> = {
+            let card_data = &self.card_data;
+            self.players[pid as usize]
+                .hand
+                .iter()
+                .map(|c| c.card_id(card_data).to_string())
+                .collect()
+        };
+
+        // Restore each hand card back into the opaque multiset, then
+        // clear the hand.
+        {
+            let state = self.players[pid as usize]
+                .opaque_deck_state
+                .as_mut()
+                .expect("caller verified opaque mode");
+            for card_id in &cards_to_restore {
+                state.restore(card_id);
+            }
+        }
+        self.players[pid as usize].hand.clear();
+
+        // Re-draw the starting hand from the reveal source.
+        for _ in 0..starting_hand {
+            self.draw_one_for_player(pid)?;
+        }
+        Ok(())
     }
 
     /// Get the current turn player's ID.
@@ -981,7 +1489,31 @@ impl Game {
     }
 
     /// Shuffle the player's hand back into the deck and redraw `starting_hand`.
+    ///
+    /// In opaque mode (when `player.opaque_deck_state.is_some()`), the
+    /// hand is restored into the opaque multiset and the redraw consumes
+    /// `starting_hand` reveals from the supplier rather than popping from
+    /// an ordered deck. See [`Self::redraw_hand_opaque`].
     fn redraw_hand(&mut self, player: PlayerId) {
+        if self.players[player as usize].opaque_deck_state.is_some() {
+            // Opaque mode: defer to the opaque-aware helper. Errors are
+            // logged but not propagated — the original `redraw_hand`
+            // signature is `-> ()` and lifting that to `Result` is a
+            // broader API change. The error case here means the
+            // reveal source is misaligned with the engine state, which
+            // is a recording-corruption symptom the replay harness
+            // will surface as a downstream parity failure.
+            if let Err(e) = self.redraw_hand_opaque(player) {
+                // Soft-fail: log + leave state best-effort. The hand
+                // will be partially populated; subsequent draws will
+                // continue to consume from the source.
+                eprintln!(
+                    "[opaque-deck] redraw_hand error for player {}: {}",
+                    player, e
+                );
+            }
+            return;
+        }
         let starting_hand = self.rules.starting_hand;
         let p = self.player_mut(player);
         p.deck.extend(p.hand.drain(..));
@@ -994,10 +1526,23 @@ impl Game {
     }
 
     /// Finalize mulligan: lay security for every player and begin turn 1.
+    ///
+    /// Security setup is opaque-aware: opaque players' security cards
+    /// are pulled from the reveal source (tagged `RevealKind::Security`),
+    /// not from an ordered `deck` Vec. Errors during opaque security
+    /// reveal are logged but not propagated for the same reason
+    /// `redraw_hand` does the same — the upstream API doesn't yet
+    /// surface a fallible `finalize_mulligan` signature.
     fn finalize_mulligan(&mut self) {
         let security_count = self.rules.security_count;
         for i in 0..self.rules.player_count as usize {
-            self.players[i].setup_security(security_count);
+            let pid = i as PlayerId;
+            if let Err(e) = self.setup_security_for_player(pid, security_count) {
+                eprintln!(
+                    "[opaque-deck] security setup error for player {}: {}",
+                    pid, e
+                );
+            }
         }
         self.turn_count = 1;
         self.memory = 0;
@@ -2139,7 +2684,18 @@ impl Game {
         };
 
         if grant_digivolve_bonus {
-            self.player_mut(hand_owner).draw();
+            // Opaque-aware: routes through draw_one_for_player so opaque
+            // opponents pull from their RevealSource rather than from the
+            // (empty in opaque mode) deck Vec. Errors are logged-and-
+            // ignored to preserve the original `-> ()` signature of this
+            // function; the symptom of a misaligned reveal source is a
+            // downstream parity divergence the replay harness will catch.
+            if let Err(e) = self.draw_one_for_player(hand_owner) {
+                eprintln!(
+                    "[opaque-deck] digivolve bonus draw error for player {}: {}",
+                    hand_owner, e
+                );
+            }
         }
 
         self.enqueue_triggered(

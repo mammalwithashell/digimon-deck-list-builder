@@ -8,5 +8,6 @@ members = [
     "code/src-tauri",
     "code/tools/dsl-schema-export",
     "code/tools/dsl-lint",
+    "code/tools/action-space-export",
 ]
 resolver = "2"

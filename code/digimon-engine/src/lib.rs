@@ -33,6 +33,7 @@ pub mod live_game;
 pub mod logger;
 pub mod modifiers;
 pub mod observation;
+pub mod opaque_deck;
 pub mod option_lifecycle;
 pub mod permanent;
 pub mod phases;

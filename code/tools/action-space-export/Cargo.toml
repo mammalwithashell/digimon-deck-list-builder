@@ -1,0 +1,13 @@
+[package]
+name = "action-space-export"
+version = "0.1.0"
+edition = "2021"
+description = "Codegen exporter for the digimon-engine action space. Emits a JSON descriptor consumed by the DCGO recording mod's ActionSpace.cs emitter (and any future cross-language consumer of action IDs)."
+
+[dependencies]
+# Imports the action space constants & encode/decode helpers directly from
+# the source-of-truth crate. Uses the engine's default features (the engine
+# crate has some non-feature-gated `pub mod dsl_cards;` references that
+# require `dsl-yaml-loader`; disabling defaults breaks the build).
+digimon-engine = { path = "../../digimon-engine" }
+serde_json = "1"

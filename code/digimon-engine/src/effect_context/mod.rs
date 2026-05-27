@@ -2062,7 +2062,24 @@ impl<'a> EffectContext<'a> {
             }
         }
 
-        let drawn = self.game.player_mut(player).draw_many(count);
+        // Opaque-aware: replace draw_many with N calls to
+        // draw_one_for_player so opaque opponents pull from RevealSource.
+        // Errors fall through as "draw stopped" — same semantic as the
+        // standard-mode draw_many returning fewer cards than requested.
+        let mut drawn: u8 = 0;
+        for _ in 0..count {
+            match self.game.draw_one_for_player(player) {
+                Ok(true) => drawn += 1,
+                Ok(false) => break, // deck-out
+                Err(e) => {
+                    eprintln!(
+                        "[opaque-deck] effect-driven draw error for player {}: {}",
+                        player, e
+                    );
+                    break;
+                }
+            }
+        }
         if drawn > 0 {
             self.game.mark_until_condition_dirty();
             self.game.reevaluate_until_condition_modifiers_if_dirty();
@@ -2070,17 +2087,28 @@ impl<'a> EffectContext<'a> {
         drawn
     }
 
-    /// Trash the top N cards of a player's deck.
+    /// Trash the top N cards of a player's deck (mill effect).
     pub fn trash_from_top(&mut self, player: PlayerId, count: u8) -> u8 {
-        let p = self.game.player_mut(player);
         let mut trashed = 0;
         for _ in 0..count {
-            if let Some(card) = p.deck.pop() {
-                p.trash.push(card);
-                trashed += 1;
-            } else {
-                break;
-            }
+            // Opaque-aware: opaque opponents materialize from RevealSource
+            // tagged Mill; standard players pop from their ordered deck.
+            let card = match self.game.take_from_deck_top_for_player(
+                player,
+                crate::opaque_deck::RevealKind::Mill,
+            ) {
+                Ok(Some(c)) => c,
+                Ok(None) => break,
+                Err(e) => {
+                    eprintln!(
+                        "[opaque-deck] trash_from_top error for player {}: {}",
+                        player, e
+                    );
+                    break;
+                }
+            };
+            self.game.player_mut(player).trash.push(card);
+            trashed += 1;
         }
         trashed
     }
@@ -2094,6 +2122,13 @@ impl<'a> EffectContext<'a> {
         use crate::enums::{EffectTiming, Zone};
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
 
+        // Opaque-aware: if top of security is a placeholder, materialize
+        // before the replacement window so the WhenWouldBeTrashed lookup
+        // sees real card identity (replacement effects are often keyed
+        // on color/type).
+        if let Some(top_idx) = self.game.player(player).security.len().checked_sub(1) {
+            self.game.ensure_security_materialized(player, top_idx);
+        }
         // Snapshot the top-of-security card handle before any state change.
         let top_handle = match self.game.player(player).security.last() {
             Some(c) => c.handle(),
@@ -2148,6 +2183,12 @@ impl<'a> EffectContext<'a> {
         use crate::enums::{EffectTiming, Zone};
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
 
+        // Opaque-aware: materialize the bottom security card if it's a
+        // placeholder, so subsequent WhenWouldBeTrashed lookups and
+        // observer firings see real card identity.
+        if !self.game.player(player).security.is_empty() {
+            self.game.ensure_security_materialized(player, 0);
+        }
         // Snapshot the bottom-of-security card handle before any state change.
         let bottom_handle = match self.game.player(player).security.first() {
             Some(c) => c.handle(),
@@ -2210,15 +2251,21 @@ impl<'a> EffectContext<'a> {
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
 
         // The handle must currently be in `player`'s security stack.
-        if !self
+        // Opaque-aware: placeholder card_index values are preserved
+        // across materialization, so the handle iteration finds the
+        // right slot whether or not it's still a placeholder. We then
+        // materialize at that position so identity-dependent effects
+        // (replacement lookups, observer firings) see real card data.
+        let Some(initial_pos) = self
             .game
             .player(player)
             .security
             .iter()
-            .any(|c| c.handle() == handle)
-        {
+            .position(|c| c.handle() == handle)
+        else {
             return false;
-        }
+        };
+        self.game.ensure_security_materialized(player, initial_pos);
         let cause = self.game.infer_effect_cause(player);
         let subject = ReplacementSubject::Card(handle, Zone::Security);
         let outcome = self.game.try_replace(
@@ -2730,6 +2777,10 @@ impl<'a> EffectContext<'a> {
         else {
             return false;
         };
+        // Opaque-aware: materialize before moving to hand — the card's
+        // identity must be real to land in hand sensibly (subsequent
+        // hand reads, plays, etc. expect a real data_index).
+        self.game.ensure_security_materialized(player, idx);
         let removed = self.game.player_mut(player).security.remove(idx);
         let owner = removed.owner;
         self.game
@@ -3216,6 +3267,12 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         security_index: usize,
     ) -> Option<PermanentHandle> {
+        // Opaque-aware: materialize before play — a played card must
+        // have a real data_index for cost/effect resolution to work.
+        if security_index >= self.game.player(player).security.len() {
+            return None;
+        }
+        self.game.ensure_security_materialized(player, security_index);
         let card = {
             let player_state = self.game.player_mut(player);
             if security_index >= player_state.security.len() {
@@ -4011,10 +4068,23 @@ impl<'a> EffectContext<'a> {
     /// Used by: `<Training>` keyword auto-install (Phase F Task 6).
     pub fn training_place_deck_top_under_self_face_down(&mut self, perm: PermanentHandle) {
         // Pop the controller's deck top. Empty-deck case is a silent no-op.
+        // Opaque-aware: opaque opponents materialize from RevealSource
+        // tagged Effect (Training peeks at top and re-routes — not draw/mill/security).
         let owner = perm.player;
-        let mut card = match self.game.player_mut(owner).deck.pop() {
-            Some(c) => c,
-            None => return,
+        let mut card = match self.game.take_from_deck_top_for_player(
+            owner,
+            crate::opaque_deck::RevealKind::Effect,
+        ) {
+            Ok(Some(c)) => c,
+            Ok(None) => return,
+            Err(e) => {
+                eprintln!(
+                    "[opaque-deck] training_place_deck_top_under_self_face_down \
+                     error for player {}: {}",
+                    owner, e
+                );
+                return;
+            }
         };
         // Mark face-down — DCGO `AddDigivolutionCardsBottom(..., isFacedown: true)`.
         card.face_down = true;

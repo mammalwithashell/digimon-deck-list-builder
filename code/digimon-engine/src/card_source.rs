@@ -35,6 +35,18 @@ pub struct CardSource {
     /// "no Tamer source" filter (DCGO `MindLink.cs:25` — face-down Tamer
     /// sources do NOT count). Out of scope for face-up reveal mechanics.
     pub face_down: bool,
+    /// `true` for opaque-deck security placeholders — cards laid into an
+    /// opaque opponent's security stack at setup time whose identities
+    /// are not yet known (they're revealed lazily when flipped via
+    /// SecurityCheck, consuming a `RevealKind::Security` from the
+    /// reveal source). When this is true, `data_index` is meaningless
+    /// (set to 0 as a non-crashing default); `card_index` IS still
+    /// unique per instance so face_up_security membership works.
+    ///
+    /// See `crate::opaque_deck` module docs for the lazy-reveal contract
+    /// and `Game::materialize_opaque_security_placeholder` for the
+    /// materialization helper.
+    pub is_opaque_placeholder: bool,
 }
 
 impl CardSource {
@@ -48,6 +60,7 @@ impl CardSource {
             also_treated_as: Vec::new(),
             reveal_overlay: None,
             face_down: false,
+            is_opaque_placeholder: false,
         }
     }
 
@@ -61,6 +74,29 @@ impl CardSource {
             also_treated_as: Vec::new(),
             reveal_overlay: None,
             face_down: false,
+            is_opaque_placeholder: false,
+        }
+    }
+
+    /// Create an opaque-deck security placeholder — a slot-holder for an
+    /// opaque opponent's security card whose identity is not yet known.
+    /// `data_index` is set to 0 (a defensive default; reading the card's
+    /// data via `card_id()` etc. will return whatever card sits at
+    /// index 0 in the data store, which is not meaningful for a
+    /// placeholder — callers must check `is_opaque_placeholder` first).
+    ///
+    /// `card_index` should be unique per instance (use
+    /// `Game::next_card_index`) so face_up_security tracking still works.
+    pub fn new_opaque_security_placeholder(owner: PlayerId, card_index: u16) -> Self {
+        Self {
+            data_index: 0,
+            owner,
+            card_index,
+            is_token: false,
+            also_treated_as: Vec::new(),
+            reveal_overlay: None,
+            face_down: true, // security cards are face-down by default
+            is_opaque_placeholder: true,
         }
     }
 
