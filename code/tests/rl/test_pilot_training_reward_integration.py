@@ -48,11 +48,13 @@ def test_default_config_factory_is_active_and_points_at_shipped_yaml():
     factory = _build_reward_profile_factory(cfg)
     assert factory.active is True
     assert factory.loader is not None
-    assert factory.loader.path == Path("code/digimon_gym/agents/reward/profiles.yaml")
-    # Shipped YAML defines these profiles.
+    assert factory.loader.profiles_path == Path("code/digimon_gym/agents/reward/profiles.yaml")
+    assert factory.loader.gameplay_path == Path("code/digimon_gym/agents/reward/gameplay.yaml")
+    # Shipped YAML defines these profiles (add-gameplay-reward-config:
+    # `_digivolve_shaped` removed; `gameplay` is the new universal root).
     by_name = factory.loader.profiles.by_name
+    assert "gameplay" in by_name
     assert "_default" in by_name
-    assert "_digivolve_shaped" in by_name
     assert "dna_omnimon_combo_v1" in by_name
 
 
@@ -78,10 +80,14 @@ def test_factory_loader_failure_raises_at_run_start():
 # ============================================================================
 
 
-def test_digivolve_shaping_true_maps_to_digivolve_shaped_override():
+def test_digivolve_shaping_true_is_now_inert():
+    """add-gameplay-reward-config §D9: `digivolve_shaping=True` is silently
+    no-op. The _digivolve_shaped profile is removed; the universal
+    gameplay default already carries digivolve weights, so the flag has
+    nothing to remap to."""
     cfg = TrainingConfig(digivolve_shaping=True)
     factory = _build_reward_profile_factory(cfg)
-    assert factory.effective_override == "_digivolve_shaped"
+    assert factory.effective_override is None
 
 
 def test_explicit_override_supersedes_digivolve_shaping_alias():
@@ -127,7 +133,7 @@ def test_factory_wraps_a_real_env_with_reward_profile_wrapper():
 # ============================================================================
 
 
-def test_sidecar_write_then_read_round_trips_all_four_fields(tmp_path: Path):
+def test_sidecar_write_then_read_round_trips_all_six_fields(tmp_path: Path):
     cfg = TrainingConfig()
     factory = _build_reward_profile_factory(cfg)
     assert factory.active
@@ -136,7 +142,9 @@ def test_sidecar_write_then_read_round_trips_all_four_fields(tmp_path: Path):
     sidecar = write_sidecar(
         tmp_path,
         reward_profiles_path=cfg.reward_profiles_path,
-        reward_profiles_hash=loader.profiles.content_hash,
+        reward_profiles_hash=loader.profiles.profiles_hash,
+        reward_gameplay_path=cfg.reward_gameplay_path,
+        reward_gameplay_hash=loader.profiles.gameplay_hash,
         reward_profile_override=factory.effective_override,
         reward_assignments_snapshot=dict(loader.profiles.assignments),
     )
@@ -146,13 +154,62 @@ def test_sidecar_write_then_read_round_trips_all_four_fields(tmp_path: Path):
     import json
     payload = json.loads(sidecar.read_text(encoding="utf-8"))
     assert set(payload) == {
+        "reward_gameplay_path",
+        "reward_gameplay_hash",
         "reward_profiles_path",
         "reward_profiles_hash",
         "reward_profile_override",
         "reward_assignments_snapshot",
     }
     assert payload["reward_profiles_hash"].startswith("sha256:")
+    assert payload["reward_gameplay_hash"].startswith("sha256:")
     assert payload["reward_assignments_snapshot"]["_default"] == "_default"
+
+
+def test_resume_hash_check_names_gameplay_file_on_mismatch(tmp_path: Path):
+    """Two-file `add-gameplay-reward-config`: when the gameplay-yaml
+    hash drifts, the error MUST name `gameplay.yaml` so operators see
+    which file changed without grepping."""
+    write_sidecar(
+        tmp_path,
+        reward_profiles_path="profiles.yaml",
+        reward_profiles_hash="sha256:profiles_unchanged",
+        reward_gameplay_path="gameplay.yaml",
+        reward_gameplay_hash="sha256:gameplay_old",
+        reward_profile_override=None,
+        reward_assignments_snapshot={"_default": "_default"},
+    )
+    with pytest.raises(RewardProfilesHashMismatchError) as exc:
+        check_resume_hash(
+            tmp_path,
+            "sha256:profiles_unchanged",
+            current_gameplay_hash="sha256:gameplay_NEW",
+        )
+    assert exc.value.file_name == "gameplay.yaml"
+    assert "gameplay.yaml" in str(exc.value)
+    assert "sha256:gameplay_old" in str(exc.value)
+
+
+def test_resume_hash_check_names_profiles_file_on_mismatch(tmp_path: Path):
+    """When only the profiles-yaml hash drifts, the error MUST name
+    `profiles.yaml`."""
+    write_sidecar(
+        tmp_path,
+        reward_profiles_path="profiles.yaml",
+        reward_profiles_hash="sha256:profiles_old",
+        reward_gameplay_path="gameplay.yaml",
+        reward_gameplay_hash="sha256:gameplay_unchanged",
+        reward_profile_override=None,
+        reward_assignments_snapshot={"_default": "_default"},
+    )
+    with pytest.raises(RewardProfilesHashMismatchError) as exc:
+        check_resume_hash(
+            tmp_path,
+            "sha256:profiles_NEW",
+            current_gameplay_hash="sha256:gameplay_unchanged",
+        )
+    assert exc.value.file_name == "profiles.yaml"
+    assert "profiles.yaml" in str(exc.value)
 
 
 def test_resume_hash_check_raises_on_mismatch_without_override(tmp_path: Path):

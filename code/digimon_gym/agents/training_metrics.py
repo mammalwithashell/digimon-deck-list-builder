@@ -109,6 +109,14 @@ class TrainingRunMetadata:
     # pre-feature sidecars load with the correct semantics.
     match_format: str = "single"
 
+    # Universal gameplay reward shape (`add-gameplay-reward-config`).
+    # Persisted from TrainingConfig + the loaded ProfileLoader so
+    # downstream tooling can distinguish paired/baseline runs by
+    # gameplay-yaml content (path + hash) without re-loading the YAML.
+    # Empty defaults preserve backward-compat with pre-feature sidecars.
+    reward_gameplay_path: str = ""
+    reward_gameplay_hash: str = ""
+
     def save(self, path: Path) -> None:
         """Write metadata to a JSON file."""
         path.write_text(json.dumps(asdict(self), indent=2))

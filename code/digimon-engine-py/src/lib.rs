@@ -37,8 +37,8 @@ use serde_json::Value;
 use pyo3::wrap_pyfunction;
 
 use ::digimon_engine::action::space::{
-    ACTION_SPACE_SIZE, BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START, SOURCE_SELECT_END,
-    SOURCE_SELECT_START,
+    ACTION_SPACE_SIZE, BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START, BREEDING_TARGET,
+    SOURCE_SELECT_END, SOURCE_SELECT_START,
 };
 use ::digimon_engine::card_data::CardData;
 use ::digimon_engine::card_registry::{CardRegistry as RustCardRegistry, REGISTRY_CAPACITY};
@@ -710,6 +710,16 @@ impl RustHeadlessGame {
         d.set_item("p2_digivolutions", game.n_digivolutions[1])?;
         d.set_item("p1_dna_digivolutions", game.n_dna_digivolutions[0])?;
         d.set_item("p2_dna_digivolutions", game.n_dna_digivolutions[1])?;
+        // Gameplay-reward-config additions. `turn_count` lets reward
+        // components that key on game progress (e.g. quick_win_bonus,
+        // stall_penalty) read the same counter the engine uses for turn
+        // tracking. `n_digivolve_driven_attacks` powers the
+        // `digivolve_driven_attack` reward signal — 2-element list
+        // indexed by Rust 0-based PlayerId (Python 1/2 mapping is
+        // owner-side).
+        d.set_item("turn_count", game.turn_count)?;
+        let driven = PyList::new_bound(py, [game.n_digivolve_driven_attacks[0], game.n_digivolve_driven_attacks[1]]);
+        d.set_item("n_digivolve_driven_attacks", driven)?;
         Ok(d.into_py(py))
     }
 
@@ -1159,6 +1169,11 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add("SOURCE_SELECT_END", SOURCE_SELECT_END)?;
     m.add("BREEDING_SOURCE_SELECT_START", BREEDING_SOURCE_SELECT_START)?;
     m.add("BREEDING_SOURCE_SELECT_END", BREEDING_SOURCE_SELECT_END)?;
+    // Breeding-area marker constant. Re-exported from the canonical
+    // Rust source so Python consumers (RewardEventBus,
+    // breeding_digivolve component) can identify breeding-area
+    // Digivolved occurrences without redefining the value.
+    m.add("BREEDING_TARGET", BREEDING_TARGET)?;
     m.add("TENSOR_SIZE", TENSOR_SIZE)?;
     Ok(())
 }

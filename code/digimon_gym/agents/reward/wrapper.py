@@ -41,7 +41,7 @@ from typing import Any, Dict, List, MutableMapping, Optional, Tuple
 
 import gymnasium
 
-from .occurrences import StepElapsed, TerminalOutcome
+from .occurrences import StepElapsed  # noqa: F401 — kept as a documented import surface
 from .profile_loader import Profile, ProfileLoader, Profiles
 
 
@@ -193,28 +193,19 @@ class RewardProfileWrapper(gymnasium.Wrapper):
         )
         profile = self._active_profile
 
-        # Legacy-terminal-exclusivity: when set on the profile AND
-        # this step has a TerminalOutcome, suppress every component
-        # except terminal_outcome itself. Replicates the legacy
-        # `DigimonEnv._compute_reward` short-circuit that returns
-        # terminal magnitude WITHOUT applying step penalty or dense
-        # signal on the terminal step. Default-off for custom profiles
-        # — only `_default` and `_digivolve_shaped` opt in.
-        is_terminal_step = profile.legacy_terminal_exclusivity and any(
-            isinstance(ev, TerminalOutcome) for ev in occurrences
-        )
+        # add-gameplay-reward-config: `legacy_terminal_exclusivity`
+        # is REMOVED. The new universal gameplay shape's terminal
+        # components (terminal_outcome + quick_win_bonus +
+        # stall_penalty) compose with the dense signal naturally on
+        # the terminal step; no carve-out is needed. Custom profiles
+        # that still need terminal-step exclusivity should define a
+        # custom component that filters on `TerminalOutcome` itself.
 
         # Pass 1: each component computes its raw contribution and the
         # per-component budget engine clamps it. Tuples ordered for
         # deterministic ProfileBudget application.
         per_component_pre_profile: List[Tuple[str, str, float]] = []
         for mc in profile.components:
-            if is_terminal_step and mc.kind != "terminal_outcome":
-                # Suppress per legacy exclusivity. Component output is
-                # zero; budget state is NOT advanced (a suppressed fire
-                # shouldn't count as one of the budgeted fires).
-                per_component_pre_profile.append((mc.kind, mc.name, 0.0))
-                continue
             raw = float(mc.component.compute(occurrences, self._episode_state))
             adjusted = mc.budget.apply(
                 raw, profile.name, mc.component_key, self._episode_state,

@@ -56,6 +56,13 @@ class Digivolved:
     `GameEvent::Digivolve`. The bus enriches with registry data:
     `result_level` and `result_traits` are looked up from `CardData`
     via `top_card_id` so components don't need registry access.
+
+    `is_breeding`: True iff the digivolve happened in the breeding
+    area (field_index == BREEDING_TARGET). The `breeding_digivolve`
+    component filters on this flag to score breeding-area raises
+    separately from battle-area digivolves. See
+    `add-gameplay-reward-config/specs/gameplay-reward-config/spec.md`
+    `breeding_digivolve component`.
     """
 
     player: int
@@ -68,6 +75,7 @@ class Digivolved:
     # Registry-enriched (bus fills in; components consume read-only):
     result_level: Optional[int]
     result_traits: Sequence[str]
+    is_breeding: bool = False
 
 
 @dataclass(frozen=True)
@@ -161,12 +169,44 @@ class TerminalOutcome:
 
     `winner_id` is Python 1/2 for a win, `None` for a draw.
     `step_count` is the env step counter at termination — feeds the
-    `terminal_outcome` component's fast-win bonus.
+    legacy `terminal_outcome.fast_win_par_steps` bonus curve.
+    `turn_count` is the engine's turn counter at termination — feeds
+    the new turn-based `quick_win_bonus` and `stall_penalty` components
+    introduced by `add-gameplay-reward-config`. Both available;
+    components pick whichever unit matches their semantics.
     """
 
     winner_id: Optional[int]
     step_count: int
     reason: Optional[str]  # game.terminal_outcome_reason.as_str()
+    turn_count: int = 0
+
+
+@dataclass(frozen=True)
+class DigivolveDrivenAttack:
+    """A Lv5+ digivolved attacker connected with the opponent's security
+    stack. Derived from `n_digivolve_driven_attacks[player]` counter
+    delta on `cur_rl_state`. One occurrence per qualifying attack
+    (per-attack semantics — Security Attack +N revealing multiple
+    cards still emits exactly one). See
+    `add-gameplay-reward-config/specs/gameplay-reward-config/spec.md`
+    `digivolve_driven_attack component` for the consuming component's
+    contract.
+
+    `has_sources`: True iff the attacker's permanent has at least one
+    card under it (`len(card_sources) > 1`). Indicates the attacker
+    came from a digivolve chain.
+    `this_turn`: True iff the attacker was just digivolved this turn
+    (`turn_digivolved == game.turn_count`). The mode predicate
+    (`this_turn` / `has_sources` / `either` / `both`) lives in the
+    component, not the bus — the bus emits raw flags and lets the
+    component filter.
+    """
+
+    player: int
+    attacker_level: int
+    has_sources: bool
+    this_turn: bool
 
 
 @dataclass(frozen=True)

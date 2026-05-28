@@ -33,6 +33,7 @@ use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::CardKind;
 use digimon_engine::selection::SelectionKind;
 
 // ─── Helper builders ─────────────────────────────────────────────────────────
@@ -56,6 +57,19 @@ fn make_dragonkin(id: &str) -> CardData {
 /// A Digimon with neither Reptile nor Dragonkin — invalid digivolve target.
 fn make_filler(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
+    c.traits = vec![];
+    c
+}
+
+/// Tamer security filler — used so the carrier attacking security doesn't
+/// mutually destruct with same-DP Digimon security (RULES_CONTEXT 14-2-1-3,
+/// see `equal_dp_security_battle_deletes_attacker`). Non-Digimon security
+/// skips the battle compare per 13-1-7-3 / 14-2-3.
+fn make_non_digimon_security_filler(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.dp = None;
+    c.level = None;
     c.traits = vec![];
     c
 }
@@ -215,7 +229,7 @@ fn bt21_001_inherited_fires_on_your_turn_and_installs_selection() {
         .dsl_card("BT21-001")
         .expect("BT21-001 in embedded DSL pack")
         .add_card(make_filler("CARRIER"))
-        .add_card(make_filler("SEC-P1"))
+        .add_card(make_non_digimon_security_filler("SEC-P1"))
         .add_card(make_reptile("REPTILE-HAND"))
         .security(1, &["SEC-P1"])
         .hand(0, &["REPTILE-HAND"])
@@ -246,7 +260,7 @@ fn bt21_001_declining_permanent_selection_no_digivolve() {
         .dsl_card("BT21-001")
         .expect("BT21-001 in embedded DSL pack")
         .add_card(make_filler("CARRIER"))
-        .add_card(make_filler("SEC-P1"))
+        .add_card(make_non_digimon_security_filler("SEC-P1"))
         .add_card(make_reptile("REPTILE-HAND"))
         .security(1, &["SEC-P1"])
         .hand(0, &["REPTILE-HAND"])
@@ -304,7 +318,7 @@ fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1()
         .dsl_card("BT21-001")
         .expect("BT21-001 in embedded DSL pack")
         .add_card(make_filler("CARRIER"))
-        .add_card(make_filler("SEC-P1"))
+        .add_card(make_non_digimon_security_filler("SEC-P1"))
         .add_card(make_reptile("REPTILE-HAND"))
         .security(1, &["SEC-P1"])
         .hand(0, &["REPTILE-HAND"])
@@ -368,8 +382,8 @@ fn bt21_001_opt_blocks_second_trigger_same_turn() {
         .dsl_card("BT21-001")
         .expect("BT21-001 in embedded DSL pack")
         .add_card(make_filler("CARRIER"))
-        .add_card(make_filler("SEC-1"))
-        .add_card(make_filler("SEC-2"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-2"))
         .add_card(make_reptile("REPTILE-HAND"))
         .security(1, &["SEC-1", "SEC-2"])
         .hand(0, &["REPTILE-HAND"])
@@ -410,9 +424,9 @@ fn bt21_001_opt_resets_after_end_turn() {
         .dsl_card("BT21-001")
         .expect("BT21-001 in embedded DSL pack")
         .add_card(make_filler("CARRIER"))
-        .add_card(make_filler("SEC-1"))
-        .add_card(make_filler("SEC-2"))
-        .add_card(make_filler("SEC-3"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-2"))
+        .add_card(make_non_digimon_security_filler("SEC-3"))
         .add_card(make_reptile("REPTILE-HAND"))
         .security(1, &["SEC-1", "SEC-2", "SEC-3"])
         .hand(0, &["REPTILE-HAND"])

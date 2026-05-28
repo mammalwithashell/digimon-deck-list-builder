@@ -14,6 +14,7 @@ import pytest
 from digimon_gym.agents.reward.event_bus import RewardEventBus
 from digimon_gym.agents.reward.occurrences import (
     Digivolved,
+    DigivolveDrivenAttack,
     DnaDigivolved,
     MemoryShifted,
     OppDeleted,
@@ -38,9 +39,35 @@ def _empty_state(**overrides: Any) -> Dict[str, Any]:
         "p2_digivolutions": 0,
         "p1_dna_digivolutions": 0,
         "p2_dna_digivolutions": 0,
+        # add-gameplay-reward-config exposes these on every step.
+        "turn_count": 0,
+        "n_digivolve_driven_attacks": [0, 0],
     }
     state.update(overrides)
     return state
+
+
+def _attack_event(
+    *,
+    seq: int = 1,
+    player: int = 0,
+    attacker_field_index: int = 0,
+    target_player: int = 1,
+    target_field_index: Any = None,
+) -> Dict[str, Any]:
+    """Synthetic `GameEvent::Attack` dict. Player is Rust 0-based here
+    (the bus reads `player` directly without remapping).
+    `target_field_index = None` indicates a Player-target (security)
+    attack — this is the shape the bus pairs with counter deltas."""
+    return {
+        "type": "Attack",
+        "seq": seq,
+        "player": player,
+        "attacker_field_index": attacker_field_index,
+        "target_field_index": target_field_index,
+        "target_player": target_player,
+        "meta": {},
+    }
 
 
 def _play_event(
@@ -396,3 +423,157 @@ def test_prev_rl_state_advances_after_each_derive():
     # Step 4: drop to 2 → fires +2 (prev still 4 from step 3)
     occ = bus.derive(_empty_state(p2_security=2), [], 3)
     assert any(isinstance(o, SecurityRemoved) and o.count == 2 for o in occ)
+
+
+# ============================================================================
+# add-gameplay-reward-config additions
+# ============================================================================
+
+
+def test_terminal_outcome_carries_turn_count_from_rl_state():
+    bus = RewardEventBus()
+    occ = bus.derive(
+        _empty_state(
+            game_over=True, winner_id=1, terminal_reason="security_attack",
+            turn_count=7,
+        ),
+        [],
+        150,
+    )
+    terminals = [o for o in occ if isinstance(o, TerminalOutcome)]
+    assert len(terminals) == 1
+    assert terminals[0].turn_count == 7
+    # Existing fields still populated.
+    assert terminals[0].step_count == 150
+    assert terminals[0].winner_id == 1
+
+
+def test_terminal_outcome_turn_count_defaults_to_zero_when_missing():
+    """Defensive: pre-`add-gameplay-reward-config` rl_state dicts (no
+    turn_count key) should produce TerminalOutcome.turn_count=0 rather
+    than KeyError."""
+    bus = RewardEventBus()
+    state = _empty_state(game_over=True, winner_id=1)
+    state.pop("turn_count")
+    occ = bus.derive(state, [], 50)
+    terminals = [o for o in occ if isinstance(o, TerminalOutcome)]
+    assert terminals[0].turn_count == 0
+
+
+def test_digivolved_is_breeding_true_when_field_index_matches_breeding_target():
+    bus = RewardEventBus()
+    breeding_idx = bus._breeding_target  # 14
+    ev = _digivolve_event()
+    ev["source_slot"] = breeding_idx
+    occ = bus.derive(_empty_state(), [ev], 0)
+    digs = [o for o in occ if isinstance(o, Digivolved)]
+    assert len(digs) == 1
+    assert digs[0].is_breeding is True
+    assert digs[0].field_index == breeding_idx
+
+
+def test_digivolved_is_breeding_false_for_battle_area_index():
+    bus = RewardEventBus()
+    ev = _digivolve_event()
+    ev["source_slot"] = 0  # battle area slot 0
+    occ = bus.derive(_empty_state(), [ev], 0)
+    digs = [o for o in occ if isinstance(o, Digivolved)]
+    assert digs[0].is_breeding is False
+
+
+def test_digivolve_driven_attack_fires_on_counter_delta_with_attack_event():
+    """Scenario: DigivolveDrivenAttack emitted per counter-delta with
+    correct flags from the permanent inspector."""
+    inspector_calls: List[tuple[int, int]] = []
+
+    def inspector(player: int, field_index: int) -> Dict[str, Any]:
+        inspector_calls.append((player, field_index))
+        return {"level": 6, "has_sources": True, "this_turn": False}
+
+    bus = RewardEventBus(permanent_inspector=inspector)
+
+    # Step 0: counter at 0.
+    bus.derive(
+        _empty_state(n_digivolve_driven_attacks=[0, 0]),
+        [],
+        0,
+    )
+
+    # Step 1: counter ticks for player 0 (Rust 0-based), with an
+    # Attack event indicating security-target (target_field_index=None).
+    occ = bus.derive(
+        _empty_state(n_digivolve_driven_attacks=[1, 0]),
+        [_attack_event(player=0, attacker_field_index=2, target_player=1)],
+        1,
+    )
+
+    driven = [o for o in occ if isinstance(o, DigivolveDrivenAttack)]
+    assert len(driven) == 1
+    assert driven[0].player == 1  # Python 1/2 convention
+    assert driven[0].attacker_level == 6
+    assert driven[0].has_sources is True
+    assert driven[0].this_turn is False
+    assert inspector_calls == [(0, 2)]
+
+
+def test_digivolve_driven_attack_no_fire_without_counter_delta():
+    bus = RewardEventBus()
+    bus.derive(_empty_state(n_digivolve_driven_attacks=[3, 0]), [], 0)
+    # Step 2: counter unchanged.
+    occ = bus.derive(_empty_state(n_digivolve_driven_attacks=[3, 0]), [], 1)
+    assert not any(isinstance(o, DigivolveDrivenAttack) for o in occ)
+
+
+def test_digivolve_driven_attack_falls_back_to_defaults_without_inspector():
+    """Without an inspector, the bus emits conservative defaults rather
+    than refusing to fire — components downstream can still re-check
+    against their own thresholds."""
+    bus = RewardEventBus()
+    bus.derive(_empty_state(n_digivolve_driven_attacks=[0, 0]), [], 0)
+    occ = bus.derive(
+        _empty_state(n_digivolve_driven_attacks=[1, 0]),
+        [_attack_event(player=0, attacker_field_index=0, target_player=1)],
+        1,
+    )
+    driven = [o for o in occ if isinstance(o, DigivolveDrivenAttack)]
+    assert len(driven) == 1
+    assert driven[0].attacker_level == 0
+    assert driven[0].has_sources is False
+    assert driven[0].this_turn is False
+
+
+def test_digivolve_driven_attack_emits_one_per_delta_unit():
+    """If the counter jumped by 2 in one step (rare), the bus emits 2
+    occurrences. Per spec: per-attack semantics."""
+    bus = RewardEventBus(
+        permanent_inspector=lambda p, f: {"level": 5, "has_sources": False, "this_turn": True},
+    )
+    bus.derive(_empty_state(n_digivolve_driven_attacks=[0, 0]), [], 0)
+    occ = bus.derive(
+        _empty_state(n_digivolve_driven_attacks=[2, 0]),
+        [
+            _attack_event(seq=1, player=0, attacker_field_index=0, target_player=1),
+            _attack_event(seq=2, player=0, attacker_field_index=1, target_player=1),
+        ],
+        1,
+    )
+    driven = [o for o in occ if isinstance(o, DigivolveDrivenAttack)]
+    assert len(driven) == 2
+    assert all(d.attacker_level == 5 and d.this_turn for d in driven)
+
+
+def test_digivolve_driven_attack_player_2_side_emits_correctly():
+    """Counter delta on the opponent side (Rust index 1) emits with
+    Python player=2."""
+    bus = RewardEventBus(
+        permanent_inspector=lambda p, f: {"level": 7, "has_sources": True, "this_turn": True},
+    )
+    bus.derive(_empty_state(n_digivolve_driven_attacks=[0, 0]), [], 0)
+    occ = bus.derive(
+        _empty_state(n_digivolve_driven_attacks=[0, 1]),
+        [_attack_event(player=1, attacker_field_index=3, target_player=0)],
+        1,
+    )
+    driven = [o for o in occ if isinstance(o, DigivolveDrivenAttack)]
+    assert len(driven) == 1
+    assert driven[0].player == 2

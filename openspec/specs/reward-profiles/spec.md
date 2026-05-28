@@ -526,47 +526,46 @@ The hash SHALL be insensitive to whitespace, YAML key ordering, and trailing com
 - **THEN** resume SHALL succeed without warning
 - **AND** the recomputed hash SHALL equal the checkpoint's hash
 
-### Requirement: Default profile preserves byte-identical legacy reward shape
-
-The shipped `code/digimon_gym/agents/reward/profiles.yaml` SHALL include a `_default` profile whose component set and parameters produce, for any sequence of actions, a per-step reward sequence equal float-for-float to the legacy `DigimonEnv._compute_reward` (with `digivolve_shaping=False`).
-
-A regression test SHALL run 100 seeded episodes against both the legacy code path and the profile path (using `_default`) and assert that the per-step reward sequences are equal. This test SHALL be part of the default `pytest` run.
-
-When a user sets the legacy `digivolve_shaping=True` flag, the system SHALL treat it as `reward_profile_override = "_digivolve_shaped"` and the shipped YAML SHALL include a `_digivolve_shaped` profile reproducing today's digivolve-shaped reward exactly.
-
-#### Scenario: Default profile matches legacy reward float-for-float
-
-- **WHEN** 100 seeded episodes are played through both the legacy `_compute_reward` path and the `_default` profile path with identical action sequences
-- **THEN** the per-step reward sequences SHALL be equal float-for-float across all 100 episodes
-- **AND** the regression test SHALL pass under the default `pytest` invocation
-
-#### Scenario: Legacy digivolve_shaping=True maps to _digivolve_shaped profile
-
-- **WHEN** `TrainingConfig(digivolve_shaping=True)` is constructed
-- **THEN** the resolved active-profile path SHALL be `_digivolve_shaped` for all episodes
-- **AND** per-step rewards SHALL match the legacy digivolve-shaped recipe float-for-float
-
 ### Requirement: Deprecation path for legacy reward-shaping fields
 
-The `TrainingConfig` fields `digivolve_reward` and `dna_digivolve_bonus` SHALL remain present in v1 but SHALL be unread by the reward computation pipeline (the active profile drives all shaping). Setting either field to a non-default value SHALL emit a `DeprecationWarning` from `TrainingConfig._validate` directing the user to define a custom profile.
+The `TrainingConfig` fields `digivolve_reward` and `dna_digivolve_bonus` SHALL remain present in this change but SHALL be unread by the reward computation pipeline (the loaded gameplay + profile components drive all shaping). Setting either field to a non-default value SHALL emit a `DeprecationWarning` from `TrainingConfig._validate` directing the user to define a custom profile or edit `gameplay.yaml`.
 
-The `digivolve_shaping` boolean SHALL remain functional in v1 by mapping `True` to `reward_profile_override = "_digivolve_shaped"`. No deprecation warning SHALL fire for `digivolve_shaping` in v1.
+The `digivolve_shaping` boolean SHALL remain accepted with no warning, but it SHALL become **inert** in this change — it no longer maps to a `_digivolve_shaped` profile (that profile is removed). Setting `digivolve_shaping=True` in a config has no effect on the active reward shape; the gameplay default already includes digivolve weights universally.
 
-The v1 change SHALL NOT remove the fields. Their removal is reserved for a follow-up proposal.
+The v1 deprecation timeline (warning in v1, removal in v2) for `digivolve_reward` / `dna_digivolve_bonus` is unchanged. `digivolve_shaping` is reserved for v2 removal alongside.
 
-#### Scenario: Non-default digivolve_reward fires deprecation warning
+This change SHALL NOT remove the fields. Their removal is reserved for a follow-up proposal.
+
+#### Scenario: Non-default digivolve_reward still fires deprecation warning
 
 - **WHEN** `TrainingConfig(digivolve_reward=0.5)` is constructed
 - **THEN** a `DeprecationWarning` SHALL be raised by `_validate`
-- **AND** the warning message SHALL reference creating a custom reward profile
+- **AND** the warning message SHALL reference editing `gameplay.yaml` or defining a custom profile
 
 #### Scenario: Default values do not warn
 
 - **WHEN** `TrainingConfig()` is constructed with the default `digivolve_reward = 0.1` and `dna_digivolve_bonus = 3.9`
 - **THEN** no `DeprecationWarning` SHALL fire for those fields
 
-#### Scenario: digivolve_shaping=True still works without warning
+#### Scenario: digivolve_shaping=True is now inert (no profile mapping)
 
 - **WHEN** `TrainingConfig(digivolve_shaping=True)` is constructed with otherwise-default values
-- **THEN** no warning SHALL fire
-- **AND** the active profile SHALL resolve to `_digivolve_shaped` for every episode
+- **THEN** no warning SHALL fire (preserves v1 contract)
+- **AND** the active profile SHALL resolve via the standard archetype/override path (NOT to `_digivolve_shaped`, which no longer exists)
+- **AND** training SHALL proceed under the new universal gameplay shape
+
+### Requirement: Profile loader cross-file inheritance
+
+The `ProfileLoader` SHALL support inheritance chains that cross file boundaries. When a profile in `profiles.yaml` declares `inherits: gameplay`, the loader SHALL resolve that reference against the merged namespace (`gameplay.yaml`'s profiles + `profiles.yaml`'s profiles).
+
+Override semantics, key-params override de-dup, and `key_cards:` expansion SHALL all work transparently across file boundaries — a child profile in `profiles.yaml` can override components inherited from a parent in `gameplay.yaml`.
+
+Profile name collisions across the two files SHALL fail at parse time (per the gameplay-reward-config capability's "Two-file loader merges namespaces" requirement). Inheritance cycles SHALL fail at parse time with a cycle path that names all involved profiles regardless of which file they live in.
+
+#### Scenario: Cross-file inheritance resolves correctly
+
+- **GIVEN** `gameplay.yaml` defines profile `gameplay` with `security_remove { weight: 1.5 }`
+- **AND** `profiles.yaml` defines `aggressive` with `inherits: gameplay` and override `security_remove { weight: 3.0 }`
+- **WHEN** the loader resolves `aggressive`
+- **THEN** the resolved component list SHALL include `security_remove` with `weight: 3.0` (child override wins)
+- **AND** all other components from `gameplay` SHALL be inherited unchanged

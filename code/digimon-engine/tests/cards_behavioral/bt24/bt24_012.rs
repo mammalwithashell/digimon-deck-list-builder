@@ -40,6 +40,7 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::CardKind as _BehavioralCardKind;
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::SelectionKind;
 
@@ -48,6 +49,20 @@ use super::super::dsl_card_data::{card_data_from_compiled as card_data, compiled
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 /// Minimal Digimon `CardData` with explicit DP and trait list.
+/// Tamer security filler — used in the security stack for tests that
+/// fire on `on_opp_security_removed` without wanting an incidental
+/// security-DP battle (which, post-fix, mutual-destructs same-DP
+/// attackers per RULES_CONTEXT 14-2-1-3). Non-Digimon security skips
+/// the battle compare entirely (13-1-7-3 / 14-2-3).
+fn make_non_digimon_security_filler(id: &str) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = _BehavioralCardKind::Tamer;
+    c.dp = None;
+    c.level = None;
+    c.traits = vec![];
+    c
+}
+
 fn make_digimon(id: &str, dp: i32, traits: &[&str]) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, id);
     card.dp = Some(dp);
@@ -574,7 +589,7 @@ fn bt24_012_inherited_gain_memory_on_opp_security_removed() {
     let mut runner = DebugRunner::builder()
         .add_card(card_data("BT24-012"))
         .add_card(make_test_card("CARRIER", "Carrier"))
-        .add_card(make_test_card("SEC", "Sec"))
+        .add_card(make_non_digimon_security_filler("SEC"))
         .add_card(make_test_card("FILL", "Fill"))
         .security(1, &["SEC"])
         .deck(0, &["FILL"])
@@ -651,8 +666,8 @@ fn bt24_012_inherited_clause_opt_blocks_second_activation() {
     let mut runner = DebugRunner::builder()
         .add_card(card_data("BT24-012"))
         .add_card(make_test_card("CARRIER", "Carrier"))
-        .add_card(make_test_card("SEC-1", "Sec1"))
-        .add_card(make_test_card("SEC-2", "Sec2"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-2"))
         .add_card(make_test_card("FILL", "Fill"))
         .security(1, &["SEC-1", "SEC-2"])
         .deck(0, &["FILL", "FILL"])
@@ -710,8 +725,8 @@ fn bt24_012_inherited_clause_opt_resets_after_turn() {
     let mut runner = DebugRunner::builder()
         .add_card(card_data("BT24-012"))
         .add_card(make_test_card("CARRIER", "Carrier"))
-        .add_card(make_test_card("SEC-1", "Sec1"))
-        .add_card(make_test_card("SEC-2", "Sec2"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-2"))
         .add_card(make_test_card("FILL", "Fill"))
         .security(1, &["SEC-1", "SEC-2"])
         .deck(0, &["FILL", "FILL"])

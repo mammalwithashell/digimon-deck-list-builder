@@ -587,12 +587,16 @@ fn ex11_021_inherited_cannot_fire_without_another_digimon() {
 /// turn — when YOUR Digimon attacks on YOUR turn it must not fire.
 #[test]
 fn ex11_021_inherited_does_not_fire_on_your_own_turn() {
+    // SECURITY uses make_tamer so the on-your-own-turn attack doesn't run
+    // a security-DP battle that would mutual-destruct the attacker
+    // (RULES_CONTEXT 14-2-1-3 post-fix); the test cares about the
+    // inherited-clause gating, not the battle compare.
     let mut runner = DebugRunner::builder()
         .dsl_card("EX11-021")
         .expect("EX11-021 YAML loads")
         .add_card(make_test_card("CARRIER", "Carrier"))
         .add_card(make_test_card("OTHER", "Other Digimon"))
-        .add_card(make_test_card("SECURITY", "Security"))
+        .add_card(make_tamer("SECURITY", "Security"))
         .security(1, &["SECURITY"])
         .start();
     runner.place_stack(0, &["EX11-021", "CARRIER"]);

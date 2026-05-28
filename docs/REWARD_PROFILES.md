@@ -2,15 +2,41 @@
 
 Operator guide for composable reward shaping in pilot training.
 
-Spec: `openspec/changes/add-reward-profiles/specs/reward-profiles/spec.md`.
+Specs:
+- `openspec/changes/add-reward-profiles/specs/reward-profiles/spec.md` — base framework
+- `openspec/changes/add-gameplay-reward-config/specs/gameplay-reward-config/spec.md` — two-file split + new components
+
+---
+
+## Two-file architecture
+
+Reward shaping lives in two sibling YAMLs under `code/digimon_gym/agents/reward/`:
+
+| File | Owns | Profile count |
+|---|---|---|
+| `gameplay.yaml` | Universal game-mechanic shape — terminal, quick-win, stall, step, security, digivolve, breeding, digivolve-driven attack | Exactly one profile, named `gameplay`. The inheritance root — it MUST NOT itself `inherits:` anything. |
+| `profiles.yaml` | Archetype overlays — `_default`, `dna_omnimon_combo_v1`, etc. | Many. Every profile here MUST `inherits: gameplay` (directly or transitively). |
+
+`ProfileLoader` takes both paths (`gameplay_path=`, `profiles_path=`), loads
+each file, then merges into a single name-keyed namespace. Name collisions
+across the two files fail at load. The two files have **separate content
+hashes** (`gameplay_hash`, `profiles_hash`) so the resume check can name
+which file drifted.
+
+Splitting gameplay shaping out of `profiles.yaml` keeps archetype overlays
+small (most just `inherits: gameplay` and add a `key_cards:` block) and
+lets the universal shape change without rewriting every archetype profile.
 
 ---
 
 ## Quick start
 
-The shipped `code/digimon_gym/agents/reward/profiles.yaml` defines five
-profiles out of the box. Default training picks `_default` (byte-identical
-to the legacy reward) — no config change is needed for legacy behavior.
+Default training uses the `_default` profile — a thin pass-through to
+`gameplay`. The shipped gameplay shape has "win fast or it hurts"
+personality: a `quick_win_bonus` peaks at +5 on turn 3 and decays to 0 by
+turn 7; a `stall_penalty` starts at turn 8 and grows quadratically without
+bound. See the file header in `gameplay.yaml` for the full terminal
+landscape table.
 
 To train DNA Omnimon with archetype-aware shaping:
 
@@ -22,7 +48,7 @@ generalist: true                # archetype sampling drives profile pick
 
 The runner reads `info["deck1_archetype"]` per episode, looks it up in
 `profiles.yaml::assignments`, and applies the matching profile. Unknown
-archetypes fall back to `_default`.
+archetypes fall back to `_default` (which is just `gameplay`).
 
 To force a specific profile regardless of archetype (e.g. fixed-deck
 training of a single archetype):
@@ -33,15 +59,43 @@ reward_profile_override: dna_omnimon_combo_v1
 
 ---
 
+## Migration note for resumes of pre-change checkpoints
+
+The two-file split changes both the gameplay-hash and the profiles-hash
+relative to any checkpoint trained before `add-gameplay-reward-config`.
+Resuming such a checkpoint fails the resume hash check (twice — once per
+file). Pass `--reward-profiles-override-mismatch` to proceed; a fresh
+sidecar with both new hashes is then written. See [Resume hash check](#resume-hash-check).
+
+The legacy `_digivolve_shaped` and `_base_terminal` profiles are gone —
+their behavior is absorbed into the universal `gameplay` shape. The
+`legacy_terminal_exclusivity` flag is removed; the loader now errors with
+a migration message if YAML still sets it.
+
+---
+
+## Concede behavior
+
+`stall_penalty` applies to losses by default — the longer a losing game
+drags out, the larger the penalty. This makes conceding a hopeless game
+attractive to the agent. We ship with this on and observe via the
+existing `pilot/concede_rate` TB scalar. If concede rate spikes above
+~50%, set `stall_penalty.apply_to_loser: false` on the relevant profile
+(typically by overriding the component in an archetype profile that
+inherits `gameplay`); draws are always penalized regardless of the apply
+flags.
+
+---
+
 ## File layout
 
-`profiles.yaml` has two top-level keys:
+Both `gameplay.yaml` and `profiles.yaml` share the same schema:
 
 ```yaml
 profiles:
   <profile_name>:
-    inherits: <parent_name>          # optional
-    legacy_terminal_exclusivity: bool # optional, default false
+    inherits: <parent_name>          # REQUIRED in profiles.yaml; FORBIDDEN
+                                     # on the `gameplay` profile (it is the root)
     budget:                          # optional, per-profile cap/floor
       per_episode_cap: float
       per_episode_floor: float
@@ -52,11 +106,18 @@ profiles:
     components:                      # the component list
       - kind: <component_kind>
         # ... kind-specific params + optional budget
+```
 
+`profiles.yaml` additionally has an `assignments:` top-level key:
+
+```yaml
 assignments:
   _default: <profile_name>           # REQUIRED — fallback target
   "<archetype name>": <profile_name>
 ```
+
+`gameplay.yaml` does NOT carry `assignments:` — assignment is overlay-level
+concern.
 
 Profile names starting with `_` are **private** — they can be referenced
 via `inherits:` but cannot be assigned to real archetypes. The `_default`
@@ -65,29 +126,99 @@ assignment key is the exception: it's allowed to target a private profile
 
 ---
 
-## Component catalog (v1)
+## Component catalog
 
-12 components are registered. Each has a stable `kind` string used in
-YAML.
+Each component has a stable `kind` string used in YAML. The 10 components
+listed in [Foundation](#foundation-shipped-in-gameplayyaml) ship in
+`gameplay.yaml` as the universal baseline; the remaining components are
+opt-in per-profile (typically in `profiles.yaml` overlays).
 
-### Foundation (every profile inherits these via `_base_terminal`)
+### Foundation (shipped in `gameplay.yaml`)
 
 | Kind | Effect |
 |---|---|
-| `terminal_outcome` | Win/loss/draw scalar + fast-win bonus curve at termination. |
+| `terminal_outcome` | Win/loss/draw scalar + legacy fast-win bonus curve at termination. The shipped `gameplay` profile sets `fast_win_bonus_max=0` and delegates fast-win shaping to `quick_win_bonus`. |
+| `quick_win_bonus` | Turn-based fast-win bonus on agent wins only — piecewise-linear peak/decay shape. |
+| `stall_penalty` | Quadratic penalty for terminal at high turn counts. Fires on win, loss, AND draw by default. |
 | `step_penalty` | Per-step penalty (`weight` per step). |
+| `security_remove` | Step where opp security count dropped (`weight × n_removed`). |
+| `security_lost` | Step where own security count dropped (`weight × n_lost`). |
+| `digivolve` | Step where the agent's `n_digivolutions` counter bumped. |
+| `dna_digivolve` | Step where the agent's `n_dna_digivolutions` counter bumped (additive over `digivolve`). |
+| `breeding_digivolve` | Per-level reward for breeding-area digivolves (agent only). |
+| `digivolve_driven_attack` | Reward for Lv5+ attacks that connect with security after a recent digivolve or with card_sources. |
 
 **`terminal_outcome` parameters** — `win_base`, `fast_win_bonus_max`,
-`fast_win_par_steps`, `loss`, `draw`. The fast-win bonus is linear in
-`max(0, par_steps - step_count) / par_steps × bonus_max`, clamped at
-zero for slow wins.
+`fast_win_par_steps`, `loss`, `draw`. The legacy fast-win bonus is linear
+in `max(0, par_steps - step_count) / par_steps × bonus_max`. In `gameplay`
+the bonus is disabled (max=0) and `quick_win_bonus` takes over.
 
-Example (legacy defaults):
+**`quick_win_bonus` parameters** — `peak_turn: int` (default 3),
+`peak_value: float` (default 5.0), `decay_per_turn: float` (default 1.25).
+Fires only on agent wins. Formula: `max(0, peak_value − decay_per_turn ×
+max(0, turn − peak_turn))`. Uses `turn_count` from the terminal occurrence,
+not `step_count`.
+
+```yaml
+- kind: quick_win_bonus
+  peak_turn: 3
+  peak_value: 5.0
+  decay_per_turn: 1.25
+# Emissions at turn 3/4/5/6/7 = +5.0 / +3.75 / +2.5 / +1.25 / 0.0
+# Zero on loss, draw, and turns past the linear root.
+```
+
+**`stall_penalty` parameters** — `threshold_turn: int` (default 7),
+`scale: float` (default 0.1), `apply_to_winner: bool` (default true),
+`apply_to_loser: bool` (default true). Formula:
+`−scale × max(0, turn − threshold_turn)²`. Unbounded. Draws are always
+penalized regardless of the apply flags.
+
+```yaml
+- kind: stall_penalty
+  threshold_turn: 7
+  scale: 0.1
+  apply_to_winner: true
+  apply_to_loser: true
+# Emissions at turn 7/10/15/20/30 = 0 / -0.9 / -6.4 / -16.9 / -52.9
+```
+
+**`breeding_digivolve` parameters** — `reward_per_level: Mapping[int, float]`
+(required). Default shipped value `{3: 0.4, 4: 0.2, 5: 0.1, 6: -0.4}`.
+Fires only when `is_breeding=true` and `player==1`. Missing keys produce
+zero. The Lv6 negative entry is the explicit slot-lock anti-pattern.
+
+```yaml
+- kind: breeding_digivolve
+  reward_per_level:
+    3: 0.4
+    4: 0.2
+    5: 0.1
+    6: -0.4
+```
+
+**`digivolve_driven_attack` parameters** — `mode: str` (one of
+`"this_turn"`, `"has_sources"`, `"either"`, `"both"`; default `"either"`),
+`attacker_min_level: int` (default 5), `reward: float` (default 0.5),
+`per_card: bool` (default false). Per-attack semantics (one emission per
+qualifying attack, regardless of Security Attack +N revealing multiple
+cards). The `per_card=true` form is deferred to v2 and emits a load-time
+warning.
+
+```yaml
+- kind: digivolve_driven_attack
+  mode: either
+  attacker_min_level: 5
+  reward: 0.5
+  per_card: false
+```
+
+Foundation YAML block from `gameplay.yaml`:
 
 ```yaml
 - kind: terminal_outcome
   win_base: 10.0
-  fast_win_bonus_max: 5.0
+  fast_win_bonus_max: 0.0          # delegated to quick_win_bonus
   fast_win_par_steps: 200
   loss: -10.0
   draw: -1.0
@@ -95,15 +226,19 @@ Example (legacy defaults):
   weight: -0.001
 ```
 
-### Dense — state-counter-derived
+Full scenario coverage for each new component lives in
+`openspec/changes/add-gameplay-reward-config/specs/gameplay-reward-config/spec.md`.
+
+### Dense — additional state-counter-derived (opt-in)
 
 | Kind | Fires on | Notes |
 |---|---|---|
-| `security_remove` | step where opp security count dropped | `weight × n_removed` |
-| `security_lost` | step where own security count dropped | conventionally negative |
-| `digivolve` | step where the agent's `n_digivolutions` counter bumped | DNA also bumps this (stacks) |
-| `dna_digivolve` | step where the agent's `n_dna_digivolutions` counter bumped | additive over `digivolve` |
 | `memory_swing` | step with any memory change | aggregated net delta × weight |
+
+(The foundation-shipped state-counter components — `security_remove`,
+`security_lost`, `digivolve`, `dna_digivolve` — are listed above and
+inherited by every profile via `gameplay`. DNA also bumps `digivolve`, so
+the two emissions stack on a DNA fire.)
 
 ### Dense — event-driven (requires engine event wiring)
 
@@ -314,14 +449,23 @@ reward_profiles_hot_reload: false
 ## Resume hash check
 
 At run-start, the runner writes `<run_dir>/reward_profiles.meta.json`
-with 4 fields: `reward_profiles_path`, `reward_profiles_hash`,
-`reward_profile_override`, `reward_assignments_snapshot`.
+with 6 fields:
 
-On resume, the recorded hash is compared against the current
-canonicalized profile hash. Mismatches fail with both hashes named:
+- `reward_gameplay_path` — path to `gameplay.yaml`
+- `reward_gameplay_hash` — canonical sha256 of `gameplay.yaml`
+- `reward_profiles_path` — path to `profiles.yaml`
+- `reward_profiles_hash` — canonical sha256 of `profiles.yaml`
+- `reward_profile_override` — the explicit override, if any
+- `reward_assignments_snapshot` — frozen archetype→profile assignment map
+
+On resume, BOTH file hashes are compared against the checkpoint's
+recorded values. Mismatch in either file raises
+`RewardProfilesHashMismatchError`. The error message names which file
+drifted (`gameplay.yaml` vs `profiles.yaml`) so operators see "gameplay
+shape changed" vs "archetype overlay changed" directly:
 
 ```
-Reward profiles changed since checkpoint.
+Reward profiles changed since checkpoint (gameplay.yaml drifted).
   Checkpoint hash: sha256:abc...
   Current hash:    sha256:def...
 Pass --reward-profiles-override-mismatch to proceed anyway.
@@ -331,44 +475,35 @@ The canonical hash is over parsed-and-sorted YAML with normalized
 floats — **whitespace, key reordering, and comments do NOT trigger
 mismatch**. Re-saving with a YAML formatter is a no-op.
 
-Use `--reward-profiles-override-mismatch` only when you intentionally
-want to switch reward shape mid-run. The override silently writes a
-fresh sidecar reflecting the new hash; future resumes reference that.
+`--reward-profiles-override-mismatch` covers both file hashes — operators
+do not need separate flags. The override silently writes a fresh sidecar
+reflecting the new hashes for both files; future resumes reference those.
+
+The `Profiles` dataclass exposes `gameplay_hash` and `profiles_hash`
+fields. A backward-compat alias `content_hash` mirrors `profiles_hash` for
+callers predating the split.
 
 ---
 
 ## Legacy compatibility
 
-### Byte-identical `_default`
-
-The shipped `_default` profile matches legacy `DigimonEnv._compute_reward`
-float-for-float. A regression test (`test_default_profile_byte_identical.py`)
-runs 10 seeded episodes through both paths and asserts equality.
-
-The match relies on a profile-level flag `legacy_terminal_exclusivity:
-true` which suppresses all non-`terminal_outcome` components on the
-terminal step — replicating the legacy short-circuit. **Set this flag
-to false (the default) on custom profiles** unless you specifically
-want to replicate the legacy quirk.
-
-### `digivolve_shaping: true` → `_digivolve_shaped`
-
-Setting `TrainingConfig.digivolve_shaping=True` (no explicit override)
-maps to `reward_profile_override = "_digivolve_shaped"` — the shipped
-profile that recreates legacy digivolve shaping (`+0.1` regular, `+3.9`
-DNA additive). No deprecation warning fires for `digivolve_shaping`
-itself in v1.
+The `_digivolve_shaped` and `_base_terminal` private profiles, and the
+`legacy_terminal_exclusivity` flag, have all been removed as of
+`add-gameplay-reward-config` — their behavior is absorbed into the
+universal `gameplay` shape (digivolve at +0.5 / +3.5 additive on DNA,
+no terminal-exclusivity carve-out). The loader errors with a migration
+message if YAML still sets `legacy_terminal_exclusivity`.
 
 ### Deprecated flat fields
 
-| Field | Default | Behavior in v1 | Removal |
+| Field | Default | Behavior | Removal |
 |---|---|---|---|
-| `digivolve_shaping` | `False` | Maps to `_digivolve_shaped` profile when True; no warning | v2 |
+| `digivolve_shaping` | `False` | INERT — accepted, no warning, no effect on profile selection | v2 |
 | `digivolve_reward` | `0.1` | Unread; `DeprecationWarning` if non-default | v2 |
 | `dna_digivolve_bonus` | `3.9` | Unread; `DeprecationWarning` if non-default | v2 |
 
-To customize digivolve reward weights, define a custom profile that
-inherits `_digivolve_shaped` and overrides the `digivolve` /
+To customize digivolve reward weights, define a custom profile in
+`profiles.yaml` that `inherits: gameplay` and overrides the `digivolve` /
 `dna_digivolve` components, then set
 `reward_profile_override: <your_profile>`.
 
@@ -444,7 +579,7 @@ Top-level window means:
 
 ```yaml
 dna_omnimon_combo_v1:
-  inherits: _default
+  inherits: gameplay
   budget:
     per_episode_cap: 15.0          # 10 from key_cards + headroom for climb + block
     per_episode_floor: -3.0
@@ -473,7 +608,7 @@ dna_omnimon_combo_v1:
 
 ```yaml
 bg_imperialdramon_combo_v1:
-  inherits: _default
+  inherits: gameplay
   budget:
     per_episode_cap: 12.0
     per_episode_floor: -2.0
@@ -500,8 +635,10 @@ bg_imperialdramon_combo_v1:
 
 1. **Identify the win-condition cards.** Card IDs from `data/cards.json`
    are the simplest matcher.
-2. **Inherit from `_default`** so terminal + step + security signals
-   come for free.
+2. **Inherit from `gameplay`** (in `profiles.yaml`) so terminal +
+   step + security + digivolve + quick-win + stall signals come for free.
+   Inheriting from `_default` works identically since `_default` is just
+   `gameplay`.
 3. **Add `key_cards:`** if the archetype has a clearly identifiable
    win-condition card. This single block usually does 80% of the work.
 4. **Add supporting components** for material climb (small reward,
@@ -520,20 +657,25 @@ bg_imperialdramon_combo_v1:
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `_default` profile reward differs from legacy | `legacy_terminal_exclusivity` not inherited | Set explicitly on your profile, OR inherit from `_default` |
+| Load fails with `legacy_terminal_exclusivity` error | YAML still sets the removed flag | Delete the flag; the behavior is gone — see [Legacy compatibility](#legacy-compatibility) |
+| Load fails: profiles.yaml profile has no `inherits:` | New rule — every `profiles.yaml` profile MUST inherit from a `gameplay.yaml` profile | Add `inherits: gameplay` |
+| Load fails: name collision between files | A profile name appears in both `gameplay.yaml` and `profiles.yaml` | Rename one |
 | `play_named_card` with `match.card_name` doesn't fire | Bus enrichment for card names is v2 work | Use `match.card_id` instead |
 | `block_event` always fires zero | Engine has no `GameEvent::Block` yet | Wait for v2 engine wiring |
 | `opp_deletion` overcounts | v1 doesn't filter Trash by source zone | Use only when archetype-relevant; tighter signal in v2 |
 | Hot reload reverts on save | Parse failure — check warning logs | Fix YAML syntax; next reset re-loads |
-| Resume fails with hash mismatch | YAML changed since checkpoint | `--reward-profiles-override-mismatch` if intentional |
+| Resume fails with hash mismatch | YAML changed since checkpoint | `--reward-profiles-override-mismatch` if intentional; error message names which file drifted |
+| Concede rate spikes above ~50% | `stall_penalty` makes losing-fast attractive | Override `stall_penalty.apply_to_loser: false` in the archetype overlay |
 | `pilot/profile/<p>/clamp_share` high | Budget too tight | Raise `per_episode_cap` / `per_episode_floor` |
 
 ---
 
 ## See also
 
-- `openspec/changes/add-reward-profiles/` — full design + spec + tasks
-- `docs/TRAINING_RUNBOOK.md` — selecting reward profiles in a run
+- `openspec/changes/add-reward-profiles/` — base framework design + spec + tasks
+- `openspec/changes/add-gameplay-reward-config/` — two-file split + new components design + spec + tasks
+- `docs/TRAINING_RUNBOOK.md` §13 — selecting reward profiles in a run
 - `code/digimon_gym/agents/reward/` — implementation + registry +
   budget engine
-- `code/digimon_gym/agents/reward/profiles.yaml` — shipped profiles
+- `code/digimon_gym/agents/reward/gameplay.yaml` — universal game-mechanic shape
+- `code/digimon_gym/agents/reward/profiles.yaml` — shipped archetype overlays

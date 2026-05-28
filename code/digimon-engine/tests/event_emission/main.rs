@@ -4,6 +4,7 @@
 //! from `openspec/changes/add-reward-profiles/specs/engine-event-emission/spec.md`.
 
 mod attack;
+mod digivolve_driven_attack;
 mod digivolve_payload;
 mod play_payload;
 mod security_reveal;

@@ -51,6 +51,7 @@ from typing import Any, Callable, List, Mapping, Optional, Sequence, Tuple
 from .occurrences import (
     Blocked,
     Digivolved,
+    DigivolveDrivenAttack,
     DnaDigivolved,
     MemoryShifted,
     OppDeleted,
@@ -67,10 +68,26 @@ from .occurrences import (
 CardDataLookup = Callable[[str], Optional[Tuple[Optional[int], Sequence[str]]]]
 
 
+# Inspector type for `digivolve_driven_attack` enrichment. Maps
+# (player, field_index) -> dict with keys `level: int`, `has_sources:
+# bool`, `this_turn: bool`. Returns None when the permanent is gone
+# (e.g. deleted during security resolution). The bus falls back to
+# conservative defaults (level=0, both flags False) in that case.
+PermanentInspector = Callable[[int, int], Optional[Mapping[str, Any]]]
+
+
 def _null_lookup(_card_id: str) -> Optional[Tuple[Optional[int], Sequence[str]]]:
     """Default no-op lookup: returns None for every card. Components
     that depend on enrichment (e.g., `digivolve_into_named_card` with
     `min_result_level` or `match_trait`) will fail-closed.
+    """
+    return None
+
+
+def _null_inspector(_player: int, _field_index: int) -> Optional[Mapping[str, Any]]:
+    """Default no-op permanent inspector. Returns None — the bus then
+    falls back to conservative (level=0, has_sources=False,
+    this_turn=False) defaults when emitting `DigivolveDrivenAttack`.
     """
     return None
 
@@ -81,10 +98,31 @@ class RewardEventBus:
     `step_count` is the env-level step counter (passed by the caller —
     typically `DigimonEnv._step_count`). The bus uses it to populate
     `TerminalOutcome.step_count` for the fast-win bonus.
+
+    `breeding_target` is the field index that marks the breeding
+    area (`digimon_engine.BREEDING_TARGET`, value 14). Used to set
+    `Digivolved.is_breeding`. Defaults to `None` — if `None`, the
+    bus attempts to read the constant from `digimon_engine` at
+    construction, falling back to the hard-coded 14 when the import
+    fails (tests without the binding installed).
     """
 
-    def __init__(self, card_data_lookup: Optional[CardDataLookup] = None) -> None:
+    def __init__(
+        self,
+        card_data_lookup: Optional[CardDataLookup] = None,
+        *,
+        breeding_target: Optional[int] = None,
+        permanent_inspector: Optional[PermanentInspector] = None,
+    ) -> None:
         self._card_data_lookup = card_data_lookup or _null_lookup
+        self._permanent_inspector = permanent_inspector or _null_inspector
+        if breeding_target is None:
+            try:
+                from digimon_engine import BREEDING_TARGET as _bt  # type: ignore
+                breeding_target = int(_bt)
+            except Exception:
+                breeding_target = 14  # canonical value from action::space
+        self._breeding_target = int(breeding_target)
         # Snapshot of rl_state at last derive() call (the "previous step").
         # None until the first derive — first step has nothing to delta against.
         self._prev_rl_state: Optional[Mapping[str, Any]] = None
@@ -126,11 +164,13 @@ class RewardEventBus:
         if cur_rl_state.get("game_over"):
             winner = cur_rl_state.get("winner_id")
             reason = cur_rl_state.get("terminal_reason")
+            turn_count = int(cur_rl_state.get("turn_count", 0))
             occurrences.append(
                 TerminalOutcome(
                     winner_id=int(winner) if winner is not None else None,
                     step_count=int(step_count),
                     reason=str(reason) if reason is not None else None,
+                    turn_count=turn_count,
                 )
             )
 
@@ -149,6 +189,62 @@ class RewardEventBus:
             own_lost = prev_p1 - cur_p1
             if own_lost > 0:
                 occurrences.append(SecurityLost(count=int(own_lost)))
+
+            # `DigivolveDrivenAttack` derivation (per-attack counter delta).
+            # Engine-side counter increments once per qualifying attack
+            # (Lv5+ attacker, target = security, attack actually
+            # reaches security). We emit one occurrence per delta unit.
+            # The attacker permanent is identified by walking the step's
+            # Attack events with target_player set + target_field_index
+            # is None (i.e., security-target attacks). When an inspector
+            # is wired, we enrich with `attacker_level` + flags;
+            # otherwise conservative defaults (level=0, both flags
+            # False) keep components from over-firing.
+            prev_driven = self._prev_rl_state.get("n_digivolve_driven_attacks") or [0, 0]
+            cur_driven = cur_rl_state.get("n_digivolve_driven_attacks") or [0, 0]
+            for player_idx in range(2):
+                try:
+                    delta = int(cur_driven[player_idx]) - int(prev_driven[player_idx])
+                except (TypeError, IndexError, ValueError):
+                    delta = 0
+                if delta <= 0:
+                    continue
+                # Find the security-target attack(s) attributed to this
+                # player in the current step. The engine emits one
+                # Attack event per attack declaration; for Player-target
+                # attacks, target_field_index is None.
+                player_attacks = [
+                    e for e in events
+                    if e.get("type") == "Attack"
+                    and int(e.get("player", -1)) == player_idx
+                    and e.get("target_field_index") is None
+                    and e.get("target_player") is not None
+                ]
+                # Emit `delta` occurrences. Pair each with the next
+                # unused attack event when available; fall back to
+                # defaults for any extras (engine counter and event
+                # stream can drift in rare multi-attack edge cases).
+                for i in range(delta):
+                    attack_ev = player_attacks[i] if i < len(player_attacks) else None
+                    info: Mapping[str, Any] = {}
+                    if attack_ev is not None:
+                        attacker_field = attack_ev.get("attacker_field_index")
+                        if attacker_field is not None:
+                            inspected = self._permanent_inspector(
+                                player_idx, int(attacker_field)
+                            )
+                            if inspected is not None:
+                                info = inspected
+                    # Per spec: `player` is Python 1/2 convention.
+                    py_player = player_idx + 1
+                    occurrences.append(
+                        DigivolveDrivenAttack(
+                            player=py_player,
+                            attacker_level=int(info.get("level", 0) or 0),
+                            has_sources=bool(info.get("has_sources", False)),
+                            this_turn=bool(info.get("this_turn", False)),
+                        )
+                    )
 
         # Event-driven occurrences. Per-event order preserved from the
         # engine's drained seq order so consumers can correlate (e.g.,
@@ -190,16 +286,18 @@ class RewardEventBus:
                 else:
                     result_level, traits_list = None, []
                 was_dna = bool(meta.get("was_dna", False))
+                field_index = int(ev.get("source_slot") or 0)
                 digivolved = Digivolved(
                     player=int(ev.get("player", 0)),
                     top_card_id=top_card_id,
-                    field_index=int(ev.get("source_slot") or 0),
+                    field_index=field_index,
                     from_stack_top=str(meta.get("from_stack_top", "")),
                     was_dna=was_dna,
                     was_blast_dna=bool(meta.get("was_blast_dna", False)),
                     memory_paid=int(meta.get("memory_paid", 0)),
                     result_level=result_level,
                     result_traits=traits_list,
+                    is_breeding=(field_index == self._breeding_target),
                 )
                 occurrences.append(digivolved)
                 # Spec decision 5 (digivolve shaping precedent): emit a

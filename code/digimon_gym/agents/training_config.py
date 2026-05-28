@@ -87,6 +87,10 @@ class TrainingConfig:
     # specific profile during eval. `reward_profiles_hot_reload`
     # toggles the mtime-check + reload at each env.reset().
     reward_profiles_path: str = "code/digimon_gym/agents/reward/profiles.yaml"
+    # Universal gameplay reward shape (`add-gameplay-reward-config`). Loads
+    # alongside `reward_profiles_path` via the two-file ProfileLoader.
+    # Defines the single `gameplay` profile every archetype overlay inherits.
+    reward_gameplay_path: str = "code/digimon_gym/agents/reward/gameplay.yaml"
     reward_profile_override: Optional[str] = None
     reward_profiles_hot_reload: bool = True
 

@@ -175,15 +175,17 @@ def _build_reward_profile_factory(cfg: TrainingConfig):
     just edited. Missing-file (path doesn't exist) IS the silent path
     so legacy runs without a YAML keep working.
 
-    Also resolves `digivolve_shaping`-to-`_digivolve_shaped` mapping
-    per task 8.5: when `cfg.digivolve_shaping=True` and no explicit
-    `reward_profile_override` was set, defaults the override to
-    `_digivolve_shaped`. The shipped YAML defines that profile.
+    Per `add-gameplay-reward-config` (D9): `digivolve_shaping=True` is
+    now inert. The `_digivolve_shaped` profile is removed and the
+    universal gameplay default already includes digivolve weights. The
+    flag is accepted (no warning, no error) for backward-compat — v2
+    removes it. NO mapping to a special profile is applied.
 
     The returned closure also captures the loader handle so callers
-    that want the metadata (`profiles_path`, `content_hash`,
-    `assignments_snapshot`) can read them via `.loader` /
-    `.effective_override` attributes on the closure.
+    that want the metadata (`profiles_path`, `gameplay_path`,
+    `gameplay_hash`, `profiles_hash`, `assignments_snapshot`) can read
+    them via `.loader` / `.effective_override` attributes on the
+    closure.
     """
     from digimon_gym.agents.reward.profile_loader import (
         ProfileConfigError,
@@ -191,21 +193,27 @@ def _build_reward_profile_factory(cfg: TrainingConfig):
     )
     from digimon_gym.agents.reward.wrapper import RewardProfileWrapper
 
-    path = Path(cfg.reward_profiles_path) if cfg.reward_profiles_path else None
+    profiles_path = (
+        Path(cfg.reward_profiles_path) if cfg.reward_profiles_path else None
+    )
+    gameplay_path = (
+        Path(cfg.reward_gameplay_path) if cfg.reward_gameplay_path else None
+    )
 
-    # Resolve effective override: explicit cfg.reward_profile_override
-    # wins; otherwise digivolve_shaping=True maps to _digivolve_shaped.
-    if cfg.reward_profile_override is not None:
-        effective_override: Optional[str] = cfg.reward_profile_override
-    elif cfg.digivolve_shaping:
-        effective_override = "_digivolve_shaped"
-    else:
-        effective_override = None
+    # Effective override: explicit cfg.reward_profile_override wins.
+    # `digivolve_shaping=True` no longer maps to anything — see docstring.
+    effective_override: Optional[str] = cfg.reward_profile_override
 
-    if path is None or not path.exists():
-        # No profiles file — legacy reward path stays active. Return
+    if (
+        profiles_path is None
+        or not profiles_path.exists()
+        or gameplay_path is None
+        or not gameplay_path.exists()
+    ):
+        # Either file missing — legacy reward path stays active. Return
         # an identity factory + None loader so downstream code can
-        # detect the "not active" state.
+        # detect the "not active" state. The two-file architecture
+        # requires both files; partial config falls back to legacy.
         def apply_identity(env):
             return env
 
@@ -215,11 +223,15 @@ def _build_reward_profile_factory(cfg: TrainingConfig):
         return apply_identity
 
     try:
-        loader = ProfileLoader(path)
+        loader = ProfileLoader(
+            gameplay_path=gameplay_path,
+            profiles_path=profiles_path,
+        )
     except ProfileConfigError as e:
         raise RuntimeError(
-            f"Failed to load reward profiles from {path}: {e}. "
-            "Fix the YAML or set `reward_profiles_path: ''` to disable."
+            f"Failed to load reward profiles from gameplay={gameplay_path} "
+            f"+ profiles={profiles_path}: {e}. Fix the YAML or set both "
+            "`reward_gameplay_path: ''` and `reward_profiles_path: ''` to disable."
         ) from e
 
     def apply_wrap(env):
@@ -627,6 +639,14 @@ class WinRateCallback(BaseCallback):
         self._window_total_hardcasts_of_boss: int = 0
         self._window_total_discipline_num: int = 0  # digivolves
         self._window_total_discipline_denom: int = 0  # digivolves + hardcasts
+        # add-gameplay-reward-config telemetry. Tracked per eval window.
+        # `mean_eval_winning_turn` is emitted only when there were
+        # agent-side wins (winner_id == 1) in the window; the bus reads
+        # `turn_count` from rl_state at terminal.
+        self._window_total_winning_turn: float = 0.0
+        self._window_total_winning_games: int = 0
+        # `mean_eval_digivolve_driven_attacks` per game (always emitted).
+        self._window_total_digivolve_driven_attacks: int = 0
 
     def get_archetype_results(self):
         """Return per-archetype results as ArchetypeResult list."""
@@ -715,6 +735,10 @@ class WinRateCallback(BaseCallback):
         self._window_total_hardcasts_of_boss = 0
         self._window_total_discipline_num = 0
         self._window_total_discipline_denom = 0
+        # add-gameplay-reward-config — reset alongside boss-arrival.
+        self._window_total_winning_turn = 0.0
+        self._window_total_winning_games = 0
+        self._window_total_digivolve_driven_attacks = 0
 
         for game_idx in range(self.n_eval_episodes):
             obs, info = eval_env.reset()
@@ -750,6 +774,8 @@ class WinRateCallback(BaseCallback):
             game_digivolves_into_boss_dna = 0
             game_hardcasts_of_boss = 0
             game_hardcasts_of_boss_full_cost = 0
+            # add-gameplay-reward-config per-game accumulators.
+            game_digivolve_driven_attacks = 0
 
             # LSTM state management (None for MLP, threaded for LSTM)
             state = None
@@ -806,6 +832,18 @@ class WinRateCallback(BaseCallback):
                             game_hardcasts_of_boss += 1
                             if ev.cost_paid >= ev.cost_printed:
                                 game_hardcasts_of_boss_full_cost += 1
+
+                # add-gameplay-reward-config: count agent-side
+                # DigivolveDrivenAttack occurrences regardless of profile
+                # (the engine counter exposes them on every run).
+                occ_list_all = info.get("reward_occurrences", []) or []
+                if occ_list_all:
+                    from digimon_gym.agents.reward.occurrences import (
+                        DigivolveDrivenAttack as _DigivolveDrivenAttack,
+                    )
+                    for ev in occ_list_all:
+                        if isinstance(ev, _DigivolveDrivenAttack) and ev.player == 1:
+                            game_digivolve_driven_attacks += 1
 
             total_reward += episode_reward
             total_steps += steps
@@ -1127,6 +1165,29 @@ class WinRateCallback(BaseCallback):
                         + game_total_steps
                     )
 
+            # add-gameplay-reward-config per-game hooks:
+            # 1. winning_turn — accumulate turn_count at terminal for
+            #    agent-won games (winner_id == 1).
+            # 2. digivolve_driven_attacks — always accumulate per-game
+            #    count regardless of outcome.
+            self._window_total_digivolve_driven_attacks += game_digivolve_driven_attacks
+            if won and not is_draw:
+                try:
+                    # Read turn_count from the final rl_state. In BO3 mode
+                    # the last game's terminal turn_count is the one we
+                    # captured; in single mode it's the only game.
+                    if eval_env is not None:
+                        turn_at_terminal = int(
+                            _unwrap_to_digimon_env(eval_env)
+                            ._rl_state()
+                            .get("turn_count", 0)
+                        )
+                        if turn_at_terminal > 0:
+                            self._window_total_winning_turn += float(turn_at_terminal)
+                            self._window_total_winning_games += 1
+                except Exception:
+                    pass
+
             # Boss-arrival per-game counts (Group 10 task 10.6). Fold
             # into both axis dicts + the window-aggregate counters.
             if game_boss_cards:
@@ -1265,6 +1326,23 @@ class WinRateCallback(BaseCallback):
                 "pilot/mean_eval_digivolve_discipline",
                 self._window_total_discipline_num / self._window_total_discipline_denom,
             )
+
+        # ─── add-gameplay-reward-config telemetry ────────────────────────
+        # `mean_eval_winning_turn` is emitted only when wins occurred —
+        # absent (NOT zero) when no agent-won games happened in the
+        # window. Operators see this as a missing point on the curve
+        # rather than a misleading 0.
+        if self._window_total_winning_games > 0:
+            self.logger.record(
+                "pilot/mean_eval_winning_turn",
+                self._window_total_winning_turn / self._window_total_winning_games,
+            )
+        # `mean_eval_digivolve_driven_attacks` is always emitted — zero
+        # is meaningful here ("the agent never landed a Lv5+ attack").
+        self.logger.record(
+            "pilot/mean_eval_digivolve_driven_attacks",
+            self._window_total_digivolve_driven_attacks / n_episodes,
+        )
 
         # ─── BO3 match-tier metrics ──────────────────────────────────────
         # Only emitted when at least one eval episode came from a MatchEnv-
@@ -2096,8 +2174,10 @@ def train(total_timesteps: int = 100_000,
         loader = reward_profile_factory.loader
         eff = reward_profile_factory.effective_override
         print(
-            f"  Reward profiles: loaded from {loader.path} "
-            f"(hash={loader.profiles.content_hash[:14]}..., "
+            f"  Reward profiles: loaded from gameplay={loader.gameplay_path} "
+            f"+ profiles={loader.profiles_path} "
+            f"(gameplay_hash={loader.profiles.gameplay_hash[:14]}..., "
+            f"profiles_hash={loader.profiles.profiles_hash[:14]}..., "
             f"override={eff!r}, hot_reload={cfg.reward_profiles_hot_reload})"
         )
 
@@ -2112,27 +2192,34 @@ def train(total_timesteps: int = 100_000,
             check_resume_hash as _rp_check_resume,
             write_sidecar as _rp_write_sidecar,
         )
-        current_hash = reward_profile_factory.loader.profiles.content_hash
+        profiles_snap = reward_profile_factory.loader.profiles
+        current_profiles_hash = profiles_snap.profiles_hash
+        current_gameplay_hash = profiles_snap.gameplay_hash
         if cfg.resume_from:
             # Resolve the resume-target's run_dir from the checkpoint
-            # zip path. The sidecar lives in the parent dir.
+            # zip path. The sidecar lives in the parent dir. The single
+            # `--reward-profiles-override-mismatch` flag covers BOTH
+            # files; if both drifted, the gameplay-side error fires
+            # first (operators usually want to know about the universal
+            # shape change first).
             checkpoint_dir = Path(cfg.resume_from).parent
             _rp_check_resume(
                 checkpoint_dir,
-                current_hash,
+                current_profiles_hash,
                 override_mismatch=reward_profiles_override_mismatch,
+                current_gameplay_hash=current_gameplay_hash,
             )
         # Always write a fresh sidecar at run-start (new run OR resume
-        # after override). The sidecar reflects the CURRENT hash so
+        # after override). The sidecar reflects the CURRENT hashes so
         # later resumes have an up-to-date reference point.
         _rp_write_sidecar(
             run_dir,
             reward_profiles_path=cfg.reward_profiles_path,
-            reward_profiles_hash=current_hash,
+            reward_profiles_hash=current_profiles_hash,
+            reward_gameplay_path=cfg.reward_gameplay_path,
+            reward_gameplay_hash=current_gameplay_hash,
             reward_profile_override=reward_profile_factory.effective_override,
-            reward_assignments_snapshot=dict(
-                reward_profile_factory.loader.profiles.assignments
-            ),
+            reward_assignments_snapshot=dict(profiles_snap.assignments),
         )
     recordings_dir = Path(cfg.record_games_dir) if cfg.record_games_dir else run_dir / "recordings"
     recording_writer = TrainingGameRecorder(
@@ -2580,6 +2667,20 @@ def train(total_timesteps: int = 100_000,
         digivolve_reward=cfg.digivolve_reward,
         dna_digivolve_bonus=cfg.dna_digivolve_bonus,
         match_format=cfg.match_format,
+        # add-gameplay-reward-config: persist gameplay-yaml path + hash
+        # so downstream tooling can distinguish runs by their universal
+        # shape without re-loading the YAML. Empty defaults when the
+        # reward-profile factory isn't active (legacy run).
+        reward_gameplay_path=(
+            cfg.reward_gameplay_path
+            if reward_profile_factory.active
+            else ""
+        ),
+        reward_gameplay_hash=(
+            reward_profile_factory.loader.profiles.gameplay_hash
+            if reward_profile_factory.active
+            else ""
+        ),
     )
     if checkpoint_cb is not None:
         meta.checkpoint_timestamps = checkpoint_cb.saved_at

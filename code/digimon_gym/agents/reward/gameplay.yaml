@@ -1,0 +1,82 @@
+# Universal game-mechanic reward shape.
+#
+# Spec: openspec/changes/add-gameplay-reward-config/specs/gameplay-reward-config/spec.md
+# Design: openspec/changes/add-gameplay-reward-config/design.md §D1-D7
+#
+# This file defines exactly ONE profile, `gameplay`, holding the universal
+# shaping every archetype inherits. Archetype overlays live in the sister
+# file `profiles.yaml` — each profile there MUST `inherits: gameplay`
+# (directly or transitively).
+#
+# Editing this file: changes take effect at the next `env.reset()` when
+# `reward_profiles_hot_reload = true` (default). The active profile is
+# locked at reset and stable for the rest of the episode.
+#
+# Personality: "win fast or it hurts." Components:
+#   - terminal_outcome    : ±10 win/loss base, -1 draw. Legacy linear
+#                           fast-win bonus is disabled (max=0); the new
+#                           turn-based `quick_win_bonus` replaces it.
+#   - quick_win_bonus     : peak +5 at turn 3 (earliest possible P1 win),
+#                           linear decay −1.25/turn to 0 at turn 7.
+#   - stall_penalty       : −0.1 × (turn − 7)² applied to EVERY terminal
+#                           (win, loss, AND draw). Unbounded — agents must
+#                           never play 30-turn games.
+#   - step_penalty        : −0.001 per env step (down from legacy −0.06).
+#   - security_remove     : +1.5 per opponent security removed.
+#   - security_lost       : −0.5 per own security lost.
+#   - digivolve           : +0.5 per regular digivolve (up from legacy +0.1).
+#   - dna_digivolve       : +3.5 ADDITIONAL on DNA (total = +4.0 with
+#                           digivolve fire).
+#   - breeding_digivolve  : per-level table; Lv6 in breeding is the
+#                           explicit -0.4 anti-pattern (slot lock).
+#   - digivolve_driven_attack : +0.5 per Lv5+ attack that connects with
+#                               security, when the attacker has card_sources
+#                               OR was just digivolved this turn (mode=either).
+#
+# Total terminal landscape (see design.md §D5 for the table):
+#   turn 3 win   = +15.0   (10 + 5)         peak
+#   turn 7 win   = +10.0   (10 + 0)         clean seam with stall start
+#   turn 10 win  =  +9.1   (10 + 0 - 0.9)
+#   turn 20 loss = -26.9   (-10 - 16.9)
+#   turn 30 draw = -53.9   (-1 - 52.9)      draws are worst at high turn
+
+profiles:
+
+  gameplay:
+    components:
+      - kind: terminal_outcome
+        win_base: 10.0
+        fast_win_bonus_max: 0.0
+        fast_win_par_steps: 200
+        loss: -10.0
+        draw: -1.0
+      - kind: quick_win_bonus
+        peak_turn: 3
+        peak_value: 5.0
+        decay_per_turn: 1.25
+      - kind: stall_penalty
+        threshold_turn: 7
+        scale: 0.1
+        apply_to_winner: true
+        apply_to_loser: true
+      - kind: step_penalty
+        weight: -0.001
+      - kind: security_remove
+        weight: 1.5
+      - kind: security_lost
+        weight: -0.5
+      - kind: digivolve
+        weight: 0.5
+      - kind: dna_digivolve
+        weight: 3.5
+      - kind: breeding_digivolve
+        reward_per_level:
+          3: 0.4
+          4: 0.2
+          5: 0.1
+          6: -0.4
+      - kind: digivolve_driven_attack
+        mode: either
+        attacker_min_level: 5
+        reward: 0.5
+        per_card: false

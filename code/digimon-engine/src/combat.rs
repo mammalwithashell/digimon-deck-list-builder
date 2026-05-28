@@ -2336,7 +2336,12 @@ impl Game {
                 self.resolve_battle(attacker, defender)
             }
             AttackTarget::Player(defender_player) => {
-                self.resolve_player_security_loop(attacker, defender_player)
+                // count_as_digivolve_driven_attack=true: this is the
+                // primary Player-target attack arm (after blocks have
+                // already redirected to a Digimon target if any). Piercing
+                // follow-ups enter via `enter_piercing_security_check`
+                // with `false` and therefore do NOT bump the counter.
+                self.resolve_player_security_loop(attacker, defender_player, true)
             }
         }
     }
@@ -2363,7 +2368,11 @@ impl Game {
         // the per-iteration recompute from
         // `fix-security-check-recompute-mid-attack`. Mid-piercing-attack
         // digivolves / modifier grants land via the same path.
-        self.resolve_player_security_loop(attacker, defender_player)
+        //
+        // count_as_digivolve_driven_attack=false: the originating attack
+        // was on a Digimon target; per the gameplay-reward-config spec
+        // the counter only increments for primary Player-target attacks.
+        self.resolve_player_security_loop(attacker, defender_player, false)
     }
 
     /// Security-check loop for a `Player` attack. Installs the first
@@ -2387,6 +2396,7 @@ impl Game {
         &mut self,
         attacker: PermanentHandle,
         defender_player: PlayerId,
+        count_as_digivolve_driven_attack: bool,
     ) -> AttackResult {
         // Start with `checks_performed = 0`. The first iteration's
         // pre-pop guard below re-reads the live strike; if it is 0 we
@@ -2395,6 +2405,26 @@ impl Game {
         let initial_strike = self.current_security_strike(attacker);
         if initial_strike == 0 {
             return AttackResult::SecurityCheckSurvived;
+        }
+
+        // Gameplay-reward-config: count this as a "digivolve-driven
+        // attack" iff (a) we're the primary Player-target arm (not a
+        // piercing follow-up), (b) the attacker's effective level is
+        // ≥ 5 — the engine-side lower bound. The Python component
+        // re-checks against its own (configurable) `attacker_min_level`.
+        // Per-attack semantics: one increment regardless of how many
+        // security cards Security Attack +N reveals. Incremented before
+        // the first pop so deck-out (returns GameWon) still counts.
+        if count_as_digivolve_driven_attack {
+            let attacker_level = self
+                .player(attacker.player)
+                .battle_area
+                .get(attacker.index as usize)
+                .and_then(|perm| perm.level_for_rules(&self.card_data, &self.modifiers, attacker))
+                .unwrap_or(0);
+            if attacker_level >= 5 {
+                self.n_digivolve_driven_attacks[attacker.player as usize] += 1;
+            }
         }
 
         // Pop the first card and install the resolution state. Deck-out
@@ -2672,7 +2702,17 @@ impl Game {
                                 // "+N DP when attacking security" modifiers.
                                 let sec_dp = raw_sec_dp
                                     .saturating_add(self.attacker_security_dp_adjustment(attacker));
-                                if attacker_dp < sec_dp
+                                // RULES_CONTEXT 14-2-1-3: "Same DP = both lose."
+                                // The attacker is deleted when it has STRICTLY LESS
+                                // OR EQUAL DP to the security Digimon. Per 14-2-3 the
+                                // security Digimon itself isn't deleted by the
+                                // battle (its trashing happens later via the
+                                // check-disposal flow); only the attacker's
+                                // deletion is the battle's responsibility here.
+                                // Jamming preserves the attacker even on a losing
+                                // or tied compare (RULES_CONTEXT 16-Jamming: "this
+                                // Digimon can't be deleted in battles").
+                                if attacker_dp <= sec_dp
                                     && !self.has_keyword(attacker, Keyword::Jamming)
                                 {
                                     self.delete_permanent_with_effects(attacker);

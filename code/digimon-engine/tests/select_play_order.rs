@@ -17,7 +17,7 @@
 //! - Outside the phase, actions 94 and 95 are NOT in the action mask.
 
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{PLAY_FIRST, PLAY_SECOND};
+use digimon_engine::action::space::{CONCEDE_GAME, PLAY_FIRST, PLAY_SECOND};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::GamePhase;
 use digimon_engine::selection::{PlayOrder, SelectionKind};
@@ -87,6 +87,58 @@ fn mask_does_not_expose_play_order_actions_outside_phase() {
     assert_eq!(
         mask[PLAY_SECOND as usize], 0.0,
         "PLAY_SECOND illegal in Main phase"
+    );
+}
+
+#[test]
+fn mask_does_not_expose_concede_during_select_play_order() {
+    // CONCEDE_GAME is intentionally legal at every agent decision point
+    // EXCEPT Mulligan and SelectPlayOrder. Conceding mid-match between
+    // games of a BO3 should be a strategic decision the agent learns by
+    // playing PLAY_FIRST / PLAY_SECOND — not a phase where a random-init
+    // policy can degenerately pick CONCEDE_GAME and forfeit the whole
+    // match. (Prior behavior degraded BO3 evals to 0% win-rate with
+    // random init; see add-gameplay-reward-config smoke verification.)
+    let mut runner = DebugRunner::builder().start();
+    runner.game.current_phase = GamePhase::GameOver;
+    runner.game.request_play_order_selection(0);
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[CONCEDE_GAME as usize], 0.0,
+        "CONCEDE_GAME MUST NOT be legal during SelectPlayOrder \
+         (forfeit-via-random-init was making BO3 evals degenerate)"
+    );
+    // Sanity: the real choices stay legal.
+    assert_eq!(mask[PLAY_FIRST as usize], 1.0);
+    assert_eq!(mask[PLAY_SECOND as usize], 1.0);
+}
+
+#[test]
+fn mask_does_not_expose_concede_during_mulligan() {
+    // Mulligan is the pre-game keep/redraw decision — conceding before
+    // the game has started is semantically degenerate and was another
+    // random-init degeneracy path. Gate CONCEDE_GAME out during Mulligan.
+    //
+    // `concede_primitive.rs` shows the established pattern: build a
+    // started runner, then forcibly set `current_phase = Mulligan`.
+    // The mask code only consults `current_phase` + `mulligan_current_player`
+    // for the Mulligan branch, so this is sufficient.
+    let mut runner = DebugRunner::builder().start();
+    runner.game.current_phase = GamePhase::Mulligan;
+    runner.game.mulligan_pending = vec![0, 1];
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[CONCEDE_GAME as usize], 0.0,
+        "CONCEDE_GAME MUST NOT be legal during Mulligan \
+         (pre-game forfeit is degenerate)"
+    );
+    // Sanity: at least one keep/mulligan action is legal so the mask
+    // isn't all-zeros (which would mask CONCEDE out trivially).
+    assert!(
+        mask[0] > 0.0 || mask[1] > 0.0,
+        "Mulligan decider should have keep (0) or mulligan (1) legal",
     );
 }
 

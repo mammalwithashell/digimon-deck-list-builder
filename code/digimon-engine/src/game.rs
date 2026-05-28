@@ -217,6 +217,20 @@ pub struct Game {
     /// Cumulative DNA-digivolve count per player. Incremented on every
     /// successful DNA digivolve, on top of `n_digivolutions`.
     pub n_dna_digivolutions: [u32; 2],
+    /// Cumulative count of digivolve-driven attacks that reached an
+    /// opponent's security stack per attacker player. Incremented once
+    /// per qualifying attack (NOT once per security card revealed) in
+    /// `resolve_battle_attack_target` when the attack target is
+    /// `AttackTarget::Player`, the attacker's effective level is ≥ 5,
+    /// and the security loop will actually pop at least one card (i.e.
+    /// not Jamming-zeroed). Blocked attacks never reach this site
+    /// because blocks redirect the target to a Digimon. Piercing
+    /// follow-ups also do NOT count because the originating attack
+    /// target was a Digimon (only the `Player` arm increments).
+    /// Indexed by Rust 0-based PlayerId. Monotonic — never reset.
+    /// Backs the `digivolve_driven_attack` reward signal.
+    /// See `openspec/changes/add-gameplay-reward-config/`.
+    pub n_digivolve_driven_attacks: [u32; 2],
     pub current_phase: GamePhase,
     /// Memory seesaw value. Positive = favor of memory_pair.0, negative = favor of memory_pair.1.
     pub memory: i16,
@@ -794,6 +808,7 @@ impl Game {
             turn_count: 0,
             n_digivolutions: [0u32, 0u32],
             n_dna_digivolutions: [0u32, 0u32],
+            n_digivolve_driven_attacks: [0u32, 0u32],
             current_phase: GamePhase::Mulligan,
             memory: 0,
             memory_pair,

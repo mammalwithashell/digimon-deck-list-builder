@@ -87,10 +87,16 @@ effects:
     target: { owner: you, trait: Boosted }
     security_attack_fn: { base: 2, per: material_count, delta: 0 }
 "#;
+    // Attacker is intentionally higher-DP than security so the test
+    // measures security-check COUNT, not the security DP-battle outcome.
+    // Equal-DP attackers mutual-destruct per RULES_CONTEXT 14-2-1-3
+    // (`equal_dp_security_battle_deletes_attacker`).
+    let mut strong_attacker = make_test_card("BT5-008", "Normal Attacker");
+    strong_attacker.dp = Some(6000);
     let mut r = DebugRunner::builder()
         .from_dsl_yaml(yaml)
         .expect("register DSL card")
-        .add_card(make_test_card("BT5-008", "Normal Attacker"))
+        .add_card(strong_attacker)
         .add_card(make_test_card("BT1-010", "Security One"))
         .add_card(make_test_card("BT1-011", "Security Two"))
         .security(1, &["BT1-010", "BT1-011"])
@@ -135,8 +141,13 @@ effects:
     target: { owner: you, trait: Boosted }
     security_attack_fn: { base: 1, per: material_count, delta: 0 }
 "#;
+    // Attacker is intentionally higher-DP than security so the test
+    // measures Security A. formula aura selection (max vs sum), not
+    // the security DP-battle outcome. Equal-DP attackers
+    // mutual-destruct per RULES_CONTEXT 14-2-1-3.
     let mut attacker_card = make_test_card("BT5-008", "Boosted Attacker");
     attacker_card.traits.push("Boosted".to_string());
+    attacker_card.dp = Some(6000);
     let mut r = DebugRunner::builder()
         .from_dsl_yaml(first)
         .expect("register first DSL card")

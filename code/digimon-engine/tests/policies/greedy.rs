@@ -5,8 +5,8 @@
 use std::collections::HashMap;
 
 use digimon_engine::action::space::{
-    encode_attack, encode_digivolve, ACTION_SPACE_SIZE, MOVE_FROM_BREEDING, PASS, PLAY_HAND_START,
-    SECURITY_TARGET, SEL_REVEAL_START,
+    encode_attack, encode_digivolve, ACTION_SPACE_SIZE, CONCEDE_GAME, MOVE_FROM_BREEDING, PASS,
+    PLAY_FIRST, PLAY_HAND_START, PLAY_SECOND, SECURITY_TARGET, SEL_REVEAL_START,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -374,3 +374,97 @@ fn breeding_moves_vanilla_level3_with_valid_evolution_in_hand() {
         "greedy should move a vanilla level-3 when a matching evolution is available in hand"
     );
 }
+
+// ─── CONCEDE-avoidance + SelectPlayOrder (BO3 match training) ──────────────
+//
+// Per CLAUDE.md rule 26 + the `add-bo3-match-training` spec, action 93
+// (CONCEDE_GAME) is legal at every agent decision point. The pre-fix
+// fallback `first_non_pass(valid)` returned the lowest-id non-PASS
+// action, which would pick 93 over real plays whenever the per-phase
+// heuristic branch fell through. That made BO3 evals degenerate
+// (opponent or agent conceded as soon as a non-Main / non-Breeding /
+// non-Mulligan decision was requested — including SelectPlayOrder
+// between games, where 93/94/95 are all legal).
+//
+// These tests pin the post-fix behavior: greedy SHALL NOT pick
+// CONCEDE_GAME when any other legal action exists, and SHALL prefer
+// `PLAY_FIRST` during `GamePhase::SelectPlayOrder`.
+
+fn mask_with(actions: &[u16]) -> Vec<f32> {
+    let mut m = vec![0.0f32; ACTION_SPACE_SIZE];
+    for &a in actions {
+        m[a as usize] = 1.0;
+    }
+    m
+}
+
+#[test]
+fn fallback_does_not_pick_concede_when_other_actions_legal() {
+    // Scenario: a non-Main/Breeding/Mulligan phase where the
+    // catch-all `_` branch fires. PASS is not legal (so the explicit
+    // PASS branch falls through), but CONCEDE_GAME (93) and PLAY_FIRST
+    // (94) and PLAY_SECOND (95) are. Before the fix, greedy returned
+    // 93. After: greedy returns 94 (or any non-93 legal action), never
+    // 93.
+    let db = test_card_db();
+    let runner = HeadlessRunner::new(
+        deck_with_level3(),
+        deck_with_level3(),
+        &db,
+        false,
+        false,
+        false,
+        Some(7),
+    )
+    .unwrap();
+
+    // The phase test fixture isn't easy to coerce, so we synthesize
+    // a mask directly. `greedy_action` consults `game.current_phase`
+    // — for non-Main / non-Breeding / non-Mulligan, all branches
+    // collapse to the catch-all. The default freshly-constructed
+    // game is in Mulligan, but mulligan_choice handles Mulligan
+    // specifically. Force the test by submitting only CONCEDE +
+    // PLAY_FIRST / PLAY_SECOND as legal in a non-mulligan phase.
+    //
+    // We use a simpler invariant: regardless of phase, greedy MUST
+    // NOT return CONCEDE_GAME when other actions are legal. This
+    // catches the bug at the contract level.
+    let mask = mask_with(&[CONCEDE_GAME, PLAY_FIRST, PLAY_SECOND]);
+    let picked = greedy_action(&runner.game, &mask);
+    assert_ne!(
+        picked, CONCEDE_GAME,
+        "greedy MUST NOT concede when PLAY_FIRST / PLAY_SECOND are legal; \
+         got CONCEDE_GAME (action 93). Match-training BO3 evals depend on \
+         this guard (see add-bo3-match-training spec + CLAUDE.md rule 26)."
+    );
+    assert!(
+        picked == PLAY_FIRST || picked == PLAY_SECOND,
+        "greedy SHALL pick a play-order action; got {picked}",
+    );
+}
+
+#[test]
+fn fallback_does_not_pick_concede_even_with_lone_low_id_action() {
+    // Pin: even when CONCEDE_GAME is the LOWEST-id legal action and
+    // some higher-id "real" action exists, greedy MUST skip CONCEDE.
+    let db = test_card_db();
+    let runner = HeadlessRunner::new(
+        deck_with_level3(),
+        deck_with_level3(),
+        &db,
+        false,
+        false,
+        false,
+        Some(11),
+    )
+    .unwrap();
+
+    // CONCEDE_GAME=93; HATCH=60. Use a fictional mask: [93, 99] where
+    // 99 is a different action id. The catch-all should skip 93 and
+    // return 99 — NOT concede.
+    let mask = mask_with(&[CONCEDE_GAME, 99]);
+    let picked = greedy_action(&runner.game, &mask);
+    assert_ne!(picked, CONCEDE_GAME);
+    assert_eq!(picked, 99, "greedy should return the non-CONCEDE action");
+}
+

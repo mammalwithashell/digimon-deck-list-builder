@@ -17,16 +17,20 @@ from __future__ import annotations
 from typing import Dict, FrozenSet, Type
 
 from .component import RewardComponent
+from .components.breeding import BreedingDigivolveComponent
 from .components.combat import (
     BlockEventComponent,
     OppDeletionComponent,
     OwnDeletionComponent,
 )
 from .components.digivolve import DigivolveComponent, DnaDigivolveComponent
+from .components.digivolve_driven_attack import DigivolveDrivenAttackComponent
 from .components.digivolve_into import DigivolveIntoNamedCardComponent
 from .components.memory import MemorySwingComponent
 from .components.play import PlayNamedCardComponent
+from .components.quick_win import QuickWinBonusComponent
 from .components.security import SecurityLostComponent, SecurityRemoveComponent
+from .components.stall import StallPenaltyComponent
 from .components.terminal import StepPenaltyComponent, TerminalOutcomeComponent
 
 
@@ -49,6 +53,11 @@ COMPONENT_REGISTRY: Dict[str, Type[RewardComponent]] = {
     "block_event": BlockEventComponent,
     "opp_deletion": OppDeletionComponent,
     "own_deletion": OwnDeletionComponent,
+    # add-gameplay-reward-config additions:
+    "quick_win_bonus": QuickWinBonusComponent,
+    "stall_penalty": StallPenaltyComponent,
+    "breeding_digivolve": BreedingDigivolveComponent,
+    "digivolve_driven_attack": DigivolveDrivenAttackComponent,
 }
 
 
@@ -69,6 +78,11 @@ KIND_KEY_PARAMETERS: Dict[str, FrozenSet[str]] = {
     "block_event": frozenset(),
     "opp_deletion": frozenset(),
     "own_deletion": frozenset(),
+    # add-gameplay-reward-config: all single-instance components.
+    "quick_win_bonus": frozenset(),
+    "stall_penalty": frozenset(),
+    "breeding_digivolve": frozenset(),
+    "digivolve_driven_attack": frozenset(),
     # Distinct instances per match/gating combination. The loader
     # serializes these to a canonical key tuple for override matching.
     "play_named_card": frozenset(

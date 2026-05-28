@@ -32,21 +32,39 @@ from digimon_gym.agents.reward.run_metadata import (
 )
 
 
+SHIPPED_GAMEPLAY = Path("code/digimon_gym/agents/reward/gameplay.yaml")
 SHIPPED_PROFILES = Path("code/digimon_gym/agents/reward/profiles.yaml")
 
 
 def _copy_profiles_to(tmp: Path) -> Path:
-    """Copy the shipped profiles.yaml to a writable temp location."""
+    """Copy BOTH shipped reward YAMLs to a writable temp location. Returns
+    the profiles.yaml path (which historically callers wrote to /
+    consumed); gameplay.yaml sits alongside it so the two-file loader
+    can resolve `inherits: gameplay`. Tests load via
+    `_load_two_file(profiles_path)` below to honor the two-file
+    architecture."""
+    gameplay_dst = tmp / "gameplay.yaml"
+    shutil.copyfile(SHIPPED_GAMEPLAY, gameplay_dst)
     dst = tmp / "profiles.yaml"
     shutil.copyfile(SHIPPED_PROFILES, dst)
     return dst
+
+
+def _load_two_file(profiles_path: Path) -> ProfileLoader:
+    """Two-file loader against a profiles.yaml whose sibling
+    gameplay.yaml lives in the same directory (per `_copy_profiles_to`).
+    """
+    return ProfileLoader(
+        gameplay_path=profiles_path.parent / "gameplay.yaml",
+        profiles_path=profiles_path,
+    )
 
 
 def test_resume_check_passes_when_yaml_unchanged(tmp_path: Path):
     (tmp_path / "step1").mkdir(parents=True, exist_ok=True)
     profiles_path = _copy_profiles_to(tmp_path / "step1")
 
-    loader = ProfileLoader(profiles_path)
+    loader = _load_two_file(profiles_path)
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     write_sidecar(
@@ -58,14 +76,14 @@ def test_resume_check_passes_when_yaml_unchanged(tmp_path: Path):
     )
 
     # Recompute hash (file unchanged) and verify resume check is a no-op.
-    fresh_loader = ProfileLoader(profiles_path)
+    fresh_loader = _load_two_file(profiles_path)
     check_resume_hash(run_dir, fresh_loader.profiles.content_hash)
 
 
 def test_resume_check_raises_when_weight_changed(tmp_path: Path):
     # Set up: original YAML + sidecar.
     original_path = _copy_profiles_to(tmp_path)
-    loader = ProfileLoader(original_path)
+    loader = _load_two_file(original_path)
     original_hash = loader.profiles.content_hash
 
     run_dir = tmp_path / "run"
@@ -78,14 +96,18 @@ def test_resume_check_raises_when_weight_changed(tmp_path: Path):
         reward_assignments_snapshot=dict(loader.profiles.assignments),
     )
 
-    # Now modify the YAML — bump security_remove weight from 1.5 to 1.7.
+    # Now modify the YAML — bump dna_omnimon_combo_v1's reward from 6.0
+    # to 6.5. Pre-`add-gameplay-reward-config` this test mutated a
+    # security_remove weight in profiles.yaml; that component now lives
+    # in gameplay.yaml, so we mutate a value that's actually still in
+    # the archetype-overlay file.
     text = original_path.read_text(encoding="utf-8")
-    modified = text.replace("weight: 1.5", "weight: 1.7", 1)
-    assert modified != text, "test setup: expected a 1.5 substring to mutate"
+    modified = text.replace("reward: 6.0", "reward: 6.5", 1)
+    assert modified != text, "test setup: expected a `reward: 6.0` substring to mutate"
     original_path.write_text(modified, encoding="utf-8")
 
     # Reload + compute new hash + run resume check.
-    new_loader = ProfileLoader(original_path)
+    new_loader = _load_two_file(original_path)
     new_hash = new_loader.profiles.content_hash
     assert new_hash != original_hash, (
         "modifying a component weight should produce a different canonical hash"
@@ -102,7 +124,7 @@ def test_resume_check_raises_when_weight_changed(tmp_path: Path):
 
 def test_resume_check_bypasses_with_override_flag(tmp_path: Path):
     original_path = _copy_profiles_to(tmp_path)
-    loader = ProfileLoader(original_path)
+    loader = _load_two_file(original_path)
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     write_sidecar(
@@ -115,7 +137,7 @@ def test_resume_check_bypasses_with_override_flag(tmp_path: Path):
 
     text = original_path.read_text(encoding="utf-8")
     original_path.write_text(text.replace("weight: 1.5", "weight: 1.7", 1), encoding="utf-8")
-    new_loader = ProfileLoader(original_path)
+    new_loader = _load_two_file(original_path)
 
     # With override → silent no-op.
     check_resume_hash(
@@ -131,7 +153,7 @@ def test_resume_check_no_op_when_cosmetic_yaml_edit(tmp_path: Path):
     comments do NOT alter it.
     """
     original_path = _copy_profiles_to(tmp_path)
-    loader = ProfileLoader(original_path)
+    loader = _load_two_file(original_path)
     original_hash = loader.profiles.content_hash
 
     run_dir = tmp_path / "run"
@@ -152,7 +174,7 @@ def test_resume_check_no_op_when_cosmetic_yaml_edit(tmp_path: Path):
     )
     original_path.write_text(cosmetic, encoding="utf-8")
 
-    new_loader = ProfileLoader(original_path)
+    new_loader = _load_two_file(original_path)
     new_hash = new_loader.profiles.content_hash
     # Canonical hash invariant: cosmetic edits do not change it.
     assert new_hash == original_hash, (
@@ -170,7 +192,7 @@ def test_sidecar_assignments_snapshot_reflects_loaded_state(tmp_path: Path):
     the loader's assignment view.
     """
     profiles_path = _copy_profiles_to(tmp_path)
-    loader = ProfileLoader(profiles_path)
+    loader = _load_two_file(profiles_path)
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     sidecar = write_sidecar(

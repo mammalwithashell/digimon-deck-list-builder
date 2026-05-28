@@ -1,6 +1,11 @@
-# Reward profiles for pilot training.
+# Reward profiles for pilot training — ARCHETYPE OVERLAYS.
 #
-# Spec: openspec/changes/add-reward-profiles/specs/reward-profiles/spec.md
+# Spec: openspec/changes/add-gameplay-reward-config/specs/gameplay-reward-config/spec.md
+#
+# Two-file architecture:
+#   - gameplay.yaml — universal game-mechanic shaping (one profile: `gameplay`)
+#   - profiles.yaml (this file) — archetype overlays. Every profile MUST
+#     `inherits: gameplay` (directly or transitively).
 #
 # Top-level keys:
 #   - profiles:    name → profile definition (components + optional budget + optional key_cards)
@@ -21,62 +26,18 @@
 profiles:
 
   # ----------------------------------------------------------------
-  # Foundation recipe. Every non-private profile inherits this
-  # (transitively through `_default`).
-  # ----------------------------------------------------------------
-  _base_terminal:
-    components:
-      # Terminal magnitudes calibrated to the BO3 match design
-      # (see bo3-match-training/design.md §D9):
-      #   win  ≈ +10 to +15  (base + linear fast-win bonus, capped)
-      #   loss = -10         (symmetric)
-      #   draw = -1          (mild stalling penalty; rare under
-      #                       force-step-limit-wins)
-      - kind: terminal_outcome
-        win_base: 10.0
-        fast_win_bonus_max: 5.0
-        fast_win_par_steps: 200
-        loss: -10.0
-        draw: -1.0
-      - kind: step_penalty
-        weight: -0.001    # ≈ -0.3 over the 300-step soft limit
-
-  # ----------------------------------------------------------------
-  # Byte-identical match for the legacy DigimonEnv._compute_reward
-  # path with digivolve_shaping = False.
+  # Default profile — thin pass-through to the universal gameplay shape.
+  # Operators who don't need archetype-specific shaping inherit this
+  # (or `gameplay` directly).
   #
-  # A pytest regression locks this in: 100 seeded episodes run through
-  # both the legacy code path and this profile and assert per-step
-  # reward sequences are equal float-for-float (see Group 9 task 9.1).
+  # Per `add-gameplay-reward-config` migration plan: the legacy
+  # byte-identical-to-_compute_reward baseline is dropped. _default
+  # IS gameplay now — no terminal-exclusivity carve-out, no
+  # digivolve-shaping toggle, the new aggression shape is universal.
   # ----------------------------------------------------------------
   _default:
-    inherits: _base_terminal
-    # Legacy `DigimonEnv._compute_reward` short-circuits on the
-    # terminal step — it returns the terminal magnitude WITHOUT
-    # applying step penalty or dense (security) signal. To preserve
-    # byte-identical legacy behavior, the `_default` and
-    # `_digivolve_shaped` profiles opt in to terminal-exclusivity.
-    # Custom profiles leave this flag false (default) so their
-    # shaping components fire normally on the terminal step.
-    legacy_terminal_exclusivity: true
-    components:
-      - kind: security_remove
-        weight: 1.5       # legacy: +1.5 per opp security removed
-      - kind: security_lost
-        weight: -0.5      # legacy: -0.5 per own security lost
-
-  # ----------------------------------------------------------------
-  # Backwards-compat for `TrainingConfig.digivolve_shaping = True`.
-  # The runner wires this profile when the flag is set, matching the
-  # legacy digivolve_reward + dna_digivolve_bonus values.
-  # ----------------------------------------------------------------
-  _digivolve_shaped:
-    inherits: _default
-    components:
-      - kind: digivolve
-        weight: 0.1       # legacy: digivolve_reward
-      - kind: dna_digivolve
-        weight: 3.9       # legacy: dna_digivolve_bonus (additive)
+    inherits: gameplay
+    # No overrides — _default IS gameplay.
 
   # ----------------------------------------------------------------
   # DNA Omnimon archetype profile.
@@ -85,7 +46,7 @@ profiles:
   # BT22-015, or BT1-084) via the DNA digivolve chain or the AD1-025
   # Assembly alt-path. Hardcasting Omnimon at full cost is wasteful.
   #
-  # Reward shape (see design.md §D15):
+  # Reward shape (see add-reward-profiles design.md §D15):
   #   first DNA arrival      : +6.0   (≈60% of a base win)
   #   second arrival         : +2.4   (decay 0.4)
   #   asymptotic cap         : +10.0  (= reward / (1 - decay))
@@ -102,7 +63,7 @@ profiles:
   # per_episode_floor = -3 (caps cumulative hardcast/penalty signal).
   # ----------------------------------------------------------------
   dna_omnimon_combo_v1:
-    inherits: _default
+    inherits: gameplay
     budget:
       per_episode_cap: 15.0
       per_episode_floor: -3.0
@@ -157,7 +118,7 @@ profiles:
   # main phase — reward that arrival shape.
   # ----------------------------------------------------------------
   bg_imperialdramon_combo_v1:
-    inherits: _default
+    inherits: gameplay
     budget:
       per_episode_cap: 12.0
       per_episode_floor: -2.0

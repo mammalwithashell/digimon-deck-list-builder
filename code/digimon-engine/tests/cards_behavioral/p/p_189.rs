@@ -65,6 +65,20 @@ use digimon_engine::selection::SelectionKind;
 
 // ── Fixture builders ──────────────────────────────────────────────────────
 
+/// Tamer security filler — used when the test wants `on_opp_security_removed`
+/// to fire WITHOUT incidentally running a security-DP battle that would
+/// mutual-destruct same-DP attacker + Digimon security (post-fix per
+/// RULES_CONTEXT 14-2-1-3, see `equal_dp_security_battle_deletes_attacker`).
+/// Non-Digimon security skips the battle compare (13-1-7-3 / 14-2-3).
+fn make_non_digimon_security_filler(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.dp = None;
+    c.level = None;
+    c.traits = vec![];
+    c
+}
+
 /// A LIBERATOR-trait Digimon with play cost 3 — eligible for the [Security]
 /// clause selection (LIBERATOR + cost ≤ 4).
 fn make_liberator_low_cost(id: &str) -> CardData {
@@ -804,7 +818,7 @@ fn p_189_inherited_gains_1_memory_on_opp_security_removed() {
         .from_dsl_yaml(P189_YAML)
         .expect("P-189 YAML parses")
         .add_card(make_test_card("CARRIER", "Carrier"))
-        .add_card(make_test_card("SEC-CARD", "SecCard"))
+        .add_card(make_non_digimon_security_filler("SEC-CARD"))
         .add_card(make_test_card("FILL", "Fill"))
         .security(1, &["SEC-CARD"])
         .deck(0, &["FILL"])
@@ -875,8 +889,8 @@ fn p_189_inherited_opt_blocks_second_activation_same_turn() {
         .from_dsl_yaml(P189_YAML)
         .expect("P-189 YAML parses")
         .add_card(make_test_card("CARRIER", "Carrier"))
-        .add_card(make_test_card("SEC-1", "Sec1"))
-        .add_card(make_test_card("SEC-2", "Sec2"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-2"))
         .add_card(make_test_card("FILL", "Fill"))
         .security(1, &["SEC-1", "SEC-2"])
         .deck(0, &["FILL", "FILL"])
@@ -922,8 +936,8 @@ fn p_189_inherited_opt_clears_after_end_turn() {
         .from_dsl_yaml(P189_YAML)
         .expect("P-189 YAML parses")
         .add_card(make_test_card("CARRIER", "Carrier"))
-        .add_card(make_test_card("SEC-P1-1", "SecP1A"))
-        .add_card(make_test_card("SEC-P1-2", "SecP1B"))
+        .add_card(make_non_digimon_security_filler("SEC-P1-1"))
+        .add_card(make_non_digimon_security_filler("SEC-P1-2"))
         .add_card(make_test_card("FILL", "Fill"))
         .security(1, &["SEC-P1-1", "SEC-P1-2"])
         .deck(0, &["FILL", "FILL"])

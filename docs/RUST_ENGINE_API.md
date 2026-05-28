@@ -6,6 +6,12 @@
 
 **Engine event emission (post-`add-reward-profiles`):** `GameEvent::Attack`, `GameEvent::Trash`, and `GameEvent::SecurityReveal` are now emitted at their canonical wiring sites (combat declaration, batched deletion + linked-card cascade + hand discards via `Game::trash_card` / `Game::trash_permanent_stack` helpers, and security-check resolution). `GameEvent::Play` carries `cost_paid: i16`, `cost_printed: i16`, `via_alt_path: Option<String>`. `GameEvent::Digivolve` carries `was_dna: bool`, `was_blast_dna: bool`, `memory_paid: i16`. Alt-path canonical string keys come from `digimon_dsl::compiled::CompiledAltPathKind::as_key()`. See `code/digimon-engine/src/events.rs` for the full variant docs and `docs/REWARD_PROFILES.md` for how the Python `RewardEventBus` consumes these.
 
+**Additions in `add-gameplay-reward-config` (2026-05):**
+
+- `RustHeadlessGame.get_rl_state()` now also exposes `turn_count: int` (mirrors `game.turn_count`) and `n_digivolve_driven_attacks: list[int]` (length-2 per-player counter, Python player-ID order `[p1, p2]`). The Python `RewardEventBus` reads `turn_count` for the new `quick_win_bonus` / `stall_penalty` components (terminal scalar), and reads `n_digivolve_driven_attacks` for the `digivolve_driven_attack` component.
+- `n_digivolve_driven_attacks: [u32; 2]` is a new per-player counter on `Game`. It is incremented in `combat.rs::resolve_player_security_loop` exactly when (a) the loop is entered via the primary Player-target arm (NOT a piercing follow-up), (b) the attacker's effective level is `>= 5`, AND (c) the security loop actually starts (`initial_strike > 0`). Piercing follow-up arms and blocked attacks therefore never increment. Semantics are **per-attack**: a single Security Attack +N revealing multiple cards counts as one increment, not N.
+- `BREEDING_TARGET = 14` is now a module-level constant exported on the PyO3 binding (`digimon_engine.BREEDING_TARGET`). Python callers that previously hard-coded `14` for the breeding-area slot index should read it from the module.
+
 This document is the canonical scripting reference. Before writing any card effect, read this in full. The engine intentionally exposes a curated API (`EffectContext`); do not reach around it into `Game` internals.
 
 The §"Phase 5/6/7/8/9/10" appendices below are historical and preserved as-is.
