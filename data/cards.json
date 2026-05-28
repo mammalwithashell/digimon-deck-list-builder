@@ -42993,6 +42993,11 @@
         "card_color": 1,
         "level": 3,
         "memory_cost": 2
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
       }
     ],
     "xros_req": ""
@@ -44000,6 +44005,11 @@
     "evo_costs": [
       {
         "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 1,
         "level": 3,
         "memory_cost": 2
       }
