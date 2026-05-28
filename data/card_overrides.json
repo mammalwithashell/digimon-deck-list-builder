@@ -7,5 +7,21 @@
 
   "BT20-060": {
     "card_colors": [5, 2, 0]
+  },
+
+  "_evo_costs_comment": "BT12-022 (ExVeemon) and BT12-050 (Stingmon) have a second digivolve path that the digimoncard.io ingest dropped. DCGO BT12_022.asset / BT12_050.asset list both paths (Blue Lv.3 cost 2 + Green Lv.3 cost 2). These overrides re-establish the alt-digivolve so Imperialdramon DNA support behaves correctly.",
+
+  "BT12-022": {
+    "evo_costs": [
+      { "card_color": 1, "level": 3, "memory_cost": 2 },
+      { "card_color": 3, "level": 3, "memory_cost": 2 }
+    ]
+  },
+
+  "BT12-050": {
+    "evo_costs": [
+      { "card_color": 3, "level": 3, "memory_cost": 2 },
+      { "card_color": 1, "level": 3, "memory_cost": 2 }
+    ]
   }
 }

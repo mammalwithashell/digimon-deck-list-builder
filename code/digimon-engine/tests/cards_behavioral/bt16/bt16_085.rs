@@ -74,6 +74,19 @@ fn make_wormmon(id: &str) -> CardData {
     c
 }
 
+/// ExVeemon — name contains "Veemon" as a substring but is NOT the exact
+/// printed name [Veemon]. Davis & Ken's free-play filter must NOT treat this
+/// as a [Veemon]-matching pick (the bracketed name in printed text is exact-
+/// match against the card name list, not substring).
+fn make_exveemon(id: &str) -> CardData {
+    let mut c = make_test_card(id, "ExVeemon");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 4;
+    c
+}
+
 fn make_digimon_lv3(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
@@ -433,6 +446,36 @@ fn bt16_085_start_of_main_does_not_prompt_when_no_target_in_hand() {
     assert!(
         runner.pending_selection().is_none(),
         "no selection prompt when hand has no Veemon or Wormmon"
+    );
+}
+
+/// ExVeemon in hand (no real [Veemon] or [Wormmon]) → start-of-main must NOT
+/// prompt. The printed bracketed name [Veemon] is an exact-name reference
+/// (not a substring), so ExVeemon is not a valid pick even though its name
+/// contains the substring "Veemon". DCGO BT16_085.cs uses
+/// `cardSource.CardNames.Contains("Veemon")` which is exact membership in
+/// the card's name list — ExVeemon's name list is ["ExVeemon"], not ["Veemon"].
+#[test]
+fn bt16_085_start_of_main_does_not_prompt_when_only_exveemon_in_hand() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses and compiles")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_exveemon("EXVEEMON"))
+        .deck(0, &filler_deck())
+        .deck(1, &filler_deck())
+        .memory(10)
+        .build();
+
+    runner.place_on_field(0, "BT16-085", Some(0));
+    push_to_hand(&mut runner, 0, "EXVEEMON");
+
+    runner.game.enter_main_phase();
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no selection prompt when only ExVeemon is in hand — [Veemon] is exact-name, \
+         not substring (DCGO CardNames.Contains is list-membership, not string-contains)"
     );
 }
 

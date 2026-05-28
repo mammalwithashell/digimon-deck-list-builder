@@ -77,6 +77,58 @@ fn bt12_050_yaml_parses_and_compiles() {
     let _compiled = digimon_dsl::compile::compile(&spec).expect("BT12-050 YAML compiles");
 }
 
+/// Production `data/cards.json` must list BOTH digivolution paths for BT12-050:
+/// Green Lv.3 / cost 2 AND Blue Lv.3 / cost 2. DCGO BT12_050.asset is the
+/// authoritative source and lists both. The digimoncard.io ingest dropped the
+/// second path on import; this regression test pins the data fix.
+#[test]
+fn bt12_050_data_cards_json_has_green_and_blue_evo_paths() {
+    use digimon_engine::card_data::CardData;
+    use std::path::PathBuf;
+
+    // CARGO_MANIFEST_DIR = code/digimon-engine; data/cards.json is two
+    // levels up at the repo root.
+    let cards_json = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("data")
+        .join("cards.json");
+    if !cards_json.exists() {
+        eprintln!(
+            "Skipping: data/cards.json not found at {} — test only runs in a full repo checkout",
+            cards_json.display()
+        );
+        return;
+    }
+
+    let cards = CardData::load_from_file(&cards_json).expect("load data/cards.json");
+    let card = cards.get("BT12-050").expect("BT12-050 in data/cards.json");
+
+    // CardColor int: Red=0, Blue=1, Yellow=2, Green=3, White=4, Black=5, Purple=6.
+    let has_green_lv3 = card
+        .evo_costs
+        .iter()
+        .any(|ec| ec.card_color == 3 && ec.level == 3 && ec.memory_cost == 2);
+    let has_blue_lv3 = card
+        .evo_costs
+        .iter()
+        .any(|ec| ec.card_color == 1 && ec.level == 3 && ec.memory_cost == 2);
+
+    assert!(
+        has_green_lv3,
+        "BT12-050 must have Green Lv.3 / cost 2 digivolution path (DCGO BT12_050.asset); \
+         got evo_costs={:?}",
+        card.evo_costs
+    );
+    assert!(
+        has_blue_lv3,
+        "BT12-050 must have Blue Lv.3 / cost 2 digivolution path — the user-reported \
+         missing alt-digivolve path for Imperialdramon DNA support (DCGO BT12_050.asset); \
+         got evo_costs={:?}",
+        card.evo_costs
+    );
+}
+
 /// BT12-050 has exactly one triggered clause: clause 0 is now a
 /// `before_pay_cost_observe` observer (Phase 2 Track H closure).
 #[test]

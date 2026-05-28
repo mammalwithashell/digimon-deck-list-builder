@@ -20,8 +20,14 @@
 #
 # DCGO (BT16_085.cs:39-191): EffectTiming.OnStartMainPhase activate;
 #   CanActivateCondition: IsExistOnBattleArea + hand has >= 1 Veemon/Wormmon card
-#   that can be legally played. CanSelectCardCondition: card name contains "Veemon"
-#   or "Wormmon" AND CanPlayAsNewPermanent(payCost=false). After PlayPermanentCards
+#   that can be legally played. CanSelectCardCondition uses
+#   `cardSource.CardNames.Contains("Veemon") || cardSource.CardNames.Contains("Wormmon")`
+#   — list-membership against the card's name list (which is the printed name
+#   plus any "also treated as" identity aliases), NOT a substring scan of a
+#   single name string. Bracketed printed names [Veemon] / [Wormmon] are
+#   exact-name references in TCG rules. ExVeemon's CardNames list is
+#   ["ExVeemon"], so DCGO's check returns false for it.
+#   AND CanPlayAsNewPermanent(payCost=false). After PlayPermanentCards
 #   resolves, the played permanent's handle is stored and an
 #   UntilOpponentTurnEndEffects.Add() installs a bounce-to-hand effect on that
 #   permanent for EffectTiming.OnEndTurn (when opp is turn player = opponent's EOT).
@@ -132,20 +138,21 @@ effects:
         filter:
           of: you
           zone: [hand]
-          any_of:
-            - name_contains: "Veemon"
-            - name_contains: "Wormmon"
+          name_in: ["Veemon", "Wormmon"]
         n: 1
     process:
       # Select 1 Veemon or Wormmon from own hand (optional — player may decline).
+      # [Veemon] / [Wormmon] are exact-name references — `name_in` matches the
+      # printed card name (and any "also treated as" identity aliases) exactly,
+      # mirroring DCGO's `CardNames.Contains(...)` list-membership check.
+      # Substring matching (`name_contains`) would incorrectly accept ExVeemon
+      # and any other card whose name contains "Veemon" as a substring.
       - select_hand:
           of: you
           bind_as: pick
           optional: true
           filter:
-            any_of:
-              - name_contains: "Veemon"
-              - name_contains: "Wormmon"
+            name_in: ["Veemon", "Wormmon"]
           prompt: "Play 1 [Veemon] or [Wormmon] from your hand without paying the cost"
       # Play the selected card for free and bind its permanent handle so the
       # scheduled return below can target the exact permanent that was just played.
