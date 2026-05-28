@@ -31,8 +31,8 @@
 
 .launcher-frame {
   width: 100%;
-  min-height: 100vh;
-  height: 100vh;
+  min-height: var(--app-vh100, 100vh);
+  height: var(--app-vh100, 100vh);
   background: var(--bg-0);
   border: 0;
   display: grid;
@@ -599,7 +599,7 @@
 }
 
 .launcher-screen {
-  min-height: 100vh;
+  min-height: var(--app-vh100, 100vh);
   background: var(--bg-0);
   color: var(--ink-1);
   font-family: var(--body);
@@ -626,7 +626,7 @@
 
   .launcher-frame {
     width: 100%;
-    height: 100vh;
+    height: var(--app-vh100, 100vh);
     border-radius: 0;
   }
 
@@ -720,7 +720,7 @@
 
   .launcher-frame {
     width: 100%;
-    min-height: 100vh;
+    min-height: var(--app-vh100, 100vh);
     height: auto;
     border-radius: 0;
   }

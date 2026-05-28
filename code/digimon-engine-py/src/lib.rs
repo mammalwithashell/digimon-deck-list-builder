@@ -51,7 +51,7 @@ use ::digimon_engine::observation::{
 };
 use ::digimon_engine::policies::greedy_action as choose_greedy_action;
 use ::digimon_engine::rules::CardRestriction;
-use ::digimon_engine::tensor::{MAX_SOURCES, TENSOR_SIZE};
+use ::digimon_engine::tensor::TENSOR_SIZE;
 use ::digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorProfile as RustTensorProfile,
 };
@@ -439,7 +439,11 @@ fn py_tensor_profile(profile: &RustTensorProfile) -> TensorProfile {
         tensor_size: profile.tensor_size,
         field_slots: profile.field_slots,
         slot_size: profile.slot_size,
-        max_sources: MAX_SOURCES,
+        // Per-profile value (v1 = 11, v2_lite/lite_deck = 12) rather than the
+        // hardcoded v1 constant. Before the engine default flipped to
+        // `standard_lite_deck_v2`, this was masked because the v1 constant
+        // happened to match the default.
+        max_sources: profile.max_sources,
         card_id_slot_count: profile.card_id_slot_count,
         scalar_slot_count: profile.scalar_slot_count,
         card_id_positions,

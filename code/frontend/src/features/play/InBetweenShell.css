@@ -1,12 +1,12 @@
 .ib-flow-frame {
-  min-height: 100vh;
+  min-height: var(--app-vh100, 100vh);
   background: #050608;
   color: #f5f1e8;
   font-family: Geist, Inter, system-ui, sans-serif;
 }
 
 .ib-flow-body {
-  min-height: 100vh;
+  min-height: var(--app-vh100, 100vh);
 }
 
 .ib-flow-topbar {

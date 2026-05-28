@@ -6,6 +6,20 @@
 
 **Scope:** Semantic differences in game state evolution given identical inputs. Architectural differences (e.g. compile-time vs dynamic effect registration) are listed separately and are not bugs.
 
+> **Engine default observation profile flipped — 2026-05-25:** Per the
+> `flip-engine-default-to-lite-deck-v2` change, the Rust engine's
+> `tensor_profiles::standard::DEFAULT_PROFILE` is now
+> `v2_lite_deck::PROFILE` (8850 floats; `standard_lite_deck_v2`). The
+> top-level `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE`
+> both report this value. The Python legacy engine continues to produce
+> `standard_compact_v1`-shaped tensors (1375). Cross-engine parity tests
+> in `code/engine_py_legacy/tests/engine/test_rust_backend_parity.py`
+> now pin the Rust side to `observation_profile="standard_compact_v1"`
+> for v1↔v1 shape comparison; this is a quality-of-reference detail,
+> not a parity divergence. v1-trained ONNX checkpoints are no longer
+> loadable through the engine's default surface — bundle this with the
+> S1.3/S1.4 retrain in `TRAINING_RUNBOOK.md`.
+
 **Reading guide:**
 
 - 🔴 **Parity-breaking** — given the same inputs, the two engines produce different game states. Must fix before claiming cross-engine correctness.

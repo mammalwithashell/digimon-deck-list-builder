@@ -705,9 +705,15 @@ export function GamePage() {
   }
 
   return (
-    <div className="h-[calc(100vh-56px)] flex flex-col">
+    // `h-full` fills the parent `main` (Layout's flex-1 slot), which in
+    // the desktop build is 1080 - navbar; in web mode it's the
+    // viewport-equivalent. Previously this used `100vh - 56px` which
+    // referenced the actual window viewport (720px in the smallest
+    // preset) instead of the fixed canvas (1080px), causing ~360px of
+    // dead space below the hand at desktop's minimum preset.
+    <div className="h-full flex flex-col">
       {/* Full-width board area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <div className="px-3 py-1 flex items-center justify-between">
           <PhaseIndicator
             phase={store.currentPhase}

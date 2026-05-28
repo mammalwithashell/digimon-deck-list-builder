@@ -5,7 +5,7 @@ export function RegisterPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] p-8">
+    <div className="flex flex-col items-center justify-center min-h-[calc(var(--app-vh100,100vh)-56px)] p-8">
       <h1 className="text-2xl font-bold text-gray-100 mb-6">Create Account</h1>
       <RegisterForm onSuccess={() => navigate('/login')} />
       <p className="mt-4 text-sm text-gray-400">

@@ -329,6 +329,15 @@ body {
 .ib-player-half--opp .ib-player-half__battle { grid-column: 2; grid-row: 1; }
 .ib-player-half--opp .ib-player-half__resources { grid-column: 1; grid-row: 1; }
 
+/* DCGO-parity layout: player's raising area sits at the bottom-left,
+   below the central memory gauge, instead of vertically-centered next to
+   the battle row (which would overlap the gauge). Opponent's raise keeps
+   its top-row position. */
+.ib-player-half--you .ib-player-half__raise {
+  align-self: end;
+  transform: translateY(56px);
+}
+
 .ib-player-half__raise,
 .ib-player-half__resources {
   display: flex;
@@ -344,10 +353,14 @@ body {
 
 .ib-battle-area {
   display: grid;
-  grid-template-columns: repeat(6, minmax(76px, 96px));
+  /* Exactly 7 columns × 2 rows = 14 slots. The canvas is fixed at
+     1920×1080 (see CanvasScaler), so this layout never needs to reflow —
+     it scales uniformly with the canvas. */
+  grid-template-columns: repeat(7, minmax(96px, 1fr));
+  grid-template-rows: repeat(2, auto);
   justify-content: center;
   gap: 8px;
-  min-height: 148px;
+  min-height: 280px;
 }
 
 .ib-drop-slot {
@@ -928,109 +941,12 @@ body {
   color: var(--ib-player);
 }
 
-@media (max-width: 980px), (max-height: 700px) {
-  .ib-board {
-    min-height: 560px;
-  }
-
-  .ib-player-tag {
-    display: none;
-  }
-
-  .ib-board__top-chrome {
-    left: 8px;
-    right: 8px;
-    justify-content: flex-start;
-    overflow: hidden;
-  }
-
-  .ib-action-trace {
-    max-width: 42vw;
-  }
-
-  .ib-board__side {
-    left: 8px;
-    right: 8px;
-  }
-
-  .ib-board__side--opp {
-    top: 58px;
-  }
-
-  .ib-board__side--player {
-    bottom: 128px;
-  }
-
-  .ib-player-half {
-    grid-template-columns: 74px minmax(0, 1fr) 74px;
-    gap: 6px;
-  }
-
-  .ib-player-half__raise,
-  .ib-player-half__resources {
-    gap: 4px;
-  }
-
-  .ib-battle-area {
-    grid-template-columns: repeat(6, minmax(50px, 70px));
-    gap: 4px;
-    min-height: 104px;
-  }
-
-  .ib-battle-slot,
-  .ib-raise-zone__empty {
-    width: 70px;
-    height: 98px;
-  }
-
-  .ib-battle-area .relative.inline-block,
-  .ib-raise-zone__perm .relative.inline-block {
-    transform: scale(0.73);
-    transform-origin: top center;
-  }
-
-  .ib-zone__body {
-    width: 46px;
-    height: 60px;
-  }
-
-  .ib-security__shield {
-    width: 48px;
-    height: 52px;
-  }
-
-  .ib-security__tokens,
-  .ib-zone__label,
-  .ib-security__label,
-  .ib-raise-zone__label {
-    display: none;
-  }
-
-  .ib-gauge-frame {
-    grid-template-columns: minmax(80px, 112px) minmax(300px, 1fr) minmax(80px, 112px);
-    gap: 8px;
-  }
-
-  .ib-gauge-pill {
-    min-height: 42px;
-    font-size: 11px;
-  }
-
-  .ib-board__hand {
-    width: calc(100% - 72px);
-  }
-
-  .ib-tensor-badge {
-    right: 10px;
-    bottom: 48px;
-    max-width: min(70vw, 320px);
-  }
-
-  .ib-board__hand .relative.inline-block {
-    transform: scale(0.82);
-    transform-origin: bottom center;
-  }
-}
+/* Game board never reflows: it lives inside the 1920×1080 fixed canvas
+ * managed by `<CanvasScaler>`. Smaller-window adjustments used to live
+ * in a `@media (max-width: 980px), (max-height: 700px)` block here;
+ * they were removed when the canvas became fixed-scale. If you need
+ * board-internal sizing tweaks, change the base rules above — they're
+ * the only layout the board ever uses. */
 
 /* Scrollbar styling for dark theme */
 ::-webkit-scrollbar {

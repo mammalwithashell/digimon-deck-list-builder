@@ -32,6 +32,7 @@ from server.db.routers import users as users_router
 from server.db.routers import admin_models as admin_models_router
 from server.db.routers import admin_releases as admin_releases_router
 from server.routers import deck_tools
+from server.routers import desktop_decks
 from server.routers import formats
 from server.routers import games
 from server.routers import health
@@ -89,6 +90,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Engine-only routers register FIRST so their explicit `/decks/parse`,
+# `/decks/validate`, `/decks/tested-cards` win over the DB router's
+# `/decks/{deck_id}` catch-all (which would treat the literal path
+# segment "tested-cards" as a deck_id and 401 on the auth middleware).
+app.include_router(deck_tools.router)
+app.include_router(desktop_decks.router)
+
 # DB-backed routers
 app.include_router(auth_router.router)
 app.include_router(users_router.router)
@@ -110,7 +118,6 @@ app.include_router(simulations.router)
 app.include_router(games.router)
 app.include_router(recordings.router)
 app.include_router(replays.router)
-app.include_router(deck_tools.router)
 app.include_router(formats.router)
 app.include_router(lobby.router)
 app.include_router(matchmaking.router)

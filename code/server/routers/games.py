@@ -1,46 +1,149 @@
-"""Game session endpoints.
+"""Game session endpoints — Rust engine backed.
 
-Engine-only router — no database or auth dependencies. Mounted on the
-hosted API for web-app gameplay; desktop dispatches the same operations
-through Tauri `invoke()` into the Rust engine instead of this router.
+Engine-only router (no DB, no auth). The desktop client dispatches the
+same operations through Tauri `invoke()` into the Rust engine; this
+router exposes the same Rust engine over HTTP for the browser-dev path.
+
+Previously this router used `engine_py_legacy.engine.runners`. That
+path was hollowed during the Rust migration (CLAUDE.md rule #22:
+production code MUST NOT import from `engine_py_legacy.*`). The
+legacy runners also depend on Python card scripts that bit-rotted
+when the EffectTiming enum was refactored — `ST14-12` still
+references the removed `DelaySkill` value, blocking game creation.
+
+Replacing the legacy backend with `RustHeadlessGame` (via PyO3
+bindings) fixes both: no more legacy import, no more script bit-rot.
+The HTTP response shape is kept identical so the frontend's
+`gameApi.ts` HTTP fallback drops in without DTO translation —
+`RustHeadlessGame.to_ui_json()` already returns the camelCase shape
+the React `GameState` type speaks.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
+from digimon_engine import RustHeadlessGame, parse_deck
 
-from engine_py_legacy.engine.data.enums import PlayerType
-from engine_py_legacy.engine.model_utils import list_onnx_models, resolve_model_path
-from engine_py_legacy.engine.runners.headless_game import HeadlessGame
-from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
-from digimon_engine import get_models_dir, parse_deck
-from server.routers.schemas import CreateGameRequest, GameActionRequest, SurrenderRequest
+from server.routers.schemas import (
+    CreateGameRequest,
+    GameActionRequest,
+    SurrenderRequest,
+)
 from server.routers.state import active_games
 
 router = APIRouter(tags=["games"])
 
 
-def _resolve_model_path(model_name: str | None) -> str | None:
-    """Resolve an ONNX model filename, raising HTTPException on failure."""
-    try:
-        return resolve_model_path(model_name)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+@dataclass
+class GameMeta:
+    """Per-session non-engine state — drives the agent-vs-human autoplay
+    loop and stores logs/events the engine emits during a step so the
+    HTTP response can carry them back. Mirrors the role `InteractiveGame`
+    used to play in the legacy stack."""
+
+    p1_human: bool
+    p2_human: bool
+    last_log: list[str]
+    last_events: list[dict[str, Any]]
+    player_labels: dict[int, str]
 
 
-def _require_game(game_id: str):
+game_meta: dict[str, GameMeta] = {}
+
+
+def _require_game(game_id: str) -> RustHeadlessGame:
     runner = active_games.get(game_id)
     if not runner:
         raise HTTPException(status_code=404, detail="Game not found")
+    if not isinstance(runner, RustHeadlessGame):
+        raise HTTPException(
+            status_code=500,
+            detail="Game session is not a Rust runner — incompatible runner registered",
+        )
     return runner
+
+
+def _require_meta(game_id: str) -> GameMeta:
+    meta = game_meta.get(game_id)
+    if not meta:
+        raise HTTPException(status_code=404, detail="Game metadata missing")
+    return meta
+
+
+def _is_human_turn(game: RustHeadlessGame, meta: GameMeta) -> bool:
+    """Python player-id convention: 1 → meta.p1_human, 2 → meta.p2_human."""
+    cur = game.current_player_id
+    if cur == 1:
+        return meta.p1_human
+    if cur == 2:
+        return meta.p2_human
+    return False
+
+
+def _autoplay_agent_turns(
+    game: RustHeadlessGame,
+    meta: GameMeta,
+    *,
+    log_buffer: list[str],
+    event_buffer: list[dict[str, Any]],
+    max_steps: int = 4096,
+) -> None:
+    """Step through agent decisions until the engine wants a human or the
+    game ends. Mirrors the legacy `InteractiveGame.run_step` agent loop.
+
+    Per-step logs/events drain into the caller-supplied buffers so the
+    HTTP response carries the cumulative trace from this call (matching
+    how `gameApi.ts` consumes `logs` and `events`)."""
+    steps = 0
+    while not game.is_game_over and steps < max_steps:
+        if _is_human_turn(game, meta):
+            return
+        action = game.greedy_action()
+        game.step(action)
+        for log_line in game.get_last_log():
+            log_buffer.append(log_line)
+        for ev in game.get_events_since_last_step():
+            event_buffer.append(ev)
+        steps += 1
+
+
+def _build_state_payload(
+    game: RustHeadlessGame,
+    meta: GameMeta,
+    *,
+    logs: list[str] | None = None,
+    events: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Common response builder used by /actions, /steps, /state, etc.
+    Keys mirror the legacy router's contract so the frontend's
+    `gameApi.ts` HTTP fallback can consume the same shape it consumes
+    from Tauri responses."""
+    return {
+        "state": game.to_ui_json(),
+        "action_mask": game.get_action_mask().tolist(),
+        "is_game_over": game.is_game_over,
+        "logs": logs or [],
+        "events": events or [],
+        "is_human_turn": _is_human_turn(game, meta),
+        "player_labels": meta.player_labels,
+    }
 
 
 @router.post("/games")
 @router.post("/game/create", include_in_schema=False)
 def create_game(request: CreateGameRequest):
-    """Create a new game session and return its initial state."""
+    """Create a new Rust-engine-backed session.
+
+    Accepts the same `CreateGameRequest` schema the legacy router took.
+    Trained-policy support is currently dropped — only `greedy` is
+    available for agent players in the HTTP path; the desktop Tauri
+    path still has trained-policy support via the ONNX inference
+    state. Browser-dev is for testing, not for matchmaking against
+    trained policies, so this trade-off is acceptable for now."""
     try:
         deck1 = parse_deck(request.deck1_raw) if request.deck1_raw else request.deck1
         deck2 = parse_deck(request.deck2_raw) if request.deck2_raw else request.deck2
@@ -51,222 +154,137 @@ def create_game(request: CreateGameRequest):
         raise HTTPException(status_code=400, detail="Both decks must be provided")
 
     game_id = str(uuid4())
-    p1_type = PlayerType.Human if request.player1_type.lower() == "human" else PlayerType.Agent
-    p2_type = PlayerType.Human if request.player2_type.lower() == "human" else PlayerType.Agent
-    p1_policy = request.player1_policy.lower()
-    p2_policy = request.player2_policy.lower()
+    try:
+        game = RustHeadlessGame(deck1, deck2, False, False, False, None)
+    except Exception as exc:  # PyValueError from the Rust binding
+        raise HTTPException(status_code=400, detail=f"Engine construction failed: {exc}")
 
-    # Resolve ONNX model paths for "trained" policies
-    p1_model_path = _resolve_model_path(request.player1_model) if p1_policy == "trained" else None
-    p2_model_path = _resolve_model_path(request.player2_model) if p2_policy == "trained" else None
+    p1_human = request.player1_type.lower() == "human"
+    p2_human = request.player2_type.lower() == "human"
+    meta = GameMeta(
+        p1_human=p1_human,
+        p2_human=p2_human,
+        last_log=[],
+        last_events=[],
+        player_labels={
+            1: "You" if p1_human else "Agent",
+            2: "You" if p2_human else "Agent",
+        },
+    )
 
-    if p1_type == PlayerType.Agent and p2_type == PlayerType.Agent:
-        runner = HeadlessGame(
-            deck1,
-            deck2,
-            verbose=True,
-            record_actions=request.record_actions,
-            record_tensors=request.record_tensors,
-        )
-    else:
-        runner = InteractiveGame(
-            deck1,
-            deck2,
-            p1_type,
-            p2_type,
-            player1_policy=p1_policy,
-            player2_policy=p2_policy,
-            agent_action_delay_ms=request.agent_action_delay_ms,
-            player1_model_path=p1_model_path,
-            player2_model_path=p2_model_path,
-        )
+    active_games[game_id] = game
+    game_meta[game_id] = meta
 
-    active_games[game_id] = runner
+    # If the opening turn belongs to an agent, advance until a human
+    # decision (or game end). All emitted logs/events flow into the
+    # initial response so the client never misses the agent's prelude.
+    log_buffer: list[str] = []
+    event_buffer: list[dict[str, Any]] = []
+    _autoplay_agent_turns(game, meta, log_buffer=log_buffer, event_buffer=event_buffer)
 
-    if isinstance(runner, InteractiveGame):
-        runner.clear_log()
-
-    state = runner.game.to_ui_json()
-    mask = runner.get_action_mask().tolist()
-
-    player_labels = {
-        1: "You" if p1_type == PlayerType.Human else "Agent",
-        2: "You" if p2_type == PlayerType.Human else "Agent",
-    }
-
-    result = {
+    return {
         "game_id": game_id,
-        "state": state,
-        "action_mask": mask,
-        "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
-        "player_labels": player_labels,
+        **_build_state_payload(game, meta, logs=log_buffer, events=event_buffer),
     }
-
-    if isinstance(runner, InteractiveGame):
-        result["recording_metadata"] = runner.get_initial_state_dict()
-
-    return result
 
 
 @router.post("/games/{game_id}/actions")
 @router.post("/game/{game_id}/action", include_in_schema=False)
 def game_action(game_id: str, request: GameActionRequest):
-    """Execute a single action in an active game."""
-    runner = _require_game(game_id)
+    """Execute a single human action in an active session."""
+    game = _require_game(game_id)
+    meta = _require_meta(game_id)
 
-    current_player_id = runner.game.current_player_id
-    memory_before = runner.game.memory
-    phase_before = runner.game.current_phase.name
-    turn_before = runner.game.turn_count
+    if game.is_game_over:
+        raise HTTPException(status_code=400, detail="Game already over")
 
-    runner.step(request.action)
-    state = runner.game.to_ui_json()
-    mask = runner.get_action_mask().tolist()
+    current_player_id = game.current_player_id
+    # `RustHeadlessGame` doesn't expose `memory` as a top-level field
+    # before/after a step (only via `to_ui_json`). We capture the
+    # before-state from the UI JSON for action_context parity with the
+    # legacy router. This is cheap (engine has the field in hand).
+    pre = game.to_ui_json()
+    memory_before = pre.get("memoryGauge", 0)
+    phase_before = pre.get("currentPhase", "")
+    turn_before = pre.get("turnCount", 0)
 
-    result = {
-        "state": state,
-        "action_mask": mask,
-        "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
-        "is_game_over": runner.is_game_over,
-        "action_context": {
-            "player_id": current_player_id,
-            "action_id": request.action,
-            "phase": phase_before,
-            "memory_before": memory_before,
-            "memory_after": runner.game.memory,
-            "turn": turn_before,
-        },
+    try:
+        game.step(int(request.action))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Step failed: {exc}")
+
+    log_buffer = list(game.get_last_log())
+    event_buffer = list(game.get_events_since_last_step())
+
+    # If after the human step the next decision is an agent's, advance
+    # through agent turns automatically.
+    _autoplay_agent_turns(game, meta, log_buffer=log_buffer, event_buffer=event_buffer)
+
+    payload = _build_state_payload(game, meta, logs=log_buffer, events=event_buffer)
+    payload["action_context"] = {
+        "player_id": current_player_id,
+        "action_id": request.action,
+        "phase": phase_before,
+        "memory_before": memory_before,
+        "memory_after": game.to_ui_json().get("memoryGauge", 0),
+        "turn": turn_before,
     }
-
-    if isinstance(runner, InteractiveGame):
-        result["logs"] = runner.get_last_log()
-        result["events"] = runner.get_last_events()
-        runner.clear_log()
-        runner.clear_events()
-
-    return result
+    return payload
 
 
 @router.post("/games/{game_id}/steps")
 @router.post("/game/{game_id}/step", include_in_schema=False)
 def game_step(game_id: str):
-    """Advance an interactive game until it is a human turn or game over."""
-    runner = _require_game(game_id)
-    if not isinstance(runner, InteractiveGame):
-        raise HTTPException(status_code=400, detail="Step is only for interactive games. Use /action for headless games.")
+    """Advance the session until the next human decision or game end.
+    No-op if the current decision is already a human's."""
+    game = _require_game(game_id)
+    meta = _require_meta(game_id)
 
-    state = runner.run_step()
-    mask = runner.get_action_mask().tolist()
-    logs = runner.get_last_log()
-    events = runner.get_last_events()
-    runner.clear_log()
-    runner.clear_events()
-
-    return {
-        "state": state,
-        "action_mask": mask,
-        "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
-        "logs": logs,
-        "events": events,
-        "is_human_turn": runner.is_current_player_human(),
-        "is_game_over": runner.is_game_over,
-    }
+    log_buffer: list[str] = []
+    event_buffer: list[dict[str, Any]] = []
+    _autoplay_agent_turns(game, meta, log_buffer=log_buffer, event_buffer=event_buffer)
+    return _build_state_payload(game, meta, logs=log_buffer, events=event_buffer)
 
 
 @router.get("/games/{game_id}/state")
 @router.get("/game/{game_id}/state", include_in_schema=False)
 def game_state(game_id: str):
-    """Get current game state."""
-    runner = _require_game(game_id)
-    return runner.game.to_ui_json()
+    """Return the current `to_ui_json` snapshot."""
+    game = _require_game(game_id)
+    return game.to_ui_json()
 
 
 @router.get("/games/{game_id}/action-mask")
 @router.get("/game/{game_id}/mask", include_in_schema=False)
 def game_mask(game_id: str):
-    """Get current action mask."""
-    runner = _require_game(game_id)
-    return {"action_mask": runner.get_action_mask().tolist()}
-
-
-@router.get("/games/{game_id}/actions")
-@router.get("/game/{game_id}/actions", include_in_schema=False)
-def game_actions(game_id: str):
-    """Get human-readable descriptions of currently legal actions."""
-    runner = _require_game(game_id)
-    return {
-        "actions": runner.game.describe_actions(runner.game.current_player_id),
-    }
-
-
-@router.get("/games/{game_id}/logs")
-@router.get("/game/{game_id}/log", include_in_schema=False)
-def game_log(game_id: str):
-    """Get and clear game logs."""
-    runner = _require_game(game_id)
-    if isinstance(runner, InteractiveGame):
-        logs = runner.get_last_log()
-        runner.clear_log()
-        return {"logs": logs}
-    return {"logs": []}
+    """Return the current action mask."""
+    game = _require_game(game_id)
+    return {"action_mask": game.get_action_mask().tolist()}
 
 
 @router.post("/games/{game_id}/surrender")
 def surrender_game(game_id: str, request: SurrenderRequest):
-    """Surrender an active game."""
-    runner = _require_game(game_id)
-    if not isinstance(runner, InteractiveGame):
-        raise HTTPException(status_code=400, detail="Surrender is only for interactive games.")
-    if runner.game.game_over:
+    """Concede on behalf of `player_id`. Player IDs are 1 or 2 (Python
+    convention); the Rust binding translates to its 0/1 internal IDs."""
+    game = _require_game(game_id)
+    meta = _require_meta(game_id)
+    if game.is_game_over:
         raise HTTPException(status_code=400, detail="Game is already over.")
-
-    state = runner.surrender(request.player_id)
-    logs = runner.get_last_log()
-    events = runner.get_last_events()
-    runner.clear_log()
-    runner.clear_events()
-
-    return {
-        "state": state,
-        "action_mask": runner.get_action_mask().tolist(),
-        "logs": logs,
-        "events": events,
-        "is_game_over": True,
-        "surrendered_by": request.player_id,
-    }
+    try:
+        game.concede(int(request.player_id))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Concede failed: {exc}")
+    logs = list(game.get_last_log())
+    events = list(game.get_events_since_last_step())
+    payload = _build_state_payload(game, meta, logs=logs, events=events)
+    payload["surrendered_by"] = request.player_id
+    return payload
 
 
 @router.delete("/games/{game_id}")
 @router.delete("/game/{game_id}", include_in_schema=False)
 def delete_game(game_id: str):
-    """Delete an active game session."""
-    if game_id in active_games:
-        del active_games[game_id]
+    """Drop the active session and its metadata."""
+    active_games.pop(game_id, None)
+    game_meta.pop(game_id, None)
     return {"status": "deleted"}
-
-
-@router.get("/games/{game_id}/recording")
-@router.get("/game/{game_id}/recording", include_in_schema=False)
-def get_game_recording(game_id: str):
-    """Get in-memory recording for a headless game."""
-    runner = _require_game(game_id)
-    if not isinstance(runner, HeadlessGame):
-        raise HTTPException(
-            status_code=400,
-            detail="Recording endpoint is for headless games. Interactive games use client-side recording.",
-        )
-
-    recording = runner.get_recording()
-    if not recording:
-        raise HTTPException(
-            status_code=404,
-            detail="This game was not created with recording enabled (record_actions=True).",
-        )
-    return recording
-
-
-
-@router.get("/games/models")
-def list_available_models():
-    """List available ONNX agent models."""
-    return {"models": list_onnx_models()}

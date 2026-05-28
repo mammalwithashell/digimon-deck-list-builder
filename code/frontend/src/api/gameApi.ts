@@ -10,6 +10,7 @@
 // DP tooltips) will appear empty until the engine surfaces them.
 
 import { invoke } from '@tauri-apps/api/core';
+import { httpJson, isInTauriRuntime } from './engineRuntime';
 import type {
   ActionTrace,
   DecodedAction,
@@ -198,6 +199,16 @@ function mapPhase(phaseStr: string): GamePhase {
       return GamePhase.CounterTiming;
     case 'AllianceTiming':
       return GamePhase.AllianceTiming;
+    case 'SelectPermutation':
+      return GamePhase.SelectPermutation;
+    case 'SelectUnion':
+      return GamePhase.SelectUnion;
+    case 'SelectBudgeted':
+      return GamePhase.SelectBudgeted;
+    case 'SelectBreedingPermanent':
+      return GamePhase.SelectBreedingPermanent;
+    case 'SelectPlayOrder':
+      return GamePhase.SelectPlayOrder;
     default:
       return GamePhase.Main;
   }
@@ -313,8 +324,36 @@ export function dtoToGameState(dto: GameStateDto): GameState {
     winner: dto.winner,
     player1: toPlayerState(player1, memory0),
     player2: toPlayerState(player2, -memory0),
-    revealedCards: [],
-    pendingSelection: null,
+    revealedCards: (dto.revealed_cards ?? []).map((rc) => ({
+      cardId: rc.card_id,
+      owner: rc.owner,
+    })),
+    pendingSelection: dto.pending_selection
+      ? {
+          phase: mapPhase(dto.pending_selection.phase),
+          validIndices: dto.pending_selection.valid_action_ids,
+          isOptional: dto.pending_selection.is_optional,
+          prompt: dto.pending_selection.prompt,
+          // Engine is 0-based (player_id 0/1); frontend convention is
+          // 1-based (1 = "you", 2 = "opponent"), and PromptBar's
+          // `localPlayer` is hardcoded to 1. Without this +1, every
+          // engine-0 pending selection would render as "Waiting for
+          // opponent…" when it's actually the user's turn.
+          selectingPlayer: dto.pending_selection.selecting_player + 1,
+          // EffectChoice branches need to thread through with their actual
+          // engine `action_id`s; the frontend's broken `EFFECT_CHOICE_START`
+          // range scan can't find them otherwise.
+          effectChoices: dto.pending_selection.effect_choices?.map((c) => ({
+            index: c.index,
+            cardId: `effect-${c.index}`,
+            cardName: c.label,
+            label: c.label,
+            // Pass engine action_id through so SelectionPanel can dispatch
+            // it directly without recomputing from index.
+            actionId: c.action_id,
+          })),
+        }
+      : null,
     pendingAttack: null,
   };
 }
@@ -375,6 +414,37 @@ export function toActionTraces(
 export async function createGame(
   params: CreateGameParams,
 ): Promise<CreateGameResponse> {
+  // Browser-dev path: hit the FastAPI `/games` endpoint. The Rust
+  // engine's `to_ui_json()` already returns the camelCase `GameState`
+  // shape so no DTO translation is needed; the response slots directly
+  // into the store.
+  if (!isInTauriRuntime()) {
+    const kinds = params.player_kinds ?? deriveKinds(params);
+    const p1Human = kinds ? kinds[0] === 'human' : false;
+    const p2Human = kinds ? kinds[1] === 'human' : false;
+    const body = {
+      deck1: params.deck1 ?? [],
+      deck2: params.deck2 ?? [],
+      deck1_raw: params.deck1_raw,
+      deck2_raw: params.deck2_raw,
+      player1_type: p1Human ? 'human' : 'agent',
+      player2_type: p2Human ? 'human' : 'agent',
+      player1_policy: 'greedy',
+      player2_policy: 'greedy',
+    };
+    const httpResp = await httpJson<{
+      game_id: string;
+      state: GameState;
+      action_mask: number[];
+    }>('/games', { method: 'POST', body });
+    return {
+      game_id: httpResp.game_id,
+      state: httpResp.state,
+      action_mask: httpResp.action_mask,
+    };
+  }
+
+  // Desktop path: Tauri invoke into the in-process Rust engine.
   // Engine accepts optional `player_kinds` / `player_model_ids`.
   // If the caller passed those directly, forward verbatim. Otherwise fall
   // back to deriving them from the legacy string-typed fields so existing
@@ -423,9 +493,32 @@ function toKind(type: string | undefined, policy: string | undefined): PlayerKin
 }
 
 export async function sendAction(
-  _gameId: string,
+  gameId: string,
   action: number,
 ): Promise<ActionResponse> {
+  if (!isInTauriRuntime()) {
+    const httpResp = await httpJson<{
+      state: GameState;
+      action_mask: number[];
+      is_game_over: boolean;
+      logs: string[];
+      events: GameEvent[];
+      action_context?: Record<string, unknown>;
+    }>(`/games/${gameId}/actions`, { method: 'POST', body: { action } });
+    return {
+      state: httpResp.state,
+      action_mask: httpResp.action_mask,
+      is_game_over: httpResp.is_game_over,
+      logs: httpResp.logs,
+      events: httpResp.events,
+      action_context: httpResp.action_context,
+      // Browser-dev path doesn't currently surface action_traces — those
+      // are produced by the Tauri command's per-step `explain_action`
+      // call. Acceptable trade-off; the ticker stays empty in browser
+      // mode but the game itself works.
+      action_traces: [],
+    };
+  }
   const resp = await invoke<ActionCommandResponse>('rust_submit_action', {
     action,
   });
@@ -440,7 +533,26 @@ export async function sendAction(
   };
 }
 
-export async function stepGame(_gameId: string): Promise<StepResponse> {
+export async function stepGame(gameId: string): Promise<StepResponse> {
+  if (!isInTauriRuntime()) {
+    const httpResp = await httpJson<{
+      state: GameState;
+      action_mask: number[];
+      is_game_over: boolean;
+      logs: string[];
+      events: GameEvent[];
+      is_human_turn: boolean;
+    }>(`/games/${gameId}/steps`, { method: 'POST' });
+    return {
+      state: httpResp.state,
+      action_mask: httpResp.action_mask,
+      logs: httpResp.logs,
+      events: httpResp.events,
+      is_human_turn: httpResp.is_human_turn,
+      is_game_over: httpResp.is_game_over,
+      action_traces: [],
+    };
+  }
   const resp = await invoke<StepCommandResponse>('rust_step_game');
   return {
     state: dtoToGameState(resp.state),

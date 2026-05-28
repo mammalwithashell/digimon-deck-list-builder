@@ -1,7 +1,55 @@
 import axios from 'axios';
 import type { DigimonCardData } from '@/types/cards';
+import { getCardImageUrl } from '@/utils/cardImages';
 
 const DIGIMON_API = 'https://digimoncard.io/index.php/api-public/search';
+
+/**
+ * The digimoncard.io API derives alt-art entries from TCGPlayer SKU
+ * names ("Alternate Art"), but the image CDN (`images.digimoncard.io`)
+ * doesn't always serve a matching `<id>_alt.webp`. For example,
+ * EX10-074 / BT16-088 / EX1-066 each have an "Alternate Art" SKU but
+ * the CDN 404s on the alt file. Without filtering, the deckbuilder
+ * renders a phantom card-button for each missing alt with only the
+ * card name as a text fallback — confusing UX.
+ *
+ * `probeAltArtExists` does an `<img>` HEAD-equivalent (Image.onload /
+ * onerror, which bypasses fetch's CORS block on the CDN) so we can
+ * drop alt entries whose images don't exist. Results are cached per
+ * session: each card_id is probed once.
+ */
+const altArtAvailability = new Map<string, Promise<boolean>>();
+
+function probeAltArtExists(cardId: string): Promise<boolean> {
+  let p = altArtAvailability.get(cardId);
+  if (p) return p;
+  p = new Promise<boolean>((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = getCardImageUrl(cardId, true);
+  });
+  altArtAvailability.set(cardId, p);
+  return p;
+}
+
+/** Strip alt-art entries that the CDN doesn't actually serve.
+ *  Runs probes in parallel; ~100ms cost on first hit, free thereafter
+ *  (cache is module-level). Base entries are never touched. */
+async function dropMissingAltArts(cards: DigimonCardData[]): Promise<DigimonCardData[]> {
+  const altIndices = cards
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.isAltArt);
+  if (altIndices.length === 0) return cards;
+  const results = await Promise.all(
+    altIndices.map(async ({ c, i }) => ({
+      i,
+      keep: await probeAltArtExists(c.cardnumber),
+    })),
+  );
+  const drop = new Set(results.filter((r) => !r.keep).map((r) => r.i));
+  return cards.filter((_, i) => !drop.has(i));
+}
 
 interface SearchParams {
   n?: string;       // name
@@ -100,7 +148,10 @@ export async function searchCards(params: SearchParams): Promise<DigimonCardData
   }
   const { data } = await axios.get<Record<string, unknown>[]>(DIGIMON_API, { params: query });
   if (!Array.isArray(data)) return [];
-  return dedupeByCardId(data);
+  // Dedupe TCGPlayer SKUs down to base + (optional) alt, then probe the
+  // CDN to drop alt entries whose image files don't exist (TCGPlayer
+  // SKU naming doesn't match CDN image availability one-to-one).
+  return dropMissingAltArts(dedupeByCardId(data));
 }
 
 export async function getCardById(cardId: string): Promise<DigimonCardData | null> {

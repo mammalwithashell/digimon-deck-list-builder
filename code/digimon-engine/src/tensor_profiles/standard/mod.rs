@@ -5,7 +5,7 @@ pub mod v2_full;
 pub mod v2_lite;
 pub mod v2_lite_deck;
 
-pub const DEFAULT_PROFILE: TensorProfile = v1::PROFILE;
+pub const DEFAULT_PROFILE: TensorProfile = v2_lite_deck::PROFILE;
 
 pub fn profile_by_version(version: u32) -> Option<TensorProfile> {
     match version {

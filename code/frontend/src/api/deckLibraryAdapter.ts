@@ -4,12 +4,21 @@ import type { DeckFolder, DeckResponse, DeckSummary } from '@/types/deck';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
-function hasTauriBridge(): boolean {
-  return Boolean((globalThis as { isTauri?: boolean }).isTauri);
-}
-
+/**
+ * Route deck CRUD through the local-file backend (`deckStore`) whenever
+ * we're in the desktop *build* — that's true whether the bundle is
+ * running inside Tauri (uses `invoke()` directly) or in a plain browser
+ * (uses the FastAPI `/desktop-decks` HTTP fallback baked into
+ * `deckStore`). Either way the same local JSON files are the source of
+ * truth, so the deckbuilder behaves identically across runtimes.
+ *
+ * Previously this also required a Tauri-bridge runtime check via
+ * `globalThis.isTauri`, which forced browser-dev sessions to fall
+ * through to `deckApi` (the DB-backed hosted-API path) and 401 on auth.
+ * Removed — `deckStore`'s own runtime detection handles both cases.
+ */
 function usesDesktopStorage(): boolean {
-  return IS_DESKTOP && hasTauriBridge();
+  return IS_DESKTOP;
 }
 
 function deckBackend() {

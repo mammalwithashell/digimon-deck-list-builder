@@ -5,6 +5,10 @@
     "core:default",
     "updater:default",
     "process:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "core:window:allow-set-size",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-set-resizable",
+    "core:window:allow-is-fullscreen"
   ]
 }

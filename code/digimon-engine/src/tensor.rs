@@ -1,392 +1,77 @@
-//! Tensor building for the RL observation space.
+//! Default observation tensor entry point.
 //!
-//! Produces a flat `f32` tensor from one player's perspective.
-//! Card identities are integer registry indices (float-cast).
-//! The `nn.Embedding` lookup happens inside the features extractor on the GPU.
+//! `tensor::build_tensor` and `tensor::TENSOR_SIZE` report the engine's
+//! canonical default profile — currently `standard_lite_deck_v2` (8850).
+//! Profile-explicit callers should reach for
+//! `observation::build_observation_tensor(.., ObservationProfileId::*)` or
+//! the profile-specific builders (`tensor_v1::build_tensor_standard_compact_v1`,
+//! `tensor_v2_lite::build_tensor_standard_lite_v2`,
+//! `tensor_v2_lite_deck::build_tensor_standard_lite_deck_v2`,
+//! `tensor_v2_full::build_tensor_standard_full_v2`).
+//!
+//! Card identities are integer registry indices (float-cast); the
+//! `nn.Embedding` lookup happens inside the features extractor on the GPU.
 
-use crate::card_data::CardData;
 use crate::card_registry::CardRegistry;
 use crate::enums::PlayerId;
 use crate::game::Game;
-use crate::permanent::{Permanent, PermanentHandle};
-use crate::player::Player;
-use crate::tensor_profiles::{self, TensorSlotHeaderField, TensorSourceField};
+use crate::observation::{build_observation_tensor, default_observation_profile};
 
-// ─── Standard V1 Tensor Layout Constants ──────────────────────────────
+// ─── Default Profile Re-exports ───────────────────────────────────────
 //
-// `tensor_profiles::standard::v1` owns these values. This module re-exports
-// them because it is the Standard v1 tensor writer and many callers still
-// import the constants from `tensor`.
+// Top-level `TENSOR_SIZE` constant agrees with `default_profile()` per the
+// `engine-default-observation-profile` spec. Other layout constants that
+// used to be re-exported (v1's `SLOT_SIZE`, `OFF_MY_BATTLE`, etc.) are now
+// reachable only via their explicit module paths
+// (`tensor_profiles::standard::v1::*`) — they describe the v1 layout, not
+// the engine default, and confusing the two led to a real bug class
+// (desktop builds rejecting modern models at the v1-shaped gate).
 
-pub use crate::tensor_profiles::standard::v1::{
-    BATTLE_SIZE, BREEDING_SIZE, FIELD_SLOTS, GLOBAL_SIZE, HAND_SIZE, MAX_HAND, MAX_REVEALED,
-    MAX_SECURITY, MAX_SOURCES, MAX_TRASH, OFF_GLOBAL, OFF_MY_BATTLE, OFF_MY_BREEDING, OFF_MY_HAND,
-    OFF_MY_SECURITY, OFF_MY_TRASH, OFF_OPP_BATTLE, OFF_OPP_BREEDING, OFF_OPP_HAND,
-    OFF_OPP_SECURITY, OFF_OPP_TRASH, OFF_REVEALED, OFF_SELECTION, REVEALED_SIZE, SECURITY_SIZE,
-    SELECTION_SIZE, SLOT_DP_OFFSET, SLOT_HEADER_SIZE, SLOT_LINKED_COUNT_OFFSET,
-    SLOT_OPT_TOTAL_OFFSET, SLOT_OPT_USED_OFFSET, SLOT_SIZE, SLOT_SOURCE_COUNT_OFFSET,
-    SLOT_SOURCE_START_OFFSET, SLOT_SUSPENDED_OFFSET, SLOT_TOP_CARD_OFFSET, SOURCE_CARD_ID_OFFSET,
-    SOURCE_DP_CONTRIBUTION_OFFSET, SOURCE_ENTRY_SIZE, SOURCE_OPT_STATE_OFFSET, TENSOR_SIZE,
-    TRASH_SIZE,
-};
+pub use crate::tensor_profiles::standard::v2_lite_deck::TENSOR_SIZE;
 
+/// Per-DP normalization constant (shared across all standard profiles).
 pub const DP_NORM: f32 = 30000.0;
 
 // ─── Tensor Builder ───────────────────────────────────────────────────
 
-/// Build a flat observation tensor from the given player's perspective.
+/// Build a flat observation tensor from the given player's perspective
+/// against the engine default profile.
 ///
-/// Layout (TENSOR_SIZE=1375):
-/// ```text
-///   [0-9]         Global data
-///   [10-569]      My battle area  (14 slots × 40)
-///   [570-1129]    Opp battle area (14 slots × 40)
-///   [1130-1149]   My hand  (20 card IDs)
-///   [1150-1169]   Opp hand (20 card IDs)
-///   [1170-1214]   My trash (45 card IDs)
-///   [1215-1259]   Opp trash (45 card IDs)
-///   [1260-1269]   My security (10 card IDs, face-down = 0.0)
-///   [1270-1279]   Opp security (10 card IDs, face-down = 0.0)
-///   [1280-1319]   My breeding (1 slot × 40)
-///   [1320-1359]   Opp breeding (1 slot × 40)
-///   [1360-1369]   Revealed cards (10 card IDs, from `game.revealed_cards`)
-///   [1370-1374]   Selection context
-/// ```
+/// This is a thin wrapper over the observation dispatcher; callers that
+/// want a specific profile should call
+/// `observation::build_observation_tensor(.., ObservationProfileId::*)`
+/// directly and not rely on the engine default.
 pub fn build_tensor(game: &Game, player_id: PlayerId, registry: &CardRegistry) -> Vec<f32> {
-    let mut t = vec![0.0f32; TENSOR_SIZE];
-
-    let (me_id, opp_id) = resolve_perspective(game, player_id);
-    let me = game.player(me_id);
-    let opp = game.player(opp_id);
-
-    // --- Global [0-9] ---
-    t[0] = (game.turn_count as f32 / 30.0).min(1.0);
-    t[1] = game.current_phase.tensor_value();
-    t[2] = get_memory_for(game, me_id) as f32 / 10.0;
-    // [3-9] reserved
-
-    // --- My battle area ---
-    write_field(
-        &mut t,
-        OFF_MY_BATTLE,
-        me_id,
-        FIELD_SLOTS,
-        game,
-        &game.card_data,
-        registry,
-    );
-
-    // --- Opp battle area ---
-    write_field(
-        &mut t,
-        OFF_OPP_BATTLE,
-        opp_id,
-        FIELD_SLOTS,
-        game,
-        &game.card_data,
-        registry,
-    );
-
-    // --- My hand ---
-    write_card_ids(
-        &mut t,
-        OFF_MY_HAND,
-        &me.hand,
-        MAX_HAND,
-        &game.card_data,
-        registry,
-    );
-
-    // --- Opp hand ---
-    write_card_ids(
-        &mut t,
-        OFF_OPP_HAND,
-        &opp.hand,
-        MAX_HAND,
-        &game.card_data,
-        registry,
-    );
-
-    // --- My trash ---
-    write_card_ids(
-        &mut t,
-        OFF_MY_TRASH,
-        &me.trash,
-        MAX_TRASH,
-        &game.card_data,
-        registry,
-    );
-
-    // --- Opp trash ---
-    write_card_ids(
-        &mut t,
-        OFF_OPP_TRASH,
-        &opp.trash,
-        MAX_TRASH,
-        &game.card_data,
-        registry,
-    );
-
-    // --- My security (face-down = 0.0; face-up cards written when
-    // `face_up_security` is populated by reveal effects). Matches Python's
-    // `_write_security_ids`.
-    write_security_ids(
-        &mut t,
-        OFF_MY_SECURITY,
-        me,
-        MAX_SECURITY,
-        &game.card_data,
-        registry,
-    );
-
-    // --- Opp security (face-down = 0.0). Face-up reveals against the
-    // opponent populate `opp.face_up_security`, so mirror the my-security
-    // writer.
-    write_security_ids(
-        &mut t,
-        OFF_OPP_SECURITY,
-        opp,
-        MAX_SECURITY,
-        &game.card_data,
-        registry,
-    );
-
-    // --- My breeding ---
-    // Breeding slot has no PermanentHandle (it's not in battle_area), so
-    // per-source DP and OPT state fall back to 0.0. Python computes them
-    // identically since eggs / in-training Digimon rarely have active
-    // effects, but this is a minor residual gap for any that do.
-    if let Some(ref perm) = me.breeding_area {
-        write_slot(
-            &mut t,
-            OFF_MY_BREEDING,
-            perm,
-            None,
-            game,
-            &game.card_data,
-            registry,
-        );
-    }
-
-    // --- Opp breeding ---
-    if let Some(ref perm) = opp.breeding_area {
-        write_slot(
-            &mut t,
-            OFF_OPP_BREEDING,
-            perm,
-            None,
-            game,
-            &game.card_data,
-            registry,
-        );
-    }
-
-    // --- Revealed cards ---
-    write_card_ids(
-        &mut t,
-        OFF_REVEALED,
-        &game.revealed_cards,
-        MAX_REVEALED,
-        &game.card_data,
-        registry,
-    );
-
-    // --- Selection context ---
-    // Slot +0: phase tensor value (populated whenever the engine is parked
-    //   in any selection/interrupt phase, even if pending_selection is None —
-    //   so RL policies can observe "we're in SelectTarget" from the phase
-    //   signal alone).
-    // Slots +1/+2: valid_count (normalized) + selecting_player, populated
-    //   only when a PendingSelection is installed. Matches Python's
-    //   `tensor.py:108-120`.
-    if game.current_phase.is_selection_phase() {
-        t[OFF_SELECTION] = game.current_phase.tensor_value();
-    }
-    if let Some(sel) = &game.pending_selection {
-        t[OFF_SELECTION + 1] =
-            sel.valid_action_ids.len() as f32 / crate::action::space::ACTION_SPACE_SIZE as f32;
-        t[OFF_SELECTION + 2] = sel.selecting_player as f32;
-    }
-
-    t
+    build_observation_tensor(game, player_id, registry, default_observation_profile())
 }
 
 // ─── Tensor Layout Metadata ───────────────────────────────────────────
 
-/// Compute which tensor positions hold card IDs vs scalar values.
-/// Used by the features extractor to split for embedding lookup.
+/// Compute which tensor positions hold card IDs vs scalar values for the
+/// engine default profile.
 pub fn compute_positions() -> (Vec<usize>, Vec<usize>) {
-    tensor_profiles::standard::v1::PROFILE.positions()
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────
-
-/// Resolve "me" and "opponent" player IDs from the observer's perspective.
-fn resolve_perspective(game: &Game, observer: PlayerId) -> (PlayerId, PlayerId) {
-    let opp = game.next_clockwise(observer);
-    (observer, opp)
-}
-
-/// Memory relative to player (positive = their favor).
-fn get_memory_for(game: &Game, player_id: PlayerId) -> i16 {
-    if player_id == game.turn_player() {
-        game.memory
-    } else {
-        -game.memory
-    }
-}
-
-/// Write permanent slot data into the tensor.
-///
-/// When `handle` is `Some`, per-source DP and OPT state are computed via
-/// Game helpers (matches Python). When `None` (e.g. the breeding slot —
-/// not part of `battle_area`), those fields fall back to 0.0 since there's
-/// no stable PermanentHandle for them.
-fn write_slot(
-    tensor: &mut [f32],
-    base: usize,
-    perm: &Permanent,
-    handle: Option<PermanentHandle>,
-    game: &Game,
-    card_data: &[CardData],
-    registry: &CardRegistry,
-) {
-    let slot_layout = tensor_profiles::standard::v1::PROFILE.slot_layout;
-    let top_card_offset = slot_layout.header_offset(TensorSlotHeaderField::TopCardId);
-    let dp_offset = slot_layout.header_offset(TensorSlotHeaderField::Dp);
-    let suspended_offset = slot_layout.header_offset(TensorSlotHeaderField::Suspended);
-    let opt_total_offset = slot_layout.header_offset(TensorSlotHeaderField::OptTotal);
-    let opt_used_offset = slot_layout.header_offset(TensorSlotHeaderField::OptUsed);
-    let linked_count_offset = slot_layout.header_offset(TensorSlotHeaderField::LinkedCount);
-    let source_count_offset = slot_layout.header_offset(TensorSlotHeaderField::SourceCount);
-    let source_card_id_offset = slot_layout.source_offset(TensorSourceField::CardId);
-    let source_opt_state_offset = slot_layout.source_offset(TensorSourceField::OptState);
-    let source_dp_contribution_offset =
-        slot_layout.source_offset(TensorSourceField::DpContribution);
-    let top = perm.top_card();
-
-    tensor[base + top_card_offset] = registry.get_index(&top.card_id(card_data)) as f32;
-
-    tensor[base + dp_offset] = perm.base_dp(card_data).unwrap_or(0) as f32 / DP_NORM;
-
-    tensor[base + suspended_offset] = if perm.is_suspended { 1.0 } else { 0.0 };
-
-    if let Some(h) = handle {
-        tensor[base + opt_total_offset] = game.opt_total(h) as f32;
-        tensor[base + opt_used_offset] = game.opt_used(h) as f32;
-    }
-
-    tensor[base + linked_count_offset] = perm.linked_cards.len() as f32;
-
-    tensor[base + source_count_offset] = perm.card_sources.len() as f32;
-
-    // Sources: [card_id, opt_state, dp_contribution] × MAX_SOURCES
-    let src_base = base + slot_layout.source_start;
-    for (j, src) in perm
-        .card_sources
-        .iter()
-        .take(slot_layout.max_sources)
-        .enumerate()
-    {
-        let off = src_base + j * SOURCE_ENTRY_SIZE;
-        tensor[off + source_card_id_offset] = registry.get_index(&src.card_id(card_data)) as f32;
-        if let Some(h) = handle {
-            tensor[off + source_opt_state_offset] = game.source_opt_state(h, j);
-            tensor[off + source_dp_contribution_offset] =
-                game.source_dp_contribution(h, j) as f32 / DP_NORM;
-        }
-    }
-}
-
-/// Write a battle area (list of permanents) into the tensor.
-fn write_field(
-    tensor: &mut [f32],
-    start: usize,
-    player: PlayerId,
-    slots: usize,
-    game: &Game,
-    card_data: &[CardData],
-    registry: &CardRegistry,
-) {
-    let permanents = &game.player(player).battle_area;
-    for (i, perm) in permanents.iter().take(slots).enumerate() {
-        let handle = PermanentHandle {
-            player,
-            index: i as u8,
-        };
-        write_slot(
-            tensor,
-            start + i * SLOT_SIZE,
-            perm,
-            Some(handle),
-            game,
-            card_data,
-            registry,
-        );
-    }
-}
-
-/// Write a player's security stack into the tensor. Only face-up cards
-/// (those whose `card_index` is in `player.face_up_security`) emit their
-/// registry index; face-down slots stay 0.0. Mirrors Python's
-/// `_write_security_ids`.
-fn write_security_ids(
-    tensor: &mut [f32],
-    start: usize,
-    player: &Player,
-    limit: usize,
-    card_data: &[CardData],
-    registry: &CardRegistry,
-) {
-    for (i, card) in player.security.iter().take(limit).enumerate() {
-        if player.face_up_security.contains(&card.card_index) {
-            tensor[start + i] = registry.get_index(&card.card_id(card_data)) as f32;
-        }
-    }
-}
-
-/// Write card IDs from a card list into the tensor (1 float per card).
-fn write_card_ids(
-    tensor: &mut [f32],
-    start: usize,
-    cards: &[crate::card_source::CardSource],
-    limit: usize,
-    card_data: &[CardData],
-    registry: &CardRegistry,
-) {
-    for (i, card) in cards.iter().take(limit).enumerate() {
-        tensor[start + i] = registry.get_index(&card.card_id(card_data)) as f32;
-    }
+    crate::tensor_profiles::standard::DEFAULT_PROFILE.positions()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tensor_profiles;
 
     #[test]
-    fn tensor_size_is_1375() {
-        assert_eq!(TENSOR_SIZE, 1375);
+    fn tensor_size_matches_default_profile() {
+        assert_eq!(TENSOR_SIZE, tensor_profiles::default_profile().tensor_size);
     }
 
     #[test]
-    fn slot_size_is_40() {
-        assert_eq!(SLOT_SIZE, 40);
+    fn default_profile_is_standard_lite_deck_v2() {
+        let p = tensor_profiles::default_profile();
+        assert_eq!(p.id, "standard_lite_deck_v2");
     }
 
     #[test]
-    fn section_offsets() {
-        assert_eq!(OFF_MY_BATTLE, 10);
-        assert_eq!(OFF_OPP_BATTLE, 570);
-        assert_eq!(OFF_MY_HAND, 1130);
-        assert_eq!(OFF_OPP_HAND, 1150);
-        assert_eq!(OFF_MY_TRASH, 1170);
-        assert_eq!(OFF_OPP_TRASH, 1215);
-        assert_eq!(OFF_MY_SECURITY, 1260);
-        assert_eq!(OFF_OPP_SECURITY, 1270);
-        assert_eq!(OFF_MY_BREEDING, 1280);
-        assert_eq!(OFF_OPP_BREEDING, 1320);
-        assert_eq!(OFF_REVEALED, 1360);
-        assert_eq!(OFF_SELECTION, 1370);
+    fn tensor_size_is_8850() {
+        assert_eq!(TENSOR_SIZE, 8850);
     }
 
     #[test]
@@ -400,12 +85,10 @@ mod tests {
             scalar_pos.len(),
             TENSOR_SIZE
         );
-        // No overlap
         let mut all: Vec<usize> = card_pos.iter().chain(scalar_pos.iter()).copied().collect();
         all.sort();
         all.dedup();
         assert_eq!(all.len(), TENSOR_SIZE);
-        // Contiguous 0..TENSOR_SIZE
         assert_eq!(*all.first().unwrap(), 0);
         assert_eq!(*all.last().unwrap(), TENSOR_SIZE - 1);
     }
