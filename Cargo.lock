@@ -3,6 +3,14 @@
 version = 4
 
 [[package]]
+name = "action-space-export"
+version = "0.1.0"
+dependencies = [
+ "digimon-engine",
+ "serde_json",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -635,6 +643,16 @@ dependencies = [
  "darling_core",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "dcgo-replay"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "digimon-engine",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

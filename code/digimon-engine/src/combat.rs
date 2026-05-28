@@ -2534,6 +2534,31 @@ impl Game {
         defender: PlayerId,
         checks_performed: u8,
     ) -> bool {
+        // Opaque-aware: if the about-to-pop security card is a
+        // placeholder (opaque opponent's security whose identity hasn't
+        // yet been revealed), materialize it via the reveal source
+        // BEFORE popping. The top of security in Vec convention is the
+        // last element; that's the index to check.
+        if let Some(top_idx) = self.player(defender).security.len().checked_sub(1) {
+            let needs = self.player(defender).security[top_idx].is_opaque_placeholder;
+            if needs {
+                if let Err(e) =
+                    self.materialize_opaque_security_placeholder(defender, top_idx)
+                {
+                    eprintln!(
+                        "[opaque-deck] security flip materialization error for player {} \
+                         at idx {}: {}",
+                        defender, top_idx, e
+                    );
+                    // Continue with the placeholder — it will pop with
+                    // data_index=0 (probably the first card in the data
+                    // store, semantically garbage but won't crash).
+                    // The replay harness will surface a parity failure
+                    // when the engine's behavior diverges from the
+                    // recording, which is the right diagnostic.
+                }
+            }
+        }
         let sec_card = match self.player_mut(defender).security.pop() {
             Some(c) => c,
             None => {

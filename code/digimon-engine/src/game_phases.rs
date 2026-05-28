@@ -128,7 +128,20 @@ impl Game {
             SkipDraw::None => false,
         };
         if !should_skip_draw {
-            let drew = self.player_mut(tp).draw();
+            // Opaque-aware draw: branches on `player.opaque_deck_state`
+            // internally. Standard mode pops from the ordered deck;
+            // opaque mode consumes a `Draw` reveal from `reveal_source`.
+            let drew = match self.draw_one_for_player(tp) {
+                Ok(b) => b,
+                Err(e) => {
+                    // Opaque reveal-source error mid-game. Surfaces in
+                    // the replay harness as a winner-mismatch / unexpected
+                    // game-state divergence. Treat as deck-out locally so
+                    // the engine doesn't crash.
+                    eprintln!("[opaque-deck] per-turn draw error for player {}: {}", tp, e);
+                    false
+                }
+            };
             if !drew {
                 // Deck-out: player is eliminated (multiplayer) or loses (standard)
                 self.handle_deckout(tp);

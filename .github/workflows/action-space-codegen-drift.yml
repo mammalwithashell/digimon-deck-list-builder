@@ -1,0 +1,67 @@
+name: Action Space Codegen Drift
+
+# Verifies that DCGO/Assets/Scripts/Script/Recording/ActionSpace.cs is
+# byte-identical to what `action-space-export` + `emit_csharp.py` would
+# generate from the current `code/digimon-engine/src/action/space.rs`.
+#
+# If this fails, run:
+#   cargo run -p action-space-export | \
+#     python code/tools/action-space-export/emit_csharp.py \
+#       --out DCGO/Assets/Scripts/Script/Recording/ActionSpace.cs
+# and commit the resulting diff.
+#
+# Phase 1 rollout: this check is `continue-on-error: true` so a green PR is
+# not blocked while the pipeline stabilizes. Once Phase 1 lands and the DCGO
+# recorder is consuming this file, promote to required by removing
+# `continue-on-error`.
+
+on:
+  pull_request:
+    paths:
+      - 'code/digimon-engine/src/action/space.rs'
+      - 'code/tools/action-space-export/**'
+      - 'DCGO/Assets/Scripts/Script/Recording/ActionSpace.cs'
+      - '.github/workflows/action-space-codegen-drift.yml'
+  push:
+    branches: ["main"]
+    paths:
+      - 'code/digimon-engine/src/action/space.rs'
+      - 'code/tools/action-space-export/**'
+      - 'DCGO/Assets/Scripts/Script/Recording/ActionSpace.cs'
+
+jobs:
+  check-action-space-drift:
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Phase 1: warn only. Promote to required when stable.
+    steps:
+      - name: Checkout (with submodules so DCGO/ is present)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-action-space-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/tools/action-space-export/Cargo.toml') }}
+
+      - name: Roundtrip tests
+        run: cargo test -p action-space-export
+
+      - name: Drift check — regenerate ActionSpace.cs and compare to committed copy
+        run: |
+          cargo run -p action-space-export \
+            | python code/tools/action-space-export/emit_csharp.py \
+                --check \
+                --out DCGO/Assets/Scripts/Script/Recording/ActionSpace.cs

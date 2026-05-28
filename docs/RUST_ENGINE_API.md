@@ -4603,3 +4603,113 @@ When `cargo test` isn't enough — when you need to poke at mid-game state, step
 Both binaries link the same `LiveGame` wrapper (`code/digimon-engine/src/live_game.rs`) so changes to the engine surface propagate automatically. Card pool defaults to `LiveGame::default_pool()` — same filter as `pilot_training` / `gauntlet`.
 
 Full reference: [docs/DEBUG_MCP.md](DEBUG_MCP.md).
+
+## Opaque opponent deck mode
+
+The engine supports a mode where one player's deck composition is known but
+its order is **opaque** — the engine doesn't know which specific card the
+opponent will draw next until an externally-supplied `RevealSource`
+provides it. Used by:
+
+- **DCGO replay harness** (`code/tools/dcgo-replay/`) — when replaying a
+  PvP recording, the local client only ever observed the opponent's
+  reveals incrementally (draws as they happened, security pops as they
+  flipped). Opaque mode lets the engine consume those reveals from the
+  recording rather than pretending to know the opponent's pre-shuffled order.
+- **RL inference against unknown opponents** (future) — the agent doesn't
+  know its opponent's deck order at play time. An opaque-mode game with a
+  sampling `RevealSource` lets the policy reason without information leak.
+
+### API surface
+
+Types live in `code/digimon-engine/src/opaque_deck.rs`:
+
+```rust
+pub enum RevealKind { Draw, Security, Mill, Effect }
+
+pub trait RevealSource: Send + Debug {
+    fn next_reveal(&mut self, kind: RevealKind) -> Result<String, RevealExhausted>;
+}
+
+pub struct RevealQueue { /* VecDeque-backed concrete impl */ }
+pub struct OpaqueDeckState { /* per-player multiset accounting, Clone */ }
+```
+
+Constructor on `Game`:
+
+```rust
+Game::new_with_opaque_opponent(
+    my_player_id: PlayerId,                // 0 or 1
+    my_deck: Vec<String>,                  // ordered, like Game::new
+    opp_decklist: Vec<String>,             // unordered multiset
+    reveal_source: Box<dyn RevealSource>,
+    all_card_data: &HashMap<String, CardData>,
+    rules: Rules,
+    seed: Option<u64>,
+) -> Result<Game, String>
+```
+
+Validates `rules.player_count == 2`, `my_player_id < 2`, opponent decklist
+size matches calling player's, and every opponent card ID is known to the
+card pool.
+
+Per-player state field on `Player`: `pub opaque_deck_state: Option<OpaqueDeckState>`.
+Game-level field: `pub reveal_source: Option<Box<dyn RevealSource>>`. Both
+default to `None` on standard `Game::new`.
+
+### Integration scope (current state, 2026-05-26)
+
+**All core game-flow paths and effect-driven deck/security paths are
+wired for opaque mode.** Security is lazy (placeholders at setup,
+materialize on flip/access).
+
+- **Wired**: construction validation, initial-hand draw, mulligan
+  redraw (with multiset restore), security setup (lazy placeholders),
+  per-turn draw, the digivolve-bonus draw, effect-driven mill via
+  `EffectContext::trash_from_top`, effect-driven peek via
+  `Game::reveal_top_deck`, the generic `CardSourceRef::DeckTop` and
+  `CardSourceRef::Security` consumers, the `<Training>` keyword's
+  deck-top placement, and all 11 effect-driven security-access sites
+  (trash top/bottom/by-handle, add-to-hand, play-from-security,
+  place-as-bottom-source, the redirect-to-trash branch of
+  place-in-security, etc.).
+- **Helpers** (use these rather than calling `Player::draw` /
+  `deck.pop()` / `security.remove(...)` directly when adding new
+  effects):
+  - `Game::draw_one_for_player(pid)` — draws one card to hand
+  - `Game::take_from_deck_top_for_player(pid, kind)` — takes a card
+    off the deck top, leaves routing to the caller
+  - `Game::setup_security_for_player(pid, count)` — security setup
+  - `Game::ensure_security_materialized(pid, idx)` — call before
+    reading or removing `security[idx]` if the effect routes the card
+    somewhere observable
+
+When you need a draw chokepoint that respects opaque mode, call
+`Game::draw_one_for_player(pid)` rather than `Player::draw()` directly.
+For security setup use `Game::setup_security_for_player(pid, count)`.
+For effect-driven security manipulation, sprinkle
+`ensure_security_materialized` before `security.remove(...)`.
+
+### Determinism and Clone semantics
+
+`Player` is `Clone`; `OpaqueDeckState` is `Clone` (it owns only the
+composition multiset and a counter). `Game` is `NOT Clone`; the
+`Box<dyn RevealSource>` lives on `Game` so the trait doesn't have to be
+`Clone`. Snapshot/recording use cases that need to clone state can clone
+the `Player` (preserving the composition view) but the reveal source on
+`Game` is single-owner.
+
+### Failure model
+
+- Construction failures return `Err(String)` with a descriptive message
+  (size mismatch, unknown card, invalid player id, wrong player count).
+- Mid-game `reveal_source` exhaustion or composition under-count surfaces
+  as `Err(String)` from `draw_one_for_player`. The Phase 1 wrapping is
+  string-typed for simplicity; the structured `RevealExhausted` error
+  type is preserved on the trait surface for future tighter integration.
+
+### Tests
+
+Setup-time behaviors are covered in `code/digimon-engine/tests/opaque_deck.rs`
+(10 integration tests). Mid-game draw integration tests will follow once
+the corresponding draw paths are wired.

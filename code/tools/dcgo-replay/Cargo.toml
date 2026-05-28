@@ -1,0 +1,22 @@
+[package]
+name = "dcgo-replay"
+version = "0.1.0"
+edition = "2021"
+description = "Replays DCGO JSONL recordings through digimon-engine and emits a parity report. Phase 1 of the DCGO recording-and-parity-harness change."
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "dcgo-replay"
+path = "src/main.rs"
+
+[dependencies]
+# The engine we're validating against. Default features required (some engine
+# `pub mod dsl_cards;` references aren't feature-gated — see action-space-export
+# Cargo.toml for the same workaround).
+digimon-engine = { path = "../../digimon-engine" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# clap for CLI; using the derive feature for a less-boilerplate spec.
+clap = { version = "4", features = ["derive"] }

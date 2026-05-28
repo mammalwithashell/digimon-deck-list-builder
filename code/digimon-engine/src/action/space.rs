@@ -1,6 +1,16 @@
 /// Standard action space constants (matching Python engine).
 /// These are for Rules::standard() — EDH/Titan will derive larger spaces from Rules.
 
+/// Action-space schema version. Consumed by external recorders (e.g. the DCGO
+/// game-recording mod) and by the `action-space-export` codegen tool to
+/// stamp a version into generated artifacts. Bump whenever the action-space
+/// layout, ID assignments, or formula semantics change in a way that would
+/// invalidate existing recordings or trained models.
+///
+/// Independent of `ACTION_SPACE_SIZE` because non-size changes (e.g. swapping
+/// the meaning of an existing ID) also need to break old artifacts.
+pub const SCHEMA_VERSION: u32 = 1;
+
 /// Total action space size for standard 2-player game.
 ///
 /// Bumped 2168 → 2192 in Task S1.3 to append a breeding-carrier
