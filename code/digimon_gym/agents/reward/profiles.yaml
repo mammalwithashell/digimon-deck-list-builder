@@ -40,6 +40,73 @@ profiles:
     # No overrides — _default IS gameplay.
 
   # ----------------------------------------------------------------
+  # Pure-outcome profile — research baseline with no shaping at all.
+  #
+  # Reward = ±0.2 per game terminal + ±1.0 per match terminal. Every
+  # gameplay-tier shaping component (security, digivolve, breeding,
+  # quick-win, stall, step penalty) is zeroed via override.
+  #
+  # Purpose: ablation reference for whether the gameplay shape's
+  # learning signal helps vs. a clean sparse-outcome bandit. The
+  # `match_outcome` component activates the Path C MatchEnv hook —
+  # `MatchEnv` defers ITS hardcoded MATCH_TERMINAL_* magnitudes and
+  # the per-game `(bo3 − inner)` calibration to this component, so
+  # the only rewards an episode sees are the explicit ±0.2 / ±1.0
+  # listed below.
+  #
+  # All component magnitudes are intentionally explicit (rather than
+  # relying on a hypothetical "disable: true" flag) so the profile is
+  # auditable end-to-end and the loader exercises the override path.
+  # ----------------------------------------------------------------
+  _pure_outcome:
+    inherits: gameplay
+    components:
+      - kind: terminal_outcome
+        win_base: 0.2
+        fast_win_bonus_max: 0.0
+        fast_win_par_steps: 200
+        loss: -0.2
+        draw: 0.0
+      - kind: quick_win_bonus
+        peak_turn: 3
+        peak_value: 0.0
+        decay_per_turn: 0.0
+      - kind: stall_penalty
+        threshold_turn: 7
+        scale: 0.0
+        apply_to_winner: true
+        apply_to_loser: true
+        winner_max_penalty: 0.0
+      - kind: step_penalty
+        weight: 0.0
+      - kind: security_remove
+        weight: 0.0
+      - kind: security_lost
+        weight: 0.0
+      - kind: digivolve
+        weight: 0.0
+      - kind: dna_digivolve
+        weight: 0.0
+      - kind: breeding_digivolve
+        reward_per_level:
+          3: 0.0
+          4: 0.0
+          5: 0.0
+          6: 0.0
+      - kind: digivolve_driven_attack
+        mode: either
+        attacker_min_level: 5
+        reward: 0.0
+        per_card: false
+      # The Path C extension — activates the wrapper hook so MatchEnv
+      # defers all match-tier magnitudes here. Without this component,
+      # MatchEnv uses its legacy hardcoded ±30 / ±10 sweep / etc.
+      - kind: match_outcome
+        win: 1.0
+        loss: -1.0
+        draw: 0.0
+
+  # ----------------------------------------------------------------
   # DNA Omnimon archetype profile.
   #
   # Win condition: assemble Omnimon (BT17-078, AD1-025, BT13-112,

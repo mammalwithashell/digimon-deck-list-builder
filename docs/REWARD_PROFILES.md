@@ -170,9 +170,12 @@ not `step_count`.
 
 **`stall_penalty` parameters** — `threshold_turn: int` (default 7),
 `scale: float` (default 0.1), `apply_to_winner: bool` (default true),
-`apply_to_loser: bool` (default true). Formula:
-`−scale × max(0, turn − threshold_turn)²`. Unbounded. Draws are always
-penalized regardless of the apply flags.
+`apply_to_loser: bool` (default true), `winner_max_penalty: float`
+(default 19.0). Formula: `−scale × max(0, turn − threshold_turn)²`.
+Loser side + draws are unbounded. **Winner side is CAPPED at
+`winner_max_penalty`** to enforce the invariant *"a win is always
+strictly better than a loss"*. Draws are always penalized regardless
+of the apply flags.
 
 ```yaml
 - kind: stall_penalty
@@ -180,8 +183,20 @@ penalized regardless of the apply flags.
   scale: 0.1
   apply_to_winner: true
   apply_to_loser: true
-# Emissions at turn 7/10/15/20/30 = 0 / -0.9 / -6.4 / -16.9 / -52.9
+  winner_max_penalty: 19.0
+# Winner emissions at turn 7/10/15/20/22/30 = 0 / -0.9 / -6.4 / -16.9 / -19.0 / -19.0  ← capped from turn 22+
+# Loser  emissions at turn 7/10/15/20/22/30 = 0 / -0.9 / -6.4 / -16.9 / -22.5 / -52.9  ← uncapped
 ```
+
+**Invariant constraint** — if you change `terminal_outcome.win_base` or
+`terminal_outcome.loss`, also update `winner_max_penalty` so that:
+
+> `winner_max_penalty < win_base − loss`
+
+Otherwise the worst-case win can drop below the best-case loss, and
+the agent will rationally prefer to lose fast over winning slow. The
+`test_terminal_landscape.py::test_win_always_beats_loss_invariant`
+regression catches this at test time.
 
 **`breeding_digivolve` parameters** — `reward_per_level: Mapping[int, float]`
 (required). Default shipped value `{3: 0.4, 4: 0.2, 5: 0.1, 6: -0.4}`.
@@ -247,6 +262,35 @@ the two emissions stack on a DNA fire.)
 | `block_event` | `GameEvent::Attack` blocked by the agent | **v1: fires zero** — no `Block` event yet |
 | `opp_deletion` | opponent card moved to trash | v1: counts ALL trash (incl. hand discard) |
 | `own_deletion` | own card moved to trash | same caveat |
+
+### Match-tier — `match_outcome` (Path C, per-BO3-match terminal)
+
+| Kind | Fires on | Notes |
+|---|---|---|
+| `match_outcome` | `MatchOutcome` (one per BO3 match end) | Activates the `MatchEnv` wrapper hook — when present, `MatchEnv` defers BOTH its hardcoded `MATCH_TERMINAL_*` magnitudes AND its per-game `(bo3 − inner)` calibration to this component. |
+
+`MatchOutcome` is constructed by `MatchEnv` itself (not `RewardEventBus`)
+because `MatchEnv` sits ABOVE `RewardProfileWrapper` in the chain.
+`MatchEnv` calls `wrapper.compute_match_terminal(snapshot)` at match
+termination iff `wrapper.has_match_outcome_component` is True.
+
+Profiles that OMIT `match_outcome` keep the legacy `MatchEnv`
+calibration (`±30 base + sweep 10 + smart-concede 5 + scared-concede
+-10 + fast(par=450,max=15)`; per-game `±12 + fast(par=150,max=3)`).
+The shipped `gameplay`, `_default`, `dna_omnimon_combo_v1`, and
+`bg_imperialdramon_combo_v1` profiles all omit it. The `_pure_outcome`
+profile includes it for a ±1 match-tier signal — see "Worked examples"
+below.
+
+Parameters: `win` (1.0), `loss` (-1.0), `draw` (0.0), `sweep_bonus`
+(0.0), `swept_penalty` (0.0), `smart_concede_bonus` (0.0),
+`scared_concede_penalty` (0.0), `fast_bonus_max` (0.0),
+`fast_bonus_par_steps` (150). Defaults give a clean ±1.
+
+Asymmetric concede gating: `scared_concede_penalty` fires only on a
+**0-2 loss with any agent concede** — a 1-2 loss where a smart concede
+didn't pan out is NOT extra-penalized (the smart-concede gamble is its
+own punishment). `smart_concede_bonus` is win-gated only.
 
 ### Match-anything
 
@@ -574,6 +618,97 @@ Top-level window means:
 ---
 
 ## Worked examples
+
+### Pure-outcome research baseline — `_pure_outcome`
+
+Sparse-outcome ablation profile: the agent receives ONLY `±0.2` per
+game terminal and `±1.0` per match terminal. All gameplay shaping
+(security, digivolve, breeding, quick-win, stall, step penalty) is
+zeroed via explicit override, and the Path C `match_outcome` component
+flips `MatchEnv` to defer its hardcoded ±30 / sweep / fast magnitudes
+to this profile.
+
+Use case: training-curve comparison vs. the `gameplay` shape. Answers
+"how much does the dense gameplay signal actually accelerate learning
+over a pure bandit reward?"
+
+```yaml
+_pure_outcome:
+  inherits: gameplay
+  components:
+    - kind: terminal_outcome           # ±0.2 per game
+      win_base: 0.2
+      fast_win_bonus_max: 0.0
+      fast_win_par_steps: 200
+      loss: -0.2
+      draw: 0.0
+    - kind: quick_win_bonus            # disabled
+      peak_turn: 3
+      peak_value: 0.0
+      decay_per_turn: 0.0
+    - kind: stall_penalty              # disabled
+      threshold_turn: 7
+      scale: 0.0
+      apply_to_winner: true
+      apply_to_loser: true
+      winner_max_penalty: 0.0
+    - kind: step_penalty               # disabled
+      weight: 0.0
+    - kind: security_remove
+      weight: 0.0
+    - kind: security_lost
+      weight: 0.0
+    - kind: digivolve
+      weight: 0.0
+    - kind: dna_digivolve
+      weight: 0.0
+    - kind: breeding_digivolve
+      reward_per_level: {3: 0.0, 4: 0.0, 5: 0.0, 6: 0.0}
+    - kind: digivolve_driven_attack
+      mode: either
+      attacker_min_level: 5
+      reward: 0.0
+      per_card: false
+    # Path C hook — activates MatchEnv deferral so the only match-
+    # terminal signal is ±1.0 (not the legacy ±30 + sweep + fast).
+    - kind: match_outcome
+      win: 1.0
+      loss: -1.0
+      draw: 0.0
+```
+
+To use the profile in training, pass it via the generic config
+override flag:
+
+```bash
+python -m digimon_gym.agents.pilot_training \
+    --timesteps 500000 \
+    --set reward_profile_override=_pure_outcome
+```
+
+The override applies to every episode, ignoring
+`info["deck1_archetype"]`. Alternatively, point the assignment
+fallback at it in `profiles.yaml`:
+
+```yaml
+assignments:
+  _default: _pure_outcome    # was: _default
+```
+
+The override flag takes precedence over the assignment map.
+
+Reward landscape per match (all components zeroed except terminal +
+match):
+
+| Outcome | Per-game reward × games | Match reward | Total |
+|---|---|---|---|
+| 2-0 win | +0.2 × 2 = +0.4 | +1.0 | **+1.4** |
+| 2-1 win | (+0.2 + -0.2 + +0.2) = +0.2 | +1.0 | **+1.2** |
+| 1-2 loss | (+0.2 + -0.2 + -0.2) = -0.2 | -1.0 | **-1.2** |
+| 0-2 loss | -0.2 × 2 = -0.4 | -1.0 | **-1.4** |
+| 1-1-1 draw | (+0.2 + -0.2 + 0.0) = 0.0 | 0.0 | **0.0** |
+
+Wins always beat losses; sweeps reward bigger than 2-1; symmetric.
 
 ### DNA Omnimon — `dna_omnimon_combo_v1`
 

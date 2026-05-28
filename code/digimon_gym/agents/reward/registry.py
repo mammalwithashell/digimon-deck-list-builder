@@ -26,6 +26,7 @@ from .components.combat import (
 from .components.digivolve import DigivolveComponent, DnaDigivolveComponent
 from .components.digivolve_driven_attack import DigivolveDrivenAttackComponent
 from .components.digivolve_into import DigivolveIntoNamedCardComponent
+from .components.match_outcome import MatchOutcomeComponent
 from .components.memory import MemorySwingComponent
 from .components.play import PlayNamedCardComponent
 from .components.quick_win import QuickWinBonusComponent
@@ -58,6 +59,10 @@ COMPONENT_REGISTRY: Dict[str, Type[RewardComponent]] = {
     "stall_penalty": StallPenaltyComponent,
     "breeding_digivolve": BreedingDigivolveComponent,
     "digivolve_driven_attack": DigivolveDrivenAttackComponent,
+    # match_outcome — Path C extension: per-BO3-match terminal reward.
+    # When in the active profile, MatchEnv defers its hardcoded match-tier
+    # constants AND its per-game (bo3 − inner) adjustment to this component.
+    "match_outcome": MatchOutcomeComponent,
 }
 
 
@@ -83,6 +88,7 @@ KIND_KEY_PARAMETERS: Dict[str, FrozenSet[str]] = {
     "stall_penalty": frozenset(),
     "breeding_digivolve": frozenset(),
     "digivolve_driven_attack": frozenset(),
+    "match_outcome": frozenset(),
     # Distinct instances per match/gating combination. The loader
     # serializes these to a canonical key tuple for override matching.
     "play_named_card": frozenset(

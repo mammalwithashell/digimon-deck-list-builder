@@ -36,6 +36,13 @@ from digimon_gym.agents.reward.profile_loader import ProfileLoader
 
 
 # Hand-computed table — see module docstring.
+#
+# Note on winner-side cap (`stall_penalty.winner_max_penalty = 19.0`):
+# the natural penalty at turn T is `−0.1 × (T − 7)²`. For winners the
+# magnitude is clamped at 19.0 so the worst-possible win
+# (`win_base 10 − cap 19 = -9.0`) is strictly greater than the
+# worst-possible loss (`-10.0` at turn ≤ 7). The cap kicks in when
+# `(T − 7)² > 190` → T > 7 + sqrt(190) ≈ 20.78, i.e. turn 21+.
 TERMINAL_LANDSCAPE = [
     # (turn, winner_id, expected_total)
     (3, 1, 15.0),       # peak win
@@ -50,12 +57,12 @@ TERMINAL_LANDSCAPE = [
     (15, 1, 3.6),       # 10 + 0 − 6.4
     (15, 2, -16.4),
     (15, None, -7.4),
-    (20, 1, -6.9),      # 10 + 0 − 16.9 — win is now NET-NEGATIVE
+    (20, 1, -6.9),      # 10 + 0 − 16.9 (natural; cap not yet kicked in)
     (20, 2, -26.9),
     (20, None, -17.9),
-    (30, 1, -42.9),     # win still less bad than loss…
-    (30, 2, -62.9),     # …but both are catastrophic
-    (30, None, -53.9),  # draw is worst at high turn (no win base)
+    (30, 1, -9.0),      # 10 + 0 − 19.0 (CAPPED — natural would be -42.9)
+    (30, 2, -62.9),     # loser unbounded
+    (30, None, -53.9),  # draw unbounded
 ]
 
 
@@ -97,6 +104,23 @@ def gameplay_terminal_components():
     assert stall.scale == 0.1
     assert stall.apply_to_winner is True
     assert stall.apply_to_loser is True
+    assert stall.winner_max_penalty == 19.0  # see invariant below
+
+    # Win-always-beats-loss invariant: with these defaults,
+    # worst-possible win = win_base + 0 (decayed qwb) − winner_max_penalty
+    #                    = 10 + 0 − 19 = -9.0
+    # worst-possible loss = loss + 0 (no stall at turn ≤ threshold)
+    #                    = -10.0
+    # so worst-win (-9.0) > worst-loss (-10.0) by 1.0. If anyone tweaks
+    # any of win_base / loss / winner_max_penalty, this assertion guards
+    # the invariant.
+    worst_win = terminal.win_base - stall.winner_max_penalty
+    worst_loss = terminal.loss
+    assert worst_win > worst_loss, (
+        f"INVARIANT VIOLATED: worst-win ({worst_win:+.2f}) <= worst-loss "
+        f"({worst_loss:+.2f}). Adjust terminal_outcome.win_base/loss or "
+        "stall_penalty.winner_max_penalty so wins always beat losses."
+    )
 
     return {"terminal": terminal, "qwb": qwb, "stall": stall}
 

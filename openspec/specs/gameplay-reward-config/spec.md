@@ -175,10 +175,11 @@ A `quick_win_bonus` component SHALL be registered with the following contract:
 
 A `stall_penalty` component SHALL be registered with the following contract:
 
-- **Parameters**: `threshold_turn: int` (default 7), `scale: float` (default 0.1), `apply_to_winner: bool` (default true), `apply_to_loser: bool` (default true).
+- **Parameters**: `threshold_turn: int` (default 7), `scale: float` (default 0.1), `apply_to_winner: bool` (default true), `apply_to_loser: bool` (default true), `winner_max_penalty: float` (default 19.0).
 - **Trigger**: fires on every `TerminalOutcome` occurrence, regardless of winner.
 - **Formula**: `−scale × max(0, turn − threshold_turn)²`. Always non-positive. Reads `turn_count`.
 - **Apply gates**: emission SHALL be zeroed when winner is agent (1) and `apply_to_winner=false`; or winner is opponent (2) and `apply_to_loser=false`. Draws ALWAYS receive the penalty regardless of the apply flags.
+- **Winner-side floor (`winner_max_penalty`)**: the magnitude of the penalty applied to wins SHALL be clamped at `winner_max_penalty` (i.e., the emitted value is `max(natural_penalty, -winner_max_penalty)`). The loser side and draws SHALL remain unbounded. The default value (19.0) is calibrated against the default `terminal_outcome` values (`win_base = 10.0`, `loss = -10.0`) to enforce the invariant **"a win is always strictly better than a loss"**: worst-case win is `win_base − winner_max_penalty = -9.0`, which is strictly greater than worst-case loss (`-10.0` at turn ≤ threshold). Operators tuning `terminal_outcome.win_base` or `loss` SHOULD update `winner_max_penalty` to preserve `winner_max_penalty < win_base − loss`.
 
 #### Scenario: No penalty at or before threshold
 
@@ -186,12 +187,31 @@ A `stall_penalty` component SHALL be registered with the following contract:
 - **WHEN** a TerminalOutcome fires at turn_count 1, 5, 7
 - **THEN** all emissions SHALL be `0.0`
 
-#### Scenario: Quadratic growth after threshold
+#### Scenario: Quadratic growth after threshold (loser, unbounded)
 
 - **GIVEN** default parameters
-- **WHEN** a TerminalOutcome fires at turn_count 10, 15, 20, 30
+- **WHEN** a TerminalOutcome fires at turn_count 10, 15, 20, 30 with `winner_id=2`
 - **THEN** emissions SHALL approximately equal `-0.9, -6.4, -16.9, -52.9` respectively
 - **AND** the values SHALL be exactly `-0.1 × (turn - 7)²`
+
+#### Scenario: Winner-side cap activates at high turn count
+
+- **GIVEN** default parameters (winner_max_penalty=19.0)
+- **WHEN** a TerminalOutcome fires at turn_count=30 with `winner_id=1`
+- **THEN** the natural penalty would be `-52.9`, but the emission SHALL be `-19.0` (capped)
+- **AND** the loser-side emission at the same turn SHALL be `-52.9` (unbounded)
+
+#### Scenario: Winner cap does not activate below the threshold magnitude
+
+- **GIVEN** default parameters
+- **WHEN** a TerminalOutcome fires at turn_count=15 with `winner_id=1` (natural penalty -6.4)
+- **THEN** the emission SHALL be `-6.4` (no clamp)
+
+#### Scenario: Win is always strictly better than loss (invariant)
+
+- **GIVEN** default parameters (winner_max_penalty=19.0) and `terminal_outcome` defaults (`win_base=10.0`, `loss=-10.0`)
+- **WHEN** the WORST-possible win (turn ≥ threshold + sqrt(190)) and the BEST-possible loss (turn ≤ threshold) are compared
+- **THEN** `(win_base + stall_winner_clamped) > (loss + 0)` SHALL hold strictly: `(-9.0) > (-10.0)`
 
 #### Scenario: Applies to all outcomes by default
 
@@ -317,6 +337,65 @@ Per-component TB scalars (`pilot/reward/quick_win_bonus/mean_per_game`, `pilot/r
 
 - **WHEN** an eval window includes games where `quick_win_bonus` contributed values [+5.0, +3.75, +2.5] across 100 total games
 - **THEN** `pilot/reward/quick_win_bonus/mean_per_game` SHALL equal `(5.0 + 3.75 + 2.5) / 100 = 0.1125`
+
+### Requirement: `match_outcome` component (Path C — per-BO3-match terminal reward)
+
+The `match_outcome` component SHALL fire on `MatchOutcome` occurrences (one per `MatchEnv` episode end) and SHALL be the profile-side hook by which `MatchEnv` defers ITS hardcoded match-tier magnitudes when the active profile includes this component.
+
+`MatchOutcome` occurrence fields: `winner_id` (Python 1/2 for a win, `None` for a 1-1-1 draw via per-match step-limit truncation), `agent_game_wins`, `opp_game_wins`, `was_sweep` (True iff agent won 2-0), `was_swept` (True iff opp won 2-0), `agent_conceded_any` (True iff agent submitted action 93 in any game of the match), `match_step_count` (total outer-agent steps across all games in the match), `total_games`.
+
+The `MatchOutcome` occurrence SHALL NOT flow through `RewardEventBus` — it is constructed and dispatched by `MatchEnv` at match termination via a `RewardProfileWrapper.compute_match_terminal(snapshot)` hook. The wrapper exposes `has_match_outcome_component: bool` so `MatchEnv` can decide at terminal time whether to defer to the profile or apply its hardcoded calibration.
+
+Parameters:
+
+- `win: float` (default 1.0) — scalar emitted on a match win.
+- `loss: float` (default -1.0) — scalar emitted on a match loss.
+- `draw: float` (default 0.0) — scalar emitted on a 1-1-1 draw.
+- `sweep_bonus: float` (default 0.0) — added to `win` when `was_sweep=True`.
+- `swept_penalty: float` (default 0.0; negative magnitude expected) — added to `loss` when `was_swept=True`.
+- `smart_concede_bonus: float` (default 0.0) — added to `win` when `agent_conceded_any=True` (rewards comebacks after a strategic concede).
+- `scared_concede_penalty: float` (default 0.0; negative magnitude expected) — added to `loss` when `agent_conceded_any=True` AND `agent_game_wins=0` (0-2 loss with concede). Asymmetric: a 1-2 loss with a smart-concede that didn't pan out is NOT extra-penalized.
+- `fast_bonus_max: float` (default 0.0) — maximum bonus added linearly in `(par − match_step_count) / par` for match wins. Clamps at 0 when `match_step_count >= par`. Win-gated only (no fast bonus on loss or draw).
+- `fast_bonus_par_steps: int` (default 150) — outer-agent-step count at which `fast_bonus` decays to 0.
+
+The shipped `_pure_outcome` profile uses `win=1.0, loss=-1.0, draw=0.0` with all bonuses at 0, for a clean ±1 match-tier signal used as a sparse-outcome research baseline. Profiles that do NOT include this component fall through to `MatchEnv`'s hardcoded MATCH_TERMINAL_* constants (back-compat) — see `openspec/specs/bo3-match-training/spec.md`.
+
+`KIND_KEY_PARAMETERS["match_outcome"] = frozenset()` — single-instance per profile; child overrides REPLACE the parent's match_outcome.
+
+#### Scenario: Pure-outcome win returns win value
+
+- **GIVEN** a profile with `match_outcome: { win: 1.0, loss: -1.0, draw: 0.0 }`
+- **WHEN** a `MatchOutcome` occurrence fires with `winner_id=1, agent_game_wins=2, opp_game_wins=0, was_sweep=True`
+- **THEN** the component SHALL emit `1.0`
+
+#### Scenario: Sweep bonus added on 2-0 win
+
+- **GIVEN** a profile with `match_outcome: { win: 10.0, loss: -10.0, sweep_bonus: 4.0 }`
+- **WHEN** a `MatchOutcome` occurrence fires with `winner_id=1, was_sweep=True, opp_game_wins=0`
+- **THEN** the component SHALL emit `14.0`
+
+#### Scenario: Scared-concede penalty fires only on 0-2 loss with concede
+
+- **GIVEN** a profile with `match_outcome: { win: 10.0, loss: -10.0, scared_concede_penalty: -3.0 }`
+- **WHEN** a `MatchOutcome` occurrence fires with `winner_id=2, agent_game_wins=0, opp_game_wins=2, was_swept=True, agent_conceded_any=True`
+- **THEN** the component SHALL emit `-13.0`
+
+#### Scenario: Scared-concede penalty NOT applied on 1-2 loss with concede
+
+- **GIVEN** the same profile as above
+- **WHEN** a `MatchOutcome` occurrence fires with `winner_id=2, agent_game_wins=1, opp_game_wins=2, was_swept=False, agent_conceded_any=True`
+- **THEN** the component SHALL emit `-10.0` (no penalty — partial-win losses aren't extra-punished)
+
+#### Scenario: Fast-bonus clamps to zero past par
+
+- **GIVEN** a profile with `match_outcome: { win: 10.0, loss: -10.0, fast_bonus_max: 4.0, fast_bonus_par_steps: 200 }`
+- **WHEN** a `MatchOutcome` occurrence fires with `winner_id=1, match_step_count=500`
+- **THEN** the component SHALL emit `10.0` (fast bonus clamps at 0, never negative)
+
+#### Scenario: Empty occurrence list returns zero
+
+- **WHEN** the component is called with `occurrences=[]` (the frequent non-terminal step case)
+- **THEN** the component SHALL emit `0.0`
 
 ### Requirement: TrainingRunMetadata persists gameplay shape
 

@@ -1079,9 +1079,25 @@ def _component_kwargs(kind: str, params: Mapping[str, Any]) -> Dict[str, Any]:
             "decay_per_turn",
             "scale",
             "reward",
+            "winner_max_penalty",
+            # match_outcome (Path C) float params. `win` and `loss`
+            # overlap with existing terminal_outcome param names; per-
+            # component parsing scopes them to this component instance.
+            "win",
+            "sweep_bonus",
+            "swept_penalty",
+            "smart_concede_bonus",
+            "scared_concede_penalty",
+            "fast_bonus_max",
         ):
             out[k] = float(v)
-        elif k in ("fast_win_par_steps", "peak_turn", "threshold_turn", "attacker_min_level"):
+        elif k in (
+            "fast_win_par_steps",
+            "peak_turn",
+            "threshold_turn",
+            "attacker_min_level",
+            "fast_bonus_par_steps",
+        ):
             out[k] = int(v)
         elif k in ("apply_to_winner", "apply_to_loser", "per_card"):
             out[k] = bool(v)

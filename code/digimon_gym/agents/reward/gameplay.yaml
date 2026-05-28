@@ -19,8 +19,10 @@
 #   - quick_win_bonus     : peak +5 at turn 3 (earliest possible P1 win),
 #                           linear decay −1.25/turn to 0 at turn 7.
 #   - stall_penalty       : −0.1 × (turn − 7)² applied to EVERY terminal
-#                           (win, loss, AND draw). Unbounded — agents must
-#                           never play 30-turn games.
+#                           (win, loss, AND draw). Loser + draw side is
+#                           unbounded. Winner side is CAPPED at -19 so a
+#                           slow win is never worse than a fast loss
+#                           (invariant: `winner_max_penalty < win_base − loss`).
 #   - step_penalty        : −0.001 per env step (down from legacy −0.06).
 #   - security_remove     : +1.5 per opponent security removed.
 #   - security_lost       : −0.5 per own security lost.
@@ -34,11 +36,15 @@
 #                               OR was just digivolved this turn (mode=either).
 #
 # Total terminal landscape (see design.md §D5 for the table):
-#   turn 3 win   = +15.0   (10 + 5)         peak
-#   turn 7 win   = +10.0   (10 + 0)         clean seam with stall start
-#   turn 10 win  =  +9.1   (10 + 0 - 0.9)
-#   turn 20 loss = -26.9   (-10 - 16.9)
-#   turn 30 draw = -53.9   (-1 - 52.9)      draws are worst at high turn
+#   turn 3 win   = +15.0    (10 + 5)          peak
+#   turn 7 win   = +10.0    (10 + 0)          clean seam with stall start
+#   turn 10 win  =  +9.1    (10 + 0 - 0.9)
+#   turn 21 win  =  -9.6    (10 + 0 - 19.6)   last natural win value
+#   turn 22+ win =  -9.0    (10 + 0 - 19)     winner cap kicks in
+#   turn 20 loss = -26.9    (-10 - 16.9)
+#   turn 30 draw = -53.9    (-1 - 52.9)       draws are worst at high turn
+# Invariant: min(win) = -9.0 > max(loss) = -10.0 — wins are ALWAYS
+# strictly better than losses.
 
 profiles:
 
@@ -59,6 +65,12 @@ profiles:
         scale: 0.1
         apply_to_winner: true
         apply_to_loser: true
+        # Winner-side cap (positive magnitude). With terminal_outcome
+        # win_base=10 / loss=-10, a cap of 19 guarantees worst-win
+        # (10 - 19 = -9) > worst-loss (-10). If you raise win_base or
+        # lower loss, you MUST also raise this cap to preserve the
+        # "win always beats loss" invariant.
+        winner_max_penalty: 19.0
       - kind: step_penalty
         weight: -0.001
       - kind: security_remove

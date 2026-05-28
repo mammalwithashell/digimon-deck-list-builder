@@ -77,6 +77,13 @@ class MatchEnv(gymnasium.Wrapper):
         super().__init__(env)
         self._rng = np.random.default_rng(seed)
         self._inner_digimon_env: DigimonEnv = self._find_digimon_env(env)
+        # Optional RewardProfileWrapper somewhere in the chain. When the
+        # active profile defines a `match_outcome` component, MatchEnv
+        # defers BOTH the per-game (bo3 − inner) calibration adjustment
+        # AND the per-match terminal reward to the wrapper — the profile
+        # owns the magnitudes end-to-end. See Path C in
+        # `add-gameplay-reward-config/design.md`.
+        self._reward_profile_wrapper: Optional[Any] = self._find_reward_profile_wrapper(env)
         # Decks held across games of the match.
         self._deck1: Optional[List[str]] = None
         self._deck2: Optional[List[str]] = None
@@ -93,6 +100,57 @@ class MatchEnv(gymnasium.Wrapper):
             "MatchEnv requires an inner DigimonEnv at some depth in the "
             "wrapper chain; none found."
         )
+
+    def _find_reward_profile_wrapper(self, env: gymnasium.Env) -> Optional[Any]:
+        """Walk the wrapper chain looking for a `RewardProfileWrapper`.
+        Returns None if absent — MatchEnv then keeps its legacy hardcoded
+        calibration (back-compat).
+        """
+        # Local import to keep the engine-only routers safe from a circular
+        # import through the reward package.
+        from digimon_gym.agents.reward.wrapper import RewardProfileWrapper
+
+        node: Any = env
+        while node is not None:
+            if isinstance(node, RewardProfileWrapper):
+                return node
+            node = getattr(node, "env", None)
+        return None
+
+    @property
+    def _profile_owns_match_terminal(self) -> bool:
+        """True iff the active reward profile defines a `match_outcome`
+        component. Recomputed on access (cheap dict scan) so profile
+        hot-reloads between matches take effect immediately.
+        """
+        if self._reward_profile_wrapper is None:
+            return False
+        return bool(self._reward_profile_wrapper.has_match_outcome_component)
+
+    def _build_match_terminal_snapshot(self) -> Dict[str, Any]:
+        """Construct the snapshot dict consumed by
+        `RewardProfileWrapper.compute_match_terminal` and the
+        `MatchOutcome` occurrence. Mirrors the fields the legacy
+        `_calc_match_terminal` reads off `self`.
+        """
+        agent_wins = int(self.match_score[0])
+        opp_wins = int(self.match_score[1])
+        if agent_wins >= 2:
+            winner_id: Optional[int] = 1
+        elif opp_wins >= 2:
+            winner_id = 2
+        else:
+            winner_id = None  # 1-1-1 draw via step-limit truncation
+        return {
+            "winner_id": winner_id,
+            "agent_game_wins": agent_wins,
+            "opp_game_wins": opp_wins,
+            "was_sweep": agent_wins >= 2 and opp_wins == 0,
+            "was_swept": opp_wins >= 2 and agent_wins == 0,
+            "agent_conceded_any": any(self.concede_history),
+            "match_step_count": int(self.match_step_count),
+            "total_games": agent_wins + opp_wins,
+        }
 
     # ─── State init ─────────────────────────────────────────────────────
 
@@ -232,7 +290,13 @@ class MatchEnv(gymnasium.Wrapper):
                 # Avoid double-counting if a real concede was already recorded.
                 if not self.concede_history[self.current_game_index]:
                     self.concede_history[self.current_game_index] = True
-            match_reward = self._calc_match_terminal()
+            if self._profile_owns_match_terminal:
+                snapshot = self._build_match_terminal_snapshot()
+                match_reward = float(
+                    self._reward_profile_wrapper.compute_match_terminal(snapshot)
+                )
+            else:
+                match_reward = self._calc_match_terminal()
             info = self._info_with_match_metadata({}, game_terminated=True)
             info["match_terminated_via_concede_during_play_order"] = True
             obs = self._inner_digimon_env.runner.get_board_tensor(1)
@@ -337,10 +401,18 @@ class MatchEnv(gymnasium.Wrapper):
         # to +5 fast bonus, par 200) with BO3's ±12 (+ up to +3 fast
         # bonus, par 150). The dense reward accumulated before the
         # terminal step is unchanged.
+        #
+        # Path C: when the active reward profile defines a `match_outcome`
+        # component, the profile owns all reward magnitudes — skip the
+        # (bo3 − inner) calibration adjustment entirely. The per-game
+        # terminal reward already flowed through the profile's
+        # `terminal_outcome` component (DigimonEnv emitted 0 because
+        # RewardProfileWrapper flips `legacy_reward=False`).
         steps_this_game = self.match_step_count_in_current_game
-        inner_terminal = self._calc_inner_game_terminal(winner_id_python, steps_this_game)
-        bo3_terminal = self._calc_bo3_game_terminal(winner_id_python, steps_this_game)
-        reward = float(reward) + (bo3_terminal - inner_terminal)
+        if not self._profile_owns_match_terminal:
+            inner_terminal = self._calc_inner_game_terminal(winner_id_python, steps_this_game)
+            bo3_terminal = self._calc_bo3_game_terminal(winner_id_python, steps_this_game)
+            reward = float(reward) + (bo3_terminal - inner_terminal)
 
         # Update match score and record the delta so
         # `_info_with_match_metadata` can compute match_score_before on
@@ -361,7 +433,13 @@ class MatchEnv(gymnasium.Wrapper):
         match_decided = agent_wins >= 2 or opp_wins >= 2 or all_games_played or match_step_limit_hit
 
         if match_decided:
-            match_reward = self._calc_match_terminal()
+            if self._profile_owns_match_terminal:
+                snapshot = self._build_match_terminal_snapshot()
+                match_reward = float(
+                    self._reward_profile_wrapper.compute_match_terminal(snapshot)
+                )
+            else:
+                match_reward = self._calc_match_terminal()
             reward = reward + match_reward
             info = self._info_with_match_metadata(info, game_terminated=True)
             info["outcome"] = info.get("outcome") or {}

@@ -37,7 +37,7 @@ semantics and the per-match `once_per_episode` interpretation.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, MutableMapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
 import gymnasium
 
@@ -135,6 +135,68 @@ class RewardProfileWrapper(gymnasium.Wrapper):
     @property
     def loader(self) -> Optional[ProfileLoader]:
         return self._loader
+
+    # ── Path C: MatchEnv integration ──────────────────────────────────
+
+    @property
+    def has_match_outcome_component(self) -> bool:
+        """True iff the active profile defines a `match_outcome`
+        component. Consumed by `MatchEnv` to decide whether to defer
+        per-match terminal reward + per-game bo3 adjustment to the
+        profile (when True) or apply its hardcoded legacy constants
+        (when False).
+
+        Returns False before the first reset (no active profile).
+        """
+        if self._active_profile is None:
+            return False
+        return any(mc.kind == "match_outcome" for mc in self._active_profile.components)
+
+    def compute_match_terminal(
+        self, snapshot: Mapping[str, Any]
+    ) -> float:
+        """Compute the scalar match-tier reward contribution from the
+        active profile's `match_outcome` component(s). Called by
+        `MatchEnv` at match termination.
+
+        `snapshot` is the `MatchOutcome` field dict:
+        `{winner_id, agent_game_wins, opp_game_wins, was_sweep,
+        was_swept, agent_conceded_any, match_step_count, total_games}`.
+
+        Returns 0.0 when no `match_outcome` component is in the active
+        profile (`has_match_outcome_component == False`). In that case
+        `MatchEnv` should fall back to its hardcoded MATCH_TERMINAL_*
+        legacy constants.
+        """
+        from .occurrences import MatchOutcome
+
+        if self._active_profile is None:
+            return 0.0
+        # Construct the occurrence and run it through every
+        # match_outcome component in the resolved chain (typically one;
+        # the registry's KIND_KEY_PARAMETERS treats match_outcome as
+        # single-instance, so child overrides REPLACE parent's).
+        occ = MatchOutcome(
+            winner_id=snapshot["winner_id"],
+            agent_game_wins=int(snapshot["agent_game_wins"]),
+            opp_game_wins=int(snapshot["opp_game_wins"]),
+            was_sweep=bool(snapshot["was_sweep"]),
+            was_swept=bool(snapshot["was_swept"]),
+            agent_conceded_any=bool(snapshot["agent_conceded_any"]),
+            match_step_count=int(snapshot["match_step_count"]),
+            total_games=int(snapshot["total_games"]),
+        )
+        total = 0.0
+        for mc in self._active_profile.components:
+            if mc.kind != "match_outcome":
+                continue
+            raw = float(mc.component.compute([occ], self._episode_state))
+            adjusted = mc.budget.apply(
+                raw, self._active_profile.name, mc.component_key,
+                self._episode_state,
+            )
+            total += adjusted
+        return total
 
     def __getattr__(self, name: str):
         """Delegate missing attribute access to the wrapped env.

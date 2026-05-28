@@ -183,6 +183,47 @@ class TerminalOutcome:
 
 
 @dataclass(frozen=True)
+class MatchOutcome:
+    """A BO3 match terminated. Fires ONCE per `MatchEnv` episode
+    termination — not once per inner game. The `match_outcome` component
+    consumes this to emit per-match terminal reward (separate from the
+    per-game `terminal_outcome` reward).
+
+    When a profile defines a `match_outcome` component, `MatchEnv` defers
+    its hardcoded MATCH_TERMINAL_WIN/LOSS/etc. constants to the
+    component AND skips its `(bo3_game_terminal − inner_game_terminal)`
+    per-game adjustment — the profile owns all reward magnitudes. When
+    no `match_outcome` is present, `MatchEnv` keeps its legacy
+    calibration (back-compat).
+
+    Fields:
+    - `winner_id`: Python 1/2 for a match win, `None` for a draw (the
+      rare 1-1-1 outcome that can only occur on the per-match step-limit
+      truncation path).
+    - `agent_game_wins` / `opp_game_wins`: per-side game tallies. Sum
+      is `total_games` (1-3, plus the forfeit path can add extras).
+    - `was_sweep`: True iff agent won 2-0 (and was the match winner).
+    - `was_swept`: True iff opp won 2-0 (and the agent got 0 games).
+    - `agent_conceded_any`: True iff agent submitted action 93 in any
+      game of the match (used for smart-concede / scared-concede gating).
+    - `match_step_count`: total outer-agent steps across all games in
+      the match. Used for the fast-bonus / fast-win curve.
+    - `total_games`: `agent_game_wins + opp_game_wins`. Forfeit paths
+      (concede-during-play-order) bump opp's score artificially; this
+      field reflects the FINAL score, not the games actually played.
+    """
+
+    winner_id: Optional[int]
+    agent_game_wins: int
+    opp_game_wins: int
+    was_sweep: bool
+    was_swept: bool
+    agent_conceded_any: bool
+    match_step_count: int
+    total_games: int
+
+
+@dataclass(frozen=True)
 class DigivolveDrivenAttack:
     """A Lv5+ digivolved attacker connected with the opponent's security
     stack. Derived from `n_digivolve_driven_attacks[player]` counter

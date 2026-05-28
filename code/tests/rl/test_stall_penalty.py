@@ -94,3 +94,74 @@ def test_draws_always_penalized_regardless_of_apply_flags():
 def test_no_terminal_in_stream_returns_zero():
     comp = _comp()
     assert comp.compute([], {}) == 0.0
+
+
+# ── Winner-side cap (winner_max_penalty) ──────────────────────────
+
+
+def test_winner_max_penalty_caps_winner_only():
+    """Default winner_max_penalty=19.0 caps winner penalty at -19.0.
+    Loser side stays unbounded — this is the invariant that keeps
+    'win never worse than loss' true."""
+    comp = _comp()  # default winner_max_penalty=19.0
+    # Turn 30: natural penalty = -52.9. Winner clamped to -19.0; loser unchanged.
+    assert comp.compute([_terminal(winner_id=1, turn_count=30)], {}) == pytest.approx(-19.0)
+    assert comp.compute([_terminal(winner_id=2, turn_count=30)], {}) == pytest.approx(-52.9)
+    # Draw also unbounded.
+    assert comp.compute([_terminal(winner_id=None, turn_count=30)], {}) == pytest.approx(-52.9)
+
+
+def test_winner_cap_does_not_apply_below_threshold_magnitude():
+    """At moderate turns where the natural penalty is BELOW the cap
+    magnitude, the cap doesn't activate (no clamping)."""
+    comp = _comp()  # cap=19
+    # Turn 15: natural = -6.4 (magnitude well below 19) → no clamp.
+    assert comp.compute([_terminal(winner_id=1, turn_count=15)], {}) == pytest.approx(-6.4)
+    # Turn 20: natural = -16.9 (still below 19) → no clamp.
+    assert comp.compute([_terminal(winner_id=1, turn_count=20)], {}) == pytest.approx(-16.9)
+    # Turn 22: natural = -22.5 (over 19) → clamped to -19.0.
+    assert comp.compute([_terminal(winner_id=1, turn_count=22)], {}) == pytest.approx(-19.0)
+
+
+def test_win_always_beats_loss_invariant():
+    """Cross-turn invariant: WORST possible win + terminal_outcome.win_base
+    must be strictly greater than BEST possible loss + terminal_outcome.loss.
+    With the default cap (19.0) + default terminal_outcome (win=10, loss=-10),
+    worst-win = 10 + 0 (decayed quick_win) − 19 = -9.0, which is strictly
+    greater than worst-loss = -10 + 0 (no stall) = -10.0.
+    """
+    comp = _comp()
+    WIN_BASE = 10.0
+    LOSS = -10.0
+    # Sweep turns 1..50 and verify (win + win_base) > (loss + LOSS) for ALL
+    # turn pairs.
+    win_values = []
+    loss_values = []
+    for turn in range(1, 51):
+        win_values.append(WIN_BASE + comp.compute([_terminal(winner_id=1, turn_count=turn)], {}))
+        loss_values.append(LOSS + comp.compute([_terminal(winner_id=2, turn_count=turn)], {}))
+    min_win = min(win_values)
+    max_loss = max(loss_values)
+    assert min_win > max_loss, (
+        f"INVARIANT VIOLATED: worst win ({min_win:+.2f}) <= best loss ({max_loss:+.2f}). "
+        "Increase winner_max_penalty (cap) or adjust terminal_outcome win_base/loss."
+    )
+
+
+def test_winner_max_penalty_can_be_disabled_with_large_value():
+    """Operators can effectively disable the cap by setting a very large
+    winner_max_penalty (e.g., 1e9). The penalty then matches the
+    unbounded loser-side formula."""
+    comp = _comp(winner_max_penalty=1e9)
+    # Turn 30 winner: natural -52.9, no clamp at 1e9.
+    assert comp.compute([_terminal(winner_id=1, turn_count=30)], {}) == pytest.approx(-52.9)
+
+
+def test_winner_max_penalty_can_be_tightened():
+    """Tighter cap (e.g., 5.0) cuts off winner penalty earlier — useful
+    if operator wants near-zero win-side stall pressure."""
+    comp = _comp(winner_max_penalty=5.0)
+    # Turn 15 winner: natural -6.4 → clamped to -5.0.
+    assert comp.compute([_terminal(winner_id=1, turn_count=15)], {}) == pytest.approx(-5.0)
+    # Loser unaffected.
+    assert comp.compute([_terminal(winner_id=2, turn_count=15)], {}) == pytest.approx(-6.4)
