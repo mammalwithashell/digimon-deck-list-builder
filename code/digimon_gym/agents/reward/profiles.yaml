@@ -1,0 +1,234 @@
+# Reward profiles for pilot training — ARCHETYPE OVERLAYS.
+#
+# Spec: openspec/changes/add-gameplay-reward-config/specs/gameplay-reward-config/spec.md
+#
+# Two-file architecture:
+#   - gameplay.yaml — universal game-mechanic shaping (one profile: `gameplay`)
+#   - profiles.yaml (this file) — archetype overlays. Every profile MUST
+#     `inherits: gameplay` (directly or transitively).
+#
+# Top-level keys:
+#   - profiles:    name → profile definition (components + optional budget + optional key_cards)
+#   - assignments: archetype_name → profile_name; `_default` key is REQUIRED and
+#                  is the fallback when an episode's `info["deck1_archetype"]`
+#                  is absent or unmapped.
+#
+# Editing this file: changes take effect at the next `env.reset()` when
+# `reward_profiles_hot_reload = true` (default). The active profile is
+# locked at reset and stable for the rest of the episode (under
+# `match_format: bo3`, stable across all 3 games of a match).
+#
+# Naming convention: profiles starting with `_` are private — they can be
+# inherited via `inherits:` but cannot be assigned to real archetypes.
+# The one exception is the `_default` assignment key itself, which is
+# allowed to target the private `_default` profile.
+
+profiles:
+
+  # ----------------------------------------------------------------
+  # Default profile — thin pass-through to the universal gameplay shape.
+  # Operators who don't need archetype-specific shaping inherit this
+  # (or `gameplay` directly).
+  #
+  # Per `add-gameplay-reward-config` migration plan: the legacy
+  # byte-identical-to-_compute_reward baseline is dropped. _default
+  # IS gameplay now — no terminal-exclusivity carve-out, no
+  # digivolve-shaping toggle, the new aggression shape is universal.
+  # ----------------------------------------------------------------
+  _default:
+    inherits: gameplay
+    # No overrides — _default IS gameplay.
+
+  # ----------------------------------------------------------------
+  # Pure-outcome profile — research baseline with no shaping at all.
+  #
+  # Reward = ±0.2 per game terminal + ±1.0 per match terminal. Every
+  # gameplay-tier shaping component (security, digivolve, breeding,
+  # quick-win, stall, step penalty) is zeroed via override.
+  #
+  # Purpose: ablation reference for whether the gameplay shape's
+  # learning signal helps vs. a clean sparse-outcome bandit. The
+  # `match_outcome` component activates the Path C MatchEnv hook —
+  # `MatchEnv` defers ITS hardcoded MATCH_TERMINAL_* magnitudes and
+  # the per-game `(bo3 − inner)` calibration to this component, so
+  # the only rewards an episode sees are the explicit ±0.2 / ±1.0
+  # listed below.
+  #
+  # All component magnitudes are intentionally explicit (rather than
+  # relying on a hypothetical "disable: true" flag) so the profile is
+  # auditable end-to-end and the loader exercises the override path.
+  # ----------------------------------------------------------------
+  _pure_outcome:
+    inherits: gameplay
+    components:
+      - kind: terminal_outcome
+        win_base: 0.2
+        fast_win_bonus_max: 0.0
+        fast_win_par_steps: 200
+        loss: -0.2
+        draw: 0.0
+      - kind: quick_win_bonus
+        peak_turn: 3
+        peak_value: 0.0
+        decay_per_turn: 0.0
+      - kind: stall_penalty
+        threshold_turn: 7
+        scale: 0.0
+        apply_to_winner: true
+        apply_to_loser: true
+        winner_max_penalty: 0.0
+      - kind: step_penalty
+        weight: 0.0
+      - kind: security_remove
+        weight: 0.0
+      - kind: security_lost
+        weight: 0.0
+      - kind: digivolve
+        weight: 0.0
+      - kind: dna_digivolve
+        weight: 0.0
+      - kind: breeding_digivolve
+        reward_per_level:
+          3: 0.0
+          4: 0.0
+          5: 0.0
+          6: 0.0
+      - kind: digivolve_driven_attack
+        mode: either
+        attacker_min_level: 5
+        reward: 0.0
+        per_card: false
+      # The Path C extension — activates the wrapper hook so MatchEnv
+      # defers all match-tier magnitudes here. Without this component,
+      # MatchEnv uses its legacy hardcoded ±30 / ±10 sweep / etc.
+      - kind: match_outcome
+        win: 1.0
+        loss: -1.0
+        draw: 0.0
+
+  # ----------------------------------------------------------------
+  # DNA Omnimon archetype profile.
+  #
+  # Win condition: assemble Omnimon (BT17-078, AD1-025, BT13-112,
+  # BT22-015, or BT1-084) via the DNA digivolve chain or the AD1-025
+  # Assembly alt-path. Hardcasting Omnimon at full cost is wasteful.
+  #
+  # Reward shape (see add-reward-profiles design.md §D15):
+  #   first DNA arrival      : +6.0   (≈60% of a base win)
+  #   second arrival         : +2.4   (decay 0.4)
+  #   asymptotic cap         : +10.0  (= reward / (1 - decay))
+  #   alt-path arrival       : +2.0 with same decay (e.g., AD1-025
+  #                            via Assembly after Partition)
+  #   full-cost hardcast     : -1.5 (capped at 1 fire per match)
+  #
+  # Supporting components:
+  #   climb (WG/MG)          : +0.5 each, max 2 fires, decay 0.7
+  #   tamer plays (Tai&Matt) : +0.3 per play, max 2 fires
+  #   blocks                 : +0.15 each, max 4 fires, decay 0.6
+  #
+  # Profile budget: per_episode_cap = 15 (= asymptotic key + headroom);
+  # per_episode_floor = -3 (caps cumulative hardcast/penalty signal).
+  # ----------------------------------------------------------------
+  dna_omnimon_combo_v1:
+    inherits: gameplay
+    budget:
+      per_episode_cap: 15.0
+      per_episode_floor: -3.0
+    key_cards:
+      - cards:
+          - BT17-078  # Omnimon (BT17)
+          - AD1-025   # Omnimon (Advance)
+          - BT13-112  # Omnimon
+          - BT22-015  # Omnimon
+          - BT1-084   # Omnimon (classic)
+        reward: 6.0
+        # diminishing_factor: 0.4   # explicit default
+        # max_per_episode: null     # explicit default — decay bounds
+        hardcast_penalty: -1.5
+        # hardcast_max_per_episode: 1  # explicit default
+        alt_path_reward: 2.0
+        alt_paths: [assembly]
+    components:
+      # Material climb — small reward for reaching the Lv6 Greymon /
+      # Garurumon line that feeds the DNA. Diminishing fast so the
+      # signal doesn't dominate.
+      - kind: digivolve_into_named_card
+        match:
+          card_id: [BT17-015, BT17-027]   # WarGreymon, MetalGarurumon
+        min_result_level: 6
+        weight: 0.5
+        budget:
+          max_fires_per_episode: 2
+          diminishing_returns_factor: 0.7
+
+      # Tamer / enabler plays — small flat reward.
+      - kind: play_named_card
+        match:
+          card_id: [BT17-081, BT22-017]   # Tai & Matt, Gabumon (BT22)
+        weight: 0.3
+        budget:
+          max_fires_per_episode: 2
+
+      # Generic disruption signal.
+      - kind: block_event
+        weight: 0.15
+        budget:
+          max_fires_per_episode: 4
+          diminishing_returns_factor: 0.6
+
+  # ----------------------------------------------------------------
+  # BG Imperialdramon archetype profile.
+  #
+  # Win condition: DNA into Paildramon (BT12-028) via Stingmon +
+  # ExVeemon. The Imperialdramon Lv7 typically follows from Paildramon.
+  # Davis & Ken (BT16-085) plays Lv3 materials for free at start of
+  # main phase — reward that arrival shape.
+  # ----------------------------------------------------------------
+  bg_imperialdramon_combo_v1:
+    inherits: gameplay
+    budget:
+      per_episode_cap: 12.0
+      per_episode_floor: -2.0
+    key_cards:
+      - cards:
+          - BT12-028   # Paildramon
+        reward: 6.0
+        hardcast_penalty: -1.2
+        # No alt-path: Paildramon doesn't have a Partition-style replay
+        # path. Operators who later wire one can edit this entry.
+    components:
+      # Lv4 material climb (Stingmon + ExVeemon).
+      - kind: digivolve_into_named_card
+        match:
+          card_id: [BT12-022, BT12-050]   # ExVeemon, Stingmon (both BT12)
+        min_result_level: 4
+        weight: 0.4
+        budget:
+          max_fires_per_episode: 2
+          diminishing_returns_factor: 0.7
+
+      # Tamer play (Davis & Ken).
+      - kind: play_named_card
+        match:
+          card_id: [BT16-085]             # Davis & Ken
+        weight: 0.3
+        budget:
+          max_fires_per_episode: 1
+
+      # NOTE: rewarding the Veemon/Wormmon free-Lv3 plays specifically
+      # requires `card_name` matching, which depends on `RewardEventBus`
+      # enriching `PlayedCard` with the card name. Until that follow-up
+      # lands, the operator can identify the relevant Lv3 cards by ID
+      # and add them here.
+
+assignments:
+  # Fallback for archetypes without an explicit assignment AND for
+  # any run where `info["deck1_archetype"]` is absent (gauntlet mode,
+  # fixed-deck training). The `_default` assignment key is allowed to
+  # target a private `_default` profile.
+  _default: _default
+
+  # Real-archetype assignments. Names MUST match exactly the
+  # archetype keys in `data/deck_library.json`.
+  "DNA Omnimon": dna_omnimon_combo_v1
+  "Imperialdramon (PR)": bg_imperialdramon_combo_v1

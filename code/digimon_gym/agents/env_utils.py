@@ -68,3 +68,31 @@ def find_match_env(env: gymnasium.Env):
     if _is_match_env(current):
         return current
     return None
+
+
+def find_reward_profile_wrapper(env: gymnasium.Env):
+    """Walk a Gymnasium wrapper stack until a `RewardProfileWrapper` is found.
+
+    Returns the `RewardProfileWrapper` instance, or `None` if not present in
+    the chain. Used by `WinRateCallback` to read the active profile's
+    boss-cards set (for the boss-arrival eval columns from
+    `add-reward-profiles` Group 10 task 10.6) without coupling the
+    callback to the wrapper's internal state.
+
+    Reload-safe (matches by module + class name like `find_match_env`).
+    """
+    target_module = "digimon_gym.agents.reward.wrapper"
+    target_name = "RewardProfileWrapper"
+
+    def _is_target(obj: object) -> bool:
+        cls = type(obj)
+        return cls.__module__ == target_module and cls.__name__ == target_name
+
+    current: gymnasium.Env = env
+    while isinstance(current, gymnasium.Wrapper):
+        if _is_target(current):
+            return current
+        current = current.env
+    if _is_target(current):
+        return current
+    return None

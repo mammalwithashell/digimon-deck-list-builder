@@ -19,6 +19,7 @@ use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::CardKind;
 use digimon_engine::selection::SelectionKind;
 
 const GIGIMON_YAML: &str = include_str!("../../../cards/bt24/BT24-001.yaml");
@@ -28,6 +29,23 @@ const GIGIMON_YAML: &str = include_str!("../../../cards/bt24/BT24-001.yaml");
 /// Generic Lv.4 Digimon filler with no traits, no effects.
 fn make_filler(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
+    c.traits = vec![];
+    c
+}
+
+/// Tamer security filler — used when the test wants to verify the
+/// `on_opp_security_removed` trigger fires WITHOUT incidentally running a
+/// security-DP battle between the carrier and a same-DP Digimon security
+/// card. Per RULES_CONTEXT 13-1-7-3 / 14-2-3, only Digimon security
+/// triggers the battle compare; non-Digimon security skips straight
+/// through. (The post-fix-2026-05 engine correctly deletes the attacker
+/// on a tied security battle per rule 14-2-1-3, which would void the
+/// trigger source mid-attack.)
+fn make_non_digimon_security_filler(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.dp = None;
+    c.level = None;
     c.traits = vec![];
     c
 }
@@ -49,15 +67,21 @@ fn make_high_dp(id: &str) -> CardData {
 }
 
 /// Build the base runner: Gigimon is loaded from YAML, plus helper cards.
+///
+/// SEC-FILLER is non-Digimon so the carrier (2000 DP) doesn't mutually
+/// destruct with same-DP Digimon security (see RULES_CONTEXT 14-2-1-3 +
+/// `equal_dp_security_battle_deletes_attacker` regression in
+/// `tests/combat/security_effects.rs`).
 fn gigimon_runner() -> DebugRunner {
     DebugRunner::builder()
         .from_dsl_yaml(GIGIMON_YAML)
         .expect("BT24-001 YAML must parse")
         .add_card(make_filler("CARRIER"))
         .add_card(make_filler("FILLER-DECK"))
+        .add_card(make_non_digimon_security_filler("SEC-FILLER"))
         .add_card(make_low_dp("LOW-DP-1"))
         .add_card(make_high_dp("HIGH-DP-1"))
-        .security(1, &["FILLER-DECK"])
+        .security(1, &["SEC-FILLER"])
         .deck(0, &["FILLER-DECK"])
         .deck(1, &["FILLER-DECK"])
         .memory(10)
@@ -243,7 +267,7 @@ fn bt24_001_declining_does_not_delete_digimon() {
         .expect("BT24-001 YAML must parse")
         .add_card(make_filler("CARRIER"))
         .add_card(make_low_dp("LOW-DP-1"))
-        .add_card(make_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-1"])
         .deck(0, &["FILLER-DECK"])
@@ -287,7 +311,7 @@ fn bt24_001_accepting_deletes_low_dp_digimon() {
         .expect("BT24-001 YAML must parse")
         .add_card(make_filler("CARRIER"))
         .add_card(make_low_dp("LOW-DP-1"))
-        .add_card(make_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-1"])
         .deck(0, &["FILLER-DECK"])
@@ -342,7 +366,7 @@ fn bt24_001_high_dp_digimon_not_eligible_for_delete() {
         .expect("BT24-001 YAML must parse")
         .add_card(make_filler("CARRIER"))
         .add_card(make_high_dp("HIGH-DP-1"))
-        .add_card(make_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-1"])
         .deck(0, &["FILLER-DECK"])
@@ -387,8 +411,8 @@ fn bt24_001_opt_blocks_second_trigger_same_turn() {
         .add_card(make_filler("CARRIER"))
         .add_card(make_low_dp("LOW-DP-1"))
         .add_card(make_low_dp("LOW-DP-2"))
-        .add_card(make_filler("SEC-1"))
-        .add_card(make_filler("SEC-2"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-2"))
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-1", "SEC-2"])
         .deck(0, &["FILLER-DECK"])

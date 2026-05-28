@@ -163,6 +163,43 @@ pub enum CompiledAltPathKind {
     ActivatedDigivolve,
 }
 
+impl CompiledAltPathKind {
+    /// Canonical snake_case string key for this alt-path variant.
+    ///
+    /// Stable identifier consumed by:
+    /// - `GameEvent::Play.via_alt_path` (surfaces the alt-path through
+    ///   which a card entered play, per the `engine-event-emission` spec)
+    /// - The `reward-profiles` `key_cards:` `alt_paths` matcher and the
+    ///   `play_named_card.via_alt_path` component matcher (YAML-side keys)
+    ///
+    /// These keys are part of the engine's public surface — renaming a
+    /// variant requires updating downstream YAML profiles AND any code
+    /// that pattern-matches on the string. Add `#[serde(rename = "...")]`
+    /// here if a future change wants a different serde wire format than
+    /// the matcher key.
+    pub fn as_key(self) -> &'static str {
+        // NOTE: strings here MUST match `alt_path_kind_matches` in
+        // `code/digimon-engine/src/dsl_cards/predicate.rs` to keep the
+        // engine's single source of truth for alt-path identifiers.
+        // Two divergences from a "pure snake_case" reading exist for
+        // historical-predicate-matching reasons:
+        //   • BlastDnaDigivolve → "blast_dna_digivolve" (not "blast_dna")
+        //   • DigiXros → "digixros" (not "digi_xros")
+        // Update both sites in lockstep if a future change wants a
+        // different scheme.
+        match self {
+            CompiledAltPathKind::Digivolve => "digivolve",
+            CompiledAltPathKind::DnaDigivolve => "dna_digivolve",
+            CompiledAltPathKind::BlastDnaDigivolve => "blast_dna_digivolve",
+            CompiledAltPathKind::DigiXros => "digixros",
+            CompiledAltPathKind::BurstDigivolve => "burst_digivolve",
+            CompiledAltPathKind::AppFusion => "app_fusion",
+            CompiledAltPathKind::Assembly => "assembly",
+            CompiledAltPathKind::ActivatedDigivolve => "activated_digivolve",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledMaterial {
     pub filter: CompiledPredicate,

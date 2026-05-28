@@ -56,10 +56,20 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             if sel.is_optional {
                 mask[PASS as usize] = 1.0;
             }
-            // CONCEDE_GAME (93) is always-legal at any agent decision point
-            // (per the BO3 match-training spec). A pending selection IS a
-            // decision point for the selecting_player.
-            mask[CONCEDE_GAME as usize] = 1.0;
+            // CONCEDE_GAME (93) is legal at every agent decision point
+            // (per the BO3 match-training spec), EXCEPT Mulligan and
+            // SelectPlayOrder — both are pre-/inter-game decisions
+            // where "forfeit" has no productive meaning, and a
+            // random-init policy degenerately picking 93 forfeits the
+            // whole match. See add-gameplay-reward-config smoke
+            // verification + the SelectPlayOrder concede-mask test in
+            // `tests/select_play_order.rs`.
+            if !matches!(
+                game.current_phase,
+                GamePhase::Mulligan | GamePhase::SelectPlayOrder,
+            ) {
+                mask[CONCEDE_GAME as usize] = 1.0;
+            }
         }
         return mask;
     }
@@ -659,19 +669,34 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
         }
     }
 
-    // CONCEDE_GAME (93) is always-legal at any agent decision point
-    // (per the BO3 match-training spec). We detect "has decision point"
-    // as "at least one other action is legal in the mask." Players with
-    // no agency (e.g., not their turn during Main) get an all-zero mask,
-    // so concede stays zero too. The soft-lock PASS rail does set PASS=1
-    // and so will surface concede=1 alongside — harmless: in those rare
-    // states the agent step shouldn't be advancing the game anyway.
-    let has_other_legal = mask
-        .iter()
-        .enumerate()
-        .any(|(i, &v)| v > 0.0 && i != CONCEDE_GAME as usize);
-    if has_other_legal {
-        mask[CONCEDE_GAME as usize] = 1.0;
+    // CONCEDE_GAME (93) is legal at every agent decision point (per
+    // the BO3 match-training spec), EXCEPT Mulligan and SelectPlayOrder.
+    // Conceding during the pre-game keep/redraw decision or during the
+    // inter-game play-order pick is semantically degenerate (the game
+    // hasn't started; or the agent is mid-match, not mid-game) AND was
+    // a real degeneracy with random-init policies — they would pick 93
+    // via argmax and forfeit the entire BO3 match. See
+    // `tests/select_play_order.rs::mask_does_not_expose_concede_during_*`
+    // for the contract.
+    //
+    // We detect "has decision point" as "at least one other action is
+    // legal in the mask." Players with no agency (e.g., not their turn
+    // during Main) get an all-zero mask, so concede stays zero too.
+    // The soft-lock PASS rail does set PASS=1 and so will surface
+    // concede=1 alongside — harmless: in those rare states the agent
+    // step shouldn't be advancing the game anyway.
+    let concede_allowed = !matches!(
+        game.current_phase,
+        GamePhase::Mulligan | GamePhase::SelectPlayOrder,
+    );
+    if concede_allowed {
+        let has_other_legal = mask
+            .iter()
+            .enumerate()
+            .any(|(i, &v)| v > 0.0 && i != CONCEDE_GAME as usize);
+        if has_other_legal {
+            mask[CONCEDE_GAME as usize] = 1.0;
+        }
     }
 
     mask

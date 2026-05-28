@@ -21,9 +21,9 @@
 //! `docs/RUST_PYTHON_PARITY.md` under "Policies".
 
 use crate::action::space::{
-    ATTACK_END, ATTACK_START, BREEDING_TARGET, DIGIVOLVE_END, DIGIVOLVE_START, FIELDS_PER_HAND,
-    HATCH, MOVE_FROM_BREEDING, PASS, PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET,
-    TARGETS_PER_ATTACKER,
+    ATTACK_END, ATTACK_START, BREEDING_TARGET, CONCEDE_GAME, DIGIVOLVE_END, DIGIVOLVE_START,
+    FIELDS_PER_HAND, HATCH, MOVE_FROM_BREEDING, PASS, PLAY_FIRST, PLAY_HAND_END, PLAY_HAND_START,
+    PLAY_SECOND, SECURITY_TARGET, TARGETS_PER_ATTACKER,
 };
 use crate::card_data::CardData;
 use crate::enums::{CardKind, GamePhase, PlayerId};
@@ -35,15 +35,31 @@ use crate::selection::SelectionKind;
 /// Python-parity heuristic. The returned id is guaranteed to be a valid
 /// entry in the provided mask (or `PASS` if the mask is empty).
 pub fn greedy_action(game: &Game, mask: &[f32]) -> u16 {
-    let valid: Vec<u16> = mask
+    let all_valid: Vec<u16> = mask
         .iter()
         .enumerate()
         .filter_map(|(i, v)| if *v > 0.0 { Some(i as u16) } else { None })
         .collect();
 
-    if valid.is_empty() {
+    if all_valid.is_empty() {
         return PASS;
     }
+
+    // CONCEDE_GAME (93) is legal at every agent decision point per
+    // `add-bo3-match-training` + CLAUDE.md rule 26. The pre-fix heuristic
+    // would pick it whenever it was the lowest non-PASS legal action
+    // (falling through `first_non_pass` or `mulligan_choice`'s fallback
+    // `valid[0]`), which made BO3 evals degenerate: greedy opponents
+    // forfeited matches at every play-order pick. Strip CONCEDE from
+    // the candidate set unless it is the ONLY option. Last-resort
+    // concede is preserved: if the engine has somehow masked everything
+    // else out (no real recovery path), the original valid is used and
+    // CONCEDE may be picked.
+    let valid: Vec<u16> = if all_valid.iter().any(|&a| a != CONCEDE_GAME) {
+        all_valid.iter().copied().filter(|&a| a != CONCEDE_GAME).collect()
+    } else {
+        all_valid.clone()
+    };
 
     // Mulligan phase — the deciding player is set by `mulligan_current_player`.
     if game.current_phase == GamePhase::Mulligan {
@@ -61,6 +77,25 @@ pub fn greedy_action(game: &Game, mask: &[f32]) -> u16 {
     }
 
     let player_id = current_decider(game);
+
+    // Best-of-three play-order pick — `add-bo3-match-training` makes
+    // these actions legal only during `GamePhase::SelectPlayOrder`,
+    // but the pre-fix catch-all branch fell through to
+    // `first_non_pass(valid)` which returned the lowest-id non-PASS
+    // action — including `CONCEDE_GAME` (93). Explicit branch here so
+    // the greedy heuristic picks a sensible play-order action instead
+    // of forfeiting the match. Default: PLAY_FIRST when offered, else
+    // PLAY_SECOND.
+    if game.current_phase == GamePhase::SelectPlayOrder {
+        if valid.contains(&PLAY_FIRST) {
+            return PLAY_FIRST;
+        }
+        if valid.contains(&PLAY_SECOND) {
+            return PLAY_SECOND;
+        }
+        // SelectPlayOrder should always offer at least one of 94/95;
+        // if not, fall through to the general non-concede fallback.
+    }
 
     match game.current_phase {
         GamePhase::Breeding => {
@@ -116,11 +151,25 @@ fn current_decider(game: &Game) -> PlayerId {
     game.turn_player()
 }
 
+/// Fallback action selector — returns the first id in `valid` that is
+/// neither PASS nor CONCEDE_GAME. CONCEDE is excluded because it is
+/// legal at every agent decision point (per `add-bo3-match-training`
+/// + CLAUDE.md rule 26) — picking it as a "default" forfeits the game
+/// when the per-phase heuristic just has nothing better to suggest.
+/// Falls through to PASS if nothing else is available, then to
+/// CONCEDE_GAME only when every other slot is masked out (last resort).
 fn first_non_pass(valid: &[u16]) -> u16 {
     for &a in valid {
-        if a != PASS {
+        if a != PASS && a != CONCEDE_GAME {
             return a;
         }
+    }
+    // No real-action slot — try PASS, then last-resort CONCEDE.
+    if valid.contains(&PASS) {
+        return PASS;
+    }
+    if valid.contains(&CONCEDE_GAME) {
+        return CONCEDE_GAME;
     }
     PASS
 }

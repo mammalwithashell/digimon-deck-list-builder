@@ -37,8 +37,8 @@ use serde_json::Value;
 use pyo3::wrap_pyfunction;
 
 use ::digimon_engine::action::space::{
-    ACTION_SPACE_SIZE, BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START, SOURCE_SELECT_END,
-    SOURCE_SELECT_START,
+    ACTION_SPACE_SIZE, BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START, BREEDING_TARGET,
+    SOURCE_SELECT_END, SOURCE_SELECT_START,
 };
 use ::digimon_engine::card_data::CardData;
 use ::digimon_engine::card_registry::{CardRegistry as RustCardRegistry, REGISTRY_CAPACITY};
@@ -710,6 +710,16 @@ impl RustHeadlessGame {
         d.set_item("p2_digivolutions", game.n_digivolutions[1])?;
         d.set_item("p1_dna_digivolutions", game.n_dna_digivolutions[0])?;
         d.set_item("p2_dna_digivolutions", game.n_dna_digivolutions[1])?;
+        // Gameplay-reward-config additions. `turn_count` lets reward
+        // components that key on game progress (e.g. quick_win_bonus,
+        // stall_penalty) read the same counter the engine uses for turn
+        // tracking. `n_digivolve_driven_attacks` powers the
+        // `digivolve_driven_attack` reward signal — 2-element list
+        // indexed by Rust 0-based PlayerId (Python 1/2 mapping is
+        // owner-side).
+        d.set_item("turn_count", game.turn_count)?;
+        let driven = PyList::new_bound(py, [game.n_digivolve_driven_attacks[0], game.n_digivolve_driven_attacks[1]]);
+        d.set_item("n_digivolve_driven_attacks", driven)?;
         Ok(d.into_py(py))
     }
 
@@ -1017,24 +1027,53 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             player,
             card_id,
             field_index,
+            cost_paid,
+            cost_printed,
+            via_alt_path,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
             d.set_item("source_slot", *field_index)?;
+            // New per-play payload from the `add-reward-profiles` change
+            // (capability `engine-event-emission`). Surfaces in meta so
+            // the existing top-level keys stay stable.
+            let meta = PyDict::new_bound(py);
+            meta.set_item("cost_paid", *cost_paid)?;
+            meta.set_item("cost_printed", *cost_printed)?;
+            meta.set_item(
+                "via_alt_path",
+                via_alt_path
+                    .as_ref()
+                    .map(|s| s.as_str())
+                    .map(|s| s.into_py(py))
+                    .unwrap_or_else(|| py.None()),
+            )?;
+            d.set_item("meta", meta)?;
         }
         GameEvent::Digivolve {
             player,
             top_card_id,
             field_index,
             from_stack_top,
+            was_dna,
+            was_blast_dna,
+            memory_paid,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", top_card_id.as_str())?;
             d.set_item("source_slot", *field_index)?;
+            // New payload from the `add-reward-profiles` change
+            // (capability `engine-event-emission`). Surfaces in `meta`
+            // alongside the existing `from_stack_top` so top-level keys
+            // stay stable for downstream consumers that don't yet read
+            // the new fields.
             let meta = PyDict::new_bound(py);
             meta.set_item("from_stack_top", from_stack_top.as_str())?;
+            meta.set_item("was_dna", *was_dna)?;
+            meta.set_item("was_blast_dna", *was_blast_dna)?;
+            meta.set_item("memory_paid", *memory_paid)?;
             d.set_item("meta", meta)?;
         }
         GameEvent::Attack {
@@ -1130,6 +1169,11 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add("SOURCE_SELECT_END", SOURCE_SELECT_END)?;
     m.add("BREEDING_SOURCE_SELECT_START", BREEDING_SOURCE_SELECT_START)?;
     m.add("BREEDING_SOURCE_SELECT_END", BREEDING_SOURCE_SELECT_END)?;
+    // Breeding-area marker constant. Re-exported from the canonical
+    // Rust source so Python consumers (RewardEventBus,
+    // breeding_digivolve component) can identify breeding-area
+    // Digivolved occurrences without redefining the value.
+    m.add("BREEDING_TARGET", BREEDING_TARGET)?;
     m.add("TENSOR_SIZE", TENSOR_SIZE)?;
     Ok(())
 }

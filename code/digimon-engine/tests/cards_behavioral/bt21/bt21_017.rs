@@ -474,11 +474,14 @@ fn bt21_017_playing_owen_free_does_not_spend_memory() {
 /// The inherited clause gains 1 memory when opponent security is removed on your turn.
 #[test]
 fn bt21_017_inherited_fires_when_source_under_carrier_your_turn() {
+    // SEC-1 is a Tamer so the on-opp-security-removed trigger fires
+    // without the carrier mutual-destructing against a same-DP Digimon
+    // security (RULES_CONTEXT 14-2-1-3 post-fix).
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(DIMETROMON_YAML)
         .expect("BT21-017 YAML parses")
         .add_card(make_filler("CARRIER"))
-        .add_card(make_filler("SEC-1"))
+        .add_card(make_tamer("SEC-1"))
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-1"])
         .deck(0, &["FILLER-DECK"])
@@ -566,12 +569,15 @@ fn bt21_017_inherited_does_not_fire_on_opponents_turn() {
 /// OPT: second security removal in the same turn must NOT gain another memory.
 #[test]
 fn bt21_017_inherited_opt_blocks_second_trigger_same_turn() {
+    // Tamer security so the carrier can attack security multiple times
+    // without mutual-destructing on the first attack (post-fix per
+    // RULES_CONTEXT 14-2-1-3 in `equal_dp_security_battle_deletes_attacker`).
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(DIMETROMON_YAML)
         .expect("BT21-017 YAML parses")
         .add_card(make_filler("CARRIER"))
-        .add_card(make_filler("SEC-1"))
-        .add_card(make_filler("SEC-2"))
+        .add_card(make_tamer("SEC-1"))
+        .add_card(make_tamer("SEC-2"))
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-1", "SEC-2"])
         .deck(0, &["FILLER-DECK"; 10])

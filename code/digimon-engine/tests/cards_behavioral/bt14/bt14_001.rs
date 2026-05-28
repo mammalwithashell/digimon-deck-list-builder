@@ -25,6 +25,7 @@
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::CardKind;
 
 const KOROMON_YAML: &str = include_str!("../../../cards/bt14/BT14-001.yaml");
 
@@ -36,14 +37,29 @@ fn make_filler(id: &str) -> CardData {
     c
 }
 
+/// Tamer security filler — avoids the carrier mutual-destructing against
+/// same-DP Digimon security per the post-fix `equal_dp_security_battle_*`
+/// regression (RULES_CONTEXT 14-2-1-3).
+fn make_non_digimon_security_filler(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.dp = None;
+    c.level = None;
+    c.traits = vec![];
+    c
+}
+
 /// Minimal runner: Koromon parsed from YAML, a filler carrier, a security card
 /// for P1, and a filler deck card for P0 (so drawing doesn't panic).
 fn koromon_runner() -> DebugRunner {
+    // Tamer security so the carrier (2000 DP) doesn't mutual-destruct
+    // with same-DP Digimon security per RULES_CONTEXT 14-2-1-3
+    // (`equal_dp_security_battle_deletes_attacker`).
     DebugRunner::builder()
         .from_dsl_yaml(KOROMON_YAML)
         .expect("BT14-001 YAML parses")
         .add_card(make_filler("CARRIER"))
-        .add_card(make_filler("SEC-CARD"))
+        .add_card(make_non_digimon_security_filler("SEC-CARD"))
         .add_card(make_filler("DECK-CARD"))
         .security(1, &["SEC-CARD"])
         .deck(0, &["DECK-CARD"])
@@ -288,12 +304,15 @@ fn bt14_001_inherited_fires_draws_one_card_on_your_turn() {
 /// fire at all before OPT can be tested).
 #[test]
 fn bt14_001_inherited_opt_blocks_second_trigger_same_turn() {
+    // Tamer security so the carrier can attack twice without dying to
+    // a same-DP Digimon security on the first attack (post-fix per
+    // RULES_CONTEXT 14-2-1-3).
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(KOROMON_YAML)
         .expect("BT14-001 YAML parses")
         .add_card(make_filler("CARRIER"))
-        .add_card(make_filler("SEC-1"))
-        .add_card(make_filler("SEC-2"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-2"))
         .add_card(make_filler("DECK-P0"))
         .security(1, &["SEC-1", "SEC-2"])
         .deck(0, &["DECK-P0", "DECK-P0"])

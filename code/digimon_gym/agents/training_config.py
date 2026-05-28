@@ -85,6 +85,20 @@ class TrainingConfig:
     #   (action 93) and SelectPlayOrder (actions 94/95) enabled.
     # `single`: legacy behavior — one Gym episode = one game.
     match_format: str = "bo3"
+    # Reward profiles (`add-reward-profiles` Group 8 wiring).
+    # When `reward_profiles_path` resolves to a readable YAML file, the
+    # pilot_training env factories wrap the env in `RewardProfileWrapper`.
+    # The override (when set) takes precedence over per-archetype
+    # assignment — useful for fixed-deck training or for forcing a
+    # specific profile during eval. `reward_profiles_hot_reload`
+    # toggles the mtime-check + reload at each env.reset().
+    reward_profiles_path: str = "code/digimon_gym/agents/reward/profiles.yaml"
+    # Universal gameplay reward shape (`add-gameplay-reward-config`). Loads
+    # alongside `reward_profiles_path` via the two-file ProfileLoader.
+    # Defines the single `gameplay` profile every archetype overlay inherits.
+    reward_gameplay_path: str = "code/digimon_gym/agents/reward/gameplay.yaml"
+    reward_profile_override: Optional[str] = None
+    reward_profiles_hot_reload: bool = True
 
     def __post_init__(self) -> None:
         self._validate()
@@ -154,6 +168,35 @@ class TrainingConfig:
             raise ValueError("digivolve_reward must be >= 0")
         if self.dna_digivolve_bonus < 0:
             raise ValueError("dna_digivolve_bonus must be >= 0")
+        # `add-reward-profiles` deprecation: legacy flat shaping fields.
+        # When set to a non-default value, the user is asking for a
+        # specific shaping that the reward profiles framework now
+        # subsumes. Warn them toward the v2 surface — but DON'T remove
+        # the fields yet (the runner still honors them via the
+        # `_digivolve_shaped` profile when `digivolve_shaping=True`).
+        if self.digivolve_reward != 0.1:
+            import warnings as _w
+            _w.warn(
+                f"`digivolve_reward = {self.digivolve_reward}` is deprecated. "
+                "Define a custom reward profile in profiles.yaml (e.g., inherit "
+                "from `_digivolve_shaped` and override the `digivolve` "
+                "component weight) and select it via `reward_profile_override` "
+                "or per-archetype assignment instead. The flat field is "
+                "scheduled for removal in v2.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        if self.dna_digivolve_bonus != 3.9:
+            import warnings as _w
+            _w.warn(
+                f"`dna_digivolve_bonus = {self.dna_digivolve_bonus}` is deprecated. "
+                "Define a custom reward profile that overrides the `dna_digivolve` "
+                "component weight and select it via `reward_profile_override` "
+                "or per-archetype assignment instead. The flat field is "
+                "scheduled for removal in v2.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         if self.match_format not in VALID_MATCH_FORMATS:
             raise ValueError(
                 f"match_format must be one of {sorted(VALID_MATCH_FORMATS)}, "

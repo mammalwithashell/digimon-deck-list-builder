@@ -22,6 +22,36 @@ try:
 except ImportError:
     RustHeadlessGame = None
 
+# Reward-profiles integration (Group 7 of add-reward-profiles change).
+# Import the bus and the optional CardDatabase adapter. CardDatabase is
+# only available when the Rust wheel is installed; when it isn't, the
+# bus falls back to a no-op lookup (Digivolved.result_level stays None
+# and the digivolve_into_named_card matcher with `min_result_level`
+# fails-closed for those components).
+from digimon_gym.agents.reward.event_bus import RewardEventBus as _RewardEventBusType
+
+try:
+    from digimon_engine import CardDatabase as _PyCardDatabase  # type: ignore
+except ImportError:
+    _PyCardDatabase = None
+
+
+def _make_reward_event_bus() -> _RewardEventBusType:
+    """Build a `RewardEventBus` with a CardDatabase-backed lookup when
+    the Rust wheel is present, otherwise the bus's default no-op lookup.
+    """
+    if _PyCardDatabase is None:
+        return _RewardEventBusType()
+    db = _PyCardDatabase()
+
+    def lookup(card_id: str):
+        card = db.get_card(card_id)
+        if card is None:
+            return None
+        return (card.level, list(card.traits))
+
+    return _RewardEventBusType(card_data_lookup=lookup)
+
 
 def _make_runner(
     deck1: List[str],
@@ -152,7 +182,9 @@ class DigimonEnv(gymnasium.Env):
                  record_tensors: bool = False,
                  digivolve_shaping: bool = False,
                  digivolve_reward: float = 0.1,
-                 dna_digivolve_bonus: float = 3.9):
+                 dna_digivolve_bonus: float = 3.9,
+                 emit_reward_occurrences: bool = False,
+                 legacy_reward: bool = True):
         super().__init__()
 
         # Observation and action spaces
@@ -194,6 +226,25 @@ class DigimonEnv(gymnasium.Env):
         self.dna_digivolve_bonus = float(dna_digivolve_bonus)
         self._prev_p1_digivolutions: Optional[int] = None
         self._prev_p1_dna_digivolutions: Optional[int] = None
+
+        # `add-reward-profiles` integration (Group 7).
+        #
+        # `emit_reward_occurrences` toggles the RewardEventBus path:
+        # when True, `step()` writes `info["reward_occurrences"]` so a
+        # wrapping `RewardProfileWrapper` can derive shaping from it.
+        # `RewardProfileWrapper.__init__` flips this to True on its
+        # wrapped env (and also sets `legacy_reward = False` to
+        # suppress double-counting from the legacy `_compute_reward`).
+        #
+        # `legacy_reward` gates the legacy hardcoded recipe: True
+        # preserves it (default — direct `DigimonEnv()` users see
+        # byte-identical behavior); False short-circuits to 0.0 so the
+        # wrapping `RewardProfileWrapper` is the sole reward source.
+        self.emit_reward_occurrences = bool(emit_reward_occurrences)
+        self.legacy_reward = bool(legacy_reward)
+        self._reward_event_bus: Optional["_RewardEventBusType"] = None
+        if self.emit_reward_occurrences:
+            self._reward_event_bus = _make_reward_event_bus()
 
     @property
     def game(self):
@@ -325,6 +376,10 @@ class DigimonEnv(gymnasium.Env):
         self._prev_p2_security = None
         self._prev_p1_digivolutions = None
         self._prev_p1_dna_digivolutions = None
+        # Reward-profiles bus: clear per-step delta tracking so a fresh
+        # episode doesn't see false deltas against the previous one.
+        if self._reward_event_bus is not None:
+            self._reward_event_bus.reset()
 
         obs = self.runner.get_board_tensor(1)
         info = {"action_mask": self.action_mask(), **self._tensor_info()}
@@ -357,9 +412,31 @@ class DigimonEnv(gymnasium.Env):
                 obs = self.runner.get_board_tensor(1)
             terminated = True
 
-        reward = self._compute_reward(terminated)
+        # Legacy reward path (preserved when `legacy_reward=True` — the
+        # default). When False (set by `RewardProfileWrapper`), the
+        # wrapper replaces the scalar so we skip the wasted work.
+        if self.legacy_reward:
+            reward = self._compute_reward(terminated)
+        else:
+            reward = 0.0
 
         info = {"action_mask": self.action_mask(), **self._tensor_info()}
+
+        # Reward-profiles occurrence emission. Activated by
+        # `emit_reward_occurrences=True` (set by `RewardProfileWrapper`
+        # on its wrapped env). Requires the Rust runner — the legacy
+        # Python `HeadlessGame` doesn't expose `get_events_since_last_step`.
+        if self._reward_event_bus is not None:
+            drain_events = getattr(self.runner, "get_events_since_last_step", None)
+            if drain_events is not None:
+                events = drain_events()
+            else:
+                events = []
+            rl_state = self._rl_state()
+            info["reward_occurrences"] = self._reward_event_bus.derive(
+                rl_state, events, self._step_count,
+            )
+
         return obs, reward, terminated, truncated, info
 
     def _tensor_info(self) -> Dict[str, Any]:

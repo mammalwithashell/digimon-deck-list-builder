@@ -287,3 +287,43 @@ At each evaluation pass in `--match-format bo3` mode, the trainer SHALL write a 
 
 - **WHEN** the matchup-grid sidecar exists for a run
 - **THEN** `digimon-training-mcp`'s `run_summary` lists it under the run's available artifacts
+
+### Requirement: Profile-driven match-tier reward deferral (Path C)
+
+`MatchEnv` SHALL detect a `RewardProfileWrapper` anywhere in its inner wrapper chain at construction. When that wrapper's active profile defines a `match_outcome` component (`wrapper.has_match_outcome_component == True`), `MatchEnv` SHALL defer BOTH of the following to the profile:
+
+1. The per-game `(bo3_game_terminal − inner_game_terminal)` calibration adjustment — `MatchEnv` SHALL NOT add the `±12 + fast` BO3 adjustment on top of the per-game reward already produced by the profile's `terminal_outcome` component. (The inner `DigimonEnv` emits 0.0 reward when `legacy_reward=False`, which `RewardProfileWrapper` flips at construction, so the per-game reward observed at the terminal step IS the profile's `terminal_outcome` contribution.)
+2. The per-match terminal reward computation. `MatchEnv` SHALL call `wrapper.compute_match_terminal(snapshot)` instead of `_calc_match_terminal()` to obtain the match-tier scalar.
+
+When the active profile does NOT include a `match_outcome` component (or no `RewardProfileWrapper` is present), `MatchEnv` SHALL apply its legacy hardcoded calibration (per-game `±12 + fast(par=150,max=3)`, per-match `±30 + sweep 10 + smart-concede 5 + scared-concede -10 + fast(par=450,max=15)`). This preserves back-compat for the `gameplay` / `_default` / `dna_omnimon_combo_v1` / `bg_imperialdramon_combo_v1` profiles, which all OMIT `match_outcome`.
+
+The snapshot dict passed to `compute_match_terminal` SHALL contain the exact keys consumed by the `MatchOutcome` occurrence (`winner_id, agent_game_wins, opp_game_wins, was_sweep, was_swept, agent_conceded_any, match_step_count, total_games`). `MatchEnv` SHALL also apply the deferral to the concede-during-play-order forfeit path (action 93 between games).
+
+#### Scenario: Profile with match_outcome takes over match-terminal reward
+
+- **GIVEN** a `MatchEnv` wrapping a chain containing `RewardProfileWrapper` whose active profile includes `match_outcome: { win: 1.0, loss: -1.0, draw: 0.0 }`
+- **WHEN** a match terminates 2-0 in favour of the agent at 100 outer steps
+- **THEN** `MatchEnv` SHALL NOT add the BO3 per-game `(bo3 − inner)` adjustment on the final game's terminal step
+- **AND** `MatchEnv` SHALL invoke `wrapper.compute_match_terminal({...})` returning `1.0`
+- **AND** the total match-terminal scalar added to the final-step reward SHALL be `1.0` (not 45.0 from the legacy MATCH_TERMINAL_WIN + sweep + fast path)
+
+#### Scenario: Profile without match_outcome keeps legacy MatchEnv reward path
+
+- **GIVEN** a `MatchEnv` wrapping a chain containing `RewardProfileWrapper` whose active profile does NOT include `match_outcome` (e.g., `_default` or `gameplay`)
+- **WHEN** a match terminates 2-0 in favour of the agent at 100 outer steps
+- **THEN** `MatchEnv` SHALL apply its legacy MATCH_TERMINAL_WIN(+30) + MATCH_SWEEP_BONUS(+10) + fast bonus calibration
+- **AND** SHALL apply the per-game `(bo3 − inner)` adjustment as before
+
+#### Scenario: No RewardProfileWrapper in chain falls through to legacy
+
+- **GIVEN** a `MatchEnv` wrapping `OpponentWrapper(DigimonEnv(legacy_reward=True))` with NO `RewardProfileWrapper` anywhere in the chain
+- **WHEN** a match terminates
+- **THEN** `MatchEnv` SHALL apply its hardcoded legacy calibration (`_calc_match_terminal` + `(bo3 − inner)` adjustment)
+- **AND** `_profile_owns_match_terminal` SHALL be `False`
+
+#### Scenario: Concede-during-play-order forfeit honours deferral
+
+- **GIVEN** a profile with `match_outcome` defined
+- **WHEN** the agent submits action 93 during a `SelectPlayOrder` phase between games, forfeiting the remaining games of the match
+- **THEN** `MatchEnv` SHALL build the match-terminal snapshot from the resulting forfeit score and invoke `wrapper.compute_match_terminal(snapshot)`
+- **AND** SHALL NOT fall back to the legacy `_calc_match_terminal` path

@@ -10,7 +10,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, Expiry, ModifierType};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, Keyword, ModifierType};
 use digimon_engine::modifiers::ModifierEntry;
 
 fn attacker() -> CardData {
@@ -288,6 +288,68 @@ fn without_dont_battle_modifier_attacker_dies_to_higher_dp_security() {
 
     assert_eq!(result, AttackResult::AttackerDeletedBySecurity);
     assert_eq!(r.battle_area_size(0), 0);
+}
+
+/// Equal-DP security battle: per RULES_CONTEXT 14-2-1-3 ("Same DP = both
+/// lose"), the attacker MUST be deleted when it ties the revealed
+/// security Digimon. The security card is still trashed by the regular
+/// check-disposal flow (14-2-3: security Digimon aren't deleted by the
+/// battle itself, but the security-check flow removes them anyway).
+///
+/// Pre-fix the engine used `<` (strict) and let equal-DP attackers
+/// survive — a real-game bug reproduced via the `add-gameplay-reward-config`
+/// smoke where opp ST1-03 (2000 DP) repeatedly attacked agent's ST1-03
+/// (2000 DP) security without dying.
+#[test]
+fn equal_dp_security_battle_deletes_attacker() {
+    let mut r = DebugRunner::builder()
+        .add_card(attacker()) // 8000 DP
+        .add_card(digimon_security("SEC", 8000)) // SAME DP — tie
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let result = r.attack_player(atk, 1, false);
+
+    assert_eq!(
+        result,
+        AttackResult::AttackerDeletedBySecurity,
+        "equal-DP tie in security battle MUST delete the attacker (RULES_CONTEXT 14-2-1-3)",
+    );
+    assert_eq!(
+        r.battle_area_size(0),
+        0,
+        "attacker is gone after tying a security Digimon",
+    );
+    assert_eq!(r.trash_size(1), 1, "security card still trashes via check flow");
+}
+
+/// Jamming preserves attacker even on a losing security DP battle (and
+/// thus also on a tie). Sanity check that the equal-DP fix doesn't
+/// regress Jamming's behavior.
+#[test]
+fn equal_dp_security_battle_with_jamming_attacker_survives() {
+    let mut r = DebugRunner::builder()
+        .add_card(attacker()) // 8000 DP
+        .add_card(digimon_security("SEC", 8000)) // tie
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    // Grant Jamming so the attacker can't be deleted in battle.
+    r.game_mut()
+        .modifiers
+        .grant_keyword(atk, Keyword::Jamming, Expiry::Permanent, 1);
+
+    let result = r.attack_player(atk, 1, false);
+
+    assert_eq!(
+        result,
+        AttackResult::SecurityCheckSurvived,
+        "Jamming attacker MUST survive a tied security battle",
+    );
+    assert_eq!(r.battle_area_size(0), 1, "Jamming kept the attacker alive");
+    assert_eq!(r.trash_size(1), 1, "security card still trashes");
 }
 
 // ─── §2.5e: inherited-stack DP adjustments vs. security ──────────────

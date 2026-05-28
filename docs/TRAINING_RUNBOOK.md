@@ -687,7 +687,37 @@ Loading a pre-BO3 checkpoint into a BO3 run will:
 
 Recommended fine-tune procedure: load checkpoint, run ~100k–500k timesteps in `--match-format bo3` to teach the policy when concede + play-order picks are valuable, evaluate, then continue full training.
 
-## 13. Dependencies
+## 13. Reward profiles
+
+Composable, YAML-defined reward shaping per archetype. Full reference: [REWARD_PROFILES.md](REWARD_PROFILES.md).
+
+**Two-file layout** (since `add-gameplay-reward-config`, 2026-05): reward shaping is split across two sibling YAMLs loaded together — `code/digimon_gym/agents/reward/gameplay.yaml` (universal game-mechanic shape, one profile `gameplay`) and `code/digimon_gym/agents/reward/profiles.yaml` (archetype overlays, every profile MUST `inherits: gameplay`). `ProfileLoader` takes both paths via `gameplay_path=` and `profiles_path=`; the `TrainingConfig.reward_gameplay_path` field defaults to the gameplay path.
+
+**Default behavior** (no config change): the shipped `gameplay` profile applies the universal "win fast or it hurts" shape — `quick_win_bonus` peaks at +5 on turn 3 and decays to 0 by turn 7, `stall_penalty` starts at turn 8 and grows quadratically without bound (terminal landscape: turn 3 win = +15, turn 7 win = +10, turn 20 loss = −26.9, turn 30 draw = −53.9). The `_default` profile is now a thin pass-through to `gameplay` — the byte-identical-to-legacy guarantee is gone.
+
+**Selecting a profile**:
+
+```yaml
+# training_config.yaml — three modes
+# 1) Default (no change): _default profile = gameplay shape.
+# 2) Force a specific profile regardless of archetype:
+reward_profile_override: dna_omnimon_combo_v1
+
+# 3) Per-archetype assignment (generalist mode):
+generalist: true
+# `assignments:` in profiles.yaml drives per-episode profile pick from
+# info["deck1_archetype"]. Unknown archetypes fall back to `_default`.
+```
+
+**Authoring a new profile**: edit `code/digimon_gym/agents/reward/profiles.yaml`. Add a profile that `inherits: gameplay` and declare a `key_cards:` block with the archetype's win-condition cards. Hot-reload (`reward_profiles_hot_reload: true` by default) means edits take effect at the next env reset without restarting training.
+
+**Resume safety**: at run-start, a `<run_dir>/reward_profiles.meta.json` sidecar records BOTH file hashes (`reward_gameplay_hash`, `reward_profiles_hash`) plus paths and the override/assignments snapshot (6 fields total). On resume both hashes are re-checked; mismatch fails with the message naming which file (`gameplay.yaml` or `profiles.yaml`) drifted. Override with `--reward-profiles-override-mismatch` only when intentionally switching reward shape mid-run — the flag covers both files.
+
+**Telemetry**: per-component, per-profile, and boss-arrival scalars surface as `pilot/reward/*`, `pilot/profile/*`, and `pilot/mean_eval_digivolves_into_boss_per_game` in TensorBoard. Two new gameplay-shape TB scalars are emitted per eval window: `pilot/mean_eval_winning_turn` (mean `turn_count` at terminal across agent-win games; not emitted when no wins) and `pilot/mean_eval_digivolve_driven_attacks` (mean agent-side `DigivolveDrivenAttack` count per eval game). Per-archetype × component drilldowns land in `evals.jsonl` under `by_archetype[X].component_means` and `by_agent_archetype[X]`.
+
+**Deprecation**: `digivolve_reward` / `dna_digivolve_bonus` flat fields warn when set to non-default values. `digivolve_shaping: true` is now INERT — it is accepted with no warning and has no effect on profile selection (the universal gameplay shape always carries the new digivolve weights). The `legacy_terminal_exclusivity` flag, the `_digivolve_shaped` profile, and the `_base_terminal` profile have all been removed; the loader errors with a migration message if YAML still sets the flag. Flat-field removal still targeted for v2.
+
+## 14. Dependencies
 
 Key RL/ML packages:
 
