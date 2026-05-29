@@ -57,6 +57,9 @@ impl Game {
 
         // Reset per-turn state
         self.player_mut(tp).new_turn();
+        if let Some(count) = self.digimon_attacks_this_turn.get_mut(tp as usize) {
+            *count = 0;
+        }
 
         // Unsuspend phase
         self.current_phase = GamePhase::Unsuspend;

@@ -1,0 +1,28 @@
+card: ST5-09
+name: MetalGreymon
+kind: digimon
+level: 5
+color: [black]
+cost: 6
+dp: 7000
+traits: [Cyborg]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] 1 of your Digimon gains Blocker until the end of your opponent's turn"
+    process:
+      - select_own_permanent:
+          bind_as: blocker_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain Blocker"
+      - grant_keyword:
+          target: blocker_target
+          keyword: Blocker
+          expiry: end_of_opponents_turn

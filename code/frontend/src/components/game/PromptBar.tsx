@@ -29,6 +29,11 @@ const PHASE_PROMPTS: Partial<Record<GamePhase, string>> = {
   [GamePhase.EndOfTurnAction]: 'End-of-turn actions available.',
   [GamePhase.AllianceTiming]: 'Alliance timing — Select an alliance partner, or decline.',
   [GamePhase.Mulligan]: 'Choose to keep your hand or mulligan.',
+  [GamePhase.SelectPermutation]: 'Place the remaining cards on the deck in any order — click them in the order you want them placed.',
+  [GamePhase.SelectUnion]: 'Choose a [Union]/Xros material.',
+  [GamePhase.SelectBudgeted]: 'Choose cards within the budget.',
+  [GamePhase.SelectBreedingPermanent]: 'Choose a Digimon to send to breeding.',
+  [GamePhase.SelectPlayOrder]: 'Choose who plays first.',
 };
 
 /** Selection/interrupt phases where a prompt bar is most useful. */
@@ -45,6 +50,11 @@ const SELECTION_PHASES = new Set<GamePhase>([
   GamePhase.SelectSecurity,
   GamePhase.EndOfTurnAction,
   GamePhase.AllianceTiming,
+  GamePhase.SelectPermutation,
+  GamePhase.SelectUnion,
+  GamePhase.SelectBudgeted,
+  GamePhase.SelectBreedingPermanent,
+  GamePhase.SelectPlayOrder,
 ]);
 
 export function PromptBar({

@@ -1,11 +1,17 @@
 import client from './client';
+import { isInTauriRuntime } from './engineRuntime';
 import type { DeckFolder, DeckResponse, DeckSummary } from '@/types/deck';
 
-// Mirrors `gameApi.ts` — desktop builds dispatch parse / validate /
-// tested-cards calls through Tauri `invoke()` into the embedded
-// `digimon-engine` deck_tools module; web builds hit the hosted FastAPI
-// endpoints. Response shapes match so callers don't branch.
-const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+// Mirrors `gameApi.ts` — when running inside Tauri, dispatch parse /
+// validate / tested-cards through `invoke()` into the embedded
+// `digimon-engine` deck_tools module. Outside Tauri (browser-dev,
+// hosted-web) hit the FastAPI endpoints under `/decks/...`. Detection
+// is RUNTIME (not build-time) so the same desktop bundle works in a
+// plain browser for testing — the build-time `VITE_BUILD_TARGET`
+// gate would still route through Tauri and 404 here.
+function useTauriBackend(): boolean {
+  return isInTauriRuntime();
+}
 
 type TauriInvoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 
@@ -110,7 +116,7 @@ export async function validateDeck(deckId: string): Promise<DeckResponse> {
 }
 
 export async function parseDeck(deckString: string): Promise<ParseDeckResponse> {
-  if (IS_DESKTOP) {
+  if (useTauriBackend()) {
     return invokeTauri<ParseDeckResponse>('rust_parse_deck', { deck: deckString });
   }
   const { data } = await client.post<ParseDeckResponse>('/decks/parse', { deck: deckString });
@@ -123,7 +129,7 @@ interface TestedCardsResponse {
 }
 
 export async function listTestedCards(): Promise<string[]> {
-  if (IS_DESKTOP) {
+  if (useTauriBackend()) {
     const resp = await invokeTauri<TestedCardsResponse>('rust_list_tested_cards');
     return resp.card_ids;
   }
@@ -136,7 +142,7 @@ export async function validateDeckRaw(
   eggDeck: string[],
   gameMode?: string,
 ): Promise<ValidateDeckResponse> {
-  const data: BackendValidateDeckResponse = IS_DESKTOP
+  const data: BackendValidateDeckResponse = useTauriBackend()
     ? await invokeTauri<BackendValidateDeckResponse>('rust_validate_deck_raw', {
         mainDeck,
         eggDeck,

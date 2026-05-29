@@ -26,9 +26,13 @@ fn v2_full_tensor_has_expected_size() {
 fn observation_dispatch_supports_standard_full_v2_without_changing_default() {
     let (game, registry) = sample_game_with_known_cards();
 
+    // After `flip-engine-default-to-lite-deck-v2`, the canonical default is
+    // `standard_lite_deck_v2`. This test's point is "you can request
+    // standard_full_v2 explicitly without nudging the default" — the
+    // specific default identity is incidental but still asserted.
     assert_eq!(
         default_observation_profile(),
-        ObservationProfileId::StandardLiteV2
+        ObservationProfileId::StandardLiteDeckV2
     );
 
     let profile_id = parse_observation_profile(STANDARD_FULL_V2_PROFILE_ID).unwrap();

@@ -17,6 +17,14 @@ export enum GamePhase {
   EndOfTurnAction = 15,
   AllianceTiming = 16,
   Mulligan = 17,
+  // Additional engine phases that were missing — without these,
+  // `mapPhase` defaulted them to `Main`, so `PromptBar` /
+  // `SelectionPanel` never dispatched the right UI.
+  SelectPermutation = 18,
+  SelectUnion = 19,
+  SelectBudgeted = 20,
+  SelectBreedingPermanent = 21,
+  SelectPlayOrder = 22,
 }
 
 export interface SourceInfo {
@@ -79,6 +87,11 @@ export interface EffectChoice {
   cardId: string;
   cardName: string;
   label: string;
+  /** Concrete engine action ID for this branch. When present, the
+   *  SelectionPanel should dispatch this directly rather than computing
+   *  from `EFFECT_CHOICE_START + index` (engine uses HAND_EFFECT_START
+   *  range, not the frontend's 1000-range — they don't match). */
+  actionId?: number;
 }
 
 export interface KeywordPrompt {

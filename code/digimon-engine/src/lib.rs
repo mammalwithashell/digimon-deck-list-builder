@@ -51,6 +51,7 @@ pub mod tensor;
 pub mod tensor_profiles;
 pub mod view;
 pub use tensor_profiles as tensor_profile;
+pub mod tensor_v1;
 pub mod tensor_v2_full;
 pub mod tensor_v2_lite;
 pub mod tensor_v2_lite_deck;

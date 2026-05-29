@@ -29,9 +29,7 @@ test.describe('Digivolution mechanics', () => {
     // Step 3: Check if we can digivolve - get actions
     const actions = await game.getActions();
     // Find a digivolve action (400+)
-    const digiAction = Object.keys(actions)
-      .map(Number)
-      .find((id) => id >= 400 && id < 1000);
+    const digiAction = actions.find((id) => id >= 400 && id < 1000);
 
     if (digiAction !== undefined) {
       await game.sendAction(digiAction);

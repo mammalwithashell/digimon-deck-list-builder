@@ -101,6 +101,25 @@ pub fn card_database() -> &'static HashMap<String, CardSummary> {
     })
 }
 
+/// Lazily-parsed full `CardData` map for the entire card pool baked into
+/// the engine via `CARDS_JSON`. Used by hosts that need to call
+/// `Game::new(decks, card_data, ...)` — the deck-tools `CardSummary`
+/// surface above is too narrow for `Game::new` because it drops
+/// `effect_class_name`, parsed `evo_costs`, etc.
+///
+/// Returns a clone-on-call `HashMap` rather than a `'static` reference
+/// because callers like `Game::new` take ownership semantics over the
+/// passed-in map. The underlying parse runs once and is cached.
+pub fn full_card_data() -> HashMap<String, crate::card_data::CardData> {
+    use crate::card_data::CardData;
+    static CELL: OnceLock<HashMap<String, CardData>> = OnceLock::new();
+    let parsed = CELL.get_or_init(|| {
+        CardData::load_from_str(CARDS_JSON)
+            .expect("cards.json is malformed (compiled-in resource)")
+    });
+    parsed.clone()
+}
+
 /// Full alpha allowlist as a set for O(1) membership checks.
 pub fn tested_cards_set() -> &'static HashSet<String> {
     static CELL: OnceLock<HashSet<String>> = OnceLock::new();

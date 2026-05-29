@@ -1,0 +1,17 @@
+card: ST5-10
+name: MetalTyrannomon
+kind: digimon
+level: 5
+color: [black]
+cost: 6
+dp: 9000
+traits: [Cyborg]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+effects: []

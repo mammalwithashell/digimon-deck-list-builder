@@ -1,0 +1,19 @@
+card: ST2-01
+name: Tsunomon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - battle_opponent_no_sources: true
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][Your Turn] +1000 DP while battling an opponent Digimon with no sources"

@@ -16,7 +16,11 @@ use crate::enums::{
 };
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
-use crate::tensor::FIELD_SLOTS;
+// The mask is bounded by the action space, not the observation tensor —
+// `action::space::MAX_FIELD_SLOTS` is the legal-action ceiling. Using it
+// here decouples the mask from any specific tensor profile.
+use crate::action::space::MAX_FIELD_SLOTS as FIELD_SLOTS_RAW;
+const FIELD_SLOTS: usize = FIELD_SLOTS_RAW as usize;
 
 pub(crate) fn evo_color(raw: u8) -> Option<CardColor> {
     // Mirrors `card_data::parse_card_color` — the raw ints come from

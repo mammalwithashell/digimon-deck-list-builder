@@ -1,5 +1,5 @@
 .room-main {
-  min-height: calc(100vh - 46px);
+  min-height: calc(var(--app-vh100, 100vh) - 46px);
   padding: 30px 34px;
 }
 

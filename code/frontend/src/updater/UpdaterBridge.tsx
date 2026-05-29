@@ -6,6 +6,18 @@ import type { ForceUpdatePayload } from './types';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
+/** Desktop build can still be loaded in a plain browser (dev workflow:
+ *  `npm run dev:desktop` + Playwright/Chrome). In that case the Tauri
+ *  runtime is NOT injected, so `listen()` / `check()` throw at first
+ *  call. Detect via the Tauri-injected `__TAURI_INTERNALS__` global
+ *  and bail out of the bridge cleanly when it's missing. */
+function inTauriRuntime(): boolean {
+  if (typeof window === 'undefined') return false;
+  return Boolean(
+    (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__,
+  );
+}
+
 type AvailableUpdate = {
   version: string;
   date: string | null;
@@ -20,6 +32,9 @@ export function UpdaterBridge() {
 
   useEffect(() => {
     if (!IS_DESKTOP) return;
+    // Running the desktop bundle in a plain browser (dev workflow) —
+    // Tauri's IPC hooks aren't injected, so any plugin call would throw.
+    if (!inTauriRuntime()) return;
 
       // 1. Listen for desktop-side force-update signal (min_version guard).
     const unlistenForce = listen<ForceUpdatePayload>('updater:force-update', (e) => {
