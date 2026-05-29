@@ -1,0 +1,28 @@
+card: ST6-14
+name: Matt Ishida
+kind: tamer
+color: [purple]
+cost: 2
+
+effects:
+  - when: on_any_deletion
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "ST6-14"
+            is_unsuspended: true
+    summary: "[Your Turn] When one of your Digimon is deleted, suspend this Tamer to gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,28 @@
+card: ST6-06
+name: Garurumon
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 4000
+traits: [Beast]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 2
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    summary: "[When Attacking] Draw 1, then trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

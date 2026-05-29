@@ -1,0 +1,40 @@
+card: ST6-15
+name: Death Claw
+kind: option
+color: [purple]
+cost: 1
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] You may delete 1 of your Digimon to delete 1 opponent level 4 or lower Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your Digimon"
+      - delete_permanent: { target: sacrifice }
+      - if:
+          condition: { binding_present: sacrifice }
+          then:
+            - select_opponent_permanent:
+                bind_as: target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                prompt: "Delete 1 opponent level 4 or lower Digimon"
+            - delete_permanent: { target: target }
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Delete 1 opponent level 4 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Delete 1 opponent level 4 or lower Digimon"
+      - delete_permanent: { target: target }

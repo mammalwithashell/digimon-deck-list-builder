@@ -1,0 +1,38 @@
+card: ST6-04
+name: Dracmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+traits: [Undead]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] You may return 1 purple Option card with cost 1 or 7 from trash to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: option_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - color_is: purple
+              - any_of:
+                  - all_of:
+                      - play_cost_gte: 1
+                      - play_cost_lte: 1
+                  - all_of:
+                      - play_cost_gte: 7
+                      - play_cost_lte: 7
+          prompt: "Return 1 purple Option card with a memory cost of 1 or 7 from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: option_pick }
