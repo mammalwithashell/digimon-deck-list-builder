@@ -9,6 +9,55 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
 
+## Grant a triggered effect to an opponent's permanent (Q2 slice) — 2026-05-29
+
+- **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (opponent-targeting + `<Progress>`
+  cause-attribution slice) — closed by change `add-grant-triggered-effect-dsl`.
+  The `grant_triggered_effect` DSL step and `ModifierType::GrantedTrigger` slot
+  already existed from the EX10-034 grant-to-binding work; a predicate `target`
+  (`CompiledModifierTarget::Filter`) already walks BOTH players' battle areas and
+  snapshots the match set, so `target: { of: opponent, kind: digimon }` installs
+  on each opponent Digimon at grant time (DCGO foreach-snapshot parity — a Digimon
+  played later does not carry it).
+- **Engine fix (the new bit):** the granted-trigger dispatch in
+  `effect_queue.rs::enqueue_from_permanent` now skips firing a granted clause when
+  the carrier is unaffected by the GRANTOR's effects —
+  `if self.progress_excludes(handle, Some(source_player)) { continue; }`, gated at
+  enqueue time while `pending_attack` is still set. This makes a granted effect
+  "the grantor's effect" from the carrier's perspective, so a `<Progress>` (or
+  `ImmunityToOpponentEffects`) opponent Digimon does not fire the grant while it
+  attacks (judge-quiz Q2: Medusamon loses no memory; a non-Progress control loses 2).
+- **Card content:** EX1-068 Ice Wall!'s `[Main]` clause authored —
+  `grant_triggered_effect` → opponent Digimon, `timing: when_attacking`,
+  `body: [lose_memory: 2]`, `expiry: end_of_opponents_next_turn`.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz q2_medusamon`; `--test cards_behavioral ex1_068` (6); regression: `--test cards_behavioral ex10_034`, `--test combat effect_granted_attack`, `--test dsl group6_auras` green.
+- **Still open (deferred to card authoring):** Q16/Q17 (Lilithmon EX6-057's
+  `[End of Your Turn] Delete this` grant) need the other attribution directions —
+  the granted self-delete read as the carrier's OWN effect (`<Partition>` does not
+  fire) and the immune carrier dropping the granted slot. These land with EX6-057.
+
+## Digi-Egg routing on return-to-deck — 2026-05-29
+
+- **G-RETURN-TRASH-DIGI-EGG-ROUTING** — a Digi-Egg returned "to the deck" from
+  trash now routes to the **digitama deck**, never the main deck (a Digi-Egg in
+  the main deck is always illegal). Closed by change
+  [`fix-judge-quiz-engine-gaps`](../openspec/changes/fix-judge-quiz-engine-gaps/)
+  (Gap 2), judge-quiz Q22.
+- **Fix:** added private `EffectContext::move_card_to_deck(card, to_bottom)`
+  (`effect_context/mod.rs`) — routes `CardKind::DigiEgg` to `digitama_deck`
+  (bottom = `insert(0)`, top = `push`), everything else to `deck`; the card
+  returns to its OWNER's deck. All four trash→deck movers go through it:
+  `return_all_trash_to_deck_bottom`, `return_trash_cards_to_deck_bottom`,
+  `return_trash_cards_to_deck_top`, `move_trash_card_to_deck_top`. The returned
+  `moved`/`handles` Vec is unchanged, so a "return N to the bottom of the deck"
+  cost (e.g. Medusamon BT24-017) stays satisfied while the egg lands in the
+  digitama deck (Q22's actual rule).
+- **Scope note (audit pending):** the permanent-stack returns
+  (`Game::return_to_deck` / `return_stack_to_deck`) and reveal-zone returns share
+  the same Digi-Egg rule for any egg in a returned digivolution stack; they live
+  on a separate game.rs path and were left for a follow-up.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz digi_egg` (Q22 + the deck-top regression `digi_egg_returned_to_deck_top_routes_to_digitama_deck`); `--test deletion_batching`, `--test dsl zone_movement`/`return` green.
+
 ## Assembly play execution — 2026-05-29
 
 - **G-ASSEMBLY-PLAY-EXECUTION** — the engine can now play a hand card via its

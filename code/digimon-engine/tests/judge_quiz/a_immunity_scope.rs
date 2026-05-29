@@ -20,7 +20,24 @@
 
 #![allow(unused_imports)]
 
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::action::PLAY_HAND_START;
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, GamePhase};
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::{AttackState, AttackTarget, PendingAttack, TriggerSource};
+
+/// A plain Blue Lv4 Digimon (no effects) — used both as the grantor's
+/// color-requirement enabler and as a non-`<Progress>` control carrier.
+fn blue_digimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Blue];
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 4;
+    c
+}
 
 // ── Cluster-A immunity-machinery probe (de-risks Q17/Q18/Q28) ────────────────
 //
@@ -98,18 +115,111 @@ fn cluster_a_self_immunity_blocks_own_controller_effect() {
 // discover-then-pin rule we do NOT write that false-passing test; the scenario
 // is `#[ignore]`-blocked on the named primitive instead.
 
-/// Q2 — faithful scenario is blocked on the Ice Wall grant primitive. See the
-/// finding above. Un-ignore once `G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT`
-/// lands; then stage the grant on Medusamon, attack, and assert Player A's
-/// memory is unchanged.
+/// Q2 — RESOLVED 2026-05-29 (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT closed by
+/// change `add-grant-triggered-effect-dsl`): EX1-068's `[Main]` grant is now
+/// authored, and the granted-trigger dispatch consults `progress_excludes`, so
+/// a `<Progress>` opponent Digimon does not fire the granted "[When Attacking]
+/// lose 2 memory" while it attacks. Player 1 (grantor) plays Ice Wall on its
+/// turn → Player 0's Medusamon (`<Progress>`) and a vanilla control Digimon
+/// both receive the grant → on Player 0's turn each attacks: the vanilla loses
+/// 2 memory, Medusamon (Progress) loses none.
 #[test]
-#[ignore = "BLOCKED: EX1-068 Ice Wall [Main] grant omitted (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT, qa/dsl-vocab-gaps.md). Faithful Q2 cannot be staged without a false pass; Progress immunity itself IS implemented (Game::progress_excludes, combat.rs:2667)."]
 fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
-    // Body intentionally empty — blocked per #[ignore] above. The intended
-    // assertion (Player A memory unchanged after Medusamon attacks while
-    // carrying the Ice-Wall-granted "[When Attacking] lose 2 memory") cannot be
-    // staged until the grant primitive exists.
-    let _ = DebugRunner::builder; // keep the import live; documents the harness.
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX1-068")
+        .expect("EX1-068 Ice Wall! loads")
+        .dsl_card("BT24-017")
+        .expect("BT24-017 Medusamon (<Progress>) loads")
+        .add_card(blue_digimon("P0BLUE")) // grantor's color-requirement Digimon
+        .add_card(blue_digimon("VANILLA")) // non-Progress control carrier (P1)
+        .hand(0, &["EX1-068"]) // Player 0 (grantor) holds Ice Wall, plays on turn 0
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    // Grantor (Player 0) needs a Blue Digimon to play the Blue Option.
+    let _p0_blue = r.place_on_field(0, "P0BLUE", Some(0));
+    // Player 1's board (the GRANTEE side): Medusamon (<Progress>) + a vanilla
+    // control Digimon.
+    let medusamon = r.place_on_field(1, "BT24-017", Some(0));
+    let vanilla = r.place_on_field(1, "VANILLA", Some(0));
+
+    // Player 0 plays Ice Wall! on its own turn (already in Main) → grants every
+    // Player-1 Digimon "[When Attacking] lose 2 memory".
+    assert_eq!(r.turn_player(), 0, "Player 0 plays Ice Wall on the start turn");
+    r.game.decode_action(PLAY_HAND_START, 0);
+    assert!(
+        r.game.player(0).hand.is_empty(),
+        "Ice Wall must leave Player 0's hand (the [Main] play resolved)"
+    );
+
+    // Both opponent (Player 1) Digimon received the grant snapshot.
+    assert!(
+        !r.game
+            .modifiers
+            .granted_triggered_for_timing(medusamon, EffectTiming::WhenAttacking)
+            .is_empty(),
+        "Medusamon must carry the Ice-Wall-granted [When Attacking] effect"
+    );
+    assert!(
+        !r.game
+            .modifiers
+            .granted_triggered_for_timing(vanilla, EffectTiming::WhenAttacking)
+            .is_empty(),
+        "the vanilla control Digimon must also carry the grant"
+    );
+
+    // Control: the non-Progress Digimon is the active attacker → firing
+    // WhenAttacking runs the granted body → the turn player loses 2 memory.
+    set_active_attacker(&mut r, vanilla);
+    r.game.set_memory(5);
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(vanilla));
+    r.game.drain_effect_queue();
+    assert_eq!(
+        r.game.memory, 3,
+        "a non-Progress carrier firing [When Attacking] runs the granted \
+         'lose 2 memory' (control); got {}",
+        r.game.memory
+    );
+
+    // Q2: the <Progress> carrier is the active attacker → the granted effect is
+    // the opponent's effect, and Progress makes Medusamon immune to opponent
+    // effects while attacking → the granted clause does NOT fire → NO loss.
+    set_active_attacker(&mut r, medusamon);
+    r.game.set_memory(5);
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(medusamon));
+    r.game.drain_effect_queue();
+    assert_eq!(
+        r.game.memory, 5,
+        "Medusamon's <Progress> blocks the Ice-Wall-granted memory loss while \
+         it is attacking (judge-quiz Q2: NO memory loss); got {}",
+        r.game.memory
+    );
+}
+
+/// Mark `attacker` as the active attacker via a minimal `PendingAttack` so
+/// `progress_excludes` engages — the same staging the `progress_mutation_gates`
+/// combat tests use to exercise the Progress gate without driving the full
+/// attack state machine.
+fn set_active_attacker(r: &mut DebugRunner, attacker: PermanentHandle) {
+    let target = AttackTarget::Player(if attacker.player == 0 { 1 } else { 0 });
+    r.game.pending_attack = Some(PendingAttack {
+        attacker,
+        original_target: target,
+        effective_target: target,
+        is_blocked: false,
+        blocker: None,
+        is_vortex: false,
+        is_overclock: false,
+        declaration_committed: true,
+        cancelled: false,
+        battle_occurred: false,
+        return_phase: GamePhase::Main,
+        state: AttackState::Declared,
+        counter_depth: 0,
+    });
 }
 
 // ── Q1 / Q17 / Q18 / Q28 — BLOCKED-CARD (cards not yet implemented) ───────────

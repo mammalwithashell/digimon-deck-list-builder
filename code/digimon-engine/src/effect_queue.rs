@@ -1632,6 +1632,17 @@ impl Game {
             .granted_triggered_for_timing_with_ids(handle, timing);
         let tp_for_granted = self.turn_player();
         for (body_id, source_card, source_player) in granted_entries {
+            // Cause attribution (judge-quiz Q2): a granted triggered effect is
+            // the GRANTOR's effect from the carrier's perspective. If the
+            // carrier is unaffected by that player's effects right now — e.g.
+            // <Progress> (or `ImmunityToOpponentEffects`) while it is the
+            // current attacker — the granted clause does NOT fire. We gate at
+            // enqueue time (while `pending_attack` is still set, so the
+            // `current_attacker` check inside `progress_excludes` is valid).
+            // No-op for same-controller grants and non-attack timings.
+            if self.progress_excludes(handle, Some(source_player)) {
+                continue;
+            }
             self.effect_queue.push_back(QueuedEffect {
                 source_card,
                 source_permanent: Some(handle),

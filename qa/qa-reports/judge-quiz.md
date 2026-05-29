@@ -27,7 +27,7 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 | Q | Cluster | Judge answer | Verdict | Blocker / gap | Test fn |
 |---|---------|--------------|---------|---------------|---------|
 | 1 | A | YES (Progress guards Digimon, not battle) | BLOCKED-CARD | BT13-088 | `a::q1_belphemon_opp_turn_ends_attack_through_progress` |
-| 2 | A | NO memory loss | **BLOCKED-PRIMITIVE** | `G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT` (Ice Wall grant); Progress half implemented | `a::q2_medusamon_progress_blocks_ice_wall_memory_loss` |
+| 2 | A | NO memory loss | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX1-068 `[Main]` grant authored + granted-trigger dispatch consults `progress_excludes` (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT, Q2 slice resolved) | `a::q2_medusamon_progress_blocks_ice_wall_memory_loss` |
 | 3 | G | YES | BLOCKED-CARD | EX10-020, BT12-057 | `g::q3_breeding_area_effect_inactive_allows_digivolve` |
 | 4 | G | NO another check (+1/−1 net) | BLOCKED-CARD | AD1-002, BT4-098, ST3-15 | `g::q4_security_attack_net_modifiers_one_check` |
 | 5 | C | YES (declare if cost can be made payable) | **PASS** | Fixed by `fix-ad1-025-assembly-data`: engine Assembly executor (G-ASSEMBLY-PLAY-EXECUTION) + `[Assembly]` restored to AD1-025 data/YAML. Declare-then-pay mask offers the play at memory 0. | `c::q5_assembly_declaration_legal_when_cost_can_be_made_payable` |
@@ -47,7 +47,7 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 | 19 | D | 0 draws | BLOCKED-CARD | BT7-069, BT2-069, BT3-006 | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
 | 20 | D | 8 draws | BLOCKED-CARD | + BT2-076 | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
 | 21 | D | 0 draws | BLOCKED-CARD | + BT3-109 | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
-| 22 | F | YES, 2 tokens | **BUG (proven)** | `G-RETURN-TRASH-DIGI-EGG-ROUTING` — Digi-Egg routed to MAIN deck, not digitama | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
+| 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
 | 23 | D/F | 1 memory | **CANDIDATE** | all cards impl; needs full chain + remain-in-trash gating check; downstream of Q22 | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
 | 24 | B | Hudiemon DP 3000 | BLOCKED-CARD | BT23-101, BT23-037, EX6-004, BT16-101, ST17-07 | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
 | 25 | E | YES (DigiXros departure ≠ battle) | BLOCKED-CARD | EX3-014 (1 away) | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
@@ -62,14 +62,22 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 | Verdict | Count | Questions |
 |---------|-------|-----------|
 | BLOCKED-CARD | 26 | 1, 3, 4, 6–21, 24–30 |
-| BLOCKED-PRIMITIVE | 1 | 2 |
-| BUG (proven) | 1 | 22 |
 | CANDIDATE | 1 | 23 |
-| PASS | 1 | 5 |
+| PASS | 3 | 2, 5, 22 |
 
 Q5 moved BLOCKED-DATA → PASS on 2026-05-29 (change `fix-ad1-025-assembly-data`):
 the engine Assembly executor was implemented (G-ASSEMBLY-PLAY-EXECUTION,
 resolved) and `[Assembly]` restored to AD1-025 in data + YAML.
+
+Q22 moved BUG (proven) → PASS on 2026-05-29 (change `fix-judge-quiz-engine-gaps`,
+Gap 2): Digi-Egg routing on return-to-deck fixed (G-RETURN-TRASH-DIGI-EGG-ROUTING,
+resolved).
+
+Q2 moved BLOCKED-PRIMITIVE → PASS on 2026-05-29 (change `add-grant-triggered-effect-dsl`):
+EX1-068's `[Main]` grant authored + the granted-trigger dispatch now consults
+`progress_excludes` so a `<Progress>` opponent Digimon doesn't fire the grant
+(G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT Q2 slice resolved; Q16/Q17 still need
+EX6-057 Lilithmon authoring).
 
 ## Gaps surfaced (the discovery-wave yield)
 
@@ -87,10 +95,12 @@ resolved) and `[Assembly]` restored to AD1-025 in data + YAML.
    judge's +1). Design tension (EX10-036 needs synchrony; Q21/Q23 need deferral) — not a trivial fix.
    Probe `cluster_d_on_trash_observer_fires_synchronously_not_deferred` characterizes it. Logged in
    [`engine-gaps.md`](../archetype-qa/engine-gaps.md).
-1. **G-RETURN-TRASH-DIGI-EGG-ROUTING** (Q22) — NEW engine bug, code-confirmed + test-proven.
-   `return_trash_cards_to_deck_bottom` inserts Digi-Eggs into the main deck instead of the digitama
-   deck. Logged in [`engine-gaps.md`](../archetype-qa/engine-gaps.md). Small fix (branch on
-   `CardKind::DigiEgg`). **Highest-priority fix** — also unblocks Q23.
+1. **G-RETURN-TRASH-DIGI-EGG-ROUTING** (Q22) — RESOLVED 2026-05-29 (change
+   `fix-judge-quiz-engine-gaps`, Gap 2). Was: `return_trash_cards_to_deck_bottom` inserted Digi-Eggs
+   into the main deck. Fixed via `EffectContext::move_card_to_deck` routing all four trash→deck movers
+   (`CardKind::DigiEgg` → digitama deck). Q22 → PASS. Gap moved to
+   [`resolved-gaps.md`](../resolved-gaps.md). (Q23's remain-in-trash gating is a separate gap —
+   G-ON-TRASH-OBSERVER-SYNCHRONOUS — still open.)
 2. **AD1-025 `[Assembly]` gap** (Q5) — RESOLVED 2026-05-29 (change `fix-ad1-025-assembly-data`). This
    was a TWO-layer gap: (a) `data/cards.json` missing the `[Assembly]` keyword the real card carries
    (DCGO AD1_025.cs:214-255), AND (b) no engine Assembly executor at all (the alt-path KIND compiled
@@ -99,9 +109,12 @@ resolved) and `[Assembly]` restored to AD1-025 in data + YAML.
    declare-then-pay mask), restoring `[Assembly]` to `card_overrides.json`, and authoring the
    `assembly` alt_path in `cards/ad1/AD1-025.yaml`. Q5 → PASS. Gap moved to
    [`resolved-gaps.md`](../resolved-gaps.md).
-3. **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (Q2) — pre-existing DSL-vocab gap (Ice Wall `[Main]`
-   grant); judge-quiz Q2 logged as a consumer in [`dsl-vocab-gaps.md`](../dsl-vocab-gaps.md). When it
-   closes, Q2 pins a Progress-vs-granted-effect immunity assertion for free.
+3. **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (Q2) — RESOLVED 2026-05-29 (change
+   `add-grant-triggered-effect-dsl`, Q2 slice). The `grant_triggered_effect` step + `GrantedTrigger`
+   slot already existed (EX10-034); the new bit is opponent-set targeting (already supported) + the
+   granted-trigger dispatch consulting `progress_excludes` so a `<Progress>` carrier doesn't fire the
+   grant. EX1-068 `[Main]` authored; Q2 → PASS; gap moved to [`resolved-gaps.md`](../resolved-gaps.md).
+   Q16/Q17 (Lilithmon EX6-057) need the other attribution directions + card authoring — still open.
 4. **52 cards to author** — the BLOCKED-CARD bulk. Per-cluster authoring load is tabulated in
    `card-resolution.md`; cluster A is the smallest (7 cards) and three scenarios (Q14, Q16, Q18, Q25,
    Q26, Q27) are a *single* card away.

@@ -1130,7 +1130,25 @@ Moved to [`qa/resolved-gaps.md`](resolved-gaps.md). `move_from_breeding` now low
 - Gap kind: DSL vocabulary gap (engine data is present; no DSL surface to filter on it).
 - First reported: 2026-05-03 (BT22-017 Gabumon, batch-implement-cards-rust-dsl)
 
-## EX1-068 — grant a triggered effect to opponent's permanent  [G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT]
+## EX1-068 — grant a triggered effect to opponent's permanent  [G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT] — RESOLVED 2026-05-29
+
+Closed by change `add-grant-triggered-effect-dsl`. The `grant_triggered_effect`
+step + `ModifierType::GrantedTrigger` slot already existed (EX10-034 grant-to-
+binding work); the remaining slice was (a) opponent-set targeting — a predicate
+`target: { of: opponent, ... }` already walks both battle areas and snapshots the
+match set, and (b) cause attribution for the `<Progress>` interaction — the
+granted-trigger dispatch (`enqueue_from_permanent`) now skips firing when the
+carrier is unaffected by the GRANTOR's effects (`progress_excludes`). EX1-068's
+`[Main]` clause is authored; judge-quiz **Q2** pins it (Medusamon `<Progress>`
+loses no memory; a non-Progress control loses 2). Full note in
+`qa/resolved-gaps.md`. **Still open (separate consumers, need card authoring):**
+Q16/Q17 (Lilithmon EX6-057's `[EoT] Delete this` grant) need the OTHER
+attribution directions — the granted self-delete counting as the carrier's OWN
+effect (`<Partition>` doesn't fire) and the immune carrier dropping the granted
+slot — verified once EX6-057 is authored.
+
+[ORIGINAL ENTRY BELOW]
+
 - Effect text: EX1-068 [Main] "All of your opponent's Digimon gain '[When Attacking] lose 2 memory' until the end of their next turn."
 - Missing DSL verb / step kind / predicate: A `grant_triggered_effect` step that installs a NEW triggered clause (timing + process body) on a SET of cross-permanent targets with a turn-scoped expiry. The DSL today exposes grants for STATIC effects only — `grant_keyword`, `add_modifier` / `add_dp_modifier`, `grant_effect_immunity`. None of those install a clause that itself fires on a future trigger (`when_attacking`, `when_digivolving`, `on_deletion`, ...) on the granted permanent.
 - Engine substrate: the Python engine handles this via `permanent.grant_temp_effect(effect, expiry_turn)` + `clear_expired_effects()` (see `qa/archetype-qa/engine-gaps.md` line 33, RESOLVED 2026-03-14 in Python). The Rust engine has the modifier-registry + expiry-tick substrate (`ModifierRegistry` carries per-permanent typed modifiers with `Expiry`), but it does NOT carry a typed `GrantedTriggeredEffect` slot, and there is no `CompiledStep::GrantTriggeredEffect`.
