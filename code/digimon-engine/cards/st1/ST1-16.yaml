@@ -1,0 +1,36 @@
+card: ST1-16
+name: Gaia Force
+kind: option
+color: [red]
+cost: 8
+
+effects:
+  # [Main] Delete 1 of your opponent's Digimon.
+  - when: main_from_hand
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Main] Delete 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: target }
+
+  # [Security] Activate this card's [Main] effect.
+  - when: on_security
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: target }

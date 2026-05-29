@@ -1988,6 +1988,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "MayAttack",
     "ForceAttack",
     "SecurityAttackChange",
+    "ChangeOwnSecurityDigimonDp",
     "ImmunityToOpponentEffects",
     "DontBattleSecurityDigimon",
     // Digivolution / color / level

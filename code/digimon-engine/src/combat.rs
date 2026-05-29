@@ -298,6 +298,13 @@ impl Game {
         total
     }
 
+    /// Sum defender-side security Digimon DP modifiers for the player whose
+    /// security stack is being checked.
+    pub fn defender_security_dp_adjustment(&self, defender: PlayerId) -> i32 {
+        self.modifiers
+            .player_modifier_value(defender, ModifierType::ChangeOwnSecurityDigimonDp)
+    }
+
     /// Check whether a permanent can attack right now (atomic — ignores interrupts).
     ///
     /// `vortex` — pass `true` when the attack is invoked via the <Vortex>
@@ -1924,15 +1931,23 @@ impl Game {
                     AttackTargetChangeReason::Blocker,
                 );
 
-                // Phase 9 Task 8 — OnBlock fires globally after the blocker
-                // is declared. Both players' battle areas are scanned;
-                // observers can read `game.pending_attack.{attacker,
-                // effective_target}` (effective_target now points at the
-                // blocker) from within their process closures.
-                for pid in 0..game.players.len() {
+                // OnBlock fires globally after the blocker is declared.
+                // The payload carries the blocked attacker as the event
+                // permanent so inherited "when this Digimon is blocked"
+                // predicates can test the carrier directly.
+                if let Some(card) = game
+                    .player(attacker.player)
+                    .battle_area
+                    .get(attacker.index as usize)
+                    .map(|perm| perm.top_card().handle())
+                {
                     game.enqueue_triggered(
                         crate::enums::EffectTiming::OnBlock,
-                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                        crate::selection::TriggerSource::BlockDeclared {
+                            attacker,
+                            blocker,
+                            card,
+                        },
                     );
                 }
                 game.drain_effect_queue();
@@ -2542,9 +2557,7 @@ impl Game {
         if let Some(top_idx) = self.player(defender).security.len().checked_sub(1) {
             let needs = self.player(defender).security[top_idx].is_opaque_placeholder;
             if needs {
-                if let Err(e) =
-                    self.materialize_opaque_security_placeholder(defender, top_idx)
-                {
+                if let Err(e) = self.materialize_opaque_security_placeholder(defender, top_idx) {
                     eprintln!(
                         "[opaque-deck] security flip materialization error for player {} \
                          at idx {}: {}",
@@ -2710,6 +2723,7 @@ impl Game {
                     };
                     let kind = state.card_kind;
                     let attacker_opt = state.attacker;
+                    let defender = state.defender;
                     if kind == CardKind::Digimon {
                         if let Some(attacker) = attacker_opt {
                             if self.handle_valid(attacker)
@@ -2726,7 +2740,8 @@ impl Game {
                                 // §2.5e: attacker's inherited stack may carry
                                 // "+N DP when attacking security" modifiers.
                                 let sec_dp = raw_sec_dp
-                                    .saturating_add(self.attacker_security_dp_adjustment(attacker));
+                                    .saturating_add(self.attacker_security_dp_adjustment(attacker))
+                                    .saturating_add(self.defender_security_dp_adjustment(defender));
                                 // RULES_CONTEXT 14-2-1-3: "Same DP = both lose."
                                 // The attacker is deleted when it has STRICTLY LESS
                                 // OR EQUAL DP to the security Digimon. Per 14-2-3 the

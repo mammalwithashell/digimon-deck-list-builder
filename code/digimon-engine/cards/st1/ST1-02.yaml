@@ -1,0 +1,17 @@
+card: ST1-02
+name: Biyomon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 3000
+traits: [Bird]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2 }
+    cost: 0
+
+effects: []

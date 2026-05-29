@@ -1,0 +1,27 @@
+card: ST1-14
+name: Starlight Explosion
+kind: option
+color: [red]
+cost: 2
+
+effects:
+  # [Main] All of your Security Digimon get +7000 DP until the end of your
+  # opponent's next turn.
+  - when: main_from_hand
+    summary: "[Main] Your Security Digimon get +7000 DP until end of opponent's next turn"
+    process:
+      - add_player_modifier:
+          target_player: you
+          modifier: ChangeOwnSecurityDigimonDp
+          value: 7000
+          expiry: end_of_opponents_next_turn
+
+  # [Security] All of your Security Digimon get +7000 DP for the turn.
+  - when: on_security
+    summary: "[Security] Your Security Digimon get +7000 DP for the turn"
+    process:
+      - add_player_modifier:
+          target_player: you
+          modifier: ChangeOwnSecurityDigimonDp
+          value: 7000
+          expiry: end_of_turn

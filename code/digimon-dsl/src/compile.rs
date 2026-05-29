@@ -183,6 +183,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::EndOfAttack => CompiledTiming::EndOfAttack,
         S::EndOfBattle => CompiledTiming::EndOfBattle,
         S::OnAttack => CompiledTiming::OnAttack,
+        S::OnBlock => CompiledTiming::OnBlock,
         S::OnAllyAttack => CompiledTiming::OnAllyAttack,
         S::OnOpponentAttack => CompiledTiming::OnOpponentAttack,
         S::OnDeletion => CompiledTiming::OnDeletion,
@@ -2180,6 +2181,11 @@ fn compile_step(
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
             target_player: compile_player_ref(a.target_player),
             modifier: a.modifier.clone(),
+            value: a
+                .value
+                .as_ref()
+                .map(|v| compile_modifier_value(v, &format!("{prefix}.value"), card_id, errors))
+                .unwrap_or(CompiledModifierValue::Literal(0)),
             expiry: a.expiry.clone(),
         },
         S::GrantKeyword(a) => CompiledStep::GrantKeyword {

@@ -48,6 +48,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "MayAttack" => ModifierType::MayAttack,
         "ForceAttack" => ModifierType::ForceAttack,
         "SecurityAttackChange" => ModifierType::SecurityAttackChange,
+        "ChangeOwnSecurityDigimonDp" => ModifierType::ChangeOwnSecurityDigimonDp,
         "ImmunityToOpponentEffects" => ModifierType::ImmunityToOpponentEffects,
         "DontBattleSecurityDigimon" => ModifierType::DontBattleSecurityDigimon,
         "CannotDigivolve" => ModifierType::CannotDigivolve,
@@ -157,6 +158,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::MayAttack
         | ModifierType::ForceAttack
         | ModifierType::SecurityAttackChange
+        | ModifierType::ChangeOwnSecurityDigimonDp
         | ModifierType::ImmunityToOpponentEffects
         | ModifierType::DontBattleSecurityDigimon
         | ModifierType::CannotDigivolve
@@ -266,6 +268,7 @@ mod tests {
             ModifierType::MayAttack,
             ModifierType::ForceAttack,
             ModifierType::SecurityAttackChange,
+            ModifierType::ChangeOwnSecurityDigimonDp,
             ModifierType::ImmunityToOpponentEffects,
             ModifierType::DontBattleSecurityDigimon,
             ModifierType::CannotDigivolve,

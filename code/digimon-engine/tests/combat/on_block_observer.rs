@@ -48,6 +48,24 @@ impl CardEffect for RecordTargetOnBlock {
     }
 }
 
+fn inherited_when_this_digimon_is_blocked_yaml() -> &'static str {
+    r#"
+card: DSL-BLOCKED-SOURCE
+name: Blocked Source
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 2000
+effects:
+  - when: on_block
+    scope: inherited
+    condition: { event_permanent_is_source: true }
+    process:
+      - gain_memory: 3
+"#
+}
+
 /// Test 1 — OnBlock fires on observers from BOTH players' battle areas.
 #[test]
 fn on_block_fires_globally_when_blocker_declared() {
@@ -174,4 +192,63 @@ fn on_block_fires_on_collision_forced_block() {
     );
     let _ = def; // quiet unused-warning noise on some toolchains
     let _: PermanentHandle = atk;
+}
+
+#[test]
+fn inherited_on_block_triggers_only_for_blocked_attacker_carrier() {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(inherited_when_this_digimon_is_blocked_yaml())
+        .expect("register blocked-source DSL")
+        .add_card(card("HOST"))
+        .add_card(card("OTHER"))
+        .add_card(card("DEF"))
+        .add_card(card("BLK"))
+        .start();
+
+    let attacker = r.place_stack(0, &["DSL-BLOCKED-SOURCE", "HOST"]);
+    let _other_with_same_source = r.place_stack(0, &["DSL-BLOCKED-SOURCE", "OTHER"]);
+    let defender = r.place_on_field(1, "DEF", Some(0));
+    let blocker = r.place_on_field(1, "BLK", Some(0));
+
+    r.game
+        .modifiers
+        .grant_keyword(blocker, Keyword::Blocker, Expiry::Permanent, 1);
+
+    r.attack_digimon(attacker, defender, false);
+    let block_action = encode_attack(0, blocker.index as u16);
+    r.game
+        .resolve_selection(1, block_action)
+        .expect("declare blocker");
+
+    assert_eq!(
+        r.memory(),
+        3,
+        "only the blocked attacker's inherited source should gain memory"
+    );
+}
+
+#[test]
+fn inherited_on_block_does_not_trigger_when_block_declined() {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(inherited_when_this_digimon_is_blocked_yaml())
+        .expect("register blocked-source DSL")
+        .add_card(card("HOST"))
+        .add_card(card("DEF"))
+        .add_card(card("BLK"))
+        .start();
+
+    let attacker = r.place_stack(0, &["DSL-BLOCKED-SOURCE", "HOST"]);
+    let defender = r.place_on_field(1, "DEF", Some(0));
+    let blocker = r.place_on_field(1, "BLK", Some(0));
+
+    r.game
+        .modifiers
+        .grant_keyword(blocker, Keyword::Blocker, Expiry::Permanent, 1);
+
+    r.attack_digimon(attacker, defender, false);
+    r.game
+        .resolve_selection(1, digimon_engine::action::space::PASS)
+        .expect("decline block");
+
+    assert_eq!(r.memory(), 0, "declining the block must not fire OnBlock");
 }

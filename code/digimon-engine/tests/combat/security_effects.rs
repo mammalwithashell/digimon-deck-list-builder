@@ -11,7 +11,7 @@ use digimon_engine::card_source::CardSource;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, Expiry, Keyword, ModifierType};
-use digimon_engine::modifiers::ModifierEntry;
+use digimon_engine::modifiers::{ModifierEntry, PlayerModifierEntry};
 
 fn attacker() -> CardData {
     CardData {
@@ -321,7 +321,11 @@ fn equal_dp_security_battle_deletes_attacker() {
         0,
         "attacker is gone after tying a security Digimon",
     );
-    assert_eq!(r.trash_size(1), 1, "security card still trashes via check flow");
+    assert_eq!(
+        r.trash_size(1),
+        1,
+        "security card still trashes via check flow"
+    );
 }
 
 /// Jamming preserves attacker even on a losing security DP battle (and
@@ -396,6 +400,64 @@ fn inherited_applies_to_opponent_security_dp_adjusts_battle() {
         "8000 DP attacker must survive after the -3000 adjustment drops security to 6000"
     );
     assert_eq!(r.battle_area_size(0), 1);
+}
+
+#[test]
+fn own_security_digimon_dp_modifier_applies_to_defenders_security_battle() {
+    let mut r = DebugRunner::builder()
+        .add_card(attacker()) // 8000 DP
+        .add_card(digimon_security("SEC", 3000))
+        .security(1, &["SEC"])
+        .start();
+
+    r.game_mut().modifiers.add_player_modifier(
+        1,
+        PlayerModifierEntry::simple(
+            ModifierType::ChangeOwnSecurityDigimonDp,
+            7000,
+            Expiry::EndOfTurn,
+            None,
+            1,
+        ),
+    );
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let result = r.attack_player(atk, 1, false);
+
+    assert_eq!(
+        result,
+        AttackResult::AttackerDeletedBySecurity,
+        "8000 DP attacker must lose to a 3000 DP security Digimon buffed to 10000"
+    );
+}
+
+#[test]
+fn own_security_digimon_dp_modifier_does_not_affect_opponents_security() {
+    let mut r = DebugRunner::builder()
+        .add_card(attacker()) // 8000 DP
+        .add_card(digimon_security("P0-SEC", 9000))
+        .security(0, &["P0-SEC"])
+        .start();
+
+    r.game_mut().modifiers.add_player_modifier(
+        1,
+        PlayerModifierEntry::simple(
+            ModifierType::ChangeOwnSecurityDigimonDp,
+            7000,
+            Expiry::EndOfTurn,
+            None,
+            1,
+        ),
+    );
+
+    let atk = r.place_on_field(1, "ATK", Some(0));
+    let result = r.attack_player(atk, 0, false);
+
+    assert_eq!(
+        result,
+        AttackResult::AttackerDeletedBySecurity,
+        "player 1's own-security modifier must not buff player 0's revealed security Digimon"
+    );
 }
 
 // ─── §2.5i: TriggerOrder suppression for single-source security ──────

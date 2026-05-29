@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-23
+Last updated: 2026-05-29
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,34 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## Gaia Red ST-1 shared DSL substrate — 2026-05-29
+
+- **G-DSL-ON-BLOCK-BLOCKED-ATTACKER** — `when: on_block` now parses and lowers
+  through the DSL timing table, and the engine dispatches `OnBlock` with a
+  `BlockDeclared` trigger payload. The blocked attacker is exposed as
+  `event_permanent`, so inherited YAML can express "when this Digimon is
+  blocked" with `event_permanent_is_source: true` without firing for other
+  battle-area observers. The blocker is exposed as `event_host_permanent` for
+  future blocker-context predicates.
+- **G-OWN-SECURITY-DIGIMON-DP-MODIFIER** —
+  `ModifierType::ChangeOwnSecurityDigimonDp` is accepted by the DSL validator
+  and engine modifier map. `add_player_modifier` now preserves authored
+  `value:` payloads, and security DP battle calculation consults the defending
+  player's modifier total separately from attacker-side
+  `applies_to_opponent_security_dp` effects.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml
+  --test dsl --
+  phase2a_triggered::compiled_timing_mapping_covers_common_triggered_timings
+  parse_clauses::parse_on_block_timing_clause
+  phase2a_steps::add_player_modifier_step_installs_value_for_security_digimon_dp_modifier
+  --exact`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test
+  combat -- on_block_observer`; `cargo test --manifest-path
+  code/digimon-engine/Cargo.toml --test combat --
+  security_effects::own_security_digimon_dp_modifier_applies_to_defenders_security_battle
+  security_effects::own_security_digimon_dp_modifier_does_not_affect_opponents_security
+  --exact`; `cargo test --manifest-path code/digimon-engine/Cargo.toml -p
+  digimon-engine modifier_map::tests`.
 
 ## Rocks EX10-034 grant-triggered binding closure — 2026-05-23
 
