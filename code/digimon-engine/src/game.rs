@@ -671,8 +671,7 @@ pub struct Game {
     /// card-id strings into `CardSource` instances. Empty for non-opaque
     /// games (the standard constructor uses an in-scope `data_index_map`
     /// directly without caching it on the Game).
-    pub(crate) opaque_data_index_map:
-        Option<std::collections::HashMap<String, usize>>,
+    pub(crate) opaque_data_index_map: Option<std::collections::HashMap<String, usize>>,
 }
 
 impl Game {
@@ -965,10 +964,7 @@ impl Game {
             ));
         }
         if my_player_id >= 2 {
-            return Err(format!(
-                "my_player_id must be 0 or 1, got {}",
-                my_player_id
-            ));
+            return Err(format!("my_player_id must be 0 or 1, got {}", my_player_id));
         }
 
         // Validate the opponent decklist size matches what the rules expect.
@@ -1054,8 +1050,9 @@ impl Game {
             })
             .cloned()
             .collect();
-        game.players[opp_idx].opaque_deck_state =
-            Some(crate::opaque_deck::OpaqueDeckState::from_decklist(&non_digitama));
+        game.players[opp_idx].opaque_deck_state = Some(
+            crate::opaque_deck::OpaqueDeckState::from_decklist(&non_digitama),
+        );
 
         game.reveal_source = Some(reveal_source);
 
@@ -1199,11 +1196,7 @@ impl Game {
     /// [`Self::materialize_opaque_security_placeholder`], the multiset
     /// has already been debited and no further change happens — the
     /// materialization just resolves identity.
-    pub fn setup_security_for_player(
-        &mut self,
-        pid: PlayerId,
-        count: u8,
-    ) -> Result<(), String> {
+    pub fn setup_security_for_player(&mut self, pid: PlayerId, count: u8) -> Result<(), String> {
         if (pid as usize) >= self.players.len() {
             return Err(format!("invalid player id {}", pid));
         }
@@ -1241,9 +1234,9 @@ impl Game {
         for _ in 0..count {
             let card_index = self.next_card_index;
             self.next_card_index += 1;
-            self.players[pid as usize].security.push(
-                CardSource::new_opaque_security_placeholder(pid, card_index),
-            );
+            self.players[pid as usize]
+                .security
+                .push(CardSource::new_opaque_security_placeholder(pid, card_index));
         }
         Ok(())
     }
@@ -1337,7 +1330,9 @@ impl Game {
                 .opaque_deck_state
                 .as_mut()
                 .expect("checked above");
-            state.consume_per_card_only(&card_id).map_err(|e| e.to_string())?;
+            state
+                .consume_per_card_only(&card_id)
+                .map_err(|e| e.to_string())?;
         }
         // Look up data_index and overwrite the placeholder's fields,
         // preserving card_index for face_up_security continuity.
@@ -2130,7 +2125,11 @@ impl Game {
     /// mill, source manipulation, security-stack effects, etc.). New
     /// engine code should prefer this over direct `player.trash.push(...)`
     /// so the event surface stays uniform.
-    pub fn trash_card(&mut self, player: crate::enums::PlayerId, card: crate::card_source::CardSource) {
+    pub fn trash_card(
+        &mut self,
+        player: crate::enums::PlayerId,
+        card: crate::card_source::CardSource,
+    ) {
         if card.is_token {
             // Tokens are removed from game — no trash entry, no event.
             return;
@@ -3353,7 +3352,9 @@ impl Game {
             for pid in 0..self.players.len() {
                 self.enqueue_triggered(
                     crate::enums::EffectTiming::OnLinkedCardTrashed,
-                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+                    crate::selection::TriggerSource::PlayerBattleArea(
+                        pid as crate::enums::PlayerId,
+                    ),
                 );
             }
             self.drain_effect_queue();
@@ -3554,6 +3555,45 @@ impl Game {
 
     pub fn dynamic_dp_aura_bonus(&self, target: crate::permanent::PermanentHandle) -> i32 {
         self.live_declarative_formula_sum(target, false).0
+    }
+
+    pub fn static_dp_aura_bonus(&self, target: crate::permanent::PermanentHandle) -> i32 {
+        use crate::effect_context::EffectReadContext;
+
+        let Some(permanent) = self
+            .players
+            .get(target.player as usize)
+            .and_then(|player| player.battle_area.get(target.index as usize))
+        else {
+            return 0;
+        };
+
+        let stack_size = permanent.card_sources.len();
+        let mut total = 0;
+        for (source_index, source) in permanent.card_sources.iter().enumerate() {
+            let inherited_source = source_index + 1 < stack_size;
+            let card_id = source.card_id(&self.card_data).to_string();
+            let Some(effects) = self.effects_for_card(&card_id, source.handle()) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if effect.materializes_declarative_state || effect.dp_modifier == 0 {
+                    continue;
+                }
+                let rctx =
+                    EffectReadContext::new(self, source.handle(), Some(target), target.player);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                total += effect.dp_modifier;
+            }
+        }
+        total
     }
 
     pub fn dynamic_security_attack_aura_bonus(

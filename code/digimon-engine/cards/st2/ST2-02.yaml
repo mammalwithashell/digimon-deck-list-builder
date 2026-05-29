@@ -1,0 +1,15 @@
+card: ST2-02
+name: Gomamon
+kind: digimon
+level: 3
+color: [blue]
+cost: 2
+dp: 3000
+traits: [Sea Beast]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0

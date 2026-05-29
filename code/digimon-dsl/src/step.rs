@@ -144,6 +144,7 @@ pub enum StepSpec {
     /// `select_material` choice is exposed.
     PlaceTopSourceAsBottom(TargetArg),
     TrashTopSource(TargetArg),
+    TrashBottomSources(TrashBottomSourcesArgs),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
     /// G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME (2026-05-21) — return each
@@ -360,6 +361,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
             StepSpec::PlaceTopSourceAsBottom(v) => kv!(s, "place_top_source_as_bottom", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
+            StepSpec::TrashBottomSources(v) => kv!(s, "trash_bottom_sources", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
             StepSpec::ReturnSelectedSourcesToHand(v) => {
@@ -583,6 +585,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
             "place_top_source_as_bottom" => StepSpec::PlaceTopSourceAsBottom(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
+            "trash_bottom_sources" => StepSpec::TrashBottomSources(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
             "return_selected_sources_to_hand" => {
@@ -778,6 +781,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_as_bottom_source",
                         "place_top_source_as_bottom",
                         "trash_top_source",
+                        "trash_bottom_sources",
                         "trash_all_sources",
                         "trash_selected_sources",
                         "return_selected_sources_to_hand",
@@ -1107,6 +1111,13 @@ fn is_zero_u8(n: &u8) -> bool {
 #[serde(deny_unknown_fields)]
 pub struct TargetArg {
     pub target: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashBottomSourcesArgs {
+    pub target: BindingRef,
+    pub count: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

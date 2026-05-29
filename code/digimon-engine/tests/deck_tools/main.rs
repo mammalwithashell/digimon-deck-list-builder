@@ -9,6 +9,8 @@ use digimon_engine::deck_tools::{
 };
 use digimon_engine::{GameMode, Rarity};
 
+const DECK_LIBRARY_JSON: &str = include_str!("../../../../data/deck_library.json");
+
 // ─── Card ID pattern ───────────────────────────────────────────────────
 
 #[test]
@@ -515,6 +517,51 @@ fn validate_eden_uses_custom_banlist_and_pair() {
         .errors
         .iter()
         .any(|e| e.contains("Choice restriction violated")));
+}
+
+#[test]
+fn st2_cocytus_blue_starter_artifact_has_official_counts_and_valid_sizes() {
+    let root: serde_json::Value =
+        serde_json::from_str(DECK_LIBRARY_JSON).expect("deck_library.json parses");
+    let decklist = root["archetypes"]["ST-2 Cocytus Blue"]["decklists"][0]["decklist"]
+        .as_str()
+        .expect("ST-2 decklist uses deck_library string convention");
+    let deck: Vec<String> = serde_json::from_str(decklist).expect("ST-2 decklist parses");
+
+    let counts = summarize_deck(&deck);
+    let expected = [
+        ("ST2-01", 4u32),
+        ("ST2-02", 4),
+        ("ST2-03", 4),
+        ("ST2-04", 4),
+        ("ST2-05", 4),
+        ("ST2-06", 2),
+        ("ST2-07", 4),
+        ("ST2-08", 4),
+        ("ST2-09", 4),
+        ("ST2-10", 2),
+        ("ST2-11", 2),
+        ("ST2-12", 4),
+        ("ST2-13", 4),
+        ("ST2-14", 4),
+        ("ST2-15", 2),
+        ("ST2-16", 2),
+    ];
+    for (card_id, count) in expected {
+        assert_eq!(counts.get(card_id), Some(&count), "{card_id} count");
+    }
+    assert_eq!(deck.len(), 54);
+
+    let parsed = classify_parsed(deck.clone());
+    assert_eq!(parsed.egg_deck.len(), 4);
+    assert_eq!(parsed.main_deck.len(), 50);
+
+    let result = validate_deck_for_game_mode(&deck, "no_restriction").unwrap();
+    assert!(
+        result.is_valid,
+        "starter artifact should satisfy construction sizes/copy limits in no_restriction mode: {:?}",
+        result.errors
+    );
 }
 
 // ─── summarize_deck ───────────────────────────────────────────────────

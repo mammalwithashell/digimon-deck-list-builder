@@ -140,6 +140,11 @@ pub struct PredicateSpec {
     /// have 3 or more total colors"). G-DSL-DISTINCT-TAMER-COLORS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distinct_tamer_colors_gte: Option<u8>,
+    /// True when this effect's carrier is currently battling an opposing
+    /// Digimon with zero digivolution source cards. Used by inherited
+    /// battle-only auras such as ST2-01 Tsunomon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub battle_opponent_no_sources: Option<bool>,
 
     // Leaf — zone / owner
     #[serde(skip_serializing_if = "Vec::is_empty")]

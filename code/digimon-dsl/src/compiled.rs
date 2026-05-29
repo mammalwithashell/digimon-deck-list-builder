@@ -288,6 +288,9 @@ pub struct CompiledPredicate {
     /// True when the observer's battle-area Tamers collectively have at
     /// least N distinct colors. G-DSL-DISTINCT-TAMER-COLORS.
     pub distinct_tamer_colors_gte: Option<u8>,
+    /// Battle-context leaf: true when the effect's carrier is battling an
+    /// opposing Digimon with zero digivolution source cards.
+    pub battle_opponent_no_sources: Option<bool>,
     pub zone: Vec<CompiledZone>,
     pub owner: Option<CompiledPlayerRef>,
     pub other: Option<bool>,
@@ -1025,6 +1028,10 @@ pub enum CompiledStep {
     },
     TrashTopSource {
         target: CompiledBindingRef,
+    },
+    TrashBottomSources {
+        target: CompiledBindingRef,
+        count: u8,
     },
     TrashAllSources {
         target: CompiledBindingRef,
