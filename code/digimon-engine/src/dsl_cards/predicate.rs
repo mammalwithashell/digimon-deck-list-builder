@@ -2317,9 +2317,12 @@ fn eval_permanent_fields(
     // (`ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`)
     // were invisible to Track H aura filters. We pre-check each
     // overlay-able field against `synth_identity` and clear it from
-    // the delegated predicate if the overlay matches. Pinned by
-    // `aura_filter_includes_track_c_change_traits_overlay` (and follow-
-    // up tests for name/color overlay propagation).
+    // the delegated predicate if the overlay matches. Permanent DP
+    // predicates are also cleared from the delegated card-field pass:
+    // they are evaluated below through `effective_dp`, so same-effect
+    // `ChangeDp` modifiers are visible before follow-up selections.
+    // Pinned by `aura_filter_includes_track_c_change_traits_overlay`
+    // and `dp_lte_selection_sees_same_effect_dp_modifier`.
     let trait_overlay_match = pred.trait_has.as_ref().is_some_and(|t| {
         synth_identity
             .traits
@@ -2354,6 +2357,8 @@ fn eval_permanent_fields(
                 .iter()
                 .all(|c| allowed.iter().any(|a| color_matches(*a, *c)))
     });
+    let has_dp_constraint =
+        pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if trait_overlay_match
         || name_is_overlay_match
@@ -2361,6 +2366,7 @@ fn eval_permanent_fields(
         || name_in_overlay_match
         || color_is_overlay_match
         || color_only_overlay_match
+        || has_dp_constraint
     {
         let mut p = pred.clone();
         if trait_overlay_match {
@@ -2380,6 +2386,11 @@ fn eval_permanent_fields(
         }
         if color_only_overlay_match {
             p.color_only = None;
+        }
+        if has_dp_constraint {
+            p.dp_eq = None;
+            p.dp_lte = None;
+            p.dp_gte = None;
         }
         delegated_pred_storage = p;
         &delegated_pred_storage

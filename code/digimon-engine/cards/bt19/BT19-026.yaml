@@ -1,0 +1,70 @@
+card: BT19-026
+name: ZeigGreymon
+kind: digimon
+level: 6
+color: [blue, purple]
+cost: 11
+dp: 11000
+traits: [Cyborg, Blue Flare]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: blue
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] De-Digivolve 2, then return an opponent level 4 or lower Digimon if present"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
+      - de_digivolve:
+          target: target
+          amount: 2
+          stop_at_level: 3
+      - select_opponent_permanent:
+          bind_as: lower
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Return 1 opponent level 4 or lower Digimon to hand"
+      - return_to_hand: { target: lower }
+
+  - when: on_deletion
+    summary: "[On Deletion] May play a cost-5 Blue Flare/Xros Heart Digimon under your Tamers, then Save"
+    process:
+      - select_under_tamer_sources:
+          min: 0
+          max: 1
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte: 5
+              - any_of:
+                  - trait_has: "Blue Flare"
+                  - trait_has: "Xros Heart"
+          bind_as: play_source
+          prompt: "Play 1 cost-5 Blue Flare or Xros Heart Digimon from under your Tamers"
+          then:
+            - play_under_tamer_source:
+                source_refs: play_source
+                cost_delta: free
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier: 2000
+    summary: "Inherited: +2000 DP"

@@ -1,0 +1,33 @@
+card: BT10-029
+name: Starmons
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Lesser, Xros Heart]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: "Xros Heart"
+    cost: 0
+
+effects:
+  - kind: grant_keyword
+    keyword: Save
+    summary: "<Save>"
+
+  - scope: inherited
+    when: when_attacking
+    condition:
+      source_name_contains: "Shoutmon"
+    summary: "Inherited [When Attacking] If this Digimon has Shoutmon in name, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

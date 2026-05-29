@@ -142,7 +142,7 @@ pub(crate) struct EndTurnResume {
     pub(crate) memory_before_end_effects: i16,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PendingWouldPlayResume {
     pub(crate) player: PlayerId,
     pub(crate) card: crate::card_source::CardHandle,
@@ -337,6 +337,13 @@ pub struct Game {
     /// Phase 8: in-flight Option card resolution. Set when an Option is
     /// played and cleared after dispose. Dispatch lands in Tasks 2-6.
     pub pending_option: Option<PendingOption>,
+    /// Inert context for a pending DigiXros play from hand. The play-cost path
+    /// installs this before cost hooks run and clears it when the play commits
+    /// or aborts. Later slices use it for material selection and source commit.
+    pub(crate) pending_digixros_transaction: Option<crate::digixros::DigiXrosTransaction>,
+    /// Turn-scoped DigiXros wildcard material modifiers waiting to be copied
+    /// into the next matching transaction.
+    pub(crate) active_digixros_wildcards: Vec<crate::digixros::ActiveDigiXrosWildcardSubstitution>,
     /// Continuation marker for Delay/Training Option placement observers.
     /// Option play normally calls `check_turn_end` after disposal. If
     /// placement observers park a selection after `pending_option` has already
@@ -863,6 +870,8 @@ impl Game {
             pending_security: None,
             pending_effect_security_removal: Vec::new(),
             pending_option: None,
+            pending_digixros_transaction: None,
+            active_digixros_wildcards: Vec::new(),
             pending_option_placed_turn_check: false,
             pending_option_placed_link_resume: None,
             security_resolution: None,
@@ -3946,6 +3955,12 @@ impl Game {
         // but is only hit once per effect query, and `effects_for_card` is
         // typically called at state-change fire-sites, not in the mask hot
         // loop — so the cost is acceptable for v1.
+        let native_keywords = self
+            .card_data
+            .iter()
+            .find(|cd| cd.card_id == card_id)
+            .map(|cd| cd.keywords.clone())
+            .unwrap_or_default();
         let mut auto_effects: Vec<crate::effect::Effect> = self
             .card_data
             .iter()
@@ -3990,6 +4005,9 @@ impl Game {
                     continue;
                 };
                 if !grant.declarative || grant.condition.is_some() {
+                    continue;
+                }
+                if !grant.inherited && native_keywords.contains(&kw) {
                     continue;
                 }
                 auto_effects.extend(

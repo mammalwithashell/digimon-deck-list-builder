@@ -118,6 +118,122 @@ When a reusable gap closes, move the full entry here and leave any card-specific
   clause.
 - **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_065 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_038 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- union_zone_cost --nocapture`.
 
+## Same-effect DP modifier visibility in subsequent `dp_lte` selections — 2026-05-24
+
+Xros Heart BT19-012 exposed that a DSL process could apply `-3000 DP` and
+immediately install a `dp_lte: 3000` opponent-permanent selection, but the
+selection only offered naturally low-DP targets. The modifier itself was
+already applied: `effective_dp` returned the reduced value before the follow-up
+selection. The root cause was predicate delegation for permanents: the shared
+card-field pass still checked printed `CardData.dp` before the later
+permanent-aware `effective_dp` check.
+
+- **Engine fix:** permanent predicate evaluation clears `dp_eq`, `dp_lte`, and
+  `dp_gte` before delegating to `eval_card_fields`, then evaluates those DP
+  predicates once through `eval_dp_constraints` against `Game::effective_dp`.
+- **DSL behavior:** same-process `add_dp_modifier` steps are visible to later
+  permanent selections, including mandatory follow-up prompts.
+- **Regression:** `selection_dp_extrema::dp_lte_selection_sees_same_effect_dp_modifier`
+  reduces a 6000 DP opponent Digimon to 3000 DP, then verifies the subsequent
+  `dp_lte: 3000` selection offers both the reduced target and a naturally 3000
+  DP target while excluding an unreduced 9000 DP target.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl dp_lte_selection_sees_same_effect_dp_modifier -- --nocapture`;
+  `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl selection_dp_extrema -- --nocapture`.
+
+Remaining BT19-012 work is card-specific production YAML and behavior coverage,
+not reusable substrate.
+
+## Xros Heart DigiXros transaction substrate — 2026-05-24
+
+The `close-xros-heart-digixros-gaps` OpenSpec change closed the reusable
+DigiXros and Material Save primitives needed by the first Xros Heart acceptance
+pool.
+
+- **Engine substrate:** `DigiXrosTransaction` tracks played card, controller,
+  recipe slots, selected and pre-attached material origins, transaction-scoped
+  zone allowances, per-material and one-shot cost deltas, and `digixros_count`.
+  Play-from-hand now prompts for visible material choices, computes final cost
+  before payment, and attaches selected/pre-attached materials as sources only
+  after successful play.
+- **Transaction hooks:** before-pay-cost handlers can mutate the pending
+  transaction by allowing under-Tamer/trash origins, pre-attaching a selected
+  material, or adding one-shot cost deltas. Declined optional hooks roll back.
+- **Keyword substrate:** `<Material Save X>` is deletion-timed, optional, uses
+  the pre-removal deletion snapshot, filters eligible sources through the
+  carrier's DigiXros recipe, prompts for a Tamer destination, and exposes
+  count-capped source picks.
+- **DSL substrate:** `kind: digixros` alt paths lower recipe material filters,
+  origin zones, and cost deltas; transaction steps lower
+  `allow_digixros_material_zone`, `add_digixros_cost_delta`, and
+  `preattach_digixros_material`.
+- **Production proof:** BT10-009, BT10-013, BT10-087, and BT12-112 now have
+  production YAML and focused behavioral tests. No action-space expansion was
+  required.
+
+Remaining related work is card-specific rather than reusable substrate:
+BT10-111's turn-scoped DigiXros wildcard modifier still uses `raw_rust` in the
+example lane, and non-DigiXros cast-time assembly such as BT15-102 Apocalymon
+remains a separate open engine gap.
+
+## Reveal-Pool Free Play Primitive — 2026-05-24
+
+The `complete-xros-heart-authoring-substrate` OpenSpec change closed the
+reveal-pool free-play sub-shape previously tracked as `play_from_revealed_free`.
+
+- **Engine substrate:** `EffectContext::play_from_reveal_free(player, card)`
+  consumes a selected revealed `CardHandle`, clears reveal overlay metadata, and
+  routes the card through the centralized effect-play pipeline without firing
+  add-to-hand observers.
+- **Replacement safety:** reveal-origin restore metadata puts the card back into
+  `Game::revealed_cards` at its original index if a would-play replacement or
+  synchronous play gate prevents commitment.
+- **DSL substrate:** `choose_from_reveal` accepts `destination: play_free` and
+  composes with `order_remainder`, so the picked card is played and unpicked
+  revealed cards remain available for ordered bottom/top placement.
+- **Production proof:** `BT19-008` uses this route for its `[On Deletion]`
+  reveal-top-3, play-one-Xros-Heart-Tamer-free, bottom-the-rest clause.
+
+## Xros Heart Stack-Derived Metric Primitives — 2026-05-24
+
+The `complete-xros-heart-authoring-substrate` OpenSpec change closed the
+reusable stack-metric DSL blocker for the next Xros Heart production fixtures.
+
+- **Formula substrate:** `source_color_count` now lowers to
+  `CompiledFormula::SourceColorCount` and `CompiledPerSelector::SourceColorCount`.
+  `source_stack_count` lowers to `CompiledFormula::SourceStackCount` with a
+  target binding and optional card predicate. Runtime evaluation reads source
+  cards beneath the queried permanent's top card.
+- **Composed primitives:** Existing `source_dp`, no-source filters, and
+  `lowest_material_count` now compose with the new color-count formula to cover
+  source-color DP math, current-DP target comparison, fewest-source targeting,
+  and no-source payoff effects without raw Rust.
+- **Production proof:** BT19-014, AD1-006, AD1-013, BT19-026, BT21-030, and
+  BT20-037 now ship as production YAML with focused behavioral coverage.
+- **Evidence:** `cargo test --manifest-path code\digimon-engine\Cargo.toml --test dsl source_color_count`
+  and focused `cards_behavioral` filters for `bt19_014`, `ad1_006`, `ad1_013`,
+  `bt19_026`, `bt21_030`, and `bt20_037`.
+
+## Xros Heart Temporary Effect Lockout Primitives — 2026-05-24
+
+The `complete-xros-heart-authoring-substrate` OpenSpec change closed the
+permanent-scoped temporary lockout shapes needed by the next Xros Heart fixture
+batch.
+
+- **Engine substrate:** `CannotActivateOnPlayEffects` and
+  `CannotActivateWhenDigivolvingEffects` suppress effect-queue dispatch for
+  the exact named timing family on the affected Digimon or Tamer.
+  `CannotUnsuspend` is enforced through normal unsuspend-phase processing.
+- **Expiry:** The fixture YAML uses expiring modifier entries such as
+  `end_of_opponents_turn`, preserving the lock through the affected opponent
+  turn and removing it afterward.
+- **DSL substrate:** Existing `add_modifier` lowering now covers the timing
+  lockout modifiers and rejects unknown modifier/timing strings through the
+  validator instead of allowing silent no-ops.
+- **Production proof:** BT19-038, BT19-051, BT19-035, BT20-037, and BT19-079
+  now ship as production YAML and focused behavioral fixtures. BT19-038 and
+  BT20-037 exercise timing lockouts directly; BT19-051 and BT19-035 prove the
+  adjacent DP/protection and played-Xros-Heart observer shapes.
+
 ## BG Imperial substrate closeout — 2026-05-20
 
 The `bg-imperial-substrate-closeout` change (OpenSpec) re-audited the 24-card BG

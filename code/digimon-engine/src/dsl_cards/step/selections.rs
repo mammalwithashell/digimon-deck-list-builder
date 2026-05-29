@@ -127,6 +127,11 @@ fn field_value(
             .battle_area
             .get(handle.index as usize)
             .map(|perm| i32::from(perm.top_card().play_cost(&game.card_data))),
+        CompiledFieldSelector::LowestMaterialCount => game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| perm.card_sources.len().saturating_sub(1) as i32),
     }
 }
 
@@ -141,6 +146,7 @@ fn selected_field_extreme(
     match selector {
         CompiledFieldSelector::LowestDp | CompiledFieldSelector::LowestPlayCost => values.min(),
         CompiledFieldSelector::HighestDp | CompiledFieldSelector::HighestPlayCost => values.max(),
+        CompiledFieldSelector::LowestMaterialCount => values.min(),
     }
 }
 
@@ -3076,6 +3082,9 @@ fn route_chosen_reveal(
         }
         CompiledRevealDestination::DeckBottom => {
             ctx.return_to_deck_from_reveal(player, handle, StackPosition::Bottom);
+        }
+        CompiledRevealDestination::PlayFree => {
+            ctx.play_from_reveal_free(player, handle);
         }
         CompiledRevealDestination::BottomSourceOf(_) => {
             if let Some(perm) = target_permanent {

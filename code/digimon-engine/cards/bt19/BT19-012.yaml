@@ -1,0 +1,73 @@
+card: BT19-012
+name: OmniShoutmon
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 7
+dp: 7000
+traits: [Dragonkin, Xros Heart]
+attribute: Data
+
+digixros_aliases: [Shoutmon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { name_contains: Shoutmon }
+    cost: 4
+  - kind: digivolve
+    from:
+      level_eq: 4
+      trait_has: "Xros Heart"
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] -3000 DP, then delete 3000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: reduced
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -3000 DP"
+      - add_dp_modifier:
+          target: reduced
+          value: -3000
+          expiry: end_of_turn
+      - select_opponent_permanent:
+          bind_as: deleted
+          filter: { kind: digimon, dp_lte: 3000 }
+          prompt: "Delete 1 opponent Digimon with 3000 DP or less"
+      - delete_permanent: { target: deleted }
+
+  - when: on_deletion
+    summary: "[On Deletion] Place 1 Xros Heart/Blue Flare Digimon from hand or trash under one of your Tamers"
+    process:
+      - select_own_permanent:
+          bind_as: tamer
+          filter: { kind: tamer }
+          prompt: "Choose a Tamer to place a card under"
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: stash
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Xros Heart"
+                  - trait_has: "Blue Flare"
+          prompt: "Choose 1 Xros Heart or Blue Flare Digimon from hand or trash"
+      - place_selected_card_under_tamer:
+          card: stash
+          tamer: tamer
+
+  - scope: inherited
+    kind: grant_keyword
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_permanent_trait_has: "Xros Heart"
+    keyword: Rush
+    summary: "Inherited: Xros Heart carrier gains Rush on your turn"

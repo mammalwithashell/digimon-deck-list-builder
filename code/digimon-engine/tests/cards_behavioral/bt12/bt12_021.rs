@@ -217,7 +217,11 @@ fn bt12_021_has_inherited_dna_digivolve_may_step() {
     assert!(
         t.process.iter().any(|step| matches!(
             step,
-            CompiledStep::MayDnaDigivolveNow { ignore_requirements: true, cost: 0, .. }
+            CompiledStep::MayDnaDigivolveNow {
+                ignore_requirements: true,
+                cost: 0,
+                ..
+            }
         )),
         "BT12-021 EoT inherited body must contain a `MayDnaDigivolveNow` step \
          with cost=0 and ignore_requirements=true"
@@ -588,13 +592,16 @@ fn bt12_021_inherited_eot_dna_digivolve_has_correct_trigger_and_scope() {
         }
         _ => None,
     });
-    let t = clause.expect(
-        "BT12-021 must have an inherited optional EoT triggered clause for DNA digivolve",
-    );
+    let t = clause
+        .expect("BT12-021 must have an inherited optional EoT triggered clause for DNA digivolve");
     assert!(
         t.process.iter().any(|step| matches!(
             step,
-            CompiledStep::MayDnaDigivolveNow { ignore_requirements: true, cost: 0, .. }
+            CompiledStep::MayDnaDigivolveNow {
+                ignore_requirements: true,
+                cost: 0,
+                ..
+            }
         )),
         "process must contain a MayDnaDigivolveNow step with cost=0 and ignore_requirements=true"
     );

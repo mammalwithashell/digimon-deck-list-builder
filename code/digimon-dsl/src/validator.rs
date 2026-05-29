@@ -1634,6 +1634,9 @@ fn validate_formula_binding_scope(
         FormulaSpec::BindingPlayCost { binding_play_cost } => {
             report_if_undeclared_binding(binding_play_cost, prefix, card_id, scope, errors);
         }
+        FormulaSpec::BindingValue { binding_value } => {
+            report_if_undeclared_binding(binding_value, prefix, card_id, scope, errors);
+        }
         FormulaSpec::BasePerDelta { per, .. } => {
             validate_per_selector_binding_scope(
                 per,
@@ -1663,6 +1666,26 @@ fn validate_formula_binding_scope(
                 );
             }
         }
+        FormulaSpec::SourceStackCount {
+            source_stack_count,
+        } => {
+            report_if_undeclared_binding(
+                &source_stack_count.target,
+                &format!("{prefix}.source_stack_count.target"),
+                card_id,
+                scope,
+                errors,
+            );
+            if let Some(filter) = &source_stack_count.filter {
+                validate_predicate_binding_scope(
+                    filter,
+                    &format!("{prefix}.source_stack_count.filter"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+        }
         FormulaSpec::Compound(CompoundFormula::FloorDiv(args))
         | FormulaSpec::Compound(CompoundFormula::Max(args))
         | FormulaSpec::Compound(CompoundFormula::Min(args)) => {
@@ -1679,6 +1702,7 @@ fn validate_formula_binding_scope(
         FormulaSpec::Literal(_)
         | FormulaSpec::SourceDp { .. }
         | FormulaSpec::SourceMaterialCount { .. }
+        | FormulaSpec::SourceColorCount { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_))
         | FormulaSpec::Compound(CompoundFormula::RawRust(_)) => {}
@@ -1827,10 +1851,25 @@ fn validate_formula(
                 );
             }
         }
+        FormulaSpec::SourceStackCount {
+            source_stack_count,
+        } => {
+            if let Some(filter) = &source_stack_count.filter {
+                validate_predicate(
+                    filter,
+                    &format!("{prefix}.source_stack_count.filter"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+        }
         FormulaSpec::Literal(_)
         | FormulaSpec::SourceDp { .. }
         | FormulaSpec::SourceMaterialCount { .. }
+        | FormulaSpec::SourceColorCount { .. }
         | FormulaSpec::BindingDp { .. }
+        | FormulaSpec::BindingValue { .. }
         | FormulaSpec::BindingPlayCost { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_)) => {}
@@ -1872,11 +1911,13 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
             | CompoundFormula::Min(args),
         ) => args.iter().any(formula_uses_dp_aggregate),
         FormulaSpec::BasePerDelta { per, .. } => per_uses_dp_aggregate(per),
-        FormulaSpec::SourceStackDpSum { .. } => false,
+        FormulaSpec::SourceStackCount { .. } | FormulaSpec::SourceStackDpSum { .. } => false,
         FormulaSpec::Literal(_)
         | FormulaSpec::SourceDp { .. }
         | FormulaSpec::SourceMaterialCount { .. }
+        | FormulaSpec::SourceColorCount { .. }
         | FormulaSpec::BindingDp { .. }
+        | FormulaSpec::BindingValue { .. }
         | FormulaSpec::BindingPlayCost { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::RawRust(_)) => false,
@@ -2013,6 +2054,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CannotReducePlayCost",
     "CannotReduceDigivolveCost",
     "OpponentCannotReduceDigivolveCost",
+    "CannotActivateOnPlayEffects",
     "CannotActivateMainEffects",
     "CannotActivateWhenDigivolvingEffects",
     "CannotActivateWhenAttackingEffects",
@@ -2054,7 +2096,9 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
 fn is_permanent_activation_modifier(name: &str) -> bool {
     matches!(
         name,
-        "CannotActivateWhenDigivolvingEffects" | "CannotActivateWhenAttackingEffects"
+        "CannotActivateOnPlayEffects"
+            | "CannotActivateWhenDigivolvingEffects"
+            | "CannotActivateWhenAttackingEffects"
     )
 }
 

@@ -24,9 +24,10 @@ fn st5_09_when_digivolving_grants_blocker_to_one_own_digimon() {
     let metalgreymon = runner.place_on_field(0, "ST5-09", Some(0));
     let ally = runner.place_on_field(0, "ST5-EFFECTS-ALLY", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(metalgreymon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(metalgreymon),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
@@ -69,9 +70,10 @@ fn st5_12_when_digivolving_grants_reboot_to_up_to_two_own_digimon() {
     let ally_b = runner.place_on_field(0, "ST5-REBOOT-B", Some(0));
     let ally_c = runner.place_on_field(0, "ST5-REBOOT-C", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(machinedramon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(machinedramon),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -79,13 +81,17 @@ fn st5_12_when_digivolving_grants_reboot_to_up_to_two_own_digimon() {
         Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 })
     );
     let first = runner.pending_selection_view().unwrap().valid_action_ids[1];
-    runner.execute_action(0, first).expect("pick first Reboot target");
+    runner
+        .execute_action(0, first)
+        .expect("pick first Reboot target");
     assert_eq!(
         runner.pending_kind(),
         Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 1 })
     );
     let second = runner.pending_selection_view().unwrap().valid_action_ids[1];
-    runner.execute_action(0, second).expect("pick second Reboot target");
+    runner
+        .execute_action(0, second)
+        .expect("pick second Reboot target");
     runner.auto_resolve().expect("finish ST5-12 selection");
 
     assert!(runner.game.has_keyword(ally_a, Keyword::Reboot));
@@ -124,7 +130,9 @@ fn st5_13_digi_burst_two_trashes_sources_and_buffs_one_own_digimon() {
     let target = runner.place_on_field(0, "ST5-BURST-TARGET", Some(0));
 
     assert!(
-        runner.game.activate_field_main(0, blitzgreymon.index as usize),
+        runner
+            .game
+            .activate_field_main(0, blitzgreymon.index as usize),
         "ST5-13 Main Digi-Burst effect should activate"
     );
     assert_eq!(
@@ -162,7 +170,10 @@ fn st5_13_digi_burst_two_trashes_sources_and_buffs_one_own_digimon() {
         "Digi-Burst 2 trashes both selected sources"
     );
     assert_eq!(runner.game.player(0).trash.len(), 2);
-    assert_eq!(runner.game.modifiers.sum(target, ModifierType::ChangeDp), 4000);
+    assert_eq!(
+        runner.game.modifiers.sum(target, ModifierType::ChangeDp),
+        4000
+    );
 
     runner.end_turn();
     assert_eq!(
@@ -186,9 +197,10 @@ fn st5_12_reboot_grant_can_be_declined_without_targets() {
         .build();
     let machinedramon = runner.place_on_field(0, "ST5-12", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(machinedramon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(machinedramon),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -202,6 +214,8 @@ fn st5_12_reboot_grant_can_be_declined_without_targets() {
             .is_optional,
         "up to 2 means the player may choose zero targets"
     );
-    runner.execute_action(0, PASS).expect("decline Reboot grant");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline Reboot grant");
     assert!(!runner.game.has_keyword(machinedramon, Keyword::Reboot));
 }

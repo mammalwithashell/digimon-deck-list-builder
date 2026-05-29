@@ -293,6 +293,7 @@ impl Game {
         }
         // Phase 6: expire player-scoped flood-gate modifiers.
         self.modifiers.expire_player_end_of_turn(ending_player);
+        self.expire_digixros_wildcards_at_end_of_turn(ending_player);
         // G-COST-REDUCE-ALLY-DIGIVOLVE: expire "For the turn" player-scoped
         // digivolve cost reducers installed by the ending player.
         self.player_digivolve_cost_reducers.retain(|r| {

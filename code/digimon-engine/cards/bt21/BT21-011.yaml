@@ -1,0 +1,50 @@
+card: BT21-011
+name: Shoutmon
+kind: digimon
+level: 3
+color: [red, yellow]
+cost: 3
+dp: 1000
+traits: [Mini Dragon, Xros Heart, Hero]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 1
+  - kind: digivolve
+    from:
+      level_eq: 2
+      any_of:
+        - trait_has: "Xros Heart"
+        - trait_has: Hero
+    cost: 0
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Xros Heart"
+                  - trait_has: Hero
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into Xros Heart or Hero, reduce cost by 1"
+
+  - kind: grant_keyword
+    keyword: Save
+    summary: "<Save>"
+
+  - scope: inherited
+    kind: grant_keyword
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_permanent_trait_has: "Xros Heart"
+    keyword: Rush
+    summary: "Inherited: Xros Heart carrier gains Rush on your turn"

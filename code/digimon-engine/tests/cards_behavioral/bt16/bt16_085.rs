@@ -1039,8 +1039,7 @@ fn bt16_085_optional_outer_prompt_installs_on_normal_digivolve() {
     let base = runner.place_on_field(0, "BASE", Some(0));
     runner.game.enter_main_phase();
 
-    let suspended_before =
-        runner.game.players[0].battle_area[tamer.index as usize].is_suspended;
+    let suspended_before = runner.game.players[0].battle_area[tamer.index as usize].is_suspended;
     assert!(
         !suspended_before,
         "precondition: Davis & Ken must be unsuspended before the digivolve"
@@ -1054,7 +1053,9 @@ fn bt16_085_optional_outer_prompt_installs_on_normal_digivolve() {
         .position(|c| c.card_id(&runner.game.card_data) == "EVOLVED")
         .expect("EVOLVED in hand");
     assert!(
-        runner.game.digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve),
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve),
         "digivolve_from_hand must succeed"
     );
     runner.game.drain_effect_queue();

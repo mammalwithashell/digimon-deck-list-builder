@@ -147,6 +147,10 @@ pub enum StepSpec {
     TrashBottomSources(TrashBottomSourcesArgs),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
+    PlaceSelectedCardUnderTamer(PlaceSelectedCardUnderTamerArgs),
+    PlaceSelectedSourcesUnderTamer(PlaceSelectedSourcesUnderTamerArgs),
+    MoveMatchingSourcesUnderTamer(MoveMatchingSourcesUnderTamerArgs),
+    TrashTopStackedSources(TrashTopStackedSourcesArgs),
     /// G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME (2026-05-21) — return each
     /// `select_own_sources`-bound digivolution source card to its owner's
     /// hand. Mirrors `TrashSelectedSources` but routes the source `Card` to
@@ -180,6 +184,7 @@ pub enum StepSpec {
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
     PlaySelectedSourcesFree(TrashSelectedSourcesArgs),
+    PlayUnderTamerSource(PlayUnderTamerSourceArgs),
     EffectInitiatedDigivolve(EffectDigivolveArgs),
     EffectInitiatedDnaDigivolve(EffectDnaDigivolveArgs),
     EffectInitiatedDnaDigivolveHandPartner(EffectDnaDigivolveHandPartnerArgs),
@@ -213,6 +218,11 @@ pub enum StepSpec {
     AddModifier(AddModifierArgs),
     AddPlayerModifier(AddPlayerModifierArgs),
     GrantKeyword(GrantKeywordArgs),
+    AllowDigixrosMaterialZone(AllowDigixrosMaterialZoneArgs),
+    AddDigixrosCostDelta(DigixrosCostDeltaArgs),
+    PreattachDigixrosMaterial(PreattachDigixrosMaterialArgs),
+    RegisterDigixrosWildcardForTurn(DigixrosWildcardArgs),
+    AddDigixrosWildcardToPendingTransaction(DigixrosWildcardArgs),
     GrantEffectImmunity(GrantEffectImmunityArgs),
     /// PUPPETS-G024 — install the narrow opponent-effect protection
     /// bundle (ImmuneFromDPMinus opponent-scoped + CannotBeDeDigivolved
@@ -236,6 +246,7 @@ pub enum StepSpec {
     SelectMaterial(SelectMaterialArgs),
     SelectMaterials(SelectMaterialsArgs),
     SelectOwnSources(SelectOwnSourcesArgs),
+    SelectUnderTamerSources(SelectOwnSourcesArgs),
     SelectOpponentSources(SelectOpponentSourcesArgs),
     DigiBurst(DigiBurstArgs),
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
@@ -364,6 +375,16 @@ impl Serialize for StepSpec {
             StepSpec::TrashBottomSources(v) => kv!(s, "trash_bottom_sources", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
+            StepSpec::PlaceSelectedCardUnderTamer(v) => {
+                kv!(s, "place_selected_card_under_tamer", v)
+            }
+            StepSpec::PlaceSelectedSourcesUnderTamer(v) => {
+                kv!(s, "place_selected_sources_under_tamer", v)
+            }
+            StepSpec::MoveMatchingSourcesUnderTamer(v) => {
+                kv!(s, "move_matching_sources_under_tamer", v)
+            }
+            StepSpec::TrashTopStackedSources(v) => kv!(s, "trash_top_stacked_sources", v),
             StepSpec::ReturnSelectedSourcesToHand(v) => {
                 kv!(s, "return_selected_sources_to_hand", v)
             }
@@ -385,6 +406,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
             StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
             StepSpec::PlaySelectedSourcesFree(v) => kv!(s, "play_selected_sources_free", v),
+            StepSpec::PlayUnderTamerSource(v) => kv!(s, "play_under_tamer_source", v),
             StepSpec::EffectInitiatedDigivolve(v) => kv!(s, "effect_initiated_digivolve", v),
             StepSpec::EffectInitiatedDnaDigivolve(v) => kv!(s, "effect_initiated_dna_digivolve", v),
             StepSpec::EffectInitiatedDnaDigivolveHandPartner(v) => {
@@ -442,6 +464,19 @@ impl Serialize for StepSpec {
             StepSpec::AddModifier(v) => kv!(s, "add_modifier", v),
             StepSpec::AddPlayerModifier(v) => kv!(s, "add_player_modifier", v),
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
+            StepSpec::AllowDigixrosMaterialZone(v) => {
+                kv!(s, "allow_digixros_material_zone", v)
+            }
+            StepSpec::AddDigixrosCostDelta(v) => kv!(s, "add_digixros_cost_delta", v),
+            StepSpec::PreattachDigixrosMaterial(v) => {
+                kv!(s, "preattach_digixros_material", v)
+            }
+            StepSpec::RegisterDigixrosWildcardForTurn(v) => {
+                kv!(s, "register_digixros_wildcard_for_turn", v)
+            }
+            StepSpec::AddDigixrosWildcardToPendingTransaction(v) => {
+                kv!(s, "add_digixros_wildcard_to_pending_transaction", v)
+            }
             StepSpec::GrantTriggeredEffect(v) => kv!(s, "grant_triggered_effect", v),
             StepSpec::GrantEffectImmunity(v) => kv!(s, "grant_effect_immunity", v),
             StepSpec::GrantNarrowOpponentEffectProtection(v) => {
@@ -457,6 +492,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
             StepSpec::SelectMaterials(v) => kv!(s, "select_materials", v),
             StepSpec::SelectOwnSources(v) => kv!(s, "select_own_sources", v),
+            StepSpec::SelectUnderTamerSources(v) => kv!(s, "select_under_tamer_sources", v),
             StepSpec::SelectOpponentSources(v) => kv!(s, "select_opponent_sources", v),
             StepSpec::DigiBurst(v) => kv!(s, "digi_burst", v),
             StepSpec::SelectOpponentDpBudget(v) => kv!(s, "select_opponent_dp_budget", v),
@@ -588,6 +624,16 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_bottom_sources" => StepSpec::TrashBottomSources(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
+            "place_selected_card_under_tamer" => {
+                StepSpec::PlaceSelectedCardUnderTamer(map.next_value()?)
+            }
+            "place_selected_sources_under_tamer" => {
+                StepSpec::PlaceSelectedSourcesUnderTamer(map.next_value()?)
+            }
+            "move_matching_sources_under_tamer" => {
+                StepSpec::MoveMatchingSourcesUnderTamer(map.next_value()?)
+            }
+            "trash_top_stacked_sources" => StepSpec::TrashTopStackedSources(map.next_value()?),
             "return_selected_sources_to_hand" => {
                 StepSpec::ReturnSelectedSourcesToHand(map.next_value()?)
             }
@@ -610,6 +656,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
             "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
+            "play_under_tamer_source" => StepSpec::PlayUnderTamerSource(map.next_value()?),
             "effect_initiated_digivolve" => StepSpec::EffectInitiatedDigivolve(map.next_value()?),
             "effect_initiated_dna_digivolve" => {
                 StepSpec::EffectInitiatedDnaDigivolve(map.next_value()?)
@@ -621,9 +668,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Security
             "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
             "trash_bottom_security" => StepSpec::TrashBottomSecurity(map.next_value()?),
-            "add_bottom_security_to_hand" => {
-                StepSpec::AddBottomSecurityToHand(map.next_value()?)
-            }
+            "add_bottom_security_to_hand" => StepSpec::AddBottomSecurityToHand(map.next_value()?),
             "trash_top_security_and_cancel_replacement" => {
                 StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
             }
@@ -667,6 +712,17 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_modifier" => StepSpec::AddModifier(map.next_value()?),
             "add_player_modifier" => StepSpec::AddPlayerModifier(map.next_value()?),
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
+            "allow_digixros_material_zone" => {
+                StepSpec::AllowDigixrosMaterialZone(map.next_value()?)
+            }
+            "add_digixros_cost_delta" => StepSpec::AddDigixrosCostDelta(map.next_value()?),
+            "preattach_digixros_material" => StepSpec::PreattachDigixrosMaterial(map.next_value()?),
+            "register_digixros_wildcard_for_turn" => {
+                StepSpec::RegisterDigixrosWildcardForTurn(map.next_value()?)
+            }
+            "add_digixros_wildcard_to_pending_transaction" => {
+                StepSpec::AddDigixrosWildcardToPendingTransaction(map.next_value()?)
+            }
             "grant_triggered_effect" => StepSpec::GrantTriggeredEffect(map.next_value()?),
             "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
             "grant_narrow_opponent_effect_protection" => {
@@ -683,6 +739,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
             "select_materials" => StepSpec::SelectMaterials(map.next_value()?),
             "select_own_sources" => StepSpec::SelectOwnSources(map.next_value()?),
+            "select_under_tamer_sources" => StepSpec::SelectUnderTamerSources(map.next_value()?),
             "select_opponent_sources" => StepSpec::SelectOpponentSources(map.next_value()?),
             "digi_burst" => StepSpec::DigiBurst(map.next_value()?),
             "select_opponent_dp_budget" => StepSpec::SelectOpponentDpBudget(map.next_value()?),
@@ -1159,6 +1216,8 @@ pub struct MayAttackNowArgs {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub without_suspending: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_summoning_sickness: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
@@ -1389,6 +1448,7 @@ pub enum RevealDestination {
     Hand,
     DeckTop,
     DeckBottom,
+    PlayFree,
     /// Place the picked card as the bottom digivolution card of `target`.
     BottomSourceOf {
         target: BindingRef,
@@ -1586,6 +1646,44 @@ pub struct TrashSelectedSourcesArgs {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub struct PlaceSelectedCardUnderTamerArgs {
+    pub card: BindingRef,
+    pub tamer: BindingRef,
+    #[serde(default)]
+    pub face_down: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceSelectedSourcesUnderTamerArgs {
+    pub source_refs: String,
+    pub tamer: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_count_as: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MoveMatchingSourcesUnderTamerArgs {
+    pub from: BindingRef,
+    pub tamer: BindingRef,
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_count_as: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashTopStackedSourcesArgs {
+    pub target: BindingRef,
+    pub count: crate::formula::FormulaSpec,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct PlayFromHandArgs {
     pub of: PlayerRef,
     pub hand_index: BindingRef,
@@ -1707,6 +1805,16 @@ pub struct UnionBoundArgs {
     /// the selected card's origin zone so consumers can move it from the right
     /// place without re-prompting.
     pub binding: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayUnderTamerSourceArgs {
+    pub source_refs: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1838,6 +1946,36 @@ pub struct GrantKeywordArgs {
     pub value: Option<i32>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AllowDigixrosMaterialZoneArgs {
+    pub zone: Zone,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_count: Option<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DigixrosCostDeltaArgs {
+    pub delta: i16,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PreattachDigixrosMaterialArgs {
+    pub card: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<i16>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DigixrosWildcardArgs {
+    pub card: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone: Option<Zone>,
+}
+
 /// Arguments for the Track H §3 `grant_triggered_effect` step. Walks
 /// battle areas for `target` matches and installs a granted-triggered-
 /// effect entry on each, whose body executes `body` (a step list) when
@@ -1933,6 +2071,11 @@ pub enum FieldSelector {
     /// opponent's highest play cost Digimon or Tamers").
     /// G-HIGHEST-PLAY-COST-SELECTOR.
     HighestPlayCost,
+    /// Restrict the selection to candidate permanent(s) with the fewest
+    /// digivolution cards beneath their top card. Used by effects such as
+    /// "delete 1 of your opponent's Digimon with the fewest digivolution
+    /// cards".
+    LowestMaterialCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

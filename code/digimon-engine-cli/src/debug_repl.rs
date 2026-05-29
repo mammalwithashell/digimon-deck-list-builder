@@ -57,7 +57,11 @@ pub fn run(
 }
 
 /// Returns `false` to terminate the REPL.
-fn dispatch(line: &str, state: &mut Option<LiveGame>, card_data: &HashMap<String, CardData>) -> bool {
+fn dispatch(
+    line: &str,
+    state: &mut Option<LiveGame>,
+    card_data: &HashMap<String, CardData>,
+) -> bool {
     let mut parts = line.split_whitespace();
     let Some(cmd) = parts.next() else {
         return true;
@@ -68,7 +72,9 @@ fn dispatch(line: &str, state: &mut Option<LiveGame>, card_data: &HashMap<String
         "help" => print_help(),
         "new" => handle_new(state, &args, card_data),
         "load" => handle_load(state, &args, card_data),
-        "state" => with_game(state, |g| print_json(&serde_json::to_value(g.state(view_arg(&args))).unwrap())),
+        "state" => with_game(state, |g| {
+            print_json(&serde_json::to_value(g.state(view_arg(&args))).unwrap())
+        }),
         "hand" => {
             with_game(state, |g| {
                 let player = player_arg(&args, 0);
@@ -91,11 +97,14 @@ fn dispatch(line: &str, state: &mut Option<LiveGame>, card_data: &HashMap<String
             Some(p) => print_json(&serde_json::to_value(p).unwrap()),
             None => println!("(no pending selection)"),
         }),
-        "queue" => with_game(state, |g| print_json(&serde_json::to_value(g.effect_queue()).unwrap())),
+        "queue" => with_game(state, |g| {
+            print_json(&serde_json::to_value(g.effect_queue()).unwrap())
+        }),
         "events" => {
-            let since = args
-                .iter()
-                .find_map(|a| a.strip_prefix("--since=").and_then(|s| s.parse::<u64>().ok()));
+            let since = args.iter().find_map(|a| {
+                a.strip_prefix("--since=")
+                    .and_then(|s| s.parse::<u64>().ok())
+            });
             with_game(state, |g| {
                 print_json(&serde_json::to_value(g.events(since)).unwrap())
             });
@@ -116,10 +125,7 @@ fn dispatch(line: &str, state: &mut Option<LiveGame>, card_data: &HashMap<String
             print_json(&serde_json::to_value(r).unwrap());
         }),
         "step" => mutate(state, |g| {
-            let id: u16 = args
-                .iter()
-                .find_map(|a| a.parse::<u16>().ok())
-                .unwrap_or(0);
+            let id: u16 = args.iter().find_map(|a| a.parse::<u16>().ok()).unwrap_or(0);
             let r = g.step(id);
             print_json(&serde_json::to_value(r).unwrap());
         }),
@@ -201,10 +207,16 @@ fn handle_new(state: &mut Option<LiveGame>, args: &[&str], card_data: &HashMap<S
         eprintln!("missing deck2 path");
         return;
     };
-    let seed = args
-        .iter()
-        .find_map(|a| a.strip_prefix("--seed=").and_then(|s| s.parse::<u64>().ok()));
-    match construct_from_decks(std::path::Path::new(d1_path), std::path::Path::new(d2_path), seed, card_data) {
+    let seed = args.iter().find_map(|a| {
+        a.strip_prefix("--seed=")
+            .and_then(|s| s.parse::<u64>().ok())
+    });
+    match construct_from_decks(
+        std::path::Path::new(d1_path),
+        std::path::Path::new(d2_path),
+        seed,
+        card_data,
+    ) {
         Ok(lg) => {
             *state = Some(lg);
             println!("(game constructed)");
@@ -218,9 +230,10 @@ fn handle_load(state: &mut Option<LiveGame>, args: &[&str], card_data: &HashMap<
         eprintln!("usage: load <recording.json> [--step N]");
         return;
     };
-    let step = args
-        .iter()
-        .find_map(|a| a.strip_prefix("--step=").and_then(|s| s.parse::<u32>().ok()));
+    let step = args.iter().find_map(|a| {
+        a.strip_prefix("--step=")
+            .and_then(|s| s.parse::<u32>().ok())
+    });
     let recording = match read_json_path(std::path::Path::new(path)) {
         Ok(v) => v,
         Err(e) => {
