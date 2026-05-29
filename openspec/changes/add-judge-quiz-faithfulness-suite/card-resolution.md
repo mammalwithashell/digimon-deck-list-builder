@@ -89,10 +89,15 @@ BT7-107 needs a test authored regardless.
   `c_declare_then_pay::q5_...` is now a live mask assertion and PASSES.
 
 **Discovery-wave gaps (4 distinct, all proven/code-confirmed):**
-- Q2 → missing ENGINE PRIMITIVE (grant-triggered-effect-to-opponent); also blocks Q16, Q17.
+- Q2 + Q16 → RESOLVED (`add-grant-triggered-effect-dsl`): the grant-triggered-effect substrate
+  existed (EX10-034); the two cause-attribution directions landed — Q2 (Progress suppresses the
+  granted opponent effect; EX1-068 authored) and Q16 (granted body runs as the carrier's own effect
+  so a granted self-delete is OwnEffect → `<Partition>` skips it; EX6-057 authored). Both PASS.
+  **Q17 still blocked** — needs BT16-102 + BT21-036 + an immunity-removes-granted-slot mechanic.
 - Q5 → RESOLVED: was missing SOURCE DATA *and* the engine Assembly executor; both fixed by
   `fix-ad1-025-assembly-data` (G-ASSEMBLY-PLAY-EXECUTION). Q5 now PASSES.
-- Q22 → ENGINE BUG (Digi-Egg routed to main deck; G-RETURN-TRASH-DIGI-EGG-ROUTING).
+- Q22 → RESOLVED (`fix-judge-quiz-engine-gaps` Gap 2): Digi-Egg now routes to the digitama deck
+  (G-RETURN-TRASH-DIGI-EGG-ROUTING). Q22 PASSES.
 - Cluster B (Q6/Q8/Q13/Q14/Q24) → ENGINE GAP, the systemic one: **no general state-based ≤0-DP
   rules-check** (G-NO-GENERAL-ZERO-DP-RULES-CHECK) — only Arts digivolve triggers it. Proven by a
   synthetic probe independent of card authoring.

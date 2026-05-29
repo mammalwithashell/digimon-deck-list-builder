@@ -41,7 +41,7 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 | 13 | B | −6000 DP | BLOCKED-CARD | BT16-101, ST17-07 | `b::q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play` |
 | 14 | B | −6000 DP | BLOCKED-CARD | BT16-101 (1 away) | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
 | 15 | E | Gallantmon (X Antibody) topmost | BLOCKED-CARD | BT19-073, BT17-016, BT12-016, EX3-057 | `e::q15_sequential_de_digivolve_halted_by_x_antibody_immunity` |
-| 16 | E | NO (`<Partition>` not triggered) | BLOCKED-CARD | EX6-057 (1 away) | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
+| 16 | E | NO (`<Partition>` not triggered) | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX6-057 Lilithmon authored + granted body runs as the carrier's own effect (D4/DCGO), so the granted self-delete is OwnEffect → `<Partition>` cause-filter skips it | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
 | 17 | A | NO | BLOCKED-CARD | BT16-102, BT21-036, EX6-057 | `a::q17_magnamon_x_immunity_removes_granted_eot_delete` |
 | 18 | A | NO | BLOCKED-CARD | LM-020 (1 away) | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
 | 19 | D | 0 draws | BLOCKED-CARD | BT7-069, BT2-069, BT3-006 | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
@@ -61,9 +61,9 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 26 | 1, 3, 4, 6–21, 24–30 |
+| BLOCKED-CARD | 25 | 1, 3, 4, 6–15, 17–21, 24–30 |
 | CANDIDATE | 1 | 23 |
-| PASS | 3 | 2, 5, 22 |
+| PASS | 4 | 2, 5, 16, 22 |
 
 Q5 moved BLOCKED-DATA → PASS on 2026-05-29 (change `fix-ad1-025-assembly-data`):
 the engine Assembly executor was implemented (G-ASSEMBLY-PLAY-EXECUTION,
@@ -75,9 +75,12 @@ resolved).
 
 Q2 moved BLOCKED-PRIMITIVE → PASS on 2026-05-29 (change `add-grant-triggered-effect-dsl`):
 EX1-068's `[Main]` grant authored + the granted-trigger dispatch now consults
-`progress_excludes` so a `<Progress>` opponent Digimon doesn't fire the grant
-(G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT Q2 slice resolved; Q16/Q17 still need
-EX6-057 Lilithmon authoring).
+`progress_excludes` so a `<Progress>` opponent Digimon doesn't fire the grant.
+
+Q16 moved BLOCKED-CARD → PASS on 2026-05-29 (same change): EX6-057 Lilithmon
+authored + the granted body now runs as the carrier's OWN effect (D4/DCGO), so
+the granted "[EoT] Delete this" is OwnEffect → `<Partition>` skips it. Q17 still
+needs BT16-102 + BT21-036 + an immunity-removes-granted-slot mechanic.
 
 ## Gaps surfaced (the discovery-wave yield)
 
@@ -109,12 +112,15 @@ EX6-057 Lilithmon authoring).
    declare-then-pay mask), restoring `[Assembly]` to `card_overrides.json`, and authoring the
    `assembly` alt_path in `cards/ad1/AD1-025.yaml`. Q5 → PASS. Gap moved to
    [`resolved-gaps.md`](../resolved-gaps.md).
-3. **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (Q2) — RESOLVED 2026-05-29 (change
-   `add-grant-triggered-effect-dsl`, Q2 slice). The `grant_triggered_effect` step + `GrantedTrigger`
-   slot already existed (EX10-034); the new bit is opponent-set targeting (already supported) + the
-   granted-trigger dispatch consulting `progress_excludes` so a `<Progress>` carrier doesn't fire the
-   grant. EX1-068 `[Main]` authored; Q2 → PASS; gap moved to [`resolved-gaps.md`](../resolved-gaps.md).
-   Q16/Q17 (Lilithmon EX6-057) need the other attribution directions + card authoring — still open.
+3. **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (Q2, Q16) — RESOLVED 2026-05-29 (change
+   `add-grant-triggered-effect-dsl`). The `grant_triggered_effect` step + `GrantedTrigger` slot
+   already existed (EX10-034). Two attribution directions landed: **Q2** — opponent-set targeting +
+   the dispatch consulting `progress_excludes` so a `<Progress>` carrier doesn't fire the grant
+   (EX1-068 `[Main]` authored). **Q16** — the granted body now runs as the carrier's OWN effect
+   (D4/DCGO: granted ActivateClass sourced from the carrier), so a granted self-delete is OwnEffect →
+   `<Partition>` skips it (EX6-057 Lilithmon authored). Q2 + Q16 → PASS; gap moved to
+   [`resolved-gaps.md`](../resolved-gaps.md). **Q17 still open** — needs BT16-102 Magnamon X +
+   BT21-036 Magnamon authored AND an "immunity removes a granted slot" mechanic (card-wave work).
 4. **52 cards to author** — the BLOCKED-CARD bulk. Per-cluster authoring load is tabulated in
    `card-resolution.md`; cluster A is the smallest (7 cards) and three scenarios (Q14, Q16, Q18, Q25,
    Q26, Q27) are a *single* card away.

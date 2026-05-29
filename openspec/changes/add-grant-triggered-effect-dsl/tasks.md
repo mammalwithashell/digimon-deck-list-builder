@@ -24,14 +24,15 @@
 ## 4. Cause-attribution + immunity integration — Q2 done; Q16/Q17 deferred
 
 - [x] 4.1c/4.2/4.3 (Q2 direction) `<Progress>` excludes a granted opponent effect on the attacker — implemented via the `progress_excludes` guard in the dispatch; pinned by Q2; `combat` + granted-attack + aura suites green.
-- [ ] 4.1a/4.1b (Q16/Q17 directions) `<Partition>` does NOT fire when a granted self-delete removes the carrier (granted deletion attributed `OwnEffect` to the carrier); an immune carrier drops the granted slot. DEFERRED — needs EX6-057 Lilithmon to exercise.
+- [x] 4.1a (Q16 direction) `<Partition>` does NOT fire when a granted self-delete removes the carrier — implemented by running the granted body with `effect_source_player = carrier.player` (D4/DCGO) at all three dispatch sites, so the deletion is the carrier-controller's OwnEffect and the existing Partition cause-filter skips it. Pinned by Q16. Two `group6_auras` mirror-tests corrected from `gain_memory(-2)` (controller-relative, assumed grantor) to `lose_memory(2)` to reflect the faithful carrier model.
+- [ ] 4.1b (Q17 direction) an immune carrier drops the granted slot. DEFERRED — needs BT16-102 Magnamon X authoring + the immunity-removal mechanic.
 
 ## 5. Author cards + pin judge-quiz scenarios — EX1-068/Q2 done; EX6-057/Q16/Q17 deferred
 
 - [x] 5.1 Authored EX1-068 Ice Wall! `[Main]`: `grant_triggered_effect` (opponent Digimon, `timing: when_attacking`, `body: [lose_memory: 2]`, `expiry: end_of_opponents_next_turn`); `[Security]` clause kept.
 - [x] 5.2 Un-ignored `judge_quiz::a_immunity_scope::q2_...` — PASSES (Medusamon loses no memory; non-Progress control loses 2). EX1-068's per-card behavioral tests updated (clause now present + shaped).
-- [ ] 5.3 Author EX6-057 Lilithmon `[On Play]`/`[When Digivolving]` grant "[EoT] Delete this" — DEFERRED (card-authoring wave).
-- [ ] 5.4 Un-ignore Q16 / Q17 — DEFERRED (depend on 5.3 + 4.1a/4.1b).
+- [x] 5.3 Authored EX6-057 Lilithmon (`cards/ex6/EX6-057.yaml`): clause 1 `[OP][WD]` grant "[EoT] Delete this" to a selected opponent Digimon (until end of opponent turn); clause 2 `[All Turns][OPT]` `when_would_leave` cost-replacement (delete a Lv5- Digimon to cancel the leave, not by battle); clause 3 `[Opp Turn][OPT]` on-deletion trash opponent's top security. Per-card tests in `tests/cards_behavioral/ex6/ex6_057.rs` (2).
+- [~] 5.4 Q16 un-ignored and PASSES (`e_partition_digixros::q16_...`). Q17 DEFERRED (needs BT16-102 + BT21-036 + 4.1b immunity-removal).
 
 ## 6. Reconcile and verify
 

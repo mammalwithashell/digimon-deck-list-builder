@@ -1643,6 +1643,15 @@ impl Game {
             if self.progress_excludes(handle, Some(source_player)) {
                 continue;
             }
+            // D4 / DCGO: a granted effect is the GRANTEE's own effect once
+            // installed (DCGO sources the granted ActivateClass from the
+            // carrier's top card). Run the body with controller = carrier's
+            // controller so a deletion it causes is the carrier's OwnEffect
+            // (e.g. AD1-… <Partition> does NOT fire on a granted self-delete —
+            // judge-quiz Q16). The grantor (`source_player`) is used only for
+            // the immunity gate above (Q2), never for body attribution.
+            let _ = source_player;
+            let carrier_controller = handle.player;
             self.effect_queue.push_back(QueuedEffect {
                 source_card,
                 source_permanent: Some(handle),
@@ -1653,12 +1662,12 @@ impl Game {
                         .map(|p| p.top_card().card_kind(&self.card_data))
                         .unwrap_or(crate::enums::CardKind::Digimon),
                 ),
-                controller: source_player,
+                controller: carrier_controller,
                 timing,
                 trigger_context: trigger_context.clone(),
                 effect_slot: 0,
                 is_optional: false,
-                is_turn_player: source_player == tp_for_granted,
+                is_turn_player: carrier_controller == tp_for_granted,
                 card_id: String::new(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
@@ -1949,6 +1958,11 @@ impl Game {
             .granted_triggered_for_timing_with_ids(handle, timing);
         let tp_for_granted = self.turn_player();
         for (body_id, source_card, source_player) in granted_entries {
+            // D4 / DCGO: granted body runs as the carrier's own effect (see the
+            // battle-area dispatch above). `source_player` (grantor) is for the
+            // immunity gate only; breeding carriers can't attack so no gate here.
+            let _ = source_player;
+            let carrier_controller = handle.player;
             let source_kind = self
                 .player(handle.player)
                 .breeding_area
@@ -1959,12 +1973,12 @@ impl Game {
                 source_card,
                 source_permanent: Some(handle),
                 source_kind,
-                controller: source_player,
+                controller: carrier_controller,
                 timing,
                 trigger_context: trigger_context.clone(),
                 effect_slot: 0,
                 is_optional: false,
-                is_turn_player: source_player == tp_for_granted,
+                is_turn_player: carrier_controller == tp_for_granted,
                 card_id: String::new(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,

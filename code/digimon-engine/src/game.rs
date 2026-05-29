@@ -3604,11 +3604,20 @@ impl Game {
     ) {
         let entries = self.modifiers.granted_triggered_for_timing(carrier, timing);
         for (source_card, source_player, body) in entries {
+            // Q2 immunity gate: skip when the carrier is unaffected by the
+            // grantor's effects (mirrors the queue dispatcher).
+            if self.progress_excludes(carrier, Some(source_player)) {
+                continue;
+            }
+            // D4 / DCGO: the granted body runs as the carrier's OWN effect
+            // (effect_source_player = carrier.player), so a deletion it causes
+            // is the carrier-controller's OwnEffect (judge-quiz Q16). The
+            // grantor (`source_player`) is used only for the immunity gate.
             let mut ctx = crate::effect_context::EffectContext::new(
                 self,
                 source_card,
                 Some(carrier),
-                source_player,
+                carrier.player,
             );
             body(&mut ctx);
         }

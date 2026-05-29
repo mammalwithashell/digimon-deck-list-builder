@@ -20,19 +20,111 @@
 
 #![allow(unused_imports)]
 
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::TriggerSource;
+
+/// Q16 — RESOLVED 2026-05-29 (change `add-grant-triggered-effect-dsl`): a
+/// Lilithmon (EX6-057)-granted "[End of Your Turn] Delete this Digimon" is the
+/// GRANTEE's own effect (DCGO sources the granted ActivateClass from the
+/// carrier's top card; the engine runs the granted body with
+/// effect_source_player = carrier.player). So when the granted self-delete
+/// removes Paildramon (BT16-025, `<Partition (Blue Lv.4 & Green Lv.4)>`), the
+/// deletion's cause is OwnEffect → `<Partition>`'s cause-filter skips it →
+/// Partition does NOT fire (no mandatory 2-source replay surfaces).
+#[test]
+fn q16_partition_not_triggered_when_leaving_by_own_granted_effect() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX6-057")
+        .expect("EX6-057 Lilithmon loads")
+        .dsl_card("BT16-025")
+        .expect("BT16-025 Paildramon (<Partition>) loads")
+        .dsl_card("BT12-022")
+        .expect("BT12-022 ExVeemon (Blue Lv4) loads")
+        .dsl_card("BT12-050")
+        .expect("BT12-050 Stingmon (Green Lv4) loads")
+        .add_card({
+            let mut c = make_test_card("SEC", "Sec");
+            c.card_kind = CardKind::Digimon;
+            c
+        })
+        .security(1, &["SEC", "SEC"])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    // Player 1's Paildramon WITH its Partition sources (Blue Lv4 ExVeemon +
+    // Green Lv4 Stingmon) so <Partition> is applicable when it leaves.
+    let paildramon = r.place_stack(1, &["BT12-022", "BT12-050", "BT16-025"]);
+
+    // Player 0 plays Lilithmon → [On Play] grants 1 opponent Digimon
+    // "[End of Your Turn] Delete this Digimon."
+    let lilithmon = r.place_on_field(0, "EX6-057", None);
+    r.fire_on_play(0, lilithmon.index as usize);
+
+    // Resolve the [On Play] target select — Paildramon is the only opponent
+    // Digimon, so the first valid action targets it.
+    if let Some(sel) = r.game.pending_selection.as_ref() {
+        let who = sel.selecting_player;
+        let aid = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(who, aid);
+    }
+
+    // The grant must be installed on Paildramon.
+    assert!(
+        !r.game
+            .modifiers
+            .granted_triggered_for_timing(paildramon, EffectTiming::EndOfYourTurn)
+            .is_empty(),
+        "Lilithmon's [On Play] must grant Paildramon the [End of Your Turn] delete"
+    );
+
+    // It's the grantee's turn (player 1) when the granted [EoT] fires.
+    r.set_first_player(1);
+    let p1_sec_before = r.security_count(1);
+
+    // Fire the granted "[End of Your Turn] Delete this Digimon".
+    r.game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(paildramon));
+    r.game.drain_effect_queue();
+
+    // Paildramon was deleted by its OWN (granted) effect.
+    let paildramon_alive = r
+        .game
+        .players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == "BT16-025");
+    assert!(!paildramon_alive, "the granted [EoT] delete must remove Paildramon");
+
+    // <Partition> must NOT fire: no mandatory 2-source replay selection, and
+    // the partition sources land in trash rather than being replayed onto the
+    // field. (Lilithmon's own [Opp Turn] clause 3 is mandatory/auto and does
+    // not surface a selection.)
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Partition must NOT fire on a granted (own-effect) self-delete — no \
+         2-source replay selection should surface (judge-quiz Q16)"
+    );
+    let sources_replayed = r.game.players[1].battle_area.iter().any(|p| {
+        let id = p.top_card().card_id(&r.game.card_data);
+        id == "BT12-022" || id == "BT12-050"
+    });
+    assert!(
+        !sources_replayed,
+        "Partition did not fire, so ExVeemon/Stingmon must NOT be replayed onto the field"
+    );
+    let _ = p1_sec_before;
+}
+
 /// Q15 — LordKnightmon (X Antibody) (BT19-073) does `<De-Digivolve 1>` repeatedly;
 /// after the first, Gallantmon (X Antibody) (EX8-073)'s [All Turns] immunity halts
 /// the rest. Judge: Gallantmon (X Antibody) is the topmost card.
 #[test]
 #[ignore = "BLOCKED-CARD: needs BT19-073 (LordKnightmon X), BT17-016 (Gallantmon), BT12-016 (WarGrowlmon), EX3-057 (Growlmon). BT19-072, BT20-102, EX8-073, EX4-006 implemented."]
 fn q15_sequential_de_digivolve_halted_by_x_antibody_immunity() {}
-
-/// Q16 — Lilithmon (EX6-057)-granted "[EoT] Delete this" on Paildramon (BT16-025)
-/// counts as leaving by its OWN effect. Judge: `<Partition>` does NOT trigger.
-/// (One card away — Paildramon/ExVeemon/Stingmon all implemented.)
-#[test]
-#[ignore = "BLOCKED-CARD: needs EX6-057 (Lilithmon). BT16-025, BT12-022, BT12-050 implemented."]
-fn q16_partition_not_triggered_when_leaving_by_own_granted_effect() {}
 
 /// Q25 — Miraculous Mega Knight (BT17-095) [All Turns] fires on DigiXros departure
 /// of WarGreymon (AD1-004) (departure ≠ battle). Judge: YES, triggers.

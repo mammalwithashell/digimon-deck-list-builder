@@ -9,10 +9,10 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
 
-## Grant a triggered effect to an opponent's permanent (Q2 slice) — 2026-05-29
+## Grant a triggered effect to an opponent's permanent (Q2 + Q16) — 2026-05-29
 
-- **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (opponent-targeting + `<Progress>`
-  cause-attribution slice) — closed by change `add-grant-triggered-effect-dsl`.
+- **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (opponent-targeting + both
+  cause-attribution directions) — closed by change `add-grant-triggered-effect-dsl`.
   The `grant_triggered_effect` DSL step and `ModifierType::GrantedTrigger` slot
   already existed from the EX10-034 grant-to-binding work; a predicate `target`
   (`CompiledModifierTarget::Filter`) already walks BOTH players' battle areas and
@@ -27,14 +27,27 @@ When a reusable gap closes, move the full entry here and leave any card-specific
   "the grantor's effect" from the carrier's perspective, so a `<Progress>` (or
   `ImmunityToOpponentEffects`) opponent Digimon does not fire the grant while it
   attacks (judge-quiz Q2: Medusamon loses no memory; a non-Progress control loses 2).
-- **Card content:** EX1-068 Ice Wall!'s `[Main]` clause authored —
-  `grant_triggered_effect` → opponent Digimon, `timing: when_attacking`,
-  `body: [lose_memory: 2]`, `expiry: end_of_opponents_next_turn`.
-- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz q2_medusamon`; `--test cards_behavioral ex1_068` (6); regression: `--test cards_behavioral ex10_034`, `--test combat effect_granted_attack`, `--test dsl group6_auras` green.
-- **Still open (deferred to card authoring):** Q16/Q17 (Lilithmon EX6-057's
-  `[End of Your Turn] Delete this` grant) need the other attribution directions —
-  the granted self-delete read as the carrier's OWN effect (`<Partition>` does not
-  fire) and the immune carrier dropping the granted slot. These land with EX6-057.
+- **Q16 — granted body runs as the carrier's OWN effect.** DCGO sources the
+  granted ActivateClass from `selectedPermanent.TopCard` (the carrier), so the
+  granted-trigger dispatch now runs the body with `effect_source_player =
+  carrier.player` (D4) — at all three dispatch sites (`enqueue_from_permanent`
+  battle + breeding, and the legacy `fire_granted_triggered_effects`). A deletion
+  the granted body causes is therefore the carrier-controller's OwnEffect, so
+  `<Partition>`'s cause-filter skips it (judge-quiz Q16). NOTE: the grantor
+  (`source_player`) is used ONLY for the Q2 immunity gate, never for body
+  attribution. Two pre-existing `group6_auras` mirror-tests used `gain_memory(-2)`
+  (controller-relative) assuming controller=grantor; they were corrected to
+  `lose_memory(2)` (turn-relative, matching EX1-068) to reflect the faithful
+  carrier-attribution model.
+- **Card content:** EX1-068 Ice Wall! `[Main]` (`grant_triggered_effect` →
+  opponent Digimon, `when_attacking`, `lose_memory: 2`,
+  `end_of_opponents_next_turn`); EX6-057 Lilithmon (3 clauses: the `[OP][WD]`
+  grant of `[EoT] Delete this`, the `when_would_leave` cost-replacement, the
+  on-deletion security trash).
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz q2_medusamon`, `--test judge_quiz q16`, `--test cards_behavioral ex1_068` (6), `--test cards_behavioral ex6_057` (2); regression: `--test cards_behavioral ex10_034` (14), `--test combat effect_granted_attack`, `--test dsl group6_auras` (49) green; full suite has only the 17 pre-existing failures.
+- **Still open — Q17 only (deferred to card-wave):** Magnamon X (BT16-102) +
+  Magnamon (BT21-036) authoring AND an "immunity removes a granted slot"
+  mechanic (the immune carrier drops the granted `[EoT] Delete`).
 
 ## Digi-Egg routing on return-to-deck — 2026-05-29
 

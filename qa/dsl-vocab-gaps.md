@@ -1141,11 +1141,12 @@ granted-trigger dispatch (`enqueue_from_permanent`) now skips firing when the
 carrier is unaffected by the GRANTOR's effects (`progress_excludes`). EX1-068's
 `[Main]` clause is authored; judge-quiz **Q2** pins it (Medusamon `<Progress>`
 loses no memory; a non-Progress control loses 2). Full note in
-`qa/resolved-gaps.md`. **Still open (separate consumers, need card authoring):**
-Q16/Q17 (Lilithmon EX6-057's `[EoT] Delete this` grant) need the OTHER
-attribution directions — the granted self-delete counting as the carrier's OWN
-effect (`<Partition>` doesn't fire) and the immune carrier dropping the granted
-slot — verified once EX6-057 is authored.
+`qa/resolved-gaps.md`. **Q16 also closed (2026-05-29):** EX6-057 Lilithmon
+authored; the granted body now runs as the carrier's OWN effect (D4/DCGO —
+sourced from `selectedPermanent.TopCard`), so its granted `[EoT] Delete this` is
+OwnEffect and `<Partition>` skips it (judge-quiz Q16 PASS). **Still open — Q17
+only:** needs BT16-102 Magnamon X + BT21-036 Magnamon authored AND an "immunity
+removes a granted slot" mechanic (the immune carrier dropping the granted delete).
 
 [ORIGINAL ENTRY BELOW]
 

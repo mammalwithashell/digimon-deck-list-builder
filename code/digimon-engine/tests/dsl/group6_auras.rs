@@ -2035,7 +2035,7 @@ effects:
           timing: when_attacking
           expiry: end_of_opponents_next_turn
           body:
-            - gain_memory: -2
+            - lose_memory: 2
 "#;
 
     let mut opp_a = make_test_card("TEST-DSL-GRANT-OPP-A", "Opp A");
@@ -2135,7 +2135,8 @@ effects:
         "own ally must NOT receive opponent-targeted grant"
     );
 
-    // Fire opp A's WhenAttacking — granted body runs (gain_memory: -2).
+    // Fire opp A's WhenAttacking — granted body runs (lose_memory: 2,
+    // controller-independent so the −2 delta holds under the D4 carrier model).
     let starting_memory = runner.game.memory;
     runner.game.enqueue_triggered(
         EffectTiming::WhenAttacking,
@@ -2814,13 +2815,14 @@ fn ex1_068_ice_wall_grants_when_attacking_loses_2_memory_to_all_opp_digimon() {
                 EffectTiming::WhenAttacking,
                 Expiry::EndOfOpponentsNextTurn,
                 |inner| {
-                    // "Lose 2 memory" — gains memory on opp's side
-                    // is `gain_memory(-2)` from source's perspective.
-                    // The granted body's source_player is the grantor
-                    // (player 0), so gain_memory(-2) reduces the
-                    // grantor's memory which is what "they lose 2
-                    // memory" means in printed text.
-                    inner.gain_memory(-2);
+                    // "[When Attacking] lose 2 memory" — the granted effect is
+                    // the GRANTEE's own effect (D4 / DCGO sources it from the
+                    // carrier), so the body runs with effect_source_player =
+                    // carrier.player. `lose_memory(2)` mutates the shared gauge
+                    // by −2 (turn-player-relative), matching EX1-068's actual
+                    // `lose_memory: 2` body — controller-independent, so the
+                    // −2/−4 deltas below hold regardless of grantor/grantee.
+                    inner.lose_memory(2);
                 },
             );
         }
