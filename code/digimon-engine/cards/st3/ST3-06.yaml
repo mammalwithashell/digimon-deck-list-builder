@@ -1,0 +1,14 @@
+card: ST3-06
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 5000
+traits: [Holy Beast]
+form: Champion
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2

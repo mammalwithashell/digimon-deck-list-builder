@@ -4909,6 +4909,12 @@ impl<'a> EffectContext<'a> {
                 .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();
+        if modifier == ModifierType::ChangeDp
+            && self.game.permanent_is_digimon_for_rules(target)
+            && self.game.effective_dp(target).is_some_and(|dp| dp <= 0)
+        {
+            self.game.delete_permanent_with_effects(target);
+        }
     }
 
     pub fn add_declarative_modifier(

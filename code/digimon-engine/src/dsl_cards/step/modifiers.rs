@@ -175,6 +175,7 @@ pub fn try_run(
         CompiledStep::AddPlayerModifier {
             target_player,
             modifier,
+            value,
             expiry,
         } => {
             let Some(expiry) = resolve_expiry("add_player_modifier", expiry) else {
@@ -189,7 +190,7 @@ pub fn try_run(
                 player,
                 PlayerModifierEntry::simple(
                     modifier_ty,
-                    0,
+                    *value,
                     expiry,
                     ctx.source_permanent,
                     ctx.player,

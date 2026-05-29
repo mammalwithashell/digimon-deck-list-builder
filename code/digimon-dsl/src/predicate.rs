@@ -267,6 +267,14 @@ pub struct PredicateSpec {
     pub event_target_level_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_level_gte: Option<DpConstraint>,
+    /// Match the event target's effective DP. Deletion events read the
+    /// deleted-object snapshot captured immediately before removal.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_dp_eq: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_dp_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_dp_gte: Option<DpConstraint>,
     /// Case-insensitive substring scan against the *event target*
     /// permanent's card name — i.e. the digivolving / played / deleted
     /// permanent carried on the triggered-effect read context. Used by

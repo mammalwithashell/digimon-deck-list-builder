@@ -1795,6 +1795,8 @@ pub struct AddModifierArgs {
 pub struct AddPlayerModifierArgs {
     pub target_player: PlayerRef,
     pub modifier: String,
+    #[serde(default)]
+    pub value: i32,
     pub expiry: String,
 }
 
