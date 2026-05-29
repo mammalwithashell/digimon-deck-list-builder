@@ -698,6 +698,13 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::TrashBottomSources { target, count } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                let _ = ctx.trash_bottom_sources(h, *count);
+            }
+            true
+        }
 
         _ => false,
     }

@@ -30,6 +30,22 @@ class CreateGameRequest(BaseModel):
     agent_action_delay_ms: int = Field(350, ge=0, le=3000)
     record_actions: bool = False
     record_tensors: bool = False
+    # Scenario-staging knobs for the browser-dev E2E workflow. The Rust
+    # engine path uses them; the Tauri desktop path ignores them.
+    #
+    # `seed` — explicit RNG seed. Without one the server generates a
+    # cryptographic random seed (still recorded in meta for /debug
+    # export). Pin this to replay the exact same deck shuffle every time.
+    #
+    # `action_script` — list of HUMAN action IDs to apply after engine
+    # init + initial agent autoplay. Lets you fast-forward into a
+    # mid-game scenario (e.g. "the state where DNA digivolve is legal")
+    # without playing through manually. Agent steps between scripted
+    # human actions are auto-played via the same greedy loop the live
+    # /games/<id>/actions endpoint uses, so the script only needs to
+    # capture *your* decisions.
+    seed: Optional[int] = Field(None, ge=0)
+    action_script: Optional[list[int]] = None
 
 
 class GameActionRequest(BaseModel):
@@ -66,6 +82,79 @@ class CreateDebugGameRequest(BaseModel):
     starting_hand2: list[str] = Field(default_factory=list)
     auto_mulligan: str = "keep"  # "keep" or "manual"
     initial_memory: int = Field(0, ge=-10, le=10)
+    # Rust-backed scenario staging (add-ui-scenario-test-substrate).
+    # `seed` pins the shuffle; `phase`/`turn` set scalar state; `zones`
+    # carries the rich per-player board staging from a scenario fixture.
+    # All optional — the legacy fields above still drive the existing
+    # e2e fixture unchanged.
+    seed: Optional[int] = Field(None, ge=0)
+    phase: Optional[str] = None
+    turn: Optional[int] = Field(None, ge=1)
+    zones: Optional[dict[str, "DebugZoneSpec"]] = None
+
+
+class DebugFieldStack(BaseModel):
+    """One battle-area permanent: a bottom-to-top digivolution stack with
+    suspend state and turn-played value."""
+
+    stack: list[str]
+    is_suspended: bool = False
+    turn_played: int = 0
+
+
+class DebugZoneSpec(BaseModel):
+    """Per-player zone staging. Any field present REPLACES the dealt
+    contents of that zone (the loader clears it first)."""
+
+    hand: Optional[list[str]] = None
+    deck_top: Optional[list[str]] = None  # index 0 = next draw
+    security: Optional[list[str]] = None  # top -> bottom
+    trash: Optional[list[str]] = None
+    field: Optional[list[DebugFieldStack]] = None
+    breeding: Optional[list[str]] = None  # bottom -> top
+
+
+class DebugInjectCardRequest(BaseModel):
+    player_id: int = Field(ge=1, le=2)
+    card_id: str
+    zone: str = "hand"  # hand | deck_top | security_top | trash
+
+
+class DebugPlaceOnFieldRequest(BaseModel):
+    player_id: int = Field(ge=1, le=2)
+    stack: list[str]  # bottom-to-top
+    is_suspended: bool = False
+    turn_played: int = 0
+
+
+class DebugBulkSetupRequest(BaseModel):
+    """Replace multiple zones in one call. Mirrors the create-time `zones`
+    staging for an already-active game."""
+
+    zones: dict[str, "DebugZoneSpec"]
+    memory: Optional[int] = None
+    phase: Optional[str] = None
+    turn: Optional[int] = Field(None, ge=1)
+
+
+class DebugAssertion(BaseModel):
+    """One engine assertion from a scenario fixture. `kind` selects the
+    check; the remaining fields are kind-specific (see qa/scenarios/README)."""
+
+    kind: str
+    value: Optional[int] = None
+    player: Optional[int] = None
+    field_index: Optional[int] = None
+    card_id: Optional[str] = None
+    zone: Optional[str] = None
+    action_id: Optional[int] = None
+    event_type: Optional[str] = None
+    expected: Optional[bool] = None
+    count: Optional[int] = None
+
+
+class DebugEvaluateRequest(BaseModel):
+    assertions: list[DebugAssertion]
 
 
 class SetMemoryRequest(BaseModel):
@@ -122,6 +211,13 @@ class ClearZoneRequest(BaseModel):
 
 class SetPhaseRequest(BaseModel):
     phase: str  # GamePhase name e.g. "Main", "Breeding"
+
+
+# Resolve forward references for the debug-staging models that reference
+# `DebugZoneSpec` before its definition (module uses `from __future__ import
+# annotations`, so all hints are strings until rebuilt).
+CreateDebugGameRequest.model_rebuild()
+DebugBulkSetupRequest.model_rebuild()
 
 
 # ── Replay ───────────────────────────────────────────────────────────────

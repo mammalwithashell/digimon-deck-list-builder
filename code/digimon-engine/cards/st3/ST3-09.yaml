@@ -1,0 +1,19 @@
+card: ST3-09
+name: Angewomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 6
+dp: 7000
+traits: [Archangel]
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+effects:
+  - when: when_digivolving
+    condition: { security_count_lte: 3 }
+    process:
+      - recover: { of: you, count: 1 }

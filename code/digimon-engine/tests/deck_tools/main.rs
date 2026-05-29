@@ -7,7 +7,43 @@ use digimon_engine::deck_tools::{
     parse_tts, summarize_deck, tested_cards_sorted, validate_deck, validate_deck_for_game_mode,
     validate_deck_for_mode,
 };
-use digimon_engine::{GameMode, Rarity};
+use digimon_engine::{build_registry, CardData, GameMode, HeadlessRunner, Rarity};
+use serde::Deserialize;
+use std::collections::{BTreeMap, HashMap};
+
+const STARTER_DECKS_JSON: &str = include_str!("../../../../data/starter_decks.json");
+const CARDS_JSON: &str = include_str!("../../../../data/cards.json");
+
+#[derive(Debug, Deserialize)]
+struct StarterDecksFixture {
+    starter_decks: BTreeMap<String, StarterDeckFixture>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StarterDeckFixture {
+    id: String,
+    name: String,
+    decklist: Vec<String>,
+}
+
+fn starter_decks_fixture() -> StarterDecksFixture {
+    serde_json::from_str(STARTER_DECKS_JSON).expect("starter_decks.json parses")
+}
+
+fn st3_starter_deck() -> Vec<String> {
+    starter_decks_fixture()
+        .starter_decks
+        .get("ST-3")
+        .expect("ST-3 fixture exists")
+        .decklist
+        .clone()
+}
+
+fn full_card_data() -> HashMap<String, CardData> {
+    CardData::load_from_str(CARDS_JSON).expect("cards.json parses")
+}
+
+const DECK_LIBRARY_JSON: &str = include_str!("../../../../data/deck_library.json");
 
 // ─── Card ID pattern ───────────────────────────────────────────────────
 
@@ -135,6 +171,81 @@ fn tested_cards_allowlist_is_consistent_with_membership_helper() {
         assert!(is_card_tested(first));
     }
     assert!(!is_card_tested("ZZZ-999"));
+}
+
+#[test]
+fn st3_starter_deck_fixture_has_canonical_counts() {
+    let fixture = starter_decks_fixture();
+    let st3 = fixture
+        .starter_decks
+        .get("ST-3")
+        .expect("ST-3 fixture exists");
+    assert_eq!(st3.id, "ST-3");
+    assert_eq!(st3.name, "Starter Deck Heaven's Yellow");
+
+    let counts = summarize_deck(&st3.decklist);
+    let expected = HashMap::from([
+        ("ST3-01".to_string(), 4_u32),
+        ("ST3-02".to_string(), 4),
+        ("ST3-03".to_string(), 4),
+        ("ST3-04".to_string(), 4),
+        ("ST3-05".to_string(), 2),
+        ("ST3-06".to_string(), 4),
+        ("ST3-07".to_string(), 4),
+        ("ST3-08".to_string(), 4),
+        ("ST3-09".to_string(), 4),
+        ("ST3-10".to_string(), 2),
+        ("ST3-11".to_string(), 2),
+        ("ST3-12".to_string(), 4),
+        ("ST3-13".to_string(), 4),
+        ("ST3-14".to_string(), 2),
+        ("ST3-15".to_string(), 4),
+        ("ST3-16".to_string(), 2),
+    ]);
+
+    assert_eq!(st3.decklist.len(), 54);
+    assert_eq!(counts, expected);
+    assert!(out_of_set_cards(&st3.decklist).is_empty());
+
+    let validation = validate_deck(&st3.decklist);
+    assert!(
+        validation.is_valid,
+        "ST-3 starter deck should validate cleanly: {:?}",
+        validation.errors
+    );
+}
+
+#[test]
+fn st3_starter_deck_cards_are_registered_as_implemented() {
+    let implemented: std::collections::HashSet<String> =
+        build_registry().registered_card_ids().into_iter().collect();
+    for card_id in summarize_deck(&st3_starter_deck()).keys() {
+        assert!(
+            implemented.contains(card_id.as_str()),
+            "{card_id} should be registered by the Rust card registry"
+        );
+    }
+}
+
+#[test]
+fn st3_starter_deck_initializes_headless_runner() {
+    let deck = st3_starter_deck();
+    let card_data = full_card_data();
+    let runner = HeadlessRunner::new(
+        deck.clone(),
+        deck,
+        &card_data,
+        false,
+        false,
+        false,
+        Some(3),
+    );
+
+    assert!(
+        runner.is_ok(),
+        "Rust headless runner should accept the canonical ST-3 deck: {:?}",
+        runner.err()
+    );
 }
 
 // ─── classify_parsed ──────────────────────────────────────────────────
@@ -515,6 +626,51 @@ fn validate_eden_uses_custom_banlist_and_pair() {
         .errors
         .iter()
         .any(|e| e.contains("Choice restriction violated")));
+}
+
+#[test]
+fn st2_cocytus_blue_starter_artifact_has_official_counts_and_valid_sizes() {
+    let root: serde_json::Value =
+        serde_json::from_str(DECK_LIBRARY_JSON).expect("deck_library.json parses");
+    let decklist = root["archetypes"]["ST-2 Cocytus Blue"]["decklists"][0]["decklist"]
+        .as_str()
+        .expect("ST-2 decklist uses deck_library string convention");
+    let deck: Vec<String> = serde_json::from_str(decklist).expect("ST-2 decklist parses");
+
+    let counts = summarize_deck(&deck);
+    let expected = [
+        ("ST2-01", 4u32),
+        ("ST2-02", 4),
+        ("ST2-03", 4),
+        ("ST2-04", 4),
+        ("ST2-05", 4),
+        ("ST2-06", 2),
+        ("ST2-07", 4),
+        ("ST2-08", 4),
+        ("ST2-09", 4),
+        ("ST2-10", 2),
+        ("ST2-11", 2),
+        ("ST2-12", 4),
+        ("ST2-13", 4),
+        ("ST2-14", 4),
+        ("ST2-15", 2),
+        ("ST2-16", 2),
+    ];
+    for (card_id, count) in expected {
+        assert_eq!(counts.get(card_id), Some(&count), "{card_id} count");
+    }
+    assert_eq!(deck.len(), 54);
+
+    let parsed = classify_parsed(deck.clone());
+    assert_eq!(parsed.egg_deck.len(), 4);
+    assert_eq!(parsed.main_deck.len(), 50);
+
+    let result = validate_deck_for_game_mode(&deck, "no_restriction").unwrap();
+    assert!(
+        result.is_valid,
+        "starter artifact should satisfy construction sizes/copy limits in no_restriction mode: {:?}",
+        result.errors
+    );
 }
 
 // ─── summarize_deck ───────────────────────────────────────────────────

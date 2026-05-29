@@ -201,3 +201,37 @@ export const MEMORY_MAX = 10;
 // ─── Pagination ────────────────────────────────────────────────────
 
 export const CARDS_PER_PAGE = 40;
+
+// ─── Desktop Graphics ──────────────────────────────────────────────
+//
+// Fixed list of supported desktop window sizes, matching DCGO's preset
+// list exactly. The Graphics Settings page renders these in order; the
+// CanvasScaler reads the current selection from `useUiStore` and applies
+// it via Tauri's window API.
+
+export interface ResolutionPreset {
+  width: number;
+  height: number;
+}
+
+export const RESOLUTION_PRESETS: readonly ResolutionPreset[] = [
+  { width: 1024, height: 576 },
+  { width: 1280, height: 720 },
+  { width: 1600, height: 900 },
+  { width: 1920, height: 1080 },
+  { width: 2560, height: 1440 },
+  { width: 3440, height: 1440 },
+  { width: 3840, height: 2160 },
+  { width: 5160, height: 2160 },
+] as const;
+
+/** Default startup size for first-launch users. Matches the second
+ *  preset and the Tauri default window size so there is no resize flash
+ *  between pre-React window creation and post-React preset application. */
+export const DEFAULT_PRESET: ResolutionPreset = { width: 1280, height: 720 };
+
+/** The internal canvas the game UI authors against. Every preset is just
+ *  this size scaled uniformly by `min(w/1920, h/1080)`. Do NOT change
+ *  without re-auditing every fixed-pixel size in the game board CSS. */
+export const DESIGN_CANVAS: ResolutionPreset = { width: 1920, height: 1080 };
+

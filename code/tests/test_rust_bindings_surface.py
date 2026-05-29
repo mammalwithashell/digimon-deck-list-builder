@@ -282,6 +282,13 @@ class TestLoadImplementedCardIds:
         # Test cards (TEST-001..022) are always registered
         assert any(s.startswith("TEST-") for s in ids)
 
+    def test_includes_complete_st5_machine_black_pool(self):
+        from digimon_engine import load_implemented_card_ids
+
+        ids = load_implemented_card_ids()
+
+        assert {f"ST5-{n:02d}" for n in range(1, 17)} <= ids
+
     def test_unknown_not_in_set(self):
         from digimon_engine import load_implemented_card_ids
         ids = load_implemented_card_ids()
@@ -307,7 +314,10 @@ class TestTensorProfiles:
 
         profile = get_tensor_profile()
 
-        assert TENSOR_PROFILE_ID == "standard_compact_v1"
+        # After `flip-engine-default-to-lite-deck-v2`, the engine default is
+        # `standard_lite_deck_v2`. `TENSOR_PROFILE_ID` is the symbolic export
+        # for whichever profile is the default — they must agree.
+        assert TENSOR_PROFILE_ID == "standard_lite_deck_v2"
         assert profile.id == TENSOR_PROFILE_ID
         assert profile.game_mode == "standard"
 
@@ -321,9 +331,28 @@ class TestTensorProfiles:
     def test_tensor_profile_positions(self):
         from digimon_engine import TENSOR_SIZE, get_tensor_profile
 
+        # Default profile is now `standard_lite_deck_v2` (8850 floats). The
+        # earlier v1-pinned assertions for compact_v1 moved to the
+        # standard_compact_v1-specific test below.
         profile = get_tensor_profile()
-        assert profile.id == "standard_compact_v1"
+        assert profile.id == "standard_lite_deck_v2"
         assert profile.tensor_size == TENSOR_SIZE
+        assert profile.tensor_size == 8850
+        # Profile shape is self-consistent: every position is either a card
+        # slot or a scalar slot, no gaps, no overlap.
+        assert (
+            profile.card_id_slot_count + profile.scalar_slot_count
+            == profile.tensor_size
+        )
+        assert len(profile.card_id_positions) == profile.card_id_slot_count
+        assert len(profile.scalar_positions) == profile.scalar_slot_count
+
+    def test_standard_compact_v1_profile_positions(self):
+        from digimon_engine import get_tensor_profile
+
+        profile = get_tensor_profile("standard_compact_v1")
+        assert profile.id == "standard_compact_v1"
+        assert profile.tensor_size == 1375
         assert profile.card_id_slot_count == 520
         assert profile.scalar_slot_count == 855
         assert len(profile.card_id_positions) == 520
@@ -356,7 +385,10 @@ class TestTensorProfiles:
             list_observation_profiles,
         )
 
-        assert DEFAULT_OBSERVATION_PROFILE == "standard_lite_v2"
+        # After `flip-engine-default-to-lite-deck-v2`, the default is
+        # `standard_lite_deck_v2`. This test exercises the explicit
+        # standard_lite_v2 profile, which must still be registered.
+        assert DEFAULT_OBSERVATION_PROFILE == "standard_lite_deck_v2"
         assert "standard_lite_v2" in list_observation_profiles()
         layout = get_observation_layout("standard_lite_v2")
 
@@ -389,6 +421,48 @@ class TestTensorProfiles:
 
 def _starter_decks():
     return ["ST1-01"] * 5 + ["ST1-03"] * 45, ["ST1-01"] * 5 + ["ST1-03"] * 45
+
+
+def _st5_machine_black_deck():
+    return (
+        ["ST5-01"] * 4
+        + ["ST5-02"] * 4
+        + ["ST5-03"] * 4
+        + ["ST5-04"] * 4
+        + ["ST5-05"] * 4
+        + ["ST5-06"] * 4
+        + ["ST5-07"] * 4
+        + ["ST5-08"] * 2
+        + ["ST5-09"] * 4
+        + ["ST5-10"] * 4
+        + ["ST5-11"] * 2
+        + ["ST5-12"] * 2
+        + ["ST5-13"] * 2
+        + ["ST5-14"] * 4
+        + ["ST5-15"] * 4
+        + ["ST5-16"] * 2
+    )
+
+
+def test_rust_headless_game_resets_with_exact_st5_machine_black_starter():
+    import numpy as np
+    import digimon_engine
+
+    deck = _st5_machine_black_deck()
+    runner = digimon_engine.RustHeadlessGame(
+        deck,
+        deck,
+        seed=123,
+        observation_profile="standard_lite_v2",
+    )
+    mask = np.asarray(runner.get_action_mask())
+    state = runner.get_rl_state()
+
+    assert len(deck) == 54
+    assert state["game_over"] is False
+    assert state["phase"] == "Mulligan"
+    assert mask.shape == (digimon_engine.ACTION_SPACE_SIZE,)
+    assert mask.any()
 
 
 def test_rust_headless_game_exposes_rl_state_snapshot():

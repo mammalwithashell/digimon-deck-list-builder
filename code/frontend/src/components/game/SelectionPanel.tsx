@@ -74,27 +74,29 @@ export function SelectionPanel({
       isValid: actionMask[SELECTION.OWN_SECURITY_START + i] === 1,
     }));
   } else if (isEffectChoice) {
-    // Use enriched effectChoices if available, otherwise fall back to generic
+    // Engine uses HAND_EFFECT_START (30+) for effect-choice action IDs,
+    // NOT the frontend's `EFFECT_CHOICE_START` (1000+). The old fallback
+    // scanned the wrong range and rendered nothing. Prefer the enriched
+    // `effectChoices` from the engine (it carries the actual action_id);
+    // fall back to scanning `pendingSelection.validIndices` if no labels.
     if (pendingSelection.effectChoices && pendingSelection.effectChoices.length > 0) {
-      cards = pendingSelection.effectChoices.map((choice) => ({
-        cardId: choice.cardId,
-        actionId: SELECTION.EFFECT_CHOICE_START + choice.index,
-        isValid: actionMask[SELECTION.EFFECT_CHOICE_START + choice.index] === 1,
-        label: choice.label,
-      }));
+      cards = pendingSelection.effectChoices.map((choice) => {
+        const actionId =
+          choice.actionId ?? SELECTION.EFFECT_CHOICE_START + choice.index;
+        return {
+          cardId: choice.cardId,
+          actionId,
+          isValid: actionMask[actionId] === 1,
+          label: choice.label,
+        };
+      });
     } else {
-      const choices: CardEntry[] = [];
-      for (let i = SELECTION.EFFECT_CHOICE_START; i <= SELECTION.EFFECT_CHOICE_END; i++) {
-        if (actionMask[i] === 1) {
-          choices.push({
-            cardId: `effect-${i - SELECTION.EFFECT_CHOICE_START}`,
-            actionId: i,
-            isValid: true,
-            label: `Effect ${i - SELECTION.EFFECT_CHOICE_START + 1}`,
-          });
-        }
-      }
-      cards = choices;
+      cards = pendingSelection.validIndices.map((actionId, i) => ({
+        cardId: `effect-${i}`,
+        actionId,
+        isValid: actionMask[actionId] === 1,
+        label: `Effect ${i + 1}`,
+      }));
     }
   }
 

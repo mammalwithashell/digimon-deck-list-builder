@@ -1,0 +1,15 @@
+card: ST2-04
+name: Bearmon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 4000
+traits: [Beast]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0

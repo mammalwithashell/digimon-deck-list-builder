@@ -153,6 +153,7 @@ impl CardEffect for DslCardEffect {
                         modifier,
                         while_condition,
                         applies_to_opponent_security_dp,
+                        applies_to_own_security_dp,
                         ..
                     } => {
                         for e in lower_aura::lower_all(
@@ -169,6 +170,7 @@ impl CardEffect for DslCardEffect {
                             modifier.clone(),
                             while_condition.clone(),
                             *applies_to_opponent_security_dp,
+                            *applies_to_own_security_dp,
                             self.raw.clone(),
                         ) {
                             out.push(e);

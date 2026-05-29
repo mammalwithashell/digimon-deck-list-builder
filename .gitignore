@@ -65,3 +65,7 @@ code/tests/api/fixtures/*.onnx
 
 # Agent worktrees
 .claude/worktrees/
+
+# Playwright e2e artifacts
+code/frontend/test-results/
+code/frontend/playwright-report/

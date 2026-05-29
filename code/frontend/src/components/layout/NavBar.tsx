@@ -42,6 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
     desktopOnly: true,
     items: [
       { to: '/models', label: 'AI Models' },
+      { to: '/settings/graphics', label: 'Graphics Settings' },
     ],
   },
   {
