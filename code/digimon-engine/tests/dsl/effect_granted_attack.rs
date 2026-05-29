@@ -39,6 +39,7 @@ effects:
         attacker,
         targets,
         without_suspending,
+        ignore_summoning_sickness,
         optional,
         prompt,
         cost_upgrade,
@@ -49,9 +50,47 @@ effects:
     assert_eq!(*attacker, CompiledBindingRef::Source);
     assert_eq!(*targets, CompiledAttackTargetSpec::Player);
     assert!(*without_suspending);
+    assert!(!*ignore_summoning_sickness);
     assert!(*optional);
     assert_eq!(prompt, &None);
     assert_eq!(cost_upgrade, &None);
+}
+
+#[test]
+fn may_attack_now_ignore_summoning_sickness_yaml_lowers_to_compiled_step() {
+    let yaml = r#"
+card: TEST-MAY-ATTACK-TEMPORARY
+name: May Attack Temporary Window Test
+kind: digimon
+color: [red]
+level: 4
+cost: 4
+dp: 5000
+effects:
+  - when: when_digivolving
+    process:
+      - may_attack_now:
+          attacker: this
+          targets: player
+          optional: true
+          ignore_summoning_sickness: true
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("yaml parses");
+    let compiled = compile(&spec).expect("yaml compiles");
+    let CompiledClause::Triggered(clause) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::MayAttackNow {
+        ignore_summoning_sickness,
+        ..
+    } = &clause.process[0]
+    else {
+        panic!("expected may_attack_now step");
+    };
+    assert!(
+        *ignore_summoning_sickness,
+        "temporary attack windows must compile the explicit summoning-sickness bypass"
+    );
 }
 
 #[test]
@@ -733,4 +772,46 @@ fn may_attack_now_event_target_respects_summoning_sickness() {
         "a summoning-sick event-played Digimon has no legal attack, so \
          may_attack_now installs no prompt (generic attack-eligibility rule)"
     );
+}
+
+#[test]
+fn may_attack_now_event_target_can_opt_into_temporary_attack_window() {
+    let observer = r#"
+card: TEST-ALLY-PLAYED-OBSERVER-TEMPORARY
+name: Ally Played May Attack Temporary Observer
+kind: digimon
+color: [red]
+level: 4
+cost: 4
+dp: 5000
+effects:
+  - when: on_any_digimon_played
+    process:
+      - may_attack_now:
+          attacker: event_target
+          targets: player
+          optional: true
+          ignore_summoning_sickness: true
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(observer)
+        .unwrap()
+        .add_card(make_test_card("ALLY", "Newly Played Ally"))
+        .add_card(make_test_card("SEC", "Security"))
+        .security(1, &["SEC"])
+        .start();
+    runner.game.turn_count = 5;
+
+    runner.place_on_field(0, "TEST-ALLY-PLAYED-OBSERVER-TEMPORARY", Some(0));
+    let played = runner.place_on_field(0, "ALLY", Some(5));
+
+    fire_digimon_played(&mut runner, played);
+
+    let action = encode_attack(played.index as u16, SECURITY_TARGET);
+    let pending = runner
+        .pending_selection_view()
+        .expect("temporary attack window should install for a fresh event target");
+    assert!(pending.valid_action_ids.contains(&action));
+    assert!(pending.is_optional);
+    assert_eq!(build_action_mask(&runner.game, 0)[PASS as usize], 1.0);
 }

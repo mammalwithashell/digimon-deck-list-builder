@@ -35,6 +35,17 @@ Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' ru
 - **Fix shape:** in `return_trash_cards_to_deck_bottom` (and audit the sibling `return_trash_cards_to_deck_top` + any other "to deck" movers), branch on `card.card_kind(&card_data) == CardKind::DigiEgg` → `digitama_deck.insert(0, card)` (bottom convention: index 0) instead of `deck`. The returned `moved` Vec still counts the card so dependent costs (Medusamon's "return 2") remain satisfied. DCGO reference: Digi-Egg cards have a dedicated `DigitamaDeck` move path. Small, well-scoped; shared primitive (used by BT24-017 and others) so verify call sites — but routing a Digi-Egg to the egg deck is universally correct (a Digi-Egg in the main deck is always illegal).
 - **Related (same area, not yet verified):** judge-quiz Q23 hinges on the "must remain in trash to resolve" gating of an inherited `on_digivolution_card_trashed` gain-memory (Tumblemon EX8-005) after 2 of 3 are returned — interacts with this same return verb; audit pending.
 
+## Closures (2026-05-29)
+
+- **ST5 Machine Black attack-history/blocker context** — CLOSED. The engine now
+  tracks per-player Digimon attack counts for the current turn and resets them
+  at turn start, enabling the DSL `digimon_attacked_this_turn` predicate used by
+  ST5-04 ToyAgumon and ST5-06 Greymon. ST5-14 Tai Kamiya required no new
+  player-visible action contract: existing Blocker target-change context is
+  faithful once the blocker declaration path suspends the blocker before
+  target-change observers resolve. Detailed closure and verification commands
+  are archived in [qa/resolved-gaps.md](../resolved-gaps.md).
+
 ## Closures (2026-05-24)
 
 - **Mid-attack `<Security A. +N>` not recomputed** — CLOSED. The
@@ -50,6 +61,57 @@ Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' ru
   [`fix-security-check-recompute-mid-attack`](../../openspec/changes/fix-security-check-recompute-mid-attack/).
   Regression test:
   [`code/digimon-engine/tests/mid_attack_security_attack_recompute.rs`](../../code/digimon-engine/tests/mid_attack_security_attack_recompute.rs).
+
+## Sweep notes (2026-05-24 — Xros Heart DigiXros closure)
+
+The `close-xros-heart-digixros-gaps` change closes the reusable engine
+substrate that blocked the first Xros Heart acceptance pool. `DigiXrosTransaction`
+now covers recipe material selection, cost deltas before payment, post-payment
+source attachment, transaction-local origin allowances, pre-attached materials,
+and `digixros_count`; `<Material Save>` now uses deletion snapshots and filters
+eligible sources through the carrier's DigiXros recipe. Production YAML and
+behavioral tests landed for BT10-009, BT10-013, BT10-087, and BT12-112.
+
+The follow-up `author-xros-heart-reusable-primitives` change closes the next
+reusable layer: under-Tamer card flow, generalized source movement and
+leave-battle rescue, scoped DigiXros wildcard substitution, and effect-created
+attack prompts. Production YAML now covers BT21-083, BT11-095, P-224,
+BT19-090, BT21-092, BT10-111, BT21-027, and BT19-061 without `raw_rust`.
+
+The `complete-xros-heart-authoring-substrate` follow-up also closes the
+reveal-pool free-play sub-shape: `EffectContext::play_from_reveal_free` and
+DSL `choose_from_reveal destination: play_free` now route selected revealed
+cards through free play with reveal-origin rollback. `BT19-008` is the Xros
+Heart production proof for this primitive.
+
+The same follow-up now closes the stack-derived metric slice: DSL
+`source_color_count` lowers as both a source-relative formula and
+base/per/delta selector, and `source_stack_count` counts predicate-matched
+source cards for count bounds and effect math. These compose with existing
+`source_dp`, no-source filters, and `lowest_material_count`. BT19-014, AD1-006,
+AD1-013, BT19-026, BT21-030, and BT20-037 are production YAML proofs for
+source-color DP math, current-DP comparison, fewest-source ties, De-Digivolve
+payoff selection, no-source targeting, and per-level-6-source suspend/memory
+counting.
+
+The temporary lockout slice now has production proof on BT19-038 and BT20-037:
+permanent-scoped `CannotActivateWhenDigivolvingEffects`,
+`CannotActivateOnPlayEffects`, and `CannotUnsuspend` modifiers suppress only
+their named timing/phase behavior and expire at the printed
+end-of-opponent-turn duration. BT19-051 and BT19-035 round out the same fixture
+batch with return-protection/DP and played-Xros-Heart observer coverage.
+
+Remaining Xros Heart work in this tracker should be card-specific authoring or
+non-Xros-specific residual primitives discovered by later cards, not a generic
+"no DigiXros transaction / under-Tamer flow" engine gap.
+
+The follow-up Xros Heart card-authoring pass added production YAML and focused
+behavioral tests for BT10-003, BT10-029, BT19-033, and BT19-047. The
+same-effect DP modifier visibility primitive that blocked BT19-012 is now
+closed: permanent DP predicates clear printed DP checks from the delegated
+card-field pass and evaluate field targets through `effective_dp`. BT19-012
+and BT21-011 should proceed as card-authoring follow-up unless their focused
+production tests prove a narrower residual.
 
 ## Sweep notes (2026-05-17 — Phase 2 rollup)
 
@@ -203,6 +265,11 @@ markers in this batch.
 ## Open / Partial Gaps
 
 Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.md). This file tracks only open gaps and partial slices with remaining follow-up work.
+
+### Same-effect DP modifier visibility in subsequent `dp_lte` selections
+> Moved to [qa/resolved-gaps.md](../resolved-gaps.md#same-effect-dp-modifier-visibility-in-subsequent-dp_lte-selections--2026-05-24).
+> BT19-012 remains unauthored, but the reusable primitive is no longer an
+> active engine blocker.
 
 ### Track C modifier payload/identity consults — PARTIALLY RESOLVED 2026-05-09
 - **Discovered in:** Puppets / Royal Knights / Olympos / DigiXros readiness passes.
@@ -420,13 +487,19 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Suggested change:** Add `event_card_color_has: Option<CompiledColor>` to `CompiledPredicate` and the matching leaf to `BoolPredicateSpec` / `PredicateSpec` in `digimon-dsl`. In `eval_predicate` (`predicate.rs`), implement the check by calling `event_target_card(rctx)`, resolving its `digimon_colors` from card_data, and testing for color membership.
 - **Workaround:** Color gate omitted from YAML — observer over-fires on any own Digimon digivolve. Test `bt16_085_digivolve_observer_does_not_fire_on_non_blue_non_green_digivolve` is `#[ignore = "BLOCKED: G-EVENT-CARD-COLOR-IS"]`.
 
-### Opponent Digivolution-Card Source Selection Missing  [G-SELECT-OPPONENT-SOURCES]
-- **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)
-- **Card(s):** BT16-085 — "[Your Turn] … If DNA digivolving, trash any 3 digivolution cards under your opponent's Digimon."
-- **Effect text:** "trash any 3 digivolution cards under your opponent's Digimon" — selects up to 3 source cards from a specific opponent permanent's card_sources stack.
-- **What's missing:** DSL has `select_own_sources` / `trash_selected_sources`, and as of 2026-05-07 `select_own_sources.target` can restrict the own-source picker to a specific own permanent binding. There is still no `select_opponent_sources` verb for targeting a specific OPPONENT permanent's card_sources. The opponent permanent itself must also first be selected (requires a field selection step). Both opponent-side pieces are missing.
-- **Suggested change:** Add `select_opponent_sources: { target: <binding>, count: N, bind_as: <name> }` DSL verb, mirroring `select_own_sources`. `target` resolves to an opponent `PermanentHandle` binding. `count` specifies how many sources to select (up to the permanent's stack depth). Implement in `step.rs`, lower in `compile.rs`, and execute in a new `CompiledStep::SelectOpponentSources` handler analogous to `execute_select_own_sources`.
-- **Workaround:** DNA trash sub-clause of BT16-085 Clause 1 is entirely omitted from the YAML while opponent-source selection is missing. The former `G-DSL-IS-DNA-DIGIVOLVING` blocker is resolved by `dna_origin: true`; the remaining blocker is `G-SELECT-OPPONENT-SOURCES`. Test `bt16_085_dna_digivolve_trashes_3_opp_digi_cards` should narrow its ignore tag when this card is revisited.
+### ~~Opponent Digivolution-Card Source Selection Missing~~  [G-SELECT-OPPONENT-SOURCES] — RESOLVED
+- **Status:** Stale active entry. `select_opponent_sources` and
+  `EffectContext::select_opponent_sources` landed during the BG Imperial
+  substrate closeout and are archived in `qa/resolved-gaps.md`.
+- **ST2 reconciliation (2026-05-29):** ST2-03, ST2-06, and ST2-09 do **not**
+  use `select_opponent_sources` because their printed text deterministically
+  trashes the bottom source(s) after the Digimon target is chosen. They are
+  implemented with `trash_bottom_sources`, covered by
+  `tests/dsl/st2_substrate.rs` and
+  `tests/cards_behavioral/st2/st2_cards.rs`.
+- **Remaining work:** None for this reusable gap. BT16-085 card migration may
+  still need a card-local follow-up, but it is not blocked by a missing
+  opponent-source selector.
 
 ### OPT Reset via Attack Cycle  [G-OPT-RESET-VIA-ATTACK-CYCLE]  — CLOSED 2026-05-17 (Phase 2 Track C)
 - **Closure:** Substrate already correct; the suspected "key persistence across turn boundaries" was a misdiagnosis. The slot key is `(carrier_permanent's `effect_activations` HashMap) × (source_card_handle, effect_slot)` and the reset clears the entire HashMap via `Permanent::new_turn()` at `begin_turn`, so any divergence between carrier identity and trigger source is irrelevant — both keys live in the same per-carrier map.

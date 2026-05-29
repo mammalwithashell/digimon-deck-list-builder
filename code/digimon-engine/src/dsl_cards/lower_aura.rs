@@ -63,27 +63,32 @@ pub fn lower_all(
     modifier: Option<String>,
     while_condition: Option<CompiledPredicate>,
     applies_to_opponent_security_dp: bool,
+    applies_to_own_security_dp: bool,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Vec<Effect> {
-    if applies_to_opponent_security_dp {
+    if applies_to_opponent_security_dp || applies_to_own_security_dp {
         // PUPPETS-G008: this is NOT a target-permanent aura — it rides on the
         // attacker's effect chain during the security battle. Lower directly
         // to a declarative inherited effect with the `dp_modifier` flag
         // wired through `applies_to_opponent_security_dp()`. The other aura
         // fields (target, target_player, grant_keyword, modifier, ...) are
         // ignored on this code path; the YAML author should leave them unset.
-        let mut builder = Effect::declarative(card).name("Aura (opponent security DP)");
+        let mut builder = Effect::declarative(card).name("Aura (security DP)");
         if matches!(scope, CompiledScope::Inherited) {
             builder = builder.inherited();
         }
         if let Some(aw) = active_when.map(Arc::new) {
-            builder =
-                builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
+            builder = builder.condition(move |rctx| eval_active_when(&aw, rctx, false));
         }
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);
         }
-        builder = builder.applies_to_opponent_security_dp();
+        if applies_to_opponent_security_dp {
+            builder = builder.applies_to_opponent_security_dp();
+        }
+        if applies_to_own_security_dp {
+            builder = builder.applies_to_own_security_dp();
+        }
         return vec![builder.build()];
     }
     if let Some(predicate) = while_condition.clone() {
@@ -214,7 +219,7 @@ fn lower_self_while_condition(
             b = b.inherited();
         }
         if let Some(aw) = active_when.clone() {
-            b = b.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
+            b = b.condition(move |rctx| eval_active_when(&aw, rctx, true));
         }
         b.build()
     };
@@ -250,7 +255,7 @@ pub fn lower(
         builder = builder.inherited();
     }
     if let Some(aw) = active_when.clone() {
-        builder = builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
+        builder = builder.condition(move |rctx| eval_active_when(&aw, rctx, is_self_aura));
     }
 
     if is_self_aura && target_player.is_none() && modifier.is_none() && security_attack.is_none() {
@@ -425,4 +430,19 @@ fn players_for_ref(
         CompiledPlayerRef::Active => vec![ctx.game.turn_player()],
         CompiledPlayerRef::Any => (0..ctx.game.players.len() as PlayerId).collect(),
     }
+}
+
+fn eval_active_when(
+    predicate: &CompiledPredicate,
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+    is_self_aura: bool,
+) -> bool {
+    let subject = if is_self_aura {
+        rctx.source_permanent
+            .map(PredicateSubject::Permanent)
+            .unwrap_or(PredicateSubject::None)
+    } else {
+        PredicateSubject::None
+    };
+    eval_predicate(predicate, rctx, subject)
 }

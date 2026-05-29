@@ -80,6 +80,9 @@ fn compile_field_selector(s: crate::step::FieldSelector) -> CompiledFieldSelecto
         crate::step::FieldSelector::HighestDp => CompiledFieldSelector::HighestDp,
         crate::step::FieldSelector::LowestPlayCost => CompiledFieldSelector::LowestPlayCost,
         crate::step::FieldSelector::HighestPlayCost => CompiledFieldSelector::HighestPlayCost,
+        crate::step::FieldSelector::LowestMaterialCount => {
+            CompiledFieldSelector::LowestMaterialCount
+        }
     }
 }
 
@@ -163,6 +166,30 @@ fn compile_zone(z: crate::predicate::Zone) -> CompiledZone {
     }
 }
 
+fn validate_digixros_wildcard_zone(
+    zone: Option<crate::predicate::Zone>,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> Option<CompiledZone> {
+    match zone {
+        Some(crate::predicate::Zone::Hand) => Some(CompiledZone::Hand),
+        Some(crate::predicate::Zone::Trash) => Some(CompiledZone::Trash),
+        Some(crate::predicate::Zone::Material) => Some(CompiledZone::Material),
+        Some(other) => {
+            errors.push(ValidationError {
+                card_id: card_id.to_string(),
+                path: format!("{prefix}.zone"),
+                message: format!(
+                    "digixros wildcard zone must be one of hand, trash, or material (got {other:?})"
+                ),
+            });
+            Some(compile_zone(other))
+        }
+        None => None,
+    }
+}
+
 fn compile_scope(s: crate::clause::ClauseScope) -> CompiledScope {
     use crate::clause::ClauseScope as S;
     match s {
@@ -183,6 +210,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::EndOfAttack => CompiledTiming::EndOfAttack,
         S::EndOfBattle => CompiledTiming::EndOfBattle,
         S::OnAttack => CompiledTiming::OnAttack,
+        S::OnBlock => CompiledTiming::OnBlock,
         S::OnAllyAttack => CompiledTiming::OnAllyAttack,
         S::OnOpponentAttack => CompiledTiming::OnOpponentAttack,
         S::OnDeletion => CompiledTiming::OnDeletion,
@@ -255,6 +283,7 @@ fn compile_reveal_destination(d: &crate::step::RevealDestination) -> CompiledRev
         S::Hand => CompiledRevealDestination::Hand,
         S::DeckTop => CompiledRevealDestination::DeckTop,
         S::DeckBottom => CompiledRevealDestination::DeckBottom,
+        S::PlayFree => CompiledRevealDestination::PlayFree,
         S::BottomSourceOf { target } => {
             CompiledRevealDestination::BottomSourceOf(compile_binding_ref(target))
         }
@@ -294,6 +323,7 @@ fn compile_per_selector(
             exclude_source: *exclude_source,
         },
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
+        S::SourceColorCount => CompiledPerSelector::SourceColorCount,
         S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
         S::SharedTrashCount { bucket } => CompiledPerSelector::SharedTrashCount { bucket: *bucket },
         S::CardCountInZone(spec) => {
@@ -429,10 +459,27 @@ fn compile_formula(
         FormulaSpec::BindingPlayCost { binding_play_cost } => {
             CompiledFormula::BindingPlayCost(binding_play_cost.clone())
         }
+        FormulaSpec::BindingValue { binding_value } => {
+            CompiledFormula::BindingValue(binding_value.clone())
+        }
         FormulaSpec::SourceDp { source_dp: _ } => CompiledFormula::SourceDp,
         FormulaSpec::SourceMaterialCount {
             source_material_count: _,
         } => CompiledFormula::SourceMaterialCount,
+        FormulaSpec::SourceColorCount {
+            source_color_count: _,
+        } => CompiledFormula::SourceColorCount,
+        FormulaSpec::SourceStackCount { source_stack_count } => CompiledFormula::SourceStackCount {
+            target: source_stack_count.target.clone(),
+            filter: source_stack_count.filter.as_ref().map(|filter| {
+                Box::new(compile_predicate(
+                    filter,
+                    &format!("{prefix}.source_stack_count.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
+        },
         FormulaSpec::SourceStackDpSum {
             source_stack_dp_sum,
         } => CompiledFormula::SourceStackDpSum {
@@ -602,6 +649,7 @@ fn compile_predicate(
         self_color_count_gte: p.self_color_count_gte,
         has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
+        battle_opponent_no_sources: p.battle_opponent_no_sources,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
         other: p.other,
@@ -693,6 +741,7 @@ fn compile_predicate(
         opponents_turn: p.opponents_turn,
         all_turns: p.all_turns,
         can_hatch: p.can_hatch.map(compile_player_ref),
+        digimon_attacked_this_turn: p.digimon_attacked_this_turn.map(compile_player_ref),
         in_breeding: p.in_breeding,
         on_field: p.on_field,
         dna_origin: p.dna_origin,
@@ -715,6 +764,15 @@ fn compile_predicate(
                 errors,
             )
         }),
+        event_target_dp_eq: p.event_target_dp_eq.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_eq"), card_id, errors)
+        }),
+        event_target_dp_lte: p.event_target_dp_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_lte"), card_id, errors)
+        }),
+        event_target_dp_gte: p.event_target_dp_gte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_gte"), card_id, errors)
+        }),
         event_target_name_contains: p.event_target_name_contains.clone(),
         event_target_is_player: p.event_target_is_player,
         event_target_is_source: p.event_target_is_source,
@@ -727,6 +785,7 @@ fn compile_predicate(
             .as_ref()
             .map(|v| v.iter().map(|c| compile_color(*c)).collect()),
         event_permanent_is_source: p.event_permanent_is_source,
+        source_deleted_battle_opponent: p.source_deleted_battle_opponent,
         event_host_permanent_is_source: p.event_host_permanent_is_source,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
@@ -1069,6 +1128,7 @@ fn compile_material(
         repeat: m.repeat.as_ref().map(compile_repeat),
         distinct_by: m.distinct_by.map(compile_distinct_by),
         zones: m.zones.iter().map(|z| compile_zone(*z)).collect(),
+        cost_delta: m.cost_delta,
         stack_under: m.stack_under,
     }
 }
@@ -1361,6 +1421,7 @@ fn compile_declarative(
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
             applies_to_opponent_security_dp: a.applies_to_opponent_security_dp.unwrap_or(false),
+            applies_to_own_security_dp: a.applies_to_own_security_dp.unwrap_or(false),
             summary,
             summary_key,
         },
@@ -1868,6 +1929,10 @@ fn compile_step(
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {
             target: compile_binding_ref(&a.target),
         },
+        S::TrashBottomSources(a) => CompiledStep::TrashBottomSources {
+            target: compile_binding_ref(&a.target),
+            count: a.count,
+        },
         S::TrashAllSources(a) => CompiledStep::TrashAllSources {
             target: compile_binding_ref(&a.target),
         },
@@ -1878,6 +1943,27 @@ fn compile_step(
         }
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
+        },
+        S::PlaceSelectedCardUnderTamer(a) => CompiledStep::PlaceSelectedCardUnderTamer {
+            card: compile_binding_ref(&a.card),
+            tamer: compile_binding_ref(&a.tamer),
+            face_down: a.face_down,
+            bind_as: a.bind_as.clone(),
+        },
+        S::PlaceSelectedSourcesUnderTamer(a) => CompiledStep::PlaceSelectedSourcesUnderTamer {
+            source_refs: a.source_refs.clone(),
+            tamer: compile_binding_ref(&a.tamer),
+            bind_count_as: a.bind_count_as.clone(),
+        },
+        S::MoveMatchingSourcesUnderTamer(a) => CompiledStep::MoveMatchingSourcesUnderTamer {
+            from: compile_binding_ref(&a.from),
+            tamer: compile_binding_ref(&a.tamer),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            bind_count_as: a.bind_count_as.clone(),
+        },
+        S::TrashTopStackedSources(a) => CompiledStep::TrashTopStackedSources {
+            target: compile_binding_ref(&a.target),
+            count: compile_formula(&a.count, &format!("{prefix}.count"), card_id, errors),
         },
         S::ReturnSelectedSourcesToHand(a) => CompiledStep::ReturnSelectedSourcesToHand {
             source_refs: a.source_refs.clone(),
@@ -1985,6 +2071,14 @@ fn compile_step(
         },
         S::PlaySelectedSourcesFree(a) => CompiledStep::PlaySelectedSourcesFree {
             source_refs: a.source_refs.clone(),
+        },
+        S::PlayUnderTamerSource(a) => CompiledStep::PlayUnderTamerSource {
+            source_refs: a.source_refs.clone(),
+            cost_delta: a
+                .cost_delta
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+            bind_as: a.bind_as.clone(),
         },
         S::EffectInitiatedDigivolve(a) => CompiledStep::EffectInitiatedDigivolve {
             target: compile_binding_ref(&a.target),
@@ -2180,6 +2274,11 @@ fn compile_step(
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
             target_player: compile_player_ref(a.target_player),
             modifier: a.modifier.clone(),
+            value: a
+                .value
+                .as_ref()
+                .map(|v| compile_modifier_value(v, &format!("{prefix}.value"), card_id, errors))
+                .unwrap_or(CompiledModifierValue::Literal(0)),
             expiry: a.expiry.clone(),
         },
         S::GrantKeyword(a) => CompiledStep::GrantKeyword {
@@ -2188,8 +2287,42 @@ fn compile_step(
             expiry: a.expiry.clone(),
             value: a.value,
         },
+        S::AllowDigixrosMaterialZone(a) => CompiledStep::AllowDigixrosMaterialZone {
+            zone: compile_zone(a.zone),
+            max_count: a.max_count,
+        },
+        S::AddDigixrosCostDelta(a) => CompiledStep::AddDigixrosCostDelta { delta: a.delta },
+        S::PreattachDigixrosMaterial(a) => CompiledStep::PreattachDigixrosMaterial {
+            card: compile_binding_ref(&a.card),
+            cost_delta: a.cost_delta.unwrap_or(0),
+        },
+        S::RegisterDigixrosWildcardForTurn(a) => CompiledStep::RegisterDigixrosWildcardForTurn {
+            card: compile_binding_ref(&a.card),
+            zone: validate_digixros_wildcard_zone(
+                a.zone,
+                &format!("{prefix}.register_digixros_wildcard_for_turn"),
+                card_id,
+                errors,
+            ),
+        },
+        S::AddDigixrosWildcardToPendingTransaction(a) => {
+            CompiledStep::AddDigixrosWildcardToPendingTransaction {
+                card: compile_binding_ref(&a.card),
+                zone: validate_digixros_wildcard_zone(
+                    a.zone,
+                    &format!("{prefix}.add_digixros_wildcard_to_pending_transaction"),
+                    card_id,
+                    errors,
+                ),
+            }
+        }
         S::GrantTriggeredEffect(a) => CompiledStep::GrantTriggeredEffect {
-            target: compile_modifier_target(&a.target, &format!("{prefix}.target"), card_id, errors),
+            target: compile_modifier_target(
+                &a.target,
+                &format!("{prefix}.target"),
+                card_id,
+                errors,
+            ),
             timing: a.timing.clone(),
             expiry: a.expiry.clone(),
             body: a
@@ -2309,6 +2442,38 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
                 .collect(),
         },
+        S::SelectUnderTamerSources(a) => {
+            let mut filter =
+                compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors);
+            match filter.host_kind_is {
+                Some(crate::compiled::CompiledCardKind::Tamer) | None => {
+                    filter.host_kind_is = Some(crate::compiled::CompiledCardKind::Tamer);
+                }
+                Some(_) => errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.select_under_tamer_sources.filter.host_kind_is"),
+                    message: "select_under_tamer_sources requires host_kind_is: tamer".to_string(),
+                }),
+            }
+            CompiledStep::SelectOwnSources {
+                target: a
+                    .target
+                    .as_ref()
+                    .or(a.from.as_ref())
+                    .map(compile_binding_ref),
+                filter,
+                min: a.min,
+                max: a.max,
+                bind_as: a.bind_as.clone(),
+                prompt: a.prompt.clone(),
+                then: a
+                    .then
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
+                    .collect(),
+            }
+        }
         S::SelectOpponentSources(a) => CompiledStep::SelectOpponentSources {
             target: a.target.as_ref().map(compile_binding_ref),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2571,6 +2736,7 @@ fn compile_step(
             attacker: compile_binding_ref(&a.attacker),
             targets: compile_attack_target_spec(a.targets),
             without_suspending: a.without_suspending,
+            ignore_summoning_sickness: a.ignore_summoning_sickness,
             optional: a.optional,
             prompt: a.prompt.clone(),
             cost_upgrade: a.cost_upgrade.map(|u| CompiledAttackCostUpgrade {
@@ -2780,7 +2946,7 @@ effects:
             .join("_examples");
         let (specs, errs) = load_dir_ok(&examples);
         assert!(errs.is_empty(), "parse errors: {errs:#?}");
-        assert_eq!(specs.len(), 16);
+        assert_eq!(specs.len(), 15);
 
         let mut failures = Vec::new();
         for spec in &specs {

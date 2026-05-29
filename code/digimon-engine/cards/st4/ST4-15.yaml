@@ -1,0 +1,33 @@
+card: ST4-15
+name: Needle Spray
+kind: option
+color: [green]
+cost: 2
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Suspend 1 opponent Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: target }
+
+  - when: on_security
+    summary: "[Security] Activate this card's Main effect, then add it to hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: target }
+      - add_this_option_to_hand: {}

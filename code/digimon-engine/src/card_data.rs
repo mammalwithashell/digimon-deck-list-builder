@@ -39,9 +39,17 @@ pub struct DnaRequirement {
     pub text_contains: String,
 }
 
-/// Accept both the current list form (`card_colors: ["Blue", "Purple"]`)
-/// and the legacy scalar form (`card_colors: "Blue"`) produced by earlier
-/// cards.json exports. Serde's `#[serde(default)]` covers absent/null.
+/// Accept the integer form used throughout `cards.json` (`card_colors: [1, 3]`
+/// — the same `parse_card_color` mapping the top-level `card_colors` field
+/// and evo-cost entries use), as well as the name-string forms
+/// (`["Blue", "Purple"]` / `"Blue"`) for resilience. Scalar variants of
+/// each are accepted too. `#[serde(default)]` covers absent/null.
+///
+/// Historically this only accepted name strings, which silently mismatched
+/// the integer convention everywhere else in `cards.json`. That mismatch
+/// went unnoticed because `dna_costs` — the sole consumer — was never
+/// populated; populating it (e.g. AD1-011 Paildramon DNA digivolve) is what
+/// surfaced it.
 fn deserialize_card_colors<'de, D>(deserializer: D) -> Result<Vec<CardColor>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -50,10 +58,17 @@ where
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum Form {
+        // Integer forms first — the cards.json convention.
+        ManyInt(Vec<u8>),
+        OneInt(u8),
+        // Name-string forms (CardColor's derived Deserialize reads variant
+        // names) for backward/forward resilience.
         Many(Vec<CardColor>),
         One(CardColor),
     }
     match Option::<Form>::deserialize(deserializer)? {
+        Some(Form::ManyInt(v)) => Ok(v.into_iter().map(parse_card_color).collect()),
+        Some(Form::OneInt(c)) => Ok(vec![parse_card_color(c)]),
         Some(Form::Many(v)) => Ok(v),
         Some(Form::One(c)) => Ok(vec![c]),
         None => Ok(vec![]),

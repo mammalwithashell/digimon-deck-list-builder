@@ -1,0 +1,24 @@
+card: ST6-08
+name: Devimon
+kind: digimon
+level: 4
+color: [purple]
+cost: 6
+dp: 5000
+traits: [Fallen Angel]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 1
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: when_attacking
+    summary: "[When Attacking] Lose 2 memory"
+    process:
+      - lose_memory: 2

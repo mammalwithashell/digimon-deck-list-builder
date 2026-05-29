@@ -2,6 +2,50 @@
 
 Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `assess-rust-engine-archetype`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
 
+> **Xros Heart DigiXros closure — 2026-05-24:** The
+> `close-xros-heart-digixros-gaps` change closed the reusable Xros Heart
+> DigiXros transaction substrate: recipe material prompts from hand,
+> battle area, trash, and under-Tamer origins; per-material cost deltas;
+> pre-attached materials; transaction-scoped zone allowances; selected-source
+> attachment after successful payment; `digixros_count`; and deletion-timed
+> `<Material Save>` recipe filtering. Production YAML and behavioral coverage
+> landed for BT10-009, BT10-013, BT10-087, and BT12-112. Remaining open
+> entries that merely "resemble DigiXros" should be read as non-DigiXros
+> residuals, such as Apocalymon-style different-name cast-time assembly.
+
+> **Xros Heart reusable primitive closure — 2026-05-24:** The
+> `author-xros-heart-reusable-primitives` change closes the next reusable
+> Xros Heart layer: card selection from under Tamers with origin identity,
+> hand/trash/union placement under Tamers, free and reduced-cost play from
+> under Tamers, generalized source movement and leave-battle source rescue,
+> turn-scoped DigiXros wildcard substitution, and effect-created attack
+> windows routed through normal attack prompts. Production YAML and focused
+> behavioral tests now cover BT21-083, BT11-095, P-224, BT19-090, BT21-092,
+> BT10-111, BT21-027, and BT19-061 without `raw_rust` placeholders. Remaining
+> Xros Heart work should be tracked as card authoring or as non-Xros-specific
+> residual primitives when a later card proves one.
+
+> **Xros Heart stack-metric and lockout closure — 2026-05-24:** The
+> `complete-xros-heart-authoring-substrate` change adds `source_color_count`
+> as a source-relative formula and `per:` selector, plus `source_stack_count`
+> for counting predicate-matched source cards beneath a target binding. The
+> same change wires permanent-scoped `CannotActivateOnPlayEffects`,
+> `CannotActivateWhenDigivolvingEffects`, and `CannotUnsuspend` through
+> expiring modifiers. Stack-derived and lockout fixtures now have production
+> YAML for BT19-014, AD1-006, AD1-013, BT19-026, BT21-030, BT19-038,
+> BT19-051, BT19-035, BT20-037, and BT19-079. Remaining Xros Heart pool work
+> should be treated as card authoring unless a later card proves a new
+> non-Xros-specific residual primitive.
+>
+> **Xros Heart card-authoring residuals — 2026-05-24:** A follow-up
+> authoring pass added production YAML and focused behavioral coverage for
+> BT10-003, BT10-029, BT19-033, and BT19-047. The follow-up
+> same-effect DP modifier selection primitive is now closed: permanent
+> `dp_lte` / `dp_eq` / `dp_gte` predicates delegate to `effective_dp` after
+> same-process `ChangeDp` steps rather than re-checking printed `CardData.dp`.
+> BT19-012 and BT21-011 are now card-authoring follow-up work unless their
+> production tests prove a narrower residual.
+
 > **Tracker hygiene sweep — 2026-05-15:** Post-rebaseline audit cleanup
 > per [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
 > 8 audit-flagged CLOSED entries plus ~46 NARROW closed-core halves
@@ -250,6 +294,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 | Gap | Severity | #cards | Key files |
 |---|---|---|---|
+| ~~[Same-effect DP modifier visibility in subsequent `dp_lte` selections](#same-effect-dp-modifier-visibility-in-subsequent-dp_lte-selections)~~ — RESOLVED 2026-05-24 | ✅ | — | `dsl_cards/predicate.rs` |
 | [Selection: aggregate-sum residual sub-shapes (self-stack material / cost-time placement)](#selection-aggregate-sum-residual-sub-shapes) | 🟡 | 2+ | `effect_context.rs`, `action/` |
 | [Selection: `select_any_permanent` curated helper + `select_dna_pair` plumbing audit](#selection-select_any_permanent-curated-helper--select_dna_pair-plumbing-audit) | 🟡 | 4+ | `effect_context.rs`, `dsl_cards/step/selections.rs` |
 | ~~[`play_from_revealed_free` (EX8-050 Gogmamon)](#play_from_revealed_free-ex8-050-gogmamon)~~ — RESOLVED 2026-05-23 | ✅ | — | — |
@@ -304,6 +349,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | ~~End-of-attack mandatory self-delete chain (EX4-074)~~ | ✅ | — | RESOLVED 2026-05-17 (Track I first-test confirmed existing primitives suffice) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) |
 | ~~Return a selected digivolution-stack source card to its owner's hand (`G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME`)~~ — RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`, see `qa/resolved-gaps.md`) | ✅ | — | — |
 | ~~Player-scoped one-shot future-digivolve cost reducer with a paid cost (`G-COST-REDUCE-ALLY-DIGIVOLVE`)~~ — RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Xros Heart DigiXros transaction + Material Save substrate~~ — RESOLVED 2026-05-24 (`close-xros-heart-digixros-gaps`, see `qa/resolved-gaps.md`) | ✅ | — | `digixros.rs`, `game_actions.rs`, `keyword_effects.rs`, `digimon-dsl` |
 
 **Group 5 contract note (2026-05-02):** Group 5 did not change ACTION_SPACE_SIZE or TENSOR_SIZE. New Link/Delay choices reuse existing pending-selection masks.
 
@@ -314,6 +360,10 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 **Validated 2026-05-14 (PR #470):** BT15-096 Supreme Connection! and BT21-102 Undine behavioral tests now ship as card-shaped proof that the Track J substrate landed correctly on real cards. No new substrate surfaced; the slice remains closed.
 
 ## Open gaps
+
+### Same-effect DP modifier visibility in subsequent `dp_lte` selections
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#same-effect-dp-modifier-visibility-in-subsequent-dp_lte-selections--2026-05-24).
+> Remaining BT19-012 work is production YAML/card behavior coverage.
 
 ### Global `OnOpponentSecurityRemoved` observer timing
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-global-onopponentsecurityremoved-observer-timing--resolved-2026-05-15-prs-449-phase-1-track-a-2026-05-0605-08) by the 2026-05-15 hygiene sweep. Core dispatch closed Phase 1 + Track A; card-local authoring is card-shaped follow-up.
@@ -693,10 +743,11 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Discovered in:** Dark Masters (2026-04-18)
 - **Card(s):** BT15-102 Apocalymon
 - **Effect text:** "When this card would be played, by placing up to 3 [Dark Masters] trait cards with different names from your battle area or trash under it, reduce the play cost by 4 for each one."
-- **What's missing:** Mechanically resembles DigiXros (parity §4.7e) but with player-driven multi-select of UP-TO-N from a UNION of source zones (battle area + trash), under a different-name uniqueness constraint, with the placed cards becoming the new permanent's digivolution stack. None of `select_multiple_*` helpers, `place_under_played_card_at_cast_time`, or different-name selection filters exist. Distinct from EX10-061 Apocalymon's "from your security stack" cast-time variant (sibling primitive, different source zone).
+- **What's missing:** Xros Heart now has a dedicated DigiXros transaction substrate, but BT15-102 still needs the generic non-DigiXros assembly form: player-driven multi-select of UP-TO-N from a union of source zones (battle area + trash), under a different-name uniqueness constraint, with the placed cards becoming the new permanent's digivolution stack. This is distinct from recipe-slot DigiXros and from EX10-061 Apocalymon's "from your security stack" cast-time variant (sibling primitive, different source zone).
 - **Suggested API shape:** `Effect::before_pay_cost(card).with_optional_under_placement(max_count: u8, source_zones: &[Zone], filter, uniqueness: UniquenessFilter::Name, cost_per_placed: i16, callback)` — surfaces a multi-select at cost-time; for each chosen card, removes from source zone, queues for stack-attachment after the play resolves; reduces effective `play_cost` by `cost_per_placed * count`.
 - **Workaround:** "None — BLOCKED." Pre-deciding the placement count auto-selects on the player's behalf (violates §17); skipping the reduction makes Apocalymon unplayable.
 - **Related:** "Dynamic cost reduction at `BeforePayCost`"; RUST_PYTHON_PARITY.md §4.7e (DigiXros cost-reduction); "Place card at a specific stack position".
+- **Updated 2026-05-24:** Do not use this entry for printed DigiXros cards. `DigiXrosTransaction` covers Xros Heart-style recipes, cost deltas, origin-zone extensions, and post-payment source attachment. This entry remains open only for arbitrary cast-time assembly shapes that are not recipe-slot DigiXros.
 - **Track E (2026-05-08) deferred — implementation strategy for follow-up:** The work requires surgery on `Game::play_from_hand_with_cost_result` (`code/digimon-engine/src/game_actions.rs`) to splice a pre-`OnPlay` assembly hook between the cost calculation step and the `OnPlay` drain. Current flow returns `Played(field_index)` only after `OnPlay` drains; a cast-time-assembly hook must run after the permanent enters battle area but before `OnPlay` triggers fire. Suggested implementation phases:
   1. Carve out an internal `commit_play_to_battle_area_without_on_play(player, hand_index, cost_delta) -> Option<usize>` from the existing `play_from_hand_with_cost_result` so the placement and the `OnPlay` drain become separable.
   2. Add `EffectContext::play_with_cast_time_assembly(player, hand_index, cost_delta, max_count, source_zones, filter, cost_per_placed)` that calls the inner placement, installs a count-capped multi-select over `source_zones` with `is_optional_zero=true`, and on resolve: (a) installs each chosen card under the new permanent via `place_as_bottom_source` (top-down), (b) reduces memory cost retroactively by `cost_per_placed * count`, (c) drains `OnPlay`.
@@ -1075,7 +1126,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 ### Cost-reduction trigger with target-card trait / name predicate ("when this/any Digimon would digivolve into a {trait/name} hand card")
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** ST-23 BEATBREAK (2026-05-17); previously surfaced in BT5-092 / BT23-005 audits
-- **Card(s):** ST23-11 Wolvermon ("When this Digimon would digivolve into a [Glowing Dawn] trait Digimon card, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 2"); BT5-092 Nokia Shiramine ("When one of your Digimon would digivolve into a Digimon card in your hand with [Greymon], [Garurumon] or [Omnimon] in its name" — BT5-092.yaml header documents this gap); BT23-005 (per BT5-092 YAML header note); likely extends to every BEATBREAK Lv4 finisher.
+- **Card(s):** ST23-11 Wolvermon ("When this Digimon would digivolve into a [Glowing Dawn] trait Digimon card, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 2"); BT21-011 Shoutmon ("When this Digimon would digivolve into a Digimon card with the [Xros Heart] or [Hero] trait, reduce the digivolution cost by 1"); BT5-092 Nokia Shiramine ("When one of your Digimon would digivolve into a Digimon card in your hand with [Greymon], [Garurumon] or [Omnimon] in its name" — BT5-092.yaml header documents this gap); BT23-005 (per BT5-092 YAML header note); likely extends to every BEATBREAK Lv4 finisher.
 - **Effect text:** As above.
 - **What's missing:** `CostReductionBody` (`digimon-dsl/src/clause.rs:323-349`) exposes only `when_playing_this: bool` and `when_any_ally_played: PredicateSpec`. It has no `when_this_digivolves_into` / `when_any_ally_digivolves_into` trigger variants keyed on the **target** card's name/trait/level/color. The engine path `scan_before_pay_cost_reduction` does not thread the digivolution-target `CardSource` through to the condition closure, so a predicate could not inspect the target's properties even if the trigger variant existed.
 - **Suggested API shape:** Add `when_this_digivolves_into: Option<PredicateSpec>` and `when_any_ally_digivolves_into: Option<PredicateSpec>` to `CostReductionBody`, where the predicate evaluates against the target card source (the hand card being digivolved INTO). Add target-side predicate leaves (`target_name_contains`, `target_trait_has`, `target_level_eq/lte/gte`, `target_color_has`), or reuse `event_card_*` predicate family after verifying scope semantics. Thread the target `CardSource` through `scan_before_pay_cost_reduction` → `EffectReadContext` so the predicate can see it.

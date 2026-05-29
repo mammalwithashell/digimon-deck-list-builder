@@ -1,0 +1,24 @@
+card: ST1-03
+name: Agumon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Reptile]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2 }
+    cost: 0
+
+effects:
+  # Inherited [Your Turn] This Digimon gets +1000 DP.
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 1000
+    summary: "[Your Turn] This Digimon gets +1000 DP"

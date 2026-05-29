@@ -1,0 +1,25 @@
+card: ST1-01
+name: Koromon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  # Inherited [Your Turn] While this Digimon has 4 or more digivolution cards,
+  # it gets +1000 DP.
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier_fn:
+      min:
+        - 1000
+        - max:
+            - 0
+            - base: -3000
+              per: material_count
+              delta: 1000
+    summary: "[Your Turn] While 4+ digivolution cards, this Digimon gets +1000 DP"

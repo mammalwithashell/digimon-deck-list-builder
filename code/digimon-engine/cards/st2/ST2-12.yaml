@@ -1,0 +1,21 @@
+card: ST2-12
+name: Matt Ishida
+kind: tamer
+color: [blue]
+cost: 2
+
+effects:
+  - when: start_of_your_turn
+    condition:
+      any_permanent:
+        of: opponent
+        kind: digimon
+        materials_count_lte: 0
+    summary: "[Start of Your Turn] If opponent has a no-source Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this Tamer without paying the cost"
+    process:
+      - play_from_security: {}

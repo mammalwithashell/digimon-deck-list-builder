@@ -16,7 +16,11 @@ use crate::enums::{
 };
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
-use crate::tensor::FIELD_SLOTS;
+// The mask is bounded by the action space, not the observation tensor —
+// `action::space::MAX_FIELD_SLOTS` is the legal-action ceiling. Using it
+// here decouples the mask from any specific tensor profile.
+use crate::action::space::MAX_FIELD_SLOTS as FIELD_SLOTS_RAW;
+const FIELD_SLOTS: usize = FIELD_SLOTS_RAW as usize;
 
 pub(crate) fn evo_color(raw: u8) -> Option<CardColor> {
     // Mirrors `card_data::parse_card_color` — the raw ints come from
@@ -900,13 +904,33 @@ pub(crate) fn effect_attack_target_action_ids(
     restriction: AttackTargetRestriction,
     without_suspending: bool,
 ) -> Vec<u16> {
+    effect_attack_target_action_ids_with_options(
+        game,
+        attacker,
+        restriction,
+        without_suspending,
+        false,
+    )
+}
+
+pub(crate) fn effect_attack_target_action_ids_with_options(
+    game: &Game,
+    attacker: PermanentHandle,
+    restriction: AttackTargetRestriction,
+    without_suspending: bool,
+    ignore_summoning_sickness: bool,
+) -> Vec<u16> {
     if game
         .modifiers
         .player_has(attacker.player, ModifierType::CannotAttack)
     {
         return Vec::new();
     }
-    let attacker_can_attack = if without_suspending {
+    let attacker_can_attack = if ignore_summoning_sickness && without_suspending {
+        game.can_attack_without_suspending_ignoring_summoning_sickness(attacker)
+    } else if ignore_summoning_sickness {
+        game.can_attack_ignoring_summoning_sickness(attacker)
+    } else if without_suspending {
         game.can_attack_without_suspending(attacker, false)
     } else {
         game.can_attack(attacker, false)

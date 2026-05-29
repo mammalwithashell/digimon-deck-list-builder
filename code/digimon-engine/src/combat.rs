@@ -115,6 +115,7 @@ pub struct AttackOpen {
     pub attacker: PermanentHandle,
     pub initiator: AttackInitiator,
     pub suspend_attacker: bool,
+    pub ignore_summoning_sickness: bool,
     pub target_constraint: TargetConstraint,
     pub allow_cancel: bool,
     pub cost_upgrade: Option<AttackCostUpgrade>,
@@ -265,7 +266,8 @@ impl Game {
             })
             .map(|entry| entry.value)
             .sum();
-        let bonus = change_dp_sum + self.dynamic_dp_aura_bonus(handle);
+        let bonus =
+            change_dp_sum + self.static_dp_aura_bonus(handle) + self.dynamic_dp_aura_bonus(handle);
         Some(base + bonus)
     }
 
@@ -292,6 +294,36 @@ impl Game {
             for effect in &effects {
                 if effect.applies_to_opponent_security_dp {
                     total = total.saturating_add(effect.dp_modifier);
+                }
+            }
+        }
+        total
+    }
+
+    /// Sum defender-side security Digimon DP modifiers for the player whose
+    /// security stack is being checked.
+    pub fn defender_security_dp_adjustment(&self, defender: PlayerId) -> i32 {
+        let mut total: i32 = self
+            .modifiers
+            .player_modifiers_iter(defender)
+            .filter(|entry| {
+                matches!(
+                    entry.modifier,
+                    ModifierType::SecurityDpChange | ModifierType::ChangeOwnSecurityDigimonDp
+                )
+            })
+            .map(|entry| entry.value)
+            .sum();
+        for perm in &self.player(defender).battle_area {
+            for source in &perm.card_sources {
+                let card_id = source.card_id(&self.card_data);
+                let Some(effects) = self.effects_for_card(card_id, source.handle()) else {
+                    continue;
+                };
+                for effect in &effects {
+                    if effect.applies_to_own_security_dp {
+                        total = total.saturating_add(effect.dp_modifier);
+                    }
                 }
             }
         }
@@ -334,6 +366,57 @@ impl Game {
         handle: PermanentHandle,
         vortex: bool,
     ) -> bool {
+        self.can_attack_without_suspending_inner(handle, vortex, false)
+    }
+
+    pub(crate) fn can_attack_ignoring_summoning_sickness(&self, handle: PermanentHandle) -> bool {
+        self.can_attack_inner(handle, false, true)
+    }
+
+    pub(crate) fn can_attack_without_suspending_ignoring_summoning_sickness(
+        &self,
+        handle: PermanentHandle,
+    ) -> bool {
+        self.can_attack_without_suspending_inner(handle, false, true)
+    }
+
+    fn can_attack_inner(
+        &self,
+        handle: PermanentHandle,
+        vortex: bool,
+        ignore_summoning_sickness: bool,
+    ) -> bool {
+        let perm = match self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+        {
+            Some(p) => p,
+            None => return false,
+        };
+        if !perm.is_digimon_for_rules(&self.card_data, &self.modifiers, handle) {
+            return false;
+        }
+        if perm.is_suspended {
+            return false;
+        }
+        let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
+        if is_fresh
+            && !ignore_summoning_sickness
+            && !vortex
+            && !self.has_keyword(handle, Keyword::Rush)
+        {
+            return false;
+        }
+        true
+    }
+
+    fn can_attack_without_suspending_inner(
+        &self,
+        handle: PermanentHandle,
+        vortex: bool,
+        ignore_summoning_sickness: bool,
+    ) -> bool {
         let perm = match self
             .player(handle.player)
             .battle_area
@@ -348,7 +431,11 @@ impl Game {
         // "Without suspending" bypasses only the suspend cost/unsuspended
         // requirement. Summoning sickness still requires Rush or Vortex.
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
-        if is_fresh && !vortex && !self.has_keyword(handle, Keyword::Rush) {
+        if is_fresh
+            && !ignore_summoning_sickness
+            && !vortex
+            && !self.has_keyword(handle, Keyword::Rush)
+        {
             return false;
         }
         true
@@ -427,6 +514,7 @@ impl Game {
                 AttackInitiator::NaturalMainPhase
             },
             suspend_attacker: true,
+            ignore_summoning_sickness: false,
             target_constraint: TargetConstraint::Forced(target),
             allow_cancel: false,
             cost_upgrade: None,
@@ -450,6 +538,7 @@ impl Game {
             attacker,
             initiator: AttackInitiator::Overclock,
             suspend_attacker: false,
+            ignore_summoning_sickness: false,
             target_constraint: TargetConstraint::Forced(target),
             allow_cancel: false,
             cost_upgrade: None,
@@ -461,6 +550,7 @@ impl Game {
             attacker,
             initiator,
             suspend_attacker,
+            ignore_summoning_sickness,
             target_constraint,
             allow_cancel: _,
             cost_upgrade,
@@ -471,7 +561,11 @@ impl Game {
         let vortex = matches!(initiator, AttackInitiator::Vortex);
         let skips_suspend_cost = !suspend_attacker;
 
-        let attacker_can_attack = if skips_suspend_cost {
+        let attacker_can_attack = if ignore_summoning_sickness && skips_suspend_cost {
+            self.can_attack_without_suspending_ignoring_summoning_sickness(attacker)
+        } else if ignore_summoning_sickness {
+            self.can_attack_ignoring_summoning_sickness(attacker)
+        } else if skips_suspend_cost {
             self.can_attack_without_suspending(attacker, vortex)
         } else {
             self.can_attack(attacker, vortex)
@@ -1916,6 +2010,9 @@ impl Game {
                     pa.blocker = Some(blocker);
                     pa.state = AttackState::PostBlock;
                 }
+                // Declaring Blocker suspends the chosen Digimon before the
+                // attack target is rewritten.
+                game.suspend(blocker);
                 // OnAttackTargetChange: fires in all players' battle areas
                 // when Block rewrites effective_target. The payload carries
                 // attacker, old/new targets, reason, and controller.
@@ -1924,15 +2021,23 @@ impl Game {
                     AttackTargetChangeReason::Blocker,
                 );
 
-                // Phase 9 Task 8 — OnBlock fires globally after the blocker
-                // is declared. Both players' battle areas are scanned;
-                // observers can read `game.pending_attack.{attacker,
-                // effective_target}` (effective_target now points at the
-                // blocker) from within their process closures.
-                for pid in 0..game.players.len() {
+                // OnBlock fires globally after the blocker is declared.
+                // The payload carries the blocked attacker as the event
+                // permanent so inherited "when this Digimon is blocked"
+                // predicates can test the carrier directly.
+                if let Some(card) = game
+                    .player(attacker.player)
+                    .battle_area
+                    .get(attacker.index as usize)
+                    .map(|perm| perm.top_card().handle())
+                {
                     game.enqueue_triggered(
                         crate::enums::EffectTiming::OnBlock,
-                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                        crate::selection::TriggerSource::BlockDeclared {
+                            attacker,
+                            blocker,
+                            card,
+                        },
                     );
                 }
                 game.drain_effect_queue();
@@ -2542,9 +2647,7 @@ impl Game {
         if let Some(top_idx) = self.player(defender).security.len().checked_sub(1) {
             let needs = self.player(defender).security[top_idx].is_opaque_placeholder;
             if needs {
-                if let Err(e) =
-                    self.materialize_opaque_security_placeholder(defender, top_idx)
-                {
+                if let Err(e) = self.materialize_opaque_security_placeholder(defender, top_idx) {
                     eprintln!(
                         "[opaque-deck] security flip materialization error for player {} \
                          at idx {}: {}",
@@ -2726,7 +2829,10 @@ impl Game {
                                 // §2.5e: attacker's inherited stack may carry
                                 // "+N DP when attacking security" modifiers.
                                 let sec_dp = raw_sec_dp
-                                    .saturating_add(self.attacker_security_dp_adjustment(attacker));
+                                    .saturating_add(self.attacker_security_dp_adjustment(attacker))
+                                    .saturating_add(
+                                        self.defender_security_dp_adjustment(state.defender),
+                                    );
                                 // RULES_CONTEXT 14-2-1-3: "Same DP = both lose."
                                 // The attacker is deleted when it has STRICTLY LESS
                                 // OR EQUAL DP to the security Digimon. Per 14-2-3 the
@@ -3117,6 +3223,9 @@ impl Game {
         let perm = &mut self.players[handle.player as usize].battle_area[handle.index as usize];
         perm.is_suspended = true;
         perm.attacks_this_turn = perm.attacks_this_turn.saturating_add(1);
+        if let Some(count) = self.digimon_attacks_this_turn.get_mut(handle.player as usize) {
+            *count = count.saturating_add(1);
+        }
     }
 
     fn handle_valid(&self, handle: PermanentHandle) -> bool {
@@ -3346,22 +3455,12 @@ impl Game {
             AttackResult::DefenderWins
         } else {
             // Tie — both are deleted. Delete in order: defender first to match
-            // DCGO convention, but both need OnDeletion to fire.
-            // Since the second deletion can shift indices, re-resolve via card_index
-            // to be safe: we use the handles directly since delete_permanent_with_effects
-            // reads the top card's card_index before deletion.
-            self.delete_permanent_with_cause(
-                defender,
+            // DCGO convention, with both bodies leaving as one batch before
+            // global OnAnyDeletion observers check survivor state.
+            self.delete_permanents_batch(
+                vec![defender, attacker],
                 crate::replacement::ReplacementCause::Battle,
             );
-            // After deleting defender, attacker's own handle index is unchanged
-            // (different player's battle_area), so the attacker handle is still valid.
-            if self.handle_valid(attacker) {
-                self.delete_permanent_with_cause(
-                    attacker,
-                    crate::replacement::ReplacementCause::Battle,
-                );
-            }
             AttackResult::MutualDestruction
         };
 

@@ -24,13 +24,68 @@
 use digimon_dsl::compiled::CompiledStep;
 
 use crate::card_source::CardHandle;
-use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
+use crate::dsl_cards::binding_ref::{
+    resolve_binding_ref, resolve_played_permanent_permissive, ResolvedBinding,
+};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::resolve_player;
 use crate::effect_context::EffectContext;
 use crate::enums::CardSourceRef;
 use crate::enums::CostDelta;
+use crate::permanent::PermanentHandle;
 use crate::selection::UnionZoneOrigin;
+use crate::trigger_context::ProvenanceToken;
+
+// ─── Cards currently affected by play-verb `bind_as` provenance ───────────
+//
+// As of change `fix-played-binding-uses-provenance`, the following cards
+// combine `bind_as` on a play verb with a downstream consumer that needs
+// identity resolution after a possible stack-changing event:
+//
+//   - BT16-085 Davis Motomiya & Ken Ichijoji — `play_from_hand_free` +
+//     `schedule_delayed` with `return_to_hand: { target: { permanent: played
+//     } }`. STRICT semantics: the bounce fizzles once the played
+//     Veemon/Wormmon is no longer a battle-area top (DNA-consumed, regular
+//     digivolve, deleted). Routed through `resolve_binding_ref`'s strict
+//     path → `Game::resolve_token_as_battle_area_top`.
+//
+//   - EX11-022 Karakurumon, EX11-061 Mirai Kinosaki, P-165 ShoeShoemon —
+//     `play_from_hand_free` / `play_token` + `schedule_delete_played_at_turn_end`.
+//     PERMISSIVE semantics: the carrier is deleted even if the played card
+//     became a digivolution card. Routed through
+//     `resolve_played_permanent_permissive` → `Game::resolve_provenance_token`.
+//
+// New cards combining a play-verb `bind_as` with a delayed consumer should
+// pick the matching resolver based on the printed-text reading.
+
+/// Bind a play-verb result by stable identity (`ProvenanceToken`) instead
+/// of a positional `PermanentHandle`. Reads the played permanent's top card
+/// and derives the token deterministically (`From<CardHandle>`).
+///
+/// The fallback handle is stored for diagnostics; production consumers MUST
+/// route through `resolve_binding_ref` (strict) or
+/// `resolve_played_permanent_permissive` (carrier-aware) and treat token
+/// resolution as the source of truth.
+fn bind_played_with_provenance(
+    bindings: &mut Bindings,
+    ctx: &EffectContext<'_>,
+    name: &str,
+    played: PermanentHandle,
+) {
+    let top_handle = ctx
+        .game
+        .player(played.player)
+        .battle_area
+        .get(played.index as usize)
+        .map(|perm| perm.top_card().handle());
+    if let Some(handle) = top_handle {
+        let token = ProvenanceToken::from(handle);
+        bindings.insert_played_permanent(name, token, played);
+    }
+    // If the slot is empty (shouldn't happen for a just-played permanent),
+    // skip the bind — same silent no-op convention as the rest of the
+    // module uses for unresolvable / unexpected state.
+}
 
 /// Translate the IR's `CompiledCostDelta` to the engine's `CostDelta`.
 ///
@@ -91,6 +146,9 @@ fn resolve_card_source_ref(
         ResolvedBinding::HandIndex(owner, i) => Some(CardSourceRef::Hand(owner, i as usize)),
         ResolvedBinding::TrashIndex(owner, i) => Some(CardSourceRef::Trash(owner, i as usize)),
         ResolvedBinding::Card(h) => resolve_card_handle_source_ref(ctx, h),
+        ResolvedBinding::SourceRefs(refs) => refs
+            .first()
+            .map(|source| CardSourceRef::Material(source.permanent, source.source_index as usize)),
         // Other kinds (permanent / list): not addressable as a card source.
         _ => None,
     }
@@ -178,7 +236,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     // G-PLAY-FROM-HAND-FREE-BIND-AS: expose the played
                     // permanent's handle to subsequent steps in the same body.
                     if let Some(name) = bind_as {
-                        bindings.insert_permanent(name, played);
+                        bind_played_with_provenance(bindings, ctx, name, played);
                     }
                 }
             }
@@ -191,7 +249,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     if let Some(played) = ctx.play_from_revealed_free(owner, handle) {
                         bindings.record_played(played);
                         if let Some(name) = bind_as {
-                            bindings.insert_permanent(name, played);
+                            bind_played_with_provenance(bindings, ctx, name, played);
                         }
                     }
                 }
@@ -204,7 +262,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         }
                     }
                     if let (Some(name), Some(played)) = (bind_as, last_played) {
-                        bindings.insert_permanent(name, played);
+                        bind_played_with_provenance(bindings, ctx, name, played);
                     }
                 }
                 _ => {}
@@ -323,7 +381,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     // Expose the played permanent's handle for later steps
                     // (e.g. a Task 11 cleanup), mirroring PlayFromHandFree.
                     if let Some(name) = bind_as {
-                        bindings.insert_permanent(name, played);
+                        bind_played_with_provenance(bindings, ctx, name, played);
                     }
                 }
             }
@@ -337,16 +395,14 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         } => {
             // Resolve the permanent binding produced by a preceding free-play
             // step (`play_union_bound_free` / `play_from_hand_free` /
-            // `play_token` bind_as). Captures the permanent's stable
-            // `ProvenanceToken` now, so the turn-end deletion hits the right
-            // permanent even after battle-area indices shift. Missing /
-            // wrong-kind binding: silent no-op (e.g. the optional play was
-            // declined).
-            if let Some(ResolvedBinding::Permanent(handle)) = resolve_binding_ref(
-                &digimon_dsl::compiled::CompiledBindingRef::Named(binding.clone()),
-                ctx,
-                bindings,
-            ) {
+            // `play_token` bind_as). PERMISSIVE resolver: if the played card
+            // is now a digivolution card under another top, the carrier is
+            // still the rules-correct deletion target (EX11-022 Karakurumon,
+            // EX11-061 Mirai Kinosaki, P-165 ShoeShoemon semantics — the
+            // `schedule_provenance_deletion` machinery exists exactly for
+            // this). Missing / wrong-kind binding: silent no-op (e.g. the
+            // optional play was declined).
+            if let Some(handle) = resolve_played_permanent_permissive(binding, ctx, bindings) {
                 if *at_opponents_turn {
                     ctx.schedule_delete_at_end_of_opponents_turn(handle);
                 } else {
@@ -433,7 +489,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     ) {
                         bindings.record_played(played);
                         if let Some(name) = bind_as {
-                            bindings.insert_permanent(name, played);
+                            bind_played_with_provenance(bindings, ctx, name, played);
                         }
                     }
                 }
@@ -447,7 +503,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         ) {
                             bindings.record_played(played);
                             if let Some(name) = bind_as {
-                                bindings.insert_permanent(name, played);
+                                bind_played_with_provenance(bindings, ctx, name, played);
                             }
                         }
                     }
@@ -476,10 +532,30 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         }
                     }
                     if let (Some(name), Some(played)) = (bind_as, last_played) {
-                        bindings.insert_permanent(name, played);
+                        bind_played_with_provenance(bindings, ctx, name, played);
                     }
                 }
                 _ => {}
+            }
+            true
+        }
+        CompiledStep::PlayUnderTamerSource {
+            source_refs,
+            cost_delta,
+            bind_as,
+        } => {
+            let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
+            let mut last_played = None;
+            if let Some(source_refs) = bindings.get_source_refs(source_refs) {
+                for source_ref in source_refs {
+                    if let Some(played) = ctx.play_under_tamer_source_with_cost(source_ref, delta) {
+                        bindings.record_played(played);
+                        last_played = Some(played);
+                    }
+                }
+            }
+            if let (Some(name), Some(played)) = (bind_as, last_played) {
+                bindings.insert_permanent(name, played);
             }
             true
         }
@@ -638,7 +714,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 // G016 binding half: expose the created token's handle to
                 // subsequent steps in the same body (mirrors PlayFromHandFree).
                 if let Some(name) = bind_as {
-                    bindings.insert_permanent(name, played);
+                    bind_played_with_provenance(bindings, ctx, name, played);
                 }
             }
             true
@@ -695,6 +771,13 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
                 let _ = ctx.trash_top_source(h);
+            }
+            true
+        }
+        CompiledStep::TrashBottomSources { target, count } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                let _ = ctx.trash_bottom_sources(h, *count);
             }
             true
         }

@@ -1,0 +1,34 @@
+card: BT10-009
+name: "Shoutmon X4"
+kind: digimon
+level: 4
+color: [red, yellow]
+cost: 9
+dp: 8000
+traits: [Composite, Xros Heart]
+
+alt_paths:
+  - kind: digixros
+    materials:
+      - filter: { name_is: Shoutmon }
+        zones: [hand, battle_area]
+        cost_delta: -2
+      - filter: { name_is: Ballistamon }
+        zones: [hand, battle_area]
+        cost_delta: -2
+      - filter: { name_is: Dorulumon }
+        zones: [hand, battle_area]
+        cost_delta: -2
+      - filter: { name_is: Starmons }
+        zones: [hand, battle_area]
+        cost_delta: -2
+    cost: 9
+
+effects:
+  - kind: grant_keyword
+    keyword: MaterialSave
+    value: 2
+
+  - when: on_play
+    process:
+      - draw: { of: you, count: 2 }

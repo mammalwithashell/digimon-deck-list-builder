@@ -9,6 +9,23 @@ For architecture details, see `../AGENTS.md`.
 > can query cloud runs from your local Claude sessions. Use it for long
 > (>~8h) jobs, off-machine training, or phone-checkable runs.
 
+> ## ⚠️ Engine default profile flipped — 2026-05-25 (`flip-engine-default-to-lite-deck-v2`)
+>
+> The engine's canonical default observation profile is now
+> **`standard_lite_deck_v2`** (`8850` floats; v2_lite prefix + 55-row own
+> original decklist + 256 reserved). `tensor::TENSOR_SIZE`,
+> `tensor_profiles::default_profile()`, and the PyO3
+> `digimon_engine.TENSOR_PROFILE_ID` all report this value. Previously the
+> default was `standard_compact_v1` (1375).
+>
+> **Existing v1-trained ONNX checkpoints stop loading on desktop and via
+> the engine's default PyO3 surface.** They can still be loaded by pinning
+> `observation_profile="standard_compact_v1"` explicitly on
+> `RustHeadlessGame` and routing through a v1-shaped inference path, but
+> the desktop bundled-manifest gate now rejects them. Retrain or re-export
+> against `standard_lite_deck_v2` (or `standard_lite_v2` for the no-deck
+> variant). This is bundled with the S1.3 / S1.4 retrain precedent.
+
 > ## ⚠️ Action-space break — 2026-05-20 (Task S1.3)
 >
 > The engine action space grew from **2168** to **2192** actions (Task S1.3

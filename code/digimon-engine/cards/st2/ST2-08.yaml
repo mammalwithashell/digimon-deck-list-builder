@@ -1,0 +1,29 @@
+card: ST2-08
+name: WereGarurumon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+traits: [Beastkin]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+
+effects:
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: opponent
+            kind: digimon
+            materials_count_lte: 0
+    target: {}
+    grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
+    summary: "[Inherited][Your Turn] Security Attack +1 while opponent has a no-source Digimon"

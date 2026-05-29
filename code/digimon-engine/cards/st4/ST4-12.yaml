@@ -1,0 +1,38 @@
+card: ST4-12
+name: Rosemon
+kind: digimon
+level: 6
+color: [green]
+cost: 10
+dp: 11000
+traits: [Fairy]
+form: Mega
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 3
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] 1 opponent Digimon can't attack or block until the end of their next turn"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon that can't attack or block"
+      - add_modifier:
+          target: target
+          modifier: CannotAttack
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: target
+          modifier: CannotBlock
+          value: 1
+          expiry: end_of_opponents_turn

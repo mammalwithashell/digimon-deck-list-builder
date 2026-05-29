@@ -4,6 +4,23 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+> **ST-2 Cocytus Blue substrate closure — 2026-05-29:** ST2 introduced no
+> remaining open DSL vocabulary gap. The new `trash_bottom_sources` step and
+> `battle_opponent_no_sources` predicate are implemented and archived in
+> `qa/resolved-gaps.md`; Kaiser Nail is covered by existing
+> `select_material` / `play_from_materials`. Do not file ST2 bottom-source
+> cards under `select_opponent_sources`: those printed effects choose the
+> Digimon only, then deterministically trash the bottom source(s).
+
+> **ST5 Machine Black closure — 2026-05-29:** `digimon_attacked_this_turn:
+> you|opponent` is now a closed DSL predicate leaf, backed by engine attack
+> history and consumed by ST5-04/ST5-06 inherited draw clauses. ST5-14 Tai
+> Kamiya's Blocker response was expressible with the existing
+> `on_attack_target_change` / `attack_target_change_reason: blocker` context
+> after the blocker declaration path was corrected to suspend the blocker before
+> target-change observers run. No open DSL vocabulary gap remains for ST5; full
+> closure details live in [qa/resolved-gaps.md](resolved-gaps.md).
+
 > **TS Olympos representative unlock — 2026-05-24:** The
 > `close-ts-olympos-rust-gaps` change added and consumed the DSL surfaces
 > needed for the representative TS Olympos deck: `materials_count_matches_aggregate`,
@@ -12,6 +29,48 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > and `add_bottom_security_to_hand`. These are closed for the
 > representative deck and should not be re-filed as open DSL vocabulary
 > gaps unless a future broad-pool card proves a distinct missing variant.
+
+> **Xros Heart DigiXros closure — 2026-05-24:** The
+> `close-xros-heart-digixros-gaps` change adds production DSL vocabulary and
+> lowering for `kind: digixros` recipe paths, material zones, per-material
+> cost deltas, transaction-local zone allowances, pre-attached materials,
+> one-shot transaction cost deltas, and Material Save lowering from a
+> DigiXros recipe. BT10-009, BT10-013, BT10-087, and BT12-112 now ship as
+> pure production YAML. Remaining Xros Heart DSL work should be tracked as
+> card-specific follow-up, such as BT10-111's turn-scoped DigiXros wildcard
+> modifier, rather than a generic DigiXros/Material Save vocabulary gap.
+
+> **Xros Heart reusable primitive closure — 2026-05-24:** The
+> `author-xros-heart-reusable-primitives` change adds production DSL
+> vocabulary and lowering for selecting cards under Tamers, placing
+> hand/trash/union-zone cards under Tamers, playing selected under-Tamer
+> cards for free or at reduced cost, moving filtered source cards under
+> Tamers with moved-count bindings, top-N opponent stack trashing,
+> sourceless-target filters, scoped DigiXros wildcard substitution, and
+> effect-created attack prompts. BT21-083, BT11-095, P-224, BT19-090,
+> BT21-092, BT10-111, BT21-027, and BT19-061 now ship as production YAML
+> acceptance fixtures. These shapes are no longer open Xros Heart DSL
+> vocabulary gaps.
+
+> **Xros Heart reveal-play slice — 2026-05-24:** `choose_from_reveal`
+> now accepts `destination: play_free`, lowering to
+> `EffectContext::play_from_reveal_free` after the existing reveal pending
+> selection. The selected revealed card is played without paying its cost, and
+> cancellation/failed would-play replacement restores it to the reveal pool.
+> `BT19-008` now uses this pure YAML route for its On Deletion reveal/play
+> clause.
+
+> **Xros Heart stack-metric and lockout slice — 2026-05-24:** The
+> `complete-xros-heart-authoring-substrate` change adds DSL formula/lowering
+> support for `source_color_count` both as `{ formula: { source_color_count:
+> {} } }` and as `per: source_color_count` inside base/per/delta formulas,
+> plus `source_stack_count` for count bounds and memory/DP math over
+> predicate-matched source cards. The same slice covers permanent-scoped
+> temporary lockout modifiers for `CannotActivateOnPlayEffects`,
+> `CannotActivateWhenDigivolvingEffects`, and `CannotUnsuspend` with explicit
+> expiry. These shapes cover the BT19-014, AD1-006, AD1-013, BT19-026,
+> BT21-030, BT19-038, BT19-051, BT19-035, BT20-037, and BT19-079 fixture set
+> and are no longer open Xros Heart DSL vocabulary gaps.
 
 > **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
 > #449–#458. The Track E zone-movement DSL verb table (below) is
@@ -251,15 +310,13 @@ every general-purpose Training / Memory Boost / search clause.
 
 | DSL verb | Engine target | Card drivers |
 |---|---|---|
-| `choose_from_reveal: { of, filter, destination, bind_as?, optional?, prompt }` | `EffectContext::select_reveal` + routing to `add_to_hand_from_reveal` / `return_to_deck_from_reveal` / `place_as_bottom_source` | P-167 (hand and `bottom_source_of`), EX8-047 (two sequential hand picks) |
+| `choose_from_reveal: { of, filter, destination, bind_as?, optional?, prompt }` | `EffectContext::select_reveal` + routing to `add_to_hand_from_reveal` / `return_to_deck_from_reveal` / `place_as_bottom_source` / `play_from_reveal_free` | P-167 (hand and `bottom_source_of`), EX8-047 (two sequential hand picks), BT19-008 (`play_free`) |
 | `order_remainder: { of, destinations: [deck_top, deck_bottom?] }` | `EffectContext::select_effect_choice` (when two destinations) + `select_ordered_permutation` + the `place_remainder_on_deck` placement loop | P-167 (player choice), EX8-047 (single `[deck_bottom]`) |
 
 The `destination` enum for `choose_from_reveal` accepts the bare scalars
-`hand`, `deck_top`, `deck_bottom`, or the mapping
-`bottom_source_of: { target: <binding> }` — matching the four routing
-shapes Rocks printed text actually requires. Other Rocks-flavoured
-"choose-to-play-free" destinations were not seen on any pool card and are
-deferred until they appear.
+`hand`, `deck_top`, `deck_bottom`, `play_free`, or the mapping
+`bottom_source_of: { target: <binding> }` — matching the routing shapes now
+needed by Rocks and Xros Heart reveal text.
 
 Closure scope: `G-ROCKS-REVEAL-ORDERING` from
 `qa/archetype-qa/dsl/rocks-gap-inputs-2026-05-03.md` §50 is closed.

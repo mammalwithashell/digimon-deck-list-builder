@@ -1,0 +1,85 @@
+card: BT19-035
+name: ShootingStarmon
+kind: digimon
+level: 4
+color: [yellow, red]
+cost: 5
+dp: 5000
+traits: [Super Major, Xros Heart]
+attribute: Data
+
+digixros_aliases: [Starmons]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: "Xros Heart"
+    cost: 2
+
+effects:
+  - when: on_any_digimon_played
+    active_when: { all_turns: true }
+    once_per_turn: true
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_trait_has: "Xros Heart"
+    summary: "[All Turns][OPT] When your Xros Heart Digimon is played, give 1 opponent Digimon Security A. -1 and -3000 DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon for Security A. -1 and -3000 DP"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
+      - add_dp_modifier:
+          target: target
+          value: -3000
+          expiry: end_of_opponents_turn
+
+  - when: on_deletion
+    summary: "[On Deletion] Place 1 Xros Heart/Blue Flare Digimon from hand or trash under one of your Tamers"
+    process:
+      - select_own_permanent:
+          bind_as: tamer
+          optional: true
+          filter: { kind: tamer }
+          prompt: "Choose a Tamer to place a card under"
+      - if:
+          condition: { binding_present: tamer }
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                bind_as: stash
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: "Xros Heart"
+                        - trait_has: "Blue Flare"
+                prompt: "Place 1 Xros Heart or Blue Flare Digimon from hand or trash under the Tamer"
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: tamer
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition: { source_permanent_trait_has: "Xros Heart" }
+    summary: "[Inherited][When Attacking][OPT] If carrier has Xros Heart, 1 opponent Digimon gets -2000 DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -2000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -2000
+          expiry: end_of_turn

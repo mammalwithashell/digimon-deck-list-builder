@@ -14,6 +14,7 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::EndOfAttack => EffectTiming::EndOfAttack,
         CompiledTiming::EndOfBattle => EffectTiming::EndOfBattle,
         CompiledTiming::OnAttack => EffectTiming::OnAttack,
+        CompiledTiming::OnBlock => EffectTiming::OnBlock,
         CompiledTiming::OnAllyAttack => EffectTiming::OnAllyAttack,
         CompiledTiming::OnOpponentAttack => EffectTiming::OnOpponentAttack,
         CompiledTiming::OnDeletion => EffectTiming::OnDeletion,

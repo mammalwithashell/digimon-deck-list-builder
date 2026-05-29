@@ -24,6 +24,9 @@ pub enum FormulaSpec {
     BindingPlayCost {
         binding_play_cost: String,
     },
+    BindingValue {
+        binding_value: String,
+    },
     /// Effective DP of the effect's `source_permanent` (the carrier of
     /// the running effect). YAML form: `{ source_dp: {} }`. Unlike
     /// `binding_dp`, which reads a named `bind_as` binding, this reads
@@ -42,15 +45,28 @@ pub enum FormulaSpec {
     SourceMaterialCount {
         source_material_count: SourceDpSpec,
     },
+    /// Number of distinct colors represented by source cards beneath the effect
+    /// carrier's top card. YAML form: `{ source_color_count: {} }`.
+    /// This is source-relative, unlike `digivolution_color_count`, whose target
+    /// is the permanent currently being measured.
+    SourceColorCount {
+        source_color_count: SourceDpSpec,
+    },
+    /// Number of source cards beneath a target permanent's top card, optionally
+    /// filtered by card predicates. YAML form:
+    /// `{ source_stack_count: { target: source, filter: { level_eq: 6 } } }`.
+    SourceStackCount {
+        source_stack_count: SourceStackDpSumSpec,
+    },
     SourceStackDpSum {
         source_stack_dp_sum: SourceStackDpSumSpec,
     },
     Compound(CompoundFormula),
 }
 
-/// Empty payload marker for the `source_dp` / `source_material_count`
-/// formulas. Exists so the untagged `FormulaSpec` variant has a
-/// distinguishing map key at deserialization. YAML: `{ source_dp: {} }`.
+/// Empty payload marker for source-relative scalar formulas. Exists so the
+/// untagged `FormulaSpec` variants have a distinguishing map key at
+/// deserialization. YAML: `{ source_dp: {} }`.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SourceDpSpec {}
@@ -169,6 +185,7 @@ pub enum PerSelector {
         exclude_source: bool,
     },
     DigivolutionColorCount,
+    SourceColorCount,
     SameLevelPairsInSources,
     SharedTrashCount {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -205,6 +222,7 @@ impl Serialize for PerSelector {
                 outer.end()
             }
             Self::DigivolutionColorCount => serializer.serialize_str("digivolution_color_count"),
+            Self::SourceColorCount => serializer.serialize_str("source_color_count"),
             Self::SameLevelPairsInSources => {
                 serializer.serialize_str("same_level_pairs_in_sources")
             }

@@ -1,0 +1,22 @@
+card: ST3-01
+name: Tokomon
+kind: digi_egg
+level: 2
+color: [yellow]
+traits: [Lesser]
+form: In-Training
+effects:
+  - scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_target_dp_lte: 0
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 1000
+          expiry: end_of_turn

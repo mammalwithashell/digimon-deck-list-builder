@@ -51,6 +51,7 @@ pub mod tensor;
 pub mod tensor_profiles;
 pub mod view;
 pub use tensor_profiles as tensor_profile;
+pub mod tensor_v1;
 pub mod tensor_v2_full;
 pub mod tensor_v2_lite;
 pub mod tensor_v2_lite_deck;
@@ -66,6 +67,11 @@ pub use card_source::{CardHandle, CardSource};
 pub use cards::{build_registry, CardEffectRegistry};
 pub use combat::AttackResult;
 pub use debug_runner::{DebugRunner, DebugRunnerBuilder};
+pub use digixros::{
+    ActiveDigiXrosWildcardSubstitution, DigiXrosDistinctBy, DigiXrosMaterialOrigin,
+    DigiXrosMaterialZone, DigiXrosRecipeSlot, DigiXrosSelectedMaterial, DigiXrosTransaction,
+    DigiXrosWildcardSubstitution, DigiXrosZoneAllowance,
+};
 pub use effect::{CardEffect, Effect, EffectBuilder};
 pub use effect_context::{CountCappedZone, DistinctByMode, EffectContext, EffectReadContext};
 pub use enums::*;

@@ -418,9 +418,7 @@ pub fn dispatch(
         "list_games" => Ok(tool_list_games(registry)),
         "close_game" => tool_close_game(args, registry),
 
-        "state" => view_call(args, registry, |g, view| {
-            Ok(json!(g.state(view)))
-        }),
+        "state" => view_call(args, registry, |g, view| Ok(json!(g.state(view)))),
         "hand" => view_call_with_player(args, registry, |g, player, view| {
             Ok(json!(g.hand(player, view)))
         }),
@@ -430,9 +428,7 @@ pub fn dispatch(
         "security" => view_call_with_player(args, registry, |g, player, view| {
             Ok(json!(g.security(player, view)))
         }),
-        "pending_selection" => simple_view(args, registry, |g| {
-            Ok(json!(g.pending_selection()))
-        }),
+        "pending_selection" => simple_view(args, registry, |g| Ok(json!(g.pending_selection()))),
         "effect_queue" => simple_view(args, registry, |g| Ok(json!(g.effect_queue()))),
         "events" => tool_events(args, registry),
         "modifiers" => tool_modifiers(args, registry),
@@ -559,7 +555,11 @@ fn tool_new_game_debug(
                 .as_array()
                 .ok_or_else(|| format!("{}.{} must be an array", key, k))?
                 .iter()
-                .map(|s| s.as_str().map(String::from).ok_or_else(|| format!("non-string in {}.{}", key, k)))
+                .map(|s| {
+                    s.as_str()
+                        .map(String::from)
+                        .ok_or_else(|| format!("non-string in {}.{}", key, k))
+                })
                 .collect::<Result<Vec<_>, _>>()?;
             out.insert(pid, cards);
         }

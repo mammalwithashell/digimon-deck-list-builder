@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { RoleGuard } from '@/components/auth/RoleGuard';
+import { CanvasScaler } from '@/components/desktop/CanvasScaler';
 import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -19,6 +20,14 @@ import { UpdaterBridge } from '@/updater/UpdaterBridge';
 import { useAuthStore } from '@/stores/authStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+
+// Lazy-loaded so the page is tree-shaken from the web bundle — graphics
+// presets only make sense in a windowed shell.
+const GraphicsSettingsPage = lazy(() =>
+  import('@/pages/GraphicsSettingsPage').then((m) => ({
+    default: m.GraphicsSettingsPage,
+  })),
+);
 
 const LauncherPage = lazy(() => import('@/components/launcher/LauncherPage').then(m => ({ default: m.LauncherPage })));
 
@@ -56,42 +65,50 @@ export function App() {
   return (
     <BrowserRouter>
       <UpdaterBridge />
-      <Routes>
-        {IS_DESKTOP && <Route path="/" element={suspended(LauncherPage)} />}
-        <Route element={<Layout />}>
-          {!IS_DESKTOP && <Route path="/" element={<HomePage />} />}
-          <Route path="/patch-notes" element={<PatchNotesPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route element={<AuthGuard />}>
-            <Route path="/lobby" element={<LobbyPage />} />
-            <Route path="/play" element={<ModeSelectPage />} />
-            <Route path="/play/deck" element={<DeckSelectPage />} />
-            <Route path="/play/matching" element={<MatchingPage />} />
-            <Route path="/play/room/:gameId" element={<RoomLobbyPage />} />
-            <Route path="/game/:id?" element={<GamePage />} />
-            <Route path="/deckbuilder" element={<DeckLibraryPage />} />
-            <Route path="/deckbuilder/new" element={<DeckBuilderPage />} />
-            <Route path="/deckbuilder/:id" element={<DeckBuilderPage />} />
-          </Route>
-          {!IS_DESKTOP && (
-            <Route element={<RoleGuard allowedRoles={['admin']} />}>
-              <Route path="/admin/issues" element={suspended(AdminIssuesPage)} />
-              <Route path="/admin/tasks" element={suspended(AdminTasksPage)} />
-              <Route path="/admin/promotions" element={suspended(AdminPromotionsPage)} />
-              <Route path="/admin/barracks" element={suspended(BarracksPage)} />
-              <Route path="/admin/arena" element={suspended(ArenaPage)} />
-              <Route path="/admin/gauntlet" element={suspended(GauntletPage)} />
-              <Route path="/admin/gauntlet/:id" element={suspended(GauntletPage)} />
-              <Route path="/admin/deck-pools" element={suspended(DeckPoolPage)} />
-              <Route path="/admin/deck-pools/:id" element={suspended(DeckPoolPage)} />
-              <Route path="/admin/patch-notes" element={suspended(AdminPatchNotesPage)} />
-              <Route path="/admin/models" element={suspended(AdminModelsPage)} />
+      <CanvasScaler>
+        <Routes>
+          {IS_DESKTOP && <Route path="/" element={suspended(LauncherPage)} />}
+          <Route element={<Layout />}>
+            {!IS_DESKTOP && <Route path="/" element={<HomePage />} />}
+            <Route path="/patch-notes" element={<PatchNotesPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route element={<AuthGuard />}>
+              <Route path="/lobby" element={<LobbyPage />} />
+              <Route path="/play" element={<ModeSelectPage />} />
+              <Route path="/play/deck" element={<DeckSelectPage />} />
+              <Route path="/play/matching" element={<MatchingPage />} />
+              <Route path="/play/room/:gameId" element={<RoomLobbyPage />} />
+              <Route path="/game/:id?" element={<GamePage />} />
+              <Route path="/deckbuilder" element={<DeckLibraryPage />} />
+              <Route path="/deckbuilder/new" element={<DeckBuilderPage />} />
+              <Route path="/deckbuilder/:id" element={<DeckBuilderPage />} />
             </Route>
-          )}
-          {IS_DESKTOP && <Route path="/models" element={suspended(ModelsPage)} />}
-        </Route>
-      </Routes>
+            {!IS_DESKTOP && (
+              <Route element={<RoleGuard allowedRoles={['admin']} />}>
+                <Route path="/admin/issues" element={suspended(AdminIssuesPage)} />
+                <Route path="/admin/tasks" element={suspended(AdminTasksPage)} />
+                <Route path="/admin/promotions" element={suspended(AdminPromotionsPage)} />
+                <Route path="/admin/barracks" element={suspended(BarracksPage)} />
+                <Route path="/admin/arena" element={suspended(ArenaPage)} />
+                <Route path="/admin/gauntlet" element={suspended(GauntletPage)} />
+                <Route path="/admin/gauntlet/:id" element={suspended(GauntletPage)} />
+                <Route path="/admin/deck-pools" element={suspended(DeckPoolPage)} />
+                <Route path="/admin/deck-pools/:id" element={suspended(DeckPoolPage)} />
+                <Route path="/admin/patch-notes" element={suspended(AdminPatchNotesPage)} />
+                <Route path="/admin/models" element={suspended(AdminModelsPage)} />
+              </Route>
+            )}
+            {IS_DESKTOP && <Route path="/models" element={suspended(ModelsPage)} />}
+            {IS_DESKTOP && (
+              <Route
+                path="/settings/graphics"
+                element={suspended(GraphicsSettingsPage)}
+              />
+            )}
+          </Route>
+        </Routes>
+      </CanvasScaler>
     </BrowserRouter>
   );
 }

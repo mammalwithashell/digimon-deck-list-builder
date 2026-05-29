@@ -1,0 +1,44 @@
+card: BT19-033
+name: Dorulumon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+traits: [Beast, Xros Heart]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Save
+    summary: "<Save>"
+
+  - when: on_play
+    summary: "[On Play] May digivolve into JaegerDorulumon under your Tamers without paying the cost"
+    process:
+      - select_under_tamer_sources:
+          min: 0
+          max: 1
+          filter:
+            name_contains: JaegerDorulumon
+          bind_as: evo_source
+          prompt: "Choose JaegerDorulumon under your Tamers to digivolve into"
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: evo_source
+                cost: free
+
+  - scope: inherited
+    kind: grant_keyword
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_permanent_trait_has: "Xros Heart"
+    keyword: Piercing
+    summary: "Inherited: Xros Heart carrier gains Piercing on your turn"

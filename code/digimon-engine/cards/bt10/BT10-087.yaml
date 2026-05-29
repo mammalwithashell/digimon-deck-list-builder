@@ -1,0 +1,16 @@
+card: BT10-087
+name: "Taiki Kudo"
+kind: tamer
+color: [red]
+cost: 3
+traits: [General, Xros Heart]
+
+effects:
+  - kind: cost_reduction
+    active_when: { your_turn: true }
+    when_any_ally_played: { has_alt_path: digixros }
+    optional: true
+    amount: 0
+    pay_cost:
+      - suspend: { target: source }
+      - allow_digixros_material_zone: { zone: material }

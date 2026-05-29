@@ -1,0 +1,16 @@
+card: ST4-07
+name: Kuwagamon
+kind: digimon
+level: 4
+color: [green]
+cost: 5
+dp: 6000
+traits: [Insectoid]
+form: Champion
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+
+effects: []

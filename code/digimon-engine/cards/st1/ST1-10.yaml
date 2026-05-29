@@ -1,0 +1,17 @@
+card: ST1-10
+name: Phoenixmon
+kind: digimon
+level: 6
+color: [red]
+cost: 10
+dp: 12000
+traits: [Holy Beast]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 2
+
+effects: []

@@ -6,6 +6,7 @@
 //! by the action decoder and the Tauri/PyO3 bindings; none of them move here.
 
 use crate::card_source::{CardHandle, CardSource};
+use crate::digixros::DigiXrosMaterialOrigin;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{
     CardKind, EffectSourceKind, EffectTiming, GamePhase, Keyword, ModifierType, PlaySource,
@@ -501,6 +502,13 @@ impl Game {
             return PlayFromHandCostResult::Failed;
         }
 
+        self.pending_digixros_transaction = match origin {
+            PendingWouldPlayOrigin::Hand => {
+                self.build_digixros_transaction_for_hand_card(player_id, hand_index)
+            }
+            _ => None,
+        };
+
         let target_card = self.player(player_id).hand[hand_index].handle();
         self.continue_play_from_hand_cost_reduction_chain(
             player_id,
@@ -560,12 +568,26 @@ impl Game {
                 );
             };
 
-            if !candidate.optional && !candidate.has_pay_cost {
+            if !candidate.optional {
                 let key = candidate.key.clone();
                 if let Some(amount) = self.apply_cost_reduction_candidate(&key, target) {
                     accumulated_reduction += amount;
                 }
                 processed.push(key);
+                if self.pending_selection.is_some() {
+                    self.wrap_pending_play_cost_continuation(
+                        player_id,
+                        hand_index,
+                        target,
+                        cost_delta,
+                        source,
+                        origin,
+                        suppress_on_play,
+                        accumulated_reduction,
+                        processed,
+                    );
+                    return PlayFromHandCostResult::Pending;
+                }
                 continue;
             }
 
@@ -620,6 +642,20 @@ impl Game {
                         reduction += amount;
                     }
                     processed.push(accept_key);
+                    if game.pending_selection.is_some() {
+                        game.wrap_pending_play_cost_continuation(
+                            player_id,
+                            hand_index,
+                            target,
+                            cost_delta,
+                            source,
+                            origin,
+                            suppress_on_play,
+                            reduction,
+                            processed,
+                        );
+                        return;
+                    }
                     let _ = game.continue_play_from_hand_cost_reduction_chain(
                         player_id,
                         hand_index,
@@ -640,6 +676,43 @@ impl Game {
 
     #[allow(clippy::too_many_arguments)]
     fn finish_play_from_hand_after_reductions(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target_card: crate::card_source::CardHandle,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        total_reduction: i32,
+    ) -> PlayFromHandCostResult {
+        if self.install_pending_digixros_material_selection_or_finish(
+            player_id,
+            hand_index,
+            target_card,
+            cost_delta,
+            source,
+            origin,
+            suppress_on_play,
+            total_reduction,
+        ) {
+            return PlayFromHandCostResult::Pending;
+        }
+
+        self.commit_play_from_hand_after_reductions(
+            player_id,
+            hand_index,
+            target_card,
+            cost_delta,
+            source,
+            origin,
+            suppress_on_play,
+            total_reduction,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn commit_play_from_hand_after_reductions(
         &mut self,
         player_id: PlayerId,
         hand_index: usize,
@@ -676,7 +749,12 @@ impl Game {
             target_permanents: [None, None],
         };
         self.scan_before_pay_cost_observers(player_id, Some(cost_target_ctx));
-        let effective_cost = (base_cost - total_reduction).max(0) as u16;
+        let transaction_cost = self
+            .pending_digixros_transaction
+            .as_ref()
+            .map(|transaction| transaction.final_cost() as i32)
+            .unwrap_or(base_cost);
+        let effective_cost = (transaction_cost - total_reduction).max(0) as u16;
 
         self.pending_would_play_resume = Some(PendingWouldPlayResume {
             player: player_id,
@@ -708,24 +786,313 @@ impl Game {
             crate::replacement::ReplacementOutcome::Cancelled
             | crate::replacement::ReplacementOutcome::CustomHandled => {
                 self.pending_would_play_resume = None;
+                self.pending_digixros_transaction = None;
                 return PlayFromHandCostResult::Failed;
             }
             crate::replacement::ReplacementOutcome::Redirected(_)
             | crate::replacement::ReplacementOutcome::Substituted(_) => {
                 self.pending_would_play_resume = None;
+                self.pending_digixros_transaction = None;
                 return PlayFromHandCostResult::Failed;
             }
         }
 
-        self.commit_play_from_hand_card_no_replace(
+        let committed = self.commit_play_from_hand_card_no_replace(
             player_id,
             target_card,
             effective_cost,
             source == PlaySource::ByEffect,
             suppress_on_play,
-        )
-        .map(PlayFromHandCostResult::Played)
-        .unwrap_or(PlayFromHandCostResult::Failed)
+        );
+        self.pending_digixros_transaction = None;
+        committed
+            .map(PlayFromHandCostResult::Played)
+            .unwrap_or(PlayFromHandCostResult::Failed)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn wrap_pending_play_cost_continuation(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target: CostTargetContext,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        accumulated_reduction: i32,
+        processed: Vec<CostReductionKey>,
+    ) {
+        let Some(mut pending) = self.pending_selection.take() else {
+            return;
+        };
+
+        let original_callback = pending.callback;
+        let accept_processed = processed.clone();
+        pending.callback = Box::new(move |game: &mut Game, action_id: u16| {
+            original_callback(game, action_id);
+            game.resume_play_cost_continuation_after_pending(
+                player_id,
+                hand_index,
+                target,
+                cost_delta,
+                source,
+                origin,
+                suppress_on_play,
+                accumulated_reduction,
+                accept_processed,
+            );
+        });
+
+        let decline_processed = processed;
+        let original_decline = pending.on_decline.take();
+        pending.on_decline = Some(Box::new(move |game: &mut Game| {
+            if let Some(original_decline) = original_decline {
+                original_decline(game);
+            }
+            game.resume_play_cost_continuation_after_pending(
+                player_id,
+                hand_index,
+                target,
+                cost_delta,
+                source,
+                origin,
+                suppress_on_play,
+                accumulated_reduction,
+                decline_processed,
+            );
+        }));
+
+        self.pending_selection = Some(pending);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_play_cost_continuation_after_pending(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target: CostTargetContext,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        accumulated_reduction: i32,
+        processed: Vec<CostReductionKey>,
+    ) {
+        if self.pending_selection.is_some() {
+            self.wrap_pending_play_cost_continuation(
+                player_id,
+                hand_index,
+                target,
+                cost_delta,
+                source,
+                origin,
+                suppress_on_play,
+                accumulated_reduction,
+                processed,
+            );
+            return;
+        }
+        let _ = self.continue_play_from_hand_cost_reduction_chain(
+            player_id,
+            hand_index,
+            target,
+            cost_delta,
+            source,
+            origin,
+            suppress_on_play,
+            accumulated_reduction,
+            processed,
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn install_pending_digixros_material_selection_or_finish(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target_card: crate::card_source::CardHandle,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        total_reduction: i32,
+    ) -> bool {
+        let Some(transaction) = self.pending_digixros_transaction.as_ref() else {
+            return false;
+        };
+        if transaction.played_card != target_card || transaction.controller != player_id {
+            return false;
+        }
+
+        let candidates = self.pending_digixros_material_candidates(player_id);
+        if candidates.is_empty() && transaction.material_count() == 0 {
+            return false;
+        }
+
+        let valid_action_ids = candidates
+            .iter()
+            .map(|(action_id, _)| *action_id)
+            .collect::<Vec<_>>();
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectMaterial;
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Material,
+            selecting_player: player_id,
+            previous_phase,
+            valid_action_ids,
+            is_optional: true,
+            prompt: "Select DigiXros material".to_string(),
+            effect_choices: None,
+            source_card: target_card,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let Some((_, origin_ref)) = candidates
+                    .iter()
+                    .find(|(candidate_action, _)| *candidate_action == action_id)
+                else {
+                    return;
+                };
+                let material_origin = *origin_ref;
+                let Some(card_data) = game.card_data_for_handle(material_origin.card()).cloned()
+                else {
+                    return;
+                };
+                if let Some(transaction) = game.pending_digixros_transaction.as_mut() {
+                    let _ = transaction.try_select_material(material_origin, &card_data);
+                }
+                let _ = game.finish_play_from_hand_after_reductions(
+                    player_id,
+                    hand_index,
+                    target_card,
+                    cost_delta,
+                    source,
+                    origin,
+                    suppress_on_play,
+                    total_reduction,
+                );
+            }),
+            on_decline: Some(Box::new(move |game: &mut Game| {
+                let _ = game.commit_play_from_hand_after_reductions(
+                    player_id,
+                    hand_index,
+                    target_card,
+                    cost_delta,
+                    source,
+                    origin,
+                    suppress_on_play,
+                    total_reduction,
+                );
+            })),
+        });
+        true
+    }
+
+    fn pending_digixros_material_candidates(
+        &self,
+        player_id: PlayerId,
+    ) -> Vec<(u16, DigiXrosMaterialOrigin)> {
+        use crate::action::space::{
+            encode_source_select, HAND_EFFECT_START, HAND_MAIN_LIMIT, MAX_FIELD_SLOTS,
+            TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
+        };
+
+        let Some(transaction) = self.pending_digixros_transaction.as_ref() else {
+            return Vec::new();
+        };
+        if transaction.controller != player_id {
+            return Vec::new();
+        }
+
+        let player = self.player(player_id);
+        let mut candidates = Vec::new();
+
+        for (index, card) in player.hand.iter().enumerate().take(HAND_MAIN_LIMIT) {
+            if card.handle() == transaction.played_card {
+                continue;
+            }
+            let origin = DigiXrosMaterialOrigin::Hand {
+                player: player_id,
+                index,
+                card: card.handle(),
+            };
+            if transaction
+                .validate_material_origin(origin, &self.card_data[card.data_index])
+                .is_ok()
+            {
+                candidates.push((HAND_EFFECT_START + index as u16, origin));
+            }
+        }
+
+        for (index, permanent) in player
+            .battle_area
+            .iter()
+            .enumerate()
+            .take(MAX_FIELD_SLOTS as usize)
+        {
+            let card = permanent.top_card();
+            let origin = DigiXrosMaterialOrigin::BattleArea {
+                permanent: PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
+                },
+                card: card.handle(),
+            };
+            if transaction
+                .validate_material_origin(origin, &self.card_data[card.data_index])
+                .is_ok()
+            {
+                candidates.push((index as u16, origin));
+            }
+        }
+
+        for (index, card) in player.trash.iter().enumerate().take(TRASH_MAIN_LIMIT) {
+            let origin = DigiXrosMaterialOrigin::Trash {
+                player: player_id,
+                index,
+                card: card.handle(),
+            };
+            if transaction
+                .validate_material_origin(origin, &self.card_data[card.data_index])
+                .is_ok()
+            {
+                candidates.push((TRASH_EFFECT_START + index as u16, origin));
+            }
+        }
+
+        for (field_index, permanent) in player
+            .battle_area
+            .iter()
+            .enumerate()
+            .take(MAX_FIELD_SLOTS as usize)
+        {
+            if permanent.top_card().card_kind(&self.card_data) != CardKind::Tamer {
+                continue;
+            }
+            for (source_index, card) in permanent.card_sources.iter().enumerate() {
+                let Some(action_id) = encode_source_select(field_index as u16, source_index as u16)
+                else {
+                    continue;
+                };
+                let origin = DigiXrosMaterialOrigin::UnderTamer {
+                    tamer: PermanentHandle {
+                        player: player_id,
+                        index: field_index as u8,
+                    },
+                    source_index,
+                    card: card.handle(),
+                };
+                if transaction
+                    .validate_material_origin(origin, &self.card_data[card.data_index])
+                    .is_ok()
+                {
+                    candidates.push((action_id, origin));
+                }
+            }
+        }
+
+        candidates
     }
 
     // ── Assembly play execution (G-ASSEMBLY-PLAY-EXECUTION) ──────────────
@@ -979,14 +1346,17 @@ impl Game {
                     resume.effect_initiated,
                     resume.suppress_on_play,
                 );
+                self.pending_digixros_transaction = None;
             }
             crate::replacement::ReplacementOutcome::Cancelled
             | crate::replacement::ReplacementOutcome::CustomHandled => {
                 self.restore_pending_would_play_origin(resume);
+                self.pending_digixros_transaction = None;
             }
             crate::replacement::ReplacementOutcome::Redirected(_)
             | crate::replacement::ReplacementOutcome::Substituted(_) => {
                 self.restore_pending_would_play_origin(resume);
+                self.pending_digixros_transaction = None;
             }
         }
     }
@@ -1069,6 +1439,14 @@ impl Game {
         let perm = crate::permanent::Permanent::new(card, turn);
         self.player_mut(player_id).battle_area.push(perm);
         let field_index = self.player(player_id).battle_area.len() - 1;
+        let mut entered = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        if self.pending_digixros_transaction.is_some() {
+            entered = self.commit_digixros_material_sources(entered);
+        }
+        let entered_index = entered.index as usize;
 
         // G-ASSEMBLY-PLAY-EXECUTION: place assembled materials at the BOTTOM of
         // the new permanent's digivolution stack BEFORE its [On Play] /
@@ -1076,6 +1454,10 @@ impl Game {
         // Digimon's own digivolution-card count (e.g. AD1-025 Omnimon's bounce)
         // observe the assembled materials. Consumed here regardless of which
         // commit path (direct or `commit_pending_would_play` resume) ran.
+        // Assembly and DigiXros are mutually exclusive play paths
+        // (`pending_assembly_materials` vs `pending_digixros_transaction`), so
+        // for an assembly play the DigiXros relocation above is a no-op and
+        // `entered_index == field_index`.
         if let Some((played, materials)) = self.pending_assembly_materials.take() {
             if played == target_card {
                 for h in materials {
@@ -1089,7 +1471,7 @@ impl Game {
                     };
                     let cs = self.player_mut(player_id).trash.remove(pos);
                     if let Some(perm) =
-                        self.player_mut(player_id).battle_area.get_mut(field_index)
+                        self.player_mut(player_id).battle_area.get_mut(entered_index)
                     {
                         perm.push_under(cs);
                     } else {
@@ -1103,7 +1485,7 @@ impl Game {
             }
         }
 
-        let top_card = self.players[player_id as usize].battle_area[field_index].top_card();
+        let top_card = self.players[player_id as usize].battle_area[entered_index].top_card();
         let emitted_card_id = top_card.card_id(&self.card_data).to_string();
         let cost_printed = self.card_data[top_card.data_index].play_cost as i16;
         let seq = self.next_event_seq();
@@ -1111,7 +1493,7 @@ impl Game {
             seq,
             player: player_id,
             card_id: emitted_card_id,
-            field_index: field_index as u8,
+            field_index: entered.index,
             // Standard PLAY-from-hand path: `effective_cost` is the
             // post-discount memory actually paid (after tamer / other
             // generic reductions). Not an alt-path play — `via_alt_path`
@@ -1128,9 +1510,124 @@ impl Game {
         // `enter_deferred_drain` / `exit_deferred_drain_and_flush` so
         // simultaneous triggers share a TriggerOrder bundle — see
         // `Game::fire_play_event_triggers` for the contract.
-        self.fire_play_event_triggers(player_id, field_index, effect_initiated, suppress_on_play);
+        self.fire_play_event_triggers(player_id, entered_index, effect_initiated, suppress_on_play);
 
-        Some(field_index)
+        Some(entered_index)
+    }
+
+    fn commit_digixros_material_sources(&mut self, mut target: PermanentHandle) -> PermanentHandle {
+        let Some(origins) = self
+            .pending_digixros_transaction
+            .as_ref()
+            .map(|transaction| {
+                let mut origins = transaction
+                    .pre_attached_materials
+                    .iter()
+                    .chain(transaction.selected_materials.iter())
+                    .map(|material| material.origin)
+                    .collect::<Vec<_>>();
+                origins.sort_by_key(|origin| match origin {
+                    DigiXrosMaterialOrigin::BattleArea { permanent, .. } => {
+                        (0u8, std::cmp::Reverse(permanent.index))
+                    }
+                    _ => (1u8, std::cmp::Reverse(0)),
+                });
+                origins
+            })
+        else {
+            return target;
+        };
+
+        for origin in origins {
+            let shifts_target_left = matches!(
+                origin,
+                DigiXrosMaterialOrigin::BattleArea { permanent, .. }
+                    if permanent.player == target.player && permanent.index < target.index
+            );
+            let Some(card) = self.take_digixros_material_origin(origin) else {
+                continue;
+            };
+            if shifts_target_left {
+                target.index = target.index.saturating_sub(1);
+            }
+            if let Some(permanent) = self
+                .player_mut(target.player)
+                .battle_area
+                .get_mut(target.index as usize)
+            {
+                permanent.push_under(card);
+            }
+        }
+
+        target
+    }
+
+    fn take_digixros_material_origin(
+        &mut self,
+        origin: DigiXrosMaterialOrigin,
+    ) -> Option<CardSource> {
+        match origin {
+            DigiXrosMaterialOrigin::Hand { player, card, .. } => {
+                let idx = self
+                    .player(player)
+                    .hand
+                    .iter()
+                    .position(|candidate| candidate.handle() == card)?;
+                Some(self.player_mut(player).hand.remove(idx))
+            }
+            DigiXrosMaterialOrigin::Trash { player, card, .. } => {
+                let idx = self
+                    .player(player)
+                    .trash
+                    .iter()
+                    .position(|candidate| candidate.handle() == card)?;
+                Some(self.player_mut(player).trash.remove(idx))
+            }
+            DigiXrosMaterialOrigin::UnderTamer {
+                tamer,
+                source_index,
+                card,
+            } => {
+                let permanent = self
+                    .player_mut(tamer.player)
+                    .battle_area
+                    .get_mut(tamer.index as usize)?;
+                if permanent
+                    .card_sources
+                    .get(source_index)
+                    .is_some_and(|candidate| candidate.handle() == card)
+                {
+                    Some(permanent.card_sources.remove(source_index))
+                } else {
+                    let idx = permanent
+                        .card_sources
+                        .iter()
+                        .position(|candidate| candidate.handle() == card)?;
+                    Some(permanent.card_sources.remove(idx))
+                }
+            }
+            DigiXrosMaterialOrigin::BattleArea { permanent, card } => {
+                let player = permanent.player;
+                let idx = self
+                    .player(player)
+                    .battle_area
+                    .get(permanent.index as usize)
+                    .filter(|candidate| candidate.top_card().handle() == card)
+                    .map(|_| permanent.index as usize)
+                    .or_else(|| {
+                        self.player(player)
+                            .battle_area
+                            .iter()
+                            .position(|candidate| candidate.top_card().handle() == card)
+                    })?;
+                let mut removed = self.player_mut(player).battle_area.remove(idx);
+                let top = removed.card_sources.pop()?;
+                if !removed.card_sources.is_empty() {
+                    self.player_mut(player).trash.extend(removed.card_sources);
+                }
+                Some(top)
+            }
+        }
     }
 
     /// Play a card from `player`'s trash to field, paying the printed cost.
@@ -2708,10 +3205,9 @@ impl Game {
             // Opaque-aware: opaque players' reveal-from-top consumes
             // RevealKind::Effect (peek effects, not draws/security/mill).
             // For standard players this is a plain `deck.pop()`.
-            let card = match self.take_from_deck_top_for_player(
-                player_id,
-                crate::opaque_deck::RevealKind::Effect,
-            ) {
+            let card = match self
+                .take_from_deck_top_for_player(player_id, crate::opaque_deck::RevealKind::Effect)
+            {
                 Ok(Some(c)) => c,
                 Ok(None) => break,
                 Err(e) => {
@@ -4669,10 +5165,8 @@ impl Game {
                 // `?` short-circuits on either deck-out (Ok(None)) or
                 // reveal-source error (Err) — both cause the caller to
                 // return None (signaling "couldn't take a card").
-                match self.take_from_deck_top_for_player(
-                    p,
-                    crate::opaque_deck::RevealKind::Effect,
-                ) {
+                match self.take_from_deck_top_for_player(p, crate::opaque_deck::RevealKind::Effect)
+                {
                     Ok(Some(c)) => c,
                     Ok(None) => return None,
                     Err(e) => {
@@ -5193,15 +5687,15 @@ impl Game {
             let Some(amount) = self.inspect_cost_reduction_candidate(&key, cost_target) else {
                 continue;
             };
-            if amount <= 0 {
-                continue;
-            }
             let Some(effects) = self.effects_for_card(&key.card_id, key.source_card) else {
                 continue;
             };
             let Some(effect) = effects.get(key.effect_slot as usize) else {
                 continue;
             };
+            if amount <= 0 && effect.pay_cost_fn.is_none() {
+                continue;
+            }
             candidates.push(CostReductionCandidate {
                 key,
                 label: if effect.name.is_empty() {

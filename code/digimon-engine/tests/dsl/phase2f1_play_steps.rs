@@ -301,9 +301,11 @@ fn play_from_revealed_free_step_consumes_reveal_and_keeps_memory() {
         battle_before + 1,
         "battle area gains 1 permanent"
     );
+    // Post-change `fix-played-binding-uses-provenance`: play-verb `bind_as`
+    // stores `PlayedPermanent { token, fallback }`, not positional `Permanent`.
     assert!(
-        bindings.get_permanent("played").is_some(),
-        "bind_as records the played permanent"
+        bindings.get_played_permanent("played").is_some(),
+        "bind_as records the played permanent (as PlayedPermanent)"
     );
 }
 

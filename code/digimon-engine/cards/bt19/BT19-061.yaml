@@ -1,0 +1,83 @@
+card: BT19-061
+name: RaptorSparrowmon
+kind: digimon
+level: 4
+color: [black, purple]
+cost: 5
+dp: 5000
+traits: [Cyborg, Twilight, Xros Heart]
+attribute: Data
+
+digixros_aliases: [Sparrowmon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: "Xros Heart"
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Reveal top 3, add Xros Heart/Blue Flare, trash rest"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 3
+          bind_as: revealed
+      - select_reveal:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - trait_has: "Xros Heart"
+              - trait_has: "Blue Flare"
+          prompt: "Add 1 Xros Heart or Blue Flare card to hand"
+      - add_to_hand_from_reveal: { of: you, card: pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  - when: on_deletion
+    summary: "[On Deletion] Place 1 Xros Heart/Blue Flare Digimon from hand or trash under one of your Tamers"
+    process:
+      - select_own_permanent:
+          bind_as: tamer
+          optional: true
+          filter: { kind: tamer }
+          prompt: "Choose a Tamer to place a card under"
+      - if:
+          condition: { binding_present: tamer }
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                bind_as: stash
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: "Xros Heart"
+                        - trait_has: "Blue Flare"
+                prompt: "Place 1 Xros Heart or Blue Flare Digimon from hand or trash under the Tamer"
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: tamer
+
+  - scope: inherited
+    kind: grant_keyword
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_permanent_trait_has: "Xros Heart"
+    keyword: Collision
+    summary: "Inherited: Xros Heart carrier gains Collision on your turn"

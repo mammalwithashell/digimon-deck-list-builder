@@ -493,6 +493,71 @@ impl DebugRunner {
         card.dp = Some(dp);
     }
 
+    // ─── Scenario-staging setters (add-ui-scenario-test-substrate) ────────
+    //
+    // These let `RustDebugGame` (and tests) drop a game into an arbitrary
+    // mid-game state. They mutate engine state directly and maintain the
+    // derived invariants the turn machine relies on (turn_order ordering,
+    // memory_pair, mulligan finalization). They do NOT run rules logic —
+    // staging is a setup step, not a play action.
+
+    /// Place a full digivolution stack (bottom-to-top) on a player's field
+    /// with explicit suspend state and turn-played value. Unlike
+    /// `place_stack` (which hardcodes `turn_played=0` and leaves the
+    /// permanent unsuspended), this is the staging entry point for combat
+    /// and timing scenarios that care about summoning sickness and suspend.
+    pub fn place_field_stack(
+        &mut self,
+        player: PlayerId,
+        card_ids: &[&str],
+        suspended: bool,
+        turn_played: u16,
+    ) -> PermanentHandle {
+        let index = self
+            .game
+            .stage_place_field_stack(player, card_ids, suspended, turn_played);
+        PermanentHandle {
+            player,
+            index: index as u8,
+        }
+    }
+
+    /// Inject a card directly into a player's trash. Non-gated counterpart
+    /// to `trash_one_source` for scenario staging (e.g. seeding [On
+    /// Deletion] / "when this card is trashed" sources, or the trashed
+    /// material a card's effect plays back out).
+    pub fn inject_trash(&mut self, player: PlayerId, card_id: &str) {
+        self.game
+            .stage_inject_card(player, card_id, "trash")
+            .unwrap_or_else(|e| panic!("inject_trash: {e}"));
+    }
+
+    /// Set the current phase directly. Intended for staging into a normal
+    /// turn phase (most commonly `Main`). If leaving `Mulligan`, the
+    /// caller should `skip_mulligan()` first so mulligan bookkeeping is
+    /// finalized; setting the phase alone does not drain `mulligan_pending`.
+    pub fn set_phase(&mut self, phase: GamePhase) {
+        self.game.current_phase = phase;
+    }
+
+    /// Set the turn counter directly. Affects summoning-sickness checks
+    /// (a permanent can attack when `turn_played < turn_count`).
+    pub fn set_turn(&mut self, turn: u16) {
+        self.game.turn_count = turn;
+    }
+
+    /// Make `player` the active turn player, preserving the seesaw and
+    /// turn-rotation invariants. Delegates to `Game::stage_set_first_player`.
+    pub fn set_first_player(&mut self, player: PlayerId) {
+        self.game.stage_set_first_player(player);
+    }
+
+    /// Validate that the staged board is internally consistent enough for
+    /// the turn machine to operate on. Delegates to `Game::stage_validate`.
+    pub fn validate(&self) -> Result<(), String> {
+        self.game.stage_validate()
+    }
+
     pub fn top_card(&self, handle: PermanentHandle) -> crate::card_source::CardHandle {
         self.game.players[handle.player as usize].battle_area[handle.index as usize]
             .top_card()

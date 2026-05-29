@@ -195,6 +195,7 @@ fn attack_open_entry_supports_effect_attacks_without_suspending() {
             optional: false,
         },
         suspend_attacker: false,
+        ignore_summoning_sickness: false,
         target_constraint: TargetConstraint::Forced(AttackTarget::Player(p1)),
         allow_cancel: false,
         cost_upgrade: None,
@@ -227,6 +228,7 @@ fn attack_open_cost_upgrade_applies_for_attack_only() {
             optional: false,
         },
         suspend_attacker: false,
+        ignore_summoning_sickness: false,
         target_constraint: TargetConstraint::Forced(AttackTarget::Player(p1)),
         allow_cancel: false,
         cost_upgrade: Some(AttackCostUpgrade {

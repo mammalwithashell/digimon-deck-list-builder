@@ -582,6 +582,12 @@ fn field_value(
             .battle_area
             .get(handle.index as usize)
             .map(|perm| i32::from(perm.top_card().play_cost(ctx.card_data()))),
+        CompiledFieldSelector::LowestMaterialCount => ctx
+            .game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| perm.card_sources.len().saturating_sub(1) as i32),
     }
 }
 
@@ -599,6 +605,7 @@ fn selected_field_extreme(
     let extreme = match selector {
         CompiledFieldSelector::LowestDp | CompiledFieldSelector::LowestPlayCost => values.min(),
         CompiledFieldSelector::HighestDp | CompiledFieldSelector::HighestPlayCost => values.max(),
+        CompiledFieldSelector::LowestMaterialCount => values.min(),
     };
     extreme
         .map(SelectedField::Exact)

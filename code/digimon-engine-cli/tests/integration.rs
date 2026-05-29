@@ -77,7 +77,13 @@ fn debug_repl_exits_cleanly_on_eof() {
     // Pipe an empty stdin — REPL prints prompt, hits EOF, exits 0.
     let cards = cards_json_path();
     let mut child = Command::new(bin_path())
-        .args(["--cards-json", &cards.to_string_lossy(), "--pool", "implemented", "debug"])
+        .args([
+            "--cards-json",
+            &cards.to_string_lossy(),
+            "--pool",
+            "implemented",
+            "debug",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -101,7 +107,13 @@ fn debug_repl_exits_cleanly_on_eof() {
 fn debug_repl_scripted_session_help_then_quit() {
     let cards = cards_json_path();
     let mut child = Command::new(bin_path())
-        .args(["--cards-json", &cards.to_string_lossy(), "--pool", "implemented", "debug"])
+        .args([
+            "--cards-json",
+            &cards.to_string_lossy(),
+            "--pool",
+            "implemented",
+            "debug",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

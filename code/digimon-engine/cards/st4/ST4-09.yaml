@@ -1,0 +1,16 @@
+card: ST4-09
+name: Okuwamon
+kind: digimon
+level: 5
+color: [green]
+cost: 6
+dp: 7000
+traits: [Insectoid]
+form: Ultimate
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 2
+
+effects: []

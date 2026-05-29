@@ -1,0 +1,25 @@
+card: ST4-06
+name: Togemon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000
+traits: [Vegetation]
+form: Champion
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    condition: { event_target_is_player: false }
+    summary: "[When Attacking] When attacking an opponent Digimon, this Digimon gets +2000 DP for the turn"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 2000
+          expiry: end_of_turn

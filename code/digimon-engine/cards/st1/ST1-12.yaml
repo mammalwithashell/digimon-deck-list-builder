@@ -1,0 +1,22 @@
+card: ST1-12
+name: Tai Kamiya
+kind: tamer
+color: [red]
+cost: 2
+
+effects:
+  # [Your Turn] All of your Digimon get +1000 DP.
+  - kind: aura
+    target:
+      of: you
+      zone: [battle_area]
+      kind: digimon
+    active_when: { your_turn: true }
+    dp_modifier: 1000
+    summary: "[Your Turn] All of your Digimon get +1000 DP"
+
+  # [Security] Play this card without paying the cost.
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

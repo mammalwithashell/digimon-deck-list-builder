@@ -18,9 +18,9 @@
 //! substrate via `ctx.cancel_leave / handle_replacement / substitute_replacement`.
 //! Trigger-based keywords (Fortitude, Partition, Retaliation) use the standard
 //! observer pattern. Scapegoat is an optional `WhenWouldBeDeleted` substitute
-//! replacement. MaterialSave(N), MindLink, and Training are `[Main]` active
-//! skills (neither a replacement nor a deletion trigger) — see §Active-skill
-//! keywords below. Execute is an `EndOfYourTurn` triggered effect granting
+//! replacement. MindLink and Training are `[Main]` active skills; MaterialSave(N)
+//! is a deletion-timed source rescue trigger. Execute is an `EndOfYourTurn`
+//! triggered effect granting
 //! `MayAttack` + `CanAttackUnsuspended` for the EOT-attack window with an
 //! `EndOfAttack` self-delete observer.
 //!
@@ -83,17 +83,12 @@
 //! finalizes) and Partition (`OnDeletion` with cause filter, trigger-based
 //! play of digivolution source cards).
 //!
-//! ## Active-skill keywords (Phase D Task 10)
+//! ## Material Save
 //!
-//! `MaterialSave(N)` is a `[Main]` active skill — neither a replacement nor
-//! a deletion trigger. It auto-installs as an `EffectTiming::MainOnField`
-//! effect; the action mask exposes a single `FIELD_EFFECT_SLOT_FOR_MAIN`
-//! bit when both halves of the gate hold (carrier has ≥1 source under top
-//! AND controller has ≥1 own Tamer). Activation is free (no memory cost,
-//! no suspension). The body parks an own-Tamer pick (mandatory) followed by
-//! an up-to-N source pick (`is_optional_zero=true`), then tucks the picks
-//! at the bottom of the chosen Tamer's stack via
-//! `place_card_under_permanent_bottom`.
+//! `MaterialSave(N)` is a deletion-timed optional rescue. It reads the deleted
+//! permanent's source snapshot, filters those handles through the carrier's
+//! printed DigiXros recipe when one is authored, then parks an own-Tamer pick
+//! followed by an up-to-N source pick from the moved cards in trash.
 //!
 //! ## Partition (Phase D Task 9)
 //!
@@ -883,90 +878,40 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
-        // Phase D Task 10 — printed MaterialSave(N): a `[Main]` active skill
-        // (NOT a replacement, NOT a deletion trigger). DCGO `MaterialSave.cs`.
-        //
-        // ## Activation gate (DCGO `CanActivateMaterialSave`, lines 10-24)
-        //
-        //   1. Self is on battle area (`IsExistOnBattleArea(card)`).
-        //   2. Self has ≥1 selectable digivolution source under top
-        //      (`DigivolutionCards.Count(...) >= 1` — DCGO `DigivolutionCards`
-        //      excludes the top card, which translates to
-        //      `card_sources.len() >= 2` here).
-        //   3. Controller has ≥1 selectable target permanent. For the auto-
-        //      install we restrict to OWN Tamers (DCGO's most common
-        //      `customMessageArrayTemplate(CanSelectDigimon: false,
-        //      CanSelectTamer: true)` template); per-card-text overrides
-        //      apply tighter filters via hand-rolled `CardEffect`.
-        //
-        // ## Body (DCGO `MaterialSaveProcess`, lines 28-120)
-        //
-        //   1. Player picks 1 own Tamer (mandatory once gate passes).
-        //   2. Player picks up to N own card_sources from self
-        //      (`is_optional_zero=true` — DCGO `canNoSelect: () => true`,
-        //      line 76; the player MAY pick fewer than N if they choose).
-        //   3. Selected sources are placed at the bottom of the chosen
-        //      Tamer's stack via `place_card_under_permanent_bottom`,
-        //      mirroring DCGO `selectedPermanent.AddDigivolutionCardsBottom`.
-        //
-        // ## Cost
-        //
-        // Zero. DCGO `MaterialSave` is a `[Main]` active skill that does
-        // NOT consume memory and does NOT suspend self. The
-        // `EffectTiming::MainOnField` machinery exposes the activation in
-        // the action mask without any cost gating, matching this.
-        //
-        // ## Filter scope (Phase D)
-        //
-        // Per the Phase D plan note: the auto-install offers "any source"
-        // filter on the source pick (no DigiXros-style restrictions) and
-        // "own Tamer only" on the target pick. Per-card-text restrictions
-        // (e.g., DigiXros source filter) are a hand-rolled override on top
-        // of the auto-install — out of Phase D scope.
-        //
-        // ## Self-scope
-        //
-        // The `[Main]` mask emission iterates the carrier's stack; the
-        // `MainOnField` timing on the keyword auto-effect is naturally
-        // self-scoped because `activate_field_main` runs only the matched
-        // permanent's effects, with `source_permanent` set to the carrier.
-        // The closures below use `ctx.source_permanent` to identify the
-        // carrier handle for the source-pick zone.
-        Keyword::MaterialSave(n) => vec![Effect::declarative(card)
+        // Xros Heart change 4.x — printed MaterialSave(N) is no longer a
+        // `[Main]` activation. It is an optional deletion-timed source rescue
+        // that uses the pre-removal snapshot because the carrier has already
+        // moved to trash by the time OnDeletion handlers drain.
+        Keyword::MaterialSave(n) => vec![Effect::on_deletion(card)
             .name(&format!("<Material Save {n}>"))
-            .timing(EffectTiming::MainOnField)
-            // Gate at mask-build time so the activation only appears when
-            // both halves of CanActivateMaterialSave hold:
-            //   - carrier has ≥1 source under top (`card_sources.len() >= 2`)
-            //   - carrier's controller has ≥1 own Tamer on field
-            .condition(|ctx| {
-                let Some(perm) = ctx.source_permanent() else {
-                    return false;
-                };
-                if perm.card_sources.len() < 2 {
-                    return false;
-                }
-                // OWN-Tamer existence check. `EffectReadContext::player`
-                // is the controller of the activating effect (the carrier's
-                // owner for a MainOnField skill).
-                let owner = ctx.player;
-                ctx.battle_area(owner)
-                    .iter()
-                    .any(|p| p.is_tamer(&ctx.game.card_data))
-            })
             .process(move |ctx| {
-                let Some(me) = ctx.source_permanent else {
+                let Some(snapshot) = ctx.deleted_object_snapshot().cloned() else {
                     return;
                 };
-                let owner = me.player;
+                let owner = snapshot.former_controller;
+                let carrier = snapshot.top_card;
+                let eligible_sources = snapshot
+                    .digisources_just_before
+                    .iter()
+                    .copied()
+                    .filter(|source| ctx.game.card_matches_digixros_recipe(carrier, *source))
+                    .collect::<Vec<_>>();
+                if eligible_sources.is_empty() {
+                    return;
+                }
+                if !ctx
+                    .game
+                    .player(owner)
+                    .battle_area
+                    .iter()
+                    .any(|permanent| permanent.is_tamer(&ctx.game.card_data))
+                {
+                    return;
+                }
 
-                // Step 1: pick a Tamer (own, mandatory).
-                // mandatory once activation is chosen — the [Main] activation itself is
-                // the "may" hook; unlike Save's post-deletion Tamer pick, declining here
-                // has no semantic meaning (player can simply not activate).
                 ctx.select_own_permanent(
-                    "select a Tamer to receive digivolution cards",
-                    /*is_optional=*/ false,
+                    "you may place Material Save sources under one of your Tamers",
+                    /*is_optional=*/ true,
                     move |g, h| {
                         if h.player != owner {
                             return false;
@@ -981,21 +926,15 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         p.is_tamer(&g.card_data)
                     },
                     move |ctx, tamer| {
-                        // Step 2: pick up to N sources from self
-                        // (`is_optional_zero=true` — DCGO line 76
-                        // `canNoSelect: () => true` lets the player pick 0).
-                        ctx.select_count_capped_multi(
+                        let eligible_sources = eligible_sources;
+                        ctx.select_snapshot_digisources_from_trash(
                             owner,
-                            CountCappedZone::Material(me),
+                            eligible_sources.clone(),
                             n,
-                            "select cards to place under Tamer",
+                            "select Material Save sources to place under Tamer",
                             /*is_optional_zero=*/ true,
-                            /*distinct_by=*/ None,
-                            |_g, _src| true,
+                            move |_g, source| eligible_sources.contains(&source),
                             move |ctx, picks| {
-                                // Place each picked source at the bottom
-                                // of the Tamer's stack, mirroring DCGO's
-                                // `AddDigivolutionCardsBottom`.
                                 for source in picks {
                                     ctx.place_card_under_permanent_bottom(source, tamer, false);
                                 }

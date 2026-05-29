@@ -1,0 +1,77 @@
+card: BT19-090
+name: Meteor Rock Soul
+kind: option
+color: [red]
+cost: 3
+traits: [Xros Heart]
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Choose: play a low-DP Xros Heart from under a Tamer, or unsuspend Shoutmon EX6 and ShootingStarmon and attack"
+    process:
+      - select_effect_choice:
+          bind_as: mode
+          labels:
+            - "Play a Xros Heart Digimon from under a Tamer"
+            - "Unsuspend and attack"
+          prompt: "Choose Meteor Rock Soul mode"
+      - if:
+          condition: { equals: [mode, 0] }
+          then:
+            - select_under_tamer_sources:
+                bind_as: play_pick
+                min: 1
+                max: 1
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Xros Heart"
+                    - dp_lte: 4000
+                prompt: "Play 1 Xros Heart Digimon with 4000 DP or less from under a Tamer"
+            - play_under_tamer_source:
+                source_refs: play_pick
+                cost_delta: free
+      - if:
+          condition: { equals: [mode, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: shoutmon
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_is: "Shoutmon EX6"
+                prompt: "Choose 1 Shoutmon EX6 to unsuspend"
+            - unsuspend: { target: shoutmon }
+            - select_own_permanent:
+                bind_as: shooting
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_is: ShootingStarmon
+                prompt: "Choose 1 ShootingStarmon to unsuspend"
+            - unsuspend: { target: shooting }
+            - select_own_permanent:
+                bind_as: attacker
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to attack a player"
+            - may_attack_now:
+                attacker: attacker
+                targets: player
+                optional: false
+
+  - when: on_security
+    summary: "[Security] Play 1 low-DP Xros Heart Digimon from under a Tamer without paying the cost"
+    process:
+      - select_under_tamer_sources:
+          bind_as: play_pick
+          min: 1
+          max: 1
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Xros Heart"
+              - dp_lte: 4000
+          prompt: "Play 1 Xros Heart Digimon with 4000 DP or less from under a Tamer"
+      - play_under_tamer_source:
+          source_refs: play_pick
+          cost_delta: free

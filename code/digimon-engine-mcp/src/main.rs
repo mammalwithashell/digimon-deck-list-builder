@@ -184,10 +184,7 @@ fn dispatch_tool_call(
         .get("name")
         .and_then(|v| v.as_str())
         .ok_or_else(|| "tools/call: missing 'name'".to_string())?;
-    let args = p
-        .get("arguments")
-        .cloned()
-        .unwrap_or_else(|| json!({}));
+    let args = p.get("arguments").cloned().unwrap_or_else(|| json!({}));
     tools::dispatch(name, args, registry, card_data)
 }
 
@@ -226,18 +223,19 @@ fn load_card_data(
             "no --cards-json path provided and no data/cards.json found in current dir or ancestors"
                 .to_string()
         })?;
-    let bytes = std::fs::read(&path)
-        .map_err(|e| format!("reading {}: {}", path.display(), e))?;
-    let text = std::str::from_utf8(&bytes)
-        .map_err(|e| format!("cards.json is not valid UTF-8: {}", e))?;
-    let all = CardData::load_from_str(text)
-        .map_err(|e| format!("parsing cards.json: {}", e))?;
+    let bytes = std::fs::read(&path).map_err(|e| format!("reading {}: {}", path.display(), e))?;
+    let text =
+        std::str::from_utf8(&bytes).map_err(|e| format!("cards.json is not valid UTF-8: {}", e))?;
+    let all = CardData::load_from_str(text).map_err(|e| format!("parsing cards.json: {}", e))?;
 
     match pool_spec {
         "all" => Ok(all),
         "implemented" => {
             let pool = LiveGame::default_pool();
-            Ok(all.into_iter().filter(|(id, _)| pool.contains(id)).collect())
+            Ok(all
+                .into_iter()
+                .filter(|(id, _)| pool.contains(id))
+                .collect())
         }
         other => {
             let p = PathBuf::from(other);
@@ -246,7 +244,10 @@ fn load_card_data(
             let pool: Vec<String> = serde_json::from_slice(&bytes)
                 .map_err(|e| format!("parsing pool file as [card_id...]: {}", e))?;
             let pool: HashSet<String> = pool.into_iter().collect();
-            Ok(all.into_iter().filter(|(id, _)| pool.contains(id)).collect())
+            Ok(all
+                .into_iter()
+                .filter(|(id, _)| pool.contains(id))
+                .collect())
         }
     }
 }

@@ -1,0 +1,29 @@
+card: ST1-11
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+traits: [Dragonkin]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 4
+
+effects:
+  # [Your Turn] For every 2 digivolution cards this Digimon has, it gains
+  # <Security A. +1>.
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    security_attack_fn:
+      floor_div:
+        - base: 0
+          per: material_count
+          delta: 1
+        - 2
+    summary: "[Your Turn] SecurityAttackPlus +1 for every 2 digivolution cards"

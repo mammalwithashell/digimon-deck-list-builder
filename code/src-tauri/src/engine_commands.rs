@@ -102,6 +102,50 @@ pub struct PlayerDto {
     pub is_eliminated: bool,
 }
 
+/// Pure-data view of `game.pending_selection` for the frontend. Without
+/// this, any human-driven effect that requires a reveal-pick, target-pick,
+/// material-pick, or effect-choice would park the engine with no UI ever
+/// prompting the user. Mirrors the Python hosted-API's `pendingSelection`
+/// dict shape (see `digimon_gym/engine/game/serialization.py:338`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingSelectionDto {
+    /// Game phase the engine is parked in (`SelectReveal`, `SelectTarget`, …).
+    pub phase: String,
+    pub selecting_player: PlayerId,
+    /// Every action ID the decoder will accept for this selection.
+    pub valid_action_ids: Vec<u16>,
+    pub is_optional: bool,
+    pub prompt: String,
+    /// For `SelectionKind::EffectChoice` prompts (`select_effect_choice`),
+    /// the branches the player picks among. Each entry's `action_id` is one
+    /// of the `valid_action_ids` above; the engine uses the
+    /// `HAND_EFFECT_START`-based range (30+) which the frontend can't
+    /// derive without this list because the same action IDs are reused
+    /// across reveal/effect-choice phases.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub effect_choices: Vec<EffectChoiceDto>,
+}
+
+/// One branch of an `EffectChoice` prompt.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectChoiceDto {
+    /// Position in the `effect_choices` array — frontend uses this as a
+    /// stable index key.
+    pub index: u8,
+    /// Human-readable label (e.g. "Hatch", "Don't hatch").
+    pub label: String,
+    /// Concrete action ID the engine accepts for this branch.
+    pub action_id: u16,
+}
+
+/// One card from `game.revealed_cards`. Effects like "reveal X cards" push
+/// here; the frontend's `RevealedCardsZone` reads it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RevealedCardDto {
+    pub card_id: String,
+    pub owner: PlayerId,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameStateDto {
     pub turn_count: u16,
@@ -118,6 +162,15 @@ pub struct GameStateDto {
     /// During mulligan, the UI hides the "Mulligan" button for a player whose
     /// entry here is `true`.
     pub mulligan_used: Vec<bool>,
+    /// `Some(...)` whenever the engine is parked on a human-driven choice.
+    /// React's `SelectionPanel` / `PromptBar` / `KeywordPromptDialog` consume
+    /// this; without it those components render nothing and the user is stuck.
+    #[serde(default)]
+    pub pending_selection: Option<PendingSelectionDto>,
+    /// Cards revealed during the most recent effect resolution. The
+    /// `RevealedCardsZone` overlay renders these for the active player.
+    #[serde(default)]
+    pub revealed_cards: Vec<RevealedCardDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -176,6 +229,7 @@ fn phase_str(p: GamePhase) -> &'static str {
         GamePhase::SelectPermutation => "SelectPermutation",
         GamePhase::SelectBudgeted => "SelectBudgeted",
         GamePhase::SelectBreedingPermanent => "SelectBreedingPermanent",
+        GamePhase::SelectPlayOrder => "SelectPlayOrder",
     }
 }
 
@@ -280,6 +334,43 @@ fn player_dto(game: &Game, id: PlayerId) -> PlayerDto {
     }
 }
 
+fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
+    let sel = game.pending_selection.as_ref()?;
+    let effect_choices = sel
+        .effect_choices
+        .as_ref()
+        .map(|choices| {
+            choices
+                .iter()
+                .enumerate()
+                .map(|(i, entry)| EffectChoiceDto {
+                    index: i as u8,
+                    label: entry.label.clone(),
+                    action_id: entry.action_id,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    Some(PendingSelectionDto {
+        phase: phase_str(game.current_phase).to_string(),
+        selecting_player: sel.selecting_player,
+        valid_action_ids: sel.valid_action_ids.clone(),
+        is_optional: sel.is_optional,
+        prompt: sel.prompt.clone(),
+        effect_choices,
+    })
+}
+
+fn revealed_cards_dto(game: &Game) -> Vec<RevealedCardDto> {
+    game.revealed_cards
+        .iter()
+        .map(|cs| RevealedCardDto {
+            card_id: cs.card_id(&game.card_data).to_string(),
+            owner: cs.owner,
+        })
+        .collect()
+}
+
 fn game_state_dto(game: &Game) -> GameStateDto {
     let players: Vec<PlayerDto> = (0..game.rules.player_count)
         .map(|i| player_dto(game, i))
@@ -294,6 +385,8 @@ fn game_state_dto(game: &Game) -> GameStateDto {
         players,
         mulligan_current_player: game.mulligan_current_player(),
         mulligan_used: game.mulligan_used.clone(),
+        pending_selection: pending_selection_dto(game),
+        revealed_cards: revealed_cards_dto(game),
     }
 }
 
@@ -658,11 +751,15 @@ fn ensure_game<'a>(
     guard.as_mut().ok_or_else(|| "No active game".to_string())
 }
 
-/// Create a new local game using the built-in test card database. Accepts
-/// optional deck lists; when absent, uses the standard test decks. Accepts
-/// optional per-player kinds (`human` / `greedy` / `trained`) and model IDs
-/// (one per player, only honored for `trained`). When both are omitted, both
-/// seats default to `human`.
+/// Create a new local game. When `deck1`/`deck2` are provided by the
+/// caller, the real `data/cards.json`-derived card pool is used so any
+/// production card ID resolves. When both are absent, falls back to the
+/// synthetic `test_card_db()` (used by the legacy smoke flow and the
+/// `create_test_game` command).
+///
+/// Accepts optional per-player kinds (`human` / `greedy` / `trained`) and
+/// model IDs (one per player, only honored for `trained`). When both are
+/// omitted, both seats default to `human`.
 ///
 /// Player indices in the request are 0-based (matching the Rust engine's
 /// `PlayerId` convention).
@@ -675,7 +772,16 @@ pub fn rust_create_game(
     player_kinds: Option<Vec<PlayerKind>>,
     player_model_ids: Option<Vec<Option<String>>>,
 ) -> Result<CreateGameResponseDto, String> {
-    let db = test_card_db();
+    // When the caller provided real decks, use the production card pool so
+    // BT/EX/AD/P/ST card IDs resolve. Without this, `Game::new` would fail
+    // on the very first card-id lookup against the 8-card synthetic
+    // `test_card_db()` that this command historically defaulted to.
+    let caller_provided_decks = deck1.is_some() || deck2.is_some();
+    let db = if caller_provided_decks {
+        digimon_engine::deck_tools::full_card_data()
+    } else {
+        test_card_db()
+    };
     let decks = vec![
         deck1.unwrap_or_else(test_deck),
         deck2.unwrap_or_else(test_deck),
@@ -1138,7 +1244,9 @@ mod tests {
         card.digixros_aliases = vec!["Greymon".to_string(), "MetalGreymon".to_string()];
 
         let data: Vec<CardData> = vec![card];
-        let source = CardSource::new(/* data_index */ 0, /* owner */ 0, /* card_index */ 0);
+        let source = CardSource::new(
+            /* data_index */ 0, /* owner */ 0, /* card_index */ 0,
+        );
         let dto = card_dto(&source, &data);
 
         assert_eq!(dto.ace_overflow, Some(3));
@@ -1272,22 +1380,26 @@ mod tests {
         let pid = current_decision_player(&game);
         let mask = digimon_engine::action::build_action_mask(&game, pid);
         let summary = tensor_summary_for(&game, pid, &registry, &mask);
+        let profile = default_profile();
 
         assert_eq!(summary.player_id, pid);
-        assert_eq!(summary.profile_id, default_profile().id);
-        assert_eq!(summary.profile_version, 1);
+        assert_eq!(summary.profile_id, profile.id);
+        // After `flip-engine-default-to-lite-deck-v2`, the default profile is
+        // `standard_lite_deck_v2` (version 2, 8850 floats).
+        assert_eq!(summary.profile_id, "standard_lite_deck_v2");
+        assert_eq!(summary.profile_version, profile.version as u16);
         assert_eq!(summary.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
+        assert_eq!(summary.tensor_size, 8850);
         assert_eq!(
             summary.mask_size,
             digimon_engine::action::space::ACTION_SPACE_SIZE
         );
-        assert_eq!(summary.tensor_size, 1375);
+        assert_eq!(summary.card_id_slot_count, profile.card_id_slot_count);
+        assert_eq!(summary.scalar_slot_count, profile.scalar_slot_count);
         assert_eq!(
-            summary.mask_size,
-            digimon_engine::action::space::ACTION_SPACE_SIZE
+            summary.card_id_slot_count + summary.scalar_slot_count,
+            summary.tensor_size
         );
-        assert_eq!(summary.card_id_slot_count, 520);
-        assert_eq!(summary.scalar_slot_count, 855);
         assert!(summary.legal_action_count > 0);
         assert_eq!(summary.phase, format!("{:?}", game.current_phase));
     }
@@ -1316,8 +1428,16 @@ mod tests {
 
         let json = serde_json::to_string(&trace).unwrap();
         assert!(json.contains("\"actor\":\"human\""));
-        assert!(json.contains("\"tensor_size\":1375"));
-        assert!(json.contains("\"mask_size\":2192"));
+        // After `flip-engine-default-to-lite-deck-v2` the engine reports
+        // `standard_lite_deck_v2` shapes through the default surface.
+        assert!(
+            json.contains("\"tensor_size\":8850"),
+            "expected tensor_size 8850 in trace JSON; got: {json}"
+        );
+        assert!(
+            json.contains("\"mask_size\":2192"),
+            "expected mask_size 2192 (action-space unchanged); got: {json}"
+        );
 
         game.decode_action(digimon_engine::action::space::PASS, pid);
     }

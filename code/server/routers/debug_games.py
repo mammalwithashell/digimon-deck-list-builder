@@ -1,336 +1,389 @@
-"""Debug game endpoints for deterministic testing. Only available when DEBUG_MODE=1."""
+"""Rust-backed debug game endpoints — scenario staging for the
+browser-dev / Playwright e2e workflow (add-ui-scenario-test-substrate).
+
+Replaces the legacy `engine_py_legacy`-based debug router (CLAUDE.md rule
+#22: production code MUST NOT import the sunset Python engine). All staging
+runs through `digimon_engine.RustDebugGame`, which wraps the real card pool
+and presents the same play surface as `RustHeadlessGame` — so a game staged
+here can be driven through the live `/games/{id}/...` routes.
+
+Endpoints
+---------
+- POST   /debug/games                      create a staged game
+- POST   /debug/games/{id}/set-memory      set the memory gauge
+- POST   /debug/games/{id}/inject-card     add one card to a zone
+- POST   /debug/games/{id}/place-on-field  place a digivolution stack
+- POST   /debug/games/{id}/bulk-setup      replace multiple zones at once
+- POST   /debug/games/{id}/step            step + accumulate events (debug-driven)
+- GET    /debug/games/{id}/internal-state  full-information board read
+- POST   /debug/games/{id}/evaluate        evaluate engine assertions
+
+The assertion evaluator (groups 3 + 4 of the change) lives here as a thin
+Python pass-through over the binding's introspection surface:
+`internal_state()` (zones/stacks), `to_ui_json()` (effective DP),
+`get_action_mask()` (action-legal), `get_pending_selection()` (selection
+options), and a per-game accumulated event log (effect-triggered).
+"""
 
 from __future__ import annotations
 
-import random
+from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
-from engine_py_legacy.engine.data.card_database import CardDatabase
-from engine_py_legacy.engine.data.enums import PlayerType, GamePhase
-from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
-from engine_py_legacy.engine.core.player import Player
+from digimon_engine import RustDebugGame
+
+from server.routers.games import GameMeta, game_meta
 from server.routers.schemas import (
     CreateDebugGameRequest,
+    DebugBulkSetupRequest,
+    DebugEvaluateRequest,
+    DebugInjectCardRequest,
+    DebugPlaceOnFieldRequest,
+    DebugZoneSpec,
     SetMemoryRequest,
-    InjectCardRequest,
-    PlaceOnFieldRequest,
-    PlaceInBreedingRequest,
-    BulkSetupRequest,
-    ClearZoneRequest,
-    SetPhaseRequest,
-)
-from engine_py_legacy.engine.debug.state_injection import (
-    place_on_field as _place_on_field,
-    place_in_breeding as _place_in_breeding,
-    clear_zone as _clear_zone,
-    bulk_setup as _bulk_setup,
-    BulkSetupConfig,
 )
 from server.routers.state import active_games
 
 router = APIRouter(prefix="/debug", tags=["debug"])
 
+# Per-game accumulated event log. `effect_triggered` assertions scan this.
+# Populated whenever the debug router itself drains events (create-time
+# action script + the /debug step endpoint). Games driven through /games
+# surface events in those responses instead; the Playwright layer captures
+# them there.
+_debug_events: dict[str, list[dict[str, Any]]] = {}
 
-class DebugGameRunner(InteractiveGame):
-    def __init__(self, config: CreateDebugGameRequest):
-        p1_type = PlayerType.Human if config.player1_type.lower() == "human" else PlayerType.Agent
-        p2_type = PlayerType.Human if config.player2_type.lower() == "human" else PlayerType.Agent
 
-        # Monkey-patch shuffle if skip_shuffle
-        original_shuffle = Player.shuffle_for_game_start
-        if config.skip_shuffle:
-            Player.shuffle_for_game_start = lambda self: None
+def _require_debug_game(game_id: str) -> RustDebugGame:
+    runner = active_games.get(game_id)
+    if runner is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+    if not isinstance(runner, RustDebugGame):
+        raise HTTPException(
+            status_code=400,
+            detail="Game is not a debug-staged game",
+        )
+    return runner
 
-        try:
-            super().__init__(
-                config.deck1, config.deck2,
-                p1_type, p2_type,
-                player1_policy=config.player1_policy,
-                player2_policy=config.player2_policy,
-                agent_action_delay_ms=config.agent_action_delay_ms,
-            )
-        finally:
-            Player.shuffle_for_game_start = original_shuffle
 
-        # Fix first player if needed
-        game = self.game
-        desired_first = game.player1 if config.first_player == 1 else game.player2
-        if game.turn_player != desired_first:
-            game.turn_player, game.opponent_player = game.opponent_player, game.turn_player
-            game.turn_player.is_my_turn = True
-            game.opponent_player.is_my_turn = False
-            # Fix mulligan order to match
-            game._mulligan_order = [game.turn_player, game.opponent_player]
-            game._mulligan_index = 0
-            game.active_player = game._mulligan_order[0]
+def _apply_zone(game: RustDebugGame, pid: int, zone: DebugZoneSpec) -> None:
+    """Apply one player's zone staging. Any present zone REPLACES the dealt
+    contents (clear-then-populate)."""
+    if zone.hand is not None:
+        game.clear_zone(pid, "hand")
+        for cid in zone.hand:
+            game.inject_card(pid, cid, "hand")
+    if zone.deck_top is not None:
+        game.clear_zone(pid, "deck")
+        # index 0 = next draw = deck top = end of the engine vec, so inject
+        # in reverse: last list element goes in first (bottom).
+        for cid in reversed(zone.deck_top):
+            game.inject_card(pid, cid, "deck_top")
+    if zone.security is not None:
+        game.clear_zone(pid, "security")
+        # security[0] = top = end of vec; inject bottom-first.
+        for cid in reversed(zone.security):
+            game.inject_card(pid, cid, "security_top")
+    if zone.trash is not None:
+        game.clear_zone(pid, "trash")
+        for cid in zone.trash:
+            game.inject_card(pid, cid, "trash")
+    if zone.field is not None:
+        game.clear_zone(pid, "battle_area")
+        for fs in zone.field:
+            game.place_on_field(pid, fs.stack, fs.is_suspended, fs.turn_played)
+    if zone.breeding is not None:
+        game.clear_zone(pid, "breeding")
+        if zone.breeding:
+            game.place_in_breeding(pid, zone.breeding)
 
-        # Set starting hands if specified
-        if config.starting_hand1:
-            self._set_starting_hand(game.player1, config.starting_hand1)
-        if config.starting_hand2:
-            self._set_starting_hand(game.player2, config.starting_hand2)
 
-        # Auto-process mulligan
-        if config.auto_mulligan == "keep":
-            while game.current_phase == GamePhase.Mulligan:
-                game.decode_action(0, game.current_player_id)  # 0 = keep hand
+def _apply_scalar_state(
+    game: RustDebugGame,
+    *,
+    memory: int | None,
+    phase: str | None,
+    turn: int | None,
+    first_player: int | None,
+) -> None:
+    if first_player is not None:
+        game.set_first_player(first_player)
+    if turn is not None:
+        game.set_turn(turn)
+    if phase is not None:
+        game.set_phase(phase)
+    if memory is not None:
+        game.set_memory(memory)
 
-        # Set initial memory
-        game.memory = config.initial_memory
 
-    @staticmethod
-    def _set_starting_hand(player: Player, card_ids: list[str]):
-        """Replace player's hand with specific cards from their library."""
-        # Return current hand cards to top of library
-        for card in reversed(player.hand_cards):
-            player.library_cards.insert(0, card)
-        player.hand_cards.clear()
-
-        # Pull requested cards from library into hand
-        for wanted_id in card_ids:
-            for i, card in enumerate(player.library_cards):
-                if card.c_entity_base and card.c_entity_base.card_id == wanted_id:
-                    player.hand_cards.append(player.library_cards.pop(i))
-                    break
+def _state_payload(game_id: str, game: RustDebugGame) -> dict[str, Any]:
+    return {
+        "game_id": game_id,
+        "state": game.to_ui_json(),
+        "action_mask": game.get_action_mask().tolist(),
+        "is_game_over": game.is_game_over,
+        "current_player": game.current_player_id,
+    }
 
 
 @router.post("/games")
 def create_debug_game(request: CreateDebugGameRequest):
+    """Create a staged debug game. Supports both the legacy fixture fields
+    (`starting_hand1/2`, `initial_memory`, `first_player`) and the richer
+    `zones` / `phase` / `turn` scenario staging."""
     if not request.deck1 or not request.deck2:
         raise HTTPException(status_code=400, detail="Both decks must be provided")
 
     game_id = str(uuid4())
-    runner = DebugGameRunner(request)
-    active_games[game_id] = runner
-    runner.clear_log()
+    try:
+        game = RustDebugGame(request.deck1, request.deck2, request.seed)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Engine construction failed: {exc}")
 
-    p1_type = PlayerType.Human if request.player1_type.lower() == "human" else PlayerType.Agent
-    p2_type = PlayerType.Human if request.player2_type.lower() == "human" else PlayerType.Agent
+    # Mulligan is auto-finalized at construction; make it explicit so the
+    # board is staged in a post-mulligan turn phase.
+    game.skip_mulligan()
 
-    state = runner.game.to_ui_json()
-    mask = runner.get_action_mask().tolist()
+    # Rich per-player zone staging (scenario fixtures).
+    if request.zones:
+        for pid_str, zone in request.zones.items():
+            try:
+                pid = int(pid_str)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Bad player key {pid_str!r}")
+            _apply_zone(game, pid, zone)
+
+    # Legacy starting-hand fields (existing e2e fixture).
+    if request.starting_hand1:
+        game.clear_zone(1, "hand")
+        for cid in request.starting_hand1:
+            game.inject_card(1, cid, "hand")
+    if request.starting_hand2:
+        game.clear_zone(2, "hand")
+        for cid in request.starting_hand2:
+            game.inject_card(2, cid, "hand")
+
+    # Scalar state. Default phase to Main so a staged board is immediately
+    # actionable; explicit `phase` overrides.
+    _apply_scalar_state(
+        game,
+        memory=request.initial_memory,
+        phase=request.phase or "Main",
+        turn=request.turn,
+        first_player=request.first_player,
+    )
+
+    try:
+        game.validate()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Staged board invalid: {exc}")
+
+    active_games[game_id] = game
+    _debug_events[game_id] = []
+
+    # Register a GameMeta so the staged game can be driven through the live
+    # `/games/{id}/...` routes (which require meta for the human/agent turn
+    # loop). Undo isn't supported for staged games — `human_action_history`
+    # starts empty and `deck1/deck2/seed` are recorded only for shape.
+    p1_human = request.player1_type.lower() == "human"
+    p2_human = request.player2_type.lower() == "human"
     player_labels = {
-        1: "You" if p1_type == PlayerType.Human else "Agent",
-        2: "You" if p2_type == PlayerType.Human else "Agent",
+        1: "You" if p1_human else "Agent",
+        2: "You" if p2_human else "Agent",
     }
+    game_meta[game_id] = GameMeta(
+        p1_human=p1_human,
+        p2_human=p2_human,
+        last_log=[],
+        last_events=[],
+        player_labels=player_labels,
+        deck1=list(request.deck1),
+        deck2=list(request.deck2),
+        seed=request.seed or 0,
+    )
 
-    return {
-        "game_id": game_id,
-        "state": state,
-        "action_mask": mask,
-        "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
-        "player_labels": player_labels,
-        "recording_metadata": runner.get_initial_state_dict(),
-    }
-
-
-@router.get("/games/{game_id}/internal-state")
-def debug_internal_state(game_id: str):
-    runner = active_games.get(game_id)
-    if not runner:
-        raise HTTPException(status_code=404, detail="Game not found")
-
-    game = runner.game
-    p1 = game.player1
-    p2 = game.player2
-
-    def _card_id(card_source):
-        return card_source.c_entity_base.card_id if card_source.c_entity_base else "unknown"
-
-    def _field_details(player):
-        results = []
-        for i, perm in enumerate(player.battle_area):
-            effect_names = []
-            top = perm.top_card
-            if top:
-                script = CardDatabase().get_script(_card_id(top))
-                if script:
-                    try:
-                        effects = script.get_card_effects(top)
-                        effect_names = [e.effect_name for e in effects if hasattr(e, 'effect_name')]
-                    except Exception:
-                        pass
-            # Detect keywords
-            keywords = []
-            for kw in ["blocker", "rush", "piercing", "reboot", "security_attack_plus",
-                        "jamming", "barrier", "armor_purge", "alliance", "vortex",
-                        "overclock", "blast_digivolve", "material_save", "decoy",
-                        "evade", "fortitude", "mind_link"]:
-                if perm.has_keyword(f"_is_{kw}"):
-                    keywords.append(kw)
-            results.append({
-                "slot": i,
-                "card_id": _card_id(top) if top else None,
-                "card_name": top.c_entity_base.card_name_eng if top and top.c_entity_base else None,
-                "level": perm.level,
-                "dp": perm.dp,
-                "is_suspended": perm.is_suspended,
-                "is_digimon": perm.is_digimon,
-                "is_tamer": perm.is_tamer,
-                "turn_played": perm.turn_played,
-                "stack": [_card_id(cs) for cs in perm.card_sources],
-                "keywords": keywords,
-                "effect_names": effect_names,
-            })
-        return results
-
-    def _breeding_info(player):
-        if player.breeding_area is None:
-            return None
-        perm = player.breeding_area
-        top = perm.top_card
-        return {
-            "card_id": _card_id(top) if top else None,
-            "card_name": top.c_entity_base.card_name_eng if top and top.c_entity_base else None,
-            "level": perm.level,
-            "stack": [_card_id(cs) for cs in perm.card_sources],
-        }
-
-    # Pending selection info
-    pending = None
-    if game.pending_selection:
-        ps = game.pending_selection
-        pending = {
-            "prompt": getattr(ps, 'prompt', None),
-            "valid_count": len(getattr(ps, 'valid_indices', [])),
-            "is_optional": getattr(ps, 'is_optional', False),
-        }
-
-    return {
-        "library_top_5_p1": [_card_id(c) for c in p1.library_cards[:5]],
-        "library_top_5_p2": [_card_id(c) for c in p2.library_cards[:5]],
-        "library_size_p1": len(p1.library_cards),
-        "library_size_p2": len(p2.library_cards),
-        "hand_p1": [_card_id(c) for c in p1.hand_cards],
-        "hand_p2": [_card_id(c) for c in p2.hand_cards],
-        "security_cards_p1": [_card_id(c) for c in p1.security_cards],
-        "security_cards_p2": [_card_id(c) for c in p2.security_cards],
-        "trash_p1": [_card_id(c) for c in p1.trash_cards],
-        "trash_p2": [_card_id(c) for c in p2.trash_cards],
-        "memory": game.memory,
-        "turn_count": game.turn_count,
-        "phase": game.current_phase.name,
-        "turn_player_id": game.turn_player.player_id,
-        "active_player_id": game.active_player.player_id if game.active_player else game.turn_player.player_id,
-        "is_game_over": game.game_over,
-        "field_details_p1": _field_details(p1),
-        "field_details_p2": _field_details(p2),
-        "breeding_p1": _breeding_info(p1),
-        "breeding_p2": _breeding_info(p2),
-        "pending_selection": pending,
-    }
+    payload = _state_payload(game_id, game)
+    payload["player_labels"] = player_labels
+    return payload
 
 
 @router.post("/games/{game_id}/set-memory")
 def debug_set_memory(game_id: str, request: SetMemoryRequest):
-    runner = active_games.get(game_id)
-    if not runner:
-        raise HTTPException(status_code=404, detail="Game not found")
-    runner.game.memory = request.memory
-    return {"memory": runner.game.memory}
+    game = _require_debug_game(game_id)
+    game.set_memory(request.memory)
+    return _state_payload(game_id, game)
 
 
 @router.post("/games/{game_id}/inject-card")
-def debug_inject_card(game_id: str, request: InjectCardRequest):
-    runner = active_games.get(game_id)
-    if not runner:
-        raise HTTPException(status_code=404, detail="Game not found")
-
-    player = runner.game.player1 if request.player_id == 1 else runner.game.player2
-    db = CardDatabase()
-    card_source = db.create_card_source(request.card_id, player)
-    if card_source is None:
-        raise HTTPException(status_code=400, detail=f"Card {request.card_id} not found")
-
-    if request.zone == "hand":
-        player.hand_cards.append(card_source)
-    elif request.zone == "library_top":
-        player.library_cards.insert(0, card_source)
-    elif request.zone == "security_top":
-        player.security_cards.insert(0, card_source)
-    elif request.zone == "trash":
-        player.trash_cards.append(card_source)
-    else:
-        raise HTTPException(status_code=400, detail=f"Invalid zone: {request.zone}")
-
-    return {"status": "injected", "card_id": request.card_id, "zone": request.zone}
+def debug_inject_card(game_id: str, request: DebugInjectCardRequest):
+    game = _require_debug_game(game_id)
+    try:
+        game.inject_card(request.player_id, request.card_id, request.zone)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return _state_payload(game_id, game)
 
 
 @router.post("/games/{game_id}/place-on-field")
-def debug_place_on_field(game_id: str, request: PlaceOnFieldRequest):
-    runner = active_games.get(game_id)
-    if not runner:
-        raise HTTPException(status_code=404, detail="Game not found")
+def debug_place_on_field(game_id: str, request: DebugPlaceOnFieldRequest):
+    game = _require_debug_game(game_id)
     try:
-        perm = _place_on_field(
-            runner.game, request.player_id, request.card_ids,
-            request.is_suspended, request.turn_played,
+        game.place_on_field(
+            request.player_id, request.stack, request.is_suspended, request.turn_played
         )
-        top = perm.top_card
-        return {
-            "status": "placed",
-            "card_id": top.c_entity_base.card_id if top and top.c_entity_base else None,
-            "card_name": top.c_entity_base.card_name_eng if top and top.c_entity_base else None,
-            "stack_size": len(perm.card_sources),
-            "slot": len(runner.game.player1.battle_area if request.player_id == 1
-                        else runner.game.player2.battle_area) - 1,
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post("/games/{game_id}/place-in-breeding")
-def debug_place_in_breeding(game_id: str, request: PlaceInBreedingRequest):
-    runner = active_games.get(game_id)
-    if not runner:
-        raise HTTPException(status_code=404, detail="Game not found")
-    try:
-        perm = _place_in_breeding(runner.game, request.player_id, request.card_ids)
-        top = perm.top_card
-        return {
-            "status": "placed",
-            "card_id": top.c_entity_base.card_id if top and top.c_entity_base else None,
-            "stack_size": len(perm.card_sources),
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return _state_payload(game_id, game)
 
 
 @router.post("/games/{game_id}/bulk-setup")
-def debug_bulk_setup(game_id: str, request: BulkSetupRequest):
-    runner = active_games.get(game_id)
-    if not runner:
-        raise HTTPException(status_code=404, detail="Game not found")
+def debug_bulk_setup(game_id: str, request: DebugBulkSetupRequest):
+    game = _require_debug_game(game_id)
+    for pid_str, zone in request.zones.items():
+        try:
+            pid = int(pid_str)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Bad player key {pid_str!r}")
+        _apply_zone(game, pid, zone)
+    _apply_scalar_state(
+        game, memory=request.memory, phase=request.phase, turn=request.turn, first_player=None
+    )
     try:
-        config = BulkSetupConfig.from_dict(request.model_dump())
-        summary = _bulk_setup(runner.game, config)
-        return {"status": "ok", "summary": summary}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        game.validate()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Staged board invalid: {exc}")
+    return _state_payload(game_id, game)
 
 
-@router.post("/games/{game_id}/clear-zone")
-def debug_clear_zone(game_id: str, request: ClearZoneRequest):
-    runner = active_games.get(game_id)
-    if not runner:
-        raise HTTPException(status_code=404, detail="Game not found")
-    try:
-        count = _clear_zone(runner.game, request.player_id, request.zone)
-        return {"status": "cleared", "zone": request.zone, "items_removed": count}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+@router.post("/games/{game_id}/step")
+def debug_step(game_id: str, action: int):
+    """Step the staged game by one action and accumulate emitted events
+    into the per-game log so `effect_triggered` assertions can scan them.
+    For scenarios driven entirely through the debug router."""
+    game = _require_debug_game(game_id)
+    if game.is_game_over:
+        raise HTTPException(status_code=400, detail="Game already over")
+    mask = game.get_action_mask().tolist()
+    if action < 0 or action >= len(mask) or mask[action] != 1:
+        raise HTTPException(status_code=400, detail=f"action {action} is not legal")
+    game.step(int(action))
+    for ev in game.get_events_since_last_step():
+        _debug_events.setdefault(game_id, []).append(ev)
+    return _state_payload(game_id, game)
 
 
-@router.post("/games/{game_id}/set-phase")
-def debug_set_phase(game_id: str, request: SetPhaseRequest):
-    runner = active_games.get(game_id)
-    if not runner:
-        raise HTTPException(status_code=404, detail="Game not found")
-    try:
-        runner.game.current_phase = GamePhase[request.phase]
-        return {"phase": runner.game.current_phase.name}
-    except KeyError:
-        valid = [p.name for p in GamePhase]
-        raise HTTPException(status_code=400, detail=f"Invalid phase. Valid: {valid}")
+@router.get("/games/{game_id}/internal-state")
+def debug_internal_state(game_id: str):
+    game = _require_debug_game(game_id)
+    return game.internal_state()
+
+
+def _player(state: dict[str, Any], pid: int) -> dict[str, Any]:
+    """internal_state() players are listed in order; player_id is 1-based."""
+    for p in state["players"]:
+        if p["player_id"] == pid:
+            return p
+    raise HTTPException(status_code=400, detail=f"no such player {pid}")
+
+
+def _evaluate_one(
+    game: RustDebugGame,
+    state: dict[str, Any],
+    ui: dict[str, Any],
+    mask: list[int],
+    events: list[dict[str, Any]],
+    a: Any,
+) -> dict[str, Any]:
+    """Evaluate one engine assertion. Returns {kind, passed, message}."""
+    kind = a.kind
+
+    def ok(passed: bool, message: str = "") -> dict[str, Any]:
+        return {"kind": kind, "passed": passed, "message": message}
+
+    if kind == "memory_equals":
+        actual = state["memory"]
+        return ok(actual == a.value, f"expected memory {a.value}, got {actual}")
+
+    if kind == "stack_top":
+        p = _player(state, a.player)
+        ba = p["battle_area"]
+        if a.field_index >= len(ba):
+            return ok(False, f"field_index {a.field_index} out of range ({len(ba)})")
+        top = ba[a.field_index]["stack"][-1]
+        return ok(top == a.card_id, f"expected top {a.card_id}, got {top}")
+
+    if kind == "effective_dp":
+        ba = ui[f"player{a.player}"]["battleArea"]
+        if a.field_index >= len(ba):
+            return ok(False, f"field_index {a.field_index} out of range ({len(ba)})")
+        actual = ba[a.field_index]["dp"]
+        return ok(actual == a.value, f"expected DP {a.value}, got {actual}")
+
+    if kind == "zone_count":
+        p = _player(state, a.player)
+        counts = {
+            "hand": len(p["hand"]),
+            "deck": p["deck_count"],
+            "security": p["security_count"],
+            "trash": len(p["trash"]),
+        }
+        actual = counts.get(a.zone)
+        if actual is None:
+            return ok(False, f"unknown zone {a.zone}")
+        return ok(actual == a.value, f"expected {a.zone} count {a.value}, got {actual}")
+
+    if kind == "zone_contains":
+        p = _player(state, a.player)
+        if a.zone not in ("hand", "trash"):
+            return ok(False, f"zone_contains supports hand|trash, got {a.zone}")
+        present = a.card_id in p[a.zone]
+        return ok(present, f"{a.card_id} {'in' if present else 'not in'} {a.zone}")
+
+    if kind == "action_legal":
+        legal = 0 <= a.action_id < len(mask) and mask[a.action_id] == 1
+        want = a.expected if a.expected is not None else True
+        return ok(legal == want, f"action {a.action_id} legal={legal}, expected {want}")
+
+    if kind == "legal_selection_options":
+        sel = game.get_pending_selection()
+        n = len(sel["validIndices"]) if sel else 0
+        return ok(n == a.count, f"expected {a.count} selection options, got {n}")
+
+    if kind == "effect_triggered":
+        fired = any(ev.get("type") == a.event_type for ev in events)
+        want = a.expected if a.expected is not None else True
+        return ok(
+            fired == want,
+            f"event {a.event_type} fired={fired}, expected {want}",
+        )
+
+    return ok(False, f"unknown assertion kind {kind!r}")
+
+
+@router.post("/games/{game_id}/evaluate")
+def debug_evaluate(game_id: str, request: DebugEvaluateRequest):
+    """Evaluate a fixture's engine assertions against the current staged
+    state. Single source of truth for engine-correctness verdicts — the
+    Rust runner and the Playwright fixture both consume these results."""
+    game = _require_debug_game(game_id)
+    state = game.internal_state()
+    ui = game.to_ui_json()
+    mask = game.get_action_mask().tolist()
+    events = _debug_events.get(game_id, [])
+    results = [
+        _evaluate_one(game, state, ui, mask, events, a) for a in request.assertions
+    ]
+    return {
+        "all_passed": all(r["passed"] for r in results),
+        "results": results,
+    }
+
+
+@router.delete("/games/{game_id}")
+def debug_delete_game(game_id: str):
+    active_games.pop(game_id, None)
+    game_meta.pop(game_id, None)
+    _debug_events.pop(game_id, None)
+    return {"status": "deleted"}

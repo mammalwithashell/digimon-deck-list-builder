@@ -417,10 +417,8 @@ pub enum Keyword {
     Alliance,
     BlastDigivolve,
     Save,
-    /// DCGO `MaterialSave N` — active skill that moves up to N digivolution
-    /// sources under another permanent. Parsed from `<Material Save N>`.
-    /// Auto-install wires up in Phase D; the variant exists now so parser
-    /// and script authors can carry the parameter.
+    /// Printed `<Material Save N>` — optional deletion/removal-timed source
+    /// rescue that moves up to N recipe-eligible sources under a Tamer.
     MaterialSave(u8),
     /// Printed `<Digi-Burst N>` — an active effect cost marker. The keyword
     /// parser carries the parameter; card bodies still author the "effect
@@ -590,6 +588,11 @@ pub enum ModifierType {
 
     // Security
     SecurityAttackChange,
+    /// Defender-side DP modifier for that player's security Digimon during
+    /// security DP battles. Distinct from attacker stack effects that modify
+    /// the opponent's revealed security Digimon.
+    ChangeOwnSecurityDigimonDp,
+    SecurityDpChange,
     /// Modifier-granted form of `Keyword::Progress` — used when the
     /// immunity comes from a temporary effect rather than printed text.
     /// Checked alongside native `Keyword::Progress` by the SecuritySkill
@@ -632,6 +635,7 @@ pub enum ModifierType {
     CannotReducePlayCost,
     CannotReduceDigivolveCost,
     OpponentCannotReduceDigivolveCost,
+    CannotActivateOnPlayEffects,
     CannotActivateMainEffects,
     CannotActivateWhenDigivolvingEffects,
     CannotActivateWhenAttackingEffects,
