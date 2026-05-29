@@ -1,0 +1,15 @@
+card: ST2-05
+name: Ikkakumon
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 5000
+traits: [Sea Beast]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2

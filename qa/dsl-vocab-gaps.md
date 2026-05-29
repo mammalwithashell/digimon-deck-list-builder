@@ -4,6 +4,14 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+> **ST-2 Cocytus Blue substrate closure — 2026-05-29:** ST2 introduced no
+> remaining open DSL vocabulary gap. The new `trash_bottom_sources` step and
+> `battle_opponent_no_sources` predicate are implemented and archived in
+> `qa/resolved-gaps.md`; Kaiser Nail is covered by existing
+> `select_material` / `play_from_materials`. Do not file ST2 bottom-source
+> cards under `select_opponent_sources`: those printed effects choose the
+> Digimon only, then deterministically trash the bottom source(s).
+
 > **ST5 Machine Black closure — 2026-05-29:** `digimon_attacked_this_turn:
 > you|opponent` is now a closed DSL predicate leaf, backed by engine attack
 > history and consumed by ST5-04/ST5-06 inherited draw clauses. ST5-14 Tai

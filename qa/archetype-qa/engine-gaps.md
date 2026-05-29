@@ -401,13 +401,19 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Suggested change:** Add `event_card_color_has: Option<CompiledColor>` to `CompiledPredicate` and the matching leaf to `BoolPredicateSpec` / `PredicateSpec` in `digimon-dsl`. In `eval_predicate` (`predicate.rs`), implement the check by calling `event_target_card(rctx)`, resolving its `digimon_colors` from card_data, and testing for color membership.
 - **Workaround:** Color gate omitted from YAML — observer over-fires on any own Digimon digivolve. Test `bt16_085_digivolve_observer_does_not_fire_on_non_blue_non_green_digivolve` is `#[ignore = "BLOCKED: G-EVENT-CARD-COLOR-IS"]`.
 
-### Opponent Digivolution-Card Source Selection Missing  [G-SELECT-OPPONENT-SOURCES]
-- **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)
-- **Card(s):** BT16-085 — "[Your Turn] … If DNA digivolving, trash any 3 digivolution cards under your opponent's Digimon."
-- **Effect text:** "trash any 3 digivolution cards under your opponent's Digimon" — selects up to 3 source cards from a specific opponent permanent's card_sources stack.
-- **What's missing:** DSL has `select_own_sources` / `trash_selected_sources`, and as of 2026-05-07 `select_own_sources.target` can restrict the own-source picker to a specific own permanent binding. There is still no `select_opponent_sources` verb for targeting a specific OPPONENT permanent's card_sources. The opponent permanent itself must also first be selected (requires a field selection step). Both opponent-side pieces are missing.
-- **Suggested change:** Add `select_opponent_sources: { target: <binding>, count: N, bind_as: <name> }` DSL verb, mirroring `select_own_sources`. `target` resolves to an opponent `PermanentHandle` binding. `count` specifies how many sources to select (up to the permanent's stack depth). Implement in `step.rs`, lower in `compile.rs`, and execute in a new `CompiledStep::SelectOpponentSources` handler analogous to `execute_select_own_sources`.
-- **Workaround:** DNA trash sub-clause of BT16-085 Clause 1 is entirely omitted from the YAML while opponent-source selection is missing. The former `G-DSL-IS-DNA-DIGIVOLVING` blocker is resolved by `dna_origin: true`; the remaining blocker is `G-SELECT-OPPONENT-SOURCES`. Test `bt16_085_dna_digivolve_trashes_3_opp_digi_cards` should narrow its ignore tag when this card is revisited.
+### ~~Opponent Digivolution-Card Source Selection Missing~~  [G-SELECT-OPPONENT-SOURCES] — RESOLVED
+- **Status:** Stale active entry. `select_opponent_sources` and
+  `EffectContext::select_opponent_sources` landed during the BG Imperial
+  substrate closeout and are archived in `qa/resolved-gaps.md`.
+- **ST2 reconciliation (2026-05-29):** ST2-03, ST2-06, and ST2-09 do **not**
+  use `select_opponent_sources` because their printed text deterministically
+  trashes the bottom source(s) after the Digimon target is chosen. They are
+  implemented with `trash_bottom_sources`, covered by
+  `tests/dsl/st2_substrate.rs` and
+  `tests/cards_behavioral/st2/st2_cards.rs`.
+- **Remaining work:** None for this reusable gap. BT16-085 card migration may
+  still need a card-local follow-up, but it is not blocked by a missing
+  opponent-source selector.
 
 ### OPT Reset via Attack Cycle  [G-OPT-RESET-VIA-ATTACK-CYCLE]  — CLOSED 2026-05-17 (Phase 2 Track C)
 - **Closure:** Substrate already correct; the suspected "key persistence across turn boundaries" was a misdiagnosis. The slot key is `(carrier_permanent's `effect_activations` HashMap) × (source_card_handle, effect_slot)` and the reset clears the entire HashMap via `Permanent::new_turn()` at `begin_turn`, so any divergence between carrier identity and trigger source is irrelevant — both keys live in the same per-carrier map.

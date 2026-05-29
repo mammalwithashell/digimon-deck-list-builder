@@ -265,7 +265,8 @@ impl Game {
             })
             .map(|entry| entry.value)
             .sum();
-        let bonus = change_dp_sum + self.dynamic_dp_aura_bonus(handle);
+        let bonus =
+            change_dp_sum + self.static_dp_aura_bonus(handle) + self.dynamic_dp_aura_bonus(handle);
         Some(base + bonus)
     }
 
@@ -2569,9 +2570,7 @@ impl Game {
         if let Some(top_idx) = self.player(defender).security.len().checked_sub(1) {
             let needs = self.player(defender).security[top_idx].is_opaque_placeholder;
             if needs {
-                if let Err(e) =
-                    self.materialize_opaque_security_placeholder(defender, top_idx)
-                {
+                if let Err(e) = self.materialize_opaque_security_placeholder(defender, top_idx) {
                     eprintln!(
                         "[opaque-deck] security flip materialization error for player {} \
                          at idx {}: {}",

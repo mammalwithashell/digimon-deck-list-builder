@@ -2093,10 +2093,10 @@ impl<'a> EffectContext<'a> {
         for _ in 0..count {
             // Opaque-aware: opaque opponents materialize from RevealSource
             // tagged Mill; standard players pop from their ordered deck.
-            let card = match self.game.take_from_deck_top_for_player(
-                player,
-                crate::opaque_deck::RevealKind::Mill,
-            ) {
+            let card = match self
+                .game
+                .take_from_deck_top_for_player(player, crate::opaque_deck::RevealKind::Mill)
+            {
                 Ok(Some(c)) => c,
                 Ok(None) => break,
                 Err(e) => {
@@ -3277,7 +3277,8 @@ impl<'a> EffectContext<'a> {
         if security_index >= self.game.player(player).security.len() {
             return None;
         }
-        self.game.ensure_security_materialized(player, security_index);
+        self.game
+            .ensure_security_materialized(player, security_index);
         let card = {
             let player_state = self.game.player_mut(player);
             if security_index >= player_state.security.len() {
@@ -4076,10 +4077,10 @@ impl<'a> EffectContext<'a> {
         // Opaque-aware: opaque opponents materialize from RevealSource
         // tagged Effect (Training peeks at top and re-routes — not draw/mill/security).
         let owner = perm.player;
-        let mut card = match self.game.take_from_deck_top_for_player(
-            owner,
-            crate::opaque_deck::RevealKind::Effect,
-        ) {
+        let mut card = match self
+            .game
+            .take_from_deck_top_for_player(owner, crate::opaque_deck::RevealKind::Effect)
+        {
             Ok(Some(c)) => c,
             Ok(None) => return,
             Err(e) => {
@@ -4415,6 +4416,71 @@ impl<'a> EffectContext<'a> {
         );
         let _ = self.cleanup_exposed_battle_area_digi_egg(target);
         true
+    }
+
+    /// Trash up to `count` bottom-most digivolution sources from `target`.
+    ///
+    /// This is the no-choice source-peel primitive for early blue effects
+    /// like ST2-03 / ST2-06 / ST2-09. It never removes the visible top card:
+    /// when fewer source cards exist than requested, it trashes the available
+    /// sources and then stops. Missing/stale targets and zero-source stacks
+    /// soft-fail with no mutation.
+    pub fn trash_bottom_sources(&mut self, target: PermanentHandle, count: u8) -> u8 {
+        if count == 0 {
+            return 0;
+        }
+        if self
+            .game
+            .modifiers
+            .has(target, ModifierType::ImmuneFromStackTrashing)
+        {
+            return 0;
+        }
+
+        let mut removed_count = 0;
+        for _ in 0..count {
+            let removed = {
+                let Some(permanent) = self
+                    .game
+                    .player_mut(target.player)
+                    .battle_area
+                    .get_mut(target.index as usize)
+                else {
+                    break;
+                };
+                if permanent.card_sources.len() <= 1 {
+                    break;
+                }
+                permanent.card_sources.remove(0)
+            };
+
+            let source_card = removed.handle();
+            let owner = removed.owner;
+            self.game.player_mut(owner).trash.push(removed);
+
+            let Some(host_card) = self
+                .game
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+                .map(|permanent| permanent.top_card().handle())
+            else {
+                break;
+            };
+
+            self.game.fire_digivolution_card_trashed(
+                target.player,
+                target,
+                host_card,
+                source_card,
+                crate::trigger_context::EventCause::from(
+                    self.game.infer_effect_cause(target.player),
+                ),
+            );
+            removed_count += 1;
+        }
+        let _ = self.cleanup_exposed_battle_area_digi_egg(target);
+        removed_count
     }
 
     /// Trash the bottom-most face-down digivolution source from `target`,
@@ -5978,9 +6044,7 @@ impl<'a> EffectContext<'a> {
     pub fn may_dna_digivolve_now(
         &mut self,
         anchor: PermanentHandle,
-        partner_filter: std::sync::Arc<
-            dyn Fn(&Game, PermanentHandle) -> bool + Send + Sync,
-        >,
+        partner_filter: std::sync::Arc<dyn Fn(&Game, PermanentHandle) -> bool + Send + Sync>,
         target_filter: std::sync::Arc<dyn Fn(&Game, usize) -> bool + Send + Sync>,
         cost: u16,
         ignore_requirements: bool,

@@ -1,0 +1,24 @@
+card: ST2-16
+name: Cocytus Breath
+kind: option
+color: [blue]
+cost: 7
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Return 1 opponent Digimon to hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to return to hand"
+      - return_to_hand: { target: target }
+
+  - when: on_security
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to return to hand"
+      - return_to_hand: { target: target }

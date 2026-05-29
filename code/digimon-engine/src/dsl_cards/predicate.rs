@@ -313,6 +313,21 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(want) = pred.battle_opponent_no_sources {
+        let Some(source) = rctx.source_permanent else {
+            return false;
+        };
+        let Some(opponent) = rctx.battle_opponent_of(source) else {
+            return false;
+        };
+        let Some(opponent_perm) = permanent_for_handle(rctx, opponent) else {
+            return false;
+        };
+        let actual = opponent_perm.card_sources.len().saturating_sub(1) == 0;
+        if actual != want {
+            return false;
+        }
+    }
     // G-BEFORE-PAY-COST-DIGIVOLVE-TARGET: when a `cost_target` sub-
     // predicate is present, evaluate it as a Card predicate against the
     // card whose cost is currently being inspected. Fails outside any

@@ -1,0 +1,30 @@
+card: ST2-03
+name: Gabumon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+traits: [Reptile]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    summary: "[Inherited][When Attacking] Trash bottom source of 1 opponent level 5 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - materials_count_gte: 1
+          prompt: "Choose 1 opponent level 5 or lower Digimon with a source"
+      - trash_bottom_sources: { target: target, count: 1 }

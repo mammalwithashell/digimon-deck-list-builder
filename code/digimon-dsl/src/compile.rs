@@ -602,6 +602,7 @@ fn compile_predicate(
         self_color_count_gte: p.self_color_count_gte,
         has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
+        battle_opponent_no_sources: p.battle_opponent_no_sources,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
         other: p.other,
@@ -1878,6 +1879,10 @@ fn compile_step(
         },
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {
             target: compile_binding_ref(&a.target),
+        },
+        S::TrashBottomSources(a) => CompiledStep::TrashBottomSources {
+            target: compile_binding_ref(&a.target),
+            count: a.count,
         },
         S::TrashAllSources(a) => CompiledStep::TrashAllSources {
             target: compile_binding_ref(&a.target),
