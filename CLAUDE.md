@@ -13,18 +13,19 @@ This is a **Digimon TCG simulator** built for both human play and **RL agent tra
 
 ### Source priority for card / keyword / rules questions
 
-When questioning *what a card or keyword should do* — for instance, "is Fragment optional?", "what does Save target?", "does Progress block X?" — consult sources in this order. **Do not skip ahead to DCGO when a primary source could answer the question.**
+When questioning *what a card or keyword should do* — for instance, "is Fragment optional?", "what does Save target?", "does Progress block X?" — consult sources in this order. **DCGO is battle-tested and community-curated; trust it over `RULES_CONTEXT.md` (which is LLM-generated) and over the card-text JSON (which is API-ingested and not always accurate).**
 
-1. **Printed card text** — `data/cards.json` (`effect_text`, `inherited_text`, `security_text`). The text on the physical card is what the no-approximations policy obligates us to implement. For an unfamiliar card, check the entry by `card_id` first.
-2. **Comprehensive Rules Manual** — `docs/RULES_CONTEXT.md` (decomposed) and `Digimon TCG resources/general_rule.pdf` (canonical). Keyword semantics live in §16; rule numbers like `16-36` cite the manual directly. **`RULES_CONTEXT.md` is the canonical interpretation of every keyword and timing — check it before reaching for an implementation reference.**
-3. **Fandom wiki** — `https://digimoncardgame.fandom.com/wiki/<CARD-ID>` for card-specific text + community-curated ruling notes (e.g. quirky interactions, errata). Useful when the printed text is terse.
-4. **DCGO C# source** (`DCGO/`) — the behavioral *implementation* reference. Use this as a tiebreaker for ambiguous behavior the primary sources don't pin down (e.g., the exact processing order of an interaction, the inner UI flow of a multi-pick). DCGO is not authoritative on whether something is optional or mandatory — that's printed text and rules manual territory. A C# flag like `isOptional=true` in `SetUpActivateClass` reflects DCGO's reading of the card; if the printed text and rules disagree, the printed text wins.
+1. **Official Rules Manual PDF** — `Digimon TCG resources/general_rule.pdf` is the **canonical source of truth** for rules, keyword semantics, and timing (keyword semantics live in §16; rule numbers like `16-36` cite it directly). `glossary.pdf` defines keywords. **This is NOT LLM-generated — reference it directly and often.** It is currently under-used; read it (via the Read tool's `pages` arg) when implementing or reasoning about any keyword/timing rule rather than relying on the decomposed text.
+2. **DCGO C# source** (`<base-repo>/DCGO/Assets/Scripts/CardEffect/<SET>/<COLOR>/<CARD_ID>.cs`) — the community-curated, battle-tested behavioral implementation. It is the authority for **how a specific card actually resolves** (processing order, interaction edges, multi-pick UI flow) and **outranks the card-text JSON for what a card does**. **DCGO lives in the base repo, not per-worktree (see rule 29). From a worktree, the local `./DCGO` is an intentionally-empty placeholder — do NOT `git submodule update --init` it (that clones a multi-GB Unity checkout per worktree and bloats disk). Resolve the populated copy in the base repo: `BASE_DCGO="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/DCGO"` and read from there. Do NOT skip DCGO and fall back to lower-trust sources because the worktree copy looks empty.** (C# filenames use underscores: `BT17-001` → `BT17_001.cs`.)
+3. **`data/card_overrides.json`** then **`data/cards.json`** — the printed card text (`effect_text`, `inherited_text`, `security_text`). `cards.json` is ingested from the digimoncard.io API and is **not always accurate**; `card_overrides.json` holds our hand-maintained corrections and is trusted over raw `cards.json` (overrides survive re-ingestion). Use the text as the no-approximations *target*, but when it conflicts with DCGO's behavior, DCGO wins for now.
+4. **Fandom wiki** — `https://digimoncardgame.fandom.com/wiki/<CARD-ID>` for card-specific text + community-curated ruling notes (quirky interactions, errata). Useful when the printed text is terse.
+5. **`docs/RULES_CONTEXT.md`** — an **LLM-generated decomposition** of `general_rule.pdf`. Treat it as a convenience index / starting pointer only; it has been wrong. Anything it asserts is overridden by the official PDF (#1) and DCGO (#2) — verify against those before relying on it.
 
-DCGO remains useful — it captures every implementation detail the rules text glosses over — but its role is **after** the primary sources, not instead of them. Cross-checking against printed text / rules first prevents the misreading-DCGO-internals failure mode where a parameter name (`canNoSelect: () => false`) gets read as the cardinal answer when in fact it governs a sub-prompt within an already-optional flow.
+When DCGO and the official PDF disagree on a rules question, the PDF governs; when DCGO and the card-text JSON disagree on what a card does, DCGO governs. The retired guidance ("do not skip ahead to DCGO", "RULES_CONTEXT.md is canonical") is intentionally reversed here.
 
 ### Rust pivot (in progress)
 
-The project is migrating to a **Rust engine as the source of truth** (`code/digimon-engine/`). Python is retained only for the FastAPI server (P2P games, lobby, auth) and RL training (gym/SB3); both call into the Rust engine via PyO3 bindings (`code/digimon-engine-py/`). Card scripts are being hand-written in Rust, TDD-driven, via a forthcoming Rust-focused `batch-fix-cards` skill (analogous to the existing Python one). The no-approximations policy applies identically in Rust. `docs/RUST_PYTHON_PARITY.md` is a **transitional** tracker of cross-engine divergences — it exists only until the Python engine is retired.
+The project is migrating to a **Rust engine as the source of truth** (`code/digimon-engine/`). Python is retained only for the FastAPI server (P2P games, lobby, auth) and RL training (gym/SB3); both call into the Rust engine via PyO3 bindings (`code/digimon-engine-py/`). Card scripting is **DSL-first**: new cards are authored as YAML specs in `code/digimon-engine/cards/<set>/`, lowered to `Effect`/`CardEffect` by the `digimon-dsl` crate, and TDD-driven by DebugRunner tests in `code/digimon-engine/tests/cards_behavioral/<set>/`. When a card can't be expressed, **widen the substrate rather than routing around it** — add DSL vocabulary or an engine primitive — so each hard card makes the next one cheaper and per-card effort trends down over time. Hand-written Rust effects (`code/digimon-engine/src/cards/raw_rust/`) are a last-resort escape hatch (see rule 28). The no-approximations policy applies identically in Rust. `docs/RUST_PYTHON_PARITY.md` is a **transitional** tracker of cross-engine divergences — it exists only until the Python engine is retired.
 
 ## Tech Stack
 
@@ -35,7 +36,7 @@ The project is migrating to a **Rust engine as the source of truth** (`code/digi
 - **Desktop**: Tauri v2 (Rust shell) — Python-free; gameplay + inference + deck tools run entirely in the embedded `digimon-engine` crate, and AI models are fetched at runtime from the hosted API's manifest
 - **RL**: Gymnasium, Stable-Baselines3, ONNX Runtime for inference; env drives the Rust engine via PyO3
 - **AI Pipeline**: Claude API, Pinecone vector DB, git worktrees
-- **C# Reference**: DCGO submodule (`DCGO/`) — implementation reference for behavioral details. **Not** the canonical source for card / keyword / rules questions; see "Source priority" above (printed text + Rules Manual + fandom wiki come first).
+- **C# Reference**: DCGO submodule (`DCGO/`) — community-curated, battle-tested behavioral implementation. The high-trust reference for how a specific card resolves; it **outranks the card-text JSON and `RULES_CONTEXT.md`** (only the official `general_rule.pdf` ranks higher for pure rules questions). See "Source priority" above. DCGO lives in the **base repo**, not per-worktree — from a worktree read it at `$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/DCGO` rather than initializing the local placeholder (rule 29).
 
 ## System Overview
 
@@ -107,11 +108,16 @@ agent config, runtime data, and project-level configs.
     │   │   ├── selection.rs           # Pending selection / interrupt state machine
     │   │   ├── tensor.rs              # Observation tensor (1375 floats, parity with Python)
     │   │   ├── action/                # Action space (2192) + mask + decoder
-    │   │   ├── cards/test_cards.rs    # TEST-001..022 — hand-written worked examples
+    │   │   ├── cards/                  # Card-effect Rust modules:
+    │   │   │   ├── raw_rust/           #   hand-written CardEffect escape hatch (rule 28)
+    │   │   │   ├── keyword_effects.rs  #   shared keyword machinery
+    │   │   │   ├── tokens/             #   token registry
+    │   │   │   └── test/               #   TEST-001..022 hand-written worked examples
     │   │   ├── runners/               # HeadlessRunner (RL-shaped API)
     │   │   └── debug_runner.rs        # Deterministic test harness
-    │   └── tests/                     # Integration tests (engine_core, tensor_and_mask,
-    │                                  # combat_scenarios, security_effects, mask_*_parity, etc.)
+    │   ├── cards/<set>/               # YAML DSL card specs (primary path) — ad1, bt1..bt18, ...
+    │   └── tests/                     # Integration tests (engine_core, tensor_and_mask, etc.)
+    │       └── cards_behavioral/<set>/  # Per-card DebugRunner behavioral tests (TDD)
     ├── digimon-engine-py/         # PyO3 bindings — Rust engine exposed to Python
     │   ├── Cargo.toml             # Depends on digimon-engine (path) + pyo3 + numpy
     │   ├── pyproject.toml         # maturin build backend, module name "digimon_engine"
@@ -156,7 +162,10 @@ agent config, runtime data, and project-level configs.
     ├── tools/                     # CLI tools (see docs/TOOLS.md)
     │   ├── archive/               # One-time migration scripts
     │   ├── dsl-schema-export/     # DSL JSON-schema generator (Cargo workspace member)
-    │   └── dsl-lint/              # DSL linter (Cargo workspace member)
+    │   ├── dsl-lint/              # DSL linter (Cargo workspace member)
+    │   ├── action-space-export/   # 2192-action descriptor → DCGO ActionSpace.cs codegen (rule 27)
+    │   ├── dcgo-replay/           # Replay DCGO JSONL recordings through the engine (parity oracle)
+    │   └── dcgo-bc-emitter/       # DCGO recordings → (obs, mask, action) numpy shards for BC
     └── tests/                     # Default pytest tree (testpaths = code/tests)
         ├── conftest.py            # Shared fixtures (reset_registry, debug_runner)
         ├── helpers/               # Test utilities (make_card, GameBuilder)
@@ -239,6 +248,11 @@ python -m digimon_gym.agents.pilot_training --timesteps 500000
 python -m digimon_gym.agents.pilot_training --lstm --timesteps 500000
 python -m digimon_gym.agents.pilot_training --self-play --timesteps 1000000
 python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
+python -m digimon_gym.agents.pilot_training --archetypes rocks,ts-olympos --timesteps 500000  # scope the deck pool
+
+# Cloud training (see docs/CLOUD_TRAINING.md) — image is built/pushed by CI on tag push
+docker compose -f ops/training/docker-compose.watch.yml up -d   # TensorBoard sidecar over ./runs
+scripts/sync_cloud_runs.sh                                       # mirror remote runs/ back locally for the MCP
 
 # Env smoke check
 python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs,info=env.reset(); print(obs.shape, info['action_mask'].shape)"
@@ -255,7 +269,11 @@ cargo test --manifest-path code/src-tauri/Cargo.toml     # Tauri-layer unit test
 # Rust engine tests
 cargo test --manifest-path code/digimon-engine/Cargo.toml
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test security_effects
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test test_cards_behavioral
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral   # per-set YAML DSL card tests
+
+# DSL tooling (schema + lint for YAML card specs under code/digimon-engine/cards/)
+cargo run -p dsl-schema-export                             # regenerate the DSL JSON schema
+cargo run -p dsl-lint -- code/digimon-engine/cards         # lint all YAML card specs
 
 # Engine debug CLI + MCP (see docs/DEBUG_MCP.md)
 cargo build -p digimon-engine-cli -p digimon-engine-mcp
@@ -296,7 +314,7 @@ DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_ru
 15. Game animation components (`DigivolveBanner`, `BattleEffect`) subscribe to `store.events` and track `lastSeqRef` to avoid replaying stale events.
 16. `Game.surrender()` must emit the `surrender` event before calling `declare_winner()` so event listeners see the surrender before game_over.
 17. The no-approximations policy applies identically to the Rust engine — no stubs, no auto-selections; every choice must surface through `pending_selection` so the RL action space sees it.
-18. New Rust card effects are TDD: write a failing behavioral test under `code/digimon-engine/tests/` using `DebugRunner` (see `code/digimon-engine/tests/test_cards_behavioral.rs`) before implementing the `CardEffect` struct.
+18. New Rust cards are TDD and **DSL-first** (see rule 28): write a failing behavioral test under `code/digimon-engine/tests/cards_behavioral/<set>/` using `DebugRunner` before authoring the YAML spec in `code/digimon-engine/cards/<set>/`. Only fall back to a hand-written `CardEffect` in `src/cards/raw_rust/` when the DSL genuinely can't express the card.
 19. Before editing engine code in either language, check `docs/RUST_PYTHON_PARITY.md` for known divergences in the area — it's the authoritative cross-engine state.
 20. `code/digimon-engine-py/src/lib.rs` must preserve the Python player-ID convention (Python 1/2 ↔ Rust 0/1 translation at the binding boundary); callers on both sides depend on it.
 21. Do not author new Python-side card scripts for cards already implemented in Rust — cards migrate one direction only (Python → Rust) and are then owned by Rust.
@@ -305,7 +323,9 @@ DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_ru
 24. All source lives under `code/`. The repo root holds docs, infra (`Dockerfile*`, CI workflows), agent config (`.claude/`), runtime data (`data/`, `qa/`, `DCGO/`), and project-level configs (`Cargo.toml`, `pyproject.toml`, `requirements*.txt`). Do not add new top-level source dirs — extend `code/` instead.
 25. **OnDeletion handlers fire post-trash (2026-05-23).** Permanent deletion runs through the batched flow at `Game::delete_permanents_batch` — `OnDeletion` handlers execute AFTER the carrier has moved to trash. Read pre-removal state via `ctx.deleted_self_dp()` / `_level()` / `_cost()` / `_names()` / `_traits()` / `_source_count()` / `_digisources()` (or `ctx.deleted_object_snapshot()`), NOT via live `ctx.game.player(handle.player).battle_area.get(handle.index)`. New keywords needing post-trash work must do it inline in the OnDeletion handler — do not reintroduce side-channel slots like the retired `pending_post_deletion_replays`. See `docs/RUST_ENGINE_API.md` §"Deletion lifecycle — batched flow" for the contract.
 26. **BO3 match training is the default Gym episode shape (2026-05-24).** `--match-format bo3` (default) makes one Gym episode equal one best-of-three match: same deck pair across all 3 games, LSTM hidden state carries across games within the match, total step counter accumulates. `--match-format single` retains the legacy one-game episode. The `MatchEnv` wrapper sits between `OpponentWrapper` and any deck-pool wrappers — so deck-pool sampling fires once per match, not per game. Concede (action `93`) is legal at every agent decision point and routes to `Game::concede(player)` regardless of `pending_selection` state. `SelectPlayOrder` (actions `94` / `95`) is engine-driven via `Game::request_play_order_selection(loser_pid)` between games; the loser of the previous game picks first / second for the next. `MatchEnv` reads the result via `runner.take_play_order_choice()` and uses the seed-parity trick (`Game::new` uses `seed % 2` for 2-player first-player selection) to align the next game's first player. The reward calibration is in `openspec/changes/add-bo3-match-training/design.md` §D9; do not modify per-game or per-match magnitudes without also updating the spec.
-27. **DCGO recorder maintenance (2026-05-26).** The DCGO mod intercepts gameplay at five chokepoints across two files: in `DCGO/Assets/Scripts/Script/TurnStateMachine.cs` — `QueueMainPhaseAction` (every main-phase decision), `SetRedraw` (mulligan), `StartGame` (game lifecycle start / deck capture), `EndGame` (game lifecycle end). In `DCGO/Assets/Scripts/Script/UserSelectionManager.cs` — `SetIntForPlayer` and `SetBoolForPlayer` (every selection response). Plus three reveal chokepoints in `DCGO/Assets/Scripts/Script/CardController.cs` for PvP: `DrawClass.Draw()`, `IBreakSecurity.SecurityCheck()`, `IAddTrashCardsFromLibraryTop.AddTrashCardsFromLibraryTop()`. When rebasing the DCGO submodule onto a newer upstream commit, verify every hook is still in place at its chokepoint — if upstream refactored the chokepoint, the hook needs to move. After ANY change to `code/digimon-engine/src/action/space.rs` (constants, ranges, encoder formulas), regenerate `DCGO/Assets/Scripts/Script/Recording/ActionSpace.cs` via `cargo run -p action-space-export | python code/tools/action-space-export/emit_csharp.py --out DCGO/Assets/Scripts/Script/Recording/ActionSpace.cs` and commit the diff. CI (`.github/workflows/action-space-codegen-drift.yml`) catches drift, but local development should regen explicitly when touching action-space code. The JSONL recording schema is described in `docs/DCGO_RECORDING_SCHEMA.md`; the build setup in `docs/DCGO_BUILD.md`.
+27. **DCGO recorder maintenance (2026-05-26).** The DCGO mod intercepts gameplay at five chokepoints across two files: in `DCGO/Assets/Scripts/Script/TurnStateMachine.cs` — `QueueMainPhaseAction` (every main-phase decision), `SetRedraw` (mulligan), `StartGame` (game lifecycle start / deck capture), `EndGame` (game lifecycle end). In `DCGO/Assets/Scripts/Script/UserSelectionManager.cs` — `SetIntForPlayer` and `SetBoolForPlayer` (every selection response). Plus three reveal chokepoints in `DCGO/Assets/Scripts/Script/CardController.cs` for PvP: `DrawClass.Draw()`, `IBreakSecurity.SecurityCheck()`, `IAddTrashCardsFromLibraryTop.AddTrashCardsFromLibraryTop()`. When rebasing the DCGO submodule onto a newer upstream commit, verify every hook is still in place at its chokepoint — if upstream refactored the chokepoint, the hook needs to move. After ANY change to `code/digimon-engine/src/action/space.rs` (constants, ranges, encoder formulas), regenerate `ActionSpace.cs` in the **base-repo** DCGO (rule 29) via `cargo run -p action-space-export | python code/tools/action-space-export/emit_csharp.py --out "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/DCGO/Assets/Scripts/Script/Recording/ActionSpace.cs"` and commit the diff (in the base repo, where the submodule is checked out). CI (`.github/workflows/action-space-codegen-drift.yml`) catches drift, but local development should regen explicitly when touching action-space code. The JSONL recording schema is described in `docs/DCGO_RECORDING_SCHEMA.md`; the build setup in `docs/DCGO_BUILD.md`.
+28. **Card scripting is DSL-first (2026-05-29).** The default path for a new card is a YAML spec in `code/digimon-engine/cards/<set>/`, lowered to `Effect`/`CardEffect` by the `digimon-dsl` crate. The intent is a compounding-coverage flywheel: when a card needs something the DSL lacks, **widen the substrate instead of routing around it** — add DSL vocabulary (lower it in `code/digimon-dsl/`, log the gap to `qa/dsl-vocab-gaps.md`) or, if the engine itself lacks the primitive, add it and log to `docs/RUST_ENGINE_GAPS.md`. That investment amortizes across every later card, so implementation complexity should decline as coverage grows. Hand-writing a `CardEffect` in `code/digimon-engine/src/cards/raw_rust/` is a **last resort** for cards the DSL fundamentally can't express — reaching for it because it's faster in the moment starves the vocabulary and breaks the flywheel. Verdicts: DSL cards tracked in `qa/qa-reports/validated_cards_dsl.json`; hand-written in `qa/qa-reports/validated_cards.json`. Skills: `/batch-implement-cards-rust-dsl` and `/implement-rust-dsl-archetype` (YAML path), `/assess-archetype-rust` (pre-flight gap audit → `docs/RUST_ENGINE_GAPS.md` + a fix-plan under `.claude/plans/`), `/batch-implement-cards-rust` (hand-written escape-hatch path).
+29. **DCGO lives in the base repo; worktrees reference it, never clone it (2026-05-29).** The `DCGO/` submodule is a multi-GB Unity checkout. It is initialized **once in the base repo** (the main worktree) and kept there. In any linked worktree, `./DCGO` is an intentionally-empty placeholder — **do NOT run `git submodule update --init DCGO` in a worktree** (it clones a full per-worktree copy and is the main driver of disk bloat / forced worktree pruning). Resolve the base copy instead: `BASE_DCGO="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/DCGO"`. Use `$BASE_DCGO` for **both** reading card C# (source-priority #2) **and** writing — including DCGO mod edits and the rule-27 `ActionSpace.cs` codegen — because Unity is pointed at the base copy, so all mod work belongs there. If `$BASE_DCGO` itself is somehow missing, initialize it in the base repo (`cd "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")" && git submodule update --init DCGO`), not in the worktree. The worktree's empty `DCGO/` placeholder is the clean state — leave it; never `git submodule deinit` from a worktree (it edits the shared `.git/config` and can disturb the base submodule).
 
 ## Documentation
 
@@ -316,7 +336,8 @@ Key references:
 - **Spec contracts**: `docs/TENSOR_SPEC.md` (obs tensor), `docs/ACTION_SPEC.md` (action space)
 - **Tools**: `docs/TOOLS.md` — card pipeline, transpiler, Pinecone, model export, new-set workflow
 - **Training**: `docs/TRAINING_RUNBOOK.md` + `AGENTS.md` (wrapper chain, gauntlet, pipeline)
-- **Rules**: `docs/RULES_CONTEXT.md` — official Digimon TCG rules reference
+- **Cloud training**: `docs/CLOUD_TRAINING.md` — Path A (RunPod GPU, LSTM/self-play) vs Path B (Hetzner/DO CPU, MLP-vs-greedy); published `Dockerfile.training` image, the `ops/training/docker-compose.watch.yml` TensorBoard sidecar, and the `scripts/sync_cloud_runs.sh` run-mirror; local VRAM mitigations
+- **Rules**: `Digimon TCG resources/general_rule.pdf` — **canonical** rules source of truth (+ `glossary.pdf` for keywords). `docs/RULES_CONTEXT.md` is an LLM-generated decomposition — convenience index only, lower trust than the PDF and DCGO (see "Source priority")
 - **Hosted-API deployment**: `docs/DEPLOYMENT.md` — DigitalOcean topology, env vars, bootstrap
 - **Model catalog**: `docs/MODEL_CATALOG.md` — ONNX upload/download pipeline, storage backends, desktop cache
 - **DCGO recording pipeline**: `docs/DCGO_BUILD.md` (build the mod) + `docs/DCGO_RECORDING_SCHEMA.md` (JSONL format) — modded DCGO client that records games as 2192-action-space JSONL, consumed by `code/tools/dcgo-replay/` as an additional Rust-engine faithfulness oracle
@@ -326,12 +347,13 @@ Key references:
 - **Scripting API**: `docs/RUST_ENGINE_API.md` — `EffectContext` API, `Effect` builder, `CardEffect` trait, TDD walkthrough for new cards
 - **Cross-engine parity**: `docs/RUST_PYTHON_PARITY.md` — live divergence tracker and per-phase progress; transitional, retired when the Python engine is
 
-**Rust card scripting**: a Rust-focused `batch-fix-cards` skill (analogous to the existing Python `/batch-fix-cards` but targeting `code/digimon-engine/src/cards/` + `code/digimon-engine/tests/`) is planned for the forthcoming card-migration phase. Until then, author new Rust card effects directly per the TDD walkthrough in `RUST_ENGINE_API.md`.
+**Rust card scripting (DSL-first — see rule 28)**: cards are authored as YAML specs in `code/digimon-engine/cards/<set>/`, lowered by the `digimon-dsl` crate, with per-card DebugRunner tests in `code/digimon-engine/tests/cards_behavioral/<set>/`. Drive the work with `/batch-implement-cards-rust-dsl` or `/implement-rust-dsl-archetype`; run `/assess-archetype-rust` first to audit which engine/DSL primitives an archetype needs. The DSL schema is generated by `code/tools/dsl-schema-export/` and linted by `code/tools/dsl-lint/`. For the rare card the DSL can't express, hand-write a `CardEffect` in `src/cards/raw_rust/` per the TDD walkthrough in `RUST_ENGINE_API.md` (driven by `/batch-implement-cards-rust`).
 
 ## QA Artifacts
 
-- `qa/archetype-qa/` — per-archetype implementation QA, engine API reference, engine gaps tracker
-- `qa/qa-reports/` — dated gameplay test reports, validated cards index
+- `qa/archetype-qa/` — per-archetype implementation QA, engine API reference, engine gaps tracker; `qa/archetype-qa/dsl/` holds per-archetype DSL/engine gap inputs
+- `qa/qa-reports/` — dated gameplay test reports + card verdict trackers: `validated_cards_dsl.json` (YAML DSL cards) and `validated_cards.json` (hand-written / Python)
+- **Gap trackers** (rule 28 — widen the substrate, don't route around): `qa/dsl-vocab-gaps.md` (missing DSL vocabulary) and `docs/RUST_ENGINE_GAPS.md` (missing engine primitives). Per-archetype fix plans land under `.claude/plans/rust-engine-gaps-*.md`.
 
 ## Pinecone MCP Integration
 
