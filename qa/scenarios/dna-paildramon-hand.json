@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "dna-paildramon-hand",
+  "title": "DNA digivolve into Paildramon from hand over ExVeemon + Stingmon",
+  "readiness": "expected_pass",
+  "blocked_reason": "",
+  "notes": "The user's reported bug: Paildramon (AD1-011) in hand with ExVeemon (BT12-022, Blue Lv.4) + Stingmon (BT12-050, Green Lv.4) on the field. Paildramon's DNA Digivolve requirement is 'Blue Lv.4 + Green Lv.4 : Cost 0' (from the xros_req text, now encoded as dna_costs in card_overrides.json + cards.json). The engine offers BOTH a regular digivolve (over one material) AND a DNA digivolve (combining both) — so the UI must surface the choice rather than forcing the regular path. This fixture drives that in the rendered browser.",
+  "decks": {
+    "1": ["ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-01",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03"],
+    "2": ["ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-01",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03"]
+  },
+  "seed": 7,
+  "state": { "memory": 5, "phase": "Main", "turn": 4, "first_player": 1 },
+  "zones": {
+    "1": {
+      "hand": ["AD1-011"],
+      "field": [
+        { "stack": ["BT12-022"], "is_suspended": false, "turn_played": 0 },
+        { "stack": ["BT12-050"], "is_suspended": false, "turn_played": 0 }
+      ]
+    }
+  },
+  "assertions": {
+    "engine": [
+      { "kind": "action_legal", "action_id": 63, "expected": true },
+      { "kind": "action_legal", "action_id": 400, "expected": true }
+    ],
+    "ui": [
+      { "kind": "dna_option_present" }
+    ]
+  }
+}

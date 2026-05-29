@@ -1,5 +1,5 @@
 .deck-select-main {
-  min-height: calc(100vh - 141px);
+  min-height: calc(var(--app-vh100, 100vh) - 141px);
   padding: 26px 32px 28px;
 }
 

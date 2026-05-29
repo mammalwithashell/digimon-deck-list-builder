@@ -122,6 +122,61 @@ alt_paths:
 }
 
 #[test]
+fn parse_digixros_material_zones_and_slot_cost_delta() {
+    let yaml = r#"
+card: DX-SLOT-COST
+name: DigiXros Slot Cost
+kind: digimon
+level: 4
+color: [red]
+cost: 6
+dp: 5000
+alt_paths:
+  - kind: digixros
+    materials:
+      - filter: { name_contains: Shoutmon }
+        zones: [hand, battle_area]
+        cost_delta: -2
+      - filter: { name_contains: Ballistamon }
+        zones: [trash]
+        cost_delta: -1
+    cost: 6
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+    let ap = &spec.alt_paths[0];
+    assert!(matches!(ap.kind, AltPathKind::DigiXros));
+    assert_eq!(ap.materials[0].cost_delta, Some(-2));
+    assert_eq!(ap.materials[1].cost_delta, Some(-1));
+    assert_eq!(ap.materials[0].zones.len(), 2);
+    assert_eq!(ap.materials[1].zones.len(), 1);
+}
+
+#[test]
+fn digixros_alt_path_rejects_unknown_fields() {
+    let yaml = r#"
+card: DX-BAD
+name: Bad DigiXros
+kind: digimon
+level: 4
+color: [red]
+cost: 6
+dp: 5000
+alt_paths:
+  - kind: digixros
+    materials:
+      - filter: { name_contains: Shoutmon }
+    cost: 6
+    unsupported_digixros_field: true
+"#;
+    let err = serde_yml::from_str::<CardSpec>(yaml).expect_err("unknown field must fail");
+    let message = err.to_string();
+    assert!(
+        message.contains("unsupported_digixros_field"),
+        "error should name the unsupported field, got: {message}"
+    );
+}
+
+#[test]
 fn parse_burst_digivolve_with_extra_cost_and_teardown() {
     let yaml = r#"
 card: BT13-060

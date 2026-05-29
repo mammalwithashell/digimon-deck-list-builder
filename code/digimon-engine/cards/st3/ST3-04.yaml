@@ -1,0 +1,26 @@
+card: ST3-04
+name: Patamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Mammal]
+form: Rookie
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+effects:
+  - scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_target_dp_lte: 0
+    process:
+      - gain_memory: 1

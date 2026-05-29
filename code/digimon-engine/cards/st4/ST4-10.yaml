@@ -1,0 +1,31 @@
+card: ST4-10
+name: Lillymon
+kind: digimon
+level: 5
+color: [green]
+cost: 6
+dp: 7000
+traits: [Fairy]
+form: Ultimate
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Reveal top 5; add 1 level 6 or higher Digimon; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 5, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+          prompt: "Add 1 level 6 or higher Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }

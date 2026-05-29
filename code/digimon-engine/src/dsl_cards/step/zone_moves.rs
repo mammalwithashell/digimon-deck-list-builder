@@ -2,7 +2,9 @@
 //! `AddToHandFromDeck`, `AddToHandFromTrash`, and the reveal-pool / security-mark
 //! family added in Task 5.
 
-use digimon_dsl::compiled::{CompiledFormula, CompiledPredicate, CompiledStep, CompiledZone};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledFormula, CompiledPredicate, CompiledStep, CompiledZone,
+};
 use std::sync::Arc;
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
@@ -221,6 +223,87 @@ pub fn try_run(
                     // trash-survivors shape.
                     let _ = ctx.trash_card_source(source_ref.permanent, source_ref.card);
                 }
+            }
+            true
+        }
+
+        CompiledStep::PlaceSelectedCardUnderTamer {
+            card,
+            tamer,
+            face_down,
+            bind_as,
+        } => {
+            let Some(ResolvedBinding::Permanent(tamer)) = resolve_binding_ref(tamer, ctx, bindings)
+            else {
+                return true;
+            };
+            if let Some(card) =
+                place_selected_card_under_tamer(ctx, bindings, card, tamer, *face_down)
+            {
+                if let Some(name) = bind_as {
+                    bindings.insert_card(name, card);
+                }
+            }
+            true
+        }
+
+        CompiledStep::PlaceSelectedSourcesUnderTamer {
+            source_refs,
+            tamer,
+            bind_count_as,
+        } => {
+            let Some(ResolvedBinding::Permanent(tamer)) = resolve_binding_ref(tamer, ctx, bindings)
+            else {
+                return true;
+            };
+            let moved = bindings
+                .get_source_refs(source_refs)
+                .map(|refs| ctx.move_selected_sources_under_tamer(refs, tamer))
+                .unwrap_or(0);
+            if let Some(name) = bind_count_as {
+                bindings.insert_literal(name, moved as i64);
+            }
+            true
+        }
+
+        CompiledStep::MoveMatchingSourcesUnderTamer {
+            from,
+            tamer,
+            filter,
+            bind_count_as,
+        } => {
+            let Some(ResolvedBinding::Permanent(from)) = resolve_binding_ref(from, ctx, bindings)
+            else {
+                return true;
+            };
+            let Some(ResolvedBinding::Permanent(tamer)) = resolve_binding_ref(tamer, ctx, bindings)
+            else {
+                return true;
+            };
+            let source_card = ctx.source_card;
+            let source_permanent = ctx.source_permanent;
+            let source_kind = ctx.source_kind;
+            let player = ctx.player;
+            let filter = filter.clone();
+            let filter_bindings = bindings.clone();
+            let moved =
+                ctx.move_all_matching_sources_under_tamer(from, tamer, move |game, card| {
+                    let read = EffectReadContext::new_with_source_kind(
+                        game,
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        player,
+                    );
+                    eval_predicate_with_bindings(
+                        &filter,
+                        &read,
+                        PredicateSubject::Card(card),
+                        Some(&filter_bindings),
+                    )
+                });
+            if let Some(name) = bind_count_as {
+                bindings.insert_literal(name, moved as i64);
             }
             true
         }
@@ -515,6 +598,15 @@ pub fn try_run(
             let _ = ctx.trash_top_n_digivolution_cards_of_each(player, n);
             true
         }
+        CompiledStep::TrashTopStackedSources { target, count } => {
+            if let Some(ResolvedBinding::Permanent(target)) =
+                resolve_binding_ref(target, ctx, bindings)
+            {
+                let count = formula_to_u8(count, ctx, bindings);
+                let _ = ctx.trash_top_n_stacked_sources(target, count);
+            }
+            true
+        }
         CompiledStep::TrashOpponentHandToCount {
             opponent,
             target_count,
@@ -563,6 +655,64 @@ fn source_from_top(
     let top_stacked_offset = 2usize + index_from_top as usize;
     let idx = perm.card_sources.len().checked_sub(top_stacked_offset)?;
     Some(perm.card_sources[idx].handle())
+}
+
+fn place_selected_card_under_tamer(
+    ctx: &mut EffectContext<'_>,
+    bindings: &Bindings,
+    card_ref: &CompiledBindingRef,
+    tamer: PermanentHandle,
+    face_down: bool,
+) -> Option<crate::card_source::CardHandle> {
+    if let Some(name) = binding_name(card_ref) {
+        if let Some((card, origin, owner)) = bindings.get_union_card(name) {
+            if owner == ctx.player {
+                return ctx.place_union_card_under_tamer(card, origin, tamer, face_down);
+            }
+            return None;
+        }
+    }
+
+    match resolve_binding_ref(card_ref, ctx, bindings)? {
+        ResolvedBinding::HandIndex(owner, index) if owner == ctx.player => {
+            ctx.place_hand_card_under_tamer(index as usize, tamer, face_down)
+        }
+        ResolvedBinding::TrashIndex(owner, index) if owner == ctx.player => {
+            ctx.place_trash_card_under_tamer(index as usize, tamer, face_down)
+        }
+        ResolvedBinding::Card(card) => {
+            if let Some(index) = ctx
+                .game
+                .player(ctx.player)
+                .hand
+                .iter()
+                .position(|candidate| candidate.handle() == card)
+            {
+                return ctx.place_hand_card_under_tamer(index, tamer, face_down);
+            }
+            if let Some(index) = ctx
+                .game
+                .player(ctx.player)
+                .trash
+                .iter()
+                .position(|candidate| candidate.handle() == card)
+            {
+                return ctx.place_trash_card_under_tamer(index, tamer, face_down);
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+fn binding_name(card_ref: &CompiledBindingRef) -> Option<&str> {
+    match card_ref {
+        CompiledBindingRef::Named(name)
+        | CompiledBindingRef::Binding(name)
+        | CompiledBindingRef::Permanent(name)
+        | CompiledBindingRef::OfPermanent(name) => Some(name),
+        _ => None,
+    }
 }
 
 fn formula_to_u8(formula: &CompiledFormula, ctx: &EffectContext<'_>, bindings: &Bindings) -> u8 {

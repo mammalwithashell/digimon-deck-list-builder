@@ -1,0 +1,57 @@
+card: AD1-013
+name: ZeigGreymon
+kind: digimon
+level: 6
+color: [blue, purple]
+cost: 11
+dp: 11000
+traits: [Cyborg, Blue Flare]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: "Blue Flare"
+            - trait_has: "Xros Heart"
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with the fewest digivolution cards"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          selector: lowest_material_count
+          filter: { kind: digimon }
+          prompt: "Delete 1 opponent Digimon with the fewest digivolution cards"
+      - delete_permanent: { target: target }
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_of:
+            - source_permanent_trait_has: "Blue Flare"
+            - source_permanent_trait_has: "Xros Heart"
+    dp_modifier_fn:
+      base: 0
+      per: source_color_count
+      delta: 1000
+    summary: "Inherited: Blue Flare/Xros Heart carrier gets +1000 DP per source color"

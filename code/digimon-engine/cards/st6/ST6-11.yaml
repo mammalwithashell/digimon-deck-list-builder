@@ -1,0 +1,30 @@
+card: ST6-11
+name: WereGarurumon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+traits: [Beastkin]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+
+effects:
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+            n: 5
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] While you have 5 or more cards in trash, this Digimon gets +2000 DP"

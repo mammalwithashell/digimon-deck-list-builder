@@ -49,6 +49,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "ForceAttack" => ModifierType::ForceAttack,
         "SecurityAttackChange" => ModifierType::SecurityAttackChange,
         "ChangeOwnSecurityDigimonDp" => ModifierType::ChangeOwnSecurityDigimonDp,
+        "SecurityDpChange" => ModifierType::SecurityDpChange,
         "ImmunityToOpponentEffects" => ModifierType::ImmunityToOpponentEffects,
         "DontBattleSecurityDigimon" => ModifierType::DontBattleSecurityDigimon,
         "CannotDigivolve" => ModifierType::CannotDigivolve,
@@ -66,6 +67,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotPlayDigimonByEffect" => ModifierType::CannotPlayDigimonByEffect,
         "CannotPlayTamerByEffect" => ModifierType::CannotPlayTamerByEffect,
         "IgnoreColorRequirement" => ModifierType::IgnoreColorRequirement,
+        "CannotActivateOnPlayEffects" => ModifierType::CannotActivateOnPlayEffects,
         "CannotActivateMainEffects" => ModifierType::CannotActivateMainEffects,
         "CannotActivateWhenDigivolvingEffects" => {
             ModifierType::CannotActivateWhenDigivolvingEffects
@@ -159,6 +161,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::ForceAttack
         | ModifierType::SecurityAttackChange
         | ModifierType::ChangeOwnSecurityDigimonDp
+        | ModifierType::SecurityDpChange
         | ModifierType::ImmunityToOpponentEffects
         | ModifierType::DontBattleSecurityDigimon
         | ModifierType::CannotDigivolve
@@ -180,6 +183,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotReducePlayCost
         | ModifierType::CannotReduceDigivolveCost
         | ModifierType::OpponentCannotReduceDigivolveCost
+        | ModifierType::CannotActivateOnPlayEffects
         | ModifierType::CannotActivateMainEffects
         | ModifierType::CannotActivateWhenDigivolvingEffects
         | ModifierType::CannotActivateWhenAttackingEffects
@@ -269,6 +273,7 @@ mod tests {
             ModifierType::ForceAttack,
             ModifierType::SecurityAttackChange,
             ModifierType::ChangeOwnSecurityDigimonDp,
+            ModifierType::SecurityDpChange,
             ModifierType::ImmunityToOpponentEffects,
             ModifierType::DontBattleSecurityDigimon,
             ModifierType::CannotDigivolve,
@@ -290,6 +295,7 @@ mod tests {
             ModifierType::CannotReducePlayCost,
             ModifierType::CannotReduceDigivolveCost,
             ModifierType::OpponentCannotReduceDigivolveCost,
+            ModifierType::CannotActivateOnPlayEffects,
             ModifierType::CannotActivateMainEffects,
             ModifierType::CannotActivateWhenDigivolvingEffects,
             ModifierType::CannotActivateWhenAttackingEffects,

@@ -47,10 +47,7 @@ pub fn run(
             let r = runner.step();
             if !r.divergences.is_empty() {
                 had_divergence = true;
-                eprintln!(
-                    "DIVERGENCE at step {}: {:?}",
-                    r.step_number, r.divergences
-                );
+                eprintln!("DIVERGENCE at step {}: {:?}", r.step_number, r.divergences);
             }
         }
         emit_view(&LiveGame::from_game(runner.game), view, show, player);

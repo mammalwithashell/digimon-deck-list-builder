@@ -1,0 +1,67 @@
+card: BT19-014
+name: Shoutmon EX6
+kind: digimon
+level: 6
+color: [red, yellow]
+cost: 11
+dp: 12000
+traits: [Composite, Xros Heart, Blue Flare]
+attribute: Data
+
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance>"
+
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - kind: grant_keyword
+    keyword: MaterialSave
+    value: 4
+    summary: "<Material Save 4>"
+
+  - when: on_play
+    summary: "[On Play] Opponent Digimon -1000 DP per source color; may play ShootingStarmon under your Tamers"
+    process:
+      - add_modifier:
+          target:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          modifier: ChangeDp
+          value:
+            formula:
+              base: 0
+              per: source_color_count
+              delta: -1000
+          expiry: end_of_turn
+      - select_under_tamer_sources:
+          min: 0
+          max: 1
+          filter:
+            name_contains: "ShootingStarmon"
+          bind_as: shooting
+          prompt: "Play 1 ShootingStarmon from under your Tamers"
+          then:
+            - play_under_tamer_source:
+                source_refs: shooting
+                cost_delta: free
+
+  - when: when_attacking
+    summary: "[When Attacking] Delete 1 opponent Digimon with DP <= this Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 opponent Digimon with DP <= this Digimon"
+      - delete_permanent: { target: target }

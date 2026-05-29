@@ -366,6 +366,7 @@ ctx.play_from_trash_with_cost(player, trash_index, CostDelta) -> Option<Permanen
 ctx.play_from_trash_free_unsuspended(card) -> Option<PermanentHandle>
 ctx.play_from_trash_free_unsuspended_suppress_on_play(card) -> Option<PermanentHandle>
 ctx.play_from_revealed_free(player, card) -> Option<PermanentHandle>
+ctx.play_from_reveal_free(player, card) -> Option<PermanentHandle>
 ctx.play_from_security(player) -> Option<PermanentHandle>
 ctx.play_from_materials(carrier, source_index, CostDelta, bind_target: Option<...>) -> Option<PermanentHandle>
 ctx.play_to_breeding_from_hand(player, hand_index) -> bool
@@ -610,6 +611,41 @@ deletion is keyed to a provenance identity, not a battle-area index, it
 targets the right permanent even after other permanents enter or leave and
 shift indices. A handle that no longer points at a live permanent is ignored
 (nothing is scheduled).
+
+### `bind_as` on play verbs tracks the played card by stable identity
+
+A `bind_as` on a play verb (`play_from_hand_free`, `play_from_revealed_free`,
+`play_from_materials`, `play_union_bound_free`, `play_token`) binds the played
+permanent as `BindingValue::PlayedPermanent { token, fallback }` — where
+`token` is the `ProvenanceToken` derived from the played top card's
+`CardHandle`. Downstream consumers resolve the binding at consume time, not
+at bind time.
+
+Two resolvers serve different printed-text semantics:
+
+- **Strict — `Game::resolve_token_as_battle_area_top`** (default via
+  `resolve_binding_ref`). Yields `Some(handle)` only when the played card is
+  currently the **top card** of a battle-area permanent. Yields `None` if the
+  played card is now a digivolution card under another top, has left play, or
+  resides in any other zone. This matches DCGO's
+  `IsPermanentExistsOnBattleArea(selectedPermanent)` semantics. Use for "return
+  *it* to the hand" and similar identity-preserving effects (BT16-085 Davis
+  Motomiya & Ken Ichijoji).
+
+- **Permissive — `resolve_played_permanent_permissive`** (called by
+  `ScheduleDeletePlayedAtTurnEnd`). Yields `Some(carrier_handle)` whenever the
+  played card is anywhere in a battle-area stack — top OR digivolution card.
+  Use for "delete the Digimon this effect played" semantics where the carrier
+  is the correct target even after a digivolve buries the played card
+  (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki, P-165 ShoeShoemon).
+
+Authors writing new DSL clauses pick the resolver semantic by writing the
+appropriate downstream verb: `return_to_hand` / `delete_permanent` /
+`add_modifier` / etc. all flow through the strict resolver via
+`resolve_binding_ref`, while `schedule_delete_played_at_turn_end` uses the
+permissive one explicitly. See change `fix-played-binding-uses-provenance`
+for the cross-engine rationale and the BT16-085 + BT16-025 Paildramon scenario
+that motivated the strict path.
 
 `schedule_delete_at_end_of_opponents_turn` (PUPPETS-G016) is the opponent-turn
 variant — for card text "At the end of your opponent's turn, delete that token"
@@ -999,8 +1035,10 @@ auto-install cannot encode:
   `<Decoy (Black)>` or `<Decoy (Red/Black)>`) is now handled natively —
   `Keyword::Decoy(u8)` carries a `CardColor` bitmask and the auto-install
   consults `subject.colors_for_rules` against the mask.
-- **DigiXros-source MaterialSave** — auto-install offers any own source;
-  per-card text may restrict to sources that were DigiXros materials.
+- **DigiXros-source MaterialSave** — auto-install filters snapshot sources
+  through the carrier's authored DigiXros recipe when one is present. Cards
+  with extra printed restrictions beyond the recipe still need a hand-rolled
+  filter or a narrower DSL predicate.
 - **Color-grouped Partition** — auto-install offers any 2 sources; printed
   text often specifies two color-grouped picks (`firstSources` / `secondSources`
   in DCGO `Partition.cs`). Override via hand-rolled to apply per-group logic.
@@ -1464,7 +1502,7 @@ DeDigivolve(u8), DrawX(u8)
 Blitz, Raid, Alliance
 BlastDigivolve
 Save
-MaterialSave(u8)              # active skill — move up to N digivolution sources under another permanent
+MaterialSave(u8)              # deletion/removal-timed source rescue under an own Tamer
 DigiBurst(u8)                 # active-effect cost marker; body authored via DSL `digi_burst`
 Fortitude
 Overclock
@@ -2016,7 +2054,7 @@ All 13 new `ModifierType` variants added in Phase 6:
 | `CannotGainMemoryExceptFromTamers` | Opponent can only gain memory from Tamer-card effects; all other sources blocked | Resolver (gain_memory, gated by `source_is_tamer`) | "Your opponent can't gain memory except from Tamer effects" |
 | `CannotReducePlayCost` | Opponent's play costs cannot be reduced by any effect | Resolver (scan_before_pay_cost_reduction) | "Your opponent can't reduce play costs" |
 | `CannotActivateMainEffects` | Opponent's Digimon/Tamer [Main] effects cannot be activated | Mask (`MainOnField` bits zeroed) | "Your opponent's Digimon can't activate their [Main] effects" |
-| `CannotActivateWhenDigivolvingEffects` | Opponent's [When Digivolving] effects cannot fire | DORMANT (resolver hook, not yet wired to enforcement site) | "Your opponent's Digimon can't activate their [When Digivolving] effects" |
+| `CannotActivateWhenDigivolvingEffects` | Opponent's [When Digivolving] effects cannot fire | Trigger dispatch (`EffectTiming::WhenDigivolving`) | "Your opponent's Digimon can't activate their [When Digivolving] effects" |
 | `CannotActivateSecurityEffects` | Opponent's security-revealed effects cannot fire | DORMANT (resolver hook) | "Your opponent's Digimon can't activate their [Security] effects" |
 | `CannotDigivolveDigimonByEffect` | Opponent cannot effect-initiate a digivolve | DORMANT (resolver hook) | "Your opponent can't digivolve Digimon by effect" |
 | `CannotDrawByEffect` | Opponent cannot draw cards via effects | Resolver (draw) | "Your opponent can't draw by effect" |
@@ -2029,7 +2067,7 @@ All 13 new `ModifierType` variants added in Phase 6:
 
 **Enforcement sites (active):**
 - **Mask:** `CannotPlayFromHand` upgraded to player-scoped query; `CannotAttack` enforced in both `Main` and `EndOfTurnAction` phases; `CannotActivateMainEffects` zeroes `MainOnField` bits in the main-phase mask; `IgnoreColorRequirement` permits Option use when no matching-color Digimon/Tamer is present.
-- **Resolver:** `CannotDrawByEffect` gates `ctx.draw`; `CannotGainMemoryByEffect` and `CannotGainMemoryExceptFromTamers` gate `ctx.gain_memory`; `CannotAddSecurityByEffect` gates `ctx.place_on_security`; `CannotReducePlayCost` nullifies `scan_before_pay_cost_reduction` for the restricted player; `CannotPlayDigimonByEffect` gates the three effect-play helpers (`play_from_hand_with_cost` + `play_from_trash_with_cost` + `play_from_security`) when `PlaySource::ByEffect`; `IgnoreColorRequirement` is rechecked by Option decode/execution before paying cost.
+- **Resolver/dispatch:** `CannotDrawByEffect` gates `ctx.draw`; `CannotGainMemoryByEffect` and `CannotGainMemoryExceptFromTamers` gate `ctx.gain_memory`; `CannotAddSecurityByEffect` gates `ctx.place_on_security`; `CannotReducePlayCost` nullifies `scan_before_pay_cost_reduction` for the restricted player; `CannotPlayDigimonByEffect` gates the three effect-play helpers (`play_from_hand_with_cost` + `play_from_trash_with_cost` + `play_from_security`) when `PlaySource::ByEffect`; `CannotActivateOnPlayEffects` and `CannotActivateWhenDigivolvingEffects` suppress effect-queue trigger dispatch for those exact timing families on the affected permanent; `IgnoreColorRequirement` is rechecked by Option decode/execution before paying cost.
 
 ---
 
@@ -3230,6 +3268,12 @@ Avoid encoding DP-change effects via `ctx.add_dp_modifier(...)` for *static* buf
 
 - kind: aura
   target: {}
+  active_when:
+    source_permanent_trait_has: "Xros Heart"
+  dp_modifier_fn: { base: 0, per: source_color_count, delta: 1000 }
+
+- kind: aura
+  target: {}
   security_attack_fn: { base: 1, per: material_count, delta: 1 }
 ```
 
@@ -3237,7 +3281,7 @@ With `target`, the aura scans battle-area permanents and installs `dp_modifier`,
 
 Static `dp_modifier`, `grant_keyword`, and named `modifier` aura fields are materialized on tick. Each `tick_declarative_effects` call first clears modifiers and granted keywords previously materialized by process-backed declaratives, then reapplies only effects marked as declarative materializers, such as DSL auras, flood gates, partition keyword grants, and top-level `grant_keyword` clauses. The action decoder refreshes these materializers before and after decoded actions so normal play keeps masks and resolver state current without executing active keyword effects like Material Save, Mind Link, or Training. That refresh prevents repeated ticks from stacking and removes stale materializations when an aura source leaves play, `active_when` becomes false, `target_player: active` changes, or a permanent stops matching the target predicate. Call `tick_declarative_effects` after manual test setup that mutates field state without using decoded actions.
 
-Formula-backed `dp_modifier_fn` and `security_attack_fn` auras are not materialized into permanent modifiers. They carry the compiled formula into the runtime effect and are continuously recomputed by the relevant query/resolution path: DP formulas are read by `effective_dp` and `source_dp_contribution`, while Security Attack formulas are read when the attack security-check count is resolved. This keeps `material_count` and other field-state selectors live after stack depth or board state changes.
+Formula-backed `dp_modifier_fn` and `security_attack_fn` auras are not materialized into permanent modifiers. They carry the compiled formula into the runtime effect and are continuously recomputed by the relevant query/resolution path: DP formulas are read by `effective_dp` and `source_dp_contribution`, while Security Attack formulas are read when the attack security-check count is resolved. This keeps `material_count`, `source_color_count`, `source_stack_count`, and other field-state selectors live after stack depth or board state changes. `source_color_count` is source-relative: it reads source cards beneath the resolving effect carrier's top card (`ctx.source_permanent`) and counts each represented color once, including multi-color source cards. `source_stack_count` counts source cards beneath the named target binding, optionally filtered with a card predicate such as `level_eq: 6`; it is intended for count bounds and memory/DP math like BT20-037's per-level-6-source effects.
 
 Dynamic DP aura formulas must not depend on effective DP. The validator rejects `dp_modifier_fn` auras whose target or `active_when` predicate uses DP comparisons (`dp_eq`, `dp_lte`, `dp_gte`, including nested predicates) or whose formula uses `highest_dp` / `lowest_dp` aggregates. This avoids re-entering `effective_dp` while effective DP is already being computed.
 
@@ -3701,6 +3745,7 @@ Effect::on_play(card).process(|ctx| {
 | `bounce_self()` → `Option<CardHandle>` | Sugar over `return_to_hand(self.source_permanent.unwrap())`. Returns `None` if there is no source permanent (Option-card OptionMain effects, rule-source effects) or if the bounce is gated by `CannotBeReturnedToHand` / `CannotBeAffected`. Owner-routed via `Permanent::owner()`. |
 | `return_to_deck(PermanentHandle, StackPosition)` → `bool` | Bounce to deck at Top/Bottom/Random. |
 | `return_to_deck_from_reveal(player, CardHandle, StackPosition)` → `bool` | Reveal pool → deck. |
+| `play_from_reveal_free(player, CardHandle)` → `Option<PermanentHandle>` | Play a selected revealed card without paying its cost. Consumes the card from `revealed_cards`, clears reveal overlay metadata, routes through the normal effect-play pipeline, and restores the card to the reveal pool if play fails before commitment. |
 | `move_trash_card_to_deck_top(player, CardHandle)` → `bool` | Move one selected trash card to the **top** of its owner's deck (`player` only identifies whose trash holds it; the card returns to `removed.owner`'s deck). Single-card, deck-TOP analog of `return_all_trash_to_deck_bottom`. A handle not in `player`'s trash is a silent no-op (`false`). Drives LM-030's Delay clause. |
 | `return_card_source_to_hand(PermanentHandle, CardHandle)` → `bool` | Return-to-hand twin of `trash_card_source` — remove one digivolution source by handle (anywhere in the stack) and push it to `removed.owner`'s hand. Fires **no** `OnDigivolutionCardTrashed` (it is a return, not a trash). `false` if the slot is gone or the card is not in the stack. |
 | `return_selected_sources_to_hand(Vec<SourceSelectionRef>)` → `bool` | `Vec`-taking wrapper over `return_card_source_to_hand` — the mirror of `trash_selected_sources` — returning each `select_own_sources`-bound source ref to its owner's hand. `true` only when every ref moved. Drives BT12-031's Dragon-Mode-return alt-cost. |
@@ -4245,6 +4290,11 @@ ctx.select_reveal(
 // After select_reveal resolves, revealed_cards holds only the unchosen cards.
 ctx.place_remainder_on_deck(p, StackPosition::Bottom);
 ```
+
+For printed "play 1 of the revealed cards without paying the cost" text, use
+the same `select_reveal` surface and call `play_from_reveal_free` for the chosen
+handle. In YAML, this is `choose_from_reveal: { ..., destination: play_free }`;
+the unchosen reveal cards stay in `revealed_cards` for `order_remainder`.
 
 **Note on chaining follow-up effects.** `place_remainder_on_deck` installs its own `PendingSelection` callback internally. If the card text requires another selection after the placement (e.g., "…then your opponent chooses a card to trash"), install that selection *after* `place_remainder_on_deck` resolves, in a separate step — not chained inside the same callback. See `code/code/digimon-engine/tests/selection/behavioral_end_to_end.rs` for an example of this two-step pattern.
 

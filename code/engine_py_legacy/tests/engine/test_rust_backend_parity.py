@@ -21,10 +21,18 @@ from digimon_engine import RustHeadlessGame  # noqa: E402
 DECK1 = ["ST1-01"] * 5 + ["ST1-03"] * 45
 DECK2 = ["ST1-01"] * 5 + ["ST1-03"] * 45
 
+# This file compares the sunset Python `HeadlessGame` (v1-shaped tensors)
+# against the Rust `RustHeadlessGame`. After `flip-engine-default-to-lite-
+# deck-v2`, the Rust default is `standard_lite_deck_v2` (8850), so we must
+# pin the Rust side to `standard_compact_v1` (1375) for shape parity to be
+# meaningful. The test exists to detect drift in the v1 layout — not to
+# claim the two engines share a default.
+_PARITY_PROFILE = "standard_compact_v1"
+
 
 def _build():
     py = HeadlessGame(DECK1, DECK2)
-    rs = RustHeadlessGame(DECK1, DECK2)
+    rs = RustHeadlessGame(DECK1, DECK2, observation_profile=_PARITY_PROFILE)
     return py, rs
 
 
@@ -54,7 +62,9 @@ def test_is_game_over_initial_state():
 def test_pass_everything_terminates_rust_backend():
     """Default policy (pass every step) must terminate the game in the Rust
     backend within a generous turn cap, matching the Python side."""
-    rs = RustHeadlessGame(DECK1, DECK2)
+    # Profile pinned for shape consistency with the rest of the file — game
+    # termination itself is profile-agnostic.
+    rs = RustHeadlessGame(DECK1, DECK2, observation_profile=_PARITY_PROFILE)
     winner = rs.run_until_conclusion(max_turns=2000)
     assert rs.is_game_over is True
     assert winner in (1, 2)
@@ -134,12 +144,14 @@ def test_events_drained_between_calls():
 
 
 def test_recording_returns_none_without_record_flag():
-    rs = RustHeadlessGame(DECK1, DECK2)
+    rs = RustHeadlessGame(DECK1, DECK2, observation_profile=_PARITY_PROFILE)
     assert rs.get_recording() is None
 
 
 def test_recording_has_expected_shape():
-    rs = RustHeadlessGame(DECK1, DECK2, record_actions=True)
+    rs = RustHeadlessGame(
+        DECK1, DECK2, record_actions=True, observation_profile=_PARITY_PROFILE
+    )
     rs.step(0)
     rs.step(0)
     rec = rs.get_recording()

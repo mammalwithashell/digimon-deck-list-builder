@@ -133,6 +133,30 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    pub fn select_opponent_no_source_digimon<C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, PermanentHandle) + Send + Sync + 'static,
+    {
+        self.select_opponent_permanent(
+            prompt,
+            is_optional,
+            |game, handle| {
+                game.permanent_is_digimon_for_rules(handle)
+                    && game
+                        .player(handle.player)
+                        .battle_area
+                        .get(handle.index as usize)
+                        .map(|perm| perm.card_sources.len().saturating_sub(1) == 0)
+                        .unwrap_or(false)
+            },
+            callback,
+        );
+    }
+
     /// Prompt `self.player` to pick one of their own Digimon / Tamers.
     ///
     /// Same shape as `select_opponent_permanent`; see that method's docs
@@ -429,6 +453,56 @@ impl<'a> EffectContext<'a> {
                 );
                 callback(&mut ctx, picked);
             }),
+        );
+    }
+
+    pub fn select_own_tamer_sources<F, C>(
+        &mut self,
+        prompt: &str,
+        min: u8,
+        max: u8,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, SourceSelectionRef) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<SourceSelectionRef>) + Send + Sync + 'static,
+    {
+        let controller = self.player;
+        self.select_own_sources(
+            prompt,
+            min,
+            max,
+            move |game, source_ref| {
+                own_tamer_source_carrier(game, controller, source_ref.permanent)
+                    && filter(game, source_ref)
+            },
+            callback,
+        );
+    }
+
+    pub fn select_sources_under_own_tamer<F, C>(
+        &mut self,
+        tamer: PermanentHandle,
+        prompt: &str,
+        min: u8,
+        max: u8,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, SourceSelectionRef) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<SourceSelectionRef>) + Send + Sync + 'static,
+    {
+        let controller = self.player;
+        self.select_own_sources(
+            prompt,
+            min,
+            max,
+            move |game, source_ref| {
+                source_ref.permanent == tamer
+                    && own_tamer_source_carrier(game, controller, tamer)
+                    && filter(game, source_ref)
+            },
+            callback,
         );
     }
 
@@ -1721,6 +1795,8 @@ impl<'a> EffectContext<'a> {
                     player: target_player,
                     index: target_index,
                 };
+                let previous_effect_source = game.effect_source_player;
+                game.effect_source_player = Some(controller);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1730,6 +1806,7 @@ impl<'a> EffectContext<'a> {
                     override_pin,
                 );
                 user_callback(&mut ctx, h);
+                ctx.game.effect_source_player = previous_effect_source;
             }),
             on_decline: None,
         });
@@ -2483,6 +2560,16 @@ fn install_partition_source_selection(
         }),
         on_decline: None,
     });
+}
+
+fn own_tamer_source_carrier(game: &Game, controller: PlayerId, permanent: PermanentHandle) -> bool {
+    if permanent.player != controller {
+        return false;
+    }
+    game.player(controller)
+        .battle_area
+        .get(permanent.index as usize)
+        .is_some_and(|perm| perm.is_tamer(&game.card_data))
 }
 
 fn source_multi_candidates(

@@ -8,23 +8,23 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 
 | Constant | Value | Notes |
 |---|---:|---|
-| `TENSOR_SIZE` | 1375 | Compact compatibility constant for `standard_compact_v1`; not the default pilot observation size |
-| `SLOT_SIZE` | 40 | `1 + 6 + MAX_SOURCES * 3` |
-| `SOURCE_ENTRY_SIZE` | 3 | `card_id + opt_state + dp_contribution` |
-| `FIELD_SLOTS` | 14 | Battle area slots per player |
-| `MAX_SOURCES` | 11 | Max digivolution stack depth (`standard_compact_v1`). The v2 profiles use `PERM_MAX_SOURCES = 12` — see `standard_lite_v2` below |
-| `MAX_HAND` | 20 | |
-| `MAX_TRASH` | 45 | |
-| `MAX_SECURITY` | 10 | |
-| `MAX_REVEALED` | 10 | |
+| `TENSOR_SIZE` | 8850 | Engine default — `standard_lite_deck_v2`. Top-level Rust `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE` both report this value. |
+| `ACTION_SPACE_SIZE` | 2192 | Unchanged by the default-profile flip. |
+
+`standard_compact_v1`-specific layout constants (`SLOT_SIZE = 40`, `FIELD_SLOTS = 14`, `MAX_HAND = 20`, etc.) are now reachable only via their module path: `digimon_engine::tensor_profiles::standard::v1::*` in Rust and `get_tensor_profile("standard_compact_v1")` in Python. They are no longer re-exported from the top-level `tensor` module — code that imported them from there must migrate either to the explicit module path (if it intentionally targets v1) or to `TensorSection` / `TensorSlotLayout` profile metadata (if it wants the active default).
 
 ## Tensor Profiles
 
-The default pilot observation profile is `standard_lite_v2`: an `8410`-float, fair-information Standard-mode tensor. It is selected by the Rust observation API via `observation::default_observation_profile()` and is exposed to Python as `digimon_engine.DEFAULT_OBSERVATION_PROFILE`.
+The engine default pilot observation profile is **`standard_lite_deck_v2`** (`8850` floats; flipped 2026-05-25 per the `flip-engine-default-to-lite-deck-v2` change). It is selected by:
 
-`standard_lite_deck_v2` is an opt-in `8850`-float profile derived from `standard_lite_v2`. It adds the observing pilot's original submitted decklist as orderless unique-card rows. It does not change the default pilot profile, action masks, or action-space size.
+- Rust: `tensor_profiles::standard::DEFAULT_PROFILE`, `tensor_profiles::default_profile()`, `observation::default_observation_profile()` — all return the same value.
+- Python: `digimon_engine.DEFAULT_OBSERVATION_PROFILE` and `digimon_engine.TENSOR_PROFILE_ID` both report `"standard_lite_deck_v2"`.
 
-`standard_compact_v1` remains the `1375`-float compact compatibility and baseline profile. The Rust `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE` constants still describe this compact profile for legacy imports and compact-profile checks; new pilot training and model metadata should use observation layout metadata instead of assuming that global constant is the active profile size.
+`standard_lite_v2` (`8410` floats) is the lite_deck_v2 prefix without the own-original-decklist section. Callers that don't need decklist-aware observations can request it explicitly via `observation_profile="standard_lite_v2"` on `RustHeadlessGame`, `--tensor-profile standard_lite_v2` on `pilot_training`, or `profile_by_id("standard_lite_v2")` from Rust.
+
+`standard_compact_v1` (`1375` floats) is the historical baseline profile. It remains reachable for legacy callers (parity tests, archived recordings, baseline models) via `observation_profile="standard_compact_v1"` and `profile_by_id("standard_compact_v1")`. Existing ONNX checkpoints trained against this profile are NOT loadable through the engine's default surface — they must be loaded with an explicit profile pin and an action-space-compatible inference path.
+
+`standard_full_v2` (`43482` floats) is the maximally informative profile used for full-state agents; unchanged by the default flip.
 
 ### `standard_lite_v2`
 

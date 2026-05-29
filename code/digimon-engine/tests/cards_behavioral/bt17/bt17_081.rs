@@ -857,8 +857,7 @@ fn bt17_081_optional_outer_prompt_installs_on_own_digivolve() {
     let tamer = runner.place_on_field(0, "BT17-081", Some(0));
     push_to_hand(&mut runner, 0, "OWN-PLAIN");
 
-    let suspended_before =
-        runner.game.players[0].battle_area[tamer.index as usize].is_suspended;
+    let suspended_before = runner.game.players[0].battle_area[tamer.index as usize].is_suspended;
     assert!(
         !suspended_before,
         "precondition: Tai & Matt must be unsuspended before the play"
@@ -884,7 +883,10 @@ fn bt17_081_optional_outer_prompt_installs_on_own_digivolve() {
     //   suspend_self), installed via `install_trigger_order_selection` on the
     //   pre-cost path. Bundle.len() == 1 here either way.
     assert!(
-        matches!(view.kind, SelectionKind::Replacement | SelectionKind::TriggerOrder),
+        matches!(
+            view.kind,
+            SelectionKind::Replacement | SelectionKind::TriggerOrder
+        ),
         "BT17-081 outer optional prompt must be either Replacement or TriggerOrder kind; got {:?}",
         view.kind
     );

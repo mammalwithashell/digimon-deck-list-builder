@@ -1,0 +1,24 @@
+card: ST4-08
+name: Kabuterimon
+kind: digimon
+level: 4
+color: [green]
+cost: 6
+dp: 5000
+traits: [Insectoid]
+form: Champion
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 1
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: when_attacking
+    summary: "[When Attacking] Lose 2 memory"
+    process:
+      - lose_memory: 2

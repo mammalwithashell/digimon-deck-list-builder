@@ -134,6 +134,7 @@ fn bt19_072_opponents_turn_switches_attack_target_to_royal_knight() {
             optional: false,
         },
         suspend_attacker: false,
+        ignore_summoning_sickness: false,
         target_constraint: TargetConstraint::Forced(AttackTarget::Player(0)),
         allow_cancel: false,
         cost_upgrade: None,

@@ -1,0 +1,33 @@
+card: ST5-14
+name: Tai Kamiya
+kind: tamer
+color: [black]
+cost: 2
+
+effects:
+  - when: on_attack_target_change
+    optional: true
+    active_when: { opponents_turn: true }
+    condition:
+      all_of:
+        - attack_target_change_reason: blocker
+        - event_target_owner: you
+        - source_is_unsuspended: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            is_suspended: true
+    summary: "[Opponent's Turn] When you use Blocker, suspend this Tamer to unsuspend 1 of your Digimon"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon, is_suspended: true }
+          prompt: "Choose 1 of your Digimon to unsuspend"
+      - unsuspend: { target: target }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -57,6 +57,9 @@ impl Game {
 
         // Reset per-turn state
         self.player_mut(tp).new_turn();
+        if let Some(count) = self.digimon_attacks_this_turn.get_mut(tp as usize) {
+            *count = 0;
+        }
 
         // Unsuspend phase
         self.current_phase = GamePhase::Unsuspend;
@@ -290,6 +293,7 @@ impl Game {
         }
         // Phase 6: expire player-scoped flood-gate modifiers.
         self.modifiers.expire_player_end_of_turn(ending_player);
+        self.expire_digixros_wildcards_at_end_of_turn(ending_player);
         // G-COST-REDUCE-ALLY-DIGIVOLVE: expire "For the turn" player-scoped
         // digivolve cost reducers installed by the ending player.
         self.player_digivolve_cost_reducers.retain(|r| {

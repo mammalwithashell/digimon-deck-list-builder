@@ -142,7 +142,7 @@ pub(crate) struct EndTurnResume {
     pub(crate) memory_before_end_effects: i16,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PendingWouldPlayResume {
     pub(crate) player: PlayerId,
     pub(crate) card: crate::card_source::CardHandle,
@@ -231,6 +231,10 @@ pub struct Game {
     /// Backs the `digivolve_driven_attack` reward signal.
     /// See `openspec/changes/add-gameplay-reward-config/`.
     pub n_digivolve_driven_attacks: [u32; 2],
+    /// Per-turn count of Digimon attacks declared by each player. Reset when
+    /// that player begins a new turn, after prior end-of-turn observers have
+    /// had a chance to inspect the ending turn's history.
+    pub digimon_attacks_this_turn: [u32; 2],
     pub current_phase: GamePhase,
     /// Memory seesaw value. Positive = favor of memory_pair.0, negative = favor of memory_pair.1.
     pub memory: i16,
@@ -333,6 +337,13 @@ pub struct Game {
     /// Phase 8: in-flight Option card resolution. Set when an Option is
     /// played and cleared after dispose. Dispatch lands in Tasks 2-6.
     pub pending_option: Option<PendingOption>,
+    /// Inert context for a pending DigiXros play from hand. The play-cost path
+    /// installs this before cost hooks run and clears it when the play commits
+    /// or aborts. Later slices use it for material selection and source commit.
+    pub(crate) pending_digixros_transaction: Option<crate::digixros::DigiXrosTransaction>,
+    /// Turn-scoped DigiXros wildcard material modifiers waiting to be copied
+    /// into the next matching transaction.
+    pub(crate) active_digixros_wildcards: Vec<crate::digixros::ActiveDigiXrosWildcardSubstitution>,
     /// Continuation marker for Delay/Training Option placement observers.
     /// Option play normally calls `check_turn_end` after disposal. If
     /// placement observers park a selection after `pending_option` has already
@@ -671,8 +682,7 @@ pub struct Game {
     /// card-id strings into `CardSource` instances. Empty for non-opaque
     /// games (the standard constructor uses an in-scope `data_index_map`
     /// directly without caching it on the Game).
-    pub(crate) opaque_data_index_map:
-        Option<std::collections::HashMap<String, usize>>,
+    pub(crate) opaque_data_index_map: Option<std::collections::HashMap<String, usize>>,
 }
 
 impl Game {
@@ -828,6 +838,7 @@ impl Game {
             n_digivolutions: [0u32, 0u32],
             n_dna_digivolutions: [0u32, 0u32],
             n_digivolve_driven_attacks: [0u32, 0u32],
+            digimon_attacks_this_turn: [0u32, 0u32],
             current_phase: GamePhase::Mulligan,
             memory: 0,
             memory_pair,
@@ -859,6 +870,8 @@ impl Game {
             pending_security: None,
             pending_effect_security_removal: Vec::new(),
             pending_option: None,
+            pending_digixros_transaction: None,
+            active_digixros_wildcards: Vec::new(),
             pending_option_placed_turn_check: false,
             pending_option_placed_link_resume: None,
             security_resolution: None,
@@ -965,10 +978,7 @@ impl Game {
             ));
         }
         if my_player_id >= 2 {
-            return Err(format!(
-                "my_player_id must be 0 or 1, got {}",
-                my_player_id
-            ));
+            return Err(format!("my_player_id must be 0 or 1, got {}", my_player_id));
         }
 
         // Validate the opponent decklist size matches what the rules expect.
@@ -1054,8 +1064,9 @@ impl Game {
             })
             .cloned()
             .collect();
-        game.players[opp_idx].opaque_deck_state =
-            Some(crate::opaque_deck::OpaqueDeckState::from_decklist(&non_digitama));
+        game.players[opp_idx].opaque_deck_state = Some(
+            crate::opaque_deck::OpaqueDeckState::from_decklist(&non_digitama),
+        );
 
         game.reveal_source = Some(reveal_source);
 
@@ -1199,11 +1210,7 @@ impl Game {
     /// [`Self::materialize_opaque_security_placeholder`], the multiset
     /// has already been debited and no further change happens — the
     /// materialization just resolves identity.
-    pub fn setup_security_for_player(
-        &mut self,
-        pid: PlayerId,
-        count: u8,
-    ) -> Result<(), String> {
+    pub fn setup_security_for_player(&mut self, pid: PlayerId, count: u8) -> Result<(), String> {
         if (pid as usize) >= self.players.len() {
             return Err(format!("invalid player id {}", pid));
         }
@@ -1241,9 +1248,9 @@ impl Game {
         for _ in 0..count {
             let card_index = self.next_card_index;
             self.next_card_index += 1;
-            self.players[pid as usize].security.push(
-                CardSource::new_opaque_security_placeholder(pid, card_index),
-            );
+            self.players[pid as usize]
+                .security
+                .push(CardSource::new_opaque_security_placeholder(pid, card_index));
         }
         Ok(())
     }
@@ -1337,7 +1344,9 @@ impl Game {
                 .opaque_deck_state
                 .as_mut()
                 .expect("checked above");
-            state.consume_per_card_only(&card_id).map_err(|e| e.to_string())?;
+            state
+                .consume_per_card_only(&card_id)
+                .map_err(|e| e.to_string())?;
         }
         // Look up data_index and overwrite the placeholder's fields,
         // preserving card_index for face_up_security continuity.
@@ -2130,7 +2139,11 @@ impl Game {
     /// mill, source manipulation, security-stack effects, etc.). New
     /// engine code should prefer this over direct `player.trash.push(...)`
     /// so the event surface stays uniform.
-    pub fn trash_card(&mut self, player: crate::enums::PlayerId, card: crate::card_source::CardSource) {
+    pub fn trash_card(
+        &mut self,
+        player: crate::enums::PlayerId,
+        card: crate::card_source::CardSource,
+    ) {
         if card.is_token {
             // Tokens are removed from game — no trash entry, no event.
             return;
@@ -2330,6 +2343,188 @@ impl Game {
         });
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
+    }
+
+    // ─── Scenario staging (add-ui-scenario-test-substrate) ─────────
+    //
+    // Direct state setters for building an arbitrary mid-game board for
+    // tests / the `/debug` HTTP surface. They are inert setup operations,
+    // NOT card effects or rule actions — they bypass the play flow on
+    // purpose. `DebugRunner`'s staging setters delegate here so there is
+    // one implementation; `RustDebugGame` (PyO3) calls these on its
+    // wrapped `Game`.
+
+    /// Place a full digivolution stack (bottom-to-top) on `player`'s field
+    /// with explicit suspend state and turn-played value. Returns the new
+    /// battle-area index. Panics on an unknown card id.
+    pub fn stage_place_field_stack(
+        &mut self,
+        player: PlayerId,
+        card_ids: &[&str],
+        suspended: bool,
+        turn_played: u16,
+    ) -> usize {
+        assert!(
+            !card_ids.is_empty(),
+            "stage_place_field_stack requires at least one card id"
+        );
+        let mut sources = Vec::with_capacity(card_ids.len());
+        for card_id in card_ids {
+            let data_idx = self
+                .card_data
+                .iter()
+                .position(|c| c.card_id == *card_id)
+                .unwrap_or_else(|| {
+                    panic!("stage_place_field_stack: unknown card_id {card_id}")
+                });
+            let next_idx = self.next_card_index();
+            let mut card = crate::card_source::CardSource::new(data_idx, player, next_idx);
+            card.card_index = next_idx;
+            sources.push(card);
+        }
+        // Bottom-to-top: first id is the bottom source, last is the top
+        // card. `Permanent::new` takes the top card; remaining go beneath.
+        let top = sources.pop().expect("non-empty checked above");
+        let mut perm = crate::permanent::Permanent::new(top, turn_played);
+        // Insert the lower sources beneath the top, preserving order.
+        for (i, src) in sources.into_iter().enumerate() {
+            perm.card_sources.insert(i, src);
+        }
+        perm.is_suspended = suspended;
+        perm.turn_played = turn_played;
+        self.players[player as usize].battle_area.push(perm);
+        self.players[player as usize].battle_area.len() - 1
+    }
+
+    /// Inject a single card directly into a named zone for `player`.
+    /// `zone` ∈ {"hand", "deck_top", "security_top", "trash"}. Panics on
+    /// an unknown card id; returns `Err` on an unknown zone.
+    pub fn stage_inject_card(
+        &mut self,
+        player: PlayerId,
+        card_id: &str,
+        zone: &str,
+    ) -> Result<(), String> {
+        let data_idx = self
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .ok_or_else(|| format!("stage_inject_card: unknown card_id {card_id}"))?;
+        let next_idx = self.next_card_index();
+        let mut card = crate::card_source::CardSource::new(data_idx, player, next_idx);
+        card.card_index = next_idx;
+        let p = &mut self.players[player as usize];
+        match zone {
+            "hand" => p.hand.push(card),
+            // Deck top = end of the vec (draw pops from the end).
+            "deck_top" => p.deck.push(card),
+            // Security top = end of the vec.
+            "security_top" => p.security.push(card),
+            "trash" => p.trash.push(card),
+            other => return Err(format!("stage_inject_card: unknown zone {other}")),
+        }
+        Ok(())
+    }
+
+    /// Make `player` the active turn player, preserving the seesaw and
+    /// turn-rotation invariants. Reorders `turn_order` so `player` leads,
+    /// points `turn_player_idx` at it, resets `memory_pair` to (active,
+    /// next), and realigns any still-pending mulligan order.
+    pub fn stage_set_first_player(&mut self, player: PlayerId) {
+        if let Some(pos) = self.turn_order.iter().position(|&p| p == player) {
+            self.turn_order.rotate_left(pos);
+        }
+        self.turn_player_idx = 0;
+        let next = if self.turn_order.len() >= 2 {
+            self.turn_order[1]
+        } else {
+            self.turn_order[0]
+        };
+        self.memory_pair = (player, next);
+        if !self.mulligan_pending.is_empty() {
+            self.mulligan_pending = self.turn_order.clone();
+        }
+    }
+
+    /// Place a digivolution stack (bottom-to-top) into `player`'s breeding
+    /// area, replacing whatever is there. Panics on an unknown card id.
+    pub fn stage_place_in_breeding(&mut self, player: PlayerId, card_ids: &[&str]) {
+        assert!(
+            !card_ids.is_empty(),
+            "stage_place_in_breeding requires at least one card id"
+        );
+        let mut sources = Vec::with_capacity(card_ids.len());
+        for card_id in card_ids {
+            let data_idx = self
+                .card_data
+                .iter()
+                .position(|c| c.card_id == *card_id)
+                .unwrap_or_else(|| {
+                    panic!("stage_place_in_breeding: unknown card_id {card_id}")
+                });
+            let next_idx = self.next_card_index();
+            let mut card = crate::card_source::CardSource::new(data_idx, player, next_idx);
+            card.card_index = next_idx;
+            sources.push(card);
+        }
+        let top = sources.pop().expect("non-empty checked above");
+        let mut perm = crate::permanent::Permanent::new(top, self.turn_count);
+        for (i, src) in sources.into_iter().enumerate() {
+            perm.card_sources.insert(i, src);
+        }
+        self.players[player as usize].breeding_area = Some(perm);
+    }
+
+    /// Empty a named zone for `player` so staged contents fully replace
+    /// whatever was dealt at construction. `zone` ∈ {"hand", "deck",
+    /// "security", "trash", "battle_area", "breeding"}. Returns `Err` on
+    /// an unknown zone.
+    pub fn stage_clear_zone(&mut self, player: PlayerId, zone: &str) -> Result<(), String> {
+        let p = &mut self.players[player as usize];
+        match zone {
+            "hand" => p.hand.clear(),
+            "deck" => p.deck.clear(),
+            "security" => p.security.clear(),
+            "trash" => p.trash.clear(),
+            "battle_area" => p.battle_area.clear(),
+            "breeding" => p.breeding_area = None,
+            other => return Err(format!("stage_clear_zone: unknown zone {other}")),
+        }
+        Ok(())
+    }
+
+    /// Validate that a staged board is internally consistent enough for
+    /// the turn machine to operate on. Returns `Err(reason)` on a
+    /// rule-illegal staged state so callers can fail loud.
+    pub fn stage_validate(&self) -> Result<(), String> {
+        if self.turn_order.is_empty() {
+            return Err("turn_order is empty".to_string());
+        }
+        if self.turn_player_idx >= self.turn_order.len() {
+            return Err(format!(
+                "turn_player_idx {} out of range for turn_order len {}",
+                self.turn_player_idx,
+                self.turn_order.len()
+            ));
+        }
+        if self.current_phase != GamePhase::Mulligan && !self.mulligan_pending.is_empty() {
+            return Err(format!(
+                "phase is {:?} but {} player(s) still owe a mulligan decision; \
+                 finalize mulligan before setting the phase",
+                self.current_phase,
+                self.mulligan_pending.len()
+            ));
+        }
+        for (pid, player) in self.players.iter().enumerate() {
+            for (i, perm) in player.battle_area.iter().enumerate() {
+                if perm.card_sources.is_empty() {
+                    return Err(format!(
+                        "player {pid} battle_area[{i}] has an empty card stack"
+                    ));
+                }
+            }
+        }
+        Ok(())
     }
 
     // ─── Elimination / winner ──────────────────────────────────────
@@ -3353,7 +3548,9 @@ impl Game {
             for pid in 0..self.players.len() {
                 self.enqueue_triggered(
                     crate::enums::EffectTiming::OnLinkedCardTrashed,
-                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+                    crate::selection::TriggerSource::PlayerBattleArea(
+                        pid as crate::enums::PlayerId,
+                    ),
                 );
             }
             self.drain_effect_queue();
@@ -3556,6 +3753,49 @@ impl Game {
         self.live_declarative_formula_sum(target, false).0
     }
 
+    pub fn static_dp_aura_bonus(&self, target: crate::permanent::PermanentHandle) -> i32 {
+        use crate::effect_context::EffectReadContext;
+
+        let Some(permanent) = self
+            .players
+            .get(target.player as usize)
+            .and_then(|player| player.battle_area.get(target.index as usize))
+        else {
+            return 0;
+        };
+
+        let stack_size = permanent.card_sources.len();
+        let mut total = 0;
+        for (source_index, source) in permanent.card_sources.iter().enumerate() {
+            let inherited_source = source_index + 1 < stack_size;
+            let card_id = source.card_id(&self.card_data).to_string();
+            let Some(effects) = self.effects_for_card(&card_id, source.handle()) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if effect.materializes_declarative_state
+                    || effect.dp_modifier == 0
+                    || effect.dp_modifier_fn.is_some()
+                    || effect.applies_to_opponent_security_dp
+                {
+                    continue;
+                }
+                let rctx =
+                    EffectReadContext::new(self, source.handle(), Some(target), target.player);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                total += effect.dp_modifier;
+            }
+        }
+        total
+    }
+
     pub fn dynamic_security_attack_aura_bonus(
         &self,
         target: crate::permanent::PermanentHandle,
@@ -3719,6 +3959,12 @@ impl Game {
         // but is only hit once per effect query, and `effects_for_card` is
         // typically called at state-change fire-sites, not in the mask hot
         // loop — so the cost is acceptable for v1.
+        let native_keywords = self
+            .card_data
+            .iter()
+            .find(|cd| cd.card_id == card_id)
+            .map(|cd| cd.keywords.clone())
+            .unwrap_or_default();
         let mut auto_effects: Vec<crate::effect::Effect> = self
             .card_data
             .iter()
@@ -3763,6 +4009,9 @@ impl Game {
                     continue;
                 };
                 if !grant.declarative || grant.condition.is_some() {
+                    continue;
+                }
+                if !grant.inherited && native_keywords.contains(&kw) {
                     continue;
                 }
                 auto_effects.extend(
@@ -4123,6 +4372,48 @@ impl Game {
         None
     }
 
+    /// Strict variant of [`resolve_provenance_token`] for "is this played card
+    /// still a Digimon on the battle area?" identity checks.
+    ///
+    /// Returns `Some(handle)` only when the card identified by `token` is
+    /// currently the **top card** of a battle-area permanent. Yields `None` if
+    /// the card is a digivolution card under a different top, has been removed
+    /// from play, or is in any other zone (hand, trash, security, deck,
+    /// linked_cards, reveal).
+    ///
+    /// This is the resolution semantic required by play-verb `bind_as`
+    /// bindings ([`crate::dsl_cards::bindings::BindingValue::PlayedPermanent`])
+    /// consumed by `return_to_hand` and friends after a `schedule_delayed`
+    /// boundary. The permissive [`resolve_provenance_token`] — which returns
+    /// `Permanent(handle)` for *any* card in *any* permanent's `card_sources` —
+    /// matches DCGO's `IsPermanentExistsOnBattleArea(selectedPermanent)` only
+    /// for the specific case where the played card is still the carrier's top;
+    /// once the played card became a digivolution card the original
+    /// `Permanent` object would have been replaced and the check would fail.
+    ///
+    /// See change `fix-played-binding-uses-provenance` for the cross-engine
+    /// rationale and the BT16-085 + Paildramon scenario this exists to handle.
+    pub fn resolve_token_as_battle_area_top(
+        &self,
+        token: crate::trigger_context::ProvenanceToken,
+    ) -> Option<PermanentHandle> {
+        if token.0 > u16::MAX as u64 {
+            return None;
+        }
+        let target_index = token.0 as u16;
+        for (player_index, player) in self.players.iter().enumerate() {
+            for (index, permanent) in player.battle_area.iter().enumerate() {
+                if permanent.top_card().card_index == target_index {
+                    return Some(PermanentHandle {
+                        player: player_index as crate::enums::PlayerId,
+                        index: index as u8,
+                    });
+                }
+            }
+        }
+        None
+    }
+
     // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───
 
     /// Sum of static `dp_modifier` values from a single source's effects
@@ -4418,5 +4709,135 @@ mod current_attacker_tests {
         assert!(r.game.opponent_sourced_mutation(a));
 
         r.game.set_effect_source_player_for_test(None);
+    }
+}
+
+#[cfg(test)]
+mod resolve_token_as_battle_area_top_tests {
+    //! Tests for the strict provenance resolver introduced by change
+    //! `fix-played-binding-uses-provenance`.
+
+    use crate::card_data::CardData;
+    use crate::card_source::CardSource;
+    use crate::debug_runner::DebugRunner;
+    use crate::enums::{CardColor, CardKind};
+    use crate::trigger_context::ProvenanceToken;
+
+    fn lv3_card(id: &str) -> CardData {
+        CardData {
+            card_id: id.to_string(),
+            card_name: id.to_string(),
+            card_kind: CardKind::Digimon,
+            level: Some(3),
+            dp: Some(2000),
+            play_cost: 3,
+            colors: vec![CardColor::Blue],
+            traits: Vec::new(),
+            evo_costs: Vec::new(),
+            dna_costs: Vec::new(),
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            security_text: String::new(),
+            keywords: Vec::new(),
+            effect_class_name: id.replace('-', "_"),
+            index: 0,
+            norm_id: 0.0,
+            dual: None,
+            ace_overflow: None,
+            digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
+        }
+    }
+
+    fn lv4_card(id: &str) -> CardData {
+        let mut c = lv3_card(id);
+        c.level = Some(4);
+        c.dp = Some(4000);
+        c.play_cost = 5;
+        c
+    }
+
+    #[test]
+    fn case_a_played_card_is_battle_area_top_resolves_to_handle() {
+        let mut r = DebugRunner::builder().add_card(lv3_card("VEEMON")).start();
+        let veemon = r.place_on_field(0, "VEEMON", None);
+        let card_index = r.game.players[0].battle_area[veemon.index as usize]
+            .top_card()
+            .card_index;
+        let token = ProvenanceToken(card_index as u64);
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(token),
+            Some(veemon),
+            "played card is the battle-area top — resolver yields its handle"
+        );
+    }
+
+    #[test]
+    fn case_b_played_card_buried_under_new_top_fizzles() {
+        let mut r = DebugRunner::builder()
+            .add_card(lv3_card("VEEMON"))
+            .add_card(lv4_card("EXVEEMON"))
+            .start();
+        let veemon = r.place_on_field(0, "VEEMON", None);
+        let veemon_card_index = r.game.players[0].battle_area[veemon.index as usize]
+            .top_card()
+            .card_index;
+
+        // Push ExVeemon as the new top card directly. The Veemon CardSource
+        // becomes a digivolution card under ExVeemon.
+        let exveemon_data_index = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "EXVEEMON")
+            .expect("EXVEEMON registered");
+        let next_idx = r.game.next_card_index();
+        let exveemon_source = CardSource::new(exveemon_data_index, 0, next_idx);
+        r.game.players[0].battle_area[veemon.index as usize]
+            .card_sources
+            .push(exveemon_source);
+
+        let token = ProvenanceToken(veemon_card_index as u64);
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(token),
+            None,
+            "played Veemon is now a digivolution card under ExVeemon — strict resolver fizzles"
+        );
+    }
+
+    #[test]
+    fn case_c_played_card_in_trash_fizzles() {
+        let mut r = DebugRunner::builder().add_card(lv3_card("VEEMON")).start();
+        let veemon_data_index = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "VEEMON")
+            .expect("VEEMON registered");
+        let next_idx = r.game.next_card_index();
+        let veemon_source = CardSource::new(veemon_data_index, 0, next_idx);
+        let card_index = veemon_source.card_index;
+        r.game.players[0].trash.push(veemon_source);
+
+        let token = ProvenanceToken(card_index as u64);
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(token),
+            None,
+            "played card is in trash — strict resolver fizzles"
+        );
+    }
+
+    #[test]
+    fn case_d_token_does_not_resolve_anywhere_yields_none() {
+        let r = DebugRunner::builder().add_card(lv3_card("VEEMON")).start();
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(ProvenanceToken(99_999)),
+            None
+        );
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(ProvenanceToken(12345)),
+            None,
+            "unknown card index yields None"
+        );
     }
 }

@@ -239,7 +239,11 @@ fn bt12_047_has_inherited_dna_digivolve_may_step() {
     assert!(
         t.process.iter().any(|step| matches!(
             step,
-            CompiledStep::MayDnaDigivolveNow { ignore_requirements: true, cost: 0, .. }
+            CompiledStep::MayDnaDigivolveNow {
+                ignore_requirements: true,
+                cost: 0,
+                ..
+            }
         )),
         "BT12-047 EoT inherited body must contain a `MayDnaDigivolveNow` step \
          with cost=0 and ignore_requirements=true"

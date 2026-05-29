@@ -243,12 +243,7 @@ fn bt24_102_aura_installs_on_same_play_call() {
         .game
         .modifiers
         .permanent_modifiers_iter(ts_handle)
-        .filter(|m| {
-            matches!(
-                m.modifier,
-                digimon_engine::enums::ModifierType::ChangeDp
-            )
-        })
+        .filter(|m| matches!(m.modifier, digimon_engine::enums::ModifierType::ChangeDp))
         .count();
     assert_eq!(
         mods_before, 0,
@@ -346,7 +341,9 @@ fn bt24_102_aura_installs_on_move_from_breeding() {
     // must already carry the +1000 ChangeDp modifier — the
     // `tick_declarative_effects` call inside the LiveGame wrapper is the
     // only thing that installs it.
-    let battle_area = &lg.field(0, digimon_engine::view::Perspective::God).battle_area;
+    let battle_area = &lg
+        .field(0, digimon_engine::view::Perspective::God)
+        .battle_area;
     let moved = battle_area
         .iter()
         .find(|p| p.top_card_id == "TS-BRED")

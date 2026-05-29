@@ -1,0 +1,56 @@
+card: BT10-111
+name: "Shoutmon (King Version)"
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 4000
+traits: [Mini Dragon, Xros Heart]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - trait_has: "Xros Heart"
+        zones: [hand, battle_area]
+        cost_delta: -2
+    cost: 5
+
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] Return 1 DigiXros card from trash to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter: { has_alt_path: digixros }
+          prompt: "Return 1 card with a DigiXros requirement from trash to hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  - when: on_play
+    summary: "[On Play] This Digimon may replace 1 DigiXros requirement this turn"
+    process:
+      - register_digixros_wildcard_for_turn:
+          card: source
+
+  - kind: grant_keyword
+    keyword: MaterialSave
+    value: 1
+
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_name_contains: Shoutmon
+    target: {}
+    dp_modifier: 2000
+    summary: "Inherited: Shoutmon gets +2000 DP on your turn"

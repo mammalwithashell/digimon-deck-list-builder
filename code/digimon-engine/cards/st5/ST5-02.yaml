@@ -1,0 +1,17 @@
+card: ST5-02
+name: Jazamon
+kind: digimon
+level: 3
+color: [black]
+cost: 2
+dp: 4000
+traits: [Bird Dragon]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 1
+
+effects: []

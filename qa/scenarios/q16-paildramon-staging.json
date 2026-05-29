@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "q16-paildramon-staging",
+  "title": "Paildramon staged over ExVeemon + Stingmon (DNA-digivolve board)",
+  "readiness": "expected_pass",
+  "blocked_reason": "",
+  "notes": "Substrate-level proof for the board from rules-quiz Q16: BT16/AD1 Paildramon with BT12 ExVeemon + BT12 Stingmon in its digivolution cards. This fixture pins that the board stages correctly and the engine reports the expected scalar/stack/DP state. The full Q16 rules check (Partition does not trigger on self-deletion via Lilithmon's granted end-of-turn delete) is a separate blocked-on-card-impl fixture.",
+  "decks": {
+    "1": ["ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-01",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03"],
+    "2": ["ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-01",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03"]
+  },
+  "seed": 12345,
+  "state": {
+    "memory": 0,
+    "phase": "Main",
+    "turn": 4,
+    "first_player": 1
+  },
+  "zones": {
+    "1": {
+      "field": [
+        { "stack": ["BT12-022", "BT12-050", "AD1-011"], "is_suspended": false, "turn_played": 0 }
+      ]
+    }
+  },
+  "assertions": {
+    "engine": [
+      { "kind": "memory_equals", "value": 0 },
+      { "kind": "stack_top", "player": 1, "field_index": 0, "card_id": "AD1-011" },
+      { "kind": "effective_dp", "player": 1, "field_index": 0, "value": 8000 }
+    ],
+    "ui": [
+      { "kind": "field_target_highlighted", "player": 1, "field_index": 0 }
+    ]
+  }
+}

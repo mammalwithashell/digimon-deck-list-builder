@@ -273,6 +273,21 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(player_ref) = pred.digimon_attacked_this_turn {
+        let attacked = resolve_predicate_players(player_ref, rctx)
+            .into_iter()
+            .any(|player| {
+                rctx.game
+                    .digimon_attacks_this_turn
+                    .get(player as usize)
+                    .copied()
+                    .unwrap_or(0)
+                    > 0
+            });
+        if !attacked {
+            return false;
+        }
+    }
     if let Some(want) = pred.dna_origin {
         if rctx.dna_origin() != want {
             return false;
@@ -295,6 +310,21 @@ pub fn eval_predicate_with_bindings(
             }
         }
         if colors.len() < usize::from(floor) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.battle_opponent_no_sources {
+        let Some(source) = rctx.source_permanent else {
+            return false;
+        };
+        let Some(opponent) = rctx.battle_opponent_of(source) else {
+            return false;
+        };
+        let Some(opponent_perm) = permanent_for_handle(rctx, opponent) else {
+            return false;
+        };
+        let actual = opponent_perm.card_sources.len().saturating_sub(1) == 0;
+        if actual != want {
             return false;
         }
     }
@@ -1254,6 +1284,30 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = &pred.event_target_dp_eq {
+        let Some(dp) = event_target_dp(rctx) else {
+            return false;
+        };
+        if dp != eval_int_constraint(want, rctx, None, None) {
+            return false;
+        }
+    }
+    if let Some(max) = &pred.event_target_dp_lte {
+        let Some(dp) = event_target_dp(rctx) else {
+            return false;
+        };
+        if dp > eval_int_constraint(max, rctx, None, None) {
+            return false;
+        }
+    }
+    if let Some(min) = &pred.event_target_dp_gte {
+        let Some(dp) = event_target_dp(rctx) else {
+            return false;
+        };
+        if dp < eval_int_constraint(min, rctx, None, None) {
+            return false;
+        }
+    }
     if let Some(ref needle) = pred.event_target_name_contains {
         // G-EVENT-TARGET-NAME-CONTAINS: case-insensitive substring scan
         // against the event-target permanent's card name (the digivolving /
@@ -1335,6 +1389,12 @@ fn eval_event_fields(
             return false;
         };
         if (event_permanent == source_permanent) != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.source_deleted_battle_opponent {
+        let actual = source_deleted_battle_opponent(rctx);
+        if actual != want {
             return false;
         }
     }
@@ -1611,6 +1671,35 @@ fn permanent_for_handle<'a>(
         .get(handle.index as usize)
 }
 
+fn source_deleted_battle_opponent(rctx: &EffectReadContext<'_>) -> bool {
+    let Some(source) = rctx.source_permanent else {
+        return false;
+    };
+    let Some(source_perm) = permanent_for_handle(rctx, source) else {
+        return false;
+    };
+    if !source_perm
+        .card_sources
+        .iter()
+        .any(|card| card.handle() == rctx.source_card)
+    {
+        return false;
+    }
+    let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
+        return false;
+    };
+    if trigger.cause != Some(crate::trigger_context::EventCause::BattleDeletion) {
+        return false;
+    }
+    let Some(event_permanent) = trigger.event_permanent.or(trigger.target_permanent) else {
+        return false;
+    };
+    let Some(opponent) = rctx.battle_opponent_of(source) else {
+        return false;
+    };
+    event_permanent == opponent
+}
+
 fn event_target_owner(rctx: &EffectReadContext<'_>) -> Option<PlayerId> {
     let trigger = rctx.game.current_trigger_context.as_ref()?;
     if let Some(snapshot) = trigger.deleted_object.as_ref() {
@@ -1728,6 +1817,26 @@ fn event_target_level(rctx: &EffectReadContext<'_>) -> Option<u8> {
     rctx.game
         .card_data_for_handle(card)
         .and_then(|data| data.level)
+}
+
+fn event_target_dp(rctx: &EffectReadContext<'_>) -> Option<i32> {
+    let trigger = rctx.game.current_trigger_context.as_ref()?;
+    if let Some(snapshot) = trigger.deleted_object.as_ref() {
+        return snapshot.dp_just_before;
+    }
+    if let Some(handle) = trigger
+        .event_permanent
+        .or(trigger.event_host_permanent)
+        .or(trigger.target_permanent)
+    {
+        return rctx.game.effective_dp(handle);
+    }
+    if let Some(change) = trigger.attack_target_change.as_ref() {
+        if let AttackTarget::Digimon(handle) = change.new_target {
+            return rctx.game.effective_dp(handle);
+        }
+    }
+    None
 }
 
 fn event_target_same_level_as_previous(rctx: &EffectReadContext<'_>) -> Option<bool> {
@@ -2243,9 +2352,12 @@ fn eval_permanent_fields(
     // (`ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`)
     // were invisible to Track H aura filters. We pre-check each
     // overlay-able field against `synth_identity` and clear it from
-    // the delegated predicate if the overlay matches. Pinned by
-    // `aura_filter_includes_track_c_change_traits_overlay` (and follow-
-    // up tests for name/color overlay propagation).
+    // the delegated predicate if the overlay matches. Permanent DP
+    // predicates are also cleared from the delegated card-field pass:
+    // they are evaluated below through `effective_dp`, so same-effect
+    // `ChangeDp` modifiers are visible before follow-up selections.
+    // Pinned by `aura_filter_includes_track_c_change_traits_overlay`
+    // and `dp_lte_selection_sees_same_effect_dp_modifier`.
     let trait_overlay_match = pred.trait_has.as_ref().is_some_and(|t| {
         synth_identity
             .traits
@@ -2280,6 +2392,8 @@ fn eval_permanent_fields(
                 .iter()
                 .all(|c| allowed.iter().any(|a| color_matches(*a, *c)))
     });
+    let has_dp_constraint =
+        pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if trait_overlay_match
         || name_is_overlay_match
@@ -2287,6 +2401,7 @@ fn eval_permanent_fields(
         || name_in_overlay_match
         || color_is_overlay_match
         || color_only_overlay_match
+        || has_dp_constraint
     {
         let mut p = pred.clone();
         if trait_overlay_match {
@@ -2306,6 +2421,11 @@ fn eval_permanent_fields(
         }
         if color_only_overlay_match {
             p.color_only = None;
+        }
+        if has_dp_constraint {
+            p.dp_eq = None;
+            p.dp_lte = None;
+            p.dp_gte = None;
         }
         delegated_pred_storage = p;
         &delegated_pred_storage

@@ -6,6 +6,32 @@
 
 **Scope:** Semantic differences in game state evolution given identical inputs. Architectural differences (e.g. compile-time vs dynamic effect registration) are listed separately and are not bugs.
 
+> **Engine default observation profile flipped — 2026-05-25:** Per the
+> `flip-engine-default-to-lite-deck-v2` change, the Rust engine's
+> `tensor_profiles::standard::DEFAULT_PROFILE` is now
+> `v2_lite_deck::PROFILE` (8850 floats; `standard_lite_deck_v2`). The
+> top-level `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE`
+> both report this value. The Python legacy engine continues to produce
+> `standard_compact_v1`-shaped tensors (1375). Cross-engine parity tests
+> in `code/engine_py_legacy/tests/engine/test_rust_backend_parity.py`
+> now pin the Rust side to `observation_profile="standard_compact_v1"`
+> for v1↔v1 shape comparison; this is a quality-of-reference detail,
+> not a parity divergence. v1-trained ONNX checkpoints are no longer
+> loadable through the engine's default surface — bundle this with the
+> S1.3/S1.4 retrain in `TRAINING_RUNBOOK.md`.
+
+> **`RustDebugGame` is a test/browser-only PyO3 surface — 2026-05-28:** Per
+> the `add-ui-scenario-test-substrate` change, `digimon_engine.RustDebugGame`
+> wraps `HeadlessRunner` with scenario-staging mutators (place field/breeding
+> stacks, inject zone cards, set memory/phase/turn/first-player, `validate`)
+> backed by `Game::stage_*` methods. It exists only in the
+> `code/digimon-engine-py` binding crate, which the Python-free desktop Tauri
+> bundle does NOT link, and no debug staging command is registered in the
+> Tauri `invoke` handlers — so it never ships to end users. It has no Python
+> legacy-engine counterpart and is not a parity surface; it's the staging
+> backbone for the scenario conformance harness (see
+> [SCENARIO_TESTING.md](SCENARIO_TESTING.md)).
+
 **Reading guide:**
 
 - 🔴 **Parity-breaking** — given the same inputs, the two engines produce different game states. Must fix before claiming cross-engine correctness.
@@ -593,7 +619,9 @@ Unified by PR3-PR5 into a single generic branch in [action/mask.rs](../code/digi
 
 ### 4.7 🟡 Modifier-gated mask checks — partial
 
-Four of the five checks have landed; §4.7e (DigiXros cost-reduction) and per-action context discriminants (§4.7x) remain future work.
+Four of the five original modifier-gated checks have landed; §4.7e is narrowed
+to mask-side reduced-cost affordability, and per-action context discriminants
+(§4.7x) remain future work.
 
 ### 4.7a 🟢 CannotAttackTarget — implemented
 
@@ -627,9 +655,22 @@ Four of the five checks have landed; §4.7e (DigiXros cost-reduction) and per-ac
 
 **Coverage:** [tests/mask_force_attack.rs](../code/digimon-engine/tests/mask_force_attack.rs) — 5 cases: non-attack bits zeroed when active, multiple forced Digimon all retain attacks, fall-through when forced attacker is suspended, CannotAttackTarget filtering, Raid-target tiebreak against unsuspended enemies.
 
-### 4.7e 🔴 DigiXros cost-reduction — outstanding
+### 4.7e 🟡 DigiXros cost-reduction — resolver/DSL landed, mask parity residual
 
-Python's play-cost check (`action_mask.py:66-72`) computes `effective_cost = max(0, play_cost - max_reduction)` for cards with `digixros_cost`. Blocked on `CardData.digixros_cost` schema + `has_any_digixros_material` validator + ingest-pipeline data (same data-population shape as §4.5b). Own plan.
+Python's play-cost check (`action_mask.py:66-72`) computes `effective_cost = max(0, play_cost - max_reduction)` for cards with `digixros_cost`.
+
+Rust now has resolver-side `DigiXrosTransaction` support for authored YAML
+`kind: digixros` paths: material selections are pending selections, cost deltas
+are applied before payment, selected materials attach after successful play, and
+transaction-local hooks can pre-attach materials or unlock trash/under-Tamer
+origins. Covered by the `close-xros-heart-digixros-gaps` Xros Heart fixtures
+for BT10-009, BT10-013, BT10-087, and BT12-112.
+
+Residual parity work: the Main-phase action mask still needs a dedicated
+reduced-cost affordability audit so a hand play can light up when it is legal
+only because available DigiXros materials reduce the effective cost. That work
+must keep `ACTION_SPACE_SIZE` unchanged and reuse the pending material prompt
+flow rather than preselecting materials.
 
 ### 4.7x 🟡 Context-aware modifier queries — outstanding
 

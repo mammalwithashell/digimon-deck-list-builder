@@ -1,0 +1,65 @@
+card: BT19-008
+name: Shoutmon
+kind: digimon
+level: 3
+color: [red, yellow]
+cost: 4
+dp: 1000
+traits: [Mini Dragon, Xros Heart]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 1
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: "Xros Heart"
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] May digivolve into OmniShoutmon under your Tamers without paying the cost"
+    process:
+      - select_under_tamer_sources:
+          min: 0
+          max: 1
+          filter:
+            name_contains: OmniShoutmon
+          bind_as: evo_source
+          prompt: "Choose OmniShoutmon under your Tamers to digivolve into"
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: evo_source
+                cost: free
+
+  - when: on_deletion
+    summary: "[On Deletion] Reveal top 3, play 1 Xros Heart Tamer, bottom rest. Then, Save."
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 3
+      - choose_from_reveal:
+          of: you
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: "Xros Heart"
+          destination: play_free
+          bind_as: played_tamer
+          prompt: "Play 1 revealed Xros Heart Tamer"
+      - order_remainder:
+          of: you
+          destinations: [deck_bottom]
+
+  - scope: inherited
+    kind: grant_keyword
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_permanent_trait_has: "Xros Heart"
+    keyword: Rush
+    summary: "Inherited: Xros Heart carrier gains Rush on your turn"

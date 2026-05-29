@@ -1,0 +1,40 @@
+card: ST2-15
+name: Kaiser Nail
+kind: option
+color: [blue]
+cost: 4
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Play 1 source from under 1 of your Digimon for free"
+    process:
+      - select_own_permanent:
+          bind_as: host
+          filter: { kind: digimon, materials_count_gte: 1 }
+          prompt: "Choose 1 of your Digimon with digivolution cards"
+      - select_material:
+          of_permanent: host
+          filter: { kind: digimon }
+          bind_as: picked_source
+          prompt: "Choose 1 Digimon digivolution card to play"
+      - play_from_materials:
+          target: host
+          source_index: picked_source
+          cost_delta: free
+
+  - when: on_security
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - select_own_permanent:
+          bind_as: host
+          filter: { kind: digimon, materials_count_gte: 1 }
+          prompt: "Choose 1 of your Digimon with digivolution cards"
+      - select_material:
+          of_permanent: host
+          filter: { kind: digimon }
+          bind_as: picked_source
+          prompt: "Choose 1 Digimon digivolution card to play"
+      - play_from_materials:
+          target: host
+          source_index: picked_source
+          cost_delta: free

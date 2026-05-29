@@ -1,4 +1,5 @@
 use digimon_dsl::compiled::CompiledClause;
+use digimon_engine::card_data::CardData;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::events::GameEvent;
@@ -36,6 +37,34 @@ effects:
     process:
       - add_this_option_to_hand: {}
 "#
+}
+
+fn battle_survivor_source_yaml() -> &'static str {
+    r#"
+card: DSL-BATTLE-SURVIVOR
+name: Battle Survivor Source
+kind: digimon
+level: 5
+color: [green]
+cost: 6
+dp: 6000
+effects:
+  - when: on_any_deletion
+    scope: inherited
+    active_when: { your_turn: true }
+    once_per_turn: true
+    condition:
+      source_deleted_battle_opponent: true
+    process:
+      - trash_top_security: { of: opponent }
+"#
+}
+
+fn combat_digimon(card_id: &str, name: &str, dp: i32) -> CardData {
+    let mut card = make_test_card(card_id, name);
+    card.level = Some(5);
+    card.dp = Some(dp);
+    card
 }
 
 #[test]
@@ -164,5 +193,53 @@ fn security_dsl_adds_currently_resolving_option_to_hand() {
     assert!(
         runner.pending_selection().is_none(),
         "adding the currently resolving option to hand is deterministic"
+    );
+}
+
+#[test]
+fn source_deleted_battle_opponent_trashes_security_when_carrier_survives_battle() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(battle_survivor_source_yaml())
+        .expect("inline survivor source DSL parses")
+        .add_card(combat_digimon("ATTACKER-WIN", "Attacker", 9000))
+        .add_card(combat_digimon("DEFENDER-LOSE", "Defender", 3000))
+        .add_card(make_test_card("SEC-FILLER", "Security Filler"))
+        .security(1, &["SEC-FILLER", "SEC-FILLER"])
+        .start();
+
+    let attacker = runner.place_stack(0, &["DSL-BATTLE-SURVIVOR", "ATTACKER-WIN"]);
+    let defender = runner.place_on_field(1, "DEFENDER-LOSE", Some(0));
+
+    let result = runner.attack_digimon(attacker, defender, true);
+
+    assert_eq!(result, AttackResult::AttackerWins);
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "the inherited source should trash one opponent security when its carrier deletes the battle opponent and survives"
+    );
+}
+
+#[test]
+fn source_deleted_battle_opponent_does_not_fire_when_carrier_is_deleted_too() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(battle_survivor_source_yaml())
+        .expect("inline survivor source DSL parses")
+        .add_card(combat_digimon("ATTACKER-TIE", "Attacker", 6000))
+        .add_card(combat_digimon("DEFENDER-TIE", "Defender", 6000))
+        .add_card(make_test_card("SEC-FILLER", "Security Filler"))
+        .security(1, &["SEC-FILLER", "SEC-FILLER"])
+        .start();
+
+    let attacker = runner.place_stack(0, &["DSL-BATTLE-SURVIVOR", "ATTACKER-TIE"]);
+    let defender = runner.place_on_field(1, "DEFENDER-TIE", Some(0));
+
+    let result = runner.attack_digimon(attacker, defender, true);
+
+    assert_eq!(result, AttackResult::MutualDestruction);
+    assert_eq!(
+        runner.security_count(1),
+        2,
+        "the inherited source must not fire unless its carrier survives the battle"
     );
 }

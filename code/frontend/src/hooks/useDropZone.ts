@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { ACTION, DIGIVOLVE_FIELDS_PER_HAND } from '@/utils/constants';
+import { ACTION, BREEDING_SLOT, DIGIVOLVE_FIELDS_PER_HAND } from '@/utils/constants';
 import type { ParsedMask } from './useActionMask';
 
 export interface DragData {
@@ -41,7 +41,10 @@ export function useDropZone(parsedMask: ParsedMask) {
 
         if (dropZone.type === 'breeding-slot') {
           if (parsedMask.canDigivolveBreeding.has(handIdx)) {
-            return ACTION.DIGIVOLVE_START + handIdx * DIGIVOLVE_FIELDS_PER_HAND + 12;
+            // Engine's BREEDING_TARGET = 14 (the 15th field in
+            // `FIELDS_PER_HAND = 15`). Hardcoding 12 here sent a regular
+            // field-slot action instead, which the engine rejected.
+            return ACTION.DIGIVOLVE_START + handIdx * DIGIVOLVE_FIELDS_PER_HAND + BREEDING_SLOT;
           }
         }
       }

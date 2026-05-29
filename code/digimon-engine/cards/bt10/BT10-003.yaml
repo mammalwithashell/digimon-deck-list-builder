@@ -1,0 +1,16 @@
+card: BT10-003
+name: Pickmons
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Mini Dragon, Xros Heart]
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    condition:
+      source_permanent_trait_has: "Xros Heart"
+    summary: "Inherited [When Attacking] If this Digimon has Xros Heart, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

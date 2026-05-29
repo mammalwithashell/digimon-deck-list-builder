@@ -1,0 +1,58 @@
+card: ST6-16
+name: Nail Bone
+kind: option
+color: [purple]
+cost: 7
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] You may play 1 purple level 3 and 1 purple level 4 Digimon from trash free; suppress their On Play effects"
+    process:
+      - select_trash:
+          of: you
+          bind_as: lv3_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - color_is: purple
+          prompt: "Play 1 purple level 3 Digimon card from your trash without paying its cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: lv3_pick
+          suppress_on_play: true
+      - select_trash:
+          of: you
+          bind_as: lv4_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 4
+              - color_is: purple
+          prompt: "Play 1 purple level 4 Digimon card from your trash without paying its cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: lv4_pick
+          suppress_on_play: true
+
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security] You may play 1 purple level 4 or lower Digimon from trash free; suppress its On Play effects"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - color_is: purple
+          prompt: "Play 1 purple level 4 or lower Digimon card from your trash without paying its cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: pick
+          suppress_on_play: true

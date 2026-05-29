@@ -6,6 +6,7 @@
 pub mod as_selecting_player;
 pub mod combat;
 pub mod control_flow;
+pub mod digixros_transaction;
 pub mod dna_digivolve;
 pub mod draw;
 pub mod effects;
@@ -441,6 +442,9 @@ pub fn run_step_with_runtime(
         return;
     }
     if modifiers::try_run(step, ctx, bindings, runtime) {
+        return;
+    }
+    if digixros_transaction::try_run(step, ctx, bindings) {
         return;
     }
     if grant_triggered::try_run(step, ctx, bindings) {

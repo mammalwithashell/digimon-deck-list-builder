@@ -1,0 +1,46 @@
+card: ST5-15
+name: Laser Eye
+kind: option
+color: [black]
+cost: 4
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] De-Digivolve 1 up to 2 of your opponent's Digimon"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          filter: { kind: digimon }
+          bind_as: targets
+          optional_zero: true
+          prompt: "Choose up to 2 opponent Digimon to De-Digivolve 1"
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - de_digivolve:
+                target: target
+                amount: 1
+                stop_at_level: 3
+
+  - when: on_security
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          filter: { kind: digimon }
+          bind_as: targets
+          optional_zero: true
+          prompt: "Choose up to 2 opponent Digimon to De-Digivolve 1"
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - de_digivolve:
+                target: target
+                amount: 1
+                stop_at_level: 3

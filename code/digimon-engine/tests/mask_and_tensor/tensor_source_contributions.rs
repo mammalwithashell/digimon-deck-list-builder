@@ -13,9 +13,12 @@ use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::cards::CardEffectRegistry;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::tensor::{
-    build_tensor, OFF_MY_BATTLE, OFF_OPP_BATTLE, SLOT_SIZE, SOURCE_ENTRY_SIZE,
+// v1-pinned test: explicitly call the relocated v1 builder so the
+// hardcoded offsets below still address the right tensor positions.
+use digimon_engine::tensor_profiles::standard::v1::{
+    OFF_MY_BATTLE, OFF_OPP_BATTLE, SLOT_SIZE, SOURCE_ENTRY_SIZE,
 };
+use digimon_engine::tensor_v1::build_tensor_standard_compact_v1 as build_tensor;
 
 // ─── Test cards for this suite ───────────────────────────────────────
 

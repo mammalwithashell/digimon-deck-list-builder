@@ -1,0 +1,30 @@
+card: BT19-079
+name: "Taiki Kudo"
+kind: tamer
+color: [red]
+cost: 4
+traits: [General, Xros Heart]
+
+effects:
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If memory is 2 or less, set it to 3"
+    process:
+      - set_memory: 3
+
+  - kind: cost_reduction
+    active_when: { all_turns: true }
+    when_any_ally_played:
+      all_of:
+        - trait_has: "Xros Heart"
+        - has_alt_path: digixros
+    optional: true
+    amount: 0
+    pay_cost:
+      - suspend: { target: source }
+      - allow_digixros_material_zone: { zone: material }
+
+  - when: on_security
+    summary: "[Security] Play this Tamer without paying the cost"
+    process:
+      - play_from_security: {}

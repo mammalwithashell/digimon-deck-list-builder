@@ -1,0 +1,67 @@
+card: BT21-027
+name: Shoutmon DX
+kind: digimon
+level: 6
+color: [red, yellow]
+cost: 12
+dp: 12000
+traits: [Composite, Xros Heart, Blue Flare]
+attribute: Data
+
+digixros_aliases: [Shoutmon, ZeigGreymon]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      name_contains: ZeigGreymon
+    cost: 2
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: "Xros Heart"
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opponent lowest-DP Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          selector: lowest_dp
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's lowest DP Digimon"
+      - delete_permanent: { target: target }
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    summary: "[All Turns] When this Digimon would leave, place up to 4 Xros Heart/Blue Flare Digimon sources under 1 Tamer"
+    process:
+      - select_own_permanent:
+          bind_as: tamer
+          optional: true
+          filter: { kind: tamer }
+          prompt: "Choose a Tamer to receive rescued source cards"
+      - if:
+          condition: { binding_present: tamer }
+          then:
+            - select_own_sources:
+                target: source
+                bind_as: rescued
+                min: 0
+                max: 4
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: "Xros Heart"
+                        - trait_has: "Blue Flare"
+                prompt: "Choose up to 4 Xros Heart or Blue Flare Digimon sources"
+            - place_selected_sources_under_tamer:
+                source_refs: rescued
+                tamer: tamer

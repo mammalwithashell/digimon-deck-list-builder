@@ -1,0 +1,59 @@
+card: BT21-092
+name: "Can't Turn My Back!"
+kind: option
+color: [red]
+cost: 2
+traits: [Xros Heart]
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Move all Digimon sources from a Xros Heart Digimon under a Tamer, then play Xros Heart from hand cost reduced by moved count"
+    process:
+      - select_own_permanent:
+          bind_as: host
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Xros Heart"
+              - materials_count_gte: 1
+          prompt: "Choose 1 Xros Heart Digimon with digivolution cards"
+      - select_own_permanent:
+          bind_as: tamer
+          filter: { kind: tamer }
+          prompt: "Choose 1 Tamer to receive the source cards"
+      - move_matching_sources_under_tamer:
+          from: host
+          tamer: tamer
+          bind_count_as: moved_count
+          filter: { kind: digimon }
+      - select_hand:
+          of: you
+          bind_as: play_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Xros Heart"
+          prompt: "Play 1 Xros Heart Digimon from hand with cost reduced by moved cards"
+      - play_from_hand:
+          of: you
+          hand_index: play_pick
+          cost_delta:
+            reduce_fn:
+              binding_value: moved_count
+
+  - when: on_security
+    summary: "[Security] Play 1 play-cost-5-or-less Xros Heart card from hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: play_pick
+          optional: true
+          filter:
+            all_of:
+              - trait_has: "Xros Heart"
+              - play_cost_lte: 5
+          prompt: "Play 1 Xros Heart card with play cost 5 or less from hand or trash"
+      - play_union_bound_free:
+          binding: play_pick

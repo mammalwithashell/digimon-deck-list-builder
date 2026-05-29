@@ -1,0 +1,53 @@
+card: BT12-112
+name: "Shoutmon X7: Superior Mode"
+kind: digimon
+level: 7
+color: [white, red]
+cost: 15
+dp: 17000
+traits: [Composite, Xros Heart, Blue Flare]
+
+alt_paths:
+  - kind: digixros
+    materials:
+      - filter:
+          any_of:
+            - trait_has: "Xros Heart"
+            - trait_has: "Blue Flare"
+        repeat: unbounded
+        distinct_by: card_number
+        zones: [hand, battle_area]
+        cost_delta: -1
+    cost: 15
+
+effects:
+  - kind: cost_reduction
+    when_playing_this: true
+    amount: 0
+    pay_cost:
+      - select_own_permanent:
+          bind_as: shoutmon
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Shoutmon
+          optional: true
+          prompt: "Place 1 Shoutmon as a digivolution card"
+      - preattach_digixros_material: { card: shoutmon, cost_delta: -1 }
+      - allow_digixros_material_zone: { zone: trash }
+
+  - when: on_play
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Return to deck"
+      - return_to_deck: { target: target, position: bottom, include_sources: true }
+
+  - kind: flood_gate
+    scope: face_up
+    active_when: { your_turn: true }
+    modifier: CannotActivateSecurityEffects
+    target:
+      of: opponent
+      kind: option

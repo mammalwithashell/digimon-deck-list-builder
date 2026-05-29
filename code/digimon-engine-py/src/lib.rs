@@ -51,7 +51,7 @@ use ::digimon_engine::observation::{
 };
 use ::digimon_engine::policies::greedy_action as choose_greedy_action;
 use ::digimon_engine::rules::CardRestriction;
-use ::digimon_engine::tensor::{MAX_SOURCES, TENSOR_SIZE};
+use ::digimon_engine::tensor::TENSOR_SIZE;
 use ::digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorProfile as RustTensorProfile,
 };
@@ -439,7 +439,11 @@ fn py_tensor_profile(profile: &RustTensorProfile) -> TensorProfile {
         tensor_size: profile.tensor_size,
         field_slots: profile.field_slots,
         slot_size: profile.slot_size,
-        max_sources: MAX_SOURCES,
+        // Per-profile value (v1 = 11, v2_lite/lite_deck = 12) rather than the
+        // hardcoded v1 constant. Before the engine default flipped to
+        // `standard_lite_deck_v2`, this was masked because the v1 constant
+        // happened to match the default.
+        max_sources: profile.max_sources,
         card_id_slot_count: profile.card_id_slot_count,
         scalar_slot_count: profile.scalar_slot_count,
         card_id_positions,
@@ -929,6 +933,301 @@ impl RustHeadlessGame {
     }
 }
 
+/// Map a UI/serialization phase string to the engine `GamePhase`. Only the
+/// staging-relevant turn phases are accepted; selection / combat sub-phases
+/// are engine-driven and never staged directly.
+fn parse_stage_phase(s: &str) -> Result<RustGamePhase, String> {
+    Ok(match s {
+        "Mulligan" => RustGamePhase::Mulligan,
+        "Unsuspend" => RustGamePhase::Unsuspend,
+        "Draw" => RustGamePhase::Draw,
+        "Breeding" => RustGamePhase::Breeding,
+        "Main" => RustGamePhase::Main,
+        "EndTurn" => RustGamePhase::EndTurn,
+        other => {
+            return Err(format!(
+                "unstageable phase '{other}'; stage a turn phase \
+                 (Mulligan/Unsuspend/Draw/Breeding/Main/EndTurn)"
+            ))
+        }
+    })
+}
+
+/// Debug-only staged game. Wraps a `HeadlessRunner` (real card pool + full
+/// RL surface, identical to `RustHeadlessGame`) and adds scenario-staging
+/// mutators that drop the game into an arbitrary mid-game board. Test /
+/// browser-only — never linked into the Python-free desktop bundle.
+///
+/// Construction builds a normal game from the two decks (so the registry,
+/// tensor, and a real draw pile exist), then the caller stages zones via
+/// the mutator methods and finally `validate()`s. The play surface
+/// (`step` / `get_action_mask` / `to_ui_json` / events) mirrors
+/// `RustHeadlessGame` so the same HTTP routes drive either runner.
+#[pyclass(module = "digimon_engine", name = "RustDebugGame")]
+pub struct RustDebugGame {
+    inner: HeadlessRunner,
+}
+
+#[pymethods]
+impl RustDebugGame {
+    #[new]
+    #[pyo3(signature = (deck1_ids, deck2_ids, seed = None, observation_profile = None))]
+    fn new(
+        deck1_ids: Vec<String>,
+        deck2_ids: Vec<String>,
+        seed: Option<u64>,
+        observation_profile: Option<String>,
+    ) -> PyResult<Self> {
+        let db = card_db()?;
+        let profile = match observation_profile {
+            None => default_observation_profile(),
+            Some(raw) => parse_observation_profile(&raw).map_err(PyValueError::new_err)?,
+        };
+        let runner = HeadlessRunner::new_with_observation_profile(
+            deck1_ids, deck2_ids, db, false, false, false, seed, profile,
+        )
+        .map_err(PyValueError::new_err)?;
+        Ok(Self { inner: runner })
+    }
+
+    // ─── Staging mutators ─────────────────────────────────────────────
+
+    /// Empty a zone so staged contents fully replace what was dealt.
+    /// `zone` ∈ {"hand","deck","security","trash","battle_area","breeding"}.
+    fn clear_zone(&mut self, pid: u8, zone: &str) -> PyResult<()> {
+        let rust_pid = to_rust_pid(pid)?;
+        self.inner
+            .game
+            .stage_clear_zone(rust_pid, zone)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Inject one card into a zone. `zone` ∈ {"hand","deck_top",
+    /// "security_top","trash"}.
+    fn inject_card(&mut self, pid: u8, card_id: &str, zone: &str) -> PyResult<()> {
+        let rust_pid = to_rust_pid(pid)?;
+        self.inner
+            .game
+            .stage_inject_card(rust_pid, card_id, zone)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Place a bottom-to-top digivolution stack on `pid`'s field with
+    /// explicit suspend state and turn-played value. Returns the new
+    /// battle-area index.
+    #[pyo3(signature = (pid, stack, suspended = false, turn_played = 0))]
+    fn place_on_field(
+        &mut self,
+        pid: u8,
+        stack: Vec<String>,
+        suspended: bool,
+        turn_played: u16,
+    ) -> PyResult<usize> {
+        let rust_pid = to_rust_pid(pid)?;
+        let refs: Vec<&str> = stack.iter().map(|s| s.as_str()).collect();
+        if refs.is_empty() {
+            return Err(PyValueError::new_err("place_on_field: empty stack"));
+        }
+        Ok(self
+            .inner
+            .game
+            .stage_place_field_stack(rust_pid, &refs, suspended, turn_played))
+    }
+
+    /// Place a bottom-to-top digivolution stack into `pid`'s breeding area.
+    fn place_in_breeding(&mut self, pid: u8, stack: Vec<String>) -> PyResult<()> {
+        let rust_pid = to_rust_pid(pid)?;
+        let refs: Vec<&str> = stack.iter().map(|s| s.as_str()).collect();
+        if refs.is_empty() {
+            return Err(PyValueError::new_err("place_in_breeding: empty stack"));
+        }
+        self.inner.game.stage_place_in_breeding(rust_pid, &refs);
+        Ok(())
+    }
+
+    /// Set the memory gauge to an exact value (positive favors player 1).
+    fn set_memory(&mut self, value: i16) {
+        self.inner.game.set_memory(value);
+    }
+
+    /// Set the current phase from a phase string (Main/Breeding/...).
+    fn set_phase(&mut self, phase: &str) -> PyResult<()> {
+        let p = parse_stage_phase(phase).map_err(PyValueError::new_err)?;
+        self.inner.game.current_phase = p;
+        Ok(())
+    }
+
+    /// Set the turn counter (affects summoning-sickness checks).
+    fn set_turn(&mut self, turn: u16) {
+        self.inner.game.turn_count = turn;
+    }
+
+    /// Make `pid` (Python 1/2) the active turn player, preserving seesaw
+    /// and turn-rotation invariants.
+    fn set_first_player(&mut self, pid: u8) -> PyResult<()> {
+        let rust_pid = to_rust_pid(pid)?;
+        self.inner.game.stage_set_first_player(rust_pid);
+        Ok(())
+    }
+
+    /// Finalize any outstanding mulligan by auto-keeping.
+    fn skip_mulligan(&mut self) {
+        while let Some(p) = self.inner.game.mulligan_current_player() {
+            let _ = self.inner.game.accept_mulligan(p, true);
+        }
+    }
+
+    /// Validate the staged board; raises `ValueError` with a diagnostic on
+    /// a rule-illegal state.
+    fn validate(&self) -> PyResult<()> {
+        self.inner
+            .game
+            .stage_validate()
+            .map_err(PyValueError::new_err)
+    }
+
+    // ─── Play surface (mirrors RustHeadlessGame) ──────────────────────
+
+    fn step(&mut self, action_id: u16) {
+        self.inner.step(action_id);
+    }
+
+    fn get_action_mask<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f32>> {
+        PyArray1::from_vec_bound(py, self.inner.get_action_mask())
+    }
+
+    fn greedy_action(&self) -> u16 {
+        let mask = self.inner.get_action_mask();
+        choose_greedy_action(&self.inner.game, &mask)
+    }
+
+    fn get_last_log<'py>(&self, py: Python<'py>) -> Bound<'py, PyList> {
+        let list = PyList::empty_bound(py);
+        for line in self.inner.get_last_log() {
+            let _ = list.append(line);
+        }
+        list
+    }
+
+    fn to_ui_json(&self, py: Python) -> PyResult<PyObject> {
+        let value = ::digimon_engine::serialization::to_ui_json(&self.inner.game);
+        json_to_pyobject(py, &value)
+    }
+
+    fn get_pending_selection(&self, py: Python) -> PyResult<PyObject> {
+        let game = &self.inner.game;
+        match game.pending_selection.as_ref() {
+            None => Ok(py.None()),
+            Some(sel) => {
+                let v = sel.view();
+                let d = PyDict::new_bound(py);
+                d.set_item("kind", v.kind_str())?;
+                d.set_item("phase", v.previous_phase_str())?;
+                d.set_item("selectingPlayer", (v.selecting_player as i64) + 1)?;
+                d.set_item("validIndices", v.valid_action_ids.clone())?;
+                d.set_item("isOptional", v.is_optional)?;
+                d.set_item("prompt", v.prompt.clone())?;
+                Ok(d.into_py(py))
+            }
+        }
+    }
+
+    fn get_events_since_last_step<'py>(
+        &mut self,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let drained = self.inner.game.drain_events();
+        let list = PyList::empty_bound(py);
+        for ev in drained {
+            list.append(event_to_pydict(py, &ev)?)?;
+        }
+        Ok(list)
+    }
+
+    #[getter]
+    fn is_game_over(&self) -> bool {
+        self.inner.is_game_over()
+    }
+
+    #[getter]
+    fn current_player_id(&self) -> u8 {
+        self.inner.current_decision_player() + 1
+    }
+
+    /// Concede on behalf of `pid` (Python 1/2). Mirrors RustHeadlessGame so
+    /// the shared /games routes work against a staged game.
+    fn concede(&mut self, pid: u8) -> PyResult<Option<u8>> {
+        let rust_pid = to_rust_pid(pid)?;
+        Ok(to_python_pid(self.inner.concede(rust_pid)))
+    }
+
+    /// Structured per-player zones + scalar state for test assertions.
+    /// Distinct from `to_ui_json` (UI-shaped, hides opponent hands): this
+    /// is full-information and stable for assertions.
+    fn internal_state(&self, py: Python) -> PyResult<PyObject> {
+        let game = &self.inner.game;
+        let d = PyDict::new_bound(py);
+        d.set_item("memory", game.memory)?;
+        d.set_item("turn_count", game.turn_count)?;
+        d.set_item("current_phase", format!("{:?}", game.current_phase))?;
+        d.set_item("current_player", self.inner.current_decision_player() + 1)?;
+        d.set_item("game_over", game.game_over)?;
+        d.set_item("winner_id", to_python_pid(game.winner.unwrap_or(u8::MAX)))?;
+
+        let players = PyList::empty_bound(py);
+        for (idx, player) in game.players.iter().enumerate() {
+            let pd = PyDict::new_bound(py);
+            pd.set_item("player_id", (idx as u8) + 1)?;
+            let hand: Vec<String> = player
+                .hand
+                .iter()
+                .map(|c| game.card_data[c.data_index].card_id.clone())
+                .collect();
+            pd.set_item("hand", hand)?;
+            pd.set_item("deck_count", player.deck.len())?;
+            pd.set_item("security_count", player.security.len())?;
+            let trash: Vec<String> = player
+                .trash
+                .iter()
+                .map(|c| game.card_data[c.data_index].card_id.clone())
+                .collect();
+            pd.set_item("trash", trash)?;
+
+            // Battle-area permanents as bottom-to-top stacks.
+            let field = PyList::empty_bound(py);
+            for perm in &player.battle_area {
+                let pdict = PyDict::new_bound(py);
+                let stack: Vec<String> = perm
+                    .card_sources
+                    .iter()
+                    .map(|c| game.card_data[c.data_index].card_id.clone())
+                    .collect();
+                pdict.set_item("stack", stack)?;
+                pdict.set_item("is_suspended", perm.is_suspended)?;
+                pdict.set_item("turn_played", perm.turn_played)?;
+                field.append(pdict)?;
+            }
+            pd.set_item("battle_area", field)?;
+
+            // Breeding stack, if any.
+            match &player.breeding_area {
+                Some(perm) => {
+                    let stack: Vec<String> = perm
+                        .card_sources
+                        .iter()
+                        .map(|c| game.card_data[c.data_index].card_id.clone())
+                        .collect();
+                    pd.set_item("breeding", stack)?;
+                }
+                None => pd.set_item("breeding", py.None())?,
+            }
+            players.append(pd)?;
+        }
+        d.set_item("players", players)?;
+        Ok(d.into_py(py))
+    }
+}
+
 fn to_rust_pid(py_pid: u8) -> PyResult<u8> {
     match py_pid {
         1 | 2 => Ok(py_pid - 1),
@@ -1127,6 +1426,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
 #[pymodule]
 fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<RustHeadlessGame>()?;
+    m.add_class::<RustDebugGame>()?;
     m.add_class::<CardDatabase>()?;
     m.add_class::<PyCard>()?;
     m.add_class::<PyEvoCost>()?;

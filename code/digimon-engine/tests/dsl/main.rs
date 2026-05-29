@@ -2,10 +2,12 @@
 //! functions. See `digimon-engine/Cargo.toml` for the `[[test]]` entry.
 
 mod activation_cost;
+mod attack_history_predicate;
 mod also_treated_as;
 mod cross_check;
 mod delay;
 mod digixros_aliases;
+mod digixros_transaction_steps;
 mod effect_battle;
 mod effect_granted_attack;
 mod effect_immunity_step;
@@ -127,6 +129,7 @@ mod security_stack_steps;
 mod select_materials;
 mod selection_dp_extrema;
 mod source_stack_aggregates;
+mod st2_substrate;
 mod standalone_declaratives_exit;
 mod tamer_stash_substrate_integration;
 mod track_e_reveal_ordering;
@@ -134,4 +137,5 @@ mod trash_bottom_face_down_source_under_tamer;
 mod union_zone_cost;
 mod union_zone_origin_play;
 mod validator;
+mod xros_reusable_primitives;
 mod zone_movement_verbs;

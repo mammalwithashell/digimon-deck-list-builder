@@ -1,12 +1,20 @@
-use digimon_engine::tensor::{
-    compute_positions, FIELD_SLOTS, GLOBAL_SIZE, HAND_SIZE, MAX_SOURCES, OFF_GLOBAL, OFF_MY_BATTLE,
-    OFF_MY_BREEDING, OFF_MY_HAND, OFF_MY_SECURITY, OFF_MY_TRASH, OFF_OPP_BATTLE, OFF_OPP_BREEDING,
-    OFF_OPP_HAND, OFF_OPP_SECURITY, OFF_OPP_TRASH, OFF_REVEALED, OFF_SELECTION, REVEALED_SIZE,
-    SECURITY_SIZE, SELECTION_SIZE, SLOT_DP_OFFSET, SLOT_HEADER_SIZE, SLOT_LINKED_COUNT_OFFSET,
+//! Structural tests for the tensor-profile registry and the v1 layout.
+//!
+//! After `flip-engine-default-to-lite-deck-v2`, the engine default is
+//! `standard_lite_deck_v2`. This file pins v1 explicitly where it probes
+//! v1-specific section layout, and asserts the new default where it
+//! exercises default-profile semantics.
+
+use digimon_engine::tensor::TENSOR_SIZE as DEFAULT_TENSOR_SIZE;
+use digimon_engine::tensor_profiles::standard::v1::{
+    FIELD_SLOTS, GLOBAL_SIZE, HAND_SIZE, MAX_SOURCES, OFF_GLOBAL, OFF_MY_BATTLE, OFF_MY_BREEDING,
+    OFF_MY_HAND, OFF_MY_SECURITY, OFF_MY_TRASH, OFF_OPP_BATTLE, OFF_OPP_BREEDING, OFF_OPP_HAND,
+    OFF_OPP_SECURITY, OFF_OPP_TRASH, OFF_REVEALED, OFF_SELECTION, REVEALED_SIZE, SECURITY_SIZE,
+    SELECTION_SIZE, SLOT_DP_OFFSET, SLOT_HEADER_SIZE, SLOT_LINKED_COUNT_OFFSET,
     SLOT_OPT_TOTAL_OFFSET, SLOT_OPT_USED_OFFSET, SLOT_SIZE, SLOT_SOURCE_COUNT_OFFSET,
     SLOT_SOURCE_START_OFFSET, SLOT_SUSPENDED_OFFSET, SLOT_TOP_CARD_OFFSET, SOURCE_CARD_ID_OFFSET,
-    SOURCE_DP_CONTRIBUTION_OFFSET, SOURCE_ENTRY_SIZE, SOURCE_OPT_STATE_OFFSET, TENSOR_SIZE,
-    TRASH_SIZE,
+    SOURCE_DP_CONTRIBUTION_OFFSET, SOURCE_ENTRY_SIZE, SOURCE_OPT_STATE_OFFSET,
+    TENSOR_SIZE as V1_TENSOR_SIZE, TRASH_SIZE,
 };
 use digimon_engine::tensor_profiles::standard;
 use digimon_engine::tensor_profiles::{
@@ -16,8 +24,19 @@ use digimon_engine::tensor_profiles::{
 };
 
 #[test]
-fn default_profile_is_standard_compact_v1() {
+fn default_profile_is_standard_lite_deck_v2() {
     let profile = default_profile();
+
+    assert_eq!(profile.id, STANDARD_LITE_DECK_V2_PROFILE_ID);
+    assert_eq!(profile.id, "standard_lite_deck_v2");
+    assert_eq!(profile.game_mode, "standard");
+    assert_eq!(profile.tensor_size, DEFAULT_TENSOR_SIZE);
+    assert_eq!(profile.tensor_size, 8850);
+}
+
+#[test]
+fn standard_compact_v1_profile_metadata() {
+    let profile = standard::v1::PROFILE;
 
     assert_eq!(profile.id, STANDARD_COMPACT_V1_PROFILE_ID);
     assert_eq!(profile.id, "standard_compact_v1");
@@ -25,7 +44,7 @@ fn default_profile_is_standard_compact_v1() {
     assert_eq!(profile.version, 1);
     assert_eq!(profile.tensor_version, 1);
     assert_eq!(profile.feature_schema_version, "standard_compact_v1.1");
-    assert_eq!(profile.tensor_size, TENSOR_SIZE);
+    assert_eq!(profile.tensor_size, V1_TENSOR_SIZE);
     assert_eq!(profile.field_slots, FIELD_SLOTS);
     assert_eq!(profile.slot_size, SLOT_SIZE);
     assert_eq!(profile.max_sources, MAX_SOURCES);
@@ -63,8 +82,8 @@ fn layout_hash_changes_when_feature_schema_version_changes() {
 }
 
 #[test]
-fn sections_expose_debug_shapes() {
-    let profile = default_profile();
+fn v1_sections_expose_debug_shapes() {
+    let profile = standard::v1::PROFILE;
     let global = profile.section("global").unwrap();
     assert_eq!(global.shape, &[10]);
 
@@ -95,7 +114,7 @@ fn registry_resolves_standard_compact_profile_and_legacy_aliases() {
         let profile = profile_by_id(id).unwrap();
         assert_eq!(profile.id, STANDARD_COMPACT_V1_PROFILE_ID);
         assert_eq!(profile.game_mode, "standard");
-        assert_eq!(profile.tensor_size, TENSOR_SIZE);
+        assert_eq!(profile.tensor_size, V1_TENSOR_SIZE);
     }
 
     assert!(profile_by_id("missing_profile").is_none());
@@ -105,7 +124,8 @@ fn registry_resolves_standard_compact_profile_and_legacy_aliases() {
 fn standard_family_resolves_profile_by_version() {
     let profile = standard::profile_by_version(1).unwrap();
 
-    assert_eq!(standard::DEFAULT_PROFILE, standard::v1::PROFILE);
+    // DEFAULT_PROFILE is now v2_lite_deck::PROFILE per the flip change.
+    assert_eq!(standard::DEFAULT_PROFILE, standard::v2_lite_deck::PROFILE);
     assert_eq!(profile, standard::v1::PROFILE);
     assert_eq!(
         standard::profile_by_version(2).unwrap(),
@@ -120,14 +140,14 @@ fn standard_v1_owns_tensor_layout_constants() {
     assert_eq!(standard::v1::PROFILE.slot_size, standard::v1::SLOT_SIZE);
     assert_eq!(standard::v1::PROFILE.max_sources, standard::v1::MAX_SOURCES);
 
-    assert_eq!(TENSOR_SIZE, standard::v1::TENSOR_SIZE);
+    assert_eq!(V1_TENSOR_SIZE, standard::v1::TENSOR_SIZE);
     assert_eq!(FIELD_SLOTS, standard::v1::FIELD_SLOTS);
     assert_eq!(SLOT_SIZE, standard::v1::SLOT_SIZE);
     assert_eq!(MAX_SOURCES, standard::v1::MAX_SOURCES);
 }
 
 #[test]
-fn standard_profile_sections_cover_tensor_without_overlap() {
+fn default_profile_sections_cover_tensor_without_overlap() {
     let profile = default_profile();
     let mut covered = Vec::new();
 
@@ -148,14 +168,11 @@ fn standard_profile_sections_cover_tensor_without_overlap() {
 }
 
 #[test]
-fn standard_profile_card_and_scalar_positions_match_tensor_module() {
+fn default_profile_card_and_scalar_positions_match_tensor_module() {
     let profile = default_profile();
     let (profile_cards, profile_scalars) = profile.positions();
-    let (v1_cards, v1_scalars) = standard::v1::PROFILE.positions();
-    let (tensor_cards, tensor_scalars) = compute_positions();
+    let (tensor_cards, tensor_scalars) = digimon_engine::tensor::compute_positions();
 
-    assert_eq!(profile_cards, v1_cards);
-    assert_eq!(profile_scalars, v1_scalars);
     assert_eq!(profile_cards, tensor_cards);
     assert_eq!(profile_scalars, tensor_scalars);
     assert_eq!(profile_cards.len(), profile.card_id_slot_count);
@@ -175,8 +192,8 @@ fn standard_profile_card_and_scalar_positions_match_tensor_module() {
 }
 
 #[test]
-fn standard_profile_marks_card_sections() {
-    let profile = default_profile();
+fn v1_profile_marks_card_sections() {
+    let profile = standard::v1::PROFILE;
 
     let hand = profile.section("my_hand").unwrap();
     assert_eq!(hand.kind, TensorSectionKind::CardIds);
@@ -195,8 +212,8 @@ fn standard_profile_marks_card_sections() {
 }
 
 #[test]
-fn standard_profile_sections_match_tensor_layout_constants() {
-    let profile = default_profile();
+fn v1_profile_sections_match_tensor_layout_constants() {
+    let profile = standard::v1::PROFILE;
 
     assert_eq!(
         (
@@ -297,7 +314,7 @@ fn standard_profile_sections_match_tensor_layout_constants() {
 }
 
 #[test]
-fn standard_profile_slot_field_offsets_match_tensor_layout_constants() {
+fn v1_profile_slot_field_offsets_match_tensor_layout_constants() {
     assert_eq!(SLOT_TOP_CARD_OFFSET, 0);
     assert_eq!(SLOT_DP_OFFSET, 1);
     assert_eq!(SLOT_SUSPENDED_OFFSET, 2);
@@ -318,8 +335,8 @@ fn standard_profile_slot_field_offsets_match_tensor_layout_constants() {
 }
 
 #[test]
-fn standard_profile_slot_layout_is_auditable_metadata() {
-    let profile = default_profile();
+fn v1_profile_slot_layout_is_auditable_metadata() {
+    let profile = standard::v1::PROFILE;
 
     assert_eq!(profile.max_sources, MAX_SOURCES);
     assert_eq!(profile.slot_layout.size, SLOT_SIZE);

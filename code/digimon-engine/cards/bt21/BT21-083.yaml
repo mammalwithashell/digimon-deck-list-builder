@@ -1,0 +1,51 @@
+card: BT21-083
+name: Taiki Kudo
+kind: tamer
+color: [red, yellow]
+cost: 4
+traits: [General, Xros Heart, Hero]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Main] Place 1 Xros Heart/Blue Flare/Hero Digimon from hand under this Tamer, draw 1, gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Xros Heart"
+                  - trait_has: "Blue Flare"
+                  - trait_has: Hero
+          prompt: "Place 1 Xros Heart, Blue Flare, or Hero Digimon under this Tamer"
+      - place_selected_card_under_tamer:
+          card: stash
+          tamer: source
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_trait_has: "Xros Heart"
+            - event_target_trait_has: Hero
+    summary: "[Your Turn] When your Xros Heart/Hero Digimon is played or digivolves, suspend this Tamer and it may attack"
+    process:
+      - suspend: { target: source }
+      - may_attack_now:
+          attacker: event_target
+          targets: any
+          optional: true
+          ignore_summoning_sickness: true
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

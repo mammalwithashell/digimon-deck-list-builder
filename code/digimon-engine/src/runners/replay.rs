@@ -484,7 +484,62 @@ fn restore_player_zone(
         next_card_index,
     )?;
     push_zone(&mut player.hand, &data["initial_hand"], next_card_index)?;
+
+    // Repopulate `original_deck` from the union of the four zones, mirroring
+    // what `Game::new` does. The `standard_lite_deck_v2` observation profile
+    // reads this — without it, the own-original-decklist section is empty
+    // for any tensor built during replay.
+    rebuild_original_deck(player, data_index_map);
     Ok(())
+}
+
+/// Aggregate every card in this player's deck/digitama/security/hand zones
+/// into the `original_deck` ledger. Mirrors the logic in `Game::new` that
+/// runs immediately before the post-shuffle library is laid down.
+fn rebuild_original_deck(player: &mut Player, data_index_map: &HashMap<&str, usize>) {
+    use crate::player::OriginalDeckCardCount;
+    use std::collections::BTreeMap;
+
+    // Build a reverse index once: data_index → card_id. The map currently
+    // borrows `&str`, so collect into a `Vec<Option<&str>>` keyed by index.
+    let max_idx = data_index_map.values().copied().max().unwrap_or(0);
+    let mut reverse: Vec<Option<&str>> = vec![None; max_idx + 1];
+    for (card_id, idx) in data_index_map.iter() {
+        reverse[*idx] = Some(*card_id);
+    }
+
+    let mut counts: BTreeMap<(String, bool), u16> = BTreeMap::new();
+    let mut bump = |idx: usize, is_digitama: bool| {
+        if let Some(card_id) = reverse.get(idx).and_then(|c| *c) {
+            *counts
+                .entry((card_id.to_string(), is_digitama))
+                .or_insert(0) += 1;
+        }
+    };
+
+    // Digitama zone is tautologically eggs.
+    for cs in player.digitama_deck.iter() {
+        bump(cs.data_index, true);
+    }
+    // Every other zone holds main-deck cards. (Eggs are legal only in
+    // `digitama_deck` by deck-construction rules.)
+    for cs in player
+        .deck
+        .iter()
+        .chain(player.security.iter())
+        .chain(player.hand.iter())
+    {
+        bump(cs.data_index, false);
+    }
+
+    player.original_deck = counts
+        .into_iter()
+        .map(|((card_id, is_digitama), count)| OriginalDeckCardCount {
+            card_id,
+            count,
+            is_digitama,
+        })
+        .collect();
 }
 
 // ── tests ─────────────────────────────────────────────────────────────────

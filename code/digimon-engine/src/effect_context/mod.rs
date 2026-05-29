@@ -26,11 +26,17 @@ pub(crate) use selections::material_carrier_permanent;
 
 pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
 
-use crate::action::mask::effect_attack_target_action_ids;
+use crate::action::mask::{
+    effect_attack_target_action_ids, effect_attack_target_action_ids_with_options,
+};
 use crate::action::space::{decode_attack, encode_attack, SECURITY_TARGET};
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
 use crate::combat::{AttackError, AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
+use crate::digixros::{
+    DigiXrosMaterialOrigin, DigiXrosMaterialValidationError, DigiXrosMaterialZone,
+    DigiXrosTransaction, DigiXrosZoneAllowance,
+};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::effect::{enumerate_refireable_effects, ReFireableEffect, TimingFilter};
@@ -227,6 +233,23 @@ impl<'a> EffectReadContext<'a> {
             return false;
         };
         self.cost_target_permanents.iter().any(|h| *h == source)
+    }
+
+    pub fn was_digixros(&self) -> bool {
+        self.game.pending_digixros_transaction().is_some()
+    }
+
+    pub fn digixros_count(&self) -> u8 {
+        self.game
+            .pending_digixros_transaction()
+            .map(|transaction| transaction.digixros_count)
+            .unwrap_or(0)
+    }
+
+    pub fn pending_digixros_play_card(&self) -> Option<CardHandle> {
+        self.game
+            .pending_digixros_transaction()
+            .map(|transaction| transaction.played_card)
     }
 
     pub fn with_replacement_context(
@@ -665,6 +688,61 @@ fn live_event_permanent(
     }
 }
 
+fn find_digixros_material_origin(game: &Game, card: CardHandle) -> Option<DigiXrosMaterialOrigin> {
+    for player in 0..game.players.len() {
+        let player_id = player as PlayerId;
+        let player_state = game.player(player_id);
+        if let Some(index) = player_state
+            .hand
+            .iter()
+            .position(|candidate| candidate.handle() == card)
+        {
+            return Some(DigiXrosMaterialOrigin::Hand {
+                player: player_id,
+                index,
+                card,
+            });
+        }
+        if let Some(index) = player_state
+            .trash
+            .iter()
+            .position(|candidate| candidate.handle() == card)
+        {
+            return Some(DigiXrosMaterialOrigin::Trash {
+                player: player_id,
+                index,
+                card,
+            });
+        }
+        for (permanent_index, permanent) in player_state.battle_area.iter().enumerate() {
+            let permanent_handle = PermanentHandle {
+                player: player_id,
+                index: permanent_index as u8,
+            };
+            if permanent.top_card().handle() == card {
+                return Some(DigiXrosMaterialOrigin::BattleArea {
+                    permanent: permanent_handle,
+                    card,
+                });
+            }
+            if permanent.is_tamer(&game.card_data) {
+                if let Some(source_index) = permanent
+                    .card_sources
+                    .iter()
+                    .position(|candidate| candidate.handle() == card)
+                {
+                    return Some(DigiXrosMaterialOrigin::UnderTamer {
+                        tamer: permanent_handle,
+                        source_index,
+                        card,
+                    });
+                }
+            }
+        }
+    }
+    None
+}
+
 fn event_dna_origin(game: &Game) -> Option<bool> {
     let has_trigger_context = game.current_trigger_context.is_some();
     let has_dna_scope = game.current_dna_origin.is_some();
@@ -867,6 +945,122 @@ impl<'a> EffectContext<'a> {
         ctx.cost_target_card = Some(cost_target_card);
         ctx.cost_target_from_hand = cost_target_from_hand;
         ctx
+    }
+
+    pub fn was_digixros(&self) -> bool {
+        self.game.pending_digixros_transaction().is_some()
+    }
+
+    pub fn digixros_count(&self) -> u8 {
+        self.game
+            .pending_digixros_transaction()
+            .map(|transaction| transaction.digixros_count)
+            .unwrap_or(0)
+    }
+
+    pub fn pending_digixros_play_card(&self) -> Option<CardHandle> {
+        self.game
+            .pending_digixros_transaction()
+            .map(|transaction| transaction.played_card)
+    }
+
+    pub fn allow_digixros_material_zone(
+        &mut self,
+        zone: DigiXrosMaterialZone,
+        max_count: Option<u8>,
+    ) -> bool {
+        let Some(transaction) = self.game.pending_digixros_transaction_mut() else {
+            return false;
+        };
+        transaction.allow_zone(DigiXrosZoneAllowance { zone, max_count });
+        true
+    }
+
+    pub fn allow_digixros_under_tamer_materials(&mut self, max_count: Option<u8>) -> bool {
+        self.allow_digixros_material_zone(DigiXrosMaterialZone::UnderTamer, max_count)
+    }
+
+    pub fn allow_digixros_trash_materials(&mut self, max_count: Option<u8>) -> bool {
+        self.allow_digixros_material_zone(DigiXrosMaterialZone::Trash, max_count)
+    }
+
+    pub fn add_digixros_one_shot_cost_delta(&mut self, delta: i16) -> bool {
+        let Some(transaction) = self.game.pending_digixros_transaction_mut() else {
+            return false;
+        };
+        transaction.add_one_shot_cost_delta(delta);
+        true
+    }
+
+    pub fn register_digixros_wildcard_for_current_turn(
+        &mut self,
+        material_card: CardHandle,
+        required_zone: Option<DigiXrosMaterialZone>,
+    ) -> bool {
+        self.game.register_digixros_wildcard_for_current_turn(
+            self.player,
+            material_card,
+            required_zone,
+        );
+        true
+    }
+
+    pub fn add_digixros_wildcard_to_pending_transaction(
+        &mut self,
+        material_card: CardHandle,
+        required_zone: Option<DigiXrosMaterialZone>,
+    ) -> bool {
+        let Some(transaction) = self.game.pending_digixros_transaction_mut() else {
+            return false;
+        };
+        let substitution = match required_zone {
+            Some(zone) => {
+                crate::digixros::DigiXrosWildcardSubstitution::once_from_zone(material_card, zone)
+            }
+            None => crate::digixros::DigiXrosWildcardSubstitution::once(material_card),
+        };
+        transaction.add_wildcard_substitution(substitution);
+        true
+    }
+
+    pub fn apply_optional_digixros_transaction_modifier<F>(
+        &mut self,
+        accepted: bool,
+        apply: F,
+    ) -> bool
+    where
+        F: FnOnce(&mut DigiXrosTransaction) -> bool,
+    {
+        let Some(transaction) = self.game.pending_digixros_transaction_mut() else {
+            return false;
+        };
+        transaction.apply_optional_modifier(accepted, apply)
+    }
+
+    pub fn preattach_digixros_material(
+        &mut self,
+        origin: DigiXrosMaterialOrigin,
+        card: &CardData,
+        cost_delta: i16,
+    ) -> Result<usize, DigiXrosMaterialValidationError> {
+        let Some(transaction) = self.game.pending_digixros_transaction_mut() else {
+            return Err(DigiXrosMaterialValidationError::NoMatchingRecipeSlot);
+        };
+        transaction.try_pre_attach_material(origin, card, cost_delta)
+    }
+
+    pub fn preattach_digixros_material_by_handle(
+        &mut self,
+        card: CardHandle,
+        cost_delta: i16,
+    ) -> Result<usize, DigiXrosMaterialValidationError> {
+        let Some(card_data) = self.game.card_data_for_handle(card).cloned() else {
+            return Err(DigiXrosMaterialValidationError::NoMatchingRecipeSlot);
+        };
+        let Some(origin) = find_digixros_material_origin(self.game, card) else {
+            return Err(DigiXrosMaterialValidationError::NoMatchingRecipeSlot);
+        };
+        self.preattach_digixros_material(origin, &card_data, cost_delta)
     }
 
     /// Construct an `EffectContext` with an explicit selecting-player
@@ -1328,6 +1522,64 @@ impl<'a> EffectContext<'a> {
             .and_then(|trigger| trigger.deleted_object.as_ref())
             .map(|s| s.digisources_just_before.as_slice())
             .unwrap_or(&[])
+    }
+
+    pub fn select_deleted_self_digisources_from_trash<F, C>(
+        &mut self,
+        max: u8,
+        prompt: &str,
+        is_optional_zero: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, CardHandle) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<CardHandle>) + Send + Sync + 'static,
+    {
+        let Some(snapshot) = self.deleted_object_snapshot().cloned() else {
+            return;
+        };
+        let owner = snapshot.former_controller;
+        let snapshot_sources = snapshot.digisources_just_before;
+        self.select_snapshot_digisources_from_trash(
+            owner,
+            snapshot_sources,
+            max,
+            prompt,
+            is_optional_zero,
+            filter,
+            callback,
+        );
+    }
+
+    pub fn select_snapshot_digisources_from_trash<F, C>(
+        &mut self,
+        owner: PlayerId,
+        snapshot_sources: Vec<CardHandle>,
+        max: u8,
+        prompt: &str,
+        is_optional_zero: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, CardHandle) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<CardHandle>) + Send + Sync + 'static,
+    {
+        if snapshot_sources.is_empty() {
+            return;
+        }
+        self.select_count_capped_multi(
+            owner,
+            CountCappedZone::Trash,
+            max,
+            prompt,
+            is_optional_zero,
+            None,
+            move |game, card| {
+                let handle = card.handle();
+                snapshot_sources.contains(&handle) && filter(game, handle)
+            },
+            callback,
+        );
     }
 
     pub fn event_affected_player(&self) -> Option<PlayerId> {
@@ -2093,10 +2345,10 @@ impl<'a> EffectContext<'a> {
         for _ in 0..count {
             // Opaque-aware: opaque opponents materialize from RevealSource
             // tagged Mill; standard players pop from their ordered deck.
-            let card = match self.game.take_from_deck_top_for_player(
-                player,
-                crate::opaque_deck::RevealKind::Mill,
-            ) {
+            let card = match self
+                .game
+                .take_from_deck_top_for_player(player, crate::opaque_deck::RevealKind::Mill)
+            {
                 Ok(Some(c)) => c,
                 Ok(None) => break,
                 Err(e) => {
@@ -2948,6 +3200,57 @@ impl<'a> EffectContext<'a> {
         self.game.return_to_deck_from_reveal(player, card, position)
     }
 
+    /// Play a specific revealed card without paying its cost.
+    ///
+    /// Uses the same hand-transit play machinery as security/material plays so
+    /// field capacity, effect-play floodgates, would-play replacement prompts,
+    /// On Play dispatch, and entered-field broadcasts remain centralized.
+    /// If the play fails synchronously, the card is restored to the reveal pool
+    /// at its original position.
+    pub fn play_from_reveal_free(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> Option<PermanentHandle> {
+        let reveal_index = self
+            .game
+            .revealed_cards
+            .iter()
+            .position(|revealed| revealed.handle() == card)?;
+        let mut taken = self.game.revealed_cards.remove(reveal_index);
+        taken.clear_reveal_overlay();
+        self.game.player_mut(player).hand.push(taken);
+        let hand_index = self.game.player(player).hand.len() - 1;
+
+        match self.game.play_from_hand_with_cost_result_from_origin(
+            player,
+            hand_index,
+            crate::enums::CostDelta::Free,
+            PlaySource::ByEffect,
+            false,
+            PendingWouldPlayOrigin::Reveal {
+                index: reveal_index,
+            },
+        ) {
+            PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
+                player,
+                index: field_index as u8,
+            }),
+            PlayFromHandCostResult::Pending => None,
+            PlayFromHandCostResult::Failed => {
+                let card = self
+                    .game
+                    .player_mut(player)
+                    .hand
+                    .pop()
+                    .expect("invariant: revealed card was just pushed to hand");
+                let insert_at = reveal_index.min(self.game.revealed_cards.len());
+                self.game.revealed_cards.insert(insert_at, card);
+                None
+            }
+        }
+    }
+
     /// Place all cards currently in `game.revealed_cards` back onto `player`'s
     /// deck at `position`, in a player-chosen order.
     ///
@@ -3277,7 +3580,8 @@ impl<'a> EffectContext<'a> {
         if security_index >= self.game.player(player).security.len() {
             return None;
         }
-        self.game.ensure_security_materialized(player, security_index);
+        self.game
+            .ensure_security_materialized(player, security_index);
         let card = {
             let player_state = self.game.player_mut(player);
             if security_index >= player_state.security.len() {
@@ -3377,6 +3681,49 @@ impl<'a> EffectContext<'a> {
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
         self.play_from_materials_suppress_on_play(target, source_index, cost_delta, false)
+    }
+
+    pub fn play_under_tamer_source_without_cost(
+        &mut self,
+        source_ref: SourceSelectionRef,
+    ) -> Option<PermanentHandle> {
+        self.play_under_tamer_source_with_cost(source_ref, crate::enums::CostDelta::Free)
+    }
+
+    pub fn play_under_tamer_source_with_cost_reduction(
+        &mut self,
+        source_ref: SourceSelectionRef,
+        reduction: i16,
+    ) -> Option<PermanentHandle> {
+        self.play_under_tamer_source_with_cost(
+            source_ref,
+            crate::enums::CostDelta::Reduce(reduction),
+        )
+    }
+
+    pub fn play_under_tamer_source_with_cost(
+        &mut self,
+        source_ref: SourceSelectionRef,
+        cost_delta: crate::enums::CostDelta,
+    ) -> Option<PermanentHandle> {
+        if !self.own_tamer_target(source_ref.permanent) {
+            return None;
+        }
+        let source_index = source_ref.source_index as usize;
+        {
+            let permanent = self
+                .game
+                .player(source_ref.permanent.player)
+                .battle_area
+                .get(source_ref.permanent.index as usize)?;
+            if source_index + 1 >= permanent.card_sources.len() {
+                return None;
+            }
+            if permanent.card_sources[source_index].handle() != source_ref.card {
+                return None;
+            }
+        }
+        self.play_from_materials(source_ref.permanent, source_index, cost_delta)
     }
 
     pub fn play_from_materials_suppress_on_play(
@@ -3720,12 +4067,227 @@ impl<'a> EffectContext<'a> {
             .place_as_bottom_source_observed(source, target, self.player, face_down)
     }
 
+    pub fn place_hand_card_under_tamer(
+        &mut self,
+        hand_index: usize,
+        tamer: PermanentHandle,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        if !self.own_tamer_target(tamer) {
+            return None;
+        }
+        let card = self.game.player(self.player).hand.get(hand_index)?.handle();
+        let moved = self.place_as_bottom_source(
+            crate::enums::CardSourceRef::Hand(self.player, hand_index),
+            tamer,
+            face_down,
+        );
+        moved.then_some(card)
+    }
+
+    pub fn place_hand_card_under_source_tamer(
+        &mut self,
+        hand_index: usize,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        let tamer = self.source_permanent?;
+        self.place_hand_card_under_tamer(hand_index, tamer, face_down)
+    }
+
+    pub fn place_trash_card_under_tamer(
+        &mut self,
+        trash_index: usize,
+        tamer: PermanentHandle,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        if !self.own_tamer_target(tamer) {
+            return None;
+        }
+        let card = self
+            .game
+            .player(self.player)
+            .trash
+            .get(trash_index)?
+            .handle();
+        let moved = self.place_as_bottom_source(
+            crate::enums::CardSourceRef::Trash(self.player, trash_index),
+            tamer,
+            face_down,
+        );
+        moved.then_some(card)
+    }
+
+    pub fn place_trash_card_under_source_tamer(
+        &mut self,
+        trash_index: usize,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        let tamer = self.source_permanent?;
+        self.place_trash_card_under_tamer(trash_index, tamer, face_down)
+    }
+
+    pub fn place_union_card_under_tamer(
+        &mut self,
+        card: CardHandle,
+        origin: crate::selection::UnionZoneOrigin,
+        tamer: PermanentHandle,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        match origin {
+            crate::selection::UnionZoneOrigin::Hand => {
+                let hand_index = self
+                    .game
+                    .player(self.player)
+                    .hand
+                    .iter()
+                    .position(|candidate| candidate.handle() == card)?;
+                self.place_hand_card_under_tamer(hand_index, tamer, face_down)
+            }
+            crate::selection::UnionZoneOrigin::Trash => {
+                let trash_index = self
+                    .game
+                    .player(self.player)
+                    .trash
+                    .iter()
+                    .position(|candidate| candidate.handle() == card)?;
+                self.place_trash_card_under_tamer(trash_index, tamer, face_down)
+            }
+            crate::selection::UnionZoneOrigin::Material { .. } => None,
+        }
+    }
+
+    pub fn place_union_card_under_source_tamer(
+        &mut self,
+        card: CardHandle,
+        origin: crate::selection::UnionZoneOrigin,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        let tamer = self.source_permanent?;
+        self.place_union_card_under_tamer(card, origin, tamer, face_down)
+    }
+
+    fn own_tamer_target(&self, tamer: PermanentHandle) -> bool {
+        if tamer.player != self.player {
+            return false;
+        }
+        self.game
+            .player(self.player)
+            .battle_area
+            .get(tamer.index as usize)
+            .is_some_and(|perm| perm.is_tamer(&self.game.card_data))
+    }
+
     pub fn place_permanent_as_bottom_sources(
         &mut self,
         source: PermanentHandle,
         target: PermanentHandle,
     ) -> bool {
         self.game.place_permanent_as_bottom_sources(source, target)
+    }
+
+    pub fn move_all_matching_sources_under_tamer<F>(
+        &mut self,
+        source: PermanentHandle,
+        tamer: PermanentHandle,
+        filter: F,
+    ) -> usize
+    where
+        F: Fn(&Game, CardHandle) -> bool,
+    {
+        if source.player != self.player || source == tamer || !self.own_tamer_target(tamer) {
+            return 0;
+        }
+
+        let source_indices = {
+            let Some(permanent) = self
+                .game
+                .player(source.player)
+                .battle_area
+                .get(source.index as usize)
+            else {
+                return 0;
+            };
+            let source_count = permanent.card_sources.len().saturating_sub(1);
+            (0..source_count)
+                .filter(|idx| filter(self.game, permanent.card_sources[*idx].handle()))
+                .collect::<Vec<_>>()
+        };
+        if source_indices.is_empty() {
+            return 0;
+        }
+
+        let mut moved = Vec::with_capacity(source_indices.len());
+        {
+            let source_perm =
+                &mut self.game.player_mut(source.player).battle_area[source.index as usize];
+            for &idx in source_indices.iter().rev() {
+                moved.push(source_perm.card_sources.remove(idx));
+            }
+        }
+        moved.reverse();
+        let moved_count = moved.len();
+
+        let Some(target_perm) = self
+            .game
+            .player_mut(tamer.player)
+            .battle_area
+            .get_mut(tamer.index as usize)
+        else {
+            return 0;
+        };
+        target_perm.card_sources.splice(0..0, moved);
+        moved_count
+    }
+
+    pub fn move_selected_sources_under_tamer(
+        &mut self,
+        selected: Vec<SourceSelectionRef>,
+        tamer: PermanentHandle,
+    ) -> usize {
+        if !self.own_tamer_target(tamer) {
+            return 0;
+        }
+
+        let mut moved = Vec::with_capacity(selected.len());
+        for source_ref in selected {
+            if source_ref.permanent.player != self.player {
+                continue;
+            }
+            let Some(permanent) = self
+                .game
+                .player_mut(source_ref.permanent.player)
+                .battle_area
+                .get_mut(source_ref.permanent.index as usize)
+            else {
+                continue;
+            };
+            let Some(position) = permanent
+                .card_sources
+                .iter()
+                .position(|candidate| candidate.handle() == source_ref.card)
+            else {
+                continue;
+            };
+            if position + 1 >= permanent.card_sources.len() {
+                continue;
+            }
+            moved.push(permanent.card_sources.remove(position));
+        }
+
+        let moved_count = moved.len();
+        if moved_count == 0 {
+            return 0;
+        }
+        let Some(target_perm) = self
+            .game
+            .player_mut(tamer.player)
+            .battle_area
+            .get_mut(tamer.index as usize)
+        else {
+            return 0;
+        };
+        target_perm.card_sources.splice(0..0, moved);
+        moved_count
     }
 
     /// Move `target`'s **top stacked card** (the card immediately beneath its
@@ -3826,6 +4388,40 @@ impl<'a> EffectContext<'a> {
         }
         taken.face_down = face_down;
         target_player.battle_area[target.index as usize].push_under(taken);
+    }
+
+    pub fn place_cards_under_tamer_bottom_in_order(
+        &mut self,
+        cards: Vec<CardHandle>,
+        tamer: PermanentHandle,
+        face_down: bool,
+    ) -> usize {
+        if !self.own_tamer_target(tamer) {
+            return 0;
+        }
+
+        let mut moved = Vec::with_capacity(cards.len());
+        for card in cards {
+            if let Some(mut taken) = self.game.remove_card_from_any_zone(card) {
+                taken.face_down = face_down;
+                moved.push(taken);
+            }
+        }
+        let moved_count = moved.len();
+        if moved_count == 0 {
+            return 0;
+        }
+
+        let Some(target_perm) = self
+            .game
+            .player_mut(tamer.player)
+            .battle_area
+            .get_mut(tamer.index as usize)
+        else {
+            return 0;
+        };
+        target_perm.card_sources.splice(0..0, moved);
+        moved_count
     }
 
     /// Place `tamer`'s top card at the bottom of `digimon`'s digivolution
@@ -4076,10 +4672,10 @@ impl<'a> EffectContext<'a> {
         // Opaque-aware: opaque opponents materialize from RevealSource
         // tagged Effect (Training peeks at top and re-routes — not draw/mill/security).
         let owner = perm.player;
-        let mut card = match self.game.take_from_deck_top_for_player(
-            owner,
-            crate::opaque_deck::RevealKind::Effect,
-        ) {
+        let mut card = match self
+            .game
+            .take_from_deck_top_for_player(owner, crate::opaque_deck::RevealKind::Effect)
+        {
             Ok(Some(c)) => c,
             Ok(None) => return,
             Err(e) => {
@@ -4415,6 +5011,123 @@ impl<'a> EffectContext<'a> {
         );
         let _ = self.cleanup_exposed_battle_area_digi_egg(target);
         true
+    }
+
+    /// Trash up to `count` bottom-most digivolution sources from `target`.
+    ///
+    /// This is the no-choice source-peel primitive for early blue effects
+    /// like ST2-03 / ST2-06 / ST2-09. It never removes the visible top card:
+    /// when fewer source cards exist than requested, it trashes the available
+    /// sources and then stops. Missing/stale targets and zero-source stacks
+    /// soft-fail with no mutation.
+    pub fn trash_bottom_sources(&mut self, target: PermanentHandle, count: u8) -> u8 {
+        if count == 0 {
+            return 0;
+        }
+        if self
+            .game
+            .modifiers
+            .has(target, ModifierType::ImmuneFromStackTrashing)
+        {
+            return 0;
+        }
+
+        let mut removed_count = 0;
+        for _ in 0..count {
+            let removed = {
+                let Some(permanent) = self
+                    .game
+                    .player_mut(target.player)
+                    .battle_area
+                    .get_mut(target.index as usize)
+                else {
+                    break;
+                };
+                if permanent.card_sources.len() <= 1 {
+                    break;
+                }
+                permanent.card_sources.remove(0)
+            };
+
+            let source_card = removed.handle();
+            let owner = removed.owner;
+            self.game.player_mut(owner).trash.push(removed);
+
+            let Some(host_card) = self
+                .game
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+                .map(|permanent| permanent.top_card().handle())
+            else {
+                break;
+            };
+
+            self.game.fire_digivolution_card_trashed(
+                target.player,
+                target,
+                host_card,
+                source_card,
+                crate::trigger_context::EventCause::from(
+                    self.game.infer_effect_cause(target.player),
+                ),
+            );
+            removed_count += 1;
+        }
+        let _ = self.cleanup_exposed_battle_area_digi_egg(target);
+        removed_count
+    }
+
+    pub fn trash_top_n_stacked_sources(&mut self, target: PermanentHandle, count: u8) -> usize {
+        if count == 0 || !self.can_affect_permanent(target) {
+            return 0;
+        }
+        if self
+            .game
+            .modifiers
+            .has(target, ModifierType::ImmuneFromStackTrashing)
+        {
+            return 0;
+        }
+
+        let mut trashed = 0usize;
+        for _ in 0..count {
+            let Some((removed, host_card)) = ({
+                let permanent = match self
+                    .game
+                    .player_mut(target.player)
+                    .battle_area
+                    .get_mut(target.index as usize)
+                {
+                    Some(permanent) => permanent,
+                    None => return trashed,
+                };
+                if permanent.card_sources.len() <= 1 {
+                    None
+                } else {
+                    let source_index = permanent.card_sources.len() - 2;
+                    let host_card = permanent.top_card().handle();
+                    Some((permanent.card_sources.remove(source_index), host_card))
+                }
+            }) else {
+                return trashed;
+            };
+
+            let source_card = removed.handle();
+            let owner = removed.owner;
+            self.game.player_mut(owner).trash.push(removed);
+            self.game.fire_digivolution_card_trashed(
+                target.player,
+                target,
+                host_card,
+                source_card,
+                crate::trigger_context::EventCause::from(
+                    self.game.infer_effect_cause(target.player),
+                ),
+            );
+            trashed += 1;
+        }
+        trashed
     }
 
     /// Trash the bottom-most face-down digivolution source from `target`,
@@ -4909,6 +5622,12 @@ impl<'a> EffectContext<'a> {
                 .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();
+        if modifier == ModifierType::ChangeDp
+            && self.game.permanent_is_digimon_for_rules(target)
+            && self.game.effective_dp(target).is_some_and(|dp| dp <= 0)
+        {
+            self.game.delete_permanent_with_effects(target);
+        }
     }
 
     pub fn add_declarative_modifier(
@@ -5879,8 +6598,78 @@ impl<'a> EffectContext<'a> {
         prompt: &str,
         cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
     ) -> Result<(), AttackError> {
-        let valid_action_ids =
-            effect_attack_target_action_ids(self.game, attacker, targets, without_suspending);
+        self.may_attack_now_optional_with_upgrade_and_summoning(
+            attacker,
+            targets,
+            without_suspending,
+            optional,
+            prompt,
+            cost_upgrade,
+            false,
+        )
+    }
+
+    pub fn may_attack_now_ignoring_summoning_sickness(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        optional: bool,
+        prompt: &str,
+    ) -> Result<(), AttackError> {
+        self.may_attack_now_optional_with_upgrade_and_summoning(
+            attacker,
+            targets,
+            without_suspending,
+            optional,
+            prompt,
+            None,
+            true,
+        )
+    }
+
+    pub fn may_attack_now_ignoring_summoning_sickness_with_upgrade(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        optional: bool,
+        prompt: &str,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+    ) -> Result<(), AttackError> {
+        self.may_attack_now_optional_with_upgrade_and_summoning(
+            attacker,
+            targets,
+            without_suspending,
+            optional,
+            prompt,
+            cost_upgrade,
+            true,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn may_attack_now_optional_with_upgrade_and_summoning(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        optional: bool,
+        prompt: &str,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+        ignore_summoning_sickness: bool,
+    ) -> Result<(), AttackError> {
+        let valid_action_ids = if ignore_summoning_sickness {
+            effect_attack_target_action_ids_with_options(
+                self.game,
+                attacker,
+                targets,
+                without_suspending,
+                true,
+            )
+        } else {
+            effect_attack_target_action_ids(self.game, attacker, targets, without_suspending)
+        };
         if valid_action_ids.is_empty() {
             return Ok(());
         }
@@ -5924,6 +6713,7 @@ impl<'a> EffectContext<'a> {
                         optional,
                     },
                     suspend_attacker: !without_suspending,
+                    ignore_summoning_sickness,
                     target_constraint: TargetConstraint::Forced(target),
                     allow_cancel: optional,
                     cost_upgrade,
@@ -5972,9 +6762,7 @@ impl<'a> EffectContext<'a> {
     pub fn may_dna_digivolve_now(
         &mut self,
         anchor: PermanentHandle,
-        partner_filter: std::sync::Arc<
-            dyn Fn(&Game, PermanentHandle) -> bool + Send + Sync,
-        >,
+        partner_filter: std::sync::Arc<dyn Fn(&Game, PermanentHandle) -> bool + Send + Sync>,
         target_filter: std::sync::Arc<dyn Fn(&Game, usize) -> bool + Send + Sync>,
         cost: u16,
         ignore_requirements: bool,

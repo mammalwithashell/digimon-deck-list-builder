@@ -306,10 +306,10 @@ fn select_materials_batch_play_from_materials_plays_every_picked_source() {
             .resolve_selection(selecting_player, action)
             .expect("pick");
     }
-    assert!(
-        runner.game.pending_selection.is_none(),
-        "all three distinct names picked; multi-pick committed"
-    );
+    runner
+        .auto_resolve()
+        .expect("resolve On Play trigger ordering after batch source play");
+    assert!(runner.game.pending_selection.is_none());
 
     // Carrier stack drained of its three sources — only the carrier top
     // card remains.
@@ -325,9 +325,6 @@ fn select_materials_batch_play_from_materials_plays_every_picked_source() {
         battle_before + 3,
         "each picked source became a fresh battle-area permanent"
     );
-
-    // Drain the triggered-effect queue so the enqueued On Play clauses run.
-    runner.game.drain_effect_queue();
 
     // Three sources played, each [On Play] gains `ON_PLAY_GAIN` memory.
     assert_eq!(
