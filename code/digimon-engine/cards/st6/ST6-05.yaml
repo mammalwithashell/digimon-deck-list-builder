@@ -1,0 +1,15 @@
+card: ST6-05
+name: Elecmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 4
+dp: 5000
+traits: [Mammal]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0

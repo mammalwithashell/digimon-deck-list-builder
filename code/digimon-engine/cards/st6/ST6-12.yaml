@@ -1,0 +1,36 @@
+card: ST6-12
+name: VenomMyotismon
+kind: digimon
+level: 6
+color: [purple]
+cost: 10
+dp: 11000
+traits: [Dark Animal]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 3
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Up to 2 of your Digimon gain Retaliation until the end of your opponent's next turn"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: battle_area
+          max: 2
+          filter: { kind: digimon }
+          bind_as: retaliation_targets
+          prompt: "Choose up to 2 of your Digimon to gain Retaliation"
+          optional_zero: true
+      - per_selected:
+          selection: retaliation_targets
+          bind_as: tgt
+          body:
+            - grant_keyword:
+                target: { binding: tgt }
+                keyword: Retaliation
+                expiry: end_of_opponents_next_turn

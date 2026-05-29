@@ -65,4 +65,5 @@ mod st21;
 mod st22;
 mod st3;
 mod st5;
+mod st6;
 mod st9;
