@@ -1272,3 +1272,330 @@ fn bt16_085_optional_outer_prompt_accept_runs_body_with_trigger_ctx() {
         "accept → exactly +1 memory from Clause 1"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 8 — Scheduled-return identity tracking (fix-played-binding-uses-provenance)
+//
+// These tests pin down the contract that the start-of-main "return *it* to the
+// hand" delayed effect tracks the played Veemon/Wormmon by stable identity
+// (ProvenanceToken via BindingValue::PlayedPermanent), NOT by positional
+// PermanentHandle. Before the fix, the binding stored a positional handle and
+// downstream stack mutations (DNA digivolve, regular digivolve, deletion) would
+// cause the scheduled return_to_hand to mis-target whatever permanent currently
+// occupied that slot. Post-fix, the binding fizzles silently in those cases —
+// matching DCGO's `IsPermanentExistsOnBattleArea(selectedPermanent)` semantics.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Build a Lv.4 Blue Digimon whose card name contains "Veemon" so it
+/// satisfies both Davis & Ken's name-filter and the DNA Lv.4 Blue
+/// requirement. Used to test DNA consumption of the played Veemon.
+fn make_veemon_lv4_blue(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Veemon");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 5;
+    c.colors = vec![CardColor::Blue];
+    c
+}
+
+/// Lv.4 Green Digimon for the DNA partner slot (Stingmon stand-in).
+fn make_partner_lv4_green(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 5;
+    c.colors = vec![CardColor::Green];
+    c
+}
+
+/// Plays the Veemon from Davis & Ken's start-of-main trigger. Returns the
+/// PermanentHandle the Veemon ended up at.
+fn play_veemon_via_davis_and_ken(runner: &mut DebugRunner) -> digimon_engine::permanent::PermanentHandle {
+    runner.game.enter_main_phase();
+    let view = runner.pending_selection_view().expect("hand selection");
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("select Veemon");
+    runner.auto_resolve().expect("finish Clause 0 free-play");
+    let last = runner.game.players[0].battle_area.len() - 1;
+    digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: last as u8,
+    }
+}
+
+/// Test 5.1 — Davis & Ken plays Veemon; the Veemon is consumed in DNA
+/// digivolve with a Lv.4 Green partner into a Paildramon-stand-in result;
+/// at the next end-of-opponent's-turn the scheduled return_to_hand silently
+/// fizzles (the played Veemon is now a digivolution card under the merged
+/// stack, no longer a battle-area top). Pins down the BT16-085 +
+/// BT16-025-shape interaction the change was created to fix.
+#[test]
+fn bt16_085_dna_into_paildramon_skips_scheduled_return() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_veemon_lv4_blue("VEEMON-LV4"))
+        .add_card(make_partner_lv4_green("STINGMON-LV4"))
+        .add_card(make_test_card("PAILDRAMON-RESULT", "PaildramonResult"))
+        .deck(0, &filler_deck())
+        .deck(1, &filler_deck())
+        .memory(10)
+        .build();
+
+    let tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    push_to_hand(&mut runner, 0, "VEEMON-LV4");
+    let stingmon = runner.place_on_field(0, "STINGMON-LV4", None);
+    push_to_hand(&mut runner, 0, "PAILDRAMON-RESULT");
+
+    // Davis & Ken plays the Veemon for free; schedules return-to-hand at
+    // the next end-of-opponent's-turn.
+    let veemon_perm = play_veemon_via_davis_and_ken(&mut runner);
+
+    assert_eq!(runner.battle_area_size(0), 3, "tamer + Veemon + Stingmon");
+    assert_eq!(
+        runner.game.players[0].battle_area[veemon_perm.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "VEEMON-LV4",
+        "Veemon landed at the expected slot"
+    );
+
+    // DNA-digivolve veemon + stingmon into Paildramon. Use
+    // `effect_initiated_dna_digivolve` with `ignore_requirements=true` to
+    // bypass DNA cost validation (the test card has no declared DNA cost).
+    let hand_idx = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "PAILDRAMON-RESULT")
+        .expect("PAILDRAMON-RESULT in hand");
+    let paildramon_card = runner.game.player(0).hand[hand_idx].handle();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, paildramon_card, None, 0);
+        ctx.effect_initiated_dna_digivolve(veemon_perm, stingmon, paildramon_card, 0, true);
+    }
+    runner.game.drain_effect_queue();
+
+    // Drive any prompts (Davis & Ken's on-DNA-digivolve clause may install
+    // its optional outer prompt).
+    let mut steps = 0;
+    while let Some(view) = runner.pending_selection_view() {
+        if steps > 16 {
+            break;
+        }
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("drive selection");
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    // Locate the merged Paildramon stack by top card.
+    let paildramon_slot = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "PAILDRAMON-RESULT")
+        .expect("merged Paildramon on field after DNA");
+    let pre_eot_sources_len =
+        runner.game.players[0].battle_area[paildramon_slot].card_sources.len();
+    assert!(
+        pre_eot_sources_len >= 3,
+        "merged stack should carry both materials' sources + the new top, got {} sources",
+        pre_eot_sources_len
+    );
+
+    // End P0's turn → P1's turn. End P1's turn → fires the
+    // EndOfOpponentsNextTurn drain for P0's scheduled effect.
+    runner.end_turn();
+    runner.end_turn();
+
+    // CRITICAL ASSERTIONS — the post-fix behavior:
+
+    // (a) The merged Paildramon stack is STILL on the field. The played
+    // Veemon is no longer a battle-area top, so the strict resolver yields
+    // None and the scheduled `return_to_hand` silently fizzles.
+    let paildramon_still_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "PAILDRAMON-RESULT");
+    assert!(
+        paildramon_still_on_field,
+        "Paildramon must remain on field — the scheduled return must NOT \
+         bounce the merged stack just because the Veemon's slot turned into \
+         Paildramon's slot"
+    );
+
+    // (b) P0's hand must NOT contain a "PaildramonResult" card from the bounce.
+    let paildramon_in_hand = runner.game.player(0).hand.iter().any(|c| {
+        runner
+            .game
+            .card_data_for_handle(c.handle())
+            .map(|d| d.card_name == "PaildramonResult")
+            .unwrap_or(false)
+    });
+    assert!(
+        !paildramon_in_hand,
+        "Paildramon must not be in P0's hand — no scheduled bounce should \
+         have fired against the merged stack"
+    );
+
+    // (c) Tamer still on field.
+    let tamer_still_on_field = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT16-085");
+    assert!(tamer_still_on_field, "Davis & Ken tamer must still be on field");
+    let _ = tamer;
+}
+
+/// Test 5.2 — Davis & Ken plays Veemon; the Veemon then REGULARLY digivolves
+/// (not DNA) into ExVeemon; at the next end-of-opponent's-turn the scheduled
+/// return_to_hand silently fizzles.
+#[test]
+fn bt16_085_regular_digivolve_skips_scheduled_return() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_veemon("VEEMON"))
+        .add_card(make_digimon_lv4("EXVEEMON"))
+        .deck(0, &filler_deck())
+        .deck(1, &filler_deck())
+        .memory(10)
+        .build();
+
+    let _tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    push_to_hand(&mut runner, 0, "VEEMON");
+    push_to_hand(&mut runner, 0, "EXVEEMON");
+
+    let veemon_perm = play_veemon_via_davis_and_ken(&mut runner);
+
+    let exveemon_hand_idx = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "EXVEEMON")
+        .expect("EXVEEMON in hand");
+    let ok = runner.game.digivolve_from_hand(
+        0,
+        exveemon_hand_idx,
+        veemon_perm.index as usize,
+        PlaySource::ByDigivolve,
+    );
+    assert!(ok, "regular digivolve onto Veemon must succeed");
+    runner.game.drain_effect_queue();
+
+    let mut steps = 0;
+    while let Some(view) = runner.pending_selection_view() {
+        if steps > 8 {
+            break;
+        }
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("drive selection");
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    let top_at_slot = runner.game.players[0].battle_area[veemon_perm.index as usize]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(top_at_slot, "EXVEEMON", "ExVeemon is the new top card");
+
+    runner.end_turn();
+    runner.end_turn();
+
+    let exveemon_still_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "EXVEEMON");
+    assert!(
+        exveemon_still_on_field,
+        "ExVeemon must remain on the field — the played Veemon is no longer \
+         a battle-area top, so the bounce must fizzle"
+    );
+    let exveemon_in_hand = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "EXVEEMON");
+    assert!(
+        !exveemon_in_hand,
+        "ExVeemon must not have been bounced to hand by the scheduled return"
+    );
+}
+
+/// Test 5.3 — Davis & Ken plays Veemon; an effect deletes Veemon before
+/// the next end-of-opponent's-turn; the scheduled return_to_hand silently
+/// fizzles.
+#[test]
+fn bt16_085_played_digimon_deleted_skips_scheduled_return() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_veemon("VEEMON"))
+        .deck(0, &filler_deck())
+        .deck(1, &filler_deck())
+        .memory(10)
+        .build();
+
+    let tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    push_to_hand(&mut runner, 0, "VEEMON");
+
+    let veemon_perm = play_veemon_via_davis_and_ken(&mut runner);
+    let p0_trash_before_delete = runner.game.player(0).trash.len();
+
+    // Capture the tamer-top-card handle first to satisfy the borrow checker
+    // (then pass &mut runner.game).
+    let tamer_top = runner.game.players[0].battle_area[tamer.index as usize]
+        .top_card()
+        .handle();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, tamer_top, Some(tamer), 0);
+        ctx.delete_permanent(veemon_perm);
+    }
+    runner.game.drain_effect_queue();
+
+    let veemon_in_battle_area = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "VEEMON");
+    assert!(!veemon_in_battle_area, "Veemon must be deleted from battle area");
+    let p0_trash_after_delete = runner.game.player(0).trash.len();
+    assert!(
+        p0_trash_after_delete > p0_trash_before_delete,
+        "Veemon must have landed in P0's trash"
+    );
+
+    let battle_area_after_delete: Vec<String> = runner.game.players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+
+    runner.end_turn();
+    runner.end_turn();
+
+    let battle_area_after_drains: Vec<String> = runner.game.players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+
+    assert_eq!(
+        battle_area_after_delete, battle_area_after_drains,
+        "battle area must not change across the two end-turn drains — the \
+         scheduled return must fizzle silently when its target is already deleted"
+    );
+}

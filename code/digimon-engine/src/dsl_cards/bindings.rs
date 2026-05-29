@@ -6,6 +6,7 @@ use crate::card_source::CardHandle;
 use crate::enums::PlayerId;
 use crate::permanent::PermanentHandle;
 use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef, UnionZoneOrigin};
+use crate::trigger_context::ProvenanceToken;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingValue {
@@ -26,6 +27,32 @@ pub enum BindingValue {
         card: CardHandle,
         origin: UnionZoneOrigin,
         owner: PlayerId,
+    },
+    /// A permanent binding produced by a *play verb* (`play_from_hand_free`,
+    /// `play_from_revealed_free`, `play_from_materials`, `play_union_bound_free`,
+    /// `play_token`). Unlike `Permanent`, this variant tracks the played card
+    /// by stable identity (`ProvenanceToken` derived from the played card's
+    /// `CardHandle`) and is resolved at consume time via the engine, not at
+    /// bind time. The strict resolver
+    /// [`crate::game::Game::resolve_token_as_battle_area_top`] yields a
+    /// `PermanentHandle` only when the played card is still the top card of a
+    /// battle-area permanent; the permissive sibling
+    /// [`crate::game::Game::resolve_provenance_token`] yields the carrier
+    /// handle for cards anywhere in a stack (top or digivolution card).
+    ///
+    /// The binding silently fails to resolve once the played card is no
+    /// longer a battle-area top (strict path) — i.e. once it has been
+    /// consumed in DNA digivolve, buried under a new top by regular
+    /// digivolve, or removed from play entirely. See change
+    /// `fix-played-binding-uses-provenance`.
+    ///
+    /// `fallback` carries the schedule-time `PermanentHandle` for
+    /// diagnostics only. Consumers MUST always route through provenance
+    /// resolution and treat resolution failure as a silent no-op; `fallback`
+    /// is never used as a substitute for the resolver in production code.
+    PlayedPermanent {
+        token: ProvenanceToken,
+        fallback: PermanentHandle,
     },
 }
 
@@ -211,6 +238,35 @@ impl Bindings {
         self.insert(name, BindingValue::Permanent(h));
     }
 
+    /// Insert a played-permanent binding tagged with stable identity
+    /// (`ProvenanceToken` for the played top card). See
+    /// [`BindingValue::PlayedPermanent`] for semantics; called by play verbs
+    /// (`PlayFromHandFree`, `PlayFromRevealedFree`, `PlayFromMaterials`,
+    /// `PlayUnionBoundFree`, `PlayToken`) at their `bind_as` insert sites.
+    pub fn insert_played_permanent(
+        &mut self,
+        name: &str,
+        token: ProvenanceToken,
+        fallback: PermanentHandle,
+    ) {
+        self.insert(name, BindingValue::PlayedPermanent { token, fallback });
+    }
+
+    /// Diagnostic getter for a played-permanent binding. Returns the raw
+    /// `(token, fallback)` pair WITHOUT resolving the token. Production
+    /// consumers MUST NOT use this — they SHALL route through
+    /// `resolve_binding_ref` (strict) or `resolve_played_permanent_permissive`
+    /// (carrier-aware). Intended for tests and tracing only.
+    pub fn get_played_permanent(
+        &self,
+        name: &str,
+    ) -> Option<(ProvenanceToken, PermanentHandle)> {
+        match self.get(name)? {
+            BindingValue::PlayedPermanent { token, fallback } => Some((token, fallback)),
+            _ => None,
+        }
+    }
+
     pub fn insert_card(&mut self, name: &str, h: CardHandle) {
         self.insert(name, BindingValue::Card(h));
     }
@@ -386,5 +442,47 @@ mod tests {
         let mut b = Bindings::new();
         b.insert_literal("branch", 1);
         assert_eq!(b.get_literal("branch"), Some(1));
+    }
+
+    #[test]
+    fn played_permanent_round_trip() {
+        let mut b = Bindings::new();
+        let token = ProvenanceToken(42);
+        let fallback = PermanentHandle {
+            player: 0,
+            index: 3,
+        };
+        b.insert_played_permanent("played", token, fallback);
+        let (got_token, got_fallback) =
+            b.get_played_permanent("played").expect("binding present");
+        assert_eq!(got_token, token);
+        assert_eq!(got_fallback, fallback);
+        // `get_permanent` (which expects a plain Permanent variant) must NOT
+        // accept a PlayedPermanent — production consumers must route through
+        // the resolver, not the positional getter.
+        assert_eq!(b.get_permanent("played"), None);
+    }
+
+    #[test]
+    fn played_permanent_clone_isolation() {
+        let mut b = Bindings::new();
+        let token = ProvenanceToken(7);
+        let fallback = PermanentHandle {
+            player: 1,
+            index: 2,
+        };
+        b.insert_played_permanent("played", token, fallback);
+        let cloned = b.clone();
+        // Mutate original — should not affect clone.
+        let new_token = ProvenanceToken(99);
+        let new_fallback = PermanentHandle {
+            player: 0,
+            index: 0,
+        };
+        b.insert_played_permanent("played", new_token, new_fallback);
+        let (clone_token, clone_fallback) =
+            cloned.get_played_permanent("played").expect("clone preserved");
+        assert_eq!(clone_token, token);
+        assert_eq!(clone_fallback, fallback);
     }
 }

@@ -611,6 +611,41 @@ targets the right permanent even after other permanents enter or leave and
 shift indices. A handle that no longer points at a live permanent is ignored
 (nothing is scheduled).
 
+### `bind_as` on play verbs tracks the played card by stable identity
+
+A `bind_as` on a play verb (`play_from_hand_free`, `play_from_revealed_free`,
+`play_from_materials`, `play_union_bound_free`, `play_token`) binds the played
+permanent as `BindingValue::PlayedPermanent { token, fallback }` — where
+`token` is the `ProvenanceToken` derived from the played top card's
+`CardHandle`. Downstream consumers resolve the binding at consume time, not
+at bind time.
+
+Two resolvers serve different printed-text semantics:
+
+- **Strict — `Game::resolve_token_as_battle_area_top`** (default via
+  `resolve_binding_ref`). Yields `Some(handle)` only when the played card is
+  currently the **top card** of a battle-area permanent. Yields `None` if the
+  played card is now a digivolution card under another top, has left play, or
+  resides in any other zone. This matches DCGO's
+  `IsPermanentExistsOnBattleArea(selectedPermanent)` semantics. Use for "return
+  *it* to the hand" and similar identity-preserving effects (BT16-085 Davis
+  Motomiya & Ken Ichijoji).
+
+- **Permissive — `resolve_played_permanent_permissive`** (called by
+  `ScheduleDeletePlayedAtTurnEnd`). Yields `Some(carrier_handle)` whenever the
+  played card is anywhere in a battle-area stack — top OR digivolution card.
+  Use for "delete the Digimon this effect played" semantics where the carrier
+  is the correct target even after a digivolve buries the played card
+  (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki, P-165 ShoeShoemon).
+
+Authors writing new DSL clauses pick the resolver semantic by writing the
+appropriate downstream verb: `return_to_hand` / `delete_permanent` /
+`add_modifier` / etc. all flow through the strict resolver via
+`resolve_binding_ref`, while `schedule_delete_played_at_turn_end` uses the
+permissive one explicitly. See change `fix-played-binding-uses-provenance`
+for the cross-engine rationale and the BT16-085 + BT16-025 Paildramon scenario
+that motivated the strict path.
+
 `schedule_delete_at_end_of_opponents_turn` (PUPPETS-G016) is the opponent-turn
 variant — for card text "At the end of your opponent's turn, delete that token"
 (P-165 ShoeShoemon). Pushes to `Game.scheduled_provenance_deletions_opp`; drained
