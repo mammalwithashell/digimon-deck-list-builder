@@ -1,0 +1,29 @@
+card: ST3-13
+name: Heaven's Gate
+kind: option
+color: [yellow]
+cost: 1
+effects:
+  - when: main_from_hand
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +3000 DP"
+      - add_dp_modifier:
+          target: target
+          value: 3000
+          expiry: end_of_turn
+  - when: on_security
+    process:
+      - add_modifier:
+          target: { owner: you, zone: [battle_area], kind: digimon }
+          modifier: ChangeDp
+          value: 5000
+          expiry: end_of_turn
+      - add_player_modifier:
+          target_player: you
+          modifier: SecurityDpChange
+          value: 5000
+          expiry: end_of_turn
+      - add_this_option_to_hand: {}

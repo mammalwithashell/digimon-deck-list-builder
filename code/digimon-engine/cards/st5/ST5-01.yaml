@@ -1,0 +1,19 @@
+card: ST5-01
+name: Kapurimon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - has_keyword: Blocker
+    target: {}
+    dp_modifier: 1000
+    summary: "[Your Turn] While this Digimon has Blocker, it gets +1000 DP"

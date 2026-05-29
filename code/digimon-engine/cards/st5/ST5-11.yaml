@@ -1,0 +1,20 @@
+card: ST5-11
+name: Megadramon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+effects:
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker

@@ -331,6 +331,8 @@ pub struct AuraBody {
     /// security battle context consults this flag (`combat.rs:260`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub applies_to_opponent_security_dp: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub applies_to_own_security_dp: Option<bool>,
 }
 
 /// Inline keyword grant used inside [`AuraBody`].

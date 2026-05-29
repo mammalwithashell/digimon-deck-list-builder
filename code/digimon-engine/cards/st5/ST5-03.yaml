@@ -1,0 +1,19 @@
+card: ST5-03
+name: Agumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Reptile]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker

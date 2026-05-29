@@ -32,6 +32,7 @@ fn add_player_modifier_step_installs_floodgate_on_referenced_player() {
             &CompiledStep::AddPlayerModifier {
                 target_player: CompiledPlayerRef::Opponent,
                 modifier: "CannotPlayDigimonByEffect".to_string(),
+                value: 0,
                 expiry: "end_of_opponents_turn".to_string(),
             },
             &mut ctx,

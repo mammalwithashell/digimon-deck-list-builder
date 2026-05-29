@@ -1,0 +1,25 @@
+card: ST5-06
+name: Greymon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+traits: [Dinosaur]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - scope: inherited
+    when: end_of_opponents_turn
+    active_when:
+      none_of:
+        - digimon_attacked_this_turn: opponent
+    summary: "If your opponent didn't attack with a Digimon this turn, draw 1"
+    process:
+      - draw: { of: you, count: 1 }

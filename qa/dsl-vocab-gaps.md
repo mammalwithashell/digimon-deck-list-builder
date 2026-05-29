@@ -12,6 +12,15 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > cards under `select_opponent_sources`: those printed effects choose the
 > Digimon only, then deterministically trash the bottom source(s).
 
+> **ST5 Machine Black closure — 2026-05-29:** `digimon_attacked_this_turn:
+> you|opponent` is now a closed DSL predicate leaf, backed by engine attack
+> history and consumed by ST5-04/ST5-06 inherited draw clauses. ST5-14 Tai
+> Kamiya's Blocker response was expressible with the existing
+> `on_attack_target_change` / `attack_target_change_reason: blocker` context
+> after the blocker declaration path was corrected to suspend the blocker before
+> target-change observers run. No open DSL vocabulary gap remains for ST5; full
+> closure details live in [qa/resolved-gaps.md](resolved-gaps.md).
+
 > **TS Olympos representative unlock — 2026-05-24:** The
 > `close-ts-olympos-rust-gaps` change added and consumed the DSL surfaces
 > needed for the representative TS Olympos deck: `materials_count_matches_aggregate`,

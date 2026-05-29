@@ -1,0 +1,24 @@
+card: ST5-08
+name: DarkTyrannomon
+kind: digimon
+level: 4
+color: [black]
+cost: 6
+dp: 5000
+traits: [Dinosaur]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 1
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: when_attacking
+    summary: "[When Attacking] Lose 2 memory"
+    process:
+      - lose_memory: 2

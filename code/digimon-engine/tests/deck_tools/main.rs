@@ -7,7 +7,41 @@ use digimon_engine::deck_tools::{
     parse_tts, summarize_deck, tested_cards_sorted, validate_deck, validate_deck_for_game_mode,
     validate_deck_for_mode,
 };
-use digimon_engine::{GameMode, Rarity};
+use digimon_engine::{build_registry, CardData, GameMode, HeadlessRunner, Rarity};
+use serde::Deserialize;
+use std::collections::{BTreeMap, HashMap};
+
+const STARTER_DECKS_JSON: &str = include_str!("../../../../data/starter_decks.json");
+const CARDS_JSON: &str = include_str!("../../../../data/cards.json");
+
+#[derive(Debug, Deserialize)]
+struct StarterDecksFixture {
+    starter_decks: BTreeMap<String, StarterDeckFixture>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StarterDeckFixture {
+    id: String,
+    name: String,
+    decklist: Vec<String>,
+}
+
+fn starter_decks_fixture() -> StarterDecksFixture {
+    serde_json::from_str(STARTER_DECKS_JSON).expect("starter_decks.json parses")
+}
+
+fn st3_starter_deck() -> Vec<String> {
+    starter_decks_fixture()
+        .starter_decks
+        .get("ST-3")
+        .expect("ST-3 fixture exists")
+        .decklist
+        .clone()
+}
+
+fn full_card_data() -> HashMap<String, CardData> {
+    CardData::load_from_str(CARDS_JSON).expect("cards.json parses")
+}
 
 const DECK_LIBRARY_JSON: &str = include_str!("../../../../data/deck_library.json");
 
@@ -137,6 +171,81 @@ fn tested_cards_allowlist_is_consistent_with_membership_helper() {
         assert!(is_card_tested(first));
     }
     assert!(!is_card_tested("ZZZ-999"));
+}
+
+#[test]
+fn st3_starter_deck_fixture_has_canonical_counts() {
+    let fixture = starter_decks_fixture();
+    let st3 = fixture
+        .starter_decks
+        .get("ST-3")
+        .expect("ST-3 fixture exists");
+    assert_eq!(st3.id, "ST-3");
+    assert_eq!(st3.name, "Starter Deck Heaven's Yellow");
+
+    let counts = summarize_deck(&st3.decklist);
+    let expected = HashMap::from([
+        ("ST3-01".to_string(), 4_u32),
+        ("ST3-02".to_string(), 4),
+        ("ST3-03".to_string(), 4),
+        ("ST3-04".to_string(), 4),
+        ("ST3-05".to_string(), 2),
+        ("ST3-06".to_string(), 4),
+        ("ST3-07".to_string(), 4),
+        ("ST3-08".to_string(), 4),
+        ("ST3-09".to_string(), 4),
+        ("ST3-10".to_string(), 2),
+        ("ST3-11".to_string(), 2),
+        ("ST3-12".to_string(), 4),
+        ("ST3-13".to_string(), 4),
+        ("ST3-14".to_string(), 2),
+        ("ST3-15".to_string(), 4),
+        ("ST3-16".to_string(), 2),
+    ]);
+
+    assert_eq!(st3.decklist.len(), 54);
+    assert_eq!(counts, expected);
+    assert!(out_of_set_cards(&st3.decklist).is_empty());
+
+    let validation = validate_deck(&st3.decklist);
+    assert!(
+        validation.is_valid,
+        "ST-3 starter deck should validate cleanly: {:?}",
+        validation.errors
+    );
+}
+
+#[test]
+fn st3_starter_deck_cards_are_registered_as_implemented() {
+    let implemented: std::collections::HashSet<String> =
+        build_registry().registered_card_ids().into_iter().collect();
+    for card_id in summarize_deck(&st3_starter_deck()).keys() {
+        assert!(
+            implemented.contains(card_id.as_str()),
+            "{card_id} should be registered by the Rust card registry"
+        );
+    }
+}
+
+#[test]
+fn st3_starter_deck_initializes_headless_runner() {
+    let deck = st3_starter_deck();
+    let card_data = full_card_data();
+    let runner = HeadlessRunner::new(
+        deck.clone(),
+        deck,
+        &card_data,
+        false,
+        false,
+        false,
+        Some(3),
+    );
+
+    assert!(
+        runner.is_ok(),
+        "Rust headless runner should accept the canonical ST-3 deck: {:?}",
+        runner.err()
+    );
 }
 
 // ─── classify_parsed ──────────────────────────────────────────────────

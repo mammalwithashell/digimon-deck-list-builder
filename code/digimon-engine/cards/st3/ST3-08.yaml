@@ -1,0 +1,26 @@
+card: ST3-08
+name: MagnaAngemon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Archangel]
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+effects:
+  - scope: inherited
+    when: when_attacking
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -1000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -1000
+          expiry: end_of_turn

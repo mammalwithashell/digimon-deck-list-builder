@@ -1,0 +1,25 @@
+card: ST5-04
+name: ToyAgumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 2000
+traits: [Puppet]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - scope: inherited
+    when: end_of_opponents_turn
+    active_when:
+      none_of:
+        - digimon_attacked_this_turn: opponent
+    summary: "If your opponent didn't attack with a Digimon this turn, draw 1"
+    process:
+      - draw: { of: you, count: 1 }
