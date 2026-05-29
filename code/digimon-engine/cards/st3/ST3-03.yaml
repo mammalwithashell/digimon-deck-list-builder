@@ -1,0 +1,14 @@
+card: ST3-03
+name: Tapirmon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 4000
+traits: [Holy Beast]
+form: Rookie
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0

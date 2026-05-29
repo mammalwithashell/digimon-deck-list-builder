@@ -693,6 +693,7 @@ fn compile_predicate(
         opponents_turn: p.opponents_turn,
         all_turns: p.all_turns,
         can_hatch: p.can_hatch.map(compile_player_ref),
+        digimon_attacked_this_turn: p.digimon_attacked_this_turn.map(compile_player_ref),
         in_breeding: p.in_breeding,
         on_field: p.on_field,
         dna_origin: p.dna_origin,
@@ -714,6 +715,15 @@ fn compile_predicate(
                 card_id,
                 errors,
             )
+        }),
+        event_target_dp_eq: p.event_target_dp_eq.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_eq"), card_id, errors)
+        }),
+        event_target_dp_lte: p.event_target_dp_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_lte"), card_id, errors)
+        }),
+        event_target_dp_gte: p.event_target_dp_gte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_gte"), card_id, errors)
         }),
         event_target_name_contains: p.event_target_name_contains.clone(),
         event_target_is_player: p.event_target_is_player,
@@ -1361,6 +1371,7 @@ fn compile_declarative(
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
             applies_to_opponent_security_dp: a.applies_to_opponent_security_dp.unwrap_or(false),
+            applies_to_own_security_dp: a.applies_to_own_security_dp.unwrap_or(false),
             summary,
             summary_key,
         },
@@ -2180,6 +2191,7 @@ fn compile_step(
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
             target_player: compile_player_ref(a.target_player),
             modifier: a.modifier.clone(),
+            value: a.value,
             expiry: a.expiry.clone(),
         },
         S::GrantKeyword(a) => CompiledStep::GrantKeyword {

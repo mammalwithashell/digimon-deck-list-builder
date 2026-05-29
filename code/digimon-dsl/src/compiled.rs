@@ -323,6 +323,7 @@ pub struct CompiledPredicate {
     pub opponents_turn: Option<bool>,
     pub all_turns: Option<bool>,
     pub can_hatch: Option<CompiledPlayerRef>,
+    pub digimon_attacked_this_turn: Option<CompiledPlayerRef>,
     pub in_breeding: Option<bool>,
     pub on_field: Option<bool>,
     pub dna_origin: Option<bool>,
@@ -331,6 +332,9 @@ pub struct CompiledPredicate {
     pub event_target_level_eq: Option<u8>,
     pub event_target_level_lte: Option<CompiledDpConstraint>,
     pub event_target_level_gte: Option<CompiledDpConstraint>,
+    pub event_target_dp_eq: Option<CompiledDpConstraint>,
+    pub event_target_dp_lte: Option<CompiledDpConstraint>,
+    pub event_target_dp_gte: Option<CompiledDpConstraint>,
     /// Case-insensitive substring scan against the event-target
     /// permanent's card name. G-EVENT-TARGET-NAME-CONTAINS.
     pub event_target_name_contains: Option<String>,
@@ -644,6 +648,7 @@ pub enum CompiledDeclarativeClause {
         /// `dp_modifier` rides as an attacker-side security-DP adjustment
         /// during the security battle (rather than as a battle-area aura).
         applies_to_opponent_security_dp: bool,
+        applies_to_own_security_dp: bool,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -1246,6 +1251,7 @@ pub enum CompiledStep {
     AddPlayerModifier {
         target_player: CompiledPlayerRef,
         modifier: String,
+        value: i32,
         expiry: String,
     },
     GrantKeyword {

@@ -1,0 +1,13 @@
+card: ST3-12
+name: T.K. Takaishi
+kind: tamer
+color: [yellow]
+cost: 2
+effects:
+  - kind: aura
+    active_when: { opponents_turn: true }
+    dp_modifier: 2000
+    applies_to_own_security_dp: true
+  - when: on_security
+    process:
+      - play_from_security: {}

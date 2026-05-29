@@ -590,6 +590,7 @@ pub enum ModifierType {
 
     // Security
     SecurityAttackChange,
+    SecurityDpChange,
     /// Modifier-granted form of `Keyword::Progress` — used when the
     /// immunity comes from a temporary effect rather than printed text.
     /// Checked alongside native `Keyword::Progress` by the SecuritySkill

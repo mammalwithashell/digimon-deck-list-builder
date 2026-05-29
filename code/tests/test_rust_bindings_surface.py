@@ -282,6 +282,13 @@ class TestLoadImplementedCardIds:
         # Test cards (TEST-001..022) are always registered
         assert any(s.startswith("TEST-") for s in ids)
 
+    def test_includes_complete_st5_machine_black_pool(self):
+        from digimon_engine import load_implemented_card_ids
+
+        ids = load_implemented_card_ids()
+
+        assert {f"ST5-{n:02d}" for n in range(1, 17)} <= ids
+
     def test_unknown_not_in_set(self):
         from digimon_engine import load_implemented_card_ids
         ids = load_implemented_card_ids()
@@ -414,6 +421,48 @@ class TestTensorProfiles:
 
 def _starter_decks():
     return ["ST1-01"] * 5 + ["ST1-03"] * 45, ["ST1-01"] * 5 + ["ST1-03"] * 45
+
+
+def _st5_machine_black_deck():
+    return (
+        ["ST5-01"] * 4
+        + ["ST5-02"] * 4
+        + ["ST5-03"] * 4
+        + ["ST5-04"] * 4
+        + ["ST5-05"] * 4
+        + ["ST5-06"] * 4
+        + ["ST5-07"] * 4
+        + ["ST5-08"] * 2
+        + ["ST5-09"] * 4
+        + ["ST5-10"] * 4
+        + ["ST5-11"] * 2
+        + ["ST5-12"] * 2
+        + ["ST5-13"] * 2
+        + ["ST5-14"] * 4
+        + ["ST5-15"] * 4
+        + ["ST5-16"] * 2
+    )
+
+
+def test_rust_headless_game_resets_with_exact_st5_machine_black_starter():
+    import numpy as np
+    import digimon_engine
+
+    deck = _st5_machine_black_deck()
+    runner = digimon_engine.RustHeadlessGame(
+        deck,
+        deck,
+        seed=123,
+        observation_profile="standard_lite_v2",
+    )
+    mask = np.asarray(runner.get_action_mask())
+    state = runner.get_rl_state()
+
+    assert len(deck) == 54
+    assert state["game_over"] is False
+    assert state["phase"] == "Mulligan"
+    assert mask.shape == (digimon_engine.ACTION_SPACE_SIZE,)
+    assert mask.any()
 
 
 def test_rust_headless_game_exposes_rl_state_snapshot():

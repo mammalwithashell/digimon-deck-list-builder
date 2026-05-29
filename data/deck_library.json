@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generated_at": "2026-05-23T19:27:51.699666+00:00",
-  "total_entries": 3638,
+  "total_entries": 3639,
   "archetypes": {
     "3 Great Angels": {
       "archetype_name": "3 Great Angels",
@@ -24213,6 +24213,37 @@
           "placement": "T8",
           "is_top_cut": false,
           "event_date": "1/11/2026"
+        }
+      ]
+    },
+    "Machine Black": {
+      "archetype_name": "Machine Black",
+      "primary_color": "Black",
+      "secondary_color": null,
+      "display_card_id": "ST5-13",
+      "stats": {
+        "times_played": 0,
+        "meta_share": 0.0,
+        "top_cut_count": 0,
+        "conversion_rate": 0.0,
+        "avg_placement": null,
+        "sources": {
+          "manual": {
+            "count": 1,
+            "top_cuts": 0
+          }
+        }
+      },
+      "decklists": [
+        {
+          "deck_id": "starter_st5_machine_black",
+          "source": "manual",
+          "source_url": "https://digimoncardgame.fandom.com/wiki/ST-5:_Starter_Deck_Machine_Black",
+          "decklist": "[\"ST5-01\", \"ST5-01\", \"ST5-01\", \"ST5-01\", \"ST5-02\", \"ST5-02\", \"ST5-02\", \"ST5-02\", \"ST5-03\", \"ST5-03\", \"ST5-03\", \"ST5-03\", \"ST5-04\", \"ST5-04\", \"ST5-04\", \"ST5-04\", \"ST5-05\", \"ST5-05\", \"ST5-05\", \"ST5-05\", \"ST5-06\", \"ST5-06\", \"ST5-06\", \"ST5-06\", \"ST5-07\", \"ST5-07\", \"ST5-07\", \"ST5-07\", \"ST5-08\", \"ST5-08\", \"ST5-09\", \"ST5-09\", \"ST5-09\", \"ST5-09\", \"ST5-10\", \"ST5-10\", \"ST5-10\", \"ST5-10\", \"ST5-11\", \"ST5-11\", \"ST5-12\", \"ST5-12\", \"ST5-13\", \"ST5-13\", \"ST5-14\", \"ST5-14\", \"ST5-14\", \"ST5-14\", \"ST5-15\", \"ST5-15\", \"ST5-15\", \"ST5-15\", \"ST5-16\", \"ST5-16\"]",
+          "format": "starter",
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": "2021-06-11"
         }
       ]
     },
