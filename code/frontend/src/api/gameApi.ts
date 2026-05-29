@@ -579,23 +579,63 @@ export async function getBoardTensorSummary(
   return toTensorSummary(summary);
 }
 
-export async function getState(_gameId: string): Promise<GameState> {
+export async function getState(gameId: string): Promise<GameState> {
+  if (!isInTauriRuntime()) {
+    // Browser-dev path: FastAPI returns the camelCase `to_ui_json()`
+    // shape directly (already a `GameState` payload), no DTO mapping.
+    return httpJson<GameState>(`/games/${gameId}/state`);
+  }
   const dto = await invoke<GameStateDto>('get_rust_game_state');
   return dtoToGameState(dto);
 }
 
-export async function getMask(_gameId: string): Promise<number[]> {
+export async function getMask(gameId: string): Promise<number[]> {
+  if (!isInTauriRuntime()) {
+    // FastAPI wraps the mask in `{ action_mask }`; the Tauri path returns
+    // the bare array. Unwrap so callers see one shape regardless of runtime.
+    const resp = await httpJson<{ action_mask: number[] }>(
+      `/games/${gameId}/action-mask`,
+    );
+    return resp.action_mask;
+  }
   return invoke<number[]>('rust_get_mask');
 }
 
 export async function getLog(_gameId: string): Promise<string[]> {
+  if (!isInTauriRuntime()) {
+    // No dedicated log endpoint in the browser-dev FastAPI surface — the
+    // per-step logs flow through action/step responses instead. Returning
+    // an empty buffer is the closest correct behavior.
+    return [];
+  }
   return invoke<string[]>('rust_get_log');
 }
 
 export async function surrenderGame(
-  _gameId: string,
+  gameId: string,
   playerId: number,
 ): Promise<SurrenderResponse> {
+  if (!isInTauriRuntime()) {
+    const httpResp = await httpJson<{
+      state: GameState;
+      action_mask: number[];
+      logs: string[];
+      events: GameEvent[];
+      is_game_over: boolean;
+      surrendered_by: number;
+    }>(`/games/${gameId}/surrender`, {
+      method: 'POST',
+      body: { player_id: playerId },
+    });
+    return {
+      state: httpResp.state,
+      action_mask: httpResp.action_mask,
+      logs: httpResp.logs,
+      events: httpResp.events,
+      is_game_over: httpResp.is_game_over,
+      surrendered_by: httpResp.surrendered_by,
+    };
+  }
   const resp = await invoke<SurrenderCommandResponse>('rust_surrender', {
     playerId,
   });
@@ -609,6 +649,40 @@ export async function surrenderGame(
   };
 }
 
-export async function deleteGame(_gameId: string): Promise<void> {
+/**
+ * Debug-only: roll the session back by one human action. Available in
+ * browser-dev mode (FastAPI replays the saved decks + seed minus the
+ * last action) and is intentionally a no-op in the Tauri runtime —
+ * the desktop engine doesn't expose undo, and we don't want UI to make
+ * promises gameplay can't keep on the shipping build.
+ */
+export async function undoGame(gameId: string): Promise<StepResponse | null> {
+  if (!isInTauriRuntime()) {
+    const httpResp = await httpJson<{
+      state: GameState;
+      action_mask: number[];
+      is_game_over: boolean;
+      logs: string[];
+      events: GameEvent[];
+      is_human_turn: boolean;
+    }>(`/games/${gameId}/undo`, { method: 'POST' });
+    return {
+      state: httpResp.state,
+      action_mask: httpResp.action_mask,
+      logs: httpResp.logs,
+      events: httpResp.events,
+      is_human_turn: httpResp.is_human_turn,
+      is_game_over: httpResp.is_game_over,
+      action_traces: [],
+    };
+  }
+  return null;
+}
+
+export async function deleteGame(gameId: string): Promise<void> {
+  if (!isInTauriRuntime()) {
+    await httpJson<{ status: string }>(`/games/${gameId}`, { method: 'DELETE' });
+    return;
+  }
   await invoke('rust_delete_game');
 }

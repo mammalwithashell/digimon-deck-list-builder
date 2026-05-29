@@ -20,6 +20,18 @@
 > loadable through the engine's default surface — bundle this with the
 > S1.3/S1.4 retrain in `TRAINING_RUNBOOK.md`.
 
+> **`RustDebugGame` is a test/browser-only PyO3 surface — 2026-05-28:** Per
+> the `add-ui-scenario-test-substrate` change, `digimon_engine.RustDebugGame`
+> wraps `HeadlessRunner` with scenario-staging mutators (place field/breeding
+> stacks, inject zone cards, set memory/phase/turn/first-player, `validate`)
+> backed by `Game::stage_*` methods. It exists only in the
+> `code/digimon-engine-py` binding crate, which the Python-free desktop Tauri
+> bundle does NOT link, and no debug staging command is registered in the
+> Tauri `invoke` handlers — so it never ships to end users. It has no Python
+> legacy-engine counterpart and is not a parity surface; it's the staging
+> backbone for the scenario conformance harness (see
+> [SCENARIO_TESTING.md](SCENARIO_TESTING.md)).
+
 **Reading guide:**
 
 - 🔴 **Parity-breaking** — given the same inputs, the two engines produce different game states. Must fix before claiming cross-engine correctness.

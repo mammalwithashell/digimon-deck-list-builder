@@ -125,7 +125,16 @@ export function GamePage() {
         if (actionResult.events) store.appendEvents(actionResult.events);
         appendResponseActionTraces(actionResult);
 
-        if (!actionResult.is_game_over) {
+        // If the human is still mid-decision — a multi-stage selection like
+        // DNA digivolve's two material picks leaves a pending_selection
+        // owned by the local player — do NOT run the agent-autoplay step.
+        // Stepping here is a no-op server-side but keeps `actionPendingRef`
+        // set across the await, which would drop the player's very next
+        // click (e.g. the second DNA material). Let the player continue.
+        const humanStillDeciding =
+          actionResult.state.pendingSelection?.selectingPlayer === 1;
+
+        if (!actionResult.is_game_over && !humanStillDeciding) {
           const stepResult = await gameApi.stepGame(store.gameId);
           store.setGameState(stepResult.state);
           store.setActionMask(stepResult.action_mask);
@@ -204,12 +213,15 @@ export function GamePage() {
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [draggedHandIndex, setDraggedHandIndex] = useState<number | null>(null);
   const [isOverValid, setIsOverValid] = useState(false);
-  // Action choice dialog: shown when hand card can both play and digivolve
+  // Action choice dialog: shown when the same hand card can be used in more
+  // than one way (play / regular digivolve / DNA digivolve). Mirrors DCGO's
+  // "With which method would you like to Digivolve?" modal.
   const [actionChoice, setActionChoice] = useState<{
     handIndex: number;
     canPlay: boolean;
     digivolveTargets: Set<number>; // field slot indices
     canDigivolveBreeding: boolean;
+    canDnaDigivolve: boolean;
   } | null>(null);
   // When set, slot clicks are interpreted as digivolve targets
   const [digivolvingHandIndex, setDigivolvingHandIndex] = useState<number | null>(null);
@@ -306,6 +318,28 @@ export function GamePage() {
     [sendAction],
   );
 
+  const handleUndo = useCallback(async () => {
+    if (!store.gameId) return;
+    try {
+      const res = await gameApi.undoGame(store.gameId);
+      if (!res) return; // Tauri path returns null — undo disabled there
+      store.setGameState(res.state);
+      store.setActionMask(res.action_mask);
+      store.clearLogs();
+      store.clearEvents();
+      store.clearActionTraces();
+      if (res.logs) store.appendLogs(res.logs);
+      if (res.events) store.appendEvents(res.events);
+      // Clear any in-flight UI selection state so we land on the
+      // replayed snapshot with a clean slate.
+      setActionChoice(null);
+      setDigivolvingHandIndex(null);
+      setSurrenderedBy(null);
+    } catch (err) {
+      console.error('Undo failed:', err);
+    }
+  }, [store]);
+
   const handleSurrender = useCallback(async () => {
     if (!store.gameId || store.isGameOver) return;
     try {
@@ -330,14 +364,19 @@ export function GamePage() {
       const fieldTargets = parsedMask.canDigivolve.get(handIndex);
       const canBreeding = parsedMask.canDigivolveBreeding.has(handIndex);
       const canDigi = (fieldTargets && fieldTargets.size > 0) || canBreeding;
+      const canDna = parsedMask.canDnaDigivolve.has(handIndex);
 
-      if (canPlay && canDigi) {
-        // Show choice dialog
+      // If more than one method is legal, show the method-picker modal so
+      // the user (and the RL action space) chooses explicitly — DCGO does
+      // exactly the same thing for the "Normal vs DNA Digivolution" prompt.
+      const methodCount = (canPlay ? 1 : 0) + (canDigi ? 1 : 0) + (canDna ? 1 : 0);
+      if (methodCount > 1) {
         setActionChoice({
           handIndex,
-          canPlay: true,
+          canPlay,
           digivolveTargets: fieldTargets ?? new Set(),
           canDigivolveBreeding: canBreeding,
+          canDnaDigivolve: canDna,
         });
         return;
       }
@@ -358,6 +397,16 @@ export function GamePage() {
           // Multiple targets — enter digivolve target mode
           setDigivolvingHandIndex(handIndex);
         }
+        return;
+      }
+
+      if (canDna) {
+        // Only DNA available — dispatch the DNA action. The engine will
+        // immediately push a `pending_selection` for the first material
+        // ("Select a level 4 Green Digimon" in DCGO's prompt), and the
+        // existing SelectionPanel + slot-click routing handles both
+        // materials with no extra UI plumbing needed.
+        handleAction(ACTION.DNA_START + handIndex);
       }
     },
     [parsedMask, handleAction, store.currentPhase],
@@ -385,6 +434,16 @@ export function GamePage() {
     }
   }, [actionChoice, handleAction]);
 
+  const handleActionChoiceDna = useCallback(() => {
+    if (!actionChoice) return;
+    const { handIndex } = actionChoice;
+    setActionChoice(null);
+    // Fire the DNA action. Material picks (two own-field permanents) come
+    // back as engine-driven `pending_selection` prompts that the existing
+    // SelectionPanel + handleSlotClick already render and route.
+    handleAction(ACTION.DNA_START + handIndex);
+  }, [actionChoice, handleAction]);
+
   const handleSlotClick = useCallback(
     (isOpponent: boolean, slotIndex: number) => {
       const phase = store.currentPhase;
@@ -400,6 +459,32 @@ export function GamePage() {
         }
         // Cancel digivolve selection on invalid click
         setDigivolvingHandIndex(null);
+        return;
+      }
+
+      // DNA digivolve material selection. The engine surfaces each of the
+      // two material picks as a PendingSelection whose `valid_action_ids`
+      // are the RAW battle_area indices of the eligible own-field
+      // permanents — NOT the 100+ `SELECTION.OWN_FIELD_START` encoding the
+      // other selection phases use. So clicking an own-field permanent
+      // dispatches that raw field index directly. Must run before the
+      // generic selection branch below (SelectMaterial is inside the
+      // SelectTarget..SelectSecurity range) so it isn't mis-encoded as
+      // 100+slot. See `Game::initiate_dna_digivolve` (valid_action_ids =
+      // battle_area indices) + `dna_digivolve_user_action.rs`.
+      if (phase === GamePhase.SelectMaterial && !isOpponent) {
+        // Read the LIVE mask via getState(), not the closure's
+        // `store.actionMask`: the two DNA material picks happen in quick
+        // succession and the second click can fire before this callback's
+        // closure re-renders with the second-stage mask. The live mask is
+        // always current, so the second material's raw index dispatches
+        // reliably.
+        const liveMask = useGameStore.getState().actionMask;
+        if (slotIndex < FIELD_SLOTS && liveMask[slotIndex] === 1) {
+          handleAction(slotIndex);
+        }
+        // Ignore clicks on non-eligible permanents; don't fall through to
+        // the 100+ mapping or attack logic.
         return;
       }
 
@@ -645,6 +730,30 @@ export function GamePage() {
     }
   }
 
+  // Highlight valid field-permanent selections during selection phases.
+  // Without this, prompts like "Choose an opponent Digimon to trash 3
+  // digivolution cards from" or DNA Digivolve material picks render the
+  // banner but leave the board un-affordanced — the user sees no hint
+  // that opponent (or own) slots are clickable. `handleSlotClick` already
+  // routes the dispatch; this purely surfaces *which* slots are valid.
+  for (const idx of parsedMask.validSelections) {
+    if (idx >= SELECTION.OWN_FIELD_START && idx <= SELECTION.OWN_FIELD_END) {
+      highlightedOwnSlots.add(idx - SELECTION.OWN_FIELD_START);
+    } else if (idx >= SELECTION.ENEMY_FIELD_START && idx <= SELECTION.ENEMY_FIELD_END) {
+      highlightedEnemySlots.add(idx - SELECTION.ENEMY_FIELD_START);
+    }
+  }
+
+  // DNA material selection highlights its own-field candidates by RAW
+  // battle_area index (the engine's encoding — see handleSlotClick), which
+  // falls outside the 100+ range scanned above. Light up each eligible
+  // own-field slot so the player sees which Digimon to combine.
+  if (store.currentPhase === GamePhase.SelectMaterial) {
+    for (let slot = 0; slot < FIELD_SLOTS; slot++) {
+      if (store.actionMask[slot] === 1) highlightedOwnSlots.add(slot);
+    }
+  }
+
   // If attacker selected, show valid targets
   const targetedSlots = new Set<number>();
   if (store.selectedAttacker !== null) {
@@ -731,6 +840,23 @@ export function GamePage() {
               Attack Security
             </button>
           )}
+          {/* Debug undo: rolls back one human action. Only useful in the
+              browser-dev workflow (FastAPI replays the saved seed +
+              decks - last action). The Tauri build's `gameApi.undoGame`
+              returns null so this button silently no-ops if it ever ends
+              up on the shipping desktop bundle. Wired here so QA can
+              walk back into a state and inspect the action mask /
+              pending_selection without restarting the match. */}
+          {!store.isGameOver && (
+            <button
+              data-testid="undo-step-button"
+              onClick={handleUndo}
+              title="Undo last action (debug)"
+              className="px-3 py-1 bg-amber-700 hover:bg-amber-600 text-white text-xs rounded ml-2"
+            >
+              ← Undo
+            </button>
+          )}
         </div>
         {store.currentPhase === GamePhase.Mulligan && (
           <div className="px-3 pb-1 text-xs text-amber-300" data-testid="mulligan-banner">
@@ -810,22 +936,35 @@ export function GamePage() {
           </DndContext>
         </div>
 
-        {/* Action choice dialog (Play vs Digivolve) */}
+        {/* Action choice dialog (Play / Digivolve / DNA Digivolve) */}
         {actionChoice && (
           <div className="flex items-center justify-center gap-3 py-2 bg-gray-800 border-t border-gray-600">
             <span className="text-sm text-gray-300">Choose action:</span>
-            <button
-              onClick={handleActionChoicePlay}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded"
-            >
-              Play
-            </button>
-            <button
-              onClick={handleActionChoiceDigivolve}
-              className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded"
-            >
-              Digivolve
-            </button>
+            {actionChoice.canPlay && (
+              <button
+                onClick={handleActionChoicePlay}
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded"
+              >
+                Play
+              </button>
+            )}
+            {(actionChoice.digivolveTargets.size > 0 ||
+              actionChoice.canDigivolveBreeding) && (
+              <button
+                onClick={handleActionChoiceDigivolve}
+                className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded"
+              >
+                Digivolve
+              </button>
+            )}
+            {actionChoice.canDnaDigivolve && (
+              <button
+                onClick={handleActionChoiceDna}
+                className="px-4 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-sm font-medium rounded"
+              >
+                DNA Digivolve
+              </button>
+            )}
             <button
               onClick={() => setActionChoice(null)}
               className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded"

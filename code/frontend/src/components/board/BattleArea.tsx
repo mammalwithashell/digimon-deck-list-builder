@@ -148,6 +148,11 @@ export function BattleArea({
             isDigivolveTarget={
               !isOpponent && isDraggingHandCard && !isEmpty && (dragValidDropSlots?.has(i) ?? false)
             }
+            // The wrapper owns the click for the WHOLE slot (so clicking
+            // card or padding works). The inner PermanentSlot must NOT also
+            // bind onClick — its click would bubble here and double-fire
+            // onSlotClick, double-dispatching actions (e.g. a dropped DNA
+            // material pick once actionPendingRef de-dupes the second fire).
             onClick={() => onSlotClick?.(i)}
           >
             {isEmpty ? (
@@ -167,7 +172,10 @@ export function BattleArea({
                   isOpponent={isOpponent}
                   highlighted={highlightedSlots?.has(i)}
                   targeted={targetedSlots?.has(i)}
-                  onClick={() => onSlotClick?.(i)}
+                  // No onClick here — the DroppableSlot wrapper owns the
+                  // click for the whole slot. Binding it here too would
+                  // double-fire onSlotClick (bubbling) and drop the second
+                  // DNA material pick. Hover handlers stay local.
                   onMouseEnter={() => onSlotHover?.(i)}
                   onMouseLeave={() => onSlotHover?.(null)}
                 />
