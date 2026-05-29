@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generated_at": "2026-05-23T19:27:51.699666+00:00",
-  "total_entries": 3639,
+  "total_entries": 3642,
   "archetypes": {
     "ST-2 Cocytus Blue": {
       "archetype_name": "ST-2 Cocytus Blue",
@@ -31,6 +31,37 @@
           "placement": null,
           "is_top_cut": false,
           "event_date": "2021-01-29"
+        }
+      ]
+    },
+    "ST-4 Giga Green": {
+      "archetype_name": "ST-4 Giga Green",
+      "primary_color": "Green",
+      "secondary_color": null,
+      "display_card_id": "ST4-13",
+      "stats": {
+        "times_played": 0,
+        "meta_share": 0.0,
+        "top_cut_count": 0,
+        "conversion_rate": 0.0,
+        "avg_placement": 0.0,
+        "sources": {
+          "manual": {
+            "count": 1,
+            "top_cuts": 0
+          }
+        }
+      },
+      "decklists": [
+        {
+          "deck_id": "starter_st4_giga_green",
+          "source": "manual",
+          "source_url": "https://digimoncardgame.fandom.com/wiki/ST-4:_Starter_Deck_Giga_Green",
+          "decklist": "[\"ST4-01\", \"ST4-01\", \"ST4-01\", \"ST4-01\", \"ST4-02\", \"ST4-02\", \"ST4-02\", \"ST4-02\", \"ST4-03\", \"ST4-03\", \"ST4-03\", \"ST4-03\", \"ST4-04\", \"ST4-04\", \"ST4-04\", \"ST4-04\", \"ST4-05\", \"ST4-05\", \"ST4-05\", \"ST4-05\", \"ST4-06\", \"ST4-06\", \"ST4-06\", \"ST4-06\", \"ST4-07\", \"ST4-07\", \"ST4-07\", \"ST4-07\", \"ST4-08\", \"ST4-08\", \"ST4-09\", \"ST4-09\", \"ST4-09\", \"ST4-09\", \"ST4-10\", \"ST4-10\", \"ST4-10\", \"ST4-10\", \"ST4-11\", \"ST4-11\", \"ST4-12\", \"ST4-12\", \"ST4-13\", \"ST4-13\", \"ST4-14\", \"ST4-14\", \"ST4-14\", \"ST4-14\", \"ST4-15\", \"ST4-15\", \"ST4-15\", \"ST4-15\", \"ST4-16\", \"ST4-16\"]",
+          "format": "starter",
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
         }
       ]
     },

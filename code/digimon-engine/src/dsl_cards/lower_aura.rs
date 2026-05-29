@@ -78,8 +78,7 @@ pub fn lower_all(
             builder = builder.inherited();
         }
         if let Some(aw) = active_when.map(Arc::new) {
-            builder =
-                builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
+            builder = builder.condition(move |rctx| eval_active_when(&aw, rctx, false));
         }
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);
@@ -220,7 +219,7 @@ fn lower_self_while_condition(
             b = b.inherited();
         }
         if let Some(aw) = active_when.clone() {
-            b = b.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
+            b = b.condition(move |rctx| eval_active_when(&aw, rctx, true));
         }
         b.build()
     };
@@ -256,16 +255,7 @@ pub fn lower(
         builder = builder.inherited();
     }
     if let Some(aw) = active_when.clone() {
-        builder = builder.condition(move |rctx| {
-            let subject = if is_self_aura {
-                rctx.source_permanent
-                    .map(PredicateSubject::Permanent)
-                    .unwrap_or(PredicateSubject::None)
-            } else {
-                PredicateSubject::None
-            };
-            eval_predicate(&aw, rctx, subject)
-        });
+        builder = builder.condition(move |rctx| eval_active_when(&aw, rctx, is_self_aura));
     }
 
     if is_self_aura && target_player.is_none() && modifier.is_none() && security_attack.is_none() {
@@ -440,4 +430,19 @@ fn players_for_ref(
         CompiledPlayerRef::Active => vec![ctx.game.turn_player()],
         CompiledPlayerRef::Any => (0..ctx.game.players.len() as PlayerId).collect(),
     }
+}
+
+fn eval_active_when(
+    predicate: &CompiledPredicate,
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+    is_self_aura: bool,
+) -> bool {
+    let subject = if is_self_aura {
+        rctx.source_permanent
+            .map(PredicateSubject::Permanent)
+            .unwrap_or(PredicateSubject::None)
+    } else {
+        PredicateSubject::None
+    };
+    eval_predicate(predicate, rctx, subject)
 }

@@ -1,0 +1,41 @@
+card: ST4-13
+name: HerculesKabuterimon
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 12000
+traits: [Insectoid]
+form: Mega
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - when: main_on_field
+    summary: "[Main] <Digi-Burst 2> Suspend 1 opponent Digimon"
+    condition: { stack_size_gte: 3 }
+    process:
+      - select_own_sources:
+          from: source
+          min: 2
+          max: 2
+          bind_as: burst_sources
+          prompt: "Trash 2 digivolution cards under this Digimon"
+          then:
+            - trash_selected_sources: { source_refs: burst_sources }
+      - select_opponent_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: target }

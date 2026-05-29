@@ -1,0 +1,32 @@
+card: ST4-16
+name: Electro Shocker
+kind: option
+color: [green]
+cost: 5
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Return 1 opponent suspended Digimon to hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "Return 1 of your opponent's suspended Digimon to hand"
+      - return_to_hand: { target: target }
+
+  - when: on_security
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "Return 1 of your opponent's suspended Digimon to hand"
+      - return_to_hand: { target: target }

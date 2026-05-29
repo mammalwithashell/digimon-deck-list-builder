@@ -1,0 +1,31 @@
+card: ST4-03
+name: Tentomon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Insectoid]
+form: Rookie
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal top card; add it if it is a green Digimon, otherwise bottom it"
+    process:
+      - reveal_top_deck: { of: you, count: 1, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: green
+          prompt: "Add the revealed green Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }

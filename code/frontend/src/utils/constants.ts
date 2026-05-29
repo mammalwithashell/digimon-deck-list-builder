@@ -234,4 +234,3 @@ export const DEFAULT_PRESET: ResolutionPreset = { width: 1280, height: 720 };
  *  this size scaled uniformly by `min(w/1920, h/1080)`. Do NOT change
  *  without re-auditing every fixed-pixel size in the game board CSS. */
 export const DESIGN_CANVAS: ResolutionPreset = { width: 1920, height: 1080 };
-

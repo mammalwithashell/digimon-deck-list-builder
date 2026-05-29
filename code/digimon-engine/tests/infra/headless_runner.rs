@@ -95,6 +95,40 @@ fn dsl_slice_deck() -> Vec<String> {
     deck
 }
 
+fn st4_card_db() -> HashMap<String, CardData> {
+    [
+        "ST4-01", "ST4-02", "ST4-03", "ST4-04", "ST4-05", "ST4-06", "ST4-07", "ST4-08", "ST4-09",
+        "ST4-10", "ST4-11", "ST4-12", "ST4-13", "ST4-14", "ST4-15", "ST4-16",
+    ]
+    .into_iter()
+    .map(|id| (id.to_string(), card_data_from_compiled(id)))
+    .collect()
+}
+
+fn st4_giga_green_deck() -> Vec<String> {
+    [
+        ("ST4-01", 4),
+        ("ST4-02", 4),
+        ("ST4-03", 4),
+        ("ST4-04", 4),
+        ("ST4-05", 4),
+        ("ST4-06", 4),
+        ("ST4-07", 4),
+        ("ST4-08", 2),
+        ("ST4-09", 4),
+        ("ST4-10", 4),
+        ("ST4-11", 2),
+        ("ST4-12", 2),
+        ("ST4-13", 2),
+        ("ST4-14", 4),
+        ("ST4-15", 4),
+        ("ST4-16", 2),
+    ]
+    .into_iter()
+    .flat_map(|(id, count)| std::iter::repeat(id.to_string()).take(count))
+    .collect()
+}
+
 #[test]
 fn runner_default_observation_profile_is_standard_lite_v2() {
     let runner = sample_runner();
@@ -144,6 +178,29 @@ fn new_runner_starts_in_mulligan() {
     assert!(runner.mulligan_current_player().is_some());
     assert!(!runner.is_game_over());
     assert_eq!(runner.winner_id(), u8::MAX);
+}
+
+#[test]
+fn st4_giga_green_deck_resets_in_headless_runner() {
+    let db = st4_card_db();
+    let deck = st4_giga_green_deck();
+    let mut runner =
+        HeadlessRunner::new(deck.clone(), deck, &db, false, false, false, Some(42)).unwrap();
+
+    assert!(runner.mulligan_current_player().is_some());
+    assert_eq!(runner.game.player(0).digitama_deck.len(), 4);
+    assert_eq!(runner.game.player(0).hand_size(), 5);
+    assert_eq!(runner.get_action_mask().len(), ACTION_SPACE_SIZE);
+
+    while let Some(player) = runner.mulligan_current_player() {
+        runner.accept_mulligan(player, true).unwrap();
+    }
+
+    assert!(!runner.is_game_over());
+    assert_eq!(runner.game.player(0).security_count(), 5);
+    assert_eq!(runner.game.player(1).security_count(), 5);
+    assert_eq!(runner.game.player(0).deck.len(), 40);
+    assert_eq!(runner.game.player(1).deck.len(), 40);
 }
 
 #[test]

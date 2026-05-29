@@ -1,0 +1,24 @@
+card: ST4-11
+name: MegaKabuterimon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Insectoid]
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - scope: inherited
+    when: on_any_deletion
+    active_when: { your_turn: true }
+    once_per_turn: true
+    condition: { source_deleted_battle_opponent: true }
+    summary: "[Your Turn][Once Per Turn] When this Digimon deletes an opponent Digimon in battle and survives, trash top opponent security"
+    process:
+      - trash_top_security: { of: opponent }

@@ -307,6 +307,12 @@ pub struct PredicateSpec {
     pub event_target_color_any_of: Option<Vec<ColorSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_permanent_is_source: Option<bool>,
+    /// True when the current deletion event's target is this effect
+    /// source's battle opponent and the source's carrier is still present.
+    /// Used for inherited "deletes an opponent's Digimon in battle and
+    /// survives" clauses.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_deleted_battle_opponent: Option<bool>,
     /// True when the triggering event's host permanent is this effect's
     /// source permanent. Used by OnDigivolutionCardTrashed observers that
     /// care about "this Digimon's digivolution cards" rather than any own

@@ -738,6 +738,7 @@ fn compile_predicate(
             .as_ref()
             .map(|v| v.iter().map(|c| compile_color(*c)).collect()),
         event_permanent_is_source: p.event_permanent_is_source,
+        source_deleted_battle_opponent: p.source_deleted_battle_opponent,
         event_host_permanent_is_source: p.event_host_permanent_is_source,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),

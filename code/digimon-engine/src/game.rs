@@ -3767,7 +3767,11 @@ impl Game {
                 if !effect.declarative || effect.inherited != inherited_source {
                     continue;
                 }
-                if effect.materializes_declarative_state || effect.dp_modifier == 0 {
+                if effect.materializes_declarative_state
+                    || effect.dp_modifier == 0
+                    || effect.dp_modifier_fn.is_some()
+                    || effect.applies_to_opponent_security_dp
+                {
                     continue;
                 }
                 let rctx =
