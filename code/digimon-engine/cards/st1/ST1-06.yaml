@@ -1,0 +1,26 @@
+card: ST1-06
+name: Coredramon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+traits: [Dragon]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 2
+
+effects:
+  # <Blocker>
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # [When Attacking] Lose 2 memory.
+  - when: when_attacking
+    summary: "[When Attacking] Lose 2 memory"
+    process:
+      - gain_memory: -2

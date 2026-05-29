@@ -1,0 +1,17 @@
+card: ST1-04
+name: Dracomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 4000
+traits: [Dragon]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2 }
+    cost: 0
+
+effects: []

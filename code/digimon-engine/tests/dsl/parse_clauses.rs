@@ -99,6 +99,26 @@ effects:
 }
 
 #[test]
+fn parse_on_block_timing_clause() {
+    let yaml = r#"
+card: DSL-BLOCK
+name: Block Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - when: on_block
+    process:
+      - gain_memory: 1
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+    let t = spec.effects[0].as_triggered().unwrap();
+    assert!(matches!(t.when, TimingSet::Single(Timing::OnBlock)));
+}
+
+#[test]
 fn parse_declarative_grant_keyword_clause() {
     let yaml = r#"
 card: AD1-025

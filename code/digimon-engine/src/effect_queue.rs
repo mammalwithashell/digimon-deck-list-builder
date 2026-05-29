@@ -427,7 +427,9 @@ impl Game {
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
-            TriggerSource::EventObserved { .. } | TriggerSource::AttackTargetChanged { .. } => {
+            TriggerSource::EventObserved { .. }
+            | TriggerSource::AttackTargetChanged { .. }
+            | TriggerSource::BlockDeclared { .. } => {
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
                     let count = self.player(player).battle_area.len();
@@ -535,6 +537,7 @@ impl Game {
             TriggerSource::EventObserved { .. }
                 | TriggerSource::PlayerBattleAreaAttack { .. }
                 | TriggerSource::AttackTargetChanged { .. }
+                | TriggerSource::BlockDeclared { .. }
                 | TriggerSource::EnteredField { .. }
         ) {
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
@@ -756,8 +759,7 @@ impl Game {
             // sibling trigger's body trashing the source, and the
             // run-time check handles that case; OPT lockout is
             // accounting-only and doesn't change user-visible choice.
-            let non_firing: Vec<usize> =
-                self.non_firing_queued_effect_indices_for(chooser);
+            let non_firing: Vec<usize> = self.non_firing_queued_effect_indices_for(chooser);
 
             let bundle: Vec<usize> = self
                 .effect_queue
@@ -1164,6 +1166,20 @@ impl Game {
                     controller: player,
                 }),
                 source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::BlockDeclared {
+                attacker,
+                blocker,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(attacker),
+                event_card: Some(card),
+                event_host_permanent: Some(blocker),
+                event_host_card: self.top_card_handle(blocker),
+                source_player: Some(attacker.player),
                 ..TriggerContext::default()
             },
             TriggerSource::SourceTrashedFromStack {
@@ -2123,29 +2139,28 @@ impl Game {
             if dna_origin_context.is_some() {
                 self.current_dna_origin = dna_origin_context;
             }
-            let condition_passes = if let Some(effects) =
-                self.effects_for_card(&card_id, source_card)
-            {
-                if let Some(eff) = effects.get(effect_slot) {
-                    if let Some(cond) = &eff.condition {
-                        let trigger_guard = TriggerContextGuard::install(self, trigger_context);
-                        let ctx = EffectContext::new_with_source_kind(
-                            &mut *trigger_guard.game,
-                            source_card,
-                            source_permanent,
-                            source_kind,
-                            controller,
-                        );
-                        cond(&ctx.as_read())
+            let condition_passes =
+                if let Some(effects) = self.effects_for_card(&card_id, source_card) {
+                    if let Some(eff) = effects.get(effect_slot) {
+                        if let Some(cond) = &eff.condition {
+                            let trigger_guard = TriggerContextGuard::install(self, trigger_context);
+                            let ctx = EffectContext::new_with_source_kind(
+                                &mut *trigger_guard.game,
+                                source_card,
+                                source_permanent,
+                                source_kind,
+                                controller,
+                            );
+                            cond(&ctx.as_read())
+                        } else {
+                            true // no condition → keep
+                        }
                     } else {
-                        true // no condition → keep
+                        true // slot missing → keep, let run-time handle it
                     }
                 } else {
-                    true // slot missing → keep, let run-time handle it
-                }
-            } else {
-                true // effects missing → keep
-            };
+                    true // effects missing → keep
+                };
             self.current_dna_origin = prev_dna_origin;
             if !condition_passes {
                 to_skip.push(i);

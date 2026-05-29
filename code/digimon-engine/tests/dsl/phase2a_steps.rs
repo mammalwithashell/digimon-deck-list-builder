@@ -1,4 +1,4 @@
-use digimon_dsl::compiled::{CompiledPlayerRef, CompiledStep};
+use digimon_dsl::compiled::{CompiledModifierValue, CompiledPlayerRef, CompiledStep};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_step;
@@ -32,7 +32,7 @@ fn add_player_modifier_step_installs_floodgate_on_referenced_player() {
             &CompiledStep::AddPlayerModifier {
                 target_player: CompiledPlayerRef::Opponent,
                 modifier: "CannotPlayDigimonByEffect".to_string(),
-                value: 0,
+                value: CompiledModifierValue::Literal(0),
                 expiry: "end_of_opponents_turn".to_string(),
             },
             &mut ctx,
@@ -53,6 +53,36 @@ fn add_player_modifier_step_installs_floodgate_on_referenced_player() {
             .modifiers
             .player_has(0, ModifierType::CannotPlayDigimonByEffect),
         "controller should not receive opponent-targeted player modifier"
+    );
+}
+
+#[test]
+fn add_player_modifier_step_installs_value_for_security_digimon_dp_modifier() {
+    let mut runner = fresh_runner();
+    let card = runner.game.players[0].hand[0].handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
+        let mut bindings = Bindings::new();
+        run_step(
+            &CompiledStep::AddPlayerModifier {
+                target_player: CompiledPlayerRef::You,
+                modifier: "ChangeOwnSecurityDigimonDp".to_string(),
+                value: CompiledModifierValue::Literal(7000),
+                expiry: "end_of_turn".to_string(),
+            },
+            &mut ctx,
+            &mut bindings,
+        );
+    }
+
+    assert_eq!(
+        runner
+            .game
+            .modifiers
+            .player_modifier_value(0, ModifierType::ChangeOwnSecurityDigimonDp),
+        7000,
+        "own-Security-Digimon DP modifiers must preserve the authored value"
     );
 }
 

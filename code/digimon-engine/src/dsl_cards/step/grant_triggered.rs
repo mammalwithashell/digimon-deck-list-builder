@@ -158,6 +158,7 @@ fn compiled_timing_string_to_effect_timing(s: &str) -> Option<crate::enums::Effe
         "on_ally_played" => T::OnAllyPlayed,
         "on_ally_attack" => T::OnAllyAttack,
         "on_opponent_attack" => T::OnOpponentAttack,
+        "on_block" => T::OnBlock,
         "on_attack_target_change" => T::OnAttackTargetChange,
 
         _ => return None,

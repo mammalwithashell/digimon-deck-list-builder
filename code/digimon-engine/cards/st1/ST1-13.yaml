@@ -1,0 +1,42 @@
+card: ST1-13
+name: Shadow Wing
+kind: option
+color: [red]
+cost: 1
+
+effects:
+  # [Main] 1 of your Digimon gets +3000 DP for the turn.
+  - when: main_from_hand
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Main] 1 of your Digimon gets +3000 DP for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +3000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: 3000
+          expiry: end_of_turn
+
+  # [Security] All of your Digimon gain <Security A. +1> until the end of your
+  # next turn.
+  - when: on_security
+    summary: "[Security] All of your Digimon gain SecurityAttackPlus +1 until end of your next turn"
+    process:
+      - for_each:
+          over:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+          bind_as: target
+          body:
+            - grant_keyword:
+                target: target
+                keyword: SecurityAttackPlus
+                value: 1
+                expiry: end_of_your_next_turn

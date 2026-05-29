@@ -60,6 +60,29 @@ fn resolve_modifier_value(
     }
 }
 
+fn resolve_player_modifier_value(
+    value: &CompiledModifierValue,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+    runtime: &StepRuntime,
+) -> i32 {
+    match value {
+        CompiledModifierValue::Literal(n) => *n,
+        CompiledModifierValue::Formula(f) => ctx
+            .source_permanent
+            .map(|h| {
+                formula_eval::evaluate_with_raw_and_bindings(
+                    f,
+                    ctx,
+                    h,
+                    runtime.raw(),
+                    Some(bindings),
+                )
+            })
+            .unwrap_or(0),
+    }
+}
+
 /// Resolve an authored expiry string. Unknown strings still no-op (same
 /// strictness convention as the rest of Phase 2c), but in debug builds we
 /// emit a warning so the silent no-op stops being invisible — this is the
@@ -186,11 +209,12 @@ pub fn try_run(
                 return true;
             };
             let player = resolve_player(ctx, *target_player);
+            let n = resolve_player_modifier_value(value, ctx, bindings, runtime);
             ctx.game.modifiers.add_player_modifier(
                 player,
                 PlayerModifierEntry::simple(
                     modifier_ty,
-                    *value,
+                    n,
                     expiry,
                     ctx.source_permanent,
                     ctx.player,

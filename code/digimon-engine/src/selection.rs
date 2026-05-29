@@ -498,6 +498,14 @@ pub enum TriggerSource {
         new_target: AttackTarget,
         reason: AttackTargetChangeReason,
     },
+    /// Observer timing fired after a Blocker is declared. Scans all players'
+    /// battle areas while carrying the blocked attacker as event context and
+    /// the blocker as host context.
+    BlockDeclared {
+        attacker: PermanentHandle,
+        blocker: PermanentHandle,
+        card: CardHandle,
+    },
     /// Observer timing fired after a card under a permanent's top card is
     /// trashed from that digivolution stack. Scans all players' battle areas
     /// while carrying the former host and trashed source card as event context.

@@ -1,0 +1,34 @@
+card: ST1-08
+name: Garudamon
+kind: digimon
+level: 5
+color: [red]
+cost: 6
+dp: 7000
+traits: [Birdkin]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4 }
+    cost: 3
+
+effects:
+  # [When Digivolving] 1 of your Digimon gets +3000 DP for the turn.
+  - when: when_digivolving
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+    summary: "[When Digivolving] 1 of your Digimon gets +3000 DP for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +3000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: 3000
+          expiry: end_of_turn

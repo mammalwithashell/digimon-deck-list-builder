@@ -588,6 +588,10 @@ pub enum ModifierType {
 
     // Security
     SecurityAttackChange,
+    /// Defender-side DP modifier for that player's security Digimon during
+    /// security DP battles. Distinct from attacker stack effects that modify
+    /// the opponent's revealed security Digimon.
+    ChangeOwnSecurityDigimonDp,
     SecurityDpChange,
     /// Modifier-granted form of `Keyword::Progress` — used when the
     /// immunity comes from a temporary effect rather than printed text.

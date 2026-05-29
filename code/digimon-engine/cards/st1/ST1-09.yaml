@@ -1,0 +1,25 @@
+card: ST1-09
+name: MetalGreymon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4 }
+    cost: 3
+
+effects:
+  # Inherited [Your Turn] When this Digimon is blocked, gain 3 memory.
+  - scope: inherited
+    when: on_block
+    active_when: { your_turn: true }
+    condition: { event_permanent_is_source: true }
+    summary: "[Your Turn] When this Digimon is blocked, gain 3 memory"
+    process:
+      - gain_memory: 3

@@ -2029,6 +2029,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "MayAttack",
     "ForceAttack",
     "SecurityAttackChange",
+    "ChangeOwnSecurityDigimonDp",
     "SecurityDpChange",
     "ImmunityToOpponentEffects",
     "DontBattleSecurityDigimon",

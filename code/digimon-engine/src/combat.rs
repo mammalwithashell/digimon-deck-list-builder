@@ -300,12 +300,18 @@ impl Game {
         total
     }
 
-    /// Sum defender-side adjustments for that player's own Security Digimon.
+    /// Sum defender-side security Digimon DP modifiers for the player whose
+    /// security stack is being checked.
     pub fn defender_security_dp_adjustment(&self, defender: PlayerId) -> i32 {
         let mut total: i32 = self
             .modifiers
             .player_modifiers_iter(defender)
-            .filter(|entry| entry.modifier == ModifierType::SecurityDpChange)
+            .filter(|entry| {
+                matches!(
+                    entry.modifier,
+                    ModifierType::SecurityDpChange | ModifierType::ChangeOwnSecurityDigimonDp
+                )
+            })
             .map(|entry| entry.value)
             .sum();
         for perm in &self.player(defender).battle_area {
@@ -2015,15 +2021,23 @@ impl Game {
                     AttackTargetChangeReason::Blocker,
                 );
 
-                // Phase 9 Task 8 — OnBlock fires globally after the blocker
-                // is declared. Both players' battle areas are scanned;
-                // observers can read `game.pending_attack.{attacker,
-                // effective_target}` (effective_target now points at the
-                // blocker) from within their process closures.
-                for pid in 0..game.players.len() {
+                // OnBlock fires globally after the blocker is declared.
+                // The payload carries the blocked attacker as the event
+                // permanent so inherited "when this Digimon is blocked"
+                // predicates can test the carrier directly.
+                if let Some(card) = game
+                    .player(attacker.player)
+                    .battle_area
+                    .get(attacker.index as usize)
+                    .map(|perm| perm.top_card().handle())
+                {
                     game.enqueue_triggered(
                         crate::enums::EffectTiming::OnBlock,
-                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                        crate::selection::TriggerSource::BlockDeclared {
+                            attacker,
+                            blocker,
+                            card,
+                        },
                     );
                 }
                 game.drain_effect_queue();

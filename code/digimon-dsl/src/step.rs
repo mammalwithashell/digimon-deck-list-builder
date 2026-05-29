@@ -1914,8 +1914,8 @@ pub struct AddModifierArgs {
 pub struct AddPlayerModifierArgs {
     pub target_player: PlayerRef,
     pub modifier: String,
-    #[serde(default)]
-    pub value: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<ModifierValueSpec>,
     pub expiry: String,
 }
 

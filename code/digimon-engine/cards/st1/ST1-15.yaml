@@ -1,0 +1,60 @@
+card: ST1-15
+name: Giga Destroyer
+kind: option
+color: [red]
+cost: 6
+
+effects:
+  # [Main] Delete up to 2 of your opponent's Digimon with 4000 DP or less.
+  - when: main_from_hand
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        dp_lte: 4000
+    summary: "[Main] Delete up to 2 opponent Digimon with 4000 DP or less"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          bind_as: targets
+          prompt: "Delete up to 2 of your opponent's Digimon with 4000 DP or less"
+          optional_zero: true
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - delete_permanent: { target: target }
+
+  # [Security] Activate this card's [Main] effect.
+  - when: on_security
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        dp_lte: 4000
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          bind_as: targets
+          prompt: "Delete up to 2 of your opponent's Digimon with 4000 DP or less"
+          optional_zero: true
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - delete_permanent: { target: target }

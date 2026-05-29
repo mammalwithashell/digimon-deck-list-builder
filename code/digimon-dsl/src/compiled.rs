@@ -780,6 +780,7 @@ pub enum CompiledTiming {
     EndOfAttack,
     EndOfBattle,
     OnAttack,
+    OnBlock,
     OnAllyAttack,
     OnOpponentAttack,
     OnDeletion,
@@ -1297,7 +1298,7 @@ pub enum CompiledStep {
     AddPlayerModifier {
         target_player: CompiledPlayerRef,
         modifier: String,
-        value: i32,
+        value: CompiledModifierValue,
         expiry: String,
     },
     GrantKeyword {
