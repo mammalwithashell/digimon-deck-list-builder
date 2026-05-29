@@ -1096,6 +1096,7 @@ Moved to [`qa/resolved-gaps.md`](resolved-gaps.md). `move_from_breeding` now low
 - Companion engine gap: tracked in `qa/archetype-qa/engine-gaps.md` line 33 as RESOLVED for Python; OPEN for the Rust engine's modifier registry.
 - Gap kind: hybrid (Rust engine modifier registry needs a typed grant slot; DSL needs the verb + lowering).
 - First reported: 2026-05-03 (EX1-068 Ice Wall!, batch-implement-cards-rust-dsl)
+- Judge-quiz consumer (2026-05-28): **Q2** of the judge-quiz faithfulness suite (`add-judge-quiz-faithfulness-suite`) is BLOCKED on this gap. Q2 stages Medusamon (BT24-017) `<Progress>` against the Ice-Wall-granted "[When Attacking] lose 2 memory" and asserts NO memory loss. The Progress half is implemented (`Game::progress_excludes`, combat.rs:2667); only this grant primitive is missing. Test `a_immunity_scope::q2_medusamon_progress_blocks_ice_wall_memory_loss` is `#[ignore]`-blocked citing this gap. When closed, the suite gains a Progress-vs-granted-effect immunity assertion for free.
 
 ## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] — RESOLVED 2026-05-17 (Phase 2 Track F)
 

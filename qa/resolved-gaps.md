@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-23
+Last updated: 2026-05-29
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,44 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## Assembly play execution — 2026-05-29
+
+- **G-ASSEMBLY-PLAY-EXECUTION** — the engine can now play a hand card via its
+  `[Assembly]` alt-path. Closed by change
+  [`fix-ad1-025-assembly-data`](../openspec/changes/fix-ad1-025-assembly-data/)
+  (hybrid engine + data + YAML), faithful to DCGO `SelectAssemblyClass.cs` /
+  `AddAssemblyConditionClass.cs` / `AD1_025.cs:214-255` and Comprehensive Rules
+  §7-3.
+- **Flow (no action-space change — rides `PLAY_HAND`, D8):** after the
+  play's cost-reduction chain resolves, `Game::assembly_or_finish_play_from_hand`
+  → `try_begin_assembly_flow` (`game_actions.rs`) detects an eligible assembly
+  path via `resolve_eligible_assembly` (reads `alt_path_registry`, requires each
+  material element satisfiable from the controller's **trash** with DISTINCT
+  cards — `assembly_can_fulfill`, a recursive system-of-distinct-representatives
+  mirroring DCGO `CanFulfillConditions`/`CanFulfillEachElementCondition`). It
+  installs an optional "use assembly?" gate (element 0, `min=0`,
+  `is_optional_zero` — declining plays at full cost) then a required per-element
+  surfaced trash selection (`select_count_capped_multi_min`, exact count, zone
+  Trash, controller-selected, distinct from already-picked). On resolution the
+  chosen materials are handed to `Game::pending_assembly_materials` and consumed
+  in `commit_play_from_hand_card_no_replace` — placed at the digivolution-stack
+  BOTTOM (`push_under`) **before** the played card's `[On Play]` /
+  `[When Digivolving]` fire (so AD1-025's bounce sees its own assembled
+  digivolution-card count) — and the play cost is reduced by the alt-path `cost:`
+  (D5: assembly `cost` = REDUCTION, not absolute).
+- **Declare-then-pay legality:** `action/mask.rs` now gates the `PLAY_HAND` bit
+  on the REDUCED cost when an assembly path is eligible
+  (`Game::assembly_play_reduction_for_hand_card`) — judge-quiz Q5 (Omnimon at
+  memory 0 is legal because 15 − 6 = 9 is payable; without the materials the
+  full 15 overdraws past the −10 floor and the play is illegal).
+- **Card content:** `[Assembly]` restored to AD1-025 in `data/card_overrides.json`;
+  the `assembly` alt_path authored in `cards/ad1/AD1-025.yaml` (materials
+  WarGreymon + MetalGarurumon, `zones:[trash]`, `stack_under`, `cost: 6`).
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl assembly_play` (6 tests: install, full-flow placement+cost, decline-at-full-cost, declare-then-pay mask offered, masked-out without materials, real AD1-025 from the pack); `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz q5`.
+- **Reusable:** the executor serves the rest of the `[Assembly]` keyword family
+  (AD1-009/012, BT22-078, BT24-062/081, EX9-047, EX11-036/045/046) — they land
+  via normal card authoring (data + YAML) with no further engine work.
 
 ## Rocks EX10-034 grant-triggered binding closure — 2026-05-23
 

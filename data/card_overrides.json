@@ -1,27 +1,50 @@
 {
   "_comment": "Hand-maintained corrections to ingest_cards.py output. The digimoncard.io API only exposes `color` / `color2` (and `evolution_cost_2`), so tri-color cards lose their third color and any third digivolve path on ingest. This sidecar patches known cases. Schema: `{card_id: {field: value, ...}}` where any top-level cards.json field may be overridden; override values replace the ingest-produced ones outright. Applied AFTER all other ingest/backfill steps so manual corrections win. CardColor int key: Red=0, Blue=1, Yellow=2, Green=3, White=4, Black=5, Purple=6.",
-
   "BT16-102": {
-    "card_colors": [2, 1, 4]
+    "card_colors": [
+      2,
+      1,
+      4
+    ]
   },
-
   "BT20-060": {
-    "card_colors": [5, 2, 0]
+    "card_colors": [
+      5,
+      2,
+      0
+    ]
   },
-
   "_evo_costs_comment": "BT12-022 (ExVeemon) and BT12-050 (Stingmon) have a second digivolve path that the digimoncard.io ingest dropped. DCGO BT12_022.asset / BT12_050.asset list both paths (Blue Lv.3 cost 2 + Green Lv.3 cost 2). These overrides re-establish the alt-digivolve so Imperialdramon DNA support behaves correctly.",
-
   "BT12-022": {
     "evo_costs": [
-      { "card_color": 1, "level": 3, "memory_cost": 2 },
-      { "card_color": 3, "level": 3, "memory_cost": 2 }
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
     ]
   },
-
   "BT12-050": {
     "evo_costs": [
-      { "card_color": 3, "level": 3, "memory_cost": 2 },
-      { "card_color": 1, "level": 3, "memory_cost": 2 }
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
     ]
+  },
+  "_ad1_025_comment": "AD1-025 Omnimon prints [Assembly] -6 [WarGreymon] x [MetalGarurumon] (DCGO AD1_025.cs:214-255 AddAssemblyConditionClass, reduceCost 6, elements WarGreymon x1 + MetalGarurumon x1) but the digimoncard.io ingest dropped it. This override restores the keyword on effect_description_eng (engine play behavior is driven by the assembly alt_path in cards/ad1/AD1-025.yaml). Reminder text phrased per Comprehensive Rules section 7-3; the official English parenthetical was not recoverable from a primary source.",
+  "AD1-025": {
+    "effect_description_eng": "[Assembly] -6 [WarGreymon] x [MetalGarurumon]\n(You may play this card by placing the specified cards from your trash under it as its digivolution cards, reducing the play cost by the specified amount.)\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Partition ([WarGreymon] & [MetalGarurumon])＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[On Play] [When Digivolving] Return all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck. Then, delete 1 of your opponent's Digimon.\r\n[All Turns] [Once Per Turn] When any of your opponent's Digimon leave the battle area, trash 1 of their Option cards in the battle area and trash their top security card."
   }
 }

@@ -114,6 +114,11 @@ path = "tests/dsl/main.rs"
 required-features = ["dsl-yaml-loader"]
 
 [[test]]
+name = "judge_quiz"
+path = "tests/judge_quiz/main.rs"
+required-features = ["dsl-yaml-loader"]
+
+[[test]]
 name = "debug_runner_dsl"
 path = "tests/debug_runner_dsl.rs"
 required-features = ["dsl-yaml-loader"]

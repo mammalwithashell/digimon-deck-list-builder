@@ -397,6 +397,18 @@ pub struct Game {
     /// replacements whose subject is a card in hand.
     #[doc(hidden)]
     pub(crate) pending_would_play_resume: Option<PendingWouldPlayResume>,
+    /// Transient hand-off for an `[Assembly]` play (G-ASSEMBLY-PLAY-EXECUTION):
+    /// the played card's handle plus the trash material handles to place at the
+    /// bottom of its digivolution stack. Consumed by
+    /// `commit_play_from_hand_card_no_replace` AFTER the permanent is created
+    /// but BEFORE its `[On Play]` / `[When Digivolving]` effects fire — so a
+    /// card whose play effects read its own digivolution-card count (e.g.
+    /// AD1-025 Omnimon's bounce) sees the assembled materials. Set immediately
+    /// before the assembly play's `finish_play_from_hand_after_reductions` and
+    /// cleared on consume. Same transient-slot pattern as
+    /// `pending_would_play_resume`.
+    #[doc(hidden)]
+    pub(crate) pending_assembly_materials: Option<(crate::card_source::CardHandle, Vec<crate::card_source::CardHandle>)>,
     /// Fire-site continuation for optional `WhenWouldLink` replacements whose
     /// subject is the pending Link Option card.
     #[doc(hidden)]
@@ -870,6 +882,7 @@ impl Game {
             replacement_pending_outcome: None,
             last_play_order_choice: None,
             pending_would_play_resume: None,
+            pending_assembly_materials: None,
             pending_would_link_resume: None,
             pending_would_digivolve_resume: None,
             player_digivolve_cost_reducers: Vec::new(),

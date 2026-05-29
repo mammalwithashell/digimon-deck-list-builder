@@ -3,6 +3,7 @@
 
 mod activation_cost;
 mod also_treated_as;
+mod assembly_play;
 mod cross_check;
 mod delay;
 mod digixros_aliases;
