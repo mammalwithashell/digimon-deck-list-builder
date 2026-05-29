@@ -34,7 +34,25 @@ pub fn resolve_binding_ref(
         CompiledBindingRef::Named(name)
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)
-        | CompiledBindingRef::OfPermanent(name) => resolve_named(name, bindings),
+        | CompiledBindingRef::OfPermanent(name) => {
+            // PlayedPermanent bindings need engine-side identity resolution
+            // (provenance token → strict top-card lookup). The strict
+            // resolver `Game::resolve_token_as_battle_area_top` yields a
+            // handle only when the played card is still the top of a
+            // battle-area permanent; if the played card has become a
+            // digivolution card, is in another zone, or has left play, the
+            // resolver yields `None` and the binding silently fails to
+            // resolve — matching DCGO's
+            // `IsPermanentExistsOnBattleArea(selectedPermanent)` semantics.
+            // See change `fix-played-binding-uses-provenance`.
+            if let Some(BindingValue::PlayedPermanent { token, .. }) = bindings.get_ref(name) {
+                return ctx
+                    .game
+                    .resolve_token_as_battle_area_top(*token)
+                    .map(ResolvedBinding::Permanent);
+            }
+            resolve_named(name, bindings)
+        }
         CompiledBindingRef::EventTarget => {
             ctx.game.current_trigger_context.as_ref().and_then(|t| {
                 if let Some(snapshot) = t.deleted_object.as_ref() {
@@ -169,6 +187,49 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
         // origin zone — the origin is intentionally not modeled in
         // `ResolvedBinding`, which has no zone-tagged card variant.
         BindingValue::UnionCard { card, .. } => Some(ResolvedBinding::Card(card)),
+        // PlayedPermanent requires engine-side resolution via
+        // `Game::resolve_token_as_battle_area_top`, which is performed
+        // upstream in `resolve_binding_ref`. Reaching this arm here means a
+        // caller invoked `resolve_named` directly (without an
+        // `EffectContext`) — yield `None` so the binding is silently treated
+        // as unresolved. Production code paths route through
+        // `resolve_binding_ref`, which intercepts before this fallback.
+        BindingValue::PlayedPermanent { .. } => None,
+    }
+}
+
+/// Permissive resolver for a `bind_as` produced by a play verb. Maps a
+/// [`BindingValue::PlayedPermanent`] to whichever battle-area permanent
+/// currently *contains* the played card in its `card_sources` — top card OR
+/// digivolution card. A plain [`BindingValue::Permanent`] returns the bound
+/// handle unchanged. Other binding kinds yield `None`.
+///
+/// This is the right resolver for verbs that follow "delete the Digimon I
+/// played" / "delete that token" semantics (EX11-022 Karakurumon, EX11-061
+/// Mirai Kinosaki, P-165 ShoeShoemon — all via
+/// `schedule_delete_played_at_turn_end`). After a digivolve buries the
+/// played card under a new top, the carrier (now wrapping the played card
+/// as a digivolution card) is still the rules-correct deletion target per
+/// DCGO's `ScheduledProvenanceDeletion` precedent.
+///
+/// For verbs with the stricter "return *it*" semantics (Davis & Ken
+/// BT16-085's `return_to_hand` on the played Veemon), route through
+/// `resolve_binding_ref` instead — that resolver fizzles once the played
+/// card is no longer a battle-area top.
+pub fn resolve_played_permanent_permissive(
+    binding_name: &str,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> Option<PermanentHandle> {
+    match bindings.get(binding_name)? {
+        BindingValue::PlayedPermanent { token, .. } => {
+            match ctx.game.resolve_provenance_token(token) {
+                Some(crate::trigger_context::EventSubject::Permanent(h)) => Some(h),
+                _ => None,
+            }
+        }
+        BindingValue::Permanent(h) => Some(h),
+        _ => None,
     }
 }
 

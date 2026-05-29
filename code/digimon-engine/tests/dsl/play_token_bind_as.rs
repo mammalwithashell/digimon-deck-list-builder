@@ -61,9 +61,15 @@ fn play_token_binds_created_handle() {
         "battle area should gain a token permanent"
     );
 
-    // The binding "tok" must resolve to the token permanent.
-    let tok_handle = bindings
-        .get_permanent("tok")
+    // The binding "tok" must resolve to the token permanent. Post-change
+    // `fix-played-binding-uses-provenance`, play-verb `bind_as` stores
+    // `BindingValue::PlayedPermanent { token, fallback }` rather than
+    // positional `Permanent`. The diagnostic getter `get_played_permanent`
+    // returns the `(token, fallback)` pair; the fallback handle is the slot
+    // the play landed in (matches the token's resolved handle since the
+    // token is still a battle-area top here).
+    let (_token, tok_handle) = bindings
+        .get_played_permanent("tok")
         .expect("bind_as should have inserted the token handle under \"tok\"");
 
     // The CannotAttack modifier must be on the token — proving the handle

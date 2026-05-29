@@ -4310,6 +4310,48 @@ impl Game {
         None
     }
 
+    /// Strict variant of [`resolve_provenance_token`] for "is this played card
+    /// still a Digimon on the battle area?" identity checks.
+    ///
+    /// Returns `Some(handle)` only when the card identified by `token` is
+    /// currently the **top card** of a battle-area permanent. Yields `None` if
+    /// the card is a digivolution card under a different top, has been removed
+    /// from play, or is in any other zone (hand, trash, security, deck,
+    /// linked_cards, reveal).
+    ///
+    /// This is the resolution semantic required by play-verb `bind_as`
+    /// bindings ([`crate::dsl_cards::bindings::BindingValue::PlayedPermanent`])
+    /// consumed by `return_to_hand` and friends after a `schedule_delayed`
+    /// boundary. The permissive [`resolve_provenance_token`] — which returns
+    /// `Permanent(handle)` for *any* card in *any* permanent's `card_sources` —
+    /// matches DCGO's `IsPermanentExistsOnBattleArea(selectedPermanent)` only
+    /// for the specific case where the played card is still the carrier's top;
+    /// once the played card became a digivolution card the original
+    /// `Permanent` object would have been replaced and the check would fail.
+    ///
+    /// See change `fix-played-binding-uses-provenance` for the cross-engine
+    /// rationale and the BT16-085 + Paildramon scenario this exists to handle.
+    pub fn resolve_token_as_battle_area_top(
+        &self,
+        token: crate::trigger_context::ProvenanceToken,
+    ) -> Option<PermanentHandle> {
+        if token.0 > u16::MAX as u64 {
+            return None;
+        }
+        let target_index = token.0 as u16;
+        for (player_index, player) in self.players.iter().enumerate() {
+            for (index, permanent) in player.battle_area.iter().enumerate() {
+                if permanent.top_card().card_index == target_index {
+                    return Some(PermanentHandle {
+                        player: player_index as crate::enums::PlayerId,
+                        index: index as u8,
+                    });
+                }
+            }
+        }
+        None
+    }
+
     // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───
 
     /// Sum of static `dp_modifier` values from a single source's effects
@@ -4605,5 +4647,135 @@ mod current_attacker_tests {
         assert!(r.game.opponent_sourced_mutation(a));
 
         r.game.set_effect_source_player_for_test(None);
+    }
+}
+
+#[cfg(test)]
+mod resolve_token_as_battle_area_top_tests {
+    //! Tests for the strict provenance resolver introduced by change
+    //! `fix-played-binding-uses-provenance`.
+
+    use crate::card_data::CardData;
+    use crate::card_source::CardSource;
+    use crate::debug_runner::DebugRunner;
+    use crate::enums::{CardColor, CardKind};
+    use crate::trigger_context::ProvenanceToken;
+
+    fn lv3_card(id: &str) -> CardData {
+        CardData {
+            card_id: id.to_string(),
+            card_name: id.to_string(),
+            card_kind: CardKind::Digimon,
+            level: Some(3),
+            dp: Some(2000),
+            play_cost: 3,
+            colors: vec![CardColor::Blue],
+            traits: Vec::new(),
+            evo_costs: Vec::new(),
+            dna_costs: Vec::new(),
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            security_text: String::new(),
+            keywords: Vec::new(),
+            effect_class_name: id.replace('-', "_"),
+            index: 0,
+            norm_id: 0.0,
+            dual: None,
+            ace_overflow: None,
+            digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
+        }
+    }
+
+    fn lv4_card(id: &str) -> CardData {
+        let mut c = lv3_card(id);
+        c.level = Some(4);
+        c.dp = Some(4000);
+        c.play_cost = 5;
+        c
+    }
+
+    #[test]
+    fn case_a_played_card_is_battle_area_top_resolves_to_handle() {
+        let mut r = DebugRunner::builder().add_card(lv3_card("VEEMON")).start();
+        let veemon = r.place_on_field(0, "VEEMON", None);
+        let card_index = r.game.players[0].battle_area[veemon.index as usize]
+            .top_card()
+            .card_index;
+        let token = ProvenanceToken(card_index as u64);
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(token),
+            Some(veemon),
+            "played card is the battle-area top — resolver yields its handle"
+        );
+    }
+
+    #[test]
+    fn case_b_played_card_buried_under_new_top_fizzles() {
+        let mut r = DebugRunner::builder()
+            .add_card(lv3_card("VEEMON"))
+            .add_card(lv4_card("EXVEEMON"))
+            .start();
+        let veemon = r.place_on_field(0, "VEEMON", None);
+        let veemon_card_index = r.game.players[0].battle_area[veemon.index as usize]
+            .top_card()
+            .card_index;
+
+        // Push ExVeemon as the new top card directly. The Veemon CardSource
+        // becomes a digivolution card under ExVeemon.
+        let exveemon_data_index = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "EXVEEMON")
+            .expect("EXVEEMON registered");
+        let next_idx = r.game.next_card_index();
+        let exveemon_source = CardSource::new(exveemon_data_index, 0, next_idx);
+        r.game.players[0].battle_area[veemon.index as usize]
+            .card_sources
+            .push(exveemon_source);
+
+        let token = ProvenanceToken(veemon_card_index as u64);
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(token),
+            None,
+            "played Veemon is now a digivolution card under ExVeemon — strict resolver fizzles"
+        );
+    }
+
+    #[test]
+    fn case_c_played_card_in_trash_fizzles() {
+        let mut r = DebugRunner::builder().add_card(lv3_card("VEEMON")).start();
+        let veemon_data_index = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "VEEMON")
+            .expect("VEEMON registered");
+        let next_idx = r.game.next_card_index();
+        let veemon_source = CardSource::new(veemon_data_index, 0, next_idx);
+        let card_index = veemon_source.card_index;
+        r.game.players[0].trash.push(veemon_source);
+
+        let token = ProvenanceToken(card_index as u64);
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(token),
+            None,
+            "played card is in trash — strict resolver fizzles"
+        );
+    }
+
+    #[test]
+    fn case_d_token_does_not_resolve_anywhere_yields_none() {
+        let r = DebugRunner::builder().add_card(lv3_card("VEEMON")).start();
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(ProvenanceToken(99_999)),
+            None
+        );
+        assert_eq!(
+            r.game.resolve_token_as_battle_area_top(ProvenanceToken(12345)),
+            None,
+            "unknown card index yields None"
+        );
     }
 }
