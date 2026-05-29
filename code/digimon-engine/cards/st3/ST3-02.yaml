@@ -1,0 +1,14 @@
+card: ST3-02
+name: Salamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 2
+dp: 3000
+traits: [Mammal]
+form: Rookie
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0

@@ -1721,6 +1721,8 @@ impl<'a> EffectContext<'a> {
                     player: target_player,
                     index: target_index,
                 };
+                let previous_effect_source = game.effect_source_player;
+                game.effect_source_player = Some(controller);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1730,6 +1732,7 @@ impl<'a> EffectContext<'a> {
                     override_pin,
                 );
                 user_callback(&mut ctx, h);
+                ctx.game.effect_source_player = previous_effect_source;
             }),
             on_decline: None,
         });

@@ -298,6 +298,30 @@ impl Game {
         total
     }
 
+    /// Sum defender-side adjustments for that player's own Security Digimon.
+    pub fn defender_security_dp_adjustment(&self, defender: PlayerId) -> i32 {
+        let mut total: i32 = self
+            .modifiers
+            .player_modifiers_iter(defender)
+            .filter(|entry| entry.modifier == ModifierType::SecurityDpChange)
+            .map(|entry| entry.value)
+            .sum();
+        for perm in &self.player(defender).battle_area {
+            for source in &perm.card_sources {
+                let card_id = source.card_id(&self.card_data);
+                let Some(effects) = self.effects_for_card(card_id, source.handle()) else {
+                    continue;
+                };
+                for effect in &effects {
+                    if effect.applies_to_own_security_dp {
+                        total = total.saturating_add(effect.dp_modifier);
+                    }
+                }
+            }
+        }
+        total
+    }
+
     /// Check whether a permanent can attack right now (atomic — ignores interrupts).
     ///
     /// `vortex` — pass `true` when the attack is invoked via the <Vortex>
@@ -2729,7 +2753,10 @@ impl Game {
                                 // §2.5e: attacker's inherited stack may carry
                                 // "+N DP when attacking security" modifiers.
                                 let sec_dp = raw_sec_dp
-                                    .saturating_add(self.attacker_security_dp_adjustment(attacker));
+                                    .saturating_add(self.attacker_security_dp_adjustment(attacker))
+                                    .saturating_add(
+                                        self.defender_security_dp_adjustment(state.defender),
+                                    );
                                 // RULES_CONTEXT 14-2-1-3: "Same DP = both lose."
                                 // The attacker is deleted when it has STRICTLY LESS
                                 // OR EQUAL DP to the security Digimon. Per 14-2-3 the

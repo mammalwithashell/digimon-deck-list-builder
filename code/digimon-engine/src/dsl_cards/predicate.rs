@@ -1269,6 +1269,30 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = &pred.event_target_dp_eq {
+        let Some(dp) = event_target_dp(rctx) else {
+            return false;
+        };
+        if dp != eval_int_constraint(want, rctx, None, None) {
+            return false;
+        }
+    }
+    if let Some(max) = &pred.event_target_dp_lte {
+        let Some(dp) = event_target_dp(rctx) else {
+            return false;
+        };
+        if dp > eval_int_constraint(max, rctx, None, None) {
+            return false;
+        }
+    }
+    if let Some(min) = &pred.event_target_dp_gte {
+        let Some(dp) = event_target_dp(rctx) else {
+            return false;
+        };
+        if dp < eval_int_constraint(min, rctx, None, None) {
+            return false;
+        }
+    }
     if let Some(ref needle) = pred.event_target_name_contains {
         // G-EVENT-TARGET-NAME-CONTAINS: case-insensitive substring scan
         // against the event-target permanent's card name (the digivolving /
@@ -1743,6 +1767,26 @@ fn event_target_level(rctx: &EffectReadContext<'_>) -> Option<u8> {
     rctx.game
         .card_data_for_handle(card)
         .and_then(|data| data.level)
+}
+
+fn event_target_dp(rctx: &EffectReadContext<'_>) -> Option<i32> {
+    let trigger = rctx.game.current_trigger_context.as_ref()?;
+    if let Some(snapshot) = trigger.deleted_object.as_ref() {
+        return snapshot.dp_just_before;
+    }
+    if let Some(handle) = trigger
+        .event_permanent
+        .or(trigger.event_host_permanent)
+        .or(trigger.target_permanent)
+    {
+        return rctx.game.effective_dp(handle);
+    }
+    if let Some(change) = trigger.attack_target_change.as_ref() {
+        if let AttackTarget::Digimon(handle) = change.new_target {
+            return rctx.game.effective_dp(handle);
+        }
+    }
+    None
 }
 
 fn event_target_same_level_as_previous(rctx: &EffectReadContext<'_>) -> Option<bool> {
