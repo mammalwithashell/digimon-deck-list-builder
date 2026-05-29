@@ -6232,17 +6232,45 @@ impl<'a> EffectContext<'a> {
     /// cards consuming this primitive bind the moved set as an ordered set
     /// for downstream predicates rather than per-card observation. Treated
     /// as a bulk move; per-card observer fan-out can land as a follow-up.
+    /// Route a card returned "to the deck" to the rules-correct deck. A
+    /// Digi-Egg can NEVER enter the main deck (Comprehensive Rules), so it is
+    /// sent to the Digi-Egg (digitama) deck instead — which still satisfies a
+    /// "send N to the bottom of the deck" cost (judge-quiz Q22). The card
+    /// returns to its OWNER's deck. `to_bottom` selects the bottom (index 0)
+    /// vs the top (`Vec` end, drawn first). G-RETURN-TRASH-DIGI-EGG-ROUTING.
+    ///
+    /// NOTE (audit pending): the permanent-stack returns
+    /// (`Game::return_to_deck` / `return_stack_to_deck`) and reveal-zone returns
+    /// share the same Digi-Egg rule for any egg in a returned digivolution
+    /// stack; those live on a different (game.rs) path and are out of scope for
+    /// this trash→deck fix.
+    fn move_card_to_deck(&mut self, card: crate::card_source::CardSource, to_bottom: bool) {
+        let owner = card.owner;
+        let is_egg = card.card_kind(&self.game.card_data) == CardKind::DigiEgg;
+        let player = self.game.player_mut(owner);
+        let deck = if is_egg {
+            &mut player.digitama_deck
+        } else {
+            &mut player.deck
+        };
+        if to_bottom {
+            deck.insert(0, card);
+        } else {
+            deck.push(card);
+        }
+    }
+
     pub fn return_all_trash_to_deck_bottom(&mut self, player: PlayerId) -> Vec<CardHandle> {
         // Drain trash in order. Each card is appended to the start of its
         // owner's deck (deck bottom = index 0 by convention; deck top =
-        // Vec end, the position drawn from first).
+        // Vec end, the position drawn from first). Digi-Eggs route to the
+        // digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING).
         let drained: Vec<crate::card_source::CardSource> =
             std::mem::take(&mut self.game.player_mut(player).trash);
         let mut handles = Vec::with_capacity(drained.len());
         for card in drained {
             handles.push(card.handle());
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.insert(0, card);
+            self.move_card_to_deck(card, true);
         }
         handles
     }
@@ -6271,8 +6299,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.insert(0, card);
+            self.move_card_to_deck(card, true);
             moved.push(handle);
         }
         moved
@@ -6305,8 +6332,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.push(card);
+            self.move_card_to_deck(card, false);
             moved.push(handle);
         }
         // `moved` was built in reverse; restore selection order for callers.
@@ -6336,9 +6362,9 @@ impl<'a> EffectContext<'a> {
             return false;
         };
         let removed = self.game.player_mut(player).trash.remove(pos);
-        let owner = removed.owner;
-        // Deck top = Vec end (drawn first) per engine convention.
-        self.game.player_mut(owner).deck.push(removed);
+        // Deck top = Vec end (drawn first) per engine convention; a Digi-Egg
+        // routes to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING).
+        self.move_card_to_deck(removed, false);
         true
     }
 

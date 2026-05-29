@@ -68,12 +68,11 @@ fn push_to_trash(runner: &mut DebugRunner, p: u8, card_id: &str) -> CardHandle {
 // qa/archetype-qa/engine-gaps.md as G-RETURN-TRASH-DIGI-EGG-ROUTING.
 
 /// Q22 core rule — a Digi-Egg returned "to the bottom of the deck" must route to
-/// the digitama deck. CONFIRMED FAILING against current engine (digitama_deck
-/// stays empty; the egg lands in the main deck). `#[ignore]`-d citing the logged
-/// gap so the suite stays green; un-ignore when G-RETURN-TRASH-DIGI-EGG-ROUTING
-/// is fixed.
+/// the digitama deck. RESOLVED 2026-05-29 (G-RETURN-TRASH-DIGI-EGG-ROUTING,
+/// change `fix-judge-quiz-engine-gaps`): `return_trash_cards_to_deck_bottom` now
+/// routes through `EffectContext::move_card_to_deck`, which sends a
+/// `CardKind::DigiEgg` to the digitama deck instead of the main deck.
 #[test]
-#[ignore = "DISCOVERED BUG (proven failing 2026-05-29): return_trash_cards_to_deck_bottom (effect_context/mod.rs:5554) inserts Digi-Eggs into the MAIN deck — no digitama routing. Logged G-RETURN-TRASH-DIGI-EGG-ROUTING in qa/archetype-qa/engine-gaps.md. Un-ignore when fixed."]
 fn q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX8-005")
@@ -112,6 +111,41 @@ fn q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck() {
         runner.game.player(0).digitama_deck.len(),
         1,
         "a Digi-Egg returned to the bottom of the deck must route to the \
+         digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING)"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "the Digi-Egg must NOT be inserted into the main deck"
+    );
+}
+
+/// Regression sibling — the deck-TOP return verb must apply the same Digi-Egg
+/// routing (`return_trash_cards_to_deck_top` → digitama deck, not main deck).
+#[test]
+fn digi_egg_returned_to_deck_top_routes_to_digitama_deck() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX8-005")
+        .expect("EX8-005 (Tumblemon, kind: digi_egg) loads")
+        .add_card(make_test_card("SRC", "Src"))
+        .memory(10)
+        .start();
+
+    let src = runner.place_on_field(0, "SRC", None);
+    let src_card = runner.game.player(0).battle_area[0].top_card().handle();
+
+    let egg_handle = push_to_trash(&mut runner, 0, "EX8-005");
+    let deck_before = runner.deck_size(0);
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, Some(src), 0);
+        ctx.return_trash_cards_to_deck_top(0, &[egg_handle]);
+    }
+
+    assert_eq!(
+        runner.game.player(0).digitama_deck.len(),
+        1,
+        "a Digi-Egg returned to the TOP of the deck must also route to the \
          digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING)"
     );
     assert_eq!(

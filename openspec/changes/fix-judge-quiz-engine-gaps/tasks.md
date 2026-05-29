@@ -1,11 +1,11 @@
-## 1. Gap 2 — Digi-Egg routing on return-to-deck (smallest, isolated)
+## 1. Gap 2 — Digi-Egg routing on return-to-deck (smallest, isolated) — DONE 2026-05-29
 
-- [ ] 1.1 Confirm the failing test: `cargo test --test judge_quiz q22` shows `q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` failing (digitama empty)
-- [ ] 1.2 Add a private `move_card_to_deck(player, card, position)` helper in `effect_context/mod.rs` (or `game.rs`) routing `CardKind::DigiEgg` → `digitama_deck` (bottom = `insert(0)`, top = `push`), everything else → `deck`
-- [ ] 1.3 Re-point `return_trash_cards_to_deck_bottom` (mod.rs:5538) and `return_trash_cards_to_deck_top` (mod.rs:5570) through the helper; grep for any other trash→deck / bounce→deck movers and route them too
-- [ ] 1.4 Confirm the `moved` Vec still counts the routed card (dependent costs unaffected)
-- [ ] 1.5 Un-ignore the Q22 test; add a focused regression test for `_to_deck_top` with a Digi-Egg; both pass
-- [ ] 1.6 Run `cargo test --test judge_quiz` + `--test deletion_batching` green
+- [x] 1.1 Confirmed the failing test (was `#[ignore]`-d as proven-failing): Q22 digitama empty pre-fix.
+- [x] 1.2 Added private `EffectContext::move_card_to_deck(card, to_bottom)` (`effect_context/mod.rs`) routing `CardKind::DigiEgg` → `digitama_deck` (bottom = `insert(0)`, top = `push`), everything else → `deck`. Returns to the card's OWNER's deck.
+- [x] 1.3 Re-pointed all four trash→deck movers through it: `return_all_trash_to_deck_bottom`, `return_trash_cards_to_deck_bottom`, `return_trash_cards_to_deck_top`, `move_trash_card_to_deck_top`. Permanent-stack returns (`Game::return_to_deck`/`return_stack_to_deck`) + reveal-zone returns share the rule but live on a separate game.rs path — noted as audit-pending in the helper doc (out of scope for this trash→deck fix).
+- [x] 1.4 The `moved`/`handles` Vec is unchanged (built before the move), so dependent costs (Medusamon "return 2") stay satisfied.
+- [x] 1.5 Un-ignored Q22 (`q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck`); added the deck-TOP regression `digi_egg_returned_to_deck_top_routes_to_digitama_deck`; both pass.
+- [x] 1.6 `cargo test --test judge_quiz` (7 pass / 29 ignored), `--test deletion_batching` (7 pass), `--test dsl zone_movement`/`return` (green) — no regressions.
 
 ## 2. Gap 1 — general state-based ≤0-DP rules-check (highest impact)
 

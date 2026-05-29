@@ -27,13 +27,9 @@ Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' ru
 - **Scope / unverified sibling:** confirmed for the `on_digivolution_card_trashed` path (Q23). Q21 uses the `[On Deletion]` path (Eyesmon: Scatter Mode replayed from trash by Back for Revenge!) — a DIFFERENT dispatch (OnDeletion, CLAUDE.md §25 post-trash contract); whether IT defers + re-checks remain-in-trash needs separate verification once BT7-069/BT3-109 are authored.
 - **Blocks (judge-quiz):** Q23 (confirmed), Q21 (probable — pending OnDeletion-path verification).
 
-### §Return-trash-to-deck-bottom ignores Digi-Egg routing (G-RETURN-TRASH-DIGI-EGG-ROUTING)
-
-- **First seen:** 2026-05-29, judge-quiz Q22 (Proganomon EX8-051 `[Fragment]` → Medusamon BT24-017 "return 2 from trash to bottom of deck → play 2 Petrification tokens"; the returned cards are Tumblemon EX8-005, `kind: digi_egg`).
-- **Symptom / proof:** test `q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` ([`code/digimon-engine/tests/judge_quiz/f_token_and_memory.rs`](../../code/digimon-engine/tests/judge_quiz/f_token_and_memory.rs)) fails: after returning a `DigiEgg` card from trash, `player.digitama_deck.len() == 0` (expected 1) and the egg lands in the main `deck`. Currently `#[ignore]`-d citing this entry to keep the suite green.
-- **Root cause:** [`EffectContext::return_trash_cards_to_deck_bottom`](../../code/digimon-engine/src/effect_context/mod.rs) (mod.rs:5554-5556) unconditionally does `self.game.player_mut(owner).deck.insert(0, card)` for every returned card — no `CardKind::DigiEgg` branch. Per the comprehensive rules, a Digi-Egg can never enter the main deck; "return to the bottom of the deck" routes it to the bottom of the Digi-Egg (digitama) deck instead. The judge ruling (Q22) confirms this still satisfies a "send N to the bottom of the deck" cost.
-- **Fix shape:** in `return_trash_cards_to_deck_bottom` (and audit the sibling `return_trash_cards_to_deck_top` + any other "to deck" movers), branch on `card.card_kind(&card_data) == CardKind::DigiEgg` → `digitama_deck.insert(0, card)` (bottom convention: index 0) instead of `deck`. The returned `moved` Vec still counts the card so dependent costs (Medusamon's "return 2") remain satisfied. DCGO reference: Digi-Egg cards have a dedicated `DigitamaDeck` move path. Small, well-scoped; shared primitive (used by BT24-017 and others) so verify call sites — but routing a Digi-Egg to the egg deck is universally correct (a Digi-Egg in the main deck is always illegal).
-- **Related (same area, not yet verified):** judge-quiz Q23 hinges on the "must remain in trash to resolve" gating of an inherited `on_digivolution_card_trashed` gain-memory (Tumblemon EX8-005) after 2 of 3 are returned — interacts with this same return verb; audit pending.
+<!-- §Return-trash-to-deck-bottom ignores Digi-Egg routing (G-RETURN-TRASH-DIGI-EGG-ROUTING)
+     RESOLVED 2026-05-29 by change `fix-judge-quiz-engine-gaps` (Gap 2). Full
+     resolution entry moved to qa/resolved-gaps.md. -->
 
 ## Closures (2026-05-29)
 
