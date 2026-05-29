@@ -1,0 +1,16 @@
+card: ST4-02
+name: Floramon
+kind: digimon
+level: 3
+color: [green]
+cost: 2
+dp: 4000
+traits: [Vegetation]
+form: Rookie
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+
+effects: []

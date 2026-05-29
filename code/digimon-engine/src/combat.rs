@@ -265,7 +265,9 @@ impl Game {
             })
             .map(|entry| entry.value)
             .sum();
-        let bonus = change_dp_sum + self.dynamic_dp_aura_bonus(handle);
+        let bonus = change_dp_sum
+            + self.static_self_dp_aura_bonus(handle)
+            + self.dynamic_dp_aura_bonus(handle);
         Some(base + bonus)
     }
 
@@ -3346,22 +3348,12 @@ impl Game {
             AttackResult::DefenderWins
         } else {
             // Tie — both are deleted. Delete in order: defender first to match
-            // DCGO convention, but both need OnDeletion to fire.
-            // Since the second deletion can shift indices, re-resolve via card_index
-            // to be safe: we use the handles directly since delete_permanent_with_effects
-            // reads the top card's card_index before deletion.
-            self.delete_permanent_with_cause(
-                defender,
+            // DCGO convention, with both bodies leaving as one batch before
+            // global OnAnyDeletion observers check survivor state.
+            self.delete_permanents_batch(
+                vec![defender, attacker],
                 crate::replacement::ReplacementCause::Battle,
             );
-            // After deleting defender, attacker's own handle index is unchanged
-            // (different player's battle_area), so the attacker handle is still valid.
-            if self.handle_valid(attacker) {
-                self.delete_permanent_with_cause(
-                    attacker,
-                    crate::replacement::ReplacementCause::Battle,
-                );
-            }
             AttackResult::MutualDestruction
         };
 

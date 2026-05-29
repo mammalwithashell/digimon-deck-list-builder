@@ -3556,6 +3556,48 @@ impl Game {
         self.live_declarative_formula_sum(target, false).0
     }
 
+    pub fn static_self_dp_aura_bonus(&self, target: crate::permanent::PermanentHandle) -> i32 {
+        use crate::effect_context::EffectReadContext;
+
+        let Some(perm) = self
+            .players
+            .get(target.player as usize)
+            .and_then(|p| p.battle_area.get(target.index as usize))
+        else {
+            return 0;
+        };
+
+        let stack_size = perm.card_sources.len();
+        let mut total = 0;
+        for (source_index, source) in perm.card_sources.iter().enumerate() {
+            let inherited_source = source_index + 1 < stack_size;
+            let card_id = source.card_id(&self.card_data).to_string();
+            let Some(effects) = self.effects_for_card(&card_id, source.handle()) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative
+                    || effect.materializes_declarative_state
+                    || effect.dp_modifier == 0
+                    || effect.dp_modifier_fn.is_some()
+                    || effect.applies_to_opponent_security_dp
+                    || effect.inherited != inherited_source
+                {
+                    continue;
+                }
+                let ctx =
+                    EffectReadContext::new(self, source.handle(), Some(target), target.player);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&ctx) {
+                        continue;
+                    }
+                }
+                total += effect.dp_modifier;
+            }
+        }
+        total
+    }
+
     pub fn dynamic_security_attack_aura_bonus(
         &self,
         target: crate::permanent::PermanentHandle,

@@ -1,0 +1,24 @@
+card: ST4-14
+name: Izzy Izumi
+kind: tamer
+color: [green]
+cost: 2
+
+effects:
+  - when: on_suspend
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - source_is_unsuspended: true
+    summary: "[Your Turn][OPT] When an opponent Digimon becomes suspended, suspend this Tamer to gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

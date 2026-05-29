@@ -351,6 +351,7 @@ pub struct CompiledPredicate {
     /// The triggering event card must have exactly this many distinct colors.
     pub event_card_color_count: Option<u8>,
     pub event_permanent_is_source: Option<bool>,
+    pub source_deleted_battle_opponent: Option<bool>,
     pub event_host_permanent_is_source: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
     pub event_target_same_level_as_previous: Option<bool>,

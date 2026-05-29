@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-23
+Last updated: 2026-05-29
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,22 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## ST4-11 battle-opponent survivor predicate — 2026-05-29
+
+- **G-DSL-SOURCE-DELETED-BATTLE-OPPONENT** — `source_deleted_battle_opponent`
+  is now available as a reusable predicate leaf for inherited effects that care
+  about the carrier deleting its direct battle opponent and surviving the
+  battle. Evaluation checks the trigger target, `BattleDeletion` cause, the
+  source permanent still being live, and `battle_opponent_of(source)`.
+- **Mutual deletion support:** equal-DP battle deletion now uses a batch
+  deletion for attacker and defender, so survivor predicates see both permanents
+  gone before trigger conditions are evaluated.
+- **Driver:** ST4-11 MegaKabuterimon can trash the opponent's top security card
+  once per turn only when its carrier deletes the battle opponent and remains in
+  play. Unrelated battles, mutual destruction, and non-battle deletion do not
+  satisfy the predicate.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl source_deleted_battle_opponent -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral st4 -- --nocapture`.
 
 ## Rocks EX10-034 grant-triggered binding closure — 2026-05-23
 

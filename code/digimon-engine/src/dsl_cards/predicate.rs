@@ -1338,6 +1338,12 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.source_deleted_battle_opponent {
+        let actual = source_deleted_battle_opponent(rctx);
+        if actual != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_host_permanent_is_source {
         let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
             return false;
@@ -1609,6 +1615,35 @@ fn permanent_for_handle<'a>(
         .player(handle.player)
         .battle_area
         .get(handle.index as usize)
+}
+
+fn source_deleted_battle_opponent(rctx: &EffectReadContext<'_>) -> bool {
+    let Some(source) = rctx.source_permanent else {
+        return false;
+    };
+    let Some(source_perm) = permanent_for_handle(rctx, source) else {
+        return false;
+    };
+    if !source_perm
+        .card_sources
+        .iter()
+        .any(|card| card.handle() == rctx.source_card)
+    {
+        return false;
+    }
+    let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
+        return false;
+    };
+    if trigger.cause != Some(crate::trigger_context::EventCause::BattleDeletion) {
+        return false;
+    }
+    let Some(event_permanent) = trigger.event_permanent.or(trigger.target_permanent) else {
+        return false;
+    };
+    let Some(opponent) = rctx.battle_opponent_of(source) else {
+        return false;
+    };
+    event_permanent == opponent
 }
 
 fn event_target_owner(rctx: &EffectReadContext<'_>) -> Option<PlayerId> {
