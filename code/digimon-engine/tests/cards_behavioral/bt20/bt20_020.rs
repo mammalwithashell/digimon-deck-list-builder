@@ -266,6 +266,7 @@ fn bt20_020_clause2_has_two_cannot_play_modifiers() {
                 target_player,
                 modifier,
                 expiry,
+                ..
             } => Some((target_player, modifier.as_str(), expiry.as_str())),
             _ => None,
         })

@@ -256,6 +256,9 @@ pub struct Effect {
     /// inherited effects like "This Digimon gains +3000 DP when attacking
     /// security". Set by `.applies_to_opponent_security_dp()`.
     pub applies_to_opponent_security_dp: bool,
+    /// Defender-side security-DP adjustment for effects that modify the
+    /// controller's own Security Digimon during security DP battles.
+    pub applies_to_own_security_dp: bool,
 
     /// Replacement-effect process closure — wired for "Would*" timings in
     /// Phase 7. Receives a `ReplacementContext` so the process can mutate
@@ -677,6 +680,7 @@ impl EffectBuilder {
                 granted_keyword: None,
                 overclock_cost_filter: None,
                 applies_to_opponent_security_dp: false,
+                applies_to_own_security_dp: false,
                 replacement_process: None,
                 option_main: false,
                 option_color_requirement_bypass: None,
@@ -908,6 +912,11 @@ impl EffectBuilder {
     /// contributions.
     pub fn applies_to_opponent_security_dp(mut self) -> Self {
         self.inner.applies_to_opponent_security_dp = true;
+        self
+    }
+
+    pub fn applies_to_own_security_dp(mut self) -> Self {
+        self.inner.applies_to_own_security_dp = true;
         self
     }
 

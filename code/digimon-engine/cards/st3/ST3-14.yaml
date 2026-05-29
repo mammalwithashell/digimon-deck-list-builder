@@ -1,0 +1,19 @@
+card: ST3-14
+name: Heaven's Charm
+kind: option
+color: [yellow]
+cost: 2
+effects:
+  - when: main_from_hand
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -2000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -2000
+          expiry: end_of_turn
+  - when: on_security
+    process:
+      - add_this_option_to_hand: {}
