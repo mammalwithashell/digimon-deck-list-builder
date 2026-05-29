@@ -693,6 +693,7 @@ fn compile_predicate(
         opponents_turn: p.opponents_turn,
         all_turns: p.all_turns,
         can_hatch: p.can_hatch.map(compile_player_ref),
+        digimon_attacked_this_turn: p.digimon_attacked_this_turn.map(compile_player_ref),
         in_breeding: p.in_breeding,
         on_field: p.on_field,
         dna_origin: p.dna_origin,

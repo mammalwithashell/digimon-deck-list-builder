@@ -256,7 +256,16 @@ pub fn lower(
         builder = builder.inherited();
     }
     if let Some(aw) = active_when.clone() {
-        builder = builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
+        builder = builder.condition(move |rctx| {
+            let subject = if is_self_aura {
+                rctx.source_permanent
+                    .map(PredicateSubject::Permanent)
+                    .unwrap_or(PredicateSubject::None)
+            } else {
+                PredicateSubject::None
+            };
+            eval_predicate(&aw, rctx, subject)
+        });
     }
 
     if is_self_aura && target_player.is_none() && modifier.is_none() && security_attack.is_none() {

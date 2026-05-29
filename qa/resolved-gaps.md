@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-23
+Last updated: 2026-05-29
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,34 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## ST5 Machine Black attack-history and blocker-context closure — 2026-05-29
+
+- **G-DSL-DIGIMON-ATTACKED-THIS-TURN-PREDICATE** — `digimon_attacked_this_turn:
+  you|opponent` now parses, compiles, and evaluates against authoritative
+  per-player Digimon attack counters in `Game`, with counters reset at the start
+  of that player's turn. ST5-04 ToyAgumon and ST5-06 Greymon consume the
+  predicate under normal DSL negation for their inherited
+  end-of-opponent's-turn draw clauses.
+- **Blocker target-change context:** the existing
+  `on_attack_target_change` timing plus `attack_target_change_reason: blocker`
+  and `event_target_owner` predicates can faithfully distinguish a Blocker
+  redirect for ST5-14 Tai Kamiya. The blocker declaration path now suspends the
+  declared blocker before emitting the target-change event, so Tai's response can
+  suspend itself as cost and unsuspend the Digimon that blocked through normal
+  pending selections. No action-space or tensor contract changes were required.
+- **Driver:** ST5-01 through ST5-16 production YAML and focused tests landed,
+  including the exact ST-5 Machine Black starter deck and implemented-card
+  registry smoke coverage.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml
+  --test cards_behavioral st5 -- --nocapture`; `cargo test --manifest-path
+  code/digimon-engine/Cargo.toml --test dsl attack_history_predicate --
+  --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml
+  --test combat blocker -- --nocapture`; `cargo test --manifest-path
+  code/digimon-engine/Cargo.toml --test dsl security -- --nocapture`;
+  `CARGO_INCREMENTAL=0 cargo test --manifest-path code/digimon-dsl/Cargo.toml`;
+  `python -m pytest code/tests/test_rust_bindings_surface.py -k
+  "st5_machine_black or complete_st5" -q`.
 
 ## Rocks EX10-034 grant-triggered binding closure — 2026-05-23
 

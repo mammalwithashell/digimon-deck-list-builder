@@ -1,0 +1,17 @@
+card: ST5-05
+name: Commandramon
+kind: digimon
+level: 3
+color: [black]
+cost: 4
+dp: 5000
+traits: [Cyborg, D-Brigade]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects: []

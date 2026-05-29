@@ -273,6 +273,21 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(player_ref) = pred.digimon_attacked_this_turn {
+        let attacked = resolve_predicate_players(player_ref, rctx)
+            .into_iter()
+            .any(|player| {
+                rctx.game
+                    .digimon_attacks_this_turn
+                    .get(player as usize)
+                    .copied()
+                    .unwrap_or(0)
+                    > 0
+            });
+        if !attacked {
+            return false;
+        }
+    }
     if let Some(want) = pred.dna_origin {
         if rctx.dna_origin() != want {
             return false;

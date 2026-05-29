@@ -1,0 +1,36 @@
+card: ST5-12
+name: Machinedramon
+kind: digimon
+level: 6
+color: [black]
+cost: 10
+dp: 11000
+traits: [Machine]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Up to 2 of your Digimon gain Reboot until the end of your opponent's turn"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: battle_area
+          max: 2
+          filter: { kind: digimon }
+          bind_as: reboot_targets
+          prompt: "Choose up to 2 of your Digimon to gain Reboot"
+          optional_zero: true
+      - per_selected:
+          selection: reboot_targets
+          bind_as: reboot_target
+          body:
+            - grant_keyword:
+                target: reboot_target
+                keyword: Reboot
+                expiry: end_of_opponents_turn
