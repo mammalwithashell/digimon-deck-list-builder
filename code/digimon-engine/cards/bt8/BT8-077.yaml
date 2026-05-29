@@ -1,0 +1,21 @@
+card: BT8-077
+name: BlackGatomon
+kind: digimon
+level: 4
+color: [purple, yellow]
+cost: 5
+dp: 6000
+traits: [Dark Animal]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation

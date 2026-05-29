@@ -35,6 +35,18 @@ fn parse_leaf_predicates() {
         p.name_not_shared_by_field_digimon.map(|s| s.player()),
         Some(PlayerRef::You)
     );
+
+    let p = parse("name_not_shared_by_field_tamer: { of: you }");
+    assert_eq!(
+        p.name_not_shared_by_field_tamer.map(|s| s.player()),
+        Some(PlayerRef::You)
+    );
+
+    let p = parse("self_digivolution_sources_color_has: yellow");
+    assert_eq!(
+        p.self_digivolution_sources_color_has,
+        Some(digimon_engine::dsl::spec::ColorSpec::Yellow)
+    );
 }
 
 #[test]

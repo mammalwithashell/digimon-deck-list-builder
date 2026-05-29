@@ -1,0 +1,100 @@
+card: P-187
+name: Mastemon
+kind: digimon
+level: 6
+color: [purple, yellow]
+cost: 13
+dp: 13000
+traits: [Angel]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, color_is: purple }
+      - { level_eq: 5, color_is: yellow }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Recovery +1; if DNA, place another Digimon/Tamer as top or bottom security to trash opponent top security"
+    process:
+      - recover: { of: you, count: 1 }
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_any_permanent:
+                bind_as: security_cost_target
+                filter:
+                  all_of:
+                    - other: true
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                prompt: "Place 1 other Digimon or Tamer as a security card"
+            - select_effect_choice:
+                labels: ["Top", "Bottom"]
+                bind_as: security_position
+                prompt: "Place it as the top or bottom security card?"
+            - if:
+                condition:
+                  equals: [security_position, 0]
+                then:
+                  - if_place_permanent_on_owners_security_cost:
+                      target: security_cost_target
+                      position: top
+                      face: down
+                      then:
+                        - trash_top_security: { of: opponent }
+            - if:
+                condition:
+                  equals: [security_position, 1]
+                then:
+                  - if_place_permanent_on_owners_security_cost:
+                      target: security_cost_target
+                      position: bottom
+                      face: down
+                      then:
+                        - trash_top_security: { of: opponent }
+
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    condition:
+      all_of:
+        - security_count_gte: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand, trash]
+              kind: digimon
+              dp_lte: 6000
+              any_of:
+                - color_is: purple
+                - color_is: yellow
+            n: 1
+    summary: "[When Digivolving][When Attacking][OPT] Trash your top security to play a purple/yellow Digimon with 6000 DP or less from hand or trash"
+    process:
+      - if_trash_top_security_cost:
+          of: you
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                optional: true
+                bind_as: small_digimon
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 6000
+                    - any_of:
+                        - color_is: purple
+                        - color_is: yellow
+                prompt: "Play 1 purple or yellow Digimon with 6000 DP or less from your hand or trash"
+            - play_union_bound_free:
+                binding: small_digimon
+                bind_as: small_played

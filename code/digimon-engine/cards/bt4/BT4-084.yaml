@@ -1,0 +1,36 @@
+card: BT4-084
+name: NeoDevimon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+traits: [Fallen Angel]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+
+effects:
+  - when: on_enter_field_anyone
+    active_when: { opponents_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: tamer
+    summary: "[Opponent's Turn] When an opponent plays a Tamer, gain 3 memory"
+    process:
+      - gain_memory: 3
+
+  - scope: inherited
+    when: on_suspend
+    active_when: { opponents_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: tamer
+    summary: "[Opponent's Turn] When an opponent's Tamer suspends, gain 1 memory"
+    process:
+      - gain_memory: 1

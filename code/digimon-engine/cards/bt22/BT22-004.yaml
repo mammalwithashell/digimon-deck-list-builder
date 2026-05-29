@@ -1,0 +1,35 @@
+card: BT22-004
+name: Wanyamon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Lesser, CS]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_digivolution_card_placed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When an effect places a [CS] Digimon card in this Digimon's sources, may digivolve into [CS] in hand cost -1"
+    condition:
+      all_of:
+        - event_is_effect_initiated: true
+        - event_host_permanent_is_source: true
+        - event_card_trait_has: CS
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+          prompt: "Digivolve into a [CS] Digimon card with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: { reduce: 1 }
+          ignore_requirements: false

@@ -1,0 +1,48 @@
+card: BT23-031
+name: Angewomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 6000
+traits: [Archangel, CS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: CS
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - name_contains: "LadyDevimon"
+          - name_contains: "Mirei Mikagura"
+    amount: 3
+    summary: "When played from hand, reduce play cost by 3 if you have LadyDevimon or Mirei Mikagura"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Add top security to hand; at 3 or fewer security, Recovery +1"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - recover: { of: you, count: 1 }
+
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Alliance

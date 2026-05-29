@@ -21,7 +21,8 @@ pub mod selections;
 pub mod zone_moves;
 
 use digimon_dsl::compiled::{
-    CompiledPlayerRef, CompiledStackPosition, CompiledStep, CompiledStepDiscriminant,
+    CompiledFormula, CompiledPlayerRef, CompiledStackPosition, CompiledStep,
+    CompiledStepDiscriminant,
 };
 use std::sync::Arc;
 
@@ -214,12 +215,15 @@ fn wrap_pending_selection_with_tail(
         );
     });
 
-    if let Some(original_decline) = pending.on_decline.take() {
+    if pending.is_optional {
+        let original_decline = pending.on_decline.take();
         let decline_tail = outer_tail;
         let decline_bindings = bindings;
         let decline_runtime = runtime;
         pending.on_decline = Some(Box::new(move |game: &mut Game| {
-            original_decline(game);
+            if let Some(original_decline) = original_decline {
+                original_decline(game);
+            }
             drain_or_rewrap_pending_tail(
                 game,
                 source_card,
@@ -386,6 +390,16 @@ fn run_steps_with_runtime_inner(
             }
         }
 
+        if let Some(outcome) =
+            try_run_trash_top_security_with_continuation(steps, i, ctx, bindings, runtime)
+        {
+            if matches!(outcome, RunOutcome::Parked) {
+                return RunOutcome::Parked;
+            }
+            i += 1;
+            continue;
+        }
+
         // Synchronous families — execute and advance.
         run_step_with_runtime(step, ctx, bindings, runtime);
         if ctx.game.pending_selection.is_some() {
@@ -395,6 +409,69 @@ fn run_steps_with_runtime_inner(
         i += 1;
     }
     RunOutcome::Synchronous
+}
+
+fn try_run_trash_top_security_with_continuation(
+    steps: &[CompiledStep],
+    i: usize,
+    ctx: &mut EffectContext<'_>,
+    bindings: &Bindings,
+    runtime: &StepRuntime,
+) -> Option<RunOutcome> {
+    let CompiledStep::TrashTopSecurity { of, count } = &steps[i] else {
+        return None;
+    };
+
+    let player = resolve_player(ctx, *of);
+    let n = match count {
+        None => 1,
+        Some(formula) => {
+            let target = ctx
+                .source_permanent
+                .unwrap_or(crate::permanent::PermanentHandle {
+                    player: ctx.player,
+                    index: 0,
+                });
+            crate::dsl_cards::formula_eval::evaluate(formula, ctx, target).max(0) as usize
+        }
+    };
+
+    for offset in 0..n {
+        if ctx.game.player(player).security.is_empty() {
+            break;
+        }
+        let moved = ctx.trash_top_security(player);
+        if ctx.game.pending_selection.is_some() {
+            let remaining = if moved {
+                n.saturating_sub(offset + 1)
+            } else {
+                0
+            };
+            let mut continuation = Vec::new();
+            if remaining > 0 {
+                continuation.push(CompiledStep::TrashTopSecurity {
+                    of: *of,
+                    count: Some(CompiledFormula::Literal(remaining as i32)),
+                });
+            }
+            continuation.extend_from_slice(&steps[i + 1..]);
+            wrap_pending_selection_with_tail(
+                ctx.game,
+                ctx.source_card,
+                ctx.source_permanent,
+                ctx.player,
+                continuation,
+                bindings.clone(),
+                runtime.clone(),
+            );
+            return Some(RunOutcome::Parked);
+        }
+        if !moved {
+            break;
+        }
+    }
+
+    Some(RunOutcome::Synchronous)
 }
 
 /// Dispatch a compiled step to its family-specific handler. Unhandled

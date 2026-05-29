@@ -1,0 +1,58 @@
+card: BT8-082
+name: Ophanimon Falldown Mode
+kind: digimon
+level: 6
+color: [purple, yellow]
+cost: 12
+dp: 12000
+traits: [Fallen Angel]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: Ophanimon }
+    cost: 2
+    ignore_requirements: true
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Purple source deletes Lv.4 or lower; yellow source recovers"
+    process:
+      - if:
+          condition:
+            self_digivolution_sources_color_has: purple
+          then:
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                prompt: "Delete 1 opponent level 4 or lower Digimon"
+            - delete_permanent: { target: delete_target }
+      - if:
+          condition:
+            self_digivolution_sources_color_has: yellow
+          then:
+            - recover: { of: you, count: 1 }
+
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] May play purple/yellow level 4 or lower Digimon from trash"
+    process:
+      - select_trash:
+          of: you
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - color_is: purple
+                  - color_is: yellow
+          prompt: "Play 1 purple or yellow level 4 or lower Digimon from trash"
+      - play_from_trash_free: { of: you, hand_index: target }

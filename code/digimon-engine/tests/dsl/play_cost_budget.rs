@@ -6,9 +6,10 @@
 //! than the budget is excluded outright. The optional `filter` restricts the
 //! candidate set (e.g. `kind: digimon`).
 
-use digimon_dsl::compiled::{CompiledPredicate, CompiledStep};
-use digimon_engine::action::space::{encode_attack, PASS};
+use digimon_dsl::compiled::{CompiledPredicate, CompiledStep, CompiledZone};
+use digimon_engine::action::space::{encode_attack, PASS, TRASH_EFFECT_START};
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
@@ -42,6 +43,41 @@ fn budget_step(then: Vec<CompiledStep>) -> CompiledStep {
         prompt: "Choose opponents within play-cost budget".to_string(),
         then,
     }
+}
+
+fn trash_budget_step(then: Vec<CompiledStep>) -> CompiledStep {
+    CompiledStep::SelectPlayCostBudget {
+        of: digimon_dsl::compiled::CompiledPlayerRef::You,
+        zone: CompiledZone::Trash,
+        play_cost_budget: 6,
+        min_picks: 0,
+        filter: CompiledPredicate::default(),
+        bind_as: Some("picks".to_string()),
+        prompt: "Play trash cards within play-cost budget".to_string(),
+        optional_zero: true,
+        then,
+    }
+}
+
+fn push_to_trash(runner: &mut DebugRunner, player: usize, card_id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("{card_id} not found in card_data"));
+    let next = runner.game.next_card_index();
+    runner.game.players[player]
+        .trash
+        .push(CardSource::new(data_idx, player as u8, next));
+}
+
+fn player_trash_ids(runner: &DebugRunner, player: usize) -> Vec<String> {
+    runner.game.players[player]
+        .trash
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect()
 }
 
 /// Two opponent Digimon, costs 3 and 4 — running sum 7 > 6. After picking the
@@ -189,4 +225,137 @@ fn play_cost_budget_filter_excludes_non_matching_kind() {
     );
 
     runner.game.resolve_selection(0, PASS).expect("decline");
+}
+
+/// Visible-zone aggregate budget selection: the controller may stop early,
+/// and only the selected trash cards are played from their true origin.
+#[test]
+fn trash_play_cost_budget_can_stop_early_and_play_selected_cards() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(digimon_with_cost("C2", "Cost2", 2))
+        .add_card(digimon_with_cost("C3", "Cost3", 3))
+        .add_card(digimon_with_cost("C4", "Cost4", 4))
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.top_card(source);
+    push_to_trash(&mut runner, 0, "C2");
+    push_to_trash(&mut runner, 0, "C3");
+    push_to_trash(&mut runner, 0, "C4");
+
+    let steps = vec![trash_budget_step(vec![CompiledStep::PlayFromTrashFree {
+        of: digimon_dsl::compiled::CompiledPlayerRef::You,
+        trash_index: digimon_dsl::compiled::CompiledBindingRef::Named("picks".to_string()),
+        suppress_on_play: false,
+    }])];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+
+    let view = runner
+        .pending_selection()
+        .expect("trash budget selection open");
+    assert!(
+        view.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)),
+        "C3 starts eligible; valid={:?}",
+        view.valid_action_ids
+    );
+
+    runner
+        .game
+        .resolve_selection(0, TRASH_EFFECT_START + 1)
+        .expect("pick C3");
+
+    let view = runner
+        .pending_selection()
+        .expect("selection remains open after one pick");
+    assert!(
+        view.is_optional,
+        "controller can stop early after picking fewer than the budget"
+    );
+    runner.game.resolve_selection(0, PASS).expect("stop early");
+
+    let played_ids: Vec<_> = runner.game.players[0]
+        .battle_area
+        .iter()
+        .map(|perm| perm.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        played_ids.contains(&"C3".to_string()),
+        "selected C3 should be played from trash"
+    );
+    assert_eq!(
+        player_trash_ids(&runner, 0),
+        vec!["C2".to_string(), "C4".to_string()],
+        "unselected trash cards stay in their origin zone"
+    );
+}
+
+/// After spending part of the budget, candidates above the remaining budget
+/// must disappear from the mask while affordable unselected cards remain legal.
+#[test]
+fn trash_play_cost_budget_masks_candidates_over_remaining_budget() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(digimon_with_cost("C2", "Cost2", 2))
+        .add_card(digimon_with_cost("C3", "Cost3", 3))
+        .add_card(digimon_with_cost("C4", "Cost4", 4))
+        .add_card(digimon_with_cost("C8", "Cost8", 8))
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.top_card(source);
+    push_to_trash(&mut runner, 0, "C2");
+    push_to_trash(&mut runner, 0, "C3");
+    push_to_trash(&mut runner, 0, "C4");
+    push_to_trash(&mut runner, 0, "C8");
+
+    let steps = vec![trash_budget_step(vec![CompiledStep::PlayFromTrashFree {
+        of: digimon_dsl::compiled::CompiledPlayerRef::You,
+        trash_index: digimon_dsl::compiled::CompiledBindingRef::Named("picks".to_string()),
+        suppress_on_play: false,
+    }])];
+
+    let mut bindings = Bindings::new();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    let view = runner
+        .pending_selection()
+        .expect("trash budget selection open");
+    assert!(
+        !view.valid_action_ids.contains(&(TRASH_EFFECT_START + 3)),
+        "over-budget C8 should not be eligible initially; valid={:?}",
+        view.valid_action_ids
+    );
+    runner
+        .game
+        .resolve_selection(0, TRASH_EFFECT_START + 1)
+        .expect("pick C3");
+
+    let view = runner
+        .pending_selection()
+        .expect("selection remains open after one pick");
+    assert!(
+        view.valid_action_ids.contains(&(TRASH_EFFECT_START)),
+        "C2 fits remaining budget 3; valid={:?}",
+        view.valid_action_ids
+    );
+    assert!(
+        !view.valid_action_ids.contains(&(TRASH_EFFECT_START + 2)),
+        "C4 exceeds remaining budget 3 and must be masked out; valid={:?}",
+        view.valid_action_ids
+    );
+
+    runner.game.resolve_selection(0, PASS).expect("stop early");
+    assert_eq!(
+        player_trash_ids(&runner, 0),
+        vec!["C2".to_string(), "C4".to_string(), "C8".to_string()],
+        "all unselected cards stay in trash"
+    );
 }

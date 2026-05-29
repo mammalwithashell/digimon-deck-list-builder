@@ -1,0 +1,17 @@
+card: BT14-003
+name: Tokomon
+kind: digi_egg
+level: 2
+color: [yellow]
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_place_security
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition: { event_target_owner: you }
+    summary: "[Your Turn][OPT] When a card is added to your security stack, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

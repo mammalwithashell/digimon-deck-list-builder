@@ -527,6 +527,7 @@ fn ex4_061_clause1_does_not_fire_on_own_unrelated_digimon() {
 #[test]
 fn ex4_061_clause1_own_gabumon_play_suspends_and_gains_memory() {
     let mut runner = matttai_runner();
+    runner.game.memory = 9;
     let mut gabu = make_named_digimon("OWN-GABU", "Gabumon", 3, 3000);
     gabu.play_cost = 0;
     runner.game.card_data.push(gabu);
@@ -567,6 +568,7 @@ fn ex4_061_clause1_own_gabumon_play_suspends_and_gains_memory() {
 #[test]
 fn ex4_061_clause1_own_agumon_play_suspends_and_gains_memory() {
     let mut runner = matttai_runner();
+    runner.game.memory = 9;
     let mut agu = make_named_digimon("OWN-AGU", "Agumon", 3, 3000);
     agu.play_cost = 0;
     runner.game.card_data.push(agu);

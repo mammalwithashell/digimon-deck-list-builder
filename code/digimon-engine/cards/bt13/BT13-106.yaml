@@ -1,0 +1,49 @@
+card: BT13-106
+name: "Odin's Breath"
+kind: option
+color: [yellow]
+cost: 5
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] 1 opponent Digimon gets -3000 DP; if total security is 6 or fewer, all opponent Digimon get Security A. -1"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter:
+            kind: digimon
+          prompt: "Choose 1 opponent Digimon to get -3000 DP"
+      - add_dp_modifier:
+          target: dp_target
+          value: -3000
+          expiry: end_of_opponents_turn
+      - if:
+          condition:
+            opponent_security_count_lte:
+              formula:
+                base: 6
+                per:
+                  card_count_in_zone:
+                    zone: security
+                    of: you
+                delta: -1
+          then:
+            - add_modifier:
+                target:
+                  of: opponent
+                  zone: [battle_area]
+                  kind: digimon
+                modifier: SecurityAttackChange
+                value: -1
+                expiry: end_of_opponents_turn
+
+  - when: on_discard_security
+    summary: "When an effect trashes this card from security, activate this card's [Main] effect"
+    process:
+      - activate_main_effects: { source: event_card }
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - activate_main_effects: { source: self }

@@ -46,8 +46,7 @@ fn test_deck() -> Vec<String> {
 
 fn make_game() -> LiveGame {
     let db = minimal_db();
-    LiveGame::from_decks(test_deck(), test_deck(), Some(7), &db)
-        .expect("from_decks succeeds")
+    LiveGame::from_decks(test_deck(), test_deck(), Some(7), &db).expect("from_decks succeeds")
 }
 
 #[test]
@@ -66,7 +65,10 @@ fn end_turn_during_mulligan_does_not_advance_turn() {
     let r = lg.end_turn();
     let st_after = lg.state(Perspective::God);
     assert!(!r.ok, "end_turn during Mulligan must be rejected");
-    assert_eq!(st_after.turn_count, turn_before, "turn_count must not advance");
+    assert_eq!(
+        st_after.turn_count, turn_before,
+        "turn_count must not advance"
+    );
     assert_eq!(st_after.phase, phase_before, "phase must not change");
 }
 
@@ -109,7 +111,10 @@ fn events_emitted_are_structured_json() {
 #[test]
 fn digivolve_with_no_legal_action_returns_rejection() {
     let mut lg = make_game();
-    let host = PermanentHandle { player: 0, index: 0 };
+    let host = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let r = lg.digivolve(host, 0);
     assert!(!r.ok, "digivolve with no legal action must be rejected");
     assert!(r.error.is_some());
@@ -118,7 +123,10 @@ fn digivolve_with_no_legal_action_returns_rejection() {
 #[test]
 fn attack_with_no_legal_action_returns_rejection() {
     let mut lg = make_game();
-    let attacker = PermanentHandle { player: 0, index: 0 };
+    let attacker = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let r = lg.attack(attacker, AttackTarget::Security);
     assert!(!r.ok, "attack with no legal action must be rejected");
     assert!(r.error.is_some());

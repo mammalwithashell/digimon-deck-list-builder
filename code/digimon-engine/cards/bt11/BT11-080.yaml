@@ -1,0 +1,38 @@
+card: BT11-080
+name: Devimon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 5000
+traits: [Fallen Angel]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 2
+
+effects:
+  - kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: you
+            any_of:
+              - { kind: digimon, color_is: yellow }
+              - { kind: tamer, color_is: yellow }
+    grant_keyword: { keyword: Rush }
+    summary: "While you have a yellow Digimon or Tamer, this Digimon gains Rush."
+
+  - kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: you
+            any_of:
+              - { kind: digimon, color_is: yellow }
+              - { kind: tamer, color_is: yellow }
+    grant_keyword: { keyword: Retaliation }
+    summary: "While you have a yellow Digimon or Tamer, this Digimon gains Retaliation."

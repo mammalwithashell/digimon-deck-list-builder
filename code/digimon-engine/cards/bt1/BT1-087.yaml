@@ -1,0 +1,37 @@
+card: BT1-087
+name: T.K. Takaishi
+kind: tamer
+color: [yellow]
+cost: 4
+
+effects:
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If memory is 2 or less, set it to 3"
+    process:
+      - set_memory: 3
+
+  - when: on_play
+    summary: "[On Play] Search security; add 1 card to hand; if yellow, Recovery +1; shuffle security"
+    process:
+      - select_security:
+          of: you
+          bind_as: picked
+          optional: false
+          filter: {}
+          prompt: "Reveal 1 card from your security stack and add it to hand"
+      - add_to_hand_from_security: { of: you, card: picked }
+      - if:
+          condition:
+            binding_card_matches:
+              binding: picked
+              filter: { color_is: yellow }
+          then:
+            - recover: { of: you, count: 1 }
+      - shuffle_security: { of: you }
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

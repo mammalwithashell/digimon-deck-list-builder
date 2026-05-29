@@ -1,0 +1,72 @@
+card: P-221
+name: Chaosmon
+kind: digimon
+level: 7
+color: [yellow, purple]
+cost: 15
+dp: 15000
+traits: [Unique]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: yellow }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: yellow }
+      - all_of:
+          - level_eq: 6
+          - any_of:
+              - color_is: purple
+              - color_is: black
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+
+  - kind: partition
+    summary: "<Partition (Yellow Lv.6 & Purple/Black Lv.6)>"
+    sources:
+      - { level_eq: 6, color_is: yellow }
+      - all_of:
+          - level_eq: 6
+          - any_of:
+              - color_is: purple
+              - color_is: black
+    exclude_cause: [own_effect, battle]
+
+  - when: when_digivolving
+    condition: { dna_origin: true }
+    summary: "[When Digivolving] If DNA, self ignores opponent effects until opponent turn ends"
+    process:
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: tamer
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: option
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+
+  - when: [when_digivolving, when_attacking]
+    summary: "[When Digivolving][When Attacking] 1 opponent Digimon gets -10000 DP until opponent turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -10000 DP"
+      - add_dp_modifier:
+          target: dp_target
+          value: -10000
+          expiry: end_of_opponents_turn

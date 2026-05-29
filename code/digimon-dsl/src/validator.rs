@@ -421,10 +421,16 @@ fn validate_predicate(
         ("stack_size_gte", &pred.stack_size_gte),
         ("materials_count_lte", &pred.materials_count_lte),
         ("materials_count_gte", &pred.materials_count_gte),
+        (
+            "same_level_pairs_in_sources_gte",
+            &pred.same_level_pairs_in_sources_gte,
+        ),
         ("memory_lte", &pred.memory_lte),
         ("memory_gte", &pred.memory_gte),
         ("security_count_lte", &pred.security_count_lte),
         ("security_count_gte", &pred.security_count_gte),
+        ("event_card_use_cost_lte", &pred.event_card_use_cost_lte),
+        ("event_card_use_cost_gte", &pred.event_card_use_cost_gte),
     ] {
         if let Some(crate::predicate::DpConstraint::Formula(formula)) = dp {
             validate_formula(formula, &format!("{prefix}.{field}"), card_id, ctx, errors);
@@ -602,6 +608,9 @@ fn validate_step(
                 });
             }
         }
+        StepSpec::ActivateMainEffects(args) => {
+            validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
+        }
         StepSpec::AddDpModifier(args) => {
             validate_modifier_value(
                 &args.value,
@@ -635,6 +644,37 @@ fn validate_step(
                     path: format!("{prefix}.modifier"),
                     message: format!("unknown modifier: {}", args.modifier),
                 });
+            }
+            if !is_known_expiry(&args.expiry) {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.expiry"),
+                    message: format!("unknown expiry: {}", args.expiry),
+                });
+            }
+        }
+        StepSpec::ChangeOriginalName(args) => {
+            if let crate::step::ModifierTarget::Filter(filter) = &args.target {
+                validate_predicate(filter, &format!("{prefix}.target"), card_id, ctx, errors);
+            }
+            if args.name.trim().is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.name"),
+                    message: "change_original_name requires a non-empty name".to_string(),
+                });
+            }
+            if !is_known_expiry(&args.expiry) {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.expiry"),
+                    message: format!("unknown expiry: {}", args.expiry),
+                });
+            }
+        }
+        StepSpec::ChangeColor(args) => {
+            if let crate::step::ModifierTarget::Filter(filter) = &args.target {
+                validate_predicate(filter, &format!("{prefix}.target"), card_id, ctx, errors);
             }
             if !is_known_expiry(&args.expiry) {
                 errors.push(ValidationError {
@@ -696,6 +736,12 @@ fn validate_step(
             }
         }
         StepSpec::PlacePermanentOnSecurityObserved(args) => {
+            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+        }
+        StepSpec::PlacePermanentOnOwnersSecurity(args) => {
+            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+        }
+        StepSpec::IfPlacePermanentOnOwnersSecurityCost(args) => {
             validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
         }
         StepSpec::SecurityPlaceStackedCard(args) => {
@@ -875,6 +921,18 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::SelectPlayCostBudget(args) => {
+            validate_predicate(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+            for (k, s) in args.then.iter().enumerate() {
+                validate_step(s, &format!("{prefix}.then[{k}]"), card_id, ctx, errors);
+            }
+        }
         StepSpec::If(i) => {
             if let Ok(condition) =
                 serde_yml::from_value::<crate::predicate::PredicateSpec>(i.condition.clone())
@@ -894,6 +952,16 @@ fn validate_step(
                 for (k, s) in else_.iter().enumerate() {
                     validate_step(s, &format!("{prefix}.else[{k}]"), card_id, ctx, errors);
                 }
+            }
+        }
+        StepSpec::IfTrashTopOrBottomSecurityCost(args) => {
+            for (k, s) in args.then.iter().enumerate() {
+                validate_step(s, &format!("{prefix}.then[{k}]"), card_id, ctx, errors);
+            }
+        }
+        StepSpec::IfAddTopSecurityToHandCost(args) => {
+            for (k, s) in args.then.iter().enumerate() {
+                validate_step(s, &format!("{prefix}.then[{k}]"), card_id, ctx, errors);
             }
         }
         StepSpec::ForEach(f) => {
@@ -972,6 +1040,28 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+        }
+        StepSpec::ChangeOriginalName(args) => {
+            if let crate::step::ModifierTarget::Filter(filter) = &args.target {
+                validate_predicate_binding_scope(
+                    filter,
+                    &format!("{prefix}.target"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+        }
+        StepSpec::ChangeColor(args) => {
+            if let crate::step::ModifierTarget::Filter(filter) = &args.target {
+                validate_predicate_binding_scope(
+                    filter,
+                    &format!("{prefix}.target"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
         }
         StepSpec::TrashTopNDigivolutionCardsOfEach(args) => {
             validate_formula_binding_scope(&args.n, &format!("{prefix}.n"), card_id, scope, errors);
@@ -1184,6 +1274,25 @@ fn validate_step_binding_scope(
             );
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::SelectPlayCostBudget(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            let mut child = scope.clone();
+            declare_optional_binding(&mut child, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::SelectEffectChoice(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
@@ -1293,6 +1402,26 @@ fn validate_step_binding_scope(
                     errors,
                 );
             }
+        }
+        StepSpec::IfTrashTopOrBottomSecurityCost(args) => {
+            let mut then_scope = scope.clone();
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut then_scope,
+                errors,
+            );
+        }
+        StepSpec::IfAddTopSecurityToHandCost(args) => {
+            let mut then_scope = scope.clone();
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut then_scope,
+                errors,
+            );
         }
         StepSpec::ForEach(args) => {
             validate_predicate_binding_scope(
@@ -1411,6 +1540,10 @@ fn validate_predicate_binding_scope(
         ("stack_size_gte", &pred.stack_size_gte),
         ("materials_count_lte", &pred.materials_count_lte),
         ("materials_count_gte", &pred.materials_count_gte),
+        (
+            "same_level_pairs_in_sources_gte",
+            &pred.same_level_pairs_in_sources_gte,
+        ),
         ("memory_lte", &pred.memory_lte),
         ("memory_gte", &pred.memory_gte),
         ("security_count_lte", &pred.security_count_lte),
@@ -1446,6 +1579,22 @@ fn validate_predicate_binding_scope(
         report_if_undeclared_binding(
             &bc.binding,
             &format!("{prefix}.binding_count_eq.binding"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
+    if let Some(bm) = &pred.binding_card_matches {
+        report_if_undeclared_binding(
+            &bm.binding,
+            &format!("{prefix}.binding_card_matches.binding"),
+            card_id,
+            scope,
+            errors,
+        );
+        validate_predicate_binding_scope(
+            &bm.filter,
+            &format!("{prefix}.binding_card_matches.filter"),
             card_id,
             scope,
             errors,
@@ -1902,6 +2051,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CanAttackUnsuspended",
     "CanAttackActivePlayer",
     "CannotAttackTarget",
+    "CannotAttackSource",
     // Suspend / select / affect
     "CannotSuspend",
     "CannotUnsuspend",
@@ -2020,6 +2170,7 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "Barrier",
     "Decoy",
     "Partition",
+    "Retaliation",
     "Vortex",
     "Collision",
     "Progress",

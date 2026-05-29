@@ -233,30 +233,61 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             trash_index,
             suppress_on_play,
         } => {
-            // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
-            // IR addresses by trash index so we must look up the handle.
-            if let Some(ResolvedBinding::TrashIndex(owner, i)) =
-                resolve_binding_ref(trash_index, ctx, bindings)
-            {
-                let handle: Option<CardHandle> = ctx
-                    .game
-                    .player(owner)
-                    .trash
-                    .get(i as usize)
-                    .map(|cs| cs.handle());
-                if let Some(h) = handle {
-                    // PUPPETS-G030 — when `suppress_on_play` is set, the
-                    // played Digimon's own `[On Play]` effects do not fire
-                    // for this play event (BT5-106 [Security]).
-                    let played = if *suppress_on_play {
-                        ctx.play_from_trash_free_unsuspended_suppress_on_play(h)
-                    } else {
-                        ctx.play_from_trash_free_unsuspended(h)
-                    };
-                    if let Some(played) = played {
-                        bindings.record_played(played);
+            match resolve_binding_ref(trash_index, ctx, bindings) {
+                // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
+                // IR addresses by trash index so we must look up the handle.
+                Some(ResolvedBinding::TrashIndex(owner, i)) => {
+                    let handle: Option<CardHandle> = ctx
+                        .game
+                        .player(owner)
+                        .trash
+                        .get(i as usize)
+                        .map(|cs| cs.handle());
+                    if let Some(h) = handle {
+                        // PUPPETS-G030 — when `suppress_on_play` is set, the
+                        // played Digimon's own `[On Play]` effects do not fire
+                        // for this play event (BT5-106 [Security]).
+                        let played = if *suppress_on_play {
+                            ctx.play_from_trash_free_unsuspended_suppress_on_play(h)
+                        } else {
+                            ctx.play_from_trash_free_unsuspended(h)
+                        };
+                        if let Some(played) = played {
+                            bindings.record_played(played);
+                        }
                     }
                 }
+                Some(ResolvedBinding::CardList(handles)) => {
+                    for h in handles {
+                        let located = (0..ctx.game.players.len()).find_map(|pid| {
+                            let owner = pid as u8;
+                            ctx.game
+                                .player(owner)
+                                .trash
+                                .iter()
+                                .position(|card| card.handle() == h)
+                                .map(|idx| (owner, idx))
+                        });
+                        if let Some((owner, idx)) = located {
+                            let played = ctx.play_from_trash_with_cost_suppress_on_play(
+                                owner,
+                                idx,
+                                CostDelta::Free,
+                                *suppress_on_play,
+                            );
+                            if let Some(played) = played {
+                                bindings.record_played(played);
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+            true
+        }
+        CompiledStep::PlayThisFromTrashFree => {
+            if let Some(played) = ctx.play_from_trash_free_unsuspended(ctx.source_card) {
+                bindings.record_played(played);
             }
             true
         }

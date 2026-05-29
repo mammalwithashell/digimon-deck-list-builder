@@ -1,0 +1,45 @@
+card: BT22-046
+name: Gargomon
+kind: digimon
+level: 4
+color: [green, yellow]
+cost: 5
+dp: 6000
+traits: [Beastkin, CS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: CS }
+    cost: 2
+
+effects:
+  - when: when_digivolving
+    optional: true
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    summary: "[When Digivolving] If you have 1 or fewer Tamers, may play 1 CS Tamer from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cs_tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: CS
+          prompt: "Play 1 CS Tamer from your hand without paying the cost"
+      - if:
+          condition: { binding_present: cs_tamer }
+          then:
+            - play_from_hand_free: { of: you, hand_index: cs_tamer }
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    dp_modifier: 1000
+    summary: "[All Turns] This Digimon gets +1000 DP"

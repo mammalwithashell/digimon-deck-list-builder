@@ -1,0 +1,63 @@
+card: BT14-033
+name: Patamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Mammal, Vaccine]
+attribute: Vaccine
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] Search security; this Digimon may digivolve into a yellow Vaccine Digimon there free; shuffle security; if it digivolved, you may place a yellow Vaccine card from hand as bottom security"
+    process:
+      - select_security:
+          of: you
+          bind_as: sec_evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - trait_has: Vaccine
+          prompt: "Digivolve this Digimon into a yellow Vaccine Digimon in security"
+      - if:
+          condition: { binding_present: sec_evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: sec_evo
+                cost: free
+                ignore_requirements: false
+            - if:
+                condition: { effect_digivolved_any_digimon: true }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: hand_vaccine
+                      optional: true
+                      filter:
+                        all_of:
+                          - color_is: yellow
+                          - trait_has: Vaccine
+                      prompt: "Place 1 yellow Vaccine card from your hand at the bottom of security"
+                  - if:
+                      condition: { binding_present: hand_vaccine }
+                      then:
+                        - place_on_security:
+                            of: you
+                            source: { binding: hand_vaccine, zone: hand }
+                            position: bottom
+                            face_up: false
+      - shuffle_security: { of: you }
+
+  - scope: inherited
+    when: on_place_security
+    optional: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition: { event_target_owner: you }
+    summary: "[Your Turn][Once Per Turn] When a card is added to your security stack, gain 1 memory"
+    process:
+      - gain_memory: 1

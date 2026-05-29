@@ -1,0 +1,43 @@
+card: EX4-005
+name: Agumon
+kind: digimon
+level: 3
+color: [red, yellow]
+cost: 3
+dp: 2000
+traits: [Dinosaur]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 1
+  - kind: digivolve
+    from: { name_is: Koromon }
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        any_of:
+          - color_is: red
+          - color_is: yellow
+    summary: "[Start of Your Main Phase] If you have a red or yellow Tamer, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [red, yellow]
+    summary: "[Your Turn][OPT] When one of your red or yellow Tamers suspends, draw 1"
+    process:
+      - draw: { of: you, count: 1 }

@@ -1,0 +1,58 @@
+card: BT22-056
+name: Guardromon
+kind: digimon
+level: 4
+color: [black, yellow]
+cost: 5
+dp: 5000
+traits: [Machine, CS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: CS }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] -3000 DP; with same-level pair, De-Digivolve 1"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 opponent Digimon gets -3000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -3000
+          expiry: end_of_turn
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              min:
+                - 1
+                - base: 0
+                  per: same_level_pairs_in_sources
+                  delta: 1
+          filter: { kind: digimon }
+          bind_as: de_digivolve_targets
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+          optional_zero: false
+      - per_selected:
+          selection: de_digivolve_targets
+          bind_as: dd_target
+          body:
+            - de_digivolve:
+                target: dd_target
+                amount: 1
+                stop_at_level: 3
+
+  - scope: inherited
+    kind: aura
+    active_when: { opponent_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Opponent's Turn] This Digimon gets +2000 DP"

@@ -1,0 +1,24 @@
+card: ST10-02
+name: Salamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Mammal]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - kind: alt_path_registration
+    scope: inherited
+    trigger: end_of_your_turn
+    registers:
+      kind: dna_digivolve
+    applies_to:
+      of: you
+      zone: [battle_area]

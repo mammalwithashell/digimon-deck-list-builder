@@ -386,6 +386,20 @@ impl Game {
                     );
                 }
             }
+            TriggerSource::OptionUsed {
+                observer_player, ..
+            } => {
+                let count = self.player(observer_player).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player: observer_player,
+                        index: i as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+            }
             TriggerSource::OptionTrashed { .. } => {
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
@@ -454,6 +468,32 @@ impl Game {
                             self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
+                }
+            }
+            TriggerSource::SourcePlacedInStack { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                    let breeding_handle = PermanentHandle {
+                        player,
+                        index: BREEDING_TARGET as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(breeding_handle), timing);
+                    self.enqueue_from_breeding_permanent(
+                        timing,
+                        breeding_handle,
+                        Some(trigger_context),
+                    );
                 }
             }
             TriggerSource::SecurityRemoved {
@@ -1065,6 +1105,23 @@ impl Game {
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
+            TriggerSource::OptionUsed {
+                player,
+                card,
+                source_kind,
+                ..
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: source_kind.zone(),
+                }),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                affected_player: Some(player),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
             TriggerSource::OptionTrashed {
                 player,
                 card,
@@ -1147,6 +1204,35 @@ impl Game {
                     cards: vec![card],
                     from: Some(crate::enums::Zone::BattleArea),
                     to: Some(crate::enums::Zone::Trash),
+                }],
+                ..TriggerContext::default()
+            },
+            TriggerSource::SourcePlacedInStack {
+                player,
+                host,
+                host_card,
+                card,
+                cause,
+                effect_initiated,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::BattleArea,
+                }),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                event_source_card: Some(card),
+                event_host_card: Some(host_card),
+                event_host_permanent: Some(host),
+                affected_player: Some(player),
+                source_player: Some(player),
+                cause: Some(cause),
+                effect_initiated,
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: None,
+                    to: Some(crate::enums::Zone::BattleArea),
                 }],
                 ..TriggerContext::default()
             },
@@ -1455,6 +1541,62 @@ impl Game {
                 granted_effect_id: None,
             });
         }
+    }
+
+    /// Collect `[Main]` Option effects from the card currently parked in
+    /// `pending_security`. This is used by effects like "when an effect
+    /// trashes this card from security, activate this card's [Main] effect":
+    /// the card is not being used from hand, so it must not pass through the
+    /// normal pay/use/dispose Option pipeline.
+    pub(crate) fn enqueue_option_main_from_pending_security_card(
+        &mut self,
+        card: CardHandle,
+        controller: PlayerId,
+    ) -> bool {
+        let Some(pending) = self.pending_security.as_ref() else {
+            return false;
+        };
+        if pending.card.handle() != card {
+            return false;
+        }
+
+        let card_id = pending.card.card_id(&self.card_data).to_string();
+        let source_kind = source_kind_for_card_kind(pending.card.card_kind(&self.card_data));
+        let Some(effects) = self.effects_for_card(&card_id, card) else {
+            return false;
+        };
+
+        let tp = self.turn_player();
+        let is_turn_player = controller == tp;
+        let trigger_context = self.current_trigger_context.clone();
+        let mut queued = false;
+
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.timing != EffectTiming::OptionMain {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card: card,
+                source_permanent: None,
+                source_kind,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
+                controller,
+                timing: EffectTiming::OptionMain,
+                trigger_context: trigger_context.clone(),
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.clone(),
+                allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
+            });
+            queued = true;
+        }
+
+        queued
     }
 
     /// Collect turn-boundary `[Security]` effects from a card that still
@@ -2811,7 +2953,7 @@ impl Game {
     /// AND the effect would actually do something if run — i.e. its source is
     /// live, its OPT counter is not exhausted, and its `condition` passes.
     /// An optional effect whose preconditions already fail must not prompt.
-    fn queued_effect_wants_outer_optional_prompt(&self, qe: &QueuedEffect) -> bool {
+    fn queued_effect_wants_outer_optional_prompt(&mut self, qe: &QueuedEffect) -> bool {
         // Granted inline bodies have no Effect metadata and never carry the
         // outer-prompt flag — never prompt for them.
         if qe.granted_effect_id.is_some() {
@@ -2842,10 +2984,20 @@ impl Game {
         // SecuritySkill effects skip the condition gate (Python parity, see
         // `run_queued_effect_inner`). For every other timing, an unsatisfied
         // condition means the body would no-op — do not prompt.
+        let trigger_guard = TriggerContextGuard::install(self, qe.trigger_context.clone());
+        let Some(effects) = trigger_guard
+            .game
+            .effects_for_card(&qe.card_id, qe.source_card)
+        else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
         let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
         let attribution_source_kind = qe.attribution_source_kind.unwrap_or(qe.source_kind);
         let rctx = EffectReadContext::new_with_source_kind(
-            self,
+            trigger_guard.game,
             attribution_source_card,
             qe.source_permanent,
             attribution_source_kind,

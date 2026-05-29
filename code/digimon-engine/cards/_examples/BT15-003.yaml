@@ -29,5 +29,5 @@ effects:
       - if:
           condition: { equals: [branch, 1] }
           then:
-            - raw_rust: { fn: bt15_003_trash_bottom_security }
+            - trash_bottom_security: { of: you }
             - gain_memory: 1

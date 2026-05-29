@@ -1,0 +1,95 @@
+card: BT23-102
+name: Mastemon
+kind: digimon
+level: 6
+color: [yellow, purple]
+cost: 13
+dp: 13000
+traits: [Angel, CS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: CS }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, color_is: yellow }
+      - { level_eq: 5, color_is: purple }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - kind: partition
+    summary: "<Partition ([Angewomon] & [LadyDevimon])>"
+    sources:
+      - { name_contains: "Angewomon" }
+      - { name_contains: "LadyDevimon" }
+    exclude_cause: [own_effect, battle]
+
+  - when: when_digivolving
+    summary: "[When Digivolving] Play Lv.5 or lower yellow/purple Digimon from hand or trash; trash both security stacks to 3 if stack has same-level pair"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: play_pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - any_of:
+                  - color_is: yellow
+                  - color_is: purple
+          prompt: "Play 1 Lv.5 or lower yellow or purple Digimon from your hand or trash"
+      - play_union_bound_free:
+          binding: play_pick
+          bind_as: played
+      - trash_top_security:
+          of: you
+          count:
+            min:
+              - base: -3
+                per:
+                  card_count_in_zone:
+                    zone: security
+                    of: you
+                delta: 1
+              - base: 0
+                per: same_level_pairs_in_sources
+                delta: 99
+      - trash_top_security:
+          of: opponent
+          count:
+            min:
+              - base: -3
+                per:
+                  card_count_in_zone:
+                    zone: security
+                    of: opponent
+                delta: 1
+              - base: 0
+                per: same_level_pairs_in_sources
+                delta: 99
+
+  - when: [on_own_security_removed, on_opponent_security_removed]
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When security stacks are removed from, place 1 Digimon as bottom security"
+    process:
+      - select_any_permanent:
+          bind_as: security_digimon
+          filter: { kind: digimon }
+          optional: true
+          prompt: "Place 1 Digimon as the bottom security card"
+      - place_permanent_on_owners_security:
+          target: security_digimon
+          position: bottom
+          face: down

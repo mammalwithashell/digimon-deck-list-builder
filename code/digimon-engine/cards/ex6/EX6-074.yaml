@@ -1,0 +1,68 @@
+card: EX6-074
+name: Mirei Mikagura
+kind: tamer
+color: [yellow, purple]
+cost: 4
+traits: []
+
+effects:
+  - when: on_ally_played
+    optional: true
+    condition:
+      all_of:
+        - your_turn: true
+        - source_is_unsuspended: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_trait_has: Holy Beast
+            - event_target_trait_has: Archangel
+            - event_target_trait_has: Fallen Angel
+    summary: "[Your Turn] When Holy Beast/Archangel/Fallen Angel is played, suspend this Tamer, gain 1 memory, then may digivolve into Angewomon/LadyDevimon in trash cost -1"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - if:
+          condition: { binding_present: target }
+          then:
+            - select_trash:
+                of: you
+                bind_as: evo
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: "Angewomon"
+                        - name_contains: "LadyDevimon"
+                prompt: "Choose Angewomon or LadyDevimon in trash"
+            - if:
+                condition: { binding_present: evo }
+                then:
+                  - effect_initiated_digivolve:
+                      target: target
+                      source: evo
+                      cost: { reduce: 1 }
+                      ignore_requirements: false
+
+  - kind: alt_path_registration
+    trigger: end_of_your_turn
+    applies_to:
+      of: you
+      zone: [battle_area]
+      kind: digimon
+    registers:
+      kind: dna_digivolve
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

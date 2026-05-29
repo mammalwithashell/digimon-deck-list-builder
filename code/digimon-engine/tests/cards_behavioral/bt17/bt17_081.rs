@@ -449,6 +449,7 @@ fn bt17_081_observer_no_greymon_no_garurumon_no_memory_gain() {
 #[test]
 fn bt17_081_observer_greymon_present_gains_one_memory() {
     let mut runner = taimatt_runner();
+    runner.game.memory = 8;
     let mut grey = make_named_digimon("OWN-GREY", "Greymon", 4, 4000);
     grey.play_cost = 0;
     runner.game.card_data.push(grey);
@@ -506,6 +507,7 @@ fn bt17_081_observer_greymon_present_gains_one_memory() {
 #[test]
 fn bt17_081_observer_garurumon_present_gains_one_memory() {
     let mut runner = taimatt_runner();
+    runner.game.memory = 8;
     let mut garu = make_named_digimon("OWN-GARU", "Garurumon", 4, 4000);
     garu.play_cost = 0;
     runner.game.card_data.push(garu);
@@ -561,6 +563,7 @@ fn bt17_081_observer_garurumon_present_gains_one_memory() {
 #[test]
 fn bt17_081_observer_both_greymon_and_garurumon_gains_two_memory() {
     let mut runner = taimatt_runner();
+    runner.game.memory = 8;
     let mut grey = make_named_digimon("OWN-GREY", "Greymon", 4, 4000);
     grey.play_cost = 0;
     runner.game.card_data.push(grey);

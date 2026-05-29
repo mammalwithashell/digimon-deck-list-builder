@@ -1,0 +1,52 @@
+card: BT18-082
+name: "Lucemon: Chaos Mode"
+kind: digimon
+level: 5
+color: [purple, yellow]
+cost: 13
+dp: 13000
+traits: [Demon Lord, Seven Great Demon Lords]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 8
+  - kind: digivolve
+    from: { name_is: Lucemon }
+    cost: 6
+    ignore_requirements: true
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Opponent may delete own Digimon/Tamer; if not, recover and trash opponent top security"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_opponent_permanent:
+                bind_as: sacrifice
+                optional: true
+                filter:
+                  any_of:
+                    - kind: digimon
+                    - kind: tamer
+                prompt: "You may delete 1 of your Digimon or Tamers"
+            - delete_permanent: { target: sacrifice }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - recover: { of: you, count: 1 }
+            - trash_top_security: { of: opponent }
+
+  - kind: replacement
+    timing: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - security_count_gte: 1
+    summary: "[All Turns][OPT] Trash bottom security so this Digimon doesn't leave"
+    process:
+      - trash_bottom_security: { of: you }
+      - cancel_replacement: {}

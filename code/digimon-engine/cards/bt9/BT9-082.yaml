@@ -1,0 +1,61 @@
+card: BT9-082
+name: Ordinemon
+kind: digimon
+level: 7
+color: [purple, yellow]
+cost: 15
+dp: 15000
+traits: [Fallen Angel]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 6
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: purple }
+      - { level_eq: 6, color_is: yellow }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: when_digivolving
+    condition:
+      all_of:
+        - dna_origin: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            level_gte: 6
+    summary: "When DNA digivolving, delete 1 Lv.6+ and all Lv.5- opponent Digimon; recover for each deleted"
+    process:
+      - select_opponent_permanent:
+          bind_as: large
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+          prompt: "Delete 1 opponent level 6 or higher Digimon"
+      - delete_permanent: { target: large }
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            level_lte: 5
+          bind_as: small
+          body:
+            - delete_permanent: { target: small }
+      - recover_for_deleted: { of: you }
+
+  - when: on_deletion
+    optional: true
+    condition: { security_count_gte: 1 }
+    summary: "[On Deletion] May trash top security to play this card from trash free"
+    process:
+      - if_trash_top_security_cost:
+          of: you
+          then:
+            - play_this_from_trash_free: {}

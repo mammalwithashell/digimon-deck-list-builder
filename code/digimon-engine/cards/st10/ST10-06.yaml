@@ -1,0 +1,79 @@
+card: ST10-06
+name: Mastemon
+kind: digimon
+level: 6
+color: [yellow, purple]
+cost: 13
+dp: 13000
+traits: [Angel]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, color_is: yellow }
+      - { level_eq: 5, color_is: purple }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Place yellow/purple Digimon from trash on security; if DNA, may play Lv.5 or lower Digimon from security"
+    process:
+      - select_trash:
+          of: you
+          bind_as: trash_digimon
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - color_is: yellow
+                  - color_is: purple
+          prompt: "Place 1 yellow or purple Digimon card from trash on top of security"
+      - if:
+          condition: { binding_present: trash_digimon }
+          then:
+            - place_on_security:
+                of: you
+                source: { binding: trash_digimon, zone: trash }
+                position: top
+                face_up: false
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_security:
+                of: you
+                bind_as: security_digimon
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                prompt: "Play 1 level 5 or lower Digimon card from security"
+            - if:
+                condition: { binding_present: security_digimon }
+                then:
+                  - play_security_card: { of: you, card: security_digimon }
+            - shuffle_security: { of: you }
+
+  - when: on_ally_played
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_is_source: false
+        - event_is_effect_initiated: true
+    summary: "[All Turns] When you play another Digimon by effect, delete an opponent Digimon with level <= the played Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte_event_target: true
+          prompt: "Delete 1 opponent Digimon with level less than or equal to the played Digimon"
+      - delete_permanent: { target: delete_target }

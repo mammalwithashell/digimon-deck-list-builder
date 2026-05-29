@@ -1,0 +1,51 @@
+card: EX10-051
+name: Mummymon
+kind: digimon
+level: 5
+color: [purple, black]
+cost: 6
+dp: 6000
+traits: [Undead]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+
+effects:
+  - when: on_play
+    summary: "[On Play] By trashing 1 card in hand, De-Digivolve 1 opponent Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          filter: {}
+          prompt: "Trash 1 card in your hand to De-Digivolve 1"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+      - de_digivolve:
+          target: target
+          amount: 1
+          stop_at_level: 3
+
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] May play a Myotismon-text Tamer from trash unless same-named Tamer is in play"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - effect_text_contains: "Myotismon"
+              - name_not_shared_by_field_tamer: you
+          prompt: "Play 1 Tamer card with [Myotismon] in its text from trash"
+      - play_union_bound_free:
+          binding: tamer_pick

@@ -76,7 +76,9 @@ fn is_default_direction(d: &AltPathDirection) -> bool {
     matches!(d, AltPathDirection::From)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum AltPathDirection {
     /// Legacy direction: the alt-path is registered on the

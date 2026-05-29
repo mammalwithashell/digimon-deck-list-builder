@@ -45,6 +45,16 @@ pub struct EffectResultLog {
     pub added_to_hand: Vec<CardHandle>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EffectResultLogCursor {
+    suspended: usize,
+    returned_to_deck: usize,
+    deleted: usize,
+    played: usize,
+    digivolved: usize,
+    added_to_hand: usize,
+}
+
 impl Bindings {
     pub fn new() -> Self {
         Self::default()
@@ -69,6 +79,38 @@ impl Bindings {
 
     pub fn result_log(&self) -> &EffectResultLog {
         &self.result_log
+    }
+
+    pub fn result_log_cursor(&self) -> EffectResultLogCursor {
+        EffectResultLogCursor {
+            suspended: self.result_log.suspended.len(),
+            returned_to_deck: self.result_log.returned_to_deck.len(),
+            deleted: self.result_log.deleted.len(),
+            played: self.result_log.played.len(),
+            digivolved: self.result_log.digivolved.len(),
+            added_to_hand: self.result_log.added_to_hand.len(),
+        }
+    }
+
+    pub fn merge_result_log_delta_from(&mut self, other: &Bindings, cursor: EffectResultLogCursor) {
+        self.result_log
+            .suspended
+            .extend_from_slice(&other.result_log.suspended[cursor.suspended..]);
+        self.result_log
+            .returned_to_deck
+            .extend_from_slice(&other.result_log.returned_to_deck[cursor.returned_to_deck..]);
+        self.result_log
+            .deleted
+            .extend_from_slice(&other.result_log.deleted[cursor.deleted..]);
+        self.result_log
+            .played
+            .extend_from_slice(&other.result_log.played[cursor.played..]);
+        self.result_log
+            .digivolved
+            .extend_from_slice(&other.result_log.digivolved[cursor.digivolved..]);
+        self.result_log
+            .added_to_hand
+            .extend_from_slice(&other.result_log.added_to_hand[cursor.added_to_hand..]);
     }
 
     pub fn record_suspended(&mut self, handle: PermanentHandle) {

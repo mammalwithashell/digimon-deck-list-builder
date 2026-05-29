@@ -1,0 +1,47 @@
+card: BT22-054
+name: Hagurumon
+kind: digimon
+level: 3
+color: [black, yellow]
+cost: 3
+dp: 1000
+traits: [Machine, CS]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: CS }
+    cost: 0
+
+effects:
+  - when: on_digivolution_card_placed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When an effect places a [CS] Digimon card in this Digimon's sources, 1 opponent Digimon gets -3000 DP"
+    condition:
+      all_of:
+        - event_is_effect_initiated: true
+        - event_host_permanent_is_source: true
+        - event_card_trait_has: CS
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -3000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -3000
+          expiry: end_of_turn
+
+  - scope: inherited
+    when: main_on_field
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Main][OPT] Place this Digimon's top stacked card as bottom; Draw 1"
+    condition:
+      materials_count_gte: 1
+    process:
+      - place_top_source_as_bottom: { target: source }
+      - draw: { of: you, count: 1 }

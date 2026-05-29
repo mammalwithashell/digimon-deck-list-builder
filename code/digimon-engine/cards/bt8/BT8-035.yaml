@@ -1,0 +1,29 @@
+card: BT8-035
+name: Candlemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Flame]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [purple]
+        - event_target_is_source: false
+    summary: "[Your Turn][OPT] When you play another purple Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1

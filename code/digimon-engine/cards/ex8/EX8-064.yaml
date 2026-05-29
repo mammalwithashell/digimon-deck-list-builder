@@ -1,0 +1,82 @@
+card: EX8-064
+name: Boltboutamon
+kind: digimon
+level: 7
+color: [black, purple]
+cost: 15
+dp: 15000
+traits: [Wizard, NSo]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color: black }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - level_eq: 6
+        any_of:
+          - color: purple
+          - color: black
+      - level_eq: 6
+        any_of:
+          - color: yellow
+          - color: green
+    cost: 0
+  - kind: dna_digivolve
+    materials:
+      - { name_contains: Piedmon }
+      - { name_contains: Myotismon }
+    cost: 0
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] De-Digivolve 3 one opponent Digimon and all opponent Digimon get -6000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigivolve_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 3"
+      - de_digivolve:
+          target: dedigivolve_target
+          amount: 3
+          stop_at_level: 3
+      - add_modifier:
+          target:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          modifier: ChangeDp
+          value: -6000
+          expiry: end_of_turn
+
+  - when: on_dna_digivolve
+    summary: "If DNA digivolving, play up to 10 play cost's total worth of NSo Digimon from trash for free"
+    process:
+      - select_play_cost_budget:
+          of: you
+          zone: trash
+          play_cost_budget: 10
+          min_picks: 0
+          optional_zero: true
+          bind_as: nso_picks
+          prompt: "Play up to 10 play cost's total worth of NSo Digimon from trash"
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: NSo
+          then:
+            - play_from_trash_free:
+                of: you
+                hand_index: nso_picks
+
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] When other Digimon are deleted, trash opponent's top security"
+    condition:
+      all_of:
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+    process:
+      - trash_top_security: { of: opponent }

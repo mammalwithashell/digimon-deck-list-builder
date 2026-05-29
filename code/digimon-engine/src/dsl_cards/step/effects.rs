@@ -55,6 +55,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             }
             true
         }
+        CompiledStep::ActivateMainEffects { source } => {
+            if let Some(ResolvedBinding::Card(card)) = resolve_binding_ref(source, ctx, bindings) {
+                let _ = ctx.activate_main_effects_for_card(card);
+            }
+            true
+        }
         // G-COST-REDUCE-ALLY-DIGIVOLVE — install a player-scoped one-shot
         // future-digivolve cost reducer (BT3-103 Hidden Potential Discovered!).
         CompiledStep::ArmDigivolveCostReducer {

@@ -1171,7 +1171,11 @@ mod tests {
         let r = lg.step(9999);
         assert!(!r.ok, "step(9999) during Mulligan should return ok:false");
         let err = r.error.expect("error message present");
-        assert!(err.contains("9999"), "error should name the action_id: {}", err);
+        assert!(
+            err.contains("9999"),
+            "error should name the action_id: {}",
+            err
+        );
     }
 
     #[test]
@@ -1200,10 +1204,10 @@ mod tests {
         // Advance through mulligan and to Main phase.
         let _ = lg.step(0); // P? keep
         let _ = lg.step(0); // P? keep
-        // Now T1 Breeding. Pass to reach Main.
+                            // Now T1 Breeding. Pass to reach Main.
         let _ = lg.pass_turn(); // Breeding → (hatch or Main); test by passing.
-        // At this point the engine is in Main for SOME player. We test that
-        // the OTHER player cannot play.
+                                // At this point the engine is in Main for SOME player. We test that
+                                // the OTHER player cannot play.
         let active = lg.current_decision_player();
         let other = 1 - active;
         let phase_before = lg.game.current_phase;
@@ -1231,7 +1235,10 @@ mod tests {
         let r = lg.end_turn();
         assert!(!r.ok, "end_turn during Mulligan must be rejected");
         assert_eq!(lg.game.current_phase, phase_before, "phase must not change");
-        assert_eq!(lg.game.turn_count, turn_before, "turn_count must not change");
+        assert_eq!(
+            lg.game.turn_count, turn_before,
+            "turn_count must not change"
+        );
     }
 
     #[test]
@@ -1283,7 +1290,9 @@ mod tests {
         // Whether play succeeds or fails, events_emitted is now a
         // Vec<Value> not Vec<String>. Verify by serializing.
         let v = serde_json::to_value(&r).unwrap();
-        let evs = v["events_emitted"].as_array().expect("events_emitted is array");
+        let evs = v["events_emitted"]
+            .as_array()
+            .expect("events_emitted is array");
         for ev in evs {
             assert!(
                 ev.is_object(),
@@ -1336,7 +1345,10 @@ mod tests {
 
         let ev = GameEvent::EffectFizzled {
             seq: 50,
-            source_permanent: Some(PermanentHandle { player: 0, index: 1 }),
+            source_permanent: Some(PermanentHandle {
+                player: 0,
+                index: 1,
+            }),
             reason: "no executable target".into(),
         };
         let v = serde_json::to_value(&ev).unwrap();

@@ -1,0 +1,42 @@
+card: BT14-037
+name: MagnaAngemon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 4
+dp: 8000
+traits: [Archangel]
+attribute: Vaccine
+ace_overflow: -3
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] If security <=5, recover; then -1000 DP per security"
+    process:
+      - if:
+          condition: { security_count_lte: 5 }
+          then:
+            - recover: { of: you, count: 1 }
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -1000 DP per card in your security stack"
+      - add_dp_modifier:
+          target: dp_target
+          value:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  zone: security
+                  of: you
+              delta: -1000
+          expiry: end_of_turn

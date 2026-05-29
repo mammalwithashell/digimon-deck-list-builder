@@ -18,14 +18,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::DeletePermanent { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
-                let existed = ctx
-                    .game
-                    .player(h.player)
-                    .battle_area
-                    .get(h.index as usize)
-                    .is_some();
-                ctx.delete_permanent(h);
-                if existed {
+                if ctx.delete_permanent(h) {
                     bindings.record_deleted(h);
                 }
             }
@@ -36,14 +29,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 handles.sort_by_key(|h| (h.player, h.index));
                 handles.reverse();
                 for handle in handles {
-                    let existed = ctx
-                        .game
-                        .player(handle.player)
-                        .battle_area
-                        .get(handle.index as usize)
-                        .is_some();
-                    ctx.delete_permanent(handle);
-                    if existed {
+                    if ctx.delete_permanent(handle) {
                         bindings.record_deleted(handle);
                     }
                 }
@@ -128,6 +114,19 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             {
                 let position = super::map_stack_position(*position);
                 let _ = ctx.place_permanent_on_security(player, h, position, *face_up);
+            }
+            true
+        }
+        CompiledStep::PlacePermanentOnOwnersSecurity {
+            target,
+            position,
+            face_up,
+        } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                let owner = h.player;
+                let position = super::map_stack_position(*position);
+                let _ = ctx.place_permanent_on_security(owner, h, position, *face_up);
             }
             true
         }

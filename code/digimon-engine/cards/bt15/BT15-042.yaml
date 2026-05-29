@@ -1,0 +1,77 @@
+card: BT15-042
+name: Magnadramon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 11
+dp: 11000
+traits: [Holy Dragon, Four Great Dragons]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "By trashing top or bottom security, 1 opponent Digimon gets -9000 DP"
+    process:
+      - if_trash_top_or_bottom_security_cost:
+          of: you
+          prompt: "Trash the top or bottom card of your security stack"
+          then:
+            - select_opponent_permanent:
+                bind_as: dp_target
+                filter: { kind: digimon }
+                prompt: "Select 1 opponent Digimon to get -9000 DP"
+            - add_dp_modifier:
+                target: dp_target
+                value: -9000
+                expiry: end_of_opponents_turn
+
+  - when: on_own_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - security_count_lte: 3
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              color_is: yellow
+            n: 1
+    summary: "[All Turns][OPT] When own security is removed at 3 or fewer, may place 1 yellow hand card top or bottom security"
+    process:
+      - select_hand:
+          of: you
+          bind_as: yellow_card
+          optional: true
+          filter: { color_is: yellow }
+          prompt: "Place 1 yellow card from your hand in security"
+      - if:
+          condition: { binding_present: yellow_card }
+          then:
+            - select_effect_choice:
+                labels: ["Top", "Bottom"]
+                bind_as: security_position
+                prompt: "Place it as the top or bottom security card?"
+            - if:
+                condition:
+                  equals: [security_position, 0]
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { binding: yellow_card, zone: hand }
+                      position: top
+                      face_up: false
+            - if:
+                condition:
+                  equals: [security_position, 1]
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { binding: yellow_card, zone: hand }
+                      position: bottom
+                      face_up: false

@@ -201,11 +201,13 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOpponentSecurityRemoved => CompiledTiming::OnOpponentSecurityRemoved,
         S::OnOwnSecurityRemoved => CompiledTiming::OnOwnSecurityRemoved,
         S::OnDigivolutionCardTrashed => CompiledTiming::OnDigivolutionCardTrashed,
+        S::OnDigivolutionCardPlaced => CompiledTiming::OnDigivolutionCardPlaced,
         S::OnSecurityCheck => CompiledTiming::OnSecurityCheck,
         S::OnCheckFaceUpSecurity => CompiledTiming::OnCheckFaceUpSecurity,
         S::OnLoseSecurity => CompiledTiming::OnLoseSecurity,
         S::OnDiscardSecurity => CompiledTiming::OnDiscardSecurity,
         S::OnSecurity => CompiledTiming::OnSecurity,
+        S::OnUseOption => CompiledTiming::OnUseOption,
         S::OnOptionPlaced => CompiledTiming::OnOptionPlaced,
         S::OnOptionTrashed => CompiledTiming::OnOptionTrashed,
         S::OnPlaceSecurity => CompiledTiming::OnPlaceSecurity,
@@ -517,6 +519,7 @@ fn compile_predicate(
             .level_gte
             .as_ref()
             .map(|d| compile_dp_constraint(d, &format!("{prefix}.level_gte"), card_id, errors)),
+        level_lte_event_target: p.level_lte_event_target,
         level_matches_aggregate: p.level_matches_aggregate.map(|m| {
             (
                 compile_aggregate_selector(m.selector),
@@ -541,6 +544,9 @@ fn compile_predicate(
         name_in: p.name_in.clone(),
         name_not_shared_by_field_digimon: p
             .name_not_shared_by_field_digimon
+            .map(|s| compile_player_ref(s.player())),
+        name_not_shared_by_field_tamer: p
+            .name_not_shared_by_field_tamer
             .map(|s| compile_player_ref(s.player())),
         card_number_is: p.card_number_is.clone(),
         play_cost_lte: p
@@ -576,6 +582,14 @@ fn compile_predicate(
         materials_count_gte: p.materials_count_gte.as_ref().map(|d| {
             compile_dp_constraint(d, &format!("{prefix}.materials_count_gte"), card_id, errors)
         }),
+        same_level_pairs_in_sources_gte: p.same_level_pairs_in_sources_gte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.same_level_pairs_in_sources_gte"),
+                card_id,
+                errors,
+            )
+        }),
         has_inherited: p.has_inherited.as_ref().map(|b| {
             Box::new(compile_predicate(
                 b,
@@ -587,6 +601,7 @@ fn compile_predicate(
         is_suspended: p.is_suspended,
         is_unsuspended: p.is_unsuspended,
         has_keyword: p.has_keyword.clone(),
+        security_attack_changed: p.security_attack_changed,
         has_on_deletion_effect: p.has_on_deletion_effect,
         self_color_count_gte: p.self_color_count_gte,
         has_face_down_source: p.has_face_down_source,
@@ -614,6 +629,9 @@ fn compile_predicate(
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
         self_digivolution_sources_contain_name: p.self_digivolution_sources_contain_name.clone(),
         self_digivolution_sources_trait_has: p.self_digivolution_sources_trait_has.clone(),
+        self_digivolution_sources_color_has: p
+            .self_digivolution_sources_color_has
+            .map(compile_color),
         memory_lte: p
             .memory_lte
             .as_ref()
@@ -662,6 +680,18 @@ fn compile_predicate(
             .binding_count_eq
             .as_ref()
             .map(|b| (b.binding.clone(), b.n)),
+        binding_card_matches: p
+            .binding_card_matches
+            .as_ref()
+            .map(|b| CompiledBindingCardMatches {
+                binding: b.binding.clone(),
+                filter: Box::new(compile_predicate(
+                    &b.filter,
+                    &format!("{prefix}.binding_card_matches.filter"),
+                    card_id,
+                    errors,
+                )),
+            }),
         your_turn: p.your_turn,
         opponents_turn: p.opponents_turn,
         all_turns: p.all_turns,
@@ -709,6 +739,22 @@ fn compile_predicate(
             compile_dp_constraint(
                 d,
                 &format!("{prefix}.event_card_level_gte"),
+                card_id,
+                errors,
+            )
+        }),
+        event_card_use_cost_lte: p.event_card_use_cost_lte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.event_card_use_cost_lte"),
+                card_id,
+                errors,
+            )
+        }),
+        event_card_use_cost_gte: p.event_card_use_cost_gte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.event_card_use_cost_gte"),
                 card_id,
                 errors,
             )
@@ -1925,6 +1971,7 @@ fn compile_step(
             trash_index: compile_binding_ref(&a.hand_index),
             suppress_on_play: a.suppress_on_play,
         },
+        S::PlayThisFromTrashFree(_) => CompiledStep::PlayThisFromTrashFree,
         S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
             binding: a.binding.clone(),
             bind_as: a.bind_as.clone(),
@@ -2032,6 +2079,11 @@ fn compile_step(
             face_up: a.face.is_up(),
             include_sources: a.include_sources,
         },
+        S::PlacePermanentOnOwnersSecurity(a) => CompiledStep::PlacePermanentOnOwnersSecurity {
+            target: compile_binding_ref(&a.target),
+            position: compile_stack_position(a.position),
+            face_up: a.face.is_up(),
+        },
         S::SecurityPlaceStackedCard(a) => {
             if a.source.is_none() && a.source_index_from_top.is_none() {
                 errors.push(ValidationError {
@@ -2111,6 +2163,9 @@ fn compile_step(
             of: compile_player_ref(a.of),
             count: a.count,
         },
+        S::RecoverForDeleted(a) => CompiledStep::RecoverForDeleted {
+            of: compile_player_ref(a.of),
+        },
         S::MarkSecurityFaceUp(a) => CompiledStep::MarkSecurityFaceUp {
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
@@ -2135,6 +2190,26 @@ fn compile_step(
             value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
         },
+        S::ChangeOriginalName(a) => CompiledStep::ChangeOriginalName {
+            target: compile_modifier_target(
+                &a.target,
+                &format!("{prefix}.target"),
+                card_id,
+                errors,
+            ),
+            name: a.name.clone(),
+            expiry: a.expiry.clone(),
+        },
+        S::ChangeColor(a) => CompiledStep::ChangeColor {
+            target: compile_modifier_target(
+                &a.target,
+                &format!("{prefix}.target"),
+                card_id,
+                errors,
+            ),
+            color: compile_color(a.color),
+            expiry: a.expiry.clone(),
+        },
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
             target_player: compile_player_ref(a.target_player),
             modifier: a.modifier.clone(),
@@ -2147,7 +2222,12 @@ fn compile_step(
             value: a.value,
         },
         S::GrantTriggeredEffect(a) => CompiledStep::GrantTriggeredEffect {
-            target: compile_modifier_target(&a.target, &format!("{prefix}.target"), card_id, errors),
+            target: compile_modifier_target(
+                &a.target,
+                &format!("{prefix}.target"),
+                card_id,
+                errors,
+            ),
             timing: a.timing.clone(),
             expiry: a.expiry.clone(),
             body: a
@@ -2335,6 +2415,22 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
                 .collect(),
         },
+        S::SelectPlayCostBudget(a) => CompiledStep::SelectPlayCostBudget {
+            of: compile_player_ref(a.of),
+            zone: compile_zone(a.zone),
+            play_cost_budget: a.play_cost_budget,
+            min_picks: a.min_picks,
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            optional_zero: a.optional_zero,
+            then: a
+                .then
+                .iter()
+                .enumerate()
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
+                .collect(),
+        },
         S::SelectOwnBreedingPermanent(a) => CompiledStep::SelectOwnBreedingPermanent {
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
@@ -2463,6 +2559,48 @@ fn compile_step(
                 })
                 .unwrap_or_default(),
         },
+        S::IfTrashTopSecurityCost(a) => CompiledStep::IfTrashTopSecurityCost {
+            of: compile_player_ref(a.of),
+            then: a
+                .then
+                .iter()
+                .enumerate()
+                .map(|(k, s)| compile_step(s, &format!("{prefix}.then[{k}]"), card_id, errors))
+                .collect(),
+        },
+        S::IfTrashTopOrBottomSecurityCost(a) => CompiledStep::IfTrashTopOrBottomSecurityCost {
+            of: compile_player_ref(a.of),
+            prompt: a.prompt.clone(),
+            then: a
+                .then
+                .iter()
+                .enumerate()
+                .map(|(k, s)| compile_step(s, &format!("{prefix}.then[{k}]"), card_id, errors))
+                .collect(),
+        },
+        S::IfAddTopSecurityToHandCost(a) => CompiledStep::IfAddTopSecurityToHandCost {
+            of: compile_player_ref(a.of),
+            prompt: a.prompt.clone(),
+            then: a
+                .then
+                .iter()
+                .enumerate()
+                .map(|(k, s)| compile_step(s, &format!("{prefix}.then[{k}]"), card_id, errors))
+                .collect(),
+        },
+        S::IfPlacePermanentOnOwnersSecurityCost(a) => {
+            CompiledStep::IfPlacePermanentOnOwnersSecurityCost {
+                target: compile_binding_ref(&a.target),
+                position: compile_stack_position(a.position),
+                face_up: a.face.is_up(),
+                then: a
+                    .then
+                    .iter()
+                    .enumerate()
+                    .map(|(k, s)| compile_step(s, &format!("{prefix}.then[{k}]"), card_id, errors))
+                    .collect(),
+            }
+        }
         S::ForEach(f) => CompiledStep::ForEach {
             over: compile_predicate(&f.over, &format!("{prefix}.over"), card_id, errors),
             bind_as: f.bind_as.clone(),
@@ -2581,6 +2719,9 @@ fn compile_step(
                 optional: a.optional,
             }
         }
+        S::ActivateMainEffects(a) => CompiledStep::ActivateMainEffects {
+            source: compile_binding_ref(&a.source),
+        },
         S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,
         S::HandleReplacement(_) => CompiledStep::HandleReplacement,

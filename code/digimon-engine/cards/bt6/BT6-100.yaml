@@ -1,0 +1,42 @@
+card: BT6-100
+name: "Reinforcing Memory Boost!"
+kind: option
+color: [yellow]
+cost: 6
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Reveal top 2; place 1 as top security; add the remaining card to hand; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 2 }
+      - select_reveal:
+          of: you
+          bind_as: security_pick
+          optional: false
+          filter: {}
+          prompt: "Place 1 revealed card on top of your security stack"
+      - place_on_security:
+          of: you
+          source: security_pick
+          position: top
+          face_up: false
+      - choose_from_reveal:
+          of: you
+          bind_as: hand_pick
+          optional: false
+          filter: {}
+          destination: hand
+          prompt: "Add the remaining revealed card to your hand"
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Gain 3 memory"
+    process:
+      - gain_memory: 3
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

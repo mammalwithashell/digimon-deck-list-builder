@@ -1,0 +1,66 @@
+card: BT14-093
+name: "Emissary of Hope"
+kind: option
+color: [yellow]
+cost: 1
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Search security; a Digimon may digivolve into a yellow level 6 or lower Vaccine there free; shuffle; recover with T.K."
+    process:
+      - select_security:
+          of: you
+          bind_as: sec_evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - level_lte: 6
+              - trait_has: Vaccine
+          prompt: "Choose a yellow level 6 or lower [Vaccine] Digimon in security"
+      - if:
+          condition: { binding_present: sec_evo }
+          then:
+            - select_own_permanent:
+                bind_as: target
+                optional: false
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - zone: [battle_area]
+                prompt: "Choose 1 of your Digimon to digivolve"
+            - effect_initiated_digivolve:
+                target: target
+                source: sec_evo
+                cost: free
+                ignore_requirements: false
+            - if:
+                condition:
+                  all_of:
+                    - effect_digivolved_any_digimon: true
+                    - any_permanent:
+                        of: you
+                        zone: [battle_area]
+                        kind: tamer
+                        name_contains: "T.K. Takaishi"
+                then:
+                  - recover: { of: you, count: 1 }
+      - shuffle_security: { of: you }
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 [Patamon] from hand or trash free; then add this card to hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: patamon
+          optional: true
+          filter:
+            all_of:
+              - name_is: Patamon
+          prompt: "You may play 1 [Patamon] from hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: patamon
+      - add_this_option_to_hand: {}

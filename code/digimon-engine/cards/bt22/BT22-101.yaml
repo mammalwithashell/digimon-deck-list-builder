@@ -1,0 +1,89 @@
+card: BT22-101
+name: Kyoko Kuremi
+kind: tamer
+color: [black, yellow]
+cost: 5
+traits: [CS]
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory is 2 or less, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: on_any_deletion
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns] When one of your level 4+ CS Digimon is deleted, suspend this Tamer to return 1 CS Digimon from trash to hand"
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_level_gte: 4
+        - event_target_trait_has: CS
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              kind: digimon
+              trait_has: CS
+            n: 1
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+          prompt: "Return 1 [CS] Digimon card from trash to hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  - when: on_unsuspend
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When this Tamer unsuspends, if you have no Alphamon, may digivolve into Alphamon in hand cost -2"
+    condition:
+      all_of:
+        - event_permanent_is_source: true
+        - none_of:
+            - any_permanent:
+                of: you
+                zone: [battle_area]
+                name_contains: Alphamon
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve into [Alphamon]"
+      - if:
+          condition: { binding_present: target }
+          then:
+            - select_hand:
+                of: you
+                bind_as: alphamon
+                optional: false
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: Alphamon
+                prompt: "Choose [Alphamon] in hand"
+            - effect_initiated_digivolve:
+                target: target
+                from_hand: alphamon
+                cost: { reduce: 2 }
+                ignore_requirements: false
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

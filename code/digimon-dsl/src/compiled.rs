@@ -200,6 +200,7 @@ pub struct CompiledPredicate {
     pub level_eq_binding: Option<String>,
     pub level_lte: Option<CompiledDpConstraint>,
     pub level_gte: Option<CompiledDpConstraint>,
+    pub level_lte_event_target: Option<bool>,
     pub color_is: Option<CompiledColor>,
     pub color_only: Option<Vec<CompiledColor>>,
     pub color_matches_any_field_digimon: Option<CompiledPlayerRef>,
@@ -218,6 +219,8 @@ pub struct CompiledPredicate {
     /// card-subject leaf: true when no battle-area Digimon of the scoped
     /// player shares the candidate card's name.
     pub name_not_shared_by_field_digimon: Option<CompiledPlayerRef>,
+    /// Sibling of `name_not_shared_by_field_digimon` for Tamer permanents.
+    pub name_not_shared_by_field_tamer: Option<CompiledPlayerRef>,
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<CompiledDpConstraint>,
     pub play_cost_gte: Option<CompiledDpConstraint>,
@@ -229,10 +232,12 @@ pub struct CompiledPredicate {
     pub stack_size_gte: Option<CompiledDpConstraint>,
     pub materials_count_lte: Option<CompiledDpConstraint>,
     pub materials_count_gte: Option<CompiledDpConstraint>,
+    pub same_level_pairs_in_sources_gte: Option<CompiledDpConstraint>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
     pub has_keyword: Option<String>,
+    pub security_attack_changed: Option<bool>,
     /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if the
     /// candidate permanent carries any `EffectTiming::OnDeletion`-timed
     /// triggered effect via a compiled DSL clause or a hand-written
@@ -273,6 +278,7 @@ pub struct CompiledPredicate {
     /// True when the named list-typed binding holds exactly `1` (count)
     /// entries. `(binding_name, n)`. G-DSL-BINDING-COUNT-EQ.
     pub binding_count_eq: Option<(String, u8)>,
+    pub binding_card_matches: Option<CompiledBindingCardMatches>,
     pub your_turn: Option<bool>,
     pub opponents_turn: Option<bool>,
     pub all_turns: Option<bool>,
@@ -297,6 +303,8 @@ pub struct CompiledPredicate {
     pub event_card_name_contains: Option<String>,
     pub event_card_level_eq: Option<u8>,
     pub event_card_level_gte: Option<CompiledDpConstraint>,
+    pub event_card_use_cost_lte: Option<CompiledDpConstraint>,
+    pub event_card_use_cost_gte: Option<CompiledDpConstraint>,
     /// Every color of the triggering event card must be within this set.
     pub event_card_color_only: Option<Vec<CompiledColor>>,
     /// The triggering event card must have at least one of these colors
@@ -349,6 +357,7 @@ pub struct CompiledPredicate {
     /// own top card is excluded. G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY.
     pub self_digivolution_sources_contain_name: Option<String>,
     pub self_digivolution_sources_trait_has: Option<String>,
+    pub self_digivolution_sources_color_has: Option<CompiledColor>,
     pub event_target_owner: Option<CompiledPlayerRef>,
     /// Event-target permanent color-set intersection test.
     /// G-EVENT-TARGET-COLOR.
@@ -415,6 +424,12 @@ pub enum CompiledBindingCompare {
 pub struct CompiledBindingOwnerPredicate {
     pub binding: String,
     pub of: CompiledPlayerRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledBindingCardMatches {
+    pub binding: String,
+    pub filter: Box<CompiledPredicate>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -732,11 +747,13 @@ pub enum CompiledTiming {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    OnDigivolutionCardPlaced,
     OnSecurityCheck,
     OnCheckFaceUpSecurity,
     OnLoseSecurity,
     OnDiscardSecurity,
     OnSecurity,
+    OnUseOption,
     OnOptionPlaced,
     OnOptionTrashed,
     OnPlaceSecurity,
@@ -1024,6 +1041,7 @@ pub enum CompiledStep {
         /// effects are skipped for this play event only (BT5-106 [Security]).
         suppress_on_play: bool,
     },
+    PlayThisFromTrashFree,
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
     /// true origin zone (hand, trash, or material). `binding` names a `select_union_zone`
     /// `bind_as`; the origin zone is carried in the binding value.
@@ -1114,6 +1132,11 @@ pub enum CompiledStep {
         face_up: bool,
         include_sources: bool,
     },
+    PlacePermanentOnOwnersSecurity {
+        target: CompiledBindingRef,
+        position: CompiledStackPosition,
+        face_up: bool,
+    },
     SecurityPlaceStackedCard {
         carrier: CompiledBindingRef,
         source: Option<CompiledBindingRef>,
@@ -1166,6 +1189,9 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         count: u8,
     },
+    RecoverForDeleted {
+        of: CompiledPlayerRef,
+    },
     MarkSecurityFaceUp {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
@@ -1182,6 +1208,16 @@ pub enum CompiledStep {
         target: CompiledModifierTarget,
         modifier: String,
         value: CompiledModifierValue,
+        expiry: String,
+    },
+    ChangeOriginalName {
+        target: CompiledModifierTarget,
+        name: String,
+        expiry: String,
+    },
+    ChangeColor {
+        target: CompiledModifierTarget,
+        color: CompiledColor,
         expiry: String,
     },
     AddPlayerModifier {
@@ -1328,6 +1364,17 @@ pub enum CompiledStep {
         prompt: String,
         then: Vec<CompiledStep>,
     },
+    SelectPlayCostBudget {
+        of: CompiledPlayerRef,
+        zone: CompiledZone,
+        play_cost_budget: i32,
+        min_picks: u8,
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        optional_zero: bool,
+        then: Vec<CompiledStep>,
+    },
     SelectOwnBreedingPermanent {
         bind_as: Option<String>,
         prompt: String,
@@ -1420,6 +1467,26 @@ pub enum CompiledStep {
         then: Vec<CompiledStep>,
         else_branch: Vec<CompiledStep>,
     },
+    IfTrashTopSecurityCost {
+        of: CompiledPlayerRef,
+        then: Vec<CompiledStep>,
+    },
+    IfTrashTopOrBottomSecurityCost {
+        of: CompiledPlayerRef,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
+    IfAddTopSecurityToHandCost {
+        of: CompiledPlayerRef,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
+    IfPlacePermanentOnOwnersSecurityCost {
+        target: CompiledBindingRef,
+        position: CompiledStackPosition,
+        face_up: bool,
+        then: Vec<CompiledStep>,
+    },
     ForEach {
         over: CompiledPredicate,
         bind_as: String,
@@ -1483,6 +1550,9 @@ pub enum CompiledStep {
         source: CompiledBindingRef,
         timing: String,
         optional: bool,
+    },
+    ActivateMainEffects {
+        source: CompiledBindingRef,
     },
     EndAttack {
         enabled: bool,

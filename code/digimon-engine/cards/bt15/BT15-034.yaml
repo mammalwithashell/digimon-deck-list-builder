@@ -1,0 +1,74 @@
+card: BT15-034
+name: Salamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Mammal]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    condition: { security_count_gte: 3 }
+    summary: "[Start of Your Main Phase] At 3+ security, may add top security to hand"
+    process:
+      - may_add_top_security_to_hand: { of: you }
+
+  - when: start_of_your_main_phase
+    condition: { security_count_lte: 2 }
+    summary: "[Start of Your Main Phase] At 2 or fewer security, may place 1 yellow Vaccine Digimon from hand top or bottom security"
+    process:
+      - select_hand:
+          of: you
+          bind_as: yellow_vaccine_digimon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - trait_has: Vaccine
+          prompt: "Place 1 yellow Vaccine Digimon from your hand in security"
+      - if:
+          condition: { binding_present: yellow_vaccine_digimon }
+          then:
+            - select_effect_choice:
+                labels: ["Top", "Bottom"]
+                bind_as: security_position
+                prompt: "Place it as top or bottom security?"
+            - if:
+                condition: { equals: [security_position, 0] }
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { binding: yellow_vaccine_digimon, zone: hand }
+                      position: top
+                      face_up: false
+            - if:
+                condition: { equals: [security_position, 1] }
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { binding: yellow_vaccine_digimon, zone: hand }
+                      position: bottom
+                      face_up: false
+
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When a card is removed from your security stack, 1 opponent Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Select 1 opponent Digimon to get -2000 DP"
+      - add_dp_modifier:
+          target: dp_target
+          value: -2000
+          expiry: end_of_turn

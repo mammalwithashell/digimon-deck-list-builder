@@ -31,6 +31,10 @@ pub struct PredicateSpec {
     pub level_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_gte: Option<DpConstraint>,
+    /// Permanent-subject predicate comparing the candidate level to the
+    /// current event target's level.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level_lte_event_target: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_matches_aggregate: Option<LevelAggregatePredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -74,6 +78,13 @@ pub struct PredicateSpec {
     /// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_not_shared_by_field_digimon: Option<PlayerRefSelector>,
+    /// Card-subject leaf: true when NO battle-area Tamer belonging to the
+    /// scoped player shares the candidate card's name. Sibling of
+    /// `name_not_shared_by_field_digimon`, used by effects such as EX10-051
+    /// that can play a Tamer unless a Tamer with the same name is already in
+    /// play.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_not_shared_by_field_tamer: Option<PlayerRefSelector>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card_number_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -98,6 +109,10 @@ pub struct PredicateSpec {
     pub materials_count_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub materials_count_gte: Option<DpConstraint>,
+    /// Permanent-subject predicate. Counts same-level pairs among source cards
+    /// below the top card and requires at least the requested amount.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub same_level_pairs_in_sources_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_inherited: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -106,6 +121,11 @@ pub struct PredicateSpec {
     pub is_unsuspended: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
+    /// Permanent-subject predicate. True when the permanent currently has a
+    /// rules-visible Security Attack adjustment, including printed/granted
+    /// `<Security A. +/-N>` keywords or modifier-backed Security Attack deltas.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub security_attack_changed: Option<bool>,
     /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true when the
     /// permanent's top card (or any card in its digivolution stack) has a
     /// triggered effect with `EffectTiming::OnDeletion` either via a
@@ -187,6 +207,10 @@ pub struct PredicateSpec {
     /// playable [Royal Knight] sources.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_digivolution_sources_trait_has: Option<String>,
+    /// Like `self_digivolution_sources_trait_has`, but matches any source card
+    /// with the requested color.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_digivolution_sources_color_has: Option<ColorSpec>,
     /// True when the carrier Digimon's printed rules text (effect_text +
     /// inherited_text + security_text of the top card) contains the given
     /// substring (case-insensitive). Evaluated against the subject permanent
@@ -294,6 +318,13 @@ pub struct PredicateSpec {
     pub event_card_level_eq: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_level_gte: Option<DpConstraint>,
+    /// Match the printed use cost of the triggering event card. For normal
+    /// Options this is the Option play/use cost; for Dual cards it is the
+    /// Option-face use cost. Non-Option event cards do not match.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_use_cost_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_use_cost_gte: Option<DpConstraint>,
     /// True when every color of the triggering event card is within the given
     /// set. Used to gate observers on "the just-played card is black/yellow
     /// only" without listing individual card names. Mirrors `color_only` but
@@ -351,6 +382,11 @@ pub struct PredicateSpec {
     /// G-DSL-BINDING-COUNT-EQ.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub binding_count_eq: Option<BindingCountPredicate>,
+    /// True when the named binding resolves to a single card and that card
+    /// satisfies the nested card predicate. Used after unrestricted security
+    /// or reveal searches whose follow-up depends on the actually chosen card.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_card_matches: Option<BindingCardMatchesPredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_suspended_any_own_digimon: Option<bool>,
     /// Opponent-side sibling of `effect_suspended_any_own_digimon`. True
@@ -573,6 +609,13 @@ fn default_face_up_security_of() -> PlayerRef {
 pub struct BindingCountPredicate {
     pub binding: String,
     pub n: u8,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindingCardMatchesPredicate {
+    pub binding: String,
+    pub filter: Box<PredicateSpec>,
 }
 
 fn default_level_aggregate_of() -> PlayerRef {

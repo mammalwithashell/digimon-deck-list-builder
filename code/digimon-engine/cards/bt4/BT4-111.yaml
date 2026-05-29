@@ -1,0 +1,25 @@
+card: BT4-111
+name: Jack Raid
+kind: option
+color: [purple]
+cost: 0
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] For every 10 cards in your trash, gain 1 memory"
+    process:
+      - gain_memory_fn:
+          formula:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone:
+                    of: you
+                    zone: trash
+                delta: 1
+              - 10
+
+  - when: on_security
+    summary: "[Security] Gain 2 memory"
+    process:
+      - gain_memory: 2

@@ -1,0 +1,61 @@
+card: BT23-037
+name: Tentomon
+kind: digimon
+level: 3
+color: [green, yellow]
+cost: 3
+dp: 1000
+traits: [Insectoid, Hudie, CS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: CS
+    cost: 0
+    ignore_requirements: true
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into a [CS] Digimon, reduce the cost by 1"
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[Inherited][When Attacking][OPT] May play play-cost-5-or-less Hudie Digimon from hand; it can't digivolve and is deleted at opponent EOT"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Hudie
+              - play_cost_lte: 5
+          prompt: "Play 1 play cost 5 or lower [Hudie] Digimon from hand"
+      - play_from_hand_free: { of: you, hand_index: pick, bind_as: played }
+      - add_modifier:
+          target: played
+          modifier: CannotDigivolve
+          value: 1
+          expiry: end_of_opponents_turn
+      - schedule_delete_played_at_turn_end:
+          binding: played
+          at: opponents_turn

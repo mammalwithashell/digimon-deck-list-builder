@@ -1,0 +1,68 @@
+card: BT22-031
+name: GoldNumemon
+kind: digimon
+level: 4
+color: [yellow, black]
+cost: 5
+dp: 2000
+traits: [Mutant, CS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, name_contains: Numemon }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: CS }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Security A. -2; with same-level pair, may digivolve into PlatinumNumemon"
+    process:
+      - select_opponent_permanent:
+          bind_as: security_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to gain Security A. -2"
+      - add_modifier:
+          target: security_target
+          modifier: SecurityAttackChange
+          value: -2
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { same_level_pairs_in_sources_gte: 1 }
+          then:
+            - select_hand:
+                of: you
+                bind_as: platinum
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_is: PlatinumNumemon
+                prompt: "Choose [PlatinumNumemon] in hand to digivolve into"
+            - if:
+                condition: { binding_present: platinum }
+                then:
+                  - effect_initiated_digivolve:
+                      target: source
+                      from_hand: platinum
+                      cost: 4
+                      ignore_requirements: true
+
+  - scope: inherited
+    kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+    amount: 1
+    summary: "[Your Turn][OPT] When digivolving into a [CS] Digimon, reduce the cost by 1"

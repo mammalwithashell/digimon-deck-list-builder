@@ -349,6 +349,7 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
         &predicate.stack_size_gte,
         &predicate.materials_count_lte,
         &predicate.materials_count_gte,
+        &predicate.same_level_pairs_in_sources_gte,
         &predicate.memory_lte,
         &predicate.memory_gte,
         &predicate.security_count_lte,

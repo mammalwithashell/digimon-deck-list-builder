@@ -1,0 +1,90 @@
+card: BT11-043
+name: KingSukamon
+kind: digimon
+level: 5
+color: [yellow, black]
+cost: 7
+dp: 6000
+traits: [Mutant]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, name_contains: Sukamon }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    condition:
+      any_of:
+        - count_gte:
+            filter:
+              of: opponent
+              zone: [trash]
+            n: 16
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              name_contains: Sukamon
+            n: 3
+    summary: "If the trash condition is met, change 1 opponent Digimon into a white 3000 DP Sukamon until end of opponent's turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: transform_target
+          filter: { kind: digimon }
+          prompt: "Change 1 opponent Digimon into Sukamon"
+      - change_color:
+          target: transform_target
+          color: white
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: transform_target
+          modifier: ChangeCardDP
+          value: 3000
+          expiry: end_of_opponents_turn
+      - change_original_name:
+          target: transform_target
+          name: Sukamon
+          expiry: end_of_opponents_turn
+
+  - when: when_attacking
+    summary: "Gain Security Attack +1 for each other Sukamon-name Digimon in play"
+    process:
+      - add_modifier:
+          target: source
+          modifier: SecurityAttackChange
+          value:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  of: any
+                  zone: battle_area
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - name_contains: Sukamon
+                      - other: true
+              delta: 1
+          expiry: end_of_turn
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_be_deleted
+    optional: true
+    summary: "[All Turns] By deleting 1 other Sukamon-name Digimon, prevent this Digimon's deletion"
+    process:
+      - select_own_permanent:
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - name_contains: Sukamon
+          prompt: "Delete 1 other Digimon with Sukamon in its name"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

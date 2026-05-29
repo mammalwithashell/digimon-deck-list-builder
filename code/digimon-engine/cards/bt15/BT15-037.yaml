@@ -1,0 +1,35 @@
+card: BT15-037
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 4000
+traits: [Holy Beast]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - when: on_discard_security
+    optional: true
+    summary: "When trashed from security by an effect, may play this card free"
+    process:
+      - play_from_security: {}
+
+  - when: on_own_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When own security is removed, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier

@@ -1,0 +1,20 @@
+card: BT21-004
+name: Koromon
+kind: digi_egg
+level: 2
+color: [yellow]
+traits: [Lesser, Hero]
+
+effects:
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [yellow, red]
+    summary: "[Your Turn][OPT] When one of your yellow or red Tamers suspends, draw 1"
+    process:
+      - draw: { of: you, count: 1 }

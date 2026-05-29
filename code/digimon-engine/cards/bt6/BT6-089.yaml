@@ -1,0 +1,50 @@
+card: BT6-089
+name: "T.K. Takaishi & Kari Kamiya"
+kind: tamer
+color: [yellow]
+cost: 4
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have fewer security cards than your opponent, gain 2 memory"
+    condition:
+      security_count_lte:
+        formula:
+          base: -1
+          per:
+            card_count_in_zone:
+              of: opponent
+              zone: security
+          delta: 1
+    process:
+      - gain_memory: 2
+
+  - when: on_ally_attack
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When one of your yellow Digimon attacks, suspend this Tamer to give 1 opponent Digimon -1000 DP"
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [yellow]
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -1000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -1000
+          expiry: end_of_turn
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

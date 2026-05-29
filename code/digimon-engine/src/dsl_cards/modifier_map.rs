@@ -25,6 +25,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CanAttackUnsuspended" => ModifierType::CanAttackUnsuspended,
         "CanAttackActivePlayer" => ModifierType::CanAttackActivePlayer,
         "CannotAttackTarget" => ModifierType::CannotAttackTarget,
+        "CannotAttackSource" => ModifierType::CannotAttackSource,
         "CannotBeRedirectedAsAttackTarget" => ModifierType::CannotBeRedirectedAsAttackTarget,
         "CanNotSwitchAttackTarget" => ModifierType::CanNotSwitchAttackTarget,
         "CannotSuspend" => ModifierType::CannotSuspend,
@@ -135,6 +136,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CanAttackUnsuspended
         | ModifierType::CanAttackActivePlayer
         | ModifierType::CannotAttackTarget
+        | ModifierType::CannotAttackSource
         | ModifierType::CannotSuspend
         | ModifierType::CannotUnsuspend
         | ModifierType::CannotBeSelectedByEffect
@@ -243,6 +245,7 @@ mod tests {
             ModifierType::CanAttackUnsuspended,
             ModifierType::CanAttackActivePlayer,
             ModifierType::CannotAttackTarget,
+            ModifierType::CannotAttackSource,
             ModifierType::CannotSuspend,
             ModifierType::CannotUnsuspend,
             ModifierType::CannotBeSelectedByEffect,
@@ -383,6 +386,7 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         // multi-color use OR'd values (e.g. `value: 33` for Red|Black).
         "Decoy" => Keyword::Decoy(value.unwrap_or(0) as u8),
         "Partition" => Keyword::Partition,
+        "Retaliation" => Keyword::Retaliation,
         "Vortex" => Keyword::Vortex,
         "Collision" => Keyword::Collision,
         "Evade" => Keyword::Evade,

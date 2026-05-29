@@ -16,8 +16,8 @@
 //! which guards against an unannounced narrowing change.
 
 use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledEffectController, CompiledEffectSourceKind, CompiledModifierTarget,
-    CompiledModifierValue, CompiledStep,
+    CompiledBindingRef, CompiledColor, CompiledEffectController, CompiledEffectSourceKind,
+    CompiledModifierTarget, CompiledModifierValue, CompiledStep,
 };
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
@@ -26,8 +26,8 @@ use crate::dsl_cards::expiry_map::lookup_expiry;
 use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::step::{resolve_player, StepRuntime};
 use crate::effect_context::EffectContext;
-use crate::enums::EffectSourceKind;
-use crate::modifiers::{EffectControllerFilter, PlayerModifierEntry};
+use crate::enums::{CardColor, EffectSourceKind};
+use crate::modifiers::{EffectControllerFilter, ModifierPayload, PlayerModifierEntry};
 use crate::permanent::PermanentHandle;
 
 /// Resolve a `CompiledModifierValue` to the `i32` the engine modifier APIs
@@ -111,6 +111,18 @@ fn lower_effect_controller(controller: CompiledEffectController) -> EffectContro
     }
 }
 
+fn lower_color(color: CompiledColor) -> CardColor {
+    match color {
+        CompiledColor::Red => CardColor::Red,
+        CompiledColor::Blue => CardColor::Blue,
+        CompiledColor::Yellow => CardColor::Yellow,
+        CompiledColor::Green => CardColor::Green,
+        CompiledColor::Black => CardColor::Black,
+        CompiledColor::Purple => CardColor::Purple,
+        CompiledColor::White => CardColor::White,
+    }
+}
+
 /// Returns `true` if `step` is a modifier family handled here.
 /// Unknown steps fall through (the caller may try other families).
 pub fn try_run(
@@ -167,6 +179,86 @@ pub fn try_run(
                     for h in matches {
                         let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
                         ctx.add_modifier(h, modifier_ty, n, expiry);
+                    }
+                }
+            }
+            true
+        }
+        CompiledStep::ChangeOriginalName {
+            target,
+            name,
+            expiry,
+        } => {
+            let Some(expiry) = resolve_expiry("change_original_name", expiry) else {
+                return true;
+            };
+            let payload = ModifierPayload::Name {
+                value: name.clone(),
+                base: true,
+            };
+            match target {
+                CompiledModifierTarget::Binding(b) => {
+                    if let Some(h) = resolve_permanent_target(b, ctx, bindings) {
+                        ctx.add_modifier_with_payload(
+                            h,
+                            crate::enums::ModifierType::ChangeBaseCardName,
+                            0,
+                            expiry,
+                            payload,
+                        );
+                    }
+                }
+                CompiledModifierTarget::Filter(pred) => {
+                    let matches =
+                        crate::dsl_cards::step::permanent_scan::scan(ctx, pred, Some(bindings));
+                    for h in matches {
+                        ctx.add_modifier_with_payload(
+                            h,
+                            crate::enums::ModifierType::ChangeBaseCardName,
+                            0,
+                            expiry,
+                            payload.clone(),
+                        );
+                    }
+                }
+            }
+            true
+        }
+        CompiledStep::ChangeColor {
+            target,
+            color,
+            expiry,
+        } => {
+            let Some(expiry) = resolve_expiry("change_color", expiry) else {
+                return true;
+            };
+            let payload = ModifierPayload::Colors {
+                value: vec![lower_color(*color)],
+                base: true,
+            };
+            match target {
+                CompiledModifierTarget::Binding(b) => {
+                    if let Some(h) = resolve_permanent_target(b, ctx, bindings) {
+                        ctx.add_modifier_with_payload(
+                            h,
+                            crate::enums::ModifierType::ChangeBaseCardColor,
+                            0,
+                            expiry,
+                            payload,
+                        );
+                    }
+                }
+                CompiledModifierTarget::Filter(pred) => {
+                    let matches =
+                        crate::dsl_cards::step::permanent_scan::scan(ctx, pred, Some(bindings));
+                    for h in matches {
+                        ctx.add_modifier_with_payload(
+                            h,
+                            crate::enums::ModifierType::ChangeBaseCardColor,
+                            0,
+                            expiry,
+                            payload.clone(),
+                        );
                     }
                 }
             }

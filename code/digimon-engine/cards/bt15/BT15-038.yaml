@@ -1,0 +1,46 @@
+card: BT15-038
+name: Angewomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 4
+dp: 7000
+traits: [Archangel]
+attribute: Vaccine
+ace_overflow: -3
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
+
+effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+  - when: [on_play, when_digivolving]
+    summary: "By trashing top or bottom security, 1 opponent Digimon gets -6000 DP"
+    process:
+      - if_trash_top_or_bottom_security_cost:
+          of: you
+          prompt: "Trash the top or bottom card of your security stack"
+          then:
+            - select_opponent_permanent:
+                bind_as: dp_target
+                filter: { kind: digimon }
+                prompt: "Select 1 opponent Digimon to get -6000 DP"
+            - add_dp_modifier:
+                target: dp_target
+                value: -6000
+                expiry: end_of_opponents_turn
+
+  - when: on_own_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition: { security_count_lte: 3 }
+    summary: "[All Turns][OPT] When own security is removed at 3 or fewer, Recovery +1"
+    process:
+      - recover: { of: you, count: 1 }

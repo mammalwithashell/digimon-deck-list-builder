@@ -368,6 +368,8 @@ pub enum EffectTiming {
     /// (cost payment, source-displacement effects, etc.). Rocks core
     /// archetype observer.
     OnDigivolutionCardTrashed,
+    /// Fires when a card is placed as a digivolution card under a stack.
+    OnDigivolutionCardPlaced,
 
     // Special
     None,
@@ -548,6 +550,11 @@ pub enum ModifierType {
     CanAttackUnsuspended,
     CanAttackActivePlayer,
     CannotAttackTarget,
+    /// Permanent-scoped on an attacker: this Digimon cannot attack the
+    /// permanent that sourced the modifier. Used by source-scoped locks such
+    /// as "can't attack this Digimon" without making the target globally
+    /// unattackable.
+    CannotAttackSource,
     CannotBeRedirectedAsAttackTarget,
     CanNotSwitchAttackTarget,
 

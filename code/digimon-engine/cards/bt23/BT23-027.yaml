@@ -1,0 +1,63 @@
+card: BT23-027
+name: Angemon
+kind: digimon
+level: 4
+color: [yellow, blue]
+cost: 5
+dp: 5000
+traits: [Angel, Hudie, CS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, name_is: Patamon }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: CS }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Draw 1; during your turn, may DNA digivolve into Shakkoumon in hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - if:
+          condition: { your_turn: true }
+          then:
+            - optional:
+                - select_hand:
+                    of: you
+                    bind_as: shakkoumon
+                    filter:
+                      all_of:
+                        - kind: digimon
+                        - name_is: Shakkoumon
+                    prompt: "Choose [Shakkoumon] in hand to DNA digivolve into"
+                - select_dna_pair:
+                    left_filter:
+                      all_of:
+                        - kind: digimon
+                        - of: you
+                    right_filter:
+                      all_of:
+                        - kind: digimon
+                        - of: you
+                    bind_left_as: dna_left
+                    bind_right_as: dna_right
+                    prompt: "Choose 2 of your Digimon to DNA digivolve into Shakkoumon"
+                - effect_initiated_dna_digivolve:
+                    target_a: dna_left
+                    target_b: dna_right
+                    from_hand: shakkoumon
+                    cost: 0
+                    ignore_requirements: false
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier

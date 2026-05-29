@@ -1,0 +1,70 @@
+card: LM-043
+name: Darkdramon
+kind: digimon
+level: 6
+color: [black, purple]
+cost: 7
+dp: 12000
+traits: [Cyborg, D-Brigade, ACCEL]
+attribute: Virus
+ace_overflow: -4
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: D-Brigade
+            - trait_has: ACCEL
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+  - kind: replacement
+    timing: when_would_be_deleted
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "<Scapegoat>"
+    process:
+      - select_own_permanent:
+          bind_as: scapegoat_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+          prompt: "Delete 1 of your other Digimon to prevent this deletion"
+      - substitute_replacement:
+          subject: scapegoat_cost
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] De-Digivolve 1, then delete all opponent lowest-play-cost Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+      - de_digivolve:
+          target: dd_target
+          amount: 1
+          stop_at_level: 3
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            play_cost_lte:
+              aggregate:
+                selector: lowest_play_cost
+                scope: opponent
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }

@@ -1,0 +1,70 @@
+card: ST10-12
+name: LadyDevimon
+kind: digimon
+level: 5
+color: [purple]
+cost: 6
+dp: 6000
+traits: [Fallen Angel]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] May trash 1 hand card; reveal 3 and add yellow + purple Angel-line Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+            - select_reveal_buckets:
+                from: revealed
+                buckets:
+                  - bind_as: yellow_angel_pick
+                    min: 1
+                    max: 1
+                    filter:
+                      all_of:
+                        - kind: digimon
+                        - color_is: yellow
+                        - any_of:
+                            - trait_has: Angel
+                            - trait_has: Archangel
+                            - trait_has: Fallen Angel
+                  - bind_as: purple_angel_pick
+                    min: 1
+                    max: 1
+                    filter:
+                      all_of:
+                        - kind: digimon
+                        - color_is: purple
+                        - any_of:
+                            - trait_has: Angel
+                            - trait_has: Archangel
+                            - trait_has: Fallen Angel
+                no_duplicate_cards: true
+                prompt: "Select 1 yellow and 1 purple Angel-line Digimon"
+            - add_to_hand_from_reveal: { of: you, card: yellow_angel_pick }
+            - add_to_hand_from_reveal: { of: you, card: purple_angel_pick }
+            - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      color_is: yellow
+    grant_keyword: { keyword: Retaliation }

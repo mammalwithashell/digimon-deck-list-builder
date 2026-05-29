@@ -425,13 +425,12 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Suggested change:** Add `EffectContext::return_trash_cards_to_deck_top` (mirror the bottom variant but `deck.push`), exposed via a `destination: top|bottom` DSL parameter — see `qa/dsl-vocab-gaps.md`.
 - **Workaround:** LM-027 clause B retains a `raw_rust` no-op; 4 tests `#[ignore]`'d with this gap tag.
 
-### Outer-Optional-Prompt Condition Evaluated Without Trigger Context  [G-OUTER-OPTIONAL-COND-NO-TRIGGER-CONTEXT]
-- **Discovered in:** Medusamon archetype re-attempt run, BT20-016 Paildramon DSL implementation (2026-05-21). Latent — not hit by BT20-016 itself.
+### ~~Outer-Optional-Prompt Condition Evaluated Without Trigger Context~~  [G-OUTER-OPTIONAL-COND-NO-TRIGGER-CONTEXT] — RESOLVED 2026-05-23
+- **Status:** Resolved by `unblock-mastemon-rust-dsl`. `queued_effect_wants_outer_optional_prompt` now takes `&mut self` and installs the queued effect's `TriggerContext` with `TriggerContextGuard` before evaluating the optional clause's condition / outer guard.
+- **Discovered in:** Medusamon archetype re-attempt run, BT20-016 Paildramon DSL implementation (2026-05-21). Latent until Mastemon `BT9-082` exercised an optional On Deletion clause that needed event-context predicates to decide whether to show an outer prompt.
 - **Scope:** Rust engine.
-- **Card(s):** Any `optional` triggered clause whose body's first step is mandatory (so an outer accept/decline prompt is required) AND whose `condition` reads event-context predicates. BT21-026's deletion arm is a known affected card (its behavioral test is `#[ignore]`'d).
-- **What's missing:** `queued_effect_wants_outer_optional_prompt` (`effect_queue.rs`) builds an `EffectReadContext` and evaluates `effect.condition` WITHOUT installing the queued effect's `trigger_context` — unlike `evaluate_effect_condition` and the pre-cost-prompt branch, which both install it via `TriggerContextGuard`. For an optional triggered clause needing an outer prompt whose `condition` reads event-context predicates (`event_target_owner`, `event_target_kind`, `event_target_name_contains`, deleted-object snapshots), the predicate defaults false → the outer prompt is wrongly suppressed and the clause silently never fires.
-- **Suggested change:** Wrap the condition evaluation in `queued_effect_wants_outer_optional_prompt` with a `TriggerContextGuard::install(qe.trigger_context)` — requires a `&mut self` refactor or a read-only trigger-context override on `EffectReadContext`.
-- **Workaround:** BT20-016 avoids this by making the body's first step a declinable `optional: true` `select_hand` (so `needs_outer_optional_prompt` is false and the inner PASS is the decline path). Not all cards can be restructured this way.
+- **Card(s):** Any `optional` triggered clause whose body's first step is mandatory and whose `condition` reads event-context predicates.
+- **Resolution evidence:** `BT9-082` now prompts correctly instead of silently suppressing or auto-running the optional On Deletion effect; focused Mastemon support-core tests cover the player-visible prompt/mask path.
 
 ### Optional `select_hand` / `select_trash` Tail Does Not Run on PASS  [G-DSL-OPTIONAL-SELECT-PASS-TAIL]
 - **Discovered in:** BT21-102 Tai Kamiya main clause (2026-05-11)

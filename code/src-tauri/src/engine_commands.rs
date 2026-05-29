@@ -1136,7 +1136,9 @@ mod tests {
         card.digixros_aliases = vec!["Greymon".to_string(), "MetalGreymon".to_string()];
 
         let data: Vec<CardData> = vec![card];
-        let source = CardSource::new(/* data_index */ 0, /* owner */ 0, /* card_index */ 0);
+        let source = CardSource::new(
+            /* data_index */ 0, /* owner */ 0, /* card_index */ 0,
+        );
         let dto = card_dto(&source, &data);
 
         assert_eq!(dto.ace_overflow, Some(3));

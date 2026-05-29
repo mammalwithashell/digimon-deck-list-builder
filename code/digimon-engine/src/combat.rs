@@ -497,6 +497,9 @@ impl Game {
                 {
                     return AttackResult::Invalid;
                 }
+                if self.cannot_attack_source(attacker, d) {
+                    return AttackResult::Invalid;
+                }
             }
             AttackTarget::Player(_) => {
                 if self
@@ -1123,6 +1126,9 @@ impl Game {
                 .modifiers
                 .has(target_handle, ModifierType::CannotAttackTarget)
             {
+                return Err(AttackError::InvalidTarget);
+            }
+            if self.cannot_attack_source(attacker, target_handle) {
                 return Err(AttackError::InvalidTarget);
             }
             if self.modifiers.has(

@@ -2461,7 +2461,9 @@ impl Game {
             for pid in 0..self.players.len() {
                 self.enqueue_triggered(
                     crate::enums::EffectTiming::OnLinkedCardTrashed,
-                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+                    crate::selection::TriggerSource::PlayerBattleArea(
+                        pid as crate::enums::PlayerId,
+                    ),
                 );
             }
             self.drain_effect_queue();
@@ -2658,6 +2660,49 @@ impl Game {
         // from `card_sources`; aura grants live in `Modifiers::permanent_keywords`.
         total += self.modifiers.granted_security_attack_keyword_bonus(target);
         total
+    }
+
+    /// True when `target` currently has a rules-visible Security Attack
+    /// adjustment beyond the default single check. This covers printed or
+    /// granted Security Attack keywords, flat modifier deltas, payload-backed
+    /// `ChangeSAttack` entries, and dynamic formula auras.
+    pub fn has_security_attack_change(&self, target: crate::permanent::PermanentHandle) -> bool {
+        let flat_delta = self.security_attack_keyword_bonus(target)
+            + self
+                .modifiers
+                .sum(target, crate::enums::ModifierType::SecurityAttackChange)
+            + self
+                .modifiers
+                .get(target, crate::enums::ModifierType::ChangeSAttack)
+                .into_iter()
+                .map(|entry| match &entry.payload {
+                    crate::modifiers::ModifierPayload::SecurityAttack { delta, invert } => {
+                        if *invert {
+                            -*delta
+                        } else {
+                            *delta
+                        }
+                    }
+                    _ => 0,
+                })
+                .sum::<i32>();
+        flat_delta != 0
+            || self
+                .dynamic_security_attack_aura_bonus(target)
+                .is_some_and(|checks| checks != 1)
+    }
+
+    /// True when `attacker` carries a source-scoped attack lock whose
+    /// originating permanent is exactly `target`.
+    pub fn cannot_attack_source(
+        &self,
+        attacker: crate::permanent::PermanentHandle,
+        target: crate::permanent::PermanentHandle,
+    ) -> bool {
+        self.modifiers
+            .get(attacker, crate::enums::ModifierType::CannotAttackSource)
+            .into_iter()
+            .any(|entry| entry.source_permanent == Some(target))
     }
 
     pub fn dynamic_dp_aura_bonus(&self, target: crate::permanent::PermanentHandle) -> i32 {
@@ -3015,6 +3060,14 @@ impl Game {
         {
             return Some(&self.card_data[cs.data_index]);
         }
+        if let Some(cs) = self
+            .pending_option
+            .as_ref()
+            .map(|pending| &pending.card)
+            .filter(|c| c.card_index == target_index)
+        {
+            return Some(&self.card_data[cs.data_index]);
+        }
         None
     }
 
@@ -3070,6 +3123,12 @@ impl Game {
         self.revealed_cards
             .iter()
             .find(|c| c.card_index == target_index)
+            .or_else(|| {
+                self.pending_option
+                    .as_ref()
+                    .map(|pending| &pending.card)
+                    .filter(|c| c.card_index == target_index)
+            })
     }
 
     pub fn provenance_token_for_card(

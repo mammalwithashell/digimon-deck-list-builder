@@ -337,6 +337,9 @@ impl Game {
         {
             return None;
         }
+        if self.cannot_attack_source(attacker, defender) {
+            return None;
+        }
         if vortex_legal {
             return Some(true);
         }

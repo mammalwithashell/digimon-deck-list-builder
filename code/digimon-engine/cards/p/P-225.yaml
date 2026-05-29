@@ -1,0 +1,50 @@
+card: P-225
+name: DigiLab
+kind: option
+color: [white]
+cost: 2
+traits: [CS]
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - { kind: digimon, trait_has: CS }
+      - { kind: tamer, trait_has: CS }
+
+effects:
+  - kind: flood_gate
+    scope: face_up
+    active_when: { your_turn: true }
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "P-225" }
+
+  - when: main_from_hand
+    summary: "[Main] Draw 1; place this card in the battle area"
+    process:
+      - draw: { of: you, count: 1 }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Place top stacked card of a level 4+ CS Digimon as bottom source; gain 2 memory"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+              - level_gte: 4
+              - materials_count_gte: 1
+          prompt: "Choose 1 level 4 or higher [CS] Digimon"
+      - place_top_source_as_bottom: { target: target }
+      - gain_memory: 2
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

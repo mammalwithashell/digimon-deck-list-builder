@@ -1,0 +1,66 @@
+card: BT11-094
+name: Mirei Mikagura
+kind: tamer
+color: [yellow, purple]
+cost: 5
+traits: []
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] Gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: on_digivolve
+    optional: true
+    condition:
+      all_of:
+        - your_turn: true
+        - source_is_unsuspended: true
+        - event_target_owner: you
+        - count_lte:
+            filter: { of: you, zone: [battle_area], kind: digimon }
+            n: 1
+        - any_of:
+            - event_target_name_contains: "Angewomon"
+            - event_target_name_contains: "LadyDevimon"
+    summary: "[Your Turn] When one Digimon digivolves into Angewomon/LadyDevimon with <=1 Digimon, suspend this Tamer to play the opposite name from hand free"
+    process:
+      - activation_cost: { suspend_self: true }
+      - if:
+          condition: { event_target_name_contains: "Angewomon" }
+          then:
+            - select_hand:
+                of: you
+                bind_as: lady
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: "LadyDevimon"
+                prompt: "Play 1 LadyDevimon from your hand"
+            - if:
+                condition: { binding_present: lady }
+                then:
+                  - play_from_hand_free: { of: you, hand_index: lady }
+      - if:
+          condition: { event_target_name_contains: "LadyDevimon" }
+          then:
+            - select_hand:
+                of: you
+                bind_as: ange
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: "Angewomon"
+                prompt: "Play 1 Angewomon from your hand"
+            - if:
+                condition: { binding_present: ange }
+                then:
+                  - play_from_hand_free: { of: you, hand_index: ange }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

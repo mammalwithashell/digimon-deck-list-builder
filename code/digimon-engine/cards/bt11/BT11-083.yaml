@@ -1,0 +1,75 @@
+card: BT11-083
+name: LadyDevimon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 6000
+traits: [Fallen Angel]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] May trash 1 hand card; if you do, may return Mirei or Angel/Archangel/Fallen Angel from trash"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - select_trash:
+                of: you
+                bind_as: return_pick
+                optional: true
+                filter:
+                  any_of:
+                    - name_contains: "Mirei Mikagura"
+                    - trait_has: Angel
+                    - trait_has: Archangel
+                    - trait_has: Fallen Angel
+                prompt: "Return Mirei or an Angel, Archangel, or Fallen Angel from trash"
+            - if:
+                condition: { binding_present: return_pick }
+                then:
+                  - add_to_hand_from_trash: { of: you, card: return_pick }
+
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_name_contains: "Angewomon"
+            - event_target_name_contains: "Mirei Mikagura"
+    summary: "[Your Turn][OPT] When you play Angewomon or Mirei, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - any_permanent:
+            of: you
+            kind: digimon
+            color_is: yellow
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      any_of:
+        - trait_has: Angel
+        - trait_has: Archangel
+        - trait_has: Fallen Angel
+    grant_keyword: { keyword: Retaliation }

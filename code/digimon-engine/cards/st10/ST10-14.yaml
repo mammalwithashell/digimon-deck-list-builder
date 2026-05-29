@@ -1,0 +1,69 @@
+card: ST10-14
+name: Chaos Degradation
+kind: option
+color: [yellow, purple]
+cost: 8
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Put 1 opponent Digimon as top/bottom security, then trash opponent top security"
+    process:
+      - select_opponent_permanent:
+          bind_as: security_target
+          filter: { kind: digimon }
+          prompt: "Place 1 opponent Digimon as top or bottom security"
+      - select_effect_choice:
+          labels: ["Top", "Bottom"]
+          bind_as: security_position
+          prompt: "Place it as top or bottom security?"
+      - if:
+          condition: { equals: [security_position, 0] }
+          then:
+            - place_permanent_on_security:
+                of: opponent
+                target: security_target
+                position: top
+                face_up: false
+            - trash_top_security: { of: opponent }
+      - if:
+          condition: { equals: [security_position, 1] }
+          then:
+            - place_permanent_on_security:
+                of: opponent
+                target: security_target
+                position: bottom
+                face_up: false
+            - trash_top_security: { of: opponent }
+
+  - when: on_security
+    optional: true
+    summary: "[Security] May place 1 opponent Digimon as top or bottom owner's security"
+    process:
+      - select_opponent_permanent:
+          bind_as: security_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Place 1 opponent Digimon as top or bottom security"
+      - if:
+          condition: { binding_present: security_target }
+          then:
+            - select_effect_choice:
+                labels: ["Top", "Bottom"]
+                bind_as: security_position
+                prompt: "Place it as top or bottom security?"
+            - if:
+                condition: { equals: [security_position, 0] }
+                then:
+                  - place_permanent_on_security:
+                      of: opponent
+                      target: security_target
+                      position: top
+                      face_up: false
+            - if:
+                condition: { equals: [security_position, 1] }
+                then:
+                  - place_permanent_on_security:
+                      of: opponent
+                      target: security_target
+                      position: bottom
+                      face_up: false

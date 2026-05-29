@@ -1316,7 +1316,12 @@ impl Game {
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 EffectTiming::OnUseOption,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
+                TriggerSource::OptionUsed {
+                    observer_player: pid as PlayerId,
+                    player: player_id,
+                    card: card_handle,
+                    source_kind,
+                },
             );
         }
 
@@ -3199,6 +3204,31 @@ impl Game {
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
+    pub(crate) fn fire_digivolution_card_placed(
+        &mut self,
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: crate::card_source::CardHandle,
+        card: crate::card_source::CardHandle,
+        cause: crate::trigger_context::EventCause,
+        effect_initiated: bool,
+    ) {
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnDigivolutionCardPlaced,
+            crate::selection::TriggerSource::SourcePlacedInStack {
+                player,
+                host,
+                host_card,
+                card,
+                cause,
+                effect_initiated,
+            },
+        );
+        self.maybe_drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
+    }
+
     /// Low-level source-attribution helper for tests and engine internals.
     ///
     /// Uses the standard De-Digivolve floor (`stop_at_level = Some(3)`) and
@@ -4386,6 +4416,13 @@ impl Game {
         let Some(taken) = self.take_card_source_ref(source) else {
             return false;
         };
+        let Some(host_card) = self.source_placement_host_card(target) else {
+            let _ = self.restore_card_source_ref(source, taken);
+            return false;
+        };
+        let placed_card = taken.card.handle();
+        let cause =
+            crate::trigger_context::EventCause::from(self.infer_effect_cause(observer_player));
 
         if target.index == crate::action::space::BREEDING_TARGET as u8 {
             let Some(breeding) = self.player_mut(target.player).breeding_area.as_mut() else {
@@ -4395,6 +4432,14 @@ impl Game {
             let mut card = taken.card;
             card.face_down = face_down;
             breeding.push_under(card);
+            self.fire_digivolution_card_placed(
+                target.player,
+                target,
+                host_card,
+                placed_card,
+                cause,
+                true,
+            );
             return true;
         }
 
@@ -4406,7 +4451,34 @@ impl Game {
         let mut card = taken.card;
         card.face_down = face_down;
         target_player.battle_area[target.index as usize].push_under(card);
+        self.fire_digivolution_card_placed(
+            target.player,
+            target,
+            host_card,
+            placed_card,
+            cause,
+            true,
+        );
         true
+    }
+
+    fn source_placement_host_card(
+        &self,
+        target: PermanentHandle,
+    ) -> Option<crate::card_source::CardHandle> {
+        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            return self
+                .player(target.player)
+                .breeding_area
+                .as_ref()
+                .and_then(|permanent| permanent.card_sources.last())
+                .map(|card| card.handle());
+        }
+        self.player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .and_then(|permanent| permanent.card_sources.last())
+            .map(|card| card.handle())
     }
 
     pub fn place_permanent_as_bottom_sources(

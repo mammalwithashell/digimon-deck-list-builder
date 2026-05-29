@@ -445,6 +445,15 @@ pub enum TriggerSource {
         linked_host: Option<PermanentHandle>,
         card: CardHandle,
     },
+    /// Observer timing fired when a player uses an Option. Scans one
+    /// observer player's battle area while carrying the used Option card as
+    /// event context.
+    OptionUsed {
+        observer_player: PlayerId,
+        player: PlayerId,
+        card: CardHandle,
+        source_kind: OptionUseSource,
+    },
     /// Observer timing fired after a persistent Option is trashed through the
     /// lifecycle API.
     OptionTrashed {
@@ -487,6 +496,16 @@ pub enum TriggerSource {
         host_card: CardHandle,
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
+    },
+    /// Observer timing fired after a card is placed under a permanent's
+    /// top card as a digivolution card.
+    SourcePlacedInStack {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+        effect_initiated: bool,
     },
     /// Observer timing fired after a card is removed from a player's security
     /// stack. `affected_player` owns the security stack; `observer_player`

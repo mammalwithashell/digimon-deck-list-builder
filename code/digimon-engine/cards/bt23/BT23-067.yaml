@@ -1,0 +1,75 @@
+card: BT23-067
+name: LadyDevimon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 6000
+traits: [Fallen Angel, CS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: CS
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - name_contains: "Angewomon"
+          - name_contains: "Mirei Mikagura"
+    amount: 3
+    summary: "When played from hand, reduce play cost by 3 if you have Angewomon or Mirei Mikagura"
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: [on_play, when_digivolving]
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        level_lte: 4
+    summary: "[On Play][When Digivolving] Delete 1 opponent level 4 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Delete 1 opponent level 4 or lower Digimon"
+      - delete_permanent: { target: target }
+
+  - kind: replacement
+    scope: inherited
+    timing: when_would_be_deleted
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "<Scapegoat>"
+    process:
+      - select_own_permanent:
+          bind_as: scapegoat_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+          prompt: "Delete 1 of your other Digimon to prevent this deletion"
+      - substitute_replacement:
+          subject: scapegoat_cost

@@ -42,12 +42,12 @@
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
 use digimon_engine::action::build_action_mask;
-use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
+use digimon_engine::action::space::{encode_attack, PASS, REPLACEMENT_ACCEPT, SECURITY_TARGET};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::EffectTiming;
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const YAML: &str = include_str!("../../../cards/bt24/BT24-082.yaml");
 
@@ -79,6 +79,33 @@ fn enqueue_digivolve_event_for(runner: &mut DebugRunner, target: PermanentHandle
         },
     );
     runner.game.drain_effect_queue();
+}
+
+fn accept_optional_trigger(runner: &mut DebugRunner) {
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "single outer optional triggers expose their accept/decline gate as a Replacement prompt"
+    );
+    assert!(
+        runner.pending_is_optional(),
+        "outer optional trigger prompt must expose PASS"
+    );
+    let view = runner
+        .pending_selection_view()
+        .expect("outer optional trigger prompt should be visible");
+    assert!(
+        build_action_mask(&runner.game, view.selecting_player)[PASS as usize] > 0.0,
+        "outer optional trigger prompt must include PASS as the decline action"
+    );
+    let selecting_player = view.selecting_player;
+    assert!(
+        view.valid_action_ids.contains(&REPLACEMENT_ACCEPT),
+        "outer optional trigger prompt should include the replacement accept action"
+    );
+    runner
+        .execute_action(selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept optional triggered effect");
 }
 
 // ─── SECTION 1 — Structural assertions ───────────────────────────────────────
@@ -505,6 +532,12 @@ fn bt24_082_clause2_fires_only_for_reptile_dragonkin_digivolve() {
     enqueue_digivolve_event_for(&mut runner, target);
 
     assert!(
+        !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "Owen should not pay the suspend cost before the optional trigger is accepted"
+    );
+    accept_optional_trigger(&mut runner);
+
+    assert!(
         runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
         "Owen should pay the suspend cost when a Reptile/Dragonkin digivolve event is observed"
     );
@@ -542,6 +575,12 @@ fn bt24_082_clause2_may_attack_prompt_installs_after_dp_buff() {
     let security_before = runner.game.players[1].security.len();
 
     enqueue_digivolve_event_for(&mut runner, target);
+
+    assert!(
+        !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "Owen should not pay the suspend cost before the optional trigger is accepted"
+    );
+    accept_optional_trigger(&mut runner);
 
     assert!(
         runner.game.players[0].battle_area[tamer.index as usize].is_suspended,

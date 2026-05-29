@@ -167,6 +167,11 @@ pub enum StepSpec {
     PlayFromRevealedFree(PlayFromRevealedFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
+    /// Play the current effect source from its controller's trash for free.
+    /// Used by self-replay effects such as BT9-082 Ordinemon's
+    /// "[On Deletion] ... play this card" clause, where selecting another
+    /// copy from trash would be incorrect.
+    PlayThisFromTrashFree(EmptyArgs),
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
     /// true origin zone (hand, trash, or material), recovered from the binding.
     PlayUnionBoundFree(PlayUnionBoundFreeArgs),
@@ -192,6 +197,7 @@ pub enum StepSpec {
     PlacePermanentOnSecurity(PlacePermanentOnSecurityReplacementArgs),
     PlacePermanentOnSecurityAndHandleReplacement(PlacePermanentOnSecurityReplacementArgs),
     PlacePermanentOnSecurityObserved(PlacePermanentOnSecurityObservedArgs),
+    PlacePermanentOnOwnersSecurity(PlacePermanentOnOwnersSecurityArgs),
     SecurityPlaceStackedCard(SecurityPlaceStackedCardArgs),
     SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
@@ -201,12 +207,18 @@ pub enum StepSpec {
     TrashOpponentHandToCount(TrashOpponentHandToCountArgs),
     SearchOwnSecurityStack(SearchOwnSecurityStackArgs),
     Recover(DrawArgs),
+    /// Recover once for each permanent actually deleted earlier in this
+    /// process body. The deletion count is taken from the per-effect result
+    /// log, so prevented or missing targets do not inflate recovery.
+    RecoverForDeleted(PlayerArg),
     MarkSecurityFaceUp(MarkSecurityArgs),
     FlipSecurityFaceUp(PlayerArg),
 
     // Modifiers
     AddDpModifier(AddDpModifierArgs),
     AddModifier(AddModifierArgs),
+    ChangeOriginalName(ChangeOriginalNameArgs),
+    ChangeColor(ChangeColorArgs),
     AddPlayerModifier(AddPlayerModifierArgs),
     GrantKeyword(GrantKeywordArgs),
     GrantEffectImmunity(GrantEffectImmunityArgs),
@@ -236,6 +248,7 @@ pub enum StepSpec {
     DigiBurst(DigiBurstArgs),
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
     SelectOpponentPlayCostBudget(SelectOpponentPlayCostBudgetArgs),
+    SelectPlayCostBudget(SelectPlayCostBudgetArgs),
     SelectOwnBreedingPermanent(SelectOwnBreedingPermanentArgs),
     SelectReveal(SelectZoneArgs),
     SelectRevealBuckets(SelectRevealBucketsArgs),
@@ -248,6 +261,10 @@ pub enum StepSpec {
 
     // Control flow
     If(IfStep),
+    IfTrashTopSecurityCost(TrashTopSecurityCostGateArgs),
+    IfTrashTopOrBottomSecurityCost(TrashTopOrBottomSecurityCostGateArgs),
+    IfAddTopSecurityToHandCost(AddTopSecurityToHandCostGateArgs),
+    IfPlacePermanentOnOwnersSecurityCost(PlacePermanentOnOwnersSecurityCostGateArgs),
     ForEach(ForEachStep),
     PerSelected(PerSelectedStep),
     ScheduleDelayed(ScheduleDelayedStep),
@@ -265,6 +282,7 @@ pub enum StepSpec {
     CancelAttack(EmptyArgs),
     OpenCounterWindow(EmptyArgs),
     RefireEffect(RefireEffectArgs),
+    ActivateMainEffects(ActivateMainEffectsArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
     HandleReplacement(EmptyArgs),
@@ -366,6 +384,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromRevealedFree(v) => kv!(s, "play_from_revealed_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
+            StepSpec::PlayThisFromTrashFree(v) => kv!(s, "play_this_from_trash_free", v),
             StepSpec::PlayUnionBoundFree(v) => kv!(s, "play_union_bound_free", v),
             StepSpec::TrashUnionBound(v) => kv!(s, "trash_union_bound", v),
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
@@ -401,6 +420,9 @@ impl Serialize for StepSpec {
             StepSpec::PlacePermanentOnSecurityObserved(v) => {
                 kv!(s, "place_permanent_on_security_observed", v)
             }
+            StepSpec::PlacePermanentOnOwnersSecurity(v) => {
+                kv!(s, "place_permanent_on_owners_security", v)
+            }
             StepSpec::SecurityPlaceStackedCard(v) => kv!(s, "security_place_stacked_card", v),
             StepSpec::SecurityPlaceTopStackedCard(v) => {
                 kv!(s, "security_place_top_stacked_card", v)
@@ -420,11 +442,14 @@ impl Serialize for StepSpec {
             StepSpec::TrashOpponentHandToCount(v) => kv!(s, "trash_opponent_hand_to_count", v),
             StepSpec::SearchOwnSecurityStack(v) => kv!(s, "search_own_security_stack", v),
             StepSpec::Recover(v) => kv!(s, "recover", v),
+            StepSpec::RecoverForDeleted(v) => kv!(s, "recover_for_deleted", v),
             StepSpec::MarkSecurityFaceUp(v) => kv!(s, "mark_security_face_up", v),
             StepSpec::FlipSecurityFaceUp(v) => kv!(s, "flip_security_face_up", v),
             // Modifiers
             StepSpec::AddDpModifier(v) => kv!(s, "add_dp_modifier", v),
             StepSpec::AddModifier(v) => kv!(s, "add_modifier", v),
+            StepSpec::ChangeOriginalName(v) => kv!(s, "change_original_name", v),
+            StepSpec::ChangeColor(v) => kv!(s, "change_color", v),
             StepSpec::AddPlayerModifier(v) => kv!(s, "add_player_modifier", v),
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
             StepSpec::GrantTriggeredEffect(v) => kv!(s, "grant_triggered_effect", v),
@@ -448,6 +473,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectOpponentPlayCostBudget(v) => {
                 kv!(s, "select_opponent_play_cost_budget", v)
             }
+            StepSpec::SelectPlayCostBudget(v) => kv!(s, "select_play_cost_budget", v),
             StepSpec::SelectOwnBreedingPermanent(v) => {
                 kv!(s, "select_own_breeding_permanent", v)
             }
@@ -461,6 +487,18 @@ impl Serialize for StepSpec {
             StepSpec::AsSelectingPlayer(v) => kv!(s, "as_selecting_player", v),
             // Control flow
             StepSpec::If(v) => kv!(s, "if", v),
+            StepSpec::IfTrashTopSecurityCost(v) => {
+                kv!(s, "if_trash_top_security_cost", v)
+            }
+            StepSpec::IfTrashTopOrBottomSecurityCost(v) => {
+                kv!(s, "if_trash_top_or_bottom_security_cost", v)
+            }
+            StepSpec::IfAddTopSecurityToHandCost(v) => {
+                kv!(s, "if_add_top_security_to_hand_cost", v)
+            }
+            StepSpec::IfPlacePermanentOnOwnersSecurityCost(v) => {
+                kv!(s, "if_place_permanent_on_owners_security_cost", v)
+            }
             StepSpec::ForEach(v) => kv!(s, "for_each", v),
             StepSpec::PerSelected(v) => kv!(s, "per_selected", v),
             StepSpec::ScheduleDelayed(v) => kv!(s, "schedule_delayed", v),
@@ -478,6 +516,7 @@ impl Serialize for StepSpec {
             StepSpec::CancelAttack(v) => kv!(s, "cancel_attack", v),
             StepSpec::OpenCounterWindow(v) => kv!(s, "open_counter_window", v),
             StepSpec::RefireEffect(v) => kv!(s, "refire_effect", v),
+            StepSpec::ActivateMainEffects(v) => kv!(s, "activate_main_effects", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
             StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
@@ -587,6 +626,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_revealed_free" => StepSpec::PlayFromRevealedFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
+            "play_this_from_trash_free" => StepSpec::PlayThisFromTrashFree(map.next_value()?),
             "play_union_bound_free" => StepSpec::PlayUnionBoundFree(map.next_value()?),
             "trash_union_bound" => StepSpec::TrashUnionBound(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
@@ -621,6 +661,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_permanent_on_security_observed" => {
                 StepSpec::PlacePermanentOnSecurityObserved(map.next_value()?)
             }
+            "place_permanent_on_owners_security" => {
+                StepSpec::PlacePermanentOnOwnersSecurity(map.next_value()?)
+            }
             "security_place_stacked_card" => StepSpec::SecurityPlaceStackedCard(map.next_value()?),
             "security_place_top_stacked_card" => {
                 StepSpec::SecurityPlaceTopStackedCard(map.next_value()?)
@@ -638,12 +681,15 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_opponent_hand_to_count" => StepSpec::TrashOpponentHandToCount(map.next_value()?),
             "search_own_security_stack" => StepSpec::SearchOwnSecurityStack(map.next_value()?),
             "recover" => StepSpec::Recover(map.next_value()?),
+            "recover_for_deleted" => StepSpec::RecoverForDeleted(map.next_value()?),
             "mark_security_face_up" => StepSpec::MarkSecurityFaceUp(map.next_value()?),
             "flip_security_face_up" => StepSpec::FlipSecurityFaceUp(map.next_value()?),
 
             // Modifiers
             "add_dp_modifier" => StepSpec::AddDpModifier(map.next_value()?),
             "add_modifier" => StepSpec::AddModifier(map.next_value()?),
+            "change_original_name" => StepSpec::ChangeOriginalName(map.next_value()?),
+            "change_color" => StepSpec::ChangeColor(map.next_value()?),
             "add_player_modifier" => StepSpec::AddPlayerModifier(map.next_value()?),
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
             "grant_triggered_effect" => StepSpec::GrantTriggeredEffect(map.next_value()?),
@@ -668,6 +714,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_opponent_play_cost_budget" => {
                 StepSpec::SelectOpponentPlayCostBudget(map.next_value()?)
             }
+            "select_play_cost_budget" => StepSpec::SelectPlayCostBudget(map.next_value()?),
             "select_own_breeding_permanent" => {
                 StepSpec::SelectOwnBreedingPermanent(map.next_value()?)
             }
@@ -682,6 +729,16 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Control flow
             "if" => StepSpec::If(map.next_value()?),
+            "if_trash_top_security_cost" => StepSpec::IfTrashTopSecurityCost(map.next_value()?),
+            "if_trash_top_or_bottom_security_cost" => {
+                StepSpec::IfTrashTopOrBottomSecurityCost(map.next_value()?)
+            }
+            "if_add_top_security_to_hand_cost" => {
+                StepSpec::IfAddTopSecurityToHandCost(map.next_value()?)
+            }
+            "if_place_permanent_on_owners_security_cost" => {
+                StepSpec::IfPlacePermanentOnOwnersSecurityCost(map.next_value()?)
+            }
             "for_each" => StepSpec::ForEach(map.next_value()?),
             "per_selected" => StepSpec::PerSelected(map.next_value()?),
             "schedule_delayed" => StepSpec::ScheduleDelayed(map.next_value()?),
@@ -700,6 +757,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "cancel_attack" => StepSpec::CancelAttack(map.next_value()?),
             "open_counter_window" => StepSpec::OpenCounterWindow(map.next_value()?),
             "refire_effect" => StepSpec::RefireEffect(map.next_value()?),
+            "activate_main_effects" => StepSpec::ActivateMainEffects(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
             "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
@@ -767,6 +825,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_from_revealed_free",
                         "play_from_trash",
                         "play_from_trash_free",
+                        "play_this_from_trash_free",
                         "play_union_bound_free",
                         "play_from_security",
                         "play_from_materials",
@@ -784,6 +843,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_permanent_on_security",
                         "place_permanent_on_security_and_handle_replacement",
                         "place_permanent_on_security_observed",
+                        "place_permanent_on_owners_security",
                         "security_place_stacked_card",
                         "security_place_top_stacked_card",
                         "return_all_trash_to_deck_bottom",
@@ -793,6 +853,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_opponent_hand_to_count",
                         "search_own_security_stack",
                         "recover",
+                        "recover_for_deleted",
                         "mark_security_face_up",
                         "flip_security_face_up",
                         "add_dp_modifier",
@@ -813,6 +874,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "digi_burst",
                         "select_opponent_dp_budget",
                         "select_opponent_play_cost_budget",
+                        "select_play_cost_budget",
                         "select_own_breeding_permanent",
                         "select_reveal",
                         "select_reveal_buckets",
@@ -823,6 +885,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_effect_choice",
                         "as_selecting_player",
                         "if",
+                        "if_trash_top_security_cost",
+                        "if_place_permanent_on_owners_security_cost",
                         "for_each",
                         "per_selected",
                         "schedule_delayed",
@@ -1169,6 +1233,12 @@ pub struct RefireEffectArgs {
     pub optional: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ActivateMainEffectsArgs {
+    pub source: BindingRef,
+}
+
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, Default,
 )]
@@ -1421,6 +1491,14 @@ pub struct PlacePermanentOnSecurityObservedArgs {
     pub face: SecurityFace,
     #[serde(default)]
     pub include_sources: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlacePermanentOnOwnersSecurityArgs {
+    pub target: BindingRef,
+    pub position: StackPosition,
+    pub face: SecurityFace,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1710,6 +1788,22 @@ pub struct AddModifierArgs {
     pub target: ModifierTarget,
     pub modifier: String,
     pub value: ModifierValueSpec,
+    pub expiry: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ChangeOriginalNameArgs {
+    pub target: ModifierTarget,
+    pub name: String,
+    pub expiry: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ChangeColorArgs {
+    pub target: ModifierTarget,
+    pub color: crate::spec::ColorSpec,
     pub expiry: String,
 }
 
@@ -2083,6 +2177,28 @@ pub struct SelectOpponentPlayCostBudgetArgs {
     pub then: Vec<StepSpec>,
 }
 
+/// Multi-select of visible-zone cards under a running printed play-cost
+/// budget. Used for text like "play up to N play cost's total worth of cards
+/// from your trash"; every pick remains a player-visible action.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectPlayCostBudgetArgs {
+    pub of: PlayerRef,
+    pub zone: Zone,
+    pub play_cost_budget: i32,
+    #[serde(default)]
+    pub min_picks: u8,
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional_zero: bool,
+    #[serde(default)]
+    pub then: Vec<StepSpec>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOwnBreedingPermanentArgs {
@@ -2223,6 +2339,51 @@ pub struct IfStep {
     pub then: Vec<StepSpec>,
     #[serde(default, rename = "else", skip_serializing_if = "Option::is_none")]
     pub else_: Option<Vec<StepSpec>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashTopSecurityCostGateArgs {
+    #[serde(default = "default_player_ref_you")]
+    pub of: PlayerRef,
+    pub then: Vec<StepSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashTopOrBottomSecurityCostGateArgs {
+    #[serde(default = "default_player_ref_you")]
+    pub of: PlayerRef,
+    #[serde(default = "default_top_or_bottom_security_cost_prompt")]
+    pub prompt: String,
+    pub then: Vec<StepSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AddTopSecurityToHandCostGateArgs {
+    #[serde(default = "default_player_ref_you")]
+    pub of: PlayerRef,
+    #[serde(default = "default_add_top_security_to_hand_cost_prompt")]
+    pub prompt: String,
+    pub then: Vec<StepSpec>,
+}
+
+fn default_top_or_bottom_security_cost_prompt() -> String {
+    "Trash top or bottom security".to_string()
+}
+
+fn default_add_top_security_to_hand_cost_prompt() -> String {
+    "Add top security to hand".to_string()
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlacePermanentOnOwnersSecurityCostGateArgs {
+    pub target: BindingRef,
+    pub position: StackPosition,
+    pub face: SecurityFace,
+    pub then: Vec<StepSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

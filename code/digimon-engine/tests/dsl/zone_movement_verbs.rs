@@ -1,15 +1,19 @@
+use std::sync::{Arc, Mutex};
+
 use digimon_dsl::compiled::{CompiledClause, CompiledStep};
 use digimon_engine::action::space::TRASH_EFFECT_START;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_steps;
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::CardKind;
+use digimon_engine::enums::{CardKind, PlayerId, Zone};
 use digimon_engine::permanent::{Permanent, PermanentHandle};
 use digimon_engine::selection::{
     OptionResolutionPhase, OptionSubtype, OptionUseSource, PendingOption,
 };
+use digimon_engine::trigger_context::EventCause;
 
 fn compile_steps(step_yaml: &str) -> Vec<CompiledStep> {
     let yaml = format!(
@@ -44,6 +48,40 @@ fn run_compiled_steps(
     let mut ctx = EffectContext::new(&mut runner.game, source_card, source_permanent, 0);
     let mut bindings = Bindings::new();
     run_steps(&steps, &mut ctx, &mut bindings);
+}
+
+struct SecurityPlacementObserver {
+    seen: Arc<
+        Mutex<
+            Vec<(
+                Option<PlayerId>,
+                Option<PlayerId>,
+                Option<EventCause>,
+                Option<CardHandle>,
+                Option<(Option<Zone>, Option<Zone>, usize)>,
+            )>,
+        >,
+    >,
+}
+
+impl CardEffect for SecurityPlacementObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = Arc::clone(&self.seen);
+        vec![Effect::on_place_security(card)
+            .name("record security placement")
+            .process(move |ctx| {
+                seen.lock().unwrap().push((
+                    ctx.event_affected_player(),
+                    ctx.event_source_player(),
+                    ctx.event_cause(),
+                    ctx.event_card(),
+                    ctx.event_moved_card_sets()
+                        .first()
+                        .map(|set| (set.from, set.to, set.cards.len())),
+                ));
+            })
+            .build()]
+    }
 }
 
 fn add_to_trash(runner: &mut DebugRunner, player: u8, owner: u8, card_id: &str) -> CardHandle {
@@ -236,6 +274,340 @@ fn permanent_and_stacked_card_security_verbs_move_expected_cards() {
             .unwrap()
             .card_id(&runner.game.card_data),
         "BOTTOM"
+    );
+}
+
+#[test]
+fn place_permanent_on_owners_security_routes_own_target_to_own_security_top_and_bottom() {
+    let mut top_runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("TARGET", "Target"))
+        .add_card(make_test_card("BOTTOM-SEC", "Bottom Security"))
+        .security(0, &["BOTTOM-SEC"])
+        .start();
+    let source = top_runner.place_on_field(0, "SRC", Some(0));
+    top_runner.place_on_field(0, "TARGET", Some(0));
+    let source_card = top_runner.game.players[0].battle_area[0]
+        .top_card()
+        .handle();
+
+    run_compiled_steps(
+        &mut top_runner,
+        source_card,
+        Some(source),
+        compile_steps(
+            r#"      - select_own_permanent:
+          bind_as: picked
+          filter: { name_is: "Target" }
+          prompt: "Place 1 of your Digimon into its owner's security"
+      - place_permanent_on_owners_security:
+          target: picked
+          position: top
+          face: down
+"#,
+        ),
+    );
+    let (player, action) = {
+        let pending = top_runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("own target selection should park");
+        assert_eq!(pending.valid_action_ids.len(), 1);
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    top_runner
+        .game
+        .resolve_selection(player, action)
+        .expect("resolve own target selection");
+
+    assert_eq!(top_runner.battle_area_size(0), 1, "source remains");
+    assert_eq!(top_runner.security_count(0), 2);
+    assert_eq!(
+        top_runner.game.players[0]
+            .security
+            .last()
+            .unwrap()
+            .card_id(&top_runner.game.card_data),
+        "TARGET",
+        "top placement should append to the security top"
+    );
+
+    let mut bottom_runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("TARGET", "Target"))
+        .add_card(make_test_card("TOP-SEC", "Top Security"))
+        .security(0, &["TOP-SEC"])
+        .start();
+    let source = bottom_runner.place_on_field(0, "SRC", Some(0));
+    bottom_runner.place_on_field(0, "TARGET", Some(0));
+    let source_card = bottom_runner.game.players[0].battle_area[0]
+        .top_card()
+        .handle();
+
+    run_compiled_steps(
+        &mut bottom_runner,
+        source_card,
+        Some(source),
+        compile_steps(
+            r#"      - select_own_permanent:
+          bind_as: picked
+          filter: { name_is: "Target" }
+          prompt: "Place 1 of your Digimon into its owner's security"
+      - place_permanent_on_owners_security:
+          target: picked
+          position: bottom
+          face: down
+"#,
+        ),
+    );
+    let (player, action) = {
+        let pending = bottom_runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("own target selection should park");
+        assert_eq!(pending.valid_action_ids.len(), 1);
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    bottom_runner
+        .game
+        .resolve_selection(player, action)
+        .expect("resolve own target selection");
+
+    assert_eq!(bottom_runner.security_count(0), 2);
+    assert_eq!(
+        bottom_runner.game.players[0].security[0].card_id(&bottom_runner.game.card_data),
+        "TARGET",
+        "bottom placement should insert at the security bottom"
+    );
+}
+
+#[test]
+fn place_permanent_on_owners_security_routes_opponent_target_to_opponent_security() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("ALLY", "Ally"))
+        .add_card(make_test_card("OPP", "Opponent Target"))
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    runner.place_on_field(0, "ALLY", Some(0));
+    runner.place_on_field(1, "OPP", Some(1));
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+
+    run_compiled_steps(
+        &mut runner,
+        source_card,
+        Some(source),
+        compile_steps(
+            r#"      - select_any_permanent:
+          bind_as: picked
+          filter: { kind: digimon }
+          prompt: "Place 1 Digimon into its owner's security"
+      - place_permanent_on_owners_security:
+          target: picked
+          position: bottom
+          face: down
+"#,
+        ),
+    );
+
+    let (player, opponent_action) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("any-permanent selection should park");
+        assert_eq!(
+            pending.valid_action_ids.len(),
+            3,
+            "source, ally, and opponent target should all be legal choices"
+        );
+        let action = *pending
+            .valid_action_ids
+            .iter()
+            .find(|action| **action >= digimon_engine::action::space::ATTACK_START + 15)
+            .expect("opponent permanent should have an opponent-side action id");
+        (pending.selecting_player, action)
+    };
+    runner
+        .game
+        .resolve_selection(player, opponent_action)
+        .expect("resolve opponent target selection");
+
+    assert_eq!(
+        runner.security_count(0),
+        0,
+        "P0 security must stay untouched"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "opponent target must route to its owner's security"
+    );
+    assert_eq!(
+        runner.game.players[1].security[0].card_id(&runner.game.card_data),
+        "OPP"
+    );
+    assert_eq!(runner.battle_area_size(1), 0);
+}
+
+#[test]
+fn place_permanent_on_owners_security_respects_leave_replacement_cancel() {
+    let cancel_target = r#"
+card: CANCEL-TARGET
+name: Cancel Target
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    process:
+      - cancel_replacement: {}
+"#;
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(cancel_target)
+        .expect("replacement target compiles")
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("OBS", "Observer"))
+        .start();
+    runner.register_effect(
+        "OBS",
+        Arc::new(SecurityPlacementObserver { seen: seen.clone() }),
+    );
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    runner.place_on_field(0, "OBS", Some(0));
+    let target = runner.place_on_field(0, "CANCEL-TARGET", Some(0));
+    let source_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+
+    run_compiled_steps(
+        &mut runner,
+        source_card,
+        Some(source),
+        compile_steps(
+            r#"      - select_own_permanent:
+          bind_as: picked
+          filter: { name_is: "Cancel Target" }
+          prompt: "Place 1 of your Digimon into its owner's security"
+      - place_permanent_on_owners_security:
+          target: picked
+          position: top
+          face: down
+"#,
+        ),
+    );
+    let (player, action) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("target selection should park before replacement");
+        assert!(pending
+            .valid_action_ids
+            .contains(&digimon_engine::action::space::encode_attack(
+                target.player as u16,
+                target.index as u16,
+            )));
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    runner
+        .game
+        .resolve_selection(player, action)
+        .expect("resolve target selection");
+
+    assert_eq!(
+        runner.security_count(0),
+        0,
+        "replacement cancellation must prevent security placement"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        3,
+        "target remains in battle area"
+    );
+    assert!(
+        seen.lock().unwrap().is_empty(),
+        "cancelled placement must not fire OnPlaceSecurity observers"
+    );
+}
+
+#[test]
+fn place_permanent_on_owners_security_fires_security_placement_observer() {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("OBS", "Observer"))
+        .add_card(make_test_card("TARGET", "Target"))
+        .start();
+    runner.register_effect(
+        "OBS",
+        Arc::new(SecurityPlacementObserver { seen: seen.clone() }),
+    );
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    runner.place_on_field(0, "OBS", Some(0));
+    let target = runner.place_on_field(0, "TARGET", Some(0));
+    let target_card = runner.game.players[0].battle_area[target.index as usize]
+        .top_card()
+        .handle();
+    let source_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+
+    run_compiled_steps(
+        &mut runner,
+        source_card,
+        Some(source),
+        compile_steps(
+            r#"      - select_own_permanent:
+          bind_as: picked
+          filter: { name_is: "Target" }
+          prompt: "Place 1 of your Digimon into its owner's security"
+      - place_permanent_on_owners_security:
+          target: picked
+          position: top
+          face: down
+"#,
+        ),
+    );
+    let (player, action) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("target selection should park");
+        assert!(pending
+            .valid_action_ids
+            .contains(&digimon_engine::action::space::encode_attack(
+                target.player as u16,
+                target.index as u16,
+            )));
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    runner
+        .game
+        .resolve_selection(player, action)
+        .expect("resolve target selection");
+
+    let seen = seen.lock().unwrap();
+    assert_eq!(seen.len(), 1, "placement observer should fire exactly once");
+    assert_eq!(
+        seen[0].0,
+        Some(0),
+        "affected player owns the security stack"
+    );
+    assert_eq!(seen[0].1, Some(0), "source player controls the effect");
+    assert_eq!(seen[0].2, Some(EventCause::SecurityPlacement));
+    assert_eq!(seen[0].3, Some(target_card));
+    assert_eq!(
+        seen[0].4,
+        Some((None, Some(Zone::Security), 1)),
+        "moved-card payload should describe the target entering security"
     );
 }
 

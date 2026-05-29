@@ -1,0 +1,27 @@
+card: BT13-003
+name: Kyaromon
+kind: digi_egg
+level: 2
+color: [yellow]
+traits: [Lesser]
+
+effects:
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Your Turn][OPT] When a card is removed from your security, 1 of your Digimon gains Jamming"
+    process:
+      - select_own_permanent:
+          bind_as: jamming_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain Jamming"
+      - grant_keyword:
+          target: jamming_target
+          keyword: Jamming
+          expiry: end_of_turn

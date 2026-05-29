@@ -1,0 +1,90 @@
+card: BT14-102
+name: Angemon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 6
+dp: 6000
+traits: [Angel]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: Patamon }
+    cost: 2
+    ignore_requirements: true
+
+effects:
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] By deleting this Digimon, choose security-place Virus or -5000 DP"
+    process:
+      - delete_permanent: { target: source }
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Place 1 opponent Virus Digimon at bottom security"
+            - "Give 1 opponent Digimon -5000 DP"
+          prompt: "Choose Angemon attack effect"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_opponent_permanent:
+                bind_as: virus_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: Virus
+                prompt: "Place 1 opponent Virus Digimon at bottom security"
+            - place_permanent_on_security:
+                of: opponent
+                target: virus_target
+                position: bottom
+                face_up: false
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - select_opponent_permanent:
+                bind_as: dp_target
+                filter: { kind: digimon }
+                prompt: "Give 1 opponent Digimon -5000 DP"
+            - add_dp_modifier:
+                target: dp_target
+                value: -5000
+                expiry: end_of_turn
+
+  - when: on_deletion
+    summary: "[On Deletion] Place this card bottom security; if you have a Tamer, may hatch"
+    process:
+      - place_self_at_security:
+          position: bottom
+          face: down
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              kind: tamer
+          then:
+            - hatch: { of: you }
+
+  - scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] Place 1 yellow Vaccine Digimon from hand bottom security"
+    process:
+      - select_hand:
+          of: you
+          bind_as: yellow_vaccine
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - trait_has: Vaccine
+          prompt: "Place 1 yellow Vaccine Digimon from hand at bottom security"
+      - place_on_security:
+          of: you
+          source: { binding: yellow_vaccine, zone: hand }
+          position: bottom
+          face_up: false

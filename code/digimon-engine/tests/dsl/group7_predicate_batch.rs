@@ -197,6 +197,50 @@ effects:
 }
 
 #[test]
+fn name_not_shared_by_field_tamer_compiles_in_select_union_zone_filter() {
+    let yaml = r#"
+card: T-G7-UNION-TAMER-NAME-EXCL
+name: Union Tamer Name Exclusion Predicate
+kind: digimon
+level: 5
+color: [purple]
+cost: 6
+dp: 6000
+effects:
+  - when: on_deletion
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash]
+          optional: true
+          prompt: Play 1 Myotismon-text Tamer from trash
+          filter:
+            all_of:
+              - kind: tamer
+              - effect_text_contains: Myotismon
+              - name_not_shared_by_field_tamer: { of: you }
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let digimon_dsl::compiled::CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let digimon_dsl::compiled::CompiledStep::SelectUnionZone { filter, .. } = &triggered.process[0]
+    else {
+        panic!("expected select_union_zone");
+    };
+
+    assert!(
+        filter
+            .all_of
+            .iter()
+            .any(|p| p.name_not_shared_by_field_tamer
+                == Some(digimon_dsl::compiled::CompiledPlayerRef::You)),
+        "name_not_shared_by_field_tamer leaf must compile into the union-zone filter"
+    );
+}
+
+#[test]
 fn self_digivolution_contains_name_compiles_in_when_digivolving_condition() {
     let yaml = r#"
 card: T-G7-SELF-DIGI

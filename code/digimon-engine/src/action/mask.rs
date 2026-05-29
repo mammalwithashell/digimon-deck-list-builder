@@ -221,6 +221,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     {
                         continue;
                     }
+                    if game.cannot_attack_source(handle, t_handle) {
+                        continue;
+                    }
                     let action_bit = encode_attack(i as u16, j as u16) as usize;
                     if target.is_suspended {
                         mask[action_bit] = 1.0;
@@ -617,6 +620,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     {
                         continue;
                     }
+                    if game.cannot_attack_source(handle, t_handle) {
+                        continue;
+                    }
                     mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
                 }
             }
@@ -942,6 +948,9 @@ pub(crate) fn effect_attack_target_action_ids(
             {
                 continue;
             }
+            if game.cannot_attack_source(attacker, target_handle) {
+                continue;
+            }
             let legal = target.is_suspended
                 || can_attack_unsuspended
                 || raid_max_dp.is_some_and(|max_dp| {
@@ -1091,7 +1100,13 @@ fn apply_force_attack_mask_replacement(
             if game
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)
+                && !game
+                    .modifiers
+                    .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
             {
+                continue;
+            }
+            if game.cannot_attack_source(handle, t_handle) {
                 continue;
             }
             let action_bit = encode_attack(i as u16, j as u16) as usize;

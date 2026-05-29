@@ -42,7 +42,8 @@ use crate::game::Game;
 use crate::game::PendingWouldPlayOrigin;
 use crate::game_actions::PlayFromHandCostResult;
 use crate::modifiers::{
-    EffectControllerFilter, EffectImmunityFilter, ModifierEntry, PlayerModifierEntry,
+    EffectControllerFilter, EffectImmunityFilter, ModifierEntry, ModifierPayload,
+    PlayerModifierEntry,
 };
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
@@ -853,6 +854,20 @@ impl<'a> EffectContext<'a> {
             return false;
         };
         perm.activation_count(effect.source_card, effect.effect_id) < effect_body.max_per_turn
+    }
+
+    pub fn activate_main_effects_for_card(&mut self, card: CardHandle) -> bool {
+        let Some(controller) = self.game.owner_of_card(card) else {
+            return false;
+        };
+        if !self
+            .game
+            .enqueue_option_main_from_pending_security_card(card, controller)
+        {
+            return false;
+        }
+        self.game.drain_effect_queue();
+        true
     }
 
     pub fn new_with_cost_target(
@@ -2289,15 +2304,29 @@ impl<'a> EffectContext<'a> {
                 .permanent_is_unaffected_by_effect(target, self.player, self.source_kind)
     }
 
-    pub fn delete_permanent(&mut self, target: PermanentHandle) {
+    pub fn delete_permanent(&mut self, target: PermanentHandle) -> bool {
         if !self.can_affect_permanent(target) {
-            return;
+            return false;
         }
+        let before = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .map(|permanent| permanent.top_card().handle());
         // Route through the Game-level fire-site so OnDeletion observers and
         // WhenWouldBeDeleted replacements run. `delete_permanent_with_effects`
         // infers cause from `effect_source_player` / `pending_attack` /
         // `security_resolution`.
         self.game.delete_permanent_with_effects(target);
+        before.is_some_and(|card| {
+            !self
+                .game
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+                .is_some_and(|permanent| permanent.top_card().handle() == card)
+        })
     }
 
     pub fn trash_breeding_permanent(&mut self, target: PermanentHandle) -> bool {
@@ -4672,6 +4701,17 @@ impl<'a> EffectContext<'a> {
         value: i32,
         expiry: Expiry,
     ) {
+        self.add_modifier_with_payload(target, modifier, value, expiry, ModifierPayload::None);
+    }
+
+    pub fn add_modifier_with_payload(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        payload: ModifierPayload,
+    ) {
         if !self.can_affect_permanent(target) {
             return;
         }
@@ -4688,6 +4728,7 @@ impl<'a> EffectContext<'a> {
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
+                .with_payload(payload)
                 .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();

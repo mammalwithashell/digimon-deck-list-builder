@@ -1,0 +1,27 @@
+card: BT7-032
+name: Pulsemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Beastkin]
+form: Rookie
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - security_count_gte: 3
+        - security_count_lte: 3
+    summary: "When attacking, if you have 3 security cards, gain 2 memory."
+    process:
+      - gain_memory: 2

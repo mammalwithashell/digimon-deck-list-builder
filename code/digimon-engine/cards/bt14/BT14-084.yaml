@@ -1,0 +1,46 @@
+card: BT14-084
+name: T.K. Takaishi
+kind: tamer
+color: [yellow]
+cost: 3
+
+effects:
+  - when: on_play
+    summary: "[On Play] By returning top security to hand, may place 1 yellow Vaccine card from hand at bottom security"
+    process:
+      - if_add_top_security_to_hand_cost:
+          of: you
+          prompt: "Return the top card of your security stack to your hand?"
+          then:
+            - select_hand:
+                of: you
+                bind_as: yellow_vaccine
+                optional: true
+                filter:
+                  all_of:
+                    - color_is: yellow
+                    - trait_has: Vaccine
+                prompt: "Place 1 yellow Vaccine card from your hand at the bottom of security"
+            - if:
+                condition: { binding_present: yellow_vaccine }
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { binding: yellow_vaccine, zone: hand }
+                      position: bottom
+                      face_up: false
+
+  - when: on_place_security
+    optional: true
+    active_when: { your_turn: true }
+    condition: { event_target_owner: you }
+    summary: "[Your Turn] When a card is added to your security stack, may suspend this Tamer to gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

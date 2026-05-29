@@ -10,7 +10,7 @@
 //! (`source_card`, `source_permanent`, `player`), so Phase 2b accepts
 //! all candidates at install time. Phase 2c widens the filter signature.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCountBound, CompiledFieldSelector, CompiledPlayerRef,
@@ -25,10 +25,11 @@ use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, 
 use crate::dsl_cards::step::{
     drain_dsl_outer_tail, resolve_player, run_steps_with_runtime, StepRuntime,
 };
+use crate::card_source::CardHandle;
 use crate::effect_context::{
     CountCappedZone, DistinctByMode, EffectContext, EffectReadContext, RevealBucketSelection,
 };
-use crate::enums::GamePhase;
+use crate::enums::{EffectSourceKind, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind};
 use crate::trigger_context::TriggerContext;
@@ -746,6 +747,34 @@ pub fn try_install(
             );
             selection_result(ctx)
         }
+        CompiledStep::SelectPlayCostBudget {
+            of,
+            zone,
+            play_cost_budget,
+            min_picks,
+            filter,
+            bind_as,
+            prompt,
+            optional_zero,
+            then,
+        } => {
+            let mut inner_tail = then.clone();
+            inner_tail.extend_from_slice(tail);
+            install_select_play_cost_budget(
+                ctx,
+                *of,
+                *zone,
+                *play_cost_budget,
+                *min_picks,
+                filter.clone(),
+                bind_as.clone(),
+                prompt.clone(),
+                *optional_zero,
+                inner_tail,
+                bindings,
+                runtime.clone(),
+            )
+        }
         CompiledStep::SelectOwnBreedingPermanent {
             bind_as,
             prompt,
@@ -1288,7 +1317,12 @@ fn install_select_own_permanent(
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let player = ctx.player;
+    let override_pin = ctx.override_selecting_player();
     let filter_bindings = bindings.clone();
+    let pick_tail = tail.clone();
+    let pick_trigger_context = trigger_context.clone();
+    let pick_bindings = bindings.clone();
+    let pick_runtime = runtime.clone();
     ctx.select_own_permanent(
         &prompt,
         optional,
@@ -1308,13 +1342,33 @@ fn install_select_own_permanent(
             ) && matches_selected_field(game, handle, selector, selected_field)
         },
         move |cb_ctx, handle: PermanentHandle| {
-            let mut b = bindings.clone();
+            let mut b = pick_bindings.clone();
             if let Some(name) = &bind_as {
                 b.insert_permanent(name, handle);
             }
-            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+            run_tail_preserving_trigger_context(
+                cb_ctx,
+                pick_trigger_context,
+                &pick_tail,
+                &mut b,
+                &pick_runtime,
+            );
         },
     );
+    if optional {
+        attach_decline_tail(
+            ctx,
+            trigger_context,
+            tail,
+            bindings,
+            runtime,
+            source_card,
+            source_permanent,
+            source_kind,
+            player,
+            override_pin,
+        );
+    }
 }
 
 /// Install the Tamer pick for `trash_bottom_face_down_source_under_tamer`.
@@ -1423,7 +1477,12 @@ fn install_select_opponent_permanent(
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let player = ctx.player;
+    let override_pin = ctx.override_selecting_player();
     let filter_bindings = bindings.clone();
+    let pick_tail = tail.clone();
+    let pick_trigger_context = trigger_context.clone();
+    let pick_bindings = bindings.clone();
+    let pick_runtime = runtime.clone();
     ctx.select_opponent_permanent(
         &prompt,
         optional,
@@ -1445,13 +1504,67 @@ fn install_select_opponent_permanent(
                 && matches_selected_field(game, handle, selector, selected_field)
         },
         move |cb_ctx, handle: PermanentHandle| {
-            let mut b = bindings.clone();
+            let mut b = pick_bindings.clone();
             if let Some(name) = &bind_as {
                 b.insert_permanent(name, handle);
             }
-            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+            run_tail_preserving_trigger_context(
+                cb_ctx,
+                pick_trigger_context,
+                &pick_tail,
+                &mut b,
+                &pick_runtime,
+            );
         },
     );
+    if optional {
+        attach_decline_tail(
+            ctx,
+            trigger_context,
+            tail,
+            bindings,
+            runtime,
+            source_card,
+            source_permanent,
+            source_kind,
+            player,
+            override_pin,
+        );
+    }
+}
+
+fn attach_decline_tail(
+    ctx: &mut EffectContext<'_>,
+    trigger_context: Option<TriggerContext>,
+    tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: EffectSourceKind,
+    player: PlayerId,
+    override_pin: Option<PlayerId>,
+) {
+    if let Some(selection) = ctx.game.pending_selection.as_mut() {
+        selection.on_decline = Some(Box::new(move |game| {
+            let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+                override_pin,
+            );
+            let mut b = bindings.clone();
+            run_tail_preserving_trigger_context(
+                &mut cb_ctx,
+                trigger_context.clone(),
+                &tail,
+                &mut b,
+                &runtime,
+            );
+        }));
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2112,6 +2225,10 @@ fn install_select_security(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    let tail_for_decline = Arc::clone(&tail);
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     ctx.select_security(
         target_player,
         &prompt,
@@ -2144,6 +2261,27 @@ fn install_select_security(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }));
+        }
+    }
 }
 
 fn install_select_material(
@@ -2521,6 +2659,301 @@ fn install_select_opponent_play_cost_budget(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PlayCostBudgetCandidate {
+    zone_index: usize,
+    handle: crate::card_source::CardHandle,
+    play_cost: i32,
+}
+
+fn collect_play_cost_budget_candidates(
+    ctx: &EffectContext<'_>,
+    target_player: u8,
+    zone: CompiledZone,
+    remaining_budget: i32,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+) -> Option<Vec<PlayCostBudgetCandidate>> {
+    use crate::action::space::{HAND_MAIN_LIMIT, TRASH_MAIN_LIMIT};
+
+    let zone_len = match zone {
+        CompiledZone::Hand => ctx
+            .game
+            .player(target_player)
+            .hand
+            .len()
+            .min(HAND_MAIN_LIMIT),
+        CompiledZone::Trash => ctx
+            .game
+            .player(target_player)
+            .trash
+            .len()
+            .min(TRASH_MAIN_LIMIT),
+        _ => return None,
+    };
+
+    let read_ctx = EffectReadContext::new_with_source_kind(
+        ctx.game,
+        ctx.source_card,
+        ctx.source_permanent,
+        ctx.source_kind,
+        ctx.player,
+    );
+    let mut candidates = Vec::new();
+    for zone_index in 0..zone_len {
+        let card = match zone {
+            CompiledZone::Hand => &ctx.game.player(target_player).hand[zone_index],
+            CompiledZone::Trash => &ctx.game.player(target_player).trash[zone_index],
+            _ => unreachable!(),
+        };
+        let data = &ctx.game.card_data[card.data_index];
+        let play_cost = i32::from(data.play_cost);
+        if play_cost <= remaining_budget
+            && eval_predicate_with_bindings(
+                filter,
+                &read_ctx,
+                PredicateSubject::Card(card.handle()),
+                Some(bindings),
+            )
+        {
+            candidates.push(PlayCostBudgetCandidate {
+                zone_index,
+                handle: card.handle(),
+                play_cost,
+            });
+        }
+    }
+    Some(candidates)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_select_play_cost_budget(
+    ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
+    zone: CompiledZone,
+    play_cost_budget: i32,
+    min_picks: u8,
+    filter: CompiledPredicate,
+    bind_as: Option<String>,
+    prompt: String,
+    optional_zero: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) -> InstallResult {
+    use crate::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
+
+    let target_player = resolve_player(ctx, of);
+    let range_start = match zone {
+        CompiledZone::Hand => PLAY_HAND_START,
+        CompiledZone::Trash => TRASH_EFFECT_START,
+        _ => return InstallResult::Continue,
+    };
+    let candidates = match collect_play_cost_budget_candidates(
+        ctx,
+        target_player,
+        zone,
+        play_cost_budget,
+        &filter,
+        &bindings,
+    ) {
+        Some(candidates) => candidates,
+        None => return InstallResult::Continue,
+    };
+    let min_unpayable = min_picks > 0 && candidates.len() < min_picks as usize;
+    let completes_synchronously = !min_unpayable && candidates.is_empty();
+
+    if min_unpayable {
+        return InstallResult::TailAlreadyRan;
+    }
+
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let override_pin = ctx.override_selecting_player;
+    let selecting_player = ctx.override_selecting_player.unwrap_or(ctx.player);
+    let previous_phase = ctx.game.current_phase;
+    let runtime_for_callback = runtime.clone();
+    let final_callback: Box<
+        dyn FnOnce(&mut crate::game::Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
+    > = Box::new(move |game, picks| {
+        let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
+            game,
+            source_card,
+            source_permanent,
+            source_kind,
+            player,
+            override_pin,
+        );
+        let mut b = bindings.clone();
+        if let Some(name) = &bind_as {
+            b.insert_card_list(name, picks);
+        }
+        run_tail_preserving_trigger_context(
+            &mut cb_ctx,
+            trigger_context,
+            &tail,
+            &mut b,
+            &runtime_for_callback,
+        );
+    });
+
+    install_play_cost_budget_step(
+        ctx.game,
+        target_player,
+        zone,
+        range_start,
+        play_cost_budget,
+        min_picks,
+        optional_zero,
+        candidates,
+        Vec::new(),
+        prompt,
+        source_card,
+        source_permanent,
+        source_kind,
+        selecting_player,
+        previous_phase,
+        final_callback,
+    );
+
+    if ctx.game.pending_selection.is_some() {
+        InstallResult::Parked
+    } else if completes_synchronously {
+        InstallResult::TailAlreadyRan
+    } else {
+        InstallResult::Continue
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_play_cost_budget_step(
+    game: &mut crate::game::Game,
+    target_player: u8,
+    zone: CompiledZone,
+    range_start: u16,
+    remaining_budget: i32,
+    min_picks: u8,
+    optional_zero: bool,
+    candidates: Vec<PlayCostBudgetCandidate>,
+    accum: Vec<crate::card_source::CardHandle>,
+    prompt: String,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<crate::permanent::PermanentHandle>,
+    source_kind: crate::enums::EffectSourceKind,
+    selecting_player: u8,
+    previous_phase: GamePhase,
+    final_callback: Box<
+        dyn FnOnce(&mut crate::game::Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
+    >,
+) {
+    let picked = accum.len() as u8;
+    let effective_min = min_picks.max(if optional_zero { 0 } else { 1 });
+    let is_optional = picked >= effective_min;
+    let valid_action_ids: Vec<u16> = candidates
+        .iter()
+        .map(|candidate| range_start + candidate.zone_index as u16)
+        .collect();
+
+    if valid_action_ids.is_empty() {
+        final_callback(game, accum);
+        return;
+    }
+
+    let shared_cb: Arc<
+        Mutex<
+            Option<
+                Box<
+                    dyn FnOnce(&mut crate::game::Game, Vec<crate::card_source::CardHandle>)
+                        + Send
+                        + Sync,
+                >,
+            >,
+        >,
+    > = Arc::new(Mutex::new(Some(final_callback)));
+    let shared_cb_decline = Arc::clone(&shared_cb);
+    let accum_for_decline = accum.clone();
+
+    game.current_phase = GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::CountCappedMultiSelect {
+            max: candidates.len().min(u8::MAX as usize) as u8,
+            picked,
+        },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: prompt.clone(),
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        source_kind,
+        callback: Box::new(move |game, action_id| {
+            let pick_zone_idx = (action_id - range_start) as usize;
+            let Some(picked_candidate) = candidates
+                .iter()
+                .find(|candidate| candidate.zone_index == pick_zone_idx)
+                .copied()
+            else {
+                return;
+            };
+            let mut new_accum = accum;
+            new_accum.push(picked_candidate.handle);
+            let next_budget = remaining_budget - picked_candidate.play_cost;
+            let new_candidates: Vec<_> = candidates
+                .into_iter()
+                .filter(|candidate| candidate.zone_index != pick_zone_idx)
+                .filter(|candidate| candidate.play_cost <= next_budget)
+                .collect();
+
+            if new_candidates.is_empty() {
+                if let Some(cb) = shared_cb.lock().unwrap().take() {
+                    cb(game, new_accum);
+                }
+                return;
+            }
+
+            let next_cb: Box<
+                dyn FnOnce(&mut crate::game::Game, Vec<crate::card_source::CardHandle>)
+                    + Send
+                    + Sync,
+            > = Box::new(move |game, picks| {
+                if let Some(cb) = shared_cb.lock().unwrap().take() {
+                    cb(game, picks);
+                }
+            });
+
+            install_play_cost_budget_step(
+                game,
+                target_player,
+                zone,
+                range_start,
+                next_budget,
+                min_picks,
+                optional_zero,
+                new_candidates,
+                new_accum,
+                prompt,
+                source_card,
+                source_permanent,
+                source_kind,
+                selecting_player,
+                previous_phase,
+                next_cb,
+            );
+        }),
+        on_decline: Some(Box::new(move |game| {
+            if let Some(cb) = shared_cb_decline.lock().unwrap().take() {
+                cb(game, accum_for_decline);
+            }
+        })),
+    });
 }
 
 fn install_select_own_breeding_permanent(

@@ -1,0 +1,60 @@
+card: EX7-064
+name: Shoto Kazama
+kind: tamer
+color: [green]
+cost: 3
+traits: [LIBERATOR]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] Suspend this Tamer to give 1 Digimon Piercing and Blocker; unsuspend it if it has Vortex Warriors"
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: target
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 Digimon to gain Piercing and Blocker"
+      - grant_keyword:
+          target: target
+          keyword: Piercing
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: target
+          keyword: Blocker
+          expiry: end_of_opponents_turn
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              of_permanent: target
+              trait_has: "Vortex Warriors"
+          then:
+            - unsuspend: { target: target }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

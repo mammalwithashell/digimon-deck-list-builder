@@ -1,0 +1,18 @@
+card: EX2-003
+name: Viximon
+kind: digi_egg
+level: 2
+color: [yellow]
+traits: [Lesser]
+effects:
+  - scope: inherited
+    when: on_use_option
+    once_per_turn: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_card_use_cost_gte: 2
+    summary: "When you use an Option with a cost of 2 or more, draw 1."
+    process:
+      - draw: { of: you, count: 1 }

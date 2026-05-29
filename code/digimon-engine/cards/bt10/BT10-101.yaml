@@ -1,0 +1,53 @@
+card: BT10-101
+name: "Lonkhe Adistakto"
+kind: option
+color: [yellow]
+cost: 8
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    any_of:
+      - name_is: Pulsemon
+      - self_digivolution_contains_name: Pulsemon
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] At 3+ security, -12000 DP; at 3 or fewer security, place 1 opponent Digimon as top security"
+    process:
+      - if:
+          condition: { security_count_gte: 3 }
+          then:
+            - select_opponent_permanent:
+                bind_as: dp_target
+                filter: { kind: digimon }
+                prompt: "Choose 1 opponent Digimon to get -12000 DP"
+            - add_dp_modifier:
+                target: dp_target
+                value: -12000
+                expiry: end_of_turn
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - select_opponent_permanent:
+                bind_as: security_target
+                filter: { kind: digimon }
+                prompt: "Choose 1 opponent Digimon to place on top of security"
+            - place_permanent_on_security:
+                of: opponent
+                target: security_target
+                position: top
+                face_up: false
+
+  - when: on_discard_security
+    summary: "When an effect trashes this card from security, activate this card's [Main] effects"
+    process:
+      - activate_main_effects: { source: event_card }
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - activate_main_effects: { source: self }

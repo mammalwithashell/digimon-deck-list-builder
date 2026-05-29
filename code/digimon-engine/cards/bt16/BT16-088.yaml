@@ -1,0 +1,63 @@
+card: BT16-088
+name: Cody Hida & T.K. Takaishi
+kind: tamer
+color: [black, yellow]
+cost: 4
+
+effects:
+  - when: start_of_your_main_phase
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - name_contains: "Armadillomon"
+            - name_contains: "Patamon"
+        n: 1
+    summary: "[Start of Main] May play Armadillomon/Patamon from hand free; return it next opponent EOT"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - name_contains: "Armadillomon"
+              - name_contains: "Patamon"
+          prompt: "Play 1 [Armadillomon] or [Patamon] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick, bind_as: played }
+      - schedule_delayed:
+          when: end_of_opponents_next_turn
+          body:
+            - return_to_hand: { target: { permanent: played } }
+
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_card_color_has: [black, yellow]
+    summary: "[Your Turn] On own Digimon digivolve into black/yellow, suspend self to gain 1 memory; if DNA, De-Digivolve 1"
+    process:
+      - suspend: { target: source }
+      - gain_memory: 1
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: target
+                filter: { kind: digimon }
+                prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+            - de_digivolve:
+                target: target
+                amount: 1
+                stop_at_level: 3
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

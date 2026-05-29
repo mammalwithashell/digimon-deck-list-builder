@@ -90,11 +90,29 @@ fn tools_list_includes_lifecycle_state_action() {
     let tools = resps[0]["result"]["tools"].as_array().expect("tools array");
     let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
     // Lifecycle
-    for n in &["new_game_from_decks", "new_game_debug", "load_recording", "seek", "list_games", "close_game"] {
+    for n in &[
+        "new_game_from_decks",
+        "new_game_debug",
+        "load_recording",
+        "seek",
+        "list_games",
+        "close_game",
+    ] {
         assert!(names.contains(n), "tools/list missing {}", n);
     }
     // State
-    for n in &["state", "hand", "field", "security", "pending_selection", "effect_queue", "events", "modifiers", "inspect_card", "legal_actions"] {
+    for n in &[
+        "state",
+        "hand",
+        "field",
+        "security",
+        "pending_selection",
+        "effect_queue",
+        "events",
+        "modifiers",
+        "inspect_card",
+        "legal_actions",
+    ] {
         assert!(names.contains(n), "tools/list missing {}", n);
     }
     // Actions (including digivolve and attack per
@@ -146,10 +164,8 @@ fn deck_cards_returns_card_metadata_for_game_from_decks() {
         }),
     ]);
     assert_eq!(resps.len(), 2);
-    let body_new: Value = serde_json::from_str(
-        resps[0]["result"]["content"][0]["text"].as_str().unwrap(),
-    )
-    .unwrap();
+    let body_new: Value =
+        serde_json::from_str(resps[0]["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     let game_id = body_new["game_id"].as_str().unwrap().to_string();
 
     let resps = run_server(&[
@@ -166,10 +182,8 @@ fn deck_cards_returns_card_metadata_for_game_from_decks() {
             "params": { "name": "list_games", "arguments": {} }
         }),
     ]);
-    let lg: Value = serde_json::from_str(
-        resps[1]["result"]["content"][0]["text"].as_str().unwrap(),
-    )
-    .unwrap();
+    let lg: Value =
+        serde_json::from_str(resps[1]["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     let fresh_gid = lg["games"][0]["game_id"].as_str().unwrap().to_string();
     let _ = game_id;
 
@@ -187,10 +201,8 @@ fn deck_cards_returns_card_metadata_for_game_from_decks() {
             "params": { "name": "deck_cards", "arguments": { "game_id": fresh_gid } }
         }),
     ]);
-    let body: Value = serde_json::from_str(
-        resps[1]["result"]["content"][0]["text"].as_str().unwrap(),
-    )
-    .unwrap();
+    let body: Value =
+        serde_json::from_str(resps[1]["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     // The recreated game has a DIFFERENT game_id (random per process),
     // so the deck_cards call sees an unknown game and returns the
     // structured error envelope — but the envelope shape is what we
@@ -228,13 +240,14 @@ fn recorded_actions_errors_for_non_recording_game() {
         }),
     ]);
     assert_eq!(resps.len(), 2);
-    let body: Value = serde_json::from_str(
-        resps[1]["result"]["content"][0]["text"].as_str().unwrap(),
-    )
-    .unwrap();
+    let body: Value =
+        serde_json::from_str(resps[1]["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     // Unknown game_id → ok:false with structured error.
     assert_eq!(body["ok"], false);
-    assert!(body["error"].as_str().unwrap_or("").contains("unknown game_id"));
+    assert!(body["error"]
+        .as_str()
+        .unwrap_or("")
+        .contains("unknown game_id"));
 }
 
 #[test]
@@ -355,10 +368,7 @@ fn capacity_limit_emits_at_capacity_error() {
     let last_content = &resps[4]["result"]["content"][0]["text"];
     let body: Value = serde_json::from_str(last_content.as_str().unwrap()).unwrap();
     assert_eq!(body["ok"], false);
-    assert!(body["error"]
-        .as_str()
-        .unwrap_or("")
-        .contains("capacity"));
+    assert!(body["error"].as_str().unwrap_or("").contains("capacity"));
 }
 
 // ── enforce-live-game-action-contracts: wire-contract regressions ─────────
@@ -370,7 +380,11 @@ fn capacity_limit_emits_at_capacity_error() {
 ///
 /// Returns (new_game_envelope, follow_up_envelope) after parsing the
 /// nested `content[0].text` JSON.
-fn one_shot_with_gid(seed: u64, follow_up_name: &str, build_args: impl Fn(&str) -> Value) -> (Value, Value) {
+fn one_shot_with_gid(
+    seed: u64,
+    follow_up_name: &str,
+    build_args: impl Fn(&str) -> Value,
+) -> (Value, Value) {
     // We can't read responses mid-batch, but we CAN drive new_game then
     // list_games then a follow-up call using the gid from list_games —
     // by spawning TWO server invocations. Round 1 discovers gids that a
@@ -404,10 +418,8 @@ fn one_shot_with_gid(seed: u64, follow_up_name: &str, build_args: impl Fn(&str) 
             "params": { "name": "list_games", "arguments": {} }
         }),
     ]);
-    let lg: Value = serde_json::from_str(
-        resps1[1]["result"]["content"][0]["text"].as_str().unwrap(),
-    )
-    .unwrap();
+    let lg: Value =
+        serde_json::from_str(resps1[1]["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     let gid = lg["games"][0]["game_id"].as_str().unwrap().to_string();
 
     let resps2 = run_server(&[
@@ -423,14 +435,10 @@ fn one_shot_with_gid(seed: u64, follow_up_name: &str, build_args: impl Fn(&str) 
             "params": { "name": follow_up_name, "arguments": build_args(&gid) }
         }),
     ]);
-    let new_game_body: Value = serde_json::from_str(
-        resps2[0]["result"]["content"][0]["text"].as_str().unwrap(),
-    )
-    .unwrap();
-    let follow_up_body: Value = serde_json::from_str(
-        resps2[1]["result"]["content"][0]["text"].as_str().unwrap(),
-    )
-    .unwrap();
+    let new_game_body: Value =
+        serde_json::from_str(resps2[0]["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
+    let follow_up_body: Value =
+        serde_json::from_str(resps2[1]["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     (new_game_body, follow_up_body)
 }
 
@@ -439,37 +447,65 @@ fn mcp_step_envelope_carries_ok_field() {
     // The follow-up gid is unknown to the second server's process — so
     // we expect ok:false. The contract being tested is the envelope
     // shape, not the dispatch path.
-    let (_new, body) = one_shot_with_gid(123, "step", |gid| {
-        json!({ "game_id": gid, "action_id": 65535 })
-    });
-    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
-    assert_eq!(body["ok"], false, "unknown gid should return ok:false: {}", body);
+    let (_new, body) = one_shot_with_gid(
+        123,
+        "step",
+        |gid| json!({ "game_id": gid, "action_id": 65535 }),
+    );
+    assert!(
+        body.get("ok").is_some(),
+        "envelope must carry `ok`: {}",
+        body
+    );
+    assert_eq!(
+        body["ok"], false,
+        "unknown gid should return ok:false: {}",
+        body
+    );
 }
 
 #[test]
 fn mcp_play_envelope_carries_ok_field() {
-    let (_new, body) = one_shot_with_gid(7, "play", |gid| {
-        json!({ "game_id": gid, "player": 0, "hand_idx": 0 })
-    });
-    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
+    let (_new, body) = one_shot_with_gid(
+        7,
+        "play",
+        |gid| json!({ "game_id": gid, "player": 0, "hand_idx": 0 }),
+    );
+    assert!(
+        body.get("ok").is_some(),
+        "envelope must carry `ok`: {}",
+        body
+    );
     assert_eq!(body["ok"], false);
 }
 
 #[test]
 fn mcp_digivolve_tool_is_dispatchable() {
     // Verify the new digivolve tool reaches dispatch (not "unknown tool").
-    let (_new, body) = one_shot_with_gid(7, "digivolve", |gid| {
-        json!({ "game_id": gid, "host": { "player": 0, "index": 0 }, "source_hand_idx": 0 })
-    });
-    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
+    let (_new, body) = one_shot_with_gid(
+        7,
+        "digivolve",
+        |gid| json!({ "game_id": gid, "host": { "player": 0, "index": 0 }, "source_hand_idx": 0 }),
+    );
+    assert!(
+        body.get("ok").is_some(),
+        "envelope must carry `ok`: {}",
+        body
+    );
 }
 
 #[test]
 fn mcp_attack_tool_is_dispatchable_with_security_target() {
-    let (_new, body) = one_shot_with_gid(7, "attack", |gid| {
-        json!({ "game_id": gid, "attacker": { "player": 0, "index": 0 }, "target": "security" })
-    });
-    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
+    let (_new, body) = one_shot_with_gid(
+        7,
+        "attack",
+        |gid| json!({ "game_id": gid, "attacker": { "player": 0, "index": 0 }, "target": "security" }),
+    );
+    assert!(
+        body.get("ok").is_some(),
+        "envelope must carry `ok`: {}",
+        body
+    );
 }
 
 #[test]
@@ -481,5 +517,9 @@ fn mcp_attack_tool_is_dispatchable_with_handle_target() {
             "target": { "player": 1, "index": 0 }
         })
     });
-    assert!(body.get("ok").is_some(), "envelope must carry `ok`: {}", body);
+    assert!(
+        body.get("ok").is_some(),
+        "envelope must carry `ok`: {}",
+        body
+    );
 }

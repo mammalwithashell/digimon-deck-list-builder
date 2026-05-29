@@ -1,0 +1,66 @@
+card: BT13-034
+name: Kudamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Holy Beast]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal top 3; add 1 yellow Vaccine Digimon and 1 yellow Tamer; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: yellow_vaccine_digimon
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - color_is: yellow
+                  - trait_has: Vaccine
+            - bind_as: yellow_tamer
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: tamer
+                  - color_is: yellow
+          prompt: "Add 1 yellow Vaccine Digimon and 1 yellow Tamer"
+          no_duplicate_cards: true
+      - add_to_hand_from_reveal: { of: you, card: yellow_vaccine_digimon }
+      - add_to_hand_from_reveal: { of: you, card: yellow_tamer }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      opponent_security_count_lte:
+        formula:
+          base: 6
+          per:
+            card_count_in_zone:
+              zone: security
+              of: you
+          delta: -1
+    summary: "[When Attacking][OPT] If total security is 6 or less, 1 opponent Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Select 1 opponent Digimon to get -2000 DP"
+      - add_dp_modifier:
+          target: dp_target
+          value: -2000
+          expiry: end_of_turn

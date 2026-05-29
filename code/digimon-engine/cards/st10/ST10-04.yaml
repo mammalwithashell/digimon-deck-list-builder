@@ -1,0 +1,66 @@
+card: ST10-04
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow, purple]
+cost: 5
+dp: 4000
+traits: [Holy Beast]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 yellow Digimon and 1 purple Digimon"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: yellow_digimon_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - color_is: yellow
+            - bind_as: purple_digimon_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - color_is: purple
+          no_duplicate_cards: true
+          prompt: "Select 1 yellow Digimon and 1 purple Digimon"
+      - add_to_hand_from_reveal: { of: you, card: yellow_digimon_pick }
+      - add_to_hand_from_reveal: { of: you, card: purple_digimon_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Archangel
+                  - trait_has: Fallen Angel
+    amount: 2
+    summary: "[Your Turn] When digivolving into [Archangel]/[Fallen Angel], reduce cost by 2"
+
+  - kind: alt_path_registration
+    scope: inherited
+    trigger: end_of_your_turn
+    registers:
+      kind: dna_digivolve
+    applies_to:
+      of: you
+      zone: [battle_area]

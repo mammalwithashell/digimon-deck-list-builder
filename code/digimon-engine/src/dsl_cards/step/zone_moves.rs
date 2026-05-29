@@ -191,6 +191,14 @@ pub fn try_run(
             ctx.recover_from_deck(p, *count);
             true
         }
+        CompiledStep::RecoverForDeleted { of } => {
+            let p = resolve_player(ctx, *of);
+            let count = bindings.result_log().deleted.len().min(u8::MAX as usize) as u8;
+            if count > 0 {
+                ctx.recover_from_deck(p, count);
+            }
+            true
+        }
 
         CompiledStep::TrashFromReveal { of, card } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {

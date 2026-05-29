@@ -1,0 +1,40 @@
+card: BT22-044
+name: Palmon
+kind: digimon
+level: 3
+color: [green, yellow]
+cost: 3
+dp: 1000
+traits: [Vegetation, CS]
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: CS }
+    cost: 0
+
+effects:
+  - when: on_digivolution_card_placed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When an effect places a [CS] Digimon card in this Digimon's sources, gain 1 memory"
+    condition:
+      all_of:
+        - event_is_effect_initiated: true
+        - event_host_permanent_is_source: true
+        - event_card_trait_has: CS
+    process:
+      - gain_memory: 1
+
+  - scope: inherited
+    when: main_on_field
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Main][OPT] Place this Digimon's top stacked card as bottom; Draw 1"
+    condition:
+      materials_count_gte: 1
+    process:
+      - place_top_source_as_bottom: { target: source }
+      - draw: { of: you, count: 1 }

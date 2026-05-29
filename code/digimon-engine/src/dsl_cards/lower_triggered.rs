@@ -471,6 +471,9 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         EffectTiming::OnOpponentSecurityRemoved => Effect::on_opponent_security_removed(card),
         EffectTiming::OnOwnSecurityRemoved => Effect::on_own_security_removed(card),
         EffectTiming::OnDigivolutionCardTrashed => Effect::on_digivolution_card_trashed(card),
+        EffectTiming::OnDigivolutionCardPlaced => {
+            EffectBuilder::new(card, EffectTiming::OnDigivolutionCardPlaced)
+        }
         EffectTiming::OnSecurityCheck => Effect::on_security_check(card),
         EffectTiming::OnCheckFaceUpSecurity => {
             EffectBuilder::new(card, EffectTiming::OnCheckFaceUpSecurity)

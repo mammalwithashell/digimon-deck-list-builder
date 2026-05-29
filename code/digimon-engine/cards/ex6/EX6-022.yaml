@@ -1,0 +1,69 @@
+card: EX6-022
+name: Angewomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 6000
+traits: [Archangel]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - when: [on_play, when_digivolving]
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            name_contains: "Mirei Mikagura"
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    summary: "[On Play][When Digivolving] With Mirei, 1 opponent Digimon gains Security A. -2"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gains Security A. -2"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: -2
+          expiry: end_of_opponents_turn
+
+  - when: [on_play, when_digivolving]
+    condition:
+      none_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            name_contains: "Mirei Mikagura"
+    summary: "[On Play][When Digivolving] Without Mirei, may play Mirei from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: mirei
+          optional: true
+          filter: { name_contains: "Mirei Mikagura" }
+          prompt: "Play 1 Mirei Mikagura from your hand"
+      - if:
+          condition: { binding_present: mirei }
+          then:
+            - play_from_hand_free: { of: you, hand_index: mirei }
+
+  - scope: inherited
+    kind: grant_keyword
+    active_when:
+      any_of:
+        - source_permanent_trait_has: Angel
+        - source_permanent_trait_has: "Three Great Angels"
+    keyword: Alliance
