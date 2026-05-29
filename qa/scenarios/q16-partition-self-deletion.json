@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "q16-partition-self-deletion",
+  "title": "Partition does not trigger when a Digimon deletes itself",
+  "readiness": "blocked_on_card_impl",
+  "blocked_reason": "Requires EX6 Lilithmon's [On Play] grant of '[End of Your Turn] Delete this Digimon.' plus the <Partition> keyword resolution on Paildramon. The self-deletion-doesn't-trigger-Partition rule depends on those card effects being implemented and on the OnDeletion/keyword-suppression path. Staging-level facts pass today (see q16-paildramon-staging); this fixture asserts the full rules outcome and stays pending until the cards are implemented.",
+  "decks": {
+    "1": ["ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-01",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03"],
+    "2": ["ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-01",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03"]
+  },
+  "seed": 12345,
+  "state": { "memory": 0, "phase": "Main", "turn": 5, "first_player": 1 },
+  "zones": {
+    "1": {
+      "field": [
+        { "stack": ["BT12-022", "BT12-050", "AD1-011"], "is_suspended": false, "turn_played": 0 }
+      ]
+    }
+  },
+  "assertions": {
+    "engine": [
+      { "kind": "effect_triggered", "event_type": "Partition", "expected": false }
+    ],
+    "ui": []
+  }
+}

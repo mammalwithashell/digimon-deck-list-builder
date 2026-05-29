@@ -350,6 +350,33 @@ no client change because SHA256 verification matches byte-for-byte either way.
 See [ENVIRONMENT.md → Model publishing](ENVIRONMENT.md#model-publishing--digitalocean-spaces)
 for the full reference and `.env.example` for the seed block.
 
+### Window sizing and canvas scaling
+
+The desktop window is locked to a fixed list of DCGO-matched resolution
+presets (1024×576 → 5160×2160) selectable from the **Graphics Settings**
+page (`code/frontend/src/pages/GraphicsSettingsPage.tsx`,
+`/settings/graphics` route, desktop-only). User edge-resize is disabled
+(`resizable: false` in `tauri.conf.json`); presets and the fullscreen
+toggle are the only paths to change window size.
+
+The entire desktop game UI is wrapped in `<CanvasScaler>`
+(`code/frontend/src/components/desktop/CanvasScaler.tsx`), which renders
+all children inside a fixed 1920×1080 internal canvas and applies a
+uniform `transform: scale(min(w/1920, h/1080))` to fit whatever preset
+the user picked. Ultrawide presets (3440×1440) letterbox with side bars
+rather than stretching. **The board's CSS contains no media queries** —
+all layout authoring targets the 1920×1080 canvas; smaller windows just
+shrink it uniformly.
+
+Persistence lives in two places:
+
+- `localStorage` (`desktop.graphicsPreset`, `desktop.fullscreen`) is the
+  source of truth for the user's selected preset, hydrated by
+  `useUiStore` on mount and applied via `@tauri-apps/api/window`'s
+  `appWindow.setSize` / `setFullscreen`.
+- `tauri-plugin-window-state` restores window *position* across
+  launches so multi-monitor users find the window where they left it.
+
 ### Working Rules for Desktop
 
 1. The Tauri build must not link any Python runtime. All gameplay, inference, and deck tooling dispatch through Tauri `invoke()` into `digimon-engine`.
@@ -357,3 +384,5 @@ for the full reference and `.env.example` for the seed block.
 3. Model cache lives under `dirs::data_dir()/digimon-tcg/models/<id>/`; downloads verify SHA256 + content-length before atomic rename from `.tmp`.
 4. The compatibility gate (`models_engine_contract` + `assert_compatible`) must run before any download so tensor/action-space drift from engine changes fails loudly, not silently.
 5. LSTM ONNX policies must call `reset()` at episode boundaries — same rule as SB3/Python.
+6. Game-board CSS targets a fixed 1920×1080 internal canvas. **Do not add `@media` queries inside the board** — `<CanvasScaler>` produces the only viewport sizing the board needs to see. Resolution variation is a uniform `transform: scale()`, not a layout reflow.
+7. Window-size changes go through `useUiStore.setGraphicsPreset()` + `appWindow.setSize()`. Do not call `setSize` from random call sites; the store is the source of truth.

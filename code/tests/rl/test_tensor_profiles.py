@@ -19,27 +19,24 @@ def test_default_observation_profile_shape():
 
     profile = get_tensor_profile()
 
+    # After `flip-engine-default-to-lite-deck-v2`, the engine default is
+    # `standard_lite_deck_v2` (8850 floats; lite_v2 prefix + 55-row own
+    # original decklist + 256 reserved). The action space is unchanged.
     assert profile.id == DEFAULT_OBSERVATION_PROFILE
-    assert profile.id == "standard_lite_v2"
+    assert profile.id == "standard_lite_deck_v2"
     assert profile.game_mode == "standard"
-    # Task S1.4: PERM_MAX_SOURCES 11 -> 12 grows tensor_size 8320 -> 8410.
-    assert profile.tensor_size == 8410
-    assert profile.card_id_slot_count == 572
-    assert profile.scalar_slot_count == 7838
-    assert len(profile.card_id_positions) == 572
-    assert len(profile.scalar_positions) == 7838
+    assert profile.tensor_size == 8850
 
 
 def test_compact_tensor_profile_remains_compatibility_profile():
     from digimon_gym.tensor_profiles import get_tensor_profile
-    from digimon_engine import TENSOR_PROFILE_ID, TENSOR_SIZE
 
+    # `standard_compact_v1` is no longer the engine default but is still
+    # reachable for callers (legacy recordings, parity tests).
     profile = get_tensor_profile("standard_compact_v1")
 
-    assert profile.id == TENSOR_PROFILE_ID
     assert profile.id == "standard_compact_v1"
     assert profile.game_mode == "standard"
-    assert profile.tensor_size == TENSOR_SIZE
     assert profile.tensor_size == 1375
     assert profile.card_id_slot_count == 520
     assert profile.scalar_slot_count == 855
@@ -140,13 +137,16 @@ def test_tensor_profile_positions_cover_tensor():
 
 def test_feature_extractor_uses_profile_positions():
     import torch
-    from digimon_engine import TENSOR_SIZE
     from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
     from digimon_gym.tensor_profiles import get_tensor_profile
 
+    # Pin to standard_compact_v1 (the historical default; reachable by ID
+    # after the engine default flipped to standard_lite_deck_v2). Use the
+    # profile's own tensor_size so the Box shape matches the profile-driven
+    # extractor's expectations.
     profile = get_tensor_profile("standard_compact_v1")
     space = spaces.Box(
-        shape=(TENSOR_SIZE,),
+        shape=(profile.tensor_size,),
         low=-10.0,
         high=20001.0,
         dtype=np.float32,
@@ -157,7 +157,7 @@ def test_feature_extractor_uses_profile_positions():
     assert extractor.card_id_indices.numel() == profile.card_id_slot_count
     assert extractor.scalar_indices.numel() == profile.scalar_slot_count
 
-    obs = torch.zeros((2, TENSOR_SIZE), dtype=torch.float32)
+    obs = torch.zeros((2, profile.tensor_size), dtype=torch.float32)
     out = extractor(obs)
     assert tuple(out.shape) == (2, 512)
 

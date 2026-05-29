@@ -32,6 +32,10 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // Restores window position (NOT size — preset selection is the
+        // source of truth for size) across launches so multi-monitor
+        // users find the window where they left it.
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
             let handle = app.handle().clone();
             updater::spawn_min_version_check(handle);
