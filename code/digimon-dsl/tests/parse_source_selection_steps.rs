@@ -1,7 +1,9 @@
 //! Phase 2g source-selection DSL verbs parse and lower into compiled steps.
 
 use digimon_dsl::compile::compile;
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledClause, CompiledPredicate, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledClause, CompiledFormula, CompiledPredicate, CompiledStep,
+};
 use digimon_dsl::spec::CardSpec;
 
 fn compile_first_step(yaml: &str) -> CompiledStep {
@@ -319,8 +321,9 @@ effects:
             bind_as,
             prompt,
             then,
+            ..
         } => {
-            assert_eq!(dp_budget, 5000);
+            assert_eq!(dp_budget, CompiledFormula::Literal(5000));
             assert_eq!(min_picks, 1);
             assert_eq!(bind_as.as_deref(), Some("targets"));
             assert_eq!(prompt, "Choose opponents");

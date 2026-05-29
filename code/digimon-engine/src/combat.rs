@@ -1916,6 +1916,9 @@ impl Game {
                     pa.blocker = Some(blocker);
                     pa.state = AttackState::PostBlock;
                 }
+                // Declaring Blocker suspends the chosen Digimon before the
+                // attack target is rewritten.
+                game.suspend(blocker);
                 // OnAttackTargetChange: fires in all players' battle areas
                 // when Block rewrites effective_target. The payload carries
                 // attacker, old/new targets, reason, and controller.
@@ -3117,6 +3120,9 @@ impl Game {
         let perm = &mut self.players[handle.player as usize].battle_area[handle.index as usize];
         perm.is_suspended = true;
         perm.attacks_this_turn = perm.attacks_this_turn.saturating_add(1);
+        if let Some(count) = self.digimon_attacks_this_turn.get_mut(handle.player as usize) {
+            *count = count.saturating_add(1);
+        }
     }
 
     fn handle_valid(&self, handle: PermanentHandle) -> bool {

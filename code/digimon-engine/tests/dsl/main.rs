@@ -2,6 +2,7 @@
 //! functions. See `digimon-engine/Cargo.toml` for the `[[test]]` entry.
 
 mod activation_cost;
+mod attack_history_predicate;
 mod also_treated_as;
 mod cross_check;
 mod delay;

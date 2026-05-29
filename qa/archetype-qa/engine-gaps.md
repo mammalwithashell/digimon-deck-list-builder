@@ -2,8 +2,19 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-24
+Last updated: 2026-05-29
 Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
+
+## Closures (2026-05-29)
+
+- **ST5 Machine Black attack-history/blocker context** — CLOSED. The engine now
+  tracks per-player Digimon attack counts for the current turn and resets them
+  at turn start, enabling the DSL `digimon_attacked_this_turn` predicate used by
+  ST5-04 ToyAgumon and ST5-06 Greymon. ST5-14 Tai Kamiya required no new
+  player-visible action contract: existing Blocker target-change context is
+  faithful once the blocker declaration path suspends the blocker before
+  target-change observers resolve. Detailed closure and verification commands
+  are archived in [qa/resolved-gaps.md](../resolved-gaps.md).
 
 ## Closures (2026-05-24)
 

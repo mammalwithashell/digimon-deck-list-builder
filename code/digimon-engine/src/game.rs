@@ -231,6 +231,10 @@ pub struct Game {
     /// Backs the `digivolve_driven_attack` reward signal.
     /// See `openspec/changes/add-gameplay-reward-config/`.
     pub n_digivolve_driven_attacks: [u32; 2],
+    /// Per-turn count of Digimon attacks declared by each player. Reset when
+    /// that player begins a new turn, after prior end-of-turn observers have
+    /// had a chance to inspect the ending turn's history.
+    pub digimon_attacks_this_turn: [u32; 2],
     pub current_phase: GamePhase,
     /// Memory seesaw value. Positive = favor of memory_pair.0, negative = favor of memory_pair.1.
     pub memory: i16,
@@ -828,6 +832,7 @@ impl Game {
             n_digivolutions: [0u32, 0u32],
             n_dna_digivolutions: [0u32, 0u32],
             n_digivolve_driven_attacks: [0u32, 0u32],
+            digimon_attacks_this_turn: [0u32, 0u32],
             current_phase: GamePhase::Mulligan,
             memory: 0,
             memory_pair,
