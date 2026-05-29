@@ -77,6 +77,28 @@ fn add_to_trash(runner: &mut DebugRunner, player: u8, card_id: &str) -> CardHand
     handle
 }
 
+fn insert_source_below_top(
+    runner: &mut DebugRunner,
+    target: PermanentHandle,
+    card_id: &str,
+) -> CardHandle {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .expect("card registered");
+    let card_index = runner.game.next_card_index();
+    let card = CardSource::new(data_idx, target.player, card_index);
+    let handle = card.handle();
+    let sources = &mut runner.game.players[target.player as usize].battle_area
+        [target.index as usize]
+        .card_sources;
+    let insert_at = sources.len().saturating_sub(1);
+    sources.insert(insert_at, card);
+    handle
+}
+
 fn push_source(runner: &mut DebugRunner, target: PermanentHandle, card_id: &str) -> CardHandle {
     let data_idx = runner
         .game
@@ -263,6 +285,123 @@ fn effect_digivolve_from_material_moves_exact_source_out_of_stack() {
         .map(|c| c.handle())
         .collect();
     assert_eq!(carrier_handles, vec![carrier_bottom, top_handle]);
+}
+
+#[test]
+fn effect_digivolve_from_under_tamer_source_preserves_origin_until_commit() {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let mut tamer = make_test_card("TAMER", "Tamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TARGET3", "Target"))
+        .add_card(tamer)
+        .add_card(evo_lv4("EVO4"))
+        .memory(5)
+        .start();
+    runner.register_effect(
+        "EVO4",
+        Arc::new(SecurityLossAndDigivolveOrder { seen: seen.clone() }),
+    );
+
+    let target = runner.place_on_field(0, "TARGET3", None);
+    let tamer = runner.place_on_field(0, "TAMER", None);
+    let evo_handle = insert_source_below_top(&mut runner, tamer, "EVO4");
+    let tamer_top = runner.game.players[0].battle_area[tamer.index as usize]
+        .top_card()
+        .handle();
+    let source_card = runner.game.players[0].battle_area[target.index as usize]
+        .top_card()
+        .handle();
+
+    let ok = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(target), 0);
+        ctx.effect_initiated_digivolve_from_source(
+            0,
+            CardSourceRef::Material(tamer, 0),
+            target,
+            CostDelta::Free,
+            false,
+        )
+    };
+
+    assert!(ok);
+    assert_eq!(
+        runner.game.players[0].battle_area[target.index as usize]
+            .top_card()
+            .handle(),
+        evo_handle
+    );
+    let tamer_handles: Vec<_> = runner.game.players[0].battle_area[tamer.index as usize]
+        .card_sources
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(
+        tamer_handles,
+        vec![tamer_top],
+        "the selected card leaves the Tamer only when the digivolve commits"
+    );
+    assert_eq!(
+        seen.lock().unwrap().as_slice(),
+        ["when_digivolving"],
+        "source-zone effect digivolve must use normal digivolution timing"
+    );
+}
+
+#[test]
+fn failed_effect_digivolve_from_under_tamer_keeps_source_under_tamer() {
+    let mut tamer = make_test_card("TAMER", "Tamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TARGET3", "Target"))
+        .add_card(tamer)
+        .add_card(evo_lv4("EVO4"))
+        .memory(-9)
+        .start();
+
+    let target = runner.place_on_field(0, "TARGET3", None);
+    let tamer = runner.place_on_field(0, "TAMER", None);
+    let evo_handle = insert_source_below_top(&mut runner, tamer, "EVO4");
+    let tamer_top = runner.game.players[0].battle_area[tamer.index as usize]
+        .top_card()
+        .handle();
+    let source_card = runner.game.players[0].battle_area[target.index as usize]
+        .top_card()
+        .handle();
+
+    let ok = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(target), 0);
+        ctx.effect_initiated_digivolve_from_source(
+            0,
+            CardSourceRef::Material(tamer, 0),
+            target,
+            CostDelta::Fixed(2),
+            false,
+        )
+    };
+
+    assert!(!ok);
+    assert_eq!(
+        runner.game.players[0].battle_area[target.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "TARGET3",
+        "target should not digivolve after the failed payment"
+    );
+    let tamer_handles: Vec<_> = runner.game.players[0].battle_area[tamer.index as usize]
+        .card_sources
+        .iter()
+        .map(|card| card.handle())
+        .collect();
+    assert_eq!(
+        tamer_handles,
+        vec![evo_handle, tamer_top],
+        "failed source-zone digivolve must restore the selected under-Tamer card"
+    );
 }
 
 #[test]

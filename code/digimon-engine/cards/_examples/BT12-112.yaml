@@ -15,20 +15,29 @@ alt_paths:
             - trait_has: "Blue Flare"
         repeat: unbounded
         distinct_by: card_number
-        zones: [hand, battle_area, trash]
-    cost:
-      formula:
-        base: 15
-        per: material_count
-        delta: -1
+        zones: [hand, battle_area]
+        cost_delta: -1
+    cost: 15
 
-  # NOTE: The "place Shoutmon as source => cost -1, unlock trash zone" is a
-  # hybrid alt_path + cost_reduction pattern. cost_reduction is not a valid
-  # AltPathKind, so the "when would be played" cost hook is OMITTED for
-  # Phase 0 and flagged for Phase 3 when activated_digivolve / cost hook
-  # extensions land.
+# Production BT12-112 now implements the printed "place 1 Shoutmon" hook as a
+# before-pay-cost transaction modifier. This example mirrors that shape.
 
 effects:
+  - kind: cost_reduction
+    when_playing_this: true
+    amount: 0
+    pay_cost:
+      - select_own_permanent:
+          bind_as: shoutmon
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Shoutmon
+          optional: true
+          prompt: "Place 1 Shoutmon as a digivolution card"
+      - preattach_digixros_material: { card: shoutmon, cost_delta: -1 }
+      - allow_digixros_material_zone: { zone: trash }
+
   - when: on_play
     process:
       - select_opponent_permanent:

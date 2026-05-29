@@ -1,0 +1,54 @@
+card: BT21-030
+name: "Shoutmon X7: Superior Mode"
+kind: digimon
+level: 7
+color: [red, yellow]
+cost: 15
+dp: 17000
+traits: [Composite, Xros Heart, Blue Flare, Hero]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - trait_has: Hero
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash top 10 stacked cards of 1 opponent Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        materials_count_gte: 1
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_gte: 1
+          prompt: "Trash the top 10 stacked cards of 1 opponent Digimon"
+      - trash_top_stacked_sources:
+          target: target
+          count: 10
+
+  - when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] May return 1 opponent Digimon with no digivolution cards to deck bottom"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "Return 1 opponent Digimon with no digivolution cards to deck bottom"
+      - return_to_deck:
+          target: target
+          position: bottom

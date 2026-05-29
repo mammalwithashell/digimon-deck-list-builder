@@ -99,6 +99,9 @@ fn permanent_activation_blocked_for_timing(
 ) -> bool {
     // ── Per-timing player-scoped/permanent-scoped category gates ──
     let category_block = match timing {
+        EffectTiming::OnPlay => game
+            .modifiers
+            .has(handle, ModifierType::CannotActivateOnPlayEffects),
         EffectTiming::WhenDigivolving => game
             .modifiers
             .has(handle, ModifierType::CannotActivateWhenDigivolvingEffects),

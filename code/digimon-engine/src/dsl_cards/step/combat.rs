@@ -58,6 +58,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             attacker,
             targets,
             without_suspending,
+            ignore_summoning_sickness,
             optional,
             prompt,
             cost_upgrade,
@@ -66,14 +67,25 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
                 return true;
             };
             let prompt = prompt.as_deref().unwrap_or("Attack with this Digimon?");
-            let _ = ctx.may_attack_now_optional_with_upgrade(
-                attacker,
-                lower_attack_target_restriction(*targets),
-                *without_suspending,
-                *optional,
-                prompt,
-                lower_attack_cost_upgrade(*cost_upgrade),
-            );
+            let _ = if *ignore_summoning_sickness {
+                ctx.may_attack_now_ignoring_summoning_sickness_with_upgrade(
+                    attacker,
+                    lower_attack_target_restriction(*targets),
+                    *without_suspending,
+                    *optional,
+                    prompt,
+                    lower_attack_cost_upgrade(*cost_upgrade),
+                )
+            } else {
+                ctx.may_attack_now_optional_with_upgrade(
+                    attacker,
+                    lower_attack_target_restriction(*targets),
+                    *without_suspending,
+                    *optional,
+                    prompt,
+                    lower_attack_cost_upgrade(*cost_upgrade),
+                )
+            };
             true
         }
         CompiledStep::ForceAttack {

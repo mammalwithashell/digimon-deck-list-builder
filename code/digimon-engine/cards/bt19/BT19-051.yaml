@@ -1,0 +1,77 @@
+card: BT19-051
+name: AtlurBallistamon
+kind: digimon
+level: 5
+color: [green, black]
+cost: 7
+dp: 7000
+traits: [Machine, Xros Heart]
+attribute: Vaccine
+
+digixros_aliases: [Ballistamon]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: "Xros Heart"
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Protect 1 own Digimon from hand/deck return and give +3000 DP"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon"
+      - add_modifier:
+          target: target
+          modifier: CannotBeReturnedToHand
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: target
+          modifier: CannotBeReturnedToDeck
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_dp_modifier:
+          target: target
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  - when: on_deletion
+    summary: "[On Deletion] Place 1 Xros Heart/Blue Flare Digimon from hand or trash under one of your Tamers"
+    process:
+      - select_own_permanent:
+          bind_as: tamer
+          optional: true
+          filter: { kind: tamer }
+          prompt: "Choose a Tamer to place a card under"
+      - if:
+          condition: { binding_present: tamer }
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                bind_as: stash
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: "Xros Heart"
+                        - trait_has: "Blue Flare"
+                prompt: "Place 1 Xros Heart or Blue Flare Digimon from hand or trash under the Tamer"
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: tamer
+
+  - scope: inherited
+    kind: grant_keyword
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - source_permanent_trait_has: "Xros Heart"
+    keyword: Blocker
+    summary: "Inherited: Xros Heart carrier gains Blocker on opponent's turn"

@@ -206,6 +206,7 @@ pub struct CompiledMaterial {
     pub repeat: Option<CompiledRepeat>,
     pub distinct_by: Option<CompiledDistinctBy>,
     pub zones: Vec<CompiledZone>,
+    pub cost_delta: Option<i16>,
     pub stack_under: bool,
 }
 
@@ -523,6 +524,7 @@ pub enum CompiledFormula {
     },
     BindingDp(String),
     BindingPlayCost(String),
+    BindingValue(String),
     /// Effective DP of the effect's `source_permanent` (the carrier of
     /// the running effect). Unlike `BindingDp`, which reads a named
     /// `bind_as` binding, this reads `ctx.source_permanent` directly.
@@ -534,6 +536,12 @@ pub enum CompiledFormula {
     /// [On Play][When Digivolving] bounce-by-digivolution-card-count.
     /// G-FORMULA-SOURCE-MATERIAL-COUNT.
     SourceMaterialCount,
+    /// Distinct colors represented by source cards beneath the effect carrier's top card.
+    SourceColorCount,
+    SourceStackCount {
+        target: String,
+        filter: Option<Box<CompiledPredicate>>,
+    },
     SourceStackDpSum {
         target: String,
         filter: Option<Box<CompiledPredicate>>,
@@ -553,6 +561,7 @@ pub enum CompiledPerSelector {
         exclude_source: bool,
     },
     DigivolutionColorCount,
+    SourceColorCount,
     SameLevelPairsInSources,
     SharedTrashCount {
         bucket: Option<u32>,
@@ -854,6 +863,9 @@ pub enum CompiledFieldSelector {
     /// Highest printed play cost among the candidate permanents.
     /// G-HIGHEST-PLAY-COST-SELECTOR.
     HighestPlayCost,
+    /// Fewest digivolution cards beneath the top card among candidate
+    /// permanents.
+    LowestMaterialCount,
 }
 
 // ── Steps ───────────────────────────────────────────────────────────
@@ -1049,6 +1061,27 @@ pub enum CompiledStep {
     TrashBottomFaceDownSourceUnderTamer {
         of: CompiledPlayerRef,
     },
+    PlaceSelectedCardUnderTamer {
+        card: CompiledBindingRef,
+        tamer: CompiledBindingRef,
+        face_down: bool,
+        bind_as: Option<String>,
+    },
+    PlaceSelectedSourcesUnderTamer {
+        source_refs: String,
+        tamer: CompiledBindingRef,
+        bind_count_as: Option<String>,
+    },
+    MoveMatchingSourcesUnderTamer {
+        from: CompiledBindingRef,
+        tamer: CompiledBindingRef,
+        filter: CompiledPredicate,
+        bind_count_as: Option<String>,
+    },
+    TrashTopStackedSources {
+        target: CompiledBindingRef,
+        count: CompiledFormula,
+    },
     Hatch {
         of: CompiledPlayerRef,
     },
@@ -1115,6 +1148,11 @@ pub enum CompiledStep {
     },
     PlaySelectedSourcesFree {
         source_refs: String,
+    },
+    PlayUnderTamerSource {
+        source_refs: String,
+        cost_delta: Option<CompiledCostDelta>,
+        bind_as: Option<String>,
     },
     EffectInitiatedDigivolve {
         target: CompiledBindingRef,
@@ -1267,6 +1305,25 @@ pub enum CompiledStep {
         keyword: String,
         expiry: String,
         value: Option<i32>,
+    },
+    AllowDigixrosMaterialZone {
+        zone: CompiledZone,
+        max_count: Option<u8>,
+    },
+    AddDigixrosCostDelta {
+        delta: i16,
+    },
+    PreattachDigixrosMaterial {
+        card: CompiledBindingRef,
+        cost_delta: i16,
+    },
+    RegisterDigixrosWildcardForTurn {
+        card: CompiledBindingRef,
+        zone: Option<CompiledZone>,
+    },
+    AddDigixrosWildcardToPendingTransaction {
+        card: CompiledBindingRef,
+        zone: Option<CompiledZone>,
     },
     GrantEffectImmunity {
         target: CompiledBindingRef,
@@ -1548,6 +1605,7 @@ pub enum CompiledStep {
         attacker: CompiledBindingRef,
         targets: CompiledAttackTargetSpec,
         without_suspending: bool,
+        ignore_summoning_sickness: bool,
         optional: bool,
         prompt: Option<String>,
         cost_upgrade: Option<CompiledAttackCostUpgrade>,
@@ -1725,6 +1783,7 @@ pub enum CompiledRevealDestination {
     Hand,
     DeckTop,
     DeckBottom,
+    PlayFree,
     BottomSourceOf(CompiledBindingRef),
 }
 

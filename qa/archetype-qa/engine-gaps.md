@@ -32,6 +32,57 @@ Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
   Regression test:
   [`code/digimon-engine/tests/mid_attack_security_attack_recompute.rs`](../../code/digimon-engine/tests/mid_attack_security_attack_recompute.rs).
 
+## Sweep notes (2026-05-24 — Xros Heart DigiXros closure)
+
+The `close-xros-heart-digixros-gaps` change closes the reusable engine
+substrate that blocked the first Xros Heart acceptance pool. `DigiXrosTransaction`
+now covers recipe material selection, cost deltas before payment, post-payment
+source attachment, transaction-local origin allowances, pre-attached materials,
+and `digixros_count`; `<Material Save>` now uses deletion snapshots and filters
+eligible sources through the carrier's DigiXros recipe. Production YAML and
+behavioral tests landed for BT10-009, BT10-013, BT10-087, and BT12-112.
+
+The follow-up `author-xros-heart-reusable-primitives` change closes the next
+reusable layer: under-Tamer card flow, generalized source movement and
+leave-battle rescue, scoped DigiXros wildcard substitution, and effect-created
+attack prompts. Production YAML now covers BT21-083, BT11-095, P-224,
+BT19-090, BT21-092, BT10-111, BT21-027, and BT19-061 without `raw_rust`.
+
+The `complete-xros-heart-authoring-substrate` follow-up also closes the
+reveal-pool free-play sub-shape: `EffectContext::play_from_reveal_free` and
+DSL `choose_from_reveal destination: play_free` now route selected revealed
+cards through free play with reveal-origin rollback. `BT19-008` is the Xros
+Heart production proof for this primitive.
+
+The same follow-up now closes the stack-derived metric slice: DSL
+`source_color_count` lowers as both a source-relative formula and
+base/per/delta selector, and `source_stack_count` counts predicate-matched
+source cards for count bounds and effect math. These compose with existing
+`source_dp`, no-source filters, and `lowest_material_count`. BT19-014, AD1-006,
+AD1-013, BT19-026, BT21-030, and BT20-037 are production YAML proofs for
+source-color DP math, current-DP comparison, fewest-source ties, De-Digivolve
+payoff selection, no-source targeting, and per-level-6-source suspend/memory
+counting.
+
+The temporary lockout slice now has production proof on BT19-038 and BT20-037:
+permanent-scoped `CannotActivateWhenDigivolvingEffects`,
+`CannotActivateOnPlayEffects`, and `CannotUnsuspend` modifiers suppress only
+their named timing/phase behavior and expire at the printed
+end-of-opponent-turn duration. BT19-051 and BT19-035 round out the same fixture
+batch with return-protection/DP and played-Xros-Heart observer coverage.
+
+Remaining Xros Heart work in this tracker should be card-specific authoring or
+non-Xros-specific residual primitives discovered by later cards, not a generic
+"no DigiXros transaction / under-Tamer flow" engine gap.
+
+The follow-up Xros Heart card-authoring pass added production YAML and focused
+behavioral tests for BT10-003, BT10-029, BT19-033, and BT19-047. The
+same-effect DP modifier visibility primitive that blocked BT19-012 is now
+closed: permanent DP predicates clear printed DP checks from the delegated
+card-field pass and evaluate field targets through `effective_dp`. BT19-012
+and BT21-011 should proceed as card-authoring follow-up unless their focused
+production tests prove a narrower residual.
+
 ## Sweep notes (2026-05-17 — Phase 2 rollup)
 
 10 Phase 2 tracks landed in PR #480 (`claude/musing-ishizaka-c4b355` against
@@ -184,6 +235,11 @@ markers in this batch.
 ## Open / Partial Gaps
 
 Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.md). This file tracks only open gaps and partial slices with remaining follow-up work.
+
+### Same-effect DP modifier visibility in subsequent `dp_lte` selections
+> Moved to [qa/resolved-gaps.md](../resolved-gaps.md#same-effect-dp-modifier-visibility-in-subsequent-dp_lte-selections--2026-05-24).
+> BT19-012 remains unauthored, but the reusable primitive is no longer an
+> active engine blocker.
 
 ### Track C modifier payload/identity consults — PARTIALLY RESOLVED 2026-05-09
 - **Discovered in:** Puppets / Royal Knights / Olympos / DigiXros readiness passes.

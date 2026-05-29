@@ -146,6 +146,9 @@ fn resolve_card_source_ref(
         ResolvedBinding::HandIndex(owner, i) => Some(CardSourceRef::Hand(owner, i as usize)),
         ResolvedBinding::TrashIndex(owner, i) => Some(CardSourceRef::Trash(owner, i as usize)),
         ResolvedBinding::Card(h) => resolve_card_handle_source_ref(ctx, h),
+        ResolvedBinding::SourceRefs(refs) => refs
+            .first()
+            .map(|source| CardSourceRef::Material(source.permanent, source.source_index as usize)),
         // Other kinds (permanent / list): not addressable as a card source.
         _ => None,
     }
@@ -533,6 +536,26 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     }
                 }
                 _ => {}
+            }
+            true
+        }
+        CompiledStep::PlayUnderTamerSource {
+            source_refs,
+            cost_delta,
+            bind_as,
+        } => {
+            let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
+            let mut last_played = None;
+            if let Some(source_refs) = bindings.get_source_refs(source_refs) {
+                for source_ref in source_refs {
+                    if let Some(played) = ctx.play_under_tamer_source_with_cost(source_ref, delta) {
+                        bindings.record_played(played);
+                        last_played = Some(played);
+                    }
+                }
+            }
+            if let (Some(name), Some(played)) = (bind_as, last_played) {
+                bindings.insert_permanent(name, played);
             }
             true
         }

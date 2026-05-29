@@ -1,0 +1,41 @@
+card: BT11-095
+name: "Taiki, Kiriha, & Nene"
+kind: tamer
+color: [white]
+cost: 4
+traits: [Xros Heart, Blue Flare, General]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Main] Place 1 Xros Heart/Blue Flare Digimon from hand under this Tamer, gain 1 memory, draw 1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Xros Heart"
+                  - trait_has: "Blue Flare"
+          prompt: "Place 1 Xros Heart or Blue Flare Digimon under this Tamer"
+      - place_selected_card_under_tamer:
+          card: stash
+          tamer: source
+      - gain_memory: 1
+      - draw: { of: you, count: 1 }
+
+  - kind: cost_reduction
+    active_when: { your_turn: true }
+    when_any_ally_played: { has_alt_path: digixros }
+    optional: true
+    amount: 0
+    summary: "[Your Turn] Suspend this Tamer to use cards under Tamers as DigiXros materials"
+    pay_cost:
+      - suspend: { target: source }
+      - allow_digixros_material_zone: { zone: material }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

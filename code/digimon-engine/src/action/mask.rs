@@ -897,13 +897,33 @@ pub(crate) fn effect_attack_target_action_ids(
     restriction: AttackTargetRestriction,
     without_suspending: bool,
 ) -> Vec<u16> {
+    effect_attack_target_action_ids_with_options(
+        game,
+        attacker,
+        restriction,
+        without_suspending,
+        false,
+    )
+}
+
+pub(crate) fn effect_attack_target_action_ids_with_options(
+    game: &Game,
+    attacker: PermanentHandle,
+    restriction: AttackTargetRestriction,
+    without_suspending: bool,
+    ignore_summoning_sickness: bool,
+) -> Vec<u16> {
     if game
         .modifiers
         .player_has(attacker.player, ModifierType::CannotAttack)
     {
         return Vec::new();
     }
-    let attacker_can_attack = if without_suspending {
+    let attacker_can_attack = if ignore_summoning_sickness && without_suspending {
+        game.can_attack_without_suspending_ignoring_summoning_sickness(attacker)
+    } else if ignore_summoning_sickness {
+        game.can_attack_ignoring_summoning_sickness(attacker)
+    } else if without_suspending {
         game.can_attack_without_suspending(attacker, false)
     } else {
         game.can_attack(attacker, false)

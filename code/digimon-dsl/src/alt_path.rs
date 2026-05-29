@@ -152,6 +152,10 @@ pub struct MaterialSpec {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub zones: Vec<crate::predicate::Zone>,
 
+    /// Optional per-material cost delta for DigiXros recipe slots.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<i16>,
+
     /// Assembly: materials go under the evolved card.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub stack_under: bool,

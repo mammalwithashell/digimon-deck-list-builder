@@ -162,6 +162,101 @@ effects:
 }
 
 #[test]
+fn dp_lte_selection_sees_same_effect_dp_modifier() {
+    let yaml = r#"
+card: TST-DP-THEN-DELETE
+name: DP Then Delete Test
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    process:
+      - select_opponent_permanent:
+          bind_as: reduced
+          filter: { kind: digimon }
+          prompt: "Choose DP reduction target"
+      - add_dp_modifier:
+          target: reduced
+          value: -3000
+          expiry: end_of_turn
+      - select_opponent_permanent:
+          bind_as: deleted
+          filter: { kind: digimon, dp_lte: 3000 }
+          prompt: "Delete 3000 DP or less"
+      - delete_permanent: { target: deleted }
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("inline DSL compiles")
+        .add_card(digimon("NATURAL-LOW", 3000))
+        .add_card(digimon("REDUCED-LOW", 6000))
+        .add_card(digimon("TOO-HIGH", 9000))
+        .start();
+    let source = runner.place_on_field(0, "TST-DP-THEN-DELETE", Some(0));
+    let natural_low = runner.place_on_field(1, "NATURAL-LOW", Some(0));
+    let reduced_low = runner.place_on_field(1, "REDUCED-LOW", Some(0));
+    let too_high = runner.place_on_field(1, "TOO-HIGH", Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(source),
+    );
+    runner.game.drain_effect_queue();
+
+    let reduce_action = digimon_engine::action::space::encode_attack(0, reduced_low.index as u16);
+    let (selecting_player, first_actions) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("first selection should park");
+        (
+            pending.selecting_player,
+            pending.valid_action_ids.clone(),
+        )
+    };
+    assert!(first_actions.contains(&reduce_action));
+    runner
+        .execute_action(selecting_player, reduce_action)
+        .expect("first selection resolves");
+
+    assert_eq!(
+        runner.effective_dp(reduced_low),
+        Some(3000),
+        "the first selection's DP modifier must apply before the second selection is installed"
+    );
+
+    let natural_low_action =
+        digimon_engine::action::space::encode_attack(0, natural_low.index as u16);
+    let reduced_low_action =
+        digimon_engine::action::space::encode_attack(0, reduced_low.index as u16);
+    let too_high_action = digimon_engine::action::space::encode_attack(0, too_high.index as u16);
+    let second_actions = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("second selection should park")
+        .valid_action_ids
+        .clone();
+
+    assert!(
+        second_actions.contains(&natural_low_action),
+        "a naturally 3000 DP target should remain legal"
+    );
+    assert!(
+        second_actions.contains(&reduced_low_action),
+        "a 6000 DP target reduced by the same effect to 3000 DP should be legal"
+    );
+    assert!(
+        !second_actions.contains(&too_high_action),
+        "an unreduced 9000 DP target should remain illegal"
+    );
+}
+
+#[test]
 fn selector_with_only_no_dp_candidates_installs_no_selection() {
     let yaml = r#"
 card: TST-NO-DP
@@ -330,5 +425,62 @@ effects:
             .card_id(&runner.game.card_data),
         "PRICEY",
         "the cheapest opponent Digimon (CHEAP) must have been the deleted target"
+    );
+}
+
+#[test]
+fn selector_lowest_material_count_preserves_ties_for_fewest_sources() {
+    let yaml = r#"
+card: TST-FEWEST-SOURCES
+name: Fewest Sources Test
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          selector: lowest_material_count
+          prompt: "Delete fewest sources"
+      - delete_permanent: { target: tgt }
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("inline DSL compiles")
+        .add_card(digimon("ZERO-A", 3000))
+        .add_card(digimon("ZERO-B", 4000))
+        .add_card(digimon("STACKED-TOP", 9000))
+        .add_card(digimon("STACKED-SRC", 1000))
+        .start();
+    let source = runner.place_on_field(0, "TST-FEWEST-SOURCES", Some(0));
+    let zero_a = runner.place_on_field(1, "ZERO-A", Some(0));
+    let zero_b = runner.place_on_field(1, "ZERO-B", Some(0));
+    let stacked = runner.place_stack(1, &["STACKED-SRC", "STACKED-TOP"]);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(source),
+    );
+    runner.game.drain_effect_queue();
+
+    let pending = runner.game.pending_selection.as_ref().expect("selection");
+    let zero_a_action = digimon_engine::action::space::encode_attack(0, zero_a.index as u16);
+    let zero_b_action = digimon_engine::action::space::encode_attack(0, zero_b.index as u16);
+    let stacked_action = digimon_engine::action::space::encode_attack(0, stacked.index as u16);
+    assert!(
+        pending.valid_action_ids.contains(&zero_a_action),
+        "first zero-source target should be legal"
+    );
+    assert!(
+        pending.valid_action_ids.contains(&zero_b_action),
+        "tied zero-source target should also be legal"
+    );
+    assert!(
+        !pending.valid_action_ids.contains(&stacked_action),
+        "target with one source must be excluded"
     );
 }

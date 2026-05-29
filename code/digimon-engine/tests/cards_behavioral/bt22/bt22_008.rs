@@ -277,7 +277,11 @@ fn bt22_008_has_inherited_dna_digivolve_may_step() {
     assert!(
         t.process.iter().any(|step| matches!(
             step,
-            CompiledStep::MayDnaDigivolveNow { ignore_requirements: true, cost: 0, .. }
+            CompiledStep::MayDnaDigivolveNow {
+                ignore_requirements: true,
+                cost: 0,
+                ..
+            }
         )),
         "BT22-008 EoT inherited body must contain a `MayDnaDigivolveNow` step \
          with cost=0 and ignore_requirements=true"
@@ -503,7 +507,6 @@ fn bt22_008_pending_selection_is_optional_when_target_exists() {
 
     let perm = runner.place_on_field(0, CARD_ID, None);
     runner.fire_on_play(0, perm.index as usize);
-
 
     let pending = runner
         .pending_selection()
@@ -731,8 +734,7 @@ fn bt22_008_eot_inherited_surfaces_optional_dna_prompt() {
     // Soft assertion: at minimum the trigger queue should not be in a
     // half-drained state.
     assert!(
-        runner.game.effect_queue.is_empty()
-            || runner.game.pending_selection.is_some(),
+        runner.game.effect_queue.is_empty() || runner.game.pending_selection.is_some(),
         "trigger queue should be either fully drained or paused on a \
          pending selection; got queue_len={}, pending={:?}",
         runner.game.effect_queue.len(),

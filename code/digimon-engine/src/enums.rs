@@ -417,10 +417,8 @@ pub enum Keyword {
     Alliance,
     BlastDigivolve,
     Save,
-    /// DCGO `MaterialSave N` — active skill that moves up to N digivolution
-    /// sources under another permanent. Parsed from `<Material Save N>`.
-    /// Auto-install wires up in Phase D; the variant exists now so parser
-    /// and script authors can carry the parameter.
+    /// Printed `<Material Save N>` — optional deletion/removal-timed source
+    /// rescue that moves up to N recipe-eligible sources under a Tamer.
     MaterialSave(u8),
     /// Printed `<Digi-Burst N>` — an active effect cost marker. The keyword
     /// parser carries the parameter; card bodies still author the "effect
@@ -633,6 +631,7 @@ pub enum ModifierType {
     CannotReducePlayCost,
     CannotReduceDigivolveCost,
     OpponentCannotReduceDigivolveCost,
+    CannotActivateOnPlayEffects,
     CannotActivateMainEffects,
     CannotActivateWhenDigivolvingEffects,
     CannotActivateWhenAttackingEffects,

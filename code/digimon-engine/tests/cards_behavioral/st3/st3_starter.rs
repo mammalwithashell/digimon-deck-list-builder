@@ -20,8 +20,8 @@ use digimon_engine::selection::TriggerSource;
 use crate::dsl_card_data::compiled;
 
 const ST3_IDS: [&str; 16] = [
-    "ST3-01", "ST3-02", "ST3-03", "ST3-04", "ST3-05", "ST3-06", "ST3-07", "ST3-08",
-    "ST3-09", "ST3-10", "ST3-11", "ST3-12", "ST3-13", "ST3-14", "ST3-15", "ST3-16",
+    "ST3-01", "ST3-02", "ST3-03", "ST3-04", "ST3-05", "ST3-06", "ST3-07", "ST3-08", "ST3-09",
+    "ST3-10", "ST3-11", "ST3-12", "ST3-13", "ST3-14", "ST3-15", "ST3-16",
 ];
 
 const EVENT_TARGET_DP_PROBE: &str = r#"
@@ -78,9 +78,10 @@ fn fire_when_attacking(runner: &mut DebugRunner, handle: PermanentHandle) {
 }
 
 fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -102,10 +103,34 @@ fn all_st3_cards_are_in_the_embedded_dsl_pack() {
 #[test]
 fn st3_vanilla_cards_keep_printed_metadata_and_no_effects() {
     let vanilla = [
-        ("ST3-02", CompiledCardKind::Digimon, Some(3), Some(2), Some(3000)),
-        ("ST3-03", CompiledCardKind::Digimon, Some(3), Some(3), Some(4000)),
-        ("ST3-06", CompiledCardKind::Digimon, Some(4), Some(4), Some(5000)),
-        ("ST3-10", CompiledCardKind::Digimon, Some(6), Some(10), Some(12000)),
+        (
+            "ST3-02",
+            CompiledCardKind::Digimon,
+            Some(3),
+            Some(2),
+            Some(3000),
+        ),
+        (
+            "ST3-03",
+            CompiledCardKind::Digimon,
+            Some(3),
+            Some(3),
+            Some(4000),
+        ),
+        (
+            "ST3-06",
+            CompiledCardKind::Digimon,
+            Some(4),
+            Some(4),
+            Some(5000),
+        ),
+        (
+            "ST3-10",
+            CompiledCardKind::Digimon,
+            Some(6),
+            Some(10),
+            Some(12000),
+        ),
     ];
 
     for (card_id, kind, level, cost, dp) in vanilla {
@@ -189,7 +214,11 @@ fn st3_05_inherited_when_attacking_gains_memory_at_four_security() {
 
     fire_when_attacking(&mut runner, carrier);
 
-    assert_eq!(runner.memory(), 1, "Angemon inherited effect gains 1 memory");
+    assert_eq!(
+        runner.memory(),
+        1,
+        "Angemon inherited effect gains 1 memory"
+    );
 }
 
 #[test]
@@ -222,7 +251,9 @@ fn st3_08_inherited_when_attacking_reduces_one_opponent_digimon_by_1000() {
     let target = runner.place_on_field(1, "OPP", Some(0));
 
     fire_when_attacking(&mut runner, carrier);
-    runner.auto_resolve().expect("MagnaAngemon target selection");
+    runner
+        .auto_resolve()
+        .expect("MagnaAngemon target selection");
 
     assert_eq!(runner.effective_dp(target), Some(3000));
 }
@@ -301,7 +332,9 @@ fn st3_13_main_buffs_one_own_digimon_by_3000() {
     let ally = runner.place_on_field(0, "ALLY", Some(0));
 
     assert!(runner.game.activate_hand_main(0, 0));
-    runner.auto_resolve().expect("Heaven's Gate target selection");
+    runner
+        .auto_resolve()
+        .expect("Heaven's Gate target selection");
 
     assert_eq!(runner.effective_dp(ally), Some(7000));
 }
@@ -320,7 +353,9 @@ fn st3_13_security_buffs_own_security_digimon_for_the_turn() {
     let second_attacker = runner.place_on_field(0, "ATK-B", Some(0));
 
     let first = runner.attack_player(first_attacker, 1, false);
-    runner.auto_resolve().expect("Heaven's Gate security resolves");
+    runner
+        .auto_resolve()
+        .expect("Heaven's Gate security resolves");
     assert_eq!(
         runner.game.defender_security_dp_adjustment(1),
         5000,
@@ -374,7 +409,9 @@ fn st3_16_security_activates_main_dp_reduction() {
 
     let result = runner.attack_player(atk, 1, false);
     assert_eq!(result, AttackResult::InProgress);
-    runner.auto_resolve().expect("Seven Heavens security target selection");
+    runner
+        .auto_resolve()
+        .expect("Seven Heavens security target selection");
 
     assert_eq!(
         runner.battle_area_size(0),
@@ -395,10 +432,10 @@ fn st3_12_security_clause_plays_tamer_without_paying_cost() {
         })
         .expect("ST3-12 must have a security play clause");
 
-    assert!(security.process.iter().any(|step| matches!(
-        step,
-        CompiledStep::PlayFromSecurity { .. }
-    )));
+    assert!(security
+        .process
+        .iter()
+        .any(|step| matches!(step, CompiledStep::PlayFromSecurity { .. })));
 }
 
 #[test]

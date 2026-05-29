@@ -202,6 +202,76 @@ effects:
 }
 
 #[test]
+fn validate_source_stack_count_unknown_target_fails() {
+    let spec = parse(
+        r#"
+card: X-STACK-COUNT-BAD-TARGET
+name: Test
+kind: digimon
+level: 7
+color: [yellow]
+cost: 15
+dp: 15000
+effects:
+  - when: when_digivolving
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              source_stack_count:
+                target: unsupported_stack
+                filter: { level_eq: 6 }
+          filter: { kind: digimon }
+          bind_as: picked
+          prompt: Pick per source count
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter().any(|e| {
+            e.path.contains("source_stack_count.target")
+                && e.message
+                    .contains("undeclared binding referenced before declaration: unsupported_stack")
+        }),
+        "expected explicit unsupported source-stack target error, got: {errs:?}"
+    );
+}
+
+#[test]
+fn validate_unknown_timing_lockout_modifier_fails() {
+    let spec = parse(
+        r#"
+card: X-LOCKOUT-BAD-TIMING
+name: Test
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+effects:
+  - when: when_digivolving
+    process:
+      - add_modifier:
+          target: source
+          modifier: CannotActivateMainPhaseEffects
+          value: 1
+          expiry: end_of_opponents_turn
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter().any(|e| {
+            e.path.contains("modifier") && e.message.contains("CannotActivateMainPhaseEffects")
+        }),
+        "expected explicit unsupported timing-family modifier error, got: {errs:?}"
+    );
+}
+
+#[test]
 fn validate_declarative_body_type_mismatch() {
     let spec = parse(
         r#"

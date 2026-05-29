@@ -30,6 +30,8 @@
 //!   controller (excludes the target itself).
 //! - `DigivolutionColorCount` — distinct colors across all `CardSource`s
 //!   in the target's stack.
+//! - `SourceColorCount` — distinct colors across source cards beneath the
+//!   source permanent's top card.
 //! - `SameLevelPairsInSources` — counts source cards below the target's top
 //!   card by level and sums `count / 2` for each level bucket.
 //! - `CardCountInZoneScoped` — number of cards in the selected zone for
@@ -144,6 +146,9 @@ pub fn evaluate_with_bindings(
             .and_then(|handle| ctx.game.effective_dp(handle))
             .unwrap_or(0),
         CompiledFormula::BindingPlayCost(name) => binding_play_cost(ctx, name, bindings),
+        CompiledFormula::BindingValue(name) => {
+            bindings.and_then(|b| b.get_literal(name)).unwrap_or(0) as i32
+        }
         CompiledFormula::SourceDp => ctx
             .source_permanent
             .and_then(|handle| ctx.game.effective_dp(handle))
@@ -153,6 +158,21 @@ pub fn evaluate_with_bindings(
             .and_then(|handle| target_permanent(ctx, handle))
             .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
             .unwrap_or(0),
+        CompiledFormula::SourceColorCount => ctx
+            .source_permanent
+            .and_then(|handle| target_permanent(ctx, handle))
+            .map(|perm| distinct_colors_in_sources(perm, &ctx.game.card_data))
+            .unwrap_or(0),
+        CompiledFormula::SourceStackCount {
+            target: target_name,
+            filter,
+        } => source_stack_count(
+            target_name,
+            filter.as_deref(),
+            &ctx.as_read(),
+            target,
+            bindings,
+        ),
         CompiledFormula::SourceStackDpSum {
             target: target_name,
             filter,
@@ -285,6 +305,9 @@ fn evaluate_read_with_raw_and_bindings(
             .and_then(|handle| ctx.game.effective_dp(handle))
             .unwrap_or(0),
         CompiledFormula::BindingPlayCost(name) => binding_play_cost_read(ctx, name, bindings),
+        CompiledFormula::BindingValue(name) => {
+            bindings.and_then(|b| b.get_literal(name)).unwrap_or(0) as i32
+        }
         CompiledFormula::SourceDp => ctx
             .source_permanent
             .and_then(|handle| ctx.game.effective_dp(handle))
@@ -294,6 +317,15 @@ fn evaluate_read_with_raw_and_bindings(
             .and_then(|handle| target_permanent_read(ctx, handle))
             .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
             .unwrap_or(0),
+        CompiledFormula::SourceColorCount => ctx
+            .source_permanent
+            .and_then(|handle| target_permanent_read(ctx, handle))
+            .map(|perm| distinct_colors_in_sources(perm, ctx.card_data()))
+            .unwrap_or(0),
+        CompiledFormula::SourceStackCount {
+            target: target_name,
+            filter,
+        } => source_stack_count(target_name, filter.as_deref(), ctx, target, bindings),
         CompiledFormula::SourceStackDpSum {
             target: target_name,
             filter,
@@ -370,15 +402,13 @@ fn evaluate_per(
                 return 0;
             };
             // Distinct colors across every CardSource in the stack.
-            let data = &ctx.game.card_data;
-            let mut seen: u8 = 0;
-            for src in &perm.card_sources {
-                for c in src.colors(data) {
-                    seen |= 1u8 << (*c as u8);
-                }
-            }
-            seen.count_ones() as i32
+            distinct_colors_in_stack(perm, &ctx.game.card_data)
         }
+        CompiledPerSelector::SourceColorCount => ctx
+            .source_permanent
+            .and_then(|handle| target_permanent(ctx, handle))
+            .map(|perm| distinct_colors_in_sources(perm, &ctx.game.card_data))
+            .unwrap_or(0),
         CompiledPerSelector::SameLevelPairsInSources => target_permanent(ctx, target)
             .map(|perm| same_level_pairs_in_sources(perm, &ctx.game.card_data))
             .unwrap_or(0),
@@ -460,15 +490,13 @@ fn evaluate_per_read(
             let Some(perm) = target_permanent_read(ctx, target) else {
                 return 0;
             };
-            let data = &ctx.game.card_data;
-            let mut seen: u8 = 0;
-            for src in &perm.card_sources {
-                for c in src.colors(data) {
-                    seen |= 1u8 << (*c as u8);
-                }
-            }
-            seen.count_ones() as i32
+            distinct_colors_in_stack(perm, &ctx.game.card_data)
         }
+        CompiledPerSelector::SourceColorCount => ctx
+            .source_permanent
+            .and_then(|handle| target_permanent_read(ctx, handle))
+            .map(|perm| distinct_colors_in_sources(perm, ctx.card_data()))
+            .unwrap_or(0),
         CompiledPerSelector::SameLevelPairsInSources => target_permanent_read(ctx, target)
             .map(|perm| same_level_pairs_in_sources(perm, ctx.card_data()))
             .unwrap_or(0),
@@ -532,6 +560,56 @@ fn same_level_pairs_in_sources(perm: &Permanent, data: &[crate::card_data::CardD
         }
     }
     counts.values().map(|count| count / 2).sum()
+}
+
+fn distinct_colors_in_stack(perm: &Permanent, data: &[crate::card_data::CardData]) -> i32 {
+    let mut seen: u8 = 0;
+    for source in &perm.card_sources {
+        for color in source.colors(data) {
+            seen |= 1u8 << (*color as u8);
+        }
+    }
+    seen.count_ones() as i32
+}
+
+fn distinct_colors_in_sources(perm: &Permanent, data: &[crate::card_data::CardData]) -> i32 {
+    let mut seen: u8 = 0;
+    for source in perm.card_sources.iter().rev().skip(1) {
+        for color in source.colors(data) {
+            seen |= 1u8 << (*color as u8);
+        }
+    }
+    seen.count_ones() as i32
+}
+
+fn source_stack_count(
+    target_name: &str,
+    filter: Option<&CompiledPredicate>,
+    ctx: &EffectReadContext<'_>,
+    fallback_target: PermanentHandle,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    let Some(target) = resolve_formula_target(target_name, ctx, fallback_target, bindings) else {
+        return 0;
+    };
+    let Some(perm) = target_permanent_read(ctx, target) else {
+        return 0;
+    };
+    perm.card_sources
+        .iter()
+        .rev()
+        .skip(1)
+        .filter(|source| {
+            filter.is_none_or(|filter| {
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::Card(source.handle()),
+                    bindings,
+                )
+            })
+        })
+        .count() as i32
 }
 
 fn source_stack_dp_sum(

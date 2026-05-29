@@ -664,6 +664,146 @@ fn cannot_activate_when_digivolving_effects_suppresses_only_gated_permanent() {
     );
 }
 
+struct WhenDigivolvingMemoryGain;
+
+impl CardEffect for WhenDigivolvingMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_digivolving(card)
+            .name("+1 when digivolving")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+struct OnPlayMemoryGain;
+
+impl CardEffect for OnPlayMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("+1 on play")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn cannot_activate_on_play_effects_suppresses_only_gated_permanent() {
+    fn setup() -> DebugRunner {
+        let mut runner = DebugRunner::builder()
+            .add_card(plain_digimon("ONPLAY-GAIN", "On Play Gain", 1))
+            .memory(10)
+            .start();
+        runner.register_effect("ONPLAY-GAIN", Arc::new(OnPlayMemoryGain));
+        runner
+    }
+
+    let mut control = setup();
+    let control_handle = control.place_on_field(0, "ONPLAY-GAIN", Some(0));
+    control.game.enqueue_triggered(
+        EffectTiming::OnPlay,
+        TriggerSource::Permanent(control_handle),
+    );
+    assert_eq!(
+        control.game.effect_queue.len(),
+        1,
+        "control dispatch should queue ONPLAY-GAIN's On Play memory effect"
+    );
+
+    let mut blocked = setup();
+    let blocked_handle = blocked.place_on_field(0, "ONPLAY-GAIN", Some(0));
+    blocked.game.modifiers.add(
+        blocked_handle,
+        ModifierEntry::simple(
+            ModifierType::CannotActivateOnPlayEffects,
+            0,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+    let blocked_before = blocked.memory();
+    blocked.game.enqueue_triggered(
+        EffectTiming::OnPlay,
+        TriggerSource::Permanent(blocked_handle),
+    );
+
+    assert!(
+        blocked.game.effect_queue.is_empty(),
+        "gated permanent must not enqueue its On Play effect"
+    );
+    assert_eq!(
+        blocked.memory(),
+        blocked_before,
+        "On Play effects on the gated Digimon must not queue"
+    );
+}
+
+#[test]
+fn cannot_activate_when_digivolving_effects_does_not_suppress_on_play() {
+    let mut runner = DebugRunner::builder()
+        .add_card(plain_digimon("TIMING-GAIN", "Timing Gain", 1))
+        .memory(0)
+        .start();
+    runner.register_effect("TIMING-GAIN", Arc::new(OnPlayMemoryGain));
+    let target = runner.place_on_field(0, "TIMING-GAIN", Some(0));
+    runner.game.modifiers.add(
+        target,
+        ModifierEntry::simple(
+            ModifierType::CannotActivateWhenDigivolvingEffects,
+            0,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+
+    let before = runner.memory();
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(target));
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.memory(),
+        before + 1,
+        "WhenDigivolving lockout must not suppress unrelated On Play effects"
+    );
+}
+
+#[test]
+fn cannot_activate_on_play_effects_does_not_suppress_when_digivolving() {
+    let mut runner = DebugRunner::builder()
+        .add_card(zero_cost_evo_card("TIMING-GAIN", "Timing Gain", &[]))
+        .memory(0)
+        .start();
+    runner.register_effect("TIMING-GAIN", Arc::new(WhenDigivolvingMemoryGain));
+    let target = runner.place_on_field(0, "TIMING-GAIN", Some(0));
+    runner.game.modifiers.add(
+        target,
+        ModifierEntry::simple(
+            ModifierType::CannotActivateOnPlayEffects,
+            0,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+
+    let before = runner.memory();
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(target),
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.memory(),
+        before + 1,
+        "On Play lockout must not suppress unrelated When Digivolving effects"
+    );
+}
+
 // ─── TEST-P1-T6 ───────────────────────────────────────────────────────────────
 
 /// A CardEffect that grants +1 memory at the end of any attack.

@@ -31,9 +31,10 @@ fn st5_04_inherited_draws_when_opponent_did_not_attack_with_digimon() {
     runner.place_stack(0, &["ST5-04", "ST5-HOST-04"]);
 
     let hand_before = runner.hand_size(0);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfOpponentsTurn, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfOpponentsTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -54,9 +55,10 @@ fn st5_04_inherited_does_not_draw_after_opponent_attacked_with_digimon() {
     runner.auto_resolve().expect("attack resolves");
 
     let hand_before = runner.hand_size(0);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfOpponentsTurn, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfOpponentsTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(

@@ -162,18 +162,19 @@ fn load_card_data(
             "no --cards-json path provided and no default cards.json found in current dir or repo root"
                 .to_string()
         })?;
-    let bytes = std::fs::read(&path)
-        .map_err(|e| format!("reading {}: {}", path.display(), e))?;
-    let text = std::str::from_utf8(&bytes)
-        .map_err(|e| format!("cards.json is not valid UTF-8: {}", e))?;
-    let all = CardData::load_from_str(text)
-        .map_err(|e| format!("parsing cards.json: {}", e))?;
+    let bytes = std::fs::read(&path).map_err(|e| format!("reading {}: {}", path.display(), e))?;
+    let text =
+        std::str::from_utf8(&bytes).map_err(|e| format!("cards.json is not valid UTF-8: {}", e))?;
+    let all = CardData::load_from_str(text).map_err(|e| format!("parsing cards.json: {}", e))?;
 
     match pool_spec {
         "all" => Ok(all),
         "implemented" => {
             let pool = LiveGame::default_pool();
-            Ok(all.into_iter().filter(|(id, _)| pool.contains(id)).collect())
+            Ok(all
+                .into_iter()
+                .filter(|(id, _)| pool.contains(id))
+                .collect())
         }
         other => {
             // Treat `other` as a path to a JSON array of card_ids.
@@ -183,7 +184,10 @@ fn load_card_data(
             let pool: Vec<String> = serde_json::from_slice(&pool_bytes)
                 .map_err(|e| format!("parsing pool file as [card_id...]: {}", e))?;
             let pool: HashSet<String> = pool.into_iter().collect();
-            Ok(all.into_iter().filter(|(id, _)| pool.contains(id)).collect())
+            Ok(all
+                .into_iter()
+                .filter(|(id, _)| pool.contains(id))
+                .collect())
         }
     }
 }
@@ -217,8 +221,8 @@ pub(crate) fn parse_perspective(s: &str) -> Perspective {
 /// Helper used by both subcommands and tests — load a deck file (a JSON
 /// `[card_id, ...]` array).
 pub(crate) fn load_deck(path: &std::path::Path) -> Result<Vec<String>, String> {
-    let bytes = std::fs::read(path)
-        .map_err(|e| format!("reading deck {}: {}", path.display(), e))?;
+    let bytes =
+        std::fs::read(path).map_err(|e| format!("reading deck {}: {}", path.display(), e))?;
     serde_json::from_slice::<Vec<String>>(&bytes)
         .map_err(|e| format!("parsing deck {}: {}", path.display(), e))
 }

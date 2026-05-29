@@ -55,9 +55,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             let bindings_for_target = bindings_snapshot;
 
             let partner_closure: Arc<
-                dyn Fn(&crate::game::Game, crate::permanent::PermanentHandle) -> bool
-                    + Send
-                    + Sync,
+                dyn Fn(&crate::game::Game, crate::permanent::PermanentHandle) -> bool + Send + Sync,
             > = Arc::new(move |game, h| {
                 let read_ctx = EffectReadContext::new_with_source_kind(
                     game,

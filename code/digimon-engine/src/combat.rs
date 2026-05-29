@@ -115,6 +115,7 @@ pub struct AttackOpen {
     pub attacker: PermanentHandle,
     pub initiator: AttackInitiator,
     pub suspend_attacker: bool,
+    pub ignore_summoning_sickness: bool,
     pub target_constraint: TargetConstraint,
     pub allow_cancel: bool,
     pub cost_upgrade: Option<AttackCostUpgrade>,
@@ -359,6 +360,57 @@ impl Game {
         handle: PermanentHandle,
         vortex: bool,
     ) -> bool {
+        self.can_attack_without_suspending_inner(handle, vortex, false)
+    }
+
+    pub(crate) fn can_attack_ignoring_summoning_sickness(&self, handle: PermanentHandle) -> bool {
+        self.can_attack_inner(handle, false, true)
+    }
+
+    pub(crate) fn can_attack_without_suspending_ignoring_summoning_sickness(
+        &self,
+        handle: PermanentHandle,
+    ) -> bool {
+        self.can_attack_without_suspending_inner(handle, false, true)
+    }
+
+    fn can_attack_inner(
+        &self,
+        handle: PermanentHandle,
+        vortex: bool,
+        ignore_summoning_sickness: bool,
+    ) -> bool {
+        let perm = match self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+        {
+            Some(p) => p,
+            None => return false,
+        };
+        if !perm.is_digimon_for_rules(&self.card_data, &self.modifiers, handle) {
+            return false;
+        }
+        if perm.is_suspended {
+            return false;
+        }
+        let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
+        if is_fresh
+            && !ignore_summoning_sickness
+            && !vortex
+            && !self.has_keyword(handle, Keyword::Rush)
+        {
+            return false;
+        }
+        true
+    }
+
+    fn can_attack_without_suspending_inner(
+        &self,
+        handle: PermanentHandle,
+        vortex: bool,
+        ignore_summoning_sickness: bool,
+    ) -> bool {
         let perm = match self
             .player(handle.player)
             .battle_area
@@ -373,7 +425,11 @@ impl Game {
         // "Without suspending" bypasses only the suspend cost/unsuspended
         // requirement. Summoning sickness still requires Rush or Vortex.
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
-        if is_fresh && !vortex && !self.has_keyword(handle, Keyword::Rush) {
+        if is_fresh
+            && !ignore_summoning_sickness
+            && !vortex
+            && !self.has_keyword(handle, Keyword::Rush)
+        {
             return false;
         }
         true
@@ -452,6 +508,7 @@ impl Game {
                 AttackInitiator::NaturalMainPhase
             },
             suspend_attacker: true,
+            ignore_summoning_sickness: false,
             target_constraint: TargetConstraint::Forced(target),
             allow_cancel: false,
             cost_upgrade: None,
@@ -475,6 +532,7 @@ impl Game {
             attacker,
             initiator: AttackInitiator::Overclock,
             suspend_attacker: false,
+            ignore_summoning_sickness: false,
             target_constraint: TargetConstraint::Forced(target),
             allow_cancel: false,
             cost_upgrade: None,
@@ -486,6 +544,7 @@ impl Game {
             attacker,
             initiator,
             suspend_attacker,
+            ignore_summoning_sickness,
             target_constraint,
             allow_cancel: _,
             cost_upgrade,
@@ -496,7 +555,11 @@ impl Game {
         let vortex = matches!(initiator, AttackInitiator::Vortex);
         let skips_suspend_cost = !suspend_attacker;
 
-        let attacker_can_attack = if skips_suspend_cost {
+        let attacker_can_attack = if ignore_summoning_sickness && skips_suspend_cost {
+            self.can_attack_without_suspending_ignoring_summoning_sickness(attacker)
+        } else if ignore_summoning_sickness {
+            self.can_attack_ignoring_summoning_sickness(attacker)
+        } else if skips_suspend_cost {
             self.can_attack_without_suspending(attacker, vortex)
         } else {
             self.can_attack(attacker, vortex)

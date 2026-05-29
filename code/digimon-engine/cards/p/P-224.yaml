@@ -1,0 +1,59 @@
+card: P-224
+name: Kotone Amano
+kind: tamer
+color: [purple]
+cost: 3
+traits: [Xros Heart, Twilight]
+
+effects:
+  - when: [start_of_your_main_phase, on_play]
+    summary: "[Start of Main][On Play] Place 1 Xros Heart/Twilight Digimon from hand or trash under this Tamer, then draw if hand has 7 or fewer"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: stash
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Xros Heart"
+                  - trait_has: Twilight
+          prompt: "Place 1 Xros Heart or Twilight Digimon from hand or trash under this Tamer"
+      - place_selected_card_under_tamer:
+          card: stash
+          tamer: source
+      - if:
+          condition:
+            count_lte:
+              n: 7
+              filter:
+                owner: you
+                zone: [hand]
+          then:
+            - draw: { of: you, count: 1 }
+
+  - when: main_on_field
+    optional: true
+    summary: "[Main] Suspend this Tamer to play 1 level 5+ Xros Heart Digimon from under a Tamer with cost -1"
+    process:
+      - suspend: { target: source }
+      - select_under_tamer_sources:
+          bind_as: play_pick
+          min: 1
+          max: 1
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 5
+              - trait_has: "Xros Heart"
+          prompt: "Play 1 level 5 or higher Xros Heart Digimon from under a Tamer"
+      - play_under_tamer_source:
+          source_refs: play_pick
+          cost_delta:
+            reduce: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -28,6 +28,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::CardKind;
 
 fn push_to_deck(runner: &mut DebugRunner, player: u8, card_id: &str) {
     let data_idx = runner
@@ -58,6 +59,19 @@ fn plain(id: &str) -> digimon_engine::card_data::CardData {
     make_test_card(id, id)
 }
 
+fn tamer(id: &str, traits: &[&str]) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c.traits = traits
+        .iter()
+        .map(|trait_name| (*trait_name).to_string())
+        .collect();
+    c
+}
+
 fn trait_any_predicate(traits: &[&str]) -> CompiledPredicate {
     let mut alts = Vec::new();
     for t in traits {
@@ -68,6 +82,15 @@ fn trait_any_predicate(traits: &[&str]) -> CompiledPredicate {
     let mut pred = CompiledPredicate::default();
     pred.any_of = alts;
     pred
+}
+
+fn compile_triggered_steps(yaml: &str) -> Vec<CompiledStep> {
+    let spec: digimon_dsl::spec::CardSpec = serde_yml::from_str(yaml).expect("yaml parses");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("yaml compiles");
+    let digimon_dsl::compiled::CompiledClause::Triggered(clause) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    clause.process.clone()
 }
 
 /// `choose_from_reveal { destination: hand }` over a 3-card reveal pool with
@@ -129,6 +152,84 @@ fn choose_from_reveal_hand_routes_picked_card_to_hand() {
             .iter()
             .any(|c| c.card_id(&runner.game.card_data) == "MIN-1"),
         "MIN-1 must be in hand after choose_from_reveal destination: hand"
+    );
+}
+
+#[test]
+fn choose_from_reveal_play_free_routes_picked_tamer_to_battle_area() {
+    let steps = compile_triggered_steps(
+        r#"
+card: TEST-REVEAL-PLAY
+name: Reveal Play
+kind: option
+color: [red]
+cost: 3
+effects:
+  - when: main_from_hand
+    process:
+      - reveal_top_deck: { of: you, count: 2 }
+      - choose_from_reveal:
+          of: you
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: "Xros Heart"
+          destination: play_free
+          bind_as: played_tamer
+          prompt: "Play 1 revealed Xros Heart Tamer"
+      - order_remainder:
+          of: you
+          destinations: [deck_bottom]
+"#,
+    );
+    let mut runner = DebugRunner::builder()
+        .add_card(plain("SRC"))
+        .add_card(tamer("TAMER-HIT", &["Xros Heart"]))
+        .add_card(plain("FILL"))
+        .hand(0, &["SRC"])
+        .build();
+
+    push_to_deck(&mut runner, 0, "FILL");
+    push_to_deck(&mut runner, 0, "TAMER-HIT");
+    let src_card = runner.game.players[0].hand[0].handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut Bindings::new());
+    }
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("choose_from_reveal should offer the matching Tamer");
+    assert!(
+        pending
+            .valid_action_ids
+            .contains(&digimon_engine::action::space::SEL_REVEAL_START),
+        "revealed Tamer should be selectable"
+    );
+    runner
+        .game
+        .resolve_selection(0, digimon_engine::action::space::SEL_REVEAL_START)
+        .expect("choose revealed Tamer");
+    runner
+        .auto_resolve()
+        .expect("order remaining revealed card");
+
+    assert!(
+        runner.game.players[0].battle_area.iter().any(|permanent| {
+            permanent.top_card().card_id(&runner.game.card_data) == "TAMER-HIT"
+        }),
+        "chosen revealed Tamer must enter the battle area"
+    );
+    assert!(
+        runner
+            .game
+            .revealed_cards
+            .iter()
+            .all(|card| card.card_id(&runner.game.card_data) != "TAMER-HIT"),
+        "played card must leave the reveal pool"
     );
 }
 

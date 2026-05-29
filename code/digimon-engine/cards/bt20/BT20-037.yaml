@@ -1,0 +1,86 @@
+card: BT20-037
+name: "Chaosmon: Valdur Arm"
+kind: digimon
+level: 7
+color: [yellow, green]
+cost: 15
+dp: 15000
+traits: [Unique]
+attribute: Vaccine
+
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: yellow }
+      - all_of:
+          - level_eq: 6
+          - any_of:
+              - color_is: green
+              - color_is: black
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+
+  - kind: partition
+    summary: "<Partition (Yellow Lv.6 & Green/Black Lv.6)>"
+    sources:
+      - { level_eq: 6, color_is: yellow }
+      - all_of:
+          - level_eq: 6
+          - any_of:
+              - color_is: green
+              - color_is: black
+    exclude_cause: [own_effect, battle]
+
+  - when: when_digivolving
+    summary: "[When Digivolving] For each level 6 source, suspend 1 opponent Digimon/Tamer and gain 1 memory; lock all opponent Digimon/Tamers"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              source_stack_count:
+                target: source
+                filter: { level_eq: 6 }
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: suspended
+          prompt: "Suspend 1 opponent Digimon or Tamer for each level 6 digivolution card"
+          optional_zero: false
+      - per_selected:
+          selection: suspended
+          bind_as: susp
+          body:
+            - suspend: { target: { binding: susp } }
+      - gain_memory_fn:
+          formula:
+            source_stack_count:
+              target: source
+              filter: { level_eq: 6 }
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          bind_as: locked
+          body:
+            - add_modifier:
+                target: { binding: locked }
+                modifier: CannotActivateOnPlayEffects
+                value: 1
+                expiry: end_of_opponents_turn
+            - add_modifier:
+                target: { binding: locked }
+                modifier: CannotUnsuspend
+                value: 1
+                expiry: end_of_opponents_turn

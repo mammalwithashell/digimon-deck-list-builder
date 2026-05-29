@@ -619,7 +619,9 @@ Unified by PR3-PR5 into a single generic branch in [action/mask.rs](../code/digi
 
 ### 4.7 🟡 Modifier-gated mask checks — partial
 
-Four of the five checks have landed; §4.7e (DigiXros cost-reduction) and per-action context discriminants (§4.7x) remain future work.
+Four of the five original modifier-gated checks have landed; §4.7e is narrowed
+to mask-side reduced-cost affordability, and per-action context discriminants
+(§4.7x) remain future work.
 
 ### 4.7a 🟢 CannotAttackTarget — implemented
 
@@ -653,9 +655,22 @@ Four of the five checks have landed; §4.7e (DigiXros cost-reduction) and per-ac
 
 **Coverage:** [tests/mask_force_attack.rs](../code/digimon-engine/tests/mask_force_attack.rs) — 5 cases: non-attack bits zeroed when active, multiple forced Digimon all retain attacks, fall-through when forced attacker is suspended, CannotAttackTarget filtering, Raid-target tiebreak against unsuspended enemies.
 
-### 4.7e 🔴 DigiXros cost-reduction — outstanding
+### 4.7e 🟡 DigiXros cost-reduction — resolver/DSL landed, mask parity residual
 
-Python's play-cost check (`action_mask.py:66-72`) computes `effective_cost = max(0, play_cost - max_reduction)` for cards with `digixros_cost`. Blocked on `CardData.digixros_cost` schema + `has_any_digixros_material` validator + ingest-pipeline data (same data-population shape as §4.5b). Own plan.
+Python's play-cost check (`action_mask.py:66-72`) computes `effective_cost = max(0, play_cost - max_reduction)` for cards with `digixros_cost`.
+
+Rust now has resolver-side `DigiXrosTransaction` support for authored YAML
+`kind: digixros` paths: material selections are pending selections, cost deltas
+are applied before payment, selected materials attach after successful play, and
+transaction-local hooks can pre-attach materials or unlock trash/under-Tamer
+origins. Covered by the `close-xros-heart-digixros-gaps` Xros Heart fixtures
+for BT10-009, BT10-013, BT10-087, and BT12-112.
+
+Residual parity work: the Main-phase action mask still needs a dedicated
+reduced-cost affordability audit so a hand play can light up when it is legal
+only because available DigiXros materials reduce the effective cost. That work
+must keep `ACTION_SPACE_SIZE` unchanged and reuse the pending material prompt
+flow rather than preselecting materials.
 
 ### 4.7x 🟡 Context-aware modifier queries — outstanding
 
