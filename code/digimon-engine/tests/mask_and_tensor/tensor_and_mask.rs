@@ -7,9 +7,18 @@ use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::enums::*;
 use digimon_engine::game::Game;
 use digimon_engine::rules::Rules;
-use digimon_engine::tensor::{
-    build_tensor, compute_positions, FIELD_SLOTS, MAX_HAND, SLOT_SIZE, TENSOR_SIZE,
+// v1-pinned test: explicitly request the v1 layout via the relocated v1
+// builder. After the `flip-engine-default-to-lite-deck-v2` change, the
+// engine default is `standard_lite_deck_v2` (8850); `tensor::build_tensor`
+// would return that shape. This file tests v1-specific offsets.
+use digimon_engine::tensor_profiles::standard::v1::{
+    FIELD_SLOTS, MAX_HAND, SLOT_SIZE, TENSOR_SIZE,
 };
+use digimon_engine::tensor_v1::build_tensor_standard_compact_v1 as build_tensor;
+
+fn compute_positions() -> (Vec<usize>, Vec<usize>) {
+    digimon_engine::tensor_profiles::standard::v1::PROFILE.positions()
+}
 
 /// Same minimal card db as engine_core tests.
 fn test_card_db() -> HashMap<String, CardData> {

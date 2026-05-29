@@ -1,0 +1,52 @@
+card: ST6-13
+name: CresGarurumon
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 12000
+traits: [Beast Knight]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+
+  - when: main_on_field
+    condition:
+      all_of:
+        - materials_count_gte: 2
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              kind: digimon
+              level_eq: 3
+              color_is: purple
+            n: 1
+    summary: "[Main] Digi-Burst 2: play 1 purple level 3 Digimon from trash free"
+    process:
+      - digi_burst:
+          count: 2
+          bind_as: burst_sources
+          prompt: "Trash 2 digivolution cards under this Digimon for Digi-Burst 2"
+          then:
+            - select_trash:
+                of: you
+                bind_as: lv3_pick
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 3
+                    - color_is: purple
+                prompt: "Play 1 purple level 3 Digimon card from your trash without paying its cost"
+            - play_from_trash_free:
+                of: you
+                hand_index: lv3_pick

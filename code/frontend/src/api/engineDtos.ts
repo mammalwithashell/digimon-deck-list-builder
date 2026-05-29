@@ -32,6 +32,26 @@ export interface PlayerDto {
   is_eliminated: boolean;
 }
 
+export interface EffectChoiceDto {
+  index: number;
+  label: string;
+  action_id: number;
+}
+
+export interface PendingSelectionDto {
+  phase: string;
+  selecting_player: number;
+  valid_action_ids: number[];
+  is_optional: boolean;
+  prompt: string;
+  effect_choices?: EffectChoiceDto[];
+}
+
+export interface RevealedCardDto {
+  card_id: string;
+  owner: number;
+}
+
 export interface GameStateDto {
   turn_count: number;
   turn_player: number;
@@ -44,6 +64,12 @@ export interface GameStateDto {
   mulligan_current_player: number | null;
   /** Whether each player has used their one redraw. Indexed by player id. */
   mulligan_used: boolean[];
+  /** `null` outside selection phases; non-null when the engine is parked
+   *  on a human-driven choice. Read by SelectionPanel / PromptBar. */
+  pending_selection?: PendingSelectionDto | null;
+  /** Cards revealed during the most recent effect; rendered by
+   *  `RevealedCardsZone`. */
+  revealed_cards?: RevealedCardDto[];
 }
 
 export type AttackResult =

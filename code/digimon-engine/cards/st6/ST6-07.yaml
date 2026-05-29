@@ -1,0 +1,15 @@
+card: ST6-07
+name: Youkomon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 6000
+traits: [Mysterious Beast]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 2

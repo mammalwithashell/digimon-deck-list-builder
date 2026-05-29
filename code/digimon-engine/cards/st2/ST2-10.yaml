@@ -1,0 +1,15 @@
+card: ST2-10
+name: Plesiomon
+kind: digimon
+level: 6
+color: [blue]
+cost: 10
+dp: 12000
+traits: [Plesiosaur]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 2

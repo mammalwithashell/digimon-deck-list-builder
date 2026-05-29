@@ -1,21 +1,58 @@
 import { type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 const API_BASE = process.env.API_BASE ?? 'http://localhost:8000';
+
+// Rust-backed `/debug` router (add-ui-scenario-test-substrate). Replaces the
+// legacy engine_py_legacy debug routes. A game staged here registers in the
+// server's active-games store and is driven through the live `/games`
+// routes (the staged game shares RustHeadlessGame's play surface).
 
 export interface DebugGameOptions {
   deck1: string[];
   deck2: string[];
   player1_type?: string;
   player2_type?: string;
-  player1_policy?: string;
-  player2_policy?: string;
   first_player?: number;
   skip_shuffle?: boolean;
   starting_hand1?: string[];
   starting_hand2?: string[];
   auto_mulligan?: string;
   initial_memory?: number;
-  agent_action_delay_ms?: number;
+  seed?: number;
+  phase?: string;
+  turn?: number;
+  zones?: Record<string, unknown>;
+}
+
+/** Normalized internal-state: the raw engine shape plus `hand_p1`/`hand_p2`
+ *  convenience accessors the specs read. */
+export interface DebugInternalState {
+  memory: number;
+  turn_count: number;
+  current_phase: string;
+  current_player: number;
+  game_over: boolean;
+  winner_id: number | null;
+  players: Array<{
+    player_id: number;
+    hand: string[];
+    deck_count: number;
+    security_count: number;
+    trash: string[];
+    battle_area: Array<{ stack: string[]; is_suspended: boolean; turn_played: number }>;
+    breeding: string[] | null;
+  }>;
+  hand_p1: string[];
+  hand_p2: string[];
+}
+
+export interface AssertionResult {
+  kind: string;
+  passed: boolean;
+  message: string;
 }
 
 export interface DebugGameHandle {
@@ -24,34 +61,21 @@ export interface DebugGameHandle {
   stepGame: () => Promise<any>;
   setMemory: (memory: number) => Promise<void>;
   injectCard: (playerId: number, cardId: string, zone: string) => Promise<void>;
-  getInternalState: () => Promise<any>;
-  getActions: () => Promise<Record<string, string>>;
+  placeOnField: (
+    playerId: number,
+    stack: string[],
+    isSuspended?: boolean,
+    turnPlayed?: number,
+  ) => Promise<void>;
+  getInternalState: () => Promise<DebugInternalState>;
+  /** Legal action ids from the live mask (replaces the removed GET /games/{id}/actions). */
+  getActions: () => Promise<number[]>;
+  /** Evaluate a fixture's engine assertions server-side. */
+  evaluate: (assertions: unknown[]) => Promise<{ all_passed: boolean; results: AssertionResult[] }>;
+  delete: () => Promise<void>;
 }
 
-export async function createDebugGame(
-  page: Page,
-  options: DebugGameOptions,
-): Promise<DebugGameHandle> {
-  const resp = await page.request.post(`${API_BASE}/debug/games`, {
-    data: {
-      player1_type: 'human',
-      player2_type: 'human',
-      player1_policy: 'greedy',
-      player2_policy: 'greedy',
-      skip_shuffle: true,
-      auto_mulligan: 'keep',
-      initial_memory: 0,
-      agent_action_delay_ms: 0,
-      ...options,
-    },
-  });
-  if (!resp.ok()) {
-    const body = await resp.text();
-    throw new Error(`Failed to create debug game: ${resp.status()} ${body}`);
-  }
-  const data = await resp.json();
-  const gameId: string = data.game_id;
-
+function attachHandle(page: Page, gameId: string): DebugGameHandle {
   return {
     gameId,
     async sendAction(actionId: number) {
@@ -74,16 +98,90 @@ export async function createDebugGame(
         data: { player_id: playerId, card_id: cardId, zone },
       });
     },
+    async placeOnField(playerId, stack, isSuspended = false, turnPlayed = 0) {
+      await page.request.post(`${API_BASE}/debug/games/${gameId}/place-on-field`, {
+        data: { player_id: playerId, stack, is_suspended: isSuspended, turn_played: turnPlayed },
+      });
+    },
     async getInternalState() {
       const r = await page.request.get(`${API_BASE}/debug/games/${gameId}/internal-state`);
-      return r.json();
+      const raw = await r.json();
+      const byId = (pid: number) =>
+        (raw.players ?? []).find((p: any) => p.player_id === pid)?.hand ?? [];
+      return { ...raw, hand_p1: byId(1), hand_p2: byId(2) } as DebugInternalState;
     },
     async getActions() {
-      const r = await page.request.get(`${API_BASE}/games/${gameId}/actions`);
+      const r = await page.request.get(`${API_BASE}/games/${gameId}/action-mask`);
       const data = await r.json();
-      return data.actions;
+      const mask: number[] = data.action_mask ?? [];
+      return mask.map((b, i) => (b === 1 ? i : -1)).filter((i) => i >= 0);
+    },
+    async evaluate(assertions: unknown[]) {
+      const r = await page.request.post(`${API_BASE}/debug/games/${gameId}/evaluate`, {
+        data: { assertions },
+      });
+      return r.json();
+    },
+    async delete() {
+      await page.request.delete(`${API_BASE}/debug/games/${gameId}`);
     },
   };
+}
+
+export async function createDebugGame(
+  page: Page,
+  options: DebugGameOptions,
+): Promise<DebugGameHandle> {
+  const resp = await page.request.post(`${API_BASE}/debug/games`, {
+    data: {
+      player1_type: 'human',
+      player2_type: 'human',
+      initial_memory: 0,
+      ...options,
+    },
+  });
+  if (!resp.ok()) {
+    const body = await resp.text();
+    throw new Error(`Failed to create debug game: ${resp.status()} ${body}`);
+  }
+  const data = await resp.json();
+  return attachHandle(page, data.game_id);
+}
+
+export interface ScenarioFixture {
+  id: string;
+  title: string;
+  readiness: 'expected_pass' | 'blocked_on_card_impl';
+  decks: Record<string, string[]>;
+  seed?: number;
+  state: { memory: number; phase: string; turn?: number; first_player?: number };
+  zones?: Record<string, unknown>;
+  assertions: { engine?: unknown[]; ui?: unknown[] };
+}
+
+/** Load a `qa/scenarios/<name>.json` fixture by file name (no extension). */
+export function loadScenario(name: string): ScenarioFixture {
+  const here = dirname(fileURLToPath(import.meta.url));
+  // e2e/fixtures -> repo qa/scenarios
+  const path = join(here, '..', '..', '..', '..', 'qa', 'scenarios', `${name}.json`);
+  return JSON.parse(readFileSync(path, 'utf-8')) as ScenarioFixture;
+}
+
+/** Stage a scenario fixture via `/debug/games` and return a handle. */
+export async function stageScenario(
+  page: Page,
+  fixture: ScenarioFixture,
+): Promise<DebugGameHandle> {
+  return createDebugGame(page, {
+    deck1: fixture.decks['1'],
+    deck2: fixture.decks['2'],
+    seed: fixture.seed,
+    initial_memory: fixture.state.memory,
+    phase: fixture.state.phase,
+    turn: fixture.state.turn,
+    first_player: fixture.state.first_player ?? 1,
+    zones: fixture.zones,
+  });
 }
 
 // ── Deck Constants ──────────────────────────────────────────────

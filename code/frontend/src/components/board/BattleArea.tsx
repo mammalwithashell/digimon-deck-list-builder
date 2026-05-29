@@ -1,8 +1,9 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { PermanentSlot } from './PermanentSlot';
 import type { PermanentInfo } from '@/types/game';
 import { MAX_BATTLE_AREA_SLOTS } from '@/utils/constants';
+import { usePositionTransitions } from '@/hooks/usePositionTransitions';
 
 interface DroppableSlotProps {
   slotIndex: number;
@@ -83,6 +84,24 @@ export function BattleArea({
   const [animatingSlots, setAnimatingSlots] = useState<Set<number>>(new Set());
   const [, setExitingSlots] = useState<Map<number, PermanentInfo>>(new Map());
 
+  // FLIP animation keys: stable identity per filled slot so we can
+  // smoothly slide cards when engine indices shift left after a midfield
+  // deletion. Composite of `(topCardId, turnPlayed)` is good enough in
+  // practice — duplicates same-turn would lose animation pairing but
+  // never visually teleport, which is acceptable.
+  const flipKeys = useMemo(() => {
+    return slots
+      .map((i) => {
+        const p = permanents[i];
+        if (!p) return null;
+        return `${isOpponent ? 'opp' : 'me'}:${p.topCardId ?? '?'}:${p.turnPlayed}`;
+      })
+      .filter((k): k is string => k !== null);
+  }, [permanents, isOpponent, slots]);
+  const { registerNode } = usePositionTransitions(flipKeys, {
+    durationMs: 250,
+  });
+
   useEffect(() => {
     const newAnimating = new Set<number>();
     const newExiting = new Map<number, PermanentInfo>();
@@ -129,6 +148,11 @@ export function BattleArea({
             isDigivolveTarget={
               !isOpponent && isDraggingHandCard && !isEmpty && (dragValidDropSlots?.has(i) ?? false)
             }
+            // The wrapper owns the click for the WHOLE slot (so clicking
+            // card or padding works). The inner PermanentSlot must NOT also
+            // bind onClick — its click would bubble here and double-fire
+            // onSlotClick, double-dispatching actions (e.g. a dropped DNA
+            // material pick once actionPendingRef de-dupes the second fire).
             onClick={() => onSlotClick?.(i)}
           >
             {isEmpty ? (
@@ -136,14 +160,22 @@ export function BattleArea({
                 <span>SLOT {String(i + 1).padStart(2, '0')}</span>
               </div>
             ) : (
-              <div className={animatingSlots.has(i) ? 'animate-card-play-in' : ''}>
+              <div
+                ref={registerNode(
+                  `${isOpponent ? 'opp' : 'me'}:${perm.topCardId ?? '?'}:${perm.turnPlayed}`,
+                )}
+                className={animatingSlots.has(i) ? 'animate-card-play-in' : ''}
+              >
                 <PermanentSlot
                   perm={perm}
                   slotIndex={i}
                   isOpponent={isOpponent}
                   highlighted={highlightedSlots?.has(i)}
                   targeted={targetedSlots?.has(i)}
-                  onClick={() => onSlotClick?.(i)}
+                  // No onClick here — the DroppableSlot wrapper owns the
+                  // click for the whole slot. Binding it here too would
+                  // double-fire onSlotClick (bubbling) and drop the second
+                  // DNA material pick. Hover handlers stay local.
                   onMouseEnter={() => onSlotHover?.(i)}
                   onMouseLeave={() => onSlotHover?.(null)}
                 />

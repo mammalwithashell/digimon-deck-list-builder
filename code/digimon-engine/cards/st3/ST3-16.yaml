@@ -1,0 +1,26 @@
+card: ST3-16
+name: Seven Heavens
+kind: option
+color: [yellow]
+cost: 7
+effects:
+  - when: main_from_hand
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -10000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -10000
+          expiry: end_of_turn
+  - when: on_security
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -10000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -10000
+          expiry: end_of_turn

@@ -1,0 +1,15 @@
+card: ST6-02
+name: DemiDevimon
+kind: digimon
+level: 3
+color: [purple]
+cost: 2
+dp: 4000
+traits: [Evil]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 1

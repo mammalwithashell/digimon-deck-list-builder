@@ -13,13 +13,13 @@ use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::enums::GamePhase;
 use digimon_engine::game::Game;
 use digimon_engine::rules::Rules;
-use digimon_engine::tensor::{build_tensor, MAX_REVEALED, MAX_SECURITY};
-
-// Hardcoded to match the private OFF_* constants in tensor.rs. The
-// `section_offsets` test inside the tensor module already locks these in.
-const OFF_MY_SECURITY: usize = 1260;
-const OFF_OPP_SECURITY: usize = 1270;
-const OFF_REVEALED: usize = 1360;
+// v1-pinned test: hidden-info checks (face-down security, revealed-cards
+// slot) are v1-layout-specific. Use the relocated v1 builder + v1 constants
+// directly so this file is robust to the engine default flipping.
+use digimon_engine::tensor_profiles::standard::v1::{
+    MAX_REVEALED, MAX_SECURITY, OFF_MY_SECURITY, OFF_OPP_SECURITY, OFF_REVEALED,
+};
+use digimon_engine::tensor_v1::build_tensor_standard_compact_v1 as build_tensor;
 
 fn test_card_db() -> HashMap<String, CardData> {
     let json = r#"{

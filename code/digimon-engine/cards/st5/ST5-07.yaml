@@ -1,0 +1,17 @@
+card: ST5-07
+name: Jazardmon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 6000
+traits: [Machine Dragon]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects: []

@@ -1,0 +1,15 @@
+card: ST6-01
+name: Pagumon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_deletion
+    summary: "[On Deletion] Trash the top 2 cards of your deck"
+    process:
+      - trash_from_top: { of: you, count: 2 }

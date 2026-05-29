@@ -24,12 +24,19 @@
 
 use std::sync::Arc;
 
+use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::DslCardEffect;
 use digimon_engine::effect::CardEffect;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::permanent::PermanentHandle;
+
+fn vote_target_card(card_id: &str, name: &str) -> CardData {
+    let mut card = make_test_card(card_id, name);
+    card.dp = Some(4000);
+    card
+}
 
 #[test]
 fn opponents_vote_card_lets_opponent_apply_minus_3000_dp_to_controllers_perm() {
@@ -61,11 +68,12 @@ effects:
 
     // Seed: TST-VOTE in P0's hand (the OnPlay source, not yet on field), and
     // two permanents on P0's field (TST-A, TST-B) — P1 will choose between
-    // them. `make_test_card` gives every card a base DP of 2000.
+    // them. Use 4000 DP targets so this routing test stays independent from
+    // the separate DP-to-zero deletion rule.
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("TST-VOTE", "Opponent's Vote"))
-        .add_card(make_test_card("TST-A", "Permanent A"))
-        .add_card(make_test_card("TST-B", "Permanent B"))
+        .add_card(vote_target_card("TST-A", "Permanent A"))
+        .add_card(vote_target_card("TST-B", "Permanent B"))
         .hand(0, &["TST-VOTE"])
         .build();
 
@@ -75,8 +83,8 @@ effects:
 
     let base_dp_a = runner.effective_dp(perm_a).expect("perm A has DP");
     let base_dp_b = runner.effective_dp(perm_b).expect("perm B has DP");
-    assert_eq!(base_dp_a, 2000, "make_test_card baseline DP");
-    assert_eq!(base_dp_b, 2000, "make_test_card baseline DP");
+    assert_eq!(base_dp_a, 4000, "fixture target DP");
+    assert_eq!(base_dp_b, 4000, "fixture target DP");
 
     // Build the DSL effect and grab its OnPlay process closure.
     let dsl_effect = DslCardEffect::new(Arc::new(compiled));

@@ -2,6 +2,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { PermanentSlot } from './PermanentSlot';
 import type { PermanentInfo } from '@/types/game';
 import type { DragData } from '@/hooks/useDropZone';
+import { BREEDING_SLOT } from '@/utils/constants';
 
 interface BreedingAreaProps {
   permanent: PermanentInfo | null;
@@ -28,7 +29,7 @@ export function BreedingArea({
   });
   const { isOver, setNodeRef: setDropNodeRef } = useDroppable({
     id: dropId,
-    data: { type: 'breeding-slot', slotIndex: 12 },
+    data: { type: 'breeding-slot', slotIndex: BREEDING_SLOT },
     disabled: !canDigivolveDrop,
   });
 

@@ -1,0 +1,37 @@
+card: ST5-13
+name: BlitzGreymon
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 12000
+traits: [Cyborg]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+
+  - when: main_on_field
+    summary: "[Main] Digi-Burst 2: 1 of your Digimon gets +4000 DP until the end of your opponent's turn"
+    process:
+      - digi_burst:
+          count: 2
+          bind_as: burst_sources
+          prompt: "Choose 2 digivolution cards under this Digimon to trash for Digi-Burst 2"
+          then:
+            - select_own_permanent:
+                bind_as: dp_target
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to get +4000 DP"
+            - add_dp_modifier:
+                target: dp_target
+                value: 4000
+                expiry: end_of_opponents_turn

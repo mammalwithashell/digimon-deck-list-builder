@@ -1,0 +1,22 @@
+card: ST2-11
+name: MetalGarurumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 11000
+traits: [Cyborg]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+
+effects:
+  - when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] Unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }

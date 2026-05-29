@@ -12,7 +12,7 @@
   --lib-good: #4cd497;
   --lib-warn: #ffd34a;
   --lib-danger: #ff5b5b;
-  min-height: calc(100vh - 56px);
+  min-height: calc(var(--app-vh100, 100vh) - 56px);
   background:
     radial-gradient(ellipse at 48% 0%, rgba(56, 165, 255, 0.12), transparent 44%),
     linear-gradient(180deg, #080a0e, #07080b);
@@ -124,7 +124,7 @@
 }
 
 .library-shell {
-  height: calc(100vh - 114px);
+  height: calc(var(--app-vh100, 100vh) - 114px);
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 320px;
   min-height: 0;

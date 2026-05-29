@@ -25,6 +25,54 @@ When a reusable gap closes, move the full entry here and leave any card-specific
   satisfy the predicate.
 - **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl source_deleted_battle_opponent -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral st4 -- --nocapture`.
 
+## ST-2 Cocytus Blue substrate closure — 2026-05-29
+
+- **G-TRASH-BOTTOM-SOURCES** — the DSL now exposes
+  `trash_bottom_sources: { target, count }`, lowering to
+  `CompiledStep::TrashBottomSources` and executing through
+  `EffectContext::trash_bottom_sources`. The verb trashes source cards from the
+  bottom up, caps at available sources, routes cards to their owners' trash,
+  fires normal `OnDigivolutionCardTrashed` observers, and never installs a
+  source-selection prompt.
+- **G-BATTLE-OPPONENT-NO-SOURCES** — `battle_opponent_no_sources` is available
+  as a battle-context predicate for inherited/aura effects. It resolves
+  relative to the source carrier's opposing Digimon in the current
+  Digimon-vs-Digimon battle and is false for security checks or player attacks.
+- **Source-play confirmation:** ST2-15 Kaiser Nail is expressible with existing
+  `select_material` plus `play_from_materials`; no new source-play vocabulary
+  was required.
+- **Drivers:** ST2-01, ST2-03, ST2-06, ST2-09, and ST2-15 production YAML and
+  tests.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl st2_substrate --no-default-features --features dsl-yaml-loader,test-helpers`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral st2_cards --no-default-features --features dsl-yaml-loader,test-helpers`.
+
+## ST5 Machine Black attack-history and blocker-context closure — 2026-05-29
+
+- **G-DSL-DIGIMON-ATTACKED-THIS-TURN-PREDICATE** — `digimon_attacked_this_turn:
+  you|opponent` now parses, compiles, and evaluates against authoritative
+  per-player Digimon attack counters in `Game`, with counters reset at the start
+  of that player's turn. ST5-04 ToyAgumon and ST5-06 Greymon consume the
+  predicate under normal DSL negation for their inherited
+  end-of-opponent's-turn draw clauses.
+- **Blocker target-change context:** the existing
+  `on_attack_target_change` timing plus `attack_target_change_reason: blocker`
+  and `event_target_owner` predicates can faithfully distinguish a Blocker
+  redirect for ST5-14 Tai Kamiya. The blocker declaration path now suspends the
+  declared blocker before emitting the target-change event, so Tai's response can
+  suspend itself as cost and unsuspend the Digimon that blocked through normal
+  pending selections. No action-space or tensor contract changes were required.
+- **Driver:** ST5-01 through ST5-16 production YAML and focused tests landed,
+  including the exact ST-5 Machine Black starter deck and implemented-card
+  registry smoke coverage.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml
+  --test cards_behavioral st5 -- --nocapture`; `cargo test --manifest-path
+  code/digimon-engine/Cargo.toml --test dsl attack_history_predicate --
+  --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml
+  --test combat blocker -- --nocapture`; `cargo test --manifest-path
+  code/digimon-engine/Cargo.toml --test dsl security -- --nocapture`;
+  `CARGO_INCREMENTAL=0 cargo test --manifest-path code/digimon-dsl/Cargo.toml`;
+  `python -m pytest code/tests/test_rust_bindings_surface.py -k
+  "st5_machine_black or complete_st5" -q`.
+
 ## Rocks EX10-034 grant-triggered binding closure — 2026-05-23
 
 - **G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING** — `grant_triggered_effect.target`

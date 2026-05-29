@@ -1,0 +1,42 @@
+card: ST2-14
+name: Sorrow Blue
+kind: option
+color: [blue]
+cost: 2
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] 1 no-source opponent Digimon can't attack or block until opponent's turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon, materials_count_lte: 0 }
+          prompt: "Choose 1 opponent Digimon with no digivolution cards"
+      - add_modifier:
+          target: target
+          modifier: CannotAttack
+          value: 0
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: target
+          modifier: CannotBlock
+          value: 0
+          expiry: end_of_opponents_turn
+
+  - when: on_security
+    summary: "[Security] 1 no-source opponent Digimon can't attack or block until your turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon, materials_count_lte: 0 }
+          prompt: "Choose 1 opponent Digimon with no digivolution cards"
+      - add_modifier:
+          target: target
+          modifier: CannotAttack
+          value: 0
+          expiry: end_of_turn
+      - add_modifier:
+          target: target
+          modifier: CannotBlock
+          value: 0
+          expiry: end_of_turn

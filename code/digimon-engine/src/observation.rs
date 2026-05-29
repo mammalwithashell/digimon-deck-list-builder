@@ -27,7 +27,7 @@ impl ObservationProfileId {
 }
 
 pub fn default_observation_profile() -> ObservationProfileId {
-    ObservationProfileId::StandardLiteV2
+    ObservationProfileId::StandardLiteDeckV2
 }
 
 pub fn parse_observation_profile(raw: &str) -> Result<ObservationProfileId, String> {
@@ -60,7 +60,7 @@ pub fn build_observation_tensor(
 ) -> Vec<f32> {
     match profile {
         ObservationProfileId::StandardCompactV1 => {
-            crate::tensor::build_tensor(game, player_id, registry)
+            crate::tensor_v1::build_tensor_standard_compact_v1(game, player_id, registry)
         }
         ObservationProfileId::StandardLiteV2 => {
             crate::tensor_v2_lite::build_tensor_standard_lite_v2(game, player_id, registry)
