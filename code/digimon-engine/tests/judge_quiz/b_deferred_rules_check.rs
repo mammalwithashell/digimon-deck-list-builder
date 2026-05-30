@@ -226,9 +226,142 @@ fn q24_analog_rules_check_deletes_between_queued_effects() {
 
 /// Q6 — Pillomon (BT9-033) at 0 DP not deleted until Flame Hellscythe (BT8-109)
 /// resolves. Judge: NO (can't play a Digimon yet).
+///
+/// Board (card-resolution.md Q6): Player 1 controls Pillomon (BT9-033),
+/// `[All Turns] Players can't play Digimon by effects` — a `target_player: any`
+/// floodgate installing `CannotPlayDigimonByEffect` on BOTH players. Player 0
+/// has a purple Lv.3 (DP ≤ 6000) in trash and plays Flame Hellscythe (BT8-109):
+///   sub-effect 1 — 1 opponent Digimon gets -6000 DP for the turn (targets
+///                  Pillomon: 2000 → -4000, i.e. ≤ 0 DP);
+///   sub-effect 2 — "you may play 1 purple/yellow Digimon DP ≤ 6000 from trash
+///                  without paying its memory cost."
+///
+/// The CONTRAST with Q7 (which is the whole point): in Q7, Eye of the Gorgon's
+/// sub-effect 1 *deletes* Pillomon, clearing its floodgate before sub-effect 2,
+/// so the trash-play succeeds. Here, sub-effect 1 only *reduces* Pillomon to ≤0
+/// DP — and a ≤0-DP Digimon is NOT deleted mid-effect (deletion is deferred to
+/// the state-based rules-check that runs AFTER Flame Hellscythe fully resolves).
+/// So when sub-effect 2 runs, Pillomon is STILL alive and its
+/// `CannotPlayDigimonByEffect` floodgate is STILL up → the trash-play is blocked.
+/// Judge: NO — you can't play a Digimon yet.
+///
+/// What this pins (so it cannot pass for the wrong reason):
+///   1. CONTROL: Pillomon's floodgate is genuinely installed on Player 0.
+///   2. After sub-effect 1's -6000, Pillomon is at ≤0 DP but STILL on the field
+///      (no mid-effect deletion) and the floodgate is STILL active.
+///   3. Sub-effect 2's trash-play is BLOCKED — the purple Lv.3 never leaves trash.
+///   4. Only AFTER Flame Hellscythe resolves does the rules-check delete Pillomon.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT8-109 (Flame Hellscythe). BT9-033 implemented."]
-fn q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves() {}
+fn q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves() {
+    use digimon_engine::action::space::{encode_attack, PASS};
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::{CardColor, ModifierType};
+    use digimon_engine::selection::SelectionKind;
+
+    // A purple Lv.3 (DP ≤ 6000), no [On Play] — the sub-effect-2 trash candidate.
+    let mut purple_l3 = make_test_card("PURPLE-L3", "Purple L3");
+    purple_l3.card_kind = CardKind::Digimon;
+    purple_l3.colors = vec![CardColor::Purple];
+    purple_l3.level = Some(3);
+    purple_l3.dp = Some(2000);
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT8-109")
+        .expect("BT8-109 Flame Hellscythe loads")
+        .dsl_card("BT9-033")
+        .expect("BT9-033 Pillomon loads")
+        .add_card(purple_l3)
+        .hand(0, &["BT8-109"])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    // Player 1's Pillomon (2000 DP) — installs the floodgate.
+    let pillomon = r.place_on_field(1, "BT9-033", Some(0));
+    // Player 0's purple Lv.3 seeded into trash.
+    {
+        let data_idx = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "PURPLE-L3")
+            .expect("PURPLE-L3 in card_data");
+        let next_idx = r.game.next_card_index();
+        r.game.players[0]
+            .trash
+            .push(CardSource::new(data_idx, 0, next_idx));
+    }
+
+    r.game.tick_declarative_effects();
+    // (1) CONTROL — the floodgate is genuinely installed on Player 0.
+    assert!(
+        r.game
+            .modifiers
+            .player_has(0, ModifierType::CannotPlayDigimonByEffect),
+        "precondition: Pillomon's [All Turns] floodgate installs CannotPlayDigimonByEffect on Player 0"
+    );
+
+    // Play Flame Hellscythe; sub-effect 1 prompts for the -6000 target.
+    r.play(0, 0).expect("play BT8-109 from hand");
+    let view = r
+        .pending_selection_view()
+        .expect("[Main] sub-effect 1: -6000 target prompt installs");
+    assert_eq!(view.kind, SelectionKind::OppField);
+    r.game.decode_action(encode_attack(0, pillomon.index as u16), 0);
+
+    // (2) Pillomon is at ≤0 DP but NOT deleted mid-effect; floodgate still up.
+    assert!(
+        r.game.effective_dp(pillomon).unwrap_or(1) <= 0,
+        "Pillomon reduced to ≤0 DP (2000 - 6000)"
+    );
+    assert_eq!(
+        r.battle_area_size(1),
+        1,
+        "Pillomon at ≤0 DP is NOT deleted mid-effect (deletion deferred to the rules-check)"
+    );
+    assert!(
+        r.game
+            .modifiers
+            .player_has(0, ModifierType::CannotPlayDigimonByEffect),
+        "Pillomon (still alive at ≤0 DP) keeps its CannotPlayDigimonByEffect floodgate up"
+    );
+
+    // (3) Sub-effect 2: the trash-play. The floodgate blocks the play — drive
+    // whatever prompt installs (select the candidate if offered, else PASS); the
+    // purple Lv.3 must NOT enter the battle area either way.
+    let battle_before = r.battle_area_size(0);
+    if let Some(play_view) = r.pending_selection_view() {
+        let pick = play_view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .unwrap_or(PASS);
+        r.game.decode_action(pick, play_view.selecting_player);
+    }
+    r.auto_resolve().ok();
+
+    assert_eq!(
+        r.battle_area_size(0),
+        battle_before,
+        "Judge NO: the trash Digimon could NOT be played — Pillomon's floodgate \
+         persists because Pillomon (at ≤0 DP) is not deleted until the effect resolves"
+    );
+    assert!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "PURPLE-L3"),
+        "the purple Lv.3 stays in Player 0's trash (the blocked play left it there)"
+    );
+
+    // (4) Only after Flame Hellscythe resolves does the rules-check delete Pillomon.
+    assert_eq!(
+        r.battle_area_size(1),
+        0,
+        "Pillomon (≤0 DP) is deleted by the state-based rules-check after the effect resolves"
+    );
+}
 
 /// Q7 — Eye of the Gorgon (BT9-108) deletes Pillomon (BT9-033) with sub-effect 1,
 /// then plays a Lv3 with sub-effect 2. Judge: YES.
@@ -418,24 +551,211 @@ fn q7_eye_of_the_gorgon_sequential_delete_then_play() {
 /// (EX4-005); at EoT Burst trashes the top, DP-less Koromon (BT21-004) can't
 /// remain. Judge: Agumon trashed → Koromon trashed.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT13-020, AD1-016, BT21-044, BT21-042, EX4-005, BT21-004. BT23-096 implemented."]
+#[ignore = "BLOCKED-PRIMITIVE: G-BURST-ON-TURN-END-NOT-EXECUTED — the Burst-Digivolve `on_burst_turn_end` step list (trash the top card at the end of the burst turn) is compiled but NEVER scheduled/executed (BurstDigivolve is lowered only to a blast-counter marker in dsl_cards/mod.rs). So 'Agumon trashed → Koromon trashed' can't occur. (Also: the DP-less-can't-remain rule, and a DebugRunner burst-digivolve driver, are needed.) All quiz cards are implemented."]
 fn q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot() {}
 
-/// Q13 — Nyabootmon (BT22-042)+ShoeShoemon (P-165); Rapidmon (X Antibody)
-/// (BT16-101) measured before ShoeShoemon's On Play. Judge: −6000 DP.
+/// Q13 — Nyabootmon (BT22-042)+ShoeShoemon (P-165) vs Rapidmon (X Antibody)
+/// (BT16-101). Judge: −6000 DP.
+///
+/// Board (card-resolution.md Q13): Player 0 digivolves into Nyabootmon
+/// (BT22-042) with ShoeShoemon (P-165) — a Lv.4 [Puppet] — in hand. Player 1
+/// controls a Rapidmon (X Antibody) (BT16-101) stack (ST17-07 underneath).
+///
+/// Nyabootmon's [When Digivolving] resolves in two sub-effects:
+///   (a) play 1 Lv.4-or-lower [Puppet] from hand free → ShoeShoemon;
+///   (b) "Then, to 1 of your opponent's Digimon, give -3000 DP until their turn
+///       ends FOR EACH OF YOUR DIGIMON."
+/// ShoeShoemon's own [On Play] (play a [Familiar] Token — another Digimon)
+/// triggers when it is played by (a), but that trigger QUEUES and resolves only
+/// AFTER Nyabootmon's effect fully resolves. So when (b) counts "your Digimon"
+/// it sees exactly two — Nyabootmon + ShoeShoemon — NOT the Familiar token.
+/// Judge: -3000 × 2 = -6000 DP (the token, added by ShoeShoemon's deferred
+/// On Play, is not counted).
+///
+/// Pins (so it can't pass for the wrong reason): the debuff is EXACTLY -6000
+/// (count 2), AND the Familiar token IS on the field afterward (proving
+/// ShoeShoemon's On Play did run — just too late to be counted; a count of 3
+/// would give -9000).
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT16-101 (Rapidmon X), ST17-07 (Rapidmon). BT22-042, P-165 implemented."]
-fn q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play() {}
+fn q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play() {
+    use digimon_engine::action::space::PASS;
 
-/// Q14 — Same vs ShineGreymon: Ruin Mode (EX4-074); ShoeShoemon enters and gets
-/// −5000 but isn't deleted until Nyabootmon resolves. Judge: −6000 DP.
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT22-042")
+        .expect("BT22-042 Nyabootmon loads")
+        .dsl_card("P-165")
+        .expect("P-165 ShoeShoemon loads")
+        .dsl_card("BT16-101")
+        .expect("BT16-101 Rapidmon (X Antibody) loads")
+        .dsl_card("ST17-07")
+        .expect("ST17-07 Rapidmon loads")
+        .hand(0, &["P-165"])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    let nya = r.place_on_field(0, "BT22-042", Some(0));
+    // Opponent's Rapidmon (X Antibody) on top of Rapidmon (ST17-07) — DP 11000.
+    let opp = r.place_stack(1, &["ST17-07", "BT16-101"]);
+    let opp_dp_before = r.game.effective_dp(opp).expect("opp DP");
+    let p0_digimon_before = r.game.players[0].battle_area.len(); // just Nyabootmon = 1
+
+    // Fire Nyabootmon's [When Digivolving].
+    r.game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(nya));
+    r.game.drain_effect_queue();
+
+    // Drive sub-effect (a) play ShoeShoemon, then (b) pick the opp debuff target.
+    // (First non-PASS at each prompt: ShoeShoemon is the only Lv.4 Puppet in hand;
+    // the Rapidmon X is the only opponent Digimon.)
+    let mut guard = 0;
+    while let Some(view) = r.pending_selection_view() {
+        let pick = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .unwrap_or(PASS);
+        r.game.decode_action(pick, view.selecting_player);
+        guard += 1;
+        if guard > 12 {
+            break;
+        }
+    }
+    r.auto_resolve().ok();
+
+    // Judge: exactly -6000 (Nyabootmon + ShoeShoemon = 2; the token is not counted).
+    let opp_dp_after = r.game.effective_dp(opp).expect("opp DP after");
+    assert_eq!(
+        opp_dp_before - opp_dp_after,
+        6000,
+        "Nyabootmon's debuff must be -3000 × 2 (Nyabootmon + ShoeShoemon) = -6000 — \
+         the Familiar token from ShoeShoemon's deferred [On Play] is NOT counted \
+         (got before={opp_dp_before:?}, after={opp_dp_after:?})"
+    );
+
+    // ShoeShoemon's [On Play] DID run (added the Familiar token) — just after the
+    // count. Player 0 now has 3 Digimon: Nyabootmon + ShoeShoemon + the token.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        p0_digimon_before + 2,
+        "ShoeShoemon was played AND its [On Play] added a Familiar token (so the token \
+         existed by end of resolution — it simply was not counted by Nyabootmon's debuff)"
+    );
+}
+
+/// Q14 — Same as Q13 but the opponent controls ShineGreymon: Ruin Mode
+/// (EX4-074), whose `[When Digivolving] all of your opponent's Digimon get
+/// -5000 DP until end of opponent's next turn` is ACTIVE. ShoeShoemon (4000 DP)
+/// enters via Nyabootmon and gets -5000 (→ -1000, i.e. ≤0 DP), but is NOT
+/// deleted until Nyabootmon's effect resolves — so it is STILL counted by
+/// Nyabootmon's `-3000 × (your Digimon)`. Count = 2 (Nyabootmon + the about-to-
+/// die ShoeShoemon) → judge: -6000 DP.
+///
+/// The distinguishing assertion is that ShoeShoemon is actually at ≤0 DP (the
+/// -5000 caught it) — otherwise this would pass for the wrong reason (a healthy
+/// ShoeShoemon trivially counted). That requires Ruin Mode's "all opponent
+/// Digimon -5000" to be a CONTINUOUS effect catching a Digimon that enters
+/// during the window — not a one-time snapshot of the Digimon present when it
+/// resolved.
+///
+/// BLOCKED-PRIMITIVE (discovered 2026-05-30): EX4-074's mass debuff is authored
+/// as a one-time snapshot — `add_modifier target: { of: opponent, kind: digimon }`
+/// applies `ChangeDp -5000` to the opponent's CURRENT battle-area Digimon only;
+/// it does NOT catch a Digimon (ShoeShoemon) played AFTER it resolves (verified:
+/// ShoeShoemon stays at 4000, not -1000). The faithful behavior is a CONTINUOUS
+/// "all opponent Digimon -5000 until end of opp's next turn" effect. Logged as
+/// G-CONTINUOUS-MASS-DP-DEBUFF. The body below is the ready-to-unblock pin (it
+/// correctly FAILS today rather than false-passing on a healthy ShoeShoemon).
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT16-101 (Rapidmon X). BT22-042, P-165, EX4-074 implemented."]
-fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {}
+#[ignore = "BLOCKED-PRIMITIVE: G-CONTINUOUS-MASS-DP-DEBUFF — EX4-074 mass -5000 is a one-time snapshot, not continuous; doesn't catch a later-played Digimon. Un-ignore when EX4-074 is re-authored continuous."]
+fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {
+    use digimon_engine::action::space::PASS;
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT22-042")
+        .expect("BT22-042 Nyabootmon loads")
+        .dsl_card("P-165")
+        .expect("P-165 ShoeShoemon loads")
+        .dsl_card("EX4-074")
+        .expect("EX4-074 ShineGreymon: Ruin Mode loads")
+        .hand(0, &["P-165"])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    let nya = r.place_on_field(0, "BT22-042", Some(0));
+    // Opponent's Ruin Mode (the -5000 source AND Nyabootmon's debuff target;
+    // Rapidmon X from the quiz board is omitted — not load-bearing for this
+    // ruling, which turns only on the deferred-deletion count).
+    let ruin = r.place_on_field(1, "EX4-074", Some(0));
+
+    // Activate Ruin Mode's [When Digivolving] mass -5000 (must be CONTINUOUS to
+    // catch the ShoeShoemon Nyabootmon plays next).
+    r.game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(ruin));
+    r.game.drain_effect_queue();
+
+    let ruin_dp_before = r.game.effective_dp(ruin).expect("ruin DP");
+
+    // Fire Nyabootmon's [When Digivolving]: play ShoeShoemon, then debuff Ruin Mode.
+    r.game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(nya));
+    r.game.drain_effect_queue();
+    let mut guard = 0;
+    while let Some(view) = r.pending_selection_view() {
+        let pick = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .unwrap_or(PASS);
+        r.game.decode_action(pick, view.selecting_player);
+        guard += 1;
+        if guard > 12 {
+            break;
+        }
+    }
+
+    // ShoeShoemon must be on the field at ≤0 DP (the -5000 caught it) at the
+    // moment Nyabootmon's debuff counted — proving the "≤0-but-still-counted"
+    // scenario rather than a trivially-healthy ShoeShoemon.
+    let shoe = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "P-165")
+        .map(|i| PermanentHandle { player: 0, index: i as u8 });
+    if let Some(shoe) = shoe {
+        assert!(
+            r.game.effective_dp(shoe).unwrap_or(4000) <= 0,
+            "ShoeShoemon (4000 DP) must be at ≤0 DP from Ruin Mode's continuous -5000 \
+             (got {:?}) — the scenario requires the mass debuff to catch a later-played Digimon",
+            r.game.effective_dp(shoe)
+        );
+    }
+
+    r.auto_resolve().ok();
+
+    // Judge: -6000 — ShoeShoemon was counted despite being at ≤0 DP (not deleted
+    // until Nyabootmon resolved). Re-resolve Ruin Mode (it took the debuff but
+    // survives: 15000 - 6000 = 9000, minus its own already-applied state).
+    let ruin = r.game.players[1]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "EX4-074")
+        .map(|i| PermanentHandle { player: 1, index: i as u8 })
+        .expect("Ruin Mode still on field");
+    assert_eq!(
+        ruin_dp_before - r.game.effective_dp(ruin).expect("ruin DP after"),
+        6000,
+        "Nyabootmon's debuff must be -6000 — ShoeShoemon (at ≤0 DP) is still counted \
+         because it is not deleted until Nyabootmon's effect resolves"
+    );
+}
 
 /// Q24 — Hudiemon (BT23-101) <Alliance> Tentomon (BT23-037); Tentomon suspended →
 /// −4000 from Rapidmon X (BT16-101) → deleted by rules check before Kokomon
 /// (EX6-004) [Your Turn] contributes. Judge: Hudiemon DP 3000.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT23-101 (Hudiemon), BT23-037 (Tentomon), EX6-004 (Kokomon), BT16-101 (Rapidmon X), ST17-07 (Rapidmon)."]
+#[ignore = "BLOCKED-PRIMITIVE: needs EX6-004 (Kokomon), which is itself BLOCKED on G-SUSPEND-EFFECT-INITIATED (the suspend event carries no by_effect bit, so Kokomon's 'when an EFFECT suspends' clause is un-gatable). Other cards (BT23-101, BT23-037, BT16-101, ST17-07) implemented."]
 fn q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger() {}

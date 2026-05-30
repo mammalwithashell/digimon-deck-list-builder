@@ -795,3 +795,51 @@ path vs `false` on the raw `Game::suspend`/attack/cost path, and populate the
 `qa/archetype-qa/dsl/zephagamon-2026-05-03-dsl-engine-gaps.md` ("Extend
 suspend/unsuspend event context with by_effect"). EX6-004 stays BLOCKED (no card
 authored — no stub) until this lands.
+
+
+### §Mass DP debuff applied as a one-time snapshot, not continuous (G-CONTINUOUS-MASS-DP-DEBUFF) — OPEN
+
+**Surfaced 2026-05-30** (judge-quiz Q14 pin). EX4-074 ShineGreymon: Ruin Mode's
+"[When Digivolving][On Deletion] Until the end of your opponent's next turn, all
+of your opponent's Digimon get -5000DP" is authored as `add_modifier target:
+{ of: opponent, kind: digimon }` — a one-time scan applying `ChangeDp -5000` to
+the opponent's CURRENT battle-area Digimon. Per Digimon rules a continuous "all X
+get -Y until Z" effect also applies to Digimon that ENTER during the window.
+Verified empirically (Q14): a ShoeShoemon (P-165) played AFTER Ruin Mode resolved
+stays at 4000 DP (not -1000). Faithful fix: install a CONTINUOUS player-scoped /
+until-condition modifier (re-evaluated as Digimon enter), not a snapshot, so
+later-entering opponent Digimon also receive the debuff. Blocks judge-quiz Q14
+(`q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode`, body written + #[ignore]'d).
+Likely a shared substrate need for every "all [opp] Digimon get ±DP until [turn]"
+mass-buff/debuff card, not just EX4-074.
+
+
+### §Burst-Digivolve `on_burst_turn_end` teardown never executed (G-BURST-ON-TURN-END-NOT-EXECUTED) — OPEN
+
+**Surfaced 2026-05-30** (judge-quiz Q8 attempt). The DSL `on_burst_turn_end:` alt-path step
+list (Burst Mode's "At the end of the burst digivolution turn, trash this Digimon's top
+card") is fully parsed + compiled (`alt_path.rs`, `compiled.rs`, `compile.rs`) and
+structurally tested, but it is **NEVER executed or scheduled** anywhere in the engine. The
+only references to `CompiledAltPath::on_burst_turn_end` are three path-detection
+`!is_empty()` checks in `dna_digivolve.rs` and a raw-rust-name collector in
+`digimon-dsl/pack.rs` — none run the steps. Furthermore `CompiledAltPathKind::BurstDigivolve`
+is lumped with `BlastDnaDigivolve` in `dsl_cards/mod.rs:97-108` and lowered only to a
+"Blast digivolve marker" (the combat counter-window blast), so a Burst-Mode digivolution
+has no "trash top at end of burst turn" wiring at all.
+
+Impact:
+- **Judge-quiz Q8 BLOCKED** (`q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot`): the
+  scenario (Comet Hammer de-digivolves the Burst stack to Agumon → at EoT the Burst trashes
+  the top Agumon → the revealed DP-less Koromon can't remain) cannot occur because the EoT
+  trash never fires. (A second blocker, the "DP-less Lv2 can't remain in the battle area"
+  rule, is moot until this lands; and DebugRunner has no burst-digivolve action driver.)
+- **BT13-020 (ShineGreymon: Burst Mode) + the BT13-060 example** ship a burst alt-path whose
+  `on_burst_turn_end: trash_top_source` is inert — their EoT self-trash does not happen.
+  Their behavioral tests are structural-only for that clause, which masked this. Both are
+  effectively PARTIAL on the Burst-Mode EoT teardown until this gap closes.
+
+Fix shape: (a) distinguish `BurstDigivolve` from `BlastDnaDigivolve` in lowering; (b) when a
+burst-digivolve action resolves, schedule the path's `on_burst_turn_end` steps to run at the
+end of that turn (a delayed/scheduled effect keyed to the burst-digivolution turn); (c) then
+the "DP-less / sub-Lv3 top card can't remain in the battle area" rules-check for the revealed
+Koromon. Likely needs a DebugRunner burst-digivolve driver to pin behaviorally.

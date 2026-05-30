@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --test judge_quiz`
-→ 1 passed (loader), 30 ignored, 0 failed.
+Coverage as of 2026-05-30: **30/30 questions have a test entry; 9 PASS.** `cargo test --test judge_quiz`
+→ 17 passed (9 question pins + loader/probe/analogs), 21 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -31,15 +31,15 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 | 3 | G | YES | BLOCKED-CARD | EX10-020, BT12-057 | `g::q3_breeding_area_effect_inactive_allows_digivolve` |
 | 4 | G | NO another check (+1/−1 net) | BLOCKED-CARD | AD1-002, BT4-098, ST3-15 | `g::q4_security_attack_net_modifiers_one_check` |
 | 5 | C | YES (declare if cost can be made payable) | **PASS** | Fixed by `fix-ad1-025-assembly-data`: engine Assembly executor (G-ASSEMBLY-PLAY-EXECUTION) + `[Assembly]` restored to AD1-025 data/YAML. Declare-then-pay mask offers the play at memory 0. | `c::q5_assembly_declaration_legal_when_cost_can_be_made_payable` |
-| 6 | B | NO | BLOCKED-CARD | BT8-109 | `b::q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves` |
+| 6 | B | NO | **PASS** | Pinned 2026-05-30: BT8-109 Flame Hellscythe authored; Pillomon (BT9-033) reduced to ≤0 DP by sub-effect 1 is NOT deleted mid-effect, so its `CannotPlayDigimonByEffect` floodgate persists and sub-effect 2's trash-play is blocked (contrast Q7, where the delete clears it). Pillomon deleted only by the post-resolution rules-check. | `b::q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves` |
 | 7 | B | YES | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT9-108 Eye of the Gorgon authored; pinned — sub-effect 1 deletes Pillomon (clearing its `CannotPlayDigimonByEffect` floodgate), sub-effect 2 then plays the Lv3 (control proves the floodgate was real → no false-pass) | `b::q7_eye_of_the_gorgon_sequential_delete_then_play` |
-| 8 | B | Agumon trashed → Koromon trashed | BLOCKED-CARD | BT13-020, AD1-016, BT21-044, BT21-042, EX4-005, BT21-004 | `b::q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot` |
+| 8 | B | Agumon trashed → Koromon trashed | BLOCKED-PRIMITIVE | All cards implemented, but `G-BURST-ON-TURN-END-NOT-EXECUTED` (discovered): the Burst `on_burst_turn_end` (trash top at end of burst turn) is compiled but never executed — `BurstDigivolve` is lowered only to a blast-counter marker — so "Agumon trashed → Koromon trashed" can't occur. (Also needs the DP-less-can't-remain rule + a DebugRunner burst driver.) | `b::q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot` |
 | 9 | D | After both trashed; NO memory | BLOCKED-CARD | BT23-102, BT15-037 | `d::q9_gatomon_not_in_battle_area_during_removal_no_memory` |
 | 10 | F | 0 | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q10_multi_effect_memory_arithmetic_ends_at_zero` |
 | 11 | F | 4 (Gravity Crush not OPT) | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q11_non_opt_gravity_crush_refires_memory_four` |
 | 12 | F | YES, unsuspends | BLOCKED-PRIMITIVE | BT24-059 authored, but `G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`: the `kind: digimon` field filter (`kind_matches_field`) matches `Digimon`/`Dual` but NOT `Token`, so the Petrification token is excluded from BT24-059's placement candidates. (The per-card test passes only with a Digimon stand-in.) | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
-| 13 | B | −6000 DP | BLOCKED-CARD | BT16-101, ST17-07 | `b::q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play` |
-| 14 | B | −6000 DP | BLOCKED-CARD | BT16-101 (1 away) | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
+| 13 | B | −6000 DP | **PASS** | Pinned 2026-05-30: BT22-042 Nyabootmon's `-3000 × (your Digimon)` is counted (2: Nyabootmon + ShoeShoemon) BEFORE ShoeShoemon (P-165)'s deferred `[On Play]` adds a Familiar token → −6000 (token not counted; a count of 3 would give −9000). | `b::q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play` |
+| 14 | B | −6000 DP | BLOCKED-PRIMITIVE | All cards implemented, but `G-CONTINUOUS-MASS-DP-DEBUFF`: EX4-074 Ruin Mode's "all opp Digimon −5000 until EoNT" is a one-time snapshot (`add_modifier` filter-target), not a continuous effect — it doesn't catch a ShoeShoemon played later (verified: stays 4000, not −1000), so the "≤0-but-still-counted" scenario can't be reproduced. Faithful pin body written + `#[ignore]`'d. | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
 | 15 | E | Gallantmon (X Antibody) topmost | BLOCKED-CARD | BT19-073, BT17-016, BT12-016, EX3-057 | `e::q15_sequential_de_digivolve_halted_by_x_antibody_immunity` |
 | 16 | E | NO (`<Partition>` not triggered) | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX6-057 Lilithmon authored + granted body runs as the carrier's own effect (D4/DCGO), so the granted self-delete is OwnEffect → `<Partition>` cause-filter skips it | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
 | 17 | A | NO | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: BT16-102 Magnamon X + EX6-057 authored; the granted-trigger dispatch suppresses a granted opponent effect when the carrier is immune to the grantor (`permanent_is_unaffected_by_effect`). BT21-036 not needed (its only role was an Armor-Form source — staged synthetically) | `a::q17_magnamon_x_immunity_removes_granted_eot_delete` |
@@ -49,7 +49,7 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 | 21 | D | 0 draws | BLOCKED-CARD | + BT3-109 | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
 | 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
 | 23 | D/F | 1 memory | **CANDIDATE** | all cards impl; needs full chain + remain-in-trash gating check; downstream of Q22 | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
-| 24 | B | Hudiemon DP 3000 | BLOCKED-CARD | BT23-101, BT23-037, EX6-004, BT16-101, ST17-07 | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
+| 24 | B | Hudiemon DP 3000 | BLOCKED-PRIMITIVE | BT23-101, BT23-037, BT16-101, ST17-07 implemented; needs EX6-004 (Kokomon), itself BLOCKED on `G-SUSPEND-EFFECT-INITIATED` (suspend event carries no by_effect bit, so Kokomon's "when an EFFECT suspends" is un-gatable). | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
 | 25 | E | YES (DigiXros departure ≠ battle) | BLOCKED-CARD | EX3-014 (1 away) | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
 | 26 | C | Returns to hand | BLOCKED-CARD | EX3-014 (1 away) | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
 | 27 | C | Pays 0 memory | BLOCKED-CARD | EX3-014 (1 away) | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
@@ -61,12 +61,24 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 18 | 3, 4, 6, 8, 9, 10, 11, 13, 14, 15, 19, 20, 21, 24, 25, 26, 27, 29, 30 |
-| BLOCKED-PRIMITIVE | 3 | 12, 18, 28 |
+| BLOCKED-CARD | 14 | 3, 4, 9, 10, 11, 15, 19, 20, 21, 25, 26, 27, 29, 30 |
+| BLOCKED-PRIMITIVE | 6 | 8, 12, 14, 18, 24, 28 |
 | CANDIDATE | 1 | 23 |
-| PASS | 7 | 1, 2, 5, 7, 16, 17, 22 |
+| PASS | 9 | 1, 2, 5, 6, 7, 13, 16, 17, 22 |
 
-(Counts: 18 + 3 + 1 + 7 = 29 of 30; Q23 is the CANDIDATE.)
+(Counts: 14 + 6 + 1 + 9 = 30 of 30.)
+
+Cluster-B pin wave (2026-05-30): after authoring cluster B's cards, Q6 + Q13 moved
+BLOCKED-CARD → **PASS** (deferred-deletion floodgate timing; debuff counted before a
+deferred On-Play token). Three more turned out BLOCKED-PRIMITIVE — each pin attempt
+*discovered* a real engine gap rather than passing:
+- Q8 → `G-BURST-ON-TURN-END-NOT-EXECUTED` (the Burst `on_burst_turn_end` top-trash is
+  compiled but never executed — `BurstDigivolve` lowers only to a blast-counter marker;
+  also blocks BT13-020/BT13-060's EoT self-trash).
+- Q14 → `G-CONTINUOUS-MASS-DP-DEBUFF` (EX4-074's mass −5000 is a one-time snapshot, not a
+  continuous effect; doesn't catch a later-played Digimon. Faithful pin body written + ignored).
+- Q24 → needs EX6-004, itself BLOCKED on `G-SUSPEND-EFFECT-INITIATED` (suspend event has no
+  by_effect bit).
 
 Q1 + Q7 moved BLOCKED-CARD → PASS on 2026-05-29 (`batch-implement-cards-rust-dsl`
 first wave): BT13-088 (Belphemon: Sleep Mode) and BT9-108 (Eye of the Gorgon)
