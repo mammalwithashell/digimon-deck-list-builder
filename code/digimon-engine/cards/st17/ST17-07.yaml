@@ -1,0 +1,76 @@
+# ST17-07 Rapidmon — Digimon, Lv.5, Green, DP 7000, Cost 7. Trait: Cyborg.
+#
+# Printed card text (ST17-07.json):
+#   [On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon.
+#   (Trash the top card. You can't trash past level 3 cards.) Then, if you have
+#   a green Tamer, until the end of your opponent's turn, your opponent's
+#   effects can't delete this Digimon or return it to the hand or deck.
+#   Inherited: [All Turns] [Once Per Turn] When this Digimon deletes an
+#   opponent's Digimon in battle, trash the top card of their security stack.
+#   Digivolve: Lv.4 w/[Gargomon]/[Rapidmon] in name: Cost 3 (xros_req).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST17/Green/ST17_07.cs
+#
+# ─── PARTIAL — green-Tamer protection sub-clause is BLOCKED ──────────────────
+# The "if you have a green Tamer, until end of opp turn, your OPPONENT'S effects
+# can't delete/return-hand/return-deck this Digimon" rider is OMITTED. It needs
+# OPPONENT-scoped CannotBeDestroyedByEffect + CannotBeReturnedToHand +
+# CannotBeReturnedToDeck. The DSL `add_modifier` step lowers through
+# `EffectContext::add_modifier` → `ModifierEntry::simple` (cause_filter = None),
+# which the replacement fire-site treats as CAUSE-AGNOSTIC (blocks the
+# controller's OWN effects too). DCGO scopes all three to `IsOpponentEffect`.
+# `default_passive_cause_filter` is only consulted by `ModifierEntry::passive_
+# replacement`, which the DSL path never uses; and `add_modifier` has no
+# `opponent_only`/`cause_filter` knob. Logged as
+# G-OPPONENT-SCOPED-EFFECT-PROTECTION-DSL (qa/dsl-vocab-gaps.md +
+# docs/RUST_ENGINE_GAPS.md). Per no-approximations the rider is omitted (NOT
+# shipped cause-agnostically); the protection tests are #[ignore]'d citing the
+# gap. The widening (opt-in `opponent_only` on add_modifier, routing through
+# passive_replacement().opponent_only()) is a deliberate cross-cutting follow-up.
+
+card: ST17-07
+name: Rapidmon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+alt_paths:
+  # [Digivolve] Lv.4 w/[Gargomon] or [Rapidmon] in name: Cost 3.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - name_contains: "Gargomon"
+            - name_contains: "Rapidmon"
+    cost: 3
+
+effects:
+  # ─── Clause 1 — [On Play][When Digivolving] De-Digivolve 1 opp Digimon ───────
+  # (The green-Tamer protection rider that printed text appends here is BLOCKED;
+  # see the header note — G-OPPONENT-SCOPED-EFFECT-PROTECTION-DSL.)
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] De-Digivolve 1 one opponent Digimon"
+    process:
+      - if:
+          condition: { any_permanent: { of: opponent, kind: digimon } }
+          then:
+            - select_opponent_permanent:
+                bind_as: dedigivolve_target
+                filter: { kind: digimon }
+                prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+            - de_digivolve:
+                target: dedigivolve_target
+                amount: 1
+                stop_at_level: 3
+
+  # ─── Clause 2 — Inherited [All Turns][OPT] battle-delete-by-this → trash sec ─
+  - scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    condition: { source_deleted_battle_opponent: true }
+    summary: "[All Turns][Once Per Turn] When this Digimon deletes an opp Digimon in battle, trash top of their security"
+    process:
+      - trash_top_security: { of: opponent }

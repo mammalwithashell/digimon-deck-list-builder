@@ -5632,6 +5632,36 @@ impl<'a> EffectContext<'a> {
         // Nyabootmon's [When Digivolving] fully resolves).
     }
 
+    /// Like [`add_modifier`], but carries a structured [`ModifierPayload`]
+    /// (e.g. `SynthIdentity` for `TreatAsDigimon`). Honors the same
+    /// `can_affect_permanent` guard and `*NextTurn` pending-skip semantics.
+    /// Used by the DSL `add_modifier` lowering when a `synth_identity:`
+    /// block is present, and available to raw_rust scripts.
+    pub fn add_modifier_with_payload(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        payload: crate::modifiers::ModifierPayload,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        let pending_skips = crate::modifiers::pending_skips_for_install(
+            expiry,
+            self.player,
+            self.game.turn_player(),
+        );
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(modifier, value, expiry, self.player)
+                .with_payload(payload)
+                .with_pending_skips(pending_skips),
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
     pub fn add_declarative_modifier(
         &mut self,
         target: PermanentHandle,

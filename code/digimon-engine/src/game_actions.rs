@@ -2527,7 +2527,24 @@ impl Game {
             return false;
         }
         for handle in to_delete.into_iter().rev() {
+            // A ≤0-DP deletion is a STATE-BASED RULE action, not an effect.
+            // `infer_deletion_cause` would otherwise attribute it to
+            // OwnEffect/OpponentEffect (no battle/security/effect-source is
+            // live between top-level effects), which is wrong for observers
+            // that distinguish "deleted by having 0 DP" from "deleted by an
+            // effect" (e.g. BT16-101's [All Turns] gain-2-memory clause keys
+            // on battle OR 0-DP, NOT effect deletion). Refine the OnDeletion /
+            // OnAnyDeletion observer payload to `EventCause::Rule` via the
+            // same override slot Overclock uses (game_phases.rs); it only
+            // refines the observer cause — replacement-window filtering still
+            // reads `current_deletion_cause` — and the deferred-replacement
+            // path (e.g. an Armor Purge window opened by this deletion)
+            // threads it through ParkedReplacement.
+            let previous = self.current_deletion_event_cause_override;
+            self.current_deletion_event_cause_override =
+                Some(crate::trigger_context::EventCause::Rule);
             self.delete_permanent_with_effects(handle);
+            self.current_deletion_event_cause_override = previous;
         }
         true
     }

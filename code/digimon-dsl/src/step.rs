@@ -1907,6 +1907,36 @@ pub struct AddModifierArgs {
     pub modifier: String,
     pub value: ModifierValueSpec,
     pub expiry: String,
+    /// Structured payload for payload-bearing modifiers. Required for
+    /// `modifier: TreatAsDigimon` ("treat this permanent as a [DP] DP
+    /// Digimon"), forbidden for every other modifier (validated). Carries
+    /// the synthetic identity the target is treated as while the modifier
+    /// is live; lowers to `ModifierPayload::SynthIdentity`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub synth_identity: Option<SynthIdentitySpec>,
+}
+
+/// The synthetic Digimon identity a permanent is "treated as" while a
+/// `TreatAsDigimon` modifier is live (e.g. RizeGreymon treating a Marcus
+/// Damon Tamer as a 3000 DP Digimon). `dp` is required; `kind` defaults to
+/// `Digimon` (the only kind this mechanic targets in printed cards);
+/// `level`/`colors`/`traits` default empty when the text grants none.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SynthIdentitySpec {
+    pub dp: i32,
+    #[serde(default = "synth_identity_default_kind")]
+    pub kind: crate::spec::CardKind,
+    #[serde(default)]
+    pub level: u8,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub colors: Vec<crate::spec::ColorSpec>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub traits: Vec<String>,
+}
+
+fn synth_identity_default_kind() -> crate::spec::CardKind {
+    crate::spec::CardKind::Digimon
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

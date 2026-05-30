@@ -1,0 +1,211 @@
+# BT21-044 RizeGreymon — Digimon, Lv.5, Yellow, DP 7000, Cost 7.
+# Traits: Cyborg. Attribute: Vaccine.
+#
+# Printed card text (BT21-044.json):
+#
+#   [On Play] [When Digivolving] For the turn, 1 of your [Marcus Damon]s is also
+#   treated as a 3000 DP Digimon, can't digivolve, and gains <Rush> (This Digimon
+#   can attack the turn it comes into play.) and <Alliance> (When this Digimon
+#   attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP
+#   to this Digimon and it gains <Security A. +1> for the attack.) Then, 1 of
+#   your Digimon may attack.
+#   [All Turns] [Once Per Turn] When any of your yellow or red Tamers are deleted,
+#   you may place 1 [Marcus Damon] from your trash as the top security card.
+#
+#   Inherited Effect:
+#   [All Turns] [Once Per Turn] When any of your yellow or red Tamers are deleted,
+#   you may place 1 [Marcus Damon] from your trash as the top security card.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT21/Yellow/BT21_044.cs
+#
+# Clause map:
+#   Clause 1 (own) [On Play][When Digivolving]:
+#     - DCGO SharedActivateCoroutine: IF any Marcus Damon on owner's battle area,
+#       MANDATORY (canNoSelect:false) select 1 -> BecomeDigimonThatCantDigivolve
+#       (DP 3000, UntilEachTurnEnd) + GainRush + GainAlliance. THEN, independently,
+#       IF any own attack-capable Digimon, optional (canNoSelect:true) select 1 to
+#       attack (Mode.Attack).
+#   Clause 2 (own) [All Turns][Once Per Turn] on deletion:
+#     - DCGO ActivateClass on OnDestroyedAnyone, hash "BT21_044_AT",
+#       maxUsableCount:1. CanUseCondition: self on battle area AND a deleted
+#       permanent is an own Tamer (IsPermanentExistsOnOwnerBattleAreaTamer). The
+#       printed text restricts to YELLOW or RED Tamers. Body: if owner can add
+#       security AND a Marcus Damon is in trash, optional SelectCardEffect (canNoSelect:
+#       true) from trash -> AddSecurityCard (top, face up).
+#   Clause 3 (inherited) [All Turns][Once Per Turn] on deletion:
+#     - DCGO duplicate ActivateClass with SetIsInheritedEffect(true), hash
+#       "BT21_044_Inherited_AT". Identical body.
+
+card: BT21-044
+name: RizeGreymon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+attribute: Vaccine
+
+# ─── Alternate Digivolution Paths ────────────────────────────────────────────
+#
+# Standard digivolve (printed evo_costs): from Lv.4 Yellow, cost 4.
+# Alt (xros_req / DCGO AddSelfDigivolutionRequirementStaticEffect, EffectTiming.None):
+#   TopCard.EqualsCardName("GeoGreymon"), digivolutionCost: 3,
+#   ignoreDigivolutionRequirement: false.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: "GeoGreymon" }
+    cost: 3
+
+effects:
+  # ─── Clause 1: [On Play] [When Digivolving] ──────────────────────────────────
+  #
+  # "For the turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon,
+  # can't digivolve, and gains <Rush> and <Alliance>. Then, 1 of your Digimon may
+  # attack."
+  #
+  # Two independent gated blocks, matching the DCGO SharedActivateCoroutine:
+  #
+  #  (a) IF any own [Marcus Damon] on the battle area, MANDATORY select 1 (DCGO
+  #      canNoSelect:false) and grant for the turn:
+  #        - TreatAsDigimon (synth_identity dp:3000; kind defaults Digimon).
+  #          The "also treated as a 3000 DP Digimon" payload landed 2026-05-30
+  #          (RUST_ENGINE_API / parse_synth_identity.rs).
+  #        - CannotDigivolve.
+  #        - <Rush> + <Alliance> (grant_keyword steps, end_of_turn).
+  #      The `if` gate makes the select install only when a Marcus Damon exists —
+  #      faithful to DCGO's HasMatchConditionPermanent guard (the select is
+  #      mandatory once it installs; it is simply absent when there is no Marcus).
+  #
+  #  (b) THEN "1 of your Digimon may attack." A separate, optional step. The
+  #      printed "may" makes the attacker selection optional (PASS legal). It
+  #      fires regardless of whether (a) ran — matching DCGO's second
+  #      independently-gated SelectPermanentEffect (Mode.Attack, canNoSelect:true).
+  #      `may_attack_now` (G-MAY-ATTACK-NOW, resolved) follows the AD1-009 idiom.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] treat a Marcus Damon as 3000 DP Digimon (CannotDigivolve + Rush + Alliance, for turn); then 1 Digimon may attack"
+    process:
+      # (a) Marcus Damon treat-as block.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              name_contains: "Marcus Damon"
+          then:
+            - select_own_permanent:
+                bind_as: marcus
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - name_contains: "Marcus Damon"
+                prompt: "Select 1 of your [Marcus Damon]s to treat as a 3000 DP Digimon"
+            - add_modifier:
+                target: marcus
+                modifier: TreatAsDigimon
+                value: 0
+                expiry: end_of_turn
+                synth_identity:
+                  dp: 3000
+            - add_modifier:
+                target: marcus
+                modifier: CannotDigivolve
+                value: 0
+                expiry: end_of_turn
+            - grant_keyword:
+                target: marcus
+                keyword: Rush
+                expiry: end_of_turn
+            - grant_keyword:
+                target: marcus
+                keyword: Alliance
+                expiry: end_of_turn
+      # (b) "Then, 1 of your Digimon may attack."
+      - optional:
+          - select_own_permanent:
+              bind_as: atk
+              filter: { kind: digimon }
+              optional: true
+              prompt: "Select 1 of your Digimon that may attack"
+          - may_attack_now:
+              attacker: atk
+              targets: any
+              optional: true
+              prompt: "Have the selected Digimon attack now?"
+
+  # ─── Clause 2: [All Turns] [Once Per Turn] (own) ─────────────────────────────
+  #
+  # "When any of your yellow or red Tamers are deleted, you may place 1
+  # [Marcus Damon] from your trash as the top security card."
+  #
+  # Observer on `on_any_deletion` (DCGO OnDestroyedAnyone). active_when all_turns
+  # ([All Turns]). once_per_turn ([Once Per Turn]). optional ("you may place").
+  # Condition gates on the DELETED OBJECT (BT22-002 / BT21-026 idiom):
+  #   - event_target_owner: you      (your Tamer)
+  #   - event_target_kind: tamer
+  #   - event_target_color_any_of: [yellow, red]
+  # Body: optional select of a [Marcus Damon] from trash, then place it as the
+  # TOP security card FACE UP (DCGO AddSecurityCard -> default top, face up; the
+  # zone:trash source resolves a TrashIndex -> CardSourceRef::Trash, per
+  # BT21-024 / BT22-041 place_on_security plumbing).
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When your yellow/red Tamer is deleted, may place a Marcus Damon from trash as top security"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [yellow, red]
+    process:
+      - select_trash:
+          of: you
+          bind_as: marcus_in_trash
+          optional: true
+          filter: { name_contains: "Marcus Damon" }
+          prompt: "Place 1 [Marcus Damon] from your trash as the top security card"
+      - if:
+          condition: { binding_present: marcus_in_trash }
+          then:
+            - place_on_security:
+                of: you
+                source: { binding: marcus_in_trash, zone: trash }
+                position: top
+                face_up: true
+
+  # ─── Clause 3: Inherited [All Turns] [Once Per Turn] ─────────────────────────
+  #
+  # Identical printed body, inherited scope (DCGO duplicate ActivateClass with
+  # SetIsInheritedEffect(true), hash "BT21_044_Inherited_AT").
+  - scope: inherited
+    when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[Inherited][All Turns][OPT] When your yellow/red Tamer is deleted, may place a Marcus Damon from trash as top security"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [yellow, red]
+    process:
+      - select_trash:
+          of: you
+          bind_as: marcus_in_trash
+          optional: true
+          filter: { name_contains: "Marcus Damon" }
+          prompt: "Place 1 [Marcus Damon] from your trash as the top security card"
+      - if:
+          condition: { binding_present: marcus_in_trash }
+          then:
+            - place_on_security:
+                of: you
+                source: { binding: marcus_in_trash, zone: trash }
+                position: top
+                face_up: true

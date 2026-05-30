@@ -110,6 +110,7 @@ fn add_modifier_cannot_attack_blocks_attack_flag() {
         modifier: "CannotAttack".into(),
         value: CompiledModifierValue::Literal(0),
         expiry: "end_of_turn".into(),
+    synth_identity: None,
     };
     let mut bindings = digimon_engine::dsl_cards::bindings::Bindings::new();
     bindings.insert_permanent("tgt", handle);
@@ -147,6 +148,7 @@ fn add_modifier_unknown_modifier_string_is_noop() {
         modifier: "NotAModifier".into(),
         value: CompiledModifierValue::Literal(0),
         expiry: "end_of_turn".into(),
+    synth_identity: None,
     };
     let mut bindings = digimon_engine::dsl_cards::bindings::Bindings::new();
     bindings.insert_permanent("tgt", handle);
@@ -192,6 +194,7 @@ fn add_modifier_filter_target_applies_to_match() {
         modifier: "CannotAttack".into(),
         value: CompiledModifierValue::Literal(0),
         expiry: "end_of_turn".into(),
+    synth_identity: None,
     };
     let mut bindings = digimon_engine::dsl_cards::bindings::Bindings::new();
 

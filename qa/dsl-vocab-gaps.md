@@ -4,6 +4,20 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+> **`TreatAsDigimon` / `SynthIdentity` payload — RESOLVED 2026-05-30** (judge-quiz
+> cluster-B authoring, Greymon/Marcus line). The DSL `add_modifier` step now accepts
+> a structured `synth_identity:` block (`dp` required; `kind` defaults Digimon;
+> `level`/`colors`/`traits` optional), lowering to the engine's pre-existing
+> `ModifierPayload::SynthIdentity` via a new `EffectContext::add_modifier_with_payload`.
+> This closes the Track C "rich payload parser pending" slice for the
+> treat-a-Tamer-as-a-Digimon mechanic (RizeGreymon BT21-044's 3000 DP grant,
+> ShineGreymon: Burst Mode BT13-020's 12000 DP grant). The validator requires
+> `synth_identity` for `TreatAsDigimon` and forbids it on any other modifier.
+> Pinned by `digimon-dsl` `parse_synth_identity` (3) + `validator::tests`
+> `treat_as_digimon_without_synth_identity_is_rejected` /
+> `synth_identity_on_non_treat_as_digimon_is_rejected`. The remaining Track C
+> string/list payload variants (non-TreatAsDigimon) stay pending — see that note below.
+
 > **ST-2 Cocytus Blue substrate closure — 2026-05-29:** ST2 introduced no
 > remaining open DSL vocabulary gap. The new `trash_bottom_sources` step and
 > `battle_opponent_no_sources` predicate are implemented and archived in
@@ -2771,3 +2785,36 @@ Surfaced: 2026-05-29, judge-quiz wave (`batch-implement-cards-rust-dsl`). EX5-06
   ```
 
 - **Blocks:** EX5-060 (judge-quiz Q28). `code/digimon-engine/cards/ex5/EX5-060.yaml` Clauses 1 & 2 declared with faithful timing / OPT / optional flags but empty (gap-blocked) `process` bodies — never resolve a wrong approximation. Inherited ＜Piercing＞ is fully supported and authored live. Tests in `code/digimon-engine/tests/cards_behavioral/ex5/ex5_060.rs`: `ex5_060_clause1_*` `#[ignore]`'d with `G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED`; `ex5_060_clause2_*` `#[ignore]`'d with `G-EVENT-PLAYED-LEVEL-FORMULA`. The Q28 negative (`ex5_060_lock_does_not_attach_to_effect_immune_target`) runs LIVE.
+
+
+## ST17-07 — opponent-scoped effect-protection from `add_modifier`  [G-OPPONENT-SCOPED-EFFECT-PROTECTION-DSL]
+
+**Surfaced 2026-05-30** (judge-quiz cluster B, ST17-07 Rapidmon). PARTIAL: the
+green-Tamer rider "until end of opp turn, your OPPONENT'S effects can't delete
+this Digimon or return it to hand/deck" is omitted.
+
+- **Problem.** The DSL `add_modifier` step lowers through
+  `EffectContext::add_modifier` → `ModifierEntry::simple`, whose `cause_filter`
+  is `None` — the replacement fire-site treats `None` as CAUSE-AGNOSTIC, so
+  `add_modifier { CannotBeDestroyedByEffect | CannotBeReturnedToHand |
+  CannotBeReturnedToDeck }` blocks the controller's OWN effects too. DCGO scopes
+  all three protections to `IsOpponentEffect`. `default_passive_cause_filter`
+  (which would scope the Return ones to OpponentEffect) is consulted ONLY by
+  `ModifierEntry::passive_replacement`, never by `ctx.add_modifier`.
+- **Latent class.** Existing cards using `add_modifier` for these protections
+  (BT18-064, P-215, EX8-070) silently ship cause-agnostic and only assert the
+  modifier is *present* (never own-vs-opponent scope), so the divergence is
+  currently unverified across the codebase — a widening here would correct them.
+- **Engine half is mostly present.** `ModifierEntry::opponent_only()`
+  (modifiers.rs) forces `cause_filter = Some(OpponentEffect)` and the fire-site
+  honors it; the missing piece is exposing an installer that uses
+  `passive_replacement(...).opponent_only()` from the DSL.
+- **Suggested widening (backward-compatible, opt-in).** Add `opponent_only:
+  bool` (default false) to the `add_modifier` DSL step; when true, route the
+  install through `passive_replacement(modifier, expiry, player).opponent_only()`
+  instead of `ModifierEntry::simple`. Existing cards (flag unset) are unchanged.
+  Deferred as a deliberate cross-cutting change (it changes the *meaning* of
+  these protections for shipped cards) — should regress BT18-064/P-215/EX8-070.
+  Until landed, ST17-07's rider stays omitted (NOT shipped cause-agnostically)
+  with `st17_07::st17_07_green_tamer_grants_opponent_only_delete_protection` /
+  `..._protection_not_installed_without_green_tamer` `#[ignore]`'d citing this ID.
