@@ -1,0 +1,102 @@
+# BT16-102 Magnamon (X Antibody) — Digimon, Lv6, DP 12000, cost 12.
+# Colors: Yellow/Blue/White (tri-color; card_colors [2,1,4]). Attribute: Vaccine.
+# Traits: Holy Warrior / X Antibody / Royal Knight. Evolves from Yellow Lv5 (cost 4).
+#
+# Printed card text (data/cards.json):
+#   <Blocker>
+#   <Armor Purge> (When this Digimon would be deleted, you may trash the top
+#     card of this Digimon to prevent that deletion.)
+#   [When Digivolving] If [Magnamon (X Antibody)] or an [Armor Form] trait card is
+#     in this Digimon's digivolution cards, this Digimon isn't affected by your
+#     opponent's effects and gains +3000 DP until the end of your opponent's
+#     turn. Then, unsuspend this Digimon.
+#   [All Turns] [Once Per Turn] When a card is removed from a security stack, you
+#     may activate 1 of this Digimon's [When Digivolving] effects.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT16/Yellow/BT16_102.cs
+#
+# The "isn't affected by your opponent's effects" immunity is the load-bearing
+# clause for judge-quiz Q17: a Lilithmon (EX6-057)-granted "[End of Your Turn]
+# Delete this" is an OPPONENT-sourced granted effect, so when it would fire on
+# this immune Digimon the granted-trigger dispatch suppresses it
+# (`permanent_is_unaffected_by_effect`). DCGO models it as a continuous
+# `CanNotAffectedClass` (UntilOpponentTurnEnd), matching the engine's fire-time
+# immunity gate.
+
+card: BT16-102
+name: "Magnamon (X Antibody)"
+kind: digimon
+level: 6
+color: [yellow, blue, white]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, X Antibody, Royal Knight]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+
+effects:
+  # ─── Declarative keywords ─────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # <Armor Purge> — auto-installed prevent-deletion-by-trashing-top keyword.
+  - kind: grant_keyword
+    keyword: ArmorPurge
+
+  # ─── [When Digivolving] conditional immunity + DP + unsuspend ─────────────
+  #
+  # Condition: this Digimon's digivolution cards contain [Magnamon (X Antibody)]
+  # or an [Armor Form] trait card. "Isn't affected by your opponent's effects"
+  # = the 4-source-kind opponent immunity idiom (digimon/tamer/option/rule),
+  # until end of opponent's turn (EX6-011 pattern).
+  - when: when_digivolving
+    summary: "[WD] If [Magnamon X]/[Armor Form] in sources: immune to opp effects + +3000 DP until end of opp turn, then unsuspend"
+    condition:
+      any_of:
+        - self_digivolution_sources_contain_name: "Magnamon (X Antibody)"
+        - self_digivolution_sources_trait_has: "Armor Form"
+    process:
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: tamer
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: option
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: rule
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - add_dp_modifier:
+          target: source
+          value: 3000
+          expiry: end_of_opponents_turn
+      - unsuspend: { target: source }
+
+  # ─── [All Turns][OPT] re-activate [When Digivolving] on security removal ───
+  #
+  # "When a card is removed from a security stack" fires on either security
+  # stack (own or opponent's). `refire_effect` re-runs this Digimon's own
+  # [When Digivolving] clause (source = this permanent).
+  - when: [on_opponent_security_removed, on_own_security_removed]
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] When a card leaves a security stack, may re-activate this Digimon's [When Digivolving]"
+    process:
+      - refire_effect:
+          source: source
+          timing: when_digivolving
+          optional: true

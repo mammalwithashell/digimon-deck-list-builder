@@ -3604,9 +3604,19 @@ impl Game {
     ) {
         let entries = self.modifiers.granted_triggered_for_timing(carrier, timing);
         for (source_card, source_player, body) in entries {
-            // Q2 immunity gate: skip when the carrier is unaffected by the
-            // grantor's effects (mirrors the queue dispatcher).
-            if self.progress_excludes(carrier, Some(source_player)) {
+            // Immunity gate (mirrors the queue dispatcher): skip when the
+            // carrier is unaffected by the grantor's effects — `<Progress>` /
+            // attack-scoped immunity (Q2) or a general `CannotBeAffected`
+            // opponent-effect immunity (Q17). The opponent-effect immunity
+            // filter is source-kind-agnostic, so `Digimon` suffices on this
+            // fallback path.
+            if self.progress_excludes(carrier, Some(source_player))
+                || self.permanent_is_unaffected_by_effect(
+                    carrier,
+                    source_player,
+                    crate::enums::EffectSourceKind::Digimon,
+                )
+            {
                 continue;
             }
             // D4 / DCGO: the granted body runs as the carrier's OWN effect

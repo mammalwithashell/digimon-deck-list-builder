@@ -2913,6 +2913,87 @@ fn ex1_068_ice_wall_grants_when_attacking_loses_2_memory_to_all_opp_digimon() {
     );
 }
 
+/// Q17 mechanic — a granted (opponent-sourced) triggered effect does NOT fire on
+/// a carrier that is unaffected by the grantor's effects. Mirrors Magnamon
+/// (X Antibody)'s "isn't affected by your opponent's effects": a `CannotBeAffected`
+/// (OpponentOnly) carrier suppresses the granted body when its timing fires,
+/// while a non-immune control carrier fires normally. Engine: the granted-trigger
+/// dispatch gates on `permanent_is_unaffected_by_effect(carrier, grantor, kind)`.
+#[test]
+fn granted_effect_suppressed_when_carrier_immune_to_grantor() {
+    use digimon_engine::enums::{EffectTiming, Expiry, ModifierType};
+    use digimon_engine::modifiers::{EffectControllerFilter, EffectImmunityFilter, ModifierEntry};
+    use digimon_engine::permanent::PermanentHandle;
+    use digimon_engine::selection::TriggerSource;
+
+    let grantor = make_test_card("TEST-Q17-GRANTOR", "Grantor"); // Digimon by default
+    let mut immune = make_test_card("TEST-Q17-IMMUNE", "Immune Carrier");
+    immune.dp = Some(5000);
+    let mut control = make_test_card("TEST-Q17-CONTROL", "Control Carrier");
+    control.dp = Some(5000);
+
+    let mut r = DebugRunner::builder()
+        .add_card(grantor)
+        .add_card(immune)
+        .add_card(control)
+        .build();
+    let g = r.place_on_field(0, "TEST-Q17-GRANTOR", None);
+    let immune_h = r.place_on_field(1, "TEST-Q17-IMMUNE", None);
+    let control_h = r.place_on_field(1, "TEST-Q17-CONTROL", None);
+    let grantor_top = r.game.players[0].battle_area[0].top_card().handle();
+
+    // Player 1's "immune" carrier is unaffected by player 0's (opponent's)
+    // Digimon effects — Magnamon-X-style.
+    r.game.modifiers.add(
+        immune_h,
+        ModifierEntry::simple(ModifierType::CannotBeAffected, 0, Expiry::Permanent, 1)
+            .with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind: Some(digimon_engine::enums::EffectSourceKind::Digimon),
+                controller: EffectControllerFilter::OpponentOnly,
+            }),
+    );
+
+    // Player 0 grants BOTH player-1 carriers "[When Attacking] lose 2 memory".
+    {
+        let mut ctx = digimon_engine::effect_context::EffectContext::new(
+            &mut r.game,
+            grantor_top,
+            Some(g),
+            0,
+        );
+        for h in [immune_h, control_h] {
+            ctx.grant_triggered_effect(
+                h,
+                EffectTiming::WhenAttacking,
+                Expiry::Permanent,
+                |inner| inner.lose_memory(2),
+            );
+        }
+    }
+
+    // Control (non-immune) fires → gauge moves by 2.
+    let m0 = r.game.memory;
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(control_h));
+    r.game.drain_effect_queue();
+    assert_eq!(
+        (r.game.memory - m0).abs(),
+        2,
+        "a non-immune carrier's granted body must fire"
+    );
+
+    // Immune carrier → granted body SUPPRESSED (no gauge change). The grant is
+    // still installed; the dispatch's immunity gate skips firing it.
+    let m1 = r.game.memory;
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(immune_h));
+    r.game.drain_effect_queue();
+    assert_eq!(
+        r.game.memory, m1,
+        "a carrier immune to the grantor's effects must NOT fire the granted body (Q17 mechanic)"
+    );
+}
+
 #[test]
 fn while_condition_aura_clears_when_source_leaves_field() {
     // When the source permanent leaves the field, ALL modifiers on it

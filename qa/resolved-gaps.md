@@ -9,9 +9,9 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
 
-## Grant a triggered effect to an opponent's permanent (Q2 + Q16) — 2026-05-29
+## Grant a triggered effect to an opponent's permanent (Q2 + Q16 + Q17) — 2026-05-29
 
-- **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (opponent-targeting + both
+- **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (opponent-targeting + all three
   cause-attribution directions) — closed by change `add-grant-triggered-effect-dsl`.
   The `grant_triggered_effect` DSL step and `ModifierType::GrantedTrigger` slot
   already existed from the EX10-034 grant-to-binding work; a predicate `target`
@@ -39,15 +39,24 @@ When a reusable gap closes, move the full entry here and leave any card-specific
   (controller-relative) assuming controller=grantor; they were corrected to
   `lose_memory(2)` (turn-relative, matching EX1-068) to reflect the faithful
   carrier-attribution model.
-- **Card content:** EX1-068 Ice Wall! `[Main]` (`grant_triggered_effect` →
-  opponent Digimon, `when_attacking`, `lose_memory: 2`,
-  `end_of_opponents_next_turn`); EX6-057 Lilithmon (3 clauses: the `[OP][WD]`
-  grant of `[EoT] Delete this`, the `when_would_leave` cost-replacement, the
-  on-deletion security trash).
-- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz q2_medusamon`, `--test judge_quiz q16`, `--test cards_behavioral ex1_068` (6), `--test cards_behavioral ex6_057` (2); regression: `--test cards_behavioral ex10_034` (14), `--test combat effect_granted_attack`, `--test dsl group6_auras` (49) green; full suite has only the 17 pre-existing failures.
-- **Still open — Q17 only (deferred to card-wave):** Magnamon X (BT16-102) +
-  Magnamon (BT21-036) authoring AND an "immunity removes a granted slot"
-  mechanic (the immune carrier drops the granted `[EoT] Delete`).
+- **Q17 — opponent-effect immunity suppresses a granted opponent effect.** The
+  granted-trigger dispatch (all three sites) ALSO gates on
+  `permanent_is_unaffected_by_effect(carrier, grantor, kind)`, keyed to the
+  grantor's effect-source kind. A carrier with `CannotBeAffected(OpponentOnly)`
+  — e.g. Magnamon (X Antibody)'s "isn't affected by your opponent's effects" —
+  does not fire an opponent-granted clause. DCGO models this as a continuous
+  `CanNotAffectedClass` (affect-time check), matching the fire-time gate; the
+  timeline works because the granted `[EoT]` delete fires at the grantee's
+  turn-end while the immunity (until end of the *opponent's* turn) is still live.
+- **Card content:** EX1-068 Ice Wall! `[Main]`; EX6-057 Lilithmon (3 clauses);
+  BT16-102 Magnamon (X Antibody) (4 clauses: `<Blocker>`, `<Armor Purge>`,
+  `[When Digivolving]` conditional immunity/+DP/unsuspend, `[All Turns][OPT]`
+  re-activate `[When Digivolving]` on security removal).
+- **Verification:** `--test judge_quiz q2_medusamon`/`q16`/`q17`; `--test cards_behavioral ex1_068` (6) / `ex6_057` (2) / `bt16_102` (2); `--test dsl group6_auras` (50, incl. the immunity-suppression synthetic test); regression: `--test cards_behavioral ex10_034` (14), `--test combat effect_granted_attack`; full suite has only the 17 pre-existing failures.
+- **Not needed:** BT21-036 Magnamon — its only role in Q17 was an Armor-Form
+  digivolution source (staged synthetically); it remains unauthored (its
+  "-2000 DP per [Armor Form] in trash" clause would need a trash-trait-count
+  formula, currently absent) but blocks no judge-quiz question.
 
 ## Digi-Egg routing on return-to-deck — 2026-05-29
 

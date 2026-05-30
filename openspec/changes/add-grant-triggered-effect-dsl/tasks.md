@@ -25,17 +25,17 @@
 
 - [x] 4.1c/4.2/4.3 (Q2 direction) `<Progress>` excludes a granted opponent effect on the attacker — implemented via the `progress_excludes` guard in the dispatch; pinned by Q2; `combat` + granted-attack + aura suites green.
 - [x] 4.1a (Q16 direction) `<Partition>` does NOT fire when a granted self-delete removes the carrier — implemented by running the granted body with `effect_source_player = carrier.player` (D4/DCGO) at all three dispatch sites, so the deletion is the carrier-controller's OwnEffect and the existing Partition cause-filter skips it. Pinned by Q16. Two `group6_auras` mirror-tests corrected from `gain_memory(-2)` (controller-relative, assumed grantor) to `lose_memory(2)` to reflect the faithful carrier model.
-- [ ] 4.1b (Q17 direction) an immune carrier drops the granted slot. DEFERRED — needs BT16-102 Magnamon X authoring + the immunity-removal mechanic.
+- [x] 4.1b (Q17 direction) a carrier immune to the grantor's effects does not fire the granted clause — implemented by also gating the granted-trigger dispatch on `permanent_is_unaffected_by_effect(carrier, grantor, kind)` at all three sites. DCGO models Magnamon X's immunity as a continuous `CanNotAffectedClass` (affect-time check), matching this fire-time gate. Pinned by Q17 + the `granted_effect_suppressed_when_carrier_immune_to_grantor` synthetic test.
 
 ## 5. Author cards + pin judge-quiz scenarios — EX1-068/Q2 done; EX6-057/Q16/Q17 deferred
 
 - [x] 5.1 Authored EX1-068 Ice Wall! `[Main]`: `grant_triggered_effect` (opponent Digimon, `timing: when_attacking`, `body: [lose_memory: 2]`, `expiry: end_of_opponents_next_turn`); `[Security]` clause kept.
 - [x] 5.2 Un-ignored `judge_quiz::a_immunity_scope::q2_...` — PASSES (Medusamon loses no memory; non-Progress control loses 2). EX1-068's per-card behavioral tests updated (clause now present + shaped).
-- [x] 5.3 Authored EX6-057 Lilithmon (`cards/ex6/EX6-057.yaml`): clause 1 `[OP][WD]` grant "[EoT] Delete this" to a selected opponent Digimon (until end of opponent turn); clause 2 `[All Turns][OPT]` `when_would_leave` cost-replacement (delete a Lv5- Digimon to cancel the leave, not by battle); clause 3 `[Opp Turn][OPT]` on-deletion trash opponent's top security. Per-card tests in `tests/cards_behavioral/ex6/ex6_057.rs` (2).
-- [~] 5.4 Q16 un-ignored and PASSES (`e_partition_digixros::q16_...`). Q17 DEFERRED (needs BT16-102 + BT21-036 + 4.1b immunity-removal).
+- [x] 5.3 Authored EX6-057 Lilithmon (`cards/ex6/EX6-057.yaml`): clause 1 `[OP][WD]` grant "[EoT] Delete this" to a selected opponent Digimon (until end of opponent turn); clause 2 `[All Turns][OPT]` `when_would_leave` cost-replacement (delete a Lv5- Digimon to cancel the leave, not by battle); clause 3 `[Opp Turn][OPT]` on-deletion trash opponent's top security. AND authored BT16-102 Magnamon (X Antibody) (`cards/bt16/BT16-102.yaml`): `<Blocker>`, `<Armor Purge>`, `[When Digivolving]` conditional opponent-effect immunity + +3000 DP + unsuspend, `[All Turns][OPT]` re-activate `[When Digivolving]` on security removal. Per-card tests in `tests/cards_behavioral/ex6/ex6_057.rs` (2) + `bt16/bt16_102.rs` (2). BT21-036 Magnamon NOT authored — its only Q17 role was an Armor-Form digivolution source (staged synthetically); blocks no judge-quiz question.
+- [x] 5.4 Q16 (`e_partition_digixros::q16_...`) and Q17 (`a_immunity_scope::q17_...`) un-ignored and PASS.
 
 ## 6. Reconcile and verify
 
-- [x] 6.1 Moved the `G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT` Q2 slice from `qa/dsl-vocab-gaps.md` to `qa/resolved-gaps.md` (Q16/Q17 directions noted as still open).
-- [x] 6.2 Updated `qa/qa-reports/judge-quiz.md`: Q2 → PASS (Q16/Q17 remain BLOCKED-CARD on EX6-057).
-- [ ] 6.3 Full-suite green gate — run with the sibling changes before archiving (Q16/Q17 still open, so this change is not fully complete).
+- [x] 6.1 Moved the full `G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT` gap (all three directions Q2/Q16/Q17) from `qa/dsl-vocab-gaps.md` to `qa/resolved-gaps.md`.
+- [x] 6.2 Updated `qa/qa-reports/judge-quiz.md` + `card-resolution.md`: Q2/Q16/Q17 → PASS.
+- [x] 6.3 Full-suite green gate: `cargo test --features dsl-yaml-loader --no-fail-fast` shows only the 17 PRE-EXISTING failures (confirmed on origin/main); the `dsl`, `judge_quiz`, and granted-effect suites pass. Change is complete (Q2/Q16/Q17 pinned; BT21-036 not needed).

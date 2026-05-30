@@ -23,7 +23,7 @@
 use digimon_engine::action::PLAY_HAND_START;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, GamePhase};
+use digimon_engine::enums::{CardColor, CardKind, EffectSourceKind, EffectTiming, GamePhase};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{AttackState, AttackTarget, PendingAttack, TriggerSource};
 
@@ -234,11 +234,92 @@ fn set_active_attacker(r: &mut DebugRunner, attacker: PermanentHandle) {
 #[ignore = "BLOCKED-CARD: needs BT13-088 (Belphemon: Sleep Mode). BT24-017 is implemented."]
 fn q1_belphemon_opp_turn_ends_attack_through_progress() {}
 
-/// Q17 — Magnamon (X Antibody) (BT16-102) [When Digivolving] immunity removes the
-/// Lilithmon (EX6-057)-granted "[EoT] Delete this". Judge: NO (does not activate).
+/// Q17 — RESOLVED 2026-05-29 (change `add-grant-triggered-effect-dsl`): a
+/// Lilithmon (EX6-057)-granted "[End of Your Turn] Delete this" is an
+/// OPPONENT-sourced granted effect. Magnamon (X Antibody) (BT16-102)'s
+/// [When Digivolving] makes it "isn't affected by your opponent's effects until
+/// the end of your opponent's turn", so when the granted [EoT] delete would
+/// fire the granted-trigger dispatch suppresses it
+/// (`permanent_is_unaffected_by_effect`) → the delete does NOT activate.
+/// (Staged with a synthetic [Armor Form] digivolution source — BT21-036
+/// Magnamon's only role in the judge scenario is being that Armor-Form source;
+/// its own effects don't fire as a digivolution card.)
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT16-102 (Magnamon X), BT21-036 (Magnamon), EX6-057 (Lilithmon)."]
-fn q17_magnamon_x_immunity_removes_granted_eot_delete() {}
+fn q17_magnamon_x_immunity_removes_granted_eot_delete() {
+    use digimon_engine::enums::ModifierType;
+
+    let armor_src = {
+        let mut c = make_test_card("ARMORSRC", "Armor Src");
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(5);
+        c.traits = vec!["Armor Form".to_string()];
+        c
+    };
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT16-102")
+        .expect("BT16-102 Magnamon (X Antibody) loads")
+        .dsl_card("EX6-057")
+        .expect("EX6-057 Lilithmon loads")
+        .add_card(armor_src)
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    // Player 1's Magnamon X, stacked on an [Armor Form] source so its
+    // [When Digivolving] immunity condition passes.
+    let magnamon_x = r.place_stack(1, &["ARMORSRC", "BT16-102"]);
+
+    // Player 0 plays Lilithmon → grants the (only) opponent Digimon (Magnamon X)
+    // the "[End of Your Turn] Delete this" — installed BEFORE the immunity, like
+    // the judge scenario (grant on Magnamon, then it digivolves into Magnamon X).
+    let lilithmon = r.place_on_field(0, "EX6-057", None);
+    r.fire_on_play(0, lilithmon.index as usize);
+    if let Some(sel) = r.game.pending_selection.as_ref() {
+        let who = sel.selecting_player;
+        let aid = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(who, aid);
+    }
+    assert!(
+        !r.game
+            .modifiers
+            .granted_triggered_for_timing(magnamon_x, EffectTiming::EndOfYourTurn)
+            .is_empty(),
+        "Lilithmon grant installed the [EoT] delete on Magnamon X"
+    );
+
+    // Magnamon X's [When Digivolving] fires → "isn't affected by your opponent's
+    // effects until end of opponent's turn" (+ DP + unsuspend).
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnamon_x),
+    );
+    r.game.drain_effect_queue();
+    assert!(
+        r.game
+            .permanent_is_unaffected_by_effect(magnamon_x, 0, EffectSourceKind::Digimon),
+        "Magnamon X's [When Digivolving] must grant opponent-effect immunity"
+    );
+
+    // Fire the granted "[End of Your Turn] Delete this" → it is the opponent's
+    // (Lilithmon's) effect, and Magnamon X is immune → SUPPRESSED, not deleted.
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::Permanent(magnamon_x),
+    );
+    r.game.drain_effect_queue();
+
+    let magnamon_x_alive = r.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == "BT16-102");
+    assert!(
+        magnamon_x_alive,
+        "Magnamon X's opponent-effect immunity must suppress the Lilithmon-granted \
+         [EoT] delete (judge-quiz Q17: does NOT activate)"
+    );
+    let _ = ModifierType::CannotBeAffected;
+}
 
 /// Q18 — Quantumon (LM-020) immunity is to ALL Digimon effects incl. its own;
 /// `<Blast Digivolve>` into Imperialdramon: PM ACE (BT17-077) is an effect. Judge: NO.

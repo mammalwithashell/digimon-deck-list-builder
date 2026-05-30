@@ -1632,15 +1632,27 @@ impl Game {
             .granted_triggered_for_timing_with_ids(handle, timing);
         let tp_for_granted = self.turn_player();
         for (body_id, source_card, source_player) in granted_entries {
-            // Cause attribution (judge-quiz Q2): a granted triggered effect is
-            // the GRANTOR's effect from the carrier's perspective. If the
-            // carrier is unaffected by that player's effects right now — e.g.
-            // <Progress> (or `ImmunityToOpponentEffects`) while it is the
-            // current attacker — the granted clause does NOT fire. We gate at
-            // enqueue time (while `pending_attack` is still set, so the
-            // `current_attacker` check inside `progress_excludes` is valid).
-            // No-op for same-controller grants and non-attack timings.
-            if self.progress_excludes(handle, Some(source_player)) {
+            // Cause attribution: a granted triggered effect is the GRANTOR's
+            // effect from the carrier's perspective. If the carrier is
+            // unaffected by that player's effects, the granted clause does NOT
+            // fire. Two flavors:
+            //   • `<Progress>` / `ImmunityToOpponentEffects` while the carrier
+            //     is the current attacker (judge-quiz Q2) — gated at enqueue
+            //     time while `pending_attack` is still set.
+            //   • A general `CannotBeAffected` opponent-effect immunity (e.g.
+            //     Magnamon (X Antibody)'s "isn't affected by your opponent's
+            //     effects") removes the opponent-granted clause — judge-quiz
+            //     Q17. The granted effect is the grantor's, so we test
+            //     immunity against `source_player`, keyed to the grantor's
+            //     effect-source kind.
+            // No-op for same-controller grants.
+            let grantor_kind = self
+                .card_data_for_handle(source_card)
+                .map(|d| source_kind_for_card_kind(d.card_kind))
+                .unwrap_or(crate::enums::EffectSourceKind::Digimon);
+            if self.progress_excludes(handle, Some(source_player))
+                || self.permanent_is_unaffected_by_effect(handle, source_player, grantor_kind)
+            {
                 continue;
             }
             // D4 / DCGO: a granted effect is the GRANTEE's own effect once
@@ -1649,8 +1661,7 @@ impl Game {
             // controller so a deletion it causes is the carrier's OwnEffect
             // (e.g. AD1-… <Partition> does NOT fire on a granted self-delete —
             // judge-quiz Q16). The grantor (`source_player`) is used only for
-            // the immunity gate above (Q2), never for body attribution.
-            let _ = source_player;
+            // the immunity gate above, never for body attribution.
             let carrier_controller = handle.player;
             self.effect_queue.push_back(QueuedEffect {
                 source_card,
@@ -1959,9 +1970,16 @@ impl Game {
         let tp_for_granted = self.turn_player();
         for (body_id, source_card, source_player) in granted_entries {
             // D4 / DCGO: granted body runs as the carrier's own effect (see the
-            // battle-area dispatch above). `source_player` (grantor) is for the
-            // immunity gate only; breeding carriers can't attack so no gate here.
-            let _ = source_player;
+            // battle-area dispatch above). `source_player` (grantor) gates only
+            // the opponent-effect immunity check (Q17) — a breeding carrier
+            // can't be the current attacker, so the Progress branch is moot.
+            let grantor_kind = self
+                .card_data_for_handle(source_card)
+                .map(|d| source_kind_for_card_kind(d.card_kind))
+                .unwrap_or(crate::enums::EffectSourceKind::Digimon);
+            if self.permanent_is_unaffected_by_effect(handle, source_player, grantor_kind) {
+                continue;
+            }
             let carrier_controller = handle.player;
             let source_kind = self
                 .player(handle.player)

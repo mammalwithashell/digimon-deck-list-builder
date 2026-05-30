@@ -1144,9 +1144,12 @@ loses no memory; a non-Progress control loses 2). Full note in
 `qa/resolved-gaps.md`. **Q16 also closed (2026-05-29):** EX6-057 Lilithmon
 authored; the granted body now runs as the carrier's OWN effect (D4/DCGO —
 sourced from `selectedPermanent.TopCard`), so its granted `[EoT] Delete this` is
-OwnEffect and `<Partition>` skips it (judge-quiz Q16 PASS). **Still open — Q17
-only:** needs BT16-102 Magnamon X + BT21-036 Magnamon authored AND an "immunity
-removes a granted slot" mechanic (the immune carrier dropping the granted delete).
+OwnEffect and `<Partition>` skips it (judge-quiz Q16 PASS). **Q17 also closed
+(2026-05-29):** the granted-trigger dispatch also gates on
+`permanent_is_unaffected_by_effect`, so a carrier immune to the grantor's
+effects (Magnamon X BT16-102's "isn't affected by your opponent's effects")
+suppresses the granted clause (judge-quiz Q17 PASS). All three directions
+(Q2/Q16/Q17) are now resolved; full entry in `qa/resolved-gaps.md`.
 
 [ORIGINAL ENTRY BELOW]
 
