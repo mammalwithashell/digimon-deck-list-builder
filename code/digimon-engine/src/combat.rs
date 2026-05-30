@@ -292,9 +292,23 @@ impl Game {
                 continue;
             };
             for effect in &effects {
-                if effect.applies_to_opponent_security_dp {
-                    total = total.saturating_add(effect.dp_modifier);
+                if !effect.applies_to_opponent_security_dp {
+                    continue;
                 }
+                // Honor the aura's `active_when`/condition gate (mirrors
+                // `static_dp_aura_bonus`). Controller is the attacker.
+                let rctx = crate::effect_context::EffectReadContext::new(
+                    self,
+                    source.handle(),
+                    None,
+                    attacker.player,
+                );
+                if let Some(condition) = &effect.condition {
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                total = total.saturating_add(effect.dp_modifier);
             }
         }
         total
@@ -321,9 +335,25 @@ impl Game {
                     continue;
                 };
                 for effect in &effects {
-                    if effect.applies_to_own_security_dp {
-                        total = total.saturating_add(effect.dp_modifier);
+                    if !effect.applies_to_own_security_dp {
+                        continue;
                     }
+                    // Honor the aura's `active_when`/condition gate — e.g. T.K.
+                    // Takaishi's "[Opponent's Turn] ... +2000" must not apply on
+                    // the controller's own turn (mirrors `static_dp_aura_bonus`).
+                    // The controller is `defender`.
+                    let rctx = crate::effect_context::EffectReadContext::new(
+                        self,
+                        source.handle(),
+                        None,
+                        defender,
+                    );
+                    if let Some(condition) = &effect.condition {
+                        if !condition(&rctx) {
+                            continue;
+                        }
+                    }
+                    total = total.saturating_add(effect.dp_modifier);
                 }
             }
         }
@@ -2568,6 +2598,16 @@ impl Game {
         if !self.handle_valid(attacker) {
             return 0;
         }
+        // Refresh declarative state so the `<Security A.>` keyword term below
+        // reads the CURRENT materialized grants. Inherited/aura declarative
+        // `grant_keyword` grants (e.g. ST1-07 Greymon's inherited `<Security A.
+        // +1>`) live in the keyword registry only after a tick; the strike must
+        // not read a stale cache. The `decode_action` path ticks before resolving
+        // an attack, but direct callers (and mid-attack board changes between the
+        // per-iteration recomputes) would otherwise miss it. `tick_declarative_
+        // effects` is idempotent and de-dups own grants already printed in
+        // `card_data`, so this does not double-count.
+        self.tick_declarative_effects();
         let sa_modifier = self
             .modifiers
             .sum(attacker, ModifierType::SecurityAttackChange);
@@ -2588,6 +2628,15 @@ impl Game {
             })
             .sum();
         let sa_keyword = self.security_attack_keyword_bonus(attacker);
+        // A `security_attack_fn` formula aura is BASE-INCLUSIVE: it returns the
+        // total base check count (the default 1, replaced by the formula's value
+        // when active), and multiple formula auras take the MAX rather than
+        // summing. Flat `<Security A.>` keyword/modifier deltas (`sa_keyword`,
+        // `sa_modifier`, `change_s_attack`) are then added on top. A card whose
+        // `<Security A.>` is itself variable (e.g. WarGreymon's `1 + floor(n/2)`)
+        // must author its formula base-inclusive — `base: 2` over `material_count`
+        // yields `floor((2 + n)/2) = 1 + floor(n/2)`, NOT a bare delta `base: 0`.
+        // When no formula aura is active the default base of 1 applies.
         let base_checks = self
             .dynamic_security_attack_aura_bonus(attacker)
             .unwrap_or(1);

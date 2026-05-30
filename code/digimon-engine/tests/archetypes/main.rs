@@ -43,3 +43,9 @@ mod fixture_smoke {
 // ── Per-archetype interaction suites ─────────────────────────────────────────
 
 mod rocks;
+mod st1_gaia_red;
+mod st2_cocytus_blue;
+mod st3_heavens_yellow;
+mod st4_giga_green;
+mod st5_machine_black;
+mod st6_venomous_violet;

@@ -1,0 +1,83 @@
+# BT1-085 Tai Kamiya — Tamer, Red, Cost 4.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [Your Turn] All of your red Digimon with 4 or more digivolution cards gain
+#   ＜Security A. +1＞ (This Digimon checks 1 additional security card.)
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT1/Red/BT1_085.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartTurn` → `SetMemoryTo3TamerEffect(card)`, the
+#   canonical "[Start of Your Turn] if memory <= 2, set it to 3" ramp idiom
+#   (sister cards BT2-089, BT4-094, BT21-102, BT13-095). Authored as a
+#   StartOfYourTurn triggered clause gated on `memory_lte: 2` with a
+#   `set_memory: 3` process step.
+#
+# Clause 2 — `EffectTiming.None` passive declarative via
+#   `ChangeSAttackStaticEffect(permanentCondition, changeValue: 1,
+#   isInheritedEffect: false, condition)`:
+#     - `condition`        = `IsExistOnBattleArea(card) && IsOwnerTurn(card)`
+#                            → `active_when: { your_turn: true }`.
+#     - `permanentCondition` = own battle-area Digimon whose
+#                            `TopCard.CardColors.Contains(Red)` AND
+#                            `DigivolutionCards.Count >= 4`.
+#     - `changeValue: 1`   = a FLAT +1 delta. The digivolution-card count is a
+#                            FILTER on which Digimon get the buff, NOT a formula
+#                            value — so this is a flat `grant_keyword:
+#                            SecurityAttackPlus(1)` (summed via
+#                            `security_attack_keyword_bonus`), NOT a
+#                            `security_attack_fn` formula aura. It therefore
+#                            SUMS with WarGreymon's (ST1-11) base-inclusive
+#                            formula rather than colliding on the formula MAX.
+#
+#   Filter mapping:
+#     - `color_is: red`     ← TopCard.CardColors.Contains(Red). `color_is`
+#                            resolves the permanent's effective (top-card) color.
+#     - `stack_size_gte: 5` ← DigivolutionCards.Count >= 4. The engine's
+#                            stack_size = card_sources.len() = top card + N
+#                            digivolution cards, so "4 or more digivolution
+#                            cards" is stack_size >= 5 (same convention as
+#                            BT12-031's `stack_size_lte: 1` = "no digi cards").
+#
+# Clause 3 (Security) — `EffectTiming.SecuritySkill` →
+#   `PlaySelfTamerSecurityEffect(card)`, the canonical "[Security] Play this
+#   card without paying the cost" Tamer idiom (sister BT5-093, BT22-084).
+#   Mandatory — no [Security] effect is opt-out per RULES_CONTEXT.md §16.
+
+card: BT1-085
+name: Tai Kamiya
+kind: tamer
+color: [red]
+cost: 4
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] if memory <= 2, set it to 3 ──────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2: [Your Turn] your red 4+source Digimon gain <Security A. +1> ────
+  - kind: aura
+    summary: "[Your Turn] Your red Digimon with 4+ digivolution cards gain <Security A. +1>"
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      color_is: red
+      stack_size_gte: 5
+    grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
+
+  # ─── Clause 3: [Security] play self without paying the cost ──────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
