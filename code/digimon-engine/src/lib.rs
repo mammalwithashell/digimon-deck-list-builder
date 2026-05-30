@@ -9,6 +9,7 @@ pub mod card_registry;
 pub mod card_source;
 pub mod cards;
 pub mod combat;
+pub mod dcgo_recording;
 pub mod debug_runner;
 pub mod deck_tools;
 pub mod deletion_batch;

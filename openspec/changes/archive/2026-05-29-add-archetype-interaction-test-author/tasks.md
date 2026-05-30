@@ -1,0 +1,34 @@
+## 1. Interaction-test home + multi-card fixtures
+
+- [x] 1.1 Created `code/digimon-engine/tests/archetypes/` (`main.rs` entry) and wired a `[[test]] name = "archetypes"` target in `code/digimon-engine/Cargo.toml`. Runs via `cargo test --test archetypes`
+- [x] 1.2 Added `tests/archetypes/support.rs` fixtures: `dsl_builder(&[ids])` (load N DSL cards into a builder, panics naming a bad id), `BoardSnapshot` + `snapshot(&runner)` (both players' field/hand/security/trash/deck + memory for a before/after net-outcome diff), `run_actions` (scripted `(player, action_id)` sequence with auto-resolve between steps). Richer board setup reuses existing `DebugRunner`/`DebugRunnerBuilder` (`place_stack`, `security`, `deck`, …)
+- [x] 1.3 Authored `tests/archetypes/rocks.rs` — the exemplar Rocks combo "Greymon removal, Koromon-enabled" (BT17-102 `[When Digivolving]` delete): a 3-card interaction where the Koromon enabler raises Greymon's effective DP 5000→8000, flipping a 6000-DP opponent target from safe to deletable. Two tests (enabler present ⇒ deleted; enabler absent ⇒ spared) + a fixture self-test. **All 3 pass.**
+- [x] 1.4 Extended `docs/RUST_DSL_TEST_API.md` §2: added the fourth "Archetype interaction tests" bucket (home, `support.rs` fixtures, traceability-to-model, triage-like-a-divergence) and updated the decision tree
+
+## 2. Static-test harness
+
+- [x] 2.1 `check_deck_legality` (new crate `code/tools/archetype-static-tests/`): rules-legality (50-card main, 0–5 egg, ≤4 copies, all cards in pool) + `Game::new` construction; reports the specific violation(s). Verified on a real Rocks meta deck (PASS, main_count=50)
+- [x] 2.2 `coverage_gate`: cross-references the unique pool against `validated_cards_dsl.json`; IMPLEMENTED/PASS = implemented, absent = "unknown" (reported, never counted as passing), other = failing; configurable `threshold` on the implemented ratio (default 1.0). Fixed the pass condition to be `ratio ≥ threshold` (not "no unknowns") so the threshold is meaningful
+- [x] 2.3 `smoke_games`: N mirror-match self-play games via `HeadlessRunner::run_until_conclusion` with a per-seed random-legal policy, each wrapped in `catch_unwind` (panic hook suppressed); liveness gate only; reports the failing seed + panic message. Ran clean on Rocks
+- [x] 2.4 `combo_presence`: asserts every card in each combo is implemented (engine registry ∪ validated-tracker IMPLEMENTED/PASS); reports each blocked combo + its missing card(s)
+- [x] 2.5 CLI `archetype-static-tests <archetype> [--threshold --smoke-games --max-steps --combo name=A,B --combos-file --json --no-write]` runs all four and prints structured per-invariant results; exits 2 if any fails. Verified end-to-end on Rocks
+- [x] 2.6 `qa/qa-reports/archetype_interactions.json` schema (`{version, last_updated, archetypes: {NAME: {updated, static_tests: {deck_legality, coverage_gate, smoke_games, combo_presence}, combos_tested, findings}}}`) + `record_run` (merges per-archetype without clobbering); CLI writes it. Initial Rocks entry recorded
+- [x] 2.7 Harness self-tests (**9 pass**): real Rocks deck passes deck-legality (+ a 10-card deck reports the size violation); full-implementation coverage passes; sub-threshold pool reports failing+unknown; unknown not counted as passing; all-combo-present passes; missing combo piece blocks the combo; alias canonicalization; `record_run` keys-by-archetype + stamps timestamp
+
+## 3. Skill: research → model → plan → author → execute → triage
+
+- [x] 3.1 Authored `.claude/skills/archetype-interaction-test-author/SKILL.md` (frontmatter + capstone framing: runs after `/batch-implement-cards-rust-dsl`, composes with `/assess-archetype-rust`, never re-implements cards; positioned as the proactive third mode alongside `/replay-bug-hunt`)
+- [x] 3.2 Phase 1 Research: resolve via `resolve_deck.py --json`; read printed text + DCGO C# (`$BASE_DCGO/.../<CARD_ID>.cs`) + `general_rule.pdf` §16; Pinecone `digimon-engine` index per the family convention
+- [x] 3.3 Phase 2 Model: emit `qa/archetype-qa/<archetype>-model.md` with the fixed structure (pool+roles, digi-lines, named combos w/ cards+expected outcome+rules basis+rank, playstyle, win conditions, ranked interactions) — sources cited inline; emitted before any test
+- [x] 3.4 Phase 3 Plan: rank by play-frequency × payoff-centrality; select top-N (`--top-n`) and **`log()` the dropped interactions**; enumerate the four static checks
+- [x] 3.5 Phase 4 Precondition gating: run coverage-gate + combo-presence via the harness before authoring; blocked combos reported + missing cards routed to the implementation backlog / `RUST_ENGINE_GAPS.md` / `engine-gaps.md`; author only combos whose pieces are all present
+- [x] 3.6 Phase 5 Author: write DebugRunner interaction tests under `tests/archetypes/<slug>.rs` via the shared fixtures, one test per model combo, asserting the mechanical outcome (BoardSnapshot diff) + unhappy path; doc-comment traceable to the combo; register in `main.rs`
+- [x] 3.7 Phase 6 Execute+triage: run interaction + static tests; confirm failures vs card text + `general_rule.pdf` + DCGO C# before filing; route engine-primitive → `RUST_ENGINE_GAPS.md`, card-effect → `engine-gaps.md`; record the run in `archetype_interactions.json`; never edit engine code
+- [x] 3.8 Three-wave sub-agent structure documented: Sonnet scout (model+plan) → Sonnet implementer (tests) → Opus reviewer (audits model+tests vs card text/rules before commit); orchestrator owns `main.rs` registration; plan-approve-execute gate before the implementer wave
+- [x] 3.9 Optional MCP-assisted combo prototyping documented (`new_game_debug` → `legal_actions` → `step` to confirm the sequence before writing the Rust test; degrades gracefully when the MCP is absent)
+
+## 4. End-to-end validation + docs
+
+- [x] 4.1 Dry-ran the skill on **Rocks** (fully-implemented): emitted the well-formed model `qa/archetype-qa/Rocks-model.md` (fixed structure, sources cited) → authored interaction tests `tests/archetypes/rocks.rs` traceable to its "Greymon removal, Koromon-enabled" combo (**2 tests pass**) → ran the four static gates (deck-legality PASS, coverage 86%, smoke 3/3, combo-presence PASS) → recorded in `qa/qa-reports/archetype_interactions.json`. Outcome: a **clean pass** (spec allows "confirmed finding OR clean pass")
+- [x] 4.2 `docs/INDEX.md`: added the **three bug-discovery modes** callout (replay differential / replay judge / archetype probe, all routing to the shared trackers, sitting above the per-card family) + extended the RUST_DSL_TEST_API row with the interaction-test bucket + the `archetype-static-tests` crate
+- [x] 4.3 `CLAUDE.md` Documentation section: added the "Archetype interaction testing (capstone)" bullet (proactive third mode, model artifact, interaction-test home + fixtures, the four static tests + crate + tracker, capstone composition + no-card-reimplementation + findings routing)

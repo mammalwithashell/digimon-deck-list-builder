@@ -1,0 +1,64 @@
+{
+  "archetypes": {
+    "Rocks": {
+      "combos_tested": [
+        "Greymon removal, Koromon-enabled"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 1
+          },
+          "detail": "all 1 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 48,
+            "ratio": 0.8571428571428571,
+            "threshold": 0.85,
+            "total": 56,
+            "unknown_cards": [
+              "P-161",
+              "P-033",
+              "ST22-09",
+              "BT15-096",
+              "ST15-16",
+              "BT2-105",
+              "BT4-109",
+              "BT5-105"
+            ]
+          },
+          "detail": "coverage 48/56 = 86% (threshold 85%); 0 failing, 8 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 3,
+            "games": 3
+          },
+          "detail": "3/3 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30"
+    }
+  },
+  "last_updated": "2026-05-30",
+  "version": 1
+}

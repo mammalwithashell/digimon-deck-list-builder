@@ -16,6 +16,7 @@
 use serde::Serialize;
 
 use crate::card_data::CardData;
+use crate::card_source::CardSource;
 use crate::enums::{CardColor, CardKind, EffectSourceKind, GamePhase, PlayerId};
 use crate::events::GameEvent;
 use crate::game::{Game, TerminalOutcomeReason};
@@ -36,6 +37,26 @@ mod tests;
 pub enum Perspective {
     Player(PlayerId),
     God,
+}
+
+/// Sentinel `card_id` for an unrevealed opaque-deck card. Consumers read this
+/// (alongside the parallel placeholder flag) instead of a meaningless concrete
+/// identity, until the reveal stream materializes the card. Used by opaque
+/// (DCGO PvP) replays where even the god view does not know the opponent's
+/// unrevealed cards.
+pub const OPAQUE_PLACEHOLDER_CARD_ID: &str = "<hidden>";
+
+/// Resolve a card source to its concrete `card_id`, or the opaque placeholder
+/// sentinel when its identity is not yet known. Returns
+/// `(card_id, is_placeholder)`. A placeholder's `data_index` is meaningless
+/// (set to 0), so this MUST be used instead of `game.card_data[data_index]`
+/// for any zone that can hold opaque placeholders.
+fn card_id_or_placeholder(game: &Game, cs: &CardSource) -> (String, bool) {
+    if cs.is_opaque_placeholder {
+        (OPAQUE_PLACEHOLDER_CARD_ID.to_string(), true)
+    } else {
+        (game.card_data[cs.data_index].card_id.clone(), false)
+    }
 }
 
 impl Perspective {
@@ -94,6 +115,9 @@ pub struct HandCardEntry {
     pub card_name: String,
     pub kind: String,
     pub play_cost: u16,
+    /// True when this is an unrevealed opaque-deck card: `card_id` is the
+    /// `OPAQUE_PLACEHOLDER_CARD_ID` sentinel, not a real identity.
+    pub is_placeholder: bool,
 }
 
 /// Hand contents from a chosen perspective.
@@ -117,13 +141,25 @@ impl HandView {
                     .iter()
                     .enumerate()
                     .map(|(idx, cs)| {
+                        let (card_id, is_placeholder) = card_id_or_placeholder(game, cs);
+                        if is_placeholder {
+                            return HandCardEntry {
+                                hand_index: idx,
+                                card_id,
+                                card_name: OPAQUE_PLACEHOLDER_CARD_ID.to_string(),
+                                kind: "Unknown".to_string(),
+                                play_cost: 0,
+                                is_placeholder: true,
+                            };
+                        }
                         let cd = &game.card_data[cs.data_index];
                         HandCardEntry {
                             hand_index: idx,
-                            card_id: cd.card_id.clone(),
+                            card_id,
                             card_name: cd.card_name.clone(),
                             kind: format!("{:?}", cd.card_kind),
                             play_cost: cd.play_cost,
+                            is_placeholder: false,
                         }
                     })
                     .collect(),
@@ -149,27 +185,37 @@ impl HandView {
 pub struct SecurityView {
     pub player: PlayerId,
     pub count: usize,
-    /// God view only. Bottom-up ordering matches engine internals.
+    /// God view only. Bottom-up ordering matches engine internals. Unrevealed
+    /// opaque-deck cards render as the `OPAQUE_PLACEHOLDER_CARD_ID` sentinel
+    /// (see the parallel `placeholders` flags).
     pub card_ids: Option<Vec<String>>,
+    /// God view only. Parallel to `card_ids`: `true` where the entry is an
+    /// unrevealed opaque placeholder (its real identity is not yet known).
+    pub placeholders: Option<Vec<bool>>,
 }
 
 impl SecurityView {
     pub fn from_game(game: &Game, player: PlayerId, perspective: Perspective) -> Self {
         let p = game.player(player);
         let count = p.security.len();
-        let card_ids = match perspective {
-            Perspective::God => Some(
-                p.security
+        let (card_ids, placeholders) = match perspective {
+            Perspective::God => {
+                let resolved: Vec<(String, bool)> = p
+                    .security
                     .iter()
-                    .map(|cs| game.card_data[cs.data_index].card_id.clone())
-                    .collect(),
-            ),
-            Perspective::Player(_) => None,
+                    .map(|cs| card_id_or_placeholder(game, cs))
+                    .collect();
+                let ids = resolved.iter().map(|(id, _)| id.clone()).collect();
+                let flags = resolved.iter().map(|(_, ph)| *ph).collect();
+                (Some(ids), Some(flags))
+            }
+            Perspective::Player(_) => (None, None),
         };
         Self {
             player,
             count,
             card_ids,
+            placeholders,
         }
     }
 }
@@ -220,7 +266,12 @@ pub struct PermanentView {
     pub level: Option<u8>,
     pub dp: Option<i32>,
     pub colors: Vec<String>,
+    /// True when the top card is an unrevealed opaque placeholder (`top_card_id`
+    /// is the `OPAQUE_PLACEHOLDER_CARD_ID` sentinel). Normally false — field
+    /// permanents are revealed when played; surfaced for uniformity.
+    pub top_is_placeholder: bool,
     /// Whole digivolution stack bottom-up. Index 0 = bottom source; last = top.
+    /// Placeholder sources render as the sentinel id.
     pub stack_card_ids: Vec<String>,
     pub linked_card_ids: Vec<String>,
     pub is_suspended: bool,
@@ -238,11 +289,12 @@ impl PermanentView {
             .card_sources
             .last()
             .expect("permanent has at least one card source");
+        let (top_card_id, top_is_placeholder) = card_id_or_placeholder(game, top);
         let top_cd = &data[top.data_index];
         let stack_card_ids = perm
             .card_sources
             .iter()
-            .map(|cs| data[cs.data_index].card_id.clone())
+            .map(|cs| card_id_or_placeholder(game, cs).0)
             .collect();
         let linked_card_ids = perm
             .linked_cards
@@ -261,13 +313,14 @@ impl PermanentView {
             .collect();
         Self {
             handle,
-            top_card_id: top_cd.card_id.clone(),
+            top_card_id,
             top_card_name: top_cd.card_name.clone(),
             kind: format!("{:?}", top_cd.card_kind),
 
             level: top_cd.level,
             dp: top_cd.dp,
             colors,
+            top_is_placeholder,
             stack_card_ids,
             linked_card_ids,
             is_suspended: perm.is_suspended,

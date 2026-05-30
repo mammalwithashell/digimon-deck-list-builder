@@ -922,6 +922,119 @@ impl Game {
         Ok(game)
     }
 
+    /// Reset this game's **mutable** state in place to a clean, pre-deal
+    /// state — reusing the already-built immutable shared state
+    /// (`card_data`, `effect_registry`, `formula_extensions`,
+    /// `token_registry`, `alt_path_registry`), `rules`, and the installed
+    /// `logger`. This is the cheap foundation for replay reset-and-replay
+    /// (see `runners::replay`): backward seek resets in place and replays
+    /// forward instead of reconstructing via `Game::new` (which would clone
+    /// every `CardData` and rebuild every registry).
+    ///
+    /// A full-state snapshot of `Game` is not possible — the mutable graph
+    /// is closure-bearing (`ModifierEntry` is non-`Clone`,
+    /// `pending_selection` carries a boxed callback, several parked
+    /// continuations hold closures). Reset-and-replay sidesteps that.
+    ///
+    /// **Maintenance invariant:** every mutable field added to `Game` MUST
+    /// be reset here to its `Game::new` default. The
+    /// `reset_for_replay_restores_defaults` guard test asserts this; keep
+    /// the two in lockstep. Fields intentionally preserved: `rules`,
+    /// `card_data`, `alt_path_registry`, `effect_registry`,
+    /// `formula_extensions`, `token_registry`, `logger`.
+    pub fn reset_for_replay(&mut self) {
+        let player_count = self.rules.player_count as usize;
+        // Fresh players — zones are re-laid by the replay relay step.
+        self.players = (0..player_count)
+            .map(|i| Player::new(i as PlayerId))
+            .collect();
+        self.turn_count = 0;
+        self.n_digivolutions = [0u32, 0u32];
+        self.n_dna_digivolutions = [0u32, 0u32];
+        self.n_digivolve_driven_attacks = [0u32, 0u32];
+        self.digimon_attacks_this_turn = [0u32, 0u32];
+        self.current_phase = GamePhase::Mulligan;
+        self.memory = 0;
+        let turn_order: Vec<PlayerId> = (0..self.rules.player_count).collect();
+        self.memory_pair = if turn_order.len() >= 2 {
+            (turn_order[0], turn_order[1])
+        } else {
+            (turn_order[0], turn_order[0])
+        };
+        self.turn_order = turn_order;
+        self.turn_player_idx = 0;
+        self.game_over = false;
+        self.winner = None;
+        self.terminal_outcome_reason = None;
+        // card_data / alt_path_registry / effect_registry / formula_extensions
+        // / token_registry intentionally preserved (immutable shared state).
+        self.modifiers = ModifierRegistry::new();
+        // Reseed deterministically — mirrors the historical backward-seek
+        // rebuild path (`Game::new(.., Some(0))`).
+        self.rng = StdRng::seed_from_u64(0);
+        self.next_card_index = 0;
+        self.mulligan_pending = Vec::new();
+        self.mulligan_used = vec![false; player_count];
+        self.revealed_cards = Vec::new();
+        self.pending_selection = None;
+        self.effect_queue = EffectQueue::new();
+        self.pending_granted_fires = Vec::new();
+        self.granted_effect_bodies = crate::modifiers::GrantedEffectBodyRegistry::default();
+        self.next_granted_effect_id = 0;
+        self.pending_pay_cost_effect = None;
+        self.pending_pay_cost_stack = Vec::new();
+        self.pending_attack = None;
+        self.pending_security = None;
+        self.pending_effect_security_removal = Vec::new();
+        self.pending_option = None;
+        self.pending_option_placed_turn_check = false;
+        self.pending_option_placed_link_resume = None;
+        self.security_resolution = None;
+        self.effect_chain_depth = 0;
+        // logger intentionally preserved (session owns the logger choice).
+        self.events = Vec::new();
+        self.event_seq = 0;
+        self.replacement_depth = 0;
+        self.replacement_pending_outcome = None;
+        self.last_play_order_choice = None;
+        self.pending_would_play_resume = None;
+        self.pending_would_link_resume = None;
+        self.pending_would_digivolve_resume = None;
+        self.player_digivolve_cost_reducers = Vec::new();
+        self.pending_player_digivolve_reduction = 0;
+        self.replacement_fired = std::collections::HashSet::new();
+        self.in_replacement_commit = false;
+        self.effect_source_player = None;
+        self.effect_source_card = None;
+        self.effect_source_permanent = None;
+        self.current_trigger_context = None;
+        self.current_deletion_cause = None;
+        self.current_deletion_event_cause_override = None;
+        self.pending_overclock_attack = None;
+        self.declined_overclock_this_eot = HashSet::new();
+        self.current_dna_origin = None;
+        self.parked_replacement = None;
+        self.dsl_replacement_outcome = None;
+        self.in_counter_window = false;
+        self.active_deletion_batch = None;
+        self.dsl_outer_tail = None;
+        self.dsl_clause_aborted = false;
+        self.scheduled_effects = Vec::new();
+        self.scheduled_drain_tail = None;
+        self.scheduled_provenance_deletions = Vec::new();
+        self.scheduled_provenance_deletions_opp = Vec::new();
+        self.pending_delayed_option_lifecycle = None;
+        self.pending_delayed_option_lifecycle_stack = Vec::new();
+        self.pending_end_turn_resume = None;
+        self.draining_deferred = 0;
+        self.until_condition_dirty = false;
+        self.until_condition_last_cycle_evaluations = 0;
+        self.until_condition_total_evaluations = 0;
+        self.until_condition_reevaluation_cycles = 0;
+        self.reveal_source = None;
+        self.opaque_data_index_map = None;
+    }
+
     /// Create a new game where one player's deck composition is known but
     /// its order is hidden — the engine consults `reveal_source` whenever
     /// it would draw from that player's pile. Used by the DCGO replay
@@ -4460,6 +4573,137 @@ impl Game {
             }
         }
         (total, used)
+    }
+}
+
+#[cfg(test)]
+mod reset_for_replay_tests {
+    use super::*;
+    use crate::card_data::CardData;
+    use crate::card_source::CardSource;
+    use crate::debug_runner::DebugRunner;
+    use crate::enums::{CardColor, CardKind};
+
+    fn card(id: &str) -> CardData {
+        CardData {
+            card_id: id.to_string(),
+            card_name: id.to_string(),
+            card_kind: CardKind::Digimon,
+            level: Some(4),
+            dp: Some(4000),
+            play_cost: 4,
+            colors: vec![CardColor::Red],
+            traits: Vec::new(),
+            evo_costs: Vec::new(),
+            dna_costs: Vec::new(),
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            security_text: String::new(),
+            keywords: Vec::new(),
+            effect_class_name: id.replace('-', "_"),
+            index: 0,
+            norm_id: 0.0,
+            dual: None,
+            ace_overflow: None,
+            digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
+        }
+    }
+
+    /// Guard for `Game::reset_for_replay`: dirty a broad set of mutable
+    /// fields, reset, and assert every one returns to its `Game::new`
+    /// default while the immutable shared state (`card_data`,
+    /// `token_registry`) is preserved. If a new mutable field is added to
+    /// `Game` and not reset in `reset_for_replay`, extend this test — it is
+    /// the lockstep guard called out in the method's doc comment.
+    #[test]
+    fn reset_for_replay_restores_defaults() {
+        let mut r = DebugRunner::builder()
+            .add_card(card("A"))
+            .add_card(card("B"))
+            .start();
+        let g = &mut r.game;
+
+        // Immutable shared state we expect preserved across reset.
+        let card_data_len = g.card_data.len();
+        assert!(card_data_len > 0, "card_data should be populated");
+        let token_count = g.token_registry.iter().count();
+        assert!(token_count > 0, "token registry should be populated");
+
+        // Dirty a representative spread of mutable / accumulator / transient
+        // fields (the plain-typed ones most likely to be forgotten).
+        g.turn_count = 7;
+        g.n_digivolutions = [3, 5];
+        g.n_dna_digivolutions = [1, 2];
+        g.n_digivolve_driven_attacks = [4, 4];
+        g.digimon_attacks_this_turn = [2, 1];
+        g.memory = 6;
+        g.game_over = true;
+        g.winner = Some(1);
+        g.event_seq = 99;
+        g.effect_chain_depth = 5;
+        g.replacement_depth = 3;
+        g.next_granted_effect_id = 42;
+        g.pending_player_digivolve_reduction = 9;
+        g.in_counter_window = true;
+        g.in_replacement_commit = true;
+        g.dsl_clause_aborted = true;
+        g.draining_deferred = 2;
+        g.until_condition_dirty = true;
+        g.until_condition_last_cycle_evaluations = 11;
+        g.until_condition_total_evaluations = 22;
+        g.until_condition_reevaluation_cycles = 33;
+        g.next_card_index = 123;
+        g.mulligan_used = vec![true, true];
+        g.revealed_cards.push(CardSource::new(0, 0, 0));
+
+        g.reset_for_replay();
+
+        // Immutable shared state preserved (not rebuilt / cleared).
+        assert_eq!(g.card_data.len(), card_data_len, "card_data preserved");
+        assert_eq!(
+            g.token_registry.iter().count(),
+            token_count,
+            "token registry preserved"
+        );
+
+        // Mutable state back to Game::new defaults.
+        assert_eq!(g.turn_count, 0);
+        assert_eq!(g.n_digivolutions, [0, 0]);
+        assert_eq!(g.n_dna_digivolutions, [0, 0]);
+        assert_eq!(g.n_digivolve_driven_attacks, [0, 0]);
+        assert_eq!(g.digimon_attacks_this_turn, [0, 0]);
+        assert_eq!(g.memory, 0);
+        assert!(!g.game_over);
+        assert!(g.winner.is_none());
+        assert!(g.terminal_outcome_reason.is_none());
+        assert_eq!(g.event_seq, 0);
+        assert!(g.events.is_empty());
+        assert_eq!(g.effect_chain_depth, 0);
+        assert_eq!(g.replacement_depth, 0);
+        assert_eq!(g.next_granted_effect_id, 0);
+        assert_eq!(g.pending_player_digivolve_reduction, 0);
+        assert!(!g.in_counter_window);
+        assert!(!g.in_replacement_commit);
+        assert!(!g.dsl_clause_aborted);
+        assert_eq!(g.draining_deferred, 0);
+        assert!(!g.until_condition_dirty);
+        assert_eq!(g.until_condition_last_cycle_evaluations, 0);
+        assert_eq!(g.until_condition_total_evaluations, 0);
+        assert_eq!(g.until_condition_reevaluation_cycles, 0);
+        assert_eq!(g.next_card_index, 0);
+        assert!(g.revealed_cards.is_empty());
+        assert!(g.pending_selection.is_none());
+        assert!(g.reveal_source.is_none());
+        assert!(g.opaque_data_index_map.is_none());
+        assert_eq!(g.current_phase, GamePhase::Mulligan);
+        assert!(g.mulligan_used.iter().all(|&u| !u));
+        assert!(
+            g.players
+                .iter()
+                .all(|p| p.hand.is_empty() && p.battle_area.is_empty() && p.deck.is_empty()),
+            "players reset to fresh (empty zones) — relay re-lays them"
+        );
     }
 }
 
