@@ -17,13 +17,17 @@ alt_paths:
 effects:
   # [Your Turn] For every 2 digivolution cards this Digimon has, it gains
   # <Security A. +1>.
+  # `security_attack_fn` is BASE-INCLUSIVE (it returns the total check count,
+  # replacing the default base-1 while active), so the formula must fold in the
+  # base: floor((2 + material_count)/2) == 1 + floor(material_count/2). A bare
+  # `base: 0` (= floor(n/2)) would drop the base-1 check and under-count.
   - kind: aura
     target: {}
     active_when: { your_turn: true }
     security_attack_fn:
       floor_div:
-        - base: 0
+        - base: 2
           per: material_count
           delta: 1
         - 2
-    summary: "[Your Turn] SecurityAttackPlus +1 for every 2 digivolution cards"
+    summary: "[Your Turn] base-inclusive 1 + floor(material_count / 2) security checks"

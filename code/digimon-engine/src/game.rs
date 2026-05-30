@@ -3546,6 +3546,24 @@ impl Game {
                 if !effect.materializes_declarative_state || effect.process.is_none() {
                     continue;
                 }
+                // De-dup: a NON-inherited `grant_keyword` whose keyword is already
+                // a PRINTED (metadata) keyword on this source is redundant with
+                // `card_data` — `face_keywords` (consulted by both
+                // `security_attack_keyword_bonus` and `has_keyword`) already counts
+                // it, so materializing it too would double-count (e.g. BT21-029's
+                // `<Security A. +1>` is both a printed keyword and a `grant_keyword`
+                // clause). Inherited grants are NOT in `card_data`, so they must
+                // still materialize.
+                if !inherited_source {
+                    if let Some(kw) = effect.granted_keyword {
+                        let already_printed = self
+                            .card_data_by_id(&card_id)
+                            .is_some_and(|cd| face_keywords(cd).contains(&kw));
+                        if already_printed {
+                            continue;
+                        }
+                    }
+                }
                 if let Some(condition) = &effect.condition {
                     let rctx = crate::effect_context::EffectReadContext::new(
                         self,

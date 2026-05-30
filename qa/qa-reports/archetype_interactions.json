@@ -1,5 +1,80 @@
 {
   "archetypes": {
+    "Machine Black": {
+      "combos_tested": [
+        {
+          "combo": "Blocker + Tai untap loop (+ unhappy path)",
+          "tests": [
+            "tai_untap_loop_re_readies_a_blocker_for_a_second_block",
+            "blocker_stays_suspended_without_an_available_tai"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "Kapurimon Blocker-DP synergy",
+          "tests": [
+            "kapurimon_buffs_a_blocker_only_on_your_turn_and_only_with_blocker"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "Machinedramon Reboot wall",
+          "tests": [
+            "machinedramon_reboot_re_readies_two_digimon_on_the_opponents_turn"
+          ],
+          "status": "PASS",
+          "note": ""
+        }
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 0
+          },
+          "detail": "all 0 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 16,
+            "ratio": 1.0,
+            "threshold": 1.0,
+            "total": 16,
+            "unknown_cards": []
+          },
+          "detail": "coverage 16/16 = 100% (threshold 100%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 10,
+            "games": 10
+          },
+          "detail": "10/10 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st5_machine_black.rs",
+      "model_doc": "qa/archetype-qa/st5-machine-black-model.md"
+    },
     "Rocks": {
       "combos_tested": [
         "Greymon removal, Koromon-enabled"
@@ -57,6 +132,411 @@
         }
       },
       "updated": "2026-05-30"
+    },
+    "ST-1 Gaia Red": {
+      "combos_tested": [
+        {
+          "combo": "Tall-stack security rush",
+          "tests": [
+            "tall_stack_security_rush_aura_adds_to_base_one_check",
+            "tall_stack_security_rush_full_line_checks_four_security"
+          ],
+          "status": "PASS",
+          "note": "WarGreymon base-inclusive formula FIXED at card layer (ST1-11 base:2); Greymon-free stack checks 3; full WarGreymon+Greymon line checks 4 (inherited keyword counted via tick-fresh strike)"
+        },
+        {
+          "combo": "Tai anthem additive stack",
+          "tests": [
+            "tai_anthem_additive_stack_layers_on_one_body_and_spares_opponent"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "Garudamon buff survives removal",
+          "tests": [
+            "garudamon_buff_survives_gaia_force_removal"
+          ],
+          "status": "PASS",
+          "note": ""
+        }
+      ],
+      "findings": [
+        {
+          "severity": "card-bug",
+          "status": "RESOLVED",
+          "desc": "WarGreymon <Security A.> formula under-counted: ST1-11 authored its security_attack_fn as a bare delta (base:0 -> floor(n/2)) but the engine's formula contract is base-inclusive, so the base-1 was dropped. Fixed at card layer (base:2 -> 1+floor(n/2)); the earlier engine base-fold was the wrong layer and double-counted correctly-authored formulas.",
+          "tracker": "docs/RUST_ENGINE_GAPS.md",
+          "test": "st1_gaia_red::tall_stack_security_rush_aura_adds_to_base_one_check",
+          "resolved": "2026-05-30"
+        },
+        {
+          "severity": "engine-bug",
+          "status": "RESOLVED",
+          "desc": "declarative inherited <Security A. +/-N> grants (DSL grant_keyword) not summed by the security strike — WarGreymon+Greymon checked 3, should be 4",
+          "tracker": "docs/RUST_ENGINE_GAPS.md",
+          "test": "st1_gaia_red::tall_stack_security_rush_full_line_checks_four_security",
+          "note": "real fix: current_security_strike ticks declarative effects before reading the keyword term (tick-fresh strike), and tick_declarative_effects skips materializing a face-printed own grant (de-overlap) so all five <Security A.> representations single-count",
+          "resolved": "2026-05-30"
+        }
+      ],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 0
+          },
+          "detail": "all 0 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 16,
+            "ratio": 1.0,
+            "threshold": 1.0,
+            "total": 16,
+            "unknown_cards": []
+          },
+          "detail": "coverage 16/16 = 100% (threshold 100%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 10,
+            "games": 10
+          },
+          "detail": "10/10 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st1_gaia_red.rs",
+      "model_doc": "qa/archetype-qa/st1-gaia-red-model.md"
+    },
+    "ST-2 Cocytus Blue": {
+      "combos_tested": [
+        {
+          "combo": "Strip → triple no-source payoff",
+          "tests": [
+            "strip_flips_all_three_no_source_payoffs_on_together"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "<Sec.A+1> reads the board not the target",
+          "tests": [
+            "weregarurumon_security_plus_keys_off_any_opponent_no_source_digimon"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "MetalGarurumon OPT = exactly two attacks",
+          "tests": [
+            "metalgarurumon_unsuspends_once_strip_fires_each_attack"
+          ],
+          "status": "PASS",
+          "note": ""
+        }
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 0
+          },
+          "detail": "all 0 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 16,
+            "ratio": 1.0,
+            "threshold": 1.0,
+            "total": 16,
+            "unknown_cards": []
+          },
+          "detail": "coverage 16/16 = 100% (threshold 100%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 10,
+            "games": 10
+          },
+          "detail": "10/10 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st2_cocytus_blue.rs",
+      "model_doc": "qa/archetype-qa/st2-cocytus-blue-model.md"
+    },
+    "ST-3 Heaven's Yellow": {
+      "combos_tested": [
+        {
+          "combo": "Seven Heavens → 0-DP deletion → Tokomon",
+          "tests": [
+            "seven_heavens_zero_dp_deletion_buffs_tokomon_carrier",
+            "tokomon_carrier_unbuffed_when_no_zero_dp_deletion_occurs"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "Stacked -DP → 0-DP delete → Patamon memory",
+          "tests": [
+            "stacked_minus_dp_attack_zero_dp_deletion_gains_patamon_memory"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "Angewomon recover gate + T.K. security aura",
+          "tests": [
+            "angewomon_recovers_when_three_or_fewer_security",
+            "angewomon_does_not_recover_at_four_security",
+            "tk_takaishi_buffs_own_security_digimon_only_on_opponents_turn",
+            "tk_takaishi_aura_is_inactive_on_controllers_own_turn"
+          ],
+          "status": "PASS",
+          "note": "T.K. security-DP aura active_when gate FIXED; own-turn-inactive case now passes"
+        }
+      ],
+      "findings": [
+        {
+          "severity": "engine-bug",
+          "status": "RESOLVED",
+          "desc": "security-DP auras ignored active_when/condition (defender_security_dp_adjustment + mirror) — T.K. +2000 leaked to controller own turn",
+          "tracker": "docs/RUST_ENGINE_GAPS.md",
+          "test": "st3_heavens_yellow::tk_takaishi_aura_is_inactive_on_controllers_own_turn",
+          "resolved": "2026-05-30"
+        }
+      ],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 0
+          },
+          "detail": "all 0 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 16,
+            "ratio": 1.0,
+            "threshold": 1.0,
+            "total": 16,
+            "unknown_cards": []
+          },
+          "detail": "coverage 16/16 = 100% (threshold 100%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 10,
+            "games": 10
+          },
+          "detail": "10/10 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st3_heavens_yellow.rs",
+      "model_doc": "qa/archetype-qa/st3-heavens-yellow-model.md"
+    },
+    "ST-4 Giga Green": {
+      "combos_tested": [
+        {
+          "combo": "Needle Spray → Izzy memory (+ negatives)",
+          "tests": [
+            "needle_spray_suspend_triggers_izzy_for_one_memory",
+            "izzy_self_suspend_does_not_retrigger_izzy",
+            "re_suspending_an_already_suspended_target_does_not_refire_izzy"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "HercKabu Digi-Burst suspend → Izzy",
+          "tests": [
+            "herckabu_digiburst_suspend_triggers_izzy_for_one_memory"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "Suspend-gated Electro Shocker bounce",
+          "tests": [
+            "electro_shocker_bounce_is_gated_on_a_prior_suspend"
+          ],
+          "status": "PASS",
+          "note": ""
+        }
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 0
+          },
+          "detail": "all 0 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 16,
+            "ratio": 1.0,
+            "threshold": 1.0,
+            "total": 16,
+            "unknown_cards": []
+          },
+          "detail": "coverage 16/16 = 100% (threshold 100%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 10,
+            "games": 10
+          },
+          "detail": "10/10 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st4_giga_green.rs",
+      "model_doc": "qa/archetype-qa/st4-giga-green-model.md"
+    },
+    "Starter Deck Venomous Violet": {
+      "combos_tested": [
+        {
+          "combo": "Trash-threshold beatdown (WereGarurumon)",
+          "tests": [
+            "weregarurumon_trash_threshold_grants_plus_2000_only_on_your_turn_at_five_trash"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "Death Claw → Matt memory loop (+ unhappy)",
+          "tests": [
+            "death_claw_self_sacrifice_feeds_matt_then_deletes_opponent",
+            "declining_death_claw_self_delete_spares_the_opponent_and_silences_matt"
+          ],
+          "status": "PASS",
+          "note": ""
+        },
+        {
+          "combo": "Nail Bone double-recur, On-Play suppressed",
+          "tests": [
+            "nail_bone_recurs_lv3_and_lv4_from_trash_with_on_play_suppressed"
+          ],
+          "status": "PASS",
+          "note": ""
+        }
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 0
+          },
+          "detail": "all 0 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 16,
+            "ratio": 1.0,
+            "threshold": 1.0,
+            "total": 16,
+            "unknown_cards": []
+          },
+          "detail": "coverage 16/16 = 100% (threshold 100%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 10,
+            "games": 10
+          },
+          "detail": "10/10 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st6_venomous_violet.rs",
+      "model_doc": "qa/archetype-qa/st6-venomous-violet-model.md"
     }
   },
   "last_updated": "2026-05-30",

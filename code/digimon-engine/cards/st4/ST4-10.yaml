@@ -21,7 +21,7 @@ effects:
       - select_reveal:
           of: you
           bind_as: picked
-          optional: true
+          optional: false
           filter:
             all_of:
               - kind: digimon
