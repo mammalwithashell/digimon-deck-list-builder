@@ -9,6 +9,42 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
 
+## General state-based ≤0-DP rules-check (cluster B: Q6/Q8/Q13/Q14/Q24) — 2026-05-29
+
+- **G-NO-GENERAL-ZERO-DP-RULES-CHECK** — closed by change `fix-judge-quiz-engine-gaps` (Gap 1).
+  The engine previously deleted a ≤0-DP Digimon only via `run_rule_check_after_arts` (Arts-digivolve
+  only); a Digimon reduced to ≤0 DP by any other effect was never deleted, while `EffectContext::add_modifier`
+  carried an *unfaithful* inline mid-effect deletion (the "latent 17-1-2-2 timing bug").
+- **Engine fix:** `run_rule_check_after_arts` → `Game::run_state_based_rules_check` — a single pass
+  that deletes every battle-area Digimon at `effective_dp ≤ 0` via the batched-deletion flow
+  (`delete_permanent_with_effects`), skipping transiently-empty (zombie) slots, returning whether it
+  deleted. Invoked from `drain_effect_queue`'s outermost-drain wrapper (`Game::effect_drain_depth == 1`):
+  (a) `rules_check_between_queued_effects` runs after EACH top-level `run_queued_effect` — so a Digimon
+  driven ≤0 by one effect is deleted before the next queued trigger resolves (Q24 interleave); and
+  (b) a final fixpoint sweep when the queue empties. It NEVER runs between the sub-steps of one
+  resolving effect (re-entrant drains observe depth > 1; a parked selection defers it) — the judge
+  rule "rule checks don't happen until an ongoing effect or rule action finishes" (Q6/Q13/Q14). The
+  inline `add_modifier` deletion was removed.
+- **Tests:** `tests/judge_quiz/b_deferred_rules_check.rs` — un-ignored `zero_dp_probe_reduced_digimon_deleted_after_effect_resolves`,
+  plus `q6_analog_no_mid_effect_deletion_within_single_effect` (reduce-then-restore within one effect →
+  survives) and `q24_analog_rules_check_deletes_between_queued_effects` (a turn-player effect drives a
+  Digimon ≤0 → deleted before a separate opponent "+DP save" trigger). Full `--features dsl-yaml-loader`
+  suite regression-clean (identical failure set to pre-change baseline). Systemic gameplay-correctness
+  fix beyond the quiz. Cluster-B per-card scenarios flip to PASS as their cards are authored.
+
+## `<Blast Digivolve>` consults effect-immunity (Q18) — 2026-05-29
+
+- **G-BLAST-DIGIVOLVE-IMMUNITY** — closed by change `fix-judge-quiz-cluster-wiring-gaps`. Blast
+  Digivolve and Blast DNA Digivolve never consulted the effect-immunity machinery, so a Digimon
+  immune to ALL Digimon effects including its own (`CannotBeAffected` / `EffectControllerFilter::Any`,
+  e.g. Quantumon LM-020) could still `<Blast Digivolve>` — but Blast Digivolve is itself a Digimon effect.
+- **Fix:** gate Blast counter-candidate collection (`combat.rs::try_enter_counter`) and the Blast DNA
+  field-target generator (`dna_digivolve.rs::valid_blast_dna_field_targets_for_hand_card`) on
+  `permanent_is_unaffected_by_effect(base, base.player, EffectSourceKind::Digimon)`, with a defensive
+  abort in `execute_blast_digivolve`. Pinned by
+  `combat::counter_interrupt::blast_target_immune_to_own_effects_is_not_a_counter_candidate`. (Q18
+  end-to-end pin stays BLOCKED-CARD on LM-020; the substrate is closed.)
+
 ## Grant a triggered effect to an opponent's permanent (Q2 + Q16 + Q17) — 2026-05-29
 
 - **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (opponent-targeting + all three

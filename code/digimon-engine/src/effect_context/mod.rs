@@ -5622,12 +5622,14 @@ impl<'a> EffectContext<'a> {
                 .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();
-        if modifier == ModifierType::ChangeDp
-            && self.game.permanent_is_digimon_for_rules(target)
-            && self.game.effective_dp(target).is_some_and(|dp| dp <= 0)
-        {
-            self.game.delete_permanent_with_effects(target);
-        }
+        // NOTE: a DP reduction to ≤0 does NOT delete the Digimon here. Deletion
+        // is a state-based action (rule 17-1-2-2 / `G-NO-GENERAL-ZERO-DP-RULES-CHECK`)
+        // that runs only after the ongoing effect or rule action finishes — see
+        // `Game::run_state_based_rules_check`, invoked at the outermost
+        // `drain_effect_queue` boundary. Deleting inline here would fire
+        // mid-effect and break the judge timing (Q6: Pillomon at 0 DP survives
+        // until Flame Hellscythe resolves; Q13/Q14: ShoeShoemon survives until
+        // Nyabootmon's [When Digivolving] fully resolves).
     }
 
     pub fn add_declarative_modifier(

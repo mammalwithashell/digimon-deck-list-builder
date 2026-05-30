@@ -2366,6 +2366,12 @@ impl Game {
         if !self.can_digivolve(&pending_ref.card, perm) {
             return false;
         }
+        // Q3 (G-DIGIVOLVE-TARGET-RESTRICTION): honor a `CanOnlyDigivolveInto`
+        // restriction on the arts-digivolve base too (the restriction applies to
+        // every digivolve route, not just normal digivolve).
+        if self.digivolve_target_blocked_by_restriction(target, &pending_ref.card) {
+            return false;
+        }
 
         let pending = self.pending_option.take().expect("checked above");
         let arts_card_id = pending.card.card_id(&self.card_data).to_string();
@@ -2376,7 +2382,11 @@ impl Game {
             .digivolve(pending.card, turn);
         self.player_mut(target.player).draw();
 
-        self.run_rule_check_after_arts();
+        // Arts digivolve runs the ≤0-DP rules-check immediately (before the
+        // WhenDigivolving enqueue) because the next branch keys off whether the
+        // Arts target survived the digivolve. The trailing `drain_effect_queue`
+        // re-runs the general check at the resolution boundary.
+        self.run_state_based_rules_check();
 
         if self
             .player(target.player)
@@ -2470,10 +2480,38 @@ impl Game {
         true
     }
 
-    pub(crate) fn run_rule_check_after_arts(&mut self) {
+    /// General state-based ≤0-DP rules-check (`G-NO-GENERAL-ZERO-DP-RULES-CHECK`).
+    ///
+    /// Deletes every battle-area Digimon whose effective DP is ≤ 0 — the
+    /// game's "checkup" / DCGO `CheckDeleteDigimon` state-based action. This is
+    /// a SINGLE pass: it collects the current ≤0-DP Digimon and deletes them
+    /// (highest index first, per player, so removals don't shift pending
+    /// handles). The fixpoint loop (re-check after `OnDeletion` handlers and
+    /// aura expiry mutate DP) lives in `drain_effect_queue`'s outermost-drain
+    /// wrapper, which calls this only at top-level resolution boundaries — never
+    /// mid-effect.
+    ///
+    /// Returns `true` if it deleted at least one Digimon (drives the wrapper's
+    /// fixpoint). Deletion routes through `delete_permanent_with_effects` (the
+    /// batched flow + inferred cause), so `OnDeletion` handlers fire post-trash
+    /// per CLAUDE.md §25.
+    ///
+    /// Idempotent: a handle whose slot is already empty is filtered by the
+    /// batched-deletion entrypoint, so a re-run is a no-op.
+    pub(crate) fn run_state_based_rules_check(&mut self) -> bool {
         let mut to_delete: Vec<PermanentHandle> = Vec::new();
         for pid in 0..self.players.len() {
             for idx in 0..self.players[pid].battle_area.len() {
+                // Skip transiently-empty (zombie) slots. A permanent mid-cleanup
+                // (a just-emptied DigiXros source carrier, a trashed last
+                // card_source) can have 0 card_sources before its slot is
+                // removed. `permanent_is_digimon_for_rules` / `effective_dp`
+                // read `top_card()`, which panics on an empty stack — and an
+                // empty slot is not a live Digimon, so it is never a ≤0-DP
+                // deletion candidate anyway.
+                if self.players[pid].battle_area[idx].card_sources.is_empty() {
+                    continue;
+                }
                 let handle = PermanentHandle {
                     player: pid as PlayerId,
                     index: idx as u8,
@@ -2485,9 +2523,13 @@ impl Game {
                 }
             }
         }
+        if to_delete.is_empty() {
+            return false;
+        }
         for handle in to_delete.into_iter().rev() {
             self.delete_permanent_with_effects(handle);
         }
+        true
     }
 
     /// Enqueue every `OptionMain` effect declared by `card_id` directly

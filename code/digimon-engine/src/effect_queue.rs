@@ -700,7 +700,66 @@ impl Game {
     /// Idempotent — safe to call when the queue is already empty. Callers
     /// should invoke this after every `enqueue_triggered` call, and again
     /// after `resolve_selection` unless that call installed a new selection.
+    /// Public drain entrypoint. Wraps the inner queue loop with the general
+    /// state-based ≤0-DP rules-check (Gap 1 / `G-NO-GENERAL-ZERO-DP-RULES-CHECK`).
+    ///
+    /// The rules-check runs only at the OUTERMOST drain (`effect_drain_depth == 1`)
+    /// — re-entrant drains (an effect body draining via `EffectContext`, or the
+    /// batched-deletion deferred-drain flush) observe depth > 1 and skip it, so it
+    /// never fires between the sub-steps of one resolving effect (the judge rule:
+    /// "rule checks don't happen until an ongoing effect or rule action finishes" —
+    /// Q6/Q13/Q14). The primary site is BETWEEN top-level queued effects
+    /// (`rules_check_between_queued_effects`, after each `run_queued_effect`), so a
+    /// Digimon driven to ≤0 DP by one effect is deleted before the next queued
+    /// trigger resolves (Q24). The wrapper adds a final fixpoint sweep for any
+    /// ≤0-DP Digimon left when the queue emptied. A parked selection means
+    /// resolution is NOT finished; the check defers to the drain that resumes when
+    /// the selection resolves.
     pub fn drain_effect_queue(&mut self) {
+        self.effect_drain_depth = self.effect_drain_depth.saturating_add(1);
+        self.drain_effect_queue_inner();
+        if self.effect_drain_depth == 1 {
+            let mut guard: u16 = 0;
+            loop {
+                if self.pending_selection.is_some() {
+                    break;
+                }
+                if !self.run_state_based_rules_check() {
+                    break;
+                }
+                guard += 1;
+                if guard > MAX_CHAIN_DEPTH {
+                    break;
+                }
+                // The batched deletion drains its own OnDeletion handlers, but
+                // those (or auras expiring with the deleted carrier) may have
+                // enqueued further triggers — flush them before the next pass.
+                if self.pending_selection.is_none() && !self.effect_queue.is_empty() {
+                    self.drain_effect_queue_inner();
+                }
+            }
+        }
+        self.effect_drain_depth = self.effect_drain_depth.saturating_sub(1);
+    }
+
+    /// State-based ≤0-DP rules-check run BETWEEN top-level queued effects (after
+    /// each `run_queued_effect`). Q24: a Digimon driven to ≤0 DP by one effect is
+    /// deleted by the rules-check before the next queued trigger resolves. Runs
+    /// only at the outermost drain (`effect_drain_depth == 1`) and only when
+    /// resolution isn't parked on a selection — so it never fires between the
+    /// sub-steps of one resolving effect (Q6/Q13/Q14).
+    fn rules_check_between_queued_effects(&mut self) {
+        if self.effect_drain_depth == 1 && self.pending_selection.is_none() {
+            self.run_state_based_rules_check();
+        }
+    }
+
+    /// Inner queue-drain loop (the historical `drain_effect_queue` body).
+    /// Resolves triggered effects until the queue empties or a selection parks.
+    /// Runs the state-based rules-check between top-level queued effects via
+    /// `rules_check_between_queued_effects`; the final fixpoint sweep is the
+    /// wrapper's job.
+    fn drain_effect_queue_inner(&mut self) {
         loop {
             if self.pending_selection.is_some() {
                 return;
@@ -904,6 +963,7 @@ impl Game {
                     return;
                 }
                 self.run_queued_effect(qe);
+                self.rules_check_between_queued_effects();
                 continue;
             }
 
@@ -932,6 +992,7 @@ impl Game {
                         .expect("bundle index in-bounds by construction");
                     self.run_queued_effect(qe);
                 }
+                self.rules_check_between_queued_effects();
                 continue;
             }
 

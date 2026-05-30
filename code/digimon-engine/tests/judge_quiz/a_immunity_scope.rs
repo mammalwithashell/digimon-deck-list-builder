@@ -230,9 +230,135 @@ fn set_active_attacker(r: &mut DebugRunner, attacker: PermanentHandle) {
 
 /// Q1 — Belphemon: Sleep Mode (BT13-088) [Opp Turn] CAN end Medusamon's
 /// (BT24-017) attack; `<Progress>` guards the Digimon, not the battle. Judge: YES.
+///
+/// Board (card-resolution.md Q1): Player 0 controls Belphemon: Sleep Mode
+/// (BT13-088) with 2 cards in hand. On Player 1's turn, Player 1's Medusamon
+/// (BT24-017, carrying `<Progress>`) attacks Player 0's security. Belphemon's
+/// `[Opponent's Turn] [Once Per Turn]` clause "trash 2 cards in hand to end the
+/// attack" activates. `<Progress>` makes Medusamon unaffected by the opponent's
+/// (Player 0's) effects while it attacks — but "end the attack" ends the BATTLE
+/// (it cancels the pending attack; it does not target / affect Medusamon), so
+/// Belphemon CAN end the attack.
+///
+/// What this pins (so it cannot pass for the wrong reason):
+///   1. Medusamon really carries `<Progress>` (declarative keyword, materialized
+///      via `tick_declarative_effects`).
+///   2. Progress is genuinely IN SCOPE at the moment Belphemon's effect fires —
+///      `progress_excludes(medusamon, Some(0))` is `true`, i.e. an opponent
+///      (Player 0) effect that *affected* Medusamon WOULD be blocked right now.
+///   3. Despite (2), Belphemon's end-attack succeeds: the attack is cancelled
+///      and NO security card is checked (Progress guards the Digimon, not the
+///      battle — judge: YES).
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT13-088 (Belphemon: Sleep Mode). BT24-017 is implemented."]
-fn q1_belphemon_opp_turn_ends_attack_through_progress() {}
+fn q1_belphemon_opp_turn_ends_attack_through_progress() {
+    use digimon_engine::enums::Keyword;
+
+    // A Lv.5 Red digivolution source so Medusamon (Lv.6 Red, evo from Lv.5 Red)
+    // can sit as a real stack top — its `<Progress>` rides the BT24-017 face card.
+    let mut red_base = make_test_card("RED-BASE", "Red Base");
+    red_base.card_kind = CardKind::Digimon;
+    red_base.colors = vec![CardColor::Red];
+    red_base.level = Some(5);
+    red_base.dp = Some(6000);
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT13-088")
+        .expect("BT13-088 Belphemon: Sleep Mode loads")
+        .dsl_card("BT24-017")
+        .expect("BT24-017 Medusamon (<Progress>) loads")
+        .add_card(red_base)
+        .add_card(make_test_card("HAND1", "Hand 1"))
+        .add_card(make_test_card("HAND2", "Hand 2"))
+        .add_card(make_test_card("SECURITY", "Security"))
+        // Player 1 needs a deck so the turn rotation to its turn does not deck-out.
+        .add_card(make_test_card("DECK1", "Deck 1"))
+        .hand(0, &["HAND1", "HAND2"]) // Belphemon's controller pays the 2-card cost
+        .security(0, &["SECURITY"]) // the single card the attack would otherwise hit
+        .deck(1, &["DECK1"; 20])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    // Player 0: Belphemon: Sleep Mode (the defender with the [Opp Turn] cancel).
+    let _belphemon = r.place_on_field(0, "BT13-088", Some(0));
+    // Player 1: Medusamon stacked on a Lv.5 Red source → the <Progress> attacker.
+    let medusamon = r.place_stack(1, &["RED-BASE", "BT24-017"]);
+
+    // Materialize the declarative <Progress> grant so the keyword is live.
+    r.game.tick_declarative_effects();
+    assert!(
+        r.game.has_keyword(medusamon, Keyword::Progress),
+        "precondition: Medusamon must carry the <Progress> keyword"
+    );
+
+    // Hand to Player 1 (the attacker's turn).
+    r.end_turn();
+    assert_eq!(
+        r.turn_player(),
+        1,
+        "Q1 plays out on the attacker (Player 1)'s turn"
+    );
+
+    // Player 1's Medusamon attacks Player 0's security.
+    r.attack_player(medusamon, 0, false);
+
+    // Progress is genuinely IN SCOPE right now: Medusamon is the current attacker
+    // and an opponent (Player 0) effect that *affected* it would be blocked.
+    // This is the load-bearing precondition that prevents a wrong-reason pass —
+    // the immunity is active, yet the end-attack must still go through.
+    assert_eq!(
+        r.game.current_attacker(),
+        Some(medusamon),
+        "Medusamon must be the active attacker so <Progress> is in scope"
+    );
+    assert!(
+        r.game.progress_excludes(medusamon, Some(0)),
+        "precondition: <Progress> must currently block Player 0's effects that \
+         would affect Medusamon (so the only way the attack ends is if end-attack \
+         does NOT 'affect' Medusamon)"
+    );
+
+    // Belphemon's [Opp Turn][OPT] "trash 2 cards in hand to end the attack" — pay
+    // the cost by trashing the 2 hand cards (two sequential picks).
+    let view = r
+        .pending_selection_view()
+        .expect("Belphemon's attack-cancel cost prompt installs (hand >= 2)");
+    assert_eq!(view.kind, digimon_engine::selection::SelectionKind::Hand);
+    r.execute_action(0, view.valid_action_ids[0])
+        .expect("trash first hand card");
+    let view2 = r
+        .pending_selection_view()
+        .expect("second hand-trash cost prompt installs");
+    r.execute_action(0, view2.valid_action_ids[0])
+        .expect("trash second hand card");
+    r.auto_resolve().expect("finish the attack-cancel");
+
+    // Judge: YES — the attack is ended through Progress.
+    assert!(
+        r.game.pending_attack.is_none(),
+        "Belphemon ended the attack — `end_attack` cancels the BATTLE (it does not \
+         'affect' Medusamon), so <Progress> does not block it (judge-quiz Q1: YES)"
+    );
+    assert_eq!(
+        r.security_count(0),
+        1,
+        "the attack ended before any security check — Player 0's single security \
+         card is untouched"
+    );
+    assert_eq!(
+        r.hand_size(0),
+        0,
+        "exactly the 2 hand cards were trashed as the end-attack cost"
+    );
+    // Medusamon is unharmed and still on the field (the battle simply ended).
+    assert!(
+        r.game.players[1]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "BT24-017"),
+        "Medusamon remains on the field — the attack was ended, not redirected"
+    );
+}
 
 /// Q17 — RESOLVED 2026-05-29 (change `add-grant-triggered-effect-dsl`): a
 /// Lilithmon (EX6-057)-granted "[End of Your Turn] Delete this" is an

@@ -371,6 +371,20 @@ pub struct Game {
     #[allow(dead_code)]
     pub(crate) effect_chain_depth: u16,
 
+    /// Re-entrancy depth for the state-based ≤0-DP rules-check
+    /// (`run_state_based_rules_check`). `drain_effect_queue` is called
+    /// re-entrantly from inside effect bodies (effect_context) and from the
+    /// batched-deletion deferred drain. The rules-check runs ONLY at the
+    /// OUTERMOST drain (`effect_drain_depth == 1`) — after a top-level
+    /// effect / rule-action has fully finished — and is run BETWEEN top-level
+    /// queued effects (after each `run_queued_effect`) so a Digimon driven to
+    /// ≤0 DP by one effect is deleted before the next queued trigger resolves
+    /// (judge Q24). It is never run between the sub-steps of one resolving
+    /// effect (the judge rule: "rule checks don't happen until an ongoing
+    /// effect or rule action finishes" — Q6/Q13/Q14). Incremented on entry to
+    /// `drain_effect_queue`, decremented on exit.
+    pub(crate) effect_drain_depth: u16,
+
     /// Game logger. Defaults to `SilentLogger` (zero-overhead for RL
     /// training). Callers that want human-readable traces install a
     /// `VerboseLogger` via `set_logger`. Parity with Python's
@@ -888,6 +902,7 @@ impl Game {
             pending_option_placed_link_resume: None,
             security_resolution: None,
             effect_chain_depth: 0,
+            effect_drain_depth: 0,
             logger: Box::new(SilentLogger),
             events: Vec::new(),
             event_seq: 0,
@@ -3271,6 +3286,38 @@ impl Game {
                     .map(|c| base_colors.contains(&c))
                     .unwrap_or(false)
         })
+    }
+
+    /// Q3 (`G-DIGIVOLVE-TARGET-RESTRICTION`): a base permanent carrying one or
+    /// more `CanOnlyDigivolveInto` modifiers may digivolve ONLY into a card whose
+    /// name matches an allowed name. Returns `true` if `card` would be BLOCKED as
+    /// a digivolve target of `base_handle` — i.e. at least one restriction entry
+    /// is present whose allowed name does not match any of `card`'s names. Each
+    /// entry is ANDed (the target must satisfy every restriction). Returns
+    /// `false` (not blocked) when no restriction is present — the common case, so
+    /// existing cards are unaffected. DCGO parity: `CanNotDigivolveStaticSelfEffect`
+    /// (EX10-020 `cardCondition: !EqualsCardName("Apocalymon")`).
+    pub(crate) fn digivolve_target_blocked_by_restriction(
+        &self,
+        base_handle: PermanentHandle,
+        card: &CardSource,
+    ) -> bool {
+        let entries = self
+            .modifiers
+            .get(base_handle, ModifierType::CanOnlyDigivolveInto);
+        if entries.is_empty() {
+            return false;
+        }
+        let names = card.card_names(&self.card_data);
+        for entry in entries {
+            if let crate::modifiers::ModifierPayload::Name { value, .. } = &entry.payload {
+                let allowed = names.iter().any(|n| *n == value.as_str());
+                if !allowed {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     // ─── Unified keyword query (Phase 3 Task 2) ──────────────────────

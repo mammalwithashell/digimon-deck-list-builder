@@ -172,6 +172,48 @@ fn q11_non_opt_gravity_crush_refires_memory_four() {}
 /// Q12 — Venusmon (BT24-040) uses Sharkmon (BT24-059) inherited [When Attacking]
 /// to place a Petrification token as a digivolution card to unsuspend. Judge:
 /// YES, will unsuspend (token placeable though it won't remain).
+///
+/// Board (card-resolution.md Q12): a Venusmon (BT24-040) carrier with Sharkmon
+/// (BT24-059) as a digivolution source contributes the inherited
+/// "[When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this
+/// Digimon's bottom digivolution card, it unsuspends." The "other Digimon"
+/// chosen is a **Petrification token** ("Digimon/White/3000 DP/[Your Turn] This
+/// Digimon can't suspend."). Judge: YES — the token COUNTS as one of your
+/// Digimon and is placeable as a digivolution card, so the placement happens and
+/// Venusmon unsuspends.
+///
+/// ── DISCOVERED ENGINE GAP (2026-05-29) — pinned-but-blocked ──────────────────
+/// A faithful Q12 test was authored (carrier Venusmon + Sharkmon source, with the
+/// REAL `TOKEN_PETRIFICATION` permanent — `CardKind::Token` — as the "other
+/// Digimon") and PROVES a real faithfulness gap: BT24-059's inherited
+/// placement filter is `kind: digimon` (`select_own_permanent` → the field
+/// candidate predicate `kind_matches_field`, predicate.rs:2826), which matches
+/// only `CardKind::Digimon | CardKind::Dual` — NOT `CardKind::Token`. So the
+/// Petrification token is filtered out of the candidate set, the placement
+/// selection never installs, and the unsuspend cannot occur. The judge rule is
+/// precisely that a token counts as a Digimon and IS placeable; the engine does
+/// not honor that for field selection filters.
+///
+/// This is a "could-pass-for-the-wrong-reason" trap: the existing per-card
+/// fixture `bt24::bt24_059::inherited_q12_token_source_counts_and_unsuspends`
+/// passes ONLY because it uses a stand-in `CardKind::Digimon` ("TOKEN-LIKE")
+/// rather than an actual token — so it proves "any 1-card permanent placed as a
+/// source counts", NOT the token-as-Digimon rule Q12 turns on. We therefore do
+/// NOT substitute a Digimon stand-in here (that would false-pass); the scenario
+/// stays `#[ignore]`-blocked on the named gap.
+///
+/// Fix (out of scope for the test-only change that surfaced this): the
+/// field-permanent `kind: digimon` matcher must treat a battle-area
+/// `CardKind::Token` permanent as a Digimon (tokens ARE Digimon per the rules
+/// manual / glossary). Once that lands, restore the authored body (spawn the
+/// real `TOKEN_PETRIFICATION` permanent, fire the carrier's inherited
+/// [When Attacking], assert the token is a legal placement pick → carrier
+/// unsuspends → token has become a digivolution source).
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT24-059 (Sharkmon). BT24-040 and Petrification token implemented."]
+#[ignore = "ENGINE GAP G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT: BT24-059's inherited \
+place filter `kind: digimon` (kind_matches_field) rejects CardKind::Token, so a \
+Petrification token is not offered as 'one of your other Digimon'. Judge Q12 says a \
+token counts. Pinning faithfully requires the real token (no Digimon stand-in), \
+which the engine filters out — refusing to false-pass per the suite's discover-\
+then-pin rule. Promote once tokens match `kind: digimon` for field selection."]
 fn q12_token_placeable_as_digivolution_card_unsuspends() {}

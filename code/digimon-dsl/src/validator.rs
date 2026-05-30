@@ -2035,6 +2035,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "DontBattleSecurityDigimon",
     // Digivolution / color / level
     "CannotDigivolve",
+    "CanOnlyDigivolveInto",
     "ChangeColor",
     "AddColor",
     "ChangeLevel",

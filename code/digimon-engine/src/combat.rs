@@ -1467,6 +1467,20 @@ impl Game {
                         if self.normal_digivolve_route_for_card(card, handle).is_none() {
                             continue;
                         }
+                        // Q18 (G-BLAST-DIGIVOLVE-IMMUNITY): a Digimon immune to
+                        // its own controller's Digimon effects cannot use
+                        // <Blast Digivolve> — Blast Digivolve is itself a
+                        // Digimon effect. Quantumon (LM-020) is "unaffected by
+                        // ALL Digimon effects, including its own" (immunity
+                        // filter `Any`), so it is not a valid Blast target even
+                        // for its own controller's blast.
+                        if self.permanent_is_unaffected_by_effect(
+                            handle,
+                            defender_player,
+                            crate::enums::EffectSourceKind::Digimon,
+                        ) {
+                            continue;
+                        }
                         candidates.push(CounterCandidate::Blast {
                             hand_index: h_idx as u8,
                             field_index: f_idx as u8,
@@ -1688,6 +1702,20 @@ impl Game {
             return;
         }
         if f_idx >= self.player(defender).battle_area.len() {
+            return;
+        }
+        // Q18 (G-BLAST-DIGIVOLVE-IMMUNITY): defensive abort if the target is
+        // immune to its controller's Digimon effects (candidate collection
+        // already filters these out; this guards effect-driven blast paths).
+        let target = PermanentHandle {
+            player: defender,
+            index: f_idx as u8,
+        };
+        if self.permanent_is_unaffected_by_effect(
+            target,
+            defender,
+            crate::enums::EffectSourceKind::Digimon,
+        ) {
             return;
         }
         let card = self.player_mut(defender).hand.remove(h_idx);

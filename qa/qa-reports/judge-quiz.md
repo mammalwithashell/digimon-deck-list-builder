@@ -26,24 +26,24 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 
 | Q | Cluster | Judge answer | Verdict | Blocker / gap | Test fn |
 |---|---------|--------------|---------|---------------|---------|
-| 1 | A | YES (Progress guards Digimon, not battle) | BLOCKED-CARD | BT13-088 | `a::q1_belphemon_opp_turn_ends_attack_through_progress` |
+| 1 | A | YES (Progress guards Digimon, not battle) | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT13-088 Belphemon: Sleep Mode authored; pinned — Medusamon's `<Progress>` is live (would block an affecting opponent effect) yet Belphemon's `[Opp Turn]` end-attack succeeds (ends the battle, doesn't affect the Digimon) | `a::q1_belphemon_opp_turn_ends_attack_through_progress` |
 | 2 | A | NO memory loss | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX1-068 `[Main]` grant authored + granted-trigger dispatch consults `progress_excludes` (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT, Q2 slice resolved) | `a::q2_medusamon_progress_blocks_ice_wall_memory_loss` |
 | 3 | G | YES | BLOCKED-CARD | EX10-020, BT12-057 | `g::q3_breeding_area_effect_inactive_allows_digivolve` |
 | 4 | G | NO another check (+1/−1 net) | BLOCKED-CARD | AD1-002, BT4-098, ST3-15 | `g::q4_security_attack_net_modifiers_one_check` |
 | 5 | C | YES (declare if cost can be made payable) | **PASS** | Fixed by `fix-ad1-025-assembly-data`: engine Assembly executor (G-ASSEMBLY-PLAY-EXECUTION) + `[Assembly]` restored to AD1-025 data/YAML. Declare-then-pay mask offers the play at memory 0. | `c::q5_assembly_declaration_legal_when_cost_can_be_made_payable` |
 | 6 | B | NO | BLOCKED-CARD | BT8-109 | `b::q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves` |
-| 7 | B | YES | BLOCKED-CARD | BT9-108 | `b::q7_eye_of_the_gorgon_sequential_delete_then_play` |
+| 7 | B | YES | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT9-108 Eye of the Gorgon authored; pinned — sub-effect 1 deletes Pillomon (clearing its `CannotPlayDigimonByEffect` floodgate), sub-effect 2 then plays the Lv3 (control proves the floodgate was real → no false-pass) | `b::q7_eye_of_the_gorgon_sequential_delete_then_play` |
 | 8 | B | Agumon trashed → Koromon trashed | BLOCKED-CARD | BT13-020, AD1-016, BT21-044, BT21-042, EX4-005, BT21-004 | `b::q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot` |
 | 9 | D | After both trashed; NO memory | BLOCKED-CARD | BT23-102, BT15-037 | `d::q9_gatomon_not_in_battle_area_during_removal_no_memory` |
 | 10 | F | 0 | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q10_multi_effect_memory_arithmetic_ends_at_zero` |
 | 11 | F | 4 (Gravity Crush not OPT) | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q11_non_opt_gravity_crush_refires_memory_four` |
-| 12 | F | YES, unsuspends | BLOCKED-CARD | BT24-059 | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
+| 12 | F | YES, unsuspends | BLOCKED-PRIMITIVE | BT24-059 authored, but `G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`: the `kind: digimon` field filter (`kind_matches_field`) matches `Digimon`/`Dual` but NOT `Token`, so the Petrification token is excluded from BT24-059's placement candidates. (The per-card test passes only with a Digimon stand-in.) | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
 | 13 | B | −6000 DP | BLOCKED-CARD | BT16-101, ST17-07 | `b::q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play` |
 | 14 | B | −6000 DP | BLOCKED-CARD | BT16-101 (1 away) | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
 | 15 | E | Gallantmon (X Antibody) topmost | BLOCKED-CARD | BT19-073, BT17-016, BT12-016, EX3-057 | `e::q15_sequential_de_digivolve_halted_by_x_antibody_immunity` |
 | 16 | E | NO (`<Partition>` not triggered) | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX6-057 Lilithmon authored + granted body runs as the carrier's own effect (D4/DCGO), so the granted self-delete is OwnEffect → `<Partition>` cause-filter skips it | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
 | 17 | A | NO | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: BT16-102 Magnamon X + EX6-057 authored; the granted-trigger dispatch suppresses a granted opponent effect when the carrier is immune to the grantor (`permanent_is_unaffected_by_effect`). BT21-036 not needed (its only role was an Armor-Form source — staged synthetically) | `a::q17_magnamon_x_immunity_removes_granted_eot_delete` |
-| 18 | A | NO | BLOCKED-CARD | LM-020 (1 away) | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
+| 18 | A | NO | BLOCKED-PRIMITIVE | LM-020 attempted (first wave): the `[Start of Opp Turn]` category-immunity (Q18-relevant) is implementable + the Blast-Digivolve immunity substrate is done, but LM-020 is BLOCKED on `G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` (its `[When Digivolving]` clause). | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
 | 19 | D | 0 draws | BLOCKED-CARD | BT7-069, BT2-069, BT3-006 | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
 | 20 | D | 8 draws | BLOCKED-CARD | + BT2-076 | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
 | 21 | D | 0 draws | BLOCKED-CARD | + BT3-109 | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
@@ -53,7 +53,7 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 | 25 | E | YES (DigiXros departure ≠ battle) | BLOCKED-CARD | EX3-014 (1 away) | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
 | 26 | C | Returns to hand | BLOCKED-CARD | EX3-014 (1 away) | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
 | 27 | C | Pays 0 memory | BLOCKED-CARD | EX3-014 (1 away) | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
-| 28 | A | YES, plays AND activates | BLOCKED-CARD | BT20-059, EX5-060 | `a::q28_gankoomon_x_protection_beats_dragomon_on_play_lock` |
+| 28 | A | YES, plays AND activates | BLOCKED-PRIMITIVE | BT20-059 Gankoomon X authored (first wave; protection verified to dodge the lock via `can_affect_permanent`); EX5-060 Dragomon BLOCKED on `G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED` + `G-EVENT-PLAYED-LEVEL-FORMULA` | `a::q28_gankoomon_x_protection_beats_dragomon_on_play_lock` |
 | 29 | E | 3 legal stacks | BLOCKED-CARD | BT10-093, EX10-039, EX10-044, EX10-059, EX10-056, EX10-031 | `e::q29_legal_digixros_stack_orderings_with_yuu_amano` |
 | 30 | C/E | Suspend both w/ cost reduction | BLOCKED-CARD | BT20-037, BT20-036, EX3-063, BT16-077, EX3-008 | `c::q30_partition_interruptive_suspends_both_with_cost_reduction` |
 
@@ -61,9 +61,22 @@ Coverage as of 2026-05-29: **30/30 questions have a test entry.** `cargo test --
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 24 | 1, 3, 4, 6–15, 18–21, 24–30 |
+| BLOCKED-CARD | 18 | 3, 4, 6, 8, 9, 10, 11, 13, 14, 15, 19, 20, 21, 24, 25, 26, 27, 29, 30 |
+| BLOCKED-PRIMITIVE | 3 | 12, 18, 28 |
 | CANDIDATE | 1 | 23 |
-| PASS | 5 | 2, 5, 16, 17, 22 |
+| PASS | 7 | 1, 2, 5, 7, 16, 17, 22 |
+
+(Counts: 18 + 3 + 1 + 7 = 29 of 30; Q23 is the CANDIDATE.)
+
+Q1 + Q7 moved BLOCKED-CARD → PASS on 2026-05-29 (`batch-implement-cards-rust-dsl`
+first wave): BT13-088 (Belphemon: Sleep Mode) and BT9-108 (Eye of the Gorgon)
+authored + pinned. Q12 moved BLOCKED-CARD → BLOCKED-PRIMITIVE same wave: BT24-059
+authored but `G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT` (token excluded from
+`kind: digimon` field-select) blocks the faithful pin. Q18 / Q28 moved
+BLOCKED-CARD → BLOCKED-PRIMITIVE: their cards were attempted but LM-020
+(`G-DSL-RETURN-SELECTED-SECURITY-TO-DECK`) and EX5-060
+(`G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED` + `G-EVENT-PLAYED-LEVEL-FORMULA`)
+BLOCKED; BT20-059 (Gankoomon X) IS authored.
 
 Q5 moved BLOCKED-DATA → PASS on 2026-05-29 (change `fix-ad1-025-assembly-data`):
 the engine Assembly executor was implemented (G-ASSEMBLY-PLAY-EXECUTION,
@@ -89,20 +102,38 @@ effects suppresses the granted "[EoT] Delete this". BT21-036 was not needed
 
 ## Gaps surfaced (the discovery-wave yield)
 
-0. **G-NO-GENERAL-ZERO-DP-RULES-CHECK** (cluster B root: Q6, Q8, Q13, Q14, Q24) — NEW engine gap,
-   test-proven. The engine has no general state-based ≤0-DP rules-check; the only ≤0-DP deletion is
-   Arts-digivolve-specific (`run_rule_check_after_arts`, game_actions.rs:1607). A Digimon reduced to
-   ≤0 DP by a non-Arts effect is never deleted. Probe
-   `zero_dp_probe_reduced_digimon_deleted_after_effect_resolves` confirmed failing (battle_area 1,
-   expected 0). Logged in [`engine-gaps.md`](../archetype-qa/engine-gaps.md). **Systemic** — bigger
-   than the quiz; affects any DP-reduction-to-0 effect. **Highest-impact fix.**
+0. **G-NO-GENERAL-ZERO-DP-RULES-CHECK** (cluster B root: Q6, Q8, Q13, Q14, Q24) — **RESOLVED
+   2026-05-29** (change `fix-judge-quiz-engine-gaps`, Gap 1). The engine now has a general
+   state-based ≤0-DP rules-check (`Game::run_state_based_rules_check`) invoked at the outermost
+   `drain_effect_queue` boundary — between each top-level queued effect (Q24 interleave) and a final
+   fixpoint sweep, never mid-effect (Q6/Q13/Q14); the unfaithful inline mid-effect deletion in
+   `add_modifier` was removed. Probe `zero_dp_probe_reduced_digimon_deleted_after_effect_resolves`
+   + synthetic `q6_analog_*`/`q24_analog_*` pin it; full suite regression-clean. Cluster-B per-card
+   scenarios (Q6/Q8/Q13/Q14/Q24) flip to PASS as their cards are authored. Moved to
+   [`resolved-gaps.md`](../resolved-gaps.md).
 0b. **G-ON-TRASH-OBSERVER-SYNCHRONOUS** (Q23 confirmed; Q21 probable) — NEW gap/tension,
    code-confirmed + probed. `on_digivolution_card_trashed` fires synchronously at trash-time
    (`fire_digivolution_card_trashed` enqueues + immediately drains, intentional for EX10-036), so
    inherited on-trash effects can't DEFER and re-check remain-in-trash → Q23 over-counts (+3 vs the
    judge's +1). Design tension (EX10-036 needs synchrony; Q21/Q23 need deferral) — not a trivial fix.
    Probe `cluster_d_on_trash_observer_fires_synchronously_not_deferred` characterizes it. Logged in
-   [`engine-gaps.md`](../archetype-qa/engine-gaps.md).
+   [`engine-gaps.md`](../archetype-qa/engine-gaps.md). **Spike done 2026-05-29 (decision: SPLIT to a
+   follow-up change).** The synchronous drain is load-bearing for EX10-036's *sibling-clause* pickup
+   (orthogonal to the on-trash observer); cleanly separating it from the deferred inherited observer
+   is a deep dispatch change that can't be validated without Q23's cards. Stays OPEN; Q21/Q23 stay
+   BLOCKED on it.
+0c. **G-BLAST-DIGIVOLVE-IMMUNITY** (Q18) — **RESOLVED 2026-05-29** (change
+   `fix-judge-quiz-cluster-wiring-gaps`). Blast Digivolve / Blast DNA now consult
+   `permanent_is_unaffected_by_effect` so a Digimon immune to all Digimon effects incl. its own
+   (Quantumon LM-020) can't blast-digivolve. Substrate closed + pinned by
+   `counter_interrupt::blast_target_immune_to_own_effects_is_not_a_counter_candidate`; Q18 stays
+   BLOCKED-CARD on LM-020 for the end-to-end pin.
+0d. **G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER** (Q25) + **G-DIGIVOLVE-TARGET-RESTRICTION** (Q3) — NEW gaps,
+   probed + scoped 2026-05-29. Both confirmed via read-only audit (DigiXros material consumption fires
+   no leave trigger; no digivolve-target-restriction `ModifierType`). DEFERRED to authoring-time
+   (rule 28): the API card text for EX3-014 lacks the `[All Turns]` the judge-quiz mapping implies, and
+   EX10-020's restriction is a self-"can only digivolve into [Apocalymon]" — both need DCGO to pin the
+   exact shape before building. Fix shapes logged in [`engine-gaps.md`](../archetype-qa/engine-gaps.md).
 1. **G-RETURN-TRASH-DIGI-EGG-ROUTING** (Q22) — RESOLVED 2026-05-29 (change
    `fix-judge-quiz-engine-gaps`, Gap 2). Was: `return_trash_cards_to_deck_bottom` inserted Digi-Eggs
    into the main deck. Fixed via `EffectContext::move_card_to_deck` routing all four trash→deck movers
