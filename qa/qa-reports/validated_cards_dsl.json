@@ -5854,6 +5854,74 @@
         "E2"
       ],
       "notes": "[On Play][When Digivolving] De-Digivolve 1 opp Digimon (stop_at_level 3) DONE; inherited [All Turns][OPT] battle-delete-by-this -> trash opp security DONE; Lv4 [Gargomon]/[Rapidmon] cost-3 alt-path. BLOCKED clause: green-Tamer opponent-scoped delete/return protection (G-OPPONENT-SCOPED-EFFECT-PROTECTION-DSL — add_modifier installs cause-agnostic, can't opponent-scope; 2 tests #[ignore]'d). Re-authored inline after worktree loss."
+    },
+    "BT23-101": {
+      "card_name": "Hudiemon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (Hudie / Q6 / Q24)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-101.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_101.rs",
+      "test_count": 12,
+      "patterns": [
+        "H",
+        "C1",
+        "D",
+        "E2",
+        "E3"
+      ],
+      "notes": "Alliance (runtime-installed); [OP][WD] free-play cost<=5 [CS] from hand + -3000 x (your [Hudie] Digimon) to 1 opp; [WA][OPT] return [CS] Tamer -> re-activate [On Play] (inline-duplicated, EX8-074 idiom); CS-trait cost4 + conditional [Erika Mishima] cost3 (count_gte 4 Hudie Tamers) alt-paths. Re-authored inline by orchestrator after a sub-agent worktree-persistence loss."
+    },
+    "BT23-037": {
+      "card_name": "Tentomon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (Hudie / Q6 / Q24)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_037.rs",
+      "test_count": 20,
+      "patterns": [
+        "B",
+        "E2"
+      ],
+      "notes": "[Your Turn] before_pay_cost -1 when digivolving into a [CS] Digimon (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET resolved; BT23-005 sibling); inherited [WA][OPT] play cost<=5 [Hudie] from hand free (On Play fires) + CannotDigivolve + schedule-delete at end of opp turn; Lv2 [CS] cost0 alt-path. Sub-agent (persisted)."
+    },
+    "BT8-109": {
+      "card_name": "Flame Hellscythe",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (Hudie / Q6 / Q24)",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-109.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_109.rs",
+      "test_count": 11,
+      "patterns": [
+        "D",
+        "A4",
+        "E2"
+      ],
+      "notes": "[Main] -6000 DP to 1 opp Digimon (turn; Q6: 0-DP deletion deferred to state-based rules-check); then optional free-play of a purple/yellow Digimon DP<=6000 from trash (On Play fires, NOT suppressed); [Security] mirror. Re-authored inline by orchestrator."
+    },
+    "EX6-004": {
+      "card_name": "Kokomon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Judge-quiz cluster B (Hudie / Q6 / Q24)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "G4",
+        "B3"
+      ],
+      "notes": "Egg, inherited [Your Turn][OPT] 'when an EFFECT suspends one of your Digimon, +2000 DP to 1 of your Digimon'. BLOCKED: G-SUSPEND-EFFECT-INITIATED — TriggerSource::EventObserved (the suspend event) carries no `effect_initiated`/`by_effect` bit, so the 'by an effect' qualifier is un-gatable (the clause would over-trigger on attack/cost suspends). Engine-event plumbing fix (thread by_effect through EffectContext::suspend vs Game::suspend); also tracked in qa/archetype-qa/dsl/zephagamon-2026-05-03-dsl-engine-gaps.md. No card authored (no stub)."
     }
   }
 }

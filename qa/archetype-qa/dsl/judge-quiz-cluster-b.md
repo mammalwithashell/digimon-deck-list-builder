@@ -7,12 +7,16 @@ Cluster B is the ≤0-DP-rules-check family. Gap 1 (G-NO-GENERAL-ZERO-DP-RULES-C
 was closed 2026-05-29, unblocking these scenarios at the engine level; this run authors
 their cards so Q6/Q8/Q13/Q14/Q24 can flip BLOCKED-CARD → PASS.
 
-## Summary (running)
-- IMPLEMENTED: 7  (BT21-042, AD1-016, BT21-044, BT13-020, BT16-101, EX4-005, BT21-004)
-- PARTIAL: 1  (ST17-07 — protection clause BLOCKED on a logged DSL gap)
-- BLOCKED: 0
+## Summary (final — all 12 cluster-B cards processed)
+- IMPLEMENTED: 10  (BT21-042, AD1-016, BT21-044, BT13-020, BT16-101, EX4-005, BT21-004, BT23-101, BT23-037, BT8-109)
+- PARTIAL: 1  (ST17-07 — protection clause BLOCKED on G-OPPONENT-SCOPED-EFFECT-PROTECTION-DSL)
+- BLOCKED: 1  (EX6-004 — G-SUSPEND-EFFECT-INITIATED engine gap; no card authored)
 - SKIPPED: 0
-- Remaining to process: 4 (Batch 3: BT23-101, BT23-037, EX6-004, BT8-109)
+
+Judge-quiz cards-complete: Q6 (BT8-109 ✓), Q8 (6 cards ✓), Q13/Q14 (BT16-101/ST17-07 ✓),
+Q24 (BT23-101, BT23-037, BT16-101 ✓; ST17-07 PARTIAL; EX6-004 BLOCKED but is a deck-piece
+egg, not the Q24 interaction). All five cluster-B questions are now authorable to PASS pins
+(Q24's pin uses Hudiemon BT23-101 + BT16-101, not EX6-004's suspend-trigger).
 
 ## Substrate widened during this run (rule 28) — second wave
 - **0-DP deletion cause (`EventCause::Rule`)** — `Game::run_state_based_rules_check` now
@@ -57,6 +61,17 @@ Batch 1 persisted correctly.
 | EX4-005 | Agumon | IMPLEMENT | IMPLEMENTED | re-authored inline | 13 | start-of-main conditional +1 memory; inherited red/yellow-Tamer-suspend→Draw 1; Koromon alt-path |
 | BT21-004 | Koromon | IMPLEMENT | IMPLEMENTED | re-authored inline | 9 | egg; inherited yellow/red-Tamer-suspend→Draw 1 |
 | ST17-07 | Rapidmon | IMPLEMENT | PARTIAL | gap diagnosis confirmed | 11 (+2 ⌀) | De-Digivolve 1 + inherited battle-delete→trash security DONE; opponent-scoped protection BLOCKED (G-OPPONENT-SCOPED-EFFECT-PROTECTION-DSL) |
+| BT23-101 | Hudiemon | IMPLEMENT | IMPLEMENTED | inline (worktree loss) | 12 | Alliance; [OP][WD] play CS≤5 + -3000×Hudie debuff; [WA][OPT] return CS Tamer → re-activate On Play; CS + conditional Erika alt-paths |
+| BT23-037 | Tentomon | IMPLEMENT | IMPLEMENTED | sub-agent (persisted) | 20 | [Your Turn] -1 digivolve cost into [CS]; inherited [WA][OPT] play Hudie≤5 free + CannotDigivolve + delete at opp EoT |
+| BT8-109 | Flame Hellscythe | IMPLEMENT | IMPLEMENTED | inline | 11 | [Main] -6000 DP (Q6 0-DP-deletion deferred) + optional play purple/yellow ≤6000 from trash; [Security] mirror |
+| EX6-004 | Kokomon | IMPLEMENT | BLOCKED (engine) | gap logged | 0 | "when an EFFECT suspends" un-gatable — G-SUSPEND-EFFECT-INITIATED (suspend event has no by_effect bit); no card authored |
+
+## Batch 3 substrate note
+- EX6-004 surfaced `G-SUSPEND-EFFECT-INITIATED` (engine): `TriggerSource::EventObserved`
+  carries no `effect_initiated` bit, so "when an EFFECT suspends" can't be distinguished from
+  attack/cost suspends. Logged to `engine-gaps.md`; additive engine-event fix deferred. EX6-004
+  BLOCKED (no stub). BT23-101 lost a sub-agent worktree (like the Batch-2 trio) and was
+  re-authored inline.
 
 ## Engine-Gap Blocked Cards
 (none this batch)

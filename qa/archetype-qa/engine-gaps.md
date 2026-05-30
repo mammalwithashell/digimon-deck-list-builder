@@ -775,3 +775,23 @@ status).
 - **Symptom / proof:** the Q12 scenario test (`f_token_and_memory::q12_token_placeable_as_digivolution_card_unsuspends`) uses the REAL `TOKEN_PETRIFICATION` permanent (`CardKind::Token`) and finds the placement selection never installs (token excluded) -> left `#[ignore]` citing this gap (refused to false-pass). NOTE: the per-card test `bt24::bt24_059::inherited_q12_token_source_counts_and_unsuspends` passes only because it uses a `CardKind::Digimon` STAND-IN, which dodges the token-as-Digimon question — it should be re-pointed at a real token once this gap closes.
 - **Fix shape (engine; broad — validate carefully):** `kind_matches_field` (and any sibling kind-matchers used for field target selection) should treat `CardKind::Token` as satisfying `digimon` (tokens are Digimon on the field). This is a BROAD behavioral change — every "select a Digimon" effect would then include tokens (which is correct per rules, but affects many cards/tests). Land it as its own change with a full regression pass; do not fix inline.
 - **Blocks (judge-quiz):** Q12 (cards BT24-040 + BT24-059 + Petrification token ALL implemented — this is now a PRIMITIVE block, not a card block).
+
+
+### §Suspend event carries no effect-initiated bit (G-SUSPEND-EFFECT-INITIATED) — OPEN
+
+**Surfaced 2026-05-30** (judge-quiz cluster B, EX6-004 Kokomon — BLOCKED). EX6-004's
+inherited clause is "[Your Turn][OPT] When an EFFECT suspends one of your Digimon,
+1 of your Digimon gets +2000 DP for the turn." The "by an effect" qualifier is
+un-gatable: `TriggerSource::EventObserved` (the source for `OnSuspend`, built by
+`Game::suspend`) carries no `effect_initiated`/`by_effect` field — its
+`TriggerContext` is constructed with `..TriggerContext::default()` (effectively
+`false`). The DSL predicate `event_is_effect_initiated` compiles but always
+evaluates `false` on suspend events, so the clause would over-trigger on
+attack-declaration / cost suspends. Fix: add `effect_initiated: bool` to
+`TriggerSource::EventObserved`, set it `true` on the `EffectContext::suspend`
+path vs `false` on the raw `Game::suspend`/attack/cost path, and populate the
+`TriggerContext` in `effect_queue.rs`. Additive, contained engine-event change
+(no behavior change for existing cards — they don't gate on it). Also tracked in
+`qa/archetype-qa/dsl/zephagamon-2026-05-03-dsl-engine-gaps.md` ("Extend
+suspend/unsuspend event context with by_effect"). EX6-004 stays BLOCKED (no card
+authored — no stub) until this lands.
