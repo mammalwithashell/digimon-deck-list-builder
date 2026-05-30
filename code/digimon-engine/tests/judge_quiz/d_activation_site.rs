@@ -19,34 +19,69 @@
 
 #![allow(unused_imports)]
 
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::card_source::CardHandle;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::EffectTiming;
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::TriggerSource;
+use std::sync::Arc;
+
+/// Medusamon (BT24-017) analog driver: in ONE resolving effect body, trash 3
+/// digivolution sources (Proganomon's Fragment <3>) then return 2 of the trashed
+/// cards to the deck (Medusamon's "return up to 2"). Used by the Q23 test to
+/// exercise the multi-source trash → TriggerOrder-parking → remain-in-trash
+/// re-evaluation path without driving the full Medusamon multi-selection UI chain.
+struct TrashThreeReturnTwo {
+    host: PermanentHandle,
+    return_cards: Vec<CardHandle>,
+}
+
+impl CardEffect for TrashThreeReturnTwo {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let host = self.host;
+        let return_cards = self.return_cards.clone();
+        vec![Effect::end_of_your_turn(card)
+            .name("trash 3 sources then return 2 (Medusamon analog)")
+            .process(move |ctx| {
+                ctx.trash_bottom_sources(host, 3);
+                ctx.return_trash_cards_to_deck_bottom(0, &return_cards);
+            })
+            .build()]
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Cluster-D/F ROOT-RULE PROBE — "remain-in-trash to resolve" (Q21, Q23)
+// Cluster-D/F ROOT-RULE PROBE — "remain-in-trash to resolve" (Q23)
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Q23 (and Q21) require that an inherited on-trash / [On Deletion] effect, once
-// triggered, is DEFERRED (queued) and resolves only if its carrier still remains
-// in the trash at resolution — so when a later effect (Medusamon's "return 2", or
-// Back for Revenge!'s replay) removes the card before resolution, that card's
-// effect does NOT fire. Q23: 3 Tumblemon trashed → 2 returned → only 1 of the 3
-// gain-memory effects resolves (+1, not +3).
+// FINDING (2026-05-30, run to completion — supersedes the 2026-05-29 note):
+// `on_digivolution_card_trashed` behavior splits by trigger count.
+//   • SINGLE source trashed: a lone mandatory observer fires SYNCHRONOUSLY at
+//     trash-time (this probe; +1 immediately). `fire_digivolution_card_trashed`
+//     enqueues then drains — kept synchronous for EX10-036's sibling already-queued
+//     clauses (see fix-judge-quiz-engine-gaps §3.1).
+//   • ≥2 sources trashed (the real Q23 shape): the mandatory observers form a
+//     multi-trigger bundle → the drainer installs a `TriggerOrder` selection, which
+//     PARKS them past the trashing effect. When the selection is resolved, each
+//     observer's clause condition is RE-EVALUATED, and the cards returned in the
+//     meantime fail (no longer in trash) → dropped. So Q23 already resolves to the
+//     judge-correct +1 (see `q23_inherited_trash_memory_gated_on_remaining_in_trash`).
 //
-// FINDING (2026-05-29, code-confirmed + probed): `on_digivolution_card_trashed`
-// resolves SYNCHRONOUSLY at trash-time. `fire_digivolution_card_trashed`
-// (game_actions.rs:3291-3308) enqueues the trigger then immediately
-// `drain_effect_queue()` — an intentional choice (comment cites EX10-036, whose
-// secondary clauses must see just-trashed cards mid-resolution). Because the
-// inherited gain-memory fires the instant the source is trashed, there is NO
-// deferral window in which a subsequent return could remove the card first → the
-// engine cannot honor the Q21/Q23 remain-in-trash gating and would over-count
-// (+1 per trashed source). Logged G-ON-TRASH-OBSERVER-SYNCHRONOUS.
+// The earlier "+3 over-count" (G-ON-TRASH-OBSERVER-SYNCHRONOUS) was a
+// MISCHARACTERIZATION of the multi-source case — it only ran THIS single-source
+// probe and reasoned about deferral abstractly, never running the 3-source-then-
+// return scenario to completion. The engine's TriggerOrder parking + condition
+// re-evaluation already implements the remain-in-trash gating for Q23. Residual
+// narrow open question: a SINGLE source trashed then returned WITHIN the same
+// effect would still fire synchronously (no deferral) — but no known card exercises
+// that, so it is not a blocker.
 
-/// Characterizes the synchronous firing (the gap root). EX8-051 Proganomon is a
-/// `[Mineral]` host, so trashing an EX8-005 Tumblemon source meets its inherited
-/// "gain 1 memory" condition. Memory changes immediately on the trash call —
-/// proving the effect is not deferred. Passes as a characterization; the doc
-/// above explains why this conflicts with the judge-faithful Q21/Q23 timing.
+/// Characterizes the single-source synchronous firing. EX8-051 Proganomon is a
+/// `[Mineral]` host, so trashing one EX8-005 Tumblemon source meets its inherited
+/// "gain 1 memory" condition and memory changes immediately on the trash call (a
+/// lone mandatory trigger does not park). The multi-source case behaves differently
+/// (parks as TriggerOrder, gates on remain-in-trash) — see the Q23 test.
 #[test]
 fn cluster_d_on_trash_observer_fires_synchronously_not_deferred() {
     let mut r = DebugRunner::builder()
@@ -71,6 +106,81 @@ fn cluster_d_on_trash_observer_fires_synchronously_not_deferred() {
         "Tumblemon's inherited gain-memory must resolve synchronously at \
          trash-time (the root of the Q21/Q23 remain-in-trash gap)"
     );
+}
+
+/// Q23 PASS — dispatch-level pin (synthetic Medusamon driver over real EX8-051 /
+/// EX8-005). A Proganomon (`EX8-051`, [Mineral]) holds 3 Tumblemon (`EX8-005`)
+/// sources, each carrying the inherited "gain 1 memory when trashed from a
+/// Mineral/Rock Digimon" clause. One resolving effect trashes all 3 (Fragment <3>)
+/// then returns 2 to the deck (Medusamon's return-2). Judge ruling: only the 1 card
+/// STILL in trash at resolution gains memory → +1.
+///
+/// VERIFIED ENGINE BEHAVIOR (2026-05-30) == judge answer: when ≥2 sources are
+/// trashed mid-effect, their mandatory `OnDigivolutionCardTrashed` observers form a
+/// multi-trigger bundle and the engine installs a `TriggerOrder` selection — which
+/// PARKS them past the trashing effect (the return-2 runs first). On resolution
+/// each observer's clause condition is re-evaluated and the 2 returned cards'
+/// observers fail (no longer in trash) → dropped; only the 1 remaining fires (+1).
+/// The previously-logged `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a
+/// mischaracterization for this multi-source case (it only ran the single-source
+/// probe + reasoned about deferral abstractly; nobody ran the 3-source scenario to
+/// completion). Driven as a top-level queued effect so the trashes run nested.
+#[test]
+fn q23_inherited_trash_memory_gated_on_remaining_in_trash() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX8-051")
+        .expect("EX8-051 Proganomon (Mineral host) loads")
+        .dsl_card("EX8-005")
+        .expect("EX8-005 Tumblemon loads")
+        .add_card(make_test_card("TEST-MEDUSA", "Medusamon analog"))
+        .memory(0)
+        .start();
+
+    let host = r.place_on_field(0, "EX8-051", Some(0));
+    let t1 = r.push_source(host, "EX8-005");
+    let t2 = r.push_source(host, "EX8-005");
+    let _t3 = r.push_source(host, "EX8-005");
+
+    // Driver permanent: trashes all 3 sources then returns 2 — in one effect body.
+    let _drv = r.place_on_field(0, "TEST-MEDUSA", Some(1));
+    r.register_effect(
+        "TEST-MEDUSA",
+        Arc::new(TrashThreeReturnTwo {
+            host,
+            return_cards: vec![t1, t2],
+        }),
+    );
+
+    let mem_before = r.memory() as i32;
+    r.game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.drain_effect_queue();
+
+    // The 3 mandatory observers form a multi-trigger bundle → the engine installs
+    // a TriggerOrder selection (this IS the deferral window). Resolve it the way a
+    // real game / RL agent must. As each parked observer resolves, its clause
+    // condition is RE-EVALUATED: the 2 returned cards' observers now fail (their
+    // source is no longer in trash) and are dropped; only the 1 card still in trash
+    // fires. This is the engine's built-in remain-in-trash gating.
+    let mut guard = 0;
+    while let Some(sel) = r.game.pending_selection.as_ref() {
+        let player = sel.selecting_player;
+        let action = sel.valid_action_ids[0];
+        r.game
+            .resolve_selection(player, action)
+            .expect("resolve TriggerOrder");
+        guard += 1;
+        assert!(guard <= 10, "selection resolution did not terminate");
+    }
+
+    // 1 of the 3 Tumblemon remains in trash; only its inherited gain-memory
+    // resolves. Verified engine behavior == judge answer.
+    assert_eq!(
+        r.memory() as i32 - mem_before,
+        1,
+        "only the 1 Tumblemon still in trash should gain memory (judge Q23: +1, not +3)"
+    );
+    assert_eq!(r.trash_size(0), 1, "exactly 1 Tumblemon remains in trash");
 }
 
 /// Q9 — Mastemon (BT23-102) trashes Gatomon (BT15-037) from security; Gatomon
@@ -98,23 +208,3 @@ fn q20_all_on_deletion_fire_when_eyesmon_stays_in_trash() {}
 #[ignore = "BLOCKED-CARD: needs BT7-069, BT2-069, BT3-006, BT2-076, BT3-109 (Back for Revenge!). BT7-107 implemented."]
 fn q21_remaining_on_deletion_suppressed_when_played_from_trash() {}
 
-/// Q23 — Proganomon (EX8-051, Rock) with 3 Tumblemon (EX8-005) sources; Medusamon
-/// (BT24-017) [When Digivolving] targets Proganomon → Fragment <3> trashes all 3
-/// Tumblemon → each fires its inherited `on_digivolution_card_trashed` "gain 1
-/// memory"; Medusamon then returns 2 to deck bottom. JUDGE ANSWER: Player A gains
-/// 1 — like [On Deletion], the gain-memory only resolves for the cards still in
-/// trash, and 2 of the 3 were returned. So only the 1 remaining resolves.
-///
-/// CANDIDATE — all three cards are implemented (the only such remaining
-/// scenario), but a faithful test needs the full multi-selection chain
-/// (Medusamon delete → Proganomon Fragment pick-3 → Medusamon return-2) AND
-/// turns on whether `on_digivolution_card_trashed` gain-memory is gated on the
-/// card remaining in trash at RESOLUTION (the queued triggers must resolve
-/// AFTER Medusamon's [WD] returns the 2 cards). It is also downstream of the
-/// Q22 routing bug (G-RETURN-TRASH-DIGI-EGG-ROUTING) — the same return verb.
-/// Write as a real end-to-end test immediately after Q22 is fixed; expected to
-/// either pin "+1 memory" or surface a second gap (gain-memory not gated on
-/// remain-in-trash → would over-count to +3).
-#[test]
-#[ignore = "CANDIDATE (all cards implemented): needs the full Medusamon→Fragment→return-2 chain + verification that on_digivolution_card_trashed gain-memory is gated on remain-in-trash; downstream of Q22 (G-RETURN-TRASH-DIGI-EGG-ROUTING). Write after the Q22 fix."]
-fn q23_inherited_trash_memory_gated_on_remaining_in_trash() {}

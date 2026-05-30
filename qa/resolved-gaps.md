@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,37 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## On-trash inherited observer "remain-in-trash" gating (Q23) — WITHDRAWN as mischaracterized — 2026-05-30
+
+- **G-ON-TRASH-OBSERVER-SYNCHRONOUS** — logged 2026-05-29 as a "+3 over-count": inherited
+  `on_digivolution_card_trashed` observers were said to fire synchronously at trash-time with no
+  deferral window, so a later separate effect (Medusamon's "return 2") couldn't gate them on
+  remain-in-trash → Q23 would gain +3 instead of the judge's +1. A spike (`fix-judge-quiz-engine-gaps`
+  §3.1/§3.6) deemed the fix a deep dispatch change and split it to a follow-up, blocked on Q23's cards.
+- **Disproven 2026-05-30 by running the real scenario to completion.** With Q23's cards now
+  implemented, a faithful reproduction (Proganomon `EX8-051` + 3× Tumblemon `EX8-005`; one effect
+  trashes all 3 via Fragment then returns 2) was run **end-to-end**. The engine already produces the
+  judge-correct **+1**. Mechanism: when ≥2 sources are trashed mid-effect, their mandatory
+  `OnDigivolutionCardTrashed` observers form a multi-trigger bundle → the drainer installs a
+  `TriggerOrder` selection (`effect_queue.rs` `drain_effect_queue_inner`, the `bundle.len() >= 2`
+  branch), which PARKS the observers past the trashing effect (the return-2 runs first). On resolving
+  the selection, each observer's clause condition is RE-EVALUATED (via `non_firing_queued_effect_indices_for`
+  / `run_queued_effect_inner`, each installing the queued effect's own `trigger_context`), and the 2
+  returned cards' observers fail (their source is no longer in trash) → dropped. Only the 1 remaining
+  fires. TriggerOrder parking + per-trigger condition re-evaluation IS the remain-in-trash gating.
+- **Why it was mischaracterized:** the only evidence was the SINGLE-source probe
+  `cluster_d_on_trash_observer_fires_synchronously_not_deferred` (a lone mandatory trigger does fire
+  synchronously, +1) plus abstract reasoning about deferral. The multi-source (real Q23) path was never
+  run to completion — a probe that stops at the first `pending_selection` never sees the parking +
+  re-evaluation. **Lesson: run a scenario end-to-end (resolve mandatory selections) before logging an
+  engine gap.**
+- **Outcome:** Q23 → **PASS** (`d_activation_site::q23_inherited_trash_memory_gated_on_remaining_in_trash`,
+  synthetic Medusamon driver over real cards). **No engine change made.** The deferral fix / split-out
+  follow-up (`defer-inherited-on-trash-observers`) is retired. Residual narrow open question (no known
+  card, not a blocker): a SINGLE source trashed then returned WITHIN one effect would still fire
+  synchronously (no parking). Q21 is the `[On Deletion]` mechanic (different dispatch) and stays
+  BLOCKED-CARD on its unauthored cards — its remain-in-trash behavior is independent of this entry.
 
 ## General state-based ≤0-DP rules-check (cluster B: Q6/Q8/Q13/Q14/Q24) — 2026-05-29
 

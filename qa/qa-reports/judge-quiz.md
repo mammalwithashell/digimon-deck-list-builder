@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-05-30: **30/30 questions have a test entry; 9 PASS.** `cargo test --test judge_quiz`
-→ 17 passed (9 question pins + loader/probe/analogs), 21 ignored, 0 failed.
+Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `cargo test --test judge_quiz`
+→ 18 passed (10 question pins + loader/probe/analogs), 20 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -48,7 +48,7 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 9 PASS.** `cargo
 | 20 | D | 8 draws | BLOCKED-CARD | + BT2-076 | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
 | 21 | D | 0 draws | BLOCKED-CARD | + BT3-109 | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
 | 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
-| 23 | D/F | 1 memory | **CANDIDATE** | all cards impl; needs full chain + remain-in-trash gating check; downstream of Q22 | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
+| 23 | D/F | 1 memory | PASS | Engine already correct (2026-05-30, run to completion): trashing 3 Tumblemon mid-effect enqueues 3 mandatory `OnDigivolutionCardTrashed` observers → multi-trigger `TriggerOrder` selection PARKS them past Medusamon's return-2; on resolution each clause condition is re-evaluated, dropping the 2 returned cards → only the 1 still in trash fires (+1). The earlier `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a mischaracterization (single-source probe + abstract reasoning, never run end-to-end). No engine change needed. | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
 | 24 | B | Hudiemon DP 3000 | BLOCKED-PRIMITIVE | BT23-101, BT23-037, BT16-101, ST17-07 implemented; needs EX6-004 (Kokomon), itself BLOCKED on `G-SUSPEND-EFFECT-INITIATED` (suspend event carries no by_effect bit, so Kokomon's "when an EFFECT suspends" is un-gatable). | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
 | 25 | E | YES (DigiXros departure ≠ battle) | BLOCKED-CARD | EX3-014 (1 away) | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
 | 26 | C | Returns to hand | BLOCKED-CARD | EX3-014 (1 away) | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
@@ -63,10 +63,21 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 9 PASS.** `cargo
 |---------|-------|-----------|
 | BLOCKED-CARD | 14 | 3, 4, 9, 10, 11, 15, 19, 20, 21, 25, 26, 27, 29, 30 |
 | BLOCKED-PRIMITIVE | 6 | 8, 12, 14, 18, 24, 28 |
-| CANDIDATE | 1 | 23 |
-| PASS | 9 | 1, 2, 5, 6, 7, 13, 16, 17, 22 |
+| CANDIDATE | 0 | — |
+| PASS | 10 | 1, 2, 5, 6, 7, 13, 16, 17, 22, 23 |
 
-(Counts: 14 + 6 + 1 + 9 = 30 of 30.)
+(Counts: 14 + 6 + 0 + 10 = 30 of 30.)
+
+Q23 moved BLOCKED-PRIMITIVE → PASS (2026-05-30): the documented
+`G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a MISCHARACTERIZATION. Running
+the real 3-source-trash-then-return-2 scenario to completion shows the engine
+already produces the judge-correct +1: ≥2 mandatory `OnDigivolutionCardTrashed`
+observers form a multi-trigger bundle → a `TriggerOrder` selection PARKS them past
+the trashing effect, and on resolution each observer's clause condition is
+re-evaluated, dropping the cards that were returned in the meantime. Pinned by
+`d::q23_inherited_trash_memory_gated_on_remaining_in_trash` (synthetic Medusamon
+driver over real EX8-051/EX8-005). The prior "fix seam" / deferral analysis was
+predicated on the over-count and is retired; no engine change was needed.
 
 Cluster-B pin wave (2026-05-30): after authoring cluster B's cards, Q6 + Q13 moved
 BLOCKED-CARD → **PASS** (deferred-deletion floodgate timing; debuff counted before a
@@ -123,17 +134,19 @@ effects suppresses the granted "[EoT] Delete this". BT21-036 was not needed
    + synthetic `q6_analog_*`/`q24_analog_*` pin it; full suite regression-clean. Cluster-B per-card
    scenarios (Q6/Q8/Q13/Q14/Q24) flip to PASS as their cards are authored. Moved to
    [`resolved-gaps.md`](../resolved-gaps.md).
-0b. **G-ON-TRASH-OBSERVER-SYNCHRONOUS** (Q23 confirmed; Q21 probable) — NEW gap/tension,
-   code-confirmed + probed. `on_digivolution_card_trashed` fires synchronously at trash-time
-   (`fire_digivolution_card_trashed` enqueues + immediately drains, intentional for EX10-036), so
-   inherited on-trash effects can't DEFER and re-check remain-in-trash → Q23 over-counts (+3 vs the
-   judge's +1). Design tension (EX10-036 needs synchrony; Q21/Q23 need deferral) — not a trivial fix.
-   Probe `cluster_d_on_trash_observer_fires_synchronously_not_deferred` characterizes it. Logged in
-   [`engine-gaps.md`](../archetype-qa/engine-gaps.md). **Spike done 2026-05-29 (decision: SPLIT to a
-   follow-up change).** The synchronous drain is load-bearing for EX10-036's *sibling-clause* pickup
-   (orthogonal to the on-trash observer); cleanly separating it from the deferred inherited observer
-   is a deep dispatch change that can't be validated without Q23's cards. Stays OPEN; Q21/Q23 stay
-   BLOCKED on it.
+0b. **G-ON-TRASH-OBSERVER-SYNCHRONOUS** (Q23) — **WITHDRAWN / MISCHARACTERIZED 2026-05-30.** The
+   logged "+3 over-count" was wrong for the real Q23 (multi-source) shape. Running the 3-Tumblemon-
+   trash-then-return-2 scenario to completion shows the engine ALREADY produces the judge-correct +1:
+   ≥2 mandatory `OnDigivolutionCardTrashed` observers form a multi-trigger bundle → the drainer
+   installs a `TriggerOrder` selection that PARKS them past the trashing effect (the return-2 runs
+   first); on resolution each observer's clause condition is RE-EVALUATED, and the cards returned in
+   the meantime fail (no longer in trash) → dropped, leaving only the 1 remaining (+1). The earlier
+   probe only ran the SINGLE-source synchronous case + reasoned about deferral abstractly, never end-
+   to-end. **Q23 → PASS; no engine change needed; the deferral "fix seam" / split-out follow-up is
+   retired.** Residual narrow open question (no known card, not a blocker): a SINGLE source trashed
+   then returned WITHIN one effect would still fire synchronously. Gap moved to
+   [`resolved-gaps.md`](../resolved-gaps.md) as mischaracterized. Q21 is `[On Deletion]` (different
+   mechanic) and stays BLOCKED-CARD on its unauthored cards.
 0c. **G-BLAST-DIGIVOLVE-IMMUNITY** (Q18) — **RESOLVED 2026-05-29** (change
    `fix-judge-quiz-cluster-wiring-gaps`). Blast Digivolve / Blast DNA now consult
    `permanent_is_unaffected_by_effect` so a Digimon immune to all Digimon effects incl. its own
@@ -150,8 +163,9 @@ effects suppresses the granted "[EoT] Delete this". BT21-036 was not needed
    `fix-judge-quiz-engine-gaps`, Gap 2). Was: `return_trash_cards_to_deck_bottom` inserted Digi-Eggs
    into the main deck. Fixed via `EffectContext::move_card_to_deck` routing all four trash→deck movers
    (`CardKind::DigiEgg` → digitama deck). Q22 → PASS. Gap moved to
-   [`resolved-gaps.md`](../resolved-gaps.md). (Q23's remain-in-trash gating is a separate gap —
-   G-ON-TRASH-OBSERVER-SYNCHRONOUS — still open.)
+   [`resolved-gaps.md`](../resolved-gaps.md). (Q23's remain-in-trash gating turned out to be already
+   handled by the engine's multi-trigger TriggerOrder parking + condition re-evaluation —
+   G-ON-TRASH-OBSERVER-SYNCHRONOUS was withdrawn as mischaracterized; Q23 → PASS.)
 2. **AD1-025 `[Assembly]` gap** (Q5) — RESOLVED 2026-05-29 (change `fix-ad1-025-assembly-data`). This
    was a TWO-layer gap: (a) `data/cards.json` missing the `[Assembly]` keyword the real card carries
    (DCGO AD1_025.cs:214-255), AND (b) no engine Assembly executor at all (the alt-path KIND compiled
@@ -202,6 +216,10 @@ Probing the engine rule each cluster needs (independent of card authoring) also 
 
 "DSL YAML present" is a weak proxy for "faithful." Of the 4 scenarios that looked discovery-ready
 (all cards had YAML), Q2/Q5/Q22 were each blocked at a *different* layer (engine primitive / source
-data / engine bug) and Q23 needs auditing. Gaps live at the engine-primitive, card-YAML-clause, and
-source-data layers, and only an AUDIT-before-asserting pass distinguishes them — which is exactly
-what this suite institutionalizes.
+data / engine bug). A second lesson (Q23, 2026-05-30): a logged "gap" can be a mischaracterization —
+the "+3 over-count" survived a probe + abstract reasoning but evaporated once the scenario was run to
+completion (resolving the mandatory TriggerOrder selection). RUN-TO-COMPLETION before logging a gap;
+a probe that stops at the first `pending_selection` can miss that the engine already does the right
+thing. Gaps live at the engine-primitive, card-YAML-clause, and source-data layers, and only an
+AUDIT-before-asserting pass — run end-to-end — distinguishes them, which is exactly what this suite
+institutionalizes.
