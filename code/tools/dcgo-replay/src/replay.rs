@@ -21,12 +21,8 @@
 
 use std::collections::HashMap;
 
-use digimon_engine::build_action_mask;
 use digimon_engine::card_data::CardData;
-use digimon_engine::enums::PlayerId;
-use digimon_engine::game::Game;
-use digimon_engine::opaque_deck::{RevealKind, RevealQueue};
-use digimon_engine::rules::Rules;
+use digimon_engine::runners::replay::{Divergence, DivergenceKind, ReplaySession};
 
 use crate::recording::{RecordingV1, Row};
 
@@ -137,109 +133,72 @@ pub struct WinnerMismatch {
     pub steps_consumed: u32,
 }
 
-/// Replay one recording through the engine.
+/// Replay one recording through the engine via the shared
+/// [`ReplaySession`] + `DcgoAdapter` (the same construction + step path the
+/// interactive bug-hunter uses — one code path for batch and interactive).
 ///
-/// Bot-vs-bot recordings (`opp_deck_post_shuffle.is_some()`) construct a
-/// standard `Game::new` with both decks ordered. PvP recordings
-/// (`opp_deck_post_shuffle.is_none()`) construct via
-/// `Game::new_with_opaque_opponent` with a `RevealQueue` preloaded from
-/// the recording's `reveal` rows.
+/// Bot-vs-bot recordings (`opp_deck_post_shuffle.is_some()`) reconstruct via
+/// `Game::new`; opaque PvP recordings build via `Game::new_with_opaque_opponent`
+/// with a `RevealQueue` from the reveal stream. The session runs under the
+/// adapter's default `CheckThenApply` policy, so a recorded action the engine
+/// masks out pauses and records a divergence, which this driver maps back to
+/// the batch [`ReplayOutcome`] taxonomy.
 pub fn replay_recording(
     recording: &RecordingV1,
     card_data: &HashMap<String, CardData>,
     config: &ReplayConfig,
 ) -> ReplayOutcome {
-    let mut game = match build_game(recording, card_data) {
-        Ok(g) => g,
-        Err(fail) => return ReplayOutcome::Fail(fail),
+    let is_opaque = recording.start.opp_deck_post_shuffle.is_none();
+
+    let mut session = match ReplaySession::from_dcgo(recording.clone(), card_data, false) {
+        Ok(s) => s,
+        Err(e) => {
+            // Opaque construction failures (missing/short decklist, bad reveal
+            // tag) keep the prior OpaqueRevealError contract; otherwise it's a
+            // deck-data / engine construction error.
+            let message = e.to_string();
+            return if is_opaque {
+                ReplayOutcome::Fail(ReplayFail::OpaqueRevealError { step: None, message })
+            } else {
+                ReplayOutcome::Fail(ReplayFail::EngineError { step: None, message })
+            };
+        }
     };
 
-    let mut step_count: u32 = 0;
-    for row in &recording.rows {
-        // Runaway guard.
-        if step_count >= config.max_steps {
-            return ReplayOutcome::Fail(ReplayFail::EngineError {
-                step: Some(step_count),
-                message: format!(
-                    "max_steps ({}) exceeded; engine may be in an infinite loop or \
-                     recording is unexpectedly long.",
-                    config.max_steps
-                ),
-            });
-        }
+    session.run_to_completion();
 
-        match row {
-            Row::Action(act) => {
-                // Verify actor matches what the engine expects to decide.
-                let expected_actor: u8 = current_decision_player(&game);
-                if expected_actor != act.actor {
-                    return ReplayOutcome::Fail(ReplayFail::ActorMismatch(ActorMismatch {
-                        step: act.step,
-                        expected_actor,
-                        recorded_actor: act.actor,
-                        action_id: act.action_id,
-                        phase: act.phase.clone(),
-                    }));
-                }
-
-                // Verify the action is legal under the current mask.
-                let mask = build_action_mask(&game, expected_actor);
-                let action_idx = act.action_id as usize;
-                let legal = mask.get(action_idx).copied().unwrap_or(0.0) > 0.5;
-                if !legal {
-                    let sample = sample_legal_ids(&mask, 10);
-                    return ReplayOutcome::Fail(ReplayFail::IllegalAction(IllegalAction {
-                        step: act.step,
-                        actor: act.actor,
-                        action_id: act.action_id,
-                        phase: act.phase.clone(),
-                        source: act.source.clone(),
-                        sample_legal_ids: sample,
-                    }));
-                }
-
-                if config.verbose {
-                    eprintln!(
-                        "step {} actor {} action_id {} phase {} source {}",
-                        act.step, act.actor, act.action_id, act.phase, act.source
-                    );
-                }
-                game.decode_action(act.action_id, expected_actor);
-                step_count += 1;
-            }
-            Row::EncoderFailure(ef) => {
-                // We can't fabricate an action ID for this row — the engine
-                // is still waiting for an unencoded selection. Halt cleanly.
-                return ReplayOutcome::PartialPass {
-                    steps_consumed: step_count,
-                    stop_reason: format!(
-                        "hit encoder_failure row at step {} ({}; raw={}). \
-                         The engine cannot advance without the corresponding \
-                         selection encoded. Resolve task 3.5 (per-prompt \
-                         selection encoding) to replay past this point.",
-                        ef.step, ef.reason, ef.raw_value
-                    ),
-                };
-            }
-            Row::Reveal(_) => {
-                // Reveals are consumed by the engine via the preloaded
-                // RevealQueue, NOT advanced by the harness loop. They're
-                // present in the row stream for documentation / debugging.
-                // No-op here.
-            }
-            Row::Unknown => {
-                // Tolerated for forward compat — unknown row types are
-                // skipped without aborting the replay.
-            }
-            Row::GameStart(_) | Row::GameEnd(_) => {
-                // These can't appear mid-stream per parser invariants.
-                // Defensive no-op.
-            }
-        }
+    if config.verbose {
+        eprintln!(
+            "replayed {} / {} steps; divergences={}",
+            session.current_step(),
+            session.total_steps(),
+            session.divergences().len()
+        );
     }
 
-    // Final winner-match check.
-    let engine_winner_raw: u8 = game.winner.unwrap_or(u8::MAX);
+    // A pausing differential divergence → the matching batch failure.
+    if let Some(div) = session.divergences().first() {
+        return ReplayOutcome::Fail(map_divergence(div));
+    }
+
+    // An encoder_failure truncated the replayable prefix — the engine is
+    // waiting on an unencoded selection. Halt cleanly (not a parity failure).
+    if let Some(ef) = recording.rows.iter().find_map(|r| match r {
+        Row::EncoderFailure(ef) => Some(ef),
+        _ => None,
+    }) {
+        return ReplayOutcome::PartialPass {
+            steps_consumed: session.current_step(),
+            stop_reason: format!(
+                "hit encoder_failure row at step {} ({}; raw={}). The engine cannot \
+                 advance without the corresponding selection encoded.",
+                ef.step, ef.reason, ef.raw_value
+            ),
+        };
+    }
+
+    // Terminal winner check.
+    let engine_winner_raw: u8 = session.winner_id().unwrap_or(u8::MAX);
     let engine_winner_i8: i8 = if engine_winner_raw == u8::MAX {
         -1
     } else {
@@ -249,208 +208,60 @@ pub fn replay_recording(
         return ReplayOutcome::Fail(ReplayFail::WinnerMismatch(WinnerMismatch {
             expected_winner: recording.end.winner,
             engine_winner: engine_winner_i8,
-            steps_consumed: step_count,
+            steps_consumed: session.current_step(),
         }));
     }
 
     ReplayOutcome::Pass {
-        steps_consumed: step_count,
+        steps_consumed: session.current_step(),
         winner: engine_winner_raw,
     }
 }
 
-/// Dispatch on `opp_deck_post_shuffle` to construct either a standard
-/// game or an opaque-opponent game. Pulled into a helper to keep
-/// `replay_recording` focused on the loop.
-fn build_game(
-    recording: &RecordingV1,
-    card_data: &HashMap<String, CardData>,
-) -> Result<Game, ReplayFail> {
-    let my_deck = recording.start.my_deck_post_shuffle.clone();
-    let my_pid = recording.start.my_player_id;
-
-    match &recording.start.opp_deck_post_shuffle {
-        Some(opp_deck) => {
-            // Standard mode — both decks fully ordered.
-            let (deck1, deck2) = if my_pid == 0 {
-                (my_deck, opp_deck.clone())
-            } else {
-                (opp_deck.clone(), my_deck)
-            };
-            // Seed = 0 is fine: the post-shuffle deck order is already
-            // baked in; RNG only affects card-internal random effects.
-            Game::new(&[deck1, deck2], card_data, Rules::standard(), Some(0)).map_err(|e| {
-                ReplayFail::EngineError {
-                    step: None,
-                    message: format!("Game::new failed: {}", e),
-                }
+/// Map a `ReplaySession` differential [`Divergence`] to the batch
+/// [`ReplayFail`] taxonomy (task 4.5).
+fn map_divergence(div: &Divergence) -> ReplayFail {
+    match &div.kind {
+        DivergenceKind::MaskMiss { sample_legal_ids } => ReplayFail::IllegalAction(IllegalAction {
+            step: div.step,
+            actor: div.actor,
+            action_id: div.action_id,
+            phase: div.phase.clone(),
+            // The DCGO source tag isn't carried on the divergence; phase is the
+            // closest stable descriptor for triage clustering.
+            source: div.phase.clone(),
+            sample_legal_ids: sample_legal_ids.clone(),
+        }),
+        DivergenceKind::Actor { expected, recorded } => ReplayFail::ActorMismatch(ActorMismatch {
+            step: div.step,
+            expected_actor: *expected,
+            recorded_actor: *recorded,
+            action_id: div.action_id,
+            phase: div.phase.clone(),
+        }),
+        DivergenceKind::Winner { recorded, replayed } => {
+            let to_i8 = |w: &Option<u8>| w.map(|x| x as i8).unwrap_or(-1);
+            ReplayFail::WinnerMismatch(WinnerMismatch {
+                expected_winner: to_i8(recorded),
+                engine_winner: to_i8(replayed),
+                steps_consumed: div.step,
             })
         }
-        None => {
-            // Opaque mode — opponent's deck composition is known but order
-            // isn't. Preload the RevealQueue from the recording's `reveal`
-            // rows in stream order, then construct via the opaque path.
-            let reveal_pairs = collect_reveal_pairs(&recording.rows).map_err(|msg| {
-                ReplayFail::OpaqueRevealError {
-                    step: None,
-                    message: msg,
-                }
-            })?;
-            let queue = RevealQueue::from_pairs(reveal_pairs);
-
-            // The opaque opponent's decklist is the same shape as my_deck
-            // but with composition known from the recording. We don't
-            // have it explicitly in the schema — the recording's
-            // `opp_deck_post_shuffle: null` means "I don't know the order,
-            // but I know the composition". The composition comes from the
-            // reveal stream's TOTAL set of cards, supplemented by any
-            // cards the opp could be inferred to hold.
-            //
-            // Pragmatic Phase 3 approach: until the recorder is updated
-            // to include an explicit `opp_decklist_composition` header
-            // field, we error out. Capturing this is task 7.x.
-            //
-            // For Phase 1 integration testing we work around by allowing
-            // recordings to optionally include a synthetic `opp_decklist`
-            // field — but that's beyond the current schema. Surface a
-            // clear error so the user knows what's missing.
-            //
-            // Fallback: if the reveal stream contains at least `deck_size`
-            // distinct entries (e.g. a test fixture with hand-written
-            // reveals for the entire deck), use them as the multiset.
-            // This lets integration tests proceed without a schema bump.
-            let opp_decklist =
-                derive_opp_decklist_from_recording(recording).map_err(|msg| {
-                    ReplayFail::OpaqueRevealError {
-                        step: None,
-                        message: msg,
-                    }
-                })?;
-
-            Game::new_with_opaque_opponent(
-                my_pid,
-                my_deck,
-                opp_decklist,
-                Box::new(queue),
-                card_data,
-                Rules::standard(),
-                Some(0),
-            )
-            .map_err(|e| ReplayFail::OpaqueRevealError {
-                step: None,
-                message: format!("Game::new_with_opaque_opponent failed: {}", e),
-            })
-        }
-    }
-}
-
-/// Walk the recording's row stream collecting reveal rows in order,
-/// mapping each `source` string to the corresponding [`RevealKind`].
-/// Returns an error if any `source` value is unrecognized.
-fn collect_reveal_pairs(rows: &[Row]) -> Result<Vec<(RevealKind, String)>, String> {
-    let mut out = Vec::new();
-    for row in rows {
-        if let Row::Reveal(rv) = row {
-            let kind = match rv.source.as_str() {
-                "draw" => RevealKind::Draw,
-                "security" => RevealKind::Security,
-                "mill" => RevealKind::Mill,
-                "effect" => RevealKind::Effect,
-                other => {
-                    return Err(format!(
-                        "reveal row at step {} has unknown source `{}` \
-                         (expected draw|security|mill|effect)",
-                        rv.step, other
-                    ));
-                }
-            };
-            out.push((kind, rv.card_id.clone()));
-        }
-    }
-    Ok(out)
-}
-
-/// Determine the opaque opponent's decklist composition.
-///
-/// Two sources, tried in order:
-///
-/// 1. **Explicit `opp_decklist_composition` header field** — added to
-///    the schema in anticipation of task 7.x's recorder update. When the
-///    DCGO mod knows the opponent's decklist (from the Photon
-///    matchmaking handshake), it emits the full decklist here even
-///    though `opp_deck_post_shuffle` stays `null`. This is the path real
-///    recordings will use.
-///
-/// 2. **Reveal-stream fallback** — when the explicit field is absent
-///    (older recordings, or hand-crafted ones). Uses the reveal stream's
-///    card IDs as the multiset. Requires the reveal stream to provide
-///    at least `expected_size` entries — bot tests can pad, real
-///    recordings without explicit composition cannot.
-fn derive_opp_decklist_from_recording(recording: &RecordingV1) -> Result<Vec<String>, String> {
-    let expected_size = recording.start.my_deck_post_shuffle.len();
-
-    // Preferred: explicit field.
-    if let Some(comp) = &recording.start.opp_decklist_composition {
-        if comp.len() != expected_size {
-            return Err(format!(
-                "opp_decklist_composition has {} cards but my_deck_post_shuffle \
-                 has {}; both must match the rules' deck size",
-                comp.len(),
-                expected_size
-            ));
-        }
-        return Ok(comp.clone());
-    }
-
-    // Fallback: derive from reveal stream.
-    let reveal_cards: Vec<String> = recording
-        .rows
-        .iter()
-        .filter_map(|r| match r {
-            Row::Reveal(rv) => Some(rv.card_id.clone()),
-            _ => None,
-        })
-        .collect();
-
-    if reveal_cards.len() < expected_size {
-        return Err(format!(
-            "opaque recording is missing an explicit `opp_decklist_composition` \
-             header field, and its reveal stream has only {} entries (fewer than \
-             the deck size of {}). The recorder must supply either an explicit \
-             composition or enough reveals to derive it.",
-            reveal_cards.len(),
-            expected_size
-        ));
-    }
-
-    Ok(reveal_cards.into_iter().take(expected_size).collect())
-}
-
-/// Replicates `HeadlessRunner::current_decision_player` logic without
-/// requiring the runner wrapper.
-fn current_decision_player(game: &Game) -> PlayerId {
-    if let Some(p) = game.mulligan_current_player() {
-        return p;
-    }
-    if let Some(sel) = game.pending_selection.as_ref() {
-        return sel.selecting_player;
-    }
-    game.turn_player()
-}
-
-/// Return up to `max` indices of `mask` whose float value > 0.5. Used to
-/// surface "what the engine WOULD have accepted" in IllegalAction reports.
-fn sample_legal_ids(mask: &[f32], max: usize) -> Vec<u16> {
-    let mut out = Vec::with_capacity(max);
-    for (i, &v) in mask.iter().enumerate() {
-        if v > 0.5 {
-            out.push(i as u16);
-            if out.len() >= max {
-                break;
+        DivergenceKind::RevealKind { message } | DivergenceKind::RevealExhausted { message } => {
+            ReplayFail::OpaqueRevealError {
+                step: Some(div.step),
+                message: message.clone(),
             }
         }
+        DivergenceKind::Memory { recorded, replayed } => ReplayFail::EngineError {
+            step: Some(div.step),
+            message: format!("memory divergence: recorded={} replayed={}", recorded, replayed),
+        },
+        DivergenceKind::Phase { recorded, replayed } => ReplayFail::EngineError {
+            step: Some(div.step),
+            message: format!("phase divergence: recorded={} replayed={}", recorded, replayed),
+        },
     }
-    out
 }
 
 #[cfg(test)]

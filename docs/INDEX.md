@@ -1,5 +1,22 @@
 # Documentation Index
 
+> **Three bug-discovery modes** (all route confirmed findings to the same
+> trackers — `docs/RUST_ENGINE_GAPS.md` for engine primitives,
+> `qa/archetype-qa/engine-gaps.md` for card effects):
+> 1. **Replay differential** — `/replay-bug-hunt` on a DCGO recording: the
+>    engine is checked against the battle-tested DCGO oracle (a masked-out
+>    recorded action is a Rust bug). *(reactive — see [DEBUG_MCP.md](DEBUG_MCP.md))*
+> 2. **Replay judge** — `/replay-bug-hunt` on a native eval/self-play recording:
+>    faithfulness judged vs card text + `general_rule.pdf` + DCGO C#. *(reactive)*
+> 3. **Archetype probe** — `/archetype-interaction-test-author`: research an
+>    archetype as a system, then author multi-card interaction tests + static
+>    archetype tests that exercise its combos. *(proactive, hypothesis-driven —
+>    see [RUST_DSL_TEST_API.md](RUST_DSL_TEST_API.md))*
+>
+> These sit **above** the per-card archetype family (`/assess-archetype-rust` →
+> `/batch-implement-cards-rust-dsl` → per-card behavioral tests): they catch the
+> cross-card / whole-game bugs per-card TDD can't see.
+
 | Document | Description |
 |----------|-------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Service architecture, API surface, frontend components, RL contracts, desktop distribution |
@@ -13,10 +30,10 @@
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Hosted API deployment — DigitalOcean topology, env vars, bootstrap |
 | [RUST_ENGINE_API.md](RUST_ENGINE_API.md) | Rust engine scripting reference — `CardEffect`, `EffectContext`, `Expiry`, `ModifierType`, common patterns, DebugRunner |
 | [SCENARIO_TESTING.md](SCENARIO_TESTING.md) | Scenario testing substrate — shared `qa/scenarios/*.json` fixtures, `RustDebugGame` + `/debug` staging, Rust + Playwright conformance runners |
-| [DEBUG_MCP.md](DEBUG_MCP.md) | Engine debug MCP server + CLI — `digimon-engine-cli` REPL/replay, `digimon-engine-mcp` stdio tools, recipes |
+| [DEBUG_MCP.md](DEBUG_MCP.md) | Engine debug MCP server + CLI — `digimon-engine-cli` REPL/replay, `digimon-engine-mcp` stdio tools (incl. recording stepping `step_forward`/`step_back`/`seek` + scanners `scan_divergences`/`scan_fizzles`/`scan_panics`), recipes. The interactive replay bug-hunter (`/replay-bug-hunt` skill) is the **microscope** that drives these tools; the [`dcgo-replay`](DCGO_RECORDING_SCHEMA.md) parity harness is the **funnel** that flags which recordings to point it at |
 | [TRAINING_MCP.md](TRAINING_MCP.md) | Training status MCP — Python stdio server for read-only inspection of `runs/` and `models/` artifacts (list runs, summarize evals/panics, query TensorBoard metrics, inventory recordings/checkpoints/deck pool) |
 | [RUST_DSL_AGENT_GUIDE.md](RUST_DSL_AGENT_GUIDE.md) | Practical Rust YAML DSL authoring guide for agents — workflow, clause/step API, archetype patterns, gap filing, and tests |
-| [RUST_DSL_TEST_API.md](RUST_DSL_TEST_API.md) | Rust DSL card test API — per-card behavioral test layout, DebugRunner helpers, and DSL test patterns |
+| [RUST_DSL_TEST_API.md](RUST_DSL_TEST_API.md) | Rust DSL card test API — per-card behavioral test layout, DebugRunner helpers, DSL test patterns, and the **archetype interaction-test** bucket (`tests/archetypes/<slug>.rs` + `support.rs` fixtures) authored by the `/archetype-interaction-test-author` capstone skill. Its **static archetype-test harness** (deck-legality / coverage gate / smoke games / combo-presence) is the crate `code/tools/archetype-static-tests/` (`cargo run -p archetype-static-tests -- "<archetype>"`), recording verdicts in `qa/qa-reports/archetype_interactions.json` |
 | [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) | Rust ↔ Python engine parity tracker — every known behavioral divergence with severity and fix order |
 | [RUST_ENGINE_GAPS.md](RUST_ENGINE_GAPS.md) | Rust engine capability gaps surfaced by archetype audits (`assess-rust-engine-archetype`) — primitives still needed before each archetype can ship under the no-approximations policy |
 | [qa/dsl-vocab-gaps.md](../qa/dsl-vocab-gaps.md) | DSL vocabulary and lowering gaps surfaced by Rust archetype assessments and batch card implementation |

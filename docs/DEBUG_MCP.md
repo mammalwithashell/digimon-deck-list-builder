@@ -87,13 +87,13 @@ Edit `.mcp.json` and uncomment the `_digimon-engine-mcp` entry (drop the leading
 
 For Claude Code, restart the client after editing `.mcp.json`.
 
-### Tool surface (26 tools)
+### Tool surface (33 tools)
 
 **Lifecycle (6):**
 - `new_game_from_decks(deck1, deck2, seed?)` → `{ game_id }`
 - `new_game_debug(hands, decks, first_player)` → `{ game_id }`
-- `load_recording(recording_json | recording_path)` → `{ game_id }`
-- `seek(game_id, step_n)` — **v1: stubbed**, use `load_recording` with a different step instead
+- `load_recording(recording_json | recording_path, source_format?)` → `{ game_id, total_steps, source_format }` — auto-detects a **native** `GameRecorder` recording (JSON object with `actions`/`initial_state`, replayed under `Trust`) vs a **DCGO** JSONL recording (leading `game_start` row, replayed under `CheckThenApply` — differential against the DCGO oracle). `recording_json` accepts an inline native object or a string holding raw native-JSON / DCGO-JSONL text. Pass `source_format: "native"|"dcgo"` to skip detection.
+- `seek(game_id, step_n)` → step view — forward replays missing steps; backward uses snappy in-place reset-and-replay (native) / deterministic rebuild (DCGO)
 - `list_games()` → `[{ game_id, turn_count, phase, ... }]`
 - `close_game(game_id)` → `{ ok }`
 
@@ -110,6 +110,28 @@ For Claude Code, restart the client after editing `.mcp.json`.
 - `legal_actions(game_id, player)`
 - `deck_cards(game_id)` — full metadata for both decks (Phase 6.5)
 - `recorded_actions(game_id, decode_labels?)` — recorded action log with optional human labels (Phase 6.5)
+
+**Replay stepping & scanning (7)** — only on recording-loaded games; each stepping
+tool returns a **step view** (below):
+- `step_forward(game_id)` — apply the next recorded step (populates `events` + `delta`)
+- `step_back(game_id)` — reset-and-replay one step (read-only view: no `events`/`delta`)
+- `seek(game_id, step_n)` / `restore_checkpoint(game_id, step_n)` — move the cursor to a step
+- `replay_step_view(game_id)` — read-only step view at the current cursor (no state change)
+- `scan_divergences(game_id, stop_at_first?)` — walk the whole recording under
+  `CheckThenApply`, collecting every differential `Divergence` (recorded oracle
+  action the engine's mask/actor/winner/reveal disagrees with) — **Mode 1** signal
+- `scan_fizzles(game_id)` — flag steps that emitted `EffectFizzled` — **Mode 2** lead
+- `scan_panics(game_id)` — flag steps the engine applied as a silent no-op (the
+  engine's `advanced` test: no event, no phase change, no pending-selection change)
+  — **Mode 2** lead; a high ratio signals the native replay diverged early (RNG)
+- All three scanners are cursor-preserving (they save + restore your position).
+
+A **step view** carries: `cursor` / `total_steps` / `is_complete` / `paused` /
+`policy`, the `recorded` next action (decoded via `explain_action`), `legal_now`
+(decoded legal actions the engine offers here), `divergences` so far, `events`
+emitted by the last forward step, a memory/zone `delta`, and `card_ids_in_play`
+(opaque tops render as the `<hidden>` sentinel). Driven end-to-end by the
+[`/replay-bug-hunt`](../.claude/skills/replay-bug-hunt/SKILL.md) skill.
 
 **Actions (8):**
 - `play(game_id, player, hand_idx)`
@@ -187,9 +209,28 @@ The `EffectFizzled` variant is emitted in two situations:
               → both decks' full metadata — now it knows what cards are in play
 5. Agent calls recorded_actions(game_id, decode_labels: true)
               → the full action log with labels like "play hand[3]: Agumon"
-6. Agent scans for the anomaly, then walks the live game to that step
-   via `step` calls. Inspects state at each point.
+6. Agent runs scan_panics / scan_fizzles to get leads, then step_forward /
+   step_back / seek to walk the live game to the suspect step. Each step view
+   carries the recorded action, legal_now, events, and the state delta.
 ```
+
+### Recipe 4 — Hunt a bug in a recorded game (the `/replay-bug-hunt` skill)
+
+```
+1. load_recording(recording_path) → { game_id, total_steps, source_format }
+2. source_format == "dcgo"  → Mode 1 (differential): scan_divergences(stop_at_first:true)
+   → seek to the divergence → step_back to inspect → localize to a card →
+   confirm vs $BASE_DCGO C# + general_rule.pdf.
+   source_format == "native" → Mode 2 (judge): scan_fizzles / scan_panics for leads
+   → step_forward reading events + delta → judge each effect vs inspect_card text +
+   rules PDF + C# → per-effect faithful / not-faithful / blocked verdict.
+3. Route confirmed findings: engine-primitive gaps → docs/RUST_ENGINE_GAPS.md,
+   card-effect gaps → qa/archetype-qa/engine-gaps.md. (The skill never fixes the engine.)
+```
+
+The skill is the **microscope**; the `dcgo-replay` parity harness is the **funnel**
+that flags which games to point it at. Both share one replay core
+(`ReplaySession` / `LiveGame` over the same adapters).
 
 ### Recipe 3 — Reproduce a flaky smoke test
 
@@ -199,18 +240,25 @@ The `EffectFizzled` variant is emitted in two situations:
 3. Step through the game by hand, watching for the divergence.
 ```
 
-## v1 limitations (worth knowing)
+## Limitations (worth knowing)
 
-- **No `snapshot` / `restore` / branching.** Deferred to v1.5 once the engine's
-  `card_data` is `Arc`-wrapped. Today, "what if I had picked differently" requires
-  re-loading the recording or rebuilding the game.
-- **`seek` (MCP) is stubbed.** Use `load_recording` with a different step instead.
+- **No state-snapshot branching.** Back-stepping is **reset-and-replay**, not a
+  saved state graph: the cursor resets to the recording's initial state and replays
+  forward (the mutable game graph is closure-bearing, so a full snapshot is
+  infeasible — see the reset-and-replay contract in
+  [`RUST_ENGINE_API.md`](RUST_ENGINE_API.md)). "What if I'd picked differently"
+  still requires editing the recording; the engine never forks mid-game.
+- **Native replay does not re-walk the RNG path.** Effects with a random outcome
+  (random reveal/selection) can resolve differently than recorded, and once they do
+  the replay diverges — later recorded actions become illegal for the live state and
+  drop. `scan_panics`' no-op ratio is the gauge: high = diverged early.
+- **Mode 1 (DCGO differential) is one-directional.** The recording stores only the
+  action DCGO took, so the engine can be caught *masking out* a legal action but not
+  *over-permitting* one DCGO would reject.
 - **Verify mode in CLI replay** catches memory/turn/phase/game-over divergences
   but doesn't compare full state.
 - **`scenario` subcommand** is stubbed — Python `ScenarioRunner` port is its own
   change.
-- **Cross-engine parity (Python recording → Rust replay)** works for the same
-  recording schema, but no in-tree fixture pins the contract yet.
 
 ## Implementation pointers
 

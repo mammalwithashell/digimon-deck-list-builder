@@ -10,5 +10,6 @@ members = [
     "code/tools/dsl-lint",
     "code/tools/action-space-export",
     "code/tools/dcgo-replay",
+    "code/tools/archetype-static-tests",
 ]
 resolver = "2"

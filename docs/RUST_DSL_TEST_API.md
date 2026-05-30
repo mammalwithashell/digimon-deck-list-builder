@@ -83,7 +83,7 @@ Production card specs live at `code/digimon-engine/cards/<set>/<card_id>.yaml`. 
 
 ## 2. Test taxonomy
 
-Three buckets. Each bucket has a clear home; do not mix them.
+Four buckets. Each bucket has a clear home; do not mix them.
 
 ### Per-card behavioral tests (`tests/cards_behavioral/<set>/<card_id>.rs`)
 
@@ -92,6 +92,18 @@ One file per card. Tests every clause that card declares — structural shape, c
 ### Mechanic-level tests (`tests/{combat, effects, selection, replacements, flood_gates, option_flow, keywords}/...`)
 
 Cross-card mechanic interactions: attack windows, Piercing math, security DP, OPT enforcement across copies of the same card, replacement-effect ordering, flood-gate stacking. These tests load *DSL fixture cards* (real shipping YAML or minimal inline YAML) — never synthetic `TEST-*` cards if a real card exhibits the mechanic. **§8** covers patterns.
+
+### Archetype interaction tests (`tests/archetypes/<archetype_slug>.rs`)
+
+One file per archetype. Each `#[test]` asserts a **named combo from that archetype's model** (`qa/archetype-qa/<archetype>-model.md`) — multiple *real implemented* cards playing together as the deck does, asserting the combo's claimed *mechanical* outcome (and, where useful, the unhappy path where a missing enabler breaks it). Unlike mechanic-level tests (which pin one engine mechanic, often with fixture cards), these are *system-level*: each test is traceable to a combo a human can check against card text, and a failure is triaged like a replay divergence (confirm vs card text + `general_rule.pdf` + DCGO C# before filing). Authored by the `/archetype-interaction-test-author` skill (the capstone that runs after the archetype's cards are implemented and per-card tests are green); the per-card behavioral coverage stays in `cards_behavioral/`.
+
+Shared multi-card fixtures live in `tests/archetypes/support.rs`:
+
+- `dsl_builder(&["BT17-102", ...])` → a `DebugRunnerBuilder` with N DSL cards loaded (panics, naming the card, on a typo / un-migrated id). Chain `.add_card(...)` for synthetic targets, then the usual `.hand()` / `.deck()` / `.security()` / `.memory()` / `.start()`.
+- `BoardSnapshot` + `snapshot(&runner)` → both players' `field`/`hand`/`security`/`trash`/`deck` sizes + `memory` in one struct; diff a before/after pair to assert the combo's net board change.
+- `run_actions(&mut runner, &[(player, action_id)])` → drive a scripted decision sequence, auto-resolving mandatory follow-ups between steps.
+
+Richer board setup (digivolution stacks via `place_stack` / `place_field_stack`, breeding, security/trash seeding) is already on `DebugRunner` / `DebugRunnerBuilder`. See `tests/archetypes/rocks.rs` for the exemplar (the Koromon-enabled Greymon removal combo: the same opponent board flips from deletable to safe depending on whether the enabler is in the stack — a system-level fact no per-card test sees).
 
 ### DSL infra tests (`tests/dsl/...`)
 
@@ -110,10 +122,11 @@ Current Phase 3 infra coverage includes:
 ### Decision tree
 
 > Is the test about a single card's effects? → **per-card** in `cards_behavioral/<set>/`.
-> Is the test about how *N cards interact* (e.g. Alliance triggering off another card's attack)? → **mechanic-level** under the relevant mechanic dir.
+> Is the test about one engine *mechanic* across ≥2 cards (e.g. Alliance triggering off another card's attack)? → **mechanic-level** under the relevant mechanic dir.
+> Is the test a *named combo* from an archetype's model (its real cards playing as the deck does)? → **archetype interaction** in `tests/archetypes/<slug>.rs`.
 > Is the test about whether the DSL parses, validates, or lowers correctly? → **DSL infra** under `tests/dsl/`.
 
-When a test could plausibly live in two buckets, prefer per-card. Mechanic tests should focus on mechanics that span ≥2 cards.
+When a test could plausibly live in two buckets, prefer per-card. Mechanic tests should focus on mechanics that span ≥2 cards; archetype interaction tests should be traceable to a specific combo in the archetype-model doc.
 
 ---
 
