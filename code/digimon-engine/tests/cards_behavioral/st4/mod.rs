@@ -6,6 +6,7 @@ use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, GamePhase, Keyword, ModifierType, PlaySource};
 use digimon_engine::replacement::ReplacementCause;
+use digimon_engine::selection::SelectionKind;
 
 const ST4_YAMLS: &[(&str, &str)] = &[
     ("ST4-01", include_str!("../../../cards/st4/ST4-01.yaml")),
@@ -573,4 +574,146 @@ fn st4_15_and_st4_16_have_security_clauses() {
             CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity)
         )));
     }
+}
+
+// --- Mandatory-selection faithfulness (printed text grants no "may"/"up to") ---
+// Each printed clause is a forced directive; the engine must NOT surface a PASS
+// to decline it when a legal target exists. We assert the pending selection is
+// non-optional at the decision point.
+
+#[test]
+fn st4_03_reveal_add_is_mandatory_when_eligible() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST4-03")
+        .expect("ST4-03 YAML loads")
+        .add_card(digimon("GREEN-HIT", CardColor::Green, 4, 3000))
+        .hand(0, &["ST4-03"])
+        .deck(0, &["GREEN-HIT"])
+        .memory(10)
+        .start();
+    make_p0_turn(&mut runner);
+
+    assert!(runner.play(0, 0).is_some());
+    let prompt = runner
+        .pending_selection()
+        .expect("ST4-03 reveals a green Digimon and prompts to add it");
+    assert!(
+        !prompt.is_optional,
+        "\"add it to your hand\" is mandatory: an eligible green Digimon cannot be declined"
+    );
+}
+
+#[test]
+fn st4_10_reveal_add_is_mandatory_when_eligible() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST4-10")
+        .expect("ST4-10 YAML loads")
+        .add_card(digivolve_target("ST4-10", CardColor::Green, 5, 7000, 4))
+        .add_card(digimon("BASE", CardColor::Green, 4, 4000))
+        .add_card(digimon("LV6-HIT", CardColor::Green, 6, 11000))
+        .add_card(option_card("DRAW", CardColor::Green))
+        .hand(0, &["ST4-10"])
+        .deck(0, &["LV6-HIT", "DRAW"])
+        .memory(10)
+        .start();
+    make_p0_turn(&mut runner);
+    let base = runner.place_on_field(0, "BASE", Some(0));
+
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve));
+    let prompt = runner
+        .pending_selection()
+        .expect("ST4-10 reveals a level-6 Digimon and prompts to add it");
+    assert!(
+        !prompt.is_optional,
+        "\"Add 1 level 6 or higher Digimon among them\" is mandatory when one exists"
+    );
+}
+
+#[test]
+fn st4_13_digi_burst_suspend_is_mandatory() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST4-13")
+        .expect("ST4-13 YAML loads")
+        .add_card(digimon("SRC-A", CardColor::Green, 4, 3000))
+        .add_card(digimon("SRC-B", CardColor::Green, 4, 3000))
+        .add_card(digimon("DEF", CardColor::Red, 4, 3000))
+        .memory(10)
+        .start();
+    let hercules = runner.place_stack(0, &["SRC-A", "SRC-B", "ST4-13"]);
+    runner.place_on_field(1, "DEF", Some(0));
+
+    assert!(runner.game.activate_field_main(0, hercules.index as usize));
+    // Step the Digi-Burst source-trash picks one action at a time (auto_resolve
+    // would drain past the suspend selection we want to inspect).
+    for _ in 0..8 {
+        if runner.pending_kind() == Some(SelectionKind::OppField) {
+            break;
+        }
+        let (player, action) = {
+            let pending = runner
+                .pending_selection()
+                .expect("a Digi-Burst source selection before the suspend");
+            (pending.selecting_player, pending.valid_action_ids[0])
+        };
+        runner
+            .execute_action(player, action)
+            .expect("resolve Digi-Burst source pick");
+    }
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OppField),
+        "Digi-Burst must lead into the suspend target selection"
+    );
+    let prompt = runner.pending_selection().expect("suspend selection pending");
+    assert!(
+        !prompt.is_optional,
+        "\"Suspend 1 of your opponent's Digimon\" is mandatory once Digi-Burst is paid"
+    );
+}
+
+#[test]
+fn st4_15_main_suspend_is_mandatory() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST4-15")
+        .expect("ST4-15 YAML loads")
+        .add_card(digimon("TARGET", CardColor::Red, 4, 3000))
+        .hand(0, &["ST4-15"])
+        .memory(10)
+        .start();
+    make_p0_turn(&mut runner);
+    runner.place_on_field(1, "TARGET", Some(0));
+
+    assert!(runner.play(0, 0).is_some());
+    let prompt = runner
+        .pending_selection()
+        .expect("ST4-15 installs the suspend selection");
+    assert!(
+        !prompt.is_optional,
+        "\"Suspend 1 of your opponent's Digimon\" is mandatory"
+    );
+}
+
+#[test]
+fn st4_16_main_return_is_mandatory() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST4-16")
+        .expect("ST4-16 YAML loads")
+        .add_card(digimon("TARGET", CardColor::Red, 4, 3000))
+        .hand(0, &["ST4-16"])
+        .memory(10)
+        .start();
+    make_p0_turn(&mut runner);
+    let target = runner.place_on_field(1, "TARGET", Some(0));
+    runner.game.players[1].battle_area[target.index as usize].is_suspended = true;
+
+    assert!(runner.play(0, 0).is_some());
+    let prompt = runner
+        .pending_selection()
+        .expect("ST4-16 installs the return selection");
+    assert!(
+        !prompt.is_optional,
+        "\"Return 1 of your opponent's suspended Digimon\" is mandatory"
+    );
 }

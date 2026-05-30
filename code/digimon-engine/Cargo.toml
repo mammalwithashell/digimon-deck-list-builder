@@ -77,6 +77,10 @@ name = "cards_behavioral"
 path = "tests/cards_behavioral/main.rs"
 
 [[test]]
+name = "archetypes"
+path = "tests/archetypes/main.rs"
+
+[[test]]
 name = "onnx_parity"
 path = "tests/onnx_parity/main.rs"
 

@@ -32,7 +32,9 @@ use crate::events::GameEvent;
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::rules::Rules;
-use crate::runners::replay::{ReplayError, ReplayRunner};
+use crate::runners::replay::{
+    DcgoAdapter, Divergence, NativeAdapter, ReplayDriver, ReplayError, ReplaySession, StepPolicy,
+};
 use crate::view::{
     EffectQueueView, EventLogView, FieldView, HandView, ModifierView, PendingSelectionDebugView,
     Perspective, SecurityView, StateView,
@@ -48,6 +50,9 @@ pub enum LiveGameError {
     GameConstruction(String),
     /// Recording-specific failures bubbled up from `ReplayRunner`.
     Replay(ReplayError),
+    /// A replay-stepping/scanner method was called on a game not built from
+    /// a recording (no bound `ReplayDriver`).
+    NotARecording,
 }
 
 impl std::fmt::Display for LiveGameError {
@@ -56,6 +61,10 @@ impl std::fmt::Display for LiveGameError {
             Self::MissingCards(ids) => write!(f, "cards not in pool: {:?}", ids),
             Self::GameConstruction(s) => write!(f, "game construction failed: {}", s),
             Self::Replay(e) => write!(f, "replay error: {}", e),
+            Self::NotARecording => write!(
+                f,
+                "this game was not constructed from a recording (no replay log to step)"
+            ),
         }
     }
 }
@@ -169,6 +178,139 @@ pub struct RecordedActionView {
     pub label: Option<String>,
 }
 
+/// A step-cursor view over a replay: what the engine sees *right now* plus
+/// the recorded action it would apply next. Returned by the stepping
+/// surface (`step_forward` / `step_back` / `replay_seek` / `replay_step_view`).
+#[derive(Debug, Clone, Serialize)]
+pub struct ReplayStepView {
+    /// Steps applied so far (the next `step_forward` applies `recorded`).
+    pub cursor: u32,
+    pub total_steps: u32,
+    pub is_complete: bool,
+    pub is_game_over: bool,
+    pub winner_id: Option<PlayerId>,
+    /// A `CheckThenApply` divergence has paused the cursor.
+    pub paused: bool,
+    /// Active step policy (`"Trust"` / `"CheckThenApply"`).
+    pub policy: String,
+    /// The recorded action at the cursor — what `step_forward` applies next.
+    /// `None` once the cursor reaches the end of the recording.
+    pub recorded: Option<RecordedStepView>,
+    /// Engine's legal actions for the current decision player, decoded — what
+    /// the engine *would* allow here (the differential reference set).
+    pub legal_now: Vec<ActionExplanation>,
+    /// Differential divergences logged so far under `CheckThenApply`.
+    pub divergences: Vec<Divergence>,
+    /// Events emitted by the most recent `step_forward` (empty for read-only
+    /// views and backward steps).
+    pub events: Vec<Value>,
+    /// Zone-size + memory delta of the most recent `step_forward` (`None` for
+    /// read-only views and backward steps).
+    pub delta: Option<ReplayDelta>,
+    /// Card IDs in both battle areas right now (opaque tops render as the
+    /// `<hidden>` sentinel), for quick board context.
+    pub card_ids_in_play: Vec<String>,
+}
+
+/// The recorded action at a replay cursor, decoded against the live state.
+#[derive(Debug, Clone, Serialize)]
+pub struct RecordedStepView {
+    pub step: u32,
+    pub actor: PlayerId,
+    pub action_id: u16,
+    pub phase: String,
+    /// Human-readable decode of `action_id` for `actor` in the current state.
+    pub label: String,
+}
+
+/// Memory + per-zone size change across a single applied step.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReplayDelta {
+    pub memory_before: i16,
+    pub memory_after: i16,
+    pub field_sizes_before: [usize; 2],
+    pub field_sizes_after: [usize; 2],
+    pub security_sizes_before: [usize; 2],
+    pub security_sizes_after: [usize; 2],
+    pub hand_sizes_before: [usize; 2],
+    pub hand_sizes_after: [usize; 2],
+}
+
+/// Result of a whole-recording scan (`scan_divergences` / `scan_fizzles` /
+/// `scan_panics`). The scan restores the caller's cursor before returning.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReplayScan {
+    /// `"divergences"` | `"fizzles"` | `"no_ops"`.
+    pub kind: &'static str,
+    pub total_steps: u32,
+    pub findings: Vec<ScanFinding>,
+}
+
+/// One flagged step from a [`ReplayScan`].
+#[derive(Debug, Clone, Serialize)]
+pub struct ScanFinding {
+    pub step: u32,
+    pub actor: PlayerId,
+    pub action_id: u16,
+    pub phase: String,
+    /// Decoded action label (pre-step), when available.
+    pub label: Option<String>,
+    /// Human-readable description of the flag (divergence kind, fizzle reason,
+    /// no-op note).
+    pub detail: String,
+    /// Full structured divergence, for `scan_divergences` findings only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub divergence: Option<Divergence>,
+}
+
+/// Pre-step probe passed to `scan_steps` classifiers.
+struct StepProbe {
+    step: u32,
+    before_seq: u64,
+    before_phase: GamePhase,
+    /// Pending-selection fingerprint before the step — lets a classifier use
+    /// the engine's own `advanced` test (a partially-consumed selection is
+    /// mutated in place, so identity must be by fingerprint, not presence).
+    before_pending: Option<PendingFingerprint>,
+}
+
+/// Snapshot of per-zone sizes + memory, used to compute a [`ReplayDelta`].
+#[derive(Debug, Clone, Copy)]
+struct ZoneSizes {
+    memory: i16,
+    field: [usize; 2],
+    security: [usize; 2],
+    hand: [usize; 2],
+}
+
+impl ZoneSizes {
+    fn capture(game: &Game) -> Self {
+        Self {
+            memory: game.memory,
+            field: [
+                game.player(0).battle_area.len(),
+                game.player(1).battle_area.len(),
+            ],
+            security: [game.player(0).security.len(), game.player(1).security.len()],
+            hand: [game.player(0).hand.len(), game.player(1).hand.len()],
+        }
+    }
+
+    fn delta(before: &ZoneSizes, after_game: &Game) -> ReplayDelta {
+        let after = ZoneSizes::capture(after_game);
+        ReplayDelta {
+            memory_before: before.memory,
+            memory_after: after.memory,
+            field_sizes_before: before.field,
+            field_sizes_after: after.field,
+            security_sizes_before: before.security,
+            security_sizes_after: after.security,
+            hand_sizes_before: before.hand,
+            hand_sizes_after: after.hand,
+        }
+    }
+}
+
 /// Unified live-game wrapper.
 pub struct LiveGame {
     pub game: Game,
@@ -180,6 +322,10 @@ pub struct LiveGame {
     /// behind `Arc` so `recorded_actions()` can clone cheaply for the
     /// temporary replay-and-decode walk.
     recording: Option<Arc<Value>>,
+    /// The replay driver bound to `game`, if this game was constructed
+    /// from a recording (native or DCGO). Steps `game` forward/backward
+    /// in place via reset-and-replay. `None` for non-recording games.
+    replay: Option<ReplayDriver>,
 }
 
 impl LiveGame {
@@ -210,6 +356,7 @@ impl LiveGame {
             game,
             deck_card_ids: [deck1, deck2],
             recording: None,
+            replay: None,
         })
     }
 
@@ -320,37 +467,65 @@ impl LiveGame {
             game: runner.game,
             deck_card_ids,
             recording: None,
+            replay: None,
         })
     }
 
-    /// Construct from a recording (paused at step 0 — initial post-mulligan
-    /// state, no actions applied).
+    /// Construct from a native `GameRecorder` recording (paused at step 0 —
+    /// initial post-mulligan state, no actions applied). Retains the bound
+    /// [`ReplayDriver`] so the stepping/scanner surface can walk it.
     pub fn from_recording(
         recording: serde_json::Value,
         card_data: &HashMap<String, CardData>,
     ) -> Result<Self, LiveGameError> {
-        let runner = ReplayRunner::new(recording.clone(), card_data, false)?;
+        let adapter = NativeAdapter::from_recording(recording.clone(), card_data)?;
+        let (game, driver) = ReplayDriver::from_source(Box::new(adapter), card_data, false)?;
         let deck_card_ids = deck_ids_from_recording(&recording);
         Ok(Self {
-            game: runner.game,
+            game,
             deck_card_ids,
             recording: Some(Arc::new(recording)),
+            replay: Some(driver),
         })
     }
 
-    /// Construct from a recording, fast-forwarded to `step_n`.
+    /// Construct from a native recording, fast-forwarded to `step_n`.
     pub fn from_recording_at_step(
         recording: serde_json::Value,
         step_n: u32,
         card_data: &HashMap<String, CardData>,
     ) -> Result<Self, LiveGameError> {
-        let mut runner = ReplayRunner::new(recording.clone(), card_data, false)?;
-        runner.seek(step_n).map_err(LiveGameError::Replay)?;
+        let adapter = NativeAdapter::from_recording(recording.clone(), card_data)?;
+        let (mut game, mut driver) =
+            ReplayDriver::from_source(Box::new(adapter), card_data, false)?;
+        driver.seek(&mut game, step_n).map_err(LiveGameError::Replay)?;
         let deck_card_ids = deck_ids_from_recording(&recording);
         Ok(Self {
-            game: runner.game,
+            game,
             deck_card_ids,
             recording: Some(Arc::new(recording)),
+            replay: Some(driver),
+        })
+    }
+
+    /// Construct from a parsed DCGO `RecordingV1` (bot-vs-bot or opaque PvP),
+    /// paused at step 0. The DCGO path defaults to `CheckThenApply` so the
+    /// stepping surface flags actions the engine wouldn't permit (differential
+    /// against the battle-tested DCGO oracle). `deck_cards()` is populated from
+    /// the recording's post-shuffle decks; the opaque opponent's deck reflects
+    /// the declared composition (multiset), not draw order.
+    pub fn from_dcgo_recording(
+        recording: crate::dcgo_recording::RecordingV1,
+        card_data: &HashMap<String, CardData>,
+    ) -> Result<Self, LiveGameError> {
+        let deck_card_ids = dcgo_deck_ids(&recording);
+        let adapter = DcgoAdapter::from_recording(recording, card_data)?;
+        let (game, driver) = ReplayDriver::from_source(Box::new(adapter), card_data, false)?;
+        Ok(Self {
+            game,
+            deck_card_ids,
+            recording: None,
+            replay: Some(driver),
         })
     }
 
@@ -364,6 +539,7 @@ impl LiveGame {
             game,
             deck_card_ids: [Vec::new(), Vec::new()],
             recording: None,
+            replay: None,
         }
     }
 
@@ -561,6 +737,285 @@ impl LiveGame {
             })
             .collect();
         Some(out)
+    }
+
+    // ── replay stepping & scanning ───────────────────────────────────────
+
+    /// True when this game carries a bound replay driver (constructed via
+    /// `from_recording`, `from_recording_at_step`, or `from_dcgo_recording`).
+    pub fn is_recording(&self) -> bool {
+        self.replay.is_some()
+    }
+
+    /// Total recorded steps, or 0 for a non-recording game.
+    pub fn replay_total_steps(&self) -> u32 {
+        self.replay.as_ref().map(|d| d.total_steps()).unwrap_or(0)
+    }
+
+    /// Current replay cursor (steps applied so far), or 0.
+    pub fn replay_cursor(&self) -> u32 {
+        self.replay.as_ref().map(|d| d.cursor()).unwrap_or(0)
+    }
+
+    /// Whether a `CheckThenApply` divergence has paused the cursor.
+    pub fn replay_paused(&self) -> bool {
+        self.replay.as_ref().map(|d| d.is_paused()).unwrap_or(false)
+    }
+
+    /// The active replay step policy as a display string (`"Trust"` /
+    /// `"CheckThenApply"`), or `None` for a non-recording game.
+    pub fn replay_policy(&self) -> Option<String> {
+        self.replay.as_ref().map(|d| format!("{:?}", d.policy()))
+    }
+
+    /// Override the replay step policy. Errors for a non-recording game.
+    pub fn set_replay_policy(&mut self, policy: StepPolicy) -> Result<(), LiveGameError> {
+        self.replay
+            .as_mut()
+            .ok_or(LiveGameError::NotARecording)?
+            .set_policy(policy);
+        Ok(())
+    }
+
+    /// Apply the next recorded step and return a [`ReplayStepView`] of the
+    /// transition (with `events` + `delta` populated from the applied step).
+    pub fn step_forward(&mut self) -> Result<ReplayStepView, LiveGameError> {
+        let mut driver = self.replay.take().ok_or(LiveGameError::NotARecording)?;
+        let before = ZoneSizes::capture(&self.game);
+        let before_seq = self.game.event_seq;
+        driver.step(&mut self.game);
+        let events = collect_events(&self.game, before_seq);
+        let delta = Some(ZoneSizes::delta(&before, &self.game));
+        let view = self.replay_step_view_inner(&driver, events, delta);
+        self.replay = Some(driver);
+        Ok(view)
+    }
+
+    /// Step the cursor back by one (reset-and-replay). The resulting view is
+    /// a read-only snapshot — `events`/`delta` are empty because the prior
+    /// state is reconstructed, not transitioned into.
+    pub fn step_back(&mut self) -> Result<ReplayStepView, LiveGameError> {
+        let mut driver = self.replay.take().ok_or(LiveGameError::NotARecording)?;
+        let res = driver.step_back(&mut self.game);
+        let view = self.replay_step_view_inner(&driver, Vec::new(), None);
+        self.replay = Some(driver);
+        res.map_err(LiveGameError::Replay)?;
+        Ok(view)
+    }
+
+    /// Seek the cursor to `target_step` (reset-and-replay on backward seek).
+    pub fn replay_seek(&mut self, target_step: u32) -> Result<ReplayStepView, LiveGameError> {
+        let mut driver = self.replay.take().ok_or(LiveGameError::NotARecording)?;
+        let res = driver.seek(&mut self.game, target_step);
+        let view = self.replay_step_view_inner(&driver, Vec::new(), None);
+        self.replay = Some(driver);
+        res.map_err(LiveGameError::Replay)?;
+        Ok(view)
+    }
+
+    /// Restore the cursor to `step_n` (alias for [`replay_seek`], matching the
+    /// MCP `restore_checkpoint` surface).
+    pub fn replay_restore(&mut self, step_n: u32) -> Result<ReplayStepView, LiveGameError> {
+        self.replay_seek(step_n)
+    }
+
+    /// Read-only snapshot of the replay at the current cursor. No state
+    /// mutation; `events`/`delta` are empty.
+    pub fn replay_step_view(&self) -> Result<ReplayStepView, LiveGameError> {
+        let driver = self.replay.as_ref().ok_or(LiveGameError::NotARecording)?;
+        Ok(self.replay_step_view_inner(driver, Vec::new(), None))
+    }
+
+    /// Build a [`ReplayStepView`] from the current `game` + `driver`. Shared
+    /// by the forward/back/seek/snapshot surfaces.
+    fn replay_step_view_inner(
+        &self,
+        driver: &ReplayDriver,
+        events: Vec<Value>,
+        delta: Option<ReplayDelta>,
+    ) -> ReplayStepView {
+        let decision_player = self.current_decision_player();
+        let recorded = driver.current_spec().map(|s| RecordedStepView {
+            step: driver.cursor(),
+            actor: s.actor,
+            action_id: s.action_id,
+            phase: s.phase.clone(),
+            label: explain_action(&self.game, s.actor, s.action_id).label,
+        });
+        ReplayStepView {
+            cursor: driver.cursor(),
+            total_steps: driver.total_steps(),
+            is_complete: driver.is_complete(),
+            is_game_over: self.game.game_over,
+            winner_id: self.game.winner,
+            paused: driver.is_paused(),
+            policy: format!("{:?}", driver.policy()),
+            recorded,
+            legal_now: legal_decoded_actions(&self.game, decision_player),
+            divergences: driver.divergences().to_vec(),
+            events,
+            delta,
+            card_ids_in_play: card_ids_in_play(&self.game),
+        }
+    }
+
+    /// Walk the whole recording under `CheckThenApply`, collecting every
+    /// differential [`Divergence`] (recorded oracle action the engine's
+    /// mask/actor disagrees with). With `stop_at_first`, halts at the first.
+    /// Restores the caller's cursor + policy afterward, so a scan never
+    /// perturbs the interactive position.
+    pub fn scan_divergences(&mut self, stop_at_first: bool) -> Result<ReplayScan, LiveGameError> {
+        let total = self.replay_total_steps();
+        let mut driver = self.replay.take().ok_or(LiveGameError::NotARecording)?;
+        let saved_cursor = driver.cursor();
+        let saved_policy = driver.policy();
+
+        let result = (|| -> Result<Vec<Divergence>, ReplayError> {
+            driver.seek(&mut self.game, 0)?;
+            driver.set_policy(StepPolicy::CheckThenApply);
+            let mut found: Vec<Divergence> = Vec::new();
+            loop {
+                driver.run_to_completion(&mut self.game);
+                let logged = driver.divergences();
+                if logged.len() > found.len() {
+                    found = logged.to_vec();
+                    if stop_at_first {
+                        break;
+                    }
+                    // Advance past the paused step along the oracle's
+                    // trajectory (apply the recorded action despite the mask)
+                    // so the scan can surface later divergences too.
+                    driver.set_policy(StepPolicy::Trust);
+                    driver.step(&mut self.game);
+                    driver.set_policy(StepPolicy::CheckThenApply);
+                    continue;
+                }
+                break;
+            }
+            Ok(found)
+        })();
+
+        // Restore cursor + policy regardless of outcome.
+        driver.set_policy(saved_policy);
+        let _ = driver.seek(&mut self.game, saved_cursor);
+        self.replay = Some(driver);
+
+        let found = result.map_err(LiveGameError::Replay)?;
+        let findings = found
+            .into_iter()
+            .map(|d| ScanFinding {
+                step: d.step,
+                actor: d.actor,
+                action_id: d.action_id,
+                phase: d.phase.clone(),
+                label: None,
+                detail: format!("{:?}", d.kind),
+                divergence: Some(d),
+            })
+            .collect();
+        Ok(ReplayScan {
+            kind: "divergences",
+            total_steps: total,
+            findings,
+        })
+    }
+
+    /// Walk the recording from the start, flagging every step whose
+    /// application emitted an `EffectFizzled` event — a Mode-2 lead for
+    /// effects that silently did nothing (missing/blocked implementation).
+    pub fn scan_fizzles(&mut self) -> Result<ReplayScan, LiveGameError> {
+        self.scan_steps("fizzles", |probe, game| {
+            collect_events(game, probe.before_seq)
+                .into_iter()
+                .find(|e| e.get("type").and_then(|t| t.as_str()) == Some("EffectFizzled"))
+                .map(|e| {
+                    format!(
+                        "EffectFizzled: {}",
+                        e.get("reason").and_then(|r| r.as_str()).unwrap_or("")
+                    )
+                })
+        })
+    }
+
+    /// Walk the recording from the start, flagging every step the engine
+    /// applied as a *silent no-op* — a Mode-2 lead for a recorded decision the
+    /// engine couldn't reproduce (e.g. once RNG-replay divergence makes a
+    /// recorded action illegal for the live state, `decode_action` drops it).
+    /// "No-op" uses the same `advanced` test `step` uses: no new event, no
+    /// phase change, and no pending-selection change. (True Rust panics abort
+    /// replay and aren't caught here; this surfaces the safe analog.)
+    pub fn scan_panics(&mut self) -> Result<ReplayScan, LiveGameError> {
+        self.scan_steps("no_ops", |probe, game| {
+            let after_pending = game.pending_selection.as_ref().map(pending_fingerprint);
+            let advanced = game.event_seq != probe.before_seq
+                || game.current_phase != probe.before_phase
+                || after_pending != probe.before_pending;
+            if advanced {
+                None
+            } else {
+                Some(
+                    "silent no-op: recorded action produced no state change (engine dropped it)"
+                        .to_string(),
+                )
+            }
+        })
+    }
+
+    /// Shared engine for `scan_fizzles` / `scan_panics`: replays from step 0
+    /// under the natural policy, applies `classify` to each step's transition,
+    /// and restores the caller's cursor afterward.
+    fn scan_steps<F>(
+        &mut self,
+        kind: &'static str,
+        mut classify: F,
+    ) -> Result<ReplayScan, LiveGameError>
+    where
+        F: FnMut(&StepProbe, &Game) -> Option<String>,
+    {
+        let total = self.replay_total_steps();
+        let mut driver = self.replay.take().ok_or(LiveGameError::NotARecording)?;
+        let saved_cursor = driver.cursor();
+
+        let result = (|| -> Result<Vec<ScanFinding>, ReplayError> {
+            driver.seek(&mut self.game, 0)?;
+            let mut findings = Vec::new();
+            while !driver.is_complete() && !self.game.game_over && !driver.is_paused() {
+                let spec = match driver.current_spec().cloned() {
+                    Some(s) => s,
+                    None => break,
+                };
+                let label = explain_action(&self.game, spec.actor, spec.action_id).label;
+                let probe = StepProbe {
+                    step: driver.cursor(),
+                    before_seq: self.game.event_seq,
+                    before_phase: self.game.current_phase,
+                    before_pending: self.game.pending_selection.as_ref().map(pending_fingerprint),
+                };
+                driver.step(&mut self.game);
+                if let Some(detail) = classify(&probe, &self.game) {
+                    findings.push(ScanFinding {
+                        step: probe.step,
+                        actor: spec.actor,
+                        action_id: spec.action_id,
+                        phase: spec.phase.clone(),
+                        label: Some(label),
+                        detail,
+                        divergence: None,
+                    });
+                }
+            }
+            Ok(findings)
+        })();
+
+        let _ = driver.seek(&mut self.game, saved_cursor);
+        self.replay = Some(driver);
+
+        let findings = result.map_err(LiveGameError::Replay)?;
+        Ok(ReplayScan {
+            kind,
+            total_steps: total,
+            findings,
+        })
     }
 
     // ── action methods ───────────────────────────────────────────────────
@@ -1011,6 +1466,58 @@ fn events_since(game: &Game, before_seq: u64) -> impl Iterator<Item = &GameEvent
     game.events[start..].iter()
 }
 
+/// Serialize the events emitted after `before_seq` to JSON `Value`s. Mirrors
+/// `make_result`'s event serialization for the replay-stepping surface.
+fn collect_events(game: &Game, before_seq: u64) -> Vec<Value> {
+    events_since(game, before_seq)
+        .map(|e| {
+            serde_json::to_value(e).unwrap_or_else(|err| {
+                serde_json::json!({
+                    "type": "SerializationError",
+                    "error": err.to_string(),
+                    "debug": format!("{:?}", e),
+                })
+            })
+        })
+        .collect()
+}
+
+/// Card IDs of the top card of every permanent in both battle areas. Opaque
+/// placeholder tops render as the `<hidden>` sentinel so partial-observability
+/// is never bypassed.
+fn card_ids_in_play(game: &Game) -> Vec<String> {
+    let mut out = Vec::new();
+    for p in 0u8..2 {
+        for perm in &game.player(p).battle_area {
+            let cs = perm.top_card();
+            if cs.is_opaque_placeholder {
+                out.push(crate::view::OPAQUE_PLACEHOLDER_CARD_ID.to_string());
+            } else {
+                out.push(cs.card_id(&game.card_data).to_string());
+            }
+        }
+    }
+    out
+}
+
+/// Derive per-player decklists (by engine player index) from a DCGO recording
+/// header. The opaque opponent falls back to its declared composition when no
+/// post-shuffle order is present.
+fn dcgo_deck_ids(recording: &crate::dcgo_recording::RecordingV1) -> [Vec<String>; 2] {
+    let me = (recording.start.my_player_id as usize).min(1);
+    let opp_idx = 1 - me;
+    let opp = recording
+        .start
+        .opp_deck_post_shuffle
+        .clone()
+        .or_else(|| recording.start.opp_decklist_composition.clone())
+        .unwrap_or_default();
+    let mut out: [Vec<String>; 2] = [Vec::new(), Vec::new()];
+    out[me] = recording.start.my_deck_post_shuffle.clone();
+    out[opp_idx] = opp;
+    out
+}
+
 // ── unused-import suppressors (referenced by spec extension points) ──────
 #[allow(dead_code)]
 fn _phase_witness() {
@@ -1116,9 +1623,9 @@ fn decode_labels_via_replay(
     let mut labels: Vec<Option<String>> = vec![None; total_actions];
 
     // We need labels for every recorded action, including the mulligan
-    // ones the runner filters from its step stream. Construct a fresh
-    // ReplayRunner — it lands post-mulligan in turn 1.
-    let Ok(mut runner) = ReplayRunner::new(recording.clone(), card_data, false) else {
+    // ones the session filters from its step stream. Construct a fresh
+    // ReplaySession (native adapter) — it lands post-mulligan in turn 1.
+    let Ok(mut runner) = ReplaySession::new(recording.clone(), card_data, false) else {
         return labels;
     };
 
@@ -1678,5 +2185,153 @@ mod tests {
         let lg2 =
             LiveGame::from_recording_at_step(recording, 1, &db).expect("from_recording_at_step");
         assert!(lg2.game.turn_count >= 1);
+    }
+
+    /// A native recording with several replayable (non-mulligan) steps:
+    /// two mulligan keeps (baked into initial_state, not replayable) plus
+    /// four passes that alternate turns.
+    fn multi_step_recording(seed: u64) -> serde_json::Value {
+        let db = minimal_db();
+        let mut hr =
+            crate::HeadlessRunner::new(small_deck(), small_deck(), &db, false, true, false, Some(seed))
+                .unwrap();
+        hr.step(0); // mulligan keep p1
+        hr.step(0); // mulligan keep p2
+        for _ in 0..4 {
+            hr.step(crate::action::space::PASS);
+        }
+        hr.get_recording().unwrap()
+    }
+
+    #[test]
+    fn step_forward_advances_cursor_with_delta_and_recorded() {
+        let db = minimal_db();
+        let mut lg = LiveGame::from_recording(multi_step_recording(11), &db).unwrap();
+        assert!(lg.is_recording());
+        assert_eq!(lg.replay_cursor(), 0);
+        let total = lg.replay_total_steps();
+        assert!(total >= 2, "expected multiple replayable steps, got {total}");
+
+        let view = lg.step_forward().unwrap();
+        assert_eq!(view.cursor, 1);
+        assert_eq!(view.total_steps, total);
+        // The view carries the recorded action now at the cursor (step 1).
+        assert!(view.recorded.is_some());
+        // Forward steps populate the transition delta.
+        assert!(view.delta.is_some());
+        // legal_now reflects the engine's offered actions for the decision
+        // player; a live game in main phase always offers at least PASS.
+        assert!(!view.legal_now.is_empty());
+    }
+
+    #[test]
+    fn step_to_completion_then_back_one() {
+        let db = minimal_db();
+        let mut lg = LiveGame::from_recording(multi_step_recording(11), &db).unwrap();
+        let total = lg.replay_total_steps();
+        for _ in 0..total {
+            lg.step_forward().unwrap();
+        }
+        assert_eq!(lg.replay_cursor(), total);
+        let view = lg.replay_step_view().unwrap();
+        assert!(view.is_complete);
+
+        let back = lg.step_back().unwrap();
+        assert_eq!(back.cursor, total - 1);
+        assert_eq!(lg.replay_cursor(), total - 1);
+        // Backward step yields a read-only reconstruction (no delta/events).
+        assert!(back.delta.is_none());
+        assert!(back.events.is_empty());
+    }
+
+    #[test]
+    fn replay_seek_matches_fresh_construction() {
+        let db = minimal_db();
+        let recording = multi_step_recording(11);
+        let mut lg = LiveGame::from_recording(recording.clone(), &db).unwrap();
+        // Walk forward, then backward-seek to step 2 (reset-and-replay path).
+        let total = lg.replay_total_steps();
+        for _ in 0..total {
+            lg.step_forward().unwrap();
+        }
+        lg.replay_seek(2).unwrap();
+        assert_eq!(lg.replay_cursor(), 2);
+
+        let fresh = LiveGame::from_recording_at_step(recording, 2, &db).unwrap();
+        assert_eq!(lg.game.turn_count, fresh.game.turn_count);
+        assert_eq!(lg.game.memory, fresh.game.memory);
+        assert_eq!(
+            lg.game.current_phase, fresh.game.current_phase,
+            "backward-seek state must match fresh construction at the same step"
+        );
+    }
+
+    #[test]
+    fn scanners_do_not_perturb_cursor() {
+        let db = minimal_db();
+        let mut lg = LiveGame::from_recording(multi_step_recording(11), &db).unwrap();
+        lg.step_forward().unwrap();
+        assert_eq!(lg.replay_cursor(), 1);
+
+        // A self-consistent native recording: the engine agrees with every
+        // recorded action, so a forced-CheckThenApply scan finds nothing.
+        let div = lg.scan_divergences(false).unwrap();
+        assert_eq!(div.kind, "divergences");
+        assert!(
+            div.findings.is_empty(),
+            "native recording diverged from itself: {:?}",
+            div.findings
+        );
+        assert_eq!(lg.replay_cursor(), 1, "scan_divergences perturbed the cursor");
+
+        let fizz = lg.scan_fizzles().unwrap();
+        assert_eq!(fizz.kind, "fizzles");
+        assert_eq!(lg.replay_cursor(), 1, "scan_fizzles perturbed the cursor");
+
+        let noop = lg.scan_panics().unwrap();
+        assert_eq!(noop.kind, "no_ops");
+        assert_eq!(lg.replay_cursor(), 1, "scan_panics perturbed the cursor");
+    }
+
+    #[test]
+    fn scanners_are_silent_on_a_faithful_recording() {
+        // A clean HeadlessRunner recording replays faithfully (every recorded
+        // action reproduces its effect), so the no-op / fizzle heuristics must
+        // not false-positive. (A pathological recording where replay diverges —
+        // e.g. a panic-regression fixture — is expected to flag many no-ops;
+        // that is a true signal, not a bug in the scanner.)
+        let db = minimal_db();
+        let mut lg = LiveGame::from_recording(multi_step_recording(11), &db).unwrap();
+        assert!(
+            lg.scan_panics().unwrap().findings.is_empty(),
+            "faithful replay must report no silent no-ops"
+        );
+        assert!(
+            lg.scan_fizzles().unwrap().findings.is_empty(),
+            "no effects fizzle in a plain pass-only game"
+        );
+        assert!(
+            lg.scan_divergences(false).unwrap().findings.is_empty(),
+            "a self-consistent native recording has no mask divergences"
+        );
+    }
+
+    #[test]
+    fn stepping_on_non_recording_game_errors() {
+        let db = minimal_db();
+        let mut lg = LiveGame::from_decks(small_deck(), small_deck(), Some(1), &db).unwrap();
+        assert!(!lg.is_recording());
+        assert!(matches!(
+            lg.step_forward(),
+            Err(LiveGameError::NotARecording)
+        ));
+        assert!(matches!(
+            lg.replay_step_view(),
+            Err(LiveGameError::NotARecording)
+        ));
+        assert!(matches!(
+            lg.scan_divergences(false),
+            Err(LiveGameError::NotARecording)
+        ));
     }
 }

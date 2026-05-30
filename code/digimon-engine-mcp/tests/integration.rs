@@ -133,7 +133,19 @@ fn tools_list_includes_lifecycle_state_action() {
     for n in &["deck_cards", "recorded_actions"] {
         assert!(names.contains(n), "tools/list missing {}", n);
     }
-    assert_eq!(names.len(), 26);
+    // Replay stepping & scanning (add-interactive-replay-bug-hunter Group 7)
+    for n in &[
+        "step_forward",
+        "step_back",
+        "restore_checkpoint",
+        "replay_step_view",
+        "scan_divergences",
+        "scan_fizzles",
+        "scan_panics",
+    ] {
+        assert!(names.contains(n), "tools/list missing {}", n);
+    }
+    assert_eq!(names.len(), 33);
 }
 
 /// Build a small ST1 deck of 5 ST1-01 + 45 ST1-03 as a Vec<Value>.

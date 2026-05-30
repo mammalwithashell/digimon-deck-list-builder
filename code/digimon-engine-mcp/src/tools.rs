@@ -16,7 +16,8 @@
 use std::collections::HashMap;
 
 use digimon_engine::card_data::CardData;
-use digimon_engine::live_game::LiveGame;
+use digimon_engine::dcgo_recording::parse_jsonl;
+use digimon_engine::live_game::{LiveGame, LiveGameError};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::view::Perspective;
 use serde_json::{json, Value};
@@ -79,18 +80,23 @@ pub fn list() -> Vec<Value> {
     ));
     all.push(tool(
         "load_recording",
-        "Load a GameRecorder recording, paused at step 0. Pass recording_json (inline) or recording_path.",
+        "Load a recording paused at step 0, retaining its replay driver for stepping/scanning. Auto-detects the source: a native GameRecorder recording (JSON object with an `actions` array, replayed under Trust) vs a DCGO JSONL recording (one row per line starting with a `game_start` row, replayed under CheckThenApply — differential against the DCGO oracle). Pass recording_json (inline native object, or a string holding raw text) or recording_path. Returns { game_id, total_steps, source_format }.",
         json!({
             "type": "object",
             "properties": {
-                "recording_json": {},
-                "recording_path": { "type": "string" }
+                "recording_json": { "description": "Inline native recording object, or a string holding raw native-JSON / DCGO-JSONL text." },
+                "recording_path": { "type": "string", "description": "Path to a recording file (.json native or .jsonl DCGO). Auto-detected by content." },
+                "source_format": {
+                    "type": "string",
+                    "enum": ["native", "dcgo"],
+                    "description": "Optional override; skips auto-detection."
+                }
             }
         }),
     ));
     all.push(tool(
         "seek",
-        "Fast-forward a recording-loaded game to step_n. Backward seek rebuilds and re-walks.",
+        "Seek a recording-loaded game's cursor to step_n. Forward replays missing steps; backward uses snappy in-place reset-and-replay (native) / deterministic rebuild (DCGO). Returns a step view.",
         json!({
             "type": "object",
             "required": ["game_id", "step_n"],
@@ -268,6 +274,80 @@ pub fn list() -> Vec<Value> {
         }),
     ));
 
+    // ── Replay stepping & scanning ───────────────────────────────────────
+    // Only valid on games loaded via load_recording. A step view carries the
+    // recorded action at the cursor, the engine's legal_now set, divergences,
+    // emitted events, a zone/memory delta, and card_ids_in_play.
+    all.push(tool(
+        "step_forward",
+        "Apply the next recorded step and return a step view (events + delta populated). No-op once complete or paused on a CheckThenApply divergence.",
+        json!({
+            "type": "object",
+            "required": ["game_id"],
+            "properties": { "game_id": { "type": "string" } }
+        }),
+    ));
+    all.push(tool(
+        "step_back",
+        "Step the cursor back by one (reset-and-replay). Returns a read-only step view (no events/delta).",
+        json!({
+            "type": "object",
+            "required": ["game_id"],
+            "properties": { "game_id": { "type": "string" } }
+        }),
+    ));
+    all.push(tool(
+        "restore_checkpoint",
+        "Restore the replay cursor to step_n (alias for seek). Returns a step view.",
+        json!({
+            "type": "object",
+            "required": ["game_id", "step_n"],
+            "properties": {
+                "game_id": { "type": "string" },
+                "step_n": { "type": "integer", "minimum": 0 }
+            }
+        }),
+    ));
+    all.push(tool(
+        "replay_step_view",
+        "Read-only step view at the current cursor — recorded next action, legal_now, divergences so far, and card_ids_in_play. No state change.",
+        json!({
+            "type": "object",
+            "required": ["game_id"],
+            "properties": { "game_id": { "type": "string" } }
+        }),
+    ));
+    all.push(tool(
+        "scan_divergences",
+        "Walk the whole recording under CheckThenApply, collecting every differential divergence (recorded oracle action the engine's mask/actor disagrees with). With stop_at_first=true, halts at the first. Restores the caller's cursor afterward.",
+        json!({
+            "type": "object",
+            "required": ["game_id"],
+            "properties": {
+                "game_id": { "type": "string" },
+                "stop_at_first": { "type": "boolean", "default": false }
+            }
+        }),
+    ));
+    all.push(tool(
+        "scan_fizzles",
+        "Walk the recording flagging every step that emitted an EffectFizzled event — a lead for effects that silently did nothing. Restores the caller's cursor afterward.",
+        json!({
+            "type": "object",
+            "required": ["game_id"],
+            "properties": { "game_id": { "type": "string" } }
+        }),
+    ));
+    all.push(tool(
+        "scan_panics",
+        "Walk the recording flagging every step the engine applied as a silent no-op (no events, no phase/memory change) — a lead for a recorded decision the engine couldn't reproduce. Restores the caller's cursor afterward.",
+        json!({
+            "type": "object",
+            "required": ["game_id"],
+            "properties": { "game_id": { "type": "string" } }
+        }),
+    ));
+
     // ── Actions ──────────────────────────────────────────────────────────
     all.push(tool(
         "play",
@@ -415,6 +495,13 @@ pub fn dispatch(
         "new_game_debug" => tool_new_game_debug(args, registry, card_data),
         "load_recording" => tool_load_recording(args, registry, card_data),
         "seek" => tool_seek(args, registry),
+        "step_forward" => tool_step_forward(args, registry),
+        "step_back" => tool_step_back(args, registry),
+        "restore_checkpoint" => tool_seek(args, registry),
+        "replay_step_view" => tool_replay_step_view(args, registry),
+        "scan_divergences" => tool_scan_divergences(args, registry),
+        "scan_fizzles" => tool_scan_fizzles(args, registry),
+        "scan_panics" => tool_scan_panics(args, registry),
         "list_games" => Ok(tool_list_games(registry)),
         "close_game" => tool_close_game(args, registry),
 
@@ -619,40 +706,170 @@ fn tool_new_game_debug(
     }
 }
 
+/// A native recording object or raw recording text awaiting format detection.
+enum RecordingInput {
+    /// An inline native `GameRecorder` recording object.
+    NativeValue(Value),
+    /// Raw text — either native JSON or DCGO JSONL, decided by content.
+    Text(String),
+}
+
 fn tool_load_recording(
     args: Value,
     registry: &mut GameRegistry,
     card_data: &HashMap<String, CardData>,
 ) -> Result<Value, String> {
-    let recording = if let Some(inline) = args.get("recording_json").cloned() {
+    let explicit_format = args.get("source_format").and_then(|v| v.as_str());
+
+    let input = if let Some(inline) = args.get("recording_json") {
         if inline.is_null() {
             return Err("recording_json is null".into());
         }
-        inline
+        match inline {
+            Value::String(s) => RecordingInput::Text(s.clone()),
+            other => RecordingInput::NativeValue(other.clone()),
+        }
     } else if let Some(path) = args.get("recording_path").and_then(|v| v.as_str()) {
-        let bytes = std::fs::read(path).map_err(|e| format!("reading {}: {}", path, e))?;
-        serde_json::from_slice(&bytes).map_err(|e| format!("parsing {}: {}", path, e))?
+        let text =
+            std::fs::read_to_string(path).map_err(|e| format!("reading {}: {}", path, e))?;
+        RecordingInput::Text(text)
     } else {
         return Err("provide recording_json or recording_path".into());
     };
-    match LiveGame::from_recording(recording, card_data) {
-        Ok(lg) => match registry.insert(lg) {
-            Ok(id) => Ok(json!({ "ok": true, "game_id": id })),
-            Err(e) => Ok(registry_err_to_value(e)),
-        },
+
+    // Resolve (format, constructed LiveGame). Detection: a native recording is
+    // a single JSON object carrying `actions`/`initial_state`; a DCGO recording
+    // is JSONL (one object per line, leading `game_start` row).
+    let (lg_result, source_format): (Result<LiveGame, LiveGameError>, &'static str) =
+        match (explicit_format, input) {
+            (Some("native"), RecordingInput::NativeValue(v)) => {
+                (LiveGame::from_recording(v, card_data), "native")
+            }
+            (Some("native"), RecordingInput::Text(t)) => {
+                let v: Value = serde_json::from_str(&t)
+                    .map_err(|e| format!("parsing native recording: {}", e))?;
+                (LiveGame::from_recording(v, card_data), "native")
+            }
+            (Some("dcgo"), RecordingInput::Text(t)) => match parse_jsonl(&t) {
+                Ok(rec) => (LiveGame::from_dcgo_recording(rec, card_data), "dcgo"),
+                Err(e) => return Ok(err_value(format!("parsing DCGO recording: {}", e))),
+            },
+            (Some("dcgo"), RecordingInput::NativeValue(_)) => {
+                return Err(
+                    "source_format=dcgo requires JSONL text (recording_json string or recording_path)"
+                        .into(),
+                );
+            }
+            (Some(other), _) => {
+                return Err(format!("unknown source_format: {}", other));
+            }
+            // Auto-detect.
+            (None, RecordingInput::NativeValue(v)) => {
+                (LiveGame::from_recording(v, card_data), "native")
+            }
+            (None, RecordingInput::Text(t)) => {
+                let as_native: Option<Value> = serde_json::from_str(&t)
+                    .ok()
+                    .filter(|v: &Value| v.get("actions").is_some() || v.get("initial_state").is_some());
+                if let Some(v) = as_native {
+                    (LiveGame::from_recording(v, card_data), "native")
+                } else {
+                    match parse_jsonl(&t) {
+                        Ok(rec) => (LiveGame::from_dcgo_recording(rec, card_data), "dcgo"),
+                        Err(e) => {
+                            return Ok(err_value(format!(
+                                "unrecognized recording: not a native JSON recording, and DCGO JSONL parse failed: {}",
+                                e
+                            )))
+                        }
+                    }
+                }
+            }
+        };
+
+    match lg_result {
+        Ok(lg) => {
+            let total_steps = lg.replay_total_steps();
+            match registry.insert(lg) {
+                Ok(id) => Ok(json!({
+                    "ok": true,
+                    "game_id": id,
+                    "total_steps": total_steps,
+                    "source_format": source_format,
+                })),
+                Err(e) => Ok(registry_err_to_value(e)),
+            }
+        }
         Err(e) => Ok(err_value(e.to_string())),
     }
 }
 
-fn tool_seek(args: Value, registry: &mut GameRegistry) -> Result<Value, String> {
+/// Shared driver for the replay-stepping tools that mutate the cursor and
+/// return a serializable payload under `key`.
+fn replay_mut_call<T: serde::Serialize>(
+    args: Value,
+    registry: &mut GameRegistry,
+    key: &str,
+    f: impl FnOnce(&mut LiveGame) -> Result<T, LiveGameError>,
+) -> Result<Value, String> {
     let game_id = get_str(&args, "game_id")?.to_string();
+    match registry.get_mut(&game_id) {
+        Ok(g) => match f(g) {
+            Ok(out) => {
+                let mut obj = serde_json::Map::new();
+                obj.insert("ok".into(), json!(true));
+                obj.insert(
+                    key.to_string(),
+                    serde_json::to_value(out).map_err(|e| e.to_string())?,
+                );
+                Ok(Value::Object(obj))
+            }
+            Err(e) => Ok(err_value(e.to_string())),
+        },
+        Err(e) => Ok(registry_err_to_value(e)),
+    }
+}
+
+fn tool_seek(args: Value, registry: &mut GameRegistry) -> Result<Value, String> {
     let step_n = get_u32(&args, "step_n")?;
-    // LiveGame post-construction doesn't keep its ReplayRunner — for v1
-    // we surface a not-supported error explaining the limitation.
-    let _ = (registry.get(&game_id), step_n);
-    Ok(err_value(
-        "seek is not supported in v1 — reconstruct via load_recording with a higher step_n",
-    ))
+    replay_mut_call(args, registry, "view", move |g| g.replay_seek(step_n))
+}
+
+fn tool_step_forward(args: Value, registry: &mut GameRegistry) -> Result<Value, String> {
+    replay_mut_call(args, registry, "view", |g| g.step_forward())
+}
+
+fn tool_step_back(args: Value, registry: &mut GameRegistry) -> Result<Value, String> {
+    replay_mut_call(args, registry, "view", |g| g.step_back())
+}
+
+fn tool_replay_step_view(args: Value, registry: &GameRegistry) -> Result<Value, String> {
+    let game_id = get_str(&args, "game_id")?.to_string();
+    match registry.get(&game_id) {
+        Ok(g) => match g.replay_step_view() {
+            Ok(view) => Ok(json!({ "ok": true, "view": view })),
+            Err(e) => Ok(err_value(e.to_string())),
+        },
+        Err(e) => Ok(registry_err_to_value(e)),
+    }
+}
+
+fn tool_scan_divergences(args: Value, registry: &mut GameRegistry) -> Result<Value, String> {
+    let stop_at_first = args
+        .get("stop_at_first")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    replay_mut_call(args, registry, "scan", move |g| {
+        g.scan_divergences(stop_at_first)
+    })
+}
+
+fn tool_scan_fizzles(args: Value, registry: &mut GameRegistry) -> Result<Value, String> {
+    replay_mut_call(args, registry, "scan", |g| g.scan_fizzles())
+}
+
+fn tool_scan_panics(args: Value, registry: &mut GameRegistry) -> Result<Value, String> {
+    replay_mut_call(args, registry, "scan", |g| g.scan_panics())
 }
 
 fn tool_list_games(registry: &GameRegistry) -> Value {
@@ -894,12 +1111,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_includes_26_tools() {
+    fn list_includes_33_tools() {
         let tools = list();
         // Expected count: 6 lifecycle + 12 state (10 originals +
-        // deck_cards + recorded_actions) + 8 action (6 originals +
-        // digivolve + attack per enforce-live-game-action-contracts) = 26.
-        assert_eq!(tools.len(), 26, "tool count drifted");
+        // deck_cards + recorded_actions) + 7 replay stepping/scanning
+        // (step_forward/step_back/restore_checkpoint/replay_step_view +
+        // scan_divergences/scan_fizzles/scan_panics) + 8 action (6 originals
+        // + digivolve + attack) = 33.
+        assert_eq!(tools.len(), 33, "tool count drifted");
     }
 
     #[test]
@@ -910,6 +1129,25 @@ mod tests {
             .collect();
         assert!(names.iter().any(|n| n == "deck_cards"));
         assert!(names.iter().any(|n| n == "recorded_actions"));
+    }
+
+    #[test]
+    fn replay_stepping_and_scanner_tools_are_advertised() {
+        let names: Vec<String> = list()
+            .iter()
+            .map(|t| t["name"].as_str().unwrap().to_string())
+            .collect();
+        for t in [
+            "step_forward",
+            "step_back",
+            "restore_checkpoint",
+            "replay_step_view",
+            "scan_divergences",
+            "scan_fizzles",
+            "scan_panics",
+        ] {
+            assert!(names.iter().any(|n| n == t), "tool {t} not advertised");
+        }
     }
 
     #[test]
@@ -934,5 +1172,221 @@ mod tests {
         let v = tool_list_games(&reg);
         assert_eq!(v["games"].as_array().unwrap().len(), 0);
         assert_eq!(v["limit"], 8);
+    }
+
+    // ── replay-stepping dispatch tests (Group 7.6) ───────────────────────
+
+    fn minimal_db() -> HashMap<String, CardData> {
+        let json = r#"{
+            "ST1-01": {
+                "card_id": "ST1-01", "card_name_eng": "Botamon",
+                "card_effect_class_name": "ST1_01", "play_cost": 0, "dp": -1,
+                "level": 2, "card_kind": 3, "rarity": 0, "card_colors": [0],
+                "type_eng": ["Lesser"], "form_eng": ["In-Training"], "attribute_eng": [],
+                "effect_description_eng": "", "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "", "evo_costs": []
+            },
+            "ST1-03": {
+                "card_id": "ST1-03", "card_name_eng": "Koromon",
+                "card_effect_class_name": "ST1_03", "play_cost": 3, "dp": 2000,
+                "level": 3, "card_kind": 0, "rarity": 0, "card_colors": [0],
+                "type_eng": ["Lesser"], "form_eng": ["Rookie"], "attribute_eng": ["Free"],
+                "effect_description_eng": "", "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "", "evo_costs": []
+            }
+        }"#;
+        CardData::load_from_str(json).unwrap()
+    }
+
+    fn small_deck() -> Vec<String> {
+        std::iter::repeat("ST1-01".to_string())
+            .take(5)
+            .chain(std::iter::repeat("ST1-03".to_string()).take(45))
+            .collect()
+    }
+
+    fn native_recording(seed: u64) -> Value {
+        let db = minimal_db();
+        let mut hr = digimon_engine::HeadlessRunner::new(
+            small_deck(),
+            small_deck(),
+            &db,
+            false,
+            true,
+            false,
+            Some(seed),
+        )
+        .unwrap();
+        hr.step(0); // mulligan keep p1
+        hr.step(0); // mulligan keep p2
+        for _ in 0..4 {
+            hr.step(digimon_engine::action::space::PASS);
+        }
+        hr.get_recording().unwrap()
+    }
+
+    /// Native recording whose first non-mulligan action_id is corrupted to an
+    /// always-masked value (999), so a CheckThenApply scan flags one MaskMiss.
+    fn native_recording_with_illegal_action() -> Value {
+        let mut rec = native_recording(11);
+        if let Some(actions) = rec["actions"].as_array_mut() {
+            for a in actions.iter_mut() {
+                if a["phase"].as_str() != Some("Mulligan") {
+                    a["action_id"] = json!(999);
+                    break;
+                }
+            }
+        }
+        rec
+    }
+
+    /// Minimal bot-vs-bot DCGO recording as JSONL text (game_start +
+    /// two mulligan keeps + game_end).
+    fn dcgo_bot_jsonl() -> String {
+        let deck = small_deck();
+        let start = json!({
+            "v": 1, "type": "game_start", "game_id": "bot", "timestamp": "t",
+            "my_player_id": 0, "is_ai": true,
+            "my_deck_post_shuffle": deck, "opp_deck_post_shuffle": deck
+        });
+        let a0 = json!({"type":"action","step":0,"actor":0,"action_id":0,"phase":"Mulligan","source":"mulligan"});
+        let a1 = json!({"type":"action","step":1,"actor":1,"action_id":0,"phase":"Mulligan","source":"mulligan"});
+        let end = json!({"type":"game_end","winner":0,"reason":"win","total_steps":2});
+        format!("{start}\n{a0}\n{a1}\n{end}\n")
+    }
+
+    fn load_game(recording: Value) -> (GameRegistry, String, Value) {
+        let db = minimal_db();
+        let mut reg = GameRegistry::new(8);
+        let resp = dispatch(
+            "load_recording",
+            json!({ "recording_json": recording }),
+            &mut reg,
+            &db,
+        )
+        .unwrap();
+        assert_eq!(resp["ok"], true, "load_recording failed: {resp}");
+        let id = resp["game_id"].as_str().unwrap().to_string();
+        (reg, id, resp)
+    }
+
+    #[test]
+    fn load_recording_native_reports_total_and_format() {
+        let (_reg, _id, resp) = load_game(native_recording(11));
+        assert_eq!(resp["source_format"], "native");
+        // 4 passes replay (mulligan baked into initial_state).
+        assert_eq!(resp["total_steps"], 4);
+    }
+
+    #[test]
+    fn load_recording_autodetects_dcgo_jsonl() {
+        let db = minimal_db();
+        let mut reg = GameRegistry::new(8);
+        // DCGO JSONL is passed as a string in recording_json.
+        let resp = dispatch(
+            "load_recording",
+            json!({ "recording_json": dcgo_bot_jsonl() }),
+            &mut reg,
+            &db,
+        )
+        .unwrap();
+        assert_eq!(resp["ok"], true, "dcgo load failed: {resp}");
+        assert_eq!(resp["source_format"], "dcgo");
+        assert_eq!(resp["total_steps"], 2);
+    }
+
+    #[test]
+    fn step_forward_view_carries_action_legal_set_and_delta() {
+        let db = minimal_db();
+        let (mut reg, id, _) = load_game(native_recording(11));
+        let resp = dispatch("step_forward", json!({ "game_id": id }), &mut reg, &db).unwrap();
+        assert_eq!(resp["ok"], true, "{resp}");
+        let view = &resp["view"];
+        assert_eq!(view["cursor"], 1);
+        assert!(view["recorded"].is_object(), "recorded action missing");
+        assert!(
+            !view["legal_now"].as_array().unwrap().is_empty(),
+            "legal_now should list the engine's offered actions"
+        );
+        assert!(view["delta"].is_object(), "forward step should carry a delta");
+    }
+
+    #[test]
+    fn step_forward_then_back_round_trips_cursor() {
+        let db = minimal_db();
+        let (mut reg, id, _) = load_game(native_recording(11));
+        dispatch("step_forward", json!({ "game_id": id }), &mut reg, &db).unwrap();
+        let fwd = dispatch("step_forward", json!({ "game_id": id }), &mut reg, &db).unwrap();
+        assert_eq!(fwd["view"]["cursor"], 2);
+        let back = dispatch("step_back", json!({ "game_id": id }), &mut reg, &db).unwrap();
+        assert_eq!(back["ok"], true, "{back}");
+        assert_eq!(back["view"]["cursor"], 1);
+    }
+
+    #[test]
+    fn seek_and_restore_checkpoint_move_the_cursor() {
+        let db = minimal_db();
+        let (mut reg, id, _) = load_game(native_recording(11));
+        let seek = dispatch(
+            "seek",
+            json!({ "game_id": id, "step_n": 3 }),
+            &mut reg,
+            &db,
+        )
+        .unwrap();
+        assert_eq!(seek["view"]["cursor"], 3);
+        let restore = dispatch(
+            "restore_checkpoint",
+            json!({ "game_id": id, "step_n": 1 }),
+            &mut reg,
+            &db,
+        )
+        .unwrap();
+        assert_eq!(restore["view"]["cursor"], 1);
+    }
+
+    #[test]
+    fn scan_divergences_finds_masked_out_action() {
+        let db = minimal_db();
+        let (mut reg, id, _) = load_game(native_recording_with_illegal_action());
+        // Advance the cursor first; the scan must not perturb it.
+        dispatch("step_forward", json!({ "game_id": id }), &mut reg, &db).unwrap();
+
+        let resp = dispatch(
+            "scan_divergences",
+            json!({ "game_id": id, "stop_at_first": true }),
+            &mut reg,
+            &db,
+        )
+        .unwrap();
+        assert_eq!(resp["ok"], true, "{resp}");
+        let findings = resp["scan"]["findings"].as_array().unwrap();
+        assert!(!findings.is_empty(), "expected a masked-action divergence");
+        assert_eq!(findings[0]["action_id"], 999);
+        assert!(
+            findings[0]["divergence"].is_object(),
+            "divergence finding should carry the structured Divergence"
+        );
+
+        // The scan restored the cursor (still at 1 from the step_forward).
+        let view = dispatch("replay_step_view", json!({ "game_id": id }), &mut reg, &db).unwrap();
+        assert_eq!(view["view"]["cursor"], 1, "scan perturbed the cursor");
+    }
+
+    #[test]
+    fn stepping_a_non_recording_game_returns_ok_false() {
+        let db = minimal_db();
+        let mut reg = GameRegistry::new(8);
+        let made = dispatch(
+            "new_game_from_decks",
+            json!({ "deck1": small_deck(), "deck2": small_deck(), "seed": 1 }),
+            &mut reg,
+            &db,
+        )
+        .unwrap();
+        let id = made["game_id"].as_str().unwrap().to_string();
+        let resp = dispatch("step_forward", json!({ "game_id": id }), &mut reg, &db).unwrap();
+        assert_eq!(resp["ok"], false);
+        assert!(resp["error"].as_str().unwrap().contains("not constructed from a recording"));
     }
 }

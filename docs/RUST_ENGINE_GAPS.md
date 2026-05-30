@@ -1207,6 +1207,40 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Workaround:** Per-effect `condition` closure on every inherited effect — fidelity-preserving but card-data shape diverges from printed structure; easier to miss a clause during authoring.
 - **Related:** Existing "DSL Option Use Requirements" / `use_requirement` (sibling but distinct — Option-use color-substitute vs. inherited-block trait-gate).
 
+## Engine correctness bugs (existing primitives) — found by archetype interaction tests
+
+> Surfaced by the `/archetype-interaction-test-author` capstone on the ST-1…ST-6 starter decks (2026-05-30). **All three are FIXED (2026-05-30).** Two were engine bugs; the first ("base-fold") turned out to be a *card-authoring* bug once the engine's base-inclusive formula contract was understood — see below.
+
+### ✅ FIXED (2026-05-30) — WarGreymon `<Security A.>` formula under-counted (CARD bug: formula authored as a bare delta, not base-inclusive)
+- **Symptom:** a 4-source WarGreymon (ST1-11) checked only 2 security where it should check 3 (base-1 + `floor(4/2)`).
+- **Root cause (the important part):** `security_attack_fn` formula auras are **base-inclusive by engine contract** — the formula returns the *total* base check count (it replaces the default base-1 while active), and multiple formula auras take the **MAX**, not the sum. Flat `<Security A.>` keyword/modifier deltas are then added on top. This contract is pinned by `tests/dsl/group6_dynamic_formulas.rs` (`{ base: 1, … }` ⇒ exactly 1 check). ST1-11's formula was authored `base: 0` (= `floor(n/2)`, a bare *delta*), so it dropped the base-1 and under-counted. An earlier attempt to "fix" this in `current_security_strike` (`1 + aura_bonus`) was the **wrong layer** — it double-counted the base for every correctly-authored base-inclusive formula and regressed the group6 dsl tests.
+- **Fix (card layer):** author the formula base-inclusive — `cards/st1/ST1-11.yaml` now uses `floor_div([{base: 2, per: material_count, delta: 1}, 2]) = floor((2+n)/2) = 1 + floor(n/2)`. The engine keeps its base-inclusive `unwrap_or(1)` contract unchanged.
+- **Test (now green):** `tests/archetypes/st1_gaia_red.rs::tall_stack_security_rush_aura_adds_to_base_one_check` (4-source WarGreymon, Greymon-free, `dynamic_security_attack_aura_bonus == Some(3)`, checks 3); plus the un-`#[ignore]`d full-line `tall_stack_security_rush_full_line_checks_four_security` (checks 4 with Greymon — see next entry).
+- **Sources:** general_rule.pdf §16-3; DCGO `ST1_11.cs` (`count = DigivolutionCards.Count / 2`, applied as a delta — the engine folds in the base).
+
+### ✅ FIXED (2026-05-30) — security-DP auras ignored their `active_when`/`condition` gate
+- **Was:** `Game::defender_security_dp_adjustment` + mirror `attacker_security_dp_adjustment` (`combat.rs`) summed `applies_to_own/opponent_security_dp` auras without evaluating `effect.condition`, so T.K. Takaishi's "[Opponent's Turn] +2000" leaked onto the controller's own turn.
+- **Fix:** both call sites now build an `EffectReadContext` (controller as `player`) and skip the aura when `effect.condition` is false — mirroring `static_dp_aura_bonus`.
+- **Test (now green):** `tests/archetypes/st3_heavens_yellow.rs::tk_takaishi_aura_is_inactive_on_controllers_own_turn`.
+- **Sources:** `ST3-12.json`; DCGO `ST3_12.cs` (`IsOpponentTurn`); general_rule.pdf 15-16-8-1.
+
+### ✅ FIXED (2026-05-30) — declarative inherited `<Security A. +/-N>` grants now counted by the security strike (tick-fresh + de-overlapped)
+- **Was:** the security strike under-counted inherited `<Security A.>` authored as a DSL `grant_keyword` (ST1-07 Greymon and any card whose inherited `<Security A. +/-N>` is a declarative grant rather than a printed `card_data` keyword). A real WarGreymon+Greymon stack checked **3**, not the card-faithful **4**.
+- **Root cause (architectural, root-caused 2026-05-30).** `<Security A.>` for a permanent is aggregated by `Game::security_attack_keyword_bonus` across overlapping representations that must single-count:
+  1. **Printed** `card_data` keywords (`face_keywords` top card, `inherited_keywords` buried sources).
+  2. **Own** (face-up, non-inherited) DSL `grant_keyword` — *also* populates `card_data` (#1 already counts it) **and** materializes into `permanent_keywords` on tick → would double-count if both summed (BT21-029 Medusamon, ST5-13, ST6-13).
+  3. **Inherited DIRECT** `grant_keyword` (`granted_keyword` set) — declarative-only; counted via the materialized registry (ST1-07, BT20-016).
+  4. **Inherited/own AURA** grants (`kind: aura`, `granted_keyword` unset, grants via a process to filter-matched permanents) — materialize into the registry (ST2-08 WereGarurumon; BT5-093 aura-to-Omnimon).
+  5. **Genuine modifier** grants (ally buffs, end-of-turn grants) — real `permanent_keywords` entries (`materialized_declarative = false`).
+
+  The registry (#2–#5) is only fresh after `tick_declarative_effects` — run by the `decode_action`/`LiveGame` path but **not** by `DebugRunner::attack_player` — so a no-tick test read a stale cache. And #2 overlaps #1 (own grants land in both `card_data` and the registry), so a naive "printed + registry" sum double-counts own keywords.
+- **Fix (two coordinated changes, full keyword-suite green):**
+  - **Tick-fresh strike** — `Game::current_security_strike` (`combat.rs`) now calls `self.tick_declarative_effects()` before reading the keyword term, so the materialized registry reflects current inherited/aura grants regardless of the caller (DebugRunner or the real action path). It is idempotent and the per-iteration recompute already re-reads it.
+  - **Tick de-overlap** — `tick_declarative_effects` (`game.rs`) now **skips materializing a non-inherited `granted_keyword` that is already face-printed** in `card_data`, so #2 never double-counts against #1. (Inherited and aura grants still materialize.) This single-counts all five representations: `security_attack_keyword_bonus = printed_true_keywords + registry`.
+- **Tests (now green):** `tests/archetypes/st1_gaia_red.rs::tall_stack_security_rush_full_line_checks_four_security` (full WarGreymon+Greymon line checks 4); the Medusamon mid-attack recompute (BT21-029) and BT20-016 / ST2-08 / BT5-093 grant cases all still single-count (combat + cards_behavioral + dsl suites pass).
+- **Formula + flat-delta co-existence (2026-05-30, BT1-085 Tai Kamiya).** BT1-085's "[Your Turn] your red Digimon with 4+ digivolution cards gain `<Security A. +1>`" was implemented (DSL, `cards/bt1/BT1-085.yaml`) specifically to exercise a formula aura (WarGreymon's `security_attack_fn`) and a flat aura `grant_keyword: SecurityAttackPlus(1)` on the SAME body. They never collide: the formula provides the base-inclusive count (MAX'd, but there is only one formula) and the flat grant is summed via `security_attack_keyword_bonus`. `tests/cards_behavioral/bt1/bt1_085.rs` proves WarGreymon+Tai checks 4 and WarGreymon+Greymon+Tai checks 5 — three independent `<Security A.>` sources (formula + inherited keyword + aura-granted keyword) single-counting and summing, matching DCGO `Strike_AllowMinus`. The flat-delta-vs-formula authoring rule: a count-conditional grant whose *value* is flat (count as FILTER) uses `grant_keyword`/`security_attack`; only a grant whose *value* varies with the count uses `security_attack_fn`.
+- **Distinct, still-open facet:** the `#[ignore]`d `st1_07_security_attack_plus_installed_on_field_via_modifier` (and BT21-029's sibling) target **face-up OWN-scope** `grant_keyword` runtime installation (G-DECLARATIVE-KEYWORD) — a different path than the buried-source inherited-strike aggregation closed here. They stay ignored: ST1-07's grant is inherited-only and correctly does not apply when it is the top card.
+
 ## Resolved gaps
 
 Resolved Rust engine group summaries have been moved to [qa/resolved-gaps.md](../qa/resolved-gaps.md#rust-engine-gap-group-summaries).

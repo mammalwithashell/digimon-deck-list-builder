@@ -141,3 +141,40 @@ fn st5_16_security_activates_dark_side_attack_main_effect() {
 
     assert_eq!(runner.battle_area_size(1), 0);
 }
+
+#[test]
+fn st5_15_main_de_digivolve_targets_up_to_two_and_allows_zero() {
+    // ST5-15 Laser Eye prints "<De-Digivolve 1> UP TO 2 of your opponent's
+    // Digimon" (the per-card JSON drops the "up to"; DCGO's description + its
+    // canEndNotMax behaviour confirm it). Per the "up to N" rule (same as ST1-15
+    // Giga Destroyer / ST5-12 / ST6-12) the player may pick 0, 1, or 2 — the
+    // selection is optional-at-zero, and the De-Digivolve amount is 1 per target.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST5-15")
+        .expect("ST5-15 YAML parses")
+        .add_card(digimon("ST5-15-A3", "Laser Eye Target A3", 3, 3))
+        .add_card(digimon("ST5-15-A4", "Laser Eye Target A4", 4, 5))
+        .hand(0, &["ST5-15"])
+        .build();
+    runner.place_stack(1, &["ST5-15-A3", "ST5-15-A4"]);
+    runner.place_stack(1, &["ST5-15-A3", "ST5-15-A4"]);
+
+    assert!(runner.game.activate_hand_main(0, 0));
+    let view = runner
+        .pending_selection_view()
+        .expect("ST5-15 installs an up-to-2 De-Digivolve selection");
+    assert_eq!(
+        view.kind,
+        SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 },
+        "caps the De-Digivolve at 2 targets"
+    );
+    assert!(
+        view.is_optional,
+        "\"up to 2\" lets the player pick zero targets"
+    );
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "both opponent Digimon are eligible De-Digivolve targets"
+    );
+}

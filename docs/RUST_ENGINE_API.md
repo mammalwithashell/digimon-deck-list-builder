@@ -790,6 +790,41 @@ Effect::on_deletion(card)
 
 **Retired patterns (2026-05-23):** The pre-batched substrate had two side-channel slots — `pending_post_deletion_replays` (for Fortitude/Partition post-finalize replays) and `pending_deletion_resume` (Vec stack for nested OnDeletion parks). Both were retired by the batched flow; new code MUST NOT add similar workaround slots. If a new keyword needs "post-trash work to run before OnAnyDeletion," do it inline in the OnDeletion handler body — the batched flow already runs that handler post-trash.
 
+### Reset-and-replay contract (recording back-step — 2026-05-29)
+
+The interactive replay stepper (`ReplaySession` / `LiveGame` stepping tools, the
+`/replay-bug-hunt` skill) supports **backward** seek, but the engine has **no
+state snapshot**. A `Game` is a mutable, closure-bearing graph — `ModifierEntry`
+holds non-`Clone` `Box<dyn Fn>`, `pending_selection` holds `Box<dyn FnOnce>`
+continuations, parked replacements hold captured state — so a full-state snapshot
+would require an engine-wide serializability refactor. Back-stepping is therefore
+**reset-and-replay**, not restore-from-snapshot:
+
+- **`Game::reset_for_replay(&mut self)`** (in `game.rs`, kept adjacent to
+  `Game::new`) resets every mutable / transient / accumulator field (zones,
+  `ModifierRegistry`, effect queue, every `pending_*` slot, events + `event_seq`,
+  counters, mulligan + replacement state) to its `Game::new` default **in place**,
+  **reusing** the immutable shared state — `card_data`, `effect_registry`,
+  `formula_extensions`, `token_registry`, `alt_path_registry`, `rules`, `logger`.
+  No `Game::new`, no `CardData` clone. There is a guard test
+  (`reset_for_replay_restores_defaults`) asserting reset-to-default + immutables
+  preserved; **when you add a new mutable field to `Game`, reset it there too.**
+- A backward `seek(n)` calls `reset_for_replay` then `source.relay_initial_state(&mut game)`
+  (re-lays the recording's post-mulligan initial zones onto the reset game) and
+  replays forward to `n`. Forward seek just steps forward — no reset.
+- **Reveal-cursor checkpoint (opaque DCGO replay).** For a partial-observability
+  recording, `relay_initial_state` re-attaches a **fresh `RevealQueue`** at cursor 0
+  built from the recording's reveal stream, so the opaque opponent's pile is
+  reconstructed deterministically on every reset. DCGO back-step therefore
+  *rebuilds* (it cannot reset-in-place — `Game::new` reshuffles and the opaque pile
+  needs a fresh queue); native back-step uses the cheap in-place reset. Batch
+  replay (`dcgo-replay`) never back-steps, so only interactive DCGO stepping pays
+  the rebuild. The `OpaqueDeckState` is recreated by the rebuild.
+
+Implication for callers: a `PermanentHandle` / index obtained before a backward
+seek is invalid after it (the same rule as across deletions — see the anti-pattern
+below). Re-read indices from the post-seek state.
+
 ### Replacement-process outcome-setters
 
 Inside a `WhenWouldBe*` replacement-process closure, after installing a

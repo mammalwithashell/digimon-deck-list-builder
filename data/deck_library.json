@@ -45548,6 +45548,68 @@
           "event_date": "10/25/2025"
         }
       ]
+    },
+    "ST-1 Gaia Red": {
+      "archetype_name": "ST-1 Gaia Red",
+      "primary_color": "Red",
+      "secondary_color": null,
+      "display_card_id": "ST1-11",
+      "stats": {
+        "times_played": 0,
+        "meta_share": 0.0,
+        "top_cut_count": 0,
+        "conversion_rate": 0.0,
+        "avg_placement": 0.0,
+        "sources": {
+          "manual": {
+            "count": 1,
+            "top_cuts": 0
+          }
+        }
+      },
+      "decklists": [
+        {
+          "deck_id": "starter_st1_gaia_red",
+          "source": "manual",
+          "source_url": "https://digimoncardgame.fandom.com/wiki/ST-1:_Starter_Deck_Gaia_Red",
+          "decklist": "[\"ST1-01\", \"ST1-01\", \"ST1-01\", \"ST1-01\", \"ST1-02\", \"ST1-02\", \"ST1-02\", \"ST1-02\", \"ST1-03\", \"ST1-03\", \"ST1-03\", \"ST1-03\", \"ST1-04\", \"ST1-04\", \"ST1-04\", \"ST1-04\", \"ST1-05\", \"ST1-05\", \"ST1-05\", \"ST1-05\", \"ST1-06\", \"ST1-06\", \"ST1-06\", \"ST1-06\", \"ST1-07\", \"ST1-07\", \"ST1-08\", \"ST1-08\", \"ST1-08\", \"ST1-08\", \"ST1-09\", \"ST1-09\", \"ST1-09\", \"ST1-09\", \"ST1-10\", \"ST1-10\", \"ST1-11\", \"ST1-11\", \"ST1-12\", \"ST1-12\", \"ST1-12\", \"ST1-12\", \"ST1-13\", \"ST1-13\", \"ST1-13\", \"ST1-13\", \"ST1-14\", \"ST1-14\", \"ST1-14\", \"ST1-14\", \"ST1-15\", \"ST1-15\", \"ST1-16\", \"ST1-16\"]",
+          "format": "starter",
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        }
+      ]
+    },
+    "ST-3 Heaven's Yellow": {
+      "archetype_name": "ST-3 Heaven's Yellow",
+      "primary_color": "Yellow",
+      "secondary_color": null,
+      "display_card_id": "ST3-11",
+      "stats": {
+        "times_played": 0,
+        "meta_share": 0.0,
+        "top_cut_count": 0,
+        "conversion_rate": 0.0,
+        "avg_placement": 0.0,
+        "sources": {
+          "manual": {
+            "count": 1,
+            "top_cuts": 0
+          }
+        }
+      },
+      "decklists": [
+        {
+          "deck_id": "starter_st3_heavens_yellow",
+          "source": "manual",
+          "source_url": "https://digimoncardgame.fandom.com/wiki/ST-3:_Starter_Deck_Heaven%27s_Yellow",
+          "decklist": "[\"ST3-01\", \"ST3-01\", \"ST3-01\", \"ST3-01\", \"ST3-02\", \"ST3-02\", \"ST3-02\", \"ST3-02\", \"ST3-03\", \"ST3-03\", \"ST3-03\", \"ST3-03\", \"ST3-04\", \"ST3-04\", \"ST3-04\", \"ST3-04\", \"ST3-05\", \"ST3-05\", \"ST3-06\", \"ST3-06\", \"ST3-06\", \"ST3-06\", \"ST3-07\", \"ST3-07\", \"ST3-07\", \"ST3-07\", \"ST3-08\", \"ST3-08\", \"ST3-08\", \"ST3-08\", \"ST3-09\", \"ST3-09\", \"ST3-09\", \"ST3-09\", \"ST3-10\", \"ST3-10\", \"ST3-11\", \"ST3-11\", \"ST3-12\", \"ST3-12\", \"ST3-12\", \"ST3-12\", \"ST3-13\", \"ST3-13\", \"ST3-13\", \"ST3-13\", \"ST3-14\", \"ST3-14\", \"ST3-15\", \"ST3-15\", \"ST3-15\", \"ST3-15\", \"ST3-16\", \"ST3-16\"]",
+          "format": "starter",
+          "placement": null,
+          "is_top_cut": false,
+          "event_date": null
+        }
+      ]
     }
   }
 }

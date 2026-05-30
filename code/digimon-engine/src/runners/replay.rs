@@ -81,6 +81,59 @@ pub struct DivergenceReport {
     pub replayed: String,
 }
 
+/// How a [`ReplaySession`] applies each recorded step.
+///
+/// - `Trust`: apply the recorded action directly (the recording came from
+///   the engine itself — native self-play / eval). Default for
+///   `NativeAdapter`.
+/// - `CheckThenApply`: verify the recorded actor and mask-membership of the
+///   action BEFORE applying; on a mismatch record a [`Divergence`] and pause
+///   (differential replay against a battle-tested oracle — DCGO). Default for
+///   `DcgoAdapter` (Group 4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StepPolicy {
+    Trust,
+    CheckThenApply,
+}
+
+/// The flavor of a differential [`Divergence`]. Detection is one-directional:
+/// it cannot flag an action the engine *over-permits* relative to the oracle
+/// (the recording stores only the action taken, not the oracle's full mask).
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum DivergenceKind {
+    /// Recorded action not set in the engine's legal-action mask.
+    MaskMiss { sample_legal_ids: Vec<u16> },
+    /// Engine expected a different decision player than the recording.
+    Actor { expected: PlayerId, recorded: PlayerId },
+    /// Replayed memory differs from the recorded value.
+    Memory { recorded: i64, replayed: i64 },
+    /// Replayed phase differs from the recorded value.
+    Phase { recorded: String, replayed: String },
+    /// Terminal winner differs (populated at completion by the DCGO path).
+    Winner {
+        recorded: Option<PlayerId>,
+        replayed: Option<PlayerId>,
+    },
+    /// Opaque: engine requested a different reveal kind than the queue's next.
+    RevealKind { message: String },
+    /// Opaque: engine requested a reveal with none remaining.
+    RevealExhausted { message: String },
+}
+
+/// A differential divergence recorded by `CheckThenApply` — the engine
+/// disagreed with the recording about what was legal / who acted / the
+/// outcome. Recorded into the session's divergence log; pausing variants
+/// (`MaskMiss`, `Actor`) halt the cursor for inspection without aborting.
+#[derive(Debug, Clone, Serialize)]
+pub struct Divergence {
+    pub step: u32,
+    pub action_id: u16,
+    pub actor: PlayerId,
+    pub phase: String,
+    pub kind: DivergenceKind,
+}
+
 /// Errors surfaced by `ReplayRunner::new`.
 #[derive(Debug)]
 pub enum ReplayError {
@@ -262,14 +315,27 @@ impl ReplayRunner {
         let total = self.total_steps();
         let target = target_step.min(total);
         if target < self.current_step {
-            // Backward: rebuild.
-            let card_data = self.snapshot_card_data();
-            self.build_game(&card_data)?;
+            // Backward: reset-and-replay. Reset the existing game's mutable
+            // state in place (reusing card_data + registries — no CardData
+            // clone, no registry rebuild), re-lay the initial state, then
+            // replay forward below. See `Game::reset_for_replay`.
+            self.game.reset_for_replay();
+            self.relay_initial_state()?;
         }
         while self.current_step < target && !self.is_game_over() {
             self.step();
         }
         Ok(())
+    }
+
+    /// Restore the game to `step_n` via reset-and-replay. Alias for [`seek`]
+    /// named to match the MCP `restore_checkpoint` surface; no state snapshot
+    /// is taken (the mutable game graph is closure-bearing and uncloneable —
+    /// backward restore resets in place and replays).
+    ///
+    /// [`seek`]: ReplayRunner::seek
+    pub fn restore(&mut self, step_n: u32) -> Result<(), ReplayError> {
+        self.seek(step_n)
     }
 
     /// Step through every remaining action.
@@ -281,17 +347,20 @@ impl ReplayRunner {
 
     // ── internals ────────────────────────────────────────────────────────
 
-    fn snapshot_card_data(&self) -> HashMap<String, CardData> {
-        self.game
-            .card_data
-            .iter()
-            .map(|cd| (cd.card_id.clone(), cd.clone()))
-            .collect()
+    fn build_game(&mut self, all_card_data: &HashMap<String, CardData>) -> Result<(), ReplayError> {
+        // Fresh empty Game — immutable shared state (card_data + registries)
+        // is built once here via `Game::new`.
+        self.game = build_empty_game(all_card_data)?;
+        self.relay_initial_state()
     }
 
-    fn build_game(&mut self, all_card_data: &HashMap<String, CardData>) -> Result<(), ReplayError> {
-        // Fresh empty Game.
-        self.game = build_empty_game(all_card_data)?;
+    /// Reset the game's mutable state to the recording's post-mulligan initial
+    /// state and re-lay all zones, WITHOUT reconstructing the immutable shared
+    /// state (`card_data` / registries). Reused by initial construction (after
+    /// `build_empty_game`) and by backward seek (after
+    /// `Game::reset_for_replay`) — this is the reset-and-replay core that
+    /// makes backward stepping cheap.
+    fn relay_initial_state(&mut self) -> Result<(), ReplayError> {
         self.current_step = 0;
 
         let initial = &self.recording["initial_state"];
@@ -436,6 +505,824 @@ impl ReplayRunner {
             }
         }
     }
+}
+
+// ── generic replay session (Group 2) ──────────────────────────────────────
+
+/// One normalized replayable decision, decoupled from the source recording
+/// format. Native (`GameRecorder`) recordings and — in Group 4 — DCGO
+/// recordings both lower to this. The optional recorded fields carry the
+/// values a native recording captured for that step; `verify` mode compares
+/// them against the replayed state.
+#[derive(Debug, Clone)]
+pub struct StepSpec {
+    pub actor: PlayerId,
+    pub action_id: u16,
+    /// Phase the action was recorded in (used by `verify`).
+    pub phase: String,
+    /// Source tag (DCGO: `mulligan`/`main_phase`/…; native: empty).
+    pub source: String,
+    pub memory_after: Option<i64>,
+    pub turn: Option<u64>,
+    pub is_game_over: Option<bool>,
+}
+
+/// A pluggable replay source. Knows how to build the initial post-mulligan
+/// game, re-lay that initial state onto a reset game (for reset-and-replay
+/// backward seek), and produce the normalized replayable step list.
+///
+/// `NativeAdapter` implements this over `GameRecorder` JSON. `DcgoAdapter`
+/// (Group 4) will implement it over DCGO `RecordingV1` recordings, so the
+/// single [`ReplaySession`] core serves both batch and interactive callers
+/// and both recording families.
+pub trait RecordingSource: Send {
+    /// Build the immutable shared state and lay the initial post-mulligan
+    /// zones, returning a ready-to-step `Game`.
+    fn build_initial_game(
+        &self,
+        card_data: &HashMap<String, CardData>,
+    ) -> Result<Game, ReplayError>;
+
+    /// Re-lay the initial mutable state onto an already-reset `Game`
+    /// (reusing its `card_data` + registries). Used by reset-and-replay
+    /// backward seek after `Game::reset_for_replay`.
+    fn relay_initial_state(&self, game: &mut Game) -> Result<(), ReplayError>;
+
+    /// The normalized replayable step list (mulligan filtered out).
+    fn steps(&self) -> &[StepSpec];
+
+    /// Default step policy for this source. `NativeAdapter` → `Trust`
+    /// (engine-generated recording); `DcgoAdapter` (Group 4) →
+    /// `CheckThenApply` (differential against the DCGO oracle).
+    fn default_policy(&self) -> StepPolicy {
+        StepPolicy::Trust
+    }
+}
+
+/// [`RecordingSource`] over a native `GameRecorder` JSON recording. Holds
+/// the canonical native relay logic (previously inlined in `ReplayRunner`),
+/// so `ReplaySession` and any future native caller share one code path.
+pub struct NativeAdapter {
+    recording: Value,
+    steps: Vec<StepSpec>,
+}
+
+impl NativeAdapter {
+    /// Parse + validate a native recording. Errors on a missing
+    /// `initial_state` or unknown card IDs (same contract as the historical
+    /// `ReplayRunner::new`), and lowers non-mulligan actions to `StepSpec`s.
+    pub fn from_recording(
+        recording: Value,
+        all_card_data: &HashMap<String, CardData>,
+    ) -> Result<Self, ReplayError> {
+        let initial = recording
+            .get("initial_state")
+            .ok_or(ReplayError::MissingInitialState)?;
+        if initial.is_null() {
+            return Err(ReplayError::MissingInitialState);
+        }
+
+        let mut missing: Vec<String> = Vec::new();
+        for player_key in &["player1", "player2"] {
+            let Some(p) = initial.get(player_key) else {
+                continue;
+            };
+            for zone_key in &[
+                "library_order",
+                "digitama_library_order",
+                "security_order",
+                "initial_hand",
+            ] {
+                if let Some(arr) = p.get(zone_key).and_then(|v| v.as_array()) {
+                    for id in arr {
+                        if let Some(s) = id.as_str() {
+                            if !all_card_data.contains_key(s) && !missing.iter().any(|m| m == s) {
+                                missing.push(s.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if !missing.is_empty() {
+            return Err(ReplayError::UnknownCard(missing));
+        }
+
+        let mut steps = Vec::new();
+        if let Some(actions) = recording["actions"].as_array() {
+            for a in actions {
+                let phase = a["phase"].as_str().unwrap_or("").to_string();
+                if phase == "Mulligan" {
+                    continue;
+                }
+                let action_id = a["action_id"].as_u64().unwrap_or(0) as u16;
+                let actor = (a["player_id"].as_u64().unwrap_or(1) as u8).saturating_sub(1);
+                steps.push(StepSpec {
+                    actor,
+                    action_id,
+                    phase,
+                    source: String::new(),
+                    memory_after: a.get("memory_after").and_then(|v| v.as_i64()),
+                    turn: a.get("turn").and_then(|v| v.as_u64()),
+                    is_game_over: a.get("is_game_over").and_then(|v| v.as_bool()),
+                });
+            }
+        }
+
+        Ok(Self { recording, steps })
+    }
+}
+
+impl RecordingSource for NativeAdapter {
+    fn build_initial_game(
+        &self,
+        card_data: &HashMap<String, CardData>,
+    ) -> Result<Game, ReplayError> {
+        let mut game = build_empty_game(card_data)?;
+        self.relay_initial_state(&mut game)?;
+        Ok(game)
+    }
+
+    fn relay_initial_state(&self, game: &mut Game) -> Result<(), ReplayError> {
+        let initial = &self.recording["initial_state"];
+        let first_player_py = initial["first_player_id"].as_u64().ok_or_else(|| {
+            ReplayError::MalformedRecording("first_player_id missing or non-numeric".into())
+        })? as u8;
+        let first_player: PlayerId = first_player_py.saturating_sub(1);
+
+        let data_index_map: HashMap<&str, usize> = game
+            .card_data
+            .iter()
+            .enumerate()
+            .map(|(idx, cd)| (cd.card_id.as_str(), idx))
+            .collect();
+
+        for p in &mut game.players {
+            p.hand.clear();
+            p.deck.clear();
+            p.security.clear();
+            p.digitama_deck.clear();
+            p.battle_area.clear();
+            p.breeding_area = None;
+            p.trash.clear();
+        }
+
+        let mut next_card_index: u16 = 0;
+        for (player_idx, key) in ["player1", "player2"].iter().enumerate() {
+            let player_id = player_idx as PlayerId;
+            let pdata = &initial[key];
+            restore_player_zone(
+                &mut game.players[player_idx],
+                pdata,
+                &data_index_map,
+                player_id,
+                &mut next_card_index,
+            )?;
+        }
+        game.advance_card_index_to(next_card_index);
+
+        game.mulligan_pending.clear();
+        for used in game.mulligan_used.iter_mut() {
+            *used = false;
+        }
+
+        game.turn_order = {
+            let mut order: Vec<PlayerId> = (0..game.rules.player_count).collect();
+            if let Some(pos) = order.iter().position(|&p| p == first_player) {
+                order.rotate_left(pos);
+            }
+            order
+        };
+        game.turn_player_idx = 0;
+        game.memory_pair = if game.turn_order.len() >= 2 {
+            (game.turn_order[0], game.turn_order[1])
+        } else {
+            (game.turn_order[0], game.turn_order[0])
+        };
+        game.turn_count = 1;
+        game.memory = 0;
+        game.current_phase = GamePhase::Unsuspend;
+        game.begin_turn();
+        Ok(())
+    }
+
+    fn steps(&self) -> &[StepSpec] {
+        &self.steps
+    }
+}
+
+/// [`RecordingSource`] over a DCGO `RecordingV1` recording. Mirrors the
+/// `dcgo-replay` batch harness's construction so the batch parity report and
+/// the interactive bug-hunter stay on one code path: bot-vs-bot recordings
+/// (`opp_deck_post_shuffle` present) build via `Game::new` with both ordered
+/// decks; opaque PvP recordings (`opp_deck_post_shuffle == null`) build via
+/// `Game::new_with_opaque_opponent` with a `RevealQueue` preloaded from the
+/// recording's reveal stream. Default policy is `CheckThenApply` (differential
+/// against the DCGO oracle).
+pub struct DcgoAdapter {
+    my_pid: u8,
+    my_deck: Vec<String>,
+    /// Ordered opponent deck (bot-vs-bot). `None` for opaque PvP.
+    opp_deck: Option<Vec<String>>,
+    /// Opaque opponent decklist multiset (PvP). `None` for bot-vs-bot.
+    opp_decklist: Option<Vec<String>>,
+    /// Ordered reveal stream consumed by the opaque `RevealQueue`.
+    reveal_pairs: Vec<(crate::opaque_deck::RevealKind, String)>,
+    steps: Vec<StepSpec>,
+    /// Card DB retained so backward-seek can reconstruct (DCGO games are not
+    /// restored zone-by-zone; see `relay_initial_state`).
+    card_data: HashMap<String, CardData>,
+}
+
+impl DcgoAdapter {
+    /// Build an adapter from a parsed DCGO recording. Lowers the `Action`
+    /// rows up to the first `encoder_failure` into the step stream (DCGO
+    /// replays mulligan actions too — the game lands in `Mulligan` phase),
+    /// and precomputes the opaque opponent decklist + reveal stream when the
+    /// recording is PvP.
+    pub fn from_recording(
+        recording: crate::dcgo_recording::RecordingV1,
+        card_data: &HashMap<String, CardData>,
+    ) -> Result<Self, ReplayError> {
+        use crate::dcgo_recording::Row;
+
+        let my_pid = recording.start.my_player_id;
+        let my_deck = recording.start.my_deck_post_shuffle.clone();
+        let opp_deck = recording.start.opp_deck_post_shuffle.clone();
+
+        let mut steps = Vec::new();
+        for row in &recording.rows {
+            match row {
+                Row::Action(a) => steps.push(StepSpec {
+                    actor: a.actor,
+                    action_id: a.action_id,
+                    phase: a.phase.clone(),
+                    source: a.source.clone(),
+                    memory_after: None,
+                    turn: None,
+                    is_game_over: None,
+                }),
+                // Can't fabricate an unencoded selection — the replayable
+                // prefix ends here (matches the batch harness's PartialPass).
+                Row::EncoderFailure(_) => break,
+                _ => {}
+            }
+        }
+
+        let (opp_decklist, reveal_pairs) = if opp_deck.is_none() {
+            (
+                Some(derive_opp_decklist(&recording)?),
+                collect_reveal_pairs(&recording.rows)?,
+            )
+        } else {
+            (None, Vec::new())
+        };
+
+        Ok(Self {
+            my_pid,
+            my_deck,
+            opp_deck,
+            opp_decklist,
+            reveal_pairs,
+            steps,
+            card_data: card_data.clone(),
+        })
+    }
+}
+
+impl RecordingSource for DcgoAdapter {
+    fn build_initial_game(
+        &self,
+        _card_data: &HashMap<String, CardData>,
+    ) -> Result<Game, ReplayError> {
+        match &self.opp_deck {
+            Some(opp_deck) => {
+                // Bot-vs-bot — both decks known. Seed 0 (RNG only affects
+                // card-internal random effects; deck order comes from the
+                // recording).
+                let (deck1, deck2) = if self.my_pid == 0 {
+                    (self.my_deck.clone(), opp_deck.clone())
+                } else {
+                    (opp_deck.clone(), self.my_deck.clone())
+                };
+                Game::new(&[deck1, deck2], &self.card_data, Rules::standard(), Some(0))
+                    .map_err(ReplayError::GameConstruction)
+            }
+            None => {
+                // Opaque PvP — fresh RevealQueue at cursor 0 so a rebuild
+                // (incl. backward-seek) consumes the same reveals in order.
+                let opp_decklist = self.opp_decklist.clone().ok_or_else(|| {
+                    ReplayError::MalformedRecording(
+                        "opaque recording missing opponent decklist".into(),
+                    )
+                })?;
+                let queue = crate::opaque_deck::RevealQueue::from_pairs(self.reveal_pairs.clone());
+                Game::new_with_opaque_opponent(
+                    self.my_pid,
+                    self.my_deck.clone(),
+                    opp_decklist,
+                    Box::new(queue),
+                    &self.card_data,
+                    Rules::standard(),
+                    Some(0),
+                )
+                .map_err(ReplayError::GameConstruction)
+            }
+        }
+    }
+
+    fn relay_initial_state(&self, game: &mut Game) -> Result<(), ReplayError> {
+        // DCGO games are reconstructed rather than restored zone-by-zone:
+        // `Game::new` shuffles from the recorded post-shuffle order (seed 0),
+        // and the opaque path must re-attach a fresh `RevealQueue` at cursor 0.
+        // Backward seek therefore rebuilds — deterministic and correct, but not
+        // as cheap as the native zone-restore. (The batch parity replay never
+        // seeks backward, so this only costs interactive DCGO back-stepping; a
+        // future Game-setup extraction could make it in-place.)
+        *game = self.build_initial_game(&self.card_data)?;
+        Ok(())
+    }
+
+    fn steps(&self) -> &[StepSpec] {
+        &self.steps
+    }
+
+    fn default_policy(&self) -> StepPolicy {
+        StepPolicy::CheckThenApply
+    }
+}
+
+/// Walk a DCGO row stream collecting reveal rows in order, mapping each
+/// `source` tag to a [`RevealKind`](crate::opaque_deck::RevealKind). Errors
+/// on an unrecognized tag. Mirrors the dcgo-replay batch helper.
+fn collect_reveal_pairs(
+    rows: &[crate::dcgo_recording::Row],
+) -> Result<Vec<(crate::opaque_deck::RevealKind, String)>, ReplayError> {
+    use crate::dcgo_recording::Row;
+    use crate::opaque_deck::RevealKind;
+    let mut out = Vec::new();
+    for row in rows {
+        if let Row::Reveal(rv) = row {
+            let kind = match rv.source.as_str() {
+                "draw" => RevealKind::Draw,
+                "security" => RevealKind::Security,
+                "mill" => RevealKind::Mill,
+                "effect" => RevealKind::Effect,
+                other => {
+                    return Err(ReplayError::MalformedRecording(format!(
+                        "reveal row at step {} has unknown source `{}` \
+                         (expected draw|security|mill|effect)",
+                        rv.step, other
+                    )));
+                }
+            };
+            out.push((kind, rv.card_id.clone()));
+        }
+    }
+    Ok(out)
+}
+
+/// Determine the opaque opponent's decklist: prefer the explicit
+/// `opp_decklist_composition` header, else fall back to the reveal stream
+/// (requires at least `deck_size` reveals). Mirrors the dcgo-replay helper.
+fn derive_opp_decklist(
+    recording: &crate::dcgo_recording::RecordingV1,
+) -> Result<Vec<String>, ReplayError> {
+    use crate::dcgo_recording::Row;
+    let expected_size = recording.start.my_deck_post_shuffle.len();
+
+    if let Some(comp) = &recording.start.opp_decklist_composition {
+        if comp.len() != expected_size {
+            return Err(ReplayError::MalformedRecording(format!(
+                "opp_decklist_composition has {} cards but my_deck_post_shuffle has {}",
+                comp.len(),
+                expected_size
+            )));
+        }
+        return Ok(comp.clone());
+    }
+
+    let reveal_cards: Vec<String> = recording
+        .rows
+        .iter()
+        .filter_map(|r| match r {
+            Row::Reveal(rv) => Some(rv.card_id.clone()),
+            _ => None,
+        })
+        .collect();
+    if reveal_cards.len() < expected_size {
+        return Err(ReplayError::MalformedRecording(format!(
+            "opaque recording is missing an explicit `opp_decklist_composition` and its \
+             reveal stream has only {} entries (fewer than the deck size of {})",
+            reveal_cards.len(),
+            expected_size
+        )));
+    }
+    Ok(reveal_cards.into_iter().take(expected_size).collect())
+}
+
+/// A scripted, steppable game replay driven by a pluggable
+/// [`RecordingSource`]. Owns the live `Game` and a step cursor. Backward
+/// seek uses reset-and-replay (`Game::reset_for_replay` + the source's
+/// `relay_initial_state`) — no state snapshot, no `Game::new` rebuild.
+///
+/// This is the unified core the MCP stepping tools (Group 7) and the DCGO
+/// differential path (Group 4) build on. `ReplayRunner` above is the
+/// historical native-only type and will collapse onto this once its other
+/// callers (CLI, integration tests) migrate.
+pub struct ReplaySession {
+    pub game: Game,
+    driver: ReplayDriver,
+}
+
+/// Game-agnostic replay stepping state: the recording source, cursor,
+/// policy, divergence log, and pause flag. Every stepping operation takes
+/// the `&mut Game` it should drive, so the same driver powers both
+/// [`ReplaySession`] (which owns its `Game`) and `LiveGame` (whose `game`
+/// field is the canonical one the MCP view tools read). Extracted so the
+/// two surfaces share one verified implementation rather than drifting.
+pub(crate) struct ReplayDriver {
+    source: Box<dyn RecordingSource>,
+    cursor: u32,
+    verify: bool,
+    policy: StepPolicy,
+    /// Differential divergences recorded under `CheckThenApply`. Accumulates
+    /// across forward stepping; cleared on a backward reset.
+    divergences: Vec<Divergence>,
+    /// Set when a pausing `CheckThenApply` divergence (`MaskMiss` / `Actor`)
+    /// halts the cursor. `step()` is a no-op while paused; cleared by a
+    /// backward `seek` (reset) or `set_policy`.
+    paused: bool,
+}
+
+impl ReplayDriver {
+    /// Build the initial `Game` from `source` and pair it with a fresh
+    /// driver. The caller owns the returned `Game`; the driver steps it.
+    pub(crate) fn from_source(
+        source: Box<dyn RecordingSource>,
+        all_card_data: &HashMap<String, CardData>,
+        verify: bool,
+    ) -> Result<(Game, Self), ReplayError> {
+        let policy = source.default_policy();
+        let game = source.build_initial_game(all_card_data)?;
+        Ok((
+            game,
+            Self {
+                source,
+                cursor: 0,
+                verify,
+                policy,
+                divergences: Vec::new(),
+                paused: false,
+            },
+        ))
+    }
+
+    pub(crate) fn policy(&self) -> StepPolicy {
+        self.policy
+    }
+
+    pub(crate) fn set_policy(&mut self, policy: StepPolicy) {
+        self.policy = policy;
+        self.paused = false;
+    }
+
+    pub(crate) fn divergences(&self) -> &[Divergence] {
+        &self.divergences
+    }
+
+    pub(crate) fn is_paused(&self) -> bool {
+        self.paused
+    }
+
+    pub(crate) fn total_steps(&self) -> u32 {
+        self.source.steps().len() as u32
+    }
+
+    pub(crate) fn cursor(&self) -> u32 {
+        self.cursor
+    }
+
+    pub(crate) fn is_complete(&self) -> bool {
+        self.cursor as usize >= self.source.steps().len()
+    }
+
+    /// The recorded step at the current cursor — the one `step` would apply
+    /// next. `None` once the cursor has reached the end.
+    pub(crate) fn current_spec(&self) -> Option<&StepSpec> {
+        self.source.steps().get(self.cursor as usize)
+    }
+
+    /// A no-progress step result reflecting `game`'s current (unchanged)
+    /// state — returned when complete or paused.
+    fn no_progress_result(&self, game: &Game) -> ReplayStepResult {
+        ReplayStepResult {
+            step_number: self.cursor,
+            player_id: 0,
+            action_id: 0,
+            phase_before: game.current_phase.py_name().to_string(),
+            phase_after: game.current_phase.py_name().to_string(),
+            memory_before: game.memory,
+            memory_after: game.memory,
+            turn_number: game.turn_count,
+            is_game_over: game.game_over,
+            winner_id: game.winner,
+            divergences: Vec::new(),
+        }
+    }
+
+    /// Apply exactly one replayable step against `game`. No-op once complete
+    /// or paused. Under `CheckThenApply`, verifies actor + mask-membership
+    /// first; a mismatch records a [`Divergence`] and pauses without
+    /// applying or aborting.
+    pub(crate) fn step(&mut self, game: &mut Game) -> ReplayStepResult {
+        if self.is_complete() || self.paused {
+            return self.no_progress_result(game);
+        }
+
+        let cur = self.cursor as usize;
+        let (action_id, actor, phase_rec, mem_after_rec, turn_rec, game_over_rec) = {
+            let s = &self.source.steps()[cur];
+            (
+                s.action_id,
+                s.actor,
+                s.phase.clone(),
+                s.memory_after,
+                s.turn,
+                s.is_game_over,
+            )
+        };
+
+        if self.policy == StepPolicy::CheckThenApply {
+            // Differential pre-check: does the engine agree the recorded actor
+            // is on decision, and is the recorded action legal here?
+            let expected = current_decision_player(game);
+            if expected != actor {
+                self.divergences.push(Divergence {
+                    step: self.cursor,
+                    action_id,
+                    actor,
+                    phase: phase_rec.clone(),
+                    kind: DivergenceKind::Actor {
+                        expected,
+                        recorded: actor,
+                    },
+                });
+                self.paused = true;
+                return self.no_progress_result(game);
+            }
+            let mask = crate::action::build_action_mask(game, actor);
+            let legal = mask.get(action_id as usize).copied().unwrap_or(0.0) > 0.5;
+            if !legal {
+                let sample = sample_legal_ids(&mask, 10);
+                self.divergences.push(Divergence {
+                    step: self.cursor,
+                    action_id,
+                    actor,
+                    phase: phase_rec.clone(),
+                    kind: DivergenceKind::MaskMiss {
+                        sample_legal_ids: sample,
+                    },
+                });
+                self.paused = true;
+                return self.no_progress_result(game);
+            }
+        }
+
+        let phase_before = game.current_phase.py_name().to_string();
+        let memory_before = game.memory;
+        let turn_number = game.turn_count;
+
+        game.decode_action(action_id, actor);
+        self.cursor += 1;
+
+        let phase_after = game.current_phase.py_name().to_string();
+
+        let mut result = ReplayStepResult {
+            step_number: self.cursor,
+            player_id: actor,
+            action_id,
+            phase_before: phase_before.clone(),
+            phase_after,
+            memory_before,
+            memory_after: game.memory,
+            turn_number,
+            is_game_over: game.game_over,
+            winner_id: game.winner,
+            divergences: Vec::new(),
+        };
+
+        if self.verify {
+            if let Some(rec) = mem_after_rec {
+                if rec != result.memory_after as i64 {
+                    result.divergences.push(DivergenceReport {
+                        step: result.step_number,
+                        field: "memory_after",
+                        recorded: rec.to_string(),
+                        replayed: result.memory_after.to_string(),
+                    });
+                }
+            }
+            if let Some(rec) = turn_rec {
+                if rec != result.turn_number as u64 {
+                    result.divergences.push(DivergenceReport {
+                        step: result.step_number,
+                        field: "turn",
+                        recorded: rec.to_string(),
+                        replayed: result.turn_number.to_string(),
+                    });
+                }
+            }
+            if !phase_rec.is_empty() && phase_rec != phase_before {
+                result.divergences.push(DivergenceReport {
+                    step: result.step_number,
+                    field: "phase",
+                    recorded: phase_rec,
+                    replayed: phase_before,
+                });
+            }
+            if let Some(rec) = game_over_rec {
+                if rec != result.is_game_over {
+                    result.divergences.push(DivergenceReport {
+                        step: result.step_number,
+                        field: "is_game_over",
+                        recorded: rec.to_string(),
+                        replayed: result.is_game_over.to_string(),
+                    });
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Seek the cursor to `target_step`, driving `game`. Forward replays
+    /// missing steps; backward resets `game` in place (reusing `card_data`
+    /// + registries — no clone, no rebuild) and replays forward. Clamps to
+    /// `[0, total]`.
+    pub(crate) fn seek(&mut self, game: &mut Game, target_step: u32) -> Result<(), ReplayError> {
+        let total = self.total_steps();
+        let target = target_step.min(total);
+        if target < self.cursor {
+            game.reset_for_replay();
+            self.source.relay_initial_state(game)?;
+            self.cursor = 0;
+            self.divergences.clear();
+            self.paused = false;
+        }
+        while self.cursor < target && !game.game_over && !self.paused {
+            self.step(game);
+        }
+        Ok(())
+    }
+
+    /// Move the cursor back by one step (reset-and-replay).
+    pub(crate) fn step_back(&mut self, game: &mut Game) -> Result<(), ReplayError> {
+        if self.cursor == 0 {
+            return Ok(());
+        }
+        self.seek(game, self.cursor - 1)
+    }
+
+    /// Restore `game` to `step_n` (alias for [`seek`](Self::seek), matching
+    /// the MCP `restore_checkpoint` surface).
+    pub(crate) fn restore(&mut self, game: &mut Game, step_n: u32) -> Result<(), ReplayError> {
+        self.seek(game, step_n)
+    }
+
+    pub(crate) fn run_to_completion(&mut self, game: &mut Game) {
+        while !self.is_complete() && !game.game_over && !self.paused {
+            self.step(game);
+        }
+    }
+}
+
+impl ReplaySession {
+    /// Construct from a native `GameRecorder` JSON recording.
+    pub fn new(
+        recording: Value,
+        all_card_data: &HashMap<String, CardData>,
+        verify: bool,
+    ) -> Result<Self, ReplayError> {
+        let adapter = NativeAdapter::from_recording(recording, all_card_data)?;
+        Self::with_source(Box::new(adapter), all_card_data, verify)
+    }
+
+    /// Construct from a parsed DCGO `RecordingV1` (bot-vs-bot or opaque PvP).
+    /// Defaults to `CheckThenApply` (differential against the DCGO oracle).
+    pub fn from_dcgo(
+        recording: crate::dcgo_recording::RecordingV1,
+        all_card_data: &HashMap<String, CardData>,
+        verify: bool,
+    ) -> Result<Self, ReplayError> {
+        let adapter = DcgoAdapter::from_recording(recording, all_card_data)?;
+        Self::with_source(Box::new(adapter), all_card_data, verify)
+    }
+
+    /// Construct from any [`RecordingSource`] (native, DCGO, …).
+    pub fn with_source(
+        source: Box<dyn RecordingSource>,
+        all_card_data: &HashMap<String, CardData>,
+        verify: bool,
+    ) -> Result<Self, ReplayError> {
+        let (game, driver) = ReplayDriver::from_source(source, all_card_data, verify)?;
+        Ok(Self { game, driver })
+    }
+
+    /// The active step policy.
+    pub fn policy(&self) -> StepPolicy {
+        self.driver.policy()
+    }
+
+    /// Override the step policy (e.g. force `CheckThenApply` to scan a native
+    /// recording, or `Trust` to step past a recorded divergence). Clears the
+    /// paused flag so stepping can resume under the new policy.
+    pub fn set_policy(&mut self, policy: StepPolicy) {
+        self.driver.set_policy(policy);
+    }
+
+    /// Differential divergences recorded so far (under `CheckThenApply`).
+    pub fn divergences(&self) -> &[Divergence] {
+        self.driver.divergences()
+    }
+
+    /// True when a pausing divergence has halted the cursor.
+    pub fn is_paused(&self) -> bool {
+        self.driver.is_paused()
+    }
+
+    pub fn total_steps(&self) -> u32 {
+        self.driver.total_steps()
+    }
+
+    pub fn current_step(&self) -> u32 {
+        self.driver.cursor()
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.driver.is_complete()
+    }
+
+    pub fn is_game_over(&self) -> bool {
+        self.game.game_over
+    }
+
+    pub fn winner_id(&self) -> Option<PlayerId> {
+        self.game.winner
+    }
+
+    /// Apply exactly one replayable step. No-op once complete or paused.
+    pub fn step(&mut self) -> ReplayStepResult {
+        self.driver.step(&mut self.game)
+    }
+
+    /// Seek the cursor to `target_step` (reset-and-replay on backward seek).
+    pub fn seek(&mut self, target_step: u32) -> Result<(), ReplayError> {
+        self.driver.seek(&mut self.game, target_step)
+    }
+
+    /// Move the cursor back by one step (reset-and-replay).
+    pub fn step_back(&mut self) -> Result<(), ReplayError> {
+        self.driver.step_back(&mut self.game)
+    }
+
+    /// Restore to `step_n` (alias for [`seek`](Self::seek)).
+    pub fn restore(&mut self, step_n: u32) -> Result<(), ReplayError> {
+        self.driver.restore(&mut self.game, step_n)
+    }
+
+    pub fn run_to_completion(&mut self) {
+        self.driver.run_to_completion(&mut self.game)
+    }
+}
+
+/// The player the engine expects to make the next decision: a pending
+/// mulligan, else a pending selection's owner, else the turn player. Mirrors
+/// `LiveGame::current_decision_player` and the dcgo-replay harness helper.
+fn current_decision_player(game: &Game) -> PlayerId {
+    if let Some(p) = game.mulligan_current_player() {
+        return p;
+    }
+    if let Some(sel) = game.pending_selection.as_ref() {
+        return sel.selecting_player;
+    }
+    game.turn_player()
+}
+
+/// Up to `max` action IDs the engine WOULD accept here (`mask` value > 0.5).
+/// Surfaced in `MaskMiss` divergences to help triage "wrong target index"
+/// vs "engine refuses a legal action".
+fn sample_legal_ids(mask: &[f32], max: usize) -> Vec<u16> {
+    let mut out = Vec::with_capacity(max);
+    for (i, &v) in mask.iter().enumerate() {
+        if v > 0.5 {
+            out.push(i as u16);
+            if out.len() >= max {
+                break;
+            }
+        }
+    }
+    out
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────
@@ -686,6 +1573,24 @@ mod tests {
         assert_eq!(r.current_step(), 0);
         // After rebuild, zones still match the recording.
         assert_eq!(r.game.players[0].deck.len(), 40);
+    }
+
+    #[test]
+    fn backward_seek_resets_in_place_via_reset_for_replay() {
+        let cd = filler_card_data();
+        let mut r = ReplayRunner::new(minimal_recording(), &cd, false).expect("constructs");
+        // Force a backward seek to exercise the reset-and-replay path
+        // (`Game::reset_for_replay` + `relay_initial_state`) rather than a
+        // `Game::new` rebuild. With a 0-action recording the forward re-walk
+        // is a no-op; the point is that reset + relay run cleanly and restore
+        // the initial zones.
+        r.current_step = 5;
+        r.seek(0).expect("backward seek resets and relays");
+        assert_eq!(r.current_step(), 0);
+        assert_eq!(r.game.players[0].deck.len(), 40);
+        assert_eq!(r.game.players[0].security.len(), 5);
+        assert_eq!(r.game.players[0].hand.len(), 5);
+        assert_eq!(r.game.players[0].digitama_deck.len(), 4);
     }
 
     #[test]
