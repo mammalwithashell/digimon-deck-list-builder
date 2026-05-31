@@ -55,9 +55,12 @@ COPY data/cards.json data/tested_cards.json data/
 
 # Trim the workspace so unrelated members don't have to resolve.
 # Only digimon-dsl + digimon-engine + digimon-engine-py are copied above;
-# the cli, mcp, tauri shell, and dsl-tools crates must be dropped from
-# `members` or cargo metadata fails before maturin can build the wheel.
-RUN sed -i -E '/"code\/(src-tauri|digimon-engine-cli|digimon-engine-mcp|tools\/dsl-[a-z-]+)"/d' Cargo.toml
+# the cli, mcp, tauri shell, and ALL code/tools/* crates must be dropped from
+# `members` or `cargo metadata` fails before maturin can build the wheel.
+# Match every code/tools/* member (dsl-schema-export, dsl-lint,
+# action-space-export, dcgo-replay, archetype-static-tests, and any future
+# tool) so a newly-added tool crate can't silently break the training image.
+RUN sed -i -E '/"code\/(src-tauri|digimon-engine-cli|digimon-engine-mcp|tools\/[a-z0-9-]+)"/d' Cargo.toml
 
 # Build the wheel — release mode for maximum speed at training time
 RUN cd code/digimon-engine-py && maturin build --release --out /wheels
