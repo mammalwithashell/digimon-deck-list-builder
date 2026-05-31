@@ -2090,6 +2090,9 @@ def train(total_timesteps: int = 100_000,
           eval_seed: Optional[int] = None,
           deck_pool_snapshot_path: Optional[str] = None,
           tensor_profile: Optional[str] = None,
+          ent_coef: Optional[float] = None,
+          record_games: Optional[str] = None,
+          record_games_max: Optional[int] = None,
           reward_profile_override: Optional[str] = None,
           reward_profiles_path: Optional[str] = None,
           reward_gameplay_path: Optional[str] = None,
@@ -2137,9 +2140,15 @@ def train(total_timesteps: int = 100_000,
         # Optional cfg overrides — tensor profile + reward-profile selection.
         # Only override the TrainingConfig defaults when a value is provided so
         # callers that don't ask keep the default behavior.
-        _cfg_overrides: Dict[str, str] = {}
+        _cfg_overrides: Dict[str, Any] = {}
         if tensor_profile is not None:
             _cfg_overrides["tensor_profile"] = tensor_profile
+        if ent_coef is not None:
+            _cfg_overrides["ent_coef"] = ent_coef
+        if record_games is not None:
+            _cfg_overrides["record_games"] = record_games
+        if record_games_max is not None:
+            _cfg_overrides["record_games_max"] = record_games_max
         if reward_profile_override is not None:
             _cfg_overrides["reward_profile_override"] = reward_profile_override
         if reward_profiles_path is not None:

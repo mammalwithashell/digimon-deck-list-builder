@@ -158,6 +158,9 @@ class MatchEnv(gymnasium.Wrapper):
         self.match_id: Optional[str] = None
         # Match score indexed by Python pid - 1: [p1_wins, p2_wins].
         self.match_score: List[int] = [0, 0]
+        # Set when a forced match end (step-limit) had no 2-win majority and
+        # the match was decided by tiebreaker rather than a clean 2 wins.
+        self._forced_match_tiebreak: bool = False
         self.match_step_count: int = 0
         self.match_step_count_in_current_game: int = 0
         self.current_game_index: int = 0
@@ -432,6 +435,15 @@ class MatchEnv(gymnasium.Wrapper):
 
         match_decided = agent_wins >= 2 or opp_wins >= 2 or all_games_played or match_step_limit_hit
 
+        # No-draw policy: a forced match end (step-limit / all games played)
+        # must still produce a decisive winner. If neither side reached a
+        # 2-win majority, award the tiebreak winner enough games to reach 2 —
+        # mirroring the per-game `force_step_limit_winner` at the match tier.
+        if match_decided and agent_wins < 2 and opp_wins < 2:
+            self._force_match_decision()
+            agent_wins = self.match_score[0]
+            opp_wins = self.match_score[1]
+
         if match_decided:
             if self._profile_owns_match_terminal:
                 snapshot = self._build_match_terminal_snapshot()
@@ -467,6 +479,25 @@ class MatchEnv(gymnasium.Wrapper):
         info["outcome"]["winner_id"] = winner_id_python
         return fresh_obs, reward, False, truncated, info
 
+    def _force_match_decision(self) -> None:
+        """Award the tiebreak winner enough game-wins to reach 2 so a forced
+        match end (step-limit / all games played) is always decisive — the BO3
+        never reports a draw. Tiebreak order: game-win leader; on a 1-1 tie,
+        the winner of the most recently completed game (which the engine's
+        board-state tiebreaker decided if that game hit the step limit)."""
+        a, o = self.match_score[0], self.match_score[1]
+        if a >= 2 or o >= 2:
+            return
+        if a > o:
+            tb = 0
+        elif o > a:
+            tb = 1
+        else:
+            # 1-1 tie: winner of the game that just ended.
+            tb = 0 if self._last_game_score_delta[0] == 1 else 1
+        self.match_score[tb] += 2 - self.match_score[tb]
+        self._forced_match_tiebreak = True
+
     # ─── Match terminal calculator ─────────────────────────────────────
 
     def _calc_match_terminal(self) -> float:
@@ -495,7 +526,8 @@ class MatchEnv(gymnasium.Wrapper):
             if agent_wins == 0 and agent_conceded_any:
                 base += self.MATCH_SCARED_CONCEDE_PENALTY
             return base
-        # Draw (1-1-1) — only on hard step-limit truncation.
+        # Defensive fallback — unreachable now that `_force_match_decision`
+        # resolves every forced match end to a 2-win majority (no draws).
         return self.MATCH_DRAW
 
     # ─── Game-terminal helpers ─────────────────────────────────────────
