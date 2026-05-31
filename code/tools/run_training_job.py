@@ -159,6 +159,7 @@ _TRAIN_KWARGS = {
     "batch_size", "n_epochs", "gamma", "bounty_threshold", "bounty_bonus",
     "use_lstm", "lstm_hidden_size", "reward_profile_override", "tensor_profile",
     "ent_coef", "record_games", "record_games_max",
+    "opponent_pool_manifest", "opponent_pool_mode", "checkpoint_every",
 }
 
 

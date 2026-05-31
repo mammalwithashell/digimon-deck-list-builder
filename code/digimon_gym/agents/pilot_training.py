@@ -2093,6 +2093,9 @@ def train(total_timesteps: int = 100_000,
           ent_coef: Optional[float] = None,
           record_games: Optional[str] = None,
           record_games_max: Optional[int] = None,
+          opponent_pool_manifest: Optional[str] = None,
+          opponent_pool_mode: Optional[str] = None,
+          checkpoint_every: Optional[int] = None,
           reward_profile_override: Optional[str] = None,
           reward_profiles_path: Optional[str] = None,
           reward_gameplay_path: Optional[str] = None,
@@ -2149,6 +2152,10 @@ def train(total_timesteps: int = 100_000,
             _cfg_overrides["record_games"] = record_games
         if record_games_max is not None:
             _cfg_overrides["record_games_max"] = record_games_max
+        if opponent_pool_manifest is not None:
+            _cfg_overrides["opponent_pool_manifest"] = opponent_pool_manifest
+        if opponent_pool_mode is not None:
+            _cfg_overrides["opponent_pool_mode"] = opponent_pool_mode
         if reward_profile_override is not None:
             _cfg_overrides["reward_profile_override"] = reward_profile_override
         if reward_profiles_path is not None:
@@ -2167,7 +2174,7 @@ def train(total_timesteps: int = 100_000,
             opponent=opponent,
             eval_freq=eval_freq,
             eval_episodes=n_eval_episodes,
-            checkpoint_every=0,
+            checkpoint_every=(checkpoint_every if checkpoint_every is not None else 0),
             models_dir=save_dir,
             tensorboard_log=tensorboard_log,
             curriculum_seed=curriculum_seed,
