@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-29
+Last updated: 2026-05-30
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,182 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## On-trash inherited observer "remain-in-trash" gating (Q23) — WITHDRAWN as mischaracterized — 2026-05-30
+
+- **G-ON-TRASH-OBSERVER-SYNCHRONOUS** — logged 2026-05-29 as a "+3 over-count": inherited
+  `on_digivolution_card_trashed` observers were said to fire synchronously at trash-time with no
+  deferral window, so a later separate effect (Medusamon's "return 2") couldn't gate them on
+  remain-in-trash → Q23 would gain +3 instead of the judge's +1. A spike (`fix-judge-quiz-engine-gaps`
+  §3.1/§3.6) deemed the fix a deep dispatch change and split it to a follow-up, blocked on Q23's cards.
+- **Disproven 2026-05-30 by running the real scenario to completion.** With Q23's cards now
+  implemented, a faithful reproduction (Proganomon `EX8-051` + 3× Tumblemon `EX8-005`; one effect
+  trashes all 3 via Fragment then returns 2) was run **end-to-end**. The engine already produces the
+  judge-correct **+1**. Mechanism: when ≥2 sources are trashed mid-effect, their mandatory
+  `OnDigivolutionCardTrashed` observers form a multi-trigger bundle → the drainer installs a
+  `TriggerOrder` selection (`effect_queue.rs` `drain_effect_queue_inner`, the `bundle.len() >= 2`
+  branch), which PARKS the observers past the trashing effect (the return-2 runs first). On resolving
+  the selection, each observer's clause condition is RE-EVALUATED (via `non_firing_queued_effect_indices_for`
+  / `run_queued_effect_inner`, each installing the queued effect's own `trigger_context`), and the 2
+  returned cards' observers fail (their source is no longer in trash) → dropped. Only the 1 remaining
+  fires. TriggerOrder parking + per-trigger condition re-evaluation IS the remain-in-trash gating.
+- **Why it was mischaracterized:** the only evidence was the SINGLE-source probe
+  `cluster_d_on_trash_observer_fires_synchronously_not_deferred` (a lone mandatory trigger does fire
+  synchronously, +1) plus abstract reasoning about deferral. The multi-source (real Q23) path was never
+  run to completion — a probe that stops at the first `pending_selection` never sees the parking +
+  re-evaluation. **Lesson: run a scenario end-to-end (resolve mandatory selections) before logging an
+  engine gap.**
+- **Outcome:** Q23 → **PASS** (`d_activation_site::q23_inherited_trash_memory_gated_on_remaining_in_trash`,
+  synthetic Medusamon driver over real cards). **No engine change made.** The deferral fix / split-out
+  follow-up (`defer-inherited-on-trash-observers`) is retired. Residual narrow open question (no known
+  card, not a blocker): a SINGLE source trashed then returned WITHIN one effect would still fire
+  synchronously (no parking). Q21 is the `[On Deletion]` mechanic (different dispatch) and stays
+  BLOCKED-CARD on its unauthored cards — its remain-in-trash behavior is independent of this entry.
+
+## General state-based ≤0-DP rules-check (cluster B: Q6/Q8/Q13/Q14/Q24) — 2026-05-29
+
+- **G-NO-GENERAL-ZERO-DP-RULES-CHECK** — closed by change `fix-judge-quiz-engine-gaps` (Gap 1).
+  The engine previously deleted a ≤0-DP Digimon only via `run_rule_check_after_arts` (Arts-digivolve
+  only); a Digimon reduced to ≤0 DP by any other effect was never deleted, while `EffectContext::add_modifier`
+  carried an *unfaithful* inline mid-effect deletion (the "latent 17-1-2-2 timing bug").
+- **Engine fix:** `run_rule_check_after_arts` → `Game::run_state_based_rules_check` — a single pass
+  that deletes every battle-area Digimon at `effective_dp ≤ 0` via the batched-deletion flow
+  (`delete_permanent_with_effects`), skipping transiently-empty (zombie) slots, returning whether it
+  deleted. Invoked from `drain_effect_queue`'s outermost-drain wrapper (`Game::effect_drain_depth == 1`):
+  (a) `rules_check_between_queued_effects` runs after EACH top-level `run_queued_effect` — so a Digimon
+  driven ≤0 by one effect is deleted before the next queued trigger resolves (Q24 interleave); and
+  (b) a final fixpoint sweep when the queue empties. It NEVER runs between the sub-steps of one
+  resolving effect (re-entrant drains observe depth > 1; a parked selection defers it) — the judge
+  rule "rule checks don't happen until an ongoing effect or rule action finishes" (Q6/Q13/Q14). The
+  inline `add_modifier` deletion was removed.
+- **Tests:** `tests/judge_quiz/b_deferred_rules_check.rs` — un-ignored `zero_dp_probe_reduced_digimon_deleted_after_effect_resolves`,
+  plus `q6_analog_no_mid_effect_deletion_within_single_effect` (reduce-then-restore within one effect →
+  survives) and `q24_analog_rules_check_deletes_between_queued_effects` (a turn-player effect drives a
+  Digimon ≤0 → deleted before a separate opponent "+DP save" trigger). Full `--features dsl-yaml-loader`
+  suite regression-clean (identical failure set to pre-change baseline). Systemic gameplay-correctness
+  fix beyond the quiz. Cluster-B per-card scenarios flip to PASS as their cards are authored.
+
+## `<Blast Digivolve>` consults effect-immunity (Q18) — 2026-05-29
+
+- **G-BLAST-DIGIVOLVE-IMMUNITY** — closed by change `fix-judge-quiz-cluster-wiring-gaps`. Blast
+  Digivolve and Blast DNA Digivolve never consulted the effect-immunity machinery, so a Digimon
+  immune to ALL Digimon effects including its own (`CannotBeAffected` / `EffectControllerFilter::Any`,
+  e.g. Quantumon LM-020) could still `<Blast Digivolve>` — but Blast Digivolve is itself a Digimon effect.
+- **Fix:** gate Blast counter-candidate collection (`combat.rs::try_enter_counter`) and the Blast DNA
+  field-target generator (`dna_digivolve.rs::valid_blast_dna_field_targets_for_hand_card`) on
+  `permanent_is_unaffected_by_effect(base, base.player, EffectSourceKind::Digimon)`, with a defensive
+  abort in `execute_blast_digivolve`. Pinned by
+  `combat::counter_interrupt::blast_target_immune_to_own_effects_is_not_a_counter_candidate`. (Q18
+  end-to-end pin stays BLOCKED-CARD on LM-020; the substrate is closed.)
+
+## Grant a triggered effect to an opponent's permanent (Q2 + Q16 + Q17) — 2026-05-29
+
+- **G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT** (opponent-targeting + all three
+  cause-attribution directions) — closed by change `add-grant-triggered-effect-dsl`.
+  The `grant_triggered_effect` DSL step and `ModifierType::GrantedTrigger` slot
+  already existed from the EX10-034 grant-to-binding work; a predicate `target`
+  (`CompiledModifierTarget::Filter`) already walks BOTH players' battle areas and
+  snapshots the match set, so `target: { of: opponent, kind: digimon }` installs
+  on each opponent Digimon at grant time (DCGO foreach-snapshot parity — a Digimon
+  played later does not carry it).
+- **Engine fix (the new bit):** the granted-trigger dispatch in
+  `effect_queue.rs::enqueue_from_permanent` now skips firing a granted clause when
+  the carrier is unaffected by the GRANTOR's effects —
+  `if self.progress_excludes(handle, Some(source_player)) { continue; }`, gated at
+  enqueue time while `pending_attack` is still set. This makes a granted effect
+  "the grantor's effect" from the carrier's perspective, so a `<Progress>` (or
+  `ImmunityToOpponentEffects`) opponent Digimon does not fire the grant while it
+  attacks (judge-quiz Q2: Medusamon loses no memory; a non-Progress control loses 2).
+- **Q16 — granted body runs as the carrier's OWN effect.** DCGO sources the
+  granted ActivateClass from `selectedPermanent.TopCard` (the carrier), so the
+  granted-trigger dispatch now runs the body with `effect_source_player =
+  carrier.player` (D4) — at all three dispatch sites (`enqueue_from_permanent`
+  battle + breeding, and the legacy `fire_granted_triggered_effects`). A deletion
+  the granted body causes is therefore the carrier-controller's OwnEffect, so
+  `<Partition>`'s cause-filter skips it (judge-quiz Q16). NOTE: the grantor
+  (`source_player`) is used ONLY for the Q2 immunity gate, never for body
+  attribution. Two pre-existing `group6_auras` mirror-tests used `gain_memory(-2)`
+  (controller-relative) assuming controller=grantor; they were corrected to
+  `lose_memory(2)` (turn-relative, matching EX1-068) to reflect the faithful
+  carrier-attribution model.
+- **Q17 — opponent-effect immunity suppresses a granted opponent effect.** The
+  granted-trigger dispatch (all three sites) ALSO gates on
+  `permanent_is_unaffected_by_effect(carrier, grantor, kind)`, keyed to the
+  grantor's effect-source kind. A carrier with `CannotBeAffected(OpponentOnly)`
+  — e.g. Magnamon (X Antibody)'s "isn't affected by your opponent's effects" —
+  does not fire an opponent-granted clause. DCGO models this as a continuous
+  `CanNotAffectedClass` (affect-time check), matching the fire-time gate; the
+  timeline works because the granted `[EoT]` delete fires at the grantee's
+  turn-end while the immunity (until end of the *opponent's* turn) is still live.
+- **Card content:** EX1-068 Ice Wall! `[Main]`; EX6-057 Lilithmon (3 clauses);
+  BT16-102 Magnamon (X Antibody) (4 clauses: `<Blocker>`, `<Armor Purge>`,
+  `[When Digivolving]` conditional immunity/+DP/unsuspend, `[All Turns][OPT]`
+  re-activate `[When Digivolving]` on security removal).
+- **Verification:** `--test judge_quiz q2_medusamon`/`q16`/`q17`; `--test cards_behavioral ex1_068` (6) / `ex6_057` (2) / `bt16_102` (2); `--test dsl group6_auras` (50, incl. the immunity-suppression synthetic test); regression: `--test cards_behavioral ex10_034` (14), `--test combat effect_granted_attack`; full suite has only the 17 pre-existing failures.
+- **Not needed:** BT21-036 Magnamon — its only role in Q17 was an Armor-Form
+  digivolution source (staged synthetically); it remains unauthored (its
+  "-2000 DP per [Armor Form] in trash" clause would need a trash-trait-count
+  formula, currently absent) but blocks no judge-quiz question.
+
+## Digi-Egg routing on return-to-deck — 2026-05-29
+
+- **G-RETURN-TRASH-DIGI-EGG-ROUTING** — a Digi-Egg returned "to the deck" from
+  trash now routes to the **digitama deck**, never the main deck (a Digi-Egg in
+  the main deck is always illegal). Closed by change
+  [`fix-judge-quiz-engine-gaps`](../openspec/changes/fix-judge-quiz-engine-gaps/)
+  (Gap 2), judge-quiz Q22.
+- **Fix:** added private `EffectContext::move_card_to_deck(card, to_bottom)`
+  (`effect_context/mod.rs`) — routes `CardKind::DigiEgg` to `digitama_deck`
+  (bottom = `insert(0)`, top = `push`), everything else to `deck`; the card
+  returns to its OWNER's deck. All four trash→deck movers go through it:
+  `return_all_trash_to_deck_bottom`, `return_trash_cards_to_deck_bottom`,
+  `return_trash_cards_to_deck_top`, `move_trash_card_to_deck_top`. The returned
+  `moved`/`handles` Vec is unchanged, so a "return N to the bottom of the deck"
+  cost (e.g. Medusamon BT24-017) stays satisfied while the egg lands in the
+  digitama deck (Q22's actual rule).
+- **Scope note (audit pending):** the permanent-stack returns
+  (`Game::return_to_deck` / `return_stack_to_deck`) and reveal-zone returns share
+  the same Digi-Egg rule for any egg in a returned digivolution stack; they live
+  on a separate game.rs path and were left for a follow-up.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz digi_egg` (Q22 + the deck-top regression `digi_egg_returned_to_deck_top_routes_to_digitama_deck`); `--test deletion_batching`, `--test dsl zone_movement`/`return` green.
+
+## Assembly play execution — 2026-05-29
+
+- **G-ASSEMBLY-PLAY-EXECUTION** — the engine can now play a hand card via its
+  `[Assembly]` alt-path. Closed by change
+  [`fix-ad1-025-assembly-data`](../openspec/changes/fix-ad1-025-assembly-data/)
+  (hybrid engine + data + YAML), faithful to DCGO `SelectAssemblyClass.cs` /
+  `AddAssemblyConditionClass.cs` / `AD1_025.cs:214-255` and Comprehensive Rules
+  §7-3.
+- **Flow (no action-space change — rides `PLAY_HAND`, D8):** after the
+  play's cost-reduction chain resolves, `Game::assembly_or_finish_play_from_hand`
+  → `try_begin_assembly_flow` (`game_actions.rs`) detects an eligible assembly
+  path via `resolve_eligible_assembly` (reads `alt_path_registry`, requires each
+  material element satisfiable from the controller's **trash** with DISTINCT
+  cards — `assembly_can_fulfill`, a recursive system-of-distinct-representatives
+  mirroring DCGO `CanFulfillConditions`/`CanFulfillEachElementCondition`). It
+  installs an optional "use assembly?" gate (element 0, `min=0`,
+  `is_optional_zero` — declining plays at full cost) then a required per-element
+  surfaced trash selection (`select_count_capped_multi_min`, exact count, zone
+  Trash, controller-selected, distinct from already-picked). On resolution the
+  chosen materials are handed to `Game::pending_assembly_materials` and consumed
+  in `commit_play_from_hand_card_no_replace` — placed at the digivolution-stack
+  BOTTOM (`push_under`) **before** the played card's `[On Play]` /
+  `[When Digivolving]` fire (so AD1-025's bounce sees its own assembled
+  digivolution-card count) — and the play cost is reduced by the alt-path `cost:`
+  (D5: assembly `cost` = REDUCTION, not absolute).
+- **Declare-then-pay legality:** `action/mask.rs` now gates the `PLAY_HAND` bit
+  on the REDUCED cost when an assembly path is eligible
+  (`Game::assembly_play_reduction_for_hand_card`) — judge-quiz Q5 (Omnimon at
+  memory 0 is legal because 15 − 6 = 9 is payable; without the materials the
+  full 15 overdraws past the −10 floor and the play is illegal).
+- **Card content:** `[Assembly]` restored to AD1-025 in `data/card_overrides.json`;
+  the `assembly` alt_path authored in `cards/ad1/AD1-025.yaml` (materials
+  WarGreymon + MetalGarurumon, `zones:[trash]`, `stack_under`, `cost: 6`).
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl assembly_play` (6 tests: install, full-flow placement+cost, decline-at-full-cost, declare-then-pay mask offered, masked-out without materials, real AD1-025 from the pack); `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz q5`.
+- **Reusable:** the executor serves the rest of the `[Assembly]` keyword family
+  (AD1-009/012, BT22-078, BT24-062/081, EX9-047, EX11-036/045/046) — they land
+  via normal card authoring (data + YAML) with no further engine work.
 
 ## Gaia Red ST-1 shared DSL substrate — 2026-05-29
 

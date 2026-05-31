@@ -1,0 +1,60 @@
+# EX4-005 Agumon — Digimon, Lv.3, Red/Yellow, DP 2000, Cost 3. Trait: Dinosaur.
+#
+# Printed card text (EX4-005.json):
+#   [Start of Your Main Phase] If you have a red or yellow Tamer in play,
+#   gain 1 memory.
+#   Inherited: [Your Turn] [Once Per Turn] When one of your red or yellow
+#   Tamers becomes suspended, ＜Draw 1＞ (Draw 1 card from your deck.)
+#   Digivolve: [Koromon]: Cost 0 (xros_req).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX4/Red/EX4_005.cs
+#   - OnStartMainPhase ActivateClass, isOptional: false (mandatory; no "may").
+#     CanActivateCondition = own Tamer permanent with red or yellow color →
+#     gain 1 memory.
+#   - OnTappedAnyone inherited, IsOwnerTurn, maxUsableCount: 1, own red/yellow
+#     Tamer suspend → Draw 1. isOptional: false.
+
+card: EX4-005
+name: Agumon
+kind: digimon
+level: 3
+color: [red, yellow]
+cost: 3
+dp: 2000
+traits: [Dinosaur]
+alt_paths:
+  - kind: digivolve
+    from: { name_is: Koromon }
+    cost: 0
+
+effects:
+  # ─── Clause 1 — [Start of Your Main Phase] conditional gain 1 memory ─────────
+  # MANDATORY (no "may"; DCGO isOptional: false). The condition gate (own
+  # red/yellow Tamer in play) makes the trigger simply not fire when unmet.
+  - when: start_of_your_main_phase
+    optional: false
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        any_of:
+          - color_is: red
+          - color_is: yellow
+    summary: "[Start of Main] If you have a red/yellow Tamer in play, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── Clause 2 — Inherited [Your Turn][OPT] own red/yellow Tamer suspend → Draw 1
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [red, yellow]
+    summary: "[Your Turn][Once Per Turn] When own red/yellow Tamer suspends, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

@@ -612,6 +612,18 @@ pub enum CompiledModifierValue {
     Formula(CompiledFormula),
 }
 
+/// Compiled synthetic identity for a `TreatAsDigimon` modifier. Mirrors the
+/// engine's `ModifierPayload::SynthIdentity` fields; the engine lowering
+/// converts `kind`/`colors` to its own enums.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledSynthIdentity {
+    pub kind: CompiledCardKind,
+    pub level: u8,
+    pub colors: Vec<CompiledColor>,
+    pub traits: Vec<String>,
+    pub dp: i32,
+}
+
 // ── Clauses ─────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1294,6 +1306,13 @@ pub enum CompiledStep {
         modifier: String,
         value: CompiledModifierValue,
         expiry: String,
+        /// Structured payload for `TreatAsDigimon` (lowers to
+        /// `ModifierPayload::SynthIdentity`). `None` for scalar modifiers.
+        /// NOTE: no `skip_serializing_if` — the embedded pack round-trips
+        /// `CompiledStep` through bincode (a non-self-describing format), so
+        /// the field must always be written or the byte stream desyncs.
+        #[serde(default)]
+        synth_identity: Option<CompiledSynthIdentity>,
     },
     AddPlayerModifier {
         target_player: CompiledPlayerRef,

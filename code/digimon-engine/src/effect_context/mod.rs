@@ -5622,12 +5622,44 @@ impl<'a> EffectContext<'a> {
                 .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();
-        if modifier == ModifierType::ChangeDp
-            && self.game.permanent_is_digimon_for_rules(target)
-            && self.game.effective_dp(target).is_some_and(|dp| dp <= 0)
-        {
-            self.game.delete_permanent_with_effects(target);
+        // NOTE: a DP reduction to ≤0 does NOT delete the Digimon here. Deletion
+        // is a state-based action (rule 17-1-2-2 / `G-NO-GENERAL-ZERO-DP-RULES-CHECK`)
+        // that runs only after the ongoing effect or rule action finishes — see
+        // `Game::run_state_based_rules_check`, invoked at the outermost
+        // `drain_effect_queue` boundary. Deleting inline here would fire
+        // mid-effect and break the judge timing (Q6: Pillomon at 0 DP survives
+        // until Flame Hellscythe resolves; Q13/Q14: ShoeShoemon survives until
+        // Nyabootmon's [When Digivolving] fully resolves).
+    }
+
+    /// Like [`add_modifier`], but carries a structured [`ModifierPayload`]
+    /// (e.g. `SynthIdentity` for `TreatAsDigimon`). Honors the same
+    /// `can_affect_permanent` guard and `*NextTurn` pending-skip semantics.
+    /// Used by the DSL `add_modifier` lowering when a `synth_identity:`
+    /// block is present, and available to raw_rust scripts.
+    pub fn add_modifier_with_payload(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        payload: crate::modifiers::ModifierPayload,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
         }
+        let pending_skips = crate::modifiers::pending_skips_for_install(
+            expiry,
+            self.player,
+            self.game.turn_player(),
+        );
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(modifier, value, expiry, self.player)
+                .with_payload(payload)
+                .with_pending_skips(pending_skips),
+        );
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn add_declarative_modifier(
@@ -6232,17 +6264,45 @@ impl<'a> EffectContext<'a> {
     /// cards consuming this primitive bind the moved set as an ordered set
     /// for downstream predicates rather than per-card observation. Treated
     /// as a bulk move; per-card observer fan-out can land as a follow-up.
+    /// Route a card returned "to the deck" to the rules-correct deck. A
+    /// Digi-Egg can NEVER enter the main deck (Comprehensive Rules), so it is
+    /// sent to the Digi-Egg (digitama) deck instead — which still satisfies a
+    /// "send N to the bottom of the deck" cost (judge-quiz Q22). The card
+    /// returns to its OWNER's deck. `to_bottom` selects the bottom (index 0)
+    /// vs the top (`Vec` end, drawn first). G-RETURN-TRASH-DIGI-EGG-ROUTING.
+    ///
+    /// NOTE (audit pending): the permanent-stack returns
+    /// (`Game::return_to_deck` / `return_stack_to_deck`) and reveal-zone returns
+    /// share the same Digi-Egg rule for any egg in a returned digivolution
+    /// stack; those live on a different (game.rs) path and are out of scope for
+    /// this trash→deck fix.
+    fn move_card_to_deck(&mut self, card: crate::card_source::CardSource, to_bottom: bool) {
+        let owner = card.owner;
+        let is_egg = card.card_kind(&self.game.card_data) == CardKind::DigiEgg;
+        let player = self.game.player_mut(owner);
+        let deck = if is_egg {
+            &mut player.digitama_deck
+        } else {
+            &mut player.deck
+        };
+        if to_bottom {
+            deck.insert(0, card);
+        } else {
+            deck.push(card);
+        }
+    }
+
     pub fn return_all_trash_to_deck_bottom(&mut self, player: PlayerId) -> Vec<CardHandle> {
         // Drain trash in order. Each card is appended to the start of its
         // owner's deck (deck bottom = index 0 by convention; deck top =
-        // Vec end, the position drawn from first).
+        // Vec end, the position drawn from first). Digi-Eggs route to the
+        // digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING).
         let drained: Vec<crate::card_source::CardSource> =
             std::mem::take(&mut self.game.player_mut(player).trash);
         let mut handles = Vec::with_capacity(drained.len());
         for card in drained {
             handles.push(card.handle());
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.insert(0, card);
+            self.move_card_to_deck(card, true);
         }
         handles
     }
@@ -6271,8 +6331,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.insert(0, card);
+            self.move_card_to_deck(card, true);
             moved.push(handle);
         }
         moved
@@ -6305,8 +6364,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.push(card);
+            self.move_card_to_deck(card, false);
             moved.push(handle);
         }
         // `moved` was built in reverse; restore selection order for callers.
@@ -6336,9 +6394,9 @@ impl<'a> EffectContext<'a> {
             return false;
         };
         let removed = self.game.player_mut(player).trash.remove(pos);
-        let owner = removed.owner;
-        // Deck top = Vec end (drawn first) per engine convention.
-        self.game.player_mut(owner).deck.push(removed);
+        // Deck top = Vec end (drawn first) per engine convention; a Digi-Egg
+        // routes to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING).
+        self.move_card_to_deck(removed, false);
         true
     }
 

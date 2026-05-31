@@ -204,3 +204,136 @@ When a card's printed text reads "[End of Your Turn] This Digimon and any of you
 - **THEN** the card's YAML is migrated to `may_dna_digivolve_now` as part of this change (or a follow-up audit)
 - **AND** the card's behavioral test is updated to assert the new clause shape
 
+### Requirement: DSL supports no-choice bottom-source trash
+
+The DSL SHALL provide a step for trashing the bottom N digivolution source cards from a resolved permanent target without presenting a source-card choice to the player. The step SHALL accept a target binding and a positive count, SHALL trash sources from the bottom of the target's stack in bottom-up order, SHALL cap naturally at the number of available source cards, and SHALL route each trashed source card to its owner's trash.
+
+This primitive is for printed text such as "Trash the digivolution card at the bottom of 1 of your opponent's Digimon" and "Trash 2 digivolution cards at the bottom of 1 of your opponent's Digimon." It SHALL NOT replace `select_own_sources`, `select_opponent_sources`, or other player-choice source selectors when printed text says the player chooses source cards.
+
+#### Scenario: One bottom source is trashed with no source prompt
+
+- **WHEN** a DSL process selects an opponent Digimon and then executes bottom-source trash with count 1
+- **THEN** the bottom source card under that opponent Digimon is moved to its owner's trash
+- **AND** no pending source-selection prompt is installed
+
+#### Scenario: Two bottom sources are trashed in order
+
+- **WHEN** a target permanent has three source cards under its top card
+- **AND** a DSL process executes bottom-source trash with count 2
+- **THEN** the two lowest source cards are moved to their owners' trash in bottom-up order
+- **AND** the remaining source and top card stay on the permanent
+
+#### Scenario: Count caps to available sources
+
+- **WHEN** a target permanent has one source card under its top card
+- **AND** a DSL process executes bottom-source trash with count 2
+- **THEN** the one available source card is trashed
+- **AND** the top card is not trashed
+- **AND** the engine does not panic
+
+#### Scenario: Player-choice source selectors remain distinct
+
+- **WHEN** printed text requires the controller to choose a source card
+- **THEN** the card YAML SHALL use a source-selection primitive rather than bottom-source trash
+- **AND** the action mask SHALL expose the legal source choices
+
+### Requirement: DSL can evaluate the opposing battled Digimon's source count
+
+The DSL SHALL provide a battle-context predicate usable by inherited or aura-style effects to test the currently opposing battled Digimon's source count. The predicate SHALL only evaluate as true while a Digimon-vs-Digimon battle context exists, SHALL inspect the opposing battle participant relative to the source carrier, and SHALL be false during security checks, player attacks, and other non-Digimon-battle contexts.
+
+#### Scenario: Opposing battler has no sources
+
+- **WHEN** a Digimon carrying an inherited effect battles an opponent Digimon whose stack contains only its top card
+- **AND** the inherited effect condition checks that the opposing battled Digimon has no source cards
+- **THEN** the condition evaluates true for that battle
+
+#### Scenario: Opposing battler has sources
+
+- **WHEN** the opposing battled Digimon has one or more source cards
+- **THEN** the no-source battled-opponent predicate evaluates false
+
+#### Scenario: No battle opponent context exists
+
+- **WHEN** the carrier attacks a player or performs security checks
+- **THEN** the no-source battled-opponent predicate evaluates false
+- **AND** any DP or keyword grant gated by that predicate is not applied for that non-battle context
+
+#### Scenario: Predicate resolves relative to the carrier
+
+- **WHEN** both players have Digimon involved in the battle
+- **THEN** the predicate inspects the opponent of the carrier permanent, not merely any no-source Digimon on either battle area
+
+### Requirement: DSL can gate inherited effects on source-carrier battle deletion survival
+
+The DSL SHALL provide a reusable predicate or helper that allows an inherited effect to detect that its source carrier deleted that carrier's battle opponent in battle and that the source carrier survived the battle. The predicate/helper SHALL compose with existing timing, owner, cause, and once-per-turn gates. It SHALL NOT match unrelated battle deletions caused by another friendly Digimon, attacks on players, effect deletion, or battles where the source carrier does not remain in the battle area.
+
+#### Scenario: Predicate matches source carrier deleting its battle opponent
+- **WHEN** an inherited effect uses the battle-deletion-survivor predicate/helper
+- **AND** its source carrier deletes the opposing battle participant by battle
+- **AND** the source carrier remains in the battle area after battle resolution
+- **THEN** the predicate/helper evaluates true for that trigger context
+
+#### Scenario: Predicate rejects unrelated friendly battle deletion
+- **WHEN** an inherited effect uses the battle-deletion-survivor predicate/helper
+- **AND** another friendly Digimon deletes an opponent Digimon by battle
+- **THEN** the predicate/helper evaluates false for the source carrier that was not a participant in that battle
+
+#### Scenario: Predicate rejects mutual destruction
+- **WHEN** an inherited effect uses the battle-deletion-survivor predicate/helper
+- **AND** its source carrier and the opponent battle participant are both deleted by battle
+- **THEN** the predicate/helper evaluates false because the source carrier did not survive
+
+#### Scenario: Predicate rejects non-battle deletion
+- **WHEN** an inherited effect uses the battle-deletion-survivor predicate/helper
+- **AND** an opponent Digimon is deleted by an effect rather than by battle
+- **THEN** the predicate/helper evaluates false
+
+### Requirement: DSL supports player Digimon attack-history predicates
+
+The DSL SHALL provide a predicate or condition that evaluates whether a referenced player attacked with at least one Digimon during the current turn. The predicate SHALL be usable in triggered effect conditions, including inherited end-of-opponent-turn clauses, and SHALL support normal DSL negation so card authors can express "the opponent did not attack with a Digimon this turn."
+
+#### Scenario: Predicate is true after referenced player attacks with a Digimon
+
+- **WHEN** a player attacks with one of their Digimon during the current turn
+- **THEN** evaluating the attack-history predicate for that player returns true
+
+#### Scenario: Predicate is false when referenced player has not attacked with a Digimon
+
+- **WHEN** a player reaches an end-of-turn timing without attacking with any Digimon during that turn
+- **THEN** evaluating the attack-history predicate for that player returns false
+- **AND** a negated form of the predicate can be used to authorize effects that require no Digimon attack
+
+#### Scenario: Predicate resets across turn boundaries
+
+- **WHEN** a player attacked with a Digimon on a previous turn
+- **AND** a later turn begins
+- **THEN** evaluating the attack-history predicate for that player reflects only the later turn's attack history
+
+#### Scenario: Predicate can be referenced from inherited end-of-opponent-turn effects
+
+- **WHEN** a card author writes an inherited `end_of_opponents_turn` clause conditioned on the opponent not having attacked with a Digimon this turn
+- **THEN** the DSL compiles the clause
+- **AND** the engine evaluates the condition at trigger resolution time using authoritative game attack history
+
+### Requirement: DSL can express when-this-Digimon-is-blocked effects
+The DSL SHALL allow a card author to express an effect that triggers only when the source permanent or inherited carrier is the attacking Digimon and that attack becomes blocked by a declared blocker. The trigger SHALL expose enough event context to distinguish the blocked attacker from other battle-area observers and from the original attack target. The effect SHALL work for face-up and inherited source scopes without hidden auto-resolution.
+
+#### Scenario: Inherited source triggers when its carrier is blocked
+- **WHEN** a Digimon attacks with an inherited source carrying a "when this Digimon is blocked" clause
+- **AND** the defender declares a legal blocker
+- **THEN** the inherited clause is enqueued for that attacking carrier
+- **AND** resolving the clause runs its process body exactly once
+
+#### Scenario: Other allied Digimon do not trigger
+- **WHEN** a Digimon attacks and is blocked
+- **AND** another allied Digimon has a "when this Digimon is blocked" clause but is not the attacker
+- **THEN** the other allied Digimon's clause is not enqueued
+
+#### Scenario: Unblocked attacks do not trigger
+- **WHEN** a Digimon attacks and the defender declines to block or has no legal blocker
+- **THEN** "when this Digimon is blocked" clauses do not trigger
+
+#### Scenario: Non-block attack target changes do not trigger
+- **WHEN** an attack target changes for a reason other than a declared blocker
+- **THEN** "when this Digimon is blocked" clauses do not trigger
+

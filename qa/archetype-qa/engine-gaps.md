@@ -5,6 +5,45 @@ This file accumulates engine mechanics that are missing or incomplete, discovere
 Last updated: 2026-05-29
 Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
 
+## Open gaps — judge-quiz faithfulness suite discovery wave (2026-05-29)
+
+Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' rules quiz reproduced as behavioral tests). Discover-then-pin: tests assert the judge-correct outcome; a failure is logged here, not weakened.
+
+### §No general state-based ≤0-DP rules-check (G-NO-GENERAL-ZERO-DP-RULES-CHECK) — RESOLVED 2026-05-29
+
+- **RESOLVED** by change `fix-judge-quiz-engine-gaps` (Gap 1). `run_rule_check_after_arts` was generalized to `Game::run_state_based_rules_check` (deletes every battle-area Digimon at `effective_dp ≤ 0` via the batched-deletion flow, skipping transiently-empty/zombie slots) and invoked at the outermost `drain_effect_queue` boundary: BETWEEN each top-level queued effect (so a Digimon driven ≤0 by one effect is deleted before the next queued trigger — Q24) AND a final fixpoint sweep, guarded by `Game::effect_drain_depth` so it never fires mid-effect (Q6/Q13/Q14). The unfaithful inline mid-effect ≤0-DP deletion in `EffectContext::add_modifier` (the "latent 17-1-2-2 timing bug") was removed. Pinned by the un-ignored `zero_dp_probe_reduced_digimon_deleted_after_effect_resolves` + synthetic `q6_analog_no_mid_effect_deletion_within_single_effect` / `q24_analog_rules_check_deletes_between_queued_effects` regression tests; full suite regression-clean. Full resolution note in [qa/resolved-gaps.md](../resolved-gaps.md). Cluster-B per-card scenarios (Q6/Q8/Q13/Q14/Q24) flip to PASS as their cards are authored.
+
+### §`<Blast Digivolve>` skips effect-immunity (G-BLAST-DIGIVOLVE-IMMUNITY) — RESOLVED 2026-05-29
+
+- **First seen / RESOLVED** 2026-05-29, judge-quiz Q18. Neither `execute_blast_digivolve` (combat.rs) nor the Blast DNA field-target generator (`dna_digivolve.rs::valid_blast_dna_field_targets_for_hand_card`) consulted the effect-immunity machinery; a Digimon immune to ALL Digimon effects including its own (Quantumon LM-020 — `CannotBeAffected` with `EffectControllerFilter::Any`) could still `<Blast Digivolve>`, but `<Blast Digivolve>` is itself a Digimon effect. **Fixed** (change `fix-judge-quiz-cluster-wiring-gaps`): gate Blast counter-candidate collection (`combat.rs::try_enter_counter`) AND the Blast DNA field-target generator on `permanent_is_unaffected_by_effect(base, base.player, Digimon)`, plus a defensive abort in `execute_blast_digivolve`. Pinned by `combat::counter_interrupt::blast_target_immune_to_own_effects_is_not_a_counter_candidate`. (Q18 stays BLOCKED-CARD on LM-020 for the end-to-end pin; the substrate is closed.)
+
+### §DigiXros material-consumption fires no leave trigger (G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER) — OPEN
+
+- **First seen:** 2026-05-29, judge-quiz Q25 (probe). When a battle-area Digimon is consumed as a DigiXros material, `Game::take_digixros_material_origin` (game_actions.rs, `DigiXrosMaterialOrigin::BattleArea` arm) silently `battle_area.remove(idx)`s it and tucks its top card under the new Digimon — firing NO `OnLeaveField` / `WhenWouldLeaveBattleArea` trigger, unlike the standard deletion path (`combat.rs` stages 1 + 6). The judge rule (Q25): a DigiXros departure DOES count as "leaving the battle area" (and is NOT "leaving by battle").
+- **DCGO-verified design (2026-05-29).** The observer that must fire is **BT17-095 Miraculous Mega Knight** (already implemented), NOT EX3-014. Its relevant clause is a `[Delay]` keyed off DCGO `EffectTiming.WhenRemoveField` with `CanUseCondition = CanDeclareOptionDelayEffect && CanTriggerWhenPermanentRemoveField(IsOwnerPermanentCondition) && !IsByBattle` — "When one of your level-6 [Greymon]/[Garurumon] **would leave the battle area outside of a battle**". The Rust BT17-095 YAML models this as `kind: replacement` / `trigger: when_would_leave_battle_area` with `active_when: { ..., none_of: [replacement_cause: battle] }`. So the engine must fire the **`WhenWouldLeaveBattleArea` REPLACEMENT WINDOW** (the deletion-batch stage-1 path, `combat.rs::run_replacement_stage(WhenWouldLeaveBattleArea, ...)`) — NOT a post-removal `OnLeaveField` observer — for each `BattleArea` DigiXros material BEFORE it is consumed, with a `ReplacementCause` that is **not `Battle`** (candidate: new `ReplacementCause::DigiXros`, or `Cost`).
+- **Why this is DigiXros-transaction surgery (not simple wiring):** `commit_digixros_material_sources` → `take_digixros_material_origin` must run the replacement window per battle-area material and then handle the OUTCOME — and BT17-095 does NOT proceed: on success it **redirects/substitutes** the leaving WarGreymon into a DNA-digivolve into Omnimon (the material is consumed into Omnimon instead of into Dorbickmon's DigiXros). So the DigiXros commit must tolerate a material being cancelled/redirected/substituted away mid-transaction. Build + validate this as the substrate step of EX3-014 authoring with BT17-095 as the integration oracle (DCGO `BT17_095.cs`, `EX3_014.cs`).
+- **Blocks (judge-quiz):** Q25 (BLOCKED-CARD on EX3-014 regardless).
+
+### §No digivolve-target restriction modifier (G-DIGIVOLVE-TARGET-RESTRICTION) — ENGINE SUBSTRATE DONE 2026-05-29; DSL-install + card at authoring
+
+- **Engine substrate IMPLEMENTED** 2026-05-29 (change `fix-judge-quiz-cluster-wiring-gaps`). `ModifierType::CanOnlyDigivolveInto` added (carries the allowed name in `ModifierPayload::Name { value }`); consulted by `Game::digivolve_target_blocked_by_restriction`, wired into the single central digivolve-route function `normal_digivolve_route_for_card` (feeds the digivolve action mask, the Blast counter path, and hand-digivolve execution) AND the arts-digivolve path (`game_actions.rs`). A base carrying the modifier offers NO digivolve route into a non-matching card; no-op when absent (zero blast radius for existing cards). Registered in `modifier_map.rs` (lookup + exhaustiveness + all_variants), `validator::KNOWN_MODIFIER_KEYS`, and the `payload_matches_modifier` guard. Pinned by `dna_digivolve::tests_q3_digivolve_target_restriction::{can_only_digivolve_into_blocks_nonmatching_name, no_restriction_is_a_noop}`. Full suite regression-clean.
+- **Remaining (deferred to EX10-020 authoring):** a DSL step/keyword to INSTALL `CanOnlyDigivolveInto` with a card-specific allowed name as a declarative aura sourced from the battle area (so it's breeding-inactive for free — see breeding-area note below). The allowed name is card-specific ("Apocalymon"), so this thin lowering lands with EX10-020 (cluster G — NOT first wave). The `ChangeBaseCardName` Name-payload-aura lowering is the template.
+- **First seen:** 2026-05-29, judge-quiz Q3 (probe). The `ModifierType` enum has `CannotDigivolve` (the source can't digivolve at all) but NO "can only digivolve INTO [X]" / "cannot digivolve into [X]" digivolve-TARGET restriction. EX10-020's `[All Turns] This Digimon can only digivolve into [Apocalymon]` (a self-restriction on its own digivolution targets) has no primitive.
+- **Breeding-area note (NOT a gap):** the Q3 judge ruling turns on this `[All Turns]` being INACTIVE while EX10-020 is in the breeding area. The probe confirmed continuous/aura effects already enumerate sources from `battle_area` only (`aura.rs::snapshot_player_battle_area` / `snapshot_all_battle_areas`), never `breeding_area` — so a restriction modelled as a declarative aura sourced from EX10-020 is automatically inactive in breeding. No breeding-isolation gap.
+- **DCGO-verified design (2026-05-29).** EX10-020 (`EX10_020.cs`) models the `[All Turns]` via `CardEffectFactory.CanNotDigivolveStaticSelfEffect(cardCondition: cs => !cs.EqualsCardName("Apocalymon"), condition: () => IsExistOnBattleArea(card), ...)` — a continuous SELF restriction: "this Digimon cannot digivolve INTO a card whose name ≠ Apocalymon", active only while EX10-020 is on the battle area. Engine design: add `ModifierType::CanOnlyDigivolveInto` (or `CannotDigivolveInto`) carrying a name predicate (reuse `ModifierPayload::Name { value }` for the allowed name); install it as a declarative aura sourced from EX10-020 (aura sources are scanned from `battle_area` only — `aura.rs` — so the restriction is automatically INACTIVE while EX10-020 is in breeding, matching the `IsExistOnBattleArea` gate AND the Q3 judge ruling); consult it at digivolve-target legality. **Consult-site note:** `Game::can_digivolve(card, perm)` takes a `&Permanent` (no handle), so the modifier consult must be added either by threading the base handle into `can_digivolve` (7 callers) or via a sibling `digivolve_target_allowed(base_handle, card)` called at the battle-area digivolve sites (action mask `mask.rs:282` region + the hand/arts digivolve execution in `game_actions.rs`); breeding digivolve sites need no consult (the base isn't an aura source there). Add DSL vocab to install "can only digivolve into [name]". Low-risk additive (no existing card installs this modifier). Close as the substrate step of EX10-020 authoring (cluster G — NOT first wave).
+- **Blocks (judge-quiz):** Q3 (BLOCKED-CARD on EX10-020 / BT12-057 regardless).
+
+### §On-trash inherited effect fires synchronously, blocking remain-in-trash gating (G-ON-TRASH-OBSERVER-SYNCHRONOUS) — **WITHDRAWN 2026-05-30 (mischaracterized; moved to `resolved-gaps.md`)**
+
+- **WITHDRAWN — not a gap.** This entry asserted a "+3 over-count" (on-trash observers fire synchronously, can't defer to re-check remain-in-trash) blocking Q23. Running the real 3-source-trash-then-return-2 scenario **to completion** (2026-05-30) disproved it: the engine already produces the judge-correct **+1**. When ≥2 sources are trashed mid-effect, their mandatory `OnDigivolutionCardTrashed` observers form a multi-trigger bundle → the drainer installs a `TriggerOrder` selection that PARKS them past the trashing effect (the return-2 runs first); on resolution each observer's clause condition is RE-EVALUATED and the cards returned in the meantime fail (no longer in trash) → dropped. The earlier evidence was the SINGLE-source probe (which does fire synchronously) plus abstract reasoning about deferral — the multi-source scenario was never run end-to-end (the probe stopped at the first `pending_selection`).
+- **Q23 → PASS** via `d_activation_site::q23_inherited_trash_memory_gated_on_remaining_in_trash` (synthetic Medusamon driver over real EX8-051/EX8-005). No engine change was made; the deferral "fix seam" / split-out follow-up change is retired.
+- **Residual narrow open question (no known card; not a blocker):** a SINGLE source trashed then returned WITHIN one effect would still fire synchronously (a lone mandatory trigger doesn't park). If a real card ever needs that gated, re-open then. The single-source synchronous behavior is characterized by `d_activation_site::cluster_d_on_trash_observer_fires_synchronously_not_deferred`.
+- Full resolution note in [`resolved-gaps.md`](../resolved-gaps.md).
+
+<!-- §Return-trash-to-deck-bottom ignores Digi-Egg routing (G-RETURN-TRASH-DIGI-EGG-ROUTING)
+     RESOLVED 2026-05-29 by change `fix-judge-quiz-engine-gaps` (Gap 2). Full
+     resolution entry moved to qa/resolved-gaps.md. -->
+
 ## Closures (2026-05-29)
 
 - **ST5 Machine Black attack-history/blocker context** — CLOSED. The engine now
@@ -725,3 +764,79 @@ adding a new family entry above, add a matching record to the JSON (the same
 `family_id`, a distinctive substring pattern, a panic-site reference, and a
 status).
 
+
+### §`kind: digimon` field-select filter excludes Tokens (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT) — OPEN
+
+- **First seen:** 2026-05-29, judge-quiz Q12 pin attempt (`batch-implement-cards-rust-dsl` first wave). The DSL `kind: digimon` target filter lowers to `kind_matches_field` (`code/digimon-engine/src/dsl_cards/predicate.rs` ~2826), which matches `CardKind::Digimon | CardKind::Dual` but NOT `CardKind::Token`. A Petrification token on the field is therefore filtered OUT of a "select 1 of your Digimon" candidate set.
+- **Judge rule (Q12):** a token placed as a digivolution card counts; a Digimon token IS a Digimon on the field. DCGO `BT24_059.cs` uses `IsPermanentExistsOnOwnerBattleAreaDigimon` -> `Permanent.IsDigimon`, and a token's card entity includes `CardKind.Digimon`. So BT24-059's inherited `[When Attacking]` (place 1 of your other Digimon as a source -> unsuspend) should accept the Petrification token as the placed Digimon -> the Digimon unsuspends.
+- **Symptom / proof:** the Q12 scenario test (`f_token_and_memory::q12_token_placeable_as_digivolution_card_unsuspends`) uses the REAL `TOKEN_PETRIFICATION` permanent (`CardKind::Token`) and finds the placement selection never installs (token excluded) -> left `#[ignore]` citing this gap (refused to false-pass). NOTE: the per-card test `bt24::bt24_059::inherited_q12_token_source_counts_and_unsuspends` passes only because it uses a `CardKind::Digimon` STAND-IN, which dodges the token-as-Digimon question — it should be re-pointed at a real token once this gap closes.
+- **Fix shape (engine; broad — validate carefully):** `kind_matches_field` (and any sibling kind-matchers used for field target selection) should treat `CardKind::Token` as satisfying `digimon` (tokens are Digimon on the field). This is a BROAD behavioral change — every "select a Digimon" effect would then include tokens (which is correct per rules, but affects many cards/tests). Land it as its own change with a full regression pass; do not fix inline.
+- **Blocks (judge-quiz):** Q12 (cards BT24-040 + BT24-059 + Petrification token ALL implemented — this is now a PRIMITIVE block, not a card block).
+
+
+### §Suspend event carries no effect-initiated bit (G-SUSPEND-EFFECT-INITIATED) — OPEN
+
+**Surfaced 2026-05-30** (judge-quiz cluster B, EX6-004 Kokomon — BLOCKED). EX6-004's
+inherited clause is "[Your Turn][OPT] When an EFFECT suspends one of your Digimon,
+1 of your Digimon gets +2000 DP for the turn." The "by an effect" qualifier is
+un-gatable: `TriggerSource::EventObserved` (the source for `OnSuspend`, built by
+`Game::suspend`) carries no `effect_initiated`/`by_effect` field — its
+`TriggerContext` is constructed with `..TriggerContext::default()` (effectively
+`false`). The DSL predicate `event_is_effect_initiated` compiles but always
+evaluates `false` on suspend events, so the clause would over-trigger on
+attack-declaration / cost suspends. Fix: add `effect_initiated: bool` to
+`TriggerSource::EventObserved`, set it `true` on the `EffectContext::suspend`
+path vs `false` on the raw `Game::suspend`/attack/cost path, and populate the
+`TriggerContext` in `effect_queue.rs`. Additive, contained engine-event change
+(no behavior change for existing cards — they don't gate on it). Also tracked in
+`qa/archetype-qa/dsl/zephagamon-2026-05-03-dsl-engine-gaps.md` ("Extend
+suspend/unsuspend event context with by_effect"). EX6-004 stays BLOCKED (no card
+authored — no stub) until this lands.
+
+
+### §Mass DP debuff applied as a one-time snapshot, not continuous (G-CONTINUOUS-MASS-DP-DEBUFF) — OPEN
+
+**Surfaced 2026-05-30** (judge-quiz Q14 pin). EX4-074 ShineGreymon: Ruin Mode's
+"[When Digivolving][On Deletion] Until the end of your opponent's next turn, all
+of your opponent's Digimon get -5000DP" is authored as `add_modifier target:
+{ of: opponent, kind: digimon }` — a one-time scan applying `ChangeDp -5000` to
+the opponent's CURRENT battle-area Digimon. Per Digimon rules a continuous "all X
+get -Y until Z" effect also applies to Digimon that ENTER during the window.
+Verified empirically (Q14): a ShoeShoemon (P-165) played AFTER Ruin Mode resolved
+stays at 4000 DP (not -1000). Faithful fix: install a CONTINUOUS player-scoped /
+until-condition modifier (re-evaluated as Digimon enter), not a snapshot, so
+later-entering opponent Digimon also receive the debuff. Blocks judge-quiz Q14
+(`q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode`, body written + #[ignore]'d).
+Likely a shared substrate need for every "all [opp] Digimon get ±DP until [turn]"
+mass-buff/debuff card, not just EX4-074.
+
+
+### §Burst-Digivolve `on_burst_turn_end` teardown never executed (G-BURST-ON-TURN-END-NOT-EXECUTED) — OPEN
+
+**Surfaced 2026-05-30** (judge-quiz Q8 attempt). The DSL `on_burst_turn_end:` alt-path step
+list (Burst Mode's "At the end of the burst digivolution turn, trash this Digimon's top
+card") is fully parsed + compiled (`alt_path.rs`, `compiled.rs`, `compile.rs`) and
+structurally tested, but it is **NEVER executed or scheduled** anywhere in the engine. The
+only references to `CompiledAltPath::on_burst_turn_end` are three path-detection
+`!is_empty()` checks in `dna_digivolve.rs` and a raw-rust-name collector in
+`digimon-dsl/pack.rs` — none run the steps. Furthermore `CompiledAltPathKind::BurstDigivolve`
+is lumped with `BlastDnaDigivolve` in `dsl_cards/mod.rs:97-108` and lowered only to a
+"Blast digivolve marker" (the combat counter-window blast), so a Burst-Mode digivolution
+has no "trash top at end of burst turn" wiring at all.
+
+Impact:
+- **Judge-quiz Q8 BLOCKED** (`q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot`): the
+  scenario (Comet Hammer de-digivolves the Burst stack to Agumon → at EoT the Burst trashes
+  the top Agumon → the revealed DP-less Koromon can't remain) cannot occur because the EoT
+  trash never fires. (A second blocker, the "DP-less Lv2 can't remain in the battle area"
+  rule, is moot until this lands; and DebugRunner has no burst-digivolve action driver.)
+- **BT13-020 (ShineGreymon: Burst Mode) + the BT13-060 example** ship a burst alt-path whose
+  `on_burst_turn_end: trash_top_source` is inert — their EoT self-trash does not happen.
+  Their behavioral tests are structural-only for that clause, which masked this. Both are
+  effectively PARTIAL on the Burst-Mode EoT teardown until this gap closes.
+
+Fix shape: (a) distinguish `BurstDigivolve` from `BlastDnaDigivolve` in lowering; (b) when a
+burst-digivolve action resolves, schedule the path's `on_burst_turn_end` steps to run at the
+end of that turn (a delayed/scheduled effect keyed to the burst-digivolution turn); (c) then
+the "DP-less / sub-Lv3 top card can't remain in the battle area" rules-check for the revealed
+Koromon. Likely needs a DebugRunner burst-digivolve driver to pin behaviorally.

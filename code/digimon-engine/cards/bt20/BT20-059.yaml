@@ -1,0 +1,219 @@
+# BT20-059 Gankoomon (X Antibody) — Digimon, Lv.6, Black, DP 13000, Cost 13.
+# Traits: Holy Warrior / X Antibody / Royal Knight. Attribute: Data.
+# Standard digivolve: Lv.5 Black / Cost 5 (printed evo_costs).
+# xros_req: [Digivolve] [Gankoomon]: Cost 2.
+#
+# Printed card text (BT20-059.json / cards.json):
+#
+#   [When Digivolving] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash
+#     up to 2 cards from the top. You can't trash past level 3 cards.) Then, if
+#     [Gankoomon] or [X Antibody] is in this Digimon's digivolution cards, until
+#     the end of your opponent's turn, none of your Digimon are affected by your
+#     opponent's Digimon's effects.
+#   [Opponent's Turn] All of your Digimon with [Sistermon] or [Huckmon] in their
+#     names or the [Royal Knight] trait gain ＜Reboot＞ and ＜Blocker＞.
+#
+#   Inherited Effect:
+#   [Opponent's Turn] While this Digimon is [Jesmon GX] all of your Digimon gain
+#     ＜Reboot＞ and ＜Blocker＞.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT20/Black/BT20_059.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect with
+#   PermanentCondition `TopCard.EqualsCardName("Gankoomon")`, digivolutionCost 2,
+#   ignoreDigivolutionRequirement false → `name_is: "Gankoomon"` (exact name),
+#   cost 2. (`name_is` precedent: BT23-008 / BT23-018.)
+#
+# Clause 1 ([When Digivolving]) — OnEnterFieldAnyone ActivateClass:
+#   1. SelectPermanentEffect over opponent battle-area Digimon, maxCount 1,
+#      canNoSelect false (mandatory) → IDegeneration(perm, 2). De-Digivolve N in
+#      the engine peels N digivolution sources, stopping so the Digimon never
+#      drops below level 3 ("can't trash past level 3 cards") → `de_digivolve`
+#      with `amount: 2, stop_at_level: 3` (AD1-018 / EX6-011 / ST20-11 idiom).
+#   2. HasGankooOrXAnti() = digivolution cards contain [Gankoomon] OR
+#      [X Antibody]. If true, install CanNotAffectedClass registered in
+#      UntilOpponentTurnEndEffects with CardCondition = any owner battle-area
+#      Digimon and SkillCondition = IsOpponentEffect && IsDigimonEffect. The
+#      printed text is "none of YOUR Digimon are affected by your opponent's
+#      Digimon's effects until the end of your opponent's turn."
+#
+#      MODELING — board-wide opponent-Digimon-effect immunity:
+#      `grant_effect_immunity` installs a `CannotBeAffected` modifier
+#      (source_kind: digimon, source_controller: opponent,
+#      expiry: end_of_opponents_turn) PER protected permanent. The text covers
+#      ALL of "your Digimon", so a `for_each` over the controller's battle-area
+#      Digimon grants each one the immunity — the ST20-11 `per_selected` +
+#      `grant_effect_immunity` idiom, here with an unconditional `for_each`
+#      (no count cap) since the immunity is unconditional for every ally.
+#
+#      DIVERGENCE NOTE (snapshot vs continuous): DCGO's CanNotAffectedClass is a
+#      continuous UntilOpponentTurnEnd effect whose CardCondition re-evaluates
+#      each fire-time, so a Digimon played LATER this opponent's turn would also
+#      be covered. The DSL/engine `grant_effect_immunity` is a per-permanent
+#      modifier applied at fire-time (a snapshot of the current board). All your
+#      Digimon present when the [When Digivolving] resolves are protected; one
+#      played afterward this turn would not be. There is no continuous
+#      controlled-immunity-aura verb in the DSL today, so this snapshot is the
+#      faithful expression of the substrate. It is correct for judge-quiz Q28
+#      (the protected ally — Sistermon Ciel — is already on the board when
+#      Gankoomon X digivolves). The residual "future-played ally" edge is logged
+#      under qa/dsl-vocab-gaps.md G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA;
+#      every ally on the board at fire-time IS protected, so the protection is
+#      not auto-selected away — the no-approximations bar is met for the present
+#      board.
+#
+#      `can_affect_permanent` interaction (Q28): a protected ally carries
+#      `CannotBeAffected` (opponent / Digimon). When the opponent plays Dragomon
+#      (EX5-060) and its [On Play] "don't activate" lock is applied via
+#      `EffectContext::add_modifier` (e.g. CannotActivateOnPlayEffects), that
+#      method first calls `can_affect_permanent(target)`, which consults the
+#      immunity → the lock never lands on the protected ally, so the played
+#      Digimon (Sistermon Ciel) plays AND activates. Q28 works through existing
+#      machinery.
+#
+# Clause 2 ([Opponent's Turn]) — EffectTiming.None RebootStaticEffect +
+#   BlockerStaticEffect (isInheritedEffect false) with PermanentCondition =
+#   owner battle-area Digimon whose TopCard ContainsCardName "Sistermon" OR
+#   "Huckmon" OR HasRoyalKnightTraits, gated on IsOpponentTurn → two
+#   `kind: aura` clauses (Reboot, Blocker) with `active_when:
+#   { opponents_turn: true }` and a `target` filtered to own battle-area Digimon
+#   matching name OR trait. (BT24-051 grant_keyword aura idiom + BT6-084 name/
+#   trait target filter.)
+#
+# Inherited ESS ([Opponent's Turn]) — RebootStaticEffect + BlockerStaticEffect
+#   (isInheritedEffect true) with PermanentCondition = any owner battle-area
+#   Digimon, gated on IsOpponentTurn && carrier TopCard EqualsCardName
+#   "Jesmon GX" → two `scope: inherited, kind: aura` clauses granting Reboot /
+#   Blocker to ALL own battle-area Digimon, gated on opponent's turn AND the
+#   carrier being [Jesmon GX]. "While this Digimon is [Jesmon GX]" → the
+#   carrier's top card is Jesmon GX → `self_digivolution_contains_name:
+#   "Jesmon GX"` (Permanent::contains_card_name scans the top card; BT12-050
+#   "[Imperialdramon] in its name" idiom).
+
+card: BT20-059
+name: "Gankoomon (X Antibody)"
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 13000
+traits: [Holy Warrior, X Antibody, Royal Knight]
+attribute: Data
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# Standard digivolve (Lv.5 Black / Cost 5) is the printed evo_costs.
+# xros_req alt: [Digivolve] [Gankoomon]: Cost 2 → exact-name [Gankoomon] source.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 5
+
+  - kind: digivolve
+    from: { name_is: "Gankoomon" }
+    cost: 2
+    ignore_requirements: false
+
+effects:
+  # ─── Clause 1 — [When Digivolving] De-Digivolve 2 + board-wide immunity ──────
+  - when: when_digivolving
+    summary: "[WD] De-Digivolve 2 an opp Digimon; if [Gankoomon]/[X Antibody] in sources, none of your Digimon are affected by opp Digimon effects until end of opp turn"
+    process:
+      # <De-Digivolve 2> 1 of your opponent's Digimon (mandatory select).
+      - select_opponent_permanent:
+          bind_as: degen_target
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to De-Digivolve 2"
+      - de_digivolve:
+          target: degen_target
+          amount: 2
+          stop_at_level: 3
+      # Then, if [Gankoomon] or [X Antibody] is in this Digimon's digivolution
+      # cards: grant every one of your Digimon immunity to opponent Digimon
+      # effects until end of opponent's turn.
+      # "if [Gankoomon] or [X Antibody] is in this Digimon's DIGIVOLUTION CARDS"
+      # — the digivolution cards are the SOURCES beneath the top card, NOT the
+      # top card (Gankoomon X) itself. `self_digivolution_contains_name` calls
+      # `Permanent::contains_card_name`, which scans the top card too — and this
+      # card's own name "Gankoomon (X Antibody)" would self-match BOTH
+      # "Gankoomon" and "X Antibody", making the condition always true. Use the
+      # sources-only scan (`self_digivolution_sources_contain_name`,
+      # G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY) so only genuine
+      # digivolution sources qualify — matching DCGO's
+      # `DigivolutionCards.Count(...)` (sources only, excludes the face card).
+      - if:
+          condition:
+            any_of:
+              - self_digivolution_sources_contain_name: "Gankoomon"
+              - self_digivolution_sources_contain_name: "X Antibody"
+          then:
+            - for_each:
+                over:
+                  all_of:
+                    - of: you
+                    - zone: [battle_area]
+                    - kind: digimon
+                bind_as: ally
+                body:
+                  - grant_effect_immunity:
+                      target: ally
+                      source_kind: digimon
+                      source_controller: opponent
+                      expiry: end_of_opponents_turn
+
+  # ─── Clause 2 — [Opponent's Turn] grant Reboot to matching allies ────────────
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      any_of:
+        - name_contains: "Sistermon"
+        - name_contains: "Huckmon"
+        - trait_has: "Royal Knight"
+    grant_keyword: { keyword: Reboot }
+    summary: "[Opponent's Turn] Your Sistermon/Huckmon-named or Royal Knight Digimon gain Reboot"
+
+  # ─── Clause 2 — [Opponent's Turn] grant Blocker to matching allies ───────────
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      any_of:
+        - name_contains: "Sistermon"
+        - name_contains: "Huckmon"
+        - trait_has: "Royal Knight"
+    grant_keyword: { keyword: Blocker }
+    summary: "[Opponent's Turn] Your Sistermon/Huckmon-named or Royal Knight Digimon gain Blocker"
+
+  # ─── Inherited ESS — [Opponent's Turn] while [Jesmon GX], all allies Reboot ──
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - self_digivolution_contains_name: "Jesmon GX"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+    grant_keyword: { keyword: Reboot }
+    summary: "[Inherited][Opponent's Turn] While carrier is [Jesmon GX], all your Digimon gain Reboot"
+
+  # ─── Inherited ESS — [Opponent's Turn] while [Jesmon GX], all allies Blocker ─
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - self_digivolution_contains_name: "Jesmon GX"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+    grant_keyword: { keyword: Blocker }
+    summary: "[Inherited][Opponent's Turn] While carrier is [Jesmon GX], all your Digimon gain Blocker"

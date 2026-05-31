@@ -376,3 +376,52 @@ fn st6_tamer_and_option_security_shapes_are_authored() {
         }
     )));
 }
+
+/// ST-6 Venomous Violet starter-deck fixture: exact official 54-card composition
+/// (4 Digi-Eggs + 50 main). Mirrors `st4_deck_library_recipe_has_canonical_counts`.
+#[test]
+fn st6_deck_library_recipe_has_canonical_counts() {
+    let library: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../../data/deck_library.json"))
+            .expect("deck_library.json parses");
+    let entry = &library["archetypes"]["ST-6 Venomous Violet"]["decklists"][0];
+    assert_eq!(entry["deck_id"], "starter_st6_venomous_violet");
+
+    let cards: Vec<String> = serde_json::from_str(
+        entry["decklist"]
+            .as_str()
+            .expect("decklist is encoded JSON"),
+    )
+    .expect("decklist parses");
+    let mut counts = std::collections::BTreeMap::<String, usize>::new();
+    for card in &cards {
+        *counts.entry(card.clone()).or_default() += 1;
+    }
+
+    assert_eq!(cards.len(), 54);
+    assert_eq!(counts.get("ST6-01"), Some(&4));
+    let main_count: usize = cards.iter().filter(|id| id.as_str() != "ST6-01").count();
+    assert_eq!(main_count, 50);
+
+    let expected = [
+        ("ST6-01", 4),
+        ("ST6-02", 4),
+        ("ST6-03", 4),
+        ("ST6-04", 4),
+        ("ST6-05", 2),
+        ("ST6-06", 4),
+        ("ST6-07", 4),
+        ("ST6-08", 4),
+        ("ST6-09", 4),
+        ("ST6-10", 2),
+        ("ST6-11", 4),
+        ("ST6-12", 2),
+        ("ST6-13", 2),
+        ("ST6-14", 4),
+        ("ST6-15", 4),
+        ("ST6-16", 2),
+    ];
+    for (card_id, count) in expected {
+        assert_eq!(counts.get(card_id), Some(&count), "{card_id} count");
+    }
+}

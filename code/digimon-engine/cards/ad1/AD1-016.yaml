@@ -1,0 +1,204 @@
+# AD1-016 ShineGreymon — Digimon, Lv.6, Yellow, DP 12000, Cost 12.
+# Traits: Light Dragon, DATA SQUAD.
+#
+# Printed card text:
+#
+#   ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other
+#   Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#   ＜Security A. +1＞ for the attack.)
+#   ＜Blocker＞ (This Digimon can block in the blocker timing.)
+#   [When Digivolving] [When Attacking] [Once Per Turn] You may play 1
+#   [Marcus Damon] from your hand or trash without paying the cost. Then, to
+#   1 of your opponent's Digimon, give -3000 DP for each of your Digimon and
+#   Tamers until their turn ends.
+#   [All Turns] [Once Per Turn] When any of your [Marcus Damon]s are played or
+#   suspend, you may delete 1 of your opponent's Digimon with as much or less
+#   DP as this Digimon.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/AD1/Yellow/AD1_016.cs
+#
+# Clause layout:
+#   Clause 1: <Alliance>            — declarative grant_keyword
+#   Clause 2: <Blocker>             — declarative grant_keyword
+#   Clause 3: [WD][WA][OPT] cluster — optional free Marcus Damon play (hand OR
+#                                     trash), THEN mandatory -3000×count DP debuff
+#   Clause 4: [All Turns][OPT]      — observer on own Marcus Damon play/suspend,
+#                                     may delete 1 opp Digimon with DP ≤ self DP
+
+card: AD1-016
+name: ShineGreymon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 12000
+traits: ["Light Dragon", "DATA SQUAD"]
+attribute: Vaccine
+
+# ─── Alternate Digivolution Path ─────────────────────────────────────────────
+#
+# DCGO (AD1_016.cs, EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   level: 5
+#   permanentCondition: TopCard.ContainsCardName("RizeGreymon")
+#                    || TopCard.EqualsTraits("DATA SQUAD")
+#   digivolutionCost: 3
+#   ignoreDigivolutionRequirement: false
+#
+# Modeled as a single alt-path with an `any_of` over name_contains + trait_has
+# (same idiom as AD1-014 / AD1-001 — the `from:` predicate does not express OR
+# over name + trait without the `any_of` form). xros_req JSON confirms cost 3.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - name_contains: "RizeGreymon"
+            - trait_has: "DATA SQUAD"
+    cost: 3
+
+effects:
+  # ─── Clause 1: <Alliance> ──────────────────────────────────────────────────
+  # Declarative keyword grant (DCGO: AllianceSelfEffect on OnAllyAttack).
+  # The whole-card grant_keyword lowers via src/dsl_cards/lower_grant_keyword.rs
+  # to a declarative effect that grant_declarative_keywords; Game::tick_declarative_effects
+  # installs it and Game::has_keyword reads it (consulted at combat.rs Alliance
+  # interrupt). The keyword grant IS runtime-installed and behaviorally tested
+  # (ad1_016_alliance_keyword_runtime_installed).
+  - kind: grant_keyword
+    keyword: Alliance
+
+  # ─── Clause 2: <Blocker> ───────────────────────────────────────────────────
+  # Declarative keyword grant (DCGO: BlockerSelfStaticEffect). Same runtime
+  # path as Alliance above; consulted at combat.rs Blocker timing. The keyword
+  # grant IS runtime-installed and behaviorally tested
+  # (ad1_016_blocker_keyword_runtime_installed).
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── Clause 3: [When Digivolving] [When Attacking] [Once Per Turn] ─────────
+  #
+  # "You may play 1 [Marcus Damon] from your hand or trash without paying the
+  # cost. Then, to 1 of your opponent's Digimon, give -3000 DP for each of your
+  # Digimon and Tamers until their turn ends."
+  #
+  # DCGO (AD1_016.cs, SharedHashString = "AD1_016_WD_WA"): one shared
+  # ActivateClass body fired by two shells (OnEnterFieldAnyone for WhenDigivolving,
+  # OnAllyAttack for WhenAttacking), both gated by maxUsableCount: 1 AND the same
+  # hash so the two timings share ONE OPT lockout per turn.
+  #
+  # DCGO SharedActivateCoroutine flow:
+  #   (a) If a Marcus Damon exists in hand OR trash, present a 3-way choice
+  #       (play from hand / play from trash / don't play), then a free play.
+  #   (b) THEN — REGARDLESS of (a) — if the opponent has any battle-area Digimon,
+  #       MANDATORILY (canNoSelect: false) select 1 and apply
+  #       -3000 × (own Digimon+Tamer count) DP until opponent's turn ends.
+  #
+  # DSL mapping:
+  #   - `when: [when_digivolving, when_attacking]` with `once_per_turn: true`
+  #     lowers to two effects stamped with a shared OPT group (the closed
+  #     G-OPT-MULTI-TIMING-SHARED-LOCKOUT machinery — see AD1-014) so the two
+  #     timings draw on a single per-turn counter, matching the DCGO hash.
+  #   - The whole clause is NOT `optional:` at the clause level — only the
+  #     PLAY sub-step is optional. The DP debuff is mandatory, so the clause
+  #     must keep firing to reach it even when the play is declined.
+  #   - `select_union_zone` with `optional: true` exposes the faithful 3-way
+  #     choice: every Marcus Damon in hand + every Marcus Damon in trash + a
+  #     PASS (decline). This is MORE granular than DCGO's zone-then-card flow
+  #     and surfaces each branch to the action space (no-approximations).
+  #     `play_union_bound_free` replays the bound card from its true origin
+  #     zone (BT23-013 idiom).
+  #   - DP debuff: `select_opponent_permanent { kind: digimon }` (mandatory —
+  #     installs only when an opponent Digimon exists, matching DCGO's
+  #     GetBattleAreaDigimons().Any() gate), then `add_dp_modifier` with value
+  #     formula `-3000 × card_count_in_zone(you, battle_area)`. Unfiltered
+  #     battle-area count = "your Digimon and Tamers" because only Digimon and
+  #     Tamers occupy battle-area slots (BT23-014 / BT9-112 idiom — documented
+  #     faithful). Expiry end_of_opponents_turn = "until their turn ends".
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[WD][WA][OPT] May free-play a Marcus Damon (hand/trash); then -3000×(own Digimon+Tamers) to 1 opp Digimon"
+    process:
+      # (a) Optional free play of a Marcus Damon from hand OR trash.
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: marcus_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - name_contains: "Marcus Damon"
+          prompt: "You may play 1 [Marcus Damon] from your hand or trash without paying the cost"
+      # When the union pick is declined (PASS), `marcus_pick` is unbound and
+      # `play_union_bound_free` is a silent no-op (per its missing-binding
+      # convention) — so the clause proceeds straight to the mandatory DP
+      # debuff, faithful to DCGO applying the debuff regardless of the play.
+      - play_union_bound_free:
+          binding: marcus_pick
+      # (b) Mandatory -3000×(own Digimon+Tamers) DP to 1 opponent Digimon.
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Give -3000 DP per your Digimon and Tamer to 1 opponent Digimon"
+      - add_dp_modifier:
+          target: dp_target
+          value:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  of: you
+                  zone: battle_area
+              delta: -3000
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 4: [All Turns] [Once Per Turn] observer ────────────────────────
+  #
+  # "When any of your [Marcus Damon]s are played or suspend, you may delete 1 of
+  # your opponent's Digimon with as much or less DP as this Digimon."
+  #
+  # DCGO (AD1_016.cs, AllTurnsHashString = "AD1_016_AT"): two ActivateClass
+  # shells sharing one hash — OnEnterFieldAnyone (played) and OnTappedAnyone
+  # (suspend). Each gated by:
+  #   - IsExistOnBattleArea(card)
+  #   - the triggering permanent is on the OWNER's battle area AND its TopCard
+  #     EqualsCardName("Marcus Damon")  → CanTriggerOnPermanentPlay /
+  #     CanTriggerWhenPermanentSuspends(IsYourMarcusDamon)
+  # maxUsableCount: 1, isAllTurns: true.
+  # Target filter (IsWeakerEnemyDigimon): opponent battle-area Digimon with
+  #   HasDP && DP <= card.PermanentOfThisCard().DP. canNoSelect: false at the
+  #   coroutine level, but the activate is itself optional ("you may delete").
+  #
+  # DSL mapping:
+  #   - `when: [on_enter_field_anyone, on_suspend]` covers play + suspend.
+  #     `once_per_turn: true` + the shared multi-timing OPT machinery gives a
+  #     single per-turn counter across both timings (DCGO's shared hash).
+  #   - `active_when: { all_turns: true }` for the [All Turns] scope.
+  #   - `optional: true` for "you may delete".
+  #   - condition: event_target_owner == you AND the triggering card's name
+  #     contains "Marcus Damon" (`event_card_name_contains`, the AD1-001 /
+  #     BT22-098 idiom; BT22-098 proves it works on the suspend timing).
+  #   - body: `select_opponent_permanent` over opponent Digimon with
+  #     `dp_lte: { source_dp: {} }` ("with as much or less DP as this Digimon"
+  #     — the resolved G-FORMULA-SOURCE-DP / G-PRED-DP-LTE surfaces read the
+  #     source permanent's effective DP), then `delete_permanent`.
+  - when: [on_enter_field_anyone, on_suspend]
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When your Marcus Damon is played/suspends, may delete 1 opp Digimon with DP ≤ this DP"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_card_name_contains: "Marcus Damon"
+    process:
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 opponent Digimon with DP equal to or less than this Digimon's DP"
+      - delete_permanent: { target: del_target }

@@ -1,0 +1,131 @@
+# BT23-037 Tentomon — Digimon, Lv.3, Green/Yellow, DP 1000, Cost 3.
+# Traits: Insectoid, Hudie, CS.
+# Evo costs: Lv.2 Green / cost 1.
+#
+# Printed effect text (cards.json / BT23-037.json — verbatim):
+#   [Your Turn] When this Digimon would digivolve into a Digimon card with the
+#   [CS] trait, reduce the digivolution cost by 1.
+#
+# Printed inherited effect text:
+#   [When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower Digimon
+#   card with the [Hudie] trait from your hand without paying the cost. The
+#   Digimon this effect played can't digivolve and is deleted at the end of your
+#   opponent's turn.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT23/Green/BT23_037.cs
+#
+# ─── Faithfulness diff vs. card text ─────────────────────────────────────────
+#
+# | Card-text element                                                  | Status |
+# |--------------------------------------------------------------------|--------|
+# | [Your Turn] digivolve into [CS] Digimon → cost -1                  | IMPLEMENTED — Clause 1 (cost_reduction, cost_target [CS]) |
+# | Inherited [When Attacking][OPT] free-play Hudie ≤5; can't digivolve;|        |
+# |   deleted at end of opp turn; On Play fires                        | IMPLEMENTED — Clause 2 |
+#
+# ─── Clause 1 — [Your Turn] cost reduction (exemplar BT23-005 Elizamon) ──────
+#
+# Mirrors BT23-005's Clause 1 (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET, resolved
+# Phase 2 Track H). `cost_target: { ... }` is evaluated against the
+# digivolve-target card during BeforePayCost cost-calc; `source_is_cost_target_
+# permanent: true` gates on "THIS permanent (Tentomon) is the one being
+# digivolved into". DCGO BT23_037.cs gates on PermanentCondition (the
+# digivolving permanent IS Tentomon's) + CardSourceCondition (target HasCSTraits)
+# + IsOwnerTurn. Single [CS] trait → no any_of needed. NOT [Once Per Turn]
+# (DCGO SetUpActivateClass max-count -1 = unlimited; printed text has no OPT).
+#
+# ─── Clause 2 — inherited [When Attacking][OPT] (exemplars BT13-020, EX11-061,
+#     P-165) ──────────────────────────────────────────────────────────────────
+#
+# `scope: inherited`, `when: when_attacking`, `optional: true` ("You may play"),
+# `once_per_turn: true` ([Once Per Turn]).
+#   - `select_hand` (optional: true) over Digimon with the [Hudie] trait and
+#     play cost ≤ 5 — DCGO CanSelectCardCondition: IsDigimon && BasePlayCost <= 5
+#     && EqualsTraits("Hudie"). The optional select_hand IS the inner decline
+#     path, so no redundant outer accept/decline prompt installs
+#     (G-OUTER-OPTIONAL-NOT-INSTALLED).
+#   - `play_from_hand_free` with `bind_as: played` — plays it WITHOUT paying the
+#     cost. suppress_on_play is left at its default (false): DCGO
+#     PlayPermanentCards(payCost: false, activateETB: true) — the played
+#     Digimon's On Play DOES fire.
+#   - `add_modifier: CannotDigivolve` on the bound permanent, expiry
+#     end_of_opponents_turn ("can't digivolve" — DCGO CanNotDigivolveClass,
+#     installed for the same window as the deletion).
+#   - `schedule_delete_played_at_turn_end` with `at: opponents_turn` ("deleted at
+#     the end of your opponent's turn" — DCGO AddSelfDeleteEffect(
+#     DeleteTiming.AtOpponentTurnEnd)). Exemplar P-165 ShoeShoemon.
+
+card: BT23-037
+name: Tentomon
+kind: digimon
+level: 3
+color: [green, yellow]
+cost: 3
+dp: 1000
+traits: [Insectoid, Hudie, CS]
+attribute: Vaccine
+
+# ─── Alternate Digivolution Paths ────────────────────────────────────────────
+#
+# Path 1 — the printed evo cost (BT23-037.json evo_costs): Lv.2 Green / cost 1.
+# Path 2 — the printed `xros_req` alternate digivolution requirement
+#   ("[Digivolve] Lv.2 w/[CS] trait: Cost 0"), implemented in DCGO BT23_037.cs
+#   as `AddSelfDigivolutionRequirementStaticEffect(permanentCondition: IsLevel2
+#   && HasCSTraits, digivolutionCost: 0)`. Same idiom as BT10-029 (the standard
+#   color path plus a trait-gated cheaper alt-path); the DSL `from:` predicate
+#   supports `trait_has` on the source.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: CS
+    cost: 0
+
+effects:
+  # ─── Clause 1 — [Your Turn] digivolve into [CS] Digimon → cost -1 ──────────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+    amount: 1
+    summary: "[Your Turn] When digivolving into a [CS] Digimon, reduce digivolution cost by 1"
+
+  # ─── Clause 2 — inherited [When Attacking][OPT] free-play a Hudie ≤5 ───────
+  - scope: inherited
+    when: when_attacking
+    optional: true
+    once_per_turn: true
+    summary: "[When Attacking][OPT] You may free-play a Hudie ≤5 Digimon from hand; it can't digivolve and is deleted at end of opponent's turn"
+    process:
+      - select_hand:
+          of: you
+          bind_as: hudie_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Hudie
+              - play_cost_lte: 5
+          prompt: "You may play 1 play cost 5 or lower [Hudie] Digimon from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: hudie_pick
+          bind_as: hudie_played
+      - add_modifier:
+          target: hudie_played
+          modifier: CannotDigivolve
+          value: 0
+          expiry: end_of_opponents_turn
+      - schedule_delete_played_at_turn_end:
+          binding: hudie_played
+          at: opponents_turn

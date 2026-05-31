@@ -700,7 +700,66 @@ impl Game {
     /// Idempotent — safe to call when the queue is already empty. Callers
     /// should invoke this after every `enqueue_triggered` call, and again
     /// after `resolve_selection` unless that call installed a new selection.
+    /// Public drain entrypoint. Wraps the inner queue loop with the general
+    /// state-based ≤0-DP rules-check (Gap 1 / `G-NO-GENERAL-ZERO-DP-RULES-CHECK`).
+    ///
+    /// The rules-check runs only at the OUTERMOST drain (`effect_drain_depth == 1`)
+    /// — re-entrant drains (an effect body draining via `EffectContext`, or the
+    /// batched-deletion deferred-drain flush) observe depth > 1 and skip it, so it
+    /// never fires between the sub-steps of one resolving effect (the judge rule:
+    /// "rule checks don't happen until an ongoing effect or rule action finishes" —
+    /// Q6/Q13/Q14). The primary site is BETWEEN top-level queued effects
+    /// (`rules_check_between_queued_effects`, after each `run_queued_effect`), so a
+    /// Digimon driven to ≤0 DP by one effect is deleted before the next queued
+    /// trigger resolves (Q24). The wrapper adds a final fixpoint sweep for any
+    /// ≤0-DP Digimon left when the queue emptied. A parked selection means
+    /// resolution is NOT finished; the check defers to the drain that resumes when
+    /// the selection resolves.
     pub fn drain_effect_queue(&mut self) {
+        self.effect_drain_depth = self.effect_drain_depth.saturating_add(1);
+        self.drain_effect_queue_inner();
+        if self.effect_drain_depth == 1 {
+            let mut guard: u16 = 0;
+            loop {
+                if self.pending_selection.is_some() {
+                    break;
+                }
+                if !self.run_state_based_rules_check() {
+                    break;
+                }
+                guard += 1;
+                if guard > MAX_CHAIN_DEPTH {
+                    break;
+                }
+                // The batched deletion drains its own OnDeletion handlers, but
+                // those (or auras expiring with the deleted carrier) may have
+                // enqueued further triggers — flush them before the next pass.
+                if self.pending_selection.is_none() && !self.effect_queue.is_empty() {
+                    self.drain_effect_queue_inner();
+                }
+            }
+        }
+        self.effect_drain_depth = self.effect_drain_depth.saturating_sub(1);
+    }
+
+    /// State-based ≤0-DP rules-check run BETWEEN top-level queued effects (after
+    /// each `run_queued_effect`). Q24: a Digimon driven to ≤0 DP by one effect is
+    /// deleted by the rules-check before the next queued trigger resolves. Runs
+    /// only at the outermost drain (`effect_drain_depth == 1`) and only when
+    /// resolution isn't parked on a selection — so it never fires between the
+    /// sub-steps of one resolving effect (Q6/Q13/Q14).
+    fn rules_check_between_queued_effects(&mut self) {
+        if self.effect_drain_depth == 1 && self.pending_selection.is_none() {
+            self.run_state_based_rules_check();
+        }
+    }
+
+    /// Inner queue-drain loop (the historical `drain_effect_queue` body).
+    /// Resolves triggered effects until the queue empties or a selection parks.
+    /// Runs the state-based rules-check between top-level queued effects via
+    /// `rules_check_between_queued_effects`; the final fixpoint sweep is the
+    /// wrapper's job.
+    fn drain_effect_queue_inner(&mut self) {
         loop {
             if self.pending_selection.is_some() {
                 return;
@@ -904,6 +963,7 @@ impl Game {
                     return;
                 }
                 self.run_queued_effect(qe);
+                self.rules_check_between_queued_effects();
                 continue;
             }
 
@@ -932,6 +992,7 @@ impl Game {
                         .expect("bundle index in-bounds by construction");
                     self.run_queued_effect(qe);
                 }
+                self.rules_check_between_queued_effects();
                 continue;
             }
 
@@ -1632,6 +1693,37 @@ impl Game {
             .granted_triggered_for_timing_with_ids(handle, timing);
         let tp_for_granted = self.turn_player();
         for (body_id, source_card, source_player) in granted_entries {
+            // Cause attribution: a granted triggered effect is the GRANTOR's
+            // effect from the carrier's perspective. If the carrier is
+            // unaffected by that player's effects, the granted clause does NOT
+            // fire. Two flavors:
+            //   • `<Progress>` / `ImmunityToOpponentEffects` while the carrier
+            //     is the current attacker (judge-quiz Q2) — gated at enqueue
+            //     time while `pending_attack` is still set.
+            //   • A general `CannotBeAffected` opponent-effect immunity (e.g.
+            //     Magnamon (X Antibody)'s "isn't affected by your opponent's
+            //     effects") removes the opponent-granted clause — judge-quiz
+            //     Q17. The granted effect is the grantor's, so we test
+            //     immunity against `source_player`, keyed to the grantor's
+            //     effect-source kind.
+            // No-op for same-controller grants.
+            let grantor_kind = self
+                .card_data_for_handle(source_card)
+                .map(|d| source_kind_for_card_kind(d.card_kind))
+                .unwrap_or(crate::enums::EffectSourceKind::Digimon);
+            if self.progress_excludes(handle, Some(source_player))
+                || self.permanent_is_unaffected_by_effect(handle, source_player, grantor_kind)
+            {
+                continue;
+            }
+            // D4 / DCGO: a granted effect is the GRANTEE's own effect once
+            // installed (DCGO sources the granted ActivateClass from the
+            // carrier's top card). Run the body with controller = carrier's
+            // controller so a deletion it causes is the carrier's OwnEffect
+            // (e.g. AD1-… <Partition> does NOT fire on a granted self-delete —
+            // judge-quiz Q16). The grantor (`source_player`) is used only for
+            // the immunity gate above, never for body attribution.
+            let carrier_controller = handle.player;
             self.effect_queue.push_back(QueuedEffect {
                 source_card,
                 source_permanent: Some(handle),
@@ -1642,12 +1734,12 @@ impl Game {
                         .map(|p| p.top_card().card_kind(&self.card_data))
                         .unwrap_or(crate::enums::CardKind::Digimon),
                 ),
-                controller: source_player,
+                controller: carrier_controller,
                 timing,
                 trigger_context: trigger_context.clone(),
                 effect_slot: 0,
                 is_optional: false,
-                is_turn_player: source_player == tp_for_granted,
+                is_turn_player: carrier_controller == tp_for_granted,
                 card_id: String::new(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
@@ -1938,6 +2030,18 @@ impl Game {
             .granted_triggered_for_timing_with_ids(handle, timing);
         let tp_for_granted = self.turn_player();
         for (body_id, source_card, source_player) in granted_entries {
+            // D4 / DCGO: granted body runs as the carrier's own effect (see the
+            // battle-area dispatch above). `source_player` (grantor) gates only
+            // the opponent-effect immunity check (Q17) — a breeding carrier
+            // can't be the current attacker, so the Progress branch is moot.
+            let grantor_kind = self
+                .card_data_for_handle(source_card)
+                .map(|d| source_kind_for_card_kind(d.card_kind))
+                .unwrap_or(crate::enums::EffectSourceKind::Digimon);
+            if self.permanent_is_unaffected_by_effect(handle, source_player, grantor_kind) {
+                continue;
+            }
+            let carrier_controller = handle.player;
             let source_kind = self
                 .player(handle.player)
                 .breeding_area
@@ -1948,12 +2052,12 @@ impl Game {
                 source_card,
                 source_permanent: Some(handle),
                 source_kind,
-                controller: source_player,
+                controller: carrier_controller,
                 timing,
                 trigger_context: trigger_context.clone(),
                 effect_slot: 0,
                 is_optional: false,
-                is_turn_player: source_player == tp_for_granted,
+                is_turn_player: carrier_controller == tp_for_granted,
                 card_id: String::new(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,

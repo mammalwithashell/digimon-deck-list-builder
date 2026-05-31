@@ -1244,3 +1244,24 @@ Items where the existing primitive **likely works** but no behavioral test cover
 ## Resolved gaps
 
 Resolved Rust engine group summaries have been moved to [qa/resolved-gaps.md](../qa/resolved-gaps.md#rust-engine-gap-group-summaries).
+
+
+## Move a security card to a deck (top/bottom)  [G-ENGINE-SECURITY-TO-DECK]  — OPEN 2026-05-29
+
+Surfaced by judge-quiz first wave (LM-020 Quantumon, BLOCKED). No public `EffectContext` method moves a card from a player's **security stack** to a **deck**. The private `move_card_to_deck` helper (`code/digimon-engine/src/effect_context/mod.rs`) is sourced from trash only; security removers route to hand / play / trash (`add_to_hand_from_security`, `play_security_card`, `trash_selected_security`).
+
+- **Suggested primitive:** `pub fn return_security_card_to_deck(&mut self, player: PlayerId, card: CardHandle, to_bottom: bool) -> bool` — locate the card in `player.security`, `ensure_security_materialized`, remove it, drop from `face_up_security`, fire `fire_security_removed_observers` with a new `SecurityRemovalDestination::Deck` variant (parallel to `::Hand`), then route through the existing trash->deck `move_card_to_deck` path.
+- **DSL prerequisite:** the verb `return_selected_security_to_deck` (`G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` in `qa/dsl-vocab-gaps.md`) lowers to it.
+- **Blocks:** LM-020 (judge-quiz Q18) [When Digivolving]. DCGO `LM_020.cs`: `IReduceSecurity` -> `AddLibraryTopCards` -> shuffle.
+
+
+## Opponent plays a Digimon from THEIR OWN trash, SUSPENDED, opponent-selected  [G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED]  — OPEN 2026-05-29
+
+Surfaced by judge-quiz wave (EX5-060 Dragomon, BLOCKED; pins Q28 alongside BT20-059 Gankoomon X). Hybrid engine+DSL gap.
+
+- **Effect text (EX5-060 Clause 1):** "[On Play] [When Digivolving] Your opponent plays 1 level 4 or lower Digimon card from their trash **suspended** without paying the cost. [On Play] effects on Digimon played by this effect don't activate."
+- **What's missing (engine):** no `EffectContext` primitive plays a card from an *arbitrary* player's trash **suspended**. `play_from_trash_free_unsuspended*` hardcodes `self.player` (the controller) as the player who plays — the DSL `play_from_trash_free { of: opponent }` `of:` field is dropped at the engine boundary (the compiled handler looks up the trash card by the bound owner but then calls `ctx.play_from_trash_free_unsuspended(handle)`, which searches `self.player`'s trash and no-ops when the handle lives in the opponent's trash). It also always plays UNSUSPENDED — neither `play_from_trash_with_cost*`, `play_from_trash_free_unsuspended*`, nor the underlying `Game::play_from_trash_with_cost_suppress` chain has a `suspended`/`is_tapped` parameter (DCGO `EX5_060.cs`: `PlayPermanentCards(payCost:false, isTapped:true, root:Trash, activateETB:false, selectPlayer:card.Owner.Enemy)`).
+- **Suggested primitive:** `pub fn play_from_trash_for_player_suspended(&mut self, player: PlayerId, trash_index: usize, suspended: bool, suppress_on_play: bool) -> Option<PermanentHandle>` — plays from `player`'s trash (not `self.player`'s), entering suspended when requested, and surfaces the selection to `player` (the opponent) via `override_selecting_player`. Thread a `suspended` bool through `Game::play_from_trash_with_cost_suppress` (and the shared `play_from_hand_with_cost_result_from_origin_suppress` path it delegates to) so the just-created permanent is marked `is_suspended` at materialization, parallel to the existing `suppress_on_play` thread (PUPPETS-G030). The `[On Play] don't activate` half is ALREADY supported via `suppress_on_play: true`.
+- **DSL prerequisite:** extend `play_from_trash_free` with a `suspended: bool` flag AND honor its `of:` field for non-controller players (route to the new primitive when `of != controller`). Today `of:` is silently ignored. Pair with `as_selecting_player { of: opponent }` so the opponent makes the pick.
+- **Q28 note:** the `[On Play] don't activate` lock is modeled as a `CannotActivateOnPlayEffects` modifier added to the just-played opponent permanent via `EffectContext::add_modifier`, whose `can_affect_permanent` guard already lets a protected target (Gankoomon X) dodge the lock — verified by the live `ex5_060_lock_does_not_attach_to_effect_immune_target` test. Only the play-and-suspend substrate is blocked, not the lock.
+- **Blocks:** EX5-060 (judge-quiz Q28) Clause 1. `code/digimon-engine/cards/ex5/EX5-060.yaml` Clause 1 declared with faithful timing but empty (gap-blocked) `process`. Tests `ex5_060_clause1_*` `#[ignore]`'d with this gap-id.

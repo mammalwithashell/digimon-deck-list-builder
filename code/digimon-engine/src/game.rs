@@ -371,6 +371,20 @@ pub struct Game {
     #[allow(dead_code)]
     pub(crate) effect_chain_depth: u16,
 
+    /// Re-entrancy depth for the state-based ≤0-DP rules-check
+    /// (`run_state_based_rules_check`). `drain_effect_queue` is called
+    /// re-entrantly from inside effect bodies (effect_context) and from the
+    /// batched-deletion deferred drain. The rules-check runs ONLY at the
+    /// OUTERMOST drain (`effect_drain_depth == 1`) — after a top-level
+    /// effect / rule-action has fully finished — and is run BETWEEN top-level
+    /// queued effects (after each `run_queued_effect`) so a Digimon driven to
+    /// ≤0 DP by one effect is deleted before the next queued trigger resolves
+    /// (judge Q24). It is never run between the sub-steps of one resolving
+    /// effect (the judge rule: "rule checks don't happen until an ongoing
+    /// effect or rule action finishes" — Q6/Q13/Q14). Incremented on entry to
+    /// `drain_effect_queue`, decremented on exit.
+    pub(crate) effect_drain_depth: u16,
+
     /// Game logger. Defaults to `SilentLogger` (zero-overhead for RL
     /// training). Callers that want human-readable traces install a
     /// `VerboseLogger` via `set_logger`. Parity with Python's
@@ -408,6 +422,18 @@ pub struct Game {
     /// replacements whose subject is a card in hand.
     #[doc(hidden)]
     pub(crate) pending_would_play_resume: Option<PendingWouldPlayResume>,
+    /// Transient hand-off for an `[Assembly]` play (G-ASSEMBLY-PLAY-EXECUTION):
+    /// the played card's handle plus the trash material handles to place at the
+    /// bottom of its digivolution stack. Consumed by
+    /// `commit_play_from_hand_card_no_replace` AFTER the permanent is created
+    /// but BEFORE its `[On Play]` / `[When Digivolving]` effects fire — so a
+    /// card whose play effects read its own digivolution-card count (e.g.
+    /// AD1-025 Omnimon's bounce) sees the assembled materials. Set immediately
+    /// before the assembly play's `finish_play_from_hand_after_reductions` and
+    /// cleared on consume. Same transient-slot pattern as
+    /// `pending_would_play_resume`.
+    #[doc(hidden)]
+    pub(crate) pending_assembly_materials: Option<(crate::card_source::CardHandle, Vec<crate::card_source::CardHandle>)>,
     /// Fire-site continuation for optional `WhenWouldLink` replacements whose
     /// subject is the pending Link Option card.
     #[doc(hidden)]
@@ -876,6 +902,7 @@ impl Game {
             pending_option_placed_link_resume: None,
             security_resolution: None,
             effect_chain_depth: 0,
+            effect_drain_depth: 0,
             logger: Box::new(SilentLogger),
             events: Vec::new(),
             event_seq: 0,
@@ -883,6 +910,7 @@ impl Game {
             replacement_pending_outcome: None,
             last_play_order_choice: None,
             pending_would_play_resume: None,
+            pending_assembly_materials: None,
             pending_would_link_resume: None,
             pending_would_digivolve_resume: None,
             player_digivolve_cost_reducers: Vec::new(),
@@ -3373,6 +3401,38 @@ impl Game {
         })
     }
 
+    /// Q3 (`G-DIGIVOLVE-TARGET-RESTRICTION`): a base permanent carrying one or
+    /// more `CanOnlyDigivolveInto` modifiers may digivolve ONLY into a card whose
+    /// name matches an allowed name. Returns `true` if `card` would be BLOCKED as
+    /// a digivolve target of `base_handle` — i.e. at least one restriction entry
+    /// is present whose allowed name does not match any of `card`'s names. Each
+    /// entry is ANDed (the target must satisfy every restriction). Returns
+    /// `false` (not blocked) when no restriction is present — the common case, so
+    /// existing cards are unaffected. DCGO parity: `CanNotDigivolveStaticSelfEffect`
+    /// (EX10-020 `cardCondition: !EqualsCardName("Apocalymon")`).
+    pub(crate) fn digivolve_target_blocked_by_restriction(
+        &self,
+        base_handle: PermanentHandle,
+        card: &CardSource,
+    ) -> bool {
+        let entries = self
+            .modifiers
+            .get(base_handle, ModifierType::CanOnlyDigivolveInto);
+        if entries.is_empty() {
+            return false;
+        }
+        let names = card.card_names(&self.card_data);
+        for entry in entries {
+            if let crate::modifiers::ModifierPayload::Name { value, .. } = &entry.payload {
+                let allowed = names.iter().any(|n| *n == value.as_str());
+                if !allowed {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     // ─── Unified keyword query (Phase 3 Task 2) ──────────────────────
 
     /// Unified keyword query — returns `true` if the permanent's top card
@@ -3722,11 +3782,30 @@ impl Game {
     ) {
         let entries = self.modifiers.granted_triggered_for_timing(carrier, timing);
         for (source_card, source_player, body) in entries {
+            // Immunity gate (mirrors the queue dispatcher): skip when the
+            // carrier is unaffected by the grantor's effects — `<Progress>` /
+            // attack-scoped immunity (Q2) or a general `CannotBeAffected`
+            // opponent-effect immunity (Q17). The opponent-effect immunity
+            // filter is source-kind-agnostic, so `Digimon` suffices on this
+            // fallback path.
+            if self.progress_excludes(carrier, Some(source_player))
+                || self.permanent_is_unaffected_by_effect(
+                    carrier,
+                    source_player,
+                    crate::enums::EffectSourceKind::Digimon,
+                )
+            {
+                continue;
+            }
+            // D4 / DCGO: the granted body runs as the carrier's OWN effect
+            // (effect_source_player = carrier.player), so a deletion it causes
+            // is the carrier-controller's OwnEffect (judge-quiz Q16). The
+            // grantor (`source_player`) is used only for the immunity gate.
             let mut ctx = crate::effect_context::EffectContext::new(
                 self,
                 source_card,
                 Some(carrier),
-                source_player,
+                carrier.player,
             );
             body(&mut ctx);
         }

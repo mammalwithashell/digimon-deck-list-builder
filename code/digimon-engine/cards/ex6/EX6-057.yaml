@@ -1,0 +1,97 @@
+# EX6-057 Lilithmon — Digimon, Purple, Lv6, cost 11, DP 11000.
+# Traits: Demon Lord / Seven Great Demon Lords. Attribute: Virus.
+# Evolves from Lv5 Purple, cost 3.
+#
+# Printed card text (data/cards.json):
+#   [On Play] [When Digivolving] Until the end of your opponent's turn, 1 of
+#     your opponent's Digimon gains "[End of Your Turn] Delete this Digimon."
+#   [All Turns] [Once Per Turn] When this Digimon would leave the battle area
+#     other than in battle, by deleting 1 level 5 or lower Digimon, prevent it
+#     from leaving.
+#   [Opponent's Turn] [Once Per Turn] When another Digimon is deleted, trash the
+#     top card of your opponent's security stack.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX6/Purple/EX6_057.cs
+#
+# ─── Clause 1 ─── [On Play][When Digivolving] grant [EoT] Delete this to 1 opp Digimon
+# DCGO (EX6_057.cs:60-105 / 180-260): SelectPermanentEffect over the opponent's
+# Digimon (selectPlayer = card.Owner), then on the selected permanent an
+# AddSkillClass installs an OnEndTurn ActivateClass whose source card is
+# `selectedPermanent.TopCard` (the CARRIER) — so the granted "Delete this
+# Digimon" is the GRANTEE's own effect. This is why <Partition> does not fire on
+# the granted self-delete (judge-quiz Q16). The grant lasts until the end of the
+# opponent's turn (`UntilOpponentTurnEndEffects`). The granted-trigger dispatch
+# runs a granted body with effect_source_player = carrier.player (the grantee),
+# so `delete_permanent { target: carrier }` is the carrier-controller's own effect.
+
+card: EX6-057
+name: Lilithmon
+kind: digimon
+level: 6
+color: [purple]
+cost: 11
+dp: 11000
+traits: [Demon Lord, Seven Great Demon Lords]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 3
+
+effects:
+  # ─── Clause 1: [On Play][When Digivolving] grant [EoT] Delete this ────────────
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Give 1 opponent Digimon '[End of Your Turn] Delete this Digimon' until end of opponent turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: cursed_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to gain '[End of Your Turn] Delete this Digimon.'"
+      - grant_triggered_effect:
+          target: cursed_target
+          timing: end_of_your_turn
+          expiry: end_of_opponents_turn
+          body:
+            - delete_permanent: { target: carrier }
+
+  # ─── Clause 2: [All Turns][OPT] prevent leaving by deleting a Lv5- Digimon ─────
+  #
+  # DCGO (EX6_057.cs:318-411): WhenRemoveField, `!IsByBattle`, max-per-turn 1,
+  # SelectPermanentEffect (selectPlayer = card.Owner, canNoSelect: true) over any
+  # battle-area Digimon with Level <= 5; on a pick, delete it and set
+  # `willBeRemoveField = false` (cancel the leave). Modeled on EX7-027.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - none_of:
+            - replacement_cause: battle
+    summary: "[All Turns][OPT] Delete 1 level 5 or lower Digimon so this Digimon doesn't leave"
+    process:
+      - select_any_permanent:
+          bind_as: prevent_cost
+          filter: { kind: digimon, level_lte: 5 }
+          optional: true
+          prompt: "Delete 1 level 5 or lower Digimon to prevent this Digimon from leaving"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}
+
+  # ─── Clause 3: [Opponent's Turn][OPT] another Digimon deleted → trash opp top security ─
+  #
+  # DCGO (EX6_057.cs:415+): OnDestroyedAnyone, max-per-turn 1, opponent's-turn
+  # gate, the deleted permanent is a Digimon other than this one; trash the top
+  # card of the opponent's security stack.
+  - when: on_any_deletion
+    once_per_turn: true
+    active_when: { opponents_turn: true }
+    condition:
+      all_of:
+        - event_target_kind: digimon
+        - none_of:
+            - event_permanent_is_source: true
+    summary: "[Opp Turn][OPT] When another Digimon is deleted, trash opponent's top security"
+    process:
+      - trash_top_security: { of: opponent }

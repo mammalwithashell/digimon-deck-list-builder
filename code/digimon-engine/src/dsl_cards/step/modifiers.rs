@@ -16,8 +16,9 @@
 //! which guards against an unannounced narrowing change.
 
 use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledEffectController, CompiledEffectSourceKind, CompiledModifierTarget,
-    CompiledModifierValue, CompiledStep,
+    CompiledBindingRef, CompiledCardKind, CompiledColor, CompiledEffectController,
+    CompiledEffectSourceKind, CompiledModifierTarget, CompiledModifierValue, CompiledStep,
+    CompiledSynthIdentity,
 };
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
@@ -134,6 +135,44 @@ fn lower_effect_controller(controller: CompiledEffectController) -> EffectContro
     }
 }
 
+fn compiled_kind_to_card_kind(k: CompiledCardKind) -> crate::enums::CardKind {
+    use crate::enums::CardKind as K;
+    match k {
+        CompiledCardKind::Digimon => K::Digimon,
+        CompiledCardKind::Tamer => K::Tamer,
+        CompiledCardKind::Option => K::Option,
+        CompiledCardKind::DigiEgg => K::DigiEgg,
+        CompiledCardKind::Token => K::Token,
+        CompiledCardKind::Dual => K::Dual,
+    }
+}
+
+fn compiled_color_to_card_color(c: CompiledColor) -> crate::enums::CardColor {
+    use crate::enums::CardColor as C;
+    match c {
+        CompiledColor::Red => C::Red,
+        CompiledColor::Blue => C::Blue,
+        CompiledColor::Yellow => C::Yellow,
+        CompiledColor::Green => C::Green,
+        CompiledColor::Black => C::Black,
+        CompiledColor::Purple => C::Purple,
+        CompiledColor::White => C::White,
+    }
+}
+
+/// Lower a compiled `synth_identity:` block to the engine's
+/// `ModifierPayload::SynthIdentity` (the data a `TreatAsDigimon` target is
+/// treated as while the modifier is live).
+fn build_synth_payload(s: &CompiledSynthIdentity) -> crate::modifiers::ModifierPayload {
+    crate::modifiers::ModifierPayload::SynthIdentity {
+        kind: compiled_kind_to_card_kind(s.kind),
+        level: s.level,
+        colors: s.colors.iter().copied().map(compiled_color_to_card_color).collect(),
+        traits: s.traits.clone(),
+        dp: s.dp,
+    }
+}
+
 /// Returns `true` if `step` is a modifier family handled here.
 /// Unknown steps fall through (the caller may try other families).
 pub fn try_run(
@@ -163,6 +202,7 @@ pub fn try_run(
             modifier,
             value,
             expiry,
+            synth_identity,
         } => {
             let Some(expiry) = resolve_expiry("add_modifier", expiry) else {
                 return true;
@@ -171,13 +211,23 @@ pub fn try_run(
             else {
                 return true;
             };
+            // `synth_identity:` (TreatAsDigimon) installs the structured
+            // `ModifierPayload::SynthIdentity` instead of a bare scalar.
+            let payload = synth_identity.as_ref().map(build_synth_payload);
+            // Closure installs with-or-without payload depending on `payload`.
+            let install = |ctx: &mut crate::effect_context::EffectContext, h, n| {
+                match &payload {
+                    Some(p) => ctx.add_modifier_with_payload(h, modifier_ty, n, expiry, p.clone()),
+                    None => ctx.add_modifier(h, modifier_ty, n, expiry),
+                }
+            };
             match target {
                 CompiledModifierTarget::Binding(b) => {
                     if let Some(ResolvedBinding::Permanent(h)) =
                         resolve_binding_ref(b, ctx, bindings)
                     {
                         let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
-                        ctx.add_modifier(h, modifier_ty, n, expiry);
+                        install(ctx, h, n);
                     }
                 }
                 CompiledModifierTarget::Filter(pred) => {
@@ -189,7 +239,7 @@ pub fn try_run(
                         crate::dsl_cards::step::permanent_scan::scan(ctx, pred, Some(bindings));
                     for h in matches {
                         let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
-                        ctx.add_modifier(h, modifier_ty, n, expiry);
+                        install(ctx, h, n);
                     }
                 }
             }

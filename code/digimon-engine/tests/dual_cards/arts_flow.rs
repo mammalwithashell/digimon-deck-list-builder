@@ -20,10 +20,13 @@ fn base_lv5(card_id: &str, color: CardColor) -> CardData {
     card
 }
 
-fn zero_dp_base() -> CardData {
-    let mut card = base_lv5("ZERO-BASE", CardColor::Red);
-    card.dp = Some(0);
-    card
+/// Lv5 Red base for the Arts-rule-check test. Carries POSITIVE DP so the
+/// general ≤0-DP state-based rules-check (`run_state_based_rules_check`) does
+/// not sweep it during setup drains. The 0-DP stack the test asserts on is
+/// produced by the 0-DP Arts card (`zero_dp_arts_dual`) becoming the stack top
+/// after the Arts digivolve — the base's DP is irrelevant once it's a source.
+fn arts_red_base() -> CardData {
+    base_lv5("ZERO-BASE", CardColor::Red)
 }
 
 fn purple_anchor() -> CardData {
@@ -290,7 +293,7 @@ fn arts_runs_rule_check_before_trigger_resolution() {
     let digivolve_witness = Arc::new(Mutex::new(0));
     let mut r = DebugRunner::builder()
         .add_card(zero_dp_arts_dual())
-        .add_card(zero_dp_base())
+        .add_card(arts_red_base())
         .add_card(purple_anchor())
         .deck(0, &["PURPLE-ANCHOR"])
         .hand(0, &["DUAL-ARTS"])

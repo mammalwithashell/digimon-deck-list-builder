@@ -1,0 +1,173 @@
+# BT21-042 GeoGreymon — Digimon, Lv.4, Yellow, DP 5000, Cost 5.
+# Traits: Dinosaur. Attribute: Vaccine.
+#
+# Printed card text (cards.json effect_description_eng):
+#
+#   [All Turns] [Once Per Turn] When any of your [Marcus Damon]s are played,
+#   this Digimon may digivolve into a yellow Digimon card with [RizeGreymon]
+#   in its name in the hand without paying the cost.
+#
+# Inherited text (cards.json inherited_effect_description_eng):
+#   [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT21/Yellow/BT21_042.cs
+#
+# ─── Source-priority cross-check (printed text > DCGO) ───────────────────────
+#
+# DCGO matches the printed text on every clause:
+#
+# Block 1 (DCGO None timing) — AddSelfDigivolutionRequirementStaticEffect:
+#   PermanentCondition = TopCard.ContainsCardName("Agumon")
+#     && TopCard.EqualsTraits("Dinosaur") && TopCard.HasLevel
+#     && TopCard.Level == 3;
+#   digivolutionCost: 2; ignoreDigivolutionRequirement: false.
+#   This is the printed Lv.3 [Agumon]/[Dinosaur] / Cost 2 evo path
+#   (cards.json `evo_costs` + `xros_req`). Encoded as a `kind: digivolve`
+#   alt_path (AD1-010 idiom). `ignoreDigivolutionRequirement: false` →
+#   standard color requirements still apply, so no `ignore_*` flag.
+#
+# Block 2 (DCGO OnEnterFieldAnyone — single ActivateClass, oncePerTurn: 1):
+#   CanUseCondition = IsExistOnBattleAreaDigimon(card)
+#     && CanTriggerOnPermanentPlay(PlayedPermanentCondition).
+#   PlayedPermanentCondition = IsPermanentExistsOnOwnerBattleArea(permanent, card)
+#     && permanent.TopCard.EqualsCardName("Marcus Damon").
+#   CanSelectCardToDigivolveInto = cardSource.HasCardColor(Yellow)
+#     && cardSource.ContainsCardName("RizeGreymon") && CanPlayCardTargetFrame(...).
+#   CanActivateCondition = IsExistOnBattleAreaDigimon(card)
+#     && HasMatchConditionOwnersHand(card, CanSelectCardToDigivolveInto)
+#     (existential guard: a yellow [RizeGreymon] must exist in hand).
+#   Body: DigivolveIntoHandOrTrashCard(target=card.PermanentOfThisCard(),
+#     cardCondition = yellow + [RizeGreymon], payCost: false, isHand: true).
+#   `SetUpActivateClass(..., oncePerTurn: 1, isOptional: true)` → printed
+#   [Once Per Turn] + "may digivolve".
+#
+#   NOTE: Marcus Damon is a TAMER name. There is NO digivolve half here
+#   (unlike AD1-010 / EX9-012, whose observers ALSO fire on `on_digivolve`):
+#   you cannot digivolve INTO Marcus Damon, so DCGO's PlayedPermanentCondition
+#   only covers the play half via CanTriggerOnPermanentPlay. The DSL uses
+#   `when: on_enter_field_anyone` only.
+#
+#   `target: source` mirrors AD1-001 / EX9-012 idiom: the effect-initiated-
+#   digivolve target is THIS card's source permanent (the carrier), which
+#   bypasses G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET
+#   (that gap only affects digivolves whose target is a SEPARATE picked
+#   permanent). `target: self` resolves to a Card binding and is silently
+#   dropped by EffectInitiatedDigivolve — use `source`.
+#
+#   `active_when: { all_turns: true }` per printed [All Turns] scoping — the
+#   observer fires on BOTH players' turns (DCGO has no IsOwnerTurn gate on
+#   CanUseCondition here, unlike EX9-012's [Your Turn] sister observer).
+#
+# Block 3 (DCGO None timing) — ChangeSelfDPStaticEffect(changeValue: 2000,
+#   isInheritedEffect: true, condition: IsOwnerTurn). The +2000 DP self-aura
+#   gated on owner's turn. Standard self-aura pattern (EX9-012 idiom):
+#   `scope: inherited / kind: aura / active_when: { your_turn: true } /
+#   target: {} / dp_modifier: 2000`.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                  | Status |
+# |--------------------------------------------------------------------|--------|
+# | Alt digivolve Lv.3 [Agumon]/[Dinosaur] / Cost 2                    | IMPLEMENTED (alt_paths kind: digivolve) |
+# | [All Turns][OPT] on own [Marcus Damon] play, may free-digivolve self into yellow [RizeGreymon] in hand | IMPLEMENTED (on_enter_field_anyone + all_turns + once_per_turn + optional; target: source; AD1-001/EX9-012 idiom) |
+# | [Inherited][Your Turn] +2000 DP self-aura                          | IMPLEMENTED (EX9-012 idiom) |
+#
+# ─── DSL/engine notes ────────────────────────────────────────────────────────
+#
+# G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET: not hit —
+# `target: source` (this card) is NOT blocked (AD1-001 / AD1-010 / EX9-012
+# share this shape).
+#
+# G-EVENT-CARD-TAMER-PLAY: `event_card` for Tamer plays through
+# `TriggerSource::EnteredField` is exercised by EX9-012's live (non-ignored)
+# Tai-Kamiya tamer-play test; the Marcus-Damon observer here rides the same
+# path. No #[ignore] needed.
+
+card: BT21-042
+name: GeoGreymon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+traits: [Dinosaur]
+attribute: Vaccine
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# Printed alt digivolve: Lv.3 w/[Agumon] in name and [Dinosaur] trait / Cost 2
+# (cards.json `evo_costs` memory_cost: 3 is the standard Lv.3-Yellow path; the
+# `xros_req` Cost-2 entry is the named alt-source DCGO installs at the None
+# timing). DCGO sets ignoreDigivolutionRequirement: false → standard color
+# requirements still apply (no ignore flag).
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, name_contains: "Agumon", trait_has: Dinosaur }
+    cost: 2
+
+effects:
+  # ─── Clause 1 — [All Turns][Once Per Turn] Marcus Damon play observer ───────
+  #
+  # Printed: "[All Turns] [Once Per Turn] When any of your [Marcus Damon]s are
+  # played, this Digimon may digivolve into a yellow Digimon card with
+  # [RizeGreymon] in its name in the hand without paying the cost."
+  #
+  # DCGO PlayedPermanentCondition: own battle area + TopCard.EqualsCardName
+  # ("Marcus Damon"). DSL filter: `event_target_owner: you` +
+  # `event_card_name_contains: "Marcus Damon"`. We do NOT add
+  # `event_target_kind: tamer` — the printed "[Marcus Damon]s are played"
+  # gate is name-only; Marcus Damon happens to be a Tamer.
+  #
+  # Marcus Damon is a Tamer name → NO `on_digivolve` half (can't digivolve
+  # INTO a Tamer). Single `on_enter_field_anyone` clause.
+  #
+  # `optional: true` per "may digivolve"; `once_per_turn: true` per [Once Per
+  # Turn]; `active_when: { all_turns: true }` per [All Turns].
+  #
+  # Hand pick: yellow + Digimon + name_contains "RizeGreymon"
+  # (CanSelectCardToDigivolveInto: HasCardColor(Yellow) &&
+  # ContainsCardName("RizeGreymon")). `select_hand` candidate filter is the
+  # existential guard — when no eligible card exists, the prompt silently
+  # skips (mirrors DCGO HasMatchConditionOwnersHand in CanActivateCondition).
+  #
+  # `target: source` (the carrier permanent) — AD1-001 / EX9-012 idiom;
+  # `cost: 0` + `ignore_requirements: true` for "without paying the cost".
+  - when: on_enter_field_anyone
+    optional: true
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] On own [Marcus Damon] play, may free-digivolve self into a yellow [RizeGreymon] hand card"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_card_name_contains: "Marcus Damon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: rize
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - name_contains: "RizeGreymon"
+          prompt: "Digivolve into a yellow [RizeGreymon] from your hand without paying the cost"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: rize
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 2 — [Inherited][Your Turn] +2000 DP self-aura ───────────────────
+  #
+  # Printed inherited: "[Your Turn] This Digimon gets +2000 DP."
+  # DCGO: ChangeSelfDPStaticEffect(2000, isInheritedEffect: true,
+  # condition: IsOwnerTurn). Standard self-aura (EX9-012 idiom): empty target
+  # `{}` + `active_when: { your_turn: true }` + `scope: inherited`.
+  # `Game::source_dp_contribution` reads `dp_modifier` gated by `active_when`.
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

@@ -313,3 +313,52 @@ fn st1_12_security_plays_tamer_for_free() {
         "ST1-12 [Security] plays the Tamer into the battle area without paying cost"
     );
 }
+
+/// ST-1 Gaia Red starter-deck fixture: exact official 54-card composition
+/// (4 Digi-Eggs + 50 main). Mirrors `st4_deck_library_recipe_has_canonical_counts`.
+#[test]
+fn st1_deck_library_recipe_has_canonical_counts() {
+    let library: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../../data/deck_library.json"))
+            .expect("deck_library.json parses");
+    let entry = &library["archetypes"]["ST-1 Gaia Red"]["decklists"][0];
+    assert_eq!(entry["deck_id"], "starter_st1_gaia_red");
+
+    let cards: Vec<String> = serde_json::from_str(
+        entry["decklist"]
+            .as_str()
+            .expect("decklist is encoded JSON"),
+    )
+    .expect("decklist parses");
+    let mut counts = std::collections::BTreeMap::<String, usize>::new();
+    for card in &cards {
+        *counts.entry(card.clone()).or_default() += 1;
+    }
+
+    assert_eq!(cards.len(), 54);
+    assert_eq!(counts.get("ST1-01"), Some(&4));
+    let main_count: usize = cards.iter().filter(|id| id.as_str() != "ST1-01").count();
+    assert_eq!(main_count, 50);
+
+    let expected = [
+        ("ST1-01", 4),
+        ("ST1-02", 4),
+        ("ST1-03", 4),
+        ("ST1-04", 4),
+        ("ST1-05", 4),
+        ("ST1-06", 4),
+        ("ST1-07", 2),
+        ("ST1-08", 4),
+        ("ST1-09", 4),
+        ("ST1-10", 2),
+        ("ST1-11", 2),
+        ("ST1-12", 4),
+        ("ST1-13", 4),
+        ("ST1-14", 4),
+        ("ST1-15", 2),
+        ("ST1-16", 2),
+    ];
+    for (card_id, count) in expected {
+        assert_eq!(counts.get(card_id), Some(&count), "{card_id} count");
+    }
+}
