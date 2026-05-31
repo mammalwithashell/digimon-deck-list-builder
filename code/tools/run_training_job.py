@@ -157,7 +157,7 @@ def build_gauntlet(
 _TRAIN_KWARGS = {
     "eval_freq", "n_eval_episodes", "learning_rate", "n_steps",
     "batch_size", "n_epochs", "gamma", "bounty_threshold", "bounty_bonus",
-    "use_lstm", "lstm_hidden_size",
+    "use_lstm", "lstm_hidden_size", "reward_profile_override",
 }
 
 
@@ -225,6 +225,22 @@ def run_job(config_path: str, dry_run: bool = False) -> None:
 
     # Resolve training kwargs
     train_kwargs = {k: training_cfg[k] for k in _TRAIN_KWARGS if k in training_cfg}
+    # Reward-profile selection: when the job requests a reward profile, resolve
+    # the reward YAMLs relative to the installed `digimon_gym` package so they
+    # load regardless of CWD / image layout. The TrainingConfig defaults are
+    # repo-relative ("code/digimon_gym/agents/reward/...") which do NOT exist in
+    # the flattened training image (code/ → /app/), so without this the profile
+    # system silently falls back to the legacy reward path.
+    if "reward_profile_override" in train_kwargs:
+        import digimon_gym as _dg
+
+        _reward_dir = Path(_dg.__file__).resolve().parent / "agents" / "reward"
+        train_kwargs.setdefault("reward_profiles_path", str(_reward_dir / "profiles.yaml"))
+        train_kwargs.setdefault("reward_gameplay_path", str(_reward_dir / "gameplay.yaml"))
+        print(
+            f"Reward profile: {train_kwargs['reward_profile_override']} "
+            f"(profiles={train_kwargs['reward_profiles_path']})"
+        )
     opponent = training_cfg.get("opponent", "greedy")
     total_timesteps = training_cfg.get("timesteps", 100_000)
 

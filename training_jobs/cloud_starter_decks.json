@@ -17,6 +17,7 @@
     "generalist": true,
     "timesteps": 1000000,
     "opponent": "greedy",
+    "reward_profile_override": "_pure_outcome",
     "use_lstm": true,
     "lstm_hidden_size": 256,
     "learning_rate": 3e-4,
