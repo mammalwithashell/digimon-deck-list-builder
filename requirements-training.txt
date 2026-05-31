@@ -1,7 +1,14 @@
 # Standalone RL training dependencies — no FastAPI, no DB, no auth
+#
+# torch is pinned to a CUDA 12.4 build. Unpinned `torch>=2.0` resolves to the
+# latest CUDA-13 wheel (e.g. 2.12.0+cu130), which requires a ~580+ driver;
+# RunPod GPU workers ship CUDA-12.4 (550-series) drivers, so that build falls
+# back to CPU. cu124 is the newest CUDA toolkit those drivers support, and
+# 2.6.0 is the latest torch with a published +cu124 wheel.
+--extra-index-url https://download.pytorch.org/whl/cu124
 numpy>=1.24
 gymnasium>=0.29
-torch>=2.0
+torch==2.6.0+cu124
 stable-baselines3>=2.0
 sb3-contrib>=2.0
 tensorboard>=2.14
