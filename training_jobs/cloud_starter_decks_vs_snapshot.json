@@ -1,0 +1,44 @@
+{
+  "job_name": "starter_decks_vs_snapshot",
+  "description": "Generalist RL agent over the six worldwide starter decks, trained against a FROZEN snapshot of a prior run (the v0.20 greedy run's final policy) as the opponent instead of the scripted greedy. opponent='pool' loads /workspace/opponent_pool.json (a single MaskableRecurrentPPO snapshot, standard_lite_deck_v2 / 8850 — obs-compatible with this run). Periodic checkpoints are on so this run itself produces snapshots for a growing league. Cloud-run entrypoint: python tools/run_training_job.py /app/jobs/cloud_starter_decks_vs_snapshot.json",
+
+  "agent_deck": { "source": "default" },
+
+  "allowed_archetypes": [
+    "ST-1 Gaia Red",
+    "ST-2 Cocytus Blue",
+    "ST-3 Heaven's Yellow",
+    "ST-4 Giga Green",
+    "ST-5 Machine Black",
+    "ST-6 Venomous Violet"
+  ],
+
+  "training": {
+    "generalist": true,
+    "timesteps": 1000000,
+    "opponent": "pool",
+    "opponent_pool_manifest": "/workspace/opponent_pool.json",
+    "opponent_pool_mode": "uniform",
+    "tensor_profile": "standard_lite_deck_v2",
+    "reward_profile_override": "_pure_outcome",
+    "ent_coef": 0.03,
+    "record_games": "eval",
+    "record_games_max": 2000,
+    "checkpoint_every": 100000,
+    "use_lstm": true,
+    "lstm_hidden_size": 256,
+    "learning_rate": 3e-4,
+    "n_steps": 2048,
+    "batch_size": 64,
+    "n_epochs": 4,
+    "gamma": 0.999,
+    "eval_freq": 20000,
+    "n_eval_episodes": 20
+  },
+
+  "output": {
+    "name": "starter_decks_vs_snapshot_v1",
+    "save_dir": "models",
+    "log_dir": "runs/pilot_ppo"
+  }
+}
