@@ -58,6 +58,49 @@ def test_inner_game_terminal_loss_no_fast_bonus() -> None:
     assert math.isclose(env._calc_inner_game_terminal(2, 30), -10.0, abs_tol=1e-9)
 
 
+# ─── No-draw tiebreaker (forced match decision) ──────────────────────────
+
+def test_force_match_decision_breaks_1_1_tie_to_last_game_winner() -> None:
+    # A forced match end at 1-1 must resolve decisively — agent won the
+    # most recent game, so the match goes to the agent (2-1), never a draw.
+    env = _bare_match_env()
+    env.match_score = [1, 1]
+    env._last_game_score_delta = [1, 0]
+    env._forced_match_tiebreak = False
+    env._force_match_decision()
+    assert env.match_score == [2, 1]
+    assert env._forced_match_tiebreak is True
+
+
+def test_force_match_decision_1_1_tie_opp_last_game() -> None:
+    env = _bare_match_env()
+    env.match_score = [1, 1]
+    env._last_game_score_delta = [0, 1]
+    env._forced_match_tiebreak = False
+    env._force_match_decision()
+    assert env.match_score == [1, 2]
+
+
+def test_force_match_decision_awards_game_win_leader() -> None:
+    # Forced end at 1-0 → the leader takes the match (2-0), not a draw.
+    env = _bare_match_env()
+    env.match_score = [1, 0]
+    env._last_game_score_delta = [1, 0]
+    env._forced_match_tiebreak = False
+    env._force_match_decision()
+    assert env.match_score == [2, 0]
+
+
+def test_force_match_decision_noop_when_already_decisive() -> None:
+    env = _bare_match_env()
+    env.match_score = [2, 1]
+    env._last_game_score_delta = [0, 1]
+    env._forced_match_tiebreak = False
+    env._force_match_decision()
+    assert env.match_score == [2, 1]
+    assert env._forced_match_tiebreak is False
+
+
 def test_bo3_game_terminal_fast_win() -> None:
     env = _bare_match_env()
     # 30-step crush → bonus = max(0, (150-30)/150) * 3 = 2.4
