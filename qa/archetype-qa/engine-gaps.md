@@ -5,6 +5,12 @@ This file accumulates engine mechanics that are missing or incomplete, discovere
 Last updated: 2026-05-29
 Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
 
+### §Medusamon EX11-012 token-shield deletes own tokens only (G-EX11-012-TOKEN-SHIELD-OWN-ONLY) — RESOLVED 2026-05-30
+
+- **First seen / RESOLVED** 2026-05-30, Medusamon faithfulness pass. EX11-012 Medusamon's `[All Turns]` shield — "When this Digimon would leave the battle area, by deleting 1 Token, it doesn't leave." — was authored with `select_own_permanent: { filter: { kind: token } }` (controller's OWN tokens only). But Medusamon's `[When Digivolving]`/`[End of Attack]` clause gives the Petrification Token to the **opponent** (`play_token: { controller: opponent }`), and the deck has no own-token source — so the shield could never fire in real play. Card text says "1 Token" with no owner qualifier, and DCGO `EX11/Red/EX11_012.cs` (would-leave region) uses `CanSelectPermanentCondition(p) => p.IsToken` via `HasMatchConditionPermanent(...)` with `selectPlayer: card.Owner` — the controller may delete ANY token (in practice the opponent's gifted Petrification Token, whose own `[On Deletion]` then trashes the opponent's top security).
+- **Fix:** localized YAML change in `code/digimon-engine/cards/ex11/EX11-012.yaml` — the would-leave cost selector is now `select_any_permanent: { filter: { kind: token } }` (scans BOTH battle areas; selecting player = controller). The any-owner permanent selector with a kind filter already existed in the DSL (`select_any_permanent`, runtime `install_select_any_permanent` in `src/dsl_cards/step/selections.rs`), so **no DSL widening was needed** — this was not a substrate gap.
+- **Pinned by:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test archetypes medusamon -- --include-ignored` (`medusamon::ex11_012_survives_by_deleting_opponents_petrification_token`: Medusamon survives + opponent's Petrification Token consumed + opponent security −1) and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral ex11_012` (7/7, no regression).
+
 ## Open gaps — judge-quiz faithfulness suite discovery wave (2026-05-29)
 
 Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' rules quiz reproduced as behavioral tests). Discover-then-pin: tests assert the judge-correct outcome; a failure is logged here, not weakened.
