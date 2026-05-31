@@ -11,7 +11,7 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 | `TENSOR_SIZE` | 8850 | Engine default — `standard_lite_deck_v2`. Top-level Rust `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE` both report this value. |
 | `ACTION_SPACE_SIZE` | 2192 | Unchanged by the default-profile flip. |
 
-`standard_compact_v1`-specific layout constants (`SLOT_SIZE = 40`, `FIELD_SLOTS = 14`, `MAX_HAND = 20`, etc.) are now reachable only via their module path: `digimon_engine::tensor_profiles::standard::v1::*` in Rust and `get_tensor_profile("standard_compact_v1")` in Python. They are no longer re-exported from the top-level `tensor` module — code that imported them from there must migrate either to the explicit module path (if it intentionally targets v1) or to `TensorSection` / `TensorSlotLayout` profile metadata (if it wants the active default).
+`standard_compact_v1`-specific layout constants (`SLOT_SIZE = 40`, `FIELD_SLOTS = 14`, `MAX_HAND = 20`, etc.) are now reachable only via their module path: `digimon_engine::tensor_profiles::standard::v1::*` in Rust. (The Python training adapter `digimon_gym.tensor_profiles.get_tensor_profile` no longer serves `standard_compact_v1` — see the retirement note under *Tensor Profiles*.) They are no longer re-exported from the top-level `tensor` module — code that imported them from there must migrate either to the explicit module path (if it intentionally targets v1) or to `TensorSection` / `TensorSlotLayout` profile metadata (if it wants the active default).
 
 ## Tensor Profiles
 
@@ -22,7 +22,16 @@ The engine default pilot observation profile is **`standard_lite_deck_v2`** (`88
 
 `standard_lite_v2` (`8410` floats) is the lite_deck_v2 prefix without the own-original-decklist section. Callers that don't need decklist-aware observations can request it explicitly via `observation_profile="standard_lite_v2"` on `RustHeadlessGame`, `--tensor-profile standard_lite_v2` on `pilot_training`, or `profile_by_id("standard_lite_v2")` from Rust.
 
-`standard_compact_v1` (`1375` floats) is the historical baseline profile. It remains reachable for legacy callers (parity tests, archived recordings, baseline models) via `observation_profile="standard_compact_v1"` and `profile_by_id("standard_compact_v1")`. Existing ONNX checkpoints trained against this profile are NOT loadable through the engine's default surface — they must be loaded with an explicit profile pin and an action-space-compatible inference path.
+`standard_compact_v1` (`1375` floats) is the historical baseline profile. It remains reachable **on the Rust side** for legacy callers (parity tests, archived recordings, baseline models) via `observation_profile="standard_compact_v1"` and `profile_by_id("standard_compact_v1")`. Existing ONNX checkpoints trained against this profile are NOT loadable through the engine's default surface — they must be loaded with an explicit profile pin and an action-space-compatible inference path.
+
+> **Retired from the training env — 2026-05-30:** Per the
+> `make-training-build-legacy-free` change, the Python training adapter
+> (`digimon_gym.tensor_profiles.get_tensor_profile` / `DigimonEnv`) no longer
+> serves `standard_compact_v1`; requesting it raises `ValueError` naming
+> `standard_lite_v2` (the training default). `DigimonEnv` is now Rust-only (the
+> Python `HeadlessGame` backend was removed). The Rust `build_tensor_standard_compact_v1`
+> builder above is unaffected — compact remains available on the engine side for
+> offline parity use.
 
 `standard_full_v2` (`43482` floats) is the maximally informative profile used for full-state agents; unchanged by the default flip.
 

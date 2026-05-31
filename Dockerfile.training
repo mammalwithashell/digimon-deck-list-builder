@@ -91,9 +91,21 @@ RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
 COPY requirements-training.txt .
 RUN pip install --no-cache-dir -r requirements-training.txt
 
-# Copy training-side source (flatten code/ → /app/)
+# Copy training-side source (flatten code/ → /app/).
+#
+# Only run_training_job.py is copied from code/tools/. The rest of code/tools/
+# is intentionally EXCLUDED because eight of those scripts import
+# `engine_py_legacy` (resolve_deck, meta_loader, ingest_cards, run_scenario,
+# run_qa_batch, promote_script, train_card_autoencoder, check_frozen_integrity)
+# — and `engine_py_legacy` is deliberately never copied into this image. The
+# training entrypoint (run_training_job.py → digimon_gym.agents.pilot_training)
+# imports only digimon_engine (the Rust wheel), data_paths, and digimon_gym.* —
+# never engine_py_legacy. `tools` is a namespace package (no __init__.py), so the
+# single file resolves as `tools.run_training_job` with /app on PYTHONPATH.
+# A guardrail test (code/tests/rl) + the CI smoke step (real import) enforce that
+# the training chain stays legacy-free.
 COPY code/digimon_gym/ digimon_gym/
-COPY code/tools/ tools/
+COPY code/tools/run_training_job.py tools/run_training_job.py
 COPY code/data_paths.py .
 COPY training_jobs/ training_jobs/
 

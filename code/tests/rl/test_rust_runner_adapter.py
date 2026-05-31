@@ -54,7 +54,8 @@ def test_digimon_env_uses_requested_standard_lite_deck_v2_profile(monkeypatch):
     assert info["action_mask"].shape == (env.action_space.n,)
 
 
-def test_legacy_env_rejects_standard_lite_v2_profile(monkeypatch):
+def test_non_rust_backend_is_rejected(monkeypatch):
+    pytest.importorskip("digimon_engine")
     monkeypatch.setenv("DIGIMON_BACKEND", "py")
     import digimon_gym.digimon_gym as gym_mod
 
@@ -64,9 +65,11 @@ def test_legacy_env_rejects_standard_lite_v2_profile(monkeypatch):
         tensor_profile="standard_lite_v2",
     )
 
+    # The training env is Rust-only; an explicit non-`rust` DIGIMON_BACKEND is
+    # rejected when the runner is built (change make-training-build-legacy-free).
     with pytest.raises(
         RuntimeError,
-        match="tensor_profile='standard_lite_v2' requires DIGIMON_BACKEND=rust",
+        match="DIGIMON_BACKEND='py' is no longer supported",
     ):
         env.reset(seed=7)
 

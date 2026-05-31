@@ -106,7 +106,16 @@ def build_gauntlet(
         print(f"Meta scope: local ({', '.join(scope_parts)})")
         print("Querying DigiLab for scoped meta stats...")
 
-    from server.digilab_client import get_scoped_meta
+    try:
+        from server.digilab_client import get_scoped_meta
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "Scoped-meta training (meta_scope set) requires the hosted-server "
+            "package (`server.digilab_client`), which is not present in this "
+            "environment (e.g. the lean training image). Run scoped-meta jobs "
+            "where `server` is importable, or omit `meta_scope` for a global / "
+            "generalist run."
+        ) from exc
 
     result = get_scoped_meta(
         store_ids=store_ids,
