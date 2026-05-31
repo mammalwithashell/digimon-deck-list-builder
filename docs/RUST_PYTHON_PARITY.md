@@ -20,6 +20,23 @@
 > loadable through the engine's default surface — bundle this with the
 > S1.3/S1.4 retrain in `TRAINING_RUNBOOK.md`.
 
+> **`DigimonEnv` is Rust-only; training has no Python backend — 2026-05-30:**
+> Per the `make-training-build-legacy-free` change, the RL training env
+> (`code/digimon_gym/digimon_gym.py`) no longer has a Python `HeadlessGame`
+> backend branch — `_make_runner` always builds `RustHeadlessGame`, and the
+> `standard_compact_v1` profile is retired from the training adapter. The
+> `greedy_policy` opponent delegates to the Rust runner's native
+> `greedy_action`; the former Python-engine heuristic was relocated to the
+> (legacy-coupled, training-excluded) `digimon_gym.agents.architect_simulator`.
+> Consequently the DigimonEnv-level dual-backend parity test
+> (`code/tests/rl/test_rust_python_parity.py`) was **removed** — it can no
+> longer run a Python side. The authoritative cross-engine parity oracle
+> remains `code/engine_py_legacy/tests/engine/test_rust_backend_parity.py`
+> (excluded from default collection; constructs `HeadlessGame` directly) plus
+> the DCGO replay oracle. The hosted API (`code/server/`) still runs on the
+> Python engine — that migration is tracked by the deferred
+> `excise-legacy-engine-from-hosted-api` change.
+
 > **`RustDebugGame` is a test/browser-only PyO3 surface — 2026-05-28:** Per
 > the `add-ui-scenario-test-substrate` change, `digimon_engine.RustDebugGame`
 > wraps `HeadlessRunner` with scenario-staging mutators (place field/breeding
