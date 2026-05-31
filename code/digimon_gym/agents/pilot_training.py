@@ -2089,6 +2089,7 @@ def train(total_timesteps: int = 100_000,
           curriculum_seed: Optional[int] = None,
           eval_seed: Optional[int] = None,
           deck_pool_snapshot_path: Optional[str] = None,
+          tensor_profile: Optional[str] = None,
           reward_profile_override: Optional[str] = None,
           reward_profiles_path: Optional[str] = None,
           reward_gameplay_path: Optional[str] = None,
@@ -2133,16 +2134,18 @@ def train(total_timesteps: int = 100_000,
     """
     config_driven = cfg is not None
     if cfg is None:
-        # Reward-profile selection (optional). Only override the TrainingConfig
-        # defaults when a value is provided so callers that don't ask for a
-        # profile keep the default behavior.
-        _reward_overrides: Dict[str, str] = {}
+        # Optional cfg overrides — tensor profile + reward-profile selection.
+        # Only override the TrainingConfig defaults when a value is provided so
+        # callers that don't ask keep the default behavior.
+        _cfg_overrides: Dict[str, str] = {}
+        if tensor_profile is not None:
+            _cfg_overrides["tensor_profile"] = tensor_profile
         if reward_profile_override is not None:
-            _reward_overrides["reward_profile_override"] = reward_profile_override
+            _cfg_overrides["reward_profile_override"] = reward_profile_override
         if reward_profiles_path is not None:
-            _reward_overrides["reward_profiles_path"] = reward_profiles_path
+            _cfg_overrides["reward_profiles_path"] = reward_profiles_path
         if reward_gameplay_path is not None:
-            _reward_overrides["reward_gameplay_path"] = reward_gameplay_path
+            _cfg_overrides["reward_gameplay_path"] = reward_gameplay_path
         cfg = TrainingConfig(
             algorithm="lstm" if use_lstm else "mlp",
             timesteps=total_timesteps,
@@ -2160,7 +2163,7 @@ def train(total_timesteps: int = 100_000,
             tensorboard_log=tensorboard_log,
             curriculum_seed=curriculum_seed,
             eval_seed=eval_seed,
-            **_reward_overrides,
+            **_cfg_overrides,
         )
     else:
         total_timesteps = cfg.timesteps
