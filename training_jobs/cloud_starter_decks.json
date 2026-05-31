@@ -17,6 +17,7 @@
     "generalist": true,
     "timesteps": 1000000,
     "opponent": "greedy",
+    "tensor_profile": "standard_lite_deck_v2",
     "reward_profile_override": "_pure_outcome",
     "use_lstm": true,
     "lstm_hidden_size": 256,

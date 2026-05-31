@@ -81,7 +81,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && mkdir -p /run/sshd \
     && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
     && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config \
-    && printf 'PYTHONPATH=/app\nDIGIMON_DATA_DIR=/app/data\nDIGIMON_BACKEND=rust\n' >> /etc/environment
+    && printf 'PYTHONPATH=/app\nDIGIMON_DATA_DIR=/app/data\nDIGIMON_BACKEND=rust\nDIGIMON_CARDS_JSON=/app/data/cards.json\n' >> /etc/environment
 
 # Install the compiled PyO3 wheel
 COPY --from=rust-builder /wheels/*.whl /wheels/
@@ -118,6 +118,11 @@ COPY training_jobs/ training_jobs/
 # DATA_DIR defaults to /data instead of /app/data. Override explicitly
 # so the data_paths module resolves the runtime volume mount.
 ENV DIGIMON_DATA_DIR=/app/data
+
+# The Rust CardDatabase (used by the reward event bus) resolves cards.json via
+# DIGIMON_CARDS_JSON (or cwd/data/cards.json), NOT DIGIMON_DATA_DIR — point it
+# at the runtime-mounted data so reward profiles work without a cwd assumption.
+ENV DIGIMON_CARDS_JSON=/app/data/cards.json
 
 # Use the Rust engine backend by default
 ENV DIGIMON_BACKEND=rust

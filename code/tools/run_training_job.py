@@ -157,7 +157,7 @@ def build_gauntlet(
 _TRAIN_KWARGS = {
     "eval_freq", "n_eval_episodes", "learning_rate", "n_steps",
     "batch_size", "n_epochs", "gamma", "bounty_threshold", "bounty_bonus",
-    "use_lstm", "lstm_hidden_size", "reward_profile_override",
+    "use_lstm", "lstm_hidden_size", "reward_profile_override", "tensor_profile",
 }
 
 
