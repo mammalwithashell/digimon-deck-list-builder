@@ -483,11 +483,13 @@ class DigimonEnv(gymnasium.Env):
             −1.0 for draw (mild stalling penalty; the engine's new
               "force step-limit wins" should make pure draws rare).
           Dense (only fires on the step where security count changed):
-            +2.0 per opponent security card removed (real progress toward win).
-            −2.0 per own security card lost (real progress toward loss).
-            With 5 security cards each, total dense magnitude is bounded
-            at ±10 per game — comparable to terminal but only fires on
-            game-state-progressing events, never on stalling.
+            +1.5 per opponent security card removed (real progress toward win).
+            −0.5 per own security card lost (asymmetric — losing security is
+              partly the opponent's action, so it's penalized less than
+              offense is rewarded). Calibrated for BO3 match training; see
+              add-bo3-match-training/design.md §D9. Clearing all 5 opponent
+              security caps cumulative dense at +7.5, strictly below the
+              per-game terminal (±12) so recovery decks can't bait the agent.
           Step penalty:
             −0.001 per step. Caps at ~−0.3 over the 300-step soft limit,
             negligible vs terminal but provides a tiebreaker toward
@@ -557,11 +559,14 @@ class DigimonEnv(gymnasium.Env):
             self._prev_p1_digivolutions = p1_digi
             self._prev_p1_dna_digivolutions = p1_dna
 
-        # Per-step stalling penalty: -0.06/step = ~-6 cumulative over a 100-step
-        # game. One power-down from -0.09 (which proved survivable vs greedy but
-        # crashed vs self-play). Combined with boosted DNA shaping (+50 bonus),
-        # designed to drive fast wins through evolution rather than stall.
-        return dense_reward - 0.06
+        # Per-step stalling penalty (small but non-zero): negligible vs the
+        # terminal magnitude but provides a tiebreaker toward shorter wins.
+        # Pinned to -0.001 by the reward-shaping design spec and the
+        # calibration suite; the reward-profiles v2 `gameplay` profile uses
+        # the same value (the transient -0.06 "boosted step penalty"
+        # experiment was reverted — see
+        # docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md).
+        return dense_reward - 0.001
 
     def render(self) -> Optional[str]:
         """Render the current game state.
