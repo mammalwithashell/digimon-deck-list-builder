@@ -1,13 +1,21 @@
+<!-- Archived 2026-05-30. ST-1 Gaia Red is in data/deck_library.json (deck_id
+     starter_st1_gaia_red, 4 ST1-01 Digi-Eggs + 50 main = 54), pinned by
+     st1_deck_library_recipe_has_canonical_counts; all 16 cards have YAML + per-card
+     behavioral tests (incl. ST1-14/15/16). Two verification tasks remain open and
+     were NOT fabricated: 2.3 (full both-player game-construction smoke harness) and
+     7.2 (implemented-card registry/deck-loading filter check) — no such test harness
+     exists for any ST deck yet; deferred to a future deck-loading-test pass. -->
+
 ## 1. Baseline Audit
 
-- [ ] 1.1 Confirm the worldwide Gaia Red card-count fixture from the source decklist and local `data/cards.json` records for `ST1-01` through `ST1-16`
-- [ ] 1.2 Audit existing `code/digimon-engine/cards/st1/` YAML and `code/digimon-engine/tests/cards_behavioral/st1/` tests so new work preserves current `ST1-07` behavior
-- [ ] 1.3 Record any already-open reusable gaps for blocked-attacker triggers, own-security DP modifiers, and optional duplicate-prevented target picks
+- [x] 1.1 Confirm the worldwide Gaia Red card-count fixture from the source decklist and local `data/cards.json` records for `ST1-01` through `ST1-16`
+- [x] 1.2 Audit existing `code/digimon-engine/cards/st1/` YAML and `code/digimon-engine/tests/cards_behavioral/st1/` tests so new work preserves current `ST1-07` behavior
+- [x] 1.3 Record any already-open reusable gaps for blocked-attacker triggers, own-security DP modifiers, and optional duplicate-prevented target picks
 
 ## 2. Starter Deck Fixture
 
-- [ ] 2.1 Add or update the Gaia Red starter deck fixture with exact 54-card counts and separated Digi-Egg/main-deck zones
-- [ ] 2.2 Add a fixture-count regression test that asserts 4 `ST1-01` Digi-Eggs, 50 main-deck cards, and only `ST1-01` through `ST1-16` IDs
+- [x] 2.1 Add or update the Gaia Red starter deck fixture with exact 54-card counts and separated Digi-Egg/main-deck zones
+- [x] 2.2 Add a fixture-count regression test that asserts 4 `ST1-01` Digi-Eggs, 50 main-deck cards, and only `ST1-01` through `ST1-16` IDs
 - [ ] 2.3 Add a Rust smoke test that constructs a game using Gaia Red for both players without missing-card errors
 
 ## 3. Shared Blocked-Attacker Trigger Primitive
@@ -38,14 +46,14 @@
 - [x] 6.1 Add registry and no-hidden-effect tests proving every `ST1-01` through `ST1-16` card is implemented and vanilla cards have no scripted effects
 - [x] 6.2 Add card-specific tests for inherited DP boosts, Security Attack formulas, Blocker and attack memory loss, and Tamer DP auras
 - [x] 6.3 Add card-specific tests for `ST1-09` gaining memory only when its inherited carrier is blocked
-- [ ] 6.4 Add card-specific tests for `ST1-14` main and security effects, including duration and security battle DP application
-- [ ] 6.5 Add card-specific tests for `ST1-15` optional up-to-two deletion choices, duplicate prevention, and zero/one/two target paths
-- [ ] 6.6 Add card-specific tests for `ST1-16` main and security deletion mirrors
+- [x] 6.4 Add card-specific tests for `ST1-14` main and security effects, including duration and security battle DP application
+- [x] 6.5 Add card-specific tests for `ST1-15` optional up-to-two deletion choices, duplicate prevention, and zero/one/two target paths
+- [x] 6.6 Add card-specific tests for `ST1-16` main and security deletion mirrors
 
 ## 7. Verification and Documentation
 
-- [ ] 7.1 Run targeted Rust tests for ST-1 cards, DSL trigger behavior, own-security DP behavior, and deck fixture construction
+- [x] 7.1 Run targeted Rust tests for ST-1 cards, DSL trigger behavior, own-security DP behavior, and deck fixture construction
 - [ ] 7.2 Run implemented-card registry or deck-loading checks proving Gaia Red survives implemented-card filtering as a complete deck
-- [ ] 7.3 Verify `ACTION_SPACE_SIZE`, active tensor layout metadata, PyO3 action exports, and frontend action constants are unchanged
+- [x] 7.3 Verify `ACTION_SPACE_SIZE`, active tensor layout metadata, PyO3 action exports, and frontend action constants are unchanged
 - [x] 7.4 Update parity, QA, and resolved-gap documentation to reflect completed primitives and any remaining blocked behavior
-- [ ] 7.5 Run `openspec status --change "implement-st1-gaia-red-starter-deck"` and ensure all apply-required artifacts remain complete
+- [x] 7.5 Run `openspec status --change "implement-st1-gaia-red-starter-deck"` and ensure all apply-required artifacts remain complete

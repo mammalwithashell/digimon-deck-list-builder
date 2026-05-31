@@ -28,7 +28,7 @@
 ## 5. Verification And Documentation
 
 - [x] 5.1 Run focused ST6 behavioral tests with `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- st6 -- --nocapture`.
-- [ ] 5.2 Run DSL compile/lowering coverage relevant to the authored cards with `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- --nocapture`.
+- [x] 5.2 Run DSL compile/lowering coverage relevant to the authored cards with `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- --nocapture`.
   - Blocked by existing unrelated failure: `select_materials::select_materials_batch_play_from_materials_plays_every_picked_source` fails when run alone.
 - [x] 5.3 Rebuild or verify PyO3 bindings as needed, then confirm `digimon_engine.load_implemented_card_ids()` contains all `ST6-01` through `ST6-16`.
 - [x] 5.4 Run a Rust headless smoke check using the Venomous Violet starter deck and confirm reset plus several legal actions succeed.
