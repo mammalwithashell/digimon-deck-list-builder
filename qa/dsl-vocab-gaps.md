@@ -4,6 +4,50 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+> **Substring trait predicate `trait_contains` — RESOLVED 2026-06-03**
+> (EX3-014 Dorbickmon code-review fix). The DSL had only `trait_has`, an EXACT
+> case-insensitive trait match (`x.eq_ignore_ascii_case(t)`). Printed text of the
+> form "[Dragon], [saur] or [Ceratopsian] in **any of its traits**" is a SUBSTRING
+> reading, matching DCGO `CardSource.HasDragonTraits` → `ContainsTraits("...")`
+> (`DCGO/Assets/Scripts/Script/CardSource.cs`). Under exact match the `saur` clause
+> was completely DEAD (no card carries a standalone "saur" trait — it only appears
+> inside `Dinosaur` ×92 / `Ankylosaur` ×11 / `Plesiosaur` ×9), and `Dragon` mostly
+> appears as a substring (`Dragonkin` ×92, `Dark Dragon` ×36, ...), so the EX3-014
+> DP cap massively undercounted and `[Dinosaur]` Digimon could not be picked as
+> DigiXros materials — a faithfulness + no-approximations violation. New leaf
+> `trait_contains: <token>` is the substring sibling of `trait_has`: matches when
+> ANY subject trait CONTAINS the token (case-insensitive,
+> `subject_traits.iter().any(|x| x.to_lowercase().contains(&t.to_lowercase()))`).
+> Threaded identically to `trait_has` — spec field
+> (`digimon-dsl/src/predicate.rs`) → compiled field (`compiled.rs`) → lowering
+> (`compile.rs`) → engine card-field eval AND synth-identity / `ChangeTraits`
+> overlay path (`digimon-engine/src/dsl_cards/predicate.rs`), plus the
+> `eval_no_subject_fields` subject-field guard. Works inside the
+> `per: { source_stack_count: { filter } }` selector and DigiXros material filters
+> (same `CompiledPredicate`). Unblocks the "[Dragon]/[saur]/[Ceratopsian]"-family
+> matching. Pinned by `tests/cards_behavioral/ex3/ex3_014.rs` — esp.
+> `ex3_014_dinosaur_source_counts_via_saur_substring` (the load-bearing `saur`
+> substring proof). G-DSL-TRAIT-CONTAINS-SUBSTRING.
+
+> **Trait-filtered carrier source count as a `per` selector — RESOLVED 2026-06-03**
+> (EX3-014 Dorbickmon authoring). The `BasePerDelta` formula now accepts a new
+> `per: { source_stack_count: { filter: <predicate> } }` selector that counts the
+> effect carrier's own digivolution sources (the cards beneath its top card)
+> matching a predicate. The engine already had the raw machinery (the top-level
+> `source_stack_count` FormulaSpec + `eval_predicate_with_bindings`), but a raw
+> count cannot be offset/scaled — there is no `add`/`mul` formula combinator. As a
+> `per` selector it composes in `base + count * delta`, letting a card scale a
+> numeric (here a DP cap) by the number of its sources matching a trait:
+> Dorbickmon's "for each card with [Dragon], [saur] or [Ceratopsian] in any of its
+> traits in this Digimon's digivolution cards, add 2000 to the maximum DP you can
+> choose" → `dp_lte: { formula: { base: 3000, per: { source_stack_count: { filter:
+> { any_of: [trait_has: Dragon, ...] } } }, delta: 2000 } }`. Spec
+> `PerSelector::SourceStackCount(SourceStackCountSpec)` → compiled
+> `CompiledPerSelector::SourceStackCountFiltered { filter }`; evaluated by
+> `formula_eval::source_stack_count_filtered` (reads `ctx.source_permanent`). Pinned
+> by `tests/cards_behavioral/ex3/ex3_014.rs` (scaling-cap behavioral tests).
+> G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
+
 > **`TreatAsDigimon` / `SynthIdentity` payload — RESOLVED 2026-05-30** (judge-quiz
 > cluster-B authoring, Greymon/Marcus line). The DSL `add_modifier` step now accepts
 > a structured `synth_identity:` block (`dp` required; `kind` defaults Digimon;

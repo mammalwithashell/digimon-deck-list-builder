@@ -29,12 +29,17 @@ Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' ru
 
 - **First seen / RESOLVED** 2026-05-29, judge-quiz Q18. Neither `execute_blast_digivolve` (combat.rs) nor the Blast DNA field-target generator (`dna_digivolve.rs::valid_blast_dna_field_targets_for_hand_card`) consulted the effect-immunity machinery; a Digimon immune to ALL Digimon effects including its own (Quantumon LM-020 — `CannotBeAffected` with `EffectControllerFilter::Any`) could still `<Blast Digivolve>`, but `<Blast Digivolve>` is itself a Digimon effect. **Fixed** (change `fix-judge-quiz-cluster-wiring-gaps`): gate Blast counter-candidate collection (`combat.rs::try_enter_counter`) AND the Blast DNA field-target generator on `permanent_is_unaffected_by_effect(base, base.player, Digimon)`, plus a defensive abort in `execute_blast_digivolve`. Pinned by `combat::counter_interrupt::blast_target_immune_to_own_effects_is_not_a_counter_candidate`. (Q18 stays BLOCKED-CARD on LM-020 for the end-to-end pin; the substrate is closed.)
 
-### §DigiXros material-consumption fires no leave trigger (G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER) — OPEN
+### §DigiXros material-consumption fires no leave trigger (G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER) + no unpayable-return-to-hand (G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND) — OPEN
 
 - **First seen:** 2026-05-29, judge-quiz Q25 (probe). When a battle-area Digimon is consumed as a DigiXros material, `Game::take_digixros_material_origin` (game_actions.rs, `DigiXrosMaterialOrigin::BattleArea` arm) silently `battle_area.remove(idx)`s it and tucks its top card under the new Digimon — firing NO `OnLeaveField` / `WhenWouldLeaveBattleArea` trigger, unlike the standard deletion path (`combat.rs` stages 1 + 6). The judge rule (Q25): a DigiXros departure DOES count as "leaving the battle area" (and is NOT "leaving by battle").
 - **DCGO-verified design (2026-05-29).** The observer that must fire is **BT17-095 Miraculous Mega Knight** (already implemented), NOT EX3-014. Its relevant clause is a `[Delay]` keyed off DCGO `EffectTiming.WhenRemoveField` with `CanUseCondition = CanDeclareOptionDelayEffect && CanTriggerWhenPermanentRemoveField(IsOwnerPermanentCondition) && !IsByBattle` — "When one of your level-6 [Greymon]/[Garurumon] **would leave the battle area outside of a battle**". The Rust BT17-095 YAML models this as `kind: replacement` / `trigger: when_would_leave_battle_area` with `active_when: { ..., none_of: [replacement_cause: battle] }`. So the engine must fire the **`WhenWouldLeaveBattleArea` REPLACEMENT WINDOW** (the deletion-batch stage-1 path, `combat.rs::run_replacement_stage(WhenWouldLeaveBattleArea, ...)`) — NOT a post-removal `OnLeaveField` observer — for each `BattleArea` DigiXros material BEFORE it is consumed, with a `ReplacementCause` that is **not `Battle`** (candidate: new `ReplacementCause::DigiXros`, or `Cost`).
 - **Why this is DigiXros-transaction surgery (not simple wiring):** `commit_digixros_material_sources` → `take_digixros_material_origin` must run the replacement window per battle-area material and then handle the OUTCOME — and BT17-095 does NOT proceed: on success it **redirects/substitutes** the leaving WarGreymon into a DNA-digivolve into Omnimon (the material is consumed into Omnimon instead of into Dorbickmon's DigiXros). So the DigiXros commit must tolerate a material being cancelled/redirected/substituted away mid-transaction. Build + validate this as the substrate step of EX3-014 authoring with BT17-095 as the integration oracle (DCGO `BT17_095.cs`, `EX3_014.cs`).
-- **Blocks (judge-quiz):** Q25 (BLOCKED-CARD on EX3-014 regardless).
+- **Second sub-gap (G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND), first seen 2026-06-03 (Q26/Q27):** even after the leave window fires and BT17-095's DNA-evo pulls WarGreymon out of the transaction, the DigiXros play has **no declare-then-pay re-check** that recomputes the play cost when a material vanishes mid-resolution and **returns the played card to hand** when the cost becomes unpayable. `commit_play_from_hand_after_reductions` (`game_actions.rs`) locks `transaction.final_cost()` and `pay_memory`s BEFORE `commit_digixros_material_sources` consumes the materials, with no post-DNA recompute / return-to-hand branch. The judge rule (Q26): a play whose cost becomes unpayable after declaration **returns to hand**; (Q27): it **pays 0 memory** (no payment for the failed play). This stacks on the leave-trigger gap above.
+- **EX3-014 / AD1-004 / BT17-095 now all implemented (2026-06-03).** The judge-quiz Q25/Q26/Q27 scenarios are now **staged-and-pinned** (discover-then-pin) rather than empty `BLOCKED-CARD` stubs:
+  - `tests/judge_quiz/e_partition_digixros.rs::q25_all_turns_fires_on_digixros_departure_not_battle` — stages the real DigiXros play (5 materials incl. WarGreymon), asserts BT17-095's `[All Turns]` observer fires; captured real failure: WarGreymon left as a material but **no Delay/DNA-evo flow surfaced and the carrier was not consumed** (observer never saw the departure). Still `#[ignore]`d on this gap.
+  - `tests/judge_quiz/c_declare_then_pay.rs::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` — captured: Dorbickmon **entered the battle area** (`in_hand=false, on_field=true`) instead of returning to hand. Ignored on this gap + G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND.
+  - `tests/judge_quiz/c_declare_then_pay.rs::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` — captured: the reduced DigiXros cost **was paid** (memory 10→7) instead of 0. Ignored on the same two gaps.
+- **Blocks (judge-quiz):** Q25, Q26, Q27 (BLOCKED-ENGINE; tests staged, pinned `#[ignore]` on this gap).
 
 ### §No digivolve-target restriction modifier (G-DIGIVOLVE-TARGET-RESTRICTION) — ENGINE SUBSTRATE DONE 2026-05-29; DSL-install + card at authoring
 
@@ -777,7 +782,32 @@ adding a new family entry above, add a matching record to the JSON (the same
 status).
 
 
-### §`kind: digimon` field-select filter excludes Tokens (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT) — OPEN
+### §`kind: digimon` field-select filter excludes Tokens (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT) — RESOLVED 2026-06-02
+
+- **RESOLVED 2026-06-02** (judge-quiz engine-gaps change). Two-part engine fix in
+  `code/digimon-engine/src/dsl_cards/predicate.rs`, both scoped to **field/permanent
+  subjects** (card-search over deck/hand/trash is untouched — tokens never appear there):
+  1. `kind_matches_field` now coalesces `CardKind::Token` into the `Digimon` arm
+     (a battle-area token IS a Digimon per the rules manual / glossary; DCGO
+     `Permanent.IsDigimon` is true for token entities).
+  2. `eval_permanent_fields` strips `kind` from the predicate it delegates to
+     `eval_card_fields` (which used the printed-data card-search matcher
+     `kind_matches_card_search`, with no Token→Digimon coalescing). The
+     authoritative permanent-kind check is now solely `kind_matches_field(want,
+     synth_identity.kind)` — which also correctly makes a `TreatAsDigimon` Tamer
+     (e.g. BT21-044's treated Marcus) satisfy `kind: digimon` field selection, a
+     latent bug the card-search matcher had been masking.
+- **Pinned by** `judge_quiz::f_token_and_memory::q12_token_placeable_as_digivolution_card_unsuspends`
+  (now un-ignored, uses the REAL `TOKEN_PETRIFICATION` permanent — not a Digimon
+  stand-in). Test cmd: `cargo test --manifest-path code/digimon-engine/Cargo.toml
+  --features dsl-yaml-loader --test judge_quiz q12_token_placeable`.
+- **Regression pass:** full `cargo test --features dsl-yaml-loader` green except 4
+  pre-existing `cost_hooks` failures unrelated to this change. One test surfaced the
+  corrected `TreatAsDigimon`-as-Digimon behavior (`bt21_044_on_play_marcus_grants_expire_at_end_of_turn`
+  — it auto-drove the now-legal Marcus attack to game-over, skipping end_turn);
+  updated to decline the optional attack. The per-card `bt24_059` stand-in fixture
+  still passes (validates "any placed permanent counts"); the token-specific pin now
+  lives in the judge_quiz Q12 test.
 
 - **First seen:** 2026-05-29, judge-quiz Q12 pin attempt (`batch-implement-cards-rust-dsl` first wave). The DSL `kind: digimon` target filter lowers to `kind_matches_field` (`code/digimon-engine/src/dsl_cards/predicate.rs` ~2826), which matches `CardKind::Digimon | CardKind::Dual` but NOT `CardKind::Token`. A Petrification token on the field is therefore filtered OUT of a "select 1 of your Digimon" candidate set.
 - **Judge rule (Q12):** a token placed as a digivolution card counts; a Digimon token IS a Digimon on the field. DCGO `BT24_059.cs` uses `IsPermanentExistsOnOwnerBattleAreaDigimon` -> `Permanent.IsDigimon`, and a token's card entity includes `CardKind.Digimon`. So BT24-059's inherited `[When Attacking]` (place 1 of your other Digimon as a source -> unsuspend) should accept the Petrification token as the placed Digimon -> the Digimon unsuspends.
@@ -806,7 +836,32 @@ suspend/unsuspend event context with by_effect"). EX6-004 stays BLOCKED (no card
 authored — no stub) until this lands.
 
 
-### §Mass DP debuff applied as a one-time snapshot, not continuous (G-CONTINUOUS-MASS-DP-DEBUFF) — OPEN
+### §Mass DP debuff applied as a one-time snapshot, not continuous (G-CONTINUOUS-MASS-DP-DEBUFF) — RESOLVED 2026-06-02
+
+- **RESOLVED 2026-06-02** (judge-quiz engine-gaps change). Added a
+  source-independent **floating continuous mass modifier** substrate
+  (`code/digimon-engine/src/floating_modifier.rs`): a data-only descriptor
+  (`CompiledPredicate` filter + `ModifierType` + value + `source_player` +
+  `Expiry` + `pending_skips`) stored on `Game.floating_mass_modifiers`. Each
+  `tick_declarative_effects` re-scans the live candidate set with the predicate
+  (relative to `source_player`, so `of: opponent` stays correct after the source
+  leaves) and installs a `Permanent`-expiry materialized-declarative modifier on
+  every current match — so Digimon entering DURING the window receive it. The
+  descriptor (not the per-permanent entry) is the lifetime authority, pruned at
+  turn-end by `Game::expire_floating_mass_modifiers` (mirroring
+  `ModifierRegistry::expire_end_of_turn`'s `*NextTurn` `pending_skips` semantics),
+  which re-ticks so a `dp_of` read right after turn-end reflects the pruned set.
+- **DSL surface:** `add_modifier` gains `continuous: true` (digimon-dsl
+  `AddModifierArgs` / `CompiledStep::AddModifier`); with a FILTER target it
+  registers a floating descriptor instead of a one-time scan. EX4-074's
+  `[When Digivolving][On Deletion]` mass −5000 is re-authored `continuous: true`.
+- **Pinned by** `judge_quiz::b_deferred_rules_check::q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant`
+  (focused: later-entrant caught, own side untouched, expiry timing) and the full
+  `q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` (un-ignored — the ≤0
+  ShoeShoemon is counted → −6000 debuff). EX4-074's 6 per-card tests updated/green.
+- **Regression:** full `cargo test --features dsl-yaml-loader` green except the 4
+  pre-existing `cost_hooks` failures (unrelated, separately flagged). Test cmd:
+  `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz q14`.
 
 **Surfaced 2026-05-30** (judge-quiz Q14 pin). EX4-074 ShineGreymon: Ruin Mode's
 "[When Digivolving][On Deletion] Until the end of your opponent's next turn, all
@@ -852,6 +907,19 @@ burst-digivolve action resolves, schedule the path's `on_burst_turn_end` steps t
 end of that turn (a delayed/scheduled effect keyed to the burst-digivolution turn); (c) then
 the "DP-less / sub-Lv3 top card can't remain in the battle area" rules-check for the revealed
 Koromon. Likely needs a DebugRunner burst-digivolve driver to pin behaviorally.
+
+**SCOPE UPDATE (2026-06-02):** investigation confirms this is **greenfield, not a
+re-model** — the engine has **no burst-digivolve resolution path at all**, so the
+teardown, the DP-less rules-check, AND `extra_cost` (return-a-Tamer, also
+**unimplemented** — only referenced in `dna_digivolve.rs` exclusion checks) all
+hang off a resolution that does not exist. The burst path is excluded from regular
+digivolve matching (`dna_digivolve.rs:250`) and is not exposed in the action space
+(so it isn't even playable — a rule-17 no-approximations gap on top of the
+teardown gap). Enablers confirmed: `schedule_delayed(EndOfYourTurn, …)` +
+`Game.alt_path_registry` + `Permanent::digivolve`. **Full build plan + the
+confirmed design** in `.claude/plans/rust-engine-gaps-burst-digivolve.md`;
+recommend a dedicated `add-burst-digivolve` OpenSpec change (the `extra_cost`
+executor and action-space exposure are the substantial, design-bearing pieces).
 
 
 ## Open gaps — Puppets archetype interaction-test discovery wave (2026-05-30)

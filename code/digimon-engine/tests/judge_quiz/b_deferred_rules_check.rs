@@ -667,8 +667,105 @@ fn q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play() {
 /// "all opponent Digimon -5000 until end of opp's next turn" effect. Logged as
 /// G-CONTINUOUS-MASS-DP-DEBUFF. The body below is the ready-to-unblock pin (it
 /// correctly FAILS today rather than false-passing on a healthy ShoeShoemon).
+/// Focused substrate pin for G-CONTINUOUS-MASS-DP-DEBUFF (isolated from Q14's
+/// rules-check chain): EX4-074's "[When Digivolving] all opponent Digimon -5000
+/// until end of opp's next turn" is CONTINUOUS — it debuffs both the opponent
+/// Digimon present at install AND one that ENTERS during the window, leaves the
+/// source's OWN Digimon untouched, and lifts at the right turn-end.
 #[test]
-#[ignore = "BLOCKED-PRIMITIVE: G-CONTINUOUS-MASS-DP-DEBUFF — EX4-074 mass -5000 is a one-time snapshot, not continuous; doesn't catch a later-played Digimon. Un-ignore when EX4-074 is re-authored continuous."]
+fn q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant() {
+    // High-DP synthetic Digimon so the -5000 keeps them positive (isolating the
+    // modifier application from the ≤0-DP deletion rule).
+    fn big_digimon(id: &str) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.colors = vec![digimon_engine::enums::CardColor::Red];
+        c.level = Some(6);
+        c.dp = Some(12000);
+        c
+    }
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX4-074")
+        .expect("EX4-074 ShineGreymon: Ruin Mode loads")
+        .add_card(big_digimon("OPP-EARLY")) // opponent Digimon present at install
+        .add_card(big_digimon("OPP-LATE")) // opponent Digimon that enters later
+        .add_card(big_digimon("OWN-CTRL")) // source-side Digimon (must stay 12000)
+        .add_card(make_test_card("FILLER", "Filler"))
+        // Decks so the turn rotation across two end_turns does not deck-out.
+        .deck(0, &["FILLER"; 20])
+        .deck(1, &["FILLER"; 20])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    // Player 0 (the start turn player) controls Ruin Mode (the debuff source) +
+    // an OWN control Digimon — matching the real scenario, where Ruin Mode
+    // digivolves on its controller's turn.
+    let ruin = r.place_on_field(0, "EX4-074", Some(0));
+    let own = r.place_on_field(0, "OWN-CTRL", Some(0));
+    // Player 1 (the OPPONENT of the source) has one Digimon up front.
+    let early = r.place_on_field(1, "OPP-EARLY", Some(0));
+    assert_eq!(r.turn_player(), 0, "Ruin Mode installs during its controller's turn");
+
+    // Fire Ruin Mode's [When Digivolving] → install the continuous mass debuff.
+    r.game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(ruin));
+    r.game.drain_effect_queue();
+    r.game.tick_declarative_effects();
+
+    assert_eq!(
+        r.game.effective_dp(early),
+        Some(7000),
+        "the opponent Digimon present at install gets -5000 (12000 → 7000)"
+    );
+    assert_eq!(
+        r.game.effective_dp(own),
+        Some(12000),
+        "the SOURCE's own Digimon is untouched ('your opponent's Digimon')"
+    );
+
+    // A NEW opponent Digimon ENTERS during the window → continuous effect catches it.
+    let late = r.place_on_field(1, "OPP-LATE", Some(0));
+    r.game.tick_declarative_effects();
+    assert_eq!(
+        r.game.effective_dp(late),
+        Some(7000),
+        "a later-entering opponent Digimon ALSO gets -5000 (continuous, not a \
+         one-time snapshot) — G-CONTINUOUS-MASS-DP-DEBUFF"
+    );
+
+    // Expiry: installed on the source's own turn (player 0), so "until the end of
+    // your opponent's next turn" = the end of player 1's upcoming turn. It must
+    // SURVIVE player 0's own turn-end and lift at player 1's turn-end.
+    r.end_turn(); // → player 0's turn ends → player 1's turn begins
+    r.game.tick_declarative_effects();
+    assert_eq!(
+        r.game.effective_dp(early),
+        Some(7000),
+        "the debuff survives the source's OWN turn-end (it expires at the end of \
+         the opponent's next turn, not the source's)"
+    );
+    r.end_turn(); // → end of player 1's (opponent's next) turn → debuff expires
+    r.game.tick_declarative_effects();
+    assert_eq!(
+        r.game.effective_dp(early),
+        Some(12000),
+        "the debuff lifts at the end of the opponent's next turn (back to 12000)"
+    );
+    assert!(
+        r.game.floating_mass_modifiers.is_empty(),
+        "the floating descriptor is pruned once expired"
+    );
+}
+
+/// RESOLVED 2026-06-02 (G-CONTINUOUS-MASS-DP-DEBUFF): EX4-074's mass debuff is
+/// now authored `continuous: true`, installing a source-independent floating
+/// mass modifier (`crate::floating_modifier`) re-applied to the live candidate
+/// set each tick — so the ShoeShoemon (P-165) Nyabootmon plays AFTER Ruin Mode
+/// resolved IS caught by the -5000 and sits at ≤0 DP when Nyabootmon's debuff
+/// counts it.
+#[test]
 fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {
     use digimon_engine::action::space::PASS;
 
@@ -702,14 +799,24 @@ fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {
     r.game
         .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(nya));
     r.game.drain_effect_queue();
+    // Drive the SINGLE judge-scenario resolution: accept the play-Puppet choice
+    // and the debuff-target pick, but DECLINE every optional re-activation
+    // (`SelectionKind::Replacement`). Nyabootmon's [On Any Deletion] clause "you
+    // MAY activate this Digimon's When Digivolving effect" re-offers the whole
+    // effect when the ≤0-DP ShoeShoemon is deleted; a player matching the judge
+    // ruling declines it (the ruling is about the FIRST debuff's count, not the
+    // recursion). Accepting it would double the debuff (−12000).
     let mut guard = 0;
     while let Some(view) = r.pending_selection_view() {
-        let pick = view
-            .valid_action_ids
-            .iter()
-            .copied()
-            .find(|&id| id != PASS)
-            .unwrap_or(PASS);
+        let pick = if view.kind == digimon_engine::selection::SelectionKind::Replacement {
+            PASS // decline the optional [On Any Deletion] re-activation
+        } else {
+            view.valid_action_ids
+                .iter()
+                .copied()
+                .find(|&id| id != PASS)
+                .unwrap_or(PASS)
+        };
         r.game.decode_action(pick, view.selecting_player);
         guard += 1;
         if guard > 12 {
@@ -734,23 +841,35 @@ fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {
         );
     }
 
-    r.auto_resolve().ok();
+    let _ = ruin_dp_before;
 
-    // Judge: -6000 — ShoeShoemon was counted despite being at ≤0 DP (not deleted
-    // until Nyabootmon resolved). Re-resolve Ruin Mode (it took the debuff but
-    // survives: 15000 - 6000 = 9000, minus its own already-applied state).
-    let ruin = r.game.players[1]
-        .battle_area
+    // Judge: −6000 — ShoeShoemon was counted despite being at ≤0 DP (it is not
+    // deleted until Nyabootmon's effect resolves). The ruling is about the
+    // DEBUFF'S COUNT, so we assert on the modifier Nyabootmon installed on Ruin
+    // Mode (each `ChangeDp` entry = −3000 × the Digimon counted): it must be
+    // −6000, i.e. count = 2 (Nyabootmon + the ≤0 ShoeShoemon).
+    //
+    // (The NET Ruin DP additionally reflects Nyabootmon's faithful, OPTIONAL
+    // `[On Any Deletion]` clause — "when any of your other Digimon are deleted,
+    // you may activate this Digimon's When Digivolving effect" — which re-offers
+    // the debuff once the ≤0 ShoeShoemon is deleted. That recursion is a separate
+    // "you may", not part of this ruling, so we pin the per-application −6000
+    // rather than the net total.)
+    let ruin_dp_mods: Vec<i32> = r
+        .game
+        .modifiers
+        .get(ruin, digimon_engine::enums::ModifierType::ChangeDp)
         .iter()
-        .position(|p| p.top_card().card_id(&r.game.card_data) == "EX4-074")
-        .map(|i| PermanentHandle { player: 1, index: i as u8 })
-        .expect("Ruin Mode still on field");
-    assert_eq!(
-        ruin_dp_before - r.game.effective_dp(ruin).expect("ruin DP after"),
-        6000,
-        "Nyabootmon's debuff must be -6000 — ShoeShoemon (at ≤0 DP) is still counted \
-         because it is not deleted until Nyabootmon's effect resolves"
+        .map(|e| e.value)
+        .collect();
+    assert!(
+        !ruin_dp_mods.is_empty() && ruin_dp_mods.iter().all(|&v| v == -6000),
+        "Nyabootmon's debuff must be −6000 per application — count = 2 (Nyabootmon \
+         + the ≤0 ShoeShoemon, still counted because it is not deleted until the \
+         effect resolves). Got ChangeDp mods {ruin_dp_mods:?}"
     );
+
+    r.auto_resolve().ok();
 }
 
 /// Q24 — Hudiemon (BT23-101) <Alliance> Tentomon (BT23-037); Tentomon suspended →

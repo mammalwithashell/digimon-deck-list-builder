@@ -202,18 +202,141 @@ fn q11_non_opt_gravity_crush_refires_memory_four() {}
 /// NOT substitute a Digimon stand-in here (that would false-pass); the scenario
 /// stays `#[ignore]`-blocked on the named gap.
 ///
-/// Fix (out of scope for the test-only change that surfaced this): the
-/// field-permanent `kind: digimon` matcher must treat a battle-area
-/// `CardKind::Token` permanent as a Digimon (tokens ARE Digimon per the rules
-/// manual / glossary). Once that lands, restore the authored body (spawn the
-/// real `TOKEN_PETRIFICATION` permanent, fire the carrier's inherited
-/// [When Attacking], assert the token is a legal placement pick → carrier
-/// unsuspends → token has become a digivolution source).
+/// RESOLVED 2026-06-02 (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT): the
+/// field-permanent `kind: digimon` matcher (`kind_matches_field`,
+/// predicate.rs) now treats a battle-area `CardKind::Token` permanent as a
+/// Digimon (tokens ARE Digimon per the rules manual / glossary). So a REAL
+/// `TOKEN_PETRIFICATION` permanent is now a legal "1 of your other Digimon"
+/// placement pick for Sharkmon's (BT24-059) inherited `[When Attacking]`, the
+/// carrier unsuspends, and the token becomes its bottom digivolution source.
+/// This uses the real token (no Digimon stand-in), so it pins the
+/// token-as-Digimon rule Q12 turns on — not merely "any 1-card permanent
+/// counts" (which the per-card `bt24_059` stand-in fixture already covers).
 #[test]
-#[ignore = "ENGINE GAP G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT: BT24-059's inherited \
-place filter `kind: digimon` (kind_matches_field) rejects CardKind::Token, so a \
-Petrification token is not offered as 'one of your other Digimon'. Judge Q12 says a \
-token counts. Pinning faithfully requires the real token (no Digimon stand-in), \
-which the engine filters out — refusing to false-pass per the suite's discover-\
-then-pin rule. Promote once tokens match `kind: digimon` for field selection."]
-fn q12_token_placeable_as_digivolution_card_unsuspends() {}
+fn q12_token_placeable_as_digivolution_card_unsuspends() {
+    use digimon_engine::action::space::{encode_attack, PASS, REPLACEMENT_ACCEPT};
+    use digimon_engine::enums::{CardColor, EffectTiming};
+    use digimon_engine::permanent::PermanentHandle;
+    use digimon_engine::selection::{SelectionKind, TriggerSource};
+
+    // Carrier (Lv.6 Black Digimon) sits on top of a real Sharkmon (BT24-059)
+    // source, which contributes the inherited `[When Attacking]` clause.
+    let mut carrier = make_test_card("CARRIER", "Carrier");
+    carrier.card_kind = CardKind::Digimon;
+    carrier.colors = vec![CardColor::Black];
+    carrier.level = Some(6);
+    carrier.dp = Some(8000);
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT24-059")
+        .expect("BT24-059 Sharkmon loads")
+        .add_card(carrier)
+        // TEST-023's [On Play] is `ctx.play_token(player, "petrification")` —
+        // the supported path to materialize a REAL Petrification token.
+        .add_card(make_test_card("TEST-023", "PlayPetrificationToken"))
+        .hand(0, &["TEST-023"])
+        .memory(5) // pre-fund TEST-023's default play cost
+        .start();
+    r.skip_mulligan();
+
+    // Sharkmon (bottom source) + carrier (top) → the inherited effect is live.
+    r.place_stack(0, &["BT24-059", "CARRIER"]);
+    // Spawn a real Petrification token on P0's field (TEST-023 [On Play]).
+    r.play(0, 0);
+
+    // Remove the TEST-023 permanent so the ONLY "other Digimon" on P0's field is
+    // the real token — a clean pin that a `CardKind::Token` permanent is offered.
+    let test023_idx = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "TEST-023")
+        .expect("TEST-023 permanent on field");
+    r.game.players[0].delete_permanent(test023_idx);
+
+    // Locate the real token and confirm its kind.
+    let token_idx = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
+        .expect("Petrification token on field");
+    assert_eq!(
+        r.game.players[0].battle_area[token_idx]
+            .top_card()
+            .card_kind(&r.game.card_data),
+        CardKind::Token,
+        "the placement candidate is a real CardKind::Token (not a Digimon stand-in)"
+    );
+    let token_handle = PermanentHandle {
+        player: 0,
+        index: token_idx as u8,
+    };
+
+    // Carrier handle + suspend it so the unsuspend is observable.
+    let carrier_idx = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "CARRIER")
+        .expect("carrier on field");
+    let carrier = PermanentHandle {
+        player: 0,
+        index: carrier_idx as u8,
+    };
+    r.game.players[0].battle_area[carrier_idx].is_suspended = true;
+
+    // Fire the carrier's inherited `[When Attacking]` (OPTIONAL) → first an
+    // accept/decline prompt installs (G-OUTER-OPTIONAL-NOT-INSTALLED); accept it.
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    r.game.drain_effect_queue();
+    let accept_view = r
+        .pending_selection_view()
+        .expect("the optional [When Attacking] accept/decline prompt installs");
+    assert_eq!(
+        accept_view.kind,
+        SelectionKind::Replacement,
+        "optional triggered clause first offers accept/decline"
+    );
+    r.execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept the optional [When Attacking] effect");
+
+    // Now the placement selection installs.
+    let view = r
+        .pending_selection_view()
+        .expect("Q12: the placement selection must install (token is a candidate)");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    // The token's select action must be offered — the load-bearing assertion.
+    let token_action = encode_attack(0, token_handle.index as u16);
+    assert!(
+        view.valid_action_ids.contains(&token_action),
+        "Q12: a real Petrification token (CardKind::Token) must be a legal \
+         'place 1 of your other Digimon' pick (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT)"
+    );
+    assert!(
+        !view.valid_action_ids.iter().any(|a| *a != PASS && *a != token_action),
+        "the token is the only non-PASS placement candidate (TEST-023 removed)"
+    );
+
+    r.execute_action(0, token_action)
+        .expect("place the Petrification token as the carrier's bottom source");
+    r.game.drain_effect_queue();
+    let _ = r.auto_resolve();
+
+    // Judge Q12: YES — the carrier unsuspends.
+    let carrier_idx = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "CARRIER")
+        .expect("carrier still on field");
+    assert!(
+        !r.game.players[0].battle_area[carrier_idx].is_suspended,
+        "Q12: placing the token as a source unsuspends the carrier (judge: YES)"
+    );
+    // The token is no longer a standalone permanent — it became a source.
+    assert!(
+        !r.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token),
+        "the token left the battle area as a standalone permanent (placed as a source)"
+    );
+}

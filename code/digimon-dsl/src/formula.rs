@@ -193,6 +193,24 @@ pub enum PerSelector {
     },
     CardCountInZone(CardCountInZoneSpec),
     DistinctColorsCount(CardCountInZoneSpec),
+    /// Count of the effect carrier's *own* digivolution sources (the cards
+    /// beneath its top card) that match `filter`. YAML form:
+    /// `source_stack_count: { filter: { any_of: [...] } }`. Composes inside a
+    /// `base_per_delta` so a card can scale a numeric (e.g. a DP cap) by the
+    /// number of its sources matching a trait — EX3-014 Dorbickmon's "for each
+    /// card with [Dragon]/[saur]/[Ceratopsian] in this Digimon's digivolution
+    /// cards, add 2000 to the maximum DP". Unlike the top-level `source_stack_count`
+    /// FormulaSpec (which yields a raw count and cannot be offset/scaled), this
+    /// is a `per` selector. Sources are always those of `ctx.source_permanent`.
+    /// G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
+    SourceStackCount(SourceStackCountSpec),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SourceStackCountSpec {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<Box<crate::predicate::PredicateSpec>>,
 }
 
 impl Serialize for PerSelector {
@@ -247,6 +265,11 @@ impl Serialize for PerSelector {
             Self::DistinctColorsCount(spec) => {
                 let mut outer = serializer.serialize_map(Some(1))?;
                 outer.serialize_entry("distinct_colors_count", spec)?;
+                outer.end()
+            }
+            Self::SourceStackCount(spec) => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                outer.serialize_entry("source_stack_count", spec)?;
                 outer.end()
             }
         }

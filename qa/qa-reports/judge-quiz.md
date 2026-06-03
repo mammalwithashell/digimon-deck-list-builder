@@ -37,9 +37,9 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 | 9 | D | After both trashed; NO memory | BLOCKED-CARD | BT23-102, BT15-037 | `d::q9_gatomon_not_in_battle_area_during_removal_no_memory` |
 | 10 | F | 0 | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q10_multi_effect_memory_arithmetic_ends_at_zero` |
 | 11 | F | 4 (Gravity Crush not OPT) | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q11_non_opt_gravity_crush_refires_memory_four` |
-| 12 | F | YES, unsuspends | BLOCKED-PRIMITIVE | BT24-059 authored, but `G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`: the `kind: digimon` field filter (`kind_matches_field`) matches `Digimon`/`Dual` but NOT `Token`, so the Petrification token is excluded from BT24-059's placement candidates. (The per-card test passes only with a Digimon stand-in.) | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
+| 12 | F | YES, unsuspends | **PASS** | RESOLVED 2026-06-02 (`G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`): `kind_matches_field` now coalesces `Token` into `Digimon`, and `eval_permanent_fields` defers permanent-kind to the (token-aware) `synth_identity` check — so a REAL Petrification token is a legal placement pick. Test un-ignored with the real `TOKEN_PETRIFICATION` permanent (not a Digimon stand-in). Regression-clean. | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
 | 13 | B | −6000 DP | **PASS** | Pinned 2026-05-30: BT22-042 Nyabootmon's `-3000 × (your Digimon)` is counted (2: Nyabootmon + ShoeShoemon) BEFORE ShoeShoemon (P-165)'s deferred `[On Play]` adds a Familiar token → −6000 (token not counted; a count of 3 would give −9000). | `b::q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play` |
-| 14 | B | −6000 DP | BLOCKED-PRIMITIVE | All cards implemented, but `G-CONTINUOUS-MASS-DP-DEBUFF`: EX4-074 Ruin Mode's "all opp Digimon −5000 until EoNT" is a one-time snapshot (`add_modifier` filter-target), not a continuous effect — it doesn't catch a ShoeShoemon played later (verified: stays 4000, not −1000), so the "≤0-but-still-counted" scenario can't be reproduced. Faithful pin body written + `#[ignore]`'d. | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
+| 14 | B | −6000 DP | **PASS** | RESOLVED 2026-06-02 (`G-CONTINUOUS-MASS-DP-DEBUFF`): EX4-074 re-authored `continuous: true` → a source-independent floating mass modifier catches the later-played ShoeShoemon at ≤0 DP, which is still counted → Nyabootmon's debuff is −6000 (count 2). Asserts the per-application debuff value (the ruling) — the net Ruin DP additionally reflects Nyabootmon's faithful OPTIONAL `[On Any Deletion]` recursion. Focused substrate pin: `b::q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant`. | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
 | 15 | E | Gallantmon (X Antibody) topmost | BLOCKED-CARD | BT19-073, BT17-016, BT12-016, EX3-057 | `e::q15_sequential_de_digivolve_halted_by_x_antibody_immunity` |
 | 16 | E | NO (`<Partition>` not triggered) | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX6-057 Lilithmon authored + granted body runs as the carrier's own effect (D4/DCGO), so the granted self-delete is OwnEffect → `<Partition>` cause-filter skips it | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
 | 17 | A | NO | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: BT16-102 Magnamon X + EX6-057 authored; the granted-trigger dispatch suppresses a granted opponent effect when the carrier is immune to the grantor (`permanent_is_unaffected_by_effect`). BT21-036 not needed (its only role was an Armor-Form source — staged synthetically) | `a::q17_magnamon_x_immunity_removes_granted_eot_delete` |
@@ -50,9 +50,9 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 | 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
 | 23 | D/F | 1 memory | PASS | Engine already correct (2026-05-30, run to completion): trashing 3 Tumblemon mid-effect enqueues 3 mandatory `OnDigivolutionCardTrashed` observers → multi-trigger `TriggerOrder` selection PARKS them past Medusamon's return-2; on resolution each clause condition is re-evaluated, dropping the 2 returned cards → only the 1 still in trash fires (+1). The earlier `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a mischaracterization (single-source probe + abstract reasoning, never run end-to-end). No engine change needed. | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
 | 24 | B | Hudiemon DP 3000 | BLOCKED-PRIMITIVE | BT23-101, BT23-037, BT16-101, ST17-07 implemented; needs EX6-004 (Kokomon), itself BLOCKED on `G-SUSPEND-EFFECT-INITIATED` (suspend event carries no by_effect bit, so Kokomon's "when an EFFECT suspends" is un-gatable). | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
-| 25 | E | YES (DigiXros departure ≠ battle) | BLOCKED-CARD | EX3-014 (1 away) | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
-| 26 | C | Returns to hand | BLOCKED-CARD | EX3-014 (1 away) | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
-| 27 | C | Pays 0 memory | BLOCKED-CARD | EX3-014 (1 away) | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
+| 25 | E | YES (DigiXros departure ≠ battle) | BLOCKED-PRIMITIVE | EX3-014 authored (2026-06-03); scenario now staged through real DigiXros play → discovered `G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER`: DigiXros material consumption raw-removes from battle area without firing `WhenWouldLeaveBattleArea`, so BT17-095's `[All Turns]` leave observer can't fire. | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
+| 26 | C | Returns to hand | BLOCKED-PRIMITIVE | EX3-014 authored; staged → `G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER` + `G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND` (DigiXros pays the reduced cost before consuming materials, no post-material-loss recompute / return-to-hand). Captured: Dorbickmon entered the field instead of returning to hand. | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
+| 27 | C | Pays 0 memory | BLOCKED-PRIMITIVE | Same gaps as Q26. Captured: memory 10→7 (reduced DigiXros cost paid) instead of 0. | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
 | 28 | A | YES, plays AND activates | BLOCKED-PRIMITIVE | BT20-059 Gankoomon X authored (first wave; protection verified to dodge the lock via `can_affect_permanent`); EX5-060 Dragomon BLOCKED on `G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED` + `G-EVENT-PLAYED-LEVEL-FORMULA` | `a::q28_gankoomon_x_protection_beats_dragomon_on_play_lock` |
 | 29 | E | 3 legal stacks | BLOCKED-CARD | BT10-093, EX10-039, EX10-044, EX10-059, EX10-056, EX10-031 | `e::q29_legal_digixros_stack_orderings_with_yuu_amano` |
 | 30 | C/E | Suspend both w/ cost reduction | BLOCKED-CARD | BT20-037, BT20-036, EX3-063, BT16-077, EX3-008 | `c::q30_partition_interruptive_suspends_both_with_cost_reduction` |
@@ -61,12 +61,28 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 14 | 3, 4, 9, 10, 11, 15, 19, 20, 21, 25, 26, 27, 29, 30 |
-| BLOCKED-PRIMITIVE | 6 | 8, 12, 14, 18, 24, 28 |
+| BLOCKED-CARD | 11 | 3, 4, 9, 10, 11, 15, 19, 20, 21, 29, 30 |
+| BLOCKED-PRIMITIVE | 7 | 8, 18, 24, 25, 26, 27, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 10 | 1, 2, 5, 6, 7, 13, 16, 17, 22, 23 |
+| PASS | 12 | 1, 2, 5, 6, 7, 12, 13, 14, 16, 17, 22, 23 |
 
-(Counts: 14 + 6 + 0 + 10 = 30 of 30.)
+(Counts: 11 + 7 + 0 + 12 = 30 of 30.)
+
+Q25/Q26/Q27 moved BLOCKED-CARD → **BLOCKED-PRIMITIVE** (2026-06-03): EX3-014 Dorbickmon
+was authored (DSL — closing 2 DSL substrate gaps: per-source-stack-count-filtered
+formula + `trait_contains` substring predicate), unblocking the cards. Staging the
+three scenarios through real DigiXros play then discovered the *true* blockers are
+two DigiXros engine gaps — `G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER` (material removal
+fires no leave trigger) and `G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND` (no
+declare-then-pay recompute/return when a material vanishes mid-resolution). The
+discover-then-pin pin is the campaign's core value: authoring the card surfaced the
+real engine work.
+
+Q12 + Q14 moved BLOCKED-PRIMITIVE → **PASS** (2026-06-02, judge-quiz engine-gaps
+change): `G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT` closed (field `kind: digimon` now
+matches battle-area tokens) and `G-CONTINUOUS-MASS-DP-DEBUFF` closed (new
+source-independent floating continuous mass-modifier substrate + `add_modifier
+continuous: true`; EX4-074 re-authored).
 
 Q23 moved BLOCKED-PRIMITIVE → PASS (2026-05-30): the documented
 `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a MISCHARACTERIZATION. Running

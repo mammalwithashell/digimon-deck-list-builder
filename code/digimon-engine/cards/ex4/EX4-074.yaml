@@ -54,6 +54,13 @@ effects:
     summary: "[When Digivolving][On Deletion] All opponent Digimon -5000 DP until end of opponent's next turn"
     process:
       - add_modifier:
+          # CONTINUOUS (G-CONTINUOUS-MASS-DP-DEBUFF): a one-time scan would only
+          # debuff the opponent Digimon present at install time. "Until the end of
+          # your opponent's next turn, ALL of your opponent's Digimon get -5000DP"
+          # is continuous — it also catches Digimon that ENTER during the window —
+          # and survives this card leaving the field (the clause is also
+          # [On Deletion]). So install a source-independent floating mass modifier.
+          continuous: true
           target: { of: opponent, kind: digimon }
           modifier: ChangeDp
           value: -5000

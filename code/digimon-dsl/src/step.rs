@@ -1914,6 +1914,16 @@ pub struct AddModifierArgs {
     /// is live; lowers to `ModifierPayload::SynthIdentity`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub synth_identity: Option<SynthIdentitySpec>,
+    /// CONTINUOUS mass modifier: instead of a one-time scan over the CURRENT
+    /// matches, install a source-independent floating effect re-applied to the
+    /// live candidate set every tick — so Digimon that ENTER during the window
+    /// also receive it ("Until [turn], all of your opponent's Digimon get ±X").
+    /// Only meaningful with a `target:` FILTER (a single-permanent `bind:` target
+    /// is one-shot). The `expiry` governs the window; the effect survives the
+    /// source leaving the field (e.g. an `[On Deletion]` install).
+    /// G-CONTINUOUS-MASS-DP-DEBUFF.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub continuous: bool,
 }
 
 /// The synthetic Digimon identity a permanent is "treated as" while a

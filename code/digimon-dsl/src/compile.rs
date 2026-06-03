@@ -369,6 +369,16 @@ fn compile_per_selector(
                 ))
             }),
         },
+        S::SourceStackCount(spec) => CompiledPerSelector::SourceStackCountFiltered {
+            filter: spec.filter.as_ref().map(|filter| {
+                Box::new(compile_predicate(
+                    filter,
+                    &format!("{prefix}.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
+        },
     }
 }
 
@@ -599,6 +609,7 @@ fn compile_predicate(
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
         trait_has: p.trait_has.clone(),
+        trait_contains: p.trait_contains.clone(),
         form_is: p.form_is.clone(),
         attribute_is: p.attribute_is.clone(),
         name_is: p.name_is.clone(),
@@ -2283,6 +2294,7 @@ fn compile_step(
             value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
             synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
+            continuous: a.continuous,
         },
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
             target_player: compile_player_ref(a.target_player),

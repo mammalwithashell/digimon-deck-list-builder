@@ -7,7 +7,7 @@ use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
-use crate::enums::{GamePhase, ModifierType, PlayerId};
+use crate::enums::{Expiry, GamePhase, ModifierType, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
@@ -254,6 +254,11 @@ pub struct Game {
     pub(crate) alt_path_registry: HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>,
     /// Active modifiers (DP buffs, granted keywords, etc.) attached to permanents.
     pub modifiers: ModifierRegistry,
+    /// Source-independent continuous mass modifiers (e.g. "all opponent Digimon
+    /// get -5000DP until end of opponent's next turn"). Re-applied to a live
+    /// candidate set every `tick_declarative_effects`; pruned at turn-end. See
+    /// `crate::floating_modifier`.
+    pub floating_mass_modifiers: Vec<crate::floating_modifier::FloatingMassModifier>,
     /// Card effect registry — maps card_id to effect implementations.
     pub effect_registry: CardEffectRegistry,
     /// Runtime callbacks for DSL `raw_rust` formulas.
@@ -877,6 +882,7 @@ impl Game {
             #[cfg(feature = "dsl-yaml-loader")]
             alt_path_registry,
             modifiers: ModifierRegistry::new(),
+            floating_mass_modifiers: Vec::new(),
             effect_registry: build_registry(),
             formula_extensions: FormulaExtensionRegistry::empty(),
             token_registry,
@@ -1005,6 +1011,7 @@ impl Game {
         // card_data / alt_path_registry / effect_registry / formula_extensions
         // / token_registry intentionally preserved (immutable shared state).
         self.modifiers = ModifierRegistry::new();
+        self.floating_mass_modifiers = Vec::new();
         // Reseed deterministically — mirrors the historical backward-seek
         // rebuild path (`Game::new(.., Some(0))`).
         self.rng = StdRng::seed_from_u64(0);
@@ -3645,6 +3652,113 @@ impl Game {
                     process(&mut ctx);
                 }
             }
+        }
+
+        // Source-independent floating mass modifiers: re-scan the live candidate
+        // set with each descriptor's predicate (relative to its `source_player`)
+        // and install a materialized-declarative modifier on every current match
+        // — so Digimon entering during the window receive the effect too
+        // (G-CONTINUOUS-MASS-DP-DEBUFF). Cleared at the top of every tick along
+        // with the source-bound declaratives; the descriptors themselves are
+        // pruned at turn-end by `expire_floating_mass_modifiers`.
+        if !self.floating_mass_modifiers.is_empty() {
+            let floating = self.floating_mass_modifiers.clone();
+            for fm in &floating {
+                let mut ctx = crate::effect_context::EffectContext::new(
+                    self,
+                    fm.source_card,
+                    None,
+                    fm.source_player,
+                );
+                let matches = crate::dsl_cards::step::permanent_scan::scan(&ctx, &fm.filter, None);
+                for h in matches {
+                    // `Expiry::Permanent`: the per-permanent materialized entry is
+                    // tick-ephemeral (cleared + re-installed every tick), so it must
+                    // NOT be expired by the per-turn `expire_end_of_turn` pass — the
+                    // floating DESCRIPTOR (pruned by `expire_floating_mass_modifiers`)
+                    // is the sole lifetime authority. Using `fm.expiry` here would
+                    // expire the entry one turn-end early relative to the descriptor
+                    // (`*NextTurn` skips live on the descriptor, not the entry).
+                    ctx.add_declarative_modifier(h, fm.modifier, fm.value, Expiry::Permanent);
+                }
+            }
+        }
+    }
+
+    /// Register a source-independent continuous mass modifier (see
+    /// `crate::floating_modifier`). Computes the `*NextTurn` skip count at
+    /// install time (mirroring `ModifierEntry` installs) and materializes it
+    /// immediately so it is visible without waiting for the next tick.
+    pub fn add_floating_mass_modifier(
+        &mut self,
+        filter: digimon_dsl::compiled::CompiledPredicate,
+        modifier: ModifierType,
+        value: i32,
+        source_card: crate::card_source::CardHandle,
+        source_player: PlayerId,
+        expiry: Expiry,
+    ) {
+        let pending_skips = crate::modifiers::pending_skips_for_install(
+            expiry,
+            source_player,
+            self.turn_player(),
+        );
+        self.floating_mass_modifiers
+            .push(crate::floating_modifier::FloatingMassModifier {
+                filter,
+                modifier,
+                value,
+                source_card,
+                source_player,
+                expiry,
+                pending_skips,
+            });
+        self.tick_declarative_effects();
+    }
+
+    /// Prune floating mass modifiers whose turn-relative expiry fires at the end
+    /// of `ending_player`'s turn. Mirrors `ModifierRegistry::expire_end_of_turn`
+    /// (same `pending_skips` `*NextTurn` skip semantics). Called from
+    /// `Game::end_turn` alongside the per-permanent / per-player expiry passes.
+    pub fn expire_floating_mass_modifiers(&mut self, ending_player: PlayerId) {
+        let had_any = !self.floating_mass_modifiers.is_empty();
+        self.floating_mass_modifiers.retain_mut(|fm| {
+            // Does THIS turn-end concern this descriptor's expiry?
+            let relevant = match fm.expiry {
+                // Fires on every turn-end.
+                Expiry::EndOfTurn => true,
+                // Fires when the ending turn is the source's opponent's.
+                Expiry::EndOfOpponentsTurn | Expiry::EndOfOpponentsNextTurn => {
+                    ending_player != fm.source_player
+                }
+                // Fires when the ending turn is the source's own.
+                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
+                    ending_player == fm.source_player
+                }
+                // Not turn-end-relative — not expired here.
+                Expiry::Permanent
+                | Expiry::EndOfAttack
+                | Expiry::EndOfBattle
+                | Expiry::UntilLeaveField
+                | Expiry::UntilCondition
+                | Expiry::OnceUsed(_) => false,
+            };
+            if !relevant {
+                return true;
+            }
+            if fm.pending_skips > 0 {
+                fm.pending_skips -= 1;
+                return true; // `*NextTurn` skip — survive this turn-end
+            }
+            false // expired → drop
+        });
+        // Refresh materialized state so a `dp_of`/`effective_dp` read taken right
+        // after the turn-end (before the next action's tick) reflects the pruned
+        // set: clear the tick-ephemeral materialized entries and re-install only
+        // from the descriptors that survived. Scoped to games that actually use
+        // floating modifiers (`had_any`) so it never perturbs other games.
+        if had_any {
+            self.tick_declarative_effects();
         }
     }
 

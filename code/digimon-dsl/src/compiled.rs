@@ -243,6 +243,10 @@ pub struct CompiledPredicate {
     pub color_matches_any_field_digimon: Option<CompiledPlayerRef>,
     pub color_matches_binding: Option<String>,
     pub trait_has: Option<String>,
+    /// Substring sibling of `trait_has` — matches when any subject trait
+    /// CONTAINS this token (case-insensitive). Mirrors DCGO
+    /// `ContainsTraits`. G-DSL-TRAIT-CONTAINS-SUBSTRING.
+    pub trait_contains: Option<String>,
     pub form_is: Option<String>,
     pub attribute_is: Option<String>,
     pub name_is: Option<String>,
@@ -579,6 +583,13 @@ pub enum CompiledPerSelector {
     DistinctColorsCountScoped {
         zone: CompiledZone,
         of: CompiledPlayerRef,
+        filter: Option<Box<CompiledPredicate>>,
+    },
+    /// Count of the effect carrier's own digivolution sources (beneath its top
+    /// card) matching `filter`. Composes in `BasePerDelta` to scale a numeric
+    /// by source count. Drives EX3-014's scaling DP cap.
+    /// G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
+    SourceStackCountFiltered {
         filter: Option<Box<CompiledPredicate>>,
     },
 }
@@ -1313,6 +1324,12 @@ pub enum CompiledStep {
         /// the field must always be written or the byte stream desyncs.
         #[serde(default)]
         synth_identity: Option<CompiledSynthIdentity>,
+        /// CONTINUOUS mass modifier (G-CONTINUOUS-MASS-DP-DEBUFF): with a FILTER
+        /// target, register a source-independent floating effect re-applied each
+        /// tick instead of a one-time scan. No `skip_serializing_if` for the
+        /// same bincode round-trip reason as `synth_identity`.
+        #[serde(default)]
+        continuous: bool,
     },
     AddPlayerModifier {
         target_player: CompiledPlayerRef,

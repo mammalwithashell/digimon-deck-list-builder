@@ -49,6 +49,18 @@ pub struct PredicateSpec {
         alias = "subject_trait"
     )]
     pub trait_has: Option<String>,
+    /// Substring sibling of `trait_has`. Matches when ANY of the subject's
+    /// traits CONTAINS this token (case-insensitive substring), mirroring
+    /// DCGO `CardSource.ContainsTraits`. `trait_has` is an EXACT
+    /// case-insensitive match; `trait_contains` is the substring reading
+    /// demanded by printed text of the form "[Dragon], [saur] or
+    /// [Ceratopsian] in any of its traits" — where e.g. `saur` only ever
+    /// appears inside `Dinosaur` / `Plesiosaur` and `Dragon` mostly inside
+    /// `Dragonkin` / `Dark Dragon`. Threaded identically to `trait_has`,
+    /// including synth-identity / `ChangeTraits` overlay visibility.
+    /// G-DSL-TRAIT-CONTAINS-SUBSTRING. Driver: EX3-014 Dorbickmon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trait_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

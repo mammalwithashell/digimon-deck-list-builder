@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-05-30",
+  "last_updated": "2026-06-03",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -6665,6 +6665,24 @@
       "yaml_path": "code/digimon-engine/cards/st6/ST6-16.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
       "audit_note": "Faithful to printed text + DCGO."
+    },
+    "EX3-014": {
+      "card_name": "Dorbickmon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q25/Q26/Q27)",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_014.rs",
+      "test_count": 14,
+      "patterns": [
+        "Rush-static",
+        "OnPlay-delete-scaling-cap",
+        "DigiXros",
+        "standard-digivolve"
+      ],
+      "notes": "Rush + [On Play] delete (DP cap 3000 + 2000 per Dragon/saur/Ceratopsian digivolution source) + DigiXros -2 (5 distinct Dragon-family Digimon). Widened DSL: per-source-stack-count-filtered formula selector + trait_contains substring predicate (mirrors DCGO ContainsTraits)."
     }
   }
 }

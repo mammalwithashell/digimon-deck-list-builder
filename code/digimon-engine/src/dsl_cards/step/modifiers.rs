@@ -203,6 +203,7 @@ pub fn try_run(
             value,
             expiry,
             synth_identity,
+            continuous,
         } => {
             let Some(expiry) = resolve_expiry("add_modifier", expiry) else {
                 return true;
@@ -231,15 +232,38 @@ pub fn try_run(
                     }
                 }
                 CompiledModifierTarget::Filter(pred) => {
-                    // Phase 2d Task 8: scan battle-area, apply modifier to every match.
-                    // Phase 2f2 Task 3: formula evaluation is INSIDE the loop with
-                    // `h` as the target, so per-selectors (StackSize etc.) resolve
-                    // against each matched permanent — NOT hoisted outside.
-                    let matches =
-                        crate::dsl_cards::step::permanent_scan::scan(ctx, pred, Some(bindings));
-                    for h in matches {
-                        let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
-                        install(ctx, h, n);
+                    if *continuous {
+                        // CONTINUOUS mass modifier (G-CONTINUOUS-MASS-DP-DEBUFF):
+                        // register a source-independent floating descriptor that
+                        // re-applies to the live candidate set every tick, instead
+                        // of a one-time scan. The magnitude is resolved ONCE at
+                        // install (these "all X get ±Y until Z" cards use a literal
+                        // ±Y, not a per-permanent formula); `dummy` only seeds the
+                        // value-formula context and is irrelevant for literals.
+                        let dummy = ctx.source_permanent.unwrap_or(PermanentHandle {
+                            player: ctx.player,
+                            index: 0,
+                        });
+                        let n = resolve_modifier_value(value, ctx, dummy, bindings, runtime);
+                        ctx.game.add_floating_mass_modifier(
+                            pred.clone(),
+                            modifier_ty,
+                            n,
+                            ctx.source_card,
+                            ctx.player,
+                            expiry,
+                        );
+                    } else {
+                        // Phase 2d Task 8: scan battle-area, apply modifier to every match.
+                        // Phase 2f2 Task 3: formula evaluation is INSIDE the loop with
+                        // `h` as the target, so per-selectors (StackSize etc.) resolve
+                        // against each matched permanent — NOT hoisted outside.
+                        let matches =
+                            crate::dsl_cards::step::permanent_scan::scan(ctx, pred, Some(bindings));
+                        for h in matches {
+                            let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
+                            install(ctx, h, n);
+                        }
                     }
                 }
             }

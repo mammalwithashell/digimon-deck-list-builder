@@ -46,6 +46,7 @@ mod bt9;
 mod ex1;
 mod ex10;
 mod ex11;
+mod ex3;
 mod ex4;
 mod ex5;
 mod ex6;
