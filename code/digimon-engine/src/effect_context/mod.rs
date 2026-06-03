@@ -5969,7 +5969,57 @@ impl<'a> EffectContext<'a> {
         self.game
             .modifiers
             .grant_keyword(target, keyword, expiry, self.player);
+        self.grant_keyword_triggered_auto_effects(target, keyword, expiry);
         self.game.mark_until_condition_dirty();
+    }
+
+    /// Register the granted keyword's TRIGGERED auto-effect(s) so they fire
+    /// at runtime — not just register the keyword for `has_keyword`.
+    ///
+    /// Passive keywords (Blocker, Reboot, …) are surfaced purely through the
+    /// modifier registry and yield an empty `keyword_to_auto_effect`, so this
+    /// is a no-op for them. Trigger-based keywords (Retaliation, Fortitude,
+    /// Partition, …) carry a plain `process` body in `keyword_to_auto_effect`;
+    /// because `effects_for_card` only synthesizes keyword auto-effects from
+    /// PRINTED + DECLARATIVE-REGISTRY grants (and OnDeletion handlers re-fetch
+    /// effects POST-TRASH, CLAUDE.md rule 25, so any board-position synthesis
+    /// would have vanished by drain time), a runtime modifier grant would
+    /// otherwise never fire. Route each plain-process triggered auto-effect
+    /// through the BOARD-INDEPENDENT granted-triggered store, carrying the
+    /// grant's `expiry`. Replacement-process keywords (Barrier, Evade, …)
+    /// carry no plain `process` and are skipped here.
+    fn grant_keyword_triggered_auto_effects(
+        &mut self,
+        target: PermanentHandle,
+        keyword: Keyword,
+        expiry: Expiry,
+    ) {
+        // Stable identity of the carrier's top card (the granted-triggered body
+        // re-resolves the carrier from `source_permanent` at fire time, so we
+        // only need the keyword's effect template here).
+        let card = match self
+            .game
+            .players
+            .get(target.player as usize)
+            .and_then(|p| p.battle_area.get(target.index as usize))
+        {
+            Some(perm) => perm.top_card().handle(),
+            None => return,
+        };
+        let autos = crate::cards::keyword_effects::keyword_to_auto_effect(keyword, card);
+        for effect in autos {
+            // Only plain-process triggered timings route through the
+            // granted-triggered store. Replacement-process keywords (no plain
+            // `process`) and declarative-only entries are skipped.
+            let Some(process) = effect.process else {
+                continue;
+            };
+            let timing = effect.timing;
+            let process = std::sync::Arc::new(process);
+            self.grant_triggered_effect(target, timing, expiry, move |inner_ctx| {
+                (process)(inner_ctx);
+            });
+        }
     }
 
     pub fn grant_declarative_keyword(
