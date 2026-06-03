@@ -2801,6 +2801,22 @@ impl<'a> EffectContext<'a> {
             "token_registry entry must map to a CardKind::Token CardData row"
         );
 
+        // `CannotPlayDigimonByEffect` (e.g. BT9-033 Pillomon "Players can't play
+        // Digimon by effects") gates token plays too: a Token is a Digimon (every
+        // registered token is a Digimon token — see `token_registry`), and DCGO
+        // routes `PlayToken` through `CanPlayAsNewPermanent` →
+        // `CanNotPutFieldClass(IsDigimon || IsDigiEgg)`, which blocks Digimon
+        // tokens under this lock. Mirror the hand/trash play-gate
+        // (`Game::play_from_hand_with_cost`) so effect-played tokens are blocked
+        // when the controller carries the modifier. (G-PLAY-TOKEN-FLOODGATE.)
+        if self
+            .game
+            .modifiers
+            .player_has(controller, crate::enums::ModifierType::CannotPlayDigimonByEffect)
+        {
+            return None;
+        }
+
         let slots = self.game.rules.field_slots as usize;
         if self.game.player(controller).battle_area.len() >= slots {
             return None;
@@ -6987,5 +7003,63 @@ mod tests {
         let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
         let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
         assert!(ctx.play_token(0, "no-such-token-lol").is_none());
+    }
+
+    /// G-PLAY-TOKEN-FLOODGATE: a Digimon Token is a Digimon, so an effect that
+    /// plays one must be blocked while the controller carries
+    /// `CannotPlayDigimonByEffect` (BT9-033 Pillomon) — matching DCGO's
+    /// `CanPlayAsNewPermanent` → `CanNotPutFieldClass(IsDigimon)` gate.
+    #[test]
+    fn play_token_blocked_by_cannot_play_digimon_by_effect() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        game.modifiers.add_player_modifier(
+            0,
+            crate::modifiers::PlayerModifierEntry::simple(
+                crate::enums::ModifierType::CannotPlayDigimonByEffect,
+                0,
+                crate::enums::Expiry::Permanent,
+                None,
+                0,
+            ),
+        );
+        let before = game.players[0].battle_area.len();
+        let played = {
+            let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+            ctx.play_token(0, "familiar")
+        };
+        assert!(
+            played.is_none(),
+            "token play must be blocked under CannotPlayDigimonByEffect"
+        );
+        assert_eq!(
+            game.players[0].battle_area.len(),
+            before,
+            "no token permanent is created when the floodgate is installed"
+        );
+    }
+
+    /// No-op control: without the floodgate, the same token play succeeds. Pins
+    /// that the gate (not some unrelated failure) is what blocks above.
+    #[test]
+    fn play_token_allowed_without_floodgate() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        let before = game.players[0].battle_area.len();
+        let played = {
+            let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+            ctx.play_token(0, "familiar")
+        };
+        assert!(
+            played.is_some(),
+            "token spawns normally when no floodgate is installed"
+        );
+        assert_eq!(
+            game.players[0].battle_area.len(),
+            before + 1,
+            "one Familiar Token permanent is created"
+        );
     }
 }

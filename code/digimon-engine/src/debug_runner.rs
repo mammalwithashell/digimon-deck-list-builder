@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use crate::card_data::{
-    CardData, DnaCost, DnaRequirement, DualCardData, DualDigimonFace, DualOptionFace,
+    CardData, DnaCost, DnaRequirement, DualCardData, DualDigimonFace, DualOptionFace, EvoCost,
 };
 use crate::card_source::{CardHandle, CardSource};
 use crate::cards::{build_registry, CardEffectRegistry};
@@ -1132,7 +1132,10 @@ fn embedded_dsl_registry() -> Result<&'static digimon_dsl::CardRegistry, String>
 #[cfg(feature = "dsl-yaml-loader")]
 fn card_data_from_compiled(card: &CompiledCard) -> CardData {
     use crate::dsl_cards::modifier_map::lookup_keyword;
-    use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
+    use digimon_dsl::compiled::{
+        CompiledAltPathDirection, CompiledAltPathKind, CompiledClause, CompiledCost,
+        CompiledDeclarativeClause, CompiledScope,
+    };
 
     // Populate native keywords from face-up `grant_keyword` declarative clauses.
     // A `GrantKeyword` clause is semantically equivalent to a printed keyword
@@ -1159,6 +1162,53 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         }
     }
 
+    // Backfill `evo_costs` from compiled `digivolve` alt-paths.
+    //
+    // In production, `data/cards.json` carries the printed digivolution-cost
+    // table (e.g. EX11-022: `[{card_color: 2, level: 4, memory_cost: 4}]`),
+    // which `Game::effect_initiated_digivolve` matches against when an effect
+    // digivolves a card with `ignore_requirements: false` (a cost-reduced
+    // "digivolve into a hand card" Delay/Option effect). DSL-loaded fixtures
+    // never see cards.json, so without this backfill the table is empty and
+    // such effect-initiated digivolves silently no-op (G-DSL-FIXTURE-EVO-COSTS).
+    //
+    // A YAML `kind: digivolve` alt-path with a `from: { level_eq, color_is }`
+    // filter and a literal `cost` is exactly an evo-cost row: the `from` filter
+    // describes the base being digivolved from, and `cost` is its memory cost.
+    // Direction `From` (default) registers the path on this destination card,
+    // so `from` is the base candidate — the evo-cost reading. Direction `Into`
+    // registers on the *source* and describes warping this card into another,
+    // which is not this card's evo cost, so it is skipped. Alt-paths whose
+    // `from` lacks a level or color (e.g. trait-only digivolves) or that carry
+    // a non-literal (formula) cost cannot be expressed as a static row and are
+    // resolved through the alt-path registration machinery instead.
+    let mut evo_costs: Vec<EvoCost> = Vec::new();
+    for ap in &card.alt_paths {
+        if !matches!(ap.kind, CompiledAltPathKind::Digivolve)
+            || !matches!(ap.direction, CompiledAltPathDirection::From)
+        {
+            continue;
+        }
+        let Some(from) = ap.from.as_ref() else {
+            continue;
+        };
+        let (Some(level), Some(color)) = (from.level_eq, from.color_is) else {
+            continue;
+        };
+        let memory_cost = match &ap.cost {
+            Some(CompiledCost::Literal(n)) => (*n).max(0) as u16,
+            _ => continue,
+        };
+        let entry = EvoCost {
+            card_color: compiled_color_to_evo_code(color),
+            level,
+            memory_cost,
+        };
+        if !evo_costs.contains(&entry) {
+            evo_costs.push(entry);
+        }
+    }
+
     CardData {
         card_id: card.card.clone(),
         card_name: card.name.clone(),
@@ -1180,7 +1230,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
             .map(compiled_color_to_engine)
             .collect(),
         traits: card.traits.clone(),
-        evo_costs: Vec::new(),
+        evo_costs,
         dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
@@ -1199,6 +1249,22 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
 #[cfg(feature = "dsl-yaml-loader")]
 pub fn card_data_for_test_from_compiled(card: &CompiledCard) -> CardData {
     card_data_from_compiled(card)
+}
+
+/// Map a compiled color to the raw `evo_costs[*].card_color` integer code
+/// (`cards.json` / Python `CardColor` convention) that
+/// `action::mask::evo_color` decodes when matching digivolution costs.
+#[cfg(feature = "dsl-yaml-loader")]
+fn compiled_color_to_evo_code(color: CompiledColor) -> u8 {
+    match color {
+        CompiledColor::Red => 0,
+        CompiledColor::Blue => 1,
+        CompiledColor::Yellow => 2,
+        CompiledColor::Green => 3,
+        CompiledColor::White => 4,
+        CompiledColor::Black => 5,
+        CompiledColor::Purple => 6,
+    }
 }
 
 #[cfg(feature = "dsl-yaml-loader")]

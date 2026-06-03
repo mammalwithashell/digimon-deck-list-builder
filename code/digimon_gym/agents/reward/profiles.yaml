@@ -107,6 +107,72 @@ profiles:
         draw: 0.0
 
   # ----------------------------------------------------------------
+  # Starter 1-6 flat profile — data-calibrated, gentle shaping for the
+  # six worldwide starter decks (ST-1..6). Flattened ~10-30x vs the
+  # default `gameplay` shape and re-paced for how starters actually win.
+  #
+  # Calibrated from the v22 eval data (1459 starter wins): wins land at
+  # median turn 8 (p25=7, p90=11, max=17); ~3.5% of games are the long
+  # stall tail; median 4 digivolves/win; DNA digivolve NEVER fires (0 of
+  # 1459). So:
+  #   - quick_win_bonus peaks at turn 7 (the fastest realistic win); the
+  #     component's max(0, turn - peak_turn) clamp gives ANY earlier
+  #     outlier win the full +0.15, then it decays to 0 by turn 12.
+  #   - stall_penalty starts at turn 14 (above p90=11) so normal games
+  #     are untouched; only the slow tail / decked-out grinds are nicked.
+  #   - dna_digivolve = 0 (dead weight for starters).
+  #   - the BO3 match_outcome (+/-1.0) dominates; per-game terminal
+  #     +/-0.3; all process shaping is a small subordinate guide.
+  # Used via reward_profile_override="starter1_6_flat".
+  # Invariant: winner_max_penalty 0.5 < win_base - loss (0.6) -> worst
+  # win (-0.2) > worst loss (-0.3).
+  # ----------------------------------------------------------------
+  starter1_6_flat:
+    inherits: gameplay
+    components:
+      - kind: terminal_outcome
+        win_base: 0.3
+        fast_win_bonus_max: 0.0
+        fast_win_par_steps: 200
+        loss: -0.3
+        draw: -0.02
+      - kind: quick_win_bonus
+        peak_turn: 7
+        peak_value: 0.15
+        decay_per_turn: 0.03
+      - kind: stall_penalty
+        threshold_turn: 14
+        scale: 0.01
+        apply_to_winner: true
+        apply_to_loser: true
+        winner_max_penalty: 0.5
+      - kind: step_penalty
+        weight: -0.0003
+      - kind: security_remove
+        weight: 0.04
+      - kind: security_lost
+        weight: -0.02
+      - kind: digivolve
+        weight: 0.01
+      - kind: dna_digivolve
+        weight: 0.0
+      - kind: breeding_digivolve
+        reward_per_level:
+          3: 0.02
+          4: 0.01
+          5: 0.005
+          6: -0.03
+      - kind: digivolve_driven_attack
+        mode: either
+        attacker_min_level: 5
+        reward: 0.03
+        per_card: false
+      - kind: match_outcome
+        win: 1.0
+        loss: -1.0
+        draw: 0.0
+
+  # ----------------------------------------------------------------
   # DNA Omnimon archetype profile.
   #
   # Win condition: assemble Omnimon (BT17-078, AD1-025, BT13-112,

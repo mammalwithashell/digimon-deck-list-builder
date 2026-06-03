@@ -58,23 +58,25 @@ def test_resolve_profiles_canonicalizes_compact_alias(monkeypatch):
     assert all(item.available for item in resolved)
 
 
-def test_real_profile_resolution_includes_compact_lite_and_full():
+def test_real_profile_resolution_includes_lite_and_full():
     pytest.importorskip("digimon_engine")
     from digimon_gym.agents.tensor_profile_gauntlet import resolve_profile_requests
 
+    # standard_compact_v1 is retired from the training env (change
+    # make-training-build-legacy-free), so the gauntlet resolves only the
+    # supported Rust profiles.
     resolved = resolve_profile_requests(
-        ("compact_v1", "standard_lite_v2", "standard_full_v2"),
+        ("standard_lite_v2", "standard_full_v2"),
         require_profiles=True,
     )
 
     assert [item.profile.id for item in resolved] == [
-        "standard_compact_v1",
         "standard_lite_v2",
         "standard_full_v2",
     ]
     # Task S1.4: PERM_MAX_SOURCES 11 -> 12; lite 8320 -> 8410, full
     # 43392 -> 43482.
-    assert [item.profile.tensor_size for item in resolved] == [1375, 8410, 43482]
+    assert [item.profile.tensor_size for item in resolved] == [8410, 43482]
 
 
 def test_resolve_profiles_records_skip_when_profile_missing(monkeypatch):

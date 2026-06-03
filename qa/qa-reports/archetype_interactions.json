@@ -75,127 +75,126 @@
       },
       "updated": "2026-05-30"
     },
-    "Medusamon": {
+    "Puppets": {
       "combos_tested": [
         {
-          "combo": "Petrification security-trash loop (signature)",
+          "combo": "C1 Overclock value loop (ST19-12 + EX11-060 + Familiar Token)",
           "status": "PASS",
+          "note": "End-of-turn Overclock deletes a Familiar Token -> Arisa suspends to Draw 1 AND the Familiar On-Deletion -3000 DP hits the opponent. Unhappy: a pre-suspended Arisa yields no draw but the -3000 still fires.",
           "tests": [
-            "petrification_token_deletion_trashes_opponent_security",
-            "petrification_token_deletion_chains_into_styracomon_removal",
-            "petrification_token_deletion_no_security_does_not_chain"
-          ],
-          "note": "Deleting an opp-controlled Petrification token trashes opp top security (auto-fires opp-security-removed observers) and chains into BT24-018 Styracomon removal."
+            "c1_overclock_token_sacrifice_draws_for_arisa_and_reduces_opponent_dp",
+            "c1_value_loop_yields_no_draw_when_arisa_cannot_pay_the_suspend_cost"
+          ]
         },
         {
-          "combo": "Owen digivolve buff + extra attack",
+          "combo": "C2 Self-sustaining token refill (ST19-12 Overclock deleter + BT22-040 refire)",
           "status": "PASS",
+          "note": "Overclock deletes a Familiar -> BT22-040 refire replays a fresh Familiar, board count restored. Unhappy: declining the refire leaves the board one token short. Cross-card finding surfaced: the Familiar On-Deletion target pick interleaves with the refire (order not assumable) — test made order-independent.",
           "tests": [
-            "owen_digivolve_buffs_dragonkin_ally_and_grants_attack",
-            "owen_digivolve_does_not_buff_non_trait_ally"
-          ],
-          "note": "Real BT24-082 Owen + real BT24-011 Cyclonemon (Dragonkin) -> suspend+ +3000 + attack; gated on trait (real BT21-024 Cyberdramon non-trait control)."
+            "c2_overclock_deletion_refires_bt22_040_to_replace_the_token",
+            "c2_declined_refire_leaves_the_board_one_token_short"
+          ]
         },
         {
-          "combo": "Raid target-change -> Lamiamon security trash",
+          "combo": "C3 Nyabootmon mass-removal payoff (board-width-gated)",
           "status": "PASS",
+          "note": "BT22-042 When-Dig -3000 DP per own Digimon: a wide board (4 Digimon) deletes a 12000-DP target via 0-DP rule 17-1-3-1; a narrow board (1 Digimon) leaves it alive at -3000.",
           "tests": [
-            "raid_target_change_with_lamiamon_trashes_opp_security",
-            "raid_target_change_without_trait_permanent_trashes_nothing"
-          ],
-          "note": "Real BT24-011 Cyclonemon Raid + real BT21-025 Lamiamon -> trash opp security; gated on a Reptile/Dragonkin permanent (real Cyberdramon control)."
+            "c3_nyabootmon_deletes_a_12000_target_over_a_wide_board",
+            "c3_nyabootmon_spares_the_same_target_over_a_narrow_board"
+          ]
         },
         {
-          "combo": "Security-removal memory snowball",
+          "combo": "C4 Arisa replay & Shoemon recursion (BT22-088)",
           "status": "PASS",
+          "note": "Start-of-main returns Arisa to deck bottom, replays a hand Arisa free; boardless -> recurs Shoemon from trash. With a Digimon present the Shoemon clause is gated off (tamer-return still fires).",
           "tests": [
-            "real_stack_snowballs_two_memory_on_one_security_removal",
-            "petrification_token_deletion_feeds_inherited_memory"
-          ],
-          "note": "Real digivolution stack [BT24-008 Elizamon, BT24-012 Dimetromon, BT21-025 Lamiamon]: one security removal pays out both buried inherited -> +2 memory. Token-deletion variant -> +1."
+            "c4_boardless_arisa_replays_itself_and_recurs_shoemon_from_trash",
+            "c4_with_a_digimon_in_play_arisa_replays_but_leaves_shoemon_in_trash"
+          ]
         },
         {
-          "combo": "Lamiamon inherited free-play (<=5000)",
+          "combo": "S2 Karakurumon temp-Puppet self-deletion feeds Arisa draw",
           "status": "PASS",
+          "note": "EX11-022 plays a temp [Puppet] free; its self-deletion is a Puppet-Digimon deletion -> EX11-060 Arisa Draw 1. Turns the printed drawback into card advantage.",
           "tests": [
-            "lamiamon_inherited_free_plays_small_dragonkin_on_security_removal",
-            "lamiamon_inherited_does_not_free_play_oversized_dragonkin"
-          ],
-          "note": "Real BT21-025 Lamiamon buried inherited free-plays real BT24-011 Cyclonemon (5000); real BT24-018 Styracomon (14000) filtered out. Exercises the dispatch the per-card clause3 test leaves #[ignore]d."
+            "s2_karakurumon_temp_puppet_self_deletion_feeds_arisa_draw_at_turn_end"
+          ]
         },
         {
-          "combo": "BT24-016 cheat-in: chains swap AND nets +2 memory",
-          "status": "PASS (incl. user-reported +2 memory)",
-          "tests": [
-            "cheat_in_chains_swap_and_nets_two_memory_from_real_inherits",
-            "cheat_in_blocked_without_owen_silences_the_chain"
-          ],
-          "note": "Real BT24-082 Owen + real BT24-008 Elizamon + real BT24-012 Dimetromon: cheat-in digivolve auto-fires the [When Digivolving] swap; the security trash pays out BOTH buried inherited -> +2 memory (net -1 = -3 digivolve cost +2). Gated on Owen."
-        },
-        {
-          "combo": "Lamiamon security swap feeds memory engine",
+          "combo": "S4 ST19-14 grants Rush to an effect-played token",
           "status": "PASS",
+          "note": "ST19-12 plays 2 Familiar Tokens by effect; ST19-14 suspends to grant Rush to exactly one (suspend cost gates the second). Tempo seam.",
           "tests": [
-            "lamiamon_security_swap_feeds_inherited_memory"
-          ],
-          "note": "Real [BT24-008 Elizamon, BT24-016 Lamiamon] stack: the swap top-security trash pays out the buried Elizamon inherited (+1 memory)."
+            "s4_st19_14_grants_rush_to_one_effect_played_familiar_token"
+          ]
         },
         {
-          "combo": "EX11-012 token-shield (faithfulness gap)",
-          "status": "PASS (gap fixed)",
+          "combo": "S5 BT22-088 play-side draw engine",
+          "status": "PASS",
+          "note": "ST19-12 plays 2 Familiar Tokens; BT22-088 suspends to Draw 1 (exactly once — suspend cost gates repeats). The play-side mirror of C1 deletion-side draw.",
           "tests": [
-            "ex11_012_survives_by_deleting_opponents_petrification_token"
-          ],
-          "note": "FIXED: would-leave shield selector changed select_own_permanent -> select_any_permanent in EX11-012.yaml (DCGO permanent.IsToken, any owner). EX11-012 now survives by deleting the opponent Petrification token, which also trashes their security. Gap G-EX11-012-TOKEN-SHIELD-OWN-ONLY RESOLVED."
+            "s5_bt22_088_draws_exactly_once_when_two_tokens_are_played"
+          ]
+        },
+        {
+          "combo": "S1 Pillomon flood-gate blocks effect token plays (was finding, now fixed)",
+          "status": "PASS",
+          "note": "G-PLAY-TOKEN-FLOODGATE fixed: play_token honors CannotPlayDigimonByEffect. s1 (blocked) + s1b (control: spawns without Pillomon).",
+          "tests": [
+            "s1_pillomon_floodgate_blocks_effect_token_plays",
+            "s1b_without_pillomon_the_same_token_play_succeeds"
+          ]
+        },
+        {
+          "combo": "S3 Kaguyamon recursion on Familiar Token deletion (was finding, now fixed)",
+          "status": "PASS",
+          "note": "G-EX11-023-TOKEN-DELETION fixed: condition now matches token kind. s3 interaction + ex11_023 per-card token-deletion test.",
+          "tests": [
+            "s3_kaguyamon_recursion_fires_on_familiar_token_deletion"
+          ]
         }
       ],
       "findings": [
         {
-          "kind": "process-correction",
-          "detail": "First pass used synthetic make_test_card stand-ins for our own effect-bearing cards (Elizamon/Dimetromon/Owen/Reptile allies), which hid the +2 memory payoff. Whole suite re-authored to load every Medusamon card via real dsl_card; synthetic fixtures now only for generic opponent-side fillers (security/bodies/hand). Audit: 10 archetype cards all real."
+          "id": "G-PLAY-TOKEN-FLOODGATE",
+          "combo": "S1 Pillomon flood-gate vs Familiar Token plays",
+          "status": "RESOLVED",
+          "test": "s1_pillomon_floodgate_blocks_effect_token_plays (#[ignore])",
+          "tracker": "docs/RUST_ENGINE_GAPS.md",
+          "summary": "EffectContext::play_token bypasses CannotPlayDigimonByEffect; under Pillomon (BT9-033), effect-played Familiar Tokens still spawn (engine spawned 2, faithful=0). DCGO blocks via CanPlayAsNewPermanent -> CanNotPutFieldClass (IsDigimon). Engine-primitive gap.",
+          "resolution": "play_token now consults CannotPlayDigimonByEffect (effect_context/mod.rs). Pins: s1 + s1b interaction tests; play_token_blocked/allowed lib unit tests. Test un-ignored."
         },
         {
-          "kind": "resolved-faithfulness-gap",
-          "id": "G-EX11-012-TOKEN-SHIELD-OWN-ONLY",
-          "detail": "RESOLVED: cards/ex11/EX11-012.yaml would-leave cost selector own->any (select_any_permanent scans both battle areas, controller picks; faithful to DCGO). One-word YAML fix; DSL verb pre-existed. Archetype test un-ignored and passing; per-card ex11_012 green."
-        },
-        {
-          "kind": "verified-behavior",
-          "detail": "User-reported: BT24-016 cheat-in with a real Elizamon + Dimetromon nets +2 memory from the two buried inherited firing off the chained security swap. Confirmed faithful (net -1 absolute = -3 cost +2 gain)."
-        },
-        {
-          "kind": "coverage-gap",
-          "detail": "Coverage gate 56/63 (89%): 7 unknown freq-1 fringe cards (ST12-03, LM-051, LM-033, BT19-011, BT14-017, LM-045, BT21-083); none in any combo."
+          "id": "G-EX11-023-TOKEN-DELETION",
+          "combo": "S3 Kaguyamon recursion on Familiar Token deletion",
+          "status": "RESOLVED",
+          "test": "s3_kaguyamon_recursion_fires_on_familiar_token_deletion (#[ignore])",
+          "tracker": "qa/archetype-qa/engine-gaps.md",
+          "summary": "EX11-023 recursion condition is event_target_kind: digimon only; Familiar Tokens are CardKind::Token, so a token deletion does not fire the trash-recursion. DCGO gates on IsDigimon (true for tokens). One-line DSL fix: add token to the any_of (sibling cards BT22-040/EX11-060 already do).",
+          "resolution": "EX11-023.yaml condition now any_of:[digimon,token]. Pins: s3 interaction test; ex11_023 per-card token-deletion + strengthened structural test. Test un-ignored."
         }
       ],
       "static_tests": {
         "combo_presence": {
           "data": {
             "blocked": [],
-            "combos_total": 5
+            "combos_total": 4
           },
-          "detail": "all 5 combo(s) have every piece implemented",
+          "detail": "all 4 combo(s) have every piece implemented",
           "passed": true
         },
         "coverage_gate": {
           "data": {
             "failing_cards": [],
-            "implemented": 56,
-            "ratio": 0.8888888888888888,
+            "implemented": 62,
+            "ratio": 1.0,
             "threshold": 1.0,
-            "total": 63,
-            "unknown_cards": [
-              "ST12-03",
-              "LM-051",
-              "LM-033",
-              "BT19-011",
-              "BT14-017",
-              "LM-045",
-              "BT21-083"
-            ]
+            "total": 62,
+            "unknown_cards": []
           },
-          "detail": "coverage 56/63 = 89% (threshold 100%); 0 failing, 7 unknown",
-          "passed": false
+          "detail": "coverage 62/62 = 100% (threshold 100%); 0 failing, 0 unknown",
+          "passed": true
         },
         "deck_legality": {
           "data": {
@@ -218,10 +217,15 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "model_doc": "qa/archetype-qa/medusamon-model.md",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/medusamon.rs",
-      "result": "15/15 active interaction tests PASS (all real DSL cards; EX11-012 gap fixed). Full archetypes binary: 45 passed, 0 ignored."
+      "updated": "2026-05-31",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/puppets.rs",
+      "model_doc": "qa/archetype-qa/Puppets-model.md",
+      "dropped_combos": [
+        {
+          "combo": "C5 Leave-prevention by token sacrifice (EX7-027 Chaperomon inherit + Familiar)",
+          "reason": "Dropped by rank (lowest-ranked stretch). The per-card suite cards_behavioral/ex7/ex7_027.rs already covers leave-prevention exhaustively (happy, decline, OPT-lock, token-cost-to-trash, own-effect-no-trigger); the cross-card delta is marginal."
+        }
+      ]
     },
     "Rocks": {
       "combos_tested": [
@@ -685,6 +689,154 @@
         }
       },
       "updated": "2026-05-30"
+    },
+    "Medusamon": {
+      "combos_tested": [
+        {
+          "combo": "Petrification security-trash loop (signature)",
+          "status": "PASS",
+          "tests": [
+            "petrification_token_deletion_trashes_opponent_security",
+            "petrification_token_deletion_chains_into_styracomon_removal",
+            "petrification_token_deletion_no_security_does_not_chain"
+          ],
+          "note": "Deleting an opp-controlled Petrification token trashes opp top security (auto-fires opp-security-removed observers) and chains into BT24-018 Styracomon removal."
+        },
+        {
+          "combo": "Owen digivolve buff + extra attack",
+          "status": "PASS",
+          "tests": [
+            "owen_digivolve_buffs_dragonkin_ally_and_grants_attack",
+            "owen_digivolve_does_not_buff_non_trait_ally"
+          ],
+          "note": "Real BT24-082 Owen + real BT24-011 Cyclonemon (Dragonkin) -> suspend+ +3000 + attack; gated on trait (real BT21-024 Cyberdramon non-trait control)."
+        },
+        {
+          "combo": "Raid target-change -> Lamiamon security trash",
+          "status": "PASS",
+          "tests": [
+            "raid_target_change_with_lamiamon_trashes_opp_security",
+            "raid_target_change_without_trait_permanent_trashes_nothing"
+          ],
+          "note": "Real BT24-011 Cyclonemon Raid + real BT21-025 Lamiamon -> trash opp security; gated on a Reptile/Dragonkin permanent (real Cyberdramon control)."
+        },
+        {
+          "combo": "Security-removal memory snowball",
+          "status": "PASS",
+          "tests": [
+            "real_stack_snowballs_two_memory_on_one_security_removal",
+            "petrification_token_deletion_feeds_inherited_memory"
+          ],
+          "note": "Real digivolution stack [BT24-008 Elizamon, BT24-012 Dimetromon, BT21-025 Lamiamon]: one security removal pays out both buried inherited -> +2 memory. Token-deletion variant -> +1."
+        },
+        {
+          "combo": "Lamiamon inherited free-play (<=5000)",
+          "status": "PASS",
+          "tests": [
+            "lamiamon_inherited_free_plays_small_dragonkin_on_security_removal",
+            "lamiamon_inherited_does_not_free_play_oversized_dragonkin"
+          ],
+          "note": "Real BT21-025 Lamiamon buried inherited free-plays real BT24-011 Cyclonemon (5000); real BT24-018 Styracomon (14000) filtered out. Exercises the dispatch the per-card clause3 test leaves #[ignore]d."
+        },
+        {
+          "combo": "BT24-016 cheat-in: chains swap AND nets +2 memory",
+          "status": "PASS (incl. user-reported +2 memory)",
+          "tests": [
+            "cheat_in_chains_swap_and_nets_two_memory_from_real_inherits",
+            "cheat_in_blocked_without_owen_silences_the_chain"
+          ],
+          "note": "Real BT24-082 Owen + real BT24-008 Elizamon + real BT24-012 Dimetromon: cheat-in digivolve auto-fires the [When Digivolving] swap; the security trash pays out BOTH buried inherited -> +2 memory (net -1 = -3 digivolve cost +2). Gated on Owen."
+        },
+        {
+          "combo": "Lamiamon security swap feeds memory engine",
+          "status": "PASS",
+          "tests": [
+            "lamiamon_security_swap_feeds_inherited_memory"
+          ],
+          "note": "Real [BT24-008 Elizamon, BT24-016 Lamiamon] stack: the swap top-security trash pays out the buried Elizamon inherited (+1 memory)."
+        },
+        {
+          "combo": "EX11-012 token-shield (faithfulness gap)",
+          "status": "PASS (gap fixed)",
+          "tests": [
+            "ex11_012_survives_by_deleting_opponents_petrification_token"
+          ],
+          "note": "FIXED: would-leave shield selector changed select_own_permanent -> select_any_permanent in EX11-012.yaml (DCGO permanent.IsToken, any owner). EX11-012 now survives by deleting the opponent Petrification token, which also trashes their security. Gap G-EX11-012-TOKEN-SHIELD-OWN-ONLY RESOLVED."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "process-correction",
+          "detail": "First pass used synthetic make_test_card stand-ins for our own effect-bearing cards (Elizamon/Dimetromon/Owen/Reptile allies), which hid the +2 memory payoff. Whole suite re-authored to load every Medusamon card via real dsl_card; synthetic fixtures now only for generic opponent-side fillers (security/bodies/hand). Audit: 10 archetype cards all real."
+        },
+        {
+          "kind": "resolved-faithfulness-gap",
+          "id": "G-EX11-012-TOKEN-SHIELD-OWN-ONLY",
+          "detail": "RESOLVED: cards/ex11/EX11-012.yaml would-leave cost selector own->any (select_any_permanent scans both battle areas, controller picks; faithful to DCGO). One-word YAML fix; DSL verb pre-existed. Archetype test un-ignored and passing; per-card ex11_012 green."
+        },
+        {
+          "kind": "verified-behavior",
+          "detail": "User-reported: BT24-016 cheat-in with a real Elizamon + Dimetromon nets +2 memory from the two buried inherited firing off the chained security swap. Confirmed faithful (net -1 absolute = -3 cost +2 gain)."
+        },
+        {
+          "kind": "coverage-gap",
+          "detail": "Coverage gate 56/63 (89%): 7 unknown freq-1 fringe cards (ST12-03, LM-051, LM-033, BT19-011, BT14-017, LM-045, BT21-083); none in any combo."
+        }
+      ],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 56,
+            "ratio": 0.8888888888888888,
+            "threshold": 1.0,
+            "total": 63,
+            "unknown_cards": [
+              "ST12-03",
+              "LM-051",
+              "LM-033",
+              "BT19-011",
+              "BT14-017",
+              "LM-045",
+              "BT21-083"
+            ]
+          },
+          "detail": "coverage 56/63 = 89% (threshold 100%); 0 failing, 7 unknown",
+          "passed": false
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30",
+      "model_doc": "qa/archetype-qa/medusamon-model.md",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/medusamon.rs",
+      "result": "15/15 active interaction tests PASS (all real DSL cards; EX11-012 gap fixed). Full archetypes binary: 45 passed, 0 ignored."
     }
   },
   "last_updated": "2026-05-31",

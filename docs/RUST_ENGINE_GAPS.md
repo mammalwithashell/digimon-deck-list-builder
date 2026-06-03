@@ -1265,3 +1265,48 @@ Surfaced by judge-quiz wave (EX5-060 Dragomon, BLOCKED; pins Q28 alongside BT20-
 - **DSL prerequisite:** extend `play_from_trash_free` with a `suspended: bool` flag AND honor its `of:` field for non-controller players (route to the new primitive when `of != controller`). Today `of:` is silently ignored. Pair with `as_selecting_player { of: opponent }` so the opponent makes the pick.
 - **Q28 note:** the `[On Play] don't activate` lock is modeled as a `CannotActivateOnPlayEffects` modifier added to the just-played opponent permanent via `EffectContext::add_modifier`, whose `can_affect_permanent` guard already lets a protected target (Gankoomon X) dodge the lock — verified by the live `ex5_060_lock_does_not_attach_to_effect_immune_target` test. Only the play-and-suspend substrate is blocked, not the lock.
 - **Blocks:** EX5-060 (judge-quiz Q28) Clause 1. `code/digimon-engine/cards/ex5/EX5-060.yaml` Clause 1 declared with faithful timing but empty (gap-blocked) `process`. Tests `ex5_060_clause1_*` `#[ignore]`'d with this gap-id.
+
+
+## G-PLAY-TOKEN-FLOODGATE — `play_token` bypasses `CannotPlayDigimonByEffect` (RESOLVED 2026-05-30)
+
+- **RESOLVED 2026-05-30.** `EffectContext::play_token`
+  (`code/digimon-engine/src/effect_context/mod.rs`) now returns `None` (no token
+  spawned) when the controller carries `CannotPlayDigimonByEffect`, mirroring the
+  hand/trash play-gate — every registered token is a Digimon token (see
+  `token_registry`), matching DCGO's `CanPlayAsNewPermanent` →
+  `CanNotPutFieldClass(IsDigimon)`. Pinned by lib unit tests
+  `effect_context::tests::{play_token_blocked_by_cannot_play_digimon_by_effect,
+  play_token_allowed_without_floodgate}` and the un-ignored interaction tests
+  `archetypes/puppets.rs::{s1_pillomon_floodgate_blocks_effect_token_plays,
+  s1b_without_pillomon_the_same_token_play_succeeds}`. Additive guard (no-op when
+  the modifier is absent); behavioral + archetypes suites regression-clean.
+- **First seen:** 2026-05-30, Puppets archetype interaction test
+  `s1_pillomon_floodgate_blocks_effect_token_plays` (`#[ignore]`'d) in
+  `code/digimon-engine/tests/archetypes/puppets.rs`.
+- **Symptom:** with BT9-033 Pillomon ("Players can't play Digimon by effects")
+  on the field — installing `ModifierType::CannotPlayDigimonByEffect` — an
+  effect that plays a **Familiar Token** (e.g. ST19-12 Cendrillmon's "play 2
+  Familiar Tokens") still spawns the tokens. The flood-gate that correctly
+  blocks effect-driven hand/trash plays does not block token spawns.
+- **Root cause:** `EffectContext::play_token`
+  (`code/digimon-engine/src/effect_context/mod.rs`) pushes the new token
+  permanent directly onto `battle_area` and does NOT consult
+  `CannotPlayDigimonByEffect`, unlike `play_from_hand_free` /
+  `play_from_hand_with_cost` (which gate on it — see the `selections.rs` and
+  `game_actions.rs` gate sites). Token plays therefore bypass the lock.
+- **DCGO-verified faithful behaviour:** a Digimon Token is a Digimon; DCGO
+  blocks its play under this lock. `CardEffectCommons.PlayToken` calls
+  `CanPlayAsNewPermanent(...)`, which enforces BT9-033's `CanNotPutFieldClass`
+  whose card-condition is `cardSource.IsDigimon || cardSource.IsDigiEgg` —
+  `IsDigimon` is `true` for the Familiar Token, so the play is blocked
+  (`$BASE_DCGO/Assets/Scripts/CardEffect/BT9/Yellow/BT9_033.cs`,
+  `Script/CardEffectCommons.cs`).
+- **Fix (engine primitive):** have `play_token` consult
+  `CannotPlayDigimonByEffect` for the controller (the token is a Digimon
+  played by an effect) and no-op the spawn when the gate is installed,
+  mirroring the hand/trash play path. Then flip
+  `s1_pillomon_floodgate_blocks_effect_token_plays` to un-ignored.
+- **Blast radius:** every token-spawning effect interacting with a
+  `CannotPlayDigimonByEffect` source (Pillomon BT9-033 and any future
+  "can't play Digimon by effects" floodgate). Additive guard; no behaviour
+  change when the modifier is absent.

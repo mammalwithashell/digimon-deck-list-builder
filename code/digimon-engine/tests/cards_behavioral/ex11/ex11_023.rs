@@ -18,6 +18,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword};
+use digimon_engine::permanent::{Permanent, PermanentHandle};
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -181,7 +182,14 @@ fn ex11_023_has_optional_opt_on_any_deletion_observer_with_self_exclusion() {
         .expect("observer must inspect the deleted-object event context");
     assert!(
         predicate_has_event_target_kind(condition, CompiledCardKind::Digimon),
-        "observer must only trigger when a Digimon is deleted"
+        "observer must trigger when a Digimon is deleted"
+    );
+    // G-EX11-023-TOKEN-DELETION: a Familiar Token is a Digimon, so the observer
+    // must ALSO match token-kind deletions (DCGO gates on IsDigimon). Sibling
+    // cards BT22-040 / EX11-060 list both kinds; EX11-023 must too.
+    assert!(
+        predicate_has_event_target_kind(condition, CompiledCardKind::Token),
+        "observer must also trigger when a Digimon Token is deleted (tokens are Digimon)"
     );
     assert!(
         predicate_has_event_permanent_is_source(condition, false),
@@ -465,6 +473,60 @@ fn ex11_023_other_deletion_trash_play_is_once_per_turn() {
         runner.pending_selection_view().is_none(),
         "second eligible deletion in the same turn must be blocked by OPT"
     );
+}
+
+/// G-EX11-023-TOKEN-DELETION regression: a Familiar Token IS a Digimon
+/// (Digimon/Yellow/3000 DP), so deleting one must trigger Kaguyamon's
+/// `[All Turns][OPT]` trash-recursion. Before the fix the observer matched
+/// `event_target_kind: digimon` only and `CardKind::Token` slipped through.
+#[test]
+fn ex11_023_other_deletion_recursion_fires_on_familiar_token_deletion() {
+    let mut runner = runner();
+    runner.place_on_field(0, "EX11-023", Some(0));
+    let token = place_familiar_token(&mut runner, 0);
+    push_to_trash(&mut runner, 0, "TRASH-PUPPET-L4");
+
+    runner.game.delete_permanent_with_effects(token);
+    runner.game.drain_effect_queue();
+
+    let target = runner
+        .pending_selection_view()
+        .expect("a Familiar Token deletion (a Digimon) must offer Kaguyamon's trash-recursion");
+    assert_eq!(target.kind, SelectionKind::Trash);
+    assert!(target.is_optional, "printed 'you may' trash-play is optional");
+    runner
+        .execute_action(0, target.valid_action_ids[0])
+        .expect("play Puppet from trash");
+    runner.auto_resolve().expect("finish trash play");
+
+    assert_eq!(
+        count_field_card(&runner, 0, "TRASH-PUPPET-L4"),
+        1,
+        "the token deletion recurs a level 4 Puppet from trash"
+    );
+}
+
+/// Push a real Familiar Token (`TOKEN_FAMILIAR`, `CardKind::Token`) onto a
+/// player's battle area. Tokens have no `place_on_field` path, so wire the
+/// permanent directly from the registered token CardData row.
+fn place_familiar_token(runner: &mut DebugRunner, player: u8) -> PermanentHandle {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "TOKEN_FAMILIAR")
+        .expect("Familiar token card data registered at Game::new");
+    let card_index = runner.game.next_card_index();
+    let mut source = CardSource::new_token(data_idx, player, card_index);
+    source.card_index = card_index;
+    let turn = runner.game.turn_count;
+    runner.game.players[player as usize]
+        .battle_area
+        .push(Permanent::new(source, turn));
+    PermanentHandle {
+        player,
+        index: (runner.game.players[player as usize].battle_area.len() - 1) as u8,
+    }
 }
 
 fn digimon(id: &str, level: u8, dp: i32, traits: &[&str]) -> CardData {
