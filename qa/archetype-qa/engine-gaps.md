@@ -2,8 +2,14 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-29
+Last updated: 2026-06-02
 Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
+
+### §DSL-loaded fixtures have empty `evo_costs` (G-DSL-FIXTURE-EVO-COSTS) — RESOLVED 2026-06-02
+
+- **First seen / RESOLVED** 2026-06-02. `DebugRunner`/`dsl_card`-loaded cards are materialized by `code/digimon-engine/src/debug_runner.rs::card_data_from_compiled`, which hardcoded `evo_costs: Vec::new()`. YAML `alt_paths` lower into a separate alt-path registration (`src/dsl_cards/lower_alt_path_registration.rs`), NOT into `CardData.evo_costs`. So `Game::effect_initiated_digivolve` with `ignore_requirements: false` (`src/game_actions.rs::effect_initiated_digivolve_from_source_inner`) — which matches the digivolve base against the evolving card's `evo_costs` table — found no matching row for any DSL-loaded card, and a cost-reduced Delay/Option "digivolve into a hand card with cost reduced by N" effect **silently no-opped** (the body stayed in hand). In production this works because `data/cards.json` carries `evo_costs` (e.g. EX11-022: `[{card_color: 2, level: 4, memory_cost: 4}]`); the gap was DebugRunner-only.
+- **Fix:** `card_data_from_compiled` now backfills `CardData.evo_costs` from the compiled `alt_paths` — each `kind: digivolve` path with direction `From` (the default), a `from: { level_eq, color_is }` filter, and a literal `cost` becomes one `EvoCost { card_color, level, memory_cost }` row (color mapped via the new `compiled_color_to_evo_code` to the `cards.json` int convention). Trait-only / formula-cost / direction-`Into` alt-paths are not static evo-cost rows and are still resolved through the alt-path registration machinery — so EX11-022's Lv.3 Puppet alt-path is (correctly) excluded, exactly matching `cards.json`. No DSL widening or engine primitive was needed; this was a test-harness materialization gap.
+- **Pinned by:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral ex11_022` — `ex11_022_dsl_fixture_backfills_printed_evo_cost_table` (the backfilled row equals the production `cards.json` table), `ex11_022_effect_initiated_cost_reduced_digivolve_onto_matching_base_succeeds` (an effect-initiated, cost-reduced digivolve now resolves and pays the reduced memory), and `ex11_022_effect_initiated_digivolve_onto_nonmatching_base_is_rejected` (precision: a non-matching base is still rejected). Both positive tests were verified to FAIL with the backfill reverted.
 
 ### §Medusamon EX11-012 token-shield deletes own tokens only (G-EX11-012-TOKEN-SHIELD-OWN-ONLY) — RESOLVED 2026-05-30
 
@@ -932,3 +938,47 @@ Fixed: name check → `source_name_contains` (carrier top-card name, top-only). 
 (NOTE: MEMORY.md "Permanent.contains_card_name checks top_card only" describes the
 retired PYTHON engine; the Rust `Permanent::contains_card_name`, permanent.rs:376,
 scans top + sources — which is why the name check diverged.)
+
+---
+
+## Open gaps — Puppets archetype interaction-test discovery wave (2026-05-30)
+
+Surfaced by `/archetype-interaction-test-author` over the **Puppets** archetype
+(model: `qa/archetype-qa/Puppets-model.md`; tests:
+`code/digimon-engine/tests/archetypes/puppets.rs`). Discover-then-pin: the test
+asserts the DCGO-/card-text-faithful outcome and is `#[ignore]`'d with the
+G-code below until fixed.
+
+### §EX11-023 Kaguyamon trash-recursion omits token-kind deletions (G-EX11-023-TOKEN-DELETION) — RESOLVED 2026-05-30
+
+- **RESOLVED 2026-05-30.** Fixed in `code/digimon-engine/cards/ex11/EX11-023.yaml`:
+  the `on_any_deletion` condition's kind match is now `any_of: [event_target_kind:
+  digimon, event_target_kind: token]` (matching sibling cards BT22-040 /
+  EX11-060). No engine change. Pinned by un-ignored
+  `archetypes/puppets.rs::s3_kaguyamon_recursion_fires_on_familiar_token_deletion`,
+  per-card `cards_behavioral/ex11/ex11_023.rs::ex11_023_other_deletion_recursion_fires_on_familiar_token_deletion`,
+  and the strengthened structural assertion (the observer must match both
+  digimon AND token kinds). Behavioral + archetypes suites regression-clean.
+- **First seen:** 2026-05-30, Puppets interaction test
+  `s3_kaguyamon_recursion_fires_on_familiar_token_deletion` (`#[ignore]`'d).
+- **Symptom:** EX11-023's `[All Turns][OPT]` "When other Digimon are deleted,
+  you may play 1 level 4 or lower [Puppet] Digimon from trash for free" does
+  NOT fire when a **Familiar Token** is deleted, so the trash-recursion never
+  offers. A Familiar Token is a Digimon (Digimon/Yellow/3000 DP), so it should.
+- **Root cause:** the DSL condition in `code/digimon-engine/cards/ex11/EX11-023.yaml`
+  is `event_target_kind: digimon` only. In the engine,
+  `kind_matches_field(Digimon, Token)` is `false`
+  (`code/digimon-engine/src/dsl_cards/predicate.rs`), so a `CardKind::Token`
+  deletion does not satisfy `event_target_kind: digimon`. Its sibling cards
+  **BT22-040** and **EX11-060** correctly use `any_of: [digimon, token]`;
+  EX11-023 omits `token`.
+- **DCGO-verified faithful behaviour:** `EX11_023.cs` gates the recursion on
+  `permanent => permanent != card.PermanentOfThisCard() && permanent.IsDigimon`,
+  and `CardSource.IsDigimon => CardKinds.Contains(CardKind.Digimon)` is `true`
+  for the Familiar Token — so DCGO fires the recursion on a token deletion.
+  Card text: "When other Digimon are deleted" (a Digimon Token is a Digimon).
+- **Fix (card-spec, one line):** change EX11-023's `on_any_deletion` condition
+  from `event_target_kind: digimon` to `any_of: [event_target_kind: digimon,
+  event_target_kind: token]` (matching BT22-040 / EX11-060). No engine change.
+  Flip `s3_kaguyamon_recursion_fires_on_familiar_token_deletion` to un-ignored
+  on fix.

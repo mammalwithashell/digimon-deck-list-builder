@@ -340,6 +340,11 @@ export function dtoToGameState(dto: GameStateDto): GameState {
           // engine-0 pending selection would render as "Waiting for
           // opponent…" when it's actually the user's turn.
           selectingPlayer: dto.pending_selection.selecting_player + 1,
+          // Field selections encode own- and opponent-field targets in the
+          // SAME id range (`OWN_FIELD_START + slot`); `kind` is the only
+          // signal of which side. Drop it and "delete an opponent's Digimon"
+          // prompts become unclickable. See `utils/selectionTargets.ts`.
+          kind: dto.pending_selection.kind,
           // EffectChoice branches need to thread through with their actual
           // engine `action_id`s; the frontend's broken `EFFECT_CHOICE_START`
           // range scan can't find them otherwise.

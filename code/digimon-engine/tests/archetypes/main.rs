@@ -44,6 +44,7 @@ mod fixture_smoke {
 
 mod bg_imperial;
 mod medusamon;
+mod puppets;
 mod rocks;
 mod st1_gaia_red;
 mod st2_cocytus_blue;
