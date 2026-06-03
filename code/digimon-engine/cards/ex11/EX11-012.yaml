@@ -52,13 +52,13 @@ effects:
   - kind: replacement
     trigger: when_would_leave_battle_area
     active_when: { all_turns: true }
-    # "by deleting 1 Token" — ANY token, either battle area (DCGO EX11_012.cs:
-    # CanSelectPermanentCondition = permanent.IsToken, selectPlayer = card.Owner).
-    # EX11-012 mints its Petrification Tokens onto the OPPONENT, so an own-only
-    # select would make this shield dead; `select_any_permanent` scans both
-    # battle areas with the controller picking.
     summary: "Delete 1 Token to prevent leaving"
     process:
+      # Card text: "by deleting 1 Token" — no owner qualifier. Medusamon gifts
+      # the Petrification Token to the OPPONENT (the clause above), so the shield
+      # must be able to delete a token in EITHER battle area, not just our own.
+      # DCGO EX11_012.cs uses CanSelectPermanentCondition(p) => p.IsToken with
+      # selectPlayer: card.Owner — the controller may delete any token.
       - select_any_permanent:
           bind_as: cost_token
           filter: { kind: token }
