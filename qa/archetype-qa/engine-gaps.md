@@ -2,8 +2,14 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-29
+Last updated: 2026-06-02
 Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
+
+### §DSL-loaded fixtures have empty `evo_costs` (G-DSL-FIXTURE-EVO-COSTS) — RESOLVED 2026-06-02
+
+- **First seen / RESOLVED** 2026-06-02. `DebugRunner`/`dsl_card`-loaded cards are materialized by `code/digimon-engine/src/debug_runner.rs::card_data_from_compiled`, which hardcoded `evo_costs: Vec::new()`. YAML `alt_paths` lower into a separate alt-path registration (`src/dsl_cards/lower_alt_path_registration.rs`), NOT into `CardData.evo_costs`. So `Game::effect_initiated_digivolve` with `ignore_requirements: false` (`src/game_actions.rs::effect_initiated_digivolve_from_source_inner`) — which matches the digivolve base against the evolving card's `evo_costs` table — found no matching row for any DSL-loaded card, and a cost-reduced Delay/Option "digivolve into a hand card with cost reduced by N" effect **silently no-opped** (the body stayed in hand). In production this works because `data/cards.json` carries `evo_costs` (e.g. EX11-022: `[{card_color: 2, level: 4, memory_cost: 4}]`); the gap was DebugRunner-only.
+- **Fix:** `card_data_from_compiled` now backfills `CardData.evo_costs` from the compiled `alt_paths` — each `kind: digivolve` path with direction `From` (the default), a `from: { level_eq, color_is }` filter, and a literal `cost` becomes one `EvoCost { card_color, level, memory_cost }` row (color mapped via the new `compiled_color_to_evo_code` to the `cards.json` int convention). Trait-only / formula-cost / direction-`Into` alt-paths are not static evo-cost rows and are still resolved through the alt-path registration machinery — so EX11-022's Lv.3 Puppet alt-path is (correctly) excluded, exactly matching `cards.json`. No DSL widening or engine primitive was needed; this was a test-harness materialization gap.
+- **Pinned by:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral ex11_022` — `ex11_022_dsl_fixture_backfills_printed_evo_cost_table` (the backfilled row equals the production `cards.json` table), `ex11_022_effect_initiated_cost_reduced_digivolve_onto_matching_base_succeeds` (an effect-initiated, cost-reduced digivolve now resolves and pays the reduced memory), and `ex11_022_effect_initiated_digivolve_onto_nonmatching_base_is_rejected` (precision: a non-matching base is still rejected). Both positive tests were verified to FAIL with the backfill reverted.
 
 ### §Medusamon EX11-012 token-shield deletes own tokens only (G-EX11-012-TOKEN-SHIELD-OWN-ONLY) — RESOLVED 2026-05-30
 
