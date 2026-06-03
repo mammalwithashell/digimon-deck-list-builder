@@ -7,9 +7,11 @@
 //! Each `#[test]` maps 1:1 to a named model combo and asserts the combo's
 //! *system-level* mechanical outcome via a before/after `BoardSnapshot` diff —
 //! the cross-card facts a per-card behavioral test cannot see. Every card a
-//! combo NAMES is loaded by its real ID through the DSL pack (`dsl_builder` /
-//! `dsl_card`); synthetic `make_test_card` is used only for unnamed neutral
-//! fillers / DNA partners / removal targets a combo needs.
+//! role — named combo pieces AND neutral fillers / DNA partners / removal
+//! targets — is loaded by its real ID through the DSL pack (`dsl_builder` /
+//! `dsl_card`), with no synthetic `make_test_card`: real ST Agumon / Greymon /
+//! Garurumon / MetalGarurumon / Plesiomon / vanilla Lv4 rookies fill the neutral
+//! roles.
 //!
 //! Source priority (CLAUDE.md): printed text (cards.json) + DCGO C#
 //! (`$BASE_DCGO/Assets/Scripts/CardEffect/<SET>/<COLOR>/<CARD_ID>.cs`) outrank
@@ -19,10 +21,9 @@
 
 #![allow(dead_code)]
 
-use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::enums::EffectTiming;
 use digimon_engine::permanent::{OptionState, PermanentHandle};
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::TriggerSource;
@@ -30,40 +31,6 @@ use digimon_engine::selection::TriggerSource;
 use super::support::{dsl_builder, snapshot};
 
 // ─── Shared fixtures ─────────────────────────────────────────────────────────
-
-/// A neutral Lv.6 Digimon with a chosen name — used as an *unnamed* DNA hand
-/// partner / neutral leaver where the combo does not name a specific card.
-fn make_l6(id: &str, name: &str) -> CardData {
-    let mut c = make_test_card(id, name);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(6);
-    c.dp = Some(11000);
-    c.play_cost = 11;
-    c.colors = vec![CardColor::Blue];
-    c
-}
-
-/// A neutral opponent Digimon with a chosen DP — a removal target.
-fn make_opp_digimon(id: &str, name: &str, dp: i32) -> CardData {
-    let mut c = make_test_card(id, name);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(4);
-    c.dp = Some(dp);
-    c.play_cost = 4;
-    c
-}
-
-/// A neutral own Lv.4 Digimon with a chosen name — used to test the Nokia aura
-/// name-filter (matching vs non-matching) and as Greymon/Garurumon presence
-/// markers for the Tai & Matt memory ramp.
-fn make_named_digimon(id: &str, name: &str, dp: i32) -> CardData {
-    let mut c = make_test_card(id, name);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(4);
-    c.dp = Some(dp);
-    c.play_cost = 4;
-    c
-}
 
 /// Push an `Agumon`/`Gabumon`-named card source directly into a player's trash
 /// (the recur source for Miraculous Mega Knight). Returns nothing; the card
@@ -320,10 +287,10 @@ fn seat_bt17_095_as_delay(runner: &mut DebugRunner, handle: PermanentHandle) {
 /// WarGreymon on field as the leaving Lv6, BT22-015 Omnimon + a neutral Lv6 DNA
 /// partner in hand. Returns `(runner, wargreymon_handle, bt17_095_handle)`.
 fn combo2_board() -> (DebugRunner, PermanentHandle, PermanentHandle) {
-    let partner = make_l6("OMNI-PARTNER", "Garurumon Partner");
-    let mut runner = dsl_builder(&["BT17-095", "BT22-013", "BT22-015"])
-        .add_card(partner)
-        .hand(0, &["BT22-015", "OMNI-PARTNER"])
+    // ST2-11 MetalGarurumon — a real Blue Lv6 DNA hand partner (the merge ignores
+    // requirements, so any real Lv6 Digimon is a faithful partner).
+    let mut runner = dsl_builder(&["BT17-095", "BT22-013", "BT22-015", "ST2-11"])
+        .hand(0, &["BT22-015", "ST2-11"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
@@ -406,9 +373,9 @@ fn combo2_mega_knight_delay_offstack_dna_into_omnimon() {
 /// a Delay Option; no merge happens.
 #[test]
 fn combo2_delay_does_not_fire_for_opponents_lv6_greymon() {
-    let opp_grey = make_l6("OPP-GREY", "Greymon");
-    let mut runner = dsl_builder(&["BT17-095", "BT22-015"])
-        .add_card(opp_grey)
+    // ST1-11 WarGreymon — a real own/opponent Lv6 "Greymon"-name Digimon (here on
+    // the OPPONENT, to prove the owner gate).
+    let mut runner = dsl_builder(&["BT17-095", "BT22-015", "ST1-11"])
         .hand(0, &["BT22-015"])
         .memory(10)
         .start();
@@ -416,7 +383,7 @@ fn combo2_delay_does_not_fire_for_opponents_lv6_greymon() {
 
     let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
     seat_bt17_095_as_delay(&mut runner, bt17_095);
-    let opp = runner.place_on_field(1, "OPP-GREY", None);
+    let opp = runner.place_on_field(1, "ST1-11", None);
 
     runner
         .game
@@ -440,9 +407,9 @@ fn combo2_delay_does_not_fire_for_opponents_lv6_greymon() {
 /// Option.
 #[test]
 fn combo2_delay_does_not_fire_for_own_lv6_non_matching_name() {
-    let own_other = make_l6("OWN-OTHER-L6", "Andromon");
-    let mut runner = dsl_builder(&["BT17-095", "BT22-015"])
-        .add_card(own_other)
+    // ST2-10 Plesiomon — a real own Lv6 Digimon whose name is NOT Greymon/
+    // Garurumon (so the name filter rejects it).
+    let mut runner = dsl_builder(&["BT17-095", "BT22-015", "ST2-10"])
         .hand(0, &["BT22-015"])
         .memory(10)
         .start();
@@ -450,7 +417,7 @@ fn combo2_delay_does_not_fire_for_own_lv6_non_matching_name() {
 
     let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
     seat_bt17_095_as_delay(&mut runner, bt17_095);
-    let own = runner.place_on_field(0, "OWN-OTHER-L6", None);
+    let own = runner.place_on_field(0, "ST2-10", None);
 
     runner
         .game
@@ -523,11 +490,10 @@ fn combo2_delay_does_not_fire_when_lv6_leaves_in_battle() {
 /// hand. `with_greymon` / `with_garurumon` add an own Greymon/Garurumon-named
 /// marker Digimon (the names that gate the memory grant). Returns the runner.
 fn combo3_board(with_greymon: bool, with_garurumon: bool) -> DebugRunner {
-    let grey = make_named_digimon("GREY-MARK", "Greymon", 6000);
-    let garu = make_named_digimon("GARU-MARK", "Garurumon", 6000);
-    let mut b = dsl_builder(&["BT22-084", "BT17-081", "BT22-008"])
-        .add_card(grey)
-        .add_card(garu)
+    // ST1-07 Greymon / ST2-06 Garurumon — real Lv4 cards literally named
+    // "Greymon"/"Garurumon" (inherited-only effects; never perturb memory) — the
+    // names that gate the Tai & Matt grant.
+    let mut b = dsl_builder(&["BT22-084", "BT17-081", "BT22-008", "ST1-07", "ST2-06"])
         .hand(0, &["BT22-008"])
         .memory(5);
     b = b.deck(0, &["BT22-008"]).deck(1, &["BT22-008"]);
@@ -537,10 +503,10 @@ fn combo3_board(with_greymon: bool, with_garurumon: bool) -> DebugRunner {
     runner.place_on_field(0, "BT22-084", Some(0)); // Nokia Shiramine
     runner.place_on_field(0, "BT17-081", Some(0)); // Tai & Matt
     if with_greymon {
-        runner.place_on_field(0, "GREY-MARK", Some(0));
+        runner.place_on_field(0, "ST1-07", Some(0)); // Greymon name marker
     }
     if with_garurumon {
-        runner.place_on_field(0, "GARU-MARK", Some(0));
+        runner.place_on_field(0, "ST2-06", Some(0)); // Garurumon name marker
     }
     runner.game.memory = 5;
     runner
@@ -694,19 +660,17 @@ fn combo3_taimatt_plus_two_with_both_names_on_own_digimon_play() {
 /// Greymon and own non-matching Digimon untouched.
 #[test]
 fn combo4_nokia_aura_buffs_own_omnimon_and_spares_others() {
-    let opp_grey = make_named_digimon("OPP-GREY", "Greymon", 6000);
-    let own_other = make_named_digimon("OWN-VEEMON", "Veemon", 3000);
-    let mut runner = dsl_builder(&["BT22-084", "BT22-015"])
-        .add_card(opp_grey)
-        .add_card(own_other)
+    // ST1-07 Greymon — a real "Greymon"-name opp Lv4 (DP 4000); ST3-06 Gatomon —
+    // a real own Lv4 (DP 5000) whose name matches no aura keyword.
+    let mut runner = dsl_builder(&["BT22-084", "BT22-015", "ST1-07", "ST3-06"])
         .memory(15)
         .start();
     runner.game.turn_count = 1;
 
     runner.place_on_field(0, "BT22-084", Some(0)); // Nokia
     let omnimon = runner.place_on_field(0, "BT22-015", Some(0)); // real Omnimon, base 15000
-    let opp = runner.place_on_field(1, "OPP-GREY", Some(0));
-    let veemon = runner.place_on_field(0, "OWN-VEEMON", Some(0));
+    let opp = runner.place_on_field(1, "ST1-07", Some(0));
+    let veemon = runner.place_on_field(0, "ST3-06", Some(0));
     runner.game.tick_declarative_effects();
 
     // BT22-015 Omnimon: 15000 base + 1000 Nokia aura = 16000.
@@ -718,14 +682,14 @@ fn combo4_nokia_aura_buffs_own_omnimon_and_spares_others() {
     // Opponent's Greymon-named Digimon is NOT buffed (owner: you predicate).
     let opp_dp = runner.effective_dp(opp).expect("Opp Greymon has DP");
     assert_eq!(
-        opp_dp, 6000,
-        "opponent's Greymon must NOT receive Nokia's aura; got {opp_dp}"
+        opp_dp, 4000,
+        "opponent's Greymon (ST1-07, DP 4000) must NOT receive Nokia's aura; got {opp_dp}"
     );
-    // Own non-matching name (Veemon) is NOT buffed.
-    let veemon_dp = runner.effective_dp(veemon).expect("Veemon has DP");
+    // Own non-matching name (Gatomon) is NOT buffed.
+    let veemon_dp = runner.effective_dp(veemon).expect("Gatomon has DP");
     assert_eq!(
-        veemon_dp, 3000,
-        "own Veemon (no Greymon/Garurumon/Omnimon name) must NOT be buffed; got {veemon_dp}"
+        veemon_dp, 5000,
+        "own Gatomon (DP 5000, no Greymon/Garurumon/Omnimon name) must NOT be buffed; got {veemon_dp}"
     );
 }
 
@@ -734,16 +698,16 @@ fn combo4_nokia_aura_buffs_own_omnimon_and_spares_others() {
 /// the card's real trigger, not a low-level delete helper.
 #[test]
 fn combo4_omnimon_on_play_clears_a_blocker() {
-    let blocker = make_opp_digimon("OPP-BLOCKER", "OppBlocker", 3000);
-    let mut runner = dsl_builder(&["BT22-084", "BT22-015"])
-        .add_card(blocker)
+    // ST1-05 Birdramon — a real opp Lv4 (the only / lowest-DP opp Digimon, the
+    // delete-lowest-DP victim).
+    let mut runner = dsl_builder(&["BT22-084", "BT22-015", "ST1-05"])
         .memory(15)
         .start();
     runner.game.turn_count = 1;
 
     runner.place_on_field(0, "BT22-084", Some(0)); // Nokia (aura source)
     let omnimon = runner.place_on_field(0, "BT22-015", Some(0));
-    runner.place_on_field(1, "OPP-BLOCKER", None);
+    runner.place_on_field(1, "ST1-05", None);
 
     let before = snapshot(&runner);
     fire_on_play(&mut runner, omnimon);
@@ -780,29 +744,20 @@ fn combo4_omnimon_on_play_clears_a_blocker() {
 //   DCGO `$BASE_DCGO/.../BT22/Red/BT22_013.cs`, `.../BT22/Blue/BT22_026.cs`.
 // ═════════════════════════════════════════════════════════════════════════════
 
-fn make_agumon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "Agumon");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(3);
-    c.dp = Some(2000);
-    c.play_cost = 3;
-    c
-}
-
 /// Digivolve branch: BT22-026 MetalGarurumon [When Digivolving] branch 0 lets
 /// an own Agumon digivolve into BT22-013 WarGreymon from hand for free,
 /// ignoring requirements. A second Lv6 enters with no memory spend; the Agumon
 /// stack's top card becomes WarGreymon; hand −1.
 #[test]
 fn combo5_metalgarurumon_branch_digivolves_agumon_into_wargreymon_free() {
-    let mut runner = dsl_builder(&["BT22-026", "BT22-013"])
-        .add_card(make_agumon("MY-AGU"))
+    // ST1-03 Agumon — a real Lv3 [Agumon]-name base (inherited-only effect).
+    let mut runner = dsl_builder(&["BT22-026", "BT22-013", "ST1-03"])
         .hand(0, &["BT22-013"]) // WarGreymon in hand — the cross-line result
         .memory(15)
         .start();
     runner.game.turn_count = 1;
 
-    let agu = runner.place_on_field(0, "MY-AGU", None);
+    let agu = runner.place_on_field(0, "ST1-03", None);
     let mg = runner.place_on_field(0, "BT22-026", Some(0));
 
     let before = snapshot(&runner);
@@ -820,7 +775,7 @@ fn combo5_metalgarurumon_branch_digivolves_agumon_into_wargreymon_free() {
         .card_id(&runner.game.card_data);
     assert_eq!(
         agu_top, "BT22-013",
-        "the own Agumon must have digivolved into WarGreymon (free cross-line)"
+        "the own ST1-03 Agumon must have digivolved into WarGreymon (free cross-line)"
     );
     // The WarGreymon left the hand to become the digivolve top.
     assert_eq!(
@@ -843,18 +798,17 @@ fn combo5_metalgarurumon_branch_digivolves_agumon_into_wargreymon_free() {
 /// Agumon. Exactly one branch resolves per "Activate 1 of the effects below".
 #[test]
 fn combo5_metalgarurumon_other_branch_bounces_and_leaves_agumon_intact() {
-    let opp = make_named_digimon("OPP-LOW", "OppLow", 3000);
-    let mut runner = dsl_builder(&["BT22-026", "BT22-013"])
-        .add_card(make_agumon("MY-AGU"))
-        .add_card(opp)
+    // ST1-05 Birdramon — a real opp Lv4 (the lowest-level opp Digimon, the bounce
+    // victim). ST1-03 Agumon — the own [Agumon] base that must stay intact.
+    let mut runner = dsl_builder(&["BT22-026", "BT22-013", "ST1-03", "ST1-05"])
         .hand(0, &["BT22-013"])
         .memory(15)
         .start();
     runner.game.turn_count = 1;
 
-    let agu = runner.place_on_field(0, "MY-AGU", None);
+    let agu = runner.place_on_field(0, "ST1-03", None);
     let mg = runner.place_on_field(0, "BT22-026", Some(0));
-    runner.place_on_field(1, "OPP-LOW", None);
+    runner.place_on_field(1, "ST1-05", None);
 
     let before = snapshot(&runner);
     fire_when_digivolving(&mut runner, mg);
@@ -879,7 +833,7 @@ fn combo5_metalgarurumon_other_branch_bounces_and_leaves_agumon_intact() {
         .top_card()
         .card_id(&runner.game.card_data);
     assert_eq!(
-        agu_top, "MY-AGU",
+        agu_top, "ST1-03",
         "the digivolve branch must NOT also resolve — Agumon stays put"
     );
     assert_eq!(

@@ -5,8 +5,11 @@
 //! cross-card combos the per-card behavioral suite cannot see as a *system*:
 //! the Option enablers (BT17-095 Miraculous Mega Knight, P-206 Digital Gate
 //! Open), the Tai & Matt double-memory engine, and the Omnimon Alter-S DNA
-//! board wipe. Every combo loads its named cards by real ID via `dsl_card`;
-//! synthetic `make_test_card` is used only for unnamed neutral fillers/targets.
+//! board wipe. Every role — named combo pieces AND neutral fillers / targets —
+//! is loaded as a real implemented DSL card by ID via `dsl_card` (no synthetic
+//! `make_test_card`): vanilla ST rookies / Tamers as dig fodder and neutral
+//! own-Digimon plays, ST MetalTyrannomon + BT Rosemon as removal victims, and
+//! the real WarGreymon / MetalGarurumon / Omnimon named pieces.
 //!
 //! Source priority (CLAUDE.md): `general_rule.pdf` §16 (＜Delay＞, DNA digivolve
 //! timing) + DCGO C# (`$BASE_DCGO/Assets/Scripts/CardEffect/...`) outrank the
@@ -17,9 +20,9 @@
 
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_source::CardSource;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::{CardColor, CardKind, DelayTrigger};
+use digimon_engine::enums::DelayTrigger;
 use digimon_engine::permanent::{OptionState, PermanentHandle};
 use digimon_engine::replacement::ReplacementCause;
 
@@ -257,22 +260,15 @@ fn c1_mega_knight_main_arms_delay_even_with_no_free_play_target() {
 /// the REAL BT17-015 WarGreymon and REAL BT17-078 Omnimon.
 #[test]
 fn c2_mega_knight_delay_dna_digivolves_leaving_wargreymon_into_omnimon() {
-    let mut runner = dsl_card_runner(&["BT17-095", "BT17-015", "BT17-078"]);
+    // ST2-11 MetalGarurumon — a real Blue Lv6 hand partner (DNA material B). The
+    // merge runs with ignore_requirements, so any real Lv6 Digimon is a faithful
+    // hand partner; its only printed effect is [When Attacking] (never fires here).
+    let mut runner = dsl_card_runner(&["BT17-095", "BT17-015", "BT17-078", "ST2-11"]);
     runner.game.turn_count = 1;
-
-    // A Lv6 Blue "Garurumon" hand partner (BT17-027 MetalGarurumon would also
-    // qualify, but a neutral unnamed Lv6 keeps the diff about the leave-cancel;
-    // the partner is NOT a card the combo names, so a synthetic is allowed).
-    let mut partner = make_test_card("C2-PARTNER", "MetalGarurumon");
-    partner.card_kind = CardKind::Digimon;
-    partner.level = Some(6);
-    partner.dp = Some(11000);
-    partner.colors = vec![CardColor::Blue];
-    runner.game.card_data.push(partner);
 
     // BT17-078 Omnimon + the Lv6 partner in hand.
     push_to_hand(&mut runner, 0, "BT17-078");
-    push_to_hand(&mut runner, 0, "C2-PARTNER");
+    push_to_hand(&mut runner, 0, "ST2-11");
 
     // BT17-095 seated as a Delay-Option; BT17-015 WarGreymon (Lv6, "Greymon")
     // on field as the dying subject.
@@ -423,37 +419,27 @@ fn c2_mega_knight_delay_declines_when_no_hand_omnimon_lv6_leaves_normally() {
 /// verifies the dig → Delay → cost-reduced Tamer-play chain end to end.
 #[test]
 fn c3_digital_gate_open_main_digs_then_delay_cheats_nokia_cost_reduced() {
-    // Top-3 dig fodder (unnamed neutrals — not cards the combo names): a Digimon
-    // and a Tamer so each select_reveal slot has a candidate, plus a filler.
-    let mut dig = make_test_card("C3-DIG", "C3 Dig");
-    dig.card_kind = CardKind::Digimon;
-    let mut tam = make_test_card("C3-TAM", "C3 Tam");
-    tam.card_kind = CardKind::Tamer;
-    let fill = make_test_card("C3-FILL", "C3 Fill");
-
-    // A Red field Digimon so BT22-084 (Red+Blue Tamer) colour-matches the board.
-    let mut field_red = make_test_card("C3-FIELD-RED", "C3 Field Red");
-    field_red.card_kind = CardKind::Digimon;
-    field_red.level = Some(4);
-    field_red.dp = Some(4000);
-    field_red.colors = vec![CardColor::Red];
-
-    let mut runner = dsl_builder_with(&["P-206", "BT22-084"], |b| {
-        b.add_card(dig.clone())
-            .add_card(tam.clone())
-            .add_card(fill.clone())
-            .add_card(field_red.clone())
-            // Deck top-to-bottom (last element = top): C3-DIG top, C3-TAM next,
-            // C3-FILL third — the [Main] reveal-3 window.
-            .deck(0, &["C3-FILL", "C3-TAM", "C3-DIG"])
-            .deck(1, &["C3-FILL"])
-            .hand(0, &["P-206", "BT22-084"])
-            .memory(10)
-    });
+    // Top-3 dig fodder (real neutral cards — not cards the combo names): a Digimon
+    // (ST1-04 Dracomon) and a Tamer (ST4-14 Izzy Izumi) so each reveal slot has a
+    // candidate, plus a filler (ST1-02 Biyomon). A Red field Digimon (ST1-05
+    // Birdramon) so BT22-084 (Red+Blue Tamer) colour-matches the board.
+    let mut runner = dsl_builder_with(
+        &[
+            "P-206", "BT22-084", "ST1-04", "ST4-14", "ST1-02", "ST1-05",
+        ],
+        |b| {
+            // Deck top-to-bottom (last element = top): ST1-04 top, ST4-14 next,
+            // ST1-02 third — the [Main] reveal-3 window.
+            b.deck(0, &["ST1-02", "ST4-14", "ST1-04"])
+                .deck(1, &["ST1-02"])
+                .hand(0, &["P-206", "BT22-084"])
+                .memory(10)
+        },
+    );
     runner.game.turn_count = 1;
 
     // A Red Digimon on P0's field so the Delay colour-match has something to bite.
-    runner.place_on_field(0, "C3-FIELD-RED", Some(0));
+    runner.place_on_field(0, "ST1-05", Some(0));
 
     let before = snapshot(&runner);
 
@@ -532,26 +518,18 @@ fn c3_digital_gate_open_main_digs_then_delay_cheats_nokia_cost_reduced() {
 /// fact: the Delay's Tamer cheat is gated on a colour-matching board Digimon.
 #[test]
 fn c3_digital_gate_open_delay_no_color_match_leaves_nokia_in_hand() {
-    // A Green field Digimon — BT22-084 (Red+Blue) does NOT colour-match it.
-    let mut field_green = make_test_card("C3N-FIELD-GREEN", "C3N Field Green");
-    field_green.card_kind = CardKind::Digimon;
-    field_green.level = Some(4);
-    field_green.dp = Some(4000);
-    field_green.colors = vec![CardColor::Green];
-    let fill = make_test_card("C3N-FILL", "C3N Fill");
-
-    let mut runner = dsl_builder_with(&["P-206", "BT22-084"], |b| {
-        b.add_card(field_green.clone())
-            .add_card(fill.clone())
-            .deck(0, &["C3N-FILL"])
-            .deck(1, &["C3N-FILL"])
+    // ST4-07 Kuwagamon — a Green field Digimon; BT22-084 (Red+Blue) does NOT
+    // colour-match it. ST1-02 Biyomon is deck filler.
+    let mut runner = dsl_builder_with(&["P-206", "BT22-084", "ST4-07", "ST1-02"], |b| {
+        b.deck(0, &["ST1-02"])
+            .deck(1, &["ST1-02"])
             .hand(0, &["BT22-084"])
             .memory(10)
     });
     runner.game.turn_count = 1;
 
     // Green field Digimon; seat P-206 directly as a mature Delay.
-    runner.place_on_field(0, "C3N-FIELD-GREEN", Some(0));
+    runner.place_on_field(0, "ST4-07", Some(0));
     let p206 = runner.place_on_field(0, "P-206", Some(0));
     runner.game.players[0].battle_area[p206.index as usize].option_state = OptionState::Delayed {
         owner: 0,
@@ -601,29 +579,25 @@ fn c3_digital_gate_open_delay_no_color_match_leaves_nokia_in_hand() {
 /// → Omnimon curve.
 #[test]
 fn c4_tai_matt_grants_two_memory_with_greymon_and_garurumon_present() {
-    let mut runner = dsl_card_runner(&["BT17-081", "BT17-015", "BT17-027"]);
+    // BT23-005 Elizamon — a real Lv3 cost-0 own Digimon to play (neutral filler;
+    // its only effects are a passive [Your Turn] digivolve-cost reduction + an
+    // inherited DP aura, neither of which touches memory, so the +2 swing is the
+    // clean Tai & Matt grant). cost 0 keeps the play itself from moving memory.
+    let mut runner = dsl_card_runner(&["BT17-081", "BT17-015", "BT17-027", "BT23-005"]);
     runner.game.turn_count = 1;
-
-    // A neutral own Digimon to play (unnamed filler — not a card the combo names).
-    let mut plain = make_test_card("C4-PLAIN", "C4 Plain");
-    plain.card_kind = CardKind::Digimon;
-    plain.level = Some(3);
-    plain.dp = Some(3000);
-    plain.play_cost = 0;
-    runner.game.card_data.push(plain);
 
     // Tai & Matt + a "Greymon"-name (BT17-015) + a "Garurumon"-name (BT17-027)
     // own Digimon on field.
     let taimatt = runner.place_on_field(0, "BT17-081", Some(0));
     runner.place_on_field(0, "BT17-015", Some(0));
     runner.place_on_field(0, "BT17-027", Some(0));
-    push_to_hand(&mut runner, 0, "C4-PLAIN");
+    push_to_hand(&mut runner, 0, "BT23-005");
 
     // Keep memory below the cap so the +2 gain is observable.
     runner.game.set_memory(5);
     let memory_before = runner.memory();
 
-    let idx = hand_index(&runner, 0, "C4-PLAIN");
+    let idx = hand_index(&runner, 0, "BT23-005");
     runner.play(0, idx).expect("plays the neutral own Digimon");
     // Accept the optional activation and resolve.
     drive_first_valid(&mut runner, 15);
@@ -647,24 +621,18 @@ fn c4_tai_matt_grants_two_memory_with_greymon_and_garurumon_present() {
 /// two grants are independent, so the swing is +1 when only one half is present.
 #[test]
 fn c4_tai_matt_grants_one_memory_with_only_greymon_present() {
-    let mut runner = dsl_card_runner(&["BT17-081", "BT17-015"]);
+    let mut runner = dsl_card_runner(&["BT17-081", "BT17-015", "BT23-005"]);
     runner.game.turn_count = 1;
 
-    let mut plain = make_test_card("C4N-PLAIN", "C4N Plain");
-    plain.card_kind = CardKind::Digimon;
-    plain.level = Some(3);
-    plain.dp = Some(3000);
-    plain.play_cost = 0;
-    runner.game.card_data.push(plain);
-
+    // BT23-005 Elizamon — the same real Lv3 cost-0 neutral own Digimon as C4.
     let taimatt = runner.place_on_field(0, "BT17-081", Some(0));
     runner.place_on_field(0, "BT17-015", Some(0));
-    push_to_hand(&mut runner, 0, "C4N-PLAIN");
+    push_to_hand(&mut runner, 0, "BT23-005");
 
     runner.game.set_memory(5);
     let memory_before = runner.memory();
 
-    let idx = hand_index(&runner, 0, "C4N-PLAIN");
+    let idx = hand_index(&runner, 0, "BT23-005");
     runner.play(0, idx).expect("plays the neutral own Digimon");
     drive_first_valid(&mut runner, 15);
 
@@ -710,27 +678,20 @@ fn c4_tai_matt_grants_one_memory_with_only_greymon_present() {
 fn c5_omnimon_alter_s_dna_wipe_deletes_opponent_highest_level() {
     use digimon_engine::enums::EffectSourceKind;
 
-    let mut runner = dsl_card_runner(&["EX9-021", "BT22-026", "BT22-013"]);
+    // Opponent board: ST5-10 MetalTyrannomon (Lv5, vanilla survivor) + BT13-060
+    // Rosemon: Burst Mode (Lv7, the unique highest → deleted; its only effects are
+    // [When Digivolving]/[When Attacking], neither of which fires when placed or
+    // deleted, so it is a clean removal victim).
+    let mut runner =
+        dsl_card_runner(&["EX9-021", "BT22-026", "BT22-013", "ST5-10", "BT13-060"]);
     runner.game.turn_count = 1;
-
-    // Opponent board: a Lv5 (survivor) + a Lv7 (the unique highest → deleted).
-    let mut opp_low = make_test_card("C5-OPP-LOW", "C5 OppLow");
-    opp_low.card_kind = CardKind::Digimon;
-    opp_low.level = Some(5);
-    opp_low.dp = Some(5000);
-    let mut opp_high = make_test_card("C5-OPP-HIGH", "C5 OppHigh");
-    opp_high.card_kind = CardKind::Digimon;
-    opp_high.level = Some(7);
-    opp_high.dp = Some(12000);
-    runner.game.card_data.push(opp_low);
-    runner.game.card_data.push(opp_high);
 
     // The two real Lv6 DNA materials on P0's field; EX9-021 in hand.
     let blue = runner.place_on_field(0, "BT22-026", None);
     let red = runner.place_on_field(0, "BT22-013", None);
     push_to_hand(&mut runner, 0, "EX9-021");
-    runner.place_on_field(1, "C5-OPP-LOW", None);
-    runner.place_on_field(1, "C5-OPP-HIGH", None);
+    runner.place_on_field(1, "ST5-10", None);
+    runner.place_on_field(1, "BT13-060", None);
 
     let ex9_hand = runner.game.players[0]
         .hand
@@ -778,11 +739,11 @@ fn c5_omnimon_alter_s_dna_wipe_deletes_opponent_highest_level() {
 
     // Delete-highest arm: the opponent's Lv7 (highest) is gone; the Lv5 survives.
     assert!(
-        !field_has_top(&runner, 1, "C5-OPP-HIGH"),
+        !field_has_top(&runner, 1, "BT13-060"),
         "the opponent's highest-level (Lv7) Digimon must be deleted"
     );
     assert!(
-        field_has_top(&runner, 1, "C5-OPP-LOW"),
+        field_has_top(&runner, 1, "ST5-10"),
         "the opponent's lower-level (Lv5) Digimon must survive the highest-level wipe"
     );
     assert_eq!(

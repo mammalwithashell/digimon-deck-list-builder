@@ -22,53 +22,39 @@
 
 #![allow(dead_code)]
 
-use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword};
+use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::enums::{CardColor, EffectTiming, Keyword};
 use digimon_engine::permanent::OptionState;
 use digimon_engine::selection::TriggerSource;
 
 use super::support::snapshot;
 
-// ─── Shared fixtures ─────────────────────────────────────────────────────────
-
-/// A neutral opponent Digimon at a chosen play cost. Costs ≤4 are eligible for
-/// the inherited "delete opp cost ≤4" fan-out (EX8-047 / EX8-048 inherited body).
-fn make_opp_target(id: &str, name: &str, play_cost: u16, dp: i32) -> CardData {
-    let mut c = make_test_card(id, name);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(4);
-    c.dp = Some(dp);
-    c.play_cost = play_cost;
-    c
-}
-
-/// A neutral Mineral-trait Black carrier Digimon that holds combo sources in its
-/// digivolution stack. Mineral-trait so the `host_permanent_trait_has` gate on
-/// the inherited triggers is satisfied; Black so it is a legal base for the
-/// black-filtered Option digivolves.
-fn make_mineral_carrier(id: &str, name: &str) -> CardData {
-    let mut c = make_test_card(id, name);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(5);
-    c.dp = Some(8000);
-    c.play_cost = 6;
-    c.colors = vec![CardColor::Black];
-    c.traits.push("Mineral".to_string());
-    c
-}
-
-/// A plain Mineral filler source (no inherited body) — used to prove the
-/// "non-inherited-delete source does NOT fan out" unhappy path.
-fn make_mineral_filler(id: &str) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(3);
-    c.dp = Some(2000);
-    c.traits.push("Mineral".to_string());
-    c
-}
+// ─── Real-card cast (all DSL-loadable) ──────────────────────────────────────
+//
+// All roles below are real implemented DSL cards (no synthetic `make_test_card`):
+//
+//   BT4-072 Gogmamon          Black Lv.5 DP 7000, [Rock] trait — the Mineral/Rock
+//                             carrier that holds combo sources. Rock satisfies the
+//                             `host_permanent_trait_has: Mineral|Rock` inherited
+//                             gate; Black is a legal base for the black-filtered
+//                             Option digivolves. Its own [Main] Digi-Burst is
+//                             player-activated (never auto-fires) and its inherited
+//                             +1000 DP only applies when it is itself a source.
+//   BT14-009 Gotsumon         Red Lv.3, [Rock] trait, NO inherited body — the
+//                             plain Mineral/Rock filler source: trashable by a
+//                             Mineral/Rock cost filter, but fans out NO delete.
+//                             (Its top-card [All Turns] never applies while it is a
+//                             buried source — only inherited bodies apply, and it
+//                             has none.)
+//   ST1-05 Birdramon / ST2-05 Ikkakumon / ST3-06 Gatomon
+//                             vanilla Lv.4 cost-4 Digimon — neutral cost-≤4 opp
+//                             victims for the inherited delete fan-outs.
+//   ST5-05 Commandramon       Black Lv.3 vanilla — the C2 colour anchor.
+//   ST1-09 MetalGreymon       Red Lv.5 (inherited-only) — the C3N non-black base.
+//   ST1-04 Dracomon           Red Lv.3 vanilla — deck pad / security fodder.
+//   BT23-005 Elizamon         Lv.3 [LIBERATOR] — the C2 reveal-search LIBERATOR
+//                             bucket target.
 
 /// Drive every pending selection by always taking the first valid action (or
 /// PASS on a candidate-less optional prompt), bounded so a logic bug surfaces as
@@ -114,11 +100,16 @@ fn set_evo_cost(runner: &mut DebugRunner, card_id: &str, color: CardColor, level
 }
 
 /// Seed `count` security cards for `player` (so a "trash top security" clause has
-/// something to bite). Returns nothing — read `snapshot().security` for deltas.
+/// something to bite), using a real card that is already registered in
+/// `card_data` (`base_id`). Returns nothing — read `snapshot().security` for
+/// deltas.
 fn seed_security(runner: &mut DebugRunner, player: usize, base_id: &str, count: usize) {
-    let card = make_test_card(base_id, base_id);
-    runner.game.card_data.push(card);
-    let idx = runner.game.card_data.len() - 1;
+    let idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == base_id)
+        .unwrap_or_else(|| panic!("seed_security: {base_id} must be loaded into card_data"));
     for _ in 0..count {
         let cs = CardSource::new(idx, player as u8, runner.game.next_card_index());
         runner.game.players[player].security.push(cs);
@@ -156,9 +147,12 @@ fn c1_zofr_kabus_source_trash_fans_out_inherited_delete_and_buffs() {
         .expect("EX8-070 (Zofr Kabus) in embedded DSL pack")
         .dsl_card("EX8-047")
         .expect("EX8-047 (Sunarizamon) in embedded DSL pack")
-        .add_card(make_mineral_carrier("C1-CARRIER", "C1 Carrier"))
-        .add_card(make_opp_target("C1-OPP-A", "C1 OppA", 3, 4000))
-        .add_card(make_opp_target("C1-OPP-B", "C1 OppB", 4, 4000))
+        .dsl_card("BT4-072") // Gogmamon — Black/Rock Lv.5 carrier
+        .expect("BT4-072 (Gogmamon) in embedded DSL pack")
+        .dsl_card("ST1-05") // Birdramon — vanilla cost-4 opp victim
+        .expect("ST1-05 (Birdramon) in embedded DSL pack")
+        .dsl_card("ST2-05") // Ikkakumon — vanilla cost-4 opp survivor
+        .expect("ST2-05 (Ikkakumon) in embedded DSL pack")
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
@@ -166,12 +160,12 @@ fn c1_zofr_kabus_source_trash_fans_out_inherited_delete_and_buffs() {
 
     // Opponent fields two cost-≤4 Digimon: one is the inherited fan-out victim,
     // the other survives (proving exactly one extra delete from the fan-out).
-    runner.place_on_field(1, "C1-OPP-A", None);
-    runner.place_on_field(1, "C1-OPP-B", None);
+    runner.place_on_field(1, "ST1-05", None);
+    runner.place_on_field(1, "ST2-05", None);
 
-    // Carrier (Mineral trait) with exactly one buried source: EX8-047. The
+    // Carrier (Rock trait) with exactly one buried source: EX8-047. The
     // single source makes Zofr Kabus's source pick forced onto the inherited card.
-    let carrier = runner.place_on_field(0, "C1-CARRIER", None);
+    let carrier = runner.place_on_field(0, "BT4-072", None);
     runner.push_source(carrier, "EX8-047");
 
     let before = snapshot(&runner);
@@ -197,8 +191,8 @@ fn c1_zofr_kabus_source_trash_fans_out_inherited_delete_and_buffs() {
     );
     let dp = runner.dp_of(carrier).expect("carrier has DP");
     assert!(
-        dp >= 8000 + 3000,
-        "Zofr Kabus must add at least +3000 DP to the carrier (base 8000, got {dp})"
+        dp >= 7000 + 3000,
+        "Zofr Kabus must add at least +3000 DP to the carrier (BT4-072 base 7000, got {dp})"
     );
 
     // (a) The EX8-047 source left the carrier stack (cost paid). `card_sources`
@@ -237,21 +231,26 @@ fn c1_zofr_kabus_non_inherited_source_buffs_but_does_not_fan_out_delete() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX8-070")
         .expect("EX8-070 (Zofr Kabus) in embedded DSL pack")
-        .add_card(make_mineral_carrier("C1N-CARRIER", "C1N Carrier"))
-        .add_card(make_mineral_filler("C1N-PLAIN"))
-        .add_card(make_opp_target("C1N-OPP-A", "C1N OppA", 3, 4000))
-        .add_card(make_opp_target("C1N-OPP-B", "C1N OppB", 4, 4000))
+        .dsl_card("BT4-072") // Gogmamon — Black/Rock Lv.5 carrier
+        .expect("BT4-072 (Gogmamon) in embedded DSL pack")
+        .dsl_card("BT14-009") // Gotsumon — plain Rock filler (no inherited body)
+        .expect("BT14-009 (Gotsumon) in embedded DSL pack")
+        .dsl_card("ST1-05") // Birdramon — vanilla cost-4 opp Digimon
+        .expect("ST1-05 (Birdramon) in embedded DSL pack")
+        .dsl_card("ST2-05") // Ikkakumon — vanilla cost-4 opp Digimon
+        .expect("ST2-05 (Ikkakumon) in embedded DSL pack")
         .hand(0, &["EX8-070"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    runner.place_on_field(1, "C1N-OPP-A", None);
-    runner.place_on_field(1, "C1N-OPP-B", None);
+    runner.place_on_field(1, "ST1-05", None);
+    runner.place_on_field(1, "ST2-05", None);
 
-    let carrier = runner.place_on_field(0, "C1N-CARRIER", None);
-    // The only buried source is a plain Mineral filler with no inherited body.
-    runner.push_source(carrier, "C1N-PLAIN");
+    let carrier = runner.place_on_field(0, "BT4-072", None);
+    // The only buried source is a plain Rock filler (BT14-009) with no inherited
+    // body — it pays the cost but fans out no delete.
+    runner.push_source(carrier, "BT14-009");
 
     let before = snapshot(&runner);
     runner.play(0, 0);
@@ -298,45 +297,31 @@ fn c2_gravel_hearts_free_plays_sunarizamon_from_trash_and_searches() {
     use digimon_engine::enums::DelayTrigger;
     use digimon_engine::selection::OptionPlayResult;
 
-    // A Black anchor satisfies the Black Option's colour requirement at play time.
-    let mut anchor = make_test_card("C2-ANCHOR", "C2 Anchor");
-    anchor.card_kind = CardKind::Digimon;
-    anchor.level = Some(3);
-    anchor.dp = Some(3000);
-    anchor.play_cost = 3;
-    anchor.colors = vec![CardColor::Black];
-
-    // Deck fodder so EX8-047's reveal-top-3 search has cards to reveal: at least
-    // one Mineral and one LIBERATOR so both buckets can be satisfied.
-    let mut deck_min = make_test_card("C2-DECK-MIN", "C2 Deck Mineral");
-    deck_min.card_kind = CardKind::Digimon;
-    deck_min.level = Some(3);
-    deck_min.dp = Some(2000);
-    deck_min.traits.push("Mineral".to_string());
-    let mut deck_lib = make_test_card("C2-DECK-LIB", "C2 Deck Liberator");
-    deck_lib.card_kind = CardKind::Digimon;
-    deck_lib.level = Some(3);
-    deck_lib.dp = Some(2000);
-    deck_lib.traits.push("LIBERATOR".to_string());
-    let deck_pad = make_test_card("C2-DECK-PAD", "C2 Deck Pad");
-
     let mut runner = DebugRunner::builder()
         .dsl_card("EX10-069")
         .expect("EX10-069 (Gravel Hearts) in embedded DSL pack")
         .dsl_card("EX8-047")
         .expect("EX8-047 (Sunarizamon) in embedded DSL pack")
-        .add_card(anchor)
-        .add_card(deck_min)
-        .add_card(deck_lib)
-        .add_card(deck_pad)
+        // ST5-05 Commandramon — Black Lv.3 anchor (satisfies the Black Option's
+        // colour requirement at play time).
+        .dsl_card("ST5-05")
+        .expect("ST5-05 (Commandramon) in embedded DSL pack")
+        // Deck fodder so EX8-047's reveal-top-3 search has both buckets to fill:
+        // BT14-009 Gotsumon ([Rock]) + BT23-005 Elizamon ([LIBERATOR]) + a pad.
+        .dsl_card("BT14-009")
+        .expect("BT14-009 (Gotsumon) in embedded DSL pack")
+        .dsl_card("BT23-005")
+        .expect("BT23-005 (Elizamon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
         .hand(0, &["EX10-069"])
-        .deck(0, &["C2-DECK-MIN", "C2-DECK-LIB", "C2-DECK-PAD"])
-        .deck(1, &["C2-DECK-PAD"])
+        .deck(0, &["BT14-009", "BT23-005", "ST1-04"])
+        .deck(1, &["ST1-04"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    runner.place_on_field(0, "C2-ANCHOR", Some(0));
+    runner.place_on_field(0, "ST5-05", Some(0));
     // EX8-047 seeded in trash — the recursion target.
     runner.inject_trash(0, "EX8-047");
     runner.game.enter_main_phase();
@@ -477,7 +462,8 @@ fn c3_black_scramble_cost_reduced_digivolve_into_pyramidimon() {
         .expect("LM-031 (Black Scramble) in embedded DSL pack")
         .dsl_card("EX10-033")
         .expect("EX10-033 (Pyramidimon) in embedded DSL pack")
-        .add_card(make_mineral_carrier("C3-BASE", "C3 Base"))
+        .dsl_card("BT4-072") // Gogmamon — Black/Rock Lv.5 base
+        .expect("BT4-072 (Gogmamon) in embedded DSL pack")
         .hand(0, &["LM-031", "EX10-033"])
         .memory(10)
         .start();
@@ -486,9 +472,9 @@ fn c3_black_scramble_cost_reduced_digivolve_into_pyramidimon() {
     // DSL test loader leaves evo_costs empty (see set_evo_cost doc-comment).
     set_evo_cost(&mut runner, "EX10-033", CardColor::Black, 5, 3);
 
-    // The Black Lv.5 Mineral base on field (placed a past turn so it is a legal
+    // The Black Lv.5 base on field (placed a past turn so it is a legal
     // digivolve base this turn) — the digivolve source.
-    let base = runner.place_on_field(0, "C3-BASE", Some(0));
+    let base = runner.place_on_field(0, "BT4-072", Some(0));
 
     let before = snapshot(&runner);
 
@@ -544,25 +530,22 @@ fn c3_black_scramble_cost_reduced_digivolve_into_pyramidimon() {
 /// it still places itself as a Delay; the digivolve simply does not occur.)
 #[test]
 fn c3_black_scramble_non_black_base_does_not_digivolve() {
-    // A RED Lv.5 base — excluded by LM-031's color_is: black filter.
-    let mut red_base = make_test_card("C3N-RED", "C3N Red Base");
-    red_base.card_kind = CardKind::Digimon;
-    red_base.level = Some(5);
-    red_base.dp = Some(8000);
-    red_base.colors = vec![CardColor::Red];
-
+    // ST1-09 MetalGreymon — a RED Lv.5 base, excluded by LM-031's color_is:
+    // black filter (its only printed effect is inherited, never active as a top
+    // card, and it is never digivolved here).
     let mut runner = DebugRunner::builder()
         .dsl_card("LM-031")
         .expect("LM-031 (Black Scramble) in embedded DSL pack")
         .dsl_card("EX10-033")
         .expect("EX10-033 (Pyramidimon) in embedded DSL pack")
-        .add_card(red_base)
+        .dsl_card("ST1-09")
+        .expect("ST1-09 (MetalGreymon) in embedded DSL pack")
         .hand(0, &["LM-031", "EX10-033"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    let base = runner.place_on_field(0, "C3N-RED", None);
+    let base = runner.place_on_field(0, "ST1-09", None);
 
     let bs_idx = runner.game.players[0]
         .hand
@@ -577,7 +560,7 @@ fn c3_black_scramble_non_black_base_does_not_digivolve() {
         runner.game.players[0].battle_area[base.index as usize]
             .top_card()
             .card_id(&runner.game.card_data),
-        "C3N-RED",
+        "ST1-09",
         "a non-black base must not be a legal Black Scramble digivolve source"
     );
 }
@@ -612,7 +595,8 @@ fn c4_defense_training_delay_cost_reduced_digivolve() {
         .expect("P-107 (Defense Training) in embedded DSL pack")
         .dsl_card("EX10-033")
         .expect("EX10-033 (Pyramidimon) in embedded DSL pack")
-        .add_card(make_mineral_carrier("C4-BASE", "C4 Base"))
+        .dsl_card("BT4-072") // Gogmamon — Black/Rock Lv.5 base
+        .expect("BT4-072 (Gogmamon) in embedded DSL pack")
         .hand(0, &["EX10-033"])
         .memory(10)
         .start();
@@ -621,7 +605,7 @@ fn c4_defense_training_delay_cost_reduced_digivolve() {
     set_evo_cost(&mut runner, "EX10-033", CardColor::Black, 5, 3);
 
     // The black Lv.5 base on field (placed a past turn) — the digivolve target.
-    let base = runner.place_on_field(0, "C4-BASE", Some(0));
+    let base = runner.place_on_field(0, "BT4-072", Some(0));
 
     // Install Defense Training as an armed Delay Option with its placing turn in
     // the PAST (turn 0) so §16-16 ("after the placing turn") permits activation
@@ -738,12 +722,20 @@ fn c5_magneticdramon_source_trash_double_removal() {
         .expect("EX8-047 (Sunarizamon) in embedded DSL pack")
         .dsl_card("EX8-048")
         .expect("EX8-048 (Landramon) in embedded DSL pack")
-        .add_card(make_mineral_filler("C5-MIN-F1"))
-        .add_card(make_mineral_filler("C5-MIN-F2"))
-        .add_card(make_mineral_carrier("C5-CARRIER", "C5 Carrier"))
-        .add_card(make_opp_target("C5-OPP-A", "C5 OppA", 3, 4000))
-        .add_card(make_opp_target("C5-OPP-B", "C5 OppB", 4, 4000))
-        .add_card(make_opp_target("C5-OPP-C", "C5 OppC", 2, 3000))
+        .dsl_card("BT14-009") // Gotsumon — plain Rock filler source #1
+        .expect("BT14-009 (Gotsumon) in embedded DSL pack")
+        .dsl_card("EX8-046") // Gotsumon — plain Rock filler source #2 (Blocker-only inherited)
+        .expect("EX8-046 (Gotsumon) in embedded DSL pack")
+        .dsl_card("BT4-072") // Gogmamon — Black/Rock Lv.5 carrier
+        .expect("BT4-072 (Gogmamon) in embedded DSL pack")
+        .dsl_card("ST1-05") // Birdramon — vanilla cost-4 opp Digimon
+        .expect("ST1-05 (Birdramon) in embedded DSL pack")
+        .dsl_card("ST2-05") // Ikkakumon — vanilla cost-4 opp Digimon
+        .expect("ST2-05 (Ikkakumon) in embedded DSL pack")
+        .dsl_card("ST3-06") // Gatomon — vanilla cost-4 opp Digimon
+        .expect("ST3-06 (Gatomon) in embedded DSL pack")
+        .dsl_card("ST1-04") // Dracomon — security fodder
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
         .memory(10)
         .start();
     runner.game.turn_count = 1;
@@ -765,18 +757,18 @@ fn c5_magneticdramon_source_trash_double_removal() {
 
     // Opponent fields three cost-≤4 Digimon: 1 active-clause victim + 1 fan-out
     // victim + 1 survivor (proving exactly one extra delete from the fan-out).
-    runner.place_on_field(1, "C5-OPP-A", None);
-    runner.place_on_field(1, "C5-OPP-B", None);
-    runner.place_on_field(1, "C5-OPP-C", None);
-    seed_security(&mut runner, 1, "C5-SEC", 2);
+    runner.place_on_field(1, "ST1-05", None);
+    runner.place_on_field(1, "ST2-05", None);
+    runner.place_on_field(1, "ST3-06", None);
+    seed_security(&mut runner, 1, "ST1-04", 2);
 
-    // Carrier stack: the Mineral inherited-delete source (EX8-048) + 2 Mineral
-    // fillers under a Mineral carrier, so Clause A's "trash 3" picks all three
+    // Carrier stack: the Mineral inherited-delete source (EX8-048) + 2 plain Rock
+    // fillers under a Rock carrier, so Clause A's "trash 3" picks all three
     // Mineral/Rock-trait cards (EX8-048 fans out a second delete).
-    let carrier = runner.place_on_field(0, "C5-CARRIER", None);
+    let carrier = runner.place_on_field(0, "BT4-072", None);
     runner.push_source(carrier, "EX8-048");
-    runner.push_source(carrier, "C5-MIN-F1");
-    runner.push_source(carrier, "C5-MIN-F2");
+    runner.push_source(carrier, "BT14-009");
+    runner.push_source(carrier, "EX8-046");
 
     let magnet = runner.place_on_field(0, "EX10-036", None);
 

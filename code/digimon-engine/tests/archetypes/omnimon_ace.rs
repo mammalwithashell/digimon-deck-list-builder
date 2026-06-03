@@ -8,9 +8,10 @@
 //! (BT17-078's DNA-gated level-wipe and BT20-102 X-Antibody's single-survivor
 //! mass deletion).
 //!
-//! Every combo loads its NAMED cards via the embedded DSL pack (`dsl_card` /
-//! `dsl_builder`); synthetic `make_test_card` is used only for unnamed neutral
-//! fillers and removal targets. Each test drives the cards' REAL action paths
+//! Every role — NAMED combo cards AND neutral fillers / removal targets / colour
+//! anchors / attackers — is loaded via the embedded DSL pack (`dsl_card` /
+//! `dsl_builder`), with no synthetic `make_test_card`: vanilla ST rookies /
+//! Lv4–6 Digimon fill the neutral roles. Each test drives the cards' REAL action paths
 //! (`play_option_from_hand` for the Option, the engine's own
 //! `effect_initiated_dna_digivolve` DNA primitive, `fire_on_play` for the
 //! When-Digivolving body) and asserts the claimed mechanical outcome via a
@@ -36,27 +37,14 @@
 #![allow(dead_code)]
 
 use digimon_engine::action::space::encode_attack;
-use digimon_engine::card_data::CardData;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::CardKind;
 use digimon_engine::permanent::{OptionState, PermanentHandle};
 use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 use super::support::snapshot;
 
 // ─── Shared fixtures ─────────────────────────────────────────────────────────
-
-/// A neutral opponent Digimon at a chosen level + DP. Used as removal /
-/// bottom-deck targets so the Omnimon payoff clauses have something to bite.
-/// `name` is an unnamed neutral (never one of the combo-named cards).
-fn make_opp_digimon(id: &str, name: &str, level: u8, dp: i32) -> CardData {
-    let mut c = make_test_card(id, name);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(level);
-    c.dp = Some(dp);
-    c
-}
 
 /// Drive every pending selection by taking the first valid action, bounded so a
 /// logic bug surfaces as a loop-exhaustion panic rather than a hang. Errors are
@@ -217,32 +205,28 @@ fn delay_option_present(runner: &DebugRunner, player: u8, card_id: &str) -> bool
             hand/trash); dispose_option then trashes the Standard Option. See \
             docs/RUST_ENGINE_GAPS.md."]
 fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
-    // A Red anchor Digimon satisfies BT17-095's Red+Blue colour requirement at
-    // Option-play time (make_test_card defaults to Red). It is an unnamed
-    // neutral, not a combo card.
-    let mut anchor = make_test_card("C1-ANCHOR", "C1 Anchor");
-    anchor.card_kind = CardKind::Digimon;
-    anchor.level = Some(3);
-    anchor.dp = Some(3000);
-    let filler = make_test_card("C1-FILL", "C1 Fill");
-
+    // ST1-04 Dracomon — a real Red Lv3 colour anchor (satisfies BT17-095's
+    // Red+Blue colour requirement at Option-play time). ST1-02 Biyomon — vanilla
+    // deck filler.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
         .expect("BT17-095 (Miraculous Mega Knight) in embedded DSL pack")
         .dsl_card("BT17-007")
         .expect("BT17-007 (Agumon) in embedded DSL pack")
-        .add_card(anchor)
-        .add_card(filler)
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .dsl_card("ST1-02")
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .hand(0, &["BT17-095"])
-        .deck(0, &["C1-FILL"; 4])
-        .deck(1, &["C1-FILL"; 4])
+        .deck(0, &["ST1-02"; 4])
+        .deck(1, &["ST1-02"; 4])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
     // Colour anchor on field; seed the real Agumon (BT17-007) ONLY into P0's
     // trash — the union pick must recur it from trash, not hand.
-    runner.place_on_field(0, "C1-ANCHOR", Some(0));
+    runner.place_on_field(0, "ST1-04", Some(0));
     runner.inject_trash(0, "BT17-007");
     runner.game.enter_main_phase();
 
@@ -326,29 +310,26 @@ fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
             mandatory place-self tail no-ops and the Standard Option is trashed (trash +1) \
             instead of seated as a Delay. See docs/RUST_ENGINE_GAPS.md."]
 fn combo1_mega_knight_declining_recursion_still_seats_delay() {
-    let mut anchor = make_test_card("C1D-ANCHOR", "C1D Anchor");
-    anchor.card_kind = CardKind::Digimon;
-    anchor.level = Some(3);
-    anchor.dp = Some(3000);
-    let filler = make_test_card("C1D-FILL", "C1D Fill");
-
+    // ST1-04 Dracomon colour anchor + ST1-02 Biyomon deck filler (both real).
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
         .expect("BT17-095 (Miraculous Mega Knight) in embedded DSL pack")
         .dsl_card("BT17-007")
         .expect("BT17-007 (Agumon) in embedded DSL pack")
-        .add_card(anchor)
-        .add_card(filler)
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .dsl_card("ST1-02")
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .hand(0, &["BT17-095"])
-        .deck(0, &["C1D-FILL"; 4])
-        .deck(1, &["C1D-FILL"; 4])
+        .deck(0, &["ST1-02"; 4])
+        .deck(1, &["ST1-02"; 4])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
     // Colour anchor on field; seed an eligible Agumon in trash so the pick is
     // genuinely OPTIONAL (there IS a target to decline), then enter main.
-    runner.place_on_field(0, "C1D-ANCHOR", Some(0));
+    runner.place_on_field(0, "ST1-04", Some(0));
     runner.inject_trash(0, "BT17-007");
     runner.game.enter_main_phase();
 
@@ -437,8 +418,6 @@ fn seat_as_delay_option(runner: &mut DebugRunner, handle: PermanentHandle) {
 /// single merged permanent — a four-card chain.
 #[test]
 fn combo2_mega_knight_delay_dna_digivolves_into_omnimon_from_hand() {
-    let filler = make_test_card("C2-FILL", "C2 Fill");
-
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
         .expect("BT17-095 (Miraculous Mega Knight) in embedded DSL pack")
@@ -448,11 +427,12 @@ fn combo2_mega_knight_delay_dna_digivolves_into_omnimon_from_hand() {
         .expect("BT17-027 (MetalGarurumon) in embedded DSL pack")
         .dsl_card("BT17-078")
         .expect("BT17-078 (Omnimon) in embedded DSL pack")
-        .add_card(filler)
+        .dsl_card("ST1-02") // Biyomon — vanilla deck filler
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         // The Omnimon result + the L6 MetalGarurumon DNA partner are in hand.
         .hand(0, &["BT17-078", "BT17-027"])
-        .deck(0, &["C2-FILL"; 5])
-        .deck(1, &["C2-FILL"; 5])
+        .deck(0, &["ST1-02"; 5])
+        .deck(1, &["ST1-02"; 5])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
@@ -527,8 +507,6 @@ fn combo2_mega_knight_delay_dna_digivolves_into_omnimon_from_hand() {
 fn combo2_mega_knight_delay_does_not_fire_on_battle_leave() {
     use digimon_engine::replacement::ReplacementCause;
 
-    let filler = make_test_card("C2B-FILL", "C2B Fill");
-
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
         .expect("BT17-095 (Miraculous Mega Knight) in embedded DSL pack")
@@ -538,10 +516,11 @@ fn combo2_mega_knight_delay_does_not_fire_on_battle_leave() {
         .expect("BT17-027 (MetalGarurumon) in embedded DSL pack")
         .dsl_card("BT17-078")
         .expect("BT17-078 (Omnimon) in embedded DSL pack")
-        .add_card(filler)
+        .dsl_card("ST1-02") // Biyomon — vanilla deck filler
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .hand(0, &["BT17-078", "BT17-027"])
-        .deck(0, &["C2B-FILL"; 5])
-        .deck(1, &["C2B-FILL"; 5])
+        .deck(0, &["ST1-02"; 5])
+        .deck(1, &["ST1-02"; 5])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
@@ -599,28 +578,27 @@ fn combo2_mega_knight_delay_does_not_fire_on_battle_leave() {
 /// [Security] clauses (PR #490), so this exercises the genuine security flip.
 #[test]
 fn combo3_mega_knight_security_free_plays_tamer_and_returns_self_to_hand() {
-    let mut attacker = make_test_card("C3-ATK", "C3 Attacker");
-    attacker.card_kind = CardKind::Digimon;
-    attacker.dp = Some(6000);
-    let filler = make_test_card("C3-FILL", "C3 Fill");
-
+    // ST1-08 Garudamon — a real Lv5 attacker (only attacks security; stats not
+    // asserted). ST1-02 Biyomon — vanilla deck filler.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
         .expect("BT17-095 (Miraculous Mega Knight) in embedded DSL pack")
         .dsl_card("BT17-081")
         .expect("BT17-081 (Tai Kamiya & Matt Ishida) in embedded DSL pack")
-        .add_card(attacker)
-        .add_card(filler)
+        .dsl_card("ST1-08")
+        .expect("ST1-08 (Garudamon) in embedded DSL pack")
+        .dsl_card("ST1-02")
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .memory(10)
-        .deck(0, &["C3-FILL"; 5])
-        .deck(1, &["C3-FILL"; 5])
+        .deck(0, &["ST1-02"; 5])
+        .deck(1, &["ST1-02"; 5])
         // Defender (P1) holds the named Tamer in HAND; BT17-095 sits in security.
         .hand(1, &["BT17-081"])
         .security(1, &["BT17-095"])
         .start();
     runner.game.turn_count = 1;
 
-    let attacker_handle = runner.place_on_field(0, "C3-ATK", Some(0));
+    let attacker_handle = runner.place_on_field(0, "ST1-08", Some(0));
     let before = snapshot(&runner);
     assert_eq!(before.security[1], 1, "precondition: BT17-095 in P1 security");
     assert_eq!(before.field[1], 0, "precondition: P1 has no Tamer on field");
@@ -672,24 +650,22 @@ fn combo3_mega_knight_security_free_plays_tamer_and_returns_self_to_hand() {
 /// self-recursion is unconditional even when the free play is declined.
 #[test]
 fn combo3_mega_knight_security_returns_self_to_hand_with_no_tamer() {
-    let mut attacker = make_test_card("C3N-ATK", "C3N Attacker");
-    attacker.card_kind = CardKind::Digimon;
-    attacker.dp = Some(6000);
-    let filler = make_test_card("C3N-FILL", "C3N Fill");
-
+    // ST1-08 Garudamon attacker + ST1-02 Biyomon deck filler (both real).
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
         .expect("BT17-095 (Miraculous Mega Knight) in embedded DSL pack")
-        .add_card(attacker)
-        .add_card(filler)
+        .dsl_card("ST1-08")
+        .expect("ST1-08 (Garudamon) in embedded DSL pack")
+        .dsl_card("ST1-02")
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .memory(10)
-        .deck(0, &["C3N-FILL"; 5])
-        .deck(1, &["C3N-FILL"; 5])
+        .deck(0, &["ST1-02"; 5])
+        .deck(1, &["ST1-02"; 5])
         .security(1, &["BT17-095"])
         .start();
     runner.game.turn_count = 1;
 
-    let attacker_handle = runner.place_on_field(0, "C3N-ATK", Some(0));
+    let attacker_handle = runner.place_on_field(0, "ST1-08", Some(0));
     assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
     assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
 
@@ -746,6 +722,9 @@ fn combo3_mega_knight_security_returns_self_to_hand_with_no_tamer() {
 fn combo4_omnimon_dna_digivolve_bottom_decks_chosen_level_then_deletes() {
     // Opponent board: two Lv.5 Digimon (the chosen-level cohort) + one Lv.6
     // (off-level survivor of the bottom-deck sweep, then a delete victim).
+    // Real vanilla opponent victims: ST5-10 MetalTyrannomon + ST4-09 Okuwamon
+    // (both Lv.5 — the chosen-level cohort) + ST2-10 Plesiomon (Lv.6 — off-level
+    // survivor of the sweep, then the delete victim).
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-078")
         .expect("BT17-078 (Omnimon) in embedded DSL pack")
@@ -753,12 +732,17 @@ fn combo4_omnimon_dna_digivolve_bottom_decks_chosen_level_then_deletes() {
         .expect("BT17-015 (WarGreymon) in embedded DSL pack")
         .dsl_card("BT17-027")
         .expect("BT17-027 (MetalGarurumon) in embedded DSL pack")
-        .add_card(make_opp_digimon("C4-OPP-L5A", "C4 OppL5A", 5, 6000))
-        .add_card(make_opp_digimon("C4-OPP-L5B", "C4 OppL5B", 5, 5000))
-        .add_card(make_opp_digimon("C4-OPP-L6", "C4 OppL6", 6, 9000))
+        .dsl_card("ST5-10")
+        .expect("ST5-10 (MetalTyrannomon) in embedded DSL pack")
+        .dsl_card("ST4-09")
+        .expect("ST4-09 (Okuwamon) in embedded DSL pack")
+        .dsl_card("ST2-10")
+        .expect("ST2-10 (Plesiomon) in embedded DSL pack")
+        .dsl_card("ST1-02") // Biyomon — vanilla deck filler
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .hand(0, &["BT17-078"])
-        .deck(0, &["C4-OPP-L6"; 4])
-        .deck(1, &["C4-OPP-L6"; 4])
+        .deck(0, &["ST1-02"; 4])
+        .deck(1, &["ST1-02"; 4])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
@@ -769,9 +753,9 @@ fn combo4_omnimon_dna_digivolve_bottom_decks_chosen_level_then_deletes() {
     let omnimon_card = runner.game.players[0].hand[hand_index_of(&runner, 0, "BT17-078")].handle();
 
     // Opponent fields the cohort: 2× Lv.5 + 1× Lv.6.
-    runner.place_on_field(1, "C4-OPP-L5A", None);
-    runner.place_on_field(1, "C4-OPP-L5B", None);
-    runner.place_on_field(1, "C4-OPP-L6", None);
+    runner.place_on_field(1, "ST5-10", None);
+    runner.place_on_field(1, "ST4-09", None);
+    runner.place_on_field(1, "ST2-10", None);
 
     let before = snapshot(&runner);
     let p1_deck_before = before.deck[1];
@@ -827,16 +811,20 @@ fn combo4_omnimon_non_dna_play_does_not_fire_level_wipe() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-078")
         .expect("BT17-078 (Omnimon) in embedded DSL pack")
-        .add_card(make_opp_digimon("C4N-OPP-L5", "C4N OppL5", 5, 6000))
-        .add_card(make_opp_digimon("C4N-OPP-L6", "C4N OppL6", 6, 9000))
+        .dsl_card("ST5-10") // MetalTyrannomon — Lv.5 opp Digimon
+        .expect("ST5-10 (MetalTyrannomon) in embedded DSL pack")
+        .dsl_card("ST2-10") // Plesiomon — Lv.6 opp Digimon
+        .expect("ST2-10 (Plesiomon) in embedded DSL pack")
+        .dsl_card("ST1-02") // Biyomon — vanilla deck filler
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .memory(20)
-        .deck(0, &["C4N-OPP-L6"; 4])
-        .deck(1, &["C4N-OPP-L6"; 4])
+        .deck(0, &["ST1-02"; 4])
+        .deck(1, &["ST1-02"; 4])
         .start();
     runner.game.turn_count = 1;
 
-    let opp_l5 = runner.place_on_field(1, "C4N-OPP-L5", Some(0));
-    let _opp_l6 = runner.place_on_field(1, "C4N-OPP-L6", Some(0));
+    let opp_l5 = runner.place_on_field(1, "ST5-10", Some(0));
+    let _opp_l6 = runner.place_on_field(1, "ST2-10", Some(0));
     let _ = opp_l5;
     // Play Omnimon onto the field directly (no DNA digivolve), then fire On Play.
     let omni = runner.place_on_field(0, "BT17-078", None);
@@ -893,25 +881,32 @@ fn combo4_omnimon_non_dna_play_does_not_fire_level_wipe() {
 /// source.
 #[test]
 fn combo5_x_antibody_with_omnimon_source_wipes_to_single_survivor_and_bottoms() {
+    // Real vanilla cast: ST1-05 Birdramon + ST2-05 Ikkakumon (Lv.4 opp Digimon)
+    // and ST5-10 MetalTyrannomon (Lv.5 own ally, the unprotected wipe victim).
     let mut runner = DebugRunner::builder()
         .dsl_card("BT20-102")
         .expect("BT20-102 (Omnimon (X Antibody)) in embedded DSL pack")
         .dsl_card("BT17-078")
         .expect("BT17-078 (Omnimon) in embedded DSL pack")
-        .add_card(make_opp_digimon("C5-OPP-A", "C5 OppA", 4, 5000))
-        .add_card(make_opp_digimon("C5-OPP-B", "C5 OppB", 4, 4000))
-        .add_card(make_opp_digimon("C5-OWN-ALLY", "C5 OwnAlly", 5, 6000))
+        .dsl_card("ST1-05")
+        .expect("ST1-05 (Birdramon) in embedded DSL pack")
+        .dsl_card("ST2-05")
+        .expect("ST2-05 (Ikkakumon) in embedded DSL pack")
+        .dsl_card("ST5-10")
+        .expect("ST5-10 (MetalTyrannomon) in embedded DSL pack")
+        .dsl_card("ST1-02") // Biyomon — vanilla deck filler
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .memory(10)
-        .deck(0, &["C5-OPP-A"; 5])
-        .deck(1, &["C5-OPP-A"; 5])
+        .deck(0, &["ST1-02"; 5])
+        .deck(1, &["ST1-02"; 5])
         .start();
     runner.game.turn_count = 1;
 
     // Opponent fields two Digimon; P0 fields one neutral ally (so the wipe has
     // own-side Digimon to delete too).
-    runner.place_on_field(1, "C5-OPP-A", Some(0));
-    runner.place_on_field(1, "C5-OPP-B", Some(0));
-    let _ally = runner.place_on_field(0, "C5-OWN-ALLY", Some(0));
+    runner.place_on_field(1, "ST1-05", Some(0));
+    runner.place_on_field(1, "ST2-05", Some(0));
+    let _ally = runner.place_on_field(0, "ST5-10", Some(0));
 
     // BT20-102 placed ON TOP of a real BT17-078 Omnimon source — the
     // sources-only digivolution-cards condition is genuinely satisfied.
@@ -953,7 +948,7 @@ fn combo5_x_antibody_with_omnimon_source_wipes_to_single_survivor_and_bottoms() 
     // unprotected neutral ally is the own Digimon deleted by "delete all other
     // Digimon", and BT20-102 survives its own wipe.
     assert!(
-        !field_has_top(&runner, 0, "C5-OWN-ALLY"),
+        !field_has_top(&runner, 0, "ST5-10"),
         "the unprotected own ally must be deleted by 'delete all other Digimon' \
          (BT20-102 itself was the protected own Digimon)"
     );
@@ -974,15 +969,19 @@ fn combo5_x_antibody_without_omnimon_source_does_not_fire_body() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT20-102")
         .expect("BT20-102 (Omnimon (X Antibody)) in embedded DSL pack")
-        .add_card(make_opp_digimon("C5N-OPP-A", "C5N OppA", 4, 5000))
-        .add_card(make_opp_digimon("C5N-OPP-B", "C5N OppB", 4, 4000))
+        .dsl_card("ST1-05") // Birdramon — Lv.4 opp Digimon
+        .expect("ST1-05 (Birdramon) in embedded DSL pack")
+        .dsl_card("ST2-05") // Ikkakumon — Lv.4 opp Digimon
+        .expect("ST2-05 (Ikkakumon) in embedded DSL pack")
+        .dsl_card("ST1-02") // Biyomon — vanilla deck filler
+        .expect("ST1-02 (Biyomon) in embedded DSL pack")
         .memory(10)
-        .deck(1, &["C5N-OPP-A"; 5])
+        .deck(1, &["ST1-02"; 5])
         .start();
     runner.game.turn_count = 1;
 
-    runner.place_on_field(1, "C5N-OPP-A", Some(0));
-    runner.place_on_field(1, "C5N-OPP-B", Some(0));
+    runner.place_on_field(1, "ST1-05", Some(0));
+    runner.place_on_field(1, "ST2-05", Some(0));
     // BT20-102 placed BARE (no digivolution source). The carrier's own name
     // "Omnimon (X Antibody)" is excluded from the sources-only scan.
     let xanti = runner.place_on_field(0, "BT20-102", None);

@@ -16,9 +16,13 @@
 //!   deletion fanning out into Kaguyamon removal + Kyaromon draw (BT22-042 +
 //!   EX9-033 + BT22-002).
 //!
-//! Every card a combo NAMES is loaded by its real ID via `dsl_card`; synthetic
-//! `make_test_card` bodies are only neutral fillers / targets / anchors a combo
-//! needs but does not name. These exercise the *real* cards through their *real*
+//! Every role — NAMED combo cards AND neutral fillers / targets / anchors / cost
+//! bodies — is loaded by its real ID via `dsl_card`, with no synthetic
+//! `make_test_card`: real Yellow/Black [Puppet] Digimon (ToyAgumon, Tobucatmon,
+//! Shoemon …) fill the Puppet-cost/base/evo roles, vanilla ST Digimon fill the
+//! non-Puppet carrier / anchor / opponent-target roles, and real LIBERATOR
+//! Digimon supply the colour-ignore enabler + reveal targets. These exercise the
+//! *real* cards through their *real*
 //! effect paths (the Option pipeline, the `<Delay>` event gate, the `<Overclock>`
 //! keyword, deletion-as-cost) and assert the combined board diff a per-card test
 //! can't see.
@@ -35,42 +39,29 @@
 #![allow(dead_code)]
 
 use digimon_engine::action::space::{encode_attack, PASS};
-use digimon_engine::card_data::CardData;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming, GamePhase, Keyword};
+use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::enums::{DelayTrigger, EffectTiming, GamePhase, Keyword};
 use digimon_engine::permanent::{OptionState, PermanentHandle};
 use digimon_engine::selection::OptionPlayResult;
 
 use super::support::snapshot;
 
-// ─── Shared helpers ──────────────────────────────────────────────────────────
-
-/// A yellow [Puppet] Digimon at a chosen level/DP — the deck's fodder/body type.
-/// Used as an *unnamed* neutral combo piece (deletion-cost body, evolution base,
-/// removal target) — never a substitute for a card a combo names.
-fn make_puppet(id: &str, level: u8, dp: i32) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.colors = vec![CardColor::Yellow];
-    c.level = Some(level);
-    c.dp = Some(dp);
-    c.play_cost = level as u16;
-    c.traits = vec!["Puppet".to_string()];
-    c
-}
-
-/// A neutral non-Puppet Digimon (a non-trigger body / colour anchor). Not a
-/// legal Puppet/Token cost body, so it never disturbs the unique cost target.
-fn make_plain(id: &str, level: u8, dp: i32) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.colors = vec![CardColor::Yellow];
-    c.level = Some(level);
-    c.dp = Some(dp);
-    c.play_cost = level as u16;
-    c.traits = vec!["Beast".to_string()];
-    c
-}
+// ─── Real-card cast (all DSL-loadable) ──────────────────────────────────────
+//
+//   ST5-04 ToyAgumon        Black Lv3 [Puppet] — inherited-only top card (no On
+//                           Play/Deletion), the unique Puppet deletion-cost fodder.
+//   ST19-07 Tobucatmon      Yellow Lv4 [Puppet] — passive <Jamming> only, the
+//                           free-digivolve [Puppet] hand body (cheat-digivolve
+//                           ignores requirements, so Lv4 is a faithful body).
+//   ST5-07 Jazardmon        Black Lv4 vanilla, NON-Puppet — the Kyaromon-source
+//                           carrier (not a legal Puppet cost → keeps the fodder
+//                           the unique cost target).
+//   ST5-05 Commandramon     Black Lv3 vanilla — colour anchor / opp Lv3 victim.
+//   ST5-10 MetalTyrannomon  Black Lv5 vanilla — opp Lv5 (survives lowest-level).
+//   ST3-06 Gatomon          Yellow Lv4 vanilla — the yellow Option colour anchor.
+//   ST1-04 Dracomon         Red Lv3 vanilla — deck draw-target / filler.
+//   BT21-055 Sunarizamon    Black Lv3 [LIBERATOR] — the colour-ignore enabler.
+//   EX7-024 / EX7-025 / BT22-029  real [LIBERATOR] cards — Vortex reveal targets.
 
 /// Drive every pending selection by taking the first valid action (or PASS on a
 /// candidate-less optional prompt), bounded so a logic bug surfaces as a
@@ -143,26 +134,25 @@ fn is_parked_delay(runner: &DebugRunner, player: usize, id: &str) -> bool {
 /// later arm the −3 digivolve (exercised in the happy path below).
 #[test]
 fn combo1_fable_waltz_main_free_plays_arisa_and_arms_delay() {
-    // Yellow anchor satisfies Fable Waltz's yellow Option colour requirement.
-    let mut anchor = make_plain("PS1-ANCHOR", 3, 3000);
-    anchor.colors = vec![CardColor::Yellow];
-    let filler = make_test_card("PS1-FILL", "Ps1 Fill");
-
+    // ST3-06 Gatomon — a real Yellow Digimon anchor (satisfies Fable Waltz's
+    // yellow Option colour requirement). ST1-04 Dracomon — vanilla deck filler.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-098")
         .expect("BT22-098 (Fable Waltz) in embedded DSL pack")
         .dsl_card("EX11-060")
         .expect("EX11-060 (Arisa Kinosaki) in embedded DSL pack")
-        .add_card(anchor)
-        .add_card(filler)
+        .dsl_card("ST3-06")
+        .expect("ST3-06 (Gatomon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
         .hand(0, &["BT22-098", "EX11-060"])
-        .deck(0, &["PS1-FILL", "PS1-FILL", "PS1-FILL", "PS1-FILL"])
-        .deck(1, &["PS1-FILL"])
+        .deck(0, &["ST1-04", "ST1-04", "ST1-04", "ST1-04"])
+        .deck(1, &["ST1-04"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    runner.place_on_field(0, "PS1-ANCHOR", Some(0));
+    runner.place_on_field(0, "ST3-06", Some(0));
     runner.game.enter_main_phase();
 
     let before = snapshot(&runner);
@@ -234,9 +224,8 @@ fn combo1_fable_waltz_main_free_plays_arisa_and_arms_delay() {
 /// hand body is the only legal armed-Delay evolution body. Returns the runner
 /// and the Arisa handle whose later suspend fires the Delay.
 fn combo1_chain_runner() -> (DebugRunner, PermanentHandle) {
-    let base = make_puppet("PS1C-BASE", 4, 5000);
-    let filler = make_test_card("PS1C-FILL", "Ps1c Fill");
-
+    // ST19-07 Tobucatmon — a real Lv4 [Puppet] base to receive the Delay's
+    // digivolve. ST1-04 Dracomon — vanilla deck filler.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-098")
         .expect("BT22-098 (Fable Waltz) in embedded DSL pack")
@@ -244,18 +233,20 @@ fn combo1_chain_runner() -> (DebugRunner, PermanentHandle) {
         .expect("EX11-060 (Arisa Kinosaki) in embedded DSL pack")
         .dsl_card("EX11-022")
         .expect("EX11-022 (Karakurumon) in embedded DSL pack")
-        .add_card(base)
-        .add_card(filler)
+        .dsl_card("ST19-07")
+        .expect("ST19-07 (Tobucatmon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
         // Fable Waltz + the EX11-022 Karakurumon Puppet+LIBERATOR evo body in hand.
         .hand(0, &["BT22-098", "EX11-022"])
-        .deck(0, &["PS1C-FILL", "PS1C-FILL", "PS1C-FILL", "PS1C-FILL"])
-        .deck(1, &["PS1C-FILL"])
+        .deck(0, &["ST1-04", "ST1-04", "ST1-04", "ST1-04"])
+        .deck(1, &["ST1-04"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
     // A Lv.4 [Puppet] base to receive the Delay's digivolve.
-    runner.place_on_field(0, "PS1C-BASE", Some(0));
+    runner.place_on_field(0, "ST19-07", Some(0));
     // The real Arisa already on field — its later suspend arms the Delay body.
     let arisa = runner.place_on_field(0, "EX11-060", Some(0));
     runner.game.enter_main_phase();
@@ -437,7 +428,7 @@ fn combo1_fable_waltz_delay_digivolves_base_into_ex11_022() {
         .map(|s| s.card_id(&runner.game.card_data).to_string())
         .collect();
     assert!(
-        evo_stack.contains(&"PS1C-BASE".to_string()),
+        evo_stack.contains(&"ST19-07".to_string()),
         "the base must remain under the Karakurumon evo body as a source; stack={evo_stack:?}"
     );
 }
@@ -452,25 +443,24 @@ fn combo1_fable_waltz_delay_digivolves_base_into_ex11_022() {
 /// stays parked and no selection fires.
 #[test]
 fn combo1_fable_waltz_delay_does_not_fire_on_placing_turn() {
-    let mut anchor = make_plain("PS1B-ANCHOR", 3, 3000);
-    anchor.colors = vec![CardColor::Yellow];
-    let filler = make_test_card("PS1B-FILL", "Ps1b Fill");
-
+    // ST3-06 Gatomon — real Yellow colour anchor; ST1-04 Dracomon — deck filler.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-098")
         .expect("BT22-098 (Fable Waltz) in embedded DSL pack")
         .dsl_card("EX11-060")
         .expect("EX11-060 (Arisa Kinosaki) in embedded DSL pack")
-        .add_card(anchor)
-        .add_card(filler)
+        .dsl_card("ST3-06")
+        .expect("ST3-06 (Gatomon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
         .hand(0, &["BT22-098"])
-        .deck(0, &["PS1B-FILL", "PS1B-FILL", "PS1B-FILL", "PS1B-FILL"])
-        .deck(1, &["PS1B-FILL"])
+        .deck(0, &["ST1-04", "ST1-04", "ST1-04", "ST1-04"])
+        .deck(1, &["ST1-04"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    runner.place_on_field(0, "PS1B-ANCHOR", Some(0));
+    runner.place_on_field(0, "ST3-06", Some(0));
     // The real Arisa on field whose suspend would (on a LATER turn) arm the Delay.
     let arisa = runner.place_on_field(0, "EX11-060", Some(0));
     runner.game.enter_main_phase();
@@ -512,37 +502,35 @@ fn combo1_fable_waltz_delay_does_not_fire_on_placing_turn() {
 /// the LIBERATOR trait (the colour-ignore enabler). Returns the runner and the
 /// EX7-074 hand index.
 fn combo2_runner(with_liberator: bool) -> (DebugRunner, usize) {
-    let mk_lib = |id: &str| -> CardData {
-        let mut c = make_puppet(id, 3, 2000);
-        c.traits = vec!["Puppet".to_string(), "LIBERATOR".to_string()];
-        c
-    };
-    // A BLACK anchor: Black does not overlap Vortex Resonance's Green/Yellow
-    // colours, so ordinary Option colour-matching FAILS off this board. Only the
-    // LIBERATOR colour-ignore (when the anchor is LIBERATOR) can make it legal.
-    let mut anchor = make_puppet("PS2-ANCHOR", 3, 3000);
-    anchor.colors = vec![CardColor::Black];
-    anchor.traits = if with_liberator {
-        vec!["Puppet".to_string(), "LIBERATOR".to_string()]
-    } else {
-        vec!["Puppet".to_string()]
-    };
+    // Anchor: a BLACK board permanent. Black does not overlap Vortex Resonance's
+    // Green/Yellow colours, so ordinary Option colour-matching FAILS off this
+    // board. Only the LIBERATOR colour-ignore (when the anchor is LIBERATOR) can
+    // make it legal — so the anchor is the real Black [LIBERATOR] Sunarizamon
+    // (BT21-055) for the enabled case, and the real Black non-LIBERATOR
+    // Commandramon (ST5-05) for the disabled case.
+    let anchor_id = if with_liberator { "BT21-055" } else { "ST5-05" };
 
     let mut runner = DebugRunner::builder()
         .dsl_card("EX7-074")
         .expect("EX7-074 (Vortex Resonance) in embedded DSL pack")
-        .add_card(mk_lib("PS2-LIB-A"))
-        .add_card(mk_lib("PS2-LIB-B"))
-        .add_card(mk_lib("PS2-LIB-C"))
-        .add_card(anchor)
+        .dsl_card("BT21-055")
+        .expect("BT21-055 (Sunarizamon, Black LIBERATOR) in embedded DSL pack")
+        .dsl_card("ST5-05")
+        .expect("ST5-05 (Commandramon, Black non-LIBERATOR) in embedded DSL pack")
+        // Three real [LIBERATOR] cards on top of deck so reveal-3 has an addable card.
+        .dsl_card("EX7-024")
+        .expect("EX7-024 (Shoemon, LIBERATOR) in embedded DSL pack")
+        .dsl_card("EX7-025")
+        .expect("EX7-025 (ShoeShoemon, LIBERATOR) in embedded DSL pack")
+        .dsl_card("BT22-029")
+        .expect("BT22-029 (Shoemon, LIBERATOR) in embedded DSL pack")
         .hand(0, &["EX7-074"])
-        // Three LIBERATOR cards on top of deck so reveal-3 has an addable card.
-        .deck(0, &["PS2-LIB-A", "PS2-LIB-B", "PS2-LIB-C"])
-        .deck(1, &["PS2-LIB-A"])
+        .deck(0, &["EX7-024", "EX7-025", "BT22-029"])
+        .deck(1, &["EX7-024"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
-    runner.place_on_field(0, "PS2-ANCHOR", Some(0));
+    runner.place_on_field(0, anchor_id, Some(0));
     runner.game.enter_main_phase();
 
     let vr_idx = runner.game.players[0]
@@ -604,12 +592,14 @@ fn combo2_vortex_resonance_with_liberator_is_legal_and_reveals_liberator() {
         before.deck[0],
         after.deck[0],
     );
-    // The added card is a revealed LIBERATOR card now in hand.
+    // The added card is a revealed LIBERATOR card now in hand (one of the three
+    // deck-seeded real LIBERATOR cards).
+    let revealed_libs = ["EX7-024", "EX7-025", "BT22-029"];
     assert!(
         runner.game.players[0]
             .hand
             .iter()
-            .any(|c| c.card_id(&runner.game.card_data).starts_with("PS2-LIB-")),
+            .any(|c| revealed_libs.contains(&c.card_id(&runner.game.card_data))),
         "a revealed LIBERATOR card must be added to hand; hand={:?}",
         runner.game.players[0]
             .hand
@@ -667,32 +657,36 @@ fn combo2_vortex_resonance_without_liberator_is_masked_illegal_off_color() {
 /// death observer is invisible to a per-card test of Karakurumon alone.
 #[test]
 fn combo3_karakurumon_cost_deletion_fires_kyaromon_death_draw() {
-    // Carrier holds Kyaromon (BT22-002) as a digivolution source so its
-    // inherited [Your Turn] Draw 1 observer is live. Deliberately a NON-Puppet
-    // (Beast) carrier so it is NOT a legal Karakurumon cost body — that keeps the
-    // Puppet fodder the unique cost target.
-    let carrier = make_plain("PS3-CARRIER", 4, 5000);
-
+    // ST5-07 Jazardmon — a real NON-Puppet (Black Lv4) carrier holding Kyaromon
+    // (BT22-002) as a source so its inherited [Your Turn] Draw 1 observer is live;
+    // being non-Puppet, it is NOT a legal Karakurumon cost body, keeping the Puppet
+    // fodder the unique cost target. ST5-04 ToyAgumon — the Puppet fodder.
+    // ST19-07 Tobucatmon — the [Puppet] free-digivolve hand body. ST1-04 Dracomon —
+    // the deck card that can only enter hand via the death-trigger draw.
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")
         .expect("EX9-032 (Karakurumon) in embedded DSL pack")
         .dsl_card("BT22-002")
         .expect("BT22-002 (Kyaromon) in embedded DSL pack")
-        .add_card(carrier)
-        .add_card(make_puppet("PS3-FODDER", 3, 3000))
-        .add_card(make_puppet("PS3-EVO", 6, 9000))
-        .add_card(make_test_card("PS3-DRAW", "Ps3 Draw"))
-        .hand(0, &["EX9-032", "PS3-EVO"])
-        .deck(0, &["PS3-DRAW", "PS3-DRAW"])
-        .deck(1, &["PS3-DRAW"])
+        .dsl_card("ST5-07")
+        .expect("ST5-07 (Jazardmon) in embedded DSL pack")
+        .dsl_card("ST5-04")
+        .expect("ST5-04 (ToyAgumon) in embedded DSL pack")
+        .dsl_card("ST19-07")
+        .expect("ST19-07 (Tobucatmon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .hand(0, &["EX9-032", "ST19-07"])
+        .deck(0, &["ST1-04", "ST1-04"])
+        .deck(1, &["ST1-04"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
     // Kyaromon under a non-Puppet carrier → its inherited death-draw is live.
-    runner.place_stack(0, &["BT22-002", "PS3-CARRIER"]);
+    runner.place_stack(0, &["BT22-002", "ST5-07"]);
     // A separate Puppet fodder to pay Karakurumon's deletion cost.
-    let fodder = runner.place_on_field(0, "PS3-FODDER", Some(0));
+    let fodder = runner.place_on_field(0, "ST5-04", Some(0));
 
     let before = snapshot(&runner);
 
@@ -722,20 +716,20 @@ fn combo3_karakurumon_cost_deletion_fires_kyaromon_death_draw() {
 
     // The Puppet fodder was deleted by Karakurumon's own cost.
     assert!(
-        !field_ids(&runner, 0).contains(&"PS3-FODDER".to_string()),
+        !field_ids(&runner, 0).contains(&"ST5-04".to_string()),
         "Karakurumon's cost must delete the Puppet fodder; field={:?}",
         field_ids(&runner, 0),
     );
     // The Puppet hand body became Karakurumon's new top via the free digivolve.
     assert!(
-        field_ids(&runner, 0).contains(&"PS3-EVO".to_string()),
+        field_ids(&runner, 0).contains(&"ST19-07".to_string()),
         "Karakurumon must free-digivolve into the Puppet hand body; field={:?}",
         field_ids(&runner, 0),
     );
-    // The fodder death fired Kyaromon's inherited Draw 1: a deck-seeded PS3-DRAW
+    // The fodder death fired Kyaromon's inherited Draw 1: a deck-seeded ST1-04
     // (which enters hand ONLY via the death-trigger draw) must now be in hand.
     assert!(
-        hand_has(&runner, 0, "PS3-DRAW"),
+        hand_has(&runner, 0, "ST1-04"),
         "Kyaromon's inherited Draw 1 must fire off the Puppet-fodder death; hand={:?}",
         runner.game.players[0]
             .hand
@@ -759,25 +753,28 @@ fn combo3_karakurumon_cost_deletion_fires_kyaromon_death_draw() {
 /// occurs. The combo's whole loop is *gated on a payable deletion cost*.
 #[test]
 fn combo3_without_fodder_no_cheat_digivolve_and_no_death_fanout() {
-    let carrier = make_plain("PS3N-CARRIER", 4, 5000);
-
+    // Same real cast as the happy path, minus the Puppet fodder: ST5-07 Jazardmon
+    // carrier + ST19-07 Tobucatmon evo body + ST1-04 Dracomon draw card.
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")
         .expect("EX9-032 (Karakurumon) in embedded DSL pack")
         .dsl_card("BT22-002")
         .expect("BT22-002 (Kyaromon) in embedded DSL pack")
-        .add_card(carrier)
-        .add_card(make_puppet("PS3N-EVO", 6, 9000))
-        .add_card(make_test_card("PS3N-DRAW", "Ps3n Draw"))
-        .hand(0, &["EX9-032", "PS3N-EVO"])
-        .deck(0, &["PS3N-DRAW", "PS3N-DRAW"])
-        .deck(1, &["PS3N-DRAW"])
+        .dsl_card("ST5-07")
+        .expect("ST5-07 (Jazardmon) in embedded DSL pack")
+        .dsl_card("ST19-07")
+        .expect("ST19-07 (Tobucatmon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .hand(0, &["EX9-032", "ST19-07"])
+        .deck(0, &["ST1-04", "ST1-04"])
+        .deck(1, &["ST1-04"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
     // Kyaromon's death-draw is live, but there is NO Token/other-Puppet fodder.
-    runner.place_stack(0, &["BT22-002", "PS3N-CARRIER"]);
+    runner.place_stack(0, &["BT22-002", "ST5-07"]);
 
     let before = snapshot(&runner);
 
@@ -800,7 +797,7 @@ fn combo3_without_fodder_no_cheat_digivolve_and_no_death_fanout() {
     // No cheat-digivolve: the Puppet hand body stays in hand, Karakurumon is the
     // (now top) played permanent, and no death draw happened.
     assert!(
-        hand_has(&runner, 0, "PS3N-EVO"),
+        hand_has(&runner, 0, "ST19-07"),
         "no cheat-digivolve: the Puppet hand body must remain in hand; hand={:?}",
         runner.game.players[0]
             .hand
@@ -814,7 +811,7 @@ fn combo3_without_fodder_no_cheat_digivolve_and_no_death_fanout() {
         field_ids(&runner, 0),
     );
     assert!(
-        !hand_has(&runner, 0, "PS3N-DRAW"),
+        !hand_has(&runner, 0, "ST1-04"),
         "with no fodder death, Kyaromon's Draw 1 must NOT fire"
     );
     // Net hand: only Karakurumon left hand (PS3N-EVO stays, no draw) → −1.
@@ -860,10 +857,11 @@ fn combo3_without_fodder_no_cheat_digivolve_and_no_death_fanout() {
 /// keyword, not a low-level delete helper.
 #[test]
 fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
-    // Kyaromon under a non-Puppet carrier so its inherited death-draw is live
-    // and the carrier is NOT itself a legal Overclock sacrifice.
-    let carrier = make_plain("PS4-CARRIER", 4, 5000);
-
+    // ST5-07 Jazardmon — a real NON-Puppet carrier holding Kyaromon (live
+    // death-draw, not itself a legal Overclock sacrifice). ST5-04 ToyAgumon — the
+    // Puppet sacrifice fodder. ST5-05 Commandramon (Lv3) + ST5-10 MetalTyrannomon
+    // (Lv5) — the opponent's low/high Digimon (Kaguyamon removes the lowest).
+    // ST1-04 Dracomon — the deck draw-only card.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
         .expect("BT22-042 (Nyabootmon) in embedded DSL pack")
@@ -871,13 +869,18 @@ fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
         .expect("EX9-033 (Kaguyamon) in embedded DSL pack")
         .dsl_card("BT22-002")
         .expect("BT22-002 (Kyaromon) in embedded DSL pack")
-        .add_card(carrier)
-        .add_card(make_puppet("PS4-FODDER", 3, 3000))
-        .add_card(make_plain("PS4-OPP-L3", 3, 3000))
-        .add_card(make_plain("PS4-OPP-L5", 5, 7000))
-        .add_card(make_test_card("PS4-DRAW", "Ps4 Draw"))
-        .deck(0, &["PS4-DRAW", "PS4-DRAW"])
-        .deck(1, &["PS4-DRAW"])
+        .dsl_card("ST5-07")
+        .expect("ST5-07 (Jazardmon) in embedded DSL pack")
+        .dsl_card("ST5-04")
+        .expect("ST5-04 (ToyAgumon) in embedded DSL pack")
+        .dsl_card("ST5-05")
+        .expect("ST5-05 (Commandramon) in embedded DSL pack")
+        .dsl_card("ST5-10")
+        .expect("ST5-10 (MetalTyrannomon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .deck(0, &["ST1-04", "ST1-04"])
+        .deck(1, &["ST1-04"])
         .memory(20)
         .start();
 
@@ -890,12 +893,12 @@ fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
     // Kaguyamon — the death-trigger fan-out body.
     runner.place_on_field(tp, "EX9-033", Some(0));
     // Kyaromon's inherited death-draw, live under a non-Puppet carrier.
-    runner.place_stack(tp, &["BT22-002", "PS4-CARRIER"]);
+    runner.place_stack(tp, &["BT22-002", "ST5-07"]);
     // A Puppet fodder — the Overclock sacrifice.
-    let fodder = runner.place_on_field(tp, "PS4-FODDER", Some(0));
+    let fodder = runner.place_on_field(tp, "ST5-04", Some(0));
     // Opponent has a low- and a high-level Digimon; Kaguyamon removes the lowest.
-    runner.place_on_field(opp, "PS4-OPP-L3", Some(0));
-    runner.place_on_field(opp, "PS4-OPP-L5", Some(0));
+    runner.place_on_field(opp, "ST5-05", Some(0));
+    runner.place_on_field(opp, "ST5-10", Some(0));
 
     // Drive into the EndOfTurnAction window (where <Overclock> activates).
     runner.game.end_turn();
@@ -952,19 +955,19 @@ fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
     );
     // It is specifically the LOWEST-level (L3) opponent Digimon that is removed.
     assert!(
-        !field_ids(&runner, opp as usize).contains(&"PS4-OPP-L3".to_string()),
+        !field_ids(&runner, opp as usize).contains(&"ST5-05".to_string()),
         "the lowest-level opponent Digimon (L3) must be the fan-out victim; opp field={:?}",
         field_ids(&runner, opp as usize),
     );
     assert!(
-        field_ids(&runner, opp as usize).contains(&"PS4-OPP-L5".to_string()),
+        field_ids(&runner, opp as usize).contains(&"ST5-10".to_string()),
         "the higher-level opponent Digimon (L5) must survive; opp field={:?}",
         field_ids(&runner, opp as usize),
     );
     // Kyaromon's inherited Draw 1 fired off the same Puppet death: a deck-seeded
-    // PS4-DRAW (which enters hand ONLY via the draw) must now be in hand.
+    // ST1-04 (which enters hand ONLY via the draw) must now be in hand.
     assert!(
-        hand_has(&runner, tp as usize, "PS4-DRAW"),
+        hand_has(&runner, tp as usize, "ST1-04"),
         "Kyaromon's inherited Draw 1 must fire off the Overclock self-sacrifice death; hand={:?}",
         runner.game.players[tp as usize]
             .hand
@@ -983,8 +986,7 @@ fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
 fn combo4_without_fodder_overclock_unpayable_no_fanout() {
     use digimon_engine::game::OverclockError;
 
-    let carrier = make_plain("PS4N-CARRIER", 4, 5000);
-
+    // Same real cast as the happy path, minus the Puppet fodder.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
         .expect("BT22-042 (Nyabootmon) in embedded DSL pack")
@@ -992,12 +994,16 @@ fn combo4_without_fodder_overclock_unpayable_no_fanout() {
         .expect("EX9-033 (Kaguyamon) in embedded DSL pack")
         .dsl_card("BT22-002")
         .expect("BT22-002 (Kyaromon) in embedded DSL pack")
-        .add_card(carrier)
-        .add_card(make_plain("PS4N-OPP-L3", 3, 3000))
-        .add_card(make_plain("PS4N-OPP-L5", 5, 7000))
-        .add_card(make_test_card("PS4N-DRAW", "Ps4n Draw"))
-        .deck(0, &["PS4N-DRAW", "PS4N-DRAW"])
-        .deck(1, &["PS4N-DRAW"])
+        .dsl_card("ST5-07")
+        .expect("ST5-07 (Jazardmon) in embedded DSL pack")
+        .dsl_card("ST5-05")
+        .expect("ST5-05 (Commandramon) in embedded DSL pack")
+        .dsl_card("ST5-10")
+        .expect("ST5-10 (MetalTyrannomon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .deck(0, &["ST1-04", "ST1-04"])
+        .deck(1, &["ST1-04"])
         .memory(20)
         .start();
 
@@ -1009,9 +1015,9 @@ fn combo4_without_fodder_overclock_unpayable_no_fanout() {
     // legal Overclock sacrifice, so to model "no spare fodder" we omit it here —
     // the only [Puppet] on board is Nyabootmon itself (not a legal 'other' cost).
     let nyaboot = runner.place_on_field(tp, "BT22-042", Some(0));
-    runner.place_stack(tp, &["BT22-002", "PS4N-CARRIER"]);
-    runner.place_on_field(opp, "PS4N-OPP-L3", Some(0));
-    runner.place_on_field(opp, "PS4N-OPP-L5", Some(0));
+    runner.place_stack(tp, &["BT22-002", "ST5-07"]);
+    runner.place_on_field(opp, "ST5-05", Some(0));
+    runner.place_on_field(opp, "ST5-10", Some(0));
 
     // With no sacrifice available, set the EOT <Overclock> window directly —
     // mirroring the per-card Overclock tests (ex7_030.rs).
@@ -1045,7 +1051,7 @@ fn combo4_without_fodder_overclock_unpayable_no_fanout() {
         after.field[opp as usize],
     );
     assert!(
-        !hand_has(&runner, tp as usize, "PS4N-DRAW"),
+        !hand_has(&runner, tp as usize, "ST1-04"),
         "no death event means no Kyaromon draw"
     );
 }

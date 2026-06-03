@@ -11,6 +11,12 @@
 //! (ex9_021, bt17_078, bt17_095, bt17_015, bt22_013, …); this file asserts the
 //! combined-system outcomes the model's named combos claim.
 //!
+//! All roles — named combo pieces AND fillers / neutral targets — are loaded as
+//! **real implemented DSL cards** (no synthetic `make_test_card`): vanilla
+//! Plesiomon / Phoenixmon as the DNA material pair, vanilla Lv.5 Digimon as
+//! removal victims, ST/BT WarGreymon / MetalGarurumon / Gabumon / Omnimon for
+//! the named combo lanes.
+//!
 //! Coverage caveat (model §"Coverage caveat"): the DNA Omnimon coverage gate
 //! FAILS (66/98 = 67%, threshold 85%) — several digivolution-line connector
 //! cards (BT14-014, BT15-024, EX9-014) are NOT implemented. They are line
@@ -27,45 +33,57 @@
 #![allow(dead_code)]
 
 use digimon_engine::action::space::{DNA_DIGIVOLVE_START, PLAY_HAND_START};
-use digimon_engine::card_data::CardData;
 use digimon_engine::combat::AttackResult;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::{CardColor, CardKind, EffectSourceKind, EffectTiming};
+use digimon_engine::enums::{CardColor, EffectSourceKind, EffectTiming};
 use digimon_engine::permanent::{OptionState, PermanentHandle};
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{AttackTarget, TriggerSource};
 
 use super::support::snapshot;
 
-// ─── Shared combo-piece fixtures ─────────────────────────────────────────────
-
-/// A colored Lv.6 Digimon — the raw DNA-material shape (any blue 6 + any red 6
-/// is a legal EX9-021 DNA pair).
-fn make_colored_lv6(id: &str, color: CardColor) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(6);
-    c.dp = Some(11000);
-    c.colors = vec![color];
-    c
-}
-
-/// An opponent Digimon with an explicit level + DP, used as a removal victim.
-fn make_opp_digimon(id: &str, name: &str, level: u8, dp: i32) -> CardData {
-    let mut c = make_test_card(id, name);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(level);
-    c.dp = Some(dp);
-    c
-}
+// ─── Real-card cast (all DSL-loadable) ──────────────────────────────────────
+//
+// Combo A — DNA material pair + removal victims:
+//   ST2-10 Plesiomon          Blue Lv.6 DP 12000, vanilla (no effect text).
+//   ST1-10 Phoenixmon         Red  Lv.6 DP 12000, vanilla.
+//   BT13-112 Omnimon          Black Lv.7 DP 14000 — [When Digivolving]-only
+//                             (no On Play/On Deletion), safe deletion victim.
+//   BT13-060 Rosemon: Burst Mode  Green Lv.7 DP 15000 — [When Digivolving]/
+//                             [When Attacking]-only, safe deletion victim.
+//   ST5-10 MetalTyrannomon    Black Lv.5 DP 9000, vanilla survivor.
+//
+// Combo B — Delay → reactive DNA into an Omnimon:
+//   ST1-11 WarGreymon         Red Lv.6 DP 12000 — [Your Turn] passive aura only;
+//                             a clean leaving [Greymon] subject.
+//   EX4-060 Omnimon Alter-S   Black Lv.7 — [When Digivolving] arms target the
+//                             opponent's Digimon (none present in the combo → no
+//                             prompt); the DNA result pulled from hand.
+//   ST2-10 Plesiomon          Lv.6 hand DNA partner.
+//   ST1-04 Dracomon           Red Lv.3 vanilla deck filler.
+//
+// Combo C — Blast DNA Counter:
+//   ST1-11 WarGreymon         field Blast-DNA material A.
+//   ST2-11 MetalGarurumon     Blue Lv.6 DP 11000 — [When Attacking]-only;
+//                             hand Blast-DNA material B.
+//   ST4-09 Okuwamon           Green Lv.5 DP 7000 vanilla attacker (level anchor).
+//   ST5-10 MetalTyrannomon    Black Lv.5 DP 9000 vanilla same-level peer.
+//   ST2-10 Plesiomon          Blue Lv.6 DP 12000 vanilla non-matching survivor.
+//   ST1-07 Greymon / ST2-06 Garurumon  Lv.4 broad-name pair (inherited-only) for
+//                             the marker-exactness rejection path.
+//
+// Combo D — free cross-tribe assembly:
+//   BT17-015 WarGreymon       Red Lv.6 payoff (free-digivolve arm).
+//   ST2-03 Gabumon            Blue Lv.3 field base.
+//   ST2-11 MetalGarurumon     Blue Lv.6 hand digivolve target.
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Combo A — DNA Omnimon Alter-S blowout (Blue 6 + Red 6 → EX9-021)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Cards: EX9-021 Omnimon Alter-S + a Blue Lv.6 + a Red Lv.6 (the DNA pair) +
-//   opponent Digimon victims.
+// Cards: EX9-021 Omnimon Alter-S + ST2-10 Plesiomon (Blue Lv.6) + ST1-10
+//   Phoenixmon (Red Lv.6) — the DNA pair — + real opponent Digimon victims.
 // Expected outcome (model Combo A): stacking a Blue Lv.6 + Red Lv.6 into EX9-021
 //   (DNA, cost 0) fires [When Digivolving] → (a) DNA-gated opponent-effect
 //   immunity for the turn, and (b) delete ALL opponent Digimon tied for the
@@ -85,22 +103,27 @@ fn combo_a_dna_blowout_deletes_all_highest_level_and_grants_immunity() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-021")
         .expect("EX9-021 (Omnimon Alter-S) in embedded DSL pack")
-        .add_card(make_colored_lv6("A-BLUE6", CardColor::Blue))
-        .add_card(make_colored_lv6("A-RED6", CardColor::Red))
+        .dsl_card("ST2-10") // Plesiomon — Blue Lv.6 DNA material
+        .expect("ST2-10 (Plesiomon) in embedded DSL pack")
+        .dsl_card("ST1-10") // Phoenixmon — Red Lv.6 DNA material
+        .expect("ST1-10 (Phoenixmon) in embedded DSL pack")
         // Two opp Digimon tied at the highest level (7) + one strictly lower (5).
-        .add_card(make_opp_digimon("A-OPP-HIGH1", "OppHigh1", 7, 12000))
-        .add_card(make_opp_digimon("A-OPP-HIGH2", "OppHigh2", 7, 9000))
-        .add_card(make_opp_digimon("A-OPP-LOW", "OppLow", 5, 6000))
+        .dsl_card("BT13-112") // Omnimon — Lv.7 victim
+        .expect("BT13-112 (Omnimon) in embedded DSL pack")
+        .dsl_card("BT13-060") // Rosemon: Burst Mode — Lv.7 victim
+        .expect("BT13-060 (Rosemon: Burst Mode) in embedded DSL pack")
+        .dsl_card("ST5-10") // MetalTyrannomon — Lv.5 survivor
+        .expect("ST5-10 (MetalTyrannomon) in embedded DSL pack")
         .hand(0, &["EX9-021"])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    runner.place_on_field(1, "A-OPP-HIGH1", None);
-    runner.place_on_field(1, "A-OPP-HIGH2", None);
-    runner.place_on_field(1, "A-OPP-LOW", None);
-    let blue = runner.place_on_field(0, "A-BLUE6", None);
-    let red = runner.place_on_field(0, "A-RED6", None);
+    runner.place_on_field(1, "BT13-112", None);
+    runner.place_on_field(1, "BT13-060", None);
+    runner.place_on_field(1, "ST5-10", None);
+    let blue = runner.place_on_field(0, "ST2-10", None);
+    let red = runner.place_on_field(0, "ST1-10", None);
 
     let before = snapshot(&runner);
     assert_eq!(before.field[1], 3, "fixture: 3 opp Digimon (2 tied high + 1 low)");
@@ -126,7 +149,7 @@ fn combo_a_dna_blowout_deletes_all_highest_level_and_grants_immunity() {
         "delete-all-highest must remove BOTH tied Lv.7 opp Digimon; survivors={survivors:?}"
     );
     assert!(
-        survivors.iter().any(|n| n == "OppLow"),
+        survivors.iter().any(|n| n == "MetalTyrannomon"),
         "the strictly-lower-level (Lv.5) opp Digimon must survive; survivors={survivors:?}"
     );
     assert_eq!(
@@ -199,8 +222,9 @@ fn combo_a_standard_digivolve_does_not_grant_immunity() {
 // Combo B — Miraculous Mega Knight Delay → reactive DNA Omnimon (BT17-095)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Cards: BT17-095 (Option, seated as a Delay) + an own Lv.6 [Greymon] on field
-//   + an [Omnimon]-name Lv.7 in hand + a Lv.6 DNA partner in hand.
+// Cards: BT17-095 (Option, seated as a Delay) + an own Lv.6 [Greymon]
+//   (ST1-11 WarGreymon) on field + an [Omnimon]-name Lv.7 (EX4-060 Omnimon
+//   Alter-S) in hand + a Lv.6 DNA partner (ST2-10 Plesiomon) in hand.
 // Expected outcome (model Combo B): when an own Lv.6 [Greymon]/[Garurumon]
 //   *would leave the battle area outside of battle*, the Delay fires: that
 //   leaving Lv.6 + a hand card DNA digivolve into an [Omnimon]-name Lv.7 in hand.
@@ -210,6 +234,8 @@ fn combo_a_standard_digivolve_does_not_grant_immunity() {
 //   `BT17/Red/BT17_095.cs` (WhenRemoveField Delay). Engine: cards/bt17/BT17-095.yaml.
 //   The DNA-into-Omnimon body uses `effect_initiated_dna_digivolve_hand_partner`
 //   (G-DSL-DNA-FROM-HAND-PARTNER CLOSED 2026-05-20) — a hand card is the 2nd material.
+//   The merge runs with ignore_requirements, so any real [Omnimon]-name Lv.7
+//   result is a faithful DNA target for ST1-11 WarGreymon + a Lv.6 hand partner.
 
 /// Seat a placed BT17-095 Option permanent as a Delay-Option so its [All Turns]
 /// `when_would_leave_battle_area` replacement can fire (Clause B is gated on
@@ -223,39 +249,6 @@ fn seat_as_delay_option(runner: &mut DebugRunner, handle: PermanentHandle) {
         trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
         placed_on_turn: turn,
     };
-}
-
-/// An own Lv.6 [Greymon] — the Delay's leaving subject (DNA material A).
-fn make_l6_greymon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "Greymon");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(6);
-    c.dp = Some(11000);
-    c.play_cost = 11;
-    c.colors = vec![CardColor::Red];
-    c
-}
-
-/// An [Omnimon]-name Lv.7 result card (in hand).
-fn make_l7_omnimon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "Omnimon");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(7);
-    c.dp = Some(13000);
-    c.play_cost = 13;
-    c.colors = vec![CardColor::Red, CardColor::Blue];
-    c
-}
-
-/// A Lv.6 hand-card DNA partner (DNA material B).
-fn make_l6_hand_partner(id: &str) -> CardData {
-    let mut c = make_test_card(id, "GarurumonPartner");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(6);
-    c.dp = Some(11000);
-    c.play_cost = 11;
-    c.colors = vec![CardColor::Blue];
-    c
 }
 
 /// Drive every installed selection by picking its first non-PASS valid action,
@@ -281,33 +274,37 @@ fn drive_first_valid(runner: &mut DebugRunner, max_steps: usize) {
     panic!("drive_first_valid exhausted {max_steps} steps without draining the selection queue");
 }
 
-/// Happy path: an own Lv.6 [Greymon] leaving the field outside battle fires the
-/// BT17-095 Delay; the leaving Greymon + a hand partner DNA digivolve into the
-/// [Omnimon]-name Lv.7 in hand. The merged Omnimon exists with the Greymon as a
-/// source, and the Greymon is NOT in the trash (consumed, not destroyed).
+/// Happy path: an own Lv.6 [Greymon] (ST1-11 WarGreymon) leaving the field
+/// outside battle fires the BT17-095 Delay; the leaving WarGreymon + a hand
+/// partner DNA digivolve into the [Omnimon]-name Lv.7 (EX4-060) in hand. The
+/// merged Omnimon exists with the WarGreymon as a source, and the WarGreymon is
+/// NOT in the trash (consumed, not destroyed).
 #[test]
 fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
-    let filler = make_test_card("B-FILL", "B Fill");
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
         .expect("BT17-095 (Miraculous Mega Knight) in embedded DSL pack")
-        .add_card(make_l6_greymon("B-FIELD-GREY"))
-        .add_card(make_l7_omnimon("B-OMNI"))
-        .add_card(make_l6_hand_partner("B-PARTNER"))
-        .add_card(filler)
-        .hand(0, &["B-OMNI", "B-PARTNER"])
-        .deck(0, &["B-FILL"; 5])
-        .deck(1, &["B-FILL"; 5])
+        .dsl_card("ST1-11") // WarGreymon — own field [Greymon] (leaving subject)
+        .expect("ST1-11 (WarGreymon) in embedded DSL pack")
+        .dsl_card("EX4-060") // Omnimon Alter-S — [Omnimon]-name Lv.7 result
+        .expect("EX4-060 (Omnimon Alter-S) in embedded DSL pack")
+        .dsl_card("ST2-10") // Plesiomon — Lv.6 hand DNA partner
+        .expect("ST2-10 (Plesiomon) in embedded DSL pack")
+        .dsl_card("ST1-04") // Dracomon — vanilla deck filler
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .hand(0, &["EX4-060", "ST2-10"])
+        .deck(0, &["ST1-04"; 5])
+        .deck(1, &["ST1-04"; 5])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
     let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
     seat_as_delay_option(&mut runner, bt17_095);
-    let greymon_handle = runner.place_on_field(0, "B-FIELD-GREY", None);
+    let greymon_handle = runner.place_on_field(0, "ST1-11", None);
     let greymon_card = runner.top_card(greymon_handle);
 
-    // Trigger the leave of the own field Greymon (own-effect, outside battle).
+    // Trigger the leave of the own field WarGreymon (own-effect, outside battle).
     runner
         .game
         .delete_permanent_with_cause(greymon_handle, ReplacementCause::OwnEffect);
@@ -317,30 +314,30 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
     drive_first_valid(&mut runner, 20);
 
     // A merged permanent topped with the Omnimon now exists on P0's field, with
-    // the leaving Greymon as one of its digivolution sources.
+    // the leaving WarGreymon as one of its digivolution sources.
     let merged = runner.game.players[0]
         .battle_area
         .iter()
-        .find(|p| p.top_card().card_id(&runner.game.card_data) == "B-OMNI")
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "EX4-060")
         .expect("merged Omnimon permanent must exist after the Delay DNA digivolve");
     assert!(
         merged.card_sources.iter().any(|s| s.handle() == greymon_card),
-        "the leaving Greymon must be a digivolution source under the merged Omnimon"
+        "the leaving WarGreymon must be a digivolution source under the merged Omnimon"
     );
     assert!(
         merged.card_sources.len() >= 3,
-        "merged stack must hold Greymon + hand partner + Omnimon result; got {}",
+        "merged stack must hold WarGreymon + hand partner + Omnimon result; got {}",
         merged.card_sources.len()
     );
 
-    // The leaving Greymon was CONSUMED, not destroyed: it must NOT be in trash.
+    // The leaving WarGreymon was CONSUMED, not destroyed: it must NOT be in trash.
     let greymon_in_trash = runner.game.players[0]
         .trash
         .iter()
         .any(|c| c.handle() == greymon_card);
     assert!(
         !greymon_in_trash,
-        "a successful DNA merge consumes the leaving Greymon into the merged \
+        "a successful DNA merge consumes the leaving WarGreymon into the merged \
          Omnimon — it must NOT proceed to the trash"
     );
 
@@ -354,30 +351,33 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
 
 /// Unhappy path (subject filter): an OPPONENT's Lv.6 [Greymon] leaving the field
 /// must NOT fire BT17-095's Delay (Clause B is gated on
-/// `replacement_subject_is_mine`). The opponent's Greymon proceeds to trash
+/// `replacement_subject_is_mine`). The opponent's WarGreymon proceeds to trash
 /// normally and no merged Omnimon is created — the combo is gated on the leaving
 /// Lv.6 being YOURS.
 #[test]
 fn combo_b_delay_does_not_fire_for_opponent_lv6_leaving() {
-    let filler = make_test_card("BN-FILL", "BN Fill");
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-095")
         .expect("BT17-095 (Miraculous Mega Knight) in embedded DSL pack")
-        .add_card(make_l6_greymon("BN-OPP-GREY"))
-        .add_card(make_l7_omnimon("BN-OMNI"))
-        .add_card(make_l6_hand_partner("BN-PARTNER"))
-        .add_card(filler)
-        .hand(0, &["BN-OMNI", "BN-PARTNER"])
-        .deck(0, &["BN-FILL"; 5])
-        .deck(1, &["BN-FILL"; 5])
+        .dsl_card("ST1-11") // WarGreymon — opponent's field [Greymon]
+        .expect("ST1-11 (WarGreymon) in embedded DSL pack")
+        .dsl_card("EX4-060") // Omnimon Alter-S — result that must stay in hand
+        .expect("EX4-060 (Omnimon Alter-S) in embedded DSL pack")
+        .dsl_card("ST2-10") // Plesiomon — DNA partner that must stay in hand
+        .expect("ST2-10 (Plesiomon) in embedded DSL pack")
+        .dsl_card("ST1-04") // Dracomon — vanilla deck filler
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .hand(0, &["EX4-060", "ST2-10"])
+        .deck(0, &["ST1-04"; 5])
+        .deck(1, &["ST1-04"; 5])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
     let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
     seat_as_delay_option(&mut runner, bt17_095);
-    // The leaving Lv.6 Greymon belongs to the OPPONENT (player 1).
-    let opp_greymon = runner.place_on_field(1, "BN-OPP-GREY", None);
+    // The leaving Lv.6 WarGreymon belongs to the OPPONENT (player 1).
+    let opp_greymon = runner.place_on_field(1, "ST1-11", None);
 
     let before = snapshot(&runner);
     runner
@@ -393,7 +393,7 @@ fn combo_b_delay_does_not_fire_for_opponent_lv6_leaving() {
     let merged_exists = runner.game.players[0]
         .battle_area
         .iter()
-        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BN-OMNI");
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "EX4-060");
     assert!(
         !merged_exists,
         "no merged Omnimon may be created for an opponent's leaving Digimon"
@@ -402,11 +402,11 @@ fn combo_b_delay_does_not_fire_for_opponent_lv6_leaving() {
         after.hand[0], before.hand[0],
         "the Omnimon result + DNA partner must stay in hand (Delay did not fire)"
     );
-    // The opponent's Greymon goes to trash normally.
+    // The opponent's WarGreymon goes to trash normally.
     assert_eq!(
         after.field[1],
         before.field[1] - 1,
-        "the opponent's leaving Greymon should leave its battle area as normal"
+        "the opponent's leaving WarGreymon should leave its battle area as normal"
     );
 }
 
@@ -414,59 +414,47 @@ fn combo_b_delay_does_not_fire_for_opponent_lv6_leaving() {
 // Combo C — Blast DNA Omnimon off the opponent's turn (BT17-078 Counter)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Cards: BT17-078 (hand) + a [WarGreymon] field material + a [MetalGarurumon]
-//   hand material; opponent attacking + opponent Digimon victims.
+// Cards: BT17-078 (hand) + ST1-11 WarGreymon field material + ST2-11
+//   MetalGarurumon hand material; opponent attacking + opponent Digimon victims.
 // Expected outcome (model Combo C): at Counter timing (when attacked), Blast DNA
 //   Digivolve — field WarGreymon + hand MetalGarurumon become BT17-078's sources
 //   at no cost. [When Digivolving] (DNA-gated): choose 1 opp Digimon, bottom-deck
 //   ALL opp Digimon of that level, then a mandatory delete of 1 more opp Digimon.
 // Rules basis: §16 <Blast DNA Digivolve>; §8-2. DCGO `BT17/White/BT17_078.cs`.
-//   Engine: cards/bt17/BT17-078.yaml.
+//   Engine: cards/bt17/BT17-078.yaml. The Blast DNA marker requires the EXACT
+//   pair name_is "WarGreymon" + name_is "MetalGarurumon" — ST1-11 + ST2-11 fit.
 //
 // Driven through the REAL combat/Counter route (`begin_attack` → Counter window
 // → Blast-DNA material selection), then the real DNA-gated bottom-deck + delete.
-
-/// A named Digimon material with explicit level/DP/color.
-fn make_named_material(id: &str, name: &str, level: u8, dp: i32, color: CardColor) -> CardData {
-    let mut c = make_test_card(id, name);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(level);
-    c.dp = Some(dp);
-    c.colors = vec![color];
-    c
-}
 
 /// Happy path: BT17-078 Blast DNA at Counter timing (field WarGreymon + hand
 /// MetalGarurumon) bottom-decks every opponent Digimon at the chosen level, then
 /// installs the mandatory extra-delete prompt — all on the opponent's turn.
 #[test]
 fn combo_c_blast_dna_counter_bottom_decks_same_level_then_prompts_delete() {
-    let wargreymon = make_named_material("C-WAR", "WarGreymon", 6, 11000, CardColor::Red);
-    let metalgarurumon =
-        make_named_material("C-METAL", "MetalGarurumon", 6, 11000, CardColor::Blue);
-    // The attacker is a Lv.5; a same-level (Lv.5) peer must also be bottom-decked.
-    let attacker = make_named_material("C-ATK", "Attacker", 5, 7000, CardColor::Red);
-    let peer_lv5 = make_named_material("C-PEER5", "Peer5", 5, 6000, CardColor::Red);
-    let survivor_lv6 = make_named_material("C-SURV6", "Surv6", 6, 9000, CardColor::Red);
-
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-078")
         .expect("BT17-078 (Omnimon) in embedded DSL pack")
-        .add_card(wargreymon)
-        .add_card(metalgarurumon)
-        .add_card(attacker)
-        .add_card(peer_lv5)
-        .add_card(survivor_lv6)
-        .hand(1, &["BT17-078", "C-METAL"])
+        .dsl_card("ST1-11") // WarGreymon — field Blast-DNA material
+        .expect("ST1-11 (WarGreymon) in embedded DSL pack")
+        .dsl_card("ST2-11") // MetalGarurumon — hand Blast-DNA material
+        .expect("ST2-11 (MetalGarurumon) in embedded DSL pack")
+        .dsl_card("ST4-09") // Okuwamon — Lv.5 attacker (level anchor)
+        .expect("ST4-09 (Okuwamon) in embedded DSL pack")
+        .dsl_card("ST5-10") // MetalTyrannomon — Lv.5 same-level peer
+        .expect("ST5-10 (MetalTyrannomon) in embedded DSL pack")
+        .dsl_card("ST2-10") // Plesiomon — Lv.6 non-matching survivor
+        .expect("ST2-10 (Plesiomon) in embedded DSL pack")
+        .hand(1, &["BT17-078", "ST2-11"])
         .memory(0)
         .start();
     runner.game.turn_count = 1;
 
     // Player 0 (the attacker's controller) attacks; player 1 holds the Counter.
-    let attacking = runner.place_on_field(0, "C-ATK", Some(0));
-    let _peer = runner.place_on_field(0, "C-PEER5", Some(0));
-    let _survivor = runner.place_on_field(0, "C-SURV6", Some(0));
-    let target = runner.place_on_field(1, "C-WAR", Some(0));
+    let attacking = runner.place_on_field(0, "ST4-09", Some(0));
+    let _peer = runner.place_on_field(0, "ST5-10", Some(0));
+    let _survivor = runner.place_on_field(0, "ST2-10", Some(0));
+    let target = runner.place_on_field(1, "ST1-11", Some(0));
     let p0_deck_before = runner.deck_size(0);
 
     let result = runner
@@ -527,28 +515,29 @@ fn combo_c_blast_dna_counter_bottom_decks_same_level_then_prompts_delete() {
 /// Unhappy path (Blast marker exactness): broad [Greymon]/[Garurumon]-named
 /// materials do NOT satisfy BT17-078's <Blast DNA Digivolve ([WarGreymon] +
 /// [MetalGarurumon])> marker, so no Counter window opens. The combo requires the
-/// EXACT named Lv.6 pair — a per-card test sees the marker, but the system fact
-/// (the Counter never even offers) is what the combo relies on.
+/// EXACT named pair — ST1-07 "Greymon" + ST2-06 "Garurumon" are real cards whose
+/// names do not match the `name_is` "WarGreymon"/"MetalGarurumon" filter. A
+/// per-card test sees the marker, but the system fact (the Counter never even
+/// offers) is what the combo relies on.
 #[test]
 fn combo_c_blast_dna_rejects_broad_greymon_garurumon_names() {
     use digimon_engine::enums::GamePhase;
-    let greymon = make_named_material("C2-GREY", "Greymon", 6, 8000, CardColor::Red);
-    let garurumon = make_named_material("C2-GARU", "Garurumon", 6, 8000, CardColor::Blue);
-    let attacker = make_named_material("C2-ATK", "Attacker", 6, 17000, CardColor::Red);
-
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-078")
         .expect("BT17-078 (Omnimon) in embedded DSL pack")
-        .add_card(greymon)
-        .add_card(garurumon)
-        .add_card(attacker)
-        .hand(1, &["BT17-078", "C2-GARU"])
+        .dsl_card("ST1-07") // Greymon — broad name, NOT "WarGreymon"
+        .expect("ST1-07 (Greymon) in embedded DSL pack")
+        .dsl_card("ST2-06") // Garurumon — broad name, NOT "MetalGarurumon"
+        .expect("ST2-06 (Garurumon) in embedded DSL pack")
+        .dsl_card("ST4-09") // Okuwamon — neutral attacker
+        .expect("ST4-09 (Okuwamon) in embedded DSL pack")
+        .hand(1, &["BT17-078", "ST2-06"])
         .memory(0)
         .start();
     runner.game.turn_count = 1;
 
-    let attacking = runner.place_on_field(0, "C2-ATK", Some(0));
-    let target = runner.place_on_field(1, "C2-GREY", Some(0));
+    let attacking = runner.place_on_field(0, "ST4-09", Some(0));
+    let target = runner.place_on_field(1, "ST1-07", Some(0));
 
     let result = runner
         .game
@@ -567,7 +556,7 @@ fn combo_c_blast_dna_rejects_broad_greymon_garurumon_names() {
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // Cards: BT17-015 WarGreymon (Red Lv.6, payoff with the free-digivolve arm) + a
-//   field [Gabumon] + a hand [MetalGarurumon].
+//   field [Gabumon] (ST2-03) + a hand [MetalGarurumon] (ST2-11).
 // Expected outcome (model Combo D): BT17-015's [On Play] branch 1 — "1 of your
 //   [Gabumon] may digivolve into [MetalGarurumon] in your hand, ignoring
 //   requirements and without paying the cost" — turns a field Gabumon into a
@@ -580,25 +569,6 @@ fn combo_c_blast_dna_rejects_broad_greymon_garurumon_names() {
 // The free cross-tribe digivolve is fired through BT17-015's REAL branch-choice
 // clause (not a synthetic digivolve), so the assembly is exercised as in play.
 
-fn make_field_gabumon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "Gabumon");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(3);
-    c.dp = Some(3000);
-    c.colors = vec![CardColor::Blue];
-    c
-}
-
-fn make_hand_metalgarurumon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "MetalGarurumon");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(6);
-    c.dp = Some(11000);
-    c.play_cost = 12;
-    c.colors = vec![CardColor::Blue];
-    c
-}
-
 /// Happy path: firing BT17-015's [On Play] branch 1 with a field Gabumon + a
 /// hand MetalGarurumon assembles the Blue Lv.6 alongside the Red Lv.6 — the DNA
 /// material pair, in one turn.
@@ -607,14 +577,16 @@ fn combo_d_free_cross_tribe_assembly_yields_both_lv6_materials() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-015")
         .expect("BT17-015 (WarGreymon) in embedded DSL pack")
-        .add_card(make_field_gabumon("D-GABU"))
-        .add_card(make_hand_metalgarurumon("D-MG"))
-        .hand(0, &["D-MG"])
+        .dsl_card("ST2-03") // Gabumon — field base
+        .expect("ST2-03 (Gabumon) in embedded DSL pack")
+        .dsl_card("ST2-11") // MetalGarurumon — hand digivolve target
+        .expect("ST2-11 (MetalGarurumon) in embedded DSL pack")
+        .hand(0, &["ST2-11"])
         .memory(15)
         .start();
     runner.game.turn_count = 1;
 
-    let gabu = runner.place_on_field(0, "D-GABU", None);
+    let gabu = runner.place_on_field(0, "ST2-03", None);
     // BT17-015 (the Red Lv.6 WarGreymon) is already in play as the payoff.
     let wargrey = runner.place_on_field(0, "BT17-015", None);
 
@@ -633,7 +605,7 @@ fn combo_d_free_cross_tribe_assembly_yields_both_lv6_materials() {
         .top_card()
         .card_id(&runner.game.card_data);
     assert_eq!(
-        gabu_top, "D-MG",
+        gabu_top, "ST2-11",
         "the field Gabumon must have digivolved into the hand MetalGarurumon (free)"
     );
 
@@ -674,8 +646,9 @@ fn combo_d_no_gabumon_yields_no_second_lv6() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-015")
         .expect("BT17-015 (WarGreymon) in embedded DSL pack")
-        .add_card(make_hand_metalgarurumon("DN-MG"))
-        .hand(0, &["DN-MG"])
+        .dsl_card("ST2-11") // MetalGarurumon — hand digivolve target (no base)
+        .expect("ST2-11 (MetalGarurumon) in embedded DSL pack")
+        .hand(0, &["ST2-11"])
         .memory(15)
         .start();
     runner.game.turn_count = 1;
@@ -696,7 +669,7 @@ fn combo_d_no_gabumon_yields_no_second_lv6() {
     let metalgaru_on_field = runner.game.players[0]
         .battle_area
         .iter()
-        .any(|p| p.top_card().card_id(&runner.game.card_data) == "DN-MG");
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "ST2-11");
     assert!(
         !metalgaru_on_field,
         "with no Gabumon base, MetalGarurumon must NOT reach the field"
