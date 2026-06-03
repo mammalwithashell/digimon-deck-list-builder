@@ -689,6 +689,154 @@
         }
       },
       "updated": "2026-05-30"
+    },
+    "Medusamon": {
+      "combos_tested": [
+        {
+          "combo": "Petrification security-trash loop (signature)",
+          "status": "PASS",
+          "tests": [
+            "petrification_token_deletion_trashes_opponent_security",
+            "petrification_token_deletion_chains_into_styracomon_removal",
+            "petrification_token_deletion_no_security_does_not_chain"
+          ],
+          "note": "Deleting an opp-controlled Petrification token trashes opp top security (auto-fires opp-security-removed observers) and chains into BT24-018 Styracomon removal."
+        },
+        {
+          "combo": "Owen digivolve buff + extra attack",
+          "status": "PASS",
+          "tests": [
+            "owen_digivolve_buffs_dragonkin_ally_and_grants_attack",
+            "owen_digivolve_does_not_buff_non_trait_ally"
+          ],
+          "note": "Real BT24-082 Owen + real BT24-011 Cyclonemon (Dragonkin) -> suspend+ +3000 + attack; gated on trait (real BT21-024 Cyberdramon non-trait control)."
+        },
+        {
+          "combo": "Raid target-change -> Lamiamon security trash",
+          "status": "PASS",
+          "tests": [
+            "raid_target_change_with_lamiamon_trashes_opp_security",
+            "raid_target_change_without_trait_permanent_trashes_nothing"
+          ],
+          "note": "Real BT24-011 Cyclonemon Raid + real BT21-025 Lamiamon -> trash opp security; gated on a Reptile/Dragonkin permanent (real Cyberdramon control)."
+        },
+        {
+          "combo": "Security-removal memory snowball",
+          "status": "PASS",
+          "tests": [
+            "real_stack_snowballs_two_memory_on_one_security_removal",
+            "petrification_token_deletion_feeds_inherited_memory"
+          ],
+          "note": "Real digivolution stack [BT24-008 Elizamon, BT24-012 Dimetromon, BT21-025 Lamiamon]: one security removal pays out both buried inherited -> +2 memory. Token-deletion variant -> +1."
+        },
+        {
+          "combo": "Lamiamon inherited free-play (<=5000)",
+          "status": "PASS",
+          "tests": [
+            "lamiamon_inherited_free_plays_small_dragonkin_on_security_removal",
+            "lamiamon_inherited_does_not_free_play_oversized_dragonkin"
+          ],
+          "note": "Real BT21-025 Lamiamon buried inherited free-plays real BT24-011 Cyclonemon (5000); real BT24-018 Styracomon (14000) filtered out. Exercises the dispatch the per-card clause3 test leaves #[ignore]d."
+        },
+        {
+          "combo": "BT24-016 cheat-in: chains swap AND nets +2 memory",
+          "status": "PASS (incl. user-reported +2 memory)",
+          "tests": [
+            "cheat_in_chains_swap_and_nets_two_memory_from_real_inherits",
+            "cheat_in_blocked_without_owen_silences_the_chain"
+          ],
+          "note": "Real BT24-082 Owen + real BT24-008 Elizamon + real BT24-012 Dimetromon: cheat-in digivolve auto-fires the [When Digivolving] swap; the security trash pays out BOTH buried inherited -> +2 memory (net -1 = -3 digivolve cost +2). Gated on Owen."
+        },
+        {
+          "combo": "Lamiamon security swap feeds memory engine",
+          "status": "PASS",
+          "tests": [
+            "lamiamon_security_swap_feeds_inherited_memory"
+          ],
+          "note": "Real [BT24-008 Elizamon, BT24-016 Lamiamon] stack: the swap top-security trash pays out the buried Elizamon inherited (+1 memory)."
+        },
+        {
+          "combo": "EX11-012 token-shield (faithfulness gap)",
+          "status": "PASS (gap fixed)",
+          "tests": [
+            "ex11_012_survives_by_deleting_opponents_petrification_token"
+          ],
+          "note": "FIXED: would-leave shield selector changed select_own_permanent -> select_any_permanent in EX11-012.yaml (DCGO permanent.IsToken, any owner). EX11-012 now survives by deleting the opponent Petrification token, which also trashes their security. Gap G-EX11-012-TOKEN-SHIELD-OWN-ONLY RESOLVED."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "process-correction",
+          "detail": "First pass used synthetic make_test_card stand-ins for our own effect-bearing cards (Elizamon/Dimetromon/Owen/Reptile allies), which hid the +2 memory payoff. Whole suite re-authored to load every Medusamon card via real dsl_card; synthetic fixtures now only for generic opponent-side fillers (security/bodies/hand). Audit: 10 archetype cards all real."
+        },
+        {
+          "kind": "resolved-faithfulness-gap",
+          "id": "G-EX11-012-TOKEN-SHIELD-OWN-ONLY",
+          "detail": "RESOLVED: cards/ex11/EX11-012.yaml would-leave cost selector own->any (select_any_permanent scans both battle areas, controller picks; faithful to DCGO). One-word YAML fix; DSL verb pre-existed. Archetype test un-ignored and passing; per-card ex11_012 green."
+        },
+        {
+          "kind": "verified-behavior",
+          "detail": "User-reported: BT24-016 cheat-in with a real Elizamon + Dimetromon nets +2 memory from the two buried inherited firing off the chained security swap. Confirmed faithful (net -1 absolute = -3 cost +2 gain)."
+        },
+        {
+          "kind": "coverage-gap",
+          "detail": "Coverage gate 56/63 (89%): 7 unknown freq-1 fringe cards (ST12-03, LM-051, LM-033, BT19-011, BT14-017, LM-045, BT21-083); none in any combo."
+        }
+      ],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 56,
+            "ratio": 0.8888888888888888,
+            "threshold": 1.0,
+            "total": 63,
+            "unknown_cards": [
+              "ST12-03",
+              "LM-051",
+              "LM-033",
+              "BT19-011",
+              "BT14-017",
+              "LM-045",
+              "BT21-083"
+            ]
+          },
+          "detail": "coverage 56/63 = 89% (threshold 100%); 0 failing, 7 unknown",
+          "passed": false
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30",
+      "model_doc": "qa/archetype-qa/medusamon-model.md",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/medusamon.rs",
+      "result": "15/15 active interaction tests PASS (all real DSL cards; EX11-012 gap fixed). Full archetypes binary: 45 passed, 0 ignored."
     }
   },
   "last_updated": "2026-05-31",
