@@ -840,3 +840,46 @@ burst-digivolve action resolves, schedule the path's `on_burst_turn_end` steps t
 end of that turn (a delayed/scheduled effect keyed to the burst-digivolution turn); (c) then
 the "DP-less / sub-Lv3 top card can't remain in the battle area" rules-check for the revealed
 Koromon. Likely needs a DebugRunner burst-digivolve driver to pin behaviorally.
+
+
+## Open gaps — Puppets archetype interaction-test discovery wave (2026-05-30)
+
+Surfaced by `/archetype-interaction-test-author` over the **Puppets** archetype
+(model: `qa/archetype-qa/Puppets-model.md`; tests:
+`code/digimon-engine/tests/archetypes/puppets.rs`). Discover-then-pin: the test
+asserts the DCGO-/card-text-faithful outcome and is `#[ignore]`'d with the
+G-code below until fixed.
+
+### §EX11-023 Kaguyamon trash-recursion omits token-kind deletions (G-EX11-023-TOKEN-DELETION) — RESOLVED 2026-05-30
+
+- **RESOLVED 2026-05-30.** Fixed in `code/digimon-engine/cards/ex11/EX11-023.yaml`:
+  the `on_any_deletion` condition's kind match is now `any_of: [event_target_kind:
+  digimon, event_target_kind: token]` (matching sibling cards BT22-040 /
+  EX11-060). No engine change. Pinned by un-ignored
+  `archetypes/puppets.rs::s3_kaguyamon_recursion_fires_on_familiar_token_deletion`,
+  per-card `cards_behavioral/ex11/ex11_023.rs::ex11_023_other_deletion_recursion_fires_on_familiar_token_deletion`,
+  and the strengthened structural assertion (the observer must match both
+  digimon AND token kinds). Behavioral + archetypes suites regression-clean.
+- **First seen:** 2026-05-30, Puppets interaction test
+  `s3_kaguyamon_recursion_fires_on_familiar_token_deletion` (`#[ignore]`'d).
+- **Symptom:** EX11-023's `[All Turns][OPT]` "When other Digimon are deleted,
+  you may play 1 level 4 or lower [Puppet] Digimon from trash for free" does
+  NOT fire when a **Familiar Token** is deleted, so the trash-recursion never
+  offers. A Familiar Token is a Digimon (Digimon/Yellow/3000 DP), so it should.
+- **Root cause:** the DSL condition in `code/digimon-engine/cards/ex11/EX11-023.yaml`
+  is `event_target_kind: digimon` only. In the engine,
+  `kind_matches_field(Digimon, Token)` is `false`
+  (`code/digimon-engine/src/dsl_cards/predicate.rs`), so a `CardKind::Token`
+  deletion does not satisfy `event_target_kind: digimon`. Its sibling cards
+  **BT22-040** and **EX11-060** correctly use `any_of: [digimon, token]`;
+  EX11-023 omits `token`.
+- **DCGO-verified faithful behaviour:** `EX11_023.cs` gates the recursion on
+  `permanent => permanent != card.PermanentOfThisCard() && permanent.IsDigimon`,
+  and `CardSource.IsDigimon => CardKinds.Contains(CardKind.Digimon)` is `true`
+  for the Familiar Token — so DCGO fires the recursion on a token deletion.
+  Card text: "When other Digimon are deleted" (a Digimon Token is a Digimon).
+- **Fix (card-spec, one line):** change EX11-023's `on_any_deletion` condition
+  from `event_target_kind: digimon` to `any_of: [event_target_kind: digimon,
+  event_target_kind: token]` (matching BT22-040 / EX11-060). No engine change.
+  Flip `s3_kaguyamon_recursion_fires_on_familiar_token_deletion` to un-ignored
+  on fix.

@@ -4,31 +4,33 @@
       "combos_tested": [
         {
           "combo": "Blocker + Tai untap loop (+ unhappy path)",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "tai_untap_loop_re_readies_a_blocker_for_a_second_block",
             "blocker_stays_suspended_without_an_available_tai"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Kapurimon Blocker-DP synergy",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "kapurimon_buffs_a_blocker_only_on_your_turn_and_only_with_blocker"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Machinedramon Reboot wall",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "machinedramon_reboot_re_readies_two_digimon_on_the_opponents_turn"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st5_machine_black.rs",
+      "model_doc": "qa/archetype-qa/st5-machine-black-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -71,9 +73,159 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st5_machine_black.rs",
-      "model_doc": "qa/archetype-qa/st5-machine-black-model.md"
+      "updated": "2026-05-30"
+    },
+    "Puppets": {
+      "combos_tested": [
+        {
+          "combo": "C1 Overclock value loop (ST19-12 + EX11-060 + Familiar Token)",
+          "status": "PASS",
+          "note": "End-of-turn Overclock deletes a Familiar Token -> Arisa suspends to Draw 1 AND the Familiar On-Deletion -3000 DP hits the opponent. Unhappy: a pre-suspended Arisa yields no draw but the -3000 still fires.",
+          "tests": [
+            "c1_overclock_token_sacrifice_draws_for_arisa_and_reduces_opponent_dp",
+            "c1_value_loop_yields_no_draw_when_arisa_cannot_pay_the_suspend_cost"
+          ]
+        },
+        {
+          "combo": "C2 Self-sustaining token refill (ST19-12 Overclock deleter + BT22-040 refire)",
+          "status": "PASS",
+          "note": "Overclock deletes a Familiar -> BT22-040 refire replays a fresh Familiar, board count restored. Unhappy: declining the refire leaves the board one token short. Cross-card finding surfaced: the Familiar On-Deletion target pick interleaves with the refire (order not assumable) — test made order-independent.",
+          "tests": [
+            "c2_overclock_deletion_refires_bt22_040_to_replace_the_token",
+            "c2_declined_refire_leaves_the_board_one_token_short"
+          ]
+        },
+        {
+          "combo": "C3 Nyabootmon mass-removal payoff (board-width-gated)",
+          "status": "PASS",
+          "note": "BT22-042 When-Dig -3000 DP per own Digimon: a wide board (4 Digimon) deletes a 12000-DP target via 0-DP rule 17-1-3-1; a narrow board (1 Digimon) leaves it alive at -3000.",
+          "tests": [
+            "c3_nyabootmon_deletes_a_12000_target_over_a_wide_board",
+            "c3_nyabootmon_spares_the_same_target_over_a_narrow_board"
+          ]
+        },
+        {
+          "combo": "C4 Arisa replay & Shoemon recursion (BT22-088)",
+          "status": "PASS",
+          "note": "Start-of-main returns Arisa to deck bottom, replays a hand Arisa free; boardless -> recurs Shoemon from trash. With a Digimon present the Shoemon clause is gated off (tamer-return still fires).",
+          "tests": [
+            "c4_boardless_arisa_replays_itself_and_recurs_shoemon_from_trash",
+            "c4_with_a_digimon_in_play_arisa_replays_but_leaves_shoemon_in_trash"
+          ]
+        },
+        {
+          "combo": "S2 Karakurumon temp-Puppet self-deletion feeds Arisa draw",
+          "status": "PASS",
+          "note": "EX11-022 plays a temp [Puppet] free; its self-deletion is a Puppet-Digimon deletion -> EX11-060 Arisa Draw 1. Turns the printed drawback into card advantage.",
+          "tests": [
+            "s2_karakurumon_temp_puppet_self_deletion_feeds_arisa_draw_at_turn_end"
+          ]
+        },
+        {
+          "combo": "S4 ST19-14 grants Rush to an effect-played token",
+          "status": "PASS",
+          "note": "ST19-12 plays 2 Familiar Tokens by effect; ST19-14 suspends to grant Rush to exactly one (suspend cost gates the second). Tempo seam.",
+          "tests": [
+            "s4_st19_14_grants_rush_to_one_effect_played_familiar_token"
+          ]
+        },
+        {
+          "combo": "S5 BT22-088 play-side draw engine",
+          "status": "PASS",
+          "note": "ST19-12 plays 2 Familiar Tokens; BT22-088 suspends to Draw 1 (exactly once — suspend cost gates repeats). The play-side mirror of C1 deletion-side draw.",
+          "tests": [
+            "s5_bt22_088_draws_exactly_once_when_two_tokens_are_played"
+          ]
+        },
+        {
+          "combo": "S1 Pillomon flood-gate blocks effect token plays (was finding, now fixed)",
+          "status": "PASS",
+          "note": "G-PLAY-TOKEN-FLOODGATE fixed: play_token honors CannotPlayDigimonByEffect. s1 (blocked) + s1b (control: spawns without Pillomon).",
+          "tests": [
+            "s1_pillomon_floodgate_blocks_effect_token_plays",
+            "s1b_without_pillomon_the_same_token_play_succeeds"
+          ]
+        },
+        {
+          "combo": "S3 Kaguyamon recursion on Familiar Token deletion (was finding, now fixed)",
+          "status": "PASS",
+          "note": "G-EX11-023-TOKEN-DELETION fixed: condition now matches token kind. s3 interaction + ex11_023 per-card token-deletion test.",
+          "tests": [
+            "s3_kaguyamon_recursion_fires_on_familiar_token_deletion"
+          ]
+        }
+      ],
+      "findings": [
+        {
+          "id": "G-PLAY-TOKEN-FLOODGATE",
+          "combo": "S1 Pillomon flood-gate vs Familiar Token plays",
+          "status": "RESOLVED",
+          "test": "s1_pillomon_floodgate_blocks_effect_token_plays (#[ignore])",
+          "tracker": "docs/RUST_ENGINE_GAPS.md",
+          "summary": "EffectContext::play_token bypasses CannotPlayDigimonByEffect; under Pillomon (BT9-033), effect-played Familiar Tokens still spawn (engine spawned 2, faithful=0). DCGO blocks via CanPlayAsNewPermanent -> CanNotPutFieldClass (IsDigimon). Engine-primitive gap.",
+          "resolution": "play_token now consults CannotPlayDigimonByEffect (effect_context/mod.rs). Pins: s1 + s1b interaction tests; play_token_blocked/allowed lib unit tests. Test un-ignored."
+        },
+        {
+          "id": "G-EX11-023-TOKEN-DELETION",
+          "combo": "S3 Kaguyamon recursion on Familiar Token deletion",
+          "status": "RESOLVED",
+          "test": "s3_kaguyamon_recursion_fires_on_familiar_token_deletion (#[ignore])",
+          "tracker": "qa/archetype-qa/engine-gaps.md",
+          "summary": "EX11-023 recursion condition is event_target_kind: digimon only; Familiar Tokens are CardKind::Token, so a token deletion does not fire the trash-recursion. DCGO gates on IsDigimon (true for tokens). One-line DSL fix: add token to the any_of (sibling cards BT22-040/EX11-060 already do).",
+          "resolution": "EX11-023.yaml condition now any_of:[digimon,token]. Pins: s3 interaction test; ex11_023 per-card token-deletion + strengthened structural test. Test un-ignored."
+        }
+      ],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 4
+          },
+          "detail": "all 4 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 62,
+            "ratio": 1.0,
+            "threshold": 1.0,
+            "total": 62,
+            "unknown_cards": []
+          },
+          "detail": "coverage 62/62 = 100% (threshold 100%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-31",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/puppets.rs",
+      "model_doc": "qa/archetype-qa/Puppets-model.md",
+      "dropped_combos": [
+        {
+          "combo": "C5 Leave-prevention by token sacrifice (EX7-027 Chaperomon inherit + Familiar)",
+          "reason": "Dropped by rank (lowest-ranked stretch). The per-card suite cards_behavioral/ex7/ex7_027.rs already covers leave-prevention exhaustively (happy, decline, OPT-lock, token-cost-to-trash, own-effect-no-trigger); the cross-card delta is marginal."
+        }
+      ]
     },
     "Rocks": {
       "combos_tested": [
@@ -137,49 +289,51 @@
       "combos_tested": [
         {
           "combo": "Tall-stack security rush",
+          "note": "WarGreymon base-inclusive formula FIXED at card layer (ST1-11 base:2); Greymon-free stack checks 3; full WarGreymon+Greymon line checks 4 (inherited keyword counted via tick-fresh strike)",
+          "status": "PASS",
           "tests": [
             "tall_stack_security_rush_aura_adds_to_base_one_check",
             "tall_stack_security_rush_full_line_checks_four_security"
-          ],
-          "status": "PASS",
-          "note": "WarGreymon base-inclusive formula FIXED at card layer (ST1-11 base:2); Greymon-free stack checks 3; full WarGreymon+Greymon line checks 4 (inherited keyword counted via tick-fresh strike)"
+          ]
         },
         {
           "combo": "Tai anthem additive stack",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "tai_anthem_additive_stack_layers_on_one_body_and_spares_opponent"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Garudamon buff survives removal",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "garudamon_buff_survives_gaia_force_removal"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [
         {
+          "desc": "WarGreymon <Security A.> formula under-counted: ST1-11 authored its security_attack_fn as a bare delta (base:0 -> floor(n/2)) but the engine's formula contract is base-inclusive, so the base-1 was dropped. Fixed at card layer (base:2 -> 1+floor(n/2)); the earlier engine base-fold was the wrong layer and double-counted correctly-authored formulas.",
+          "resolved": "2026-05-30",
           "severity": "card-bug",
           "status": "RESOLVED",
-          "desc": "WarGreymon <Security A.> formula under-counted: ST1-11 authored its security_attack_fn as a bare delta (base:0 -> floor(n/2)) but the engine's formula contract is base-inclusive, so the base-1 was dropped. Fixed at card layer (base:2 -> 1+floor(n/2)); the earlier engine base-fold was the wrong layer and double-counted correctly-authored formulas.",
-          "tracker": "docs/RUST_ENGINE_GAPS.md",
           "test": "st1_gaia_red::tall_stack_security_rush_aura_adds_to_base_one_check",
-          "resolved": "2026-05-30"
+          "tracker": "docs/RUST_ENGINE_GAPS.md"
         },
         {
+          "desc": "declarative inherited <Security A. +/-N> grants (DSL grant_keyword) not summed by the security strike — WarGreymon+Greymon checked 3, should be 4",
+          "note": "real fix: current_security_strike ticks declarative effects before reading the keyword term (tick-fresh strike), and tick_declarative_effects skips materializing a face-printed own grant (de-overlap) so all five <Security A.> representations single-count",
+          "resolved": "2026-05-30",
           "severity": "engine-bug",
           "status": "RESOLVED",
-          "desc": "declarative inherited <Security A. +/-N> grants (DSL grant_keyword) not summed by the security strike — WarGreymon+Greymon checked 3, should be 4",
-          "tracker": "docs/RUST_ENGINE_GAPS.md",
           "test": "st1_gaia_red::tall_stack_security_rush_full_line_checks_four_security",
-          "note": "real fix: current_security_strike ticks declarative effects before reading the keyword term (tick-fresh strike), and tick_declarative_effects skips materializing a face-printed own grant (de-overlap) so all five <Security A.> representations single-count",
-          "resolved": "2026-05-30"
+          "tracker": "docs/RUST_ENGINE_GAPS.md"
         }
       ],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st1_gaia_red.rs",
+      "model_doc": "qa/archetype-qa/st1-gaia-red-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -222,38 +376,38 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st1_gaia_red.rs",
-      "model_doc": "qa/archetype-qa/st1-gaia-red-model.md"
+      "updated": "2026-05-30"
     },
     "ST-2 Cocytus Blue": {
       "combos_tested": [
         {
           "combo": "Strip → triple no-source payoff",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "strip_flips_all_three_no_source_payoffs_on_together"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "<Sec.A+1> reads the board not the target",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "weregarurumon_security_plus_keys_off_any_opponent_no_source_digimon"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "MetalGarurumon OPT = exactly two attacks",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "metalgarurumon_unsuspends_once_strip_fires_each_attack"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st2_cocytus_blue.rs",
+      "model_doc": "qa/archetype-qa/st2-cocytus-blue-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -296,51 +450,51 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st2_cocytus_blue.rs",
-      "model_doc": "qa/archetype-qa/st2-cocytus-blue-model.md"
+      "updated": "2026-05-30"
     },
     "ST-3 Heaven's Yellow": {
       "combos_tested": [
         {
           "combo": "Seven Heavens → 0-DP deletion → Tokomon",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "seven_heavens_zero_dp_deletion_buffs_tokomon_carrier",
             "tokomon_carrier_unbuffed_when_no_zero_dp_deletion_occurs"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Stacked -DP → 0-DP delete → Patamon memory",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "stacked_minus_dp_attack_zero_dp_deletion_gains_patamon_memory"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Angewomon recover gate + T.K. security aura",
+          "note": "T.K. security-DP aura active_when gate FIXED; own-turn-inactive case now passes",
+          "status": "PASS",
           "tests": [
             "angewomon_recovers_when_three_or_fewer_security",
             "angewomon_does_not_recover_at_four_security",
             "tk_takaishi_buffs_own_security_digimon_only_on_opponents_turn",
             "tk_takaishi_aura_is_inactive_on_controllers_own_turn"
-          ],
-          "status": "PASS",
-          "note": "T.K. security-DP aura active_when gate FIXED; own-turn-inactive case now passes"
+          ]
         }
       ],
       "findings": [
         {
+          "desc": "security-DP auras ignored active_when/condition (defender_security_dp_adjustment + mirror) — T.K. +2000 leaked to controller own turn",
+          "resolved": "2026-05-30",
           "severity": "engine-bug",
           "status": "RESOLVED",
-          "desc": "security-DP auras ignored active_when/condition (defender_security_dp_adjustment + mirror) — T.K. +2000 leaked to controller own turn",
-          "tracker": "docs/RUST_ENGINE_GAPS.md",
           "test": "st3_heavens_yellow::tk_takaishi_aura_is_inactive_on_controllers_own_turn",
-          "resolved": "2026-05-30"
+          "tracker": "docs/RUST_ENGINE_GAPS.md"
         }
       ],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st3_heavens_yellow.rs",
+      "model_doc": "qa/archetype-qa/st3-heavens-yellow-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -383,40 +537,40 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st3_heavens_yellow.rs",
-      "model_doc": "qa/archetype-qa/st3-heavens-yellow-model.md"
+      "updated": "2026-05-30"
     },
     "ST-4 Giga Green": {
       "combos_tested": [
         {
           "combo": "Needle Spray → Izzy memory (+ negatives)",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "needle_spray_suspend_triggers_izzy_for_one_memory",
             "izzy_self_suspend_does_not_retrigger_izzy",
             "re_suspending_an_already_suspended_target_does_not_refire_izzy"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "HercKabu Digi-Burst suspend → Izzy",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "herckabu_digiburst_suspend_triggers_izzy_for_one_memory"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Suspend-gated Electro Shocker bounce",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "electro_shocker_bounce_is_gated_on_a_prior_suspend"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st4_giga_green.rs",
+      "model_doc": "qa/archetype-qa/st4-giga-green-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -459,39 +613,39 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st4_giga_green.rs",
-      "model_doc": "qa/archetype-qa/st4-giga-green-model.md"
+      "updated": "2026-05-30"
     },
     "Starter Deck Venomous Violet": {
       "combos_tested": [
         {
           "combo": "Trash-threshold beatdown (WereGarurumon)",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "weregarurumon_trash_threshold_grants_plus_2000_only_on_your_turn_at_five_trash"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Death Claw → Matt memory loop (+ unhappy)",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "death_claw_self_sacrifice_feeds_matt_then_deletes_opponent",
             "declining_death_claw_self_delete_spares_the_opponent_and_silences_matt"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Nail Bone double-recur, On-Play suppressed",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "nail_bone_recurs_lv3_and_lv4_from_trash_with_on_play_suppressed"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st6_venomous_violet.rs",
+      "model_doc": "qa/archetype-qa/st6-venomous-violet-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -534,11 +688,9 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st6_venomous_violet.rs",
-      "model_doc": "qa/archetype-qa/st6-venomous-violet-model.md"
+      "updated": "2026-05-30"
     }
   },
-  "last_updated": "2026-05-30",
+  "last_updated": "2026-05-31",
   "version": 1
 }
