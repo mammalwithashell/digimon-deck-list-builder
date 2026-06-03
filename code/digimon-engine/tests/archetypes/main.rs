@@ -42,6 +42,7 @@ mod fixture_smoke {
 
 // ── Per-archetype interaction suites ─────────────────────────────────────────
 
+mod bg_imperial;
 mod medusamon;
 mod puppets;
 mod rocks;

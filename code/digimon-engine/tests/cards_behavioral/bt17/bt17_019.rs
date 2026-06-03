@@ -243,13 +243,14 @@ fn bt17_019_has_inherited_dna_digivolve_may_step() {
         t.process.iter().any(|step| matches!(
             step,
             CompiledStep::MayDnaDigivolveNow {
-                ignore_requirements: true,
+                ignore_requirements: false,
                 cost: 0,
                 ..
             }
         )),
         "BT17-019 EoT inherited body must contain a `MayDnaDigivolveNow` step \
-         with cost=0 and ignore_requirements=true"
+         with ignore_requirements=false (DCGO pays the target's printed DNA cost \
+         and checks its DNA requirements — not a free/unrestricted DNA digivolve)"
     );
 }
 
