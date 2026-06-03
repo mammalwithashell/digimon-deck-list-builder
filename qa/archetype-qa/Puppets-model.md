@@ -1,116 +1,190 @@
 # Puppets — Model
 
-> Archetype-model artifact produced by `/archetype-interaction-test-author`
-> (Phases 0-3). System-level model of the **Puppets** / [Puppet]+[LIBERATOR]
-> deck: how it ramps, recurs, and closes. Sources cited inline (DCGO C# path /
-> `general_rule.pdf` rule via `docs/RULES_CONTEXT.md` index). All 62 pool cards
-> are IMPLEMENTED in the Rust DSL per `qa/qa-reports/validated_cards_dsl.json`
-> (status `IMPLEMENTED`); the resolve-deck `script_status: missing` reflects the
-> *Python* registry only and is not authoritative here.
->
-> Canonical name: **Puppets**. Pool resolved over 34 decklists
-> (`python code/tools/resolve_deck.py "Puppets" --json`).
+> System-level model authored by `/archetype-interaction-test-author` (Phase 2).
+> Sources cited inline: DCGO C# paths under
+> `$BASE_DCGO/Assets/Scripts/CardEffect/<SET>/<COLOR>/<CARD_ID>.cs`, card text
+> from `data/cards.json`, rules from `Digimon TCG resources/general_rule.pdf`.
+> Pool resolved from `data/deck_library.json` ("Puppets", 34 decklists, 62
+> unique cards). Static gate (Phase 4): deck legal (4 eggs / 50 main), coverage
+> 62/62 = 100% implemented, 5/5 smoke games clean.
+
+## What the deck is
+
+A **Yellow [Puppet]-trait token-engine / control** deck built on the Cinderella /
+fairy-tale Shoemon line. Its identity is a **self-deletion value loop**: it
+floods the board with disposable **[Familiar] Tokens** (Digimon/Yellow/3000 DP,
+`[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn`), then
+deliberately deletes its own tokens via the **Overclock** keyword to (a) take
+free extra attacks, (b) draw cards off Arisa Kinosaki, (c) stack -DP onto the
+opponent's board until things hit 0 DP and die (rule 17-1-3-1: a Digimon at 0
+or less DP is deleted). Deletion is a *resource*, not a cost.
 
 ## Card pool & roles
 
-Puppets is a Yellow (splash Purple/Black) midrange/combo deck built on the
-**[Puppet] trait + [LIBERATOR] trait** package. Its core loop is: cheap [Puppet]
-rookies -> free-digivolve up the line by **deleting your own Tokens/[Puppet]
-Digimon** -> recur the deleted bodies from trash -> close with **<Overclock>**
-extra attacks. Tamers (Arisa/Mirai) and Option cards are the ramp/consistency
-engine that fuels the digivolve chains.
-
 | Card | Role | One-line function |
 |------|------|-------------------|
-| BT22-098 Unique Emblem: Fable Waltz (**Option**) | enabler/engine | `[Main]` free-play Shoemon/Arisa from **hand or trash**, then self-places; Delay: a [Puppet] digivolves into a [Puppet]+[LIBERATOR] hand card, cost -3 |
-| P-229 Unique Emblem: Narrative Ronde (**Option**) | enabler/engine | `[Main]` reveal-3, add 1 [Puppet] + 1 [LIBERATOR] to hand; Delay (on Mirai play): a Digimon digivolves into a Lv<=6 [LIBERATOR] hand card, cost -3 |
-| EX7-074 Vortex Resonance (**Option**) | enabler | `[Main]` reveal-3, add 1 [LIBERATOR] to hand; then a Digimon may digivolve into a hand Digimon, cost -4; color-bypass while you have a LIBERATOR Digimon/Tamer |
-| LM-029 Yellow Scramble (**Option**) | enabler/recursion | `[Main]` a yellow Digimon digivolves into a yellow hand card, cost -3; Delay: return a yellow Digimon from trash to deck top, then (if boardless) free-play a small yellow from trash |
-| P-105 Physical Training / LM-054 Treadmill Training (**Option**) | enabler | `[Main]` reveal + add; Delay: digivolve into a yellow (or yellow/black) hand card for cost, reduced by 2 |
-| P-037 / LM-035 / LM-037 Memory Boost! (**Option**) | enabler | reveal-4/3 add 1 yellow/purple Digimon; Delay: gain 2 memory |
-| BT4-104 Blinding Ray (**Option**) | tech | `[Main]` trash top security, gain 2 memory (security-cost tempo) |
-| EX9-067 / EX11-061 Mirai Kinosaki (Tamer) | enabler | reveal/ramp + digivolve-trigger plays; the Delay trigger for Narrative Ronde |
-| BT22-088 / EX7-063 / ST19-14 / P-136 Arisa Kinosaki (Tamer) | engine | on Token/[Puppet] play or deletion: draw / free-play a Lv3 [Puppet] / suspend for value; the Fable Waltz Delay trigger |
-| EX9-032 / EX11-022 Karakurumon (Lv5) | engine | `[OnPlay/WhenDigivolving]` delete 1 Token/other [Puppet] -> free-digivolve into a [Puppet] hand card; <Scapegoat> |
-| EX7-024 / ST19-03 / EX11-019 Shoemon (Lv3) | enabler | cost -1 to digivolve into [Puppet]; On Deletion play a Familiar Token / Lv3 [Puppet]; <Barrier> inherited |
-| P-165 / EX7-025 ShoeShoemon (Lv4) | engine | `[OnPlay/WhenDigivolving]` play Familiar Token(s); On Deletion play a Lv3 [Puppet] |
-| EX7-027 / BT22-036 / ST19-11 Chaperomon (Lv5) | payoff | <Overclock>; WhenDigivolving play a Lv3 [Puppet] / -DP; inherited "doesn't leave" by deleting a [Puppet] |
-| EX7-030 / EX11-024 / BT22-040 / ST19-12 Cendrillmon (Lv6) | payoff | <Overclock>; WhenDigivolving play Familiar Token(s) + a [Puppet] hand card; -DP swings |
-| EX9-033 / EX11-023 Kaguyamon (Lv6) | payoff/engine | grants <Alliance>+<Blocker> to all Tokens/[Puppet]; on other-deletion delete opp lowest level; EoT free-play a Lv<=4 [Puppet] from trash |
-| BT22-042 Nyabootmon (Lv7) | payoff | <Overclock>; WhenDigivolving free-play Lv<=4 [Puppet] + -3000 DP per own Digimon; on other-deletion re-fire its WhenDigivolving |
-| BT22-002 / ST19-01 Kyaromon, BT15-003 Nyaromon (DigiEgg) | engine | inherited draw on [Puppet]/Token deletion (Kyaromon) / when-attacking security-trash ramp (Nyaromon) |
-
-(The named combos below reference these pieces; the full per-card roster is the
-resolve-deck output. Tech/off-archetype splashes - BT9-112 DeathXmon, EX4-074
-ShineGreymon: Ruin Mode, EX6-011 RagnaLoardmon, BT9-033 Pillomon, EX8-030
-Tapirmon, BT5-033 Cutemon, BT13-101 Miki & Megumi - are present but not the
-archetype's combo core.)
+| ST19-03 / EX7-024 / BT22-029 / P-134 / EX11-019 Shoemon | enabler | Lv3 base; search ([Puppet]+[LIBERATOR]), cost-reduction, or token-on-deletion |
+| ST19-08 / EX7-025 / BT22-032 / P-165 ShoeShoemon | engine | Lv4; On-Deletion / When-Dig free-play a Lv3 [Puppet]; Overclock (ST19-08) |
+| ST19-11 / EX7-027 / BT22-036 Chaperomon | engine | Lv5; Overclock; leave-prevention by deleting a Token/[Puppet] |
+| ST19-12 / EX7-030 / BT22-040 / EX11-024 Cendrillmon | payoff/engine | Lv6; Overclock; plays [Familiar] Tokens; BT22-040/EX11-024 refire When-Dig on deletion |
+| BT22-042 Nyabootmon | payoff (win-con) | Lv7; Overclock; When-Dig free-plays a Puppet + mass -DP scaling on board width |
+| EX11-020/EX9-024 Hanimon, EX11-021/EX9-027 Kokeshimon, EX11-022/EX9-032 Karakurumon, EX11-023/EX9-033 Kaguyamon | engine | Yellow/Purple Kaguya line; Scapegoat resilience, trash recursion, removal |
+| BT22-088 / EX11-060 / EX7-063 / ST19-14 / EX9-067 / P-136 Arisa Kinosaki | engine (Tamer) | Memory floor, draw-on-deletion, Rush grant, replay loop |
+| EX11-061 Mirai Kinosaki | engine (Tamer) | Memory ramp; free Lv3 Puppet on Puppet-digivolve |
+| BT13-101 Miki & Megumi | enabler (Tamer) | Free PawnChessmon; draw on B/Y play |
+| ST19-04/05 PawnChessmon | enabler | Trash-a-Puppet → Draw 2; Reboot |
+| BT22-098 Fable Waltz / P-229 Narrative Ronde | enabler (Option) | Free Shoemon/Arisa, search, Delay digivolve-discount |
+| LM-035 Amber / P-037 Yellow Memory Boost!, LM-029 Yellow Scramble | enabler (Option) | Ramp / search |
+| BT9-033 Pillomon | tech | `Players can't play Digimon by effects` (mirror / lock) |
 
 ## Digivolution lines
 
-- **Kyaromon/Nyaromon (Lv2 egg) -> Shoemon (Lv3 [Puppet]) -> ShoeShoemon (Lv4) -> Chaperomon (Lv5) -> Cendrillmon (Lv6) -> Nyabootmon (Lv7)** - the mono-Yellow [Puppet] line; each evo step is cheap (Shoemon cost -1, Option cost -3/-4).
-- **Hanimon (Lv3) -> Kokeshimon (Lv4) -> Karakurumon (Lv5) -> Kaguyamon (Lv6)** - the Yellow/Purple [Puppet]+[LIBERATOR] line; Karakurumon free-digivolves by deleting a Token/[Puppet].
-- **Token sub-engine:** Familiar Token (Yellow/3000 DP, `[On Deletion]` give an opponent Digimon -3000 DP) is generated by ShoeShoemon/Cendrillmon and spent as <Overclock> / free-digivolve / Scapegoat fuel - its deletion drives Kyaromon draw and Arisa/Kaguyamon triggers.
+- **Shoemon line (mono-Yellow):** Kyaromon/Nyaromon (Lv2 egg, ST19-01/BT22-002/
+  BT15-003) → Shoemon (Lv3, evo 0) → ShoeShoemon (Lv4, evo 2) → Chaperomon
+  (Lv5, evo 3) → Cendrillmon (Lv6, evo 3) → Nyabootmon (Lv7, evo 4). Mono-Yellow
+  gates throughout; Shoemon's cheap evo-0 plus EX7-024's `-1` cost reduction
+  and Fable Waltz's `-3` Delay make the climb fast.
+- **Kaguya line (Yellow/Purple):** Shoemon/Hanimon (Lv3) → Kokeshimon (Lv4) →
+  Karakurumon (Lv5) → Kaguyamon (Lv6). Adds Scapegoat resilience + lowest-level
+  removal + trash recursion. Mirai Kinosaki enables it.
 
 ## Named combos
 
-### Fable Waltz -> Arisa engine, then Delay cost-reduced digivolve  *(Option - top rank)*
+### C1 — Overclock value loop (Cendrillmon + Arisa + Familiar Token)
+- Cards: ST19-12 **Cendrillmon** (Overclock + When-Dig plays 2 Familiar Tokens),
+  EX11-060 **Arisa Kinosaki**, the **[Familiar] Token**.
+- Expected mechanical outcome: at end of your turn, Cendrillmon's Overclock
+  deletes 1 Familiar Token → Cendrillmon gains a free (un-suspending) attack;
+  that token deletion fires (a) the Familiar's `[On Deletion]` -3000 DP onto an
+  opponent Digimon, and (b) Arisa's `[All Turns]` "when your Token/[Puppet] is
+  deleted, by suspending this Tamer, Draw 1". Net per loop: **+1 card drawn,
+  one opponent Digimon -3000 DP, Cendrillmon attacks without suspending.**
+- Rules/keyword basis: Overclock keyword (`$BASE_DCGO/.../ST19/Yellow/ST19_12.cs`,
+  `EX11/Yellow/EX11_060.cs`); deletion → on-deletion timing (`general_rule.pdf`
+  §6 deletion, §16 keyword glossary). The suspend-to-draw "may" must surface
+  (no-approximations).
+- Rank: **1** (signature engine; touches every Puppets deck).
 
-- **Cards:** BT22-098 (Unique Emblem: Fable Waltz), an Arisa Kinosaki Tamer (e.g. EX7-063 / BT22-088), a [Puppet]+[LIBERATOR] Digimon in hand (e.g. EX11-022 Karakurumon / EX9-033 Kaguyamon), a [Puppet] base on board.
-- **Expected mechanical outcome:** `[Main]` of Fable Waltz plays 1 Shoemon **or** Arisa Kinosaki from hand **or trash** without paying cost (union-zone pick), then Fable Waltz places itself in the battle area as a Delay Option (board: +1 permanent for the played card, +1 Option permanent; trash/hand -1; **0 memory paid** for the played card). On a later turn, when your Arisa Kinosaki suspends, trashing Fable Waltz lets 1 of your [Puppet] Digimon digivolve into a [Puppet]+[LIBERATOR] hand card with the **digivolution cost reduced by 3** (target stack +1 card; hand -1; memory paid = printed evo cost - 3, floored at 0). **Unhappy path:** if no Arisa is on board (or it does not suspend), the Delay cannot be declared and the Option stays inert.
-- **Rules/keyword basis:** `<Delay>` (`general_rule.pdf` 16-16); union-zone free-play (no cost paid). DCGO C#: `$BASE_DCGO/Assets/Scripts/CardEffect/BT22/Yellow/BT22_098.cs` (`OptionSkill` union-zone play + `PlaceDelayOptionCards`; `OnTappedAnyone` Delay gated on `IsArisaKinosaki` suspend, `DigivolveIntoHandOrTrashCard` reduceCost 3).
-- **Rank:** highest - a deck-frequency 16 Option that both ramps the board and is the cheapest route into the [Puppet]+[LIBERATOR] top end; the Arisa-suspend -> Delay-digivolve chain spans Option + Tamer + Digimon.
+### C2 — Self-sustaining token refill (Overclock deleter + BT22-040 Cendrillmon)
+- Cards: ST19-12 **Cendrillmon** (Overclock, the deleter) OR BT22-040's own
+  Overclock, and BT22-040 **Cendrillmon** (When-Dig plays a Familiar Token;
+  `[All Turns][Once Per Turn]` "when any of your **other** Digimon are deleted,
+  you may activate 1 of this Digimon's `[When Digivolving]` effects").
+- Expected mechanical outcome: an Overclock deletes a Familiar Token → BT22-040's
+  refire observer offers to re-run its When-Dig → **a fresh Familiar Token is
+  played**, so the board count is restored. The loop is OPT-gated: a second
+  same-turn deletion does **not** re-offer until the turn cycles.
+- Rules/keyword basis: `$BASE_DCGO/.../BT22/Yellow/BT22_040.cs`; OnAnyDeletion
+  must evaluate the *deleted object's* owner/kind against "your other Digimon"
+  (covered structurally by `tests/cards_behavioral/bt22/bt22_040.rs`). This
+  combo asserts the **cross-card** wiring Overclock-deletes → refire-replays.
+- Rank: **2** (board-sustain engine).
 
-### Karakurumon: delete a Token to free-digivolve into a Puppet hand card  *(engine - high rank)*
+### C3 — Nyabootmon mass-removal payoff (board-width-gated)
+- Cards: BT22-042 **Nyabootmon** + a **wide own board** (tokens/Puppets) + an
+  opponent Digimon target.
+- Expected mechanical outcome: When-Dig "to 1 of your opponent's Digimon, give
+  -3000 DP until their turn ends **for each of your Digimon**." With a wide
+  board the cumulative -DP drives the target to ≤0 → **deleted** (rule
+  17-1-3-1). The *same* effect over a narrow board leaves the target alive —
+  the removal is **gated on board width**, the system-level fact a per-card
+  test can't express.
+- Rules/keyword basis: `$BASE_DCGO/.../BT22/Yellow/BT22_042.cs`; 0-DP deletion
+  rule 17-1-3-1 (see memory `project_dp_zero_deletion.md`); -DP "until their
+  turn ends" window.
+- Rank: **3** (primary win-con / board wipe).
 
-- **Cards:** EX9-032 / EX11-022 (Karakurumon), 1 Familiar Token or other [Puppet] Digimon on board, a [Puppet] Digimon card in hand.
-- **Expected mechanical outcome:** on Karakurumon's `[OnPlay/WhenDigivolving]`, by **deleting 1 of your Tokens or other [Puppet] Digimon** (board -1 permanent), Karakurumon digivolves into a [Puppet] Digimon card from hand for **cost 0, ignoring digivolution requirements** (Karakurumon's stack gains the hand card on top; hand -1; memory paid 0). The deleted Token's `[On Deletion]` (-3000 DP to an opponent Digimon) and Kyaromon's inherited draw both fire off the same deletion. **Unhappy path:** if you control no other Token/[Puppet] the effect is uncastable (no deletion cost available) and Karakurumon plays normally.
-- **Rules/keyword basis:** "by [deleting]" cost paid before reward (`general_rule.pdf` cost-then-effect); ignore-digivolution-requirement free digivolve. DCGO C#: `$BASE_DCGO/Assets/Scripts/CardEffect/EX9/Yellow/EX9_032.cs`.
-- **Rank:** high - the central free-tempo engine of the Yellow/Purple line; chains a deletion (Token), a recursion enabler, and a digivolve in one action.
+### C4 — Arisa replay & Shoemon recursion (BT22-088)
+- Cards: BT22-088 **Arisa Kinosaki** (in play) + a second **Arisa** (in hand) +
+  a **Shoemon** (in trash).
+- Expected mechanical outcome: `[Start of Your Main Phase]` returning the
+  in-play Arisa to the **bottom of the deck**, play the hand Arisa for free;
+  then **if you have no Digimon**, play a Shoemon from trash for free. Asserts
+  the multi-zone shuffle: deck +1 (old Arisa bottomed), the new Arisa in play,
+  Shoemon recurred from trash when the board is empty. Unhappy path: with a
+  Digimon already in play the Shoemon clause is skipped.
+- Rules/keyword basis: `$BASE_DCGO/.../BT22/Yellow/BT22_088.cs`; "without
+  paying the cost" play; conditional second clause.
+- Rank: **4** (consistency / recursion engine).
 
-### Narrative Ronde -> Mirai-triggered Delay digivolve  *(Option - high rank)*
-
-- **Cards:** P-229 (Unique Emblem: Narrative Ronde), a Mirai Kinosaki Tamer (EX9-067 / EX11-061), a Lv<=6 [LIBERATOR] Digimon in hand, a Digimon base.
-- **Expected mechanical outcome:** `[Main]` reveals top 3, adds 1 [Puppet] Digimon card **and** 1 [LIBERATOR] card to hand (hand +2; deck -2, rest bottomed), then self-places. When a Mirai Kinosaki is **played**, trashing Narrative Ronde lets 1 of your Digimon digivolve into a **Lv<=6 [LIBERATOR]** hand card with cost **reduced by 3** (target stack +1; hand -1; memory paid = evo cost - 3). **Unhappy path:** Delay requires a Mirai *play* event after the placing turn; without it the Option is inert.
-- **Rules/keyword basis:** `<Delay>` (16-16); reveal-and-add-to-hand. DCGO C#: `$BASE_DCGO/Assets/Scripts/CardEffect/P/Yellow/P_229.cs` (`OptionSkill` reveal/add-2 + `PlaceDelayOptionCards`; `OnEnterFieldAnyone` Delay gated on a Mirai Kinosaki play, `DigivolveIntoHandOrTrashCard` reduceCost 3, Lv<=6 LIBERATOR `CardCondition`).
-- **Rank:** high - deck-frequency 18 Option; the only digging-+-Delay-digivolve package keyed to the Mirai play trigger.
-
-### Vortex Resonance: dig a LIBERATOR, then digivolve into hand for -4  *(Option - high rank)*
-
-- **Cards:** EX7-074 (Vortex Resonance), a Digimon base, a Digimon card in hand, a [LIBERATOR] Digimon/Tamer already on board (color-bypass enabler).
-- **Expected mechanical outcome:** `[Main]` reveals top 3, adds 1 [LIBERATOR] card to hand (rest bottomed), then 1 of your Digimon **may** digivolve into a hand Digimon with cost **reduced by 4** (target stack +1; hand -1; memory paid = evo cost - 4, floored at 0). While you control a [LIBERATOR] Digimon or Tamer, the card ignores its Green/Yellow color requirement (playable off an all-yellow board). **Unhappy path:** the digivolve sub-step is optional - if you decline the base pick, only the reveal/add resolves; with no LIBERATOR board the color-bypass is off.
-- **Rules/keyword basis:** IgnoreColorRequirement flood-gate; reveal-add; cost-reduced digivolve. DCGO C#: `$BASE_DCGO/Assets/Scripts/CardEffect/EX7/Green/EX7_074.cs` (`None` IgnoreColorConditionClass scoped to this card; `OptionSkill` `SimplifiedRevealDeckTopCardsAndSelect` + `DigivolveIntoHandOrTrashCard` reduceCost 4).
-- **Rank:** high - the biggest single-card digivolution discount (-4); a clean Option-enabled tempo line into the Lv5/6 payoffs.
-
-### Overclock + Token loop: extra attack by deleting a Token  *(payoff - high rank)*
-
-- **Cards:** a <Overclock> payoff (EX7-027/BT22-036 Chaperomon, EX7-030/EX11-024 Cendrillmon, BT22-042 Nyabootmon), a Familiar Token or other [Puppet] Digimon, and (synergy) Kyaromon egg + Arisa for the deletion payoff.
-- **Expected mechanical outcome:** at end of your turn, by **deleting 1 of your Tokens or other [Puppet] Digimon** (board -1), the Overclock Digimon **attacks a player without suspending** (an extra, unsuspended attack - i.e. it can have already attacked this turn and still attack again). The deleted Familiar Token's `[On Deletion]` gives an opponent Digimon -3000 DP; Kyaromon inherited `<Draw 1>` and Arisa/Kaguyamon deletion-triggers also fire. **Unhappy path:** with no spare Token/[Puppet] to delete, Overclock cannot pay and no extra attack occurs.
-- **Rules/keyword basis:** `<Overclock>` (`general_rule.pdf` 16-33) - end-of-turn, pay by deleting a Token/[Puppet], attack a player without suspending; `[On Deletion]` Token trigger; Kyaromon inherited draw on [Puppet]/Token deletion. DCGO C#: `$BASE_DCGO/.../BT22/Yellow/BT22_042.cs` (Overclock grant + cost filter), Token registry `code/digimon-engine/src/cards/tokens/familiar.rs`.
-- **Rank:** high - the deck's primary closing line; converts the board into player-face damage and feeds the deletion-payoff sub-engine.
+### C5 — Leave-prevention by token sacrifice (Chaperomon inherit + Familiar)
+- Cards: ST19-11 / EX7-027 **Chaperomon** inherited `[All Turns][OPT]` "when
+  this would leave the battle area other than by your effects, by deleting 1 of
+  your Tokens or other [Puppet] Digimon, prevent it from leaving" + a **Familiar
+  Token** as the sacrifice.
+- Expected mechanical outcome: opponent tries to delete the carrier → you delete
+  a Familiar Token instead → **the carrier stays**. Unhappy path: with no
+  Token/[Puppet] to delete, the carrier leaves.
+- Rules/keyword basis: `$BASE_DCGO/.../EX7/Yellow/EX7_027.cs`; leave-replacement
+  timing (`general_rule.pdf` §6 deletion replacement, see rule 25 deletion
+  lifecycle). NOTE: this is an **inherited** effect — the carrier must hold
+  Chaperomon as a digivolution source; setup cost is higher, so this is the
+  lowest-ranked selected combo.
+- Rank: **5** (resilience). *Authored only if C1–C4 land cleanly within scope.*
 
 ## Playstyle
-
-- **Class:** midrange/combo. Tempo comes from cost-reduced/free digivolution (Options -3/-4, Shoemon -1, Karakurumon free) and from converting Tokens into value (draw, -DP, extra attacks).
-- **Memory curve:** ramp with Tamers (Arisa "set to 3", Mirai gain 1) and Memory Boost / Blinding Ray; build a [Puppet] board; recur deleted bodies from trash (Kaguyamon EoT, Yellow Scramble, Shoemon/ShoeShoemon On-Deletion plays).
-- **Resilience:** <Scapegoat> (Karakurumon/Kaguyamon), <Barrier> (Shoemon), Chaperomon/Karakurumon inherited "doesn't leave by deleting a [Puppet]", and Hanimon/Kokeshimon attack-enders make the board sticky.
+- Class: **combo-control** with a token swarm. Tempo comes from cheap evo costs +
+  Arisa's memory floor (set to 3) and Overclock free attacks; the deck grinds
+  card advantage through self-deletion while shrinking the opponent's board.
+- Memory curve: Arisa (EX11-060/ST19-14) sets memory to 3 each turn; Mirai
+  (EX11-061) and EX7-063 ramp +1 when the opponent has a Digimon.
 
 ## Win conditions
-
-- **Overclock beatdown:** chain extra attacks from Chaperomon/Cendrillmon/Nyabootmon by deleting Tokens, while -DP swings (Cendrillmon, Nyabootmon, Familiar Tokens) clear blockers.
-- **Security pressure:** Shoemon variants give opponent Security Digimon -3000 DP / <Security A. -1>; Nyabootmon/Cendrillmon stack <Security A. +1> via <Alliance> (Kaguyamon grants it board-wide) for multi-checks.
-- **Deletion grind:** Kaguyamon (delete opp lowest level on other-deletion) + Nyabootmon (re-fire WhenDigivolving on other-deletion) attrition the opponent board while Kyaromon/Arisa refill the hand.
+1. **Overclock + Alliance extra attacks** punching multiple security checks
+   (Cendrillmon EX11-024 / Kaguyamon Alliance add Security A. +1).
+2. **Board wipe via stacked -DP** (Nyabootmon, Familiar On-Deletion, Cendrillmon
+   When-Attacking) followed by free attacks into open security.
+3. **Grind** — Arisa draw engine + Scapegoat resilience outlasting the opponent.
 
 ## Ranked interactions to test
+1. **C1** Overclock value loop — signature engine, highest coverage. ✅ authored
+2. **C2** Self-sustaining token refill — board-sustain cross-card wiring. ✅ authored
+3. **C3** Nyabootmon mass-removal — board-width-gated payoff (happy + unhappy). ✅ authored
+4. **C4** Arisa replay & Shoemon recursion — multi-zone consistency engine. ✅ authored
+5. **C5** Leave-prevention by token sacrifice — **dropped by rank**: the per-card
+   suite `cards_behavioral/ex7/ex7_027.rs` already covers leave-prevention
+   exhaustively (happy / decline / OPT-lock / token-cost-to-trash /
+   own-effect-no-trigger); the cross-card delta is marginal.
 
-1. **Fable Waltz -> Arisa engine + Delay cost-reduced digivolve** - Option that ramps and is the cheapest path to the [Puppet]+[LIBERATOR] top end; spans Option + Tamer + Digimon, with a clear board diff (free play, self-place, -3 digivolve). *(highest - Option-centric)*
-2. **Karakurumon: delete-a-Token free-digivolve into a Puppet hand card** - the central free-tempo engine; deletion-cost + ignore-requirements + chained Token/Kyaromon triggers in one action.
-3. **Narrative Ronde -> Mirai-triggered Delay digivolve** - Option dig-2 + Delay -3 digivolve keyed to the Mirai play trigger.
-4. **Vortex Resonance: dig a LIBERATOR + -4 digivolve** - biggest single-card digivolution discount; color-bypass off a LIBERATOR board.
-5. **Overclock + Token loop: extra attack by deleting a Token** - the closing line; Token `[On Deletion]` -DP + Kyaromon draw fire off the Overclock cost.
+## Additional situations (second wave — 2026-05-30)
 
-> **Capped at 5 (Phase 3).** Logged but dropped below the cap:
-> - *Yellow Scramble (LM-029) Delay trash-recursion* - `[Main]` -3 digivolve + Delay return-to-deck/free-play; strong but overlaps combos 1/4 on the "Option cost-reduced digivolve" axis (rank 6).
-> - *Shoemon/ShoeShoemon On-Deletion -> Familiar Token / Lv3 [Puppet] chain* - recursion glue; better as a per-card test than a system combo (rank 7).
-> - *Kaguyamon other-deletion -> delete opp lowest level + EoT trash recursion* - payoff attrition; overlaps the Overclock/deletion sub-engine (rank 8).
-> - **Note (not authored / faithfulness watch):** EX9-067 Mirai Kinosaki's `[Your Turn]` "digivolve-into-[Puppet] -> return Tamer, play Arisa/[Puppet] with play cost -3" clause is **absent** from `code/digimon-engine/cards/ex9/EX9-067.yaml` (only `[On Play]` reveal + `[Security]` are present). Any combo resting on that clause is **blocked on the missing effect** and was not ranked into the cap; route to `qa/archetype-qa/engine-gaps.md` if confirmed during Phase 4/6.
+Beyond the four headline combos, five more cross-card seams were exercised:
+
+| # | Situation | Verdict |
+|---|-----------|---------|
+| S2 | Karakurumon (EX11-022) temp-Puppet self-deletion → Arisa (EX11-060) Draw 1 — drawback becomes card advantage | ✅ PASS |
+| S4 | ST19-14 Arisa grants <Rush> to one effect-played Familiar Token (suspend cost gates the second) | ✅ PASS |
+| S5 | BT22-088 Arisa **play-side** draw (mirror of C1's deletion-side) — Draw exactly once over two token plays | ✅ PASS |
+| S1 | Pillomon (BT9-033) flood-gate must block effect-played Familiar Tokens | ⛔ FINDING **G-PLAY-TOKEN-FLOODGATE** |
+| S3 | Kaguyamon (EX11-023) trash-recursion must fire on a Familiar Token deletion | ⛔ FINDING **G-EX11-023-TOKEN-DELETION** |
+
+## Findings (both confirmed AND fixed — 2026-05-30)
+
+1. **G-PLAY-TOKEN-FLOODGATE** (engine primitive → `docs/RUST_ENGINE_GAPS.md`) —
+   **RESOLVED.** `EffectContext::play_token` now consults
+   `CannotPlayDigimonByEffect` and no-ops the spawn when the controller carries
+   it (every registered token is a Digimon token), matching DCGO's
+   `CanPlayAsNewPermanent` → `CanNotPutFieldClass(IsDigimon)`. Pins:
+   `s1_…` + `s1b_…` (interaction) and `play_token_blocked…` /
+   `play_token_allowed…` (lib unit tests).
+2. **G-EX11-023-TOKEN-DELETION** (card-spec → `qa/archetype-qa/engine-gaps.md`) —
+   **RESOLVED.** EX11-023's deletion-recursion condition is now
+   `any_of: [digimon, token]` (matching sibling cards BT22-040/EX11-060). Pins:
+   `s3_…` (interaction), `ex11_023_other_deletion_recursion_fires_on_familiar_token_deletion`
+   (per-card), and the strengthened structural assertion.
+
+## Run record (Phase 6 — 2026-05-30)
+
+- Interaction tests: `code/digimon-engine/tests/archetypes/puppets.rs` —
+  **11/11 PASS + 2 `#[ignore]`'d findings** (C1–C4 + S2/S4/S5 pass; S1/S3 pin
+  confirmed open divergences). Full `--test archetypes` binary: **41/41 PASS,
+  2 ignored** (no regressions).
+- Static gate: deck legal (4 eggs / 50 main), coverage 62/62 = 100%, 5/5 smoke
+  games, combo-presence 4/4. Recorded in
+  `qa/qa-reports/archetype_interactions.json`.
+- **First-wave authoring note:** the four headline combos surfaced no engine
+  bugs (the only fixes were to the *tests* — a trigger-order assumption, the
+  `enter_main_phase()` firing, and a Shoemon-`[On Play]`-confounded deck count).
+  The second wave then surfaced the two genuine faithfulness divergences above.
+- **No engine/card code was edited** (per skill guardrails) — findings filed to
+  the trackers; the two pinning tests flip to un-ignored when fixed.

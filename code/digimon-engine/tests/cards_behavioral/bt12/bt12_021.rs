@@ -218,13 +218,14 @@ fn bt12_021_has_inherited_dna_digivolve_may_step() {
         t.process.iter().any(|step| matches!(
             step,
             CompiledStep::MayDnaDigivolveNow {
-                ignore_requirements: true,
+                ignore_requirements: false,
                 cost: 0,
                 ..
             }
         )),
         "BT12-021 EoT inherited body must contain a `MayDnaDigivolveNow` step \
-         with cost=0 and ignore_requirements=true"
+         with ignore_requirements=false (DCGO pays the target's printed DNA cost \
+         and checks its DNA requirements — not a free/unrestricted DNA digivolve)"
     );
 }
 
@@ -598,12 +599,12 @@ fn bt12_021_inherited_eot_dna_digivolve_has_correct_trigger_and_scope() {
         t.process.iter().any(|step| matches!(
             step,
             CompiledStep::MayDnaDigivolveNow {
-                ignore_requirements: true,
+                ignore_requirements: false,
                 cost: 0,
                 ..
             }
         )),
-        "process must contain a MayDnaDigivolveNow step with cost=0 and ignore_requirements=true"
+        "process must contain a MayDnaDigivolveNow step with ignore_requirements=false (faithful: pays printed DNA cost, checks DNA requirements)"
     );
 }
 

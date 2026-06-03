@@ -1,92 +1,5 @@
 {
   "archetypes": {
-    "DNA Omnimon": {
-      "combos_tested": [
-        "DNA Omnimon Alter-S blowout (Blue6 + Red6 -> EX9-021)",
-        "Miraculous Mega Knight Delay -> reactive DNA Omnimon (Option)",
-        "Blast DNA Omnimon off opponent's turn (BT17-078 Counter)",
-        "Free cross-tribe Lv.6 assembly (both DNA materials in one turn)",
-        "Nokia accel into cheap Lv.6 (BT22-013 cost-6 jump)"
-      ],
-      "findings": [],
-      "static_tests": {
-        "combo_presence": {
-          "data": {
-            "blocked": [],
-            "combos_total": 5
-          },
-          "detail": "all 5 combo(s) have every piece implemented",
-          "passed": true
-        },
-        "coverage_gate": {
-          "data": {
-            "failing_cards": [
-              "AD1-004"
-            ],
-            "implemented": 66,
-            "ratio": 0.673469387755102,
-            "threshold": 0.85,
-            "total": 98,
-            "unknown_cards": [
-              "ST20-14",
-              "LM-033",
-              "LM-049",
-              "EX4-051",
-              "EX1-066",
-              "LM-053",
-              "BT13-065",
-              "ST20-01",
-              "ST20-07",
-              "AD1-022",
-              "ST20-02",
-              "ST21-07",
-              "BT17-012",
-              "EX5-018",
-              "EX9-020",
-              "BT9-024",
-              "BT9-020",
-              "BT17-028",
-              "BT15-083",
-              "BT11-002",
-              "P-104",
-              "LM-028",
-              "P-036",
-              "BT15-024",
-              "EX9-014",
-              "BT14-014",
-              "P-073",
-              "ST21-08",
-              "ST20-13",
-              "ST20-03",
-              "ST21-01"
-            ]
-          },
-          "detail": "coverage 66/98 = 67% (threshold 85%); 1 failing, 31 unknown",
-          "passed": false
-        },
-        "deck_legality": {
-          "data": {
-            "constructs": true,
-            "egg_count": 4,
-            "main_count": 50,
-            "over_copy_limit": [],
-            "unknown_cards": [],
-            "violations": []
-          },
-          "detail": "deck is rules-legal and constructs a game",
-          "passed": true
-        },
-        "smoke_games": {
-          "data": {
-            "completed": 5,
-            "games": 5
-          },
-          "detail": "5/5 smoke games completed cleanly",
-          "passed": true
-        }
-      },
-      "updated": "2026-06-03"
-    },
     "Machine Black": {
       "combos_tested": [
         {
@@ -162,366 +75,113 @@
       },
       "updated": "2026-05-30"
     },
-    "Magneticdra": {
-      "combos_tested": [
-        "Zofr Kabus source-trash fan-out removal",
-        "Gravel Hearts free-play recur Sunarizamon search",
-        "Black Scramble cost-reduced digivolve into payoff",
-        "Defense Training Delay cost-reduced digivolve",
-        "Magneticdramon source-trash double removal"
-      ],
-      "findings": [],
-      "static_tests": {
-        "combo_presence": {
-          "data": {
-            "blocked": [],
-            "combos_total": 5
-          },
-          "detail": "all 5 combo(s) have every piece implemented",
-          "passed": true
-        },
-        "coverage_gate": {
-          "data": {
-            "failing_cards": [
-              "BT23-058"
-            ],
-            "implemented": 35,
-            "ratio": 0.875,
-            "threshold": 0.85,
-            "total": 40,
-            "unknown_cards": [
-              "EX1-071",
-              "BT10-062",
-              "LM-025",
-              "LM-033"
-            ]
-          },
-          "detail": "coverage 35/40 = 88% (threshold 85%); 1 failing, 4 unknown",
-          "passed": true
-        },
-        "deck_legality": {
-          "data": {
-            "constructs": true,
-            "egg_count": 4,
-            "main_count": 50,
-            "over_copy_limit": [],
-            "unknown_cards": [],
-            "violations": []
-          },
-          "detail": "deck is rules-legal and constructs a game",
-          "passed": true
-        },
-        "smoke_games": {
-          "data": {
-            "completed": 5,
-            "games": 5
-          },
-          "detail": "5/5 smoke games completed cleanly",
-          "passed": true
-        }
-      },
-      "updated": "2026-06-02"
-    },
-    "Medusamon": {
-      "combos_tested": [
-        "EX11-012 Petrification security loop (sticky body)",
-        "BT24-017 Medusamon when-digivolving payoff package",
-        "Raid -> attack-target-change -> trash security (BT21-025 Lamiamon)",
-        "Styracomon security-removal -> delete chain (BT24-018 apex)",
-        "Owen security-removed punish (BT18-087) + Petrification feed"
-      ],
-      "findings": [],
-      "static_tests": {
-        "combo_presence": {
-          "data": {
-            "blocked": [],
-            "combos_total": 5
-          },
-          "detail": "all 5 combo(s) have every piece implemented",
-          "passed": true
-        },
-        "coverage_gate": {
-          "data": {
-            "failing_cards": [],
-            "implemented": 56,
-            "ratio": 0.8888888888888888,
-            "threshold": 0.85,
-            "total": 63,
-            "unknown_cards": [
-              "ST12-03",
-              "LM-051",
-              "LM-033",
-              "BT19-011",
-              "BT14-017",
-              "LM-045",
-              "BT21-083"
-            ]
-          },
-          "detail": "coverage 56/63 = 89% (threshold 85%); 0 failing, 7 unknown",
-          "passed": true
-        },
-        "deck_legality": {
-          "data": {
-            "constructs": true,
-            "egg_count": 4,
-            "main_count": 50,
-            "over_copy_limit": [],
-            "unknown_cards": [],
-            "violations": []
-          },
-          "detail": "deck is rules-legal and constructs a game",
-          "passed": true
-        },
-        "smoke_games": {
-          "data": {
-            "completed": 5,
-            "games": 5
-          },
-          "detail": "5/5 smoke games completed cleanly",
-          "passed": true
-        }
-      },
-      "updated": "2026-06-02"
-    },
-    "Nokia AlterS": {
-      "combos_tested": [
-        "Miraculous Mega Knight free-play recursion (Option)",
-        "Mega Knight Delay second-life hand-DNA Omnimon (Option)",
-        "Digital Gate Open dig + Delay Tamer cheat (Option)",
-        "Tai & Matt double-memory off the cross-evolve sequence",
-        "Omnimon Alter-S DNA board wipe"
-      ],
-      "findings": [],
-      "static_tests": {
-        "combo_presence": {
-          "data": {
-            "blocked": [],
-            "combos_total": 5
-          },
-          "detail": "all 5 combo(s) have every piece implemented",
-          "passed": true
-        },
-        "coverage_gate": {
-          "data": {
-            "failing_cards": [],
-            "implemented": 28,
-            "ratio": 1.0,
-            "threshold": 0.85,
-            "total": 28,
-            "unknown_cards": []
-          },
-          "detail": "coverage 28/28 = 100% (threshold 85%); 0 failing, 0 unknown",
-          "passed": true
-        },
-        "deck_legality": {
-          "data": {
-            "constructs": true,
-            "egg_count": 4,
-            "main_count": 50,
-            "over_copy_limit": [],
-            "unknown_cards": [],
-            "violations": []
-          },
-          "detail": "deck is rules-legal and constructs a game",
-          "passed": true
-        },
-        "smoke_games": {
-          "data": {
-            "completed": 5,
-            "games": 5
-          },
-          "detail": "5/5 smoke games completed cleanly",
-          "passed": true
-        }
-      },
-      "updated": "2026-06-02"
-    },
-    "Omni Nokia": {
-      "combos_tested": [
-        "Miraculous Mega Knight — recur an Agumon/Gabumon from trash",
-        "Mega Knight Delay — off-stack Omnimon when a Lv6 leaves outside battle",
-        "Nokia free-play into Tai & Matt memory ramp",
-        "Nokia +1000 aura + DNA Omnimon swing",
-        "WarGreymon/MetalGarurumon branch — free cross-line digivolve"
-      ],
-      "findings": [],
-      "static_tests": {
-        "combo_presence": {
-          "data": {
-            "blocked": [],
-            "combos_total": 5
-          },
-          "detail": "all 5 combo(s) have every piece implemented",
-          "passed": true
-        },
-        "coverage_gate": {
-          "data": {
-            "failing_cards": [],
-            "implemented": 46,
-            "ratio": 0.9387755102040816,
-            "threshold": 0.85,
-            "total": 49,
-            "unknown_cards": [
-              "EX1-066",
-              "BT1-010",
-              "ST21-10"
-            ]
-          },
-          "detail": "coverage 46/49 = 94% (threshold 85%); 0 failing, 3 unknown",
-          "passed": true
-        },
-        "deck_legality": {
-          "data": {
-            "constructs": true,
-            "egg_count": 4,
-            "main_count": 50,
-            "over_copy_limit": [],
-            "unknown_cards": [],
-            "violations": []
-          },
-          "detail": "deck is rules-legal and constructs a game",
-          "passed": true
-        },
-        "smoke_games": {
-          "data": {
-            "completed": 5,
-            "games": 5
-          },
-          "detail": "5/5 smoke games completed cleanly",
-          "passed": true
-        }
-      },
-      "updated": "2026-06-02"
-    },
-    "Omnimon ACE": {
-      "combos_tested": [
-        "Miraculous Mega Knight — free Agumon/Gabumon from trash (Option recursion)",
-        "Miraculous Mega Knight Delay — leave-trigger → Omnimon DNA from hand",
-        "Miraculous Mega Knight security — off-turn Tamer free-play, Option to hand",
-        "Omnimon (BT17-078) DNA digivolve — board-level wipe of one level",
-        "BT20-102 X-Antibody — single-target mass deletion + bottom"
-      ],
-      "findings": [],
-      "static_tests": {
-        "combo_presence": {
-          "data": {
-            "blocked": [],
-            "combos_total": 5
-          },
-          "detail": "all 5 combo(s) have every piece implemented",
-          "passed": true
-        },
-        "coverage_gate": {
-          "data": {
-            "failing_cards": [],
-            "implemented": 20,
-            "ratio": 0.9090909090909092,
-            "threshold": 0.85,
-            "total": 22,
-            "unknown_cards": [
-              "BT14-101",
-              "ST15-14"
-            ]
-          },
-          "detail": "coverage 20/22 = 91% (threshold 85%); 0 failing, 2 unknown",
-          "passed": true
-        },
-        "deck_legality": {
-          "data": {
-            "constructs": true,
-            "egg_count": 4,
-            "main_count": 50,
-            "over_copy_limit": [],
-            "unknown_cards": [],
-            "violations": []
-          },
-          "detail": "deck is rules-legal and constructs a game",
-          "passed": true
-        },
-        "smoke_games": {
-          "data": {
-            "completed": 5,
-            "games": 5
-          },
-          "detail": "5/5 smoke games completed cleanly",
-          "passed": true
-        }
-      },
-      "updated": "2026-06-02"
-    },
-    "Puppet-Sister": {
-      "combos_tested": [
-        "Fable Waltz [Main] free-plays Shoemon, self-arms as Delay",
-        "Narrative Ronde dual-search then Mirai play arms the digivolve Delay",
-        "Physical Training [Main] dig then Delay discount digivolve",
-        "Cendrillmon free-play Puppet plus Familiar Tokens per opponent Digimon",
-        "Overclock self-sacrifice fans out into Kaguyamon opponent removal"
-      ],
-      "findings": [],
-      "static_tests": {
-        "combo_presence": {
-          "data": {
-            "blocked": [],
-            "combos_total": 5
-          },
-          "detail": "all 5 combo(s) have every piece implemented",
-          "passed": true
-        },
-        "coverage_gate": {
-          "data": {
-            "failing_cards": [
-              "ST12-12"
-            ],
-            "implemented": 23,
-            "ratio": 0.92,
-            "threshold": 0.85,
-            "total": 25,
-            "unknown_cards": [
-              "BT7-082"
-            ]
-          },
-          "detail": "coverage 23/25 = 92% (threshold 85%); 1 failing, 1 unknown",
-          "passed": true
-        },
-        "deck_legality": {
-          "data": {
-            "constructs": true,
-            "egg_count": 4,
-            "main_count": 50,
-            "over_copy_limit": [],
-            "unknown_cards": [],
-            "violations": []
-          },
-          "detail": "deck is rules-legal and constructs a game",
-          "passed": true
-        },
-        "smoke_games": {
-          "data": {
-            "completed": 5,
-            "games": 5
-          },
-          "detail": "5/5 smoke games completed cleanly",
-          "passed": true
-        }
-      },
-      "updated": "2026-06-02"
-    },
     "Puppets": {
       "combos_tested": [
-        "Fable Waltz trash-recursion + Arisa-suspend Delay digivolve",
-        "Vortex Resonance LIBERATOR colour-ignore + -4 digivolve",
-        "Karakurumon delete-fodder cheat-digivolve into Puppet hand card -> death-draw loop",
-        "Overclock self-sacrifice -> death-trigger fan-out",
-        "Narrative Ronde Mirai-armed Delay -3 LIBERATOR digivolve"
+        {
+          "combo": "C1 Overclock value loop (ST19-12 + EX11-060 + Familiar Token)",
+          "status": "PASS",
+          "note": "End-of-turn Overclock deletes a Familiar Token -> Arisa suspends to Draw 1 AND the Familiar On-Deletion -3000 DP hits the opponent. Unhappy: a pre-suspended Arisa yields no draw but the -3000 still fires.",
+          "tests": [
+            "c1_overclock_token_sacrifice_draws_for_arisa_and_reduces_opponent_dp",
+            "c1_value_loop_yields_no_draw_when_arisa_cannot_pay_the_suspend_cost"
+          ]
+        },
+        {
+          "combo": "C2 Self-sustaining token refill (ST19-12 Overclock deleter + BT22-040 refire)",
+          "status": "PASS",
+          "note": "Overclock deletes a Familiar -> BT22-040 refire replays a fresh Familiar, board count restored. Unhappy: declining the refire leaves the board one token short. Cross-card finding surfaced: the Familiar On-Deletion target pick interleaves with the refire (order not assumable) — test made order-independent.",
+          "tests": [
+            "c2_overclock_deletion_refires_bt22_040_to_replace_the_token",
+            "c2_declined_refire_leaves_the_board_one_token_short"
+          ]
+        },
+        {
+          "combo": "C3 Nyabootmon mass-removal payoff (board-width-gated)",
+          "status": "PASS",
+          "note": "BT22-042 When-Dig -3000 DP per own Digimon: a wide board (4 Digimon) deletes a 12000-DP target via 0-DP rule 17-1-3-1; a narrow board (1 Digimon) leaves it alive at -3000.",
+          "tests": [
+            "c3_nyabootmon_deletes_a_12000_target_over_a_wide_board",
+            "c3_nyabootmon_spares_the_same_target_over_a_narrow_board"
+          ]
+        },
+        {
+          "combo": "C4 Arisa replay & Shoemon recursion (BT22-088)",
+          "status": "PASS",
+          "note": "Start-of-main returns Arisa to deck bottom, replays a hand Arisa free; boardless -> recurs Shoemon from trash. With a Digimon present the Shoemon clause is gated off (tamer-return still fires).",
+          "tests": [
+            "c4_boardless_arisa_replays_itself_and_recurs_shoemon_from_trash",
+            "c4_with_a_digimon_in_play_arisa_replays_but_leaves_shoemon_in_trash"
+          ]
+        },
+        {
+          "combo": "S2 Karakurumon temp-Puppet self-deletion feeds Arisa draw",
+          "status": "PASS",
+          "note": "EX11-022 plays a temp [Puppet] free; its self-deletion is a Puppet-Digimon deletion -> EX11-060 Arisa Draw 1. Turns the printed drawback into card advantage.",
+          "tests": [
+            "s2_karakurumon_temp_puppet_self_deletion_feeds_arisa_draw_at_turn_end"
+          ]
+        },
+        {
+          "combo": "S4 ST19-14 grants Rush to an effect-played token",
+          "status": "PASS",
+          "note": "ST19-12 plays 2 Familiar Tokens by effect; ST19-14 suspends to grant Rush to exactly one (suspend cost gates the second). Tempo seam.",
+          "tests": [
+            "s4_st19_14_grants_rush_to_one_effect_played_familiar_token"
+          ]
+        },
+        {
+          "combo": "S5 BT22-088 play-side draw engine",
+          "status": "PASS",
+          "note": "ST19-12 plays 2 Familiar Tokens; BT22-088 suspends to Draw 1 (exactly once — suspend cost gates repeats). The play-side mirror of C1 deletion-side draw.",
+          "tests": [
+            "s5_bt22_088_draws_exactly_once_when_two_tokens_are_played"
+          ]
+        },
+        {
+          "combo": "S1 Pillomon flood-gate blocks effect token plays (was finding, now fixed)",
+          "status": "PASS",
+          "note": "G-PLAY-TOKEN-FLOODGATE fixed: play_token honors CannotPlayDigimonByEffect. s1 (blocked) + s1b (control: spawns without Pillomon).",
+          "tests": [
+            "s1_pillomon_floodgate_blocks_effect_token_plays",
+            "s1b_without_pillomon_the_same_token_play_succeeds"
+          ]
+        },
+        {
+          "combo": "S3 Kaguyamon recursion on Familiar Token deletion (was finding, now fixed)",
+          "status": "PASS",
+          "note": "G-EX11-023-TOKEN-DELETION fixed: condition now matches token kind. s3 interaction + ex11_023 per-card token-deletion test.",
+          "tests": [
+            "s3_kaguyamon_recursion_fires_on_familiar_token_deletion"
+          ]
+        }
       ],
-      "findings": [],
+      "findings": [
+        {
+          "id": "G-PLAY-TOKEN-FLOODGATE",
+          "combo": "S1 Pillomon flood-gate vs Familiar Token plays",
+          "status": "RESOLVED",
+          "test": "s1_pillomon_floodgate_blocks_effect_token_plays (#[ignore])",
+          "tracker": "docs/RUST_ENGINE_GAPS.md",
+          "summary": "EffectContext::play_token bypasses CannotPlayDigimonByEffect; under Pillomon (BT9-033), effect-played Familiar Tokens still spawn (engine spawned 2, faithful=0). DCGO blocks via CanPlayAsNewPermanent -> CanNotPutFieldClass (IsDigimon). Engine-primitive gap.",
+          "resolution": "play_token now consults CannotPlayDigimonByEffect (effect_context/mod.rs). Pins: s1 + s1b interaction tests; play_token_blocked/allowed lib unit tests. Test un-ignored."
+        },
+        {
+          "id": "G-EX11-023-TOKEN-DELETION",
+          "combo": "S3 Kaguyamon recursion on Familiar Token deletion",
+          "status": "RESOLVED",
+          "test": "s3_kaguyamon_recursion_fires_on_familiar_token_deletion (#[ignore])",
+          "tracker": "qa/archetype-qa/engine-gaps.md",
+          "summary": "EX11-023 recursion condition is event_target_kind: digimon only; Familiar Tokens are CardKind::Token, so a token deletion does not fire the trash-recursion. DCGO gates on IsDigimon (true for tokens). One-line DSL fix: add token to the any_of (sibling cards BT22-040/EX11-060 already do).",
+          "resolution": "EX11-023.yaml condition now any_of:[digimon,token]. Pins: s3 interaction test; ex11_023 per-card token-deletion + strengthened structural test. Test un-ignored."
+        }
+      ],
       "static_tests": {
         "combo_presence": {
           "data": {
             "blocked": [],
-            "combos_total": 5
+            "combos_total": 4
           },
-          "detail": "all 5 combo(s) have every piece implemented",
+          "detail": "all 4 combo(s) have every piece implemented",
           "passed": true
         },
         "coverage_gate": {
@@ -529,11 +189,11 @@
             "failing_cards": [],
             "implemented": 62,
             "ratio": 1.0,
-            "threshold": 0.85,
+            "threshold": 1.0,
             "total": 62,
             "unknown_cards": []
           },
-          "detail": "coverage 62/62 = 100% (threshold 85%); 0 failing, 0 unknown",
+          "detail": "coverage 62/62 = 100% (threshold 100%); 0 failing, 0 unknown",
           "passed": true
         },
         "deck_legality": {
@@ -557,24 +217,28 @@
           "passed": true
         }
       },
-      "updated": "2026-06-02"
+      "updated": "2026-05-31",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/puppets.rs",
+      "model_doc": "qa/archetype-qa/Puppets-model.md",
+      "dropped_combos": [
+        {
+          "combo": "C5 Leave-prevention by token sacrifice (EX7-027 Chaperomon inherit + Familiar)",
+          "reason": "Dropped by rank (lowest-ranked stretch). The per-card suite cards_behavioral/ex7/ex7_027.rs already covers leave-prevention exhaustively (happy, decline, OPT-lock, token-cost-to-trash, own-effect-no-trigger); the cross-card delta is marginal."
+        }
+      ]
     },
     "Rocks": {
       "combos_tested": [
-        "Magneticdramon source-trash double removal",
-        "Proganomon cheat-evolve, Close-gated",
-        "Pyramidimon trash-3 highest-cost delete + re-bury recursion",
-        "Close suspend-refuel on Mineral/Rock digivolve",
-        "Gravel Hearts cheat-play + Delay cost-reduced digivolve"
+        "Greymon removal, Koromon-enabled"
       ],
       "findings": [],
       "static_tests": {
         "combo_presence": {
           "data": {
             "blocked": [],
-            "combos_total": 5
+            "combos_total": 1
           },
-          "detail": "all 5 combo(s) have every piece implemented",
+          "detail": "all 1 combo(s) have every piece implemented",
           "passed": true
         },
         "coverage_gate": {
@@ -612,14 +276,14 @@
         },
         "smoke_games": {
           "data": {
-            "completed": 5,
-            "games": 5
+            "completed": 3,
+            "games": 3
           },
-          "detail": "5/5 smoke games completed cleanly",
+          "detail": "3/3 smoke games completed cleanly",
           "passed": true
         }
       },
-      "updated": "2026-06-02"
+      "updated": "2026-05-30"
     },
     "ST-1 Gaia Red": {
       "combos_tested": [
@@ -1025,6 +689,679 @@
         }
       },
       "updated": "2026-05-30"
+    },
+    "Medusamon": {
+      "combos_tested": [
+        {
+          "combo": "Petrification security-trash loop (signature)",
+          "status": "PASS",
+          "tests": [
+            "petrification_token_deletion_trashes_opponent_security",
+            "petrification_token_deletion_chains_into_styracomon_removal",
+            "petrification_token_deletion_no_security_does_not_chain"
+          ],
+          "note": "Deleting an opp-controlled Petrification token trashes opp top security (auto-fires opp-security-removed observers) and chains into BT24-018 Styracomon removal."
+        },
+        {
+          "combo": "Owen digivolve buff + extra attack",
+          "status": "PASS",
+          "tests": [
+            "owen_digivolve_buffs_dragonkin_ally_and_grants_attack",
+            "owen_digivolve_does_not_buff_non_trait_ally"
+          ],
+          "note": "Real BT24-082 Owen + real BT24-011 Cyclonemon (Dragonkin) -> suspend+ +3000 + attack; gated on trait (real BT21-024 Cyberdramon non-trait control)."
+        },
+        {
+          "combo": "Raid target-change -> Lamiamon security trash",
+          "status": "PASS",
+          "tests": [
+            "raid_target_change_with_lamiamon_trashes_opp_security",
+            "raid_target_change_without_trait_permanent_trashes_nothing"
+          ],
+          "note": "Real BT24-011 Cyclonemon Raid + real BT21-025 Lamiamon -> trash opp security; gated on a Reptile/Dragonkin permanent (real Cyberdramon control)."
+        },
+        {
+          "combo": "Security-removal memory snowball",
+          "status": "PASS",
+          "tests": [
+            "real_stack_snowballs_two_memory_on_one_security_removal",
+            "petrification_token_deletion_feeds_inherited_memory"
+          ],
+          "note": "Real digivolution stack [BT24-008 Elizamon, BT24-012 Dimetromon, BT21-025 Lamiamon]: one security removal pays out both buried inherited -> +2 memory. Token-deletion variant -> +1."
+        },
+        {
+          "combo": "Lamiamon inherited free-play (<=5000)",
+          "status": "PASS",
+          "tests": [
+            "lamiamon_inherited_free_plays_small_dragonkin_on_security_removal",
+            "lamiamon_inherited_does_not_free_play_oversized_dragonkin"
+          ],
+          "note": "Real BT21-025 Lamiamon buried inherited free-plays real BT24-011 Cyclonemon (5000); real BT24-018 Styracomon (14000) filtered out. Exercises the dispatch the per-card clause3 test leaves #[ignore]d."
+        },
+        {
+          "combo": "BT24-016 cheat-in: chains swap AND nets +2 memory",
+          "status": "PASS (incl. user-reported +2 memory)",
+          "tests": [
+            "cheat_in_chains_swap_and_nets_two_memory_from_real_inherits",
+            "cheat_in_blocked_without_owen_silences_the_chain"
+          ],
+          "note": "Real BT24-082 Owen + real BT24-008 Elizamon + real BT24-012 Dimetromon: cheat-in digivolve auto-fires the [When Digivolving] swap; the security trash pays out BOTH buried inherited -> +2 memory (net -1 = -3 digivolve cost +2). Gated on Owen."
+        },
+        {
+          "combo": "Lamiamon security swap feeds memory engine",
+          "status": "PASS",
+          "tests": [
+            "lamiamon_security_swap_feeds_inherited_memory"
+          ],
+          "note": "Real [BT24-008 Elizamon, BT24-016 Lamiamon] stack: the swap top-security trash pays out the buried Elizamon inherited (+1 memory)."
+        },
+        {
+          "combo": "EX11-012 token-shield (faithfulness gap)",
+          "status": "PASS (gap fixed)",
+          "tests": [
+            "ex11_012_survives_by_deleting_opponents_petrification_token"
+          ],
+          "note": "FIXED: would-leave shield selector changed select_own_permanent -> select_any_permanent in EX11-012.yaml (DCGO permanent.IsToken, any owner). EX11-012 now survives by deleting the opponent Petrification token, which also trashes their security. Gap G-EX11-012-TOKEN-SHIELD-OWN-ONLY RESOLVED."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "process-correction",
+          "detail": "First pass used synthetic make_test_card stand-ins for our own effect-bearing cards (Elizamon/Dimetromon/Owen/Reptile allies), which hid the +2 memory payoff. Whole suite re-authored to load every Medusamon card via real dsl_card; synthetic fixtures now only for generic opponent-side fillers (security/bodies/hand). Audit: 10 archetype cards all real."
+        },
+        {
+          "kind": "resolved-faithfulness-gap",
+          "id": "G-EX11-012-TOKEN-SHIELD-OWN-ONLY",
+          "detail": "RESOLVED: cards/ex11/EX11-012.yaml would-leave cost selector own->any (select_any_permanent scans both battle areas, controller picks; faithful to DCGO). One-word YAML fix; DSL verb pre-existed. Archetype test un-ignored and passing; per-card ex11_012 green."
+        },
+        {
+          "kind": "verified-behavior",
+          "detail": "User-reported: BT24-016 cheat-in with a real Elizamon + Dimetromon nets +2 memory from the two buried inherited firing off the chained security swap. Confirmed faithful (net -1 absolute = -3 cost +2 gain)."
+        },
+        {
+          "kind": "coverage-gap",
+          "detail": "Coverage gate 56/63 (89%): 7 unknown freq-1 fringe cards (ST12-03, LM-051, LM-033, BT19-011, BT14-017, LM-045, BT21-083); none in any combo."
+        }
+      ],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 56,
+            "ratio": 0.8888888888888888,
+            "threshold": 1.0,
+            "total": 63,
+            "unknown_cards": [
+              "ST12-03",
+              "LM-051",
+              "LM-033",
+              "BT19-011",
+              "BT14-017",
+              "LM-045",
+              "BT21-083"
+            ]
+          },
+          "detail": "coverage 56/63 = 89% (threshold 100%); 0 failing, 7 unknown",
+          "passed": false
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30",
+      "model_doc": "qa/archetype-qa/medusamon-model.md",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/medusamon.rs",
+      "result": "15/15 active interaction tests PASS (all real DSL cards; EX11-012 gap fixed). Full archetypes binary: 45 passed, 0 ignored."
+    },
+    "BG Imperial": {
+      "combos_tested": [
+        "DNA Bounce",
+        "DNA Lockdown",
+        "Colour Source Replay"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 3
+          },
+          "detail": "all 3 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "BT23-047"
+            ],
+            "implemented": 33,
+            "ratio": 0.39285714285714285,
+            "threshold": 1.0,
+            "total": 84,
+            "unknown_cards": [
+              "BT8-053",
+              "BT16-021",
+              "EX7-023",
+              "LM-036",
+              "BT8-099",
+              "LM-028",
+              "BT16-092",
+              "BT16-002",
+              "BT21-032",
+              "ST17-13",
+              "BT12-055",
+              "BT16-102",
+              "P-104",
+              "P-118",
+              "BT12-030",
+              "BT17-084",
+              "BT8-088",
+              "ST9-14",
+              "BT3-021",
+              "EX7-015",
+              "AD1-011",
+              "AD1-024",
+              "LM-056",
+              "BT12-024",
+              "ST9-04",
+              "BT16-017",
+              "BT5-086",
+              "BT16-004",
+              "EX2-072",
+              "BT16-018",
+              "EX1-019",
+              "EX2-068",
+              "P-109",
+              "BT5-088",
+              "BT14-026",
+              "BT16-077",
+              "BT16-046",
+              "BT8-084",
+              "BT16-041",
+              "ST17-01",
+              "P-110",
+              "EX1-066",
+              "P-036",
+              "ST8-01",
+              "P-124",
+              "BT3-104",
+              "BT12-057",
+              "BT12-090",
+              "BT14-002",
+              "BT21-036"
+            ]
+          },
+          "detail": "coverage 33/84 = 39% (threshold 100%); 1 failing, 50 unknown",
+          "passed": false
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 5,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-03",
+      "model_doc": "qa/archetype-qa/bg-imperial-model.md",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/bg_imperial.rs",
+      "interaction_tests": {
+        "DNA Bounce (ST9-05)": {
+          "tests": [
+            "dna_bounce_real_exveemon_stingmon_returns_low_dp_opponent",
+            "regular_digivolve_into_paildramon_does_not_fire_dna_bounce"
+          ],
+          "passed": true,
+          "asserts": "DNA path fires the [WD] return-DP<=6000 bounce + UI prompt describes it; regular digivolve does not fire it."
+        },
+        "DNA Lockdown (BT16-025)": {
+          "tests": [
+            "dna_lockdown_suspends_and_locks_opponent",
+            "regular_digivolve_into_meta_paildramon_suspends_but_does_not_lock"
+          ],
+          "passed": true,
+          "asserts": "DNA path suspends opp AND applies CannotUnsuspend; regular digivolve suspends but does not lock."
+        },
+        "Colour Source Replay (ST9-06)": {
+          "tests": [
+            "colour_source_replay_with_blue_and_green_sources_replays_both",
+            "colour_source_replay_without_green_source_replays_only_blue"
+          ],
+          "passed": true,
+          "asserts": "Blue+green Lv.4 sources both replay (field +2); blue-only stack replays only blue (field +1); prompt describes the colour."
+        },
+        "Evolution-cost & colour gate": {
+          "tests": [
+            "paildramon_st9_05_dna_alt_path_requires_blue_lv4_and_green_lv4_at_cost_0",
+            "imperialdramon_dm_st9_06_standard_digivolve_is_blue_lv5_cost_4"
+          ],
+          "passed": true,
+          "asserts": "Paildramon DNA = Blue Lv.4 + Green Lv.4 @ cost 0; standard digivolve cost 4; IDramon DM standard = Blue Lv.5 @ cost 4."
+        },
+        "Digivolution colour gate (ExVeemon/Stingmon/Wormmon)": {
+          "tests": [
+            "veemon_digivolves_over_blue_egg",
+            "wormmon_cannot_digivolve_over_blue_egg",
+            "wormmon_digivolves_over_green_egg",
+            "single_colour_exveemon_takes_blue_lv3_not_green",
+            "single_colour_stingmon_takes_green_lv3_not_blue",
+            "dual_colour_exveemon_and_stingmon_accept_the_off_colour_lv3"
+          ],
+          "passed": true,
+          "asserts": "Standard-digivolve colour+level gate: Wormmon (Green) CANNOT digivolve over a blue egg but CAN over a green egg; single-colour ExVeemon/Stingmon colour-locked; dual-colour BT12-022/BT12-050 accept either colour Lv.3."
+        }
+      },
+      "interaction_tests_total": 14,
+      "interaction_tests_passed": 14,
+      "notes": "Clean pass: 8/8 interaction tests green, no engine bugs found in the tested combos. coverage_gate fails (33/84=39%) only because the full BG Imperial pool spans many un-migrated alternate printings (AD1-011/024, EX1-019, BT12-030/055, BT16-017/018, etc.); combo_presence passes (every piece of the 4 tested combos is implemented), so the gate-fail does not block these interaction tests. Run date 2026-06-02. [Update 2 of 2026-06-02] Added Combo 6 (digivolution colour gate, 6 tests) answering \"can Wormmon digivolve over a blue egg?\" = NO (Green evo cost vs blue-only egg). HARNESS NOTE: the embedded DSL pack carries no printed evo_costs (card_data_from_compiled sets evo_costs empty), so digivolve-colour tests use synthetic cards encoding the real printed evo-costs via can_digivolve; this is a test-fixture limitation, not an engine bug. 14/14 interaction tests green."
+    },
+    "DNA Omnimon": {
+      "combos_tested": [
+        "DNA Omnimon Alter-S blowout (Blue6 + Red6 -> EX9-021)",
+        "Miraculous Mega Knight Delay -> reactive DNA Omnimon (Option)",
+        "Blast DNA Omnimon off opponent's turn (BT17-078 Counter)",
+        "Free cross-tribe Lv.6 assembly (both DNA materials in one turn)",
+        "Nokia accel into cheap Lv.6 (BT22-013 cost-6 jump)"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "AD1-004"
+            ],
+            "implemented": 66,
+            "ratio": 0.673469387755102,
+            "threshold": 0.85,
+            "total": 98,
+            "unknown_cards": [
+              "ST20-14",
+              "LM-033",
+              "LM-049",
+              "EX4-051",
+              "EX1-066",
+              "LM-053",
+              "BT13-065",
+              "ST20-01",
+              "ST20-07",
+              "AD1-022",
+              "ST20-02",
+              "ST21-07",
+              "BT17-012",
+              "EX5-018",
+              "EX9-020",
+              "BT9-024",
+              "BT9-020",
+              "BT17-028",
+              "BT15-083",
+              "BT11-002",
+              "P-104",
+              "LM-028",
+              "P-036",
+              "BT15-024",
+              "EX9-014",
+              "BT14-014",
+              "P-073",
+              "ST21-08",
+              "ST20-13",
+              "ST20-03",
+              "ST21-01"
+            ]
+          },
+          "detail": "coverage 66/98 = 67% (threshold 85%); 1 failing, 31 unknown",
+          "passed": false
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-03"
+    },
+    "Magneticdra": {
+      "combos_tested": [
+        "Zofr Kabus source-trash fan-out removal",
+        "Gravel Hearts free-play recur Sunarizamon search",
+        "Black Scramble cost-reduced digivolve into payoff",
+        "Defense Training Delay cost-reduced digivolve",
+        "Magneticdramon source-trash double removal"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "BT23-058"
+            ],
+            "implemented": 35,
+            "ratio": 0.875,
+            "threshold": 0.85,
+            "total": 40,
+            "unknown_cards": [
+              "EX1-071",
+              "BT10-062",
+              "LM-025",
+              "LM-033"
+            ]
+          },
+          "detail": "coverage 35/40 = 88% (threshold 85%); 1 failing, 4 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Nokia AlterS": {
+      "combos_tested": [
+        "Miraculous Mega Knight free-play recursion (Option)",
+        "Mega Knight Delay second-life hand-DNA Omnimon (Option)",
+        "Digital Gate Open dig + Delay Tamer cheat (Option)",
+        "Tai & Matt double-memory off the cross-evolve sequence",
+        "Omnimon Alter-S DNA board wipe"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 28,
+            "ratio": 1.0,
+            "threshold": 0.85,
+            "total": 28,
+            "unknown_cards": []
+          },
+          "detail": "coverage 28/28 = 100% (threshold 85%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Omni Nokia": {
+      "combos_tested": [
+        "Miraculous Mega Knight — recur an Agumon/Gabumon from trash",
+        "Mega Knight Delay — off-stack Omnimon when a Lv6 leaves outside battle",
+        "Nokia free-play into Tai & Matt memory ramp",
+        "Nokia +1000 aura + DNA Omnimon swing",
+        "WarGreymon/MetalGarurumon branch — free cross-line digivolve"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 46,
+            "ratio": 0.9387755102040816,
+            "threshold": 0.85,
+            "total": 49,
+            "unknown_cards": [
+              "EX1-066",
+              "BT1-010",
+              "ST21-10"
+            ]
+          },
+          "detail": "coverage 46/49 = 94% (threshold 85%); 0 failing, 3 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Omnimon ACE": {
+      "combos_tested": [
+        "Miraculous Mega Knight — free Agumon/Gabumon from trash (Option recursion)",
+        "Miraculous Mega Knight Delay — leave-trigger → Omnimon DNA from hand",
+        "Miraculous Mega Knight security — off-turn Tamer free-play, Option to hand",
+        "Omnimon (BT17-078) DNA digivolve — board-level wipe of one level",
+        "BT20-102 X-Antibody — single-target mass deletion + bottom"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 20,
+            "ratio": 0.9090909090909092,
+            "threshold": 0.85,
+            "total": 22,
+            "unknown_cards": [
+              "BT14-101",
+              "ST15-14"
+            ]
+          },
+          "detail": "coverage 20/22 = 91% (threshold 85%); 0 failing, 2 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Puppet-Sister": {
+      "combos_tested": [
+        "Fable Waltz [Main] free-plays Shoemon, self-arms as Delay",
+        "Narrative Ronde dual-search then Mirai play arms the digivolve Delay",
+        "Physical Training [Main] dig then Delay discount digivolve",
+        "Cendrillmon free-play Puppet plus Familiar Tokens per opponent Digimon",
+        "Overclock self-sacrifice fans out into Kaguyamon opponent removal"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "ST12-12"
+            ],
+            "implemented": 23,
+            "ratio": 0.92,
+            "threshold": 0.85,
+            "total": 25,
+            "unknown_cards": [
+              "BT7-082"
+            ]
+          },
+          "detail": "coverage 23/25 = 92% (threshold 85%); 1 failing, 1 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
     }
   },
   "last_updated": "2026-06-03",

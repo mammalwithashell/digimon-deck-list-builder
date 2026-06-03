@@ -44,6 +44,8 @@ export interface PendingSelectionDto {
   valid_action_ids: number[];
   is_optional: boolean;
   prompt: string;
+  /** Engine `SelectionKind` discriminant (e.g. "OwnField" / "OppField"). */
+  kind?: string;
   effect_choices?: EffectChoiceDto[];
 }
 
