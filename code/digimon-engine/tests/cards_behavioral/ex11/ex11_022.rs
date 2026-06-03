@@ -29,7 +29,7 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::CardKind;
+use digimon_engine::enums::{CardColor, CardKind, CardSourceRef, CostDelta, PlaySource};
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{SelectionKind, UnionZoneSet};
 
@@ -49,6 +49,16 @@ fn token(id: &str) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, id);
     card.card_kind = CardKind::Token;
     card.dp = Some(3000);
+    card
+}
+
+/// A vanilla colored base for digivolution-cost tests.
+fn base(id: &str, level: u8, color: CardColor) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(level);
+    card.dp = Some(4000);
+    card.colors = vec![color];
     card
 }
 
@@ -645,5 +655,119 @@ fn ex11_022_when_digivolving_uses_same_optional_play_and_cleanup_body() {
     assert!(
         card_ids_on_field(&runner, 0).contains(&"EX11-022".to_string()),
         "the EX11-022 stack itself must survive"
+    );
+}
+
+/// G-DSL-FIXTURE-EVO-COSTS: a DSL-loaded card's `CardData.evo_costs` is
+/// backfilled from its `kind: digivolve` alt-paths so it matches the printed
+/// table `data/cards.json` carries in production. EX11-022's only standard
+/// (color + level) digivolution row is yellow Lv.4 → 4 memory; the Lv.3
+/// Puppet-trait alt-path has no color and is resolved through alt-path
+/// registration, not as a static evo-cost row, so it must NOT appear here.
+#[test]
+fn ex11_022_dsl_fixture_backfills_printed_evo_cost_table() {
+    let runner = load_runner();
+    let data = runner
+        .game
+        .card_data
+        .iter()
+        .find(|c| c.card_id == "EX11-022")
+        .expect("EX11-022 in registry");
+
+    assert_eq!(
+        data.evo_costs.len(),
+        1,
+        "only the printed color+level digivolution row is a static evo cost; got {:?}",
+        data.evo_costs
+    );
+    let row = &data.evo_costs[0];
+    assert_eq!(row.card_color, 2, "yellow (card_color int 2)");
+    assert_eq!(row.level, 4);
+    assert_eq!(row.memory_cost, 4);
+}
+
+/// G-DSL-FIXTURE-EVO-COSTS regression: an effect-initiated, cost-reduced
+/// digivolve (`ignore_requirements: false`) onto a matching base resolves
+/// against the backfilled `evo_costs`. Before the fix, the DSL fixture's
+/// `evo_costs` table was empty, so this digivolve found no matching row and
+/// SILENTLY no-opped (the body stayed in hand). It now succeeds and pays the
+/// reduced memory cost.
+#[test]
+fn ex11_022_effect_initiated_cost_reduced_digivolve_onto_matching_base_succeeds() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-022")
+        .expect("EX11-022 YAML loads")
+        .add_card(base("BASE-LV4-Y", 4, CardColor::Yellow))
+        .hand(0, &["EX11-022"])
+        .memory(5)
+        .start();
+    runner.game.enter_main_phase();
+
+    let base_handle = runner.place_on_field(0, "BASE-LV4-Y", Some(0));
+
+    // Digivolve EX11-022 (hand index 0) onto the yellow Lv.4 base, reducing
+    // the printed evo cost (4) by 2 → 2 memory paid. `ignore_color: false`
+    // forces the engine to find a matching `evo_costs` row by (level, color).
+    let ok = runner.game.effect_initiated_digivolve_from_source(
+        0,
+        CardSourceRef::Hand(0, 0),
+        base_handle,
+        CostDelta::Reduce(2),
+        false,
+        PlaySource::ByEffect,
+    );
+    assert!(
+        ok,
+        "effect-initiated digivolve must match the backfilled evo cost and succeed"
+    );
+
+    assert_eq!(
+        runner.game.players[0].battle_area[base_handle.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "EX11-022",
+        "EX11-022 must be stacked on top of the base after the digivolve"
+    );
+    assert_eq!(
+        runner.game.memory, 3,
+        "printed evo cost 4 reduced by 2 → 2 memory paid (5 - 2 = 3)"
+    );
+}
+
+/// G-DSL-FIXTURE-EVO-COSTS regression (negative): the backfill is precise. A
+/// base whose (level, color) matches no printed digivolution row — here a
+/// Lv.3 base, since EX11-022's only static row is yellow Lv.4 — is correctly
+/// rejected by an effect-initiated digivolve that honors requirements.
+#[test]
+fn ex11_022_effect_initiated_digivolve_onto_nonmatching_base_is_rejected() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-022")
+        .expect("EX11-022 YAML loads")
+        .add_card(base("BASE-LV3-Y", 3, CardColor::Yellow))
+        .hand(0, &["EX11-022"])
+        .memory(10)
+        .start();
+    runner.game.enter_main_phase();
+
+    let base_handle = runner.place_on_field(0, "BASE-LV3-Y", Some(0));
+
+    let ok = runner.game.effect_initiated_digivolve_from_source(
+        0,
+        CardSourceRef::Hand(0, 0),
+        base_handle,
+        CostDelta::Reduce(0),
+        false,
+        PlaySource::ByEffect,
+    );
+    assert!(
+        !ok,
+        "no evo-cost row matches a Lv.3 base, so the digivolve must be rejected"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[base_handle.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BASE-LV3-Y",
+        "the base must be untouched after a rejected digivolve"
     );
 }
