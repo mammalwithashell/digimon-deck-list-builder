@@ -846,3 +846,89 @@ burst-digivolve action resolves, schedule the path's `on_burst_turn_end` steps t
 end of that turn (a delayed/scheduled effect keyed to the burst-digivolution turn); (c) then
 the "DP-less / sub-Lv3 top card can't remain in the battle area" rules-check for the revealed
 Koromon. Likely needs a DebugRunner burst-digivolve driver to pin behaviorally.
+
+---
+
+## BG Imperial (Imperialdramon): named/cross-colour rookie+champion line unimplemented (2026-06-02)
+
+Source: `/archetype-interaction-test-author` BG Imperial pass; DCGO cross-check.
+
+The Imperialdramon line is **colour-fluid, not colour-locked** — it assembles both DNA legs
+(ExVeemon blue + Stingmon green for Paildramon) off a SINGLE egg colour via (a) named
+digivolution requirements that bypass colour and (b) cross-colour evo-costs. DCGO-verified:
+
+- **BT16-017 Veemon** — `AddSelfDigivolutionRequirementStaticEffect` over `ContainsCardName("DemiVeemon")`
+  at cost 0 (`BT16_017.cs:18`): digivolves over the **blue egg by name**, colour-agnostic.
+  Also a cross-colour evo-cost: Blue/Red card ← **Green** Lv.2.
+- **BT16-018 ExVeemon** — named `[Digivolve] [Veemon]: Cost 2`; cross-colour evo Green Lv.3.
+- **BT16-040 Wormmon** — named over `[Minomon]` (`BT16_040.cs:18`); evo Red Lv.2.
+- **BT12-050 Stingmon (Green)** ← **Blue** Lv.3 (the green DNA leg off the blue Veemon line).
+- **BT12-022 ExVeemon (Blue)** ← **Green** Lv.3.
+
+Engine status: the substrate **supports** named requirements — DSL alt-path `from: { name_contains: ... }`,
+checked at `code/digimon-engine/src/dna_digivolve.rs:942` — and the dual cross-colour evo-costs of
+BT12-050/BT12-022 are already representable (two `digivolve` alt-paths). The cross-colour cards that
+ARE implemented (BT12-050, BT12-022, EX1-014, ST9-09) work; their colour gating is covered by
+`tests/archetypes/bg_imperial.rs` Combo 6.
+
+Gap: **BT16-017 and BT16-018 are unimplemented (no YAML).** Until they land, the named-digivolve-over-the-blue-egg
+path (the deck's single-egg colour-fluid construction) cannot be exercised end-to-end in the engine.
+This is an **implementation** gap (cards not yet authored), not a missing engine primitive — route to
+`/batch-implement-cards-rust-dsl` for BT16-017/BT16-018, using `from: { name_contains: "DemiVeemon" }`
+(resp. `"Veemon"`) for the named requirement alongside the cross-colour `from: { level_eq, color_is }` path.
+
+NOTE — corrects an earlier mischaracterisation in this pass: digivolution into the Lv.3/Lv.4 line is
+NOT purely colour-gated; "the green leg needs a green egg / a hard-played Wormmon" was WRONG.
+"Can Wormmon digivolve over a blue egg?" is still No (all three pool Wormmon verified in DCGO), but
+it is moot — the green leg comes from Stingmon (BT12-050) off the blue Veemon.
+
+---
+
+## BT12 Imperialdramon-line faithfulness fixes vs DCGO (2026-06-02)
+
+Found while checking BT12 Veemon/Wormmon/ExVeemon/Stingmon against DCGO C#. Two
+divergence classes, both fixed for the BT12 cards:
+
+### 1. EoT DNA-digivolve was free + unrestricted (G-FIX-BT12-EOT-DNA-PAYCOST)
+BT12-021 Veemon & BT12-047 Wormmon print "[End of Your Turn] This Digimon and any
+of your other Digimon may DNA digivolve into a Digimon card in the hand." DCGO
+(`BT12_021.cs`/`BT12_047.cs`) drives this via
+`DNADigivolvePermanentsIntoHandOrTrashCard(CanSelectCardCondition, payCost: TRUE)`
+where `CanSelectCardCondition` → `CanJogressFromTargetPermanent(this, PayCost:true)`:
+the target hand card's printed DNA requirements must be met by {this, partner} AND
+you pay its printed DNA cost (`condition.cost`, `CardSource.cs:2799`).
+
+The YAML used `cost: 0, ignore_requirements: true` → DNA-digivolve into ANY hand
+Digimon for FREE, ignoring DNA material requirements. Fixed by:
+- **Engine**: `EffectContext::may_dna_digivolve_now` now, when `!ignore_requirements`,
+  gates the target hand-card on a valid DNA route from {anchor, partner}
+  (`can_dna_digivolve`) and charges the matching printed DNA cost
+  (`matching_dna_cost(..).memory_cost`). New helpers
+  `dna_pair_can_reach_hand_card` / `dna_pair_cost_for_hand_card`. Additive —
+  the `ignore_requirements: true` path is unchanged.
+- **YAML**: BT12-021, BT12-047 → `ignore_requirements: false`.
+- **Tests**: structural assertions updated; new lib test
+  `effect_context::tests::dna_pair_gating_requires_a_legal_dna_route_and_returns_printed_cost`.
+
+**RESOLVED (2026-06-02):** the identical `cost: 0, ignore_requirements: true`
+pattern was also on the four other cards printing the same EoT DNA-digivolve text —
+**BT17-007, BT17-019, BT22-008, BT22-017**. Each was DCGO-verified to use the same
+normal DNA digivolve (`OnEndTurn` → `CanJogressFromTargetPermanent(this, PayCost:true)`
++ `DNADigivolvePermanentsIntoHandOrTrashCard(payCost: true)`) and flipped to
+`ignore_requirements: false`, with its structural test updated. All six EoT-DNA cards
+are now faithful (pay printed DNA cost + check DNA requirements).
+
+### 2. Inherited Jamming/Piercing name check scanned the whole stack (G-FIX-BT12-INHERIT-TOPCARD-NAME)
+BT12-022 ExVeemon (Jamming) & BT12-050 Stingmon (Piercing) print "[Your Turn] While
+this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains <kw>".
+DCGO checks the carrier's TOP CARD only: `TopCard.ContainsCardName("Imperialdramon")
+|| TopCard.CardTraits.Contains("Free")`. The YAML's name check used
+`self_digivolution_contains_name`, which routes through `Permanent::contains_card_name`
+and scans the top card AND all digivolution sources — over-granting the keyword when
+an [Imperialdramon] card sits as a buried source under a non-Imperialdramon top.
+Fixed: name check → `source_name_contains` (carrier top-card name, top-only). The
+[Free] trait check was already top-only (`source_permanent_trait_has`) and faithful.
+
+(NOTE: MEMORY.md "Permanent.contains_card_name checks top_card only" describes the
+retired PYTHON engine; the Rust `Permanent::contains_card_name`, permanent.rs:376,
+scans top + sources — which is why the name check diverged.)

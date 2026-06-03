@@ -77,9 +77,14 @@ effects:
   #   "[Your Turn] While this Digimon has [Imperialdramon] in its name or the
   #    [Free] trait, it gains ＜Piercing＞"
   #
-  # DCGO: PierceSelfEffect(isInheritedEffect: true), condition checks
-  #   carrier's TopCard name or trait. The inherited aura targets only the
-  #   source permanent carrying this card.
+  # DCGO BT12_050.cs Condition(): IsOwnerTurn && (TopCard.ContainsCardName(
+  #   "Imperialdramon") || TopCard.CardTraits.Contains("Free")). BOTH checks are
+  #   on the carrier's TOP CARD only.
+  #   FIX (G-FIX-BT12-INHERIT-TOPCARD-NAME, 2026-06-02): name check now uses
+  #   `source_name_contains` (carrier top-card name, top-only) instead of
+  #   `self_digivolution_contains_name`, which scanned top + ALL sources and
+  #   over-granted Piercing when [Imperialdramon] was a buried source. Mirrors
+  #   the BT12-022 Jamming fix.
   - scope: inherited
     kind: aura
     target: {}
@@ -88,6 +93,6 @@ effects:
       all_of:
         - your_turn: true
         - any_of:
-            - self_digivolution_contains_name: "Imperialdramon"
+            - source_name_contains: "Imperialdramon"
             - source_permanent_trait_has: "Free"
-    summary: "[Inherited][Your Turn] Carrier gains <Piercing> if name has [Imperialdramon] or [Free] trait"
+    summary: "[Inherited][Your Turn] Carrier gains <Piercing> if its TOP CARD has [Imperialdramon] in name or the [Free] trait"
