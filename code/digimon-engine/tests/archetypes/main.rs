@@ -42,7 +42,14 @@ mod fixture_smoke {
 
 // ── Per-archetype interaction suites ─────────────────────────────────────────
 
+mod dna_omnimon;
+mod magneticdra;
 mod medusamon;
+mod nokia_alters;
+mod omni_nokia;
+mod omnimon_ace;
+mod puppet_sister;
+mod puppets;
 mod rocks;
 mod st1_gaia_red;
 mod st2_cocytus_blue;

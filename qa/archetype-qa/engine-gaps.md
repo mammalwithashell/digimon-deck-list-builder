@@ -846,3 +846,44 @@ burst-digivolve action resolves, schedule the path's `on_burst_turn_end` steps t
 end of that turn (a delayed/scheduled effect keyed to the burst-digivolution turn); (c) then
 the "DP-less / sub-Lv3 top card can't remain in the battle area" rules-check for the revealed
 Koromon. Likely needs a DebugRunner burst-digivolve driver to pin behaviorally.
+
+
+### §DSL-loaded card bodies have empty `evo_costs`, so cost-reduced effect-initiated digivolves into them no-op in DebugRunner (G-DSL-FIXTURE-EVO-COSTS) — OPEN
+
+**Surfaced 2026-06-02** (Puppets interaction-test authoring, combo 1 "Fable Waltz
+trash-recursion + Arisa-suspend Delay digivolve"). A card loaded via
+`DebugRunner`/`dsl_card` is materialized by
+`code/digimon-engine/src/debug_runner.rs::card_data_from_compiled`, which sets
+`evo_costs: Vec::new()` (line ~1183). YAML `alt_paths` lower into a SEPARATE
+alt-path registration (`lower_alt_path_registration.rs`), NOT into
+`CardData.evo_costs`. `Game::effect_initiated_digivolve` with
+`ignore_requirements: false` (`game_actions.rs::effect_initiated_digivolve_from_source_inner`,
+~line 7392) matches the digivolve base against the *evolving card's* `evo_costs`
+table — so a cost-reduced Delay/Option digivolve INTO a real DSL-loaded card body
+finds no matching evo cost and **silently no-ops** (the body stays in hand, the
+base keeps its current top).
+
+Impact:
+- **Puppets combo 1 payoff completion** (`tests/archetypes/puppets.rs::combo1_fable_waltz_delay_digivolves_base_into_ex11_022`)
+  is `#[ignore]`d: Fable Waltz's `<Delay>` correctly fires off a later EX11-060
+  Arisa suspend and trashes itself as the activation cost (the cross-card chain is
+  asserted in the sibling non-ignored test), but the `-3` digivolve into the real
+  EX11-022 Karakurumon hand body cannot complete because EX11-022's DSL `evo_costs`
+  is empty. The `-3` digivolve *mechanism* is otherwise proven in
+  `tests/cards_behavioral/bt22/bt22_098.rs` with a SYNTHETIC evo body that carries
+  explicit `evo_costs`, and Puppets combo 5
+  (`combo5_narrative_ronde_main_digs_two_then_mirai_play_fires_delay`) exercises the
+  same `effect_initiated_digivolve(reduce 3, ignore_requirements:false)` path
+  successfully into a synthetic-evo target — confirming the no-op is specific to
+  *DSL-loaded* bodies, not the digivolve primitive.
+- This is a **DebugRunner fixture limitation**, NOT a live engine bug: in
+  production `CardData` comes from `data/cards.json`, which DOES carry `evo_costs`
+  (verified: EX11-022 → `[{card_color:2, level:4, memory_cost:4}]`), so the same
+  digivolve resolves at runtime. It nonetheless blocks faithful interaction tests
+  that digivolve into a named DSL card via a cost-reduced effect.
+
+Fix shape: have `card_data_from_compiled` backfill `CardData.evo_costs` from the
+compiled `alt_paths` (`kind: digivolve` paths → `{card_color, level, memory_cost}`
+entries), or from `cards.json` when available, so DSL-loaded bodies are legal
+effect-initiated digivolve targets in tests. Un-ignore
+`combo1_fable_waltz_delay_digivolves_base_into_ex11_022` once landed.
