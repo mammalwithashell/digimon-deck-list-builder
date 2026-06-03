@@ -44,9 +44,9 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 | 16 | E | NO (`<Partition>` not triggered) | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX6-057 Lilithmon authored + granted body runs as the carrier's own effect (D4/DCGO), so the granted self-delete is OwnEffect → `<Partition>` cause-filter skips it | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
 | 17 | A | NO | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: BT16-102 Magnamon X + EX6-057 authored; the granted-trigger dispatch suppresses a granted opponent effect when the carrier is immune to the grantor (`permanent_is_unaffected_by_effect`). BT21-036 not needed (its only role was an Armor-Form source — staged synthetically) | `a::q17_magnamon_x_immunity_removes_granted_eot_delete` |
 | 18 | A | NO | BLOCKED-PRIMITIVE | LM-020 attempted (first wave): the `[Start of Opp Turn]` category-immunity (Q18-relevant) is implementable + the Blast-Digivolve immunity substrate is done, but LM-020 is BLOCKED on `G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` (its `[When Digivolving]` clause). | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
-| 19 | D | 0 draws | BLOCKED-CARD | BT7-069, BT2-069, BT3-006 | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
-| 20 | D | 8 draws | BLOCKED-CARD | + BT2-076 | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
-| 21 | D | 0 draws | BLOCKED-CARD | + BT3-109 | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
+| 19 | D | 0 draws | BLOCKED-PRIMITIVE | Cards authored 2026-06-03 (BT7-069/BT2-069/BT3-006); staged via real BT7-107 → discovered `G-ON-DELETION-RESOLVES-MID-EFFECT`: the [On Deletion] bundle resolves nested inside the delete step, before BT7-107's return-to-hand, so the carrier-returns-to-hand suppression never happens (engine draws 6, judge 0). | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
+| 20 | D | 8 draws | **PASS** | Cards authored 2026-06-03; the Eyesmon stack (own Draw3 + inherited Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2) deleted-to-trash fires all [On Deletion] → 8 draws. Engine matches. | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
+| 21 | D | 0 draws | BLOCKED-CARD | BT3-109 (Back for Revenge!) BLOCKED on `G-DSL-DELETED-SELF-TRASH-BINDING` (no DSL binding for the just-deleted carrier in trash); would also hit `G-ON-DELETION-RESOLVES-MID-EFFECT`. | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
 | 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
 | 23 | D/F | 1 memory | PASS | Engine already correct (2026-05-30, run to completion): trashing 3 Tumblemon mid-effect enqueues 3 mandatory `OnDigivolutionCardTrashed` observers → multi-trigger `TriggerOrder` selection PARKS them past Medusamon's return-2; on resolution each clause condition is re-evaluated, dropping the 2 returned cards → only the 1 still in trash fires (+1). The earlier `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a mischaracterization (single-source probe + abstract reasoning, never run end-to-end). No engine change needed. | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
 | 24 | B | Hudiemon DP 3000 | BLOCKED-PRIMITIVE | BT23-101, BT23-037, BT16-101, ST17-07 implemented; needs EX6-004 (Kokomon), itself BLOCKED on `G-SUSPEND-EFFECT-INITIATED` (suspend event carries no by_effect bit, so Kokomon's "when an EFFECT suspends" is un-gatable). | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
@@ -61,12 +61,20 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 11 | 3, 4, 9, 10, 11, 15, 19, 20, 21, 29, 30 |
-| BLOCKED-PRIMITIVE | 7 | 8, 18, 24, 25, 26, 27, 28 |
+| BLOCKED-CARD | 9 | 3, 4, 9, 10, 11, 15, 21, 29, 30 |
+| BLOCKED-PRIMITIVE | 8 | 8, 18, 19, 24, 25, 26, 27, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 12 | 1, 2, 5, 6, 7, 12, 13, 14, 16, 17, 22, 23 |
+| PASS | 13 | 1, 2, 5, 6, 7, 12, 13, 14, 16, 17, 20, 22, 23 |
 
-(Counts: 11 + 7 + 0 + 12 = 30 of 30.)
+(Counts: 9 + 8 + 0 + 13 = 30 of 30.)
+
+Q19/Q20/Q21 (D-cluster [On Deletion] activation-site) processed 2026-06-03: authored
+the 4 Eyesmon-stack cards (BT7-069/BT2-069/BT3-006/BT2-076, DSL — purple [On Deletion]
+Draw-then-trash). **Q20 → PASS** (stack deletion fires all [On Deletion] = 8 draws).
+**Q19 → BLOCKED-PRIMITIVE** `G-ON-DELETION-RESOLVES-MID-EFFECT` (On-Deletion resolves
+nested in the delete step, before the return-to-hand). **Q21 stays BLOCKED-CARD** on
+BT3-109 (`G-DSL-DELETED-SELF-TRASH-BINDING`). 5th card BT3-109 BLOCKED (no faithful
+play-this-card-from-trash binding).
 
 Q25/Q26/Q27 moved BLOCKED-CARD → **BLOCKED-PRIMITIVE** (2026-06-03): EX3-014 Dorbickmon
 was authored (DSL — closing 2 DSL substrate gaps: per-source-stack-count-filtered

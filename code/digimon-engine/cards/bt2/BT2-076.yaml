@@ -1,0 +1,37 @@
+# BT2-076 Pumpkinmon — Digimon, Lv.5, Black, DP 6000, Cost 6. Traits: [Puppet].
+# Attribute: Data.
+#
+# Printed card text (cards.json effect_description_eng):
+#   Inherited Effect [On Deletion] ＜Draw 2＞. (Draw 2 cards from your deck.)
+#   Then trash 1 card from your hand.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT2/Black/BT2_076.cs
+#
+# INHERITED [On Deletion]: fires when the host Digimon this card is stacked
+# under is deleted. ＜Draw 2＞ keyword draw, then a MANDATORY single hand trash
+# (no "you may"). The player chooses which card via a forced `select_hand`
+# (optional:false); it degrades to a no-op if the hand is empty.
+
+card: BT2-076
+name: Pumpkinmon
+kind: digimon
+level: 5
+color: [purple]
+cost: 6
+dp: 6000
+traits: [Puppet]
+attribute: Data
+
+effects:
+  - scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] Draw 2, then trash 1 card from your hand"
+    process:
+      - draw: { of: you, count: 2 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

@@ -1,0 +1,46 @@
+# BT7-069 Eyesmon: Scatter Mode — Digimon, Lv.4, Black, DP 4000, Cost 4.
+# Traits: [Dark Dragon]. Attribute: Virus.
+#
+# Printed card text (cards.json effect_description_eng):
+#   [On Deletion] ＜Draw 3＞ (Draw 3 cards from your deck.) Then, trash 2 cards
+#   in your hand.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT7/Black/BT7_069.cs
+#
+# This is the carrier's OWN [On Deletion] (not inherited). ＜Draw N＞ is the
+# keyword draw. "Then, trash 2 cards in your hand" is a MANDATORY discard with
+# no "you may" — once the draw happens the player MUST trash 2 (choosing which
+# when the hand exceeds 2). Modelled as two sequential mandatory single-card
+# hand picks (`select_hand` optional:false + `trash_from_hand_by_index`); the
+# DSL has no count-based own-hand trash primitive, and each pick is exposed to
+# the RL action space individually (no auto-selection). Each `select_hand`
+# degrades to a no-op when the hand is already empty.
+
+card: BT7-069
+name: "Eyesmon: Scatter Mode"
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 4000
+traits: [Dark Dragon]
+attribute: Virus
+
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Draw 3, then trash 2 cards from your hand"
+    process:
+      - draw: { of: you, count: 3 }
+      - select_hand:
+          of: you
+          bind_as: trash_a
+          filter: {}
+          prompt: "Trash 1 of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_a }
+      - select_hand:
+          of: you
+          bind_as: trash_b
+          filter: {}
+          prompt: "Trash 2 of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_b }

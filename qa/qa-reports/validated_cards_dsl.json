@@ -6683,6 +6683,91 @@
         "standard-digivolve"
       ],
       "notes": "Rush + [On Play] delete (DP cap 3000 + 2000 per Dragon/saur/Ceratopsian digivolution source) + DigiXros -2 (5 distinct Dragon-family Digimon). Widened DSL: per-source-stack-count-filtered formula selector + trait_contains substring predicate (mirrors DCGO ContainsTraits)."
+    },
+    "BT7-069": {
+      "card_name": "Eyesmon: Scatter Mode",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_069.rs",
+      "test_count": 6,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "[On Deletion] Draw 3 then mandatory trash 2 (2 surfaced picks)"
+    },
+    "BT2-069": {
+      "card_name": "Gabumon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt2/BT2-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt2/bt2_069.rs",
+      "test_count": 5,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "Inherited [On Deletion] Draw 2 then trash 1"
+    },
+    "BT3-006": {
+      "card_name": "DemiMeramon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_006.rs",
+      "test_count": 5,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "Digi-Egg inherited [On Deletion] Draw 1 then trash 1"
+    },
+    "BT2-076": {
+      "card_name": "Pumpkinmon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt2/BT2-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt2/bt2_076.rs",
+      "test_count": 5,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "Inherited [On Deletion] Draw 2 then trash 1"
+    },
+    "BT3-109": {
+      "card_name": "Back for Revenge!",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "dsl",
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "G-DSL-DELETED-SELF-TRASH-BINDING: no binding for the just-deleted carrier card in trash to feed play_from_trash_free"
     }
   }
 }
