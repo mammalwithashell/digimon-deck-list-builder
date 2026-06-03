@@ -992,6 +992,376 @@
       "interaction_tests_total": 14,
       "interaction_tests_passed": 14,
       "notes": "Clean pass: 8/8 interaction tests green, no engine bugs found in the tested combos. coverage_gate fails (33/84=39%) only because the full BG Imperial pool spans many un-migrated alternate printings (AD1-011/024, EX1-019, BT12-030/055, BT16-017/018, etc.); combo_presence passes (every piece of the 4 tested combos is implemented), so the gate-fail does not block these interaction tests. Run date 2026-06-02. [Update 2 of 2026-06-02] Added Combo 6 (digivolution colour gate, 6 tests) answering \"can Wormmon digivolve over a blue egg?\" = NO (Green evo cost vs blue-only egg). HARNESS NOTE: the embedded DSL pack carries no printed evo_costs (card_data_from_compiled sets evo_costs empty), so digivolve-colour tests use synthetic cards encoding the real printed evo-costs via can_digivolve; this is a test-fixture limitation, not an engine bug. 14/14 interaction tests green."
+    },
+    "DNA Omnimon": {
+      "combos_tested": [
+        "DNA Omnimon Alter-S blowout (Blue6 + Red6 -> EX9-021)",
+        "Miraculous Mega Knight Delay -> reactive DNA Omnimon (Option)",
+        "Blast DNA Omnimon off opponent's turn (BT17-078 Counter)",
+        "Free cross-tribe Lv.6 assembly (both DNA materials in one turn)",
+        "Nokia accel into cheap Lv.6 (BT22-013 cost-6 jump)"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "AD1-004"
+            ],
+            "implemented": 66,
+            "ratio": 0.673469387755102,
+            "threshold": 0.85,
+            "total": 98,
+            "unknown_cards": [
+              "ST20-14",
+              "LM-033",
+              "LM-049",
+              "EX4-051",
+              "EX1-066",
+              "LM-053",
+              "BT13-065",
+              "ST20-01",
+              "ST20-07",
+              "AD1-022",
+              "ST20-02",
+              "ST21-07",
+              "BT17-012",
+              "EX5-018",
+              "EX9-020",
+              "BT9-024",
+              "BT9-020",
+              "BT17-028",
+              "BT15-083",
+              "BT11-002",
+              "P-104",
+              "LM-028",
+              "P-036",
+              "BT15-024",
+              "EX9-014",
+              "BT14-014",
+              "P-073",
+              "ST21-08",
+              "ST20-13",
+              "ST20-03",
+              "ST21-01"
+            ]
+          },
+          "detail": "coverage 66/98 = 67% (threshold 85%); 1 failing, 31 unknown",
+          "passed": false
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-03"
+    },
+    "Magneticdra": {
+      "combos_tested": [
+        "Zofr Kabus source-trash fan-out removal",
+        "Gravel Hearts free-play recur Sunarizamon search",
+        "Black Scramble cost-reduced digivolve into payoff",
+        "Defense Training Delay cost-reduced digivolve",
+        "Magneticdramon source-trash double removal"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "BT23-058"
+            ],
+            "implemented": 35,
+            "ratio": 0.875,
+            "threshold": 0.85,
+            "total": 40,
+            "unknown_cards": [
+              "EX1-071",
+              "BT10-062",
+              "LM-025",
+              "LM-033"
+            ]
+          },
+          "detail": "coverage 35/40 = 88% (threshold 85%); 1 failing, 4 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Nokia AlterS": {
+      "combos_tested": [
+        "Miraculous Mega Knight free-play recursion (Option)",
+        "Mega Knight Delay second-life hand-DNA Omnimon (Option)",
+        "Digital Gate Open dig + Delay Tamer cheat (Option)",
+        "Tai & Matt double-memory off the cross-evolve sequence",
+        "Omnimon Alter-S DNA board wipe"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 28,
+            "ratio": 1.0,
+            "threshold": 0.85,
+            "total": 28,
+            "unknown_cards": []
+          },
+          "detail": "coverage 28/28 = 100% (threshold 85%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Omni Nokia": {
+      "combos_tested": [
+        "Miraculous Mega Knight — recur an Agumon/Gabumon from trash",
+        "Mega Knight Delay — off-stack Omnimon when a Lv6 leaves outside battle",
+        "Nokia free-play into Tai & Matt memory ramp",
+        "Nokia +1000 aura + DNA Omnimon swing",
+        "WarGreymon/MetalGarurumon branch — free cross-line digivolve"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 46,
+            "ratio": 0.9387755102040816,
+            "threshold": 0.85,
+            "total": 49,
+            "unknown_cards": [
+              "EX1-066",
+              "BT1-010",
+              "ST21-10"
+            ]
+          },
+          "detail": "coverage 46/49 = 94% (threshold 85%); 0 failing, 3 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Omnimon ACE": {
+      "combos_tested": [
+        "Miraculous Mega Knight — free Agumon/Gabumon from trash (Option recursion)",
+        "Miraculous Mega Knight Delay — leave-trigger → Omnimon DNA from hand",
+        "Miraculous Mega Knight security — off-turn Tamer free-play, Option to hand",
+        "Omnimon (BT17-078) DNA digivolve — board-level wipe of one level",
+        "BT20-102 X-Antibody — single-target mass deletion + bottom"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 20,
+            "ratio": 0.9090909090909092,
+            "threshold": 0.85,
+            "total": 22,
+            "unknown_cards": [
+              "BT14-101",
+              "ST15-14"
+            ]
+          },
+          "detail": "coverage 20/22 = 91% (threshold 85%); 0 failing, 2 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Puppet-Sister": {
+      "combos_tested": [
+        "Fable Waltz [Main] free-plays Shoemon, self-arms as Delay",
+        "Narrative Ronde dual-search then Mirai play arms the digivolve Delay",
+        "Physical Training [Main] dig then Delay discount digivolve",
+        "Cendrillmon free-play Puppet plus Familiar Tokens per opponent Digimon",
+        "Overclock self-sacrifice fans out into Kaguyamon opponent removal"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "ST12-12"
+            ],
+            "implemented": 23,
+            "ratio": 0.92,
+            "threshold": 0.85,
+            "total": 25,
+            "unknown_cards": [
+              "BT7-082"
+            ]
+          },
+          "detail": "coverage 23/25 = 92% (threshold 85%); 1 failing, 1 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
     }
   },
   "last_updated": "2026-06-03",
