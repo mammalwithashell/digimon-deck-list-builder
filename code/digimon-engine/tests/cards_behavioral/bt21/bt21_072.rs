@@ -60,6 +60,30 @@ fn arresterdramon_runner() -> DebugRunner {
         .start()
 }
 
+/// Inert vanilla filler used as a digivolution-card source when isolating the
+/// [All Turns] +1000-per-digivolution-card formula (clause 4).
+///
+/// IMPORTANT: the filler must NOT be BT21-072 itself. BT21-072 carries an
+/// inherited [Your Turn] +2000 DP aura (clause 5), which `static_dp_aura_bonus`
+/// correctly applies to the carrier once per inherited BT21-072 source. Pushing
+/// BT21-072 as filler therefore adds +2000 per source on the controller's turn,
+/// masking the formula under test (e.g. 2 sources → +2000 formula +4000 inherited
+/// = +6000 instead of the intended +2000). A vanilla Digimon with no effects lets
+/// material_count drive the DP delta cleanly.
+const FILLER_ID: &str = "FILLER-LV4";
+
+fn arresterdramon_runner_with_filler() -> DebugRunner {
+    let mut filler = make_test_card(FILLER_ID, "FillerLv4");
+    filler.level = Some(4);
+    filler.dp = Some(3000);
+    DebugRunner::builder()
+        .dsl_card("BT21-072")
+        .expect("BT21-072 in embedded DSL pack")
+        .add_card(filler)
+        .memory(9)
+        .start()
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -571,11 +595,13 @@ fn bt21_072_all_turns_dp_zero_bonus_with_no_digivolution_cards() {
 /// Effective DP == 10000 + 1000 = 11000.
 #[test]
 fn bt21_072_all_turns_dp_plus1000_with_one_digivolution_card() {
-    let mut runner = arresterdramon_runner();
+    let mut runner = arresterdramon_runner_with_filler();
     let handle = runner.place_on_field(0, "BT21-072", None);
 
-    // push_source inserts a digivolution card beneath the top card.
-    runner.push_source(handle, "BT21-072");
+    // push_source inserts a digivolution card beneath the top card. Use an
+    // inert filler so only the formula (material_count) drives the DP — see
+    // FILLER_ID for why BT21-072 itself would contaminate the measurement.
+    runner.push_source(handle, FILLER_ID);
 
     let effective = runner
         .effective_dp(handle)
@@ -590,11 +616,11 @@ fn bt21_072_all_turns_dp_plus1000_with_one_digivolution_card() {
 /// Effective DP == 10000 + 2000 = 12000. Proves the formula scales per-card.
 #[test]
 fn bt21_072_all_turns_dp_plus2000_with_two_digivolution_cards() {
-    let mut runner = arresterdramon_runner();
+    let mut runner = arresterdramon_runner_with_filler();
     let handle = runner.place_on_field(0, "BT21-072", None);
 
-    runner.push_source(handle, "BT21-072");
-    runner.push_source(handle, "BT21-072");
+    runner.push_source(handle, FILLER_ID);
+    runner.push_source(handle, FILLER_ID);
 
     let effective = runner
         .effective_dp(handle)
@@ -613,11 +639,11 @@ fn bt21_072_all_turns_dp_plus2000_with_two_digivolution_cards() {
 /// — a static `add_dp_modifier` snapshot would leave DP frozen at 12000.
 #[test]
 fn bt21_072_all_turns_dp_recomputes_after_digivolution_card_removed() {
-    let mut runner = arresterdramon_runner();
+    let mut runner = arresterdramon_runner_with_filler();
     let handle = runner.place_on_field(0, "BT21-072", None);
 
-    runner.push_source(handle, "BT21-072");
-    runner.push_source(handle, "BT21-072");
+    runner.push_source(handle, FILLER_ID);
+    runner.push_source(handle, FILLER_ID);
     assert_eq!(
         runner.effective_dp(handle),
         Some(12000),
@@ -648,9 +674,9 @@ fn bt21_072_all_turns_dp_recomputes_after_digivolution_card_removed() {
 /// opponent's turn just as on the controller's turn.
 #[test]
 fn bt21_072_all_turns_dp_bonus_applies_on_opponents_turn() {
-    let mut runner = arresterdramon_runner();
+    let mut runner = arresterdramon_runner_with_filler();
     let handle = runner.place_on_field(0, "BT21-072", None);
-    runner.push_source(handle, "BT21-072"); // material_count == 1
+    runner.push_source(handle, FILLER_ID); // material_count == 1
 
     assert_eq!(
         runner.effective_dp(handle),

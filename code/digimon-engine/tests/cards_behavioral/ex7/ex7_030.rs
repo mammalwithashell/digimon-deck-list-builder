@@ -291,10 +291,23 @@ fn ex7_030_when_attacking_gives_one_opponent_digimon_minus_6000_dp() {
         .expect("choose opponent Digimon");
     runner.auto_resolve().expect("finish DP modifier");
 
+    // -6000 DP drops the 3000 DP target below 0. Per rule 17-1-3-1 ("a Digimon
+    // in the battle area whose DP is 0 is deleted"), the target is deleted by the
+    // rule check that follows the effect — it does not linger at negative DP.
     assert_eq!(
         runner.effective_dp(opp),
-        Some(-3000),
-        "3000 DP test Digimon gets -6000 DP"
+        None,
+        "deleted target has no effective DP"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "opponent Digimon reduced to <= 0 DP by -6000 is deleted (rule 17-1-3-1)"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        1,
+        "the deleted opponent Digimon is sent to its owner's trash"
     );
 }
 

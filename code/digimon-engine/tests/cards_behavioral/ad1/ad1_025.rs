@@ -692,12 +692,47 @@ fn ad1_025_all_turns_observer_opt_blocks_second_trigger_same_turn() {
     );
 }
 
-// ─── SECTION 6 — Notes on declarative keyword runtime installation ───────────
+// ─── SECTION 6 — Declarative keyword runtime installation ────────────────────
 //
-// Per ad1_001's `inherited_raid_installs_on_carrier` precedent, behavioral
-// installation of the GrantKeyword(Raid)/GrantKeyword(Blocker) modifiers on
-// the carrier at runtime is gated by **G-DECLARATIVE-KEYWORD**: declarative
-// grant_keyword clauses compile to `EffectTiming::Declarative` but are not
-// enqueued by the engine. Structural assertions above (the GrantKeyword
-// match arms with `CompiledScope::FaceUp`) are the load-bearing checks for
-// these clauses until the gap closes.
+// G-DECLARATIVE-KEYWORD is RESOLVED (qa/resolved-gaps.md, 2026-05-02). Whole-card
+// `grant_keyword` clauses are runtime-functional, not merely structural:
+// `src/dsl_cards/lower_grant_keyword.rs` builds a declarative effect with
+// `.materializes_declarative_state()` whose process closure calls
+// `ctx.grant_declarative_keyword(handle, kw, Expiry::Permanent)`;
+// `Game::tick_declarative_effects` (game.rs) runs it and installs the keyword
+// modifier; `Game::has_keyword` (game.rs) reads it. So the load-bearing checks
+// for AD1-025's face-up Raid/Blocker grants are behavioral: place Omnimon on the
+// field, tick declaratives, and assert the carrier actually has each keyword.
+// (Same idiom as bt21/bt21_021.rs and bt12/bt12_022.rs.)
+
+/// Face-up GrantKeyword(Raid) must install the Raid keyword on AD1-025's
+/// carrier at runtime (not just compile structurally).
+#[test]
+fn ad1_025_face_up_raid_installs_on_carrier() {
+    let mut runner = omnimon_runner();
+    let omni = runner.place_on_field(0, "AD1-025", Some(0));
+
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        runner.game.has_keyword(omni, Keyword::Raid),
+        "face-up GrantKeyword(Raid) must install the Raid keyword on AD1-025's \
+         carrier after tick_declarative_effects (G-DECLARATIVE-KEYWORD resolved 2026-05-02)"
+    );
+}
+
+/// Face-up GrantKeyword(Blocker) must install the Blocker keyword on AD1-025's
+/// carrier at runtime (not just compile structurally).
+#[test]
+fn ad1_025_face_up_blocker_installs_on_carrier() {
+    let mut runner = omnimon_runner();
+    let omni = runner.place_on_field(0, "AD1-025", Some(0));
+
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        runner.game.has_keyword(omni, Keyword::Blocker),
+        "face-up GrantKeyword(Blocker) must install the Blocker keyword on AD1-025's \
+         carrier after tick_declarative_effects (G-DECLARATIVE-KEYWORD resolved 2026-05-02)"
+    );
+}

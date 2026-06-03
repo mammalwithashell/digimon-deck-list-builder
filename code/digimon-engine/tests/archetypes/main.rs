@@ -42,6 +42,7 @@ mod fixture_smoke {
 
 // ── Per-archetype interaction suites ─────────────────────────────────────────
 
+mod medusamon;
 mod puppets;
 mod rocks;
 mod st1_gaia_red;
