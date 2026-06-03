@@ -840,3 +840,53 @@ burst-digivolve action resolves, schedule the path's `on_burst_turn_end` steps t
 end of that turn (a delayed/scheduled effect keyed to the burst-digivolution turn); (c) then
 the "DP-less / sub-Lv3 top card can't remain in the battle area" rules-check for the revealed
 Koromon. Likely needs a DebugRunner burst-digivolve driver to pin behaviorally.
+
+
+### §EX11-012 would-leave token-shield targets wrong owner (G-EX11-012-TOKEN-SHIELD-OWN-ONLY) — RESOLVED 2026-05-30
+
+**RESOLUTION 2026-05-30.** One-word DSL fix: `cards/ex11/EX11-012.yaml` would-leave cost
+selector changed from `select_own_permanent { kind: token }` to
+`select_any_permanent { kind: token }`. The DSL `select_any_permanent` verb already scans
+**both** battle areas (`collect_matching_any_permanents` iterates all players) with the
+controller (`ctx.player`) selecting — faithful to DCGO `EX11_012.cs`
+(`CanSelectPermanentCondition = permanent.IsToken`, `selectPlayer = card.Owner`). No engine
+or DSL-vocabulary change needed. Verified: the archetype test
+`ex11_012_survives_by_deleting_opponents_petrification_token` (formerly `#[ignore]`d) now
+passes — EX11-012 survives by deleting the opponent's Petrification token, which also trashes
+the opponent's top security (the nested loop). Per-card `ex11_012.rs` tests still green
+(the own-token path remains valid since "any" includes own).
+
+---
+
+**Surfaced 2026-05-30** (Medusamon archetype interaction-test run). EX11-012 Medusamon's
+`[All Turns]` shield — "When this Digimon would leave the battle area, by deleting 1 Token,
+it doesn't leave." — is implemented in `cards/ex11/EX11-012.yaml` with
+`select_own_permanent: { filter: { kind: token } }`, i.e. it can only delete the
+**controller's own** tokens. But EX11-012's `[When Digivolving]/[End of Attack]` clause gives
+the Petrification Token to the **opponent** (`play_token: { controller: opponent }`), and
+EX11-012 has no other token source — so in real play the controller never has an own token
+and the shield can **never fire**.
+
+DCGO disagrees: `EX11_012.cs` would-leave clause uses
+`CanSelectPermanentCondition(Permanent permanent) => permanent.IsToken;` dispatched via
+`HasMatchConditionPermanent(...)` (NOT an own-only scan) with `selectPlayer: card.Owner`.
+So the controller may delete **any** token regardless of owner — i.e. the opponent's
+Petrification token it just created — to cancel the leave. (As a bonus this is a nested
+loop: the deleted token's `[On Deletion]` then trashes the opponent's top security.)
+
+Card text ("by deleting 1 Token", no owner qualifier) + DCGO both say **any token**; the DSL
+restricts to own → confirmed faithfulness gap.
+
+Impact:
+- **EX11-012's survivability shield is dead** in normal play; the card silently leaves the
+  battle area when targeted by removal instead of eating an opponent token to stay.
+- Pinned by `tests/archetypes/medusamon.rs::ex11_012_survives_by_deleting_opponents_petrification_token`
+  (authored `#[ignore]`d, asserting the faithful outcome — survives + opp token consumed +
+  opp security −1). Empirically confirmed failing today: EX11-012 is deleted (battle-area
+  size 0) because the opponent's token is not a legal cost target.
+
+Fix shape: change the would-leave cost selector from own-only to an any-owner token select
+(filter `{ kind: token }` across both battle areas, `selecting_player = controller`). If the
+DSL lacks an any-owner permanent selector with a kind filter, that is the underlying
+DSL-vocab gap to widen (log to `qa/dsl-vocab-gaps.md`); otherwise it is a one-line YAML fix
+in `cards/ex11/EX11-012.yaml`. Un-ignore the archetype test when closed.

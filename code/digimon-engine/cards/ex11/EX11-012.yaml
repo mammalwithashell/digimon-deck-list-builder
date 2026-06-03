@@ -52,9 +52,14 @@ effects:
   - kind: replacement
     trigger: when_would_leave_battle_area
     active_when: { all_turns: true }
+    # "by deleting 1 Token" — ANY token, either battle area (DCGO EX11_012.cs:
+    # CanSelectPermanentCondition = permanent.IsToken, selectPlayer = card.Owner).
+    # EX11-012 mints its Petrification Tokens onto the OPPONENT, so an own-only
+    # select would make this shield dead; `select_any_permanent` scans both
+    # battle areas with the controller picking.
     summary: "Delete 1 Token to prevent leaving"
     process:
-      - select_own_permanent:
+      - select_any_permanent:
           bind_as: cost_token
           filter: { kind: token }
           optional: true
