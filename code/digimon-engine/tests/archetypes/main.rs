@@ -42,11 +42,22 @@ mod fixture_smoke {
 
 // ── Per-archetype interaction suites ─────────────────────────────────────────
 
+mod bg_imperial;
+mod dna_omnimon;
+mod magneticdra;
 mod medusamon;
+mod nokia_alters;
+mod omni_nokia;
+mod omnimon_ace;
+mod puppet_sister;
+mod puppets;
 mod rocks;
-mod st1_gaia_red;
-mod st2_cocytus_blue;
-mod st3_heavens_yellow;
-mod st4_giga_green;
-mod st5_machine_black;
-mod st6_venomous_violet;
+
+// Starter-deck interaction suites (ST-1 … ST-6), authored by the
+// `/archetype-interaction-test-author` capstone run. Real-card / synthetic-free.
+mod st1;
+mod st2;
+mod st3;
+mod st4;
+mod st5;
+mod st6;

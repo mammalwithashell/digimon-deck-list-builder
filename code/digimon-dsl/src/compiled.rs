@@ -1631,6 +1631,7 @@ pub enum CompiledStep {
         without_suspending: bool,
         ignore_summoning_sickness: bool,
         optional: bool,
+        windowed: bool,
         prompt: Option<String>,
         cost_upgrade: Option<CompiledAttackCostUpgrade>,
     },

@@ -2819,6 +2819,28 @@ this Digimon or return it to hand/deck" is omitted.
   with `st17_07::st17_07_green_tamer_grants_opponent_only_delete_protection` /
   `..._protection_not_installed_without_green_tamer` `#[ignore]`'d citing this ID.
 
+### RESOLVED 2026-06-02 — `may_attack_now: { windowed: true }` (deferred EOT attack grant)
+- **Gap:** `[End of Your Turn] 1 of your Digimon may attack` (AD1-004 WarGreymon)
+  was authored with inline `may_attack_now`, which declares AND resolves the
+  attack synchronously inside the trigger. That leaves no window for a sibling
+  end-of-turn effect (e.g. an inherited DNA digivolve) to resolve first and
+  remove the attacker, so the attack could never fizzle — contrary to
+  general_rule.pdf §15-4-2-3 (EOT triggers activate one at a time) + the
+  "attack ends if the attacker has left" rule.
+- **Resolution:** added a `windowed: bool` flag to the `may_attack_now` step
+  (`MayAttackNowArgs` → `CompiledStep::MayAttackNow`). When true, the step grants
+  the chosen attacker a `MayAttack` (+`CanAttackUnsuspended` iff `without_suspending`)
+  modifier with `Expiry::EndOfTurn` — the same windowed mechanism the `<Execute>`
+  keyword uses — instead of declaring inline. The attack becomes a deferred
+  EOT-action; if a sibling EOT effect removes the attacker, the grant is orphaned
+  and no attack happens. AD1-004's YAML now sets `windowed: true`. Default is
+  false, so all other `may_attack_now` users (AD1-009, BT12/17/20/…) are unchanged.
+- **Tests:** `cards_behavioral/ad1/ad1_004.rs::{ad1_004_eot_attack_is_windowed_grant_not_synchronous,
+  ad1_004_eot_attack_fizzles_when_attacker_is_removed_before_it_acts}`.
+- **Note:** AD1-004 stays PARTIAL overall — its `[On Play][When Digivolving]`
+  "delete opponent Digimon with DP ≤ this" is still blocked on G-FORMULA-SOURCE-DP
+  (unrelated to this fix).
+
 ## RESOLVED 2026-06-03 — `select_count_capped_multi.clamp_to_available` (mandatory "N of opponent" target count)
 
 **Gap (FAQ MP-30/31, discovered via `tests/rules_faq/effect_resolution.rs`):** the DSL

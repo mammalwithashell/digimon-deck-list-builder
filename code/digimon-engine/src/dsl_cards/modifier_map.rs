@@ -411,6 +411,7 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         "DrawX" => Keyword::DrawX(value.unwrap_or(1) as u8),
         "Fragment" => Keyword::Fragment(value.unwrap_or(1) as u8),
         "Progress" => Keyword::Progress,
+        "Retaliation" => Keyword::Retaliation,
         _ => return None,
     })
 }
