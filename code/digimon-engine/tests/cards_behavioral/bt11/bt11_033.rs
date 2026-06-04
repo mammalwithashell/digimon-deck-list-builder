@@ -80,6 +80,40 @@ fn bt11_033_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(opp_digimon("OPP-LV6", 6))
         .add_card(make_test_card("OPP-SEC-1", "OPP-SEC-1"))
         .add_card(make_test_card("OPP-SEC-2", "OPP-SEC-2"))
+        .add_card(make_test_card("HAND-FILLER", "HAND-FILLER"))
+}
+
+/// Set `player`'s hand to exactly `target` HAND-FILLER cards (registered in the
+/// pool by `bt11_033_runner`).
+fn set_hand_size(r: &mut DebugRunner, player: PlayerId, target: usize) {
+    use digimon_engine::card_source::CardSource;
+    let data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "HAND-FILLER")
+        .expect("HAND-FILLER registered");
+    r.game.players[player as usize].hand.clear();
+    for _ in 0..target {
+        let next_idx = r.game.next_card_index();
+        r.game.players[player as usize]
+            .hand
+            .push(CardSource::new(data_idx, player, next_idx));
+    }
+}
+
+/// Fire an EFFECT-driven add to `player`'s hand (the `OnAddToHand` observer
+/// timing) without going through a specific add verb — mirrors how
+/// `fire_when_digivolving` fires its trigger directly.
+fn fire_effect_add_to_hand(r: &mut DebugRunner, player: PlayerId) {
+    r.game.enqueue_triggered(
+        EffectTiming::OnAddToHand,
+        TriggerSource::HandGained {
+            player,
+            effect_initiated: true,
+        },
+    );
+    r.game.drain_effect_queue();
 }
 
 fn hand_contains(runner: &DebugRunner, player: PlayerId, card_id: &str) -> bool {
@@ -176,28 +210,35 @@ fn bt11_033_structural_identity_and_when_digivolving_clause() {
 }
 
 #[test]
-fn bt11_033_does_not_author_the_blocked_memory_observer() {
-    // Guard against a future approximation: clause 2's observer is BLOCKED on
-    // the OnAddToHand trigger gap, so no GainMemoryFn step may exist until the
-    // primitive lands. (When the gap closes, replace this with a positive
-    // assertion on the memory-observer clause.)
+fn bt11_033_authors_the_on_add_to_hand_memory_observer() {
+    // G-ON-ADD-TO-HAND-OBSERVER resolved (2026-06-04): clause 2 is now an
+    // `on_add_to_hand` observer carrying a `gain_memory` step. (This replaces the
+    // earlier guard that asserted the clause was ABSENT while the gap was open.)
     let runner = bt11_033_runner().start();
     let compiled = runner
         .compiled_card(CARD_ID)
         .expect("BT11-033 compiled card present");
 
-    let has_gain_memory = compiled.effects.iter().any(|clause| match clause {
-        CompiledClause::Triggered(t) => t
+    let observer = compiled
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnAddToHand] => Some(t),
+            _ => None,
+        })
+        .expect("clause 2 must be an `on_add_to_hand` observer");
+    assert!(
+        observer.once_per_turn,
+        "the memory observer is [Once Per Turn]"
+    );
+    assert!(
+        observer
             .process
             .iter()
             .any(|step| matches!(step, CompiledStep::GainMemoryFn { .. })),
-        _ => false,
-    });
-    assert!(
-        !has_gain_memory,
-        "clause 2 is BLOCKED ({GAP_ON_ADD_TO_HAND}); it must not be approximated with a \
-         gain_memory step on the wrong trigger"
+        "the observer must gain memory via a formula step"
     );
+    let _ = GAP_ON_ADD_TO_HAND;
 }
 
 // ─── Behavioral — Clause 1 POSITIVE (return-to-hand) ────────────────────────
@@ -341,25 +382,88 @@ fn bt11_033_when_digivolving_with_empty_opp_board_adds_opp_top_security_to_hand(
 // OPT lockout are the load-bearing assertions to honor when the gap closes.
 
 #[test]
-#[ignore = "BLOCKED: G-ON-ADD-TO-HAND-OBSERVER — OnAddToHand timing not dispatched"]
 fn bt11_033_memory_gain_is_floor_of_opp_hand_over_four() {
-    // 3 cards → 0 memory; 4 → 1; 8 → 2. The observer must read the opponent's
-    // hand size AT TRIGGER TIME and gain floor(size / 4).
+    // 3 cards → 0 memory; 4 → 1; 8 → 2. The observer reads the OPPONENT's hand
+    // size AT TRIGGER TIME and gains floor(size / 4).
     for (hand_size, expected_gain) in [(3usize, 0i16), (4, 1), (8, 2)] {
-        let _ = (hand_size, expected_gain);
-        // Intentionally unimplemented until the observer trigger exists; the
-        // engine cannot route "an effect added cards to the opponent's hand"
-        // into this card's process body.
-        unimplemented!("{GAP_ON_ADD_TO_HAND}");
+        let mut r = bt11_033_runner().memory(0).start();
+        r.set_first_player(0);
+        // BT11-033 belongs to player 0; player 1 is the opponent whose hand is
+        // watched.
+        r.place_on_field(0, CARD_ID, Some(0));
+        set_hand_size(&mut r, 1, hand_size);
+
+        let mem_before = r.memory();
+        fire_effect_add_to_hand(&mut r, 1);
+
+        assert_eq!(
+            (r.memory() - mem_before).abs(),
+            expected_gain,
+            "opp hand {hand_size} → gain floor({hand_size}/4) = {expected_gain}"
+        );
     }
 }
 
 #[test]
-#[ignore = "BLOCKED: G-ON-ADD-TO-HAND-OBSERVER — OnAddToHand timing not dispatched"]
+fn bt11_033_memory_observer_does_not_fire_for_own_hand_gain() {
+    // The observer gates on the OPPONENT's hand (`event_add_to_hand_player:
+    // opponent`); an effect adding to the controller's OWN hand must NOT gain.
+    let mut r = bt11_033_runner().memory(0).start();
+    r.set_first_player(0);
+    r.place_on_field(0, CARD_ID, Some(0));
+    set_hand_size(&mut r, 0, 8); // controller's own hand large
+
+    let mem_before = r.memory();
+    fire_effect_add_to_hand(&mut r, 0); // add to the controller's OWN hand
+
+    assert_eq!(
+        r.memory(),
+        mem_before,
+        "an add to the controller's own hand must not trigger the opponent-hand observer"
+    );
+}
+
+#[test]
 fn bt11_033_memory_observer_is_once_per_turn_and_clears_after_end_turn() {
-    // First effect-add this turn gains memory; a second effect-add the same
-    // turn gains nothing (OPT lockout). After end_turn, the lockout clears and
-    // the next effect-add gains again.
-    unimplemented!("{GAP_ON_ADD_TO_HAND}");
+    // First effect-add this turn gains memory; a second effect-add the same turn
+    // gains nothing (OPT lockout). After end_turn, the lockout clears.
+    let mut r = bt11_033_runner().memory(0).start();
+    r.set_first_player(0);
+    r.place_on_field(0, CARD_ID, Some(0));
+    set_hand_size(&mut r, 1, 4); // floor(4/4) = 1 each fire
+
+    let m0 = r.memory();
+    fire_effect_add_to_hand(&mut r, 1);
+    let after_first = r.memory();
+    assert_eq!(
+        (after_first - m0).abs(),
+        1,
+        "the first effect-add this turn gains floor(4/4)=1"
+    );
+
+    // Second add the SAME turn — OPT lockout, no further gain.
+    fire_effect_add_to_hand(&mut r, 1);
+    assert_eq!(
+        r.memory(),
+        after_first,
+        "a second effect-add the same turn gains nothing (Once Per Turn lockout)"
+    );
+
+    // The lockout is TURN-SCOPED: clearing the per-turn activation counters
+    // (exactly what `Player::new_turn` does at the start of the owner's next
+    // turn) restores the gain. This isolates the turn-scope of the OPT from the
+    // non-deterministic first-player/seed turn sequencing.
+    for perm in &mut r.game.players[0].battle_area {
+        perm.new_turn();
+    }
+    set_hand_size(&mut r, 1, 4);
+    r.game.memory = 0; // clean baseline so a ±1 gain is not memory-capped
+    let m_reset = r.memory();
+    fire_effect_add_to_hand(&mut r, 1);
+    assert_eq!(
+        (r.memory() - m_reset).abs(),
+        1,
+        "once the per-turn OPT counter resets (new turn), the observer gains again"
+    );
 }
 

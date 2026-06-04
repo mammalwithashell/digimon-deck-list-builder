@@ -333,6 +333,11 @@ pub struct PredicateSpec {
     pub event_host_permanent_is_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
+    /// For `OnAddToHand` observers: the player whose hand gained cards
+    /// (`TriggerContext.affected_player`) must match this player-ref, resolved
+    /// relative to the observer (`you` / `opponent`). See G-ON-ADD-TO-HAND-OBSERVER.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_add_to_hand_player: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_is_player: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

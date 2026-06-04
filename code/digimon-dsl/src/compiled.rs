@@ -410,6 +410,8 @@ pub struct CompiledPredicate {
     pub self_digivolution_sources_contain_name: Option<String>,
     pub self_digivolution_sources_trait_has: Option<String>,
     pub event_target_owner: Option<CompiledPlayerRef>,
+    /// `OnAddToHand` observer: the gaining player must match this ref.
+    pub event_add_to_hand_player: Option<CompiledPlayerRef>,
     /// Event-target permanent color-set intersection test.
     /// G-EVENT-TARGET-COLOR.
     pub event_target_color_any_of: Option<Vec<CompiledColor>>,
@@ -814,6 +816,7 @@ pub enum CompiledTiming {
     OnLeaveField,
     OnSuspend,
     OnUnsuspend,
+    OnAddToHand,
     OnHatch,
     OnMove,
     OnDigivolve,

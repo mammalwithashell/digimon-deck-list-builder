@@ -1349,6 +1349,22 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.event_add_to_hand_player {
+        // OnAddToHand observer: the gaining player is carried in
+        // `affected_player`. Compare it to the requested ref (you/opponent),
+        // resolved relative to the observer. See G-ON-ADD-TO-HAND-OBSERVER.
+        let Some(gaining_player) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.affected_player)
+        else {
+            return false;
+        };
+        if !player_ref_matches(want, gaining_player, rctx) {
+            return false;
+        }
+    }
     if let Some(ref wanted_colors) = pred.event_target_color_any_of {
         // G-EVENT-TARGET-COLOR: the event-target permanent's printed color
         // set must intersect the requested list. Mirrors the snapshot /

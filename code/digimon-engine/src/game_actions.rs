@@ -4302,6 +4302,10 @@ impl Game {
         if let Some(snapshot) = leave_snapshot {
             self.fire_on_leave_field(handle, snapshot);
         }
+        // OnAddToHand: the returned top card entered its owner's hand by effect.
+        // (Digivolution sources went to trash, not hand, so only the top card
+        // counts as a hand gain.) See G-ON-ADD-TO-HAND-OBSERVER.
+        self.fire_on_add_to_hand_by_effect(top_owner);
         Some(top_handle)
     }
 

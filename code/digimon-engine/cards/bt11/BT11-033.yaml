@@ -24,31 +24,19 @@
 #       security to THEIR own hand (DCGO: enemy SecurityCards[0] → AddHandCards
 #       on the enemy + ReduceSecurity on the enemy).
 #
-# Clause 2 (triggered) — [All Turns][Once Per Turn] memory observer: OMITTED.
+# Clause 2 (triggered) — [All Turns][Once Per Turn] memory observer: IMPLEMENTED
+#   (2026-06-04, G-ON-ADD-TO-HAND-OBSERVER resolved). See the clause below.
 #   "When an EFFECT adds cards to your opponent's hand, gain 1 memory for every
 #    4 cards in your opponent's hand." DCGO: EffectTiming.OnAddHand gated by
 #    CanTriggerWhenAddHand(player == Owner.Enemy, cardEffect != null) — i.e.
 #    effect-initiated adds to the opponent's hand only (not normal draws) —
 #    rewarding floor(Owner.Enemy.HandCards.Count / 4), OPT-locked.
 #
-#   BLOCKED (no-approximations): the engine's EffectTiming::OnAddToHand is
-#   never dispatched and the DSL TriggerWhen enum has no on_add_to_hand token,
-#   so "observe an effect adding cards to the opponent's hand" is unexpressible.
-#   The memory ARITHMETIC is already composable (gain_memory_fn + a floor_div of
-#   card_count_in_zone{ zone: hand, of: opponent } by 4); only the TRIGGER is
-#   missing. See docs/RUST_ENGINE_GAPS.md (G-ON-ADD-TO-HAND-OBSERVER) and
-#   qa/dsl-vocab-gaps.md. When the observer timing lands, append:
-#
-#     - when: on_add_to_hand          # effect-initiated adds to opponent hand
-#       active_when: { ... }          # [All Turns]
-#       once_per_turn: true
-#       condition: { event_add_to_hand_player: opponent, event_is_effect_initiated: true }
-#       process:
-#         - gain_memory_fn:
-#             formula:
-#               floor_div:
-#                 - { base: 0, per: { card_count_in_zone: { zone: hand, of: opponent } }, delta: 1 }
-#                 - 4
+#   The new `on_add_to_hand` observer timing fires `EffectTiming::OnAddToHand`
+#   from every effect-driven hand gain (return-to-hand, security/trash/deck/
+#   reveal-to-hand, effect-draw) with the gaining player in `affected_player`.
+#   The `event_add_to_hand_player: opponent` predicate gates to the opponent's
+#   hand; `event_is_effect_initiated: true` mirrors DCGO's `cardEffect != null`.
 
 card: BT11-033
 name: MirageGaogamon
@@ -85,3 +73,44 @@ effects:
           condition: { effect_returned_any_card: false }
           then:
             - add_top_security_to_hand: { of: opponent }
+
+  # ─── Clause 2 — [All Turns][Once Per Turn] memory observer ──────────────────
+  #
+  # Printed: "[All Turns] [Once Per Turn] When an effect adds cards to your
+  # opponent's hand, gain 1 memory for every 4 cards in your opponent's hand."
+  #
+  # DCGO BT11_033.cs: EffectTiming.OnAddHand gated by
+  # CanTriggerWhenAddHand(player == Owner.Enemy, cardEffect != null) — fires only
+  # for EFFECT-initiated adds to the OPPONENT's hand (not normal draws) — gaining
+  # floor(Owner.Enemy.HandCards.Count / 4), OPT-locked via
+  # SetHashString("GainMemory_BT11_033").
+  #
+  # Implementation (G-ON-ADD-TO-HAND-OBSERVER, resolved 2026-06-04):
+  #   - `when: on_add_to_hand` — the new observer timing fired by every
+  #     effect-driven hand gain (return-to-hand, security/trash/deck/reveal-to-
+  #     hand). `event_is_effect_initiated: true` keeps the "not a normal draw"
+  #     gate explicit.
+  #   - `event_add_to_hand_player: opponent` — fire only when the OPPONENT's hand
+  #     gained cards (DCGO `player == Owner.Enemy`).
+  #   - `once_per_turn: true` + `active_when: { all_turns: true }` — the printed
+  #     [Once Per Turn] / [All Turns] tags.
+  #   - `gain_memory_fn` over `floor_div(card_count_in_zone{ of: opponent, zone:
+  #     hand }, 4)` — read the opponent's hand size AT TRIGGER TIME and gain
+  #     floor(size / 4).
+  - when: on_add_to_hand
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When an effect adds cards to opponent's hand, gain 1 memory per 4 cards in opponent's hand"
+    condition:
+      all_of:
+        - event_add_to_hand_player: opponent
+        - event_is_effect_initiated: true
+    process:
+      - gain_memory_fn:
+          formula:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone: { of: opponent, zone: hand }
+                delta: 1
+              - 4

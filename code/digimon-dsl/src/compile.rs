@@ -233,6 +233,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnLeaveField => CompiledTiming::OnLeaveField,
         S::OnSuspend => CompiledTiming::OnSuspend,
         S::OnUnsuspend => CompiledTiming::OnUnsuspend,
+        S::OnAddToHand => CompiledTiming::OnAddToHand,
         S::OnHatch => CompiledTiming::OnHatch,
         S::OnMove => CompiledTiming::OnMove,
         S::OnDigivolve => CompiledTiming::OnDigivolve,
@@ -803,6 +804,7 @@ fn compile_predicate(
         attack_target_change_reason: p.attack_target_change_reason.clone(),
         attacker_trait_has: p.attacker_trait_has.clone(),
         event_target_owner: p.event_target_owner.map(compile_player_ref),
+        event_add_to_hand_player: p.event_add_to_hand_player.map(compile_player_ref),
         event_target_color_any_of: p
             .event_target_color_any_of
             .as_ref()

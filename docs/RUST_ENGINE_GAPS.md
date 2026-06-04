@@ -1312,7 +1312,16 @@ Surfaced by judge-quiz wave (EX5-060 Dragomon, BLOCKED; pins Q28 alongside BT20-
   change when the modifier is absent.
 
 
-## Observe an effect adding cards to a player's hand  [G-ON-ADD-TO-HAND-OBSERVER]  — OPEN 2026-06-03
+## Observe an effect adding cards to a player's hand  [G-ON-ADD-TO-HAND-OBSERVER]  — RESOLVED 2026-06-04
+
+**RESOLVED 2026-06-04.** Implemented the `OnAddToHand` observer end-to-end:
+- **Engine:** new `TriggerSource::HandGained { player, effect_initiated }` (fans out to ALL battle areas, carrying the gaining player in `TriggerContext.affected_player`); `Game::fire_on_add_to_hand_by_effect(player)` enqueues it. Called from every EFFECT-driven hand-gain sink — `return_to_hand` (game-level), `add_to_hand_from_{deck,trash,security,reveal}`, `add_pending_security_to_hand`, `return_card_source_to_hand`, and `EffectContext::draw` (effect-draws like Akihiro Kurata's). The normal turn-start draw does NOT route through these, so it never over-fires (DCGO's `cardEffect != null` gate).
+- **DSL:** `when: on_add_to_hand` trigger token (`Timing`/`CompiledTiming`/`compile_timing`/`timing_map`) + the `event_add_to_hand_player:` player-ref predicate (compares `affected_player` to you/opponent). Compose with the existing `event_is_effect_initiated:`.
+- **Card:** BT11-033 MirageGaogamon clause 2 authored (`gain_memory_fn` over `floor_div(card_count_in_zone{of: opponent, zone: hand}, 4)`, `once_per_turn`, gated on `event_add_to_hand_player: opponent`).
+- **Tests:** `tests/cards_behavioral/bt11/bt11_033.rs` — un-ignored memory tests (gain = floor(opp_hand/4): 3→0, 4→1, 8→2), opponent-only gating, OPT lockout + per-turn reset; structural positive assertion. Regression-clean (`cards_behavioral` 3894 pass, `judge_quiz` 25, `combat` 213, `option_flow` 93, lib 212).
+
+Original report (for context):
+
 
 Surfaced by BT11-033 MirageGaogamon (clause 2 BLOCKED, omitted from YAML per no-approximations). Hybrid engine + DSL gap. The card's clause 1 ([When Digivolving] return + security fallback) is fully implemented; only the second clause is blocked.
 

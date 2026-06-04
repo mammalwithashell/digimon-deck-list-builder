@@ -2357,6 +2357,13 @@ impl<'a> EffectContext<'a> {
         if drawn > 0 {
             self.game.mark_until_condition_dirty();
             self.game.reevaluate_until_condition_modifiers_if_dirty();
+            // An effect-driven draw adds cards to the player's hand — fire the
+            // OnAddToHand observer (DCGO's `cardEffect != null` gate; the normal
+            // turn-start draw does NOT route through this effect method). The
+            // observer is enqueued and drains after the current effect body
+            // (e.g. Akihiro Kurata's "draw 1, then trash 1") fully resolves, so
+            // it reads the post-resolution hand size. See G-ON-ADD-TO-HAND-OBSERVER.
+            self.game.fire_on_add_to_hand_by_effect(player);
         }
         drawn
     }
@@ -3045,7 +3052,11 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> bool {
-        self.game.add_to_hand_from_deck(player, card)
+        let moved = self.game.add_to_hand_from_deck(player, card);
+        if moved {
+            self.game.fire_on_add_to_hand_by_effect(player);
+        }
+        moved
     }
 
     /// Move a specific card from `player`'s trash to their hand.
@@ -3054,7 +3065,11 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> bool {
-        self.game.add_to_hand_from_trash(player, card)
+        let moved = self.game.add_to_hand_from_trash(player, card);
+        if moved {
+            self.game.fire_on_add_to_hand_by_effect(player);
+        }
+        moved
     }
 
     /// Move a specific card from `player`'s security stack to their hand.
@@ -3087,6 +3102,7 @@ impl<'a> EffectContext<'a> {
             removed,
             crate::selection::SecurityRemovalDestination::Hand(owner),
         );
+        self.game.fire_on_add_to_hand_by_effect(player);
         true
     }
 
@@ -3196,7 +3212,11 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> bool {
-        self.game.add_to_hand_from_reveal(player, card)
+        let moved = self.game.add_to_hand_from_reveal(player, card);
+        if moved {
+            self.game.fire_on_add_to_hand_by_effect(player);
+        }
+        moved
     }
 
     /// Move the card currently resolving from security into its defender's hand.
@@ -3216,6 +3236,7 @@ impl<'a> EffectContext<'a> {
 
         let owner = pending.card.owner;
         self.game.player_mut(owner).hand.push(pending.card);
+        self.game.fire_on_add_to_hand_by_effect(owner);
         true
     }
 
@@ -4920,6 +4941,7 @@ impl<'a> EffectContext<'a> {
         let owner = removed.owner;
         self.game.player_mut(owner).hand.push(removed);
         let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
+        self.game.fire_on_add_to_hand_by_effect(owner);
         true
     }
 
