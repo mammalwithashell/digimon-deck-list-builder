@@ -160,13 +160,13 @@ fn digi_egg_returned_to_deck_top_routes_to_digitama_deck() {
 /// Q10 — memory math across Akihiro Kurata (BT13-103), MirageGaogamon (BT11-033),
 /// Gravity Crush (BT1-090), Mental Training (P-104). Judge: gauge ends at 0.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT13-103 (Akihiro Kurata), BT11-033 (MirageGaogamon), P-104 (Mental Training). BT1-090 implemented."]
+#[ignore = "BLOCKED-PRIMITIVE: cards authored 2026-06-03 (P-104 IMPLEMENTED; BT13-103, BT11-033 PARTIAL) but the load-bearing memory-arithmetic clause — MirageGaogamon (BT11-033) [All Turns] 'gain 1 memory per 4 cards in opponent's hand when an effect adds cards to their hand' — is BLOCKED on G-ON-ADD-TO-HAND-OBSERVER (no OnAddToHand trigger dispatched). Q10 also needs Akihiro Kurata's interactive-paycost cost reduction (G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT). See docs/RUST_ENGINE_GAPS.md."]
 fn q10_multi_effect_memory_arithmetic_ends_at_zero() {}
 
 /// Q11 — follow-up with a 2nd Mental Training; Gravity Crush (BT1-090) is NOT
 /// [Once Per Turn] so it fires again. Judge: Player A starts turn at 4.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT13-103, BT11-033, P-104. BT1-090 implemented."]
+#[ignore = "BLOCKED-PRIMITIVE: same as Q10 — MirageGaogamon (BT11-033)'s memory-per-4-cards observer is BLOCKED on G-ON-ADD-TO-HAND-OBSERVER. Cards authored (P-104 done; BT13-103/BT11-033 PARTIAL). See docs/RUST_ENGINE_GAPS.md."]
 fn q11_non_opt_gravity_crush_refires_memory_four() {}
 
 /// Q12 — Venusmon (BT24-040) uses Sharkmon (BT24-059) inherited [When Attacking]

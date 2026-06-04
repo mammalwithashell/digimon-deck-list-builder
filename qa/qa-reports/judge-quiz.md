@@ -35,8 +35,8 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 | 7 | B | YES | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT9-108 Eye of the Gorgon authored; pinned — sub-effect 1 deletes Pillomon (clearing its `CannotPlayDigimonByEffect` floodgate), sub-effect 2 then plays the Lv3 (control proves the floodgate was real → no false-pass) | `b::q7_eye_of_the_gorgon_sequential_delete_then_play` |
 | 8 | B | Agumon trashed → Koromon trashed | BLOCKED-PRIMITIVE | All cards implemented, but `G-BURST-ON-TURN-END-NOT-EXECUTED` (discovered): the Burst `on_burst_turn_end` (trash top at end of burst turn) is compiled but never executed — `BurstDigivolve` is lowered only to a blast-counter marker — so "Agumon trashed → Koromon trashed" can't occur. (Also needs the DP-less-can't-remain rule + a DebugRunner burst driver.) | `b::q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot` |
 | 9 | D | After both trashed; NO memory | BLOCKED-CARD | BT23-102, BT15-037 | `d::q9_gatomon_not_in_battle_area_during_removal_no_memory` |
-| 10 | F | 0 | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q10_multi_effect_memory_arithmetic_ends_at_zero` |
-| 11 | F | 4 (Gravity Crush not OPT) | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q11_non_opt_gravity_crush_refires_memory_four` |
+| 10 | F | 0 | BLOCKED-PRIMITIVE | Cards authored 2026-06-03 (P-104 IMPLEMENTED; BT13-103/BT11-033 PARTIAL). Blocked on `G-ON-ADD-TO-HAND-OBSERVER` (MirageGaogamon's "gain memory per 4 cards in opp hand" observer undispatched) + `G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT` (Akihiro Kurata). | `f::q10_multi_effect_memory_arithmetic_ends_at_zero` |
+| 11 | F | 4 (Gravity Crush not OPT) | BLOCKED-PRIMITIVE | Same as Q10 — `G-ON-ADD-TO-HAND-OBSERVER`. | `f::q11_non_opt_gravity_crush_refires_memory_four` |
 | 12 | F | YES, unsuspends | **PASS** | RESOLVED 2026-06-02 (`G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`): `kind_matches_field` now coalesces `Token` into `Digimon`, and `eval_permanent_fields` defers permanent-kind to the (token-aware) `synth_identity` check — so a REAL Petrification token is a legal placement pick. Test un-ignored with the real `TOKEN_PETRIFICATION` permanent (not a Digimon stand-in). Regression-clean. | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
 | 13 | B | −6000 DP | **PASS** | Pinned 2026-05-30: BT22-042 Nyabootmon's `-3000 × (your Digimon)` is counted (2: Nyabootmon + ShoeShoemon) BEFORE ShoeShoemon (P-165)'s deferred `[On Play]` adds a Familiar token → −6000 (token not counted; a count of 3 would give −9000). | `b::q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play` |
 | 14 | B | −6000 DP | **PASS** | RESOLVED 2026-06-02 (`G-CONTINUOUS-MASS-DP-DEBUFF`): EX4-074 re-authored `continuous: true` → a source-independent floating mass modifier catches the later-played ShoeShoemon at ≤0 DP, which is still counted → Nyabootmon's debuff is −6000 (count 2). Asserts the per-application debuff value (the ruling) — the net Ruin DP additionally reflects Nyabootmon's faithful OPTIONAL `[On Any Deletion]` recursion. Focused substrate pin: `b::q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant`. | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
@@ -61,12 +61,19 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 9 | 3, 4, 9, 10, 11, 15, 21, 29, 30 |
-| BLOCKED-PRIMITIVE | 8 | 8, 18, 19, 24, 25, 26, 27, 28 |
+| BLOCKED-CARD | 7 | 3, 4, 9, 15, 21, 29, 30 |
+| BLOCKED-PRIMITIVE | 10 | 8, 10, 11, 18, 19, 24, 25, 26, 27, 28 |
 | CANDIDATE | 0 | — |
 | PASS | 13 | 1, 2, 5, 6, 7, 12, 13, 14, 16, 17, 20, 22, 23 |
 
-(Counts: 9 + 8 + 0 + 13 = 30 of 30.)
+(Counts: 7 + 10 + 0 + 13 = 30 of 30.)
+
+Q10/Q11 (F-cluster memory arithmetic) processed 2026-06-03: authored the 3 cards
+(P-104 Mental Training IMPLEMENTED; BT13-103 Akihiro Kurata + BT11-033 MirageGaogamon
+PARTIAL). Discover-then-pin surfaced two engine gaps that block the arithmetic —
+`G-ON-ADD-TO-HAND-OBSERVER` (no OnAddToHand trigger for MirageGaogamon's
+memory-per-4-cards observer) and `G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT`
+(Akihiro Kurata's "by deleting X reduce cost by X's cost"). Q10/Q11 → BLOCKED-PRIMITIVE.
 
 Q19/Q20/Q21 (D-cluster [On Deletion] activation-site) processed 2026-06-03: authored
 the 4 Eyesmon-stack cards (BT7-069/BT2-069/BT3-006/BT2-076, DSL — purple [On Deletion]

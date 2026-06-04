@@ -6768,6 +6768,59 @@
         "trash-from-hand"
       ],
       "notes": "G-DSL-DELETED-SELF-TRASH-BINDING: no binding for the just-deleted carrier card in trash to feed play_from_trash_free"
+    },
+    "P-104": {
+      "card_name": "Mental Training",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q10/Q11)",
+      "yaml_path": "code/digimon-engine/cards/p/P-104.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_104.rs",
+      "test_count": 13,
+      "patterns": [
+        "option",
+        "reveal",
+        "delay",
+        "digivolve-cost-reduction"
+      ],
+      "notes": "Reveal2 add-blue + Delay digivolve-into-blue cost-2"
+    },
+    "BT13-103": {
+      "card_name": "Akihiro Kurata",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "judge-quiz (Q10/Q11)",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_103.rs",
+      "test_count": 7,
+      "patterns": [
+        "tamer",
+        "eot-opp",
+        "place-tamer-under",
+        "security-play"
+      ],
+      "notes": "Clauses 2+3 done; Clause 1 (interactive paycost cost-reduction) BLOCKED G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT"
+    },
+    "BT11-033": {
+      "card_name": "MirageGaogamon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "judge-quiz (Q10/Q11)",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_033.rs",
+      "test_count": 5,
+      "patterns": [
+        "when-digivolving",
+        "return-to-hand",
+        "memory-observer"
+      ],
+      "notes": "Clause 1 (return Lv5- / else security-to-hand) done; Clause 2 (gain memory per 4 cards in opp hand) BLOCKED G-ON-ADD-TO-HAND-OBSERVER"
     }
   }
 }
