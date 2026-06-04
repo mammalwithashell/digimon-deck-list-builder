@@ -1382,6 +1382,24 @@
       ],
       "notes": "Re-attempt 2026-05-21: fully completed. [Main] reveal-2/add-red + place-self; [Main]<Delay> digivolve into red Digimon cost-2; [Security] place self. <Delay> trigger corrected on_play->delayed (player-initiated, matches P-035/P-037) per review fix. 23/23 tests pass, 0 ignored. Reviewer APPROVED after fix."
     },
+    "P-104": {
+      "card_name": "Mental Training",
+      "validated_date": "2026-06-03",
+      "report": "manual-p104-dsl-port",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Training Options",
+      "yaml_path": "code/digimon-engine/cards/p/P-104.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_104.rs",
+      "test_count": 14,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "DELAY",
+        "EFFECT-DIGIVOLVE",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Blue sibling of P-103 (red) / P-105 (yellow). [Main] reveal-2/add-blue + place-self-as-delay-option; [Main]<Delay> digivolve into blue Digimon cost-2 (player-initiated, DelayTrigger::MainPhaseActivated); [Security] place self. Modeled on corrected P-105. 14/14 tests pass."
+    },
     "BT8-097": {
       "card_name": "Crimson Blaze",
       "validated_date": "2026-05-20",
