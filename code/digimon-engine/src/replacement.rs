@@ -688,6 +688,54 @@ fn run_candidate_inner(
         return ReplacementOutcome::None;
     };
 
+    // If the subject was a permanent that has since moved to the DigiXros
+    // leaving/limbo slot, its index-only handle is now stale (it aliases a
+    // shifted-down permanent). Re-point it to the limbo-encoded handle so the
+    // parked process reads the right card (G-DIGIXROS-REDIRECT-EXTRACTION).
+    let subject = game.remap_digixros_limbo_subject(subject);
+
+    // The source permanent's `battle_area` index may have shifted between when
+    // this optional replacement's accept gate was installed and when the player
+    // resolves it (the stale index is captured by value in the accept callback).
+    // One way this happens: a DigiXros material is moved to the leaving/limbo
+    // slot (G-DIGIXROS-REDIRECT-EXTRACTION), shifting every later permanent down
+    // by one — so the source (e.g. BT17-095's Delay-Option carrier) ends up at a
+    // different index. Re-resolve by the identity-stable `source_card`, but ONLY
+    // when the stored index no longer points at the source card, so the common
+    // (unshifted) path is unchanged.
+    let source_permanent = source_permanent.map(|h| {
+        let still_points_at_source = game
+            .players
+            .get(h.player as usize)
+            .and_then(|p| p.battle_area.get(h.index as usize))
+            .is_some_and(|perm| {
+                perm.card_sources
+                    .iter()
+                    .chain(perm.linked_cards.iter())
+                    .any(|s| s.handle() == source_card)
+            });
+        if still_points_at_source {
+            return h;
+        }
+        game.players
+            .get(h.player as usize)
+            .and_then(|p| {
+                p.battle_area
+                    .iter()
+                    .position(|perm| {
+                        perm.card_sources
+                            .iter()
+                            .chain(perm.linked_cards.iter())
+                            .any(|s| s.handle() == source_card)
+                    })
+                    .map(|idx| PermanentHandle {
+                        player: h.player,
+                        index: idx as u8,
+                    })
+            })
+            .unwrap_or(h)
+    });
+
     if effect.max_per_turn > 0 {
         let Some(source_permanent) = source_permanent else {
             return ReplacementOutcome::None;

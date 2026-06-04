@@ -2130,6 +2130,14 @@ impl<'a> EffectContext<'a> {
     /// zombie case is correctly treated as "no top card." Mirrors the same
     /// defensive form used by `Game::top_card_handle` in `effect_queue.rs`.
     pub fn permanent_top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
+        if crate::digixros::is_limbo_index(handle.index) {
+            let pos = (handle.index - crate::digixros::LIMBO_INDEX_BASE) as usize;
+            return self
+                .game
+                .digixros_leaving_limbo
+                .get(pos)
+                .and_then(|(_, _, perm)| perm.card_sources.last().map(|c| c.handle()));
+        }
         self.game
             .player(handle.player)
             .battle_area
@@ -2157,6 +2165,10 @@ impl<'a> EffectContext<'a> {
                 player,
                 index: index as u8,
             })
+            // Fallback: the card may be parked in the DigiXros leaving/limbo slot
+            // (its `WhenWouldLeaveBattleArea` window parked a reward). Resolve to
+            // the limbo-encoded handle so a DNA-evo reward can still extract it.
+            .or_else(|| self.game.find_limbo_permanent_containing_card(player, card))
     }
 
     pub fn digivolve_replacement_subject_without_cost(
@@ -2166,6 +2178,16 @@ impl<'a> EffectContext<'a> {
     ) -> bool {
         let Some(target) = subject.permanent() else {
             return false;
+        };
+        // Re-materialize a leaving/limbo subject into `battle_area` before the
+        // digivolve operates on it (G-DIGIXROS-REDIRECT-EXTRACTION).
+        let target = if crate::digixros::is_limbo_index(target.index) {
+            match self.game.rematerialize_digixros_limbo(target) {
+                Some(h) => h,
+                None => return false,
+            }
+        } else {
+            target
         };
         if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
             return false;
@@ -5516,6 +5538,15 @@ impl<'a> EffectContext<'a> {
         if hand_partner == result_from_hand {
             return None;
         }
+        // The leaving subject may be parked in the DigiXros leaving/limbo slot
+        // (G-DIGIXROS-REDIRECT-EXTRACTION). Re-materialize it into `battle_area`
+        // first so the merge operates on a real permanent — this is the EXTRACT
+        // that pulls the material out of the in-flight DigiXros transaction.
+        let target = if crate::digixros::is_limbo_index(target.index) {
+            self.game.rematerialize_digixros_limbo(target)?
+        } else {
+            target
+        };
         if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
             return None;
         }

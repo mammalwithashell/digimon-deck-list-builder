@@ -346,6 +346,24 @@ pub struct Game {
     /// installs this before cost hooks run and clears it when the play commits
     /// or aborts. Later slices use it for material selection and source commit.
     pub(crate) pending_digixros_transaction: Option<crate::digixros::DigiXrosTransaction>,
+    /// "Leaving / limbo" holding slot for battle-area DigiXros materials whose
+    /// `WhenWouldLeaveBattleArea` replacement window parked a `pending_selection`
+    /// (e.g. BT17-095's optional `<Delay>` accept). The departing material is
+    /// popped OUT of `battle_area` (so it is no longer any permanent's top card —
+    /// satisfying the "the material has left" precondition) but retained here so
+    /// the parked observer's reward (a DNA-evo) can still EXTRACT it into a new
+    /// permanent. On finalize, any material still in limbo (the observer declined
+    /// / was ineligible) is restored to `battle_area` to be consumed under the
+    /// DigiXros host as normal. Addressed by handles whose index is offset by
+    /// `LIMBO_INDEX_BASE`. See rule G-DIGIXROS-REDIRECT-EXTRACTION (judge-quiz
+    /// Q26/Q27).
+    /// Each entry is `(owner, original_battle_handle, permanent)`. The original
+    /// battle handle (captured BEFORE the `battle_area.remove` shift) lets a
+    /// parked replacement whose subject was the leaving permanent re-resolve to
+    /// the limbo-encoded handle (`remap_digixros_limbo_subject`), since the
+    /// subject is addressed by index alone.
+    pub(crate) digixros_leaving_limbo:
+        Vec<(crate::enums::PlayerId, crate::permanent::PermanentHandle, crate::permanent::Permanent)>,
     /// Turn-scoped DigiXros wildcard material modifiers waiting to be copied
     /// into the next matching transaction.
     pub(crate) active_digixros_wildcards: Vec<crate::digixros::ActiveDigiXrosWildcardSubstitution>,
@@ -903,6 +921,7 @@ impl Game {
             pending_effect_security_removal: Vec::new(),
             pending_option: None,
             pending_digixros_transaction: None,
+            digixros_leaving_limbo: Vec::new(),
             active_digixros_wildcards: Vec::new(),
             pending_option_placed_turn_check: false,
             pending_option_placed_link_resume: None,
