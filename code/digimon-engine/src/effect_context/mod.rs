@@ -2801,6 +2801,22 @@ impl<'a> EffectContext<'a> {
             "token_registry entry must map to a CardKind::Token CardData row"
         );
 
+        // `CannotPlayDigimonByEffect` (e.g. BT9-033 Pillomon "Players can't play
+        // Digimon by effects") gates token plays too: a Token is a Digimon (every
+        // registered token is a Digimon token — see `token_registry`), and DCGO
+        // routes `PlayToken` through `CanPlayAsNewPermanent` →
+        // `CanNotPutFieldClass(IsDigimon || IsDigiEgg)`, which blocks Digimon
+        // tokens under this lock. Mirror the hand/trash play-gate
+        // (`Game::play_from_hand_with_cost`) so effect-played tokens are blocked
+        // when the controller carries the modifier. (G-PLAY-TOKEN-FLOODGATE.)
+        if self
+            .game
+            .modifiers
+            .player_has(controller, crate::enums::ModifierType::CannotPlayDigimonByEffect)
+        {
+            return None;
+        }
+
         let slots = self.game.rules.field_slots as usize;
         if self.game.player(controller).battle_area.len() >= slots {
             return None;
@@ -5622,12 +5638,44 @@ impl<'a> EffectContext<'a> {
                 .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();
-        if modifier == ModifierType::ChangeDp
-            && self.game.permanent_is_digimon_for_rules(target)
-            && self.game.effective_dp(target).is_some_and(|dp| dp <= 0)
-        {
-            self.game.delete_permanent_with_effects(target);
+        // NOTE: a DP reduction to ≤0 does NOT delete the Digimon here. Deletion
+        // is a state-based action (rule 17-1-2-2 / `G-NO-GENERAL-ZERO-DP-RULES-CHECK`)
+        // that runs only after the ongoing effect or rule action finishes — see
+        // `Game::run_state_based_rules_check`, invoked at the outermost
+        // `drain_effect_queue` boundary. Deleting inline here would fire
+        // mid-effect and break the judge timing (Q6: Pillomon at 0 DP survives
+        // until Flame Hellscythe resolves; Q13/Q14: ShoeShoemon survives until
+        // Nyabootmon's [When Digivolving] fully resolves).
+    }
+
+    /// Like [`add_modifier`], but carries a structured [`ModifierPayload`]
+    /// (e.g. `SynthIdentity` for `TreatAsDigimon`). Honors the same
+    /// `can_affect_permanent` guard and `*NextTurn` pending-skip semantics.
+    /// Used by the DSL `add_modifier` lowering when a `synth_identity:`
+    /// block is present, and available to raw_rust scripts.
+    pub fn add_modifier_with_payload(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        payload: crate::modifiers::ModifierPayload,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
         }
+        let pending_skips = crate::modifiers::pending_skips_for_install(
+            expiry,
+            self.player,
+            self.game.turn_player(),
+        );
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(modifier, value, expiry, self.player)
+                .with_payload(payload)
+                .with_pending_skips(pending_skips),
+        );
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn add_declarative_modifier(
@@ -5921,7 +5969,57 @@ impl<'a> EffectContext<'a> {
         self.game
             .modifiers
             .grant_keyword(target, keyword, expiry, self.player);
+        self.grant_keyword_triggered_auto_effects(target, keyword, expiry);
         self.game.mark_until_condition_dirty();
+    }
+
+    /// Register the granted keyword's TRIGGERED auto-effect(s) so they fire
+    /// at runtime — not just register the keyword for `has_keyword`.
+    ///
+    /// Passive keywords (Blocker, Reboot, …) are surfaced purely through the
+    /// modifier registry and yield an empty `keyword_to_auto_effect`, so this
+    /// is a no-op for them. Trigger-based keywords (Retaliation, Fortitude,
+    /// Partition, …) carry a plain `process` body in `keyword_to_auto_effect`;
+    /// because `effects_for_card` only synthesizes keyword auto-effects from
+    /// PRINTED + DECLARATIVE-REGISTRY grants (and OnDeletion handlers re-fetch
+    /// effects POST-TRASH, CLAUDE.md rule 25, so any board-position synthesis
+    /// would have vanished by drain time), a runtime modifier grant would
+    /// otherwise never fire. Route each plain-process triggered auto-effect
+    /// through the BOARD-INDEPENDENT granted-triggered store, carrying the
+    /// grant's `expiry`. Replacement-process keywords (Barrier, Evade, …)
+    /// carry no plain `process` and are skipped here.
+    fn grant_keyword_triggered_auto_effects(
+        &mut self,
+        target: PermanentHandle,
+        keyword: Keyword,
+        expiry: Expiry,
+    ) {
+        // Stable identity of the carrier's top card (the granted-triggered body
+        // re-resolves the carrier from `source_permanent` at fire time, so we
+        // only need the keyword's effect template here).
+        let card = match self
+            .game
+            .players
+            .get(target.player as usize)
+            .and_then(|p| p.battle_area.get(target.index as usize))
+        {
+            Some(perm) => perm.top_card().handle(),
+            None => return,
+        };
+        let autos = crate::cards::keyword_effects::keyword_to_auto_effect(keyword, card);
+        for effect in autos {
+            // Only plain-process triggered timings route through the
+            // granted-triggered store. Replacement-process keywords (no plain
+            // `process`) and declarative-only entries are skipped.
+            let Some(process) = effect.process else {
+                continue;
+            };
+            let timing = effect.timing;
+            let process = std::sync::Arc::new(process);
+            self.grant_triggered_effect(target, timing, expiry, move |inner_ctx| {
+                (process)(inner_ctx);
+            });
+        }
     }
 
     pub fn grant_declarative_keyword(
@@ -6232,17 +6330,45 @@ impl<'a> EffectContext<'a> {
     /// cards consuming this primitive bind the moved set as an ordered set
     /// for downstream predicates rather than per-card observation. Treated
     /// as a bulk move; per-card observer fan-out can land as a follow-up.
+    /// Route a card returned "to the deck" to the rules-correct deck. A
+    /// Digi-Egg can NEVER enter the main deck (Comprehensive Rules), so it is
+    /// sent to the Digi-Egg (digitama) deck instead — which still satisfies a
+    /// "send N to the bottom of the deck" cost (judge-quiz Q22). The card
+    /// returns to its OWNER's deck. `to_bottom` selects the bottom (index 0)
+    /// vs the top (`Vec` end, drawn first). G-RETURN-TRASH-DIGI-EGG-ROUTING.
+    ///
+    /// NOTE (audit pending): the permanent-stack returns
+    /// (`Game::return_to_deck` / `return_stack_to_deck`) and reveal-zone returns
+    /// share the same Digi-Egg rule for any egg in a returned digivolution
+    /// stack; those live on a different (game.rs) path and are out of scope for
+    /// this trash→deck fix.
+    fn move_card_to_deck(&mut self, card: crate::card_source::CardSource, to_bottom: bool) {
+        let owner = card.owner;
+        let is_egg = card.card_kind(&self.game.card_data) == CardKind::DigiEgg;
+        let player = self.game.player_mut(owner);
+        let deck = if is_egg {
+            &mut player.digitama_deck
+        } else {
+            &mut player.deck
+        };
+        if to_bottom {
+            deck.insert(0, card);
+        } else {
+            deck.push(card);
+        }
+    }
+
     pub fn return_all_trash_to_deck_bottom(&mut self, player: PlayerId) -> Vec<CardHandle> {
         // Drain trash in order. Each card is appended to the start of its
         // owner's deck (deck bottom = index 0 by convention; deck top =
-        // Vec end, the position drawn from first).
+        // Vec end, the position drawn from first). Digi-Eggs route to the
+        // digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING).
         let drained: Vec<crate::card_source::CardSource> =
             std::mem::take(&mut self.game.player_mut(player).trash);
         let mut handles = Vec::with_capacity(drained.len());
         for card in drained {
             handles.push(card.handle());
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.insert(0, card);
+            self.move_card_to_deck(card, true);
         }
         handles
     }
@@ -6271,8 +6397,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.insert(0, card);
+            self.move_card_to_deck(card, true);
             moved.push(handle);
         }
         moved
@@ -6305,8 +6430,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.push(card);
+            self.move_card_to_deck(card, false);
             moved.push(handle);
         }
         // `moved` was built in reverse; restore selection order for callers.
@@ -6336,9 +6460,9 @@ impl<'a> EffectContext<'a> {
             return false;
         };
         let removed = self.game.player_mut(player).trash.remove(pos);
-        let owner = removed.owner;
-        // Deck top = Vec end (drawn first) per engine convention.
-        self.game.player_mut(owner).deck.push(removed);
+        // Deck top = Vec end (drawn first) per engine convention; a Digi-Egg
+        // routes to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING).
+        self.move_card_to_deck(removed, false);
         true
     }
 
@@ -6823,7 +6947,21 @@ impl<'a> EffectContext<'a> {
                     controller,
                     &target_prompt,
                     optional,
-                    move |g, i| target_filter_for_inner(g, i),
+                    move |g, i| {
+                        if !target_filter_for_inner(g, i) {
+                            return false;
+                        }
+                        // Faithful path (DCGO `CanJogressFromTargetPermanent`,
+                        // PayCost=true): the chosen hand card must be a LEGAL
+                        // DNA-digivolve target for the {anchor, partner} pair —
+                        // one of its printed DNA requirements satisfied by the two
+                        // materials. Only the explicit `ignore_requirements: true`
+                        // escape hatch skips this gate.
+                        if ignore_requirements {
+                            return true;
+                        }
+                        dna_pair_can_reach_hand_card(g, controller, anchor, partner, i)
+                    },
                     move |ctx, hand_idx| {
                         // Final stage: resolve hand_idx to a CardHandle and
                         // delegate to the existing engine primitive.
@@ -6837,11 +6975,20 @@ impl<'a> EffectContext<'a> {
                             Some(c) => c,
                             None => return,
                         };
+                        // Faithful path pays the TARGET's printed DNA cost (DCGO
+                        // `payCost: true` → `condition.cost`); `ignore_requirements`
+                        // keeps the authored fixed `cost`.
+                        let charge = if ignore_requirements {
+                            cost as i32
+                        } else {
+                            dna_pair_cost_for_hand_card(ctx.game, controller, anchor, partner, hand_idx)
+                                .unwrap_or(cost as i32)
+                        };
                         ctx.effect_initiated_dna_digivolve(
                             anchor,
                             partner,
                             card,
-                            cost as i32,
+                            charge,
                             ignore_requirements,
                         );
                     },
@@ -6887,6 +7034,44 @@ impl<'a> EffectContext<'a> {
     }
 }
 
+/// Can the `{anchor, partner}` battle-area pair legally DNA-digivolve into the
+/// hand card at `hand_idx` (one of its printed DNA requirements satisfied by the
+/// two materials)? Used by `may_dna_digivolve_now`'s faithful (requirement-checked)
+/// path to mirror DCGO `CardSource.CanJogressFromTargetPermanent`.
+pub(crate) fn dna_pair_can_reach_hand_card(
+    game: &Game,
+    controller: PlayerId,
+    anchor: PermanentHandle,
+    partner: PermanentHandle,
+    hand_idx: usize,
+) -> bool {
+    dna_pair_cost_for_hand_card(game, controller, anchor, partner, hand_idx).is_some()
+}
+
+/// The printed DNA-digivolve memory cost the `{anchor, partner}` pair would pay to
+/// DNA-digivolve into the hand card at `hand_idx`, or `None` if the pair does not
+/// satisfy any of that card's DNA requirements. Mirrors DCGO `condition.cost`.
+pub(crate) fn dna_pair_cost_for_hand_card(
+    game: &Game,
+    controller: PlayerId,
+    anchor: PermanentHandle,
+    partner: PermanentHandle,
+    hand_idx: usize,
+) -> Option<i32> {
+    let hand_card = game.player(controller).hand.get(hand_idx)?;
+    let meta = game.card_data.get(hand_card.data_index)?;
+    let anchor_perm = game
+        .player(anchor.player)
+        .battle_area
+        .get(anchor.index as usize)?;
+    let partner_perm = game
+        .player(partner.player)
+        .battle_area
+        .get(partner.index as usize)?;
+    crate::dna_digivolve::matching_dna_cost(meta, anchor_perm, partner_perm, &game.card_data)
+        .map(|c| c.memory_cost as i32)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -6929,5 +7114,141 @@ mod tests {
         let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
         let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
         assert!(ctx.play_token(0, "no-such-token-lol").is_none());
+    }
+
+    // ── may_dna_digivolve_now faithful-path gating (G-FIX-BT12-EOT-DNA-PAYCOST) ──
+    //
+    // The EoT DNA-digivolve effects (BT12-021 Veemon / BT12-047 Wormmon) are a
+    // NORMAL DNA digivolve: DCGO `CanJogressFromTargetPermanent(.., PayCost:true)`
+    // requires the target's printed DNA requirements be met by the {anchor,
+    // partner} pair AND charges the target's printed DNA cost. These tests pin
+    // the gating/cost helpers that `may_dna_digivolve_now` now uses when
+    // `ignore_requirements: false` — proving the pair must be DNA-legal and the
+    // printed DNA cost (not 0) is what gets paid.
+    #[test]
+    fn dna_pair_gating_requires_a_legal_dna_route_and_returns_printed_cost() {
+        use crate::card_data::{DnaCost, DnaRequirement};
+        use crate::debug_runner::{make_test_card, DebugRunner};
+        use crate::enums::{CardColor, CardKind};
+
+        fn mat(id: &str, color: CardColor) -> CardData {
+            let mut c = make_test_card(id, id);
+            c.card_kind = CardKind::Digimon;
+            c.level = Some(4);
+            c.colors = vec![color];
+            c.dp = Some(4000);
+            c
+        }
+        fn req(color: CardColor, level: u8) -> DnaRequirement {
+            DnaRequirement {
+                level,
+                card_colors: vec![color],
+                name_contains: String::new(),
+                text_contains: String::new(),
+            }
+        }
+        // RESULT digivolves via DNA from {Blue Lv.4 + Green Lv.4} for cost 2.
+        let mut result = make_test_card("RESULT-DNA", "ResultDna");
+        result.card_kind = CardKind::Digimon;
+        result.level = Some(5);
+        result.dna_costs = vec![DnaCost {
+            requirement1: req(CardColor::Blue, 4),
+            requirement2: req(CardColor::Green, 4),
+            memory_cost: 2,
+        }];
+
+        let mut runner = DebugRunner::builder()
+            .add_card(mat("MAT-B", CardColor::Blue))
+            .add_card(mat("MAT-G", CardColor::Green))
+            .add_card(mat("MAT-B2", CardColor::Blue))
+            .add_card(result)
+            .hand(0, &["RESULT-DNA"])
+            .memory(10)
+            .start();
+        let blue = runner.place_on_field(0, "MAT-B", Some(0));
+        let green = runner.place_on_field(0, "MAT-G", Some(0));
+        let blue2 = runner.place_on_field(0, "MAT-B2", Some(0));
+
+        // Legal pair (Blue + Green) → reachable, and the charged cost is the
+        // target's PRINTED DNA cost (2), NOT the old free-of-charge 0.
+        assert!(
+            dna_pair_can_reach_hand_card(&runner.game, 0, blue, green, 0),
+            "Blue+Green must satisfy RESULT's DNA requirement"
+        );
+        assert_eq!(
+            dna_pair_cost_for_hand_card(&runner.game, 0, blue, green, 0),
+            Some(2),
+            "the faithful path pays RESULT's printed DNA cost (2), not 0"
+        );
+
+        // Illegal pair (Blue + Blue) → no valid DNA route; the EoT effect must
+        // NOT offer RESULT as a target (the over-permissive bug this fixes).
+        assert!(
+            !dna_pair_can_reach_hand_card(&runner.game, 0, blue, blue2, 0),
+            "Blue+Blue does NOT satisfy RESULT's Blue+Green DNA requirement — must be rejected"
+        );
+        assert_eq!(
+            dna_pair_cost_for_hand_card(&runner.game, 0, blue, blue2, 0),
+            None,
+            "no cost for an illegal DNA pair"
+        );
+    }
+
+    /// G-PLAY-TOKEN-FLOODGATE: a Digimon Token is a Digimon, so an effect that
+    /// plays one must be blocked while the controller carries
+    /// `CannotPlayDigimonByEffect` (BT9-033 Pillomon) — matching DCGO's
+    /// `CanPlayAsNewPermanent` → `CanNotPutFieldClass(IsDigimon)` gate.
+    #[test]
+    fn play_token_blocked_by_cannot_play_digimon_by_effect() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        game.modifiers.add_player_modifier(
+            0,
+            crate::modifiers::PlayerModifierEntry::simple(
+                crate::enums::ModifierType::CannotPlayDigimonByEffect,
+                0,
+                crate::enums::Expiry::Permanent,
+                None,
+                0,
+            ),
+        );
+        let before = game.players[0].battle_area.len();
+        let played = {
+            let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+            ctx.play_token(0, "familiar")
+        };
+        assert!(
+            played.is_none(),
+            "token play must be blocked under CannotPlayDigimonByEffect"
+        );
+        assert_eq!(
+            game.players[0].battle_area.len(),
+            before,
+            "no token permanent is created when the floodgate is installed"
+        );
+    }
+
+    /// No-op control: without the floodgate, the same token play succeeds. Pins
+    /// that the gate (not some unrelated failure) is what blocks above.
+    #[test]
+    fn play_token_allowed_without_floodgate() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        let before = game.players[0].battle_area.len();
+        let played = {
+            let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+            ctx.play_token(0, "familiar")
+        };
+        assert!(
+            played.is_some(),
+            "token spawns normally when no floodgate is installed"
+        );
+        assert_eq!(
+            game.players[0].battle_area.len(),
+            before + 1,
+            "one Familiar Token permanent is created"
+        );
     }
 }

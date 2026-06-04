@@ -54,7 +54,12 @@ effects:
     active_when: { all_turns: true }
     summary: "Delete 1 Token to prevent leaving"
     process:
-      - select_own_permanent:
+      # Card text: "by deleting 1 Token" — no owner qualifier. Medusamon gifts
+      # the Petrification Token to the OPPONENT (the clause above), so the shield
+      # must be able to delete a token in EITHER battle area, not just our own.
+      # DCGO EX11_012.cs uses CanSelectPermanentCondition(p) => p.IsToken with
+      # selectPlayer: card.Owner — the controller may delete any token.
+      - select_any_permanent:
           bind_as: cost_token
           filter: { kind: token }
           optional: true

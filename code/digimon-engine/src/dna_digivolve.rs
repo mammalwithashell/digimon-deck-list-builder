@@ -165,6 +165,15 @@ impl Game {
         card: &CardSource,
         base_handle: PermanentHandle,
     ) -> Option<DigivolveRouteMatch> {
+        // Q3 (G-DIGIVOLVE-TARGET-RESTRICTION): a base carrying a
+        // `CanOnlyDigivolveInto` restriction (e.g. EX10-020 "can only digivolve
+        // into [Apocalymon]") offers NO digivolve route into a non-matching card.
+        // This is the single consult point for the digivolve action mask, the
+        // Blast counter path, and hand-digivolve execution (all route through
+        // here). No-op when no restriction is installed (the common case).
+        if self.digivolve_target_blocked_by_restriction(base_handle, card) {
+            return None;
+        }
         let base = self
             .players
             .get(base_handle.player as usize)?
@@ -426,6 +435,21 @@ impl Game {
             .map(|p| p.battle_area.len())
             .unwrap_or(0);
         (0..battle_len).filter_map(move |field_idx| {
+            // Q18 (G-BLAST-DIGIVOLVE-IMMUNITY): a field Digimon immune to its own
+            // controller's Digimon effects cannot be the base of a <Blast DNA
+            // Digivolve> — Blast DNA digivolve is a Digimon effect. (Quantumon
+            // LM-020: immune to ALL Digimon effects incl. its own.)
+            let base = crate::permanent::PermanentHandle {
+                player,
+                index: field_idx as u8,
+            };
+            if self.permanent_is_unaffected_by_effect(
+                base,
+                player,
+                crate::enums::EffectSourceKind::Digimon,
+            ) {
+                return None;
+            }
             self.valid_blast_dna_hand_materials_for_hand_card(player, result_hand_index, field_idx)
                 .next()
                 .map(|_| field_idx as u16)
@@ -1103,5 +1127,109 @@ mod tests_stacking {
 
         let valid = get_valid_dna_second_targets(&data[0], 1, &battle, &data);
         assert_eq!(valid, vec![0, 2], "first idx (1) must be excluded");
+    }
+}
+
+#[cfg(test)]
+mod tests_q3_digivolve_target_restriction {
+    //! Q3 (`G-DIGIVOLVE-TARGET-RESTRICTION`): a base permanent carrying a
+    //! `CanOnlyDigivolveInto` modifier offers a normal-digivolve route ONLY into
+    //! a card whose name matches the allowed name (DCGO `CanNotDigivolveStaticSelfEffect`,
+    //! EX10-020 Puppetmon "[All Turns] this Digimon can only digivolve into [Apocalymon]").
+    use crate::card_data::{CardData, EvoCost};
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::enums::{CardColor, CardKind, Expiry, ModifierType};
+    use crate::modifiers::{ModifierEntry, ModifierPayload};
+
+    fn lv4_base() -> CardData {
+        let mut c = make_test_card("BASE", "Base");
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(4);
+        c.dp = Some(4000);
+        c.colors = vec![CardColor::Red];
+        c
+    }
+
+    fn lv5_evo(id: &str, name: &str) -> CardData {
+        let mut c = make_test_card(id, name);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(5);
+        c.dp = Some(6000);
+        c.colors = vec![CardColor::Red];
+        c.evo_costs = vec![EvoCost {
+            card_color: CardColor::Red as u8,
+            level: 4,
+            memory_cost: 0,
+        }];
+        c
+    }
+
+    #[test]
+    fn can_only_digivolve_into_blocks_nonmatching_name() {
+        let mut r = DebugRunner::builder()
+            .add_card(lv4_base())
+            .add_card(lv5_evo("ALLOWED", "Apocalymon"))
+            .add_card(lv5_evo("OTHER", "Megadramon"))
+            .hand(0, &["ALLOWED", "OTHER"])
+            .memory(10)
+            .start();
+        let base = r.place_on_field(0, "BASE", Some(0));
+
+        // Control: both Lv4→Lv5 routes are valid BEFORE any restriction.
+        assert!(
+            r.game
+                .normal_digivolve_route_for_hand_card(0, 0, base)
+                .is_some(),
+            "control: Apocalymon digivolve route is valid"
+        );
+        assert!(
+            r.game
+                .normal_digivolve_route_for_hand_card(0, 1, base)
+                .is_some(),
+            "control: Megadramon digivolve route is valid"
+        );
+
+        // Install "[All Turns] this Digimon can only digivolve into [Apocalymon]".
+        r.game.modifiers.add(
+            base,
+            ModifierEntry::simple(ModifierType::CanOnlyDigivolveInto, 0, Expiry::Permanent, 0)
+                .with_payload(ModifierPayload::Name {
+                    value: "Apocalymon".to_string(),
+                    base: false,
+                }),
+        );
+
+        // Now only the Apocalymon route survives; the non-matching route is gone.
+        assert!(
+            r.game
+                .normal_digivolve_route_for_hand_card(0, 0, base)
+                .is_some(),
+            "Apocalymon (allowed name) must still be a valid digivolve target"
+        );
+        assert!(
+            r.game
+                .normal_digivolve_route_for_hand_card(0, 1, base)
+                .is_none(),
+            "Megadramon must be BLOCKED — base may only digivolve into [Apocalymon]"
+        );
+    }
+
+    #[test]
+    fn no_restriction_is_a_noop() {
+        // Sanity: a base WITHOUT the modifier offers the route normally (the
+        // common case — existing cards are unaffected by the new consult).
+        let mut r = DebugRunner::builder()
+            .add_card(lv4_base())
+            .add_card(lv5_evo("OTHER", "Megadramon"))
+            .hand(0, &["OTHER"])
+            .memory(10)
+            .start();
+        let base = r.place_on_field(0, "BASE", Some(0));
+        assert!(
+            r.game
+                .normal_digivolve_route_for_hand_card(0, 0, base)
+                .is_some(),
+            "no CanOnlyDigivolveInto modifier ⇒ digivolve route unaffected"
+        );
     }
 }

@@ -5,7 +5,7 @@
 
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::debug_runner::{DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{Keyword, ModifierType};
+use digimon_engine::enums::{Keyword, ModifierType, PlaySource};
 
 const ST1_IDS: [&str; 16] = [
     "ST1-01", "ST1-02", "ST1-03", "ST1-04", "ST1-05", "ST1-06", "ST1-07", "ST1-08",
@@ -82,8 +82,11 @@ fn st1_inherited_dp_and_security_attack_effects_apply_to_carriers() {
     );
     assert_eq!(
         runner.game.dynamic_security_attack_aura_bonus(four_sources),
-        Some(2),
-        "ST1-11 grants SecurityAttackPlus +1 for every 2 digivolution cards"
+        Some(3),
+        "ST1-11's security_attack_fn is BASE-INCLUSIVE: it returns the total base \
+         check count 1 + floor(4/2) = 3 (default base-1 + the +1-per-2-cards bonus), \
+         not a bare delta. Flat <Security A.> keyword deltas (e.g. ST1-07's inherited \
+         +1) are summed on top in current_security_strike."
     );
 }
 
@@ -236,4 +239,126 @@ fn st1_16_gaia_force_selects_and_deletes_one_opponent_digimon() {
         .expect("delete selected Digimon");
     assert_eq!(runner.battle_area_size(1), 0);
     assert_eq!(runner.trash_size(1), 1);
+}
+
+fn st1_resolve_pending(runner: &mut DebugRunner) {
+    for _ in 0..8 {
+        if runner.pending_selection().is_none() {
+            return;
+        }
+        runner.auto_resolve().expect("pending selection resolves");
+    }
+}
+
+#[test]
+fn st1_08_when_digivolving_buffs_one_own_digimon() {
+    // Coverage for ST1-08 Garudamon [When Digivolving] "1 of your Digimon gets
+    // +3000 DP for the turn" — a mandatory single-target buff that expires EOT.
+    let mut runner = st1_builder()
+        .memory(10)
+        .hand(0, &["ST1-08"])
+        .deck(0, &["ST1-02", "ST1-02"])
+        .start();
+    let base = runner.place_on_field(0, "ST1-05", Some(0));
+
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve));
+
+    let prompt = runner
+        .pending_selection()
+        .expect("ST1-08 [When Digivolving] installs a +3000 DP target selection");
+    assert!(
+        !prompt.is_optional,
+        "ST1-08 buffs exactly 1 of your Digimon and must not be declinable"
+    );
+    assert_eq!(
+        prompt.valid_action_ids.len(),
+        1,
+        "the digivolved Garudamon is the only own Digimon to target"
+    );
+    let pick = prompt.valid_action_ids[0];
+    runner
+        .execute_action(0, pick)
+        .expect("apply +3000 to the only own Digimon");
+
+    assert_eq!(
+        runner.effective_dp(base),
+        Some(10_000),
+        "Garudamon (7000) gains +3000 DP for the turn"
+    );
+    runner.end_turn();
+    assert_eq!(
+        runner.effective_dp(base),
+        Some(7_000),
+        "the +3000 DP expires at the end of the turn"
+    );
+}
+
+#[test]
+fn st1_12_security_plays_tamer_for_free() {
+    // Coverage for ST1-12 Tai Kamiya [Security] "Play this card without paying
+    // the cost" — flips from the security stack into the battle area for free.
+    let mut runner = st1_builder().memory(10).security(1, &["ST1-12"]).start();
+    let attacker = runner.place_on_field(0, "ST1-03", Some(0));
+
+    runner.attack_player(attacker, 1, false);
+    st1_resolve_pending(&mut runner);
+
+    assert!(
+        runner.game.players[1]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "ST1-12"),
+        "ST1-12 [Security] plays the Tamer into the battle area without paying cost"
+    );
+}
+
+/// ST-1 Gaia Red starter-deck fixture: exact official 54-card composition
+/// (4 Digi-Eggs + 50 main). Mirrors `st4_deck_library_recipe_has_canonical_counts`.
+#[test]
+fn st1_deck_library_recipe_has_canonical_counts() {
+    let library: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../../data/deck_library.json"))
+            .expect("deck_library.json parses");
+    let entry = &library["archetypes"]["ST-1 Gaia Red"]["decklists"][0];
+    assert_eq!(entry["deck_id"], "starter_st1_gaia_red");
+
+    let cards: Vec<String> = serde_json::from_str(
+        entry["decklist"]
+            .as_str()
+            .expect("decklist is encoded JSON"),
+    )
+    .expect("decklist parses");
+    let mut counts = std::collections::BTreeMap::<String, usize>::new();
+    for card in &cards {
+        *counts.entry(card.clone()).or_default() += 1;
+    }
+
+    assert_eq!(cards.len(), 54);
+    assert_eq!(counts.get("ST1-01"), Some(&4));
+    let main_count: usize = cards.iter().filter(|id| id.as_str() != "ST1-01").count();
+    assert_eq!(main_count, 50);
+
+    let expected = [
+        ("ST1-01", 4),
+        ("ST1-02", 4),
+        ("ST1-03", 4),
+        ("ST1-04", 4),
+        ("ST1-05", 4),
+        ("ST1-06", 4),
+        ("ST1-07", 2),
+        ("ST1-08", 4),
+        ("ST1-09", 4),
+        ("ST1-10", 2),
+        ("ST1-11", 2),
+        ("ST1-12", 4),
+        ("ST1-13", 4),
+        ("ST1-14", 4),
+        ("ST1-15", 2),
+        ("ST1-16", 2),
+    ];
+    for (card_id, count) in expected {
+        assert_eq!(counts.get(card_id), Some(&count), "{card_id} count");
+    }
 }

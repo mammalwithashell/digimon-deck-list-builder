@@ -15,6 +15,21 @@ alt_paths:
     cost: 0
     stacks_unsuspended: true
 
+  # ─── [Assembly] −6 [WarGreymon] x [MetalGarurumon] ───────────────────────────
+  #
+  # Printed keyword (DCGO AD1_025.cs:214-255 — `AddAssemblyConditionClass`,
+  # elements [WarGreymon] ×1 + [MetalGarurumon] ×1, `reduceCost: 6`): play
+  # Omnimon from hand by placing 1 [WarGreymon] + 1 [MetalGarurumon] from the
+  # TRASH under it, reducing the play cost by 6 (15 → 9). The materials are
+  # surfaced per element (RL-visible, no auto-select) and placed at the
+  # digivolution-stack bottom. `cost:` here is the REDUCTION amount (D5),
+  # distinct from `dna_digivolve`'s absolute cost above. G-ASSEMBLY-PLAY-EXECUTION.
+  - kind: assembly
+    materials:
+      - { name_contains: "WarGreymon", zones: [trash], stack_under: true }
+      - { name_contains: "MetalGarurumon", zones: [trash], stack_under: true }
+    cost: 6
+
 effects:
   - kind: grant_keyword
     keyword: Raid

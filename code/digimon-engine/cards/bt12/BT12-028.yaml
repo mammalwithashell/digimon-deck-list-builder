@@ -72,12 +72,17 @@ effects:
                 of: opponent
                 zone: battle_area
                 max: 2
+                # Card text: "2 of your opponent's Digimon ... can't attack"
+                # (mandatory) — affect min(2, available); cannot stop after 1
+                # when 2 match (FAQ MP-31), still affects the 1 when only 1
+                # matches (FAQ MP-30). DCGO BT12_028.cs uses canEndNotMax: false.
+                clamp_to_available: true
                 filter:
                   all_of:
                     - kind: digimon
                     - stack_size_lte: 1
                 bind_as: no_digi_targets
-                prompt: "Select up to 2 opponent Digimon with no digivolution cards"
+                prompt: "Select 2 opponent Digimon with no digivolution cards"
                 optional_zero: false
             - per_selected:
                 selection: no_digi_targets

@@ -1,0 +1,167 @@
+# BT13-020 ShineGreymon: Burst Mode — Digimon, Lv.7, Red/Yellow, DP 15000,
+# Cost 15, Light Dragon.
+#
+# Printed card text (BT13-020.json):
+#
+#   [When Digivolving] You may play 1 [Marcus Damon] from your hand without
+#   paying its cost. For the turn, treat the Tamer played with this effect as a
+#   12000 DP Digimon with ＜Rush＞ (This Digimon can attack the turn it comes
+#   into play.), and it cannot digivolve.
+#   [Your Turn] [Once Per Turn] When one of your Tamers becomes suspended,
+#   Trash 1 card from the top of your opponent's security stack.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT13/Red/BT13_020.cs
+#
+# Clause layout:
+#   Clause 1: [When Digivolving]  — optional free-play of a [Marcus Damon] from
+#                                   hand; on the just-played Tamer install (for
+#                                   the turn) TreatAsDigimon(12000 DP) +
+#                                   CannotDigivolve + <Rush>.
+#   Clause 2: [Your Turn][OPT]    — observer of own-Tamer suspend; trash the top
+#                                   of the opponent's security stack.
+
+card: BT13-020
+name: "ShineGreymon: Burst Mode"
+kind: digimon
+level: 7
+color: [red, yellow]
+cost: 15
+dp: 15000
+traits: ["Light Dragon"]
+attribute: Vaccine
+
+# ─── Alternate Digivolution Paths ────────────────────────────────────────────
+#
+# Printed alt-path text (BT13-020.json xros_req):
+#   [Burst Digivolve] [ShineGreymon]: By returning 1 [Marcus Damon] to hand,
+#   cost 0
+#   At the end of the burst digivolution turn, trash this Digimon's top card.
+#
+# DCGO (BT13_020.cs, EffectTiming.None, AddBurstDigivolutionConditionClass):
+#   - GetBurstDigivolution returns a BurstDigivolutionCondition with:
+#       digimonCondition: TopCard.CardNames.Contains("ShineGreymon") on the
+#         owner's field (the named Lv.6 prior form) — NOT any Lv.6.
+#       tamerCondition:   a Marcus Damon Tamer on the owner's battle area that
+#         can be returned to hand (selectTamerMessage "1 [Marcus Damon]").
+#       cost: 0.
+#   The "trash this Digimon's top card at end of burst turn" is the Burst Mode
+#   framework teardown that the engine runs from on_burst_turn_end.
+#
+# Modeled exactly on the canonical Burst Mode exemplar
+# `cards/_examples/BT13-060.yaml` (Rosemon: Burst Mode) — the structurally
+# identical sibling:
+#   - The standard named-prior-form digivolve path (from the named Lv.6, cost
+#     5). Burst Mode digivolves from its named Lv.6 only, not "any Lv.6"; the
+#     evo_costs metadata does not carry the name restriction, so this explicit
+#     `from: { level_eq: 6, name_is: "ShineGreymon" }` path encodes it (same
+#     precedent as BT13-060's explicit Rosemon Lv.6 digivolve path).
+#   - The burst_digivolve path: cost 0, extra_cost returns 1 [Marcus Damon] to
+#     hand, on_burst_turn_end trashes this Digimon's top source.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, name_is: "ShineGreymon" }
+    cost: 5
+  - kind: burst_digivolve
+    from: { level_eq: 6, name_is: "ShineGreymon" }
+    cost: 0
+    extra_cost:
+      - select_own_permanent:
+          bind_as: marcus
+          filter: { kind: tamer, name_is: "Marcus Damon" }
+          prompt: "Return Marcus Damon to hand"
+      - return_to_hand: { target: marcus }
+    on_burst_turn_end:
+      - trash_top_source: { target: self }
+
+effects:
+  # ─── Clause 1 — [When Digivolving] play a Marcus Damon, treat it as a 12000 DP
+  #     Rush Digimon that can't digivolve, for the turn ───────────────────────
+  #
+  # DCGO (BT13_020.cs, OnEnterFieldAnyone):
+  #   - SelectHandEffect with canNoSelect: true over hand cards whose
+  #     CardNames contain "Marcus Damon" and which can be played as a new
+  #     permanent without paying cost → "you may play 1 [Marcus Damon]".
+  #   - PlayPermanentCards(payCost: false) → free play.
+  #   - On the played permanent: BecomeDigimonThatCantDigivolve(DP: 12000,
+  #     UntilEachTurnEnd) then GainRush(UntilEachTurnEnd).
+  #
+  # DSL mapping:
+  #   - `select_hand` (optional) filtered to a Tamer named "Marcus Damon"
+  #     surfaces the "you may" decline to the action space. When declined (or
+  #     no Marcus in hand) the binding `marcus_pick` is absent.
+  #   - `play_from_hand_free` with `hand_index: marcus_pick` plays it free and
+  #     `bind_as: marcus_played` captures the just-played permanent handle
+  #     (G-PLAY-FROM-HAND-FREE-BIND-AS). With the pick absent this step is a
+  #     silent no-op, so the modifier steps below also no-op (their binding
+  #     target never resolves).
+  #   - `add_modifier: TreatAsDigimon` with `synth_identity { dp: 12000 }`
+  #     (kind defaults to Digimon) lowers to ModifierPayload::SynthIdentity —
+  #     "treat as a 12000 DP Digimon". `add_modifier: CannotDigivolve` is the
+  #     "it cannot digivolve" clause; `grant_keyword: Rush` is the "<Rush>"
+  #     clause. All three expire end_of_turn = "For the turn".
+  - when: when_digivolving
+    summary: "[When Digivolving] may free-play a Marcus Damon; treat it as a 12000 DP Rush Digimon that can't digivolve, for the turn"
+    process:
+      - select_hand:
+          of: you
+          bind_as: marcus_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - name_contains: "Marcus Damon"
+          prompt: "You may play 1 [Marcus Damon] from your hand without paying its cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: marcus_pick
+          bind_as: marcus_played
+      - add_modifier:
+          target: marcus_played
+          modifier: TreatAsDigimon
+          value: 0
+          expiry: end_of_turn
+          synth_identity:
+            dp: 12000
+      - add_modifier:
+          target: marcus_played
+          modifier: CannotDigivolve
+          value: 0
+          expiry: end_of_turn
+      - grant_keyword:
+          target: marcus_played
+          keyword: Rush
+          expiry: end_of_turn
+
+  # ─── Clause 2 — [Your Turn][OPT] on own Tamer suspend, trash opp security top ─
+  #
+  # DCGO (BT13_020.cs, OnTappedAnyone):
+  #   - CanUseCondition: IsExistOnBattleArea(card) && IsOwnerTurn(card) &&
+  #     CanTriggerWhenPermanentSuspends(PermanentCondition) where
+  #     PermanentCondition = the suspending permanent is on the owner's battle
+  #     area AND IsTamer.
+  #   - maxUsableCount: 1 → [Once Per Turn].
+  #   - ActivateCoroutine: IDestroySecurity(card.Owner.Enemy, count: 1,
+  #     fromTop: true) → trash the top card of the opponent's security stack.
+  #
+  # DSL mapping mirrors BT13-012 clause 2's own-Tamer-suspend observer:
+  #   - `when: on_suspend`, gated `active_when: { your_turn: true }` ([Your
+  #     Turn]) with `event_target_owner: you` + `event_target_kind: tamer`
+  #     ("one of your Tamers becomes suspended").
+  #   - `once_per_turn: true` for [Once Per Turn] (G-OPT-TRIGGERED resolved —
+  #     triggered-effect OPT enforcement is live).
+  #   - This effect is NOT "you may" — the trash is mandatory once the trigger
+  #     condition is met, so the clause is not `optional`.
+  #   - `trash_top_security: { of: opponent }` is the BT13-012-sibling /
+  #     BT24-018 / AD1-025 verb for "trash 1 card from the top of your
+  #     opponent's security stack" (EffectContext::trash_top_security).
+  - when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+    summary: "[Your Turn][OPT] On own Tamer suspending, trash the top of the opponent's security stack"
+    process:
+      - trash_top_security: { of: opponent }

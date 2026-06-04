@@ -106,6 +106,13 @@ export interface PendingSelection {
   isOptional: boolean;
   prompt: string;
   selectingPlayer: number;
+  /**
+   * Engine `SelectionKind` (e.g. `OwnField`, `OppField`, `Hand`, `Trash`).
+   * For field selections it is the ONLY signal of which player's field the
+   * `validIndices` (`OWN_FIELD_START + slot`) refer to — the engine encodes
+   * both sides in the same id range. See `utils/selectionTargets.ts`.
+   */
+  kind?: string;
   effectChoices?: EffectChoice[];
   keywordPrompt?: KeywordPrompt;
 }

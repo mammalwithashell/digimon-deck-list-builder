@@ -1,0 +1,37 @@
+# BT21-004 Koromon — Digi-Egg (In-Training), Lv.2, Yellow, Cost 0, no DP.
+# Traits: Lesser, Hero.
+#
+# Printed card text (BT21-004.json) — INHERITED ONLY (DCGO SetIsInheritedEffect):
+#   Inherited: [Your Turn] [Once Per Turn] When any of your yellow or red
+#   Tamers suspend, ＜Draw 1＞ (Draw 1 card from your deck.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Yellow/BT21_004.cs
+#   - OnTappedAnyone, IsInheritedEffect, IsOwnerTurn, maxUsableCount: 1,
+#     PermanentCondition = own Tamer whose colors include Yellow or Red →
+#     DrawClass(1). isOptional: false (no "may" — mandatory draw).
+#
+# Single inherited clause; no main-deck effect; egg has no DP. Sibling of
+# EX4-005's inherited clause (same predicate triple).
+
+card: BT21-004
+name: Koromon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Lesser, Hero]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [yellow, red]
+    summary: "[Your Turn][Once Per Turn] When own yellow/red Tamer suspends, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

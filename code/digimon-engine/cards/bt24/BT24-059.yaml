@@ -1,0 +1,160 @@
+card: BT24-059
+name: Sharkmon
+kind: digimon
+level: 5
+color: [black, blue]
+cost: 7
+dp: 7000
+traits: [Cyborg, Titan, TS]
+attribute: Virus
+
+# ─── Printed card text (data/cards.json — verbatim) ──────────────────────────
+#
+# [On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon.
+#   (Trash the top card. You can't trash past level 3 cards.)
+# [On Deletion] Reveal the top 3 cards of your deck. You may play 1 play cost 7
+#   or lower [TS] trait card suspended among them without paying the cost.
+#   Trash the rest.
+#
+# Inherited Effect:
+#   [When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this
+#   Digimon's bottom digivolution card, it unsuspends.
+#
+# Digivolution requirement (xros_req): "[Digivolve] Lv.4 w/[Aqua] or
+#   [Sea Animal] in any trait or w/[TS] trait: Cost 3"
+#
+# ─── Source-priority audit ───────────────────────────────────────────────────
+#
+# 1. Printed text governs.
+# 2. DCGO BT24/Black/BT24_059.cs confirms behavior:
+#    - Shared On Play / When Digivolving body → SelectPermanent(opponent Digimon)
+#      → IDegeneration(selected, 1) [De-Digivolve 1]. (DCGO gates the cost-3
+#      digivolve on HasTSTraits || HasAquaTraits; the printed xros_req also
+#      lists [Sea Animal], so we follow the printed text and accept all three.)
+#    - On Deletion → SimplifiedRevealDeckTopCardsAndSelect(3) with a single
+#      bucket filtering (IsDigimon || IsTamer) && EqualsTraits("TS") &&
+#      GetCostItself <= 7, canNoSelect:true; then PlayPermanentCards(payCost:
+#      false, isTapped: true) — i.e. play SUSPENDED — and trash the remainder.
+#    - Inherited [When Attacking][OPT] → SelectPermanent(own OTHER Digimon)
+#      → IPlacePermanentToDigivolutionCards(selected → this) [whole permanent as
+#      bottom source]; if DigivolutionCards.Contains(placedCard) → IUnsuspend
+#      (this Digimon).
+#
+# ─── play-from-reveal SUSPENDED resolution ───────────────────────────────────
+#
+# `play_from_revealed_free` has no `suspended`/`tapped` flag, but it does expose
+# `bind_as` to bind the resulting permanent. The faithful path is therefore:
+#   - play_from_revealed_free: { card: ts_pick, bind_as: ts_play }
+#   - suspend: { target: ts_play }
+# Nothing stack-changing happens between play and suspend, so the provenance-
+# bound handle resolves to the just-played permanent and it enters suspended.
+
+alt_paths:
+  # Standard Lv.4 black digivolve (evo_costs: Lv.4 black, cost 4).
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - color_is: black
+    cost: 4
+  # Reduced cost-3 digivolve off a Lv.4 with [Aqua] or [Sea Animal] or [TS].
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_has: Aqua
+            - trait_has: Sea Animal
+            - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── Clause A — [On Play][When Digivolving] De-Digivolve 1 ──────────────────
+  #
+  # Shared body: choose 1 opponent Digimon and De-Digivolve 1 (trash its top
+  # source, stopping at level 3). Mandatory (no "you may"); installs no
+  # selection when the opponent has no Digimon.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] De-Digivolve 1 one opponent Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigivolve_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+      - de_digivolve:
+          target: dedigivolve_target
+          amount: 1
+          stop_at_level: 3
+
+  # ─── Clause B — [On Deletion] reveal 3, play 1 [TS] suspended, trash rest ───
+  #
+  # The reveal + trash are mandatory; only the play is optional ("You may
+  # play"). `select_reveal_buckets` (not `select_reveal`) keeps the trash tail
+  # running even when the player declines (min:0). Eligible cards: Digimon OR
+  # Tamer with the [TS] trait and play cost <= 7. The picked card is played for
+  # free and then SUSPENDED.
+  - when: on_deletion
+    summary: "[On Deletion] Reveal top 3; you may play 1 [TS] cost<=7 card suspended free; trash rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: ts_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - any_of:
+                      - kind: digimon
+                      - kind: tamer
+                  - trait_has: TS
+                  - play_cost_lte: 7
+          prompt: "Play 1 play cost 7 or lower [TS] trait card suspended without paying the cost"
+      - play_from_revealed_free: { of: you, card: ts_pick, bind_as: ts_play }
+      - suspend: { target: ts_play }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  # ─── Clause C — Inherited [When Attacking][OPT] place source → unsuspend ────
+  #
+  # "By placing 1 of your other Digimon as this Digimon's bottom digivolution
+  # card, it unsuspends." `select_own_permanent` with `other: true` excludes the
+  # carrier permanent (DCGO: permanent != card.PermanentOfThisCard()).
+  # `place_as_bottom_source` with `source: { permanent: ... }` moves the whole
+  # permanent (top card + its own sources) under the carrier — this is the
+  # token-safe path (Q12: a Petrification token placed as a source counts).
+  # The unsuspend then fires on the carrier (`target: source`). In every
+  # realizable game state the placement of a selected valid permanent succeeds,
+  # so the unsuspend follows it (DCGO's DigivolutionCards.Contains gate is a
+  # post-success safety check that holds here).
+  - scope: inherited
+    when: when_attacking
+    optional: true
+    once_per_turn: true
+    summary: "[When Attacking][OPT] Place 1 of your other Digimon as this Digimon's bottom source; it unsuspends"
+    process:
+      - select_own_permanent:
+          bind_as: place_source
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "Place 1 of your other Digimon as this Digimon's bottom digivolution card"
+      # Gate placement + unsuspend on a Digimon actually being chosen — mirrors
+      # DCGO's `DigivolutionCards.Contains(placedCard)` post-placement check.
+      # The non-optional select binds `place_source` only when a valid OTHER
+      # Digimon exists; with none, the step skips and the unsuspend must NOT
+      # fire ("By placing… it unsuspends" — no placement ⇒ no unsuspend).
+      - if:
+          condition: { binding_present: place_source }
+          then:
+            - place_as_bottom_source:
+                source: { permanent: place_source }
+                target: source
+            - unsuspend: { target: source }

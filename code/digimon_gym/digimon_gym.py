@@ -1,6 +1,7 @@
 """DigimonEnv: Gymnasium-compliant RL environment for the Digimon TCG.
 
-Wraps HeadlessGame to provide a standard Gymnasium interface with:
+Wraps the Rust `RustHeadlessGame` runner to provide a standard Gymnasium
+interface with:
 - Proper observation_space and action_space definitions
 - Gymnasium v1.0 API (5-tuple step, 2-tuple reset)
 - Dense reward shaping (security delta, board presence)
@@ -8,13 +9,11 @@ Wraps HeadlessGame to provide a standard Gymnasium interface with:
 """
 
 import os
-import random
 import numpy as np
 import logging
 from typing import List, Tuple, Dict, Any, Optional
 import gymnasium
 from gymnasium import spaces
-from engine_py_legacy.engine.runners.headless_game import HeadlessGame
 from digimon_gym.tensor_profiles import get_tensor_profile
 
 try:
@@ -57,77 +56,43 @@ def _make_runner(
     deck1: List[str],
     deck2: List[str],
     seed: Optional[int] = None,
-    tensor_profile: str = "standard_compact_v1",
+    tensor_profile: str = "standard_lite_v2",
     record_actions: bool = False,
     record_tensors: bool = False,
 ):
-    """Build the game runner chosen by the `DIGIMON_BACKEND` env var.
+    """Build the Rust game runner (`RustHeadlessGame`).
 
-    - `DIGIMON_BACKEND=rust` → `RustHeadlessGame` (requires the `digimon_engine`
-      PyO3 wheel to be installed, e.g. via `maturin develop`).
-    - unset + non-compact tensor profile → `RustHeadlessGame` when available.
-    - unset + compact tensor profile → Python `HeadlessGame` for compatibility.
-    - any other explicit value → Python `HeadlessGame`.
-
-    Both runners expose the same duck-typed surface: `step`, `get_action_mask`,
-    `get_board_tensor`, and `is_game_over`. Rust runners also expose
-    `get_rl_state()` for backend-neutral RL metadata.
+    The training env runs exclusively on the Rust engine. The legacy Python
+    `HeadlessGame` backend was removed (see change
+    make-training-build-legacy-free); `DIGIMON_BACKEND` is honored only to
+    reject an explicit non-`rust` value with a clear error. The Rust runner
+    exposes `step`, `get_action_mask`, `get_board_tensor`, `is_game_over`,
+    `greedy_action`, and `get_rl_state()`; it takes `seed` and
+    `observation_profile` directly, so no Python-side RNG shim is needed.
     """
     backend = os.environ.get("DIGIMON_BACKEND")
-    backend_normalized = backend.lower() if backend is not None else None
-    use_rust = (
-        backend_normalized == "rust"
-        or (backend is None and tensor_profile != "standard_compact_v1")
-    )
-    if use_rust:
-        if RustHeadlessGame is None:
-            if backend_normalized == "rust":
-                raise RuntimeError(
-                    "DIGIMON_BACKEND=rust but digimon_engine wheel is not installed. "
-                    "Run `cd digimon-engine-py && maturin develop --release`."
-                )
-            raise RuntimeError(
-                f"tensor_profile={tensor_profile!r} requires the Rust runner, "
-                "but digimon_engine wheel is not installed. "
-                "Run `cd digimon-engine-py && maturin develop --release`."
-            )
-        return RustHeadlessGame(
-            deck1,
-            deck2,
-            record_actions=record_actions,
-            record_tensors=record_tensors,
-            seed=seed,
-            observation_profile=tensor_profile,
-        )
-    if tensor_profile != "standard_compact_v1":
+    if backend is not None and backend.lower() != "rust":
         raise RuntimeError(
-            f"tensor_profile={tensor_profile!r} requires DIGIMON_BACKEND=rust "
-            "or an unset DIGIMON_BACKEND with Rust bindings available"
+            f"DIGIMON_BACKEND={backend!r} is no longer supported: the training "
+            "env runs exclusively on the Rust engine. Unset DIGIMON_BACKEND or "
+            "set it to 'rust'."
         )
-    if seed is None:
-        return HeadlessGame(deck1, deck2, record_actions=record_actions, record_tensors=record_tensors)
-    rng_state = random.getstate()
-    original_choice = random.choice
-
-    def seeded_choice(seq):
-        if list(seq) == [True, False]:
-            return seed % 2 == 0
-        return original_choice(seq)
-
-    try:
-        random.seed(seed)
-        random.choice = seeded_choice
-        return HeadlessGame(deck1, deck2, record_actions=record_actions, record_tensors=record_tensors)
-    finally:
-        random.choice = original_choice
-        random.setstate(rng_state)
-from engine_py_legacy.engine.game import (
-    FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND,
-    SECURITY_TARGET, BREEDING_SLOT,
-)  # parity-doc: these geometry constants stay on Python until migrated
-from engine_py_legacy.engine.data.enums import PendingAction  # parity-doc: Python-engine fallback path only
+    if RustHeadlessGame is None:
+        raise RuntimeError(
+            "The Rust engine wheel (digimon_engine) is not installed. Build it "
+            "with `cd code/digimon-engine-py && maturin develop --release` "
+            "(or install the prebuilt wheel)."
+        )
+    return RustHeadlessGame(
+        deck1,
+        deck2,
+        record_actions=record_actions,
+        record_tensors=record_tensors,
+        seed=seed,
+        observation_profile=tensor_profile,
+    )
 import digimon_engine as _engine
-from digimon_engine import ACTION_SPACE_SIZE, GamePhase, TENSOR_SIZE
+from digimon_engine import ACTION_SPACE_SIZE, TENSOR_SIZE
 
 # Action Space Constants (re-exported for backward compatibility)
 ACTION_PLAY_CARD_START = 0
@@ -211,7 +176,7 @@ class DigimonEnv(gymnasium.Env):
         self.max_turns = max_turns
         self.record_actions = bool(record_actions)
         self.record_tensors = bool(record_tensors)
-        self.runner: Optional[HeadlessGame] = None
+        self.runner: Optional[Any] = None
         self._step_count = 0
         # Event-based reward shaping: track security counts at end of last
         # env.step so we can compute deltas (security removed / lost). `None`
@@ -424,8 +389,8 @@ class DigimonEnv(gymnasium.Env):
 
         # Reward-profiles occurrence emission. Activated by
         # `emit_reward_occurrences=True` (set by `RewardProfileWrapper`
-        # on its wrapped env). Requires the Rust runner — the legacy
-        # Python `HeadlessGame` doesn't expose `get_events_since_last_step`.
+        # on its wrapped env). Drains events from the Rust runner via
+        # `get_events_since_last_step` when present.
         if self._reward_event_bus is not None:
             drain_events = getattr(self.runner, "get_events_since_last_step", None)
             if drain_events is not None:
@@ -483,11 +448,13 @@ class DigimonEnv(gymnasium.Env):
             −1.0 for draw (mild stalling penalty; the engine's new
               "force step-limit wins" should make pure draws rare).
           Dense (only fires on the step where security count changed):
-            +2.0 per opponent security card removed (real progress toward win).
-            −2.0 per own security card lost (real progress toward loss).
-            With 5 security cards each, total dense magnitude is bounded
-            at ±10 per game — comparable to terminal but only fires on
-            game-state-progressing events, never on stalling.
+            +1.5 per opponent security card removed (real progress toward win).
+            −0.5 per own security card lost (asymmetric — losing security is
+              partly the opponent's action, so it's penalized less than
+              offense is rewarded). Calibrated for BO3 match training; see
+              add-bo3-match-training/design.md §D9. Clearing all 5 opponent
+              security caps cumulative dense at +7.5, strictly below the
+              per-game terminal (±12) so recovery decks can't bait the agent.
           Step penalty:
             −0.001 per step. Caps at ~−0.3 over the 300-step soft limit,
             negligible vs terminal but provides a tiebreaker toward
@@ -557,11 +524,14 @@ class DigimonEnv(gymnasium.Env):
             self._prev_p1_digivolutions = p1_digi
             self._prev_p1_dna_digivolutions = p1_dna
 
-        # Per-step stalling penalty: -0.06/step = ~-6 cumulative over a 100-step
-        # game. One power-down from -0.09 (which proved survivable vs greedy but
-        # crashed vs self-play). Combined with boosted DNA shaping (+50 bonus),
-        # designed to drive fast wins through evolution rather than stall.
-        return dense_reward - 0.06
+        # Per-step stalling penalty (small but non-zero): negligible vs the
+        # terminal magnitude but provides a tiebreaker toward shorter wins.
+        # Pinned to -0.001 by the reward-shaping design spec and the
+        # calibration suite; the reward-profiles v2 `gameplay` profile uses
+        # the same value (the transient -0.06 "boosted step penalty"
+        # experiment was reverted — see
+        # docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md).
+        return dense_reward - 0.001
 
     def render(self) -> Optional[str]:
         """Render the current game state.
@@ -681,210 +651,32 @@ def greedy_policy(env) -> int:
       2) Move.
       3) Pass.
     """
-    if isinstance(env, DigimonEnv):
-        mask = np.asarray(env.get_action_mask())
-        rust_greedy = getattr(env.runner, "greedy_action", None) if env.runner else None
-        if rust_greedy is not None:
-            action = int(rust_greedy())
-            # Greedy opponent must not concede — when the Rust heuristic picks
-            # concede (action 93), fall back to a non-concede legal action so
-            # eval recordings reflect real game-ending outcomes rather than
-            # the opponent giving up.
-            if action == ACTION_CONCEDE:
-                valid_actions = np.where(mask > 0)[0].astype(int)
-                for alt in valid_actions:
-                    if int(alt) != ACTION_CONCEDE:
-                        return int(alt)
-            return action
-        game = env.game
-    else:
-        mask = np.asarray(env.get_action_mask())
-        game = env.game
-
+    mask = np.asarray(env.get_action_mask())
     valid_actions = np.where(mask > 0)[0].astype(int)
 
-    if game is None or len(valid_actions) == 0:
+    runner = getattr(env, "runner", None)
+    rust_greedy = getattr(runner, "greedy_action", None) if runner is not None else None
+    if rust_greedy is not None:
+        action = int(rust_greedy())
+        # Greedy opponent must not concede — when the Rust heuristic picks
+        # concede (action 93), fall back to a non-concede legal action so eval
+        # recordings reflect real game-ending outcomes rather than a give-up.
+        if action == ACTION_CONCEDE:
+            for alt in valid_actions:
+                if int(alt) != ACTION_CONCEDE:
+                    return int(alt)
+        return action
+
+    # Fallback when the Rust greedy heuristic is unavailable: prefer a legal
+    # non-pass, non-concede action, else pass, else the first legal action.
+    # (The legacy Python-engine heuristic was relocated to
+    # digimon_gym.agents.architect_simulator when the env became Rust-only;
+    # see change make-training-build-legacy-free.)
+    if len(valid_actions) == 0:
         return ACTION_PASS_TURN
-
-    player = game.turn_player
-    opponent = game.opponent_player
-
-    def _first_non_pass() -> int:
-        for action in valid_actions:
-            if action != ACTION_PASS_TURN:
-                return int(action)
-        return ACTION_PASS_TURN
-
-    if game.current_phase == GamePhase.Mulligan:
-        acting = game.player1 if game.current_player_id == game.player1.player_id else game.player2
-        has_level3 = any(
-            card.is_digimon and (card.level or 0) == 3
-            for card in acting.hand_cards
-        )
-        valid_set = set(int(a) for a in valid_actions)
-        if not has_level3 and 1 in valid_set:
-            return 1
-        if 0 in valid_set:
-            return 0
-        return int(valid_actions[0])
-
-    def _relative_memory() -> int:
-        # Convert gauge to active-player-relative memory.
-        return int(game.memory) if game.turn_player is game.player1 else int(-game.memory)
-
-    def _estimate_digivolve_cost(card, base_perm) -> int:
-        if not card.c_entity_base or not card.c_entity_base.evo_costs:
-            return int(card.get_cost_itself)
-        if not base_perm.top_card:
-            return int(card.get_cost_itself)
-
-        base_level = base_perm.level
-        base_colors = set(base_perm.top_card.card_colors)
-        matching_costs = []
-        for evo_cost in card.c_entity_base.evo_costs:
-            if evo_cost.level == base_level and evo_cost.card_color in base_colors:
-                matching_costs.append(int(evo_cost.memory_cost))
-        if not matching_costs:
-            return int(card.get_cost_itself)
-        return min(matching_costs)
-
-    def _best_keep_turn_digivolve() -> Optional[int]:
-        rel_memory = _relative_memory()
-        keep_turn = []
-
-        for action in valid_actions:
-            if not (ACTION_DIGIVOLVE_START <= action <= ACTION_DIGIVOLVE_END):
-                continue
-            offset = int(action - ACTION_DIGIVOLVE_START)
-            hand_idx = offset // FIELDS_PER_HAND
-            field_idx = offset % FIELDS_PER_HAND
-
-            if hand_idx >= len(player.hand_cards):
-                continue
-            card = player.hand_cards[hand_idx]
-
-            if field_idx < len(player.battle_area):
-                base_perm = player.battle_area[field_idx]
-            elif field_idx == BREEDING_SLOT and player.breeding_area is not None:
-                base_perm = player.breeding_area
-            else:
-                continue
-
-            cost = _estimate_digivolve_cost(card, base_perm)
-            if rel_memory - cost < 0:
-                continue
-
-            # Deterministic tie-breaks: level, DP, then lower cost.
-            score = (
-                int(card.level or 0),
-                int(card.base_dp or 0),
-                -cost,
-                -hand_idx,
-                -field_idx,
-            )
-            keep_turn.append((score, int(action)))
-
-        if not keep_turn:
-            return None
-        keep_turn.sort(reverse=True)
-        return keep_turn[0][1]
-
-    def _best_attack() -> Optional[int]:
-        attacks = []
-        for action in valid_actions:
-            if not (ACTION_ATTACK_START <= action <= ACTION_ATTACK_END):
-                continue
-            offset = int(action - ACTION_ATTACK_START)
-            attacker_idx = offset // TARGETS_PER_ATTACKER
-            target_idx = offset % TARGETS_PER_ATTACKER
-
-            if attacker_idx >= len(player.battle_area):
-                continue
-            attacker = player.battle_area[attacker_idx]
-            attacker_dp = int(attacker.dp or 0)
-
-            if target_idx == SECURITY_TARGET:
-                is_lethal = len(opponent.security_cards) == 0
-                priority = 3 if is_lethal else 1
-                score = (priority, attacker_dp, -attacker_idx)
-                attacks.append((score, int(action)))
-                continue
-
-            if target_idx >= len(opponent.battle_area):
-                continue
-            target = opponent.battle_area[target_idx]
-            target_dp = int(target.dp or 0)
-            favorable = attacker_dp > target_dp
-            priority = 2 if favorable else 0
-            score = (priority, attacker_dp - target_dp, -attacker_idx, -target_idx)
-            attacks.append((score, int(action)))
-
-        if not attacks:
-            return None
-        attacks.sort(reverse=True)
-        return attacks[0][1]
-
-    def _best_play() -> Optional[int]:
-        plays = []
-        for action in valid_actions:
-            if not (ACTION_PLAY_CARD_START <= action <= ACTION_PLAY_CARD_END):
-                continue
-            hand_idx = int(action - ACTION_PLAY_CARD_START)
-            if hand_idx >= len(player.hand_cards):
-                continue
-            card = player.hand_cards[hand_idx]
-            kind_score = 2 if card.is_digimon else (1 if card.is_option else 0)
-            score = (int(card.get_cost_itself), kind_score, -hand_idx)
-            plays.append((score, int(action)))
-        if not plays:
-            return None
-        plays.sort(reverse=True)
-        return plays[0][1]
-
-    # Selection-time hand trashing: dump lowest-value card first.
-    if game.pending_action == PendingAction.TRASH_CARD:
-        trash_choices = []
-        for action in valid_actions:
-            if not (ACTION_TRASH_CARD_START <= action <= ACTION_TRASH_CARD_END):
-                continue
-            hand_idx = int(action - ACTION_TRASH_CARD_START)
-            if hand_idx >= len(player.hand_cards):
-                continue
-            card = player.hand_cards[hand_idx]
-            kind_score = 2 if card.is_digimon else (1 if card.is_option else 0)
-            score = (kind_score, int(card.get_cost_itself), hand_idx)
-            trash_choices.append((score, int(action)))
-        if trash_choices:
-            trash_choices.sort()
-            return trash_choices[0][1]
-        return _first_non_pass()
-
-    if game.current_phase == GamePhase.Breeding:
-        if ACTION_HATCH in valid_actions:
-            return ACTION_HATCH
-        if ACTION_MOVE in valid_actions:
-            return ACTION_MOVE
-        if ACTION_PASS_TURN in valid_actions:
-            return ACTION_PASS_TURN
-        return _first_non_pass()
-
-    if game.current_phase == GamePhase.Main:
-        best_keep_turn_digivolve = _best_keep_turn_digivolve()
-        if best_keep_turn_digivolve is not None:
-            return best_keep_turn_digivolve
-
-        best_attack = _best_attack()
-        if best_attack is not None:
-            return best_attack
-
-        best_play = _best_play()
-        if best_play is not None:
-            return best_play
-
-        if ACTION_PASS_TURN in valid_actions:
-            return ACTION_PASS_TURN
-        return _first_non_pass()
-
+    for action in valid_actions:
+        if int(action) not in (ACTION_PASS_TURN, ACTION_CONCEDE):
+            return int(action)
     if ACTION_PASS_TURN in valid_actions:
         return ACTION_PASS_TURN
-    return _first_non_pass()
+    return int(valid_actions[0])

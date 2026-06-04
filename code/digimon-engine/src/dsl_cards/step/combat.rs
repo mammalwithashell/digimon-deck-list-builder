@@ -60,12 +60,34 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             without_suspending,
             ignore_summoning_sickness,
             optional,
+            windowed,
             prompt,
             cost_upgrade,
         } => {
             let Some(attacker) = resolve_permanent_ref(attacker, ctx, bindings) else {
                 return true;
             };
+            if *windowed {
+                use crate::enums::{Expiry, ModifierType};
+                use crate::modifiers::ModifierEntry;
+                let owner = attacker.player;
+                ctx.game.modifiers.add(
+                    attacker,
+                    ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, owner),
+                );
+                if *without_suspending {
+                    ctx.game.modifiers.add(
+                        attacker,
+                        ModifierEntry::simple(
+                            ModifierType::CanAttackUnsuspended,
+                            1,
+                            Expiry::EndOfTurn,
+                            owner,
+                        ),
+                    );
+                }
+                return true;
+            }
             let prompt = prompt.as_deref().unwrap_or("Attack with this Digimon?");
             let _ = if *ignore_summoning_sickness {
                 ctx.may_attack_now_ignoring_summoning_sickness_with_upgrade(

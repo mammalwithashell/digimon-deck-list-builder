@@ -4,6 +4,20 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+> **`TreatAsDigimon` / `SynthIdentity` payload — RESOLVED 2026-05-30** (judge-quiz
+> cluster-B authoring, Greymon/Marcus line). The DSL `add_modifier` step now accepts
+> a structured `synth_identity:` block (`dp` required; `kind` defaults Digimon;
+> `level`/`colors`/`traits` optional), lowering to the engine's pre-existing
+> `ModifierPayload::SynthIdentity` via a new `EffectContext::add_modifier_with_payload`.
+> This closes the Track C "rich payload parser pending" slice for the
+> treat-a-Tamer-as-a-Digimon mechanic (RizeGreymon BT21-044's 3000 DP grant,
+> ShineGreymon: Burst Mode BT13-020's 12000 DP grant). The validator requires
+> `synth_identity` for `TreatAsDigimon` and forbids it on any other modifier.
+> Pinned by `digimon-dsl` `parse_synth_identity` (3) + `validator::tests`
+> `treat_as_digimon_without_synth_identity_is_rejected` /
+> `synth_identity_on_non_treat_as_digimon_is_rejected`. The remaining Track C
+> string/list payload variants (non-TreatAsDigimon) stay pending — see that note below.
+
 > **ST-2 Cocytus Blue substrate closure — 2026-05-29:** ST2 introduced no
 > remaining open DSL vocabulary gap. The new `trash_bottom_sources` step and
 > `battle_opponent_no_sources` predicate are implemented and archived in
@@ -1130,7 +1144,29 @@ Moved to [`qa/resolved-gaps.md`](resolved-gaps.md). `move_from_breeding` now low
 - Gap kind: DSL vocabulary gap (engine data is present; no DSL surface to filter on it).
 - First reported: 2026-05-03 (BT22-017 Gabumon, batch-implement-cards-rust-dsl)
 
-## EX1-068 — grant a triggered effect to opponent's permanent  [G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT]
+## EX1-068 — grant a triggered effect to opponent's permanent  [G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT] — RESOLVED 2026-05-29
+
+Closed by change `add-grant-triggered-effect-dsl`. The `grant_triggered_effect`
+step + `ModifierType::GrantedTrigger` slot already existed (EX10-034 grant-to-
+binding work); the remaining slice was (a) opponent-set targeting — a predicate
+`target: { of: opponent, ... }` already walks both battle areas and snapshots the
+match set, and (b) cause attribution for the `<Progress>` interaction — the
+granted-trigger dispatch (`enqueue_from_permanent`) now skips firing when the
+carrier is unaffected by the GRANTOR's effects (`progress_excludes`). EX1-068's
+`[Main]` clause is authored; judge-quiz **Q2** pins it (Medusamon `<Progress>`
+loses no memory; a non-Progress control loses 2). Full note in
+`qa/resolved-gaps.md`. **Q16 also closed (2026-05-29):** EX6-057 Lilithmon
+authored; the granted body now runs as the carrier's OWN effect (D4/DCGO —
+sourced from `selectedPermanent.TopCard`), so its granted `[EoT] Delete this` is
+OwnEffect and `<Partition>` skips it (judge-quiz Q16 PASS). **Q17 also closed
+(2026-05-29):** the granted-trigger dispatch also gates on
+`permanent_is_unaffected_by_effect`, so a carrier immune to the grantor's
+effects (Magnamon X BT16-102's "isn't affected by your opponent's effects")
+suppresses the granted clause (judge-quiz Q17 PASS). All three directions
+(Q2/Q16/Q17) are now resolved; full entry in `qa/resolved-gaps.md`.
+
+[ORIGINAL ENTRY BELOW]
+
 - Effect text: EX1-068 [Main] "All of your opponent's Digimon gain '[When Attacking] lose 2 memory' until the end of their next turn."
 - Missing DSL verb / step kind / predicate: A `grant_triggered_effect` step that installs a NEW triggered clause (timing + process body) on a SET of cross-permanent targets with a turn-scoped expiry. The DSL today exposes grants for STATIC effects only — `grant_keyword`, `add_modifier` / `add_dp_modifier`, `grant_effect_immunity`. None of those install a clause that itself fires on a future trigger (`when_attacking`, `when_digivolving`, `on_deletion`, ...) on the granted permanent.
 - Engine substrate: the Python engine handles this via `permanent.grant_temp_effect(effect, expiry_turn)` + `clear_expired_effects()` (see `qa/archetype-qa/engine-gaps.md` line 33, RESOLVED 2026-03-14 in Python). The Rust engine has the modifier-registry + expiry-tick substrate (`ModifierRegistry` carries per-permanent typed modifiers with `Expiry`), but it does NOT carry a typed `GrantedTriggeredEffect` slot, and there is no `CompiledStep::GrantTriggeredEffect`.
@@ -1153,6 +1189,7 @@ Moved to [`qa/resolved-gaps.md`](resolved-gaps.md). `move_from_breeding` now low
 - Companion engine gap: tracked in `qa/archetype-qa/engine-gaps.md` line 33 as RESOLVED for Python; OPEN for the Rust engine's modifier registry.
 - Gap kind: hybrid (Rust engine modifier registry needs a typed grant slot; DSL needs the verb + lowering).
 - First reported: 2026-05-03 (EX1-068 Ice Wall!, batch-implement-cards-rust-dsl)
+- Judge-quiz consumer (2026-05-28): **Q2** of the judge-quiz faithfulness suite (`add-judge-quiz-faithfulness-suite`) is BLOCKED on this gap. Q2 stages Medusamon (BT24-017) `<Progress>` against the Ice-Wall-granted "[When Attacking] lose 2 memory" and asserts NO memory loss. The Progress half is implemented (`Game::progress_excludes`, combat.rs:2667); only this grant primitive is missing. Test `a_immunity_scope::q2_medusamon_progress_blocks_ice_wall_memory_loss` is `#[ignore]`-blocked citing this gap. When closed, the suite gains a Progress-vs-granted-effect immunity assertion for free.
 
 ## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] — RESOLVED 2026-05-17 (Phase 2 Track F)
 
@@ -2693,3 +2730,178 @@ Historical note:
 - **What's missing:** `activation_cost:` accepts only `suspend_self` and `return_self_to_deck_bottom` (per `compile.rs`). There is no `trash_self: true` variant. Per Comprehensive Rules 16-16-2, ＜Delay＞ processing is OPTIONAL — the controller may decline to trash the card and activate the effect. Without a declinable `trash_self` activation cost, the trash-self must be modeled as the first mandatory body step, which forces the activation once the trigger fires and a valid target exists — suppressing a rules-mandated player choice (a no-approximations violation).
 - **Suggested change:** Add `activation_cost: { trash_self: true }` — a declinable activation cost that trashes the source card and gates the body; declining skips the whole Delay.
 - **Workaround:** BT21-093 models the trash as a mandatory first body step. PARTIAL.
+
+
+## LM-020 — return a selected SECURITY card to a deck  [G-DSL-RETURN-SELECTED-SECURITY-TO-DECK]
+
+Surfaced: 2026-05-29, judge-quiz first wave (`batch-implement-cards-rust-dsl`). LM-020 Quantumon BLOCKED.
+
+- **Missing DSL verb:** `return_selected_security_to_deck` — route a `select_security`-bound `CardHandle` to the owner's deck **top or bottom**. The three verbs that consume a `select_security` pick route it to hand (`add_to_hand_from_security`), play (`play_security_card`), or trash (`trash_selected_security`) — never to a deck.
+  - Suggested YAML (mirrors `return_to_deck_from_reveal { of, card, position }`):
+    ```yaml
+    - return_selected_security_to_deck: { of: opponent, card: picked_sec, position: top }   # top | bottom
+    ```
+- **Engine prerequisite (root cause — also logged in `docs/RUST_ENGINE_GAPS.md`):** no public `EffectContext` method moves a security card to a deck. The private `move_card_to_deck` helper (`effect_context/mod.rs`) is sourced from trash only. Suggested `pub fn return_security_card_to_deck(&mut self, player, card, to_bottom) -> bool`: find the card in `player.security`, `ensure_security_materialized`, remove it, drop from `face_up_security`, fire `fire_security_removed_observers` (add a `SecurityRemovalDestination::Deck` variant alongside `::Hand`), then route through the existing trash->deck `move_card_to_deck` path. Lower the new verb in `dsl_cards/step/zone_moves.rs` alongside `AddToHandFromSecurity` / `TrashSelectedSecurity`.
+- **Card text:** LM-020 [When Digivolving] "... reveal all of your opponent's security cards, and place 1 card among them on top of your opponent's deck. Shuffle the rest and return them to the security stack." DCGO `LM_020.cs`: `IReduceSecurity` -> `AddLibraryTopCards` -> shuffle.
+- **Blocks:** LM-020 (Quantumon) -> judge-quiz Q18. (LM-020's `[Start of Opponent's Turn]` category-immunity clause is independently implementable; only the security->deck clause is blocked.) Likely shared by other "place a security card on top/bottom of deck" cards. Re-attempt LM-020 once the verb lands.
+
+## BT13-088 — place a card as the TOP digivolution source  [G-DSL-PLACE-AS-TOP-SOURCE]
+
+Surfaced: 2026-05-29, judge-quiz first wave. BT13-088 Belphemon: Sleep Mode shipped PARTIAL.
+
+- **Missing DSL verb / engine primitive:** a "place card as the TOP digivolution source" (just below the face card) — DCGO `AddDigivolutionCardsTop`. The engine ships `place_as_bottom_source` (inserts at index 0) only; no top-source insertion.
+- **Resolution used:** BT13-088 uses `place_as_bottom_source` for "place [Belphemon: Rage Mode] on top of this Digimon's digivolution cards." Position is **behaviorally inert** for this card (it only needs Rage Mode IN the stack to gain the inherited effect; no mechanic reads the top-source slot) -> shipped PARTIAL, not BLOCKED. A future card whose text/behavior depends on the top-source position would need this verb (+ an `EffectContext::place_as_top_source` primitive).
+
+## EX5-060 — opponent plays from their OWN trash SUSPENDED + played-permanent-level formula  [G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED] / [G-EVENT-PLAYED-LEVEL-FORMULA]
+
+Surfaced: 2026-05-29, judge-quiz wave (`batch-implement-cards-rust-dsl`). EX5-060 Dragomon BLOCKED (pins Q28 alongside BT20-059 Gankoomon X).
+
+- **Card text:**
+  - Clause 1 [On Play][When Digivolving]: "Your opponent plays 1 level 4 or lower Digimon card from their trash **suspended** without paying the cost. [On Play] effects on Digimon played by this effect don't activate."
+  - Clause 2 [All Turns][Once Per Turn]: "When an effect plays an opponent's Digimon, you may play 1 purple Digimon card with **a level less than or equal to it** from your trash without paying the cost."
+
+- **Clause 1 — DSL gap (root cause is the engine gap `G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED` in `docs/RUST_ENGINE_GAPS.md`):** `play_from_trash_free` cannot (a) play from the **opponent's** trash — its `of:` field is dropped at the engine boundary (lowers to `play_from_trash_free_unsuspended*`, which hardcodes `self.player`) — or (b) play **suspended** (no `suspended:` flag anywhere in the play-from-trash chain). The `[On Play] don't activate` half already works via `suppress_on_play: true`. Intended shape once both land:
+  ```yaml
+  - as_selecting_player:
+      of: opponent
+      body:
+        - select_trash: { of: opponent, bind_as: opp_pick, filter: { kind: digimon, level_lte: 4 }, prompt: "..." }
+        - play_from_trash_free: { of: opponent, hand_index: opp_pick, suspended: true, suppress_on_play: true }  # of:opponent + suspended NEW
+  ```
+
+- **Clause 2 — DSL gaps:**
+  - **`event_played_by_effect` predicate** — `on_any_digimon_played` cannot distinguish a normal hard-play from an effect-play. DCGO `EX5_060.cs` gates Clause 3 on `IsByEffect`. No `by_effect`/`event_played_by_effect` predicate leaf exists in `predicate.rs`.
+  - **`event_target_level` FORMULA** — "a level less than or equal to **it**" bounds the own-trash recursion filter by the *played opponent permanent's level*. Only the predicate leaves `event_target_level_lte/_eq/_gte` exist (compare against a literal); there is no `FormulaSpec::EventTargetLevel` to feed `level_lte: { formula: ... }`. DCGO reads `permanent.LevelJustAfterPlayed`. The trigger timing + `event_target_owner: opponent` + `event_target_kind: digimon` predicates DO exist.
+  Intended shape once both land:
+  ```yaml
+  - when: on_any_digimon_played
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    condition: { all_of: [ { event_target_owner: opponent }, { event_target_kind: digimon }, { event_played_by_effect: true } ] }  # by_effect NEW
+    process:
+      - select_trash: { of: you, bind_as: recur, optional: true, filter: { all_of: [ { kind: digimon }, { color_is: purple }, { level_lte: { formula: { event_target_level: {} } } } ] }, prompt: "..." }  # event_target_level formula NEW
+      - play_from_trash_free: { of: you, hand_index: recur }
+  ```
+
+- **Blocks:** EX5-060 (judge-quiz Q28). `code/digimon-engine/cards/ex5/EX5-060.yaml` Clauses 1 & 2 declared with faithful timing / OPT / optional flags but empty (gap-blocked) `process` bodies — never resolve a wrong approximation. Inherited ＜Piercing＞ is fully supported and authored live. Tests in `code/digimon-engine/tests/cards_behavioral/ex5/ex5_060.rs`: `ex5_060_clause1_*` `#[ignore]`'d with `G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED`; `ex5_060_clause2_*` `#[ignore]`'d with `G-EVENT-PLAYED-LEVEL-FORMULA`. The Q28 negative (`ex5_060_lock_does_not_attach_to_effect_immune_target`) runs LIVE.
+
+
+## ST17-07 — opponent-scoped effect-protection from `add_modifier`  [G-OPPONENT-SCOPED-EFFECT-PROTECTION-DSL]
+
+**Surfaced 2026-05-30** (judge-quiz cluster B, ST17-07 Rapidmon). PARTIAL: the
+green-Tamer rider "until end of opp turn, your OPPONENT'S effects can't delete
+this Digimon or return it to hand/deck" is omitted.
+
+- **Problem.** The DSL `add_modifier` step lowers through
+  `EffectContext::add_modifier` → `ModifierEntry::simple`, whose `cause_filter`
+  is `None` — the replacement fire-site treats `None` as CAUSE-AGNOSTIC, so
+  `add_modifier { CannotBeDestroyedByEffect | CannotBeReturnedToHand |
+  CannotBeReturnedToDeck }` blocks the controller's OWN effects too. DCGO scopes
+  all three protections to `IsOpponentEffect`. `default_passive_cause_filter`
+  (which would scope the Return ones to OpponentEffect) is consulted ONLY by
+  `ModifierEntry::passive_replacement`, never by `ctx.add_modifier`.
+- **Latent class.** Existing cards using `add_modifier` for these protections
+  (BT18-064, P-215, EX8-070) silently ship cause-agnostic and only assert the
+  modifier is *present* (never own-vs-opponent scope), so the divergence is
+  currently unverified across the codebase — a widening here would correct them.
+- **Engine half is mostly present.** `ModifierEntry::opponent_only()`
+  (modifiers.rs) forces `cause_filter = Some(OpponentEffect)` and the fire-site
+  honors it; the missing piece is exposing an installer that uses
+  `passive_replacement(...).opponent_only()` from the DSL.
+- **Suggested widening (backward-compatible, opt-in).** Add `opponent_only:
+  bool` (default false) to the `add_modifier` DSL step; when true, route the
+  install through `passive_replacement(modifier, expiry, player).opponent_only()`
+  instead of `ModifierEntry::simple`. Existing cards (flag unset) are unchanged.
+  Deferred as a deliberate cross-cutting change (it changes the *meaning* of
+  these protections for shipped cards) — should regress BT18-064/P-215/EX8-070.
+  Until landed, ST17-07's rider stays omitted (NOT shipped cause-agnostically)
+  with `st17_07::st17_07_green_tamer_grants_opponent_only_delete_protection` /
+  `..._protection_not_installed_without_green_tamer` `#[ignore]`'d citing this ID.
+
+### RESOLVED 2026-06-02 — `may_attack_now: { windowed: true }` (deferred EOT attack grant)
+- **Gap:** `[End of Your Turn] 1 of your Digimon may attack` (AD1-004 WarGreymon)
+  was authored with inline `may_attack_now`, which declares AND resolves the
+  attack synchronously inside the trigger. That leaves no window for a sibling
+  end-of-turn effect (e.g. an inherited DNA digivolve) to resolve first and
+  remove the attacker, so the attack could never fizzle — contrary to
+  general_rule.pdf §15-4-2-3 (EOT triggers activate one at a time) + the
+  "attack ends if the attacker has left" rule.
+- **Resolution:** added a `windowed: bool` flag to the `may_attack_now` step
+  (`MayAttackNowArgs` → `CompiledStep::MayAttackNow`). When true, the step grants
+  the chosen attacker a `MayAttack` (+`CanAttackUnsuspended` iff `without_suspending`)
+  modifier with `Expiry::EndOfTurn` — the same windowed mechanism the `<Execute>`
+  keyword uses — instead of declaring inline. The attack becomes a deferred
+  EOT-action; if a sibling EOT effect removes the attacker, the grant is orphaned
+  and no attack happens. AD1-004's YAML now sets `windowed: true`. Default is
+  false, so all other `may_attack_now` users (AD1-009, BT12/17/20/…) are unchanged.
+- **Tests:** `cards_behavioral/ad1/ad1_004.rs::{ad1_004_eot_attack_is_windowed_grant_not_synchronous,
+  ad1_004_eot_attack_fizzles_when_attacker_is_removed_before_it_acts}`.
+- **Note:** AD1-004 stays PARTIAL overall — its `[On Play][When Digivolving]`
+  "delete opponent Digimon with DP ≤ this" is still blocked on G-FORMULA-SOURCE-DP
+  (unrelated to this fix).
+
+## RESOLVED 2026-06-03 — `select_count_capped_multi.clamp_to_available` (mandatory "N of opponent" target count)
+
+**Gap (FAQ MP-30/31, discovered via `tests/rules_faq/effect_resolution.rs`):** the DSL
+`select_count_capped_multi` step had no way to express a mandatory **"N of your opponent's
+Digimon"** target count. Its `min` field carries *cost* semantics (no-op when fewer than `min`
+candidates exist), and with `min` absent the floor defaults to 1 — so a card whose text reads
+"Suspend **2**" (BT24-051 Merukimon) let the player stop after suspending **one** when two were
+available (violates MP-31), while naïvely setting `min: 2` would fizzle the effect when only one
+target is in play (violates MP-30, which requires affecting `min(N, available)`).
+
+**Fix (widened the substrate, per rule 28):** added a `clamp_to_available: bool` field to
+`SelectCountCappedArgs` (and the compiled step). When true, the required floor is clamped to
+`min(max, available_candidates)` and the step never no-ops for "fewer than N" — the rules-correct
+"affect as many as possible, up to N" semantics. Implemented in the battle-area path
+(`install_select_count_capped_permanents`, `dsl_cards/step/selections.rs`); orthogonal to the
+existing cost `min`. BT24-051 now sets `clamp_to_available: true`. Hand/Trash zones thread the flag
+but do not yet act on it (no card needs it; future extension).
+
+Files: `code/digimon-dsl/src/{step,compiled,compile}.rs`,
+`code/digimon-engine/src/dsl_cards/step/selections.rs`,
+`code/digimon-engine/cards/bt24/BT24-051.yaml`. Tests: `mp30_*` / `mp31_*` in `rules_faq`.
+
+**DCGO-verified (2026-06-03).** The fix matches the battle-tested DCGO behavior exactly:
+`BT24_051.cs` uses `maxCount = Math.Min(2, available)` + `canEndNotMax: false` (must pick all
+`min(2, available)`) — which is precisely `clamp_to_available: true`. DCGO's `canEndNotMax` is the
+general distinguisher: `false` ⇒ `clamp_to_available: true`; `true` ⇒ the default "up to N"
+(`optional_zero`). **Sibling sweep (implemented pool, mandatory "≥2 of your opponent's"):** only
+BT24-051 was affected. ST5-15 Laser Eye is genuinely "up to 2" (`ST5_15.cs` `canEndNotMax: true`;
+cards.json dropped the "up to") — its existing `optional_zero: true` authoring is correct, NOT a gap.
+
+**Second sibling found + fixed (2026-06-03): BT12-028 Paildramon.** A DCGO-grounded sweep of the
+whole implemented pool (DCGO `canEndNotMax:false` + `Math.Min(≥2,...)`, intersected with cards using
+`select_count_capped_multi` on `zone: battle_area`) found one more instance of the identical bug:
+BT12-028's "[When DNA Digivolving] **2** of your opponent's Digimon with no digivolution cards can't
+attack" was authored `max: 2, optional_zero: false` with no clamp — letting the player lock only 1 of
+2. Fixed with `clamp_to_available: true` (DCGO `BT12_028.cs` confirms `canEndNotMax: false`). Existing
+BT12-028 behavioral tests (9) still pass. **Sweep otherwise clean:** BT24-040 / BT15-101 hand-roll N
+mandatory `select_opponent_permanent` calls with `not_in_binding` dedup (faithful); ST5-12/ST5-15/
+ST6-12 are genuinely "up to/may" (`optional_zero: true`); formula-`max` cards are "up to <X>".
+
+## RESOLVED 2026-06-03 — `optional: true` on MANDATORY single-target selects (FAQ MP-29)
+
+**Gap class (cousin of the MP-30/31 multi-target bug).** A select step authored `optional: true`
+over-exposes an illegal *decline* (PASS) for an effect whose printed text is **mandatory** (no
+"may"/"can"/"up to"). DCGO signal: `canEndNotMax: false` / `isOptional = -1`. Found by sweeping
+implemented cards for `select_opponent_permanent { optional: true }` whose card text is a mandatory
+"Suspend/Delete 1 of your opponent's Digimon", cross-checked against DCGO.
+
+Two instances found + fixed:
+- **BT21-037 Lighdramon** — "[When Digivolving] Suspend 1 of your opponent's Digimon. Then +2000 DP."
+  The select was `optional: true` (the YAML comment even documented the intended `optional: false`).
+  The author used `optional: true` to keep the unconditional DP buff firing when no target exists —
+  but `install_select_opponent_permanent` already skips the tail on empty candidates, so that didn't
+  even work, and it wrongly exposed a decline with a target present. **Fix:** guard select+suspend
+  behind `if any_permanent(opponent, digimon)` (mandatory select only reached when a target exists),
+  DP buff unconditional afterward. DCGO `isOptional=false`. Caught by `rules_faq::…::mp29_*`; both the
+  with-target suspend test and the no-target DP-buff test stay green.
+- **AD1-018 LordKnightmon** — "[Security] <De-Digivolve 1>, then **delete** 1 of your opponent's
+  Digimon with play cost 3 or less." The delete select was `optional: true`; DCGO `AD1_018.cs`
+  SecuritySkill uses `canEndNotMax: false`. **Fix:** removed `optional: true` (delete is the final
+  step, so the empty-candidate no-op loses nothing).
+
+Sweep otherwise clean: these were the only two implemented `select_opponent_permanent {optional:true}`
+cards whose text is mandatory single-target.

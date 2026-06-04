@@ -30,7 +30,7 @@ def ctx() -> ServerContext:
     return ServerContext(runs_dir=None, models_dir=None, repo_root=None)
 
 
-def test_tool_definitions_has_eight_entries():
+def test_tool_definitions_has_expected_entries():
     names = [tool.name for tool in TOOL_DEFINITIONS]
     assert sorted(names) == sorted([
         "list_runs",
@@ -41,6 +41,9 @@ def test_tool_definitions_has_eight_entries():
         "run_checkpoints",
         "run_deck_pool",
         "run_per_game_evals",
+        "champion_standings",
+        "run_elo_ladder",
+        "run_exploitability",
     ])
 
 
@@ -83,6 +86,9 @@ async def test_each_tool_handler_returns_structured_dict(ctx: ServerContext):
         "run_checkpoints": {"name": "missing"},
         "run_deck_pool": {"name": "missing"},
         "run_per_game_evals": {"name": "missing"},
+        "champion_standings": {},
+        "run_elo_ladder": {"name": "missing"},
+        "run_exploitability": {"name": "missing"},
     }
     # run_per_game_evals returns ok=True with empty rows for missing runs
     # (consistent with the spec's "empty list, not error" scenario).

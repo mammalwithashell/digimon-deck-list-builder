@@ -46,6 +46,7 @@ fn play_token_binds_created_handle() {
             modifier: "CannotAttack".into(),
             value: CompiledModifierValue::Literal(0),
             expiry: "end_of_turn".into(),
+        synth_identity: None,
         },
     ];
 

@@ -34,9 +34,9 @@ effects:
           target: target
           modifier: CannotAttack
           value: 0
-          expiry: end_of_turn
+          expiry: end_of_your_next_turn
       - add_modifier:
           target: target
           modifier: CannotBlock
           value: 0
-          expiry: end_of_turn
+          expiry: end_of_your_next_turn

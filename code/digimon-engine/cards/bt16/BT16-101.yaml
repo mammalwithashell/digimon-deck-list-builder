@@ -1,0 +1,212 @@
+# BT16-101 Rapidmon (X Antibody) — Digimon, Lv.6, Yellow/Green, DP 11000, Cost 11.
+# Traits: Holy Warrior / X Antibody. Attribute: Vaccine.
+# Standard digivolve: Lv.5 Yellow / Cost 3 (printed evo_costs: card_color 2, level 5, memory_cost 3).
+# xros_req: [Digivolve] [Rapidmon]: Cost 4.
+#
+# Printed card text (BT16-101.json / cards.json — verbatim):
+#
+#   <Armor Purge> (When this Digimon would be deleted, you may trash the top
+#     card of this Digimon to prevent that deletion.)
+#   [When Digivolving] Suspend all of your opponent's Digimon. Then, this
+#     Digimon may attack.
+#   [All Turns] While [Rapidmon] or [X Antibody] is in this Digimon's
+#     digivolution cards, all of your opponent's suspended Digimon get -4000 DP.
+#   [All Turns] [Once Per Turn] When an opponent's Digimon is deleted in battle
+#     or by having 0 DP, gain 2 memory.
+#
+#   Inherited Effect: (none)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT16/Yellow/BT16_101.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt-digivolve (EffectTiming.None AddSelfDigivolutionRequirementStaticEffect):
+#   PermanentCondition `TopCard.CardNames.Contains("Rapidmon")`, digivolutionCost
+#   4, ignoreDigivolutionRequirement: true → `name_contains: "Rapidmon"`, cost 4,
+#   ignore_requirements: true (BT12-050 / xros_req idiom: the base's top card is
+#   named Rapidmon, the level/color requirement is waived).
+#
+# Clause 0 — <Armor Purge> (EffectTiming.WhenPermanentWouldBeDeleted):
+#   `CardEffectFactory.ArmorPurgeEffect(card)`. The auto-installed
+#   prevent-deletion-by-trashing-top keyword. → `grant_keyword: ArmorPurge`
+#   (sibling BT16-102 Magnamon X idiom; ArmorPurge is in the validator's
+#   keyword allowlist). It installs as a replacement-backed keyword.
+#
+# Clause 1 — [When Digivolving] (EffectTiming.OnEnterFieldAnyone, ActivateClass,
+#   CanTriggerWhenDigivolving):
+#   Step 1: foreach `card.Owner.Enemy.GetBattleAreaDigimons()` that are not
+#     CanNotBeAffected → SuspendPermanentsClass.Tap(). An UNCONDITIONAL for-each
+#     suspend of ALL opponent Digimon (no "with no digivolution cards" filter —
+#     simpler than BT12-031). → `for_each` over `{ of: opponent, zone:
+#     [battle_area], kind: digimon }` → `suspend`.
+#   Step 2: if self still on battle area AND CanAttack → SelectAttackEffect
+#     (canAttackPlayerCondition: () => true, defenderCondition: () => true). This
+#     is "this Digimon may attack" — the SOURCE permanent attacks, target is
+#     unrestricted (player or any opp Digimon). The attack is offered (the
+#     SelectAttackEffect allows declining), so `optional: true`. →
+#     `may_attack_now { attacker: source, targets: any, optional: true }`
+#     (BT22-015 / AD1-009 "Then, this Digimon may attack" idiom).
+#
+# Clause 2 — [All Turns] aura (EffectTiming.None ChangeDPStaticEffect):
+#   PermanentCondition = opponent battle-area Digimon that IsSuspended.
+#   changeValue -4000. CanUseCondition = `card.PermanentOfThisCard()
+#   .DigivolutionCards.Count(cs => cs.CardNames.Contains("Rapidmon")
+#   || cs.CardNames.Contains("X Antibody") || Contains("XAntibody")) >= 1`
+#   AND self on battle area.
+#
+#   The condition is the DIGIVOLUTION CARDS (sources beneath the top card), NOT
+#   the top card. This card's own name "Rapidmon (X Antibody)" contains BOTH
+#   "Rapidmon" and "X Antibody" — so a top-card scan (`self_digivolution_
+#   contains_name`, which calls `Permanent::contains_card_name` and scans the
+#   top card too) would ALWAYS be true and the negative case ("no Rapidmon /
+#   X Antibody in the digivolution cards") would be inexpressible. Use the
+#   sources-only scan `self_digivolution_sources_contain_name` /
+#   `self_digivolution_sources_trait_has` (G-SELF-DIGIVOLUTION-CONTAINS-NAME-
+#   SOURCES-ONLY), exactly as BT20-059 (same "[X] or [X Antibody]" family
+#   wording) does, so the aura is OFF for an X-Antibody Rapidmon with no
+#   qualifying source.
+#
+#   Printed-text NUANCE — name vs trait: the printed text brackets are
+#   "[Rapidmon] or [X Antibody]". [Rapidmon] is a NAME; [X Antibody] is the
+#   X Antibody TRAIT. DCGO checks BOTH as NAME substrings (because the
+#   "X Antibody" string also appears in X-Antibody card names). To stay faithful
+#   to BOTH the printed trait reading and DCGO's name reading, the `active_when`
+#   gate is an `any_of` of three leaves: a [Rapidmon] name source, an
+#   [X Antibody] name source (DCGO's literal check), and an [X Antibody] trait
+#   source (the printed bracket reading). Any one satisfies the gate.
+#
+#   Self-aura `active_when` is evaluated against the carrier permanent
+#   (PredicateSubject::Permanent) at tick time, so the `self_digivolution_
+#   sources_*` predicates resolve the carrier's own stack. The `target`
+#   predicate selects the OPPONENT's SUSPENDED Digimon (BT12-031 `is_suspended:
+#   true` target idiom; BT20-059 opponent/own aura target idiom). The aura's
+#   per-permanent `dp_modifier: -4000` rides on each matching opp Digimon.
+#
+# Clause 3 — [All Turns] [Once Per Turn] (EffectTiming.OnDestroyedAnyone AND
+#   EffectTiming.OnEndBattle — DCGO uses TWO timing shells that SHARE one OPT
+#   hash "Memory+2_BT16_101", so it is ONE [Once Per Turn] effect that fires on
+#   either a battle death or a 0-DP rules-check death):
+#   CanUseCondition = self on battle area AND a deleted permanent is an opponent
+#   battle-area Digimon AND `!IsByEffect`. Body: `card.Owner.AddMemory(2)`.
+#
+#   "deleted in battle or by having 0 DP" = NOT by an effect (DCGO `!IsByEffect`).
+#   The substrate now tags 0-DP rules-check deletions with `EventCause::Rule`
+#   (added 2026-05-29), so the cause-OR is `any_of: [{ event_cause:
+#   battle_deletion }, { event_cause: rule }]`. Expressed as ONE `on_any_deletion`
+#   observer with `once_per_turn: true` — NOT two separately-OPT'd clauses (which
+#   could gain 4 in a turn). Gated on the deleted object being the opponent's
+#   Digimon (`event_target_owner: opponent` + `event_target_kind: digimon`).
+#   This is NOT optional: "gain 2 memory" has no "you may" — but the gating
+#   condition controls whether it fires (BT21-044 / ST3-04 on_any_deletion
+#   gain-memory idiom). DCGO's ActivateClass has no isOptional flag set on the
+#   memory gain.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                          | Status        |
+# |------------------------------------------------------------|---------------|
+# | Standard digivolve Lv.5 Yellow / Cost 3                    | IMPLEMENTED   |
+# | Alt-digivolve [Rapidmon] / Cost 4 (ignore reqs)            | IMPLEMENTED   |
+# | <Armor Purge>                                              | IMPLEMENTED   |
+# | [When Digivolving] suspend ALL opp Digimon                 | IMPLEMENTED   |
+# | [When Digivolving] then this Digimon may attack            | IMPLEMENTED   |
+# | [All Turns] aura: opp suspended Digimon -4000 (gated)      | IMPLEMENTED   |
+# | [All Turns][OPT] gain 2 memory on opp battle / 0-DP death  | IMPLEMENTED   |
+
+card: BT16-101
+name: "Rapidmon (X Antibody)"
+kind: digimon
+level: 6
+color: [yellow, green]
+cost: 11
+dp: 11000
+traits: [Holy Warrior, X Antibody]
+attribute: Vaccine
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# Standard digivolve (Lv.5 Yellow / Cost 3) is the printed evo_costs.
+# xros_req alt: [Digivolve] [Rapidmon]: Cost 4 — the base's top card name
+# contains "Rapidmon"; level/color requirement waived (DCGO
+# ignoreDigivolutionRequirement: true).
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+
+  - kind: digivolve
+    from: { name_contains: "Rapidmon" }
+    cost: 4
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 0 — <Armor Purge> (auto-installed prevent-deletion keyword) ──────
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge> — may trash the top card of this Digimon to prevent its deletion"
+
+  # ─── Clause 1 — [When Digivolving] suspend all opp + this Digimon may attack ──
+  #
+  # Step 1: UNCONDITIONAL for_each over ALL opponent battle-area Digimon →
+  #   suspend (DCGO foreach GetBattleAreaDigimons → SuspendPermanentsClass.Tap;
+  #   no "no digivolution cards" filter). `for_each` snapshots the iteration set
+  #   so the per-iteration suspends do not invalidate it.
+  # Step 2: "Then, this Digimon may attack." The SOURCE permanent attacks; the
+  #   target is unrestricted (player or any opp Digimon). Printed "may" →
+  #   `optional: true` (DCGO SelectAttackEffect allows declining the attack).
+  - when: when_digivolving
+    summary: "[When Digivolving] Suspend all opp Digimon; then this Digimon may attack"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+          bind_as: opp_digimon
+          body:
+            - suspend: { target: opp_digimon }
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true
+          prompt: "This Digimon may attack"
+
+  # ─── Clause 2 — [All Turns] aura: opp suspended Digimon -4000 DP ──────────────
+  #
+  # Gated on [Rapidmon] / [X Antibody] in this Digimon's digivolution SOURCES
+  # (sources-only scan, NOT the top card — see header). Target: the opponent's
+  # SUSPENDED Digimon. Per-permanent dp_modifier -4000.
+  - kind: aura
+    active_when:
+      any_of:
+        - self_digivolution_sources_contain_name: "Rapidmon"
+        - self_digivolution_sources_contain_name: "X Antibody"
+        - self_digivolution_sources_trait_has: "X Antibody"
+    target:
+      owner: opponent
+      zone: [battle_area]
+      kind: digimon
+      is_suspended: true
+    dp_modifier: -4000
+    summary: "[All Turns] While [Rapidmon]/[X Antibody] in digivolution cards, opp SUSPENDED Digimon get -4000 DP"
+
+  # ─── Clause 3 — [All Turns][OPT] gain 2 memory on opp battle / 0-DP death ─────
+  #
+  # ONE [Once Per Turn] observer firing on either a battle death OR a 0-DP
+  # rules-check death of an opponent's Digimon (DCGO: two timing shells sharing
+  # one OPT hash). "deleted in battle or by having 0 DP" = `!IsByEffect`, so the
+  # cause-OR is `battle_deletion OR rule`. Gated on the deleted object being the
+  # opponent's Digimon. Not "you may" → not optional; the condition gates firing.
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][Once Per Turn] When an opp Digimon is deleted in battle or by having 0 DP, gain 2 memory"
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - any_of:
+            - event_cause: battle_deletion
+            - event_cause: rule
+    process:
+      - gain_memory: 2

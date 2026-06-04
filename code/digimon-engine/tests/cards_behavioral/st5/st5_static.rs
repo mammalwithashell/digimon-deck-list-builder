@@ -118,3 +118,52 @@ fn st5_01_kapurimon_buffs_carrier_with_blocker_only_on_your_turn() {
         "ST5-01 buff is [Your Turn] only and should turn off on opponent's turn"
     );
 }
+
+/// ST-5 Machine Black starter-deck fixture: exact official 54-card composition
+/// (4 Digi-Eggs + 50 main). Mirrors `st4_deck_library_recipe_has_canonical_counts`.
+#[test]
+fn st5_deck_library_recipe_has_canonical_counts() {
+    let library: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../../data/deck_library.json"))
+            .expect("deck_library.json parses");
+    let entry = &library["archetypes"]["ST-5 Machine Black"]["decklists"][0];
+    assert_eq!(entry["deck_id"], "starter_st5_machine_black");
+
+    let cards: Vec<String> = serde_json::from_str(
+        entry["decklist"]
+            .as_str()
+            .expect("decklist is encoded JSON"),
+    )
+    .expect("decklist parses");
+    let mut counts = std::collections::BTreeMap::<String, usize>::new();
+    for card in &cards {
+        *counts.entry(card.clone()).or_default() += 1;
+    }
+
+    assert_eq!(cards.len(), 54);
+    assert_eq!(counts.get("ST5-01"), Some(&4));
+    let main_count: usize = cards.iter().filter(|id| id.as_str() != "ST5-01").count();
+    assert_eq!(main_count, 50);
+
+    let expected = [
+        ("ST5-01", 4),
+        ("ST5-02", 4),
+        ("ST5-03", 4),
+        ("ST5-04", 4),
+        ("ST5-05", 4),
+        ("ST5-06", 4),
+        ("ST5-07", 4),
+        ("ST5-08", 2),
+        ("ST5-09", 4),
+        ("ST5-10", 4),
+        ("ST5-11", 2),
+        ("ST5-12", 2),
+        ("ST5-13", 2),
+        ("ST5-14", 4),
+        ("ST5-15", 4),
+        ("ST5-16", 2),
+    ];
+    for (card_id, count) in expected {
+        assert_eq!(counts.get(card_id), Some(&count), "{card_id} count");
+    }
+}

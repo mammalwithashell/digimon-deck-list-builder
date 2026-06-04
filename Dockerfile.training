@@ -55,9 +55,12 @@ COPY data/cards.json data/tested_cards.json data/
 
 # Trim the workspace so unrelated members don't have to resolve.
 # Only digimon-dsl + digimon-engine + digimon-engine-py are copied above;
-# the cli, mcp, tauri shell, and dsl-tools crates must be dropped from
-# `members` or cargo metadata fails before maturin can build the wheel.
-RUN sed -i -E '/"code\/(src-tauri|digimon-engine-cli|digimon-engine-mcp|tools\/dsl-[a-z-]+)"/d' Cargo.toml
+# the cli, mcp, tauri shell, and ALL code/tools/* crates must be dropped from
+# `members` or `cargo metadata` fails before maturin can build the wheel.
+# Match every code/tools/* member (dsl-schema-export, dsl-lint,
+# action-space-export, dcgo-replay, archetype-static-tests, and any future
+# tool) so a newly-added tool crate can't silently break the training image.
+RUN sed -i -E '/"code\/(src-tauri|digimon-engine-cli|digimon-engine-mcp|tools\/[a-z0-9-]+)"/d' Cargo.toml
 
 # Build the wheel — release mode for maximum speed at training time
 RUN cd code/digimon-engine-py && maturin build --release --out /wheels
@@ -88,9 +91,21 @@ RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
 COPY requirements-training.txt .
 RUN pip install --no-cache-dir -r requirements-training.txt
 
-# Copy training-side source (flatten code/ → /app/)
+# Copy training-side source (flatten code/ → /app/).
+#
+# Only run_training_job.py is copied from code/tools/. The rest of code/tools/
+# is intentionally EXCLUDED because eight of those scripts import
+# `engine_py_legacy` (resolve_deck, meta_loader, ingest_cards, run_scenario,
+# run_qa_batch, promote_script, train_card_autoencoder, check_frozen_integrity)
+# — and `engine_py_legacy` is deliberately never copied into this image. The
+# training entrypoint (run_training_job.py → digimon_gym.agents.pilot_training)
+# imports only digimon_engine (the Rust wheel), data_paths, and digimon_gym.* —
+# never engine_py_legacy. `tools` is a namespace package (no __init__.py), so the
+# single file resolves as `tools.run_training_job` with /app on PYTHONPATH.
+# A guardrail test (code/tests/rl) + the CI smoke step (real import) enforce that
+# the training chain stays legacy-free.
 COPY code/digimon_gym/ digimon_gym/
-COPY code/tools/ tools/
+COPY code/tools/run_training_job.py tools/run_training_job.py
 COPY code/data_paths.py .
 COPY training_jobs/ training_jobs/
 

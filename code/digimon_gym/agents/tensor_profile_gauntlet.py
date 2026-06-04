@@ -16,7 +16,6 @@ from digimon_gym.tensor_profiles import TensorProfile, get_tensor_profile
 
 
 DEFAULT_PROFILE_REQUESTS = (
-    "compact_v1",
     "standard_lite_v2",
     "standard_full_v2",
 )
@@ -209,9 +208,6 @@ def score_trigger_order_accuracy_from_probe(
     profile_id = str(profile.id)
     sections = {_section_name(section): section for section in getattr(profile, "sections", ())}
     probe = _synthetic_trigger_probe(profile, sections) if tensor is None else tensor
-
-    if profile_id == "standard_compact_v1":
-        return (0, 1)
 
     correct = 0
     total = 1

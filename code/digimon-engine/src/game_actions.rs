@@ -5,7 +5,7 @@
 //! and the `activate_*_main` [Main] effect dispatchers live. All three are invoked
 //! by the action decoder and the Tauri/PyO3 bindings; none of them move here.
 
-use crate::card_source::CardSource;
+use crate::card_source::{CardHandle, CardSource};
 use crate::digixros::DigiXrosMaterialOrigin;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{
@@ -549,7 +549,14 @@ impl Game {
                 CostReductionKind::Play,
             );
             let Some(candidate) = candidates.into_iter().next() else {
-                return self.finish_play_from_hand_after_reductions(
+                // All generic cost reducers resolved. Before committing the
+                // play, offer the Assembly alt-path (G-ASSEMBLY-PLAY-EXECUTION,
+                // change `fix-ad1-025-assembly-data`) when the played card has
+                // an `assembly` path whose materials are present in the
+                // controller's trash. Falls through to the normal play finish
+                // when the card is not assembly-capable or its materials are
+                // unavailable.
+                return self.assembly_or_finish_play_from_hand(
                     player_id,
                     hand_index,
                     target.card,
@@ -561,7 +568,13 @@ impl Game {
                 );
             };
 
-            if !candidate.optional {
+            // Auto-apply only reducers with NO interactive cost: a reducer
+            // bearing a `pay_cost_fn` (e.g. "trash 2 cards" / "by suspending
+            // this Tamer") imposes a real cost the player chooses to pay, so
+            // it must park behind an explicit acceptance prompt below rather
+            // than fire silently here (Working Rule §17 — no auto-selections;
+            // every choice surfaces through `pending_selection`).
+            if !candidate.optional && !candidate.has_pay_cost {
                 let key = candidate.key.clone();
                 if let Some(amount) = self.apply_cost_reduction_candidate(&key, target) {
                     accumulated_reduction += amount;
@@ -1088,6 +1101,241 @@ impl Game {
         candidates
     }
 
+    // ── Assembly play execution (G-ASSEMBLY-PLAY-EXECUTION) ──────────────
+    //
+    // Faithful to DCGO `SelectAssemblyClass.cs`: a hand card with an
+    // `assembly` alt-path may be played by placing its named materials from
+    // the controller's TRASH under it (digivolution-stack bottom) and paying
+    // a reduced cost. The flow rides the normal PLAY_HAND action (no new
+    // action-space range): after the cost-reduction chain resolves we offer
+    // an optional gate ("use the assembly pieces from trash?") followed by a
+    // per-element surfaced trash selection. Declining the gate plays the card
+    // at full cost. See change `fix-ad1-025-assembly-data`.
+
+    /// Try the Assembly alt-path before the normal play finish. Returns
+    /// `Some(Pending)` when an Assembly selection flow was installed; `None`
+    /// when the card is not assembly-capable (caller then finishes normally).
+    #[allow(clippy::too_many_arguments)]
+    fn assembly_or_finish_play_from_hand(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target_card: CardHandle,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        total_reduction: i32,
+    ) -> PlayFromHandCostResult {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            if let Some(result) = self.try_begin_assembly_flow(
+                player_id,
+                hand_index,
+                target_card,
+                cost_delta,
+                source,
+                origin,
+                suppress_on_play,
+                total_reduction,
+            ) {
+                return result;
+            }
+        }
+        self.finish_play_from_hand_after_reductions(
+            player_id,
+            hand_index,
+            target_card,
+            cost_delta,
+            source,
+            origin,
+            suppress_on_play,
+            total_reduction,
+        )
+    }
+
+    /// Install the Assembly flow when the played card has an `assembly`
+    /// alt-path whose materials are satisfiable from the controller's trash.
+    /// Returns `Some(Pending)` if a selection was installed, else `None`.
+    #[cfg(feature = "dsl-yaml-loader")]
+    #[allow(clippy::too_many_arguments)]
+    fn try_begin_assembly_flow(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target_card: CardHandle,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        total_reduction: i32,
+    ) -> Option<PlayFromHandCostResult> {
+        // Assembly is a hand-play mechanic; only attempt for genuine hand plays.
+        if !matches!(origin, PendingWouldPlayOrigin::Hand) {
+            return None;
+        }
+
+        let (assembly_reduction, elements) =
+            self.resolve_eligible_assembly(player_id, hand_index, target_card)?;
+
+        let params = AssemblyPlayParams {
+            cost_delta,
+            source,
+            origin,
+            suppress_on_play,
+            total_reduction,
+            assembly_reduction,
+        };
+        install_assembly_element(
+            self,
+            player_id,
+            target_card,
+            params,
+            std::sync::Arc::new(elements),
+            0,
+            Vec::new(),
+        );
+        Some(PlayFromHandCostResult::Pending)
+    }
+
+    /// Resolve a hand card's eligible `assembly` alt-path: returns the cost
+    /// reduction (D5) and the per-element `(filter, count)` list when the card
+    /// carries an assembly path whose materials are each satisfiable from the
+    /// controller's trash with DISTINCT cards. `None` when the card is not
+    /// assembly-capable or its materials are unavailable. Shared by the play
+    /// flow (`try_begin_assembly_flow`) and the action mask (declare-then-pay
+    /// legality against the reduced cost).
+    #[cfg(feature = "dsl-yaml-loader")]
+    fn resolve_eligible_assembly(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target_card: CardHandle,
+    ) -> Option<(i32, Vec<(digimon_dsl::compiled::CompiledPredicate, u8)>)> {
+        use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCost, CompiledRepeat, CompiledZone};
+
+        let card_id = {
+            let card = self.player(player_id).hand.get(hand_index)?;
+            if card.handle() != target_card {
+                return None;
+            }
+            card.card_id(&self.card_data).to_string()
+        };
+
+        let path = self
+            .alt_path_registry
+            .get(&card_id)?
+            .iter()
+            .find(|p| matches!(p.kind, CompiledAltPathKind::Assembly))?;
+
+        // D5: an assembly alt-path `cost:` is the REDUCTION amount.
+        let assembly_reduction = match &path.cost {
+            None => 0,
+            Some(CompiledCost::Literal(n)) => *n,
+            // Formula reductions are not yet supported for assembly.
+            Some(CompiledCost::Formula(_)) => return None,
+        };
+
+        // Per-element (filter, count). Assembly materials come from trash and
+        // stack under the played card.
+        let mut elements: Vec<(digimon_dsl::compiled::CompiledPredicate, u8)> = Vec::new();
+        for m in &path.materials {
+            if !m.stack_under || !m.zones.iter().any(|z| matches!(z, CompiledZone::Trash)) {
+                return None; // unsupported material shape for assembly
+            }
+            let count = match &m.repeat {
+                None => 1u8,
+                Some(CompiledRepeat::Range { min, max }) if min == max => *max,
+                // Variable / unbounded counts not supported for assembly yet.
+                _ => return None,
+            };
+            elements.push((m.filter.clone(), count));
+        }
+        if elements.is_empty() {
+            return None;
+        }
+
+        // Eligibility: each element satisfiable from trash with distinct cards
+        // (DCGO `CanFulfillConditions` / recursive distinct-assignment check).
+        if !self.assembly_can_fulfill(player_id, target_card, &elements) {
+            return None;
+        }
+
+        Some((assembly_reduction, elements))
+    }
+
+    /// The assembly cost-reduction available for hand card `hand_index` right
+    /// now, or `0` when the card has no eligible assembly path. Used by the
+    /// action mask to offer the play under declare-then-pay legality against
+    /// the REDUCED cost (Q5). Always `0` without the DSL loader feature.
+    pub(crate) fn assembly_play_reduction_for_hand_card(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> i32 {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let Some(target) = self
+                .player(player_id)
+                .hand
+                .get(hand_index)
+                .map(|c| c.handle())
+            else {
+                return 0;
+            };
+            if let Some((reduction, _)) =
+                self.resolve_eligible_assembly(player_id, hand_index, target)
+            {
+                return reduction.max(0);
+            }
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (player_id, hand_index);
+        }
+        0
+    }
+
+    /// True when each assembly element can be matched to a DISTINCT card in
+    /// the controller's trash (a system of distinct representatives exists).
+    #[cfg(feature = "dsl-yaml-loader")]
+    fn assembly_can_fulfill(
+        &self,
+        player_id: PlayerId,
+        source_card: CardHandle,
+        elements: &[(digimon_dsl::compiled::CompiledPredicate, u8)],
+    ) -> bool {
+        use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+
+        let rctx = EffectReadContext::new(self, source_card, None, player_id);
+        let trash = &self.player(player_id).trash;
+
+        // Expand elements into one slot per required card.
+        let mut slots: Vec<&digimon_dsl::compiled::CompiledPredicate> = Vec::new();
+        for (pred, count) in elements {
+            for _ in 0..*count {
+                slots.push(pred);
+            }
+        }
+        // For each slot, the trash indices that satisfy its filter.
+        let match_table: Vec<Vec<usize>> = slots
+            .iter()
+            .map(|pred| {
+                trash
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, cs)| {
+                        eval_predicate(pred, &rctx, PredicateSubject::Card(cs.handle()))
+                    })
+                    .map(|(i, _)| i)
+                    .collect()
+            })
+            .collect();
+
+        let mut used = vec![false; trash.len()];
+        assembly_assign(&match_table, 0, &mut used)
+    }
+
     pub(crate) fn commit_pending_would_play(
         &mut self,
         outcome: crate::replacement::ReplacementOutcome,
@@ -1205,6 +1453,44 @@ impl Game {
             entered = self.commit_digixros_material_sources(entered);
         }
         let entered_index = entered.index as usize;
+
+        // G-ASSEMBLY-PLAY-EXECUTION: place assembled materials at the BOTTOM of
+        // the new permanent's digivolution stack BEFORE its [On Play] /
+        // [When Digivolving] effects fire — so play effects reading this
+        // Digimon's own digivolution-card count (e.g. AD1-025 Omnimon's bounce)
+        // observe the assembled materials. Consumed here regardless of which
+        // commit path (direct or `commit_pending_would_play` resume) ran.
+        // Assembly and DigiXros are mutually exclusive play paths
+        // (`pending_assembly_materials` vs `pending_digixros_transaction`), so
+        // for an assembly play the DigiXros relocation above is a no-op and
+        // `entered_index == field_index`.
+        if let Some((played, materials)) = self.pending_assembly_materials.take() {
+            if played == target_card {
+                for h in materials {
+                    let Some(pos) = self
+                        .player(player_id)
+                        .trash
+                        .iter()
+                        .position(|c| c.handle() == h)
+                    else {
+                        continue;
+                    };
+                    let cs = self.player_mut(player_id).trash.remove(pos);
+                    if let Some(perm) =
+                        self.player_mut(player_id).battle_area.get_mut(entered_index)
+                    {
+                        perm.push_under(cs);
+                    } else {
+                        self.player_mut(player_id).trash.push(cs);
+                    }
+                }
+            } else {
+                // Mismatch (would only arise under unusual interleaving):
+                // restore the slot for the correct card's commit.
+                self.pending_assembly_materials = Some((played, materials));
+            }
+        }
+
         let top_card = self.players[player_id as usize].battle_area[entered_index].top_card();
         let emitted_card_id = top_card.card_id(&self.card_data).to_string();
         let cost_printed = self.card_data[top_card.data_index].play_cost as i16;
@@ -2086,6 +2372,12 @@ impl Game {
         if !self.can_digivolve(&pending_ref.card, perm) {
             return false;
         }
+        // Q3 (G-DIGIVOLVE-TARGET-RESTRICTION): honor a `CanOnlyDigivolveInto`
+        // restriction on the arts-digivolve base too (the restriction applies to
+        // every digivolve route, not just normal digivolve).
+        if self.digivolve_target_blocked_by_restriction(target, &pending_ref.card) {
+            return false;
+        }
 
         let pending = self.pending_option.take().expect("checked above");
         let arts_card_id = pending.card.card_id(&self.card_data).to_string();
@@ -2096,7 +2388,11 @@ impl Game {
             .digivolve(pending.card, turn);
         self.player_mut(target.player).draw();
 
-        self.run_rule_check_after_arts();
+        // Arts digivolve runs the ≤0-DP rules-check immediately (before the
+        // WhenDigivolving enqueue) because the next branch keys off whether the
+        // Arts target survived the digivolve. The trailing `drain_effect_queue`
+        // re-runs the general check at the resolution boundary.
+        self.run_state_based_rules_check();
 
         if self
             .player(target.player)
@@ -2190,10 +2486,38 @@ impl Game {
         true
     }
 
-    pub(crate) fn run_rule_check_after_arts(&mut self) {
+    /// General state-based ≤0-DP rules-check (`G-NO-GENERAL-ZERO-DP-RULES-CHECK`).
+    ///
+    /// Deletes every battle-area Digimon whose effective DP is ≤ 0 — the
+    /// game's "checkup" / DCGO `CheckDeleteDigimon` state-based action. This is
+    /// a SINGLE pass: it collects the current ≤0-DP Digimon and deletes them
+    /// (highest index first, per player, so removals don't shift pending
+    /// handles). The fixpoint loop (re-check after `OnDeletion` handlers and
+    /// aura expiry mutate DP) lives in `drain_effect_queue`'s outermost-drain
+    /// wrapper, which calls this only at top-level resolution boundaries — never
+    /// mid-effect.
+    ///
+    /// Returns `true` if it deleted at least one Digimon (drives the wrapper's
+    /// fixpoint). Deletion routes through `delete_permanent_with_effects` (the
+    /// batched flow + inferred cause), so `OnDeletion` handlers fire post-trash
+    /// per CLAUDE.md §25.
+    ///
+    /// Idempotent: a handle whose slot is already empty is filtered by the
+    /// batched-deletion entrypoint, so a re-run is a no-op.
+    pub(crate) fn run_state_based_rules_check(&mut self) -> bool {
         let mut to_delete: Vec<PermanentHandle> = Vec::new();
         for pid in 0..self.players.len() {
             for idx in 0..self.players[pid].battle_area.len() {
+                // Skip transiently-empty (zombie) slots. A permanent mid-cleanup
+                // (a just-emptied DigiXros source carrier, a trashed last
+                // card_source) can have 0 card_sources before its slot is
+                // removed. `permanent_is_digimon_for_rules` / `effective_dp`
+                // read `top_card()`, which panics on an empty stack — and an
+                // empty slot is not a live Digimon, so it is never a ≤0-DP
+                // deletion candidate anyway.
+                if self.players[pid].battle_area[idx].card_sources.is_empty() {
+                    continue;
+                }
                 let handle = PermanentHandle {
                     player: pid as PlayerId,
                     index: idx as u8,
@@ -2205,9 +2529,30 @@ impl Game {
                 }
             }
         }
-        for handle in to_delete.into_iter().rev() {
-            self.delete_permanent_with_effects(handle);
+        if to_delete.is_empty() {
+            return false;
         }
+        for handle in to_delete.into_iter().rev() {
+            // A ≤0-DP deletion is a STATE-BASED RULE action, not an effect.
+            // `infer_deletion_cause` would otherwise attribute it to
+            // OwnEffect/OpponentEffect (no battle/security/effect-source is
+            // live between top-level effects), which is wrong for observers
+            // that distinguish "deleted by having 0 DP" from "deleted by an
+            // effect" (e.g. BT16-101's [All Turns] gain-2-memory clause keys
+            // on battle OR 0-DP, NOT effect deletion). Refine the OnDeletion /
+            // OnAnyDeletion observer payload to `EventCause::Rule` via the
+            // same override slot Overclock uses (game_phases.rs); it only
+            // refines the observer cause — replacement-window filtering still
+            // reads `current_deletion_cause` — and the deferred-replacement
+            // path (e.g. an Armor Purge window opened by this deletion)
+            // threads it through ParkedReplacement.
+            let previous = self.current_deletion_event_cause_override;
+            self.current_deletion_event_cause_override =
+                Some(crate::trigger_context::EventCause::Rule);
+            self.delete_permanent_with_effects(handle);
+            self.current_deletion_event_cause_override = previous;
+        }
+        true
     }
 
     /// Enqueue every `OptionMain` effect declared by `card_id` directly
@@ -7196,4 +7541,166 @@ impl Game {
 
         true
     }
+}
+
+// ── Assembly play-execution free helpers (G-ASSEMBLY-PLAY-EXECUTION) ──────
+//
+// These live at module scope (not on `impl Game`) so the per-element
+// selection chain can recurse from inside a `Box<dyn FnOnce>` selection
+// callback without any self-reference. See `Game::try_begin_assembly_flow`.
+
+/// Immutable bundle of the play parameters threaded through the Assembly
+/// selection chain. `Copy` so each recursive step / closure can take it.
+#[cfg(feature = "dsl-yaml-loader")]
+#[derive(Clone, Copy)]
+struct AssemblyPlayParams {
+    cost_delta: crate::enums::CostDelta,
+    source: PlaySource,
+    origin: PendingWouldPlayOrigin,
+    suppress_on_play: bool,
+    /// Generic cost reduction accumulated by the BeforePayCost chain.
+    total_reduction: i32,
+    /// The assembly-specific reduction (D5 — `cost:` on the alt-path).
+    assembly_reduction: i32,
+}
+
+/// Recursive system-of-distinct-representatives check: can each assembly
+/// slot be matched to a DISTINCT trash card? `match_table[slot]` lists the
+/// trash indices satisfying that slot's filter. Tiny inputs (≤ a few slots,
+/// trash bounded by deck size) keep the backtracking cheap.
+#[cfg(feature = "dsl-yaml-loader")]
+fn assembly_assign(match_table: &[Vec<usize>], slot: usize, used: &mut [bool]) -> bool {
+    if slot >= match_table.len() {
+        return true;
+    }
+    for &t in &match_table[slot] {
+        if !used[t] {
+            used[t] = true;
+            if assembly_assign(match_table, slot + 1, used) {
+                used[t] = false;
+                return true;
+            }
+            used[t] = false;
+        }
+    }
+    false
+}
+
+/// Install the trash selection for assembly element `element_idx`, chaining
+/// to the next element on resolution. Element 0 is the optional gate
+/// (declining plays the card at full cost); later elements are required
+/// (exact count, DCGO `canEndNotMax: false`). After the final element the
+/// play is finished at the reduced cost and the chosen materials are placed
+/// under the new permanent.
+#[cfg(feature = "dsl-yaml-loader")]
+#[allow(clippy::too_many_arguments)]
+fn install_assembly_element(
+    game: &mut Game,
+    player: PlayerId,
+    target_card: CardHandle,
+    params: AssemblyPlayParams,
+    elements: std::sync::Arc<Vec<(digimon_dsl::compiled::CompiledPredicate, u8)>>,
+    element_idx: usize,
+    picked_so_far: Vec<CardHandle>,
+) {
+    use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+    use crate::effect_context::CountCappedZone;
+
+    let (filter_pred, count) = elements[element_idx].clone();
+    let is_first = element_idx == 0;
+    let is_last = element_idx + 1 >= elements.len();
+    let source_card = target_card;
+
+    // Distinctness across elements: exclude handles already picked.
+    let exclude = picked_so_far.clone();
+    let filter = move |g: &Game, cs: &CardSource| -> bool {
+        if exclude.contains(&cs.handle()) {
+            return false;
+        }
+        let rctx = EffectReadContext::new(g, source_card, None, player);
+        eval_predicate(&filter_pred, &rctx, PredicateSubject::Card(cs.handle()))
+    };
+
+    // Element 0 is the optional "use assembly?" gate (declineable at zero
+    // picks); subsequent elements require their exact count.
+    let min = if is_first { 0 } else { count };
+    let max = count;
+    let prompt = format!(
+        "Assembly: select {} card(s) from trash to place under (No Selection to skip).",
+        count
+    );
+
+    let elements_for_cb = std::sync::Arc::clone(&elements);
+    let mut ctx = EffectContext::new(game, source_card, None, player);
+    ctx.select_count_capped_multi_min(
+        player,
+        CountCappedZone::Trash,
+        min,
+        max,
+        &prompt,
+        is_first, // is_optional_zero: only the gate (element 0) may finish at 0 picks
+        None,
+        filter,
+        move |cctx, picks| {
+            let game: &mut Game = cctx.game;
+            // Decline at the gate → play at full cost (no assembly used).
+            if is_first && picks.is_empty() {
+                let _ = assembly_finish(game, player, target_card, params, params.total_reduction);
+                return;
+            }
+            let mut all_picked = picked_so_far;
+            all_picked.extend(picks.iter().copied());
+            if is_last {
+                let total = params.total_reduction + params.assembly_reduction;
+                // Hand the chosen materials to the commit, which places them
+                // under the new permanent BEFORE its [On Play] effects fire.
+                game.pending_assembly_materials = Some((target_card, all_picked));
+                let _ = assembly_finish(game, player, target_card, params, total);
+                // Clear any leftover (e.g. the play failed before commit) so
+                // the slot can't leak into a later play.
+                game.pending_assembly_materials = None;
+            } else {
+                install_assembly_element(
+                    game,
+                    player,
+                    target_card,
+                    params,
+                    elements_for_cb,
+                    element_idx + 1,
+                    all_picked,
+                );
+            }
+        },
+    );
+}
+
+/// Re-resolve the hand index for `target_card` (the selection callbacks fire
+/// after `decode_action` returns, but the queue is paused so the hand should
+/// be unchanged) and finish the play at `total_reduction`.
+#[cfg(feature = "dsl-yaml-loader")]
+fn assembly_finish(
+    game: &mut Game,
+    player: PlayerId,
+    target_card: CardHandle,
+    params: AssemblyPlayParams,
+    total_reduction: i32,
+) -> PlayFromHandCostResult {
+    let Some(hand_index) = game
+        .player(player)
+        .hand
+        .iter()
+        .position(|c| c.handle() == target_card)
+    else {
+        return PlayFromHandCostResult::Failed;
+    };
+    game.finish_play_from_hand_after_reductions(
+        player,
+        hand_index,
+        target_card,
+        params.cost_delta,
+        params.source,
+        params.origin,
+        params.suppress_on_play,
+        total_reduction,
+    )
 }

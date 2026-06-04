@@ -1219,6 +1219,8 @@ pub struct MayAttackNowArgs {
     pub ignore_summoning_sickness: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub windowed: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1907,6 +1909,36 @@ pub struct AddModifierArgs {
     pub modifier: String,
     pub value: ModifierValueSpec,
     pub expiry: String,
+    /// Structured payload for payload-bearing modifiers. Required for
+    /// `modifier: TreatAsDigimon` ("treat this permanent as a [DP] DP
+    /// Digimon"), forbidden for every other modifier (validated). Carries
+    /// the synthetic identity the target is treated as while the modifier
+    /// is live; lowers to `ModifierPayload::SynthIdentity`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub synth_identity: Option<SynthIdentitySpec>,
+}
+
+/// The synthetic Digimon identity a permanent is "treated as" while a
+/// `TreatAsDigimon` modifier is live (e.g. RizeGreymon treating a Marcus
+/// Damon Tamer as a 3000 DP Digimon). `dp` is required; `kind` defaults to
+/// `Digimon` (the only kind this mechanic targets in printed cards);
+/// `level`/`colors`/`traits` default empty when the text grants none.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SynthIdentitySpec {
+    pub dp: i32,
+    #[serde(default = "synth_identity_default_kind")]
+    pub kind: crate::spec::CardKind,
+    #[serde(default)]
+    pub level: u8,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub colors: Vec<crate::spec::ColorSpec>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub traits: Vec<String>,
+}
+
+fn synth_identity_default_kind() -> crate::spec::CardKind {
+    crate::spec::CardKind::Digimon
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2404,6 +2436,15 @@ pub struct SelectCountCappedArgs {
     /// cost is unpayable). G-SELECT-MULTI-MIN.
     #[serde(default, skip_serializing_if = "is_zero_u8")]
     pub min: u8,
+    /// MP-30/31 (General Rules/FAQ): when true the required pick-count clamps to
+    /// the number of available candidates — the player MUST affect
+    /// `min(max, available)` targets and the step never no-ops for "fewer than N
+    /// in play" (a mandatory "N of your opponent's Digimon" effect affects as
+    /// many as are present, but cannot stop early when N are available). Use for
+    /// EFFECT-TARGET selections; leave false for unpayable-cost selections.
+    /// Orthogonal to `min` (the cost floor).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub clamp_to_available: bool,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,

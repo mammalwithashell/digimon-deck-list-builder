@@ -104,6 +104,18 @@ runpodctl gpu list      # should list available GPU types
 
 ## A.2 Publish the training image to GHCR
 
+> **Legacy-free, self-contained image (2026-05-30):** Per the
+> `make-training-build-legacy-free` change, `Dockerfile.training` ships neither
+> `engine_py_legacy` nor `code/server/`, and copies only `run_training_job.py`
+> from `code/tools/` (the other tools import the legacy engine). The training
+> stack is Rust-only (`DIGIMON_BACKEND=rust`, default profile
+> `standard_lite_v2`). The CI workflow now runs a **real import** of the
+> entrypoint chain inside the built image (`python -c "import tools.run_training_job;
+> import digimon_gym.agents.pilot_training"`) in addition to the `--dry-run` job
+> check — the old `--dry-run`-only smoke returned before the import chain and so
+> let import-time breakage (a missing dep, a stray `engine_py_legacy` import)
+> ship green.
+
 Tag and push triggers `.github/workflows/training-image.yml`, which builds
 `Dockerfile.training` and publishes to GHCR:
 

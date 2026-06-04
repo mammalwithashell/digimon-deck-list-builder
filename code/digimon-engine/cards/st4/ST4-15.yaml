@@ -10,7 +10,6 @@ effects:
     process:
       - select_opponent_permanent:
           bind_as: target
-          optional: true
           filter:
             all_of:
               - kind: digimon
@@ -23,7 +22,6 @@ effects:
     process:
       - select_opponent_permanent:
           bind_as: target
-          optional: true
           filter:
             all_of:
               - kind: digimon

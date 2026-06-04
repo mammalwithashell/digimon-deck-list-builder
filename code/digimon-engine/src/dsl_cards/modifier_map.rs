@@ -53,6 +53,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "ImmunityToOpponentEffects" => ModifierType::ImmunityToOpponentEffects,
         "DontBattleSecurityDigimon" => ModifierType::DontBattleSecurityDigimon,
         "CannotDigivolve" => ModifierType::CannotDigivolve,
+        "CanOnlyDigivolveInto" => ModifierType::CanOnlyDigivolveInto,
         "ChangeColor" => ModifierType::ChangeColor,
         "AddColor" => ModifierType::AddColor,
         "ChangeLevel" => ModifierType::ChangeLevel,
@@ -165,6 +166,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::ImmunityToOpponentEffects
         | ModifierType::DontBattleSecurityDigimon
         | ModifierType::CannotDigivolve
+        | ModifierType::CanOnlyDigivolveInto
         | ModifierType::ChangeColor
         | ModifierType::AddColor
         | ModifierType::ChangeLevel
@@ -277,6 +279,7 @@ mod tests {
             ModifierType::ImmunityToOpponentEffects,
             ModifierType::DontBattleSecurityDigimon,
             ModifierType::CannotDigivolve,
+            ModifierType::CanOnlyDigivolveInto,
             ModifierType::ChangeColor,
             ModifierType::AddColor,
             ModifierType::ChangeLevel,
@@ -408,6 +411,7 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         "DrawX" => Keyword::DrawX(value.unwrap_or(1) as u8),
         "Fragment" => Keyword::Fragment(value.unwrap_or(1) as u8),
         "Progress" => Keyword::Progress,
+        "Retaliation" => Keyword::Retaliation,
         _ => return None,
     })
 }

@@ -141,6 +141,18 @@ fn compile_color(c: crate::spec::ColorSpec) -> CompiledColor {
     }
 }
 
+fn compile_synth_identity(
+    s: &crate::step::SynthIdentitySpec,
+) -> crate::compiled::CompiledSynthIdentity {
+    crate::compiled::CompiledSynthIdentity {
+        kind: compile_card_kind(s.kind),
+        level: s.level,
+        colors: s.colors.iter().copied().map(compile_color).collect(),
+        traits: s.traits.clone(),
+        dp: s.dp,
+    }
+}
+
 fn compile_player_ref(p: crate::common::PlayerRef) -> CompiledPlayerRef {
     use crate::common::PlayerRef as S;
     match p {
@@ -2270,6 +2282,7 @@ fn compile_step(
             modifier: a.modifier.clone(),
             value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
+            synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
         },
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
             target_player: compile_player_ref(a.target_player),
@@ -2623,6 +2636,7 @@ fn compile_step(
             zone: compile_zone(a.zone),
             max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
             min: a.min,
+            clamp_to_available: a.clamp_to_available,
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
@@ -2738,6 +2752,7 @@ fn compile_step(
             without_suspending: a.without_suspending,
             ignore_summoning_sickness: a.ignore_summoning_sickness,
             optional: a.optional,
+            windowed: a.windowed,
             prompt: a.prompt.clone(),
             cost_upgrade: a.cost_upgrade.map(|u| CompiledAttackCostUpgrade {
                 dp: u.dp.unwrap_or(0),

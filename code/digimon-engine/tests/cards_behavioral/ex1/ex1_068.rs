@@ -121,18 +121,13 @@ fn ex1_068_is_option_blue_cost_1() {
     );
 }
 
-/// One clause total — the [Main] grant clause is OMITTED pending
-/// G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT, leaving only the [Security]
-/// clause:
-///   [0] on_security (triggered, FaceUp scope, gain_memory: 2)
-///
-/// This test ALSO defends the no-approximations decision: if a future
-/// change adds a half-implementation of the [Main] clause (e.g. a
-/// `lose_memory: 2` step routed through some other timing), this test
-/// will fail and force the author to either close the gap properly or
-/// revert.
+/// Two clauses total — the [Main] grant clause is now IMPLEMENTED
+/// (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT resolved), alongside the
+/// [Security] clause:
+///   [0] main_from_hand (grant_triggered_effect → opponent Digimon)
+///   [1] on_security (triggered, FaceUp scope, gain_memory: 2)
 #[test]
-fn ex1_068_has_one_clause_pending_main_gap() {
+fn ex1_068_has_two_clauses_after_main_grant_implemented() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -146,18 +141,21 @@ fn ex1_068_has_one_clause_pending_main_gap() {
     let card = runner.compiled_card(CARD_ID).expect("EX1-068 compiled");
     assert_eq!(
         card.effects.len(),
-        1,
-        "expected 1 clause (only [Security] gain_memory: 2; [Main] grant clause \
-         OMITTED pending G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT); got {} clauses",
+        2,
+        "expected 2 clauses ([Main] grant + [Security] gain_memory: 2); got {} clauses",
         card.effects.len()
     );
 }
 
-/// The [Main] grant clause MUST NOT be present until the DSL gap closes.
-/// If a future change adds a `MainFromHand` triggered clause that does NOT
-/// faithfully implement the granted-trigger semantics, this test fails.
+/// The [Main] grant clause IS present and faithfully shaped: a
+/// `MainFromHand` triggered clause whose process is a
+/// `GrantTriggeredEffect` with `timing = when_attacking` and a body that
+/// loses 2 memory. Defends against regression to the omitted state AND
+/// against a wrong-timing/wrong-body half-implementation.
 #[test]
-fn ex1_068_no_main_from_hand_clause_pending_gap() {
+fn ex1_068_main_from_hand_grant_clause_shape() {
+    use digimon_dsl::compiled::CompiledModifierTarget;
+
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -170,16 +168,44 @@ fn ex1_068_no_main_from_hand_clause_pending_gap() {
 
     let card = runner.compiled_card(CARD_ID).expect("EX1-068 compiled");
 
-    let has_main_from_hand = card.effects.iter().any(|c| match c {
-        CompiledClause::Triggered(t) => t.when.contains(&CompiledTiming::MainFromHand),
-        _ => false,
-    });
+    let main_clause = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainFromHand) => {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("EX1-068 must carry a MainFromHand [Main] clause");
+
+    let grant = main_clause
+        .process
+        .iter()
+        .find_map(|s| match s {
+            CompiledStep::GrantTriggeredEffect {
+                target,
+                timing,
+                expiry,
+                body,
+            } => Some((target, timing, expiry, body)),
+            _ => None,
+        })
+        .expect("[Main] process must contain a grant_triggered_effect step");
+
+    let (target, timing, expiry, body) = grant;
+    assert_eq!(timing, "when_attacking", "granted trigger fires when attacking");
+    assert_eq!(
+        expiry, "end_of_opponents_next_turn",
+        "grant lasts until the end of the opponent's next turn"
+    );
     assert!(
-        !has_main_from_hand,
-        "EX1-068 must NOT carry a MainFromHand clause until \
-         G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT closes — a half-implementation \
-         (e.g. silent lose_memory on every opponent attack) would over-fire on \
-         Digimon played AFTER this Option resolves, violating no-approximations."
+        matches!(target, CompiledModifierTarget::Filter(_)),
+        "target must be a predicate filter (opponent Digimon), got {target:?}"
+    );
+    assert!(
+        body.iter().any(|s| matches!(s, CompiledStep::LoseMemory(2))),
+        "granted body must lose 2 memory; got {body:?}"
     );
 }
 
@@ -201,11 +227,17 @@ fn ex1_068_security_clause_shape() {
 
     let card = runner.compiled_card(CARD_ID).expect("EX1-068 compiled");
 
-    match &card.effects[0] {
+    let security_clause = card
+        .effects
+        .iter()
+        .find(|c| matches!(c, CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity)))
+        .expect("EX1-068 must carry an OnSecurity [Security] clause");
+
+    match security_clause {
         CompiledClause::Triggered(t) => {
             assert!(
                 t.when.contains(&CompiledTiming::OnSecurity),
-                "clause 0 must fire at OnSecurity; got {:?}",
+                "security clause must fire at OnSecurity; got {:?}",
                 t.when
             );
             assert_eq!(
@@ -244,11 +276,16 @@ fn ex1_068_security_process_contains_gain_memory_2() {
 
     let card = runner.compiled_card(CARD_ID).expect("EX1-068 compiled");
 
-    let CompiledClause::Triggered(t) = &card.effects[0] else {
-        panic!("clause 0 must be Triggered; got {:?}", card.effects[0]);
-    };
+    let security_clause = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => Some(t),
+            _ => None,
+        })
+        .expect("EX1-068 must carry an OnSecurity [Security] clause");
 
-    let has_gain_memory_2 = t
+    let has_gain_memory_2 = security_clause
         .process
         .iter()
         .any(|s| matches!(s, CompiledStep::GainMemory(2)));
@@ -256,6 +293,6 @@ fn ex1_068_security_process_contains_gain_memory_2() {
         has_gain_memory_2,
         "[Security] process must contain GainMemory(2) — printed text 'Gain 2 memory'; \
          got {:?}",
-        t.process
+        security_clause.process
     );
 }

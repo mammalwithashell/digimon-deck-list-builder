@@ -1,0 +1,102 @@
+card: BT9-108
+name: Eye of the Gorgon
+kind: option
+color: [purple]
+cost: 8
+
+# Printed card text (data/cards.json — verbatim):
+#
+#   [Main] Delete 1 of your opponent's unsuspended Digimon. If you do, you may
+#   play 1 purple level 3 Digimon card from your trash without paying its memory
+#   cost. Any [On Play] effects on the Digimon played with this effect don't
+#   activate.
+#
+#   Security Effect [Security] Activate this card's [Main] effects.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT9/Purple/BT9_108.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+# Clause 0 — [Main]:
+#   0a. Delete 1 opponent UNSUSPENDED Digimon — MANDATORY (printed "Delete 1").
+#       `select_opponent_permanent` with filter `is_unsuspended: true`. DCGO
+#       marks the select `canNoSelect: true`, but the printed text is mandatory
+#       and the "If you do" gate (0b) already handles the no-target case (the
+#       selection installs nothing when no unsuspended opponent Digimon exists).
+#   0b. "If you do" — gate the follow-up on a delete having occurred via
+#       `binding_present: victim`. Mirrors ST6-15 Death Claw.
+#   0c. "you may play 1 purple level 3 Digimon from your trash without paying
+#       its memory cost" — optional `select_trash` (printed "you may") +
+#       `play_from_trash_free`.
+#   0d. "Any [On Play] effects ... don't activate" — `suppress_on_play: true`
+#       on the free play (PUPPETS-G030). Scoped to the just-played permanent and
+#       this single play event only.
+#
+# Clause 1 — [Security] mirror:
+#   "[Security] Activate this card's [Main] effects." The inherited Security
+#   clause re-runs the whole [Main] body. Modeled as a second triggered clause
+#   at `on_security` with `scope: inherited` (matching ST6-16 / BT5-106 /
+#   ST1-16 security-mirror shape).
+
+effects:
+  # ─── Clause 0 — [Main] ───────────────────────────────────────────────────────
+  - when: main_from_hand
+    summary: "[Main] Delete 1 opponent unsuspended Digimon; if you do, you may play 1 purple Lv.3 from trash free (suppress its On Play)"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Delete 1 of your opponent's unsuspended Digimon"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { binding_present: victim }
+          then:
+            - select_trash:
+                of: you
+                bind_as: revived
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 3
+                    - color_is: purple
+                prompt: "Play 1 purple level 3 Digimon from your trash without paying its cost"
+            - play_from_trash_free:
+                of: you
+                hand_index: revived
+                suppress_on_play: true
+
+  # ─── Clause 1 — [Security] mirror ────────────────────────────────────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Delete 1 of your opponent's unsuspended Digimon"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { binding_present: victim }
+          then:
+            - select_trash:
+                of: you
+                bind_as: revived
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 3
+                    - color_is: purple
+                prompt: "Play 1 purple level 3 Digimon from your trash without paying its cost"
+            - play_from_trash_free:
+                of: you
+                hand_index: revived
+                suppress_on_play: true

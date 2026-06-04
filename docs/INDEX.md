@@ -24,6 +24,7 @@
 | [TENSOR_SPEC.md](TENSOR_SPEC.md) | Observation tensor layout (1375 floats) |
 | [ACTION_SPEC.md](ACTION_SPEC.md) | Action space (2192 actions) — ranges and conventions |
 | [TRAINING_RUNBOOK.md](TRAINING_RUNBOOK.md) | RL training operations guide |
+| [MODEL_EVALUATION.md](MODEL_EVALUATION.md) | How to evaluate models across training modes — anchored eval (greedy + frozen champions, seat-balanced), Elo ladder, champion registry, exploiter/exploitability, gated self-play, equilibrium-methods horizon |
 | [REWARD_PROFILES.md](REWARD_PROFILES.md) | Composable reward shaping — YAML-defined per-archetype reward profiles, component catalog, budget engine, hot-reload, resume-hash check, telemetry reference, deprecation timeline for legacy flat shaping fields |
 | [TOOLS.md](TOOLS.md) | CLI tools reference — card pipeline, transpiler, Pinecone, model export |
 | [MODEL_CATALOG.md](MODEL_CATALOG.md) | ONNX model catalog — admin upload, desktop cache, storage backends, integrity |
