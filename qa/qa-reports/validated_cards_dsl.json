@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-05-30",
+  "last_updated": "2026-06-03",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -6665,6 +6665,16 @@
       "yaml_path": "code/digimon-engine/cards/st6/ST6-16.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
       "audit_note": "Faithful to printed text + DCGO."
+    },
+    "BT24-068": {
+      "card_name": "DemiDevimon",
+      "validated_date": "2026-06-03",
+      "report": "rules-faq-faithfulness-suite (NV-1 vehicle)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "rules-FAQ no-DP vehicle",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-068.yaml",
+      "test_path": "code/digimon-engine/tests/rules_faq/no_level_no_value.rs"
     }
   }
 }

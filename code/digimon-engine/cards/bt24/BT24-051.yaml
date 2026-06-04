@@ -46,6 +46,10 @@ effects:
           of: opponent
           zone: battle_area
           max: 2
+          # Card text reads "Suspend 2" (mandatory) — affect min(2, available);
+          # cannot stop after 1 when 2 are present (FAQ MP-31), but still
+          # suspends the 1 when only 1 is in play (FAQ MP-30).
+          clamp_to_available: true
           filter:
             any_of:
               - kind: digimon

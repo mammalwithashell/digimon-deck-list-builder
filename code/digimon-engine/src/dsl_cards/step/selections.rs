@@ -422,6 +422,7 @@ pub fn try_install(
             zone,
             max,
             min,
+            clamp_to_available,
             bind_as,
             prompt,
             optional_zero,
@@ -438,8 +439,10 @@ pub fn try_install(
             };
             // When fewer candidates exist than the required minimum, the step
             // installs nothing AND does not run the captured tail — the
-            // required cost is unpayable. G-SELECT-MULTI-MIN.
-            let min_unpayable = *min > 0 && candidate_count < *min as usize;
+            // required cost is unpayable. G-SELECT-MULTI-MIN. A
+            // `clamp_to_available` (MP-30/31 effect-target) selection is never
+            // unpayable: it affects `min(max, available)` instead.
+            let min_unpayable = !*clamp_to_available && *min > 0 && candidate_count < *min as usize;
             let completes_synchronously =
                 !min_unpayable && (candidate_count == 0 || max_value == 0);
             install_select_count_capped_multi(
@@ -448,6 +451,7 @@ pub fn try_install(
                 *zone,
                 *min,
                 max_value,
+                *clamp_to_available,
                 filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
@@ -1844,6 +1848,7 @@ fn install_select_count_capped_multi(
     zone: CompiledZone,
     min: u8,
     max: u8,
+    clamp_to_available: bool,
     filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
@@ -1877,6 +1882,7 @@ fn install_select_count_capped_multi(
             target_player,
             min,
             max,
+            clamp_to_available,
             filter,
             bind_as,
             prompt,
@@ -1941,6 +1947,7 @@ fn install_select_count_capped_permanents(
     target_player: u8,
     min: u8,
     max: u8,
+    clamp_to_available: bool,
     filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
@@ -1963,8 +1970,18 @@ fn install_select_count_capped_permanents(
             .collect();
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    // MP-30/31 (General Rules/FAQ): a mandatory "N of your opponent's Digimon"
+    // effect-target selection affects `min(max, available)` — it is never
+    // unpayable for "fewer than N in play", but it MUST NOT stop early when N
+    // are available. Raise the required floor to `min(max, candidates)`.
+    let min = if clamp_to_available {
+        max.min(candidates.len() as u8)
+    } else {
+        min
+    };
     // Fewer candidates than the required minimum → unpayable required cost;
-    // silently no-op without running the tail. G-SELECT-MULTI-MIN.
+    // silently no-op without running the tail. G-SELECT-MULTI-MIN. (Unreachable
+    // when `clamp_to_available`, since the floor was clamped to `candidates`.)
     if min > 0 && candidates.len() < min as usize {
         return;
     }

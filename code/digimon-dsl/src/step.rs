@@ -2436,6 +2436,15 @@ pub struct SelectCountCappedArgs {
     /// cost is unpayable). G-SELECT-MULTI-MIN.
     #[serde(default, skip_serializing_if = "is_zero_u8")]
     pub min: u8,
+    /// MP-30/31 (General Rules/FAQ): when true the required pick-count clamps to
+    /// the number of available candidates — the player MUST affect
+    /// `min(max, available)` targets and the step never no-ops for "fewer than N
+    /// in play" (a mandatory "N of your opponent's Digimon" effect affects as
+    /// many as are present, but cannot stop early when N are available). Use for
+    /// EFFECT-TARGET selections; leave false for unpayable-cost selections.
+    /// Orthogonal to `min` (the cost floor).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub clamp_to_available: bool,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
