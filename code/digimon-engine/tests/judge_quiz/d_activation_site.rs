@@ -243,7 +243,7 @@ fn q9_gatomon_not_in_battle_area_during_removal_no_memory() {}
 ///     still leave the timing gap → still 6 draws.) Editing the card YAML is out
 ///     of scope here.
 #[test]
-#[ignore = "BLOCKED: G-ON-DELETION-RESOLVES-MID-EFFECT — [On Deletion] resolves nested in the delete step, before CFtD's return-to-hand, so the carrier-returns-to-hand suppression the judge requires never happens (engine draws 6, judge: 0). See engine-gaps.md. (The earlier color data bug — the 4 Eyesmon-stack cards declared black, actually purple [6] — was fixed 2026-06-03; only the timing gap remains.)"]
+#[ignore = "BLOCKED: G-ON-DELETION-RESOLVES-MID-EFFECT — confirmed deletion-model restructuring (2026-06-04). DCGO (CanActivateOnDeletion, OnDeletion.cs:113) gates the whole bundle on IsExistOnTrash(TopCard), RE-CHECKED at activation AFTER the causing effect resolves — so the fix is (a) a top-most-card-in-trash gate on the OnDeletion bundle PLUS (b) deferring the batch's OnDeletion/OnAnyDeletion/OnLeaveField drain past the causing effect's later steps (CFtD's return). The `draining_deferred` counter can't span CFtD's return-selection PARK cleanly (enter/exit in different frames, no completion signal → counter leak), so (b) requires restructuring the batch to enqueue-only or threading deferred-scope completion through the DSL park/resume continuation — a load-bearing change across the 3894-test deletion path, out of scope for a surgical fix. Engine draws 6, judge: 0. See engine-gaps.md."]
 fn q19_on_deletion_suppressed_when_returned_to_hand() {
     let pad: Vec<&str> = vec!["PAD"; 30];
     let mut r = DebugRunner::builder()
