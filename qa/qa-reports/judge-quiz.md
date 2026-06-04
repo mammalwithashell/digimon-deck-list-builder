@@ -50,9 +50,9 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 | 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
 | 23 | D/F | 1 memory | PASS | Engine already correct (2026-05-30, run to completion): trashing 3 Tumblemon mid-effect enqueues 3 mandatory `OnDigivolutionCardTrashed` observers → multi-trigger `TriggerOrder` selection PARKS them past Medusamon's return-2; on resolution each clause condition is re-evaluated, dropping the 2 returned cards → only the 1 still in trash fires (+1). The earlier `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a mischaracterization (single-source probe + abstract reasoning, never run end-to-end). No engine change needed. | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
 | 24 | B | Hudiemon DP 3000 | BLOCKED-PRIMITIVE | BT23-101, BT23-037, BT16-101, ST17-07 implemented; needs EX6-004 (Kokomon), itself BLOCKED on `G-SUSPEND-EFFECT-INITIATED` (suspend event carries no by_effect bit, so Kokomon's "when an EFFECT suspends" is un-gatable). | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
-| 25 | E | YES (DigiXros departure ≠ battle) | BLOCKED-PRIMITIVE | EX3-014 authored (2026-06-03); scenario now staged through real DigiXros play → discovered `G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER`: DigiXros material consumption raw-removes from battle area without firing `WhenWouldLeaveBattleArea`, so BT17-095's `[All Turns]` leave observer can't fire. | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
-| 26 | C | Returns to hand | BLOCKED-PRIMITIVE | EX3-014 authored; staged → `G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER` + `G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND` (DigiXros pays the reduced cost before consuming materials, no post-material-loss recompute / return-to-hand). Captured: Dorbickmon entered the field instead of returning to hand. | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
-| 27 | C | Pays 0 memory | BLOCKED-PRIMITIVE | Same gaps as Q26. Captured: memory 10→7 (reduced DigiXros cost paid) instead of 0. | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
+| 25 | E | YES (DigiXros departure ≠ battle) | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER`): added `ReplacementCause::DigiXros` + fire the `WhenWouldLeaveBattleArea` replacement window per battle-area material before consuming. BT17-095's `[All Turns]` leave observer now fires on a DigiXros departure. | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
+| 26 | C | Returns to hand | BLOCKED-PRIMITIVE | Leave-window + cost-recompute/return-to-hand machinery now built (`G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER` resolved; `G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND` machinery ready). Residual: `G-DIGIXROS-REDIRECT-EXTRACTION` — needs a "limbo" slot so the departing WarGreymon can be extracted into Omnimon while BT17-095's accept is parked. Closes once extraction lands. | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
+| 27 | C | Pays 0 memory | BLOCKED-PRIMITIVE | Same residual as Q26 (`G-DIGIXROS-REDIRECT-EXTRACTION`); the 0-memory return-to-hand branch is implemented and gated on it. | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
 | 28 | A | YES, plays AND activates | BLOCKED-PRIMITIVE | BT20-059 Gankoomon X authored (first wave; protection verified to dodge the lock via `can_affect_permanent`); EX5-060 Dragomon BLOCKED on `G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED` + `G-EVENT-PLAYED-LEVEL-FORMULA` | `a::q28_gankoomon_x_protection_beats_dragomon_on_play_lock` |
 | 29 | E | 3 legal stacks | BLOCKED-CARD | BT10-093, EX10-039, EX10-044, EX10-059, EX10-056, EX10-031 | `e::q29_legal_digixros_stack_orderings_with_yuu_amano` |
 | 30 | C/E | Suspend both w/ cost reduction | BLOCKED-CARD | BT20-037, BT20-036, EX3-063, BT16-077, EX3-008 | `c::q30_partition_interruptive_suspends_both_with_cost_reduction` |
@@ -62,11 +62,18 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 | Verdict | Count | Questions |
 |---------|-------|-----------|
 | BLOCKED-CARD | 7 | 3, 4, 9, 15, 21, 29, 30 |
-| BLOCKED-PRIMITIVE | 10 | 8, 10, 11, 18, 19, 24, 25, 26, 27, 28 |
+| BLOCKED-PRIMITIVE | 9 | 8, 10, 11, 18, 19, 24, 26, 27, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 13 | 1, 2, 5, 6, 7, 12, 13, 14, 16, 17, 20, 22, 23 |
+| PASS | 14 | 1, 2, 5, 6, 7, 12, 13, 14, 16, 17, 20, 22, 23, 25 |
 
-(Counts: 7 + 10 + 0 + 13 = 30 of 30.)
+(Counts: 7 + 9 + 0 + 14 = 30 of 30.)
+
+Q25 → **PASS** (2026-06-03): the DigiXros leave-trigger gap
+(`G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER`) is closed — `ReplacementCause::DigiXros` +
+firing the `WhenWouldLeaveBattleArea` window per battle-area material make BT17-095's
+`[All Turns]` leave observer fire on a DigiXros departure. Q26/Q27's
+recompute/return-to-hand machinery is built and gated on the residual
+`G-DIGIXROS-REDIRECT-EXTRACTION` (a leaving-material limbo slot).
 
 Q10/Q11 (F-cluster memory arithmetic) processed 2026-06-03: authored the 3 cards
 (P-104 Mental Training IMPLEMENTED; BT13-103 Akihiro Kurata + BT11-033 MirageGaogamon

@@ -171,7 +171,6 @@ fn q15_sequential_de_digivolve_halted_by_x_antibody_immunity() {}
 /// Logged to qa/archetype-qa/engine-gaps.md as
 /// G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER.
 #[test]
-#[ignore = "BLOCKED-ENGINE G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER: DigiXros battle-area material consumption (Game::take_digixros_material_origin BattleArea branch) does a raw battle_area.remove without firing WhenWouldLeaveBattleArea, so BT17-095's [All Turns] leave observer cannot fire on a DigiXros departure. See qa/archetype-qa/engine-gaps.md."]
 fn q25_all_turns_fires_on_digixros_departure_not_battle() {
     // Board (card-resolution.md Q25): Player A controls WarGreymon (AD1-004,
     // Lv6, [Greymon] in name) and Miraculous Mega Knight (BT17-095) seated as a

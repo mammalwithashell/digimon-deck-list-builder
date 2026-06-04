@@ -28,6 +28,11 @@ pub enum ReplacementCause {
     SecurityCheck,
     Cost,
     Overclock,
+    /// A battle-area Digimon is leaving because it is being consumed as a
+    /// [DigiXros] material. Distinct from `Battle` so leave-the-battle-area
+    /// observers gated on "outside of a battle" (e.g. BT17-095's `[All Turns]`,
+    /// `none_of: [replacement_cause: battle]`) fire on a DigiXros departure.
+    DigiXros,
 }
 
 /// What's about to happen — a permanent leaving the field, a card being

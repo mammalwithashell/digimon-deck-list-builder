@@ -104,6 +104,7 @@ fn cause_is_excluded(
         crate::replacement::ReplacementCause::SecurityCheck => "security_check",
         crate::replacement::ReplacementCause::Cost => "cost",
         crate::replacement::ReplacementCause::Overclock => "overclock",
+        crate::replacement::ReplacementCause::DigiXros => "digixros",
     };
     exclude.iter().any(|s| s == normalized)
 }

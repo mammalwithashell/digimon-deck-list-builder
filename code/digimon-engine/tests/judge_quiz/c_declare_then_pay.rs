@@ -216,38 +216,47 @@ fn q5_assembly_declaration_legal_when_cost_can_be_made_payable() {
 /// Knight (BT17-095) DNA-evolves mid-resolution, removing WarGreymon ⇒
 /// Dorbickmon's cost becomes unpayable. Judge: returns to hand.
 ///
-/// ── BLOCKED-ENGINE (G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER +
-///    G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND) ──────────────────────────────────────
-/// This interaction depends on Q25's blocked observer-firing AND on a second
-/// missing primitive. Two engine gaps stack:
+/// ── PARTIAL (2026-06-03) — leave-trigger LANDED, redirect-extraction REMAINS ──
+/// G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER is now CLOSED: a DigiXros battle-area
+/// material consumption fires the `WhenWouldLeaveBattleArea` replacement window
+/// with the new `ReplacementCause::DigiXros` (not `Battle`), so BT17-095's
+/// `[All Turns]` leave observer DOES now see WarGreymon's DigiXros departure and
+/// installs its `<Delay>` accept (judge-quiz Q25 PASSES on the same substrate).
 ///
-///   1. G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER (see Q25 / engine-gaps.md): the
-///      DigiXros material-consumption path raw-removes a battle-area material
-///      (`Game::take_digixros_material_origin`) WITHOUT firing
-///      `WhenWouldLeaveBattleArea`, so BT17-095's [All Turns] DNA-evo never
-///      triggers mid-resolution. WarGreymon is consumed straight under
-///      Dorbickmon instead of being pulled into an Omnimon.
-///   2. G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND: even if the observer fired and the
-///      DNA-evo removed WarGreymon from the transaction, the DigiXros play has
-///      NO declare-then-pay re-check that recomputes cost after a material
-///      vanishes and returns the played card to hand when the cost becomes
-///      unpayable. `commit_play_from_hand_after_reductions` locks
-///      `transaction.final_cost()` BEFORE `commit_digixros_material_sources`
-///      consumes the materials; there is no post-DNA recompute / return-to-hand
-///      branch.
+/// What still blocks Q26/Q27 (G-DIGIXROS-REDIRECT-EXTRACTION +
+/// G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND): when the leave observer parks its
+/// optional `<Delay>` accept, the engine commits the DigiXros host immediately
+/// (so the departing WarGreymon stops being a standalone top card — what Q25/Q26
+/// preconditions require) by tucking WarGreymon UNDER Dorbickmon. But BT17-095's
+/// DNA-evo (driven later via `auto_resolve`) must instead pull WarGreymon OUT of
+/// the transaction and INTO an Omnimon — which needs WarGreymon to remain a
+/// resolvable, EXTRACTABLE subject (not buried under the already-committed host)
+/// at the moment the player accepts the Delay. The two preconditions are in
+/// direct tension: Q25 (no `auto_resolve`) wants WarGreymon already gone while
+/// the accept is parked; Q26 wants the parked accept's DNA-evo to still extract
+/// WarGreymon. Satisfying both requires a dedicated "leaving / limbo" holding
+/// slot — a battle-area-departing material that is (a) no longer any permanent's
+/// top card and (b) still resolvable by `resolve_stable_replacement_subject` and
+/// extractable by the DNA-evo. That zone primitive does not exist yet.
 ///
-/// Captured real failure (ran WITHOUT #[ignore], 2026-06-03): the DigiXros play
-/// committed NORMALLY — Dorbickmon (EX3-014) entered Player A's battle area
-/// (with WarGreymon among its materials), and BT17-095's DNA-evo never fired.
-/// Dorbickmon did NOT return to hand. The load-bearing assertion
-/// (`dorbickmon_returned_to_hand`) failed: "Dorbickmon must RETURN TO HAND when
-/// its DigiXros cost becomes unpayable after BT17-095's DNA-evo pulls WarGreymon
-/// out (judge Q26) — instead it entered the battle area".
+/// Once a material can be DNA-extracted from the in-flight transaction, the
+/// declare-then-pay recompute + return-to-hand machinery is ALREADY in place
+/// (`finalize_digixros_play_after_leave_windows`: prunes vanished battle-area
+/// materials, recomputes `(final_cost - total_reduction)`, and returns the
+/// played card to hand for 0 memory when unpayable). It just never runs on the
+/// park path because the host is committed eagerly on park (above).
+///
+/// Captured real failure (ran WITHOUT #[ignore], 2026-06-03, on the new
+/// substrate): the leave window fires and BT17-095's Delay accept surfaces, but
+/// because the host is committed on park, Dorbickmon (EX3-014) entered Player
+/// A's battle area with WarGreymon tucked under it; `auto_resolve`'s DNA-evo
+/// could not extract WarGreymon. Dorbickmon did NOT return to hand
+/// (`dorbickmon_returned_to_hand` failed: in_hand=false, on_field=true).
 ///
 /// Logged to qa/archetype-qa/engine-gaps.md
-/// (G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER, G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND).
+/// (G-DIGIXROS-REDIRECT-EXTRACTION, G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND).
 #[test]
-#[ignore = "BLOCKED-ENGINE G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER + G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND: DigiXros material consumption never fires WhenWouldLeaveBattleArea (BT17-095 DNA-evo cannot fire mid-resolution), and the DigiXros play has no post-material-loss cost recompute / return-to-hand branch. See qa/archetype-qa/engine-gaps.md."]
+#[ignore = "PARTIAL G-DIGIXROS-REDIRECT-EXTRACTION: the DigiXros leave window now fires (Q25 PASS) and the cost-recompute / return-to-hand machinery exists, but on a parked <Delay> accept the host is committed eagerly (so the departing material is no longer a standalone top card), which leaves BT17-095's DNA-evo unable to EXTRACT WarGreymon from the in-flight transaction. Needs a leaving/limbo holding slot. See qa/archetype-qa/engine-gaps.md."]
 fn q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo() {
     let (mut r, _memory_before) = stage_q26_board();
 
@@ -298,17 +307,21 @@ fn q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo() {
 
 /// Q27 — Same board. Judge: pays 0 memory (cost unpayable ⇒ no payment).
 ///
-/// ── BLOCKED-ENGINE (same gaps as Q26) ────────────────────────────────────────
-/// Captured real failure (ran WITHOUT #[ignore], 2026-06-03): because the
-/// DigiXros play committed normally (BT17-095's DNA-evo never fired — see Q26),
-/// Dorbickmon's reduced DigiXros cost WAS paid, so memory DROPPED. The judge
-/// answer requires 0 memory paid (the failed/unpayable play makes no payment).
-/// The load-bearing assertion (`zero_memory_paid`) failed: memory changed even
-/// though the judge says the unpayable play pays nothing.
+/// ── PARTIAL (same residual as Q26: G-DIGIXROS-REDIRECT-EXTRACTION) ────────────
+/// The DigiXros leave window now fires (Q25 PASS) and the unpayable-return-to-
+/// hand / 0-memory branch exists in `finalize_digixros_play_after_leave_windows`
+/// — but it only runs on the non-park resolution path. On a parked `<Delay>`
+/// accept the host is committed eagerly (paying the reduced cost) so BT17-095's
+/// DNA-evo cannot extract WarGreymon and trigger the recompute. See Q26's note.
 ///
-/// Logged to qa/archetype-qa/engine-gaps.md (same two G-blockers as Q26).
+/// Captured real failure (ran WITHOUT #[ignore], 2026-06-03, new substrate):
+/// the reduced DigiXros cost WAS paid (memory 10→7) because the host committed
+/// on the parked accept; judge requires 0 memory (`zero_memory_paid` failed).
+///
+/// Logged to qa/archetype-qa/engine-gaps.md (G-DIGIXROS-REDIRECT-EXTRACTION,
+/// G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND).
 #[test]
-#[ignore = "BLOCKED-ENGINE G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER + G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND: see Q26. The DigiXros play commits and pays its reduced cost instead of returning to hand for 0 memory. See qa/archetype-qa/engine-gaps.md."]
+#[ignore = "PARTIAL G-DIGIXROS-REDIRECT-EXTRACTION: see Q26. The leave window fires and the 0-memory return-to-hand branch exists, but the host commits eagerly on the parked <Delay> accept (paying the reduced cost), so the DNA-evo can't extract WarGreymon to trigger the recompute. See qa/archetype-qa/engine-gaps.md."]
 fn q27_dorbickmon_pays_zero_memory_when_returned_to_hand() {
     let (mut r, memory_before) = stage_q26_board();
 

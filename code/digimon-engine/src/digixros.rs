@@ -384,6 +384,22 @@ impl DigiXrosTransaction {
         self.selected_materials.len() + self.pre_attached_materials.len()
     }
 
+    /// Drop every selected / pre-attached material whose origin fails `keep`,
+    /// then refresh `digixros_count`. Used by the DigiXros declare-then-pay
+    /// recompute when a battle-area material is redirected/consumed away by a
+    /// `WhenWouldLeaveBattleArea` replacement mid-resolution: dropping it both
+    /// removes its negative `cost_delta` from `final_cost()` and stops
+    /// `commit_digixros_material_sources` from trying to consume a vanished
+    /// permanent.
+    pub fn retain_materials<F>(&mut self, keep: F)
+    where
+        F: Fn(DigiXrosMaterialOrigin) -> bool,
+    {
+        self.selected_materials.retain(|m| keep(m.origin));
+        self.pre_attached_materials.retain(|m| keep(m.origin));
+        self.refresh_digixros_count();
+    }
+
     pub fn selected_cost_delta(&self) -> i16 {
         self.selected_materials
             .iter()
