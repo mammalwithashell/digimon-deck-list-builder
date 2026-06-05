@@ -97,6 +97,13 @@ pub enum StepSpec {
     /// `select_security` step). G-TRASH-SELECTED-SECURITY. Used by BT24-018
     /// ("You may trash any 1 of your opponent's security cards").
     TrashSelectedSecurity(HandleMoveArgs),
+    /// Move a specific bound card FROM a player's security stack to that
+    /// player's deck (top or bottom; Digi-Eggs route to the digitama deck).
+    /// The `card` binding is a `CardHandle` (typically from a prior
+    /// `select_security` step). G-DSL-RETURN-SELECTED-SECURITY-TO-DECK. Used by
+    /// LM-020 Quantumon ("place 1 card among them on top of your opponent's
+    /// deck"). YAML: `return_selected_security_to_deck: { of, card, position }`.
+    ReturnSelectedSecurityToDeck(ReturnToDeckArgs),
     AddTopSecurityToHand(PlayerArg),
     MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
@@ -345,6 +352,9 @@ impl Serialize for StepSpec {
             StepSpec::AddToHandFromSecurity(v) => kv!(s, "add_to_hand_from_security", v),
             StepSpec::PlaySecurityCard(v) => kv!(s, "play_security_card", v),
             StepSpec::TrashSelectedSecurity(v) => kv!(s, "trash_selected_security", v),
+            StepSpec::ReturnSelectedSecurityToDeck(v) => {
+                kv!(s, "return_selected_security_to_deck", v)
+            }
             StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
             StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
@@ -593,6 +603,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_to_hand_from_security" => StepSpec::AddToHandFromSecurity(map.next_value()?),
             "play_security_card" => StepSpec::PlaySecurityCard(map.next_value()?),
             "trash_selected_security" => StepSpec::TrashSelectedSecurity(map.next_value()?),
+            "return_selected_security_to_deck" => {
+                StepSpec::ReturnSelectedSecurityToDeck(map.next_value()?)
+            }
             "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
             "may_add_top_security_to_hand" => StepSpec::MayAddTopSecurityToHand(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
@@ -812,6 +825,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_to_hand_from_security",
                         "play_security_card",
                         "trash_selected_security",
+                        "return_selected_security_to_deck",
                         "add_top_security_to_hand",
                         "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",

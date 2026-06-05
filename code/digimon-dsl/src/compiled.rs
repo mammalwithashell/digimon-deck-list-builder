@@ -952,6 +952,13 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    /// Move a bound card from a player's security stack to that player's deck.
+    /// G-DSL-RETURN-SELECTED-SECURITY-TO-DECK.
+    ReturnSelectedSecurityToDeck {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        position: CompiledStackPosition,
+    },
     AddTopSecurityToHand {
         of: CompiledPlayerRef,
     },

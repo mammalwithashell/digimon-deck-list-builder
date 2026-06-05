@@ -1816,6 +1816,11 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::ReturnSelectedSecurityToDeck(a) => CompiledStep::ReturnSelectedSecurityToDeck {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+            position: compile_stack_position(a.position),
+        },
         S::AddTopSecurityToHand(a) => CompiledStep::AddTopSecurityToHand {
             of: compile_player_ref(a.of),
         },

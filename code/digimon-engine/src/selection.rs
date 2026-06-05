@@ -576,6 +576,14 @@ pub struct PendingSecurity {
 pub enum SecurityRemovalDestination {
     Trash,
     Hand(PlayerId),
+    /// Move the removed security card to its owner's deck (top or bottom).
+    /// Digi-Eggs route to the digitama deck. Used by LM-020 Quantumon's
+    /// [When Digivolving] "place 1 card among them on top of your opponent's
+    /// deck". `owner` is the card owner (= the security stack's player).
+    Deck {
+        owner: PlayerId,
+        to_bottom: bool,
+    },
     BottomSource(PermanentHandle),
     Digivolve {
         player: PlayerId,

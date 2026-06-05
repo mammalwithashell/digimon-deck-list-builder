@@ -462,6 +462,21 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::ReturnSelectedSecurityToDeck { of, card, position } => {
+            // G-DSL-RETURN-SELECTED-SECURITY-TO-DECK: `card` is a CardHandle
+            // binding (typically from a prior `select_security`). Move exactly
+            // that security card to its owner's deck (top or bottom). No-op
+            // when the binding is unset (declined optional select).
+            let owner = resolve_player(ctx, *of);
+            let to_bottom = matches!(
+                super::map_stack_position(*position),
+                crate::enums::StackPosition::Bottom
+            );
+            if let Some(ResolvedBinding::Card(handle)) = resolve_binding_ref(card, ctx, bindings) {
+                let _ = ctx.return_security_card_to_deck(owner, handle, to_bottom);
+            }
+            true
+        }
         CompiledStep::PlayFromMaterials {
             target,
             source_index,

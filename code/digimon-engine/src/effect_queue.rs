@@ -2983,6 +2983,24 @@ impl Game {
                     SecurityRemovalDestination::Hand(owner) => {
                         self.player_mut(owner).hand.push(security.card);
                     }
+                    SecurityRemovalDestination::Deck { owner, to_bottom } => {
+                        // Route to the owner's deck. Digi-Eggs go to the
+                        // digitama deck. Deck top = Vec end (drawn first);
+                        // deck bottom = index 0 — matching `move_card_to_deck`.
+                        let is_egg = security.card.card_kind(&self.card_data)
+                            == crate::enums::CardKind::DigiEgg;
+                        let player = self.player_mut(owner);
+                        let deck = if is_egg {
+                            &mut player.digitama_deck
+                        } else {
+                            &mut player.deck
+                        };
+                        if to_bottom {
+                            deck.insert(0, security.card);
+                        } else {
+                            deck.push(security.card);
+                        }
+                    }
                     SecurityRemovalDestination::BottomSource(target) => {
                         if target.index == crate::action::space::BREEDING_TARGET as u8 {
                             if let Some(breeding) =
