@@ -4288,7 +4288,21 @@ impl Game {
                 }
             }
         }
-        self.drain_effect_queue();
+        // Defer the post-deletion trigger drain to the outermost deferred
+        // scope. `maybe_drain_effect_queue` drains only when
+        // `draining_deferred == 0`; inside an effect's resolution window
+        // (e.g. an option like Calling From the Darkness that deletes a
+        // Digimon and THEN returns cards from trash) it leaves the
+        // OnDeletion / OnAnyDeletion / OnLeaveField entries queued so they
+        // resolve only AFTER the causing effect's later steps complete.
+        // Combined with the top-card-in-trash gate in `run_queued_effect_inner`
+        // (Q19 Part A), an [On Deletion] bundle whose top card was returned to
+        // hand by the same effect is then suppressed — DCGO `TriggeredSkillProcess`
+        // drains the [On Deletion] stack after the deleting effect resolves,
+        // and `CanActivateOnDeletion` re-checks `IsExistOnTrash(TopCard)` at
+        // that point. At a top-level deletion (`draining_deferred == 0`, e.g.
+        // combat) this drains immediately, matching prior behavior.
+        self.maybe_drain_effect_queue();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 

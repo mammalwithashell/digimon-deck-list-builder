@@ -215,35 +215,26 @@ fn q9_gatomon_not_in_battle_area_during_removal_no_memory() {}
 /// inherited source's) is gated on the TOP-MOST card (Eyesmon) still being in
 /// trash at resolution. Eyesmon returned ⇒ all suppressed ⇒ 0 draws.
 ///
-/// # BLOCKED — G-ON-DELETION-RESOLVES-MID-EFFECT (timing) + color data bug
-/// Run un-ignored 2026-06-03 to capture the real failure: driving the REAL
-/// BT7-107 option (`activate_hand_main`) over the real stack draws **6**
-/// (Eyesmon 3 + Gabumon 2 + DemiMeramon 1), not 0:
+/// # PASS (2026-06-05) — G-ON-DELETION-RESOLVES-MID-EFFECT resolved
+/// Driving the REAL BT7-107 option (`activate_hand_main`) over the real stack now
+/// draws **0**. The fix is two-part (DCGO `CanActivateOnDeletion` + the outer
+/// `TriggeredSkillProcess` drain model):
+///  - **Part A** (`run_queued_effect_inner`): an [On Deletion] queued effect
+///    activates only while its snapshot's TOP-MOST card is still in the former
+///    controller's trash (tokens always activate). Re-checked at activation, so a
+///    returned carrier suppresses the whole bundle (own + every inherited source,
+///    which all share the carrier's top-card snapshot).
+///  - **Part B** (`drain_batch_on_any_deletion`): the batch's post-deletion
+///    trigger drain is gated on `maybe_drain_effect_queue` (only at
+///    `draining_deferred == 0`). Inside CFtD's resolution window the OnDeletion /
+///    OnAnyDeletion / OnLeaveField entries stay queued until the causing effect's
+///    later steps (the return-to-hand) finish, then resolve under Part A's gate.
 ///
-///   assertion `left == right` failed: Q19 (judge: 0 draws)
-///     left: 6   right: 0
-///
-/// Two stacked blockers:
-///  1. **G-ON-DELETION-RESOLVES-MID-EFFECT** — when CFtD's `delete_permanent`
-///     step runs, the 3 [On Deletion] triggers park as a `TriggerOrder` and then
-///     resolve *nested inside the delete step*, BEFORE CFtD's later
-///     return-to-hand step runs. So a same-effect return of the carrier cannot
-///     suppress them — they have already drawn. The judge's model defers the
-///     whole [On Deletion] bundle until the causing effect (CFtD, incl. its
-///     return) fully resolves, then gates each on the TOP-MOST card remaining in
-///     trash. The engine has no "gate the inherited+own bundle on the topmost
-///     card's trash residency" check. (Contrast Q20, where Eyesmon stays in
-///     trash and the engine's 8 happens to match.)
-///  2. **Color data bug** — BT7-069/BT2-069/BT3-006 are declared `color:
-///     [black]` in their YAML specs (the in-file comments even say "Black"), but
-///     the printed cards are PURPLE (cards.json `card_colors:[6]`; the PDF images
-///     are purple-bordered). BT7-107's return filter is `color_is: purple`, so it
-///     can't even target these mis-coloured cards from trash — the return step
-///     surfaces no selection. (Independent of blocker 1: fixing the colour would
-///     still leave the timing gap → still 6 draws.) Editing the card YAML is out
-///     of scope here.
+/// CFtD returns Eyesmon: Scatter Mode (the top-most card) to hand among its 2
+/// purple returns, so the whole bundle is suppressed ⇒ 0 draws. (Contrast Q20,
+/// where Eyesmon stays in trash ⇒ all 8 fire — the discriminator both halves of
+/// the fix preserve.)
 #[test]
-#[ignore = "BLOCKED: G-ON-DELETION-RESOLVES-MID-EFFECT — confirmed deletion-model restructuring (2026-06-04). DCGO (CanActivateOnDeletion, OnDeletion.cs:113) gates the whole bundle on IsExistOnTrash(TopCard), RE-CHECKED at activation AFTER the causing effect resolves — so the fix is (a) a top-most-card-in-trash gate on the OnDeletion bundle PLUS (b) deferring the batch's OnDeletion/OnAnyDeletion/OnLeaveField drain past the causing effect's later steps (CFtD's return). The `draining_deferred` counter can't span CFtD's return-selection PARK cleanly (enter/exit in different frames, no completion signal → counter leak), so (b) requires restructuring the batch to enqueue-only or threading deferred-scope completion through the DSL park/resume continuation — a load-bearing change across the 3894-test deletion path, out of scope for a surgical fix. Engine draws 6, judge: 0. See engine-gaps.md."]
 fn q19_on_deletion_suppressed_when_returned_to_hand() {
     let pad: Vec<&str> = vec!["PAD"; 30];
     let mut r = DebugRunner::builder()

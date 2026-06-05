@@ -759,7 +759,44 @@ fn event_dna_origin(game: &Game) -> Option<bool> {
     Some(trigger_origin || scoped_origin)
 }
 
+/// Reverse of `From<ReplacementCause> for EventCause` for the deletion-cause
+/// subset. Used to recover the `ReplacementCause` from a `DeletedObjectSnapshot`
+/// after the live `current_deletion_cause` slot has been restored — e.g. when an
+/// `[On Deletion]` bundle is deferred past the deleting effect's resolution
+/// window (Q19 Part B). Non-deletion event causes map to `None`.
+fn replacement_cause_from_event_cause(
+    ec: crate::trigger_context::EventCause,
+) -> Option<ReplacementCause> {
+    use crate::trigger_context::EventCause;
+    match ec {
+        EventCause::BattleDeletion => Some(ReplacementCause::Battle),
+        EventCause::OwnEffect => Some(ReplacementCause::OwnEffect),
+        EventCause::OpponentEffect => Some(ReplacementCause::OpponentEffect),
+        EventCause::SecurityRemoval => Some(ReplacementCause::SecurityCheck),
+        EventCause::Cost => Some(ReplacementCause::Cost),
+        EventCause::Overclock => Some(ReplacementCause::Overclock),
+        _ => None,
+    }
+}
+
 fn observed_deletion_cause(game: &Game) -> Option<ReplacementCause> {
+    // Rule 25: `[On Deletion]` handlers read pre-removal state from the snapshot,
+    // not live slots. When the bundle is deferred past the deleting effect's
+    // later steps (Q19 Part B), the live `current_deletion_cause` /
+    // `current_deletion_event_cause_override` slots have already been restored by
+    // the batch's exit, so prefer the cause threaded into the installed trigger
+    // context (`deleted_object.cause`), which survives the deferral. Battle and
+    // other top-level deletions install the same snapshot during their handler,
+    // so this is consistent with the live-slot reads they used before.
+    if let Some(snap) = game
+        .current_trigger_context
+        .as_ref()
+        .and_then(|t| t.deleted_object.as_ref())
+    {
+        if let Some(rc) = replacement_cause_from_event_cause(snap.cause) {
+            return Some(rc);
+        }
+    }
     match game.current_deletion_event_cause_override {
         Some(crate::trigger_context::EventCause::Overclock) => Some(ReplacementCause::Overclock),
         _ => game.current_deletion_cause,

@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-06-04: **30/30 questions have a test entry; 18 PASS.** `cargo test --test judge_quiz`
-→ 27 passed (18 question pins + loader/probe/analogs), 12 ignored, 0 failed.
+Coverage as of 2026-06-05: **30/30 questions have a test entry; 19 PASS.** `cargo test --test judge_quiz`
+→ 28 passed (19 question pins + loader/probe/analogs), 11 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -44,7 +44,7 @@ Coverage as of 2026-06-04: **30/30 questions have a test entry; 18 PASS.** `carg
 | 16 | E | NO (`<Partition>` not triggered) | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX6-057 Lilithmon authored + granted body runs as the carrier's own effect (D4/DCGO), so the granted self-delete is OwnEffect → `<Partition>` cause-filter skips it | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
 | 17 | A | NO | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: BT16-102 Magnamon X + EX6-057 authored; the granted-trigger dispatch suppresses a granted opponent effect when the carrier is immune to the grantor (`permanent_is_unaffected_by_effect`). BT21-036 not needed (its only role was an Armor-Form source — staged synthetically) | `a::q17_magnamon_x_immunity_removes_granted_eot_delete` |
 | 18 | A | NO | BLOCKED-PRIMITIVE | LM-020 attempted (first wave): the `[Start of Opp Turn]` category-immunity (Q18-relevant) is implementable + the Blast-Digivolve immunity substrate is done, but LM-020 is BLOCKED on `G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` (its `[When Digivolving]` clause). | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
-| 19 | D | 0 draws | BLOCKED-PRIMITIVE | Cards authored 2026-06-03 (BT7-069/BT2-069/BT3-006); staged via real BT7-107 → discovered `G-ON-DELETION-RESOLVES-MID-EFFECT`: the [On Deletion] bundle resolves nested inside the delete step, before BT7-107's return-to-hand, so the carrier-returns-to-hand suppression never happens (engine draws 6, judge 0). | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
+| 19 | D | 0 draws | PASS | `G-ON-DELETION-RESOLVES-MID-EFFECT` RESOLVED 2026-06-05. Part A: top-most-card-in-trash gate on the OnDeletion bundle (`run_queued_effect_inner` + snapshot `is_token`). Part B: `drain_batch_on_any_deletion`'s post-deletion trigger drain gated on `maybe_drain_effect_queue` so the bundle resolves only after CFtD's return-to-hand settles → Eyesmon left trash → all suppressed → 0 draws. (Q20 stays 8.) | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
 | 20 | D | 8 draws | **PASS** | Cards authored 2026-06-03; the Eyesmon stack (own Draw3 + inherited Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2) deleted-to-trash fires all [On Deletion] → 8 draws. Engine matches. | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
 | 21 | D | 0 draws | BLOCKED-CARD | BT3-109 (Back for Revenge!) BLOCKED on `G-DSL-DELETED-SELF-TRASH-BINDING` (no DSL binding for the just-deleted carrier in trash); would also hit `G-ON-DELETION-RESOLVES-MID-EFFECT`. | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
 | 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
@@ -62,11 +62,24 @@ Coverage as of 2026-06-04: **30/30 questions have a test entry; 18 PASS.** `carg
 | Verdict | Count | Questions |
 |---------|-------|-----------|
 | BLOCKED-CARD | 7 | 3, 4, 9, 15, 21, 29, 30 |
-| BLOCKED-PRIMITIVE | 5 | 8, 18, 19, 24, 28 |
+| BLOCKED-PRIMITIVE | 4 | 8, 18, 24, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 18 | 1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 20, 22, 23, 25, 26, 27 |
+| PASS | 19 | 1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26, 27 |
 
-(Counts: 7 + 5 + 0 + 18 = 30 of 30.)
+(Counts: 7 + 4 + 0 + 19 = 30 of 30.)
+
+Q19 → **PASS** (2026-06-05): `G-ON-DELETION-RESOLVES-MID-EFFECT` RESOLVED. Two-part
+fix — (A) a top-most-card-in-trash gate on the `[On Deletion]` bundle in
+`run_queued_effect_inner` (DCGO `CanActivateOnDeletion`; snapshot gains `is_token`),
+and (B) gating `drain_batch_on_any_deletion`'s post-deletion trigger drain on
+`maybe_drain_effect_queue` so the bundle resolves only after the deleting effect's
+later steps (Calling From the Darkness' return-to-hand) settle. The (b) half proved
+surgical, not the feared deletion-model restructuring: the premature drain was an
+*unconditional* `drain_effect_queue()` in the OnAnyDeletion stage, not the OnDeletion
+stage's already-deferred flush. A cause-slot follow-on (deferred handlers read the
+cause from the snapshot, not the restored live slot) keeps `deletion_cause()` faithful
+(rule 25). Q20 stays 8. Regression: full engine suite green except 4 pre-existing
+`cost_hooks` failures (confirmed at pre-Q19 990de2d5). See engine-gaps.md.
 
 Q25 → **PASS** (2026-06-03): the DigiXros leave-trigger gap
 (`G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER`) is closed — `ReplacementCause::DigiXros` +
