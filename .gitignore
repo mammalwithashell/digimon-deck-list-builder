@@ -55,6 +55,9 @@ code/tools/onnxruntime-vendor/**/*.dylib
 .claude/pm/.briefing-lock
 .claude/scheduled_tasks.lock
 
+# digimon-card-lookup: CDN-downloaded image cache for cards missing from the local mirror
+.claude/skills/digimon-card-lookup/.cache/
+
 # Generated ONNX test fixtures
 code/tests/api/fixtures/*.onnx
 

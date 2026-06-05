@@ -1,0 +1,70 @@
+---
+name: digimon-card-lookup
+description: Use when reasoning about, implementing, fixing, debugging, or QA'ing a specific Digimon card's effect — or a whole archetype's cards. Resolves a card ID, a card NAME (all printings — e.g. "Wormmon" is 8 distinct cards), or an archetype name to local card-image paths + printed text, so you VIEW the actual card face (the authoritative source for printed text) instead of relying only on cards.json or the YAML DSL. Triggers on "what does <card> do", "fix/implement/check <card>", "look up <card>", comparing printings, or implementing/auditing an archetype.
+---
+
+# Digimon Card Visual Lookup
+
+When you are reasoning about what a Digimon card *says* or *does*, do not rely only on
+`data/cards.json` (API-ingested, **not always accurate**) or the YAML DSL spec. **Look at
+the actual printed card.** A complete local image mirror exists on this machine, and the
+`Read` tool renders `.webp` natively — the card face is the **highest-fidelity source for
+printed text** (effect / inherited / security / DP / level / color / traits).
+
+This applies at three scopes: a **single card**, **all printings of a name**, and a
+**whole archetype**.
+
+## Workflow
+
+### 1. Resolve the query → image paths + text
+
+Run the resolver from the repo root (it self-detects the query type):
+
+```bash
+python .claude/skills/digimon-card-lookup/resolve_cards.py <query> [<query> ...]
+```
+
+| You have… | Example | What you get |
+|---|---|---|
+| a card **ID** | `BT20-065` | that printing (add `--editions` for alt-art `_P0/_P1/_P2`) |
+| a card **NAME** | `Wormmon` | **every** printing — e.g. all 8 distinct Wormmon cards, each with different text |
+| an **archetype** | `"Xros Heart"` | the unique card pool from `deck_library.json` (aliases applied) |
+
+Force the type with `--type id|name|archetype` if auto-detection guesses wrong.
+The output ends with an **`IMAGES TO READ`** list of absolute `.webp` paths.
+
+A card missing from the local mirror is auto-downloaded from the digimoncard.io CDN into
+`.cache/` (so it can still be `Read`); any card with no image anywhere is flagged.
+
+### 2. View the cards — batch your `Read`s
+
+- **One card / a few printings:** `Read` every listed `.webp` in a **single message**
+  (parallel tool calls). Then you can see the art and read the printed text directly.
+- **A whole archetype (40–60 cards):** the manifest is cheap, but **do NOT `Read` all 60
+  images at once** — that floods context. Skim the manifest first, then `Read` images in
+  **small batches** for the cards you are actively working on. Surface the manifest +
+  any missing/downloaded cards up front.
+
+### 3. Trust order
+
+- **Printed text** ("what does it say"): the **card image** is authoritative → then
+  `data/card_overrides.json` (trusted patches) → then `data/cards.json`.
+- **Behavior** ("how does it resolve"): keep following the project's source-priority
+  chain — DCGO C# → `general_rule.pdf` → fandom wiki. The image tells you the text;
+  DCGO/rules tell you how that text actually plays out.
+
+## Useful flags
+
+- `--editions` — include alt-art editions (`_P0/_P1/_P2`) for an ID query.
+- `--paths-only` — print just the image paths (handy when you only need the files to `Read`).
+- `--json` — structured manifest.
+- `--no-download` — skip the CDN fallback (local-only).
+
+## Notes
+
+- Image directory defaults to `C:\Users\james\Documents\DCGO_Application\Assets\Textures\Card`;
+  override with the `DIGIMON_CARD_IMAGE_DIR` env var.
+- The `UserPromptSubmit` hook `digimon_card_image_hint.py` already reminds you (with paths)
+  when a prompt mentions card IDs — but you still must run this skill / `Read` the images.
+- For a bare card **name** or **archetype**, always go through `resolve_cards.py`: one name
+  can be many cards, and you want to view the *right* printing.
