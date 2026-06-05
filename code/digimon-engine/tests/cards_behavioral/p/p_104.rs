@@ -7,24 +7,23 @@
 //! place this card in the battle area.
 //!
 //! [Main] <Delay> (By trashing this card after the placing turn, activate the
-//! effect below.)
-//! - 1 of your Digimon may digivolve into a blue Digimon card in your hand for
-//!   its digivolution cost. When it would digivolve by this effect, reduce the
-//!   cost by 2.
+//! effect below.) 1 of your Digimon may digivolve into a blue Digimon card in
+//! your hand for its digivolution cost. When it would digivolve by this effect,
+//! reduce the cost by 2.
 //!
 //! Inherited: Security Effect [Security] Place this card in the battle area.
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/P/Blue/P_104.cs
 //!
+//! Sibling of P-103 (red) and P-105 (yellow) — identical structure with blue.
+//!
 //! # Patterns this test covers
-//! - Training Option [Main]: reveal top 2, select 1 blue card of any kind, add
-//!   to hand, bottom the remainder, place self as a Delay Option permanent.
+//! - Training Option [Main]: reveal top 2, select 1 color-matching card of any
+//!   kind, add to hand, bottom the remainder, then place self in battle area.
 //! - Delay body: optional own-Digimon pick, mandatory blue Digimon hand pick,
 //!   effect_initiated_digivolve with cost reduction 2.
 //! - Inherited security placement through place_self_as_delay_option.
-//! - Known partial: standard Delay should be a player-visible later Main
-//!   activation; current generic Delay YAML uses the scheduled delay primitive.
 
 use std::path::Path;
 
@@ -153,7 +152,7 @@ fn p_104_has_main_delay_and_inherited_security_clauses() {
 }
 
 #[test]
-fn p_104_main_reveal_selects_blue_card_of_any_kind() {
+fn p_104_main_reveal_selects_blue_card_of_any_kind_without_pass() {
     let runner = p_104_runner();
     let compiled = runner.compiled_card("P-104").expect("P-104 compiled");
     let main = match &compiled.effects[0] {
@@ -174,7 +173,15 @@ fn p_104_main_reveal_selects_blue_card_of_any_kind() {
         .process
         .iter()
         .find_map(|step| match step {
-            CompiledStep::SelectReveal { filter, .. } => Some(filter),
+            CompiledStep::SelectReveal {
+                filter, optional, ..
+            } => {
+                assert!(
+                    !*optional,
+                    "if a blue card is revealed, the printed add-1 choice is mandatory"
+                );
+                Some(filter)
+            }
             _ => None,
         })
         .expect("Main process must select from the reveal");
@@ -195,6 +202,12 @@ fn p_104_main_reveal_selects_blue_card_of_any_kind() {
             ..
         }
     )));
+    assert!(
+        main.process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::PlaceSelfAsDelayOption)),
+        "Main clause must place this card in the battle area as a Delay Option"
+    );
 }
 
 #[test]
@@ -224,34 +237,42 @@ fn p_104_main_adds_blue_option_from_top_2_to_hand() {
     assert_eq!(runner.pending_action_count(), 1);
     assert!(
         !runner.pending_is_optional(),
-        "the mandatory blue-card add drops PASS when a candidate exists"
+        "PASS must not be legal when the mandatory blue-card pick has a candidate"
     );
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(mask[PASS as usize], 0.0, "mandatory reveal pick drops PASS");
 
     runner
         .auto_resolve()
-        .expect("resolve reveal and bottom ordering");
+        .expect("resolve reveal, bottom ordering, and self-placement");
 
     let hand_ids = card_ids_in_hand(&runner, 0);
     assert!(
         hand_ids.iter().any(|id| id == "BLUE-OPTION"),
         "P-104 must add blue cards of any kind; hand={hand_ids:?}"
     );
-    // P-104 leaves the hand (placed in battle area), and BLUE-OPTION is added:
-    // net hand size is unchanged, but the contents swapped.
-    assert_eq!(runner.hand_size(0), hand_before);
+    // "Then, place this card in the battle area" — P-104 itself leaves the hand
+    // via place_self_as_delay_option, so the net hand change is +1 (BLUE-OPTION)
+    // −1 (P-104) = 0.
     assert!(
         !hand_ids.iter().any(|id| id == "P-104"),
-        "P-104 is placed in the battle area, not left in hand"
+        "P-104 must leave the hand when placed in the battle area; hand={hand_ids:?}"
     );
-    assert!(
-        runner
-            .game
-            .player(0)
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "P-104"),
-        "Then, place this card in the battle area"
-    );
+    assert_eq!(runner.hand_size(0), hand_before);
+    let placed = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "P-104")
+        .expect("P-104 must be placed as a battle-area delayed Option after [Main]");
+    assert!(matches!(
+        placed.option_state,
+        OptionState::Delayed {
+            trigger: DelayTrigger::MainPhaseActivated,
+            ..
+        }
+    ));
     assert_eq!(
         deck_before - runner.deck_size(0),
         1,
@@ -280,21 +301,34 @@ fn p_104_main_with_no_blue_in_top_2_adds_nothing_and_bottoms_remainder() {
     assert!(runner.game.activate_hand_main(0, 0));
     runner
         .auto_resolve()
-        .expect("resolve bottom ordering for non-matching reveal");
+        .expect("resolve bottom ordering for non-matching reveal and self-placement");
 
-    // Nothing is added to hand (no blue among the top 2); P-104 still leaves the
-    // hand because "Then, place this card in the battle area" is unconditional.
+    let hand_ids = card_ids_in_hand(&runner, 0);
+    // No blue card is added, but P-104 still leaves the hand via
+    // place_self_as_delay_option, so the hand shrinks by exactly 1 (just P-104).
     assert!(
-        !card_ids_in_hand(&runner, 0)
-            .iter()
-            .any(|id| id == "P-104"),
-        "P-104 is placed in the battle area even when no blue card is added"
+        !hand_ids.iter().any(|id| id == "P-104"),
+        "P-104 must leave the hand when placed in the battle area; hand={hand_ids:?}"
     );
     assert_eq!(
         runner.hand_size(0),
         hand_before - 1,
-        "no blue card is added; the only hand change is P-104 being placed"
+        "no blue card is added, but P-104 itself leaves the hand to the battle area"
     );
+    let placed = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "P-104")
+        .expect("P-104 must be placed as a battle-area delayed Option after [Main]");
+    assert!(matches!(
+        placed.option_state,
+        OptionState::Delayed {
+            trigger: DelayTrigger::MainPhaseActivated,
+            ..
+        }
+    ));
     assert_eq!(
         runner.deck_size(0),
         deck_before,

@@ -4,114 +4,63 @@ kind: option
 color: [blue]
 cost: 2
 
-# Blue analog of P-103 Offense Training (red) and P-105 Physical Training
-# (yellow). Same three-clause Training Option shape.
-#
-# ─── Clause 0: [Main] ─────────────────────────────────────────────────────────
-#
-# "[Main] Reveal the top 2 cards of your deck. Add 1 blue card among them to
-# your hand. Place the rest at the bottom of your deck in any order.
-# Then, place this card in the battle area."
-#
-# DCGO (EffectTiming.OptionSkill, P/Blue/P_104.cs):
-#   SimplifiedRevealDeckTopCardsAndSelect(
-#     revealCount: 2,
-#     simplifiedSelectCardConditions: [ { canTargetCondition: HasCardColor(Blue),
-#       message: "Select 1 blue card.", mode: AddHand, maxCount: 1 } ],
-#     remainingCardsPlace: RemainingCardsPlace.DeckBottom)
-#   then PlaceDelayOptionCards(card, activateClass)
-#
-# DSL modelling mirrors P-103/P-105:
-#   - select_reveal optional: true — when no revealed card matches the blue
-#     filter, the select installs no selection (DCGO maxCount:1 over 0 matches =
-#     skip); add_to_hand_from_reveal no-ops and place_remainder_on_deck still
-#     bottoms all revealed cards.
-#
-# ─── Clause 1: [Main] <Delay> ────────────────────────────────────────────────
-#
-# "[Main] <Delay> (By trashing this card after the placing turn, activate the
-# effect below.) · 1 of your Digimon may digivolve into a blue Digimon card in
-# your hand for its digivolution cost. When it would digivolve by this effect,
-# reduce the cost by 2."
-#
-# DCGO (EffectTiming.OnDeclaration):
-#   CanUseCondition: CanDeclareOptionDelayEffect(card)
-#   DeletePermanentAndProcessAccordingToResult → on success:
-#     SelectPermanentEffect over owner's battle-area Digimon (canNoSelect: true)
-#     if selectedPermanent != null:
-#       DigivolveIntoHandOrTrashCard(
-#         cardCondition: IsDigimon && HasCardColor(Blue),
-#         payCost: true,
-#         reduceCostTuple: (reduceCost: 2, null),
-#         isHand: true)
-#
-# DSL: kind: delay / trigger: delayed → standard printed <Delay>
-# (RULES_CONTEXT 16-16) — a player-visible later-Main-phase activation that
-# never auto-fires and cannot fire the placing turn.
-#   - select_own_permanent (optional: true — DCGO canNoSelect: true)
-#   - select_hand (filter: kind:digimon + color_is:blue — DCGO cardCondition)
-#   - effect_initiated_digivolve (cost: { reduce: 2 } — DCGO reduceCostTuple)
-#
-# ─── Clause 2: [Security] (inherited) ────────────────────────────────────────
-#
-# "Security Effect [Security] Place this card in the battle area."
-# DCGO (EffectTiming.SecuritySkill): PlaceSelfDelayOptionSecurityEffect(card).
-
+# Sibling of P-103 (red, Offense Training) and P-105 (yellow, Physical Training).
+# DCGO: P/Blue/P_104.cs — identical structure with CardColor.Blue.
 effects:
   # ─── Clause 0: [Main] ─────────────────────────────────────────────────────
+  # Reveal top 2, add 1 blue card to hand, place rest at bottom, place self in
+  # battle area as a Delay-Option permanent.
   - when: main_from_hand
     optional: false
-    summary: "[Main] Reveal top 2; add 1 blue card to hand; place rest at bottom; place self in battle area"
+    summary: "[Main] Reveal top 2; add 1 blue card to hand; place rest bottom; place self in battle area"
     process:
       - reveal_top_deck:
           of: you
           count: 2
-      # DCGO: canTargetCondition: HasCardColor(Blue), maxCount: 1, mode: AddHand
-      # optional: false — when a blue card is revealed the add is mandatory; the
-      # engine no-ops the select when 0 revealed cards match the blue filter
-      # (mirrors sibling P-105 Physical Training).
       - select_reveal:
           of: you
           bind_as: picked
           optional: false
           filter:
             color_is: blue
-          prompt: "Select 1 blue card to add to your hand"
+          prompt: "Add 1 blue card to your hand"
       - add_to_hand_from_reveal: { of: you, card: picked }
       - place_remainder_on_deck: { of: you, position: bottom }
       # "Then, place this card in the battle area" — DCGO: PlaceDelayOptionCards.
+      # Seats P-104 in the battle area as an OptionState::Delayed permanent so the
+      # <Delay> body can be reached from a normal hand-play (mirrors P-103/P-105).
       - place_self_as_delay_option: {}
 
-  # ─── Clause 1: [Main] <Delay> ─────────────────────────────────────────────
+  # [Main] <Delay> — player-visible [Main]-phase activation (PUPPETS-G009).
+  # `trigger: delayed` parks the Option until its controller chooses to trash
+  # it on a later main phase; the body never auto-fires (RULES_CONTEXT 16-16).
   - kind: delay
     trigger: delayed
     summary: "[Main]<Delay> 1 of your Digimon may digivolve into a blue Digimon in hand, cost -2"
     process:
-      # DCGO: SelectPermanentEffect canNoSelect: true → optional
       - select_own_permanent:
           bind_as: target
           optional: true
           filter:
             kind: digimon
           prompt: "Choose 1 of your Digimon to digivolve"
-      # DCGO: cardCondition: IsDigimon && HasCardColor(Blue)
       - select_hand:
           of: you
           bind_as: evo
+          optional: false
           filter:
             kind: digimon
             color_is: blue
           prompt: "Choose a blue Digimon card in your hand to digivolve into"
-      # DCGO: payCost: true, reduceCostTuple: (reduceCost: 2, null), isHand: true
       - effect_initiated_digivolve:
           target: target
           from_hand: evo
           cost: { reduce: 2 }
           ignore_requirements: false
 
-  # ─── Clause 2: [Security] (inherited) ─────────────────────────────────────
   - scope: inherited
     when: on_security
-    summary: "[Security][Inherited] Place this card in the battle area"
+    optional: false
+    summary: "[Security] Place this card in the battle area"
     process:
       - place_self_as_delay_option: {}

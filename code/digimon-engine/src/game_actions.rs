@@ -583,7 +583,13 @@ impl Game {
                 );
             };
 
-            if !candidate.optional {
+            // Auto-apply only reducers with NO interactive cost: a reducer
+            // bearing a `pay_cost_fn` (e.g. "trash 2 cards" / "by suspending
+            // this Tamer") imposes a real cost the player chooses to pay, so
+            // it must park behind an explicit acceptance prompt below rather
+            // than fire silently here (Working Rule §17 — no auto-selections;
+            // every choice surfaces through `pending_selection`).
+            if !candidate.optional && !candidate.has_pay_cost {
                 let key = candidate.key.clone();
                 if let Some(amount) = self.apply_cost_reduction_candidate(&key, target) {
                     accumulated_reduction += amount;

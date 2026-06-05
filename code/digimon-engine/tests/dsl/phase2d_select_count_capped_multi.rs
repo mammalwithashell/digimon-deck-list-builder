@@ -46,6 +46,7 @@ fn multi_pick_binds_card_list_for_per_selected() {
 
     let steps = vec![
         CompiledStep::SelectCountCappedMulti {
+            clamp_to_available: false,
             of: CompiledPlayerRef::Opponent,
             zone: CompiledZone::Trash,
             min: 0,
@@ -95,6 +96,7 @@ fn empty_multi_pick_runs_tail_once_synchronously() {
     let memory_before = runner.game.memory;
     let steps = vec![
         CompiledStep::SelectCountCappedMulti {
+            clamp_to_available: false,
             of: CompiledPlayerRef::Opponent,
             zone: CompiledZone::Trash,
             min: 0,

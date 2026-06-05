@@ -69,6 +69,7 @@ fn multi_pick_then_per_selected_then_for_each_round_trip() {
 
     let steps = vec![
         CompiledStep::SelectCountCappedMulti {
+            clamp_to_available: false,
             of: CompiledPlayerRef::Opponent,
             zone: CompiledZone::Trash,
             min: 0,

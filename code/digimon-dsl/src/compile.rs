@@ -2661,6 +2661,7 @@ fn compile_step(
             zone: compile_zone(a.zone),
             max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
             min: a.min,
+            clamp_to_available: a.clamp_to_available,
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
@@ -2776,6 +2777,7 @@ fn compile_step(
             without_suspending: a.without_suspending,
             ignore_summoning_sickness: a.ignore_summoning_sickness,
             optional: a.optional,
+            windowed: a.windowed,
             prompt: a.prompt.clone(),
             cost_upgrade: a.cost_upgrade.map(|u| CompiledAttackCostUpgrade {
                 dp: u.dp.unwrap_or(0),

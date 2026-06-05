@@ -41,6 +41,7 @@ fn distinct_by_card_number_filters_duplicates_after_pick() {
     let src_card = runner.game.players[0].hand[0].handle();
 
     let steps = vec![CompiledStep::SelectCountCappedMulti {
+        clamp_to_available: false,
         of: CompiledPlayerRef::Opponent,
         zone: CompiledZone::Trash,
         min: 0,

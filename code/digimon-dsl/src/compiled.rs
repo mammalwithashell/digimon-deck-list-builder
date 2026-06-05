@@ -1598,6 +1598,10 @@ pub enum CompiledStep {
         max: CompiledCountBound,
         /// Minimum required picks. G-SELECT-MULTI-MIN.
         min: u8,
+        /// MP-30/31: clamp the required pick-count to available candidates
+        /// (`min(max, available)`); never no-op for fewer-than-N. Effect-target
+        /// selections only. See `SelectCountCappedArgs::clamp_to_available`.
+        clamp_to_available: bool,
         filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,
@@ -1661,6 +1665,7 @@ pub enum CompiledStep {
         without_suspending: bool,
         ignore_summoning_sickness: bool,
         optional: bool,
+        windowed: bool,
         prompt: Option<String>,
         cost_upgrade: Option<CompiledAttackCostUpgrade>,
     },

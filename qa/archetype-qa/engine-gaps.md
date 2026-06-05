@@ -946,6 +946,133 @@ recommend a dedicated `add-burst-digivolve` OpenSpec change (the `extra_cost`
 executor and action-space exposure are the substantial, design-bearing pieces).
 
 
+### §DSL-loaded card bodies have empty `evo_costs`, so cost-reduced effect-initiated digivolves into them no-op in DebugRunner (G-DSL-FIXTURE-EVO-COSTS) — OPEN
+
+**Surfaced 2026-06-02** (Puppets interaction-test authoring, combo 1 "Fable Waltz
+trash-recursion + Arisa-suspend Delay digivolve"). A card loaded via
+`DebugRunner`/`dsl_card` is materialized by
+`code/digimon-engine/src/debug_runner.rs::card_data_from_compiled`, which sets
+`evo_costs: Vec::new()` (line ~1183). YAML `alt_paths` lower into a SEPARATE
+alt-path registration (`lower_alt_path_registration.rs`), NOT into
+`CardData.evo_costs`. `Game::effect_initiated_digivolve` with
+`ignore_requirements: false` (`game_actions.rs::effect_initiated_digivolve_from_source_inner`,
+~line 7392) matches the digivolve base against the *evolving card's* `evo_costs`
+table — so a cost-reduced Delay/Option digivolve INTO a real DSL-loaded card body
+finds no matching evo cost and **silently no-ops** (the body stays in hand, the
+base keeps its current top).
+
+Impact:
+- **Puppets combo 1 payoff completion** (`tests/archetypes/puppets.rs::combo1_fable_waltz_delay_digivolves_base_into_ex11_022`)
+  is `#[ignore]`d: Fable Waltz's `<Delay>` correctly fires off a later EX11-060
+  Arisa suspend and trashes itself as the activation cost (the cross-card chain is
+  asserted in the sibling non-ignored test), but the `-3` digivolve into the real
+  EX11-022 Karakurumon hand body cannot complete because EX11-022's DSL `evo_costs`
+  is empty. The `-3` digivolve *mechanism* is otherwise proven in
+  `tests/cards_behavioral/bt22/bt22_098.rs` with a SYNTHETIC evo body that carries
+  explicit `evo_costs`, and Puppets combo 5
+  (`combo5_narrative_ronde_main_digs_two_then_mirai_play_fires_delay`) exercises the
+  same `effect_initiated_digivolve(reduce 3, ignore_requirements:false)` path
+  successfully into a synthetic-evo target — confirming the no-op is specific to
+  *DSL-loaded* bodies, not the digivolve primitive.
+- This is a **DebugRunner fixture limitation**, NOT a live engine bug: in
+  production `CardData` comes from `data/cards.json`, which DOES carry `evo_costs`
+  (verified: EX11-022 → `[{card_color:2, level:4, memory_cost:4}]`), so the same
+  digivolve resolves at runtime. It nonetheless blocks faithful interaction tests
+  that digivolve into a named DSL card via a cost-reduced effect.
+
+Fix shape: have `card_data_from_compiled` backfill `CardData.evo_costs` from the
+compiled `alt_paths` (`kind: digivolve` paths → `{card_color, level, memory_cost}`
+entries), or from `cards.json` when available, so DSL-loaded bodies are legal
+effect-initiated digivolve targets in tests. Un-ignore
+`combo1_fable_waltz_delay_digivolves_base_into_ex11_022` once landed.
+---
+
+## BG Imperial (Imperialdramon): named/cross-colour rookie+champion line unimplemented (2026-06-02)
+
+Source: `/archetype-interaction-test-author` BG Imperial pass; DCGO cross-check.
+
+The Imperialdramon line is **colour-fluid, not colour-locked** — it assembles both DNA legs
+(ExVeemon blue + Stingmon green for Paildramon) off a SINGLE egg colour via (a) named
+digivolution requirements that bypass colour and (b) cross-colour evo-costs. DCGO-verified:
+
+- **BT16-017 Veemon** — `AddSelfDigivolutionRequirementStaticEffect` over `ContainsCardName("DemiVeemon")`
+  at cost 0 (`BT16_017.cs:18`): digivolves over the **blue egg by name**, colour-agnostic.
+  Also a cross-colour evo-cost: Blue/Red card ← **Green** Lv.2.
+- **BT16-018 ExVeemon** — named `[Digivolve] [Veemon]: Cost 2`; cross-colour evo Green Lv.3.
+- **BT16-040 Wormmon** — named over `[Minomon]` (`BT16_040.cs:18`); evo Red Lv.2.
+- **BT12-050 Stingmon (Green)** ← **Blue** Lv.3 (the green DNA leg off the blue Veemon line).
+- **BT12-022 ExVeemon (Blue)** ← **Green** Lv.3.
+
+Engine status: the substrate **supports** named requirements — DSL alt-path `from: { name_contains: ... }`,
+checked at `code/digimon-engine/src/dna_digivolve.rs:942` — and the dual cross-colour evo-costs of
+BT12-050/BT12-022 are already representable (two `digivolve` alt-paths). The cross-colour cards that
+ARE implemented (BT12-050, BT12-022, EX1-014, ST9-09) work; their colour gating is covered by
+`tests/archetypes/bg_imperial.rs` Combo 6.
+
+Gap: **BT16-017 and BT16-018 are unimplemented (no YAML).** Until they land, the named-digivolve-over-the-blue-egg
+path (the deck's single-egg colour-fluid construction) cannot be exercised end-to-end in the engine.
+This is an **implementation** gap (cards not yet authored), not a missing engine primitive — route to
+`/batch-implement-cards-rust-dsl` for BT16-017/BT16-018, using `from: { name_contains: "DemiVeemon" }`
+(resp. `"Veemon"`) for the named requirement alongside the cross-colour `from: { level_eq, color_is }` path.
+
+NOTE — corrects an earlier mischaracterisation in this pass: digivolution into the Lv.3/Lv.4 line is
+NOT purely colour-gated; "the green leg needs a green egg / a hard-played Wormmon" was WRONG.
+"Can Wormmon digivolve over a blue egg?" is still No (all three pool Wormmon verified in DCGO), but
+it is moot — the green leg comes from Stingmon (BT12-050) off the blue Veemon.
+
+---
+
+## BT12 Imperialdramon-line faithfulness fixes vs DCGO (2026-06-02)
+
+Found while checking BT12 Veemon/Wormmon/ExVeemon/Stingmon against DCGO C#. Two
+divergence classes, both fixed for the BT12 cards:
+
+### 1. EoT DNA-digivolve was free + unrestricted (G-FIX-BT12-EOT-DNA-PAYCOST)
+BT12-021 Veemon & BT12-047 Wormmon print "[End of Your Turn] This Digimon and any
+of your other Digimon may DNA digivolve into a Digimon card in the hand." DCGO
+(`BT12_021.cs`/`BT12_047.cs`) drives this via
+`DNADigivolvePermanentsIntoHandOrTrashCard(CanSelectCardCondition, payCost: TRUE)`
+where `CanSelectCardCondition` → `CanJogressFromTargetPermanent(this, PayCost:true)`:
+the target hand card's printed DNA requirements must be met by {this, partner} AND
+you pay its printed DNA cost (`condition.cost`, `CardSource.cs:2799`).
+
+The YAML used `cost: 0, ignore_requirements: true` → DNA-digivolve into ANY hand
+Digimon for FREE, ignoring DNA material requirements. Fixed by:
+- **Engine**: `EffectContext::may_dna_digivolve_now` now, when `!ignore_requirements`,
+  gates the target hand-card on a valid DNA route from {anchor, partner}
+  (`can_dna_digivolve`) and charges the matching printed DNA cost
+  (`matching_dna_cost(..).memory_cost`). New helpers
+  `dna_pair_can_reach_hand_card` / `dna_pair_cost_for_hand_card`. Additive —
+  the `ignore_requirements: true` path is unchanged.
+- **YAML**: BT12-021, BT12-047 → `ignore_requirements: false`.
+- **Tests**: structural assertions updated; new lib test
+  `effect_context::tests::dna_pair_gating_requires_a_legal_dna_route_and_returns_printed_cost`.
+
+**RESOLVED (2026-06-02):** the identical `cost: 0, ignore_requirements: true`
+pattern was also on the four other cards printing the same EoT DNA-digivolve text —
+**BT17-007, BT17-019, BT22-008, BT22-017**. Each was DCGO-verified to use the same
+normal DNA digivolve (`OnEndTurn` → `CanJogressFromTargetPermanent(this, PayCost:true)`
++ `DNADigivolvePermanentsIntoHandOrTrashCard(payCost: true)`) and flipped to
+`ignore_requirements: false`, with its structural test updated. All six EoT-DNA cards
+are now faithful (pay printed DNA cost + check DNA requirements).
+
+### 2. Inherited Jamming/Piercing name check scanned the whole stack (G-FIX-BT12-INHERIT-TOPCARD-NAME)
+BT12-022 ExVeemon (Jamming) & BT12-050 Stingmon (Piercing) print "[Your Turn] While
+this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains <kw>".
+DCGO checks the carrier's TOP CARD only: `TopCard.ContainsCardName("Imperialdramon")
+|| TopCard.CardTraits.Contains("Free")`. The YAML's name check used
+`self_digivolution_contains_name`, which routes through `Permanent::contains_card_name`
+and scans the top card AND all digivolution sources — over-granting the keyword when
+an [Imperialdramon] card sits as a buried source under a non-Imperialdramon top.
+Fixed: name check → `source_name_contains` (carrier top-card name, top-only). The
+[Free] trait check was already top-only (`source_permanent_trait_has`) and faithful.
+
+(NOTE: MEMORY.md "Permanent.contains_card_name checks top_card only" describes the
+retired PYTHON engine; the Rust `Permanent::contains_card_name`, permanent.rs:376,
+scans top + sources — which is why the name check diverged.)
+
+---
+
 ## Open gaps — Puppets archetype interaction-test discovery wave (2026-05-30)
 
 Surfaced by `/archetype-interaction-test-author` over the **Puppets** archetype

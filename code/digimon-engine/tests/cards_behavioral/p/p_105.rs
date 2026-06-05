@@ -238,14 +238,35 @@ fn p_105_main_adds_yellow_option_from_top_2_to_hand() {
 
     runner
         .auto_resolve()
-        .expect("resolve reveal and bottom ordering");
+        .expect("resolve reveal, bottom ordering, and self-placement");
 
     let hand_ids = card_ids_in_hand(&runner, 0);
     assert!(
         hand_ids.iter().any(|id| id == "YELLOW-OPTION"),
         "P-105 must add yellow cards of any kind; hand={hand_ids:?}"
     );
-    assert_eq!(runner.hand_size(0), hand_before + 1);
+    // "Then, place this card in the battle area" — P-105 itself leaves the hand
+    // via place_self_as_delay_option, so the net hand change is +1 (YELLOW-OPTION)
+    // −1 (P-105) = 0.
+    assert!(
+        !hand_ids.iter().any(|id| id == "P-105"),
+        "P-105 must leave the hand when placed in the battle area; hand={hand_ids:?}"
+    );
+    assert_eq!(runner.hand_size(0), hand_before);
+    let placed = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "P-105")
+        .expect("P-105 must be placed as a battle-area delayed Option after [Main]");
+    assert!(matches!(
+        placed.option_state,
+        OptionState::Delayed {
+            trigger: DelayTrigger::MainPhaseActivated,
+            ..
+        }
+    ));
     assert_eq!(
         deck_before - runner.deck_size(0),
         1,
@@ -274,13 +295,34 @@ fn p_105_main_with_no_yellow_in_top_2_adds_nothing_and_bottoms_remainder() {
     assert!(runner.game.activate_hand_main(0, 0));
     runner
         .auto_resolve()
-        .expect("resolve bottom ordering for non-matching reveal");
+        .expect("resolve bottom ordering for non-matching reveal and self-placement");
 
+    let hand_ids = card_ids_in_hand(&runner, 0);
+    // No yellow card is added, but P-105 still leaves the hand via
+    // place_self_as_delay_option, so the hand shrinks by exactly 1 (just P-105).
+    assert!(
+        !hand_ids.iter().any(|id| id == "P-105"),
+        "P-105 must leave the hand when placed in the battle area; hand={hand_ids:?}"
+    );
     assert_eq!(
         runner.hand_size(0),
-        hand_before,
-        "no yellow card among the top 2 means nothing is added to hand"
+        hand_before - 1,
+        "no yellow card is added, but P-105 itself leaves the hand to the battle area"
     );
+    let placed = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "P-105")
+        .expect("P-105 must be placed as a battle-area delayed Option after [Main]");
+    assert!(matches!(
+        placed.option_state,
+        OptionState::Delayed {
+            trigger: DelayTrigger::MainPhaseActivated,
+            ..
+        }
+    ));
     assert_eq!(
         runner.deck_size(0),
         deck_before,

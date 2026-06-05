@@ -2897,3 +2897,89 @@ this Digimon or return it to hand/deck" is omitted.
   - `pay_cost_fn` is additionally gated to `RunOutcome::Synchronous` (`lower_cost_reduction.rs:195`); an interactive `select_own_permanent` parks (non-synchronous) → the cost reads as failed → the reduction is dropped. So even the *selection* cannot surface through `pending_selection`. (See also `game_actions.rs:5678`, which skips paid reducers entirely without a real cost target.)
 - **Suggested change:** make the cost-reduction `pay_cost` (i) able to surface an interactive `pending_selection` and resume, and (ii) able to bind the selected/paid permanent into a binding scope that `amount_fn` can read (e.g. a `BindingPlayCost` over a `pay_cost`-produced binding, or a dedicated `paid_cost_total` formula that sums the printed cost of permanents deleted/paid during this pay_cost). Backward-compatible: literal `amount:` and the existing synchronous self-suspend / return-to-deck pay_costs are unchanged.
 - **Workaround:** None faithful. BT13-103 Clause 1 is BLOCKED — left UNIMPLEMENTED in `code/digimon-engine/cards/bt13/BT13-103.yaml` (Clauses 2 & 3 ARE authored) rather than approximated. The Clause-1 behavioral test `bt13_103_belphemon_play_cost_reduced_by_deleted_gizmon_cost` in `code/digimon-engine/tests/cards_behavioral/bt13/bt13_103.rs` is `#[ignore]`'d citing this ID.
+### RESOLVED 2026-06-02 — `may_attack_now: { windowed: true }` (deferred EOT attack grant)
+- **Gap:** `[End of Your Turn] 1 of your Digimon may attack` (AD1-004 WarGreymon)
+  was authored with inline `may_attack_now`, which declares AND resolves the
+  attack synchronously inside the trigger. That leaves no window for a sibling
+  end-of-turn effect (e.g. an inherited DNA digivolve) to resolve first and
+  remove the attacker, so the attack could never fizzle — contrary to
+  general_rule.pdf §15-4-2-3 (EOT triggers activate one at a time) + the
+  "attack ends if the attacker has left" rule.
+- **Resolution:** added a `windowed: bool` flag to the `may_attack_now` step
+  (`MayAttackNowArgs` → `CompiledStep::MayAttackNow`). When true, the step grants
+  the chosen attacker a `MayAttack` (+`CanAttackUnsuspended` iff `without_suspending`)
+  modifier with `Expiry::EndOfTurn` — the same windowed mechanism the `<Execute>`
+  keyword uses — instead of declaring inline. The attack becomes a deferred
+  EOT-action; if a sibling EOT effect removes the attacker, the grant is orphaned
+  and no attack happens. AD1-004's YAML now sets `windowed: true`. Default is
+  false, so all other `may_attack_now` users (AD1-009, BT12/17/20/…) are unchanged.
+- **Tests:** `cards_behavioral/ad1/ad1_004.rs::{ad1_004_eot_attack_is_windowed_grant_not_synchronous,
+  ad1_004_eot_attack_fizzles_when_attacker_is_removed_before_it_acts}`.
+- **Note:** AD1-004 stays PARTIAL overall — its `[On Play][When Digivolving]`
+  "delete opponent Digimon with DP ≤ this" is still blocked on G-FORMULA-SOURCE-DP
+  (unrelated to this fix).
+
+## RESOLVED 2026-06-03 — `select_count_capped_multi.clamp_to_available` (mandatory "N of opponent" target count)
+
+**Gap (FAQ MP-30/31, discovered via `tests/rules_faq/effect_resolution.rs`):** the DSL
+`select_count_capped_multi` step had no way to express a mandatory **"N of your opponent's
+Digimon"** target count. Its `min` field carries *cost* semantics (no-op when fewer than `min`
+candidates exist), and with `min` absent the floor defaults to 1 — so a card whose text reads
+"Suspend **2**" (BT24-051 Merukimon) let the player stop after suspending **one** when two were
+available (violates MP-31), while naïvely setting `min: 2` would fizzle the effect when only one
+target is in play (violates MP-30, which requires affecting `min(N, available)`).
+
+**Fix (widened the substrate, per rule 28):** added a `clamp_to_available: bool` field to
+`SelectCountCappedArgs` (and the compiled step). When true, the required floor is clamped to
+`min(max, available_candidates)` and the step never no-ops for "fewer than N" — the rules-correct
+"affect as many as possible, up to N" semantics. Implemented in the battle-area path
+(`install_select_count_capped_permanents`, `dsl_cards/step/selections.rs`); orthogonal to the
+existing cost `min`. BT24-051 now sets `clamp_to_available: true`. Hand/Trash zones thread the flag
+but do not yet act on it (no card needs it; future extension).
+
+Files: `code/digimon-dsl/src/{step,compiled,compile}.rs`,
+`code/digimon-engine/src/dsl_cards/step/selections.rs`,
+`code/digimon-engine/cards/bt24/BT24-051.yaml`. Tests: `mp30_*` / `mp31_*` in `rules_faq`.
+
+**DCGO-verified (2026-06-03).** The fix matches the battle-tested DCGO behavior exactly:
+`BT24_051.cs` uses `maxCount = Math.Min(2, available)` + `canEndNotMax: false` (must pick all
+`min(2, available)`) — which is precisely `clamp_to_available: true`. DCGO's `canEndNotMax` is the
+general distinguisher: `false` ⇒ `clamp_to_available: true`; `true` ⇒ the default "up to N"
+(`optional_zero`). **Sibling sweep (implemented pool, mandatory "≥2 of your opponent's"):** only
+BT24-051 was affected. ST5-15 Laser Eye is genuinely "up to 2" (`ST5_15.cs` `canEndNotMax: true`;
+cards.json dropped the "up to") — its existing `optional_zero: true` authoring is correct, NOT a gap.
+
+**Second sibling found + fixed (2026-06-03): BT12-028 Paildramon.** A DCGO-grounded sweep of the
+whole implemented pool (DCGO `canEndNotMax:false` + `Math.Min(≥2,...)`, intersected with cards using
+`select_count_capped_multi` on `zone: battle_area`) found one more instance of the identical bug:
+BT12-028's "[When DNA Digivolving] **2** of your opponent's Digimon with no digivolution cards can't
+attack" was authored `max: 2, optional_zero: false` with no clamp — letting the player lock only 1 of
+2. Fixed with `clamp_to_available: true` (DCGO `BT12_028.cs` confirms `canEndNotMax: false`). Existing
+BT12-028 behavioral tests (9) still pass. **Sweep otherwise clean:** BT24-040 / BT15-101 hand-roll N
+mandatory `select_opponent_permanent` calls with `not_in_binding` dedup (faithful); ST5-12/ST5-15/
+ST6-12 are genuinely "up to/may" (`optional_zero: true`); formula-`max` cards are "up to <X>".
+
+## RESOLVED 2026-06-03 — `optional: true` on MANDATORY single-target selects (FAQ MP-29)
+
+**Gap class (cousin of the MP-30/31 multi-target bug).** A select step authored `optional: true`
+over-exposes an illegal *decline* (PASS) for an effect whose printed text is **mandatory** (no
+"may"/"can"/"up to"). DCGO signal: `canEndNotMax: false` / `isOptional = -1`. Found by sweeping
+implemented cards for `select_opponent_permanent { optional: true }` whose card text is a mandatory
+"Suspend/Delete 1 of your opponent's Digimon", cross-checked against DCGO.
+
+Two instances found + fixed:
+- **BT21-037 Lighdramon** — "[When Digivolving] Suspend 1 of your opponent's Digimon. Then +2000 DP."
+  The select was `optional: true` (the YAML comment even documented the intended `optional: false`).
+  The author used `optional: true` to keep the unconditional DP buff firing when no target exists —
+  but `install_select_opponent_permanent` already skips the tail on empty candidates, so that didn't
+  even work, and it wrongly exposed a decline with a target present. **Fix:** guard select+suspend
+  behind `if any_permanent(opponent, digimon)` (mandatory select only reached when a target exists),
+  DP buff unconditional afterward. DCGO `isOptional=false`. Caught by `rules_faq::…::mp29_*`; both the
+  with-target suspend test and the no-target DP-buff test stay green.
+- **AD1-018 LordKnightmon** — "[Security] <De-Digivolve 1>, then **delete** 1 of your opponent's
+  Digimon with play cost 3 or less." The delete select was `optional: true`; DCGO `AD1_018.cs`
+  SecuritySkill uses `canEndNotMax: false`. **Fix:** removed `optional: true` (delete is the final
+  step, so the empty-candidate no-op loses nothing).
+
+Sweep otherwise clean: these were the only two implemented `select_opponent_permanent {optional:true}`
+cards whose text is mandatory single-target.

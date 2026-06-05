@@ -1382,6 +1382,24 @@
       ],
       "notes": "Re-attempt 2026-05-21: fully completed. [Main] reveal-2/add-red + place-self; [Main]<Delay> digivolve into red Digimon cost-2; [Security] place self. <Delay> trigger corrected on_play->delayed (player-initiated, matches P-035/P-037) per review fix. 23/23 tests pass, 0 ignored. Reviewer APPROVED after fix."
     },
+    "P-104": {
+      "card_name": "Mental Training",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q10/Q11)",
+      "yaml_path": "code/digimon-engine/cards/p/P-104.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_104.rs",
+      "test_count": 13,
+      "patterns": [
+        "option",
+        "reveal",
+        "delay",
+        "digivolve-cost-reduction"
+      ],
+      "notes": "Reveal2 add-blue + Delay digivolve-into-blue cost-2"
+    },
     "BT8-097": {
       "card_name": "Crimson Blaze",
       "validated_date": "2026-05-20",
@@ -6675,6 +6693,16 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
       "audit_note": "Faithful to printed text + DCGO."
     },
+    "BT24-068": {
+      "card_name": "DemiDevimon",
+      "validated_date": "2026-06-03",
+      "report": "rules-faq-faithfulness-suite (NV-1 vehicle)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "rules-FAQ no-DP vehicle",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-068.yaml",
+      "test_path": "code/digimon-engine/tests/rules_faq/no_level_no_value.rs"
+    },
     "EX3-014": {
       "card_name": "Dorbickmon",
       "validated_date": "2026-06-03",
@@ -6779,24 +6807,6 @@
         "suppress-on-play"
       ],
       "notes": "Grants [On Deletion] self-replay-from-trash via event_card binding; closes G-DSL-DELETED-SELF-TRASH-BINDING (play_from_trash_free now accepts a Card-handle binding). Flips judge-quiz Q21."
-    },
-    "P-104": {
-      "card_name": "Mental Training",
-      "validated_date": "2026-06-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "judge-quiz (Q10/Q11)",
-      "yaml_path": "code/digimon-engine/cards/p/P-104.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_104.rs",
-      "test_count": 13,
-      "patterns": [
-        "option",
-        "reveal",
-        "delay",
-        "digivolve-cost-reduction"
-      ],
-      "notes": "Reveal2 add-blue + Delay digivolve-into-blue cost-2"
     },
     "BT13-103": {
       "card_name": "Akihiro Kurata",
