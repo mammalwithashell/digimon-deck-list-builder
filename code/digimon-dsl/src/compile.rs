@@ -686,6 +686,12 @@ fn compile_predicate(
                 binding: b.binding.clone(),
                 of: compile_player_ref(b.of),
             }),
+        binding_card_kind: p.binding_card_kind.as_ref().map(|b| {
+            crate::compiled::CompiledBindingCardKindPredicate {
+                binding: b.binding.clone(),
+                kind: compile_card_kind(b.kind),
+            }
+        }),
         source_is_tamer: p.source_is_tamer,
         source_is_unsuspended: p.source_is_unsuspended,
         source_name_contains: p.source_name_contains.clone(),

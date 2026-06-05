@@ -5692,19 +5692,28 @@
     },
     "LM-020": {
       "card_name": "Quantumon",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "test_count": 0,
-      "yaml_path": null,
-      "test_path": null,
+      "validated_date": "2026-06-05",
+      "report": "judge-quiz Q18",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q18)",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_020.rs",
+      "test_count": 4,
       "patterns": [
-        "F6-IMMUNITY-ANY",
-        "SECURITY-MANIPULATION"
+        "start-of-opp-turn",
+        "select-effect-choice",
+        "declare-category",
+        "reveal-deck-top",
+        "binding-card-kind",
+        "grant-effect-immunity",
+        "self-inclusive-immunity",
+        "when-digivolving-cost",
+        "place-permanent-on-security",
+        "return-selected-security-to-deck",
+        "shuffle-security"
       ],
-      "notes": "Judge-quiz Q18. BLOCKED on G-DSL-RETURN-SELECTED-SECURITY-TO-DECK: [WhenDigivolving] needs to move a selected opponent security card to the TOP of the opponent deck; no DSL verb / EffectContext method exists. [StartOfOppTurn] category-immunity clause (Any controller filter; Q18-relevant) IS implementable. Re-attempt after the security->deck verb lands.",
-      "validated_date": "2026-05-29",
-      "report": "batch-implement-cards-rust-dsl",
-      "archetype": "judge-quiz first wave"
+      "notes": "Both clauses faithful. Clause 2 declare-category conditional immunity (source_controller any → blocks own Blast Digivolve, judge Q18). Clause 1 place-Digimon-on-security cost + 1 opp security to deck top + shuffle. Closed G-DSL-RETURN-SELECTED-SECURITY-TO-DECK + added binding_card_kind predicate."
     },
     "BT20-059": {
       "card_name": "Gankoomon (X Antibody)",

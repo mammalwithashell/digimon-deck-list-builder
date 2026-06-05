@@ -302,6 +302,7 @@ pub struct CompiledPredicate {
     pub of_permanent: Option<String>,
     pub not_in_binding: Option<String>,
     pub binding_owner: Option<CompiledBindingOwnerPredicate>,
+    pub binding_card_kind: Option<CompiledBindingCardKindPredicate>,
     pub source_is_tamer: Option<bool>,
     pub source_is_unsuspended: Option<bool>,
     pub source_name_contains: Option<String>,
@@ -477,6 +478,12 @@ pub enum CompiledBindingCompare {
 pub struct CompiledBindingOwnerPredicate {
     pub binding: String,
     pub of: CompiledPlayerRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledBindingCardKindPredicate {
+    pub binding: String,
+    pub kind: CompiledCardKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

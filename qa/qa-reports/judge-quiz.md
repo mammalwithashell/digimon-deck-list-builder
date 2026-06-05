@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-06-05: **30/30 questions have a test entry; 20 PASS.** `cargo test --test judge_quiz`
-→ 29 passed (20 question pins + loader/probe/analogs), 10 ignored, 0 failed.
+Coverage as of 2026-06-05: **30/30 questions have a test entry; 21 PASS.** `cargo test --test judge_quiz`
+→ 30 passed (21 question pins + loader/probe/analogs), 9 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -43,7 +43,7 @@ Coverage as of 2026-06-05: **30/30 questions have a test entry; 20 PASS.** `carg
 | 15 | E | Gallantmon (X Antibody) topmost | BLOCKED-CARD | BT19-073, BT17-016, BT12-016, EX3-057 | `e::q15_sequential_de_digivolve_halted_by_x_antibody_immunity` |
 | 16 | E | NO (`<Partition>` not triggered) | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX6-057 Lilithmon authored + granted body runs as the carrier's own effect (D4/DCGO), so the granted self-delete is OwnEffect → `<Partition>` cause-filter skips it | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
 | 17 | A | NO | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: BT16-102 Magnamon X + EX6-057 authored; the granted-trigger dispatch suppresses a granted opponent effect when the carrier is immune to the grantor (`permanent_is_unaffected_by_effect`). BT21-036 not needed (its only role was an Armor-Form source — staged synthetically) | `a::q17_magnamon_x_immunity_removes_granted_eot_delete` |
-| 18 | A | NO | BLOCKED-PRIMITIVE | LM-020 attempted (first wave): the `[Start of Opp Turn]` category-immunity (Q18-relevant) is implementable + the Blast-Digivolve immunity substrate is done, but LM-020 is BLOCKED on `G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` (its `[When Digivolving]` clause). | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
+| 18 | A | NO | PASS | LM-020 Quantumon fully authored 2026-06-05. `[Start of Opp Turn]` declares a category (`select_effect_choice`) + reveals opp deck-top + grants category immunity (`grant_effect_immunity` source_controller `any` → covers OWN effects) gated on the new `binding_card_kind` predicate. Self-inclusive Digimon immunity blocks Quantumon's own `<Blast Digivolve>` (combat gates blast candidacy/execution on `permanent_is_unaffected_by_effect(.., own, Digimon)`). `[When Digivolving]` clause uses the new `return_selected_security_to_deck` verb (`G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` CLOSED). | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
 | 19 | D | 0 draws | PASS | `G-ON-DELETION-RESOLVES-MID-EFFECT` RESOLVED 2026-06-05. Part A: top-most-card-in-trash gate on the OnDeletion bundle (`run_queued_effect_inner` + snapshot `is_token`). Part B: `drain_batch_on_any_deletion`'s post-deletion trigger drain gated on `maybe_drain_effect_queue` so the bundle resolves only after CFtD's return-to-hand settles → Eyesmon left trash → all suppressed → 0 draws. (Q20 stays 8.) | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
 | 20 | D | 8 draws | **PASS** | Cards authored 2026-06-03; the Eyesmon stack (own Draw3 + inherited Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2) deleted-to-trash fires all [On Deletion] → 8 draws. Engine matches. | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
 | 21 | D | 0 draws | PASS | `G-DSL-DELETED-SELF-TRASH-BINDING` CLOSED 2026-06-05 + BT3-109 authored. `event_card` already resolved the deleted-self top card in trash; the only fix was making `play_from_trash_free` accept a `Card`-handle binding. Back for Revenge! grants Eyesmon `[On Deletion]` self-replay-from-trash; replaying it leaves the trash, so the remaining draw bundle is suppressed by the Q19 top-card-in-trash gate ⇒ 0 draws. (Q19's co-blocker on this row resolved 2026-06-05.) | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
@@ -62,11 +62,27 @@ Coverage as of 2026-06-05: **30/30 questions have a test entry; 20 PASS.** `carg
 | Verdict | Count | Questions |
 |---------|-------|-----------|
 | BLOCKED-CARD | 6 | 3, 4, 9, 15, 29, 30 |
-| BLOCKED-PRIMITIVE | 4 | 8, 18, 24, 28 |
+| BLOCKED-PRIMITIVE | 3 | 8, 24, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 20 | 1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 19, 20, 21, 22, 23, 25, 26, 27 |
+| PASS | 21 | 1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27 |
 
-(Counts: 6 + 4 + 0 + 20 = 30 of 30.)
+(Counts: 6 + 3 + 0 + 21 = 30 of 30.)
+
+Q18 → **PASS** (2026-06-05): LM-020 Quantumon fully authored (both clauses). The
+ledger's "only the security→deck clause is blocked" was an undercount — the card
+needed several primitives. Landed two reusable ones: the `return_selected_security_to_deck`
+verb + `EffectContext::return_security_card_to_deck` engine primitive
+(`G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` CLOSED), and a `binding_card_kind`
+predicate (compare a bound card's category to a declared one). Clause 2
+([Start of Opp Turn]) declares a category via `select_effect_choice`, reveals the
+opponent deck-top, and grants `grant_effect_immunity` with `source_controller: any`
+(covers OWN effects) when the kinds match. Because `<Blast Digivolve>` is a Digimon
+effect and combat gates blast on `permanent_is_unaffected_by_effect(.., own, Digimon)`,
+declaring Digimon makes Quantumon unable to blast-digivolve into Imperialdramon: PM
+ACE (BT17-077). Q18 test pins the gate from the REAL clause-2 effect with a control.
+Clause 1 ([When Digivolving]) place-Digimon-on-security cost + security→deck-top +
+shuffle uses the new verb. Regression: judge_quiz 30, cards_behavioral 3900,
+dsl 760, combat 213, effect_context 145, lib 212 — green.
 
 Q21 → **PASS** (2026-06-05): `G-DSL-DELETED-SELF-TRASH-BINDING` CLOSED + BT3-109
 authored. The gap premise was mostly wrong — the `event_card`/`event_target`

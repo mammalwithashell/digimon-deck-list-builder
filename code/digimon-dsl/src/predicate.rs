@@ -171,6 +171,12 @@ pub struct PredicateSpec {
     pub not_in_binding: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub binding_owner: Option<BindingOwnerPredicate>,
+    /// True when the card bound to `binding` has the given card category.
+    /// Resolves the named card binding (e.g. from `reveal_top_deck { bind_as }`)
+    /// and compares its printed kind. Used by LM-020 Quantumon to test whether
+    /// the revealed opponent deck-top matches the declared category.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_card_kind: Option<BindingCardKindPredicate>,
 
     // Leaf — source-relative
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -526,6 +532,13 @@ impl PredicateSpec {
 pub struct BindingOwnerPredicate {
     pub binding: String,
     pub of: PlayerRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindingCardKindPredicate {
+    pub binding: String,
+    pub kind: CardKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]

@@ -555,6 +555,21 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(binding_kind) = &pred.binding_card_kind {
+        // Resolve the named card binding and compare its printed category.
+        // Used by LM-020 to test the revealed opponent deck-top against the
+        // declared category. Fails closed when the binding is unset or the
+        // card data can't be resolved.
+        let Some(handle) = bindings.and_then(|b| b.get_card(&binding_kind.binding)) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(handle) else {
+            return false;
+        };
+        if !kind_matches_field(binding_kind.kind, data.card_kind) {
+            return false;
+        }
+    }
 
     // Existentials — scan battle areas.
     if let Some(ex) = &pred.any_permanent {

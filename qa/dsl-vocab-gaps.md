@@ -2778,6 +2778,19 @@ Historical note:
 
 ## LM-020 — return a selected SECURITY card to a deck  [G-DSL-RETURN-SELECTED-SECURITY-TO-DECK]
 
+**CLOSED 2026-06-05.** Added the `return_selected_security_to_deck` DSL verb
+(`ReturnToDeckArgs`: of/card/position) + the engine primitive
+`EffectContext::return_security_card_to_deck(player, card, to_bottom)` and a new
+`SecurityRemovalDestination::Deck { owner, to_bottom }` handled in
+`complete_effect_security_removal` (Digi-Eggs route to the digitama deck; fires the
+OnLoseSecurity / OnOpponentSecurityRemoved observer chain). LM-020 Quantumon is now
+fully authored (`code/digimon-engine/cards/lm/LM-020.yaml`, both clauses) and
+judge-quiz **Q18 → PASS**. A second small gap surfaced while authoring clause 2 —
+no predicate compared a *bound card's* category to a declared one — closed by the
+new `binding_card_kind: { binding, kind }` predicate. Tests:
+`tests/effect_context/security_stack_operations.rs` (3) +
+`tests/cards_behavioral/lm/lm_020.rs` (4) + judge-quiz Q18.
+
 Surfaced: 2026-05-29, judge-quiz first wave (`batch-implement-cards-rust-dsl`). LM-020 Quantumon BLOCKED.
 
 - **Missing DSL verb:** `return_selected_security_to_deck` — route a `select_security`-bound `CardHandle` to the owner's deck **top or bottom**. The three verbs that consume a `select_security` pick route it to hand (`add_to_hand_from_security`), play (`play_security_card`), or trash (`trash_selected_security`) — never to a deck.
