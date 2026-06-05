@@ -136,6 +136,11 @@ pub struct DeletedObjectSnapshot {
     /// Pre-removal digivolution-card handles in stack order (bottom-most
     /// first), excluding the top card.
     pub digisources_just_before: Vec<CardHandle>,
+    /// Whether the deleted carrier's top card was a token. DCGO
+    /// `CardEffectCommons.CanActivateOnDeletion` returns `true` immediately
+    /// for tokens (`if (card.IsToken) return true;`), so the OnDeletion bundle
+    /// fires even though a trashed token leaves no card in trash.
+    pub is_token: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

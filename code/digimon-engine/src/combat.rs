@@ -4005,6 +4005,7 @@ impl Game {
                     traits_just_before: Vec::new(),
                     source_count_just_before: 0,
                     digisources_just_before: Vec::new(),
+                    is_token: false,
                 });
             }
         }
@@ -4037,6 +4038,7 @@ impl Game {
         }
         let source_count = digisources.len();
         let dp_now = self.effective_dp(handle);
+        let is_token = perm.top_card().is_token;
         Some(crate::trigger_context::DeletedObjectSnapshot {
             former_controller: handle.player,
             top_card: top_handle,
@@ -4054,6 +4056,7 @@ impl Game {
             traits_just_before: data.traits.clone(),
             source_count_just_before: source_count,
             digisources_just_before: digisources,
+            is_token,
         })
     }
 

@@ -2395,6 +2395,32 @@ impl Game {
             return;
         }
 
+        // DCGO `CardEffectCommons.CanActivateOnDeletion` (OnDeletion.cs): the
+        // [On Deletion] bundle activates only while the deleted carrier's
+        // top-most card is still in its former controller's trash. This is a
+        // CanActivate check — re-evaluated at activation, not at queue time —
+        // so if an earlier effect (the deleting effect's own body, or an
+        // earlier OnDeletion clause) moves the top card out of trash before
+        // this clause resolves, the clause is suppressed. Tokens leave no card
+        // in trash but always activate (`if (card.IsToken) return true;`).
+        if qe.timing == EffectTiming::OnDeletion {
+            if let Some(snap) = qe
+                .trigger_context
+                .as_ref()
+                .and_then(|t| t.deleted_object.as_ref())
+            {
+                if !snap.is_token {
+                    let top = snap.top_card;
+                    let owner = snap.former_controller;
+                    let in_trash =
+                        self.player(owner).trash.iter().any(|c| c.handle() == top);
+                    if !in_trash {
+                        return; // suppressed: top card no longer in trash
+                    }
+                }
+            }
+        }
+
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
