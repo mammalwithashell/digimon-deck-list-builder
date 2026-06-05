@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-03",
+  "last_updated": "2026-06-05",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -6754,20 +6754,22 @@
     },
     "BT3-109": {
       "card_name": "Back for Revenge!",
-      "validated_date": "2026-06-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "judge-quiz (Q19/Q20/Q21)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "validated_date": "2026-06-05",
+      "report": "judge-quiz Q21",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-109.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_109.rs",
+      "test_count": 2,
       "patterns": [
+        "grant-triggered-effect",
         "on-deletion",
-        "draw-keyword",
-        "trash-from-hand"
+        "play-from-trash-free",
+        "event-card-binding",
+        "suppress-on-play"
       ],
-      "notes": "G-DSL-DELETED-SELF-TRASH-BINDING: no binding for the just-deleted carrier card in trash to feed play_from_trash_free"
+      "notes": "Grants [On Deletion] self-replay-from-trash via event_card binding; closes G-DSL-DELETED-SELF-TRASH-BINDING (play_from_trash_free now accepts a Card-handle binding). Flips judge-quiz Q21."
     },
     "P-104": {
       "card_name": "Mental Training",

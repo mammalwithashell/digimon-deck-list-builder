@@ -24,6 +24,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::EffectTiming;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::TriggerSource;
 use std::sync::Arc;
 
@@ -365,15 +366,74 @@ fn q20_all_on_deletion_fire_when_eyesmon_stays_in_trash() {
 /// from trash* mid-resolution, so it leaves the trash before the remaining
 /// [On Deletion] can resolve ⇒ Judge: 0 draws.
 ///
-/// # BLOCKED-CARD — BT3-109 not implemented (G-DSL-DELETED-SELF-TRASH-BINDING)
-/// Back for Revenge! cannot be authored: the DSL has no binding for "this card" =
-/// the just-deleted carrier sitting in trash (the card needs to reference and
-/// play back the very Digimon whose deletion triggered it). Until that binding
-/// exists, this scenario cannot be staged faithfully (no auto-selecting which
-/// trashed card to play). Kept ignored as BLOCKED-CARD on BT3-109; this would
-/// ALSO hit the same G-ON-DELETION-RESOLVES-MID-EFFECT timing gap as Q19 even if
-/// BT3-109 existed. See engine-gaps.md.
+/// # PASS (2026-06-05) — BT3-109 authored, G-DSL-DELETED-SELF-TRASH-BINDING closed
+/// Back for Revenge! grants a chosen own Digimon "[On Deletion] play this card
+/// from trash for free" via `grant_triggered_effect`. The granted body addresses
+/// the just-deleted carrier through the `event_card` binding (which, on an
+/// [On Deletion] trigger context, resolves to `DeletedObjectSnapshot.top_card` —
+/// the carrier's top card now in trash); `play_from_trash_free` now accepts that
+/// card-handle binding (the narrow DSL gap that was the only real blocker — the
+/// `event_card`/`event_target` bindings already resolved the deleted self). When
+/// the deletion fires the bundle (own <Draw 3> + the 3 inherited draws + the
+/// granted replay), resolving the granted replay returns Eyesmon to the field, so
+/// the carrier leaves the trash and the remaining [On Deletion] are suppressed by
+/// the Q19 top-most-card-in-trash gate ⇒ 0 draws.
 #[test]
-#[ignore = "BLOCKED-CARD: BT3-109 (Back for Revenge!) not implemented — G-DSL-DELETED-SELF-TRASH-BINDING (no DSL binding for 'this card' = the just-deleted carrier in trash). Would also hit G-ON-DELETION-RESOLVES-MID-EFFECT. BT7-069/BT2-069/BT3-006/BT2-076/BT7-107 implemented."]
-fn q21_remaining_on_deletion_suppressed_when_played_from_trash() {}
+fn q21_remaining_on_deletion_suppressed_when_played_from_trash() {
+    let pad: Vec<&str> = vec!["PAD"; 30];
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT7-069")
+        .expect("BT7-069 Eyesmon: Scatter Mode loads")
+        .dsl_card("BT2-069")
+        .expect("BT2-069 Gabumon loads")
+        .dsl_card("BT3-006")
+        .expect("BT3-006 DemiMeramon loads")
+        .dsl_card("BT2-076")
+        .expect("BT2-076 Pumpkinmon loads")
+        .dsl_card("BT3-109")
+        .expect("BT3-109 Back for Revenge! loads")
+        .add_card(make_test_card("PAD", "PAD"))
+        .deck(0, &pad)
+        .hand(0, &["BT3-109"])
+        .memory(5)
+        .start();
+    // Stack bottom→top: DemiMeramon (egg), Gabumon, Pumpkinmon, Eyesmon (top).
+    let host = r.place_stack(0, &["BT3-006", "BT2-069", "BT2-076", "BT7-069"]);
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "precondition: the 4-card Eyesmon stack is staged on the field"
+    );
+
+    // [Main] Back for Revenge! → grant Eyesmon the [On Deletion] self-replay.
+    let fired = r.game.activate_hand_main(0, 0);
+    assert!(fired, "BT3-109 [Main] must fire");
+    let _ = r.auto_resolve();
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "granting does not move the Eyesmon stack off the field"
+    );
+
+    let deck_before = r.deck_size(0);
+
+    // Delete the Eyesmon stack → [On Deletion] bundle fires: own <Draw 3> +
+    // inherited (Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2) + the granted replay.
+    r.game
+        .delete_permanent_with_cause(host, ReplacementCause::OwnEffect);
+    let _ = r.auto_resolve();
+
+    // The granted replay returns Eyesmon: Scatter Mode to the field from trash.
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "Eyesmon: Scatter Mode is replayed from trash by the granted [On Deletion]"
+    );
+    // Judge: Eyesmon (top-most) left the trash ⇒ NO remaining [On Deletion] resolves.
+    assert_eq!(
+        deck_before - r.deck_size(0),
+        0,
+        "Q21: carrier played from trash ⇒ remaining [On Deletion] suppressed (judge: 0 draws)"
+    );
+}
 

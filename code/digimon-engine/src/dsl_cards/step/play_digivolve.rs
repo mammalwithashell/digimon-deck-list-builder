@@ -291,29 +291,34 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             trash_index,
             suppress_on_play,
         } => {
-            // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
-            // IR addresses by trash index so we must look up the handle.
-            if let Some(ResolvedBinding::TrashIndex(owner, i)) =
-                resolve_binding_ref(trash_index, ctx, bindings)
-            {
-                let handle: Option<CardHandle> = ctx
-                    .game
-                    .player(owner)
-                    .trash
-                    .get(i as usize)
-                    .map(|cs| cs.handle());
-                if let Some(h) = handle {
-                    // PUPPETS-G030 — when `suppress_on_play` is set, the
-                    // played Digimon's own `[On Play]` effects do not fire
-                    // for this play event (BT5-106 [Security]).
-                    let played = if *suppress_on_play {
-                        ctx.play_from_trash_free_unsuspended_suppress_on_play(h)
-                    } else {
-                        ctx.play_from_trash_free_unsuspended(h)
-                    };
-                    if let Some(played) = played {
-                        bindings.record_played(played);
-                    }
+            // `play_from_trash_free_unsuspended` takes a `CardHandle`. The
+            // binding may address the card either by trash index
+            // (`ResolvedBinding::TrashIndex`) or directly by card handle
+            // (`ResolvedBinding::Card`) — the latter lets a card-identity
+            // binding such as `event_card` / `event_target` (which, inside an
+            // [On Deletion] body, resolves to the just-deleted carrier's
+            // top card now in trash) feed a free replay. This is what BT3-109
+            // "Back for Revenge!" needs to "Play this card" from trash. The
+            // engine call self-guards: it returns `None` if the handle is not
+            // actually in the controller's trash.
+            let handle: Option<CardHandle> = match resolve_binding_ref(trash_index, ctx, bindings) {
+                Some(ResolvedBinding::TrashIndex(owner, i)) => {
+                    ctx.game.player(owner).trash.get(i as usize).map(|cs| cs.handle())
+                }
+                Some(ResolvedBinding::Card(h)) => Some(h),
+                _ => None,
+            };
+            if let Some(h) = handle {
+                // PUPPETS-G030 — when `suppress_on_play` is set, the
+                // played Digimon's own `[On Play]` effects do not fire
+                // for this play event (BT5-106 [Security]).
+                let played = if *suppress_on_play {
+                    ctx.play_from_trash_free_unsuspended_suppress_on_play(h)
+                } else {
+                    ctx.play_from_trash_free_unsuspended(h)
+                };
+                if let Some(played) = played {
+                    bindings.record_played(played);
                 }
             }
             true

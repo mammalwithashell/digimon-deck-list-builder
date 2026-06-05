@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-06-05: **30/30 questions have a test entry; 19 PASS.** `cargo test --test judge_quiz`
-→ 28 passed (19 question pins + loader/probe/analogs), 11 ignored, 0 failed.
+Coverage as of 2026-06-05: **30/30 questions have a test entry; 20 PASS.** `cargo test --test judge_quiz`
+→ 29 passed (20 question pins + loader/probe/analogs), 10 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -46,7 +46,7 @@ Coverage as of 2026-06-05: **30/30 questions have a test entry; 19 PASS.** `carg
 | 18 | A | NO | BLOCKED-PRIMITIVE | LM-020 attempted (first wave): the `[Start of Opp Turn]` category-immunity (Q18-relevant) is implementable + the Blast-Digivolve immunity substrate is done, but LM-020 is BLOCKED on `G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` (its `[When Digivolving]` clause). | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
 | 19 | D | 0 draws | PASS | `G-ON-DELETION-RESOLVES-MID-EFFECT` RESOLVED 2026-06-05. Part A: top-most-card-in-trash gate on the OnDeletion bundle (`run_queued_effect_inner` + snapshot `is_token`). Part B: `drain_batch_on_any_deletion`'s post-deletion trigger drain gated on `maybe_drain_effect_queue` so the bundle resolves only after CFtD's return-to-hand settles → Eyesmon left trash → all suppressed → 0 draws. (Q20 stays 8.) | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
 | 20 | D | 8 draws | **PASS** | Cards authored 2026-06-03; the Eyesmon stack (own Draw3 + inherited Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2) deleted-to-trash fires all [On Deletion] → 8 draws. Engine matches. | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
-| 21 | D | 0 draws | BLOCKED-CARD | BT3-109 (Back for Revenge!) BLOCKED on `G-DSL-DELETED-SELF-TRASH-BINDING` (no DSL binding for the just-deleted carrier in trash); would also hit `G-ON-DELETION-RESOLVES-MID-EFFECT`. | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
+| 21 | D | 0 draws | PASS | `G-DSL-DELETED-SELF-TRASH-BINDING` CLOSED 2026-06-05 + BT3-109 authored. `event_card` already resolved the deleted-self top card in trash; the only fix was making `play_from_trash_free` accept a `Card`-handle binding. Back for Revenge! grants Eyesmon `[On Deletion]` self-replay-from-trash; replaying it leaves the trash, so the remaining draw bundle is suppressed by the Q19 top-card-in-trash gate ⇒ 0 draws. (Q19's co-blocker on this row resolved 2026-06-05.) | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
 | 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
 | 23 | D/F | 1 memory | PASS | Engine already correct (2026-05-30, run to completion): trashing 3 Tumblemon mid-effect enqueues 3 mandatory `OnDigivolutionCardTrashed` observers → multi-trigger `TriggerOrder` selection PARKS them past Medusamon's return-2; on resolution each clause condition is re-evaluated, dropping the 2 returned cards → only the 1 still in trash fires (+1). The earlier `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a mischaracterization (single-source probe + abstract reasoning, never run end-to-end). No engine change needed. | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
 | 24 | B | Hudiemon DP 3000 | BLOCKED-PRIMITIVE | BT23-101, BT23-037, BT16-101, ST17-07 implemented; needs EX6-004 (Kokomon), itself BLOCKED on `G-SUSPEND-EFFECT-INITIATED` (suspend event carries no by_effect bit, so Kokomon's "when an EFFECT suspends" is un-gatable). | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
@@ -61,12 +61,26 @@ Coverage as of 2026-06-05: **30/30 questions have a test entry; 19 PASS.** `carg
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 7 | 3, 4, 9, 15, 21, 29, 30 |
+| BLOCKED-CARD | 6 | 3, 4, 9, 15, 29, 30 |
 | BLOCKED-PRIMITIVE | 4 | 8, 18, 24, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 19 | 1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26, 27 |
+| PASS | 20 | 1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 19, 20, 21, 22, 23, 25, 26, 27 |
 
-(Counts: 7 + 4 + 0 + 19 = 30 of 30.)
+(Counts: 6 + 4 + 0 + 20 = 30 of 30.)
+
+Q21 → **PASS** (2026-06-05): `G-DSL-DELETED-SELF-TRASH-BINDING` CLOSED + BT3-109
+authored. The gap premise was mostly wrong — the `event_card`/`event_target`
+bindings ALREADY resolve the just-deleted carrier's top card in trash
+(`DeletedObjectSnapshot.top_card`). The only real missing link: `play_from_trash_free`
+accepted a trash-index binding but not a card-handle binding, so `event_card`
+couldn't feed it. Fixed generally by making the `PlayFromTrashFree` step arm accept
+`ResolvedBinding::Card(h)` (engine call self-guards the handle is in trash). BT3-109
+Back for Revenge! grants a chosen Digimon `[On Deletion]` self-replay-from-trash;
+replaying the carrier leaves the trash, so the remaining draw bundle is suppressed
+by the Q19 top-most-card-in-trash gate ⇒ 0 draws. Composes cleanly with Q19 — both
+D-cluster activation-site questions now PASS. Behavioral test:
+`tests/cards_behavioral/bt3/bt3_109.rs`; regression: cards_behavioral 3896, full
+engine suite green except the 4 pre-existing cost_hooks failures.
 
 Q19 → **PASS** (2026-06-05): `G-ON-DELETION-RESOLVES-MID-EFFECT` RESOLVED. Two-part
 fix — (A) a top-most-card-in-trash gate on the `[On Deletion]` bundle in
