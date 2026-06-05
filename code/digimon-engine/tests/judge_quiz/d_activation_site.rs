@@ -24,6 +24,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::EffectTiming;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::TriggerSource;
 use std::sync::Arc;
 
@@ -192,19 +193,247 @@ fn q9_gatomon_not_in_battle_area_during_removal_no_memory() {}
 
 /// Q19 — Eyesmon: Scatter Mode (BT7-069) returned to hand by Calling From the
 /// Darkness (BT7-107) ⇒ no [On Deletion]. Judge: 0 draws.
+///
+/// # Board (read off the PDF, "ZXavier's Digi Rulings", PDF pp.39–41)
+/// Player A has a Digimon in the battle area:
+///   top  Eyesmon: Scatter Mode (BT7-069) — own [On Deletion] <Draw 3>+trash 2
+///   src  Gabumon (BT2-069) — inherited [On Deletion] <Draw 2>+trash 1
+///   src  DemiMeramon (BT3-006) — inherited [On Deletion] <Draw 1>+trash 1
+/// Trash: 0 cards.
+///
+/// # Action
+/// Player A uses Calling From the Darkness (BT7-107) targeting Eyesmon: Scatter
+/// Mode. CFtD deletes the Digimon (the whole stack goes to trash), THEN returns
+/// up to 2 purple Digimon cards from trash to hand — here Eyesmon: Scatter Mode
+/// & Gabumon.
+///
+/// # Judge rationale (PDF p.41)
+/// "[On Deletion] effects are tied to the top-most card of the Digimon, not tied
+/// to the digivolution cards. Additionally, [On Deletion] effects can only
+/// activate if they're in the trash. Since Calling From the Darkness returned
+/// Eyesmon: Scatter Mode to the hand, no [On Deletion] effects are able to
+/// activate." ⇒ the WHOLE [On Deletion] bundle (the topmost card's own + EVERY
+/// inherited source's) is gated on the TOP-MOST card (Eyesmon) still being in
+/// trash at resolution. Eyesmon returned ⇒ all suppressed ⇒ 0 draws.
+///
+/// # PASS (2026-06-05) — G-ON-DELETION-RESOLVES-MID-EFFECT resolved
+/// Driving the REAL BT7-107 option (`activate_hand_main`) over the real stack now
+/// draws **0**. The fix is two-part (DCGO `CanActivateOnDeletion` + the outer
+/// `TriggeredSkillProcess` drain model):
+///  - **Part A** (`run_queued_effect_inner`): an [On Deletion] queued effect
+///    activates only while its snapshot's TOP-MOST card is still in the former
+///    controller's trash (tokens always activate). Re-checked at activation, so a
+///    returned carrier suppresses the whole bundle (own + every inherited source,
+///    which all share the carrier's top-card snapshot).
+///  - **Part B** (`drain_batch_on_any_deletion`): the batch's post-deletion
+///    trigger drain is gated on `maybe_drain_effect_queue` (only at
+///    `draining_deferred == 0`). Inside CFtD's resolution window the OnDeletion /
+///    OnAnyDeletion / OnLeaveField entries stay queued until the causing effect's
+///    later steps (the return-to-hand) finish, then resolve under Part A's gate.
+///
+/// CFtD returns Eyesmon: Scatter Mode (the top-most card) to hand among its 2
+/// purple returns, so the whole bundle is suppressed ⇒ 0 draws. (Contrast Q20,
+/// where Eyesmon stays in trash ⇒ all 8 fire — the discriminator both halves of
+/// the fix preserve.)
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT7-069 (Eyesmon: Scatter Mode), BT2-069 (Gabumon), BT3-006 (DemiMeramon). BT7-107 implemented."]
-fn q19_on_deletion_suppressed_when_returned_to_hand() {}
+fn q19_on_deletion_suppressed_when_returned_to_hand() {
+    let pad: Vec<&str> = vec!["PAD"; 30];
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT7-069")
+        .expect("BT7-069 Eyesmon: Scatter Mode loads")
+        .dsl_card("BT2-069")
+        .expect("BT2-069 Gabumon loads")
+        .dsl_card("BT3-006")
+        .expect("BT3-006 DemiMeramon loads")
+        .dsl_card("BT7-107")
+        .expect("BT7-107 Calling From the Darkness loads")
+        .add_card(make_test_card("PAD", "PAD"))
+        .deck(0, &pad)
+        .hand(0, &["BT7-107"])
+        .memory(5)
+        .start();
+    // Stack bottom→top: DemiMeramon (egg), Gabumon, Eyesmon (top). 0 in trash.
+    let _host = r.place_stack(0, &["BT3-006", "BT2-069", "BT7-069"]);
+    let deck_before = r.deck_size(0);
+
+    // Drive the REAL Calling From the Darkness: it deletes the Eyesmon stack and
+    // (per the PDF) returns Eyesmon + Gabumon from trash to hand.
+    let fired = r.game.activate_hand_main(0, 0);
+    assert!(fired, "BT7-107 main effect must fire");
+    let _ = r.auto_resolve();
+
+    // Judge: Eyesmon (top-most) returned to hand ⇒ NO [On Deletion] resolves.
+    assert_eq!(
+        deck_before - r.deck_size(0),
+        0,
+        "Q19: Eyesmon returned to hand ⇒ no [On Deletion] resolves (judge: 0 draws)"
+    );
+}
 
 /// Q20 — Eyesmon stays in trash (+Pumpkinmon BT2-076) ⇒ all [On Deletion] fire.
-/// Judge: 8 draws.
+/// Judge: 8 draws.  **PASS (2026-06-03).**
+///
+/// # Board (read off the PDF, "ZXavier's Digi Rulings", PDF pp.42–44)
+/// Player A has a Digimon in the battle area:
+///   top  Eyesmon: Scatter Mode (BT7-069) — own [On Deletion] <Draw 3>+trash 2
+///   src  Gabumon (BT2-069)      — inherited [On Deletion] <Draw 2>+trash 1
+///   src  DemiMeramon (BT3-006)  — inherited [On Deletion] <Draw 1>+trash 1
+///   src  Pumpkinmon (BT2-076)   — inherited [On Deletion] <Draw 2>+trash 1
+/// Trash: 0 cards.
+///
+/// # Action
+/// Player A uses Calling From the Darkness (BT7-107) targeting Eyesmon: Scatter
+/// Mode. CFtD deletes the Digimon (the whole 4-card stack goes to trash), THEN
+/// returns up to 2 purple Digimon cards from trash to hand — here Gabumon &
+/// Pumpkinmon (NOT Eyesmon).
+///
+/// # Judge rationale (PDF p.44)
+/// "[On Deletion] effects are tied to the top-most card of the Digimon ... Since
+/// Calling From the Darkness didn't return Eyesmon: Scatter Mode to the hand, all
+/// [On Deletion] effects are able to activate." ⇒ the top-most card stays in
+/// trash, so the WHOLE bundle fires:
+///   Eyesmon 3 + Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2 = **8 draws**.
+///
+/// # Load-bearing assertion
+/// Net cards drawn (deck-size delta) == 8. The scenario is genuinely staged: the
+/// real BT7-107 option deletes the real 4-card Eyesmon stack via
+/// `activate_hand_main` (battle area empties), and every [On Deletion] in the
+/// stack resolves. The deck must be deep enough that all 8 draws land (30 PADs).
+/// Note: the colour data bug (sources declared black, are purple — see Q19) means
+/// CFtD's purple-only return surfaces no selection, but that is NOT load-bearing
+/// here: the judge keeps Eyesmon in trash either way, so the answer is 8
+/// regardless of whether Gabumon/Pumpkinmon get returned. What this test pins is
+/// the activation-site rule: the deleted carrier remaining in trash ⇒ all
+/// [On Deletion] (own + every inherited) fire.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT7-069, BT2-069, BT3-006, BT2-076 (Pumpkinmon). BT7-107 implemented."]
-fn q20_all_on_deletion_fire_when_eyesmon_stays_in_trash() {}
+fn q20_all_on_deletion_fire_when_eyesmon_stays_in_trash() {
+    let pad: Vec<&str> = vec!["PAD"; 30];
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT7-069")
+        .expect("BT7-069 Eyesmon: Scatter Mode loads")
+        .dsl_card("BT2-069")
+        .expect("BT2-069 Gabumon loads")
+        .dsl_card("BT3-006")
+        .expect("BT3-006 DemiMeramon loads")
+        .dsl_card("BT2-076")
+        .expect("BT2-076 Pumpkinmon loads")
+        .dsl_card("BT7-107")
+        .expect("BT7-107 Calling From the Darkness loads")
+        .add_card(make_test_card("PAD", "PAD"))
+        .deck(0, &pad)
+        .hand(0, &["BT7-107"])
+        .memory(5)
+        .start();
+    // Stack bottom→top: DemiMeramon (egg), Gabumon, Pumpkinmon, Eyesmon (top).
+    let host = r.place_stack(0, &["BT3-006", "BT2-069", "BT2-076", "BT7-069"]);
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "precondition: the 4-card Eyesmon stack is staged on the field"
+    );
+    let deck_before = r.deck_size(0);
+
+    // Drive the REAL Calling From the Darkness: it deletes the Eyesmon stack.
+    let fired = r.game.activate_hand_main(0, 0);
+    assert!(fired, "BT7-107 main effect must fire");
+    let _ = r.auto_resolve();
+
+    // Precondition the scenario was genuinely staged: Eyesmon really got deleted.
+    assert!(
+        r.game
+            .player(0)
+            .battle_area
+            .get(host.index as usize)
+            .is_none(),
+        "precondition: Eyesmon: Scatter Mode was deleted by Calling From the Darkness"
+    );
+
+    // Judge: Eyesmon stayed in trash ⇒ every [On Deletion] (own 3 + Gabumon 2 +
+    // DemiMeramon 1 + Pumpkinmon 2) resolves ⇒ 8 cards drawn (deck shrinks by 8).
+    assert_eq!(
+        deck_before - r.deck_size(0),
+        8,
+        "Q20: all [On Deletion] fire when Eyesmon stays in trash \
+         (3+2+1+2 = 8 draws)"
+    );
+}
 
 /// Q21 — Eyesmon played from trash by Back for Revenge! (BT3-109) ⇒ remaining
 /// [On Deletion] can't fire. Judge: 0 draws.
+///
+/// # Board (read off the PDF, "ZXavier's Digi Rulings"; same family as Q19/Q20)
+/// (Q20 board) + Back for Revenge! (BT3-109) — Eyesmon: Scatter Mode is *played
+/// from trash* mid-resolution, so it leaves the trash before the remaining
+/// [On Deletion] can resolve ⇒ Judge: 0 draws.
+///
+/// # PASS (2026-06-05) — BT3-109 authored, G-DSL-DELETED-SELF-TRASH-BINDING closed
+/// Back for Revenge! grants a chosen own Digimon "[On Deletion] play this card
+/// from trash for free" via `grant_triggered_effect`. The granted body addresses
+/// the just-deleted carrier through the `event_card` binding (which, on an
+/// [On Deletion] trigger context, resolves to `DeletedObjectSnapshot.top_card` —
+/// the carrier's top card now in trash); `play_from_trash_free` now accepts that
+/// card-handle binding (the narrow DSL gap that was the only real blocker — the
+/// `event_card`/`event_target` bindings already resolved the deleted self). When
+/// the deletion fires the bundle (own <Draw 3> + the 3 inherited draws + the
+/// granted replay), resolving the granted replay returns Eyesmon to the field, so
+/// the carrier leaves the trash and the remaining [On Deletion] are suppressed by
+/// the Q19 top-most-card-in-trash gate ⇒ 0 draws.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT7-069, BT2-069, BT3-006, BT2-076, BT3-109 (Back for Revenge!). BT7-107 implemented."]
-fn q21_remaining_on_deletion_suppressed_when_played_from_trash() {}
+fn q21_remaining_on_deletion_suppressed_when_played_from_trash() {
+    let pad: Vec<&str> = vec!["PAD"; 30];
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT7-069")
+        .expect("BT7-069 Eyesmon: Scatter Mode loads")
+        .dsl_card("BT2-069")
+        .expect("BT2-069 Gabumon loads")
+        .dsl_card("BT3-006")
+        .expect("BT3-006 DemiMeramon loads")
+        .dsl_card("BT2-076")
+        .expect("BT2-076 Pumpkinmon loads")
+        .dsl_card("BT3-109")
+        .expect("BT3-109 Back for Revenge! loads")
+        .add_card(make_test_card("PAD", "PAD"))
+        .deck(0, &pad)
+        .hand(0, &["BT3-109"])
+        .memory(5)
+        .start();
+    // Stack bottom→top: DemiMeramon (egg), Gabumon, Pumpkinmon, Eyesmon (top).
+    let host = r.place_stack(0, &["BT3-006", "BT2-069", "BT2-076", "BT7-069"]);
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "precondition: the 4-card Eyesmon stack is staged on the field"
+    );
+
+    // [Main] Back for Revenge! → grant Eyesmon the [On Deletion] self-replay.
+    let fired = r.game.activate_hand_main(0, 0);
+    assert!(fired, "BT3-109 [Main] must fire");
+    let _ = r.auto_resolve();
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "granting does not move the Eyesmon stack off the field"
+    );
+
+    let deck_before = r.deck_size(0);
+
+    // Delete the Eyesmon stack → [On Deletion] bundle fires: own <Draw 3> +
+    // inherited (Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2) + the granted replay.
+    r.game
+        .delete_permanent_with_cause(host, ReplacementCause::OwnEffect);
+    let _ = r.auto_resolve();
+
+    // The granted replay returns Eyesmon: Scatter Mode to the field from trash.
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "Eyesmon: Scatter Mode is replayed from trash by the granted [On Deletion]"
+    );
+    // Judge: Eyesmon (top-most) left the trash ⇒ NO remaining [On Deletion] resolves.
+    assert_eq!(
+        deck_before - r.deck_size(0),
+        0,
+        "Q21: carrier played from trash ⇒ remaining [On Deletion] suppressed (judge: 0 draws)"
+    );
+}
 

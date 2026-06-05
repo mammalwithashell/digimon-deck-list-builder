@@ -449,9 +449,68 @@ fn q17_magnamon_x_immunity_removes_granted_eot_delete() {
 
 /// Q18 — Quantumon (LM-020) immunity is to ALL Digimon effects incl. its own;
 /// `<Blast Digivolve>` into Imperialdramon: PM ACE (BT17-077) is an effect. Judge: NO.
+///
+/// # Board / rationale
+/// At the start of the opponent's turn, Quantumon's [Start of Opponent's Turn]
+/// clause declares a card category, reveals the opponent's deck-top, and — if it
+/// matches — makes Quantumon "isn't affected by the effects of that card category
+/// for the turn." Declaring **Digimon** (and revealing a Digimon) grants immunity
+/// to Digimon effects from ANY controller, **including its own**. `<Blast
+/// Digivolve>` is itself a Digimon effect, and combat gates blast-digivolve
+/// candidacy AND execution on exactly
+/// `permanent_is_unaffected_by_effect(target, target.player, Digimon)`
+/// (`combat.rs` ~1507 candidate filter + ~1744 execute guard). So Quantumon
+/// cannot `<Blast Digivolve>` into BT17-077. Judge: **NO**.
+///
+/// # Load-bearing assertion
+/// This pins the operative gate using the REAL LM-020 clause-2 effect (not a
+/// synthetic modifier): after the declaration, Quantumon is unaffected by its own
+/// controller's Digimon effects. A control asserts it is affectable BEFORE the
+/// declaration, so the immunity — not some unrelated route gap — is what produces
+/// the judge's NO. (The end-to-end "immune base ⇒ no blast counter candidate"
+/// mechanism is separately proven in
+/// `combat::counter_interrupt::blast_target_immune_to_own_effects_is_not_a_counter_candidate`.)
 #[test]
-#[ignore = "BLOCKED-CARD: needs LM-020 (Quantumon). BT17-077 is implemented."]
-fn q18_quantumon_self_immunity_blocks_own_blast_digivolve() {}
+fn q18_quantumon_self_immunity_blocks_own_blast_digivolve() {
+    let dgm = make_test_card("DGM", "Deck Digimon");
+    let mut r = DebugRunner::builder()
+        .dsl_card("LM-020")
+        .expect("LM-020 Quantumon loads")
+        .add_card(make_test_card("PAD", "PAD"))
+        .add_card(dgm)
+        // opponent (player 1) deck top = Vec end = a Digimon.
+        .deck(1, &["PAD", "PAD", "DGM"])
+        .deck(0, &["PAD", "PAD", "PAD"])
+        .memory(0)
+        .start();
+    let quantumon = r.place_on_field(0, "LM-020", Some(0));
+
+    // Control: before the declaration, Quantumon is NOT immune to its own
+    // Digimon effects — absent the immunity, a <Blast Digivolve> would be legal.
+    assert!(
+        !r.game
+            .permanent_is_unaffected_by_effect(quantumon, 0, EffectSourceKind::Digimon),
+        "control: Quantumon is affectable by its own Digimon effects before the declaration"
+    );
+
+    // [Start of Opponent's Turn]: declare Digimon, reveal a Digimon → immunity.
+    r.game.enqueue_triggered(
+        EffectTiming::StartOfOpponentsTurn,
+        TriggerSource::Permanent(quantumon),
+    );
+    r.game.drain_effect_queue();
+    r.execute_branch(0).expect("declare Digimon category");
+    r.execute_branch(0).expect("return revealed card to deck top");
+
+    // Judge: NO. Quantumon is now unaffected by Digimon effects from ANY
+    // controller, including its OWN — the exact condition combat uses to forbid
+    // <Blast Digivolve> into Imperialdramon: PM ACE (BT17-077).
+    assert!(
+        r.game
+            .permanent_is_unaffected_by_effect(quantumon, 0, EffectSourceKind::Digimon),
+        "Q18: Quantumon's declared Digimon immunity blocks its OWN <Blast Digivolve> (judge: NO)"
+    );
+}
 
 /// Q28 — Gankoomon (X Antibody) (BT20-059) protection beats Dragomon (EX5-060)
 /// "[On Play] don't activate" on Sistermon Ciel (BT6-084). Judge: YES, plays AND activates.

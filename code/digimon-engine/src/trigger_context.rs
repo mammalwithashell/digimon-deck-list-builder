@@ -58,6 +58,8 @@ impl From<crate::replacement::ReplacementCause> for EventCause {
             crate::replacement::ReplacementCause::SecurityCheck => EventCause::SecurityRemoval,
             crate::replacement::ReplacementCause::Cost => EventCause::Cost,
             crate::replacement::ReplacementCause::Overclock => EventCause::Overclock,
+            // DigiXros material consumption is the controller's own play action.
+            crate::replacement::ReplacementCause::DigiXros => EventCause::OwnEffect,
         }
     }
 }
@@ -134,6 +136,11 @@ pub struct DeletedObjectSnapshot {
     /// Pre-removal digivolution-card handles in stack order (bottom-most
     /// first), excluding the top card.
     pub digisources_just_before: Vec<CardHandle>,
+    /// Whether the deleted carrier's top card was a token. DCGO
+    /// `CardEffectCommons.CanActivateOnDeletion` returns `true` immediately
+    /// for tokens (`if (card.IsToken) return true;`), so the OnDeletion bundle
+    /// fires even though a trashed token leaves no card in trash.
+    pub is_token: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

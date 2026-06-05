@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-03",
+  "last_updated": "2026-06-05",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -1385,20 +1385,20 @@
     "P-104": {
       "card_name": "Mental Training",
       "validated_date": "2026-06-03",
-      "report": "manual-p104-dsl-port",
+      "report": "batch-implement-cards-rust-dsl",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Training Options",
+      "archetype": "judge-quiz (Q10/Q11)",
       "yaml_path": "code/digimon-engine/cards/p/P-104.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_104.rs",
-      "test_count": 14,
+      "test_count": 13,
       "patterns": [
-        "REVEAL-SEARCH",
-        "DELAY",
-        "EFFECT-DIGIVOLVE",
-        "SECURITY-PLACE-OPTION"
+        "option",
+        "reveal",
+        "delay",
+        "digivolve-cost-reduction"
       ],
-      "notes": "Blue sibling of P-103 (red) / P-105 (yellow). [Main] reveal-2/add-blue + place-self-as-delay-option; [Main]<Delay> digivolve into blue Digimon cost-2 (player-initiated, DelayTrigger::MainPhaseActivated); [Security] place self. Modeled on corrected P-105. 14/14 tests pass."
+      "notes": "Reveal2 add-blue + Delay digivolve-into-blue cost-2"
     },
     "BT8-097": {
       "card_name": "Crimson Blaze",
@@ -5710,19 +5710,28 @@
     },
     "LM-020": {
       "card_name": "Quantumon",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "test_count": 0,
-      "yaml_path": null,
-      "test_path": null,
+      "validated_date": "2026-06-05",
+      "report": "judge-quiz Q18",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q18)",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_020.rs",
+      "test_count": 4,
       "patterns": [
-        "F6-IMMUNITY-ANY",
-        "SECURITY-MANIPULATION"
+        "start-of-opp-turn",
+        "select-effect-choice",
+        "declare-category",
+        "reveal-deck-top",
+        "binding-card-kind",
+        "grant-effect-immunity",
+        "self-inclusive-immunity",
+        "when-digivolving-cost",
+        "place-permanent-on-security",
+        "return-selected-security-to-deck",
+        "shuffle-security"
       ],
-      "notes": "Judge-quiz Q18. BLOCKED on G-DSL-RETURN-SELECTED-SECURITY-TO-DECK: [WhenDigivolving] needs to move a selected opponent security card to the TOP of the opponent deck; no DSL verb / EffectContext method exists. [StartOfOppTurn] category-immunity clause (Any controller filter; Q18-relevant) IS implementable. Re-attempt after the security->deck verb lands.",
-      "validated_date": "2026-05-29",
-      "report": "batch-implement-cards-rust-dsl",
-      "archetype": "judge-quiz first wave"
+      "notes": "Both clauses faithful. Clause 2 declare-category conditional immunity (source_controller any → blocks own Blast Digivolve, judge Q18). Clause 1 place-Digimon-on-security cost + 1 opp security to deck top + shuffle. Closed G-DSL-RETURN-SELECTED-SECURITY-TO-DECK + added binding_card_kind predicate."
     },
     "BT20-059": {
       "card_name": "Gankoomon (X Antibody)",
@@ -6693,6 +6702,146 @@
       "archetype": "rules-FAQ no-DP vehicle",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-068.yaml",
       "test_path": "code/digimon-engine/tests/rules_faq/no_level_no_value.rs"
+    },
+    "EX3-014": {
+      "card_name": "Dorbickmon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q25/Q26/Q27)",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_014.rs",
+      "test_count": 14,
+      "patterns": [
+        "Rush-static",
+        "OnPlay-delete-scaling-cap",
+        "DigiXros",
+        "standard-digivolve"
+      ],
+      "notes": "Rush + [On Play] delete (DP cap 3000 + 2000 per Dragon/saur/Ceratopsian digivolution source) + DigiXros -2 (5 distinct Dragon-family Digimon). Widened DSL: per-source-stack-count-filtered formula selector + trait_contains substring predicate (mirrors DCGO ContainsTraits)."
+    },
+    "BT7-069": {
+      "card_name": "Eyesmon: Scatter Mode",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_069.rs",
+      "test_count": 6,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "[On Deletion] Draw 3 then mandatory trash 2 (2 surfaced picks)"
+    },
+    "BT2-069": {
+      "card_name": "Gabumon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt2/BT2-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt2/bt2_069.rs",
+      "test_count": 5,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "Inherited [On Deletion] Draw 2 then trash 1"
+    },
+    "BT3-006": {
+      "card_name": "DemiMeramon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_006.rs",
+      "test_count": 5,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "Digi-Egg inherited [On Deletion] Draw 1 then trash 1"
+    },
+    "BT2-076": {
+      "card_name": "Pumpkinmon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt2/BT2-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt2/bt2_076.rs",
+      "test_count": 5,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "Inherited [On Deletion] Draw 2 then trash 1"
+    },
+    "BT3-109": {
+      "card_name": "Back for Revenge!",
+      "validated_date": "2026-06-05",
+      "report": "judge-quiz Q21",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-109.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_109.rs",
+      "test_count": 2,
+      "patterns": [
+        "grant-triggered-effect",
+        "on-deletion",
+        "play-from-trash-free",
+        "event-card-binding",
+        "suppress-on-play"
+      ],
+      "notes": "Grants [On Deletion] self-replay-from-trash via event_card binding; closes G-DSL-DELETED-SELF-TRASH-BINDING (play_from_trash_free now accepts a Card-handle binding). Flips judge-quiz Q21."
+    },
+    "BT13-103": {
+      "card_name": "Akihiro Kurata",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "judge-quiz (Q10/Q11)",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_103.rs",
+      "test_count": 7,
+      "patterns": [
+        "tamer",
+        "eot-opp",
+        "place-tamer-under",
+        "security-play"
+      ],
+      "notes": "Clauses 2+3 done; Clause 1 (interactive paycost cost-reduction) BLOCKED G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT"
+    },
+    "BT11-033": {
+      "card_name": "MirageGaogamon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "judge-quiz (Q10/Q11)",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_033.rs",
+      "test_count": 5,
+      "patterns": [
+        "when-digivolving",
+        "return-to-hand",
+        "memory-observer"
+      ],
+      "notes": "Clause 1 (return Lv5- / else security-to-hand) done; Clause 2 (gain memory per 4 cards in opp hand) BLOCKED G-ON-ADD-TO-HAND-OBSERVER"
     }
   }
 }

@@ -1,0 +1,116 @@
+# BT11-033 MirageGaogamon — Digimon, Lv.6, Blue, DP 12000, Cost 12.
+# Traits: Beast Knight
+# Standard digivolve: Lv.5 Blue / cost 4 (printed default, from card metadata).
+#
+# Printed card text (authoritative):
+#
+#   [When Digivolving] Return 1 of your opponent's level 5 or lower Digimon to
+#   its owner's hand. If no Digimon was returned by this effect, your opponent
+#   adds the top card of their security stack to their hand.
+#   [All Turns] [Once Per Turn] When an effect adds cards to your opponent's
+#   hand, gain 1 memory for every 4 cards in your opponent's hand.
+#
+# (No inherited effect, no security effect.)
+#
+# DCGO reference: DCGO/Assets/Scripts/CardEffect/BT11/Blue/BT11_033.cs
+#
+# ─── Clause layout ───────────────────────────────────────────────────────────
+# Clause 1 (triggered) — [When Digivolving]:
+#   - select_opponent_permanent: opp Digimon with level <= 5 (mandatory pick
+#     when a target exists — DCGO canNoSelect: false, maxCount = min(1, count)).
+#   - return_to_hand: the selected Digimon (to its owner's hand).
+#   - if effect_returned_any_card == false:  ← "If no Digimon was returned"
+#       add_top_security_to_hand: { of: opponent }  ← opponent adds THEIR top
+#       security to THEIR own hand (DCGO: enemy SecurityCards[0] → AddHandCards
+#       on the enemy + ReduceSecurity on the enemy).
+#
+# Clause 2 (triggered) — [All Turns][Once Per Turn] memory observer: IMPLEMENTED
+#   (2026-06-04, G-ON-ADD-TO-HAND-OBSERVER resolved). See the clause below.
+#   "When an EFFECT adds cards to your opponent's hand, gain 1 memory for every
+#    4 cards in your opponent's hand." DCGO: EffectTiming.OnAddHand gated by
+#    CanTriggerWhenAddHand(player == Owner.Enemy, cardEffect != null) — i.e.
+#    effect-initiated adds to the opponent's hand only (not normal draws) —
+#    rewarding floor(Owner.Enemy.HandCards.Count / 4), OPT-locked.
+#
+#   The new `on_add_to_hand` observer timing fires `EffectTiming::OnAddToHand`
+#   from every effect-driven hand gain (return-to-hand, security/trash/deck/
+#   reveal-to-hand, effect-draw) with the gaining player in `affected_player`.
+#   The `event_add_to_hand_player: opponent` predicate gates to the opponent's
+#   hand; `event_is_effect_initiated: true` mirrors DCGO's `cardEffect != null`.
+
+card: BT11-033
+name: MirageGaogamon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+traits: ["Beast Knight"]
+
+# Standard Lv.5 Blue / cost 4 digivolve (printed default).
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: blue
+    cost: 4
+
+effects:
+  # ─── Clause 1 — [When Digivolving] ─────────────────────────────────────────
+  - when: when_digivolving
+    summary: "[When Digivolving] Return 1 opp Lv.5-or-lower Digimon to hand; if none returned, opponent adds their top security to hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: returned
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+          prompt: "Return 1 of your opponent's level 5 or lower Digimon to its owner's hand"
+      - return_to_hand: { target: returned }
+      - if:
+          condition: { effect_returned_any_card: false }
+          then:
+            - add_top_security_to_hand: { of: opponent }
+
+  # ─── Clause 2 — [All Turns][Once Per Turn] memory observer ──────────────────
+  #
+  # Printed: "[All Turns] [Once Per Turn] When an effect adds cards to your
+  # opponent's hand, gain 1 memory for every 4 cards in your opponent's hand."
+  #
+  # DCGO BT11_033.cs: EffectTiming.OnAddHand gated by
+  # CanTriggerWhenAddHand(player == Owner.Enemy, cardEffect != null) — fires only
+  # for EFFECT-initiated adds to the OPPONENT's hand (not normal draws) — gaining
+  # floor(Owner.Enemy.HandCards.Count / 4), OPT-locked via
+  # SetHashString("GainMemory_BT11_033").
+  #
+  # Implementation (G-ON-ADD-TO-HAND-OBSERVER, resolved 2026-06-04):
+  #   - `when: on_add_to_hand` — the new observer timing fired by every
+  #     effect-driven hand gain (return-to-hand, security/trash/deck/reveal-to-
+  #     hand). `event_is_effect_initiated: true` keeps the "not a normal draw"
+  #     gate explicit.
+  #   - `event_add_to_hand_player: opponent` — fire only when the OPPONENT's hand
+  #     gained cards (DCGO `player == Owner.Enemy`).
+  #   - `once_per_turn: true` + `active_when: { all_turns: true }` — the printed
+  #     [Once Per Turn] / [All Turns] tags.
+  #   - `gain_memory_fn` over `floor_div(card_count_in_zone{ of: opponent, zone:
+  #     hand }, 4)` — read the opponent's hand size AT TRIGGER TIME and gain
+  #     floor(size / 4).
+  - when: on_add_to_hand
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When an effect adds cards to opponent's hand, gain 1 memory per 4 cards in opponent's hand"
+    condition:
+      all_of:
+        - event_add_to_hand_player: opponent
+        - event_is_effect_initiated: true
+    process:
+      - gain_memory_fn:
+          formula:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone: { of: opponent, zone: hand }
+                delta: 1
+              - 4

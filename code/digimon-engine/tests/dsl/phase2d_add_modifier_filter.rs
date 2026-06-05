@@ -39,6 +39,7 @@ fn add_modifier_filter_targets_every_match() {
         value: CompiledModifierValue::Literal(0),
         expiry: "end_of_turn".to_string(),
     synth_identity: None,
+    continuous: false,
     }];
 
     {
@@ -82,6 +83,7 @@ fn add_modifier_filter_can_install_timing_suppression_modifier() {
         value: CompiledModifierValue::Literal(0),
         expiry: "end_of_turn".to_string(),
     synth_identity: None,
+    continuous: false,
     }];
 
     {

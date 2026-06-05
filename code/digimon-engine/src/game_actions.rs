@@ -38,6 +38,21 @@ struct TakenCardSource {
     restore_face_up_security_for: Option<PlayerId>,
 }
 
+/// Captured state for resuming `run_digixros_leave_windows_then_commit` after a
+/// battle-area DigiXros material's `WhenWouldLeaveBattleArea` window parked a
+/// `pending_selection` (the material is now in the leaving/limbo slot). Once the
+/// parked reward settles, the loop re-enters at `next_material` and ultimately
+/// finalizes the host play (G-DIGIXROS-REDIRECT-EXTRACTION).
+#[derive(Clone)]
+struct DigiXrosResumeContinuation {
+    player: PlayerId,
+    target_card: CardHandle,
+    total_reduction: i32,
+    source: PlaySource,
+    suppress_on_play: bool,
+    next_material: usize,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CostReductionKind {
     Play,
@@ -801,6 +816,283 @@ impl Game {
                 self.pending_digixros_transaction = None;
                 return PlayFromHandCostResult::Failed;
             }
+        }
+
+        // DigiXros declare-then-pay: before placing the host and paying memory,
+        // fire the `WhenWouldLeaveBattleArea` replacement window for each
+        // battle-area material that is about to be consumed (cause = DigiXros,
+        // NOT Battle). A replacement (e.g. BT17-095) may redirect/substitute a
+        // material away (consume it into a DNA-evo) — in which case the material
+        // is no longer available to the DigiXros host, the reduced cost is
+        // recomputed, and an unpayable play returns to hand for 0 memory
+        // (judge-quiz Q25/Q26/Q27, G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER +
+        // G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND).
+        if self.pending_digixros_transaction.is_some() {
+            return self.run_digixros_leave_windows_then_commit(
+                player_id,
+                target_card,
+                total_reduction,
+                source,
+                suppress_on_play,
+                0,
+            );
+        }
+
+        let committed = self.commit_play_from_hand_card_no_replace(
+            player_id,
+            target_card,
+            effective_cost,
+            source == PlaySource::ByEffect,
+            suppress_on_play,
+        );
+        self.pending_digixros_transaction = None;
+        committed
+            .map(PlayFromHandCostResult::Played)
+            .unwrap_or(PlayFromHandCostResult::Failed)
+    }
+
+    /// Fire the `WhenWouldLeaveBattleArea` replacement window over each
+    /// battle-area DigiXros material (cause = `DigiXros`) starting at
+    /// `start_material`, then either commit the host play or — if a material was
+    /// redirected away and the reduced cost became unpayable — return the played
+    /// card to hand for 0 memory.
+    ///
+    /// Re-entrant: if a replacement parks a `pending_selection` (e.g. BT17-095's
+    /// optional `<Delay>` accept / DNA-evo target picks), the selection's
+    /// callback + on_decline are wrapped to resume this loop at the next
+    /// material. The played card stays in `player_id`'s hand throughout — the
+    /// host is only placed once every window has resolved.
+    fn run_digixros_leave_windows_then_commit(
+        &mut self,
+        player_id: PlayerId,
+        target_card: crate::card_source::CardHandle,
+        total_reduction: i32,
+        source: PlaySource,
+        suppress_on_play: bool,
+        start_material: usize,
+    ) -> PlayFromHandCostResult {
+        use crate::replacement::{ReplacementCause, ReplacementSubject};
+
+        // Snapshot the battle-area material origins (in selection order) so the
+        // index `i` is stable across re-entries. We re-resolve the live
+        // permanent handle (by card identity) each iteration, because earlier
+        // windows may have shifted battle-area indices.
+        let battle_materials: Vec<crate::card_source::CardHandle> = self
+            .pending_digixros_transaction
+            .as_ref()
+            .map(|tx| {
+                tx.pre_attached_materials
+                    .iter()
+                    .chain(tx.selected_materials.iter())
+                    .filter_map(|m| match m.origin {
+                        DigiXrosMaterialOrigin::BattleArea { card, .. } => Some(card),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let mut i = start_material;
+        while i < battle_materials.len() {
+            let material_card = battle_materials[i];
+            i += 1;
+
+            // Locate the live permanent carrying this material's top card.
+            let handle = self
+                .player(player_id)
+                .battle_area
+                .iter()
+                .position(|p| p.top_card().handle() == material_card)
+                .map(|idx| PermanentHandle {
+                    player: player_id,
+                    index: idx as u8,
+                });
+            let Some(handle) = handle else {
+                // Material already gone (consumed by an earlier window's
+                // redirect) — nothing to observe; the prune below drops it.
+                continue;
+            };
+
+            let _ = self.try_replace(
+                EffectTiming::WhenWouldLeaveBattleArea,
+                ReplacementSubject::Permanent(handle),
+                ReplacementCause::DigiXros,
+                None,
+            );
+
+            if self.pending_selection.is_some() {
+                // The leave observer (e.g. BT17-095) parked its optional
+                // `<Delay>` accept. Rather than commit the host eagerly (which
+                // would tuck the leaving material UNDER the host, burying it so
+                // the parked reward could no longer extract it), move the leaving
+                // material OUT to the leaving/limbo slot: it is no longer any
+                // permanent's top card (so "the material has left" holds — Q25),
+                // yet it remains resolvable + EXTRACTABLE by the parked reward's
+                // DNA-evo (G-DIGIXROS-REDIRECT-EXTRACTION). The host stays in hand
+                // until every leave window has resolved.
+                //
+                // Arm a continuation so that once the parked reward settles
+                // (accept-and-extract OR decline), the loop re-enters at the next
+                // material and ultimately reaches `finalize_...`, which either
+                // commits the host (decline → material consumed under host) or
+                // returns it to hand for 0 memory (extract → cost unpayable —
+                // judge-quiz Q26/Q27).
+                self.move_battle_permanent_to_limbo(player_id, material_card);
+                self.arm_digixros_resume_after_parked_leave(DigiXrosResumeContinuation {
+                    player: player_id,
+                    target_card,
+                    total_reduction,
+                    source,
+                    suppress_on_play,
+                    next_material: i,
+                });
+                return PlayFromHandCostResult::Pending;
+            }
+            // Whatever the outcome (None / Cancelled / Redirected / Substituted),
+            // the material's presence on the battle area is re-checked at commit
+            // time: a redirected/consumed material is pruned from the
+            // transaction (cost recompute) and skipped by the material take.
+        }
+
+        self.finalize_digixros_play_after_leave_windows(
+            player_id,
+            target_card,
+            total_reduction,
+            source,
+            suppress_on_play,
+        )
+    }
+
+    /// After every DigiXros leave window has resolved: prune materials that left
+    /// the battle area mid-window (redirected/consumed), recompute the reduced
+    /// cost, and either commit the host play (if payable) or return the played
+    /// card to hand for 0 memory (if the cost became unpayable — judge Q26/Q27).
+    /// Wrap the live `pending_selection`'s callback + on_decline so that once the
+    /// parked DigiXros leave reward settles (and any nested selections drain),
+    /// the leave-window loop re-enters at `cont.next_material`. Mirrors the
+    /// `<Delay>` continuation arming in `lower_replacement.rs`.
+    fn arm_digixros_resume_after_parked_leave(&mut self, cont: DigiXrosResumeContinuation) {
+        let Some(mut selection) = self.pending_selection.take() else {
+            self.continue_digixros_after_parked_leave(cont);
+            return;
+        };
+
+        let original_callback = selection.callback;
+        let cont_cb = cont.clone();
+        selection.callback = Box::new(move |game, action_id| {
+            original_callback(game, action_id);
+            game.continue_digixros_after_parked_leave(cont_cb);
+        });
+
+        let original_decline = selection.on_decline.take();
+        selection.on_decline = Some(Box::new(move |game| {
+            if let Some(original_decline) = original_decline {
+                original_decline(game);
+            }
+            game.continue_digixros_after_parked_leave(cont);
+        }));
+
+        self.pending_selection = Some(selection);
+    }
+
+    /// Re-enter the DigiXros leave-window loop after a parked reward settled. If
+    /// the reward surfaced further selections, re-arm onto them; otherwise resume
+    /// the loop at the next material (eventually reaching `finalize_...`).
+    fn continue_digixros_after_parked_leave(&mut self, cont: DigiXrosResumeContinuation) {
+        if self.pending_selection.is_some() {
+            self.arm_digixros_resume_after_parked_leave(cont);
+            return;
+        }
+        // The transaction may have been cleared if the play already aborted.
+        if self.pending_digixros_transaction.is_none() {
+            self.restore_digixros_limbo_to_battle_area(cont.player);
+            return;
+        }
+        let _ = self.run_digixros_leave_windows_then_commit(
+            cont.player,
+            cont.target_card,
+            cont.total_reduction,
+            cont.source,
+            cont.suppress_on_play,
+            cont.next_material,
+        );
+    }
+
+    fn finalize_digixros_play_after_leave_windows(
+        &mut self,
+        player_id: PlayerId,
+        target_card: crate::card_source::CardHandle,
+        total_reduction: i32,
+        source: PlaySource,
+        suppress_on_play: bool,
+    ) -> PlayFromHandCostResult {
+        // Restore any leaving material STILL parked in limbo (the leave observer
+        // declined / was ineligible to extract it) back to the battle area so it
+        // is consumed under the DigiXros host as a normal material. Materials the
+        // observer DID extract were already re-materialized into their merged
+        // permanent and removed from limbo, so this only restores the declines.
+        self.restore_digixros_limbo_to_battle_area(player_id);
+
+        // Prune battle-area materials that are no longer on the field (a
+        // replacement redirected/consumed them away). Dropping them from the
+        // transaction both fixes `final_cost()` (their negative cost_delta no
+        // longer applies) and prevents `commit_digixros_material_sources` from
+        // trying to consume a vanished permanent.
+        let materials_pruned = {
+            let live_on_field: std::collections::HashSet<crate::card_source::CardHandle> = self
+                .player(player_id)
+                .battle_area
+                .iter()
+                .map(|p| p.top_card().handle())
+                .collect();
+            if let Some(tx) = self.pending_digixros_transaction.as_mut() {
+                let before = tx.material_count();
+                tx.retain_materials(|origin| match origin {
+                    DigiXrosMaterialOrigin::BattleArea { card, .. } => live_on_field.contains(&card),
+                    _ => true,
+                });
+                tx.material_count() < before
+            } else {
+                false
+            }
+        };
+
+        // Recompute the reduced cost from the materials that actually remain,
+        // mirroring `commit_play_from_hand_after_reductions`:
+        // `(transaction.final_cost() - total_reduction).max(0)`. The
+        // (now-pruned) transaction's `final_cost()` reflects the materials that
+        // truly survived the leave windows.
+        let transaction_cost = self
+            .pending_digixros_transaction
+            .as_ref()
+            .map(|tx| tx.final_cost() as i32)
+            .unwrap_or(0);
+        let effective_cost = (transaction_cost - total_reduction).max(0) as u16;
+
+        // Declare-then-pay re-check (judge Q26/Q27): the play is unpayable — and
+        // returns to hand for 0 memory — if EITHER the recomputed memory cost
+        // overdraws past the memory floor, OR a material that was present at
+        // declaration LEFT mid-resolution (a `WhenWouldLeaveBattleArea` window
+        // redirected/DNA-extracted it) and the DigiXros recipe is now no longer
+        // satisfied. The recipe check is gated on `materials_pruned` so the
+        // engine's existing lenient path — declaring a DigiXros host with fewer
+        // materials than the recipe `min` and paying base cost — is unchanged;
+        // only a mid-resolution departure of an already-counted material can flip
+        // the play to "unpayable → returns to hand".
+        let recipe_now_unsatisfied = materials_pruned
+            && self
+                .pending_digixros_transaction
+                .as_ref()
+                .is_some_and(|tx| !tx.recipe_is_satisfied());
+        let memory_affordable =
+            (self.memory as i32 - effective_cost as i32) >= self.rules.memory_range.0 as i32;
+        let payable = !recipe_now_unsatisfied && memory_affordable;
+        if !payable {
+            self.pending_digixros_transaction = None;
+            // The played card never left the hand, and no memory was paid — the
+            // unpayable play simply does not happen. This is the faithful
+            // "returns to hand for 0 memory" outcome.
+            return PlayFromHandCostResult::Failed;
         }
 
         let committed = self.commit_play_from_hand_card_no_replace(
@@ -3932,6 +4224,7 @@ impl Game {
                 }
                 let source_count = digisources.len();
                 let dp_now = self.effective_dp(handle);
+                let is_token = p.top_card().is_token;
                 Some(crate::trigger_context::DeletedObjectSnapshot {
                     former_controller: handle.player,
                     top_card: top_handle,
@@ -3947,6 +4240,7 @@ impl Game {
                     traits_just_before: data.traits.clone(),
                     source_count_just_before: source_count,
                     digisources_just_before: digisources,
+                    is_token,
                 })
             });
 
@@ -4016,6 +4310,10 @@ impl Game {
         if let Some(snapshot) = leave_snapshot {
             self.fire_on_leave_field(handle, snapshot);
         }
+        // OnAddToHand: the returned top card entered its owner's hand by effect.
+        // (Digivolution sources went to trash, not hand, so only the top card
+        // counts as a hand gain.) See G-ON-ADD-TO-HAND-OBSERVER.
+        self.fire_on_add_to_hand_by_effect(top_owner);
         Some(top_handle)
     }
 
@@ -4273,6 +4571,7 @@ impl Game {
                 }
                 let source_count = digisources.len();
                 let dp_now = self.effective_dp(handle);
+                let is_token = p.top_card().is_token;
                 Some(crate::trigger_context::DeletedObjectSnapshot {
                     former_controller: player_id,
                     top_card: top_handle,
@@ -4293,6 +4592,7 @@ impl Game {
                     traits_just_before: data.traits.clone(),
                     source_count_just_before: source_count,
                     digisources_just_before: digisources,
+                    is_token,
                 })
             });
 

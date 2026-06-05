@@ -4,6 +4,50 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+> **Substring trait predicate `trait_contains` — RESOLVED 2026-06-03**
+> (EX3-014 Dorbickmon code-review fix). The DSL had only `trait_has`, an EXACT
+> case-insensitive trait match (`x.eq_ignore_ascii_case(t)`). Printed text of the
+> form "[Dragon], [saur] or [Ceratopsian] in **any of its traits**" is a SUBSTRING
+> reading, matching DCGO `CardSource.HasDragonTraits` → `ContainsTraits("...")`
+> (`DCGO/Assets/Scripts/Script/CardSource.cs`). Under exact match the `saur` clause
+> was completely DEAD (no card carries a standalone "saur" trait — it only appears
+> inside `Dinosaur` ×92 / `Ankylosaur` ×11 / `Plesiosaur` ×9), and `Dragon` mostly
+> appears as a substring (`Dragonkin` ×92, `Dark Dragon` ×36, ...), so the EX3-014
+> DP cap massively undercounted and `[Dinosaur]` Digimon could not be picked as
+> DigiXros materials — a faithfulness + no-approximations violation. New leaf
+> `trait_contains: <token>` is the substring sibling of `trait_has`: matches when
+> ANY subject trait CONTAINS the token (case-insensitive,
+> `subject_traits.iter().any(|x| x.to_lowercase().contains(&t.to_lowercase()))`).
+> Threaded identically to `trait_has` — spec field
+> (`digimon-dsl/src/predicate.rs`) → compiled field (`compiled.rs`) → lowering
+> (`compile.rs`) → engine card-field eval AND synth-identity / `ChangeTraits`
+> overlay path (`digimon-engine/src/dsl_cards/predicate.rs`), plus the
+> `eval_no_subject_fields` subject-field guard. Works inside the
+> `per: { source_stack_count: { filter } }` selector and DigiXros material filters
+> (same `CompiledPredicate`). Unblocks the "[Dragon]/[saur]/[Ceratopsian]"-family
+> matching. Pinned by `tests/cards_behavioral/ex3/ex3_014.rs` — esp.
+> `ex3_014_dinosaur_source_counts_via_saur_substring` (the load-bearing `saur`
+> substring proof). G-DSL-TRAIT-CONTAINS-SUBSTRING.
+
+> **Trait-filtered carrier source count as a `per` selector — RESOLVED 2026-06-03**
+> (EX3-014 Dorbickmon authoring). The `BasePerDelta` formula now accepts a new
+> `per: { source_stack_count: { filter: <predicate> } }` selector that counts the
+> effect carrier's own digivolution sources (the cards beneath its top card)
+> matching a predicate. The engine already had the raw machinery (the top-level
+> `source_stack_count` FormulaSpec + `eval_predicate_with_bindings`), but a raw
+> count cannot be offset/scaled — there is no `add`/`mul` formula combinator. As a
+> `per` selector it composes in `base + count * delta`, letting a card scale a
+> numeric (here a DP cap) by the number of its sources matching a trait:
+> Dorbickmon's "for each card with [Dragon], [saur] or [Ceratopsian] in any of its
+> traits in this Digimon's digivolution cards, add 2000 to the maximum DP you can
+> choose" → `dp_lte: { formula: { base: 3000, per: { source_stack_count: { filter:
+> { any_of: [trait_has: Dragon, ...] } } }, delta: 2000 } }`. Spec
+> `PerSelector::SourceStackCount(SourceStackCountSpec)` → compiled
+> `CompiledPerSelector::SourceStackCountFiltered { filter }`; evaluated by
+> `formula_eval::source_stack_count_filtered` (reads `ctx.source_permanent`). Pinned
+> by `tests/cards_behavioral/ex3/ex3_014.rs` (scaling-cap behavioral tests).
+> G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
+
 > **`TreatAsDigimon` / `SynthIdentity` payload — RESOLVED 2026-05-30** (judge-quiz
 > cluster-B authoring, Greymon/Marcus line). The DSL `add_modifier` step now accepts
 > a structured `synth_identity:` block (`dp` required; `kind` defaults Digimon;
@@ -2734,6 +2778,19 @@ Historical note:
 
 ## LM-020 — return a selected SECURITY card to a deck  [G-DSL-RETURN-SELECTED-SECURITY-TO-DECK]
 
+**CLOSED 2026-06-05.** Added the `return_selected_security_to_deck` DSL verb
+(`ReturnToDeckArgs`: of/card/position) + the engine primitive
+`EffectContext::return_security_card_to_deck(player, card, to_bottom)` and a new
+`SecurityRemovalDestination::Deck { owner, to_bottom }` handled in
+`complete_effect_security_removal` (Digi-Eggs route to the digitama deck; fires the
+OnLoseSecurity / OnOpponentSecurityRemoved observer chain). LM-020 Quantumon is now
+fully authored (`code/digimon-engine/cards/lm/LM-020.yaml`, both clauses) and
+judge-quiz **Q18 → PASS**. A second small gap surfaced while authoring clause 2 —
+no predicate compared a *bound card's* category to a declared one — closed by the
+new `binding_card_kind: { binding, kind }` predicate. Tests:
+`tests/effect_context/security_stack_operations.rs` (3) +
+`tests/cards_behavioral/lm/lm_020.rs` (4) + judge-quiz Q18.
+
 Surfaced: 2026-05-29, judge-quiz first wave (`batch-implement-cards-rust-dsl`). LM-020 Quantumon BLOCKED.
 
 - **Missing DSL verb:** `return_selected_security_to_deck` — route a `select_security`-bound `CardHandle` to the owner's deck **top or bottom**. The three verbs that consume a `select_security` pick route it to hand (`add_to_hand_from_security`), play (`play_security_card`), or trash (`trash_selected_security`) — never to a deck.
@@ -2819,6 +2876,27 @@ this Digimon or return it to hand/deck" is omitted.
   with `st17_07::st17_07_green_tamer_grants_opponent_only_delete_protection` /
   `..._protection_not_installed_without_green_tamer` `#[ignore]`'d citing this ID.
 
+## DSL Gap: BT3-109 — no "deleted self card in trash" binding for granted [On Deletion] trash-play  [G-DSL-DELETED-SELF-TRASH-BINDING]
+- **Status:** CLOSED 2026-06-05. BT3-109 authored (`code/digimon-engine/cards/bt3/BT3-109.yaml`), behavioral test green (`tests/cards_behavioral/bt3/bt3_109.rs`), and judge-quiz **Q21 → PASS**. The premise was partly wrong: the `event_card` / `event_target` bindings ALREADY resolve the just-deleted carrier's top card in trash (`binding_ref.rs` reads `DeletedObjectSnapshot.top_card` for both). The only real missing link was that `play_from_trash_free` accepted a `TrashIndex` binding but not a `Card`-handle binding — so a card-identity binding like `event_card` couldn't feed it. Fixed by making the `PlayFromTrashFree` step arm also accept `ResolvedBinding::Card(h)` (`code/digimon-engine/src/dsl_cards/step/play_digivolve.rs`); the engine call `play_from_trash_free_unsuspended` self-guards that the handle is in the controller's trash. No new `StructuredBindingRef` variant was needed. Composes with the Q19 top-most-card-in-trash gate: replaying the carrier suppresses its remaining [On Deletion] bundle. `suppress_on_play: true` covers "Any [On Play] effects ... don't activate". The "BLOCKED guard test" mentioned below was never committed; the real test is the live behavioral + judge-quiz pin.
+- **Status (historical):** OPEN (discovered 2026-06-03, BT3-109 Back for Revenge! DSL implementation — judge-quiz Q21 cluster).
+- **Scope:** DSL.
+- **Card(s):** BT3-109 Back for Revenge! — `[Main] 1 of your Digimon gains "[On Deletion] Play this card without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate." for the turn.` Generalizes to any granted-or-printed [On Deletion] body that must play "this card" (the just-deleted carrier's own top card, now in the trash) back from trash.
+- **Recovered text source:** DCGO `DCGO/Assets/Scripts/CardEffect/BT3/Purple/BT3_109.cs` (cards.json `effect_description_eng` is garbled with doubled/nested quotes). DCGO: OptionSkill selects exactly 1 of your Digimon (mandatory, `canNoSelect: false`); grants it an `OnDestroyedAnyone` ActivateClass with `EffectDuration.UntilEachTurnEnd`; the granted body plays `selectedPermanent.TopCard` from `root: Trash`, `payCost: false`, `activateETB: false`. No level/cost cap.
+- **What's missing:** `play_from_trash_free` (and `play_from_trash`) take `hand_index: <BindingRef>` — a binding to a SPECIFIC trash card. "This card" is the carrier's own top card after it moved to trash on deletion, but `StructuredBindingRef` (`code/digimon-dsl/src/step.rs:1040`) exposes only `permanent` / `source_permanent` / `zone` / `of_permanent` / `deck_top` — there is NO binding resolving "the just-deleted self card now in the trash". A generic `select_trash` is not a faithful substitute: "this card" is one specific card, and there is no identity predicate tying a trash card back to the carrier permanent that was just deleted, so a filter-based pick over-exposes every other matching trash card as an illegal choice (no-approximations / rule 17 violation). NOTE: the earlier-suspected second blocker (granted-body selection support) is CLOSED — Phase 4i "Queue-based granted-body dispatch + selection support" parks selection-installing granted bodies via `pending_selection`. The stale "v1 limitation" comment in `code/digimon-engine/src/dsl_cards/step/grant_triggered.rs` predates Phase 4i.
+- **Suggested change:** Add a card-identity binding for the deleted-self card in trash usable inside an [On Deletion] body / granted [On Deletion] body (e.g. a `StructuredBindingRef` variant `deleted_self_in_trash` or a `trigger_self_card` binding that resolves the carrier's pre-deletion top card now in the trash), accepted by `play_from_trash` / `play_from_trash_free` `hand_index`. Pairs with the existing `suppress_on_play: true` to express "Any [On Play] effects ... don't activate" faithfully.
+- **Workaround:** None faithful. BT3-109 is BLOCKED — left UNIMPLEMENTED (no YAML in the embedded pack) rather than stubbed with an auto-selection or an approximate "play any Digimon from trash" surrogate. A BLOCKED guard test pins the absence in `code/digimon-engine/tests/cards_behavioral/bt3/bt3_109.rs`.
+
+## DSL Gap: BT13-103 — cost_reduction amount driven by an interactive in-cost deletion  [G-DSL-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT]
+- **Status:** OPEN (discovered 2026-06-03, BT13-103 Akihiro Kurata DSL implementation).
+- **Scope:** DSL + engine (the engine half of the cost-reduction scan must also change).
+- **Card(s):** BT13-103 Akihiro Kurata Clause 1 — `[Your Turn] When you would play a card with [Belphemon] in its name, by deleting 1 of your Digimon with [Gizmon] in its name, reduce the play cost by the play cost of the deleted Digimon.` Generalizes to any BeforePayCost reduction whose **amount is set by a permanent the player interactively selects and deletes/pays during the cost** (the reduction = the deleted/paid permanent's printed cost).
+- **Authoritative source:** DCGO `DCGO/Assets/Scripts/CardEffect/BT13/Purple/BT13_103.cs` (EffectTiming.BeforePayCost). `SelectPermanentEffect` over own non-immune [Gizmon]-name Digimon, `canNoSelect: true` (optional); on a pick, `DeletePeremanentAndProcessAccordingToResult`, then installs a `ChangeCostClass` of `-permanent.CostJustBeforeRemoveField` for the current play. The reduction magnitude is the *selected* Digimon's cost — known only AFTER the in-cost selection. (DCGO also ships an AI-only `EffectTiming.None` mirror that auto-picks `gizmonCosts.Max()` — an approximation we may NOT replicate under rule 17.)
+- **What's missing:** the DSL `kind: cost_reduction` clause splits the amount from the cost across two callbacks that cannot share the selection:
+  - `amount` / `amount_fn` is evaluated in `cost_reduction_fn` (READ context) by `apply_cost_reduction_candidate` (`code/digimon-engine/src/game_actions.rs:5848`) **before** `pay_cost_fn` runs.
+  - `pay_cost_fn` (`code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs:193`) builds a **fresh** `Bindings`, so any permanent selected/bound inside `pay_cost` is invisible to `amount_fn`. No `FormulaSpec` (`code/digimon-dsl/src/formula.rs`) reads "the cost of the permanent paid as the cost" — `BindingPlayCost` reads a *prior* `bind_as` binding only, unreachable from the isolated pay_cost scope.
+  - `pay_cost_fn` is additionally gated to `RunOutcome::Synchronous` (`lower_cost_reduction.rs:195`); an interactive `select_own_permanent` parks (non-synchronous) → the cost reads as failed → the reduction is dropped. So even the *selection* cannot surface through `pending_selection`. (See also `game_actions.rs:5678`, which skips paid reducers entirely without a real cost target.)
+- **Suggested change:** make the cost-reduction `pay_cost` (i) able to surface an interactive `pending_selection` and resume, and (ii) able to bind the selected/paid permanent into a binding scope that `amount_fn` can read (e.g. a `BindingPlayCost` over a `pay_cost`-produced binding, or a dedicated `paid_cost_total` formula that sums the printed cost of permanents deleted/paid during this pay_cost). Backward-compatible: literal `amount:` and the existing synchronous self-suspend / return-to-deck pay_costs are unchanged.
+- **Workaround:** None faithful. BT13-103 Clause 1 is BLOCKED — left UNIMPLEMENTED in `code/digimon-engine/cards/bt13/BT13-103.yaml` (Clauses 2 & 3 ARE authored) rather than approximated. The Clause-1 behavioral test `bt13_103_belphemon_play_cost_reduced_by_deleted_gizmon_cost` in `code/digimon-engine/tests/cards_behavioral/bt13/bt13_103.rs` is `#[ignore]`'d citing this ID.
 ### RESOLVED 2026-06-02 — `may_attack_now: { windowed: true }` (deferred EOT attack grant)
 - **Gap:** `[End of Your Turn] 1 of your Digimon may attack` (AD1-004 WarGreymon)
   was authored with inline `may_attack_now`, which declares AND resolves the

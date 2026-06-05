@@ -224,6 +224,23 @@ impl Game {
     /// **Does not drive execution.** Call `drain_effect_queue()` afterward
     /// to resolve the collected effects, or call `enqueue_triggered` for
     /// multiple sources first and drain once at the end.
+    /// Enqueue the `OnAddToHand` observer for an EFFECT-driven hand gain by
+    /// `player`. Call this from every effect-initiated "add to hand" sink
+    /// (return-to-hand, security/trash/deck/reveal-to-hand, effect-draw, …) — NOT
+    /// from the normal turn/mulligan draw. The observer is enqueued (drained by
+    /// the surrounding effect-resolution loop, like `OnPlay`/`OnEnterField`); the
+    /// gaining player is carried in `affected_player` so a controller's observer
+    /// can gate on "the opponent's hand gained cards." See G-ON-ADD-TO-HAND-OBSERVER.
+    pub(crate) fn fire_on_add_to_hand_by_effect(&mut self, player: PlayerId) {
+        self.enqueue_triggered(
+            EffectTiming::OnAddToHand,
+            TriggerSource::HandGained {
+                player,
+                effect_initiated: true,
+            },
+        );
+    }
+
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
         match source {
             TriggerSource::Permanent(handle) => {
@@ -323,6 +340,25 @@ impl Game {
                 }
             }
             TriggerSource::Digivolved { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
+            TriggerSource::HandGained { .. } => {
+                // Fan out to EVERY player's battle area so a controller's
+                // observer (e.g. BT11-033 watching the opponent's hand) sees a
+                // hand-gain on any player. The gaining player is carried in
+                // `affected_player` (set in `trigger_context_for_source`).
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
                     let count = self.player(player).battle_area.len();
@@ -1139,6 +1175,19 @@ impl Game {
                 source_player: Some(player),
                 effect_initiated,
                 dna_origin,
+                ..TriggerContext::default()
+            },
+            TriggerSource::HandGained {
+                player,
+                effect_initiated,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The player whose hand gained cards. `event_add_to_hand_player`
+                // predicates compare this against the observer's controller.
+                affected_player: Some(player),
+                source_player: Some(player),
+                effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::EnteredField {
@@ -2346,6 +2395,32 @@ impl Game {
             return;
         }
 
+        // DCGO `CardEffectCommons.CanActivateOnDeletion` (OnDeletion.cs): the
+        // [On Deletion] bundle activates only while the deleted carrier's
+        // top-most card is still in its former controller's trash. This is a
+        // CanActivate check — re-evaluated at activation, not at queue time —
+        // so if an earlier effect (the deleting effect's own body, or an
+        // earlier OnDeletion clause) moves the top card out of trash before
+        // this clause resolves, the clause is suppressed. Tokens leave no card
+        // in trash but always activate (`if (card.IsToken) return true;`).
+        if qe.timing == EffectTiming::OnDeletion {
+            if let Some(snap) = qe
+                .trigger_context
+                .as_ref()
+                .and_then(|t| t.deleted_object.as_ref())
+            {
+                if !snap.is_token {
+                    let top = snap.top_card;
+                    let owner = snap.former_controller;
+                    let in_trash =
+                        self.player(owner).trash.iter().any(|c| c.handle() == top);
+                    if !in_trash {
+                        return; // suppressed: top card no longer in trash
+                    }
+                }
+            }
+        }
+
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
@@ -2907,6 +2982,24 @@ impl Game {
                     }
                     SecurityRemovalDestination::Hand(owner) => {
                         self.player_mut(owner).hand.push(security.card);
+                    }
+                    SecurityRemovalDestination::Deck { owner, to_bottom } => {
+                        // Route to the owner's deck. Digi-Eggs go to the
+                        // digitama deck. Deck top = Vec end (drawn first);
+                        // deck bottom = index 0 — matching `move_card_to_deck`.
+                        let is_egg = security.card.card_kind(&self.card_data)
+                            == crate::enums::CardKind::DigiEgg;
+                        let player = self.player_mut(owner);
+                        let deck = if is_egg {
+                            &mut player.digitama_deck
+                        } else {
+                            &mut player.deck
+                        };
+                        if to_bottom {
+                            deck.insert(0, security.card);
+                        } else {
+                            deck.push(security.card);
+                        }
                     }
                     SecurityRemovalDestination::BottomSource(target) => {
                         if target.index == crate::action::space::BREEDING_TARGET as u8 {

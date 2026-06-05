@@ -440,6 +440,10 @@ fn evaluate_per(
                 .collect::<HashSet<_>>()
                 .len() as i32
         }
+        CompiledPerSelector::SourceStackCountFiltered { filter } => {
+            let read = ctx.as_read();
+            source_stack_count_filtered(filter.as_deref(), &read, bindings)
+        }
     }
 }
 
@@ -523,7 +527,42 @@ fn evaluate_per_read(
                 .collect::<HashSet<_>>()
                 .len() as i32
         }
+        CompiledPerSelector::SourceStackCountFiltered { filter } => {
+            source_stack_count_filtered(filter.as_deref(), ctx, bindings)
+        }
     }
+}
+
+/// Count the effect carrier's own digivolution sources (the cards beneath its
+/// top card) that match `filter`. Mirrors the top-level `source_stack_count`
+/// FormulaSpec but resolves the carrier (`ctx.source_permanent`) directly and
+/// is usable as a `per` selector inside `BasePerDelta`.
+fn source_stack_count_filtered(
+    filter: Option<&CompiledPredicate>,
+    ctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    let Some(handle) = ctx.source_permanent else {
+        return 0;
+    };
+    let Some(perm) = target_permanent_read(ctx, handle) else {
+        return 0;
+    };
+    perm.card_sources
+        .iter()
+        .rev()
+        .skip(1)
+        .filter(|source| {
+            filter.is_none_or(|filter| {
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::Card(source.handle()),
+                    bindings,
+                )
+            })
+        })
+        .count() as i32
 }
 
 fn target_permanent<'a>(

@@ -1,0 +1,47 @@
+# BT3-109 Back for Revenge! — Option, Purple, Cost 2.
+# Traits: (none printed).
+#
+# Printed card text (card image / cards.json):
+#   [Main] 1 of your Digimon gains "[On Deletion] Play this card without paying
+#     its memory cost. Any [On Play] effects on Digimon played with this effect
+#     don't 'activate'" for the turn.
+#
+# Security Effect: — (none).
+#
+# ─── Modeling ───────────────────────────────────────────────────────────────
+# [Main] selects 1 of your Digimon and grants it a temporary [On Deletion] body
+# that plays THAT Digimon (the just-deleted carrier, now in trash) back without
+# paying its cost. Inside the granted [On Deletion] body the carrier permanent no
+# longer exists, so the replay addresses the card via `event_card` — which, on an
+# [On Deletion] trigger context, resolves to the deleted carrier's top card now
+# in the trash (`DeletedObjectSnapshot.top_card`). `suppress_on_play: true`
+# implements "Any [On Play] effects ... don't activate" for the replayed Digimon.
+#
+# Judge-quiz Q21 (PDF "ZXavier's Digi Rulings", D-cluster): when the carrier is
+# played from trash mid-[On Deletion] resolution it leaves the trash, so the
+# REMAINING [On Deletion] effects of that carrier (its own + every inherited
+# source's) can no longer activate — they are gated on the top-most card still
+# residing in trash (the same activation-site rule as Q19). Resolving the granted
+# replay first therefore suppresses the whole draw bundle ⇒ 0 draws.
+
+card: BT3-109
+name: Back for Revenge!
+kind: option
+color: [purple]
+cost: 2
+
+effects:
+  # ─── [Main] grant [On Deletion] self-replay-from-trash for the turn ──────────
+  - when: main_from_hand
+    summary: "[Main] 1 of your Digimon gains '[On Deletion] Play this card without paying its memory cost' for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: revenge_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain '[On Deletion] Play this card without paying its memory cost.'"
+      - grant_triggered_effect:
+          target: revenge_target
+          timing: on_deletion
+          expiry: end_of_turn
+          body:
+            - play_from_trash_free: { of: you, hand_index: event_card, suppress_on_play: true }

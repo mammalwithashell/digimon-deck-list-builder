@@ -139,6 +139,7 @@ fn add_modifier_filter_target_formula_evaluated_per_match() {
         }),
         expiry: "end_of_turn".into(),
     synth_identity: None,
+    continuous: false,
     };
 
     {

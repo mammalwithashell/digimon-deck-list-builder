@@ -1911,6 +1911,11 @@ fn validate_per_selector(
             validate_predicate(filter, &format!("{prefix}.filter"), card_id, ctx, errors);
         }
     }
+    if let crate::formula::PerSelector::SourceStackCount(spec) = per {
+        if let Some(filter) = &spec.filter {
+            validate_predicate(filter, &format!("{prefix}.filter"), card_id, ctx, errors);
+        }
+    }
 }
 
 fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {

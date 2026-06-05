@@ -759,7 +759,44 @@ fn event_dna_origin(game: &Game) -> Option<bool> {
     Some(trigger_origin || scoped_origin)
 }
 
+/// Reverse of `From<ReplacementCause> for EventCause` for the deletion-cause
+/// subset. Used to recover the `ReplacementCause` from a `DeletedObjectSnapshot`
+/// after the live `current_deletion_cause` slot has been restored — e.g. when an
+/// `[On Deletion]` bundle is deferred past the deleting effect's resolution
+/// window (Q19 Part B). Non-deletion event causes map to `None`.
+fn replacement_cause_from_event_cause(
+    ec: crate::trigger_context::EventCause,
+) -> Option<ReplacementCause> {
+    use crate::trigger_context::EventCause;
+    match ec {
+        EventCause::BattleDeletion => Some(ReplacementCause::Battle),
+        EventCause::OwnEffect => Some(ReplacementCause::OwnEffect),
+        EventCause::OpponentEffect => Some(ReplacementCause::OpponentEffect),
+        EventCause::SecurityRemoval => Some(ReplacementCause::SecurityCheck),
+        EventCause::Cost => Some(ReplacementCause::Cost),
+        EventCause::Overclock => Some(ReplacementCause::Overclock),
+        _ => None,
+    }
+}
+
 fn observed_deletion_cause(game: &Game) -> Option<ReplacementCause> {
+    // Rule 25: `[On Deletion]` handlers read pre-removal state from the snapshot,
+    // not live slots. When the bundle is deferred past the deleting effect's
+    // later steps (Q19 Part B), the live `current_deletion_cause` /
+    // `current_deletion_event_cause_override` slots have already been restored by
+    // the batch's exit, so prefer the cause threaded into the installed trigger
+    // context (`deleted_object.cause`), which survives the deferral. Battle and
+    // other top-level deletions install the same snapshot during their handler,
+    // so this is consistent with the live-slot reads they used before.
+    if let Some(snap) = game
+        .current_trigger_context
+        .as_ref()
+        .and_then(|t| t.deleted_object.as_ref())
+    {
+        if let Some(rc) = replacement_cause_from_event_cause(snap.cause) {
+            return Some(rc);
+        }
+    }
     match game.current_deletion_event_cause_override {
         Some(crate::trigger_context::EventCause::Overclock) => Some(ReplacementCause::Overclock),
         _ => game.current_deletion_cause,
@@ -2130,6 +2167,14 @@ impl<'a> EffectContext<'a> {
     /// zombie case is correctly treated as "no top card." Mirrors the same
     /// defensive form used by `Game::top_card_handle` in `effect_queue.rs`.
     pub fn permanent_top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
+        if crate::digixros::is_limbo_index(handle.index) {
+            let pos = (handle.index - crate::digixros::LIMBO_INDEX_BASE) as usize;
+            return self
+                .game
+                .digixros_leaving_limbo
+                .get(pos)
+                .and_then(|(_, _, perm)| perm.card_sources.last().map(|c| c.handle()));
+        }
         self.game
             .player(handle.player)
             .battle_area
@@ -2157,6 +2202,10 @@ impl<'a> EffectContext<'a> {
                 player,
                 index: index as u8,
             })
+            // Fallback: the card may be parked in the DigiXros leaving/limbo slot
+            // (its `WhenWouldLeaveBattleArea` window parked a reward). Resolve to
+            // the limbo-encoded handle so a DNA-evo reward can still extract it.
+            .or_else(|| self.game.find_limbo_permanent_containing_card(player, card))
     }
 
     pub fn digivolve_replacement_subject_without_cost(
@@ -2166,6 +2215,16 @@ impl<'a> EffectContext<'a> {
     ) -> bool {
         let Some(target) = subject.permanent() else {
             return false;
+        };
+        // Re-materialize a leaving/limbo subject into `battle_area` before the
+        // digivolve operates on it (G-DIGIXROS-REDIRECT-EXTRACTION).
+        let target = if crate::digixros::is_limbo_index(target.index) {
+            match self.game.rematerialize_digixros_limbo(target) {
+                Some(h) => h,
+                None => return false,
+            }
+        } else {
+            target
         };
         if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
             return false;
@@ -2335,6 +2394,13 @@ impl<'a> EffectContext<'a> {
         if drawn > 0 {
             self.game.mark_until_condition_dirty();
             self.game.reevaluate_until_condition_modifiers_if_dirty();
+            // An effect-driven draw adds cards to the player's hand — fire the
+            // OnAddToHand observer (DCGO's `cardEffect != null` gate; the normal
+            // turn-start draw does NOT route through this effect method). The
+            // observer is enqueued and drains after the current effect body
+            // (e.g. Akihiro Kurata's "draw 1, then trash 1") fully resolves, so
+            // it reads the post-resolution hand size. See G-ON-ADD-TO-HAND-OBSERVER.
+            self.game.fire_on_add_to_hand_by_effect(player);
         }
         drawn
     }
@@ -3023,7 +3089,11 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> bool {
-        self.game.add_to_hand_from_deck(player, card)
+        let moved = self.game.add_to_hand_from_deck(player, card);
+        if moved {
+            self.game.fire_on_add_to_hand_by_effect(player);
+        }
+        moved
     }
 
     /// Move a specific card from `player`'s trash to their hand.
@@ -3032,7 +3102,11 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> bool {
-        self.game.add_to_hand_from_trash(player, card)
+        let moved = self.game.add_to_hand_from_trash(player, card);
+        if moved {
+            self.game.fire_on_add_to_hand_by_effect(player);
+        }
+        moved
     }
 
     /// Move a specific card from `player`'s security stack to their hand.
@@ -3064,6 +3138,45 @@ impl<'a> EffectContext<'a> {
             player,
             removed,
             crate::selection::SecurityRemovalDestination::Hand(owner),
+        );
+        self.game.fire_on_add_to_hand_by_effect(player);
+        true
+    }
+
+    /// Move a specific card from `player`'s security stack to that player's
+    /// deck (top or bottom; Digi-Eggs route to the digitama deck). Fires the
+    /// `OnLoseSecurity` observer chain via `fire_security_removed_observers`
+    /// with a `Deck` destination. Mirrors `add_to_hand_from_security` but the
+    /// final placement is the deck. Used by LM-020 Quantumon's [When
+    /// Digivolving] clause. Returns `false` if the card is not in the stack.
+    pub fn return_security_card_to_deck(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+        to_bottom: bool,
+    ) -> bool {
+        let Some(idx) = self
+            .game
+            .player(player)
+            .security
+            .iter()
+            .position(|c| c.handle() == card)
+        else {
+            return false;
+        };
+        // Materialize before moving — the card's identity must be real to land
+        // in the deck sensibly (it will later be drawn / revealed).
+        self.game.ensure_security_materialized(player, idx);
+        let removed = self.game.player_mut(player).security.remove(idx);
+        let owner = removed.owner;
+        self.game
+            .player_mut(player)
+            .face_up_security
+            .remove(&removed.card_index);
+        self.fire_security_removed_observers(
+            player,
+            removed,
+            crate::selection::SecurityRemovalDestination::Deck { owner, to_bottom },
         );
         true
     }
@@ -3174,7 +3287,11 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> bool {
-        self.game.add_to_hand_from_reveal(player, card)
+        let moved = self.game.add_to_hand_from_reveal(player, card);
+        if moved {
+            self.game.fire_on_add_to_hand_by_effect(player);
+        }
+        moved
     }
 
     /// Move the card currently resolving from security into its defender's hand.
@@ -3194,6 +3311,7 @@ impl<'a> EffectContext<'a> {
 
         let owner = pending.card.owner;
         self.game.player_mut(owner).hand.push(pending.card);
+        self.game.fire_on_add_to_hand_by_effect(owner);
         true
     }
 
@@ -4898,6 +5016,7 @@ impl<'a> EffectContext<'a> {
         let owner = removed.owner;
         self.game.player_mut(owner).hand.push(removed);
         let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
+        self.game.fire_on_add_to_hand_by_effect(owner);
         true
     }
 
@@ -5516,6 +5635,15 @@ impl<'a> EffectContext<'a> {
         if hand_partner == result_from_hand {
             return None;
         }
+        // The leaving subject may be parked in the DigiXros leaving/limbo slot
+        // (G-DIGIXROS-REDIRECT-EXTRACTION). Re-materialize it into `battle_area`
+        // first so the merge operates on a real permanent — this is the EXTRACT
+        // that pulls the material out of the in-flight DigiXros transaction.
+        let target = if crate::digixros::is_limbo_index(target.index) {
+            self.game.rematerialize_digixros_limbo(target)?
+        } else {
+            target
+        };
         if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
             return None;
         }

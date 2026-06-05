@@ -51,6 +51,7 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledPlayerRef, CompiledPredicate,
     CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, Keyword, ModifierType};
@@ -389,7 +390,24 @@ fn bt21_044_on_play_marcus_grants_expire_at_end_of_turn() {
     play_rize(&mut runner);
     let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     runner.game.resolve_selection(0, action).expect("resolves");
-    let _ = runner.auto_resolve();
+    // Part (b) "1 of your Digimon may attack" is optional. Marcus is now treated
+    // as a Digimon, so it (and RizeGreymon) are legal attacker candidates —
+    // `kind: digimon` field selection now matches a TreatAsDigimon Tamer
+    // (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT widened `kind_matches_field`).
+    // Decline the optional attack so the turn stays alive and the end-of-turn
+    // expiry step actually runs (auto-driving the attack wins the game and skips
+    // it). We only care that the for-the-turn grants revert.
+    while let Some(sel) = runner.game.pending_selection.as_ref() {
+        let who = sel.selecting_player;
+        assert!(
+            sel.is_optional,
+            "only the optional may-attack prompt should remain after the Marcus pick"
+        );
+        runner
+            .game
+            .resolve_selection(who, PASS)
+            .expect("decline the optional may-attack prompt");
+    }
 
     // Sanity: grants are present this turn.
     assert!(runner.modifiers().has(marcus, ModifierType::TreatAsDigimon));

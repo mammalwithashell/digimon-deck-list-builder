@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `cargo test --test judge_quiz`
-→ 18 passed (10 question pins + loader/probe/analogs), 20 ignored, 0 failed.
+Coverage as of 2026-06-05: **30/30 questions have a test entry; 21 PASS.** `cargo test --test judge_quiz`
+→ 30 passed (21 question pins + loader/probe/analogs), 9 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -35,24 +35,24 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 | 7 | B | YES | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT9-108 Eye of the Gorgon authored; pinned — sub-effect 1 deletes Pillomon (clearing its `CannotPlayDigimonByEffect` floodgate), sub-effect 2 then plays the Lv3 (control proves the floodgate was real → no false-pass) | `b::q7_eye_of_the_gorgon_sequential_delete_then_play` |
 | 8 | B | Agumon trashed → Koromon trashed | BLOCKED-PRIMITIVE | All cards implemented, but `G-BURST-ON-TURN-END-NOT-EXECUTED` (discovered): the Burst `on_burst_turn_end` (trash top at end of burst turn) is compiled but never executed — `BurstDigivolve` is lowered only to a blast-counter marker — so "Agumon trashed → Koromon trashed" can't occur. (Also needs the DP-less-can't-remain rule + a DebugRunner burst driver.) | `b::q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot` |
 | 9 | D | After both trashed; NO memory | BLOCKED-CARD | BT23-102, BT15-037 | `d::q9_gatomon_not_in_battle_area_during_removal_no_memory` |
-| 10 | F | 0 | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q10_multi_effect_memory_arithmetic_ends_at_zero` |
-| 11 | F | 4 (Gravity Crush not OPT) | BLOCKED-CARD | BT13-103, BT11-033, P-104 | `f::q11_non_opt_gravity_crush_refires_memory_four` |
-| 12 | F | YES, unsuspends | BLOCKED-PRIMITIVE | BT24-059 authored, but `G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`: the `kind: digimon` field filter (`kind_matches_field`) matches `Digimon`/`Dual` but NOT `Token`, so the Petrification token is excluded from BT24-059's placement candidates. (The per-card test passes only with a Digimon stand-in.) | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
+| 10 | F | 0 | **PASS** | RESOLVED 2026-06-04 (`G-ON-ADD-TO-HAND-OBSERVER`). The earlier `G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT` co-block was a MISCHARACTERIZATION — the judge line uses Akihiro Kurata's **[End of Opp Turn] draw/trash** (clause 2, implemented), NOT his Belphemon cost-reduction (clause 1, still blocked but unused here). MirageGaogamon's observer now fires for real off Kurata's effect-draw and gains floor(15/4)=3 → 0. Mental Training cost + Gravity Crush −2 staged as memory deltas. | `f::q10_multi_effect_memory_arithmetic_ends_at_zero` |
+| 11 | F | 4 (Gravity Crush not OPT) | **PASS** | RESOLVED 2026-06-04. Follow-up from Q10: a 2nd Mental Training (−2) + Gravity Crush's non-OPT end-of-turn −2 → 4 on Player A's side. (Turns on Gravity Crush being non-OPT, not the observer.) | `f::q11_non_opt_gravity_crush_refires_memory_four` |
+| 12 | F | YES, unsuspends | **PASS** | RESOLVED 2026-06-02 (`G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`): `kind_matches_field` now coalesces `Token` into `Digimon`, and `eval_permanent_fields` defers permanent-kind to the (token-aware) `synth_identity` check — so a REAL Petrification token is a legal placement pick. Test un-ignored with the real `TOKEN_PETRIFICATION` permanent (not a Digimon stand-in). Regression-clean. | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
 | 13 | B | −6000 DP | **PASS** | Pinned 2026-05-30: BT22-042 Nyabootmon's `-3000 × (your Digimon)` is counted (2: Nyabootmon + ShoeShoemon) BEFORE ShoeShoemon (P-165)'s deferred `[On Play]` adds a Familiar token → −6000 (token not counted; a count of 3 would give −9000). | `b::q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play` |
-| 14 | B | −6000 DP | BLOCKED-PRIMITIVE | All cards implemented, but `G-CONTINUOUS-MASS-DP-DEBUFF`: EX4-074 Ruin Mode's "all opp Digimon −5000 until EoNT" is a one-time snapshot (`add_modifier` filter-target), not a continuous effect — it doesn't catch a ShoeShoemon played later (verified: stays 4000, not −1000), so the "≤0-but-still-counted" scenario can't be reproduced. Faithful pin body written + `#[ignore]`'d. | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
+| 14 | B | −6000 DP | **PASS** | RESOLVED 2026-06-02 (`G-CONTINUOUS-MASS-DP-DEBUFF`): EX4-074 re-authored `continuous: true` → a source-independent floating mass modifier catches the later-played ShoeShoemon at ≤0 DP, which is still counted → Nyabootmon's debuff is −6000 (count 2). Asserts the per-application debuff value (the ruling) — the net Ruin DP additionally reflects Nyabootmon's faithful OPTIONAL `[On Any Deletion]` recursion. Focused substrate pin: `b::q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant`. | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
 | 15 | E | Gallantmon (X Antibody) topmost | BLOCKED-CARD | BT19-073, BT17-016, BT12-016, EX3-057 | `e::q15_sequential_de_digivolve_halted_by_x_antibody_immunity` |
 | 16 | E | NO (`<Partition>` not triggered) | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX6-057 Lilithmon authored + granted body runs as the carrier's own effect (D4/DCGO), so the granted self-delete is OwnEffect → `<Partition>` cause-filter skips it | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
 | 17 | A | NO | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: BT16-102 Magnamon X + EX6-057 authored; the granted-trigger dispatch suppresses a granted opponent effect when the carrier is immune to the grantor (`permanent_is_unaffected_by_effect`). BT21-036 not needed (its only role was an Armor-Form source — staged synthetically) | `a::q17_magnamon_x_immunity_removes_granted_eot_delete` |
-| 18 | A | NO | BLOCKED-PRIMITIVE | LM-020 attempted (first wave): the `[Start of Opp Turn]` category-immunity (Q18-relevant) is implementable + the Blast-Digivolve immunity substrate is done, but LM-020 is BLOCKED on `G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` (its `[When Digivolving]` clause). | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
-| 19 | D | 0 draws | BLOCKED-CARD | BT7-069, BT2-069, BT3-006 | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
-| 20 | D | 8 draws | BLOCKED-CARD | + BT2-076 | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
-| 21 | D | 0 draws | BLOCKED-CARD | + BT3-109 | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
+| 18 | A | NO | PASS | LM-020 Quantumon fully authored 2026-06-05. `[Start of Opp Turn]` declares a category (`select_effect_choice`) + reveals opp deck-top + grants category immunity (`grant_effect_immunity` source_controller `any` → covers OWN effects) gated on the new `binding_card_kind` predicate. Self-inclusive Digimon immunity blocks Quantumon's own `<Blast Digivolve>` (combat gates blast candidacy/execution on `permanent_is_unaffected_by_effect(.., own, Digimon)`). `[When Digivolving]` clause uses the new `return_selected_security_to_deck` verb (`G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` CLOSED). | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
+| 19 | D | 0 draws | PASS | `G-ON-DELETION-RESOLVES-MID-EFFECT` RESOLVED 2026-06-05. Part A: top-most-card-in-trash gate on the OnDeletion bundle (`run_queued_effect_inner` + snapshot `is_token`). Part B: `drain_batch_on_any_deletion`'s post-deletion trigger drain gated on `maybe_drain_effect_queue` so the bundle resolves only after CFtD's return-to-hand settles → Eyesmon left trash → all suppressed → 0 draws. (Q20 stays 8.) | `d::q19_on_deletion_suppressed_when_returned_to_hand` |
+| 20 | D | 8 draws | **PASS** | Cards authored 2026-06-03; the Eyesmon stack (own Draw3 + inherited Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2) deleted-to-trash fires all [On Deletion] → 8 draws. Engine matches. | `d::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash` |
+| 21 | D | 0 draws | PASS | `G-DSL-DELETED-SELF-TRASH-BINDING` CLOSED 2026-06-05 + BT3-109 authored. `event_card` already resolved the deleted-self top card in trash; the only fix was making `play_from_trash_free` accept a `Card`-handle binding. Back for Revenge! grants Eyesmon `[On Deletion]` self-replay-from-trash; replaying it leaves the trash, so the remaining draw bundle is suppressed by the Q19 top-card-in-trash gate ⇒ 0 draws. (Q19's co-blocker on this row resolved 2026-06-05.) | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
 | 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
 | 23 | D/F | 1 memory | PASS | Engine already correct (2026-05-30, run to completion): trashing 3 Tumblemon mid-effect enqueues 3 mandatory `OnDigivolutionCardTrashed` observers → multi-trigger `TriggerOrder` selection PARKS them past Medusamon's return-2; on resolution each clause condition is re-evaluated, dropping the 2 returned cards → only the 1 still in trash fires (+1). The earlier `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a mischaracterization (single-source probe + abstract reasoning, never run end-to-end). No engine change needed. | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
 | 24 | B | Hudiemon DP 3000 | BLOCKED-PRIMITIVE | BT23-101, BT23-037, BT16-101, ST17-07 implemented; needs EX6-004 (Kokomon), itself BLOCKED on `G-SUSPEND-EFFECT-INITIATED` (suspend event carries no by_effect bit, so Kokomon's "when an EFFECT suspends" is un-gatable). | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
-| 25 | E | YES (DigiXros departure ≠ battle) | BLOCKED-CARD | EX3-014 (1 away) | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
-| 26 | C | Returns to hand | BLOCKED-CARD | EX3-014 (1 away) | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
-| 27 | C | Pays 0 memory | BLOCKED-CARD | EX3-014 (1 away) | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
+| 25 | E | YES (DigiXros departure ≠ battle) | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER`): added `ReplacementCause::DigiXros` + fire the `WhenWouldLeaveBattleArea` replacement window per battle-area material before consuming. BT17-095's `[All Turns]` leave observer now fires on a DigiXros departure. | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
+| 26 | C | Returns to hand | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-REDIRECT-EXTRACTION`): added the leaving/limbo holding slot (`Game::digixros_leaving_limbo`). The leave window parks BT17-095's `<Delay>` without committing the host; WarGreymon is held in limbo (resolvable + extractable); the accepted DNA-evo re-materializes it into Omnimon; finalize finds the DigiXros recipe dropped below `min` and returns Dorbickmon to hand. Supporting fixes: identity re-resolution of the parked replacement's source/subject after the `battle_area` index shift, and excluding the in-flight host from DNA-partner candidates. | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
+| 27 | C | Pays 0 memory | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND`): the host commits only at `finalize_digixros_play_after_leave_windows`; when a pruned material leaves the recipe unsatisfied the play is abandoned with 0 memory paid. | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
 | 28 | A | YES, plays AND activates | BLOCKED-PRIMITIVE | BT20-059 Gankoomon X authored (first wave; protection verified to dodge the lock via `can_affect_permanent`); EX5-060 Dragomon BLOCKED on `G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED` + `G-EVENT-PLAYED-LEVEL-FORMULA` | `a::q28_gankoomon_x_protection_beats_dragomon_on_play_lock` |
 | 29 | E | 3 legal stacks | BLOCKED-CARD | BT10-093, EX10-039, EX10-044, EX10-059, EX10-056, EX10-031 | `e::q29_legal_digixros_stack_orderings_with_yuu_amano` |
 | 30 | C/E | Suspend both w/ cost reduction | BLOCKED-CARD | BT20-037, BT20-036, EX3-063, BT16-077, EX3-008 | `c::q30_partition_interruptive_suspends_both_with_cost_reduction` |
@@ -61,12 +61,93 @@ Coverage as of 2026-05-30: **30/30 questions have a test entry; 10 PASS.** `carg
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 14 | 3, 4, 9, 10, 11, 15, 19, 20, 21, 25, 26, 27, 29, 30 |
-| BLOCKED-PRIMITIVE | 6 | 8, 12, 14, 18, 24, 28 |
+| BLOCKED-CARD | 6 | 3, 4, 9, 15, 29, 30 |
+| BLOCKED-PRIMITIVE | 3 | 8, 24, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 10 | 1, 2, 5, 6, 7, 13, 16, 17, 22, 23 |
+| PASS | 21 | 1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27 |
 
-(Counts: 14 + 6 + 0 + 10 = 30 of 30.)
+(Counts: 6 + 3 + 0 + 21 = 30 of 30.)
+
+Q18 → **PASS** (2026-06-05): LM-020 Quantumon fully authored (both clauses). The
+ledger's "only the security→deck clause is blocked" was an undercount — the card
+needed several primitives. Landed two reusable ones: the `return_selected_security_to_deck`
+verb + `EffectContext::return_security_card_to_deck` engine primitive
+(`G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` CLOSED), and a `binding_card_kind`
+predicate (compare a bound card's category to a declared one). Clause 2
+([Start of Opp Turn]) declares a category via `select_effect_choice`, reveals the
+opponent deck-top, and grants `grant_effect_immunity` with `source_controller: any`
+(covers OWN effects) when the kinds match. Because `<Blast Digivolve>` is a Digimon
+effect and combat gates blast on `permanent_is_unaffected_by_effect(.., own, Digimon)`,
+declaring Digimon makes Quantumon unable to blast-digivolve into Imperialdramon: PM
+ACE (BT17-077). Q18 test pins the gate from the REAL clause-2 effect with a control.
+Clause 1 ([When Digivolving]) place-Digimon-on-security cost + security→deck-top +
+shuffle uses the new verb. Regression: judge_quiz 30, cards_behavioral 3900,
+dsl 760, combat 213, effect_context 145, lib 212 — green.
+
+Q21 → **PASS** (2026-06-05): `G-DSL-DELETED-SELF-TRASH-BINDING` CLOSED + BT3-109
+authored. The gap premise was mostly wrong — the `event_card`/`event_target`
+bindings ALREADY resolve the just-deleted carrier's top card in trash
+(`DeletedObjectSnapshot.top_card`). The only real missing link: `play_from_trash_free`
+accepted a trash-index binding but not a card-handle binding, so `event_card`
+couldn't feed it. Fixed generally by making the `PlayFromTrashFree` step arm accept
+`ResolvedBinding::Card(h)` (engine call self-guards the handle is in trash). BT3-109
+Back for Revenge! grants a chosen Digimon `[On Deletion]` self-replay-from-trash;
+replaying the carrier leaves the trash, so the remaining draw bundle is suppressed
+by the Q19 top-most-card-in-trash gate ⇒ 0 draws. Composes cleanly with Q19 — both
+D-cluster activation-site questions now PASS. Behavioral test:
+`tests/cards_behavioral/bt3/bt3_109.rs`; regression: cards_behavioral 3896, full
+engine suite green except the 4 pre-existing cost_hooks failures.
+
+Q19 → **PASS** (2026-06-05): `G-ON-DELETION-RESOLVES-MID-EFFECT` RESOLVED. Two-part
+fix — (A) a top-most-card-in-trash gate on the `[On Deletion]` bundle in
+`run_queued_effect_inner` (DCGO `CanActivateOnDeletion`; snapshot gains `is_token`),
+and (B) gating `drain_batch_on_any_deletion`'s post-deletion trigger drain on
+`maybe_drain_effect_queue` so the bundle resolves only after the deleting effect's
+later steps (Calling From the Darkness' return-to-hand) settle. The (b) half proved
+surgical, not the feared deletion-model restructuring: the premature drain was an
+*unconditional* `drain_effect_queue()` in the OnAnyDeletion stage, not the OnDeletion
+stage's already-deferred flush. A cause-slot follow-on (deferred handlers read the
+cause from the snapshot, not the restored live slot) keeps `deletion_cause()` faithful
+(rule 25). Q20 stays 8. Regression: full engine suite green except 4 pre-existing
+`cost_hooks` failures (confirmed at pre-Q19 990de2d5). See engine-gaps.md.
+
+Q25 → **PASS** (2026-06-03): the DigiXros leave-trigger gap
+(`G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER`) is closed — `ReplacementCause::DigiXros` +
+firing the `WhenWouldLeaveBattleArea` window per battle-area material make BT17-095's
+`[All Turns]` leave observer fire on a DigiXros departure. Q26/Q27's
+recompute/return-to-hand machinery is built and gated on the residual
+`G-DIGIXROS-REDIRECT-EXTRACTION` (a leaving-material limbo slot).
+
+Q10/Q11 (F-cluster memory arithmetic) processed 2026-06-03: authored the 3 cards
+(P-104 Mental Training IMPLEMENTED; BT13-103 Akihiro Kurata + BT11-033 MirageGaogamon
+PARTIAL). Discover-then-pin surfaced two engine gaps that block the arithmetic —
+`G-ON-ADD-TO-HAND-OBSERVER` (no OnAddToHand trigger for MirageGaogamon's
+memory-per-4-cards observer) and `G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT`
+(Akihiro Kurata's "by deleting X reduce cost by X's cost"). Q10/Q11 → BLOCKED-PRIMITIVE.
+
+Q19/Q20/Q21 (D-cluster [On Deletion] activation-site) processed 2026-06-03: authored
+the 4 Eyesmon-stack cards (BT7-069/BT2-069/BT3-006/BT2-076, DSL — purple [On Deletion]
+Draw-then-trash). **Q20 → PASS** (stack deletion fires all [On Deletion] = 8 draws).
+**Q19 → BLOCKED-PRIMITIVE** `G-ON-DELETION-RESOLVES-MID-EFFECT` (On-Deletion resolves
+nested in the delete step, before the return-to-hand). **Q21 stays BLOCKED-CARD** on
+BT3-109 (`G-DSL-DELETED-SELF-TRASH-BINDING`). 5th card BT3-109 BLOCKED (no faithful
+play-this-card-from-trash binding).
+
+Q25/Q26/Q27 moved BLOCKED-CARD → **BLOCKED-PRIMITIVE** (2026-06-03): EX3-014 Dorbickmon
+was authored (DSL — closing 2 DSL substrate gaps: per-source-stack-count-filtered
+formula + `trait_contains` substring predicate), unblocking the cards. Staging the
+three scenarios through real DigiXros play then discovered the *true* blockers are
+two DigiXros engine gaps — `G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER` (material removal
+fires no leave trigger) and `G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND` (no
+declare-then-pay recompute/return when a material vanishes mid-resolution). The
+discover-then-pin pin is the campaign's core value: authoring the card surfaced the
+real engine work.
+
+Q12 + Q14 moved BLOCKED-PRIMITIVE → **PASS** (2026-06-02, judge-quiz engine-gaps
+change): `G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT` closed (field `kind: digimon` now
+matches battle-area tokens) and `G-CONTINUOUS-MASS-DP-DEBUFF` closed (new
+source-independent floating continuous mass-modifier substrate + `add_modifier
+continuous: true`; EX4-074 re-authored).
 
 Q23 moved BLOCKED-PRIMITIVE → PASS (2026-05-30): the documented
 `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a MISCHARACTERIZATION. Running

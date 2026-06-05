@@ -20,7 +20,9 @@
 
 use digimon_engine::action::{build_action_mask, PLAY_HAND_START};
 use digimon_engine::card_source::CardSource;
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::permanent::PermanentHandle;
 
 /// Push a card already present in `card_data` onto player `p`'s trash.
 fn seed_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
@@ -34,6 +36,114 @@ fn seed_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
     runner.game.players[p as usize]
         .trash
         .push(CardSource::new(data_idx, p, idx));
+}
+
+/// Seat the BT17-095 Option permanent at `handle` as a Delay-Option so its
+/// Clause B `when_would_leave_battle_area` observer can fire (gated on
+/// `source_is_delayed_option`). Mirrors the helper in
+/// `tests/cards_behavioral/bt17/bt17_095.rs`.
+fn seat_as_delay_option(runner: &mut DebugRunner, handle: PermanentHandle) {
+    use digimon_engine::permanent::OptionState;
+    let turn = runner.game.turn_count;
+    let perm = &mut runner.game.players[handle.player as usize].battle_area[handle.index as usize];
+    perm.option_state = OptionState::Delayed {
+        owner: handle.player,
+        trash_on_turn: turn + 2,
+        trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+        placed_on_turn: turn,
+    };
+}
+
+/// Stage the shared Q26/Q27 board: Player A plays Dorbickmon (EX3-014) via
+/// [DigiXros] with WarGreymon (AD1-004) as one material; BT17-095 is seated as a
+/// Delay-Option watching WarGreymon's departure; AD1-025 (Omnimon DNA result)
+/// and a Lv6 [Garurumon] partner sit in hand for BT17-095's <Delay> DNA-evo.
+/// Returns the runner with the DigiXros play DECLARED and all 5 materials
+/// selected (WarGreymon + 4 hand Dragons), poised to commit.
+fn stage_q26_board() -> (DebugRunner, i16) {
+    let mut builder = DebugRunner::builder()
+        .dsl_card("EX3-014")
+        .expect("EX3-014 Dorbickmon loads")
+        .dsl_card("AD1-004")
+        .expect("AD1-004 WarGreymon loads")
+        .dsl_card("AD1-025")
+        .expect("AD1-025 Omnimon loads")
+        .from_dsl_yaml(include_str!("../../cards/bt17/BT17-095.yaml"))
+        .expect("BT17-095 Miraculous Mega Knight loads")
+        .add_card({
+            // Lv6 [Garurumon] DNA partner in hand for BT17-095's DNA-evo.
+            let mut c = make_test_card("Q26-GARU", "MetalGarurumon");
+            c.card_kind = CardKind::Digimon;
+            c.level = Some(6);
+            c.dp = Some(11000);
+            c.play_cost = 11;
+            c.colors = vec![CardColor::Blue];
+            c
+        });
+    for i in 0..4 {
+        builder = builder.add_card({
+            let mut c = make_test_card(&format!("Q26-DRG{i}"), &format!("Dragon{i}"));
+            c.card_kind = CardKind::Digimon;
+            c.level = Some(4);
+            c.dp = Some(4000);
+            c.play_cost = 4;
+            c.colors = vec![CardColor::Red];
+            c.traits = vec!["Dragon".to_string()];
+            c
+        });
+    }
+    let mut r = builder
+        .add_card({
+            let mut c = make_test_card("Q26-FILL", "Filler");
+            c.card_kind = CardKind::Digimon;
+            c
+        })
+        // Dorbickmon (idx 0) + 4 Dragon materials + Omnimon DNA result + L6 partner.
+        .hand(
+            0,
+            &[
+                "EX3-014", "Q26-DRG0", "Q26-DRG1", "Q26-DRG2", "Q26-DRG3", "AD1-025", "Q26-GARU",
+            ],
+        )
+        .deck(0, &["Q26-FILL"; 5])
+        .deck(1, &["Q26-FILL"; 5])
+        .memory(13)
+        .start();
+    r.skip_mulligan();
+
+    let wargreymon = r.place_on_field(0, "AD1-004", Some(0));
+    let mmk = r.place_on_field(0, "BT17-095", Some(0));
+    seat_as_delay_option(&mut r, mmk);
+
+    let memory_before = r.memory();
+
+    // Declare the DigiXros play of Dorbickmon and select WarGreymon + 4 hand
+    // Dragons as the 5 materials (no auto-select — surfaced material actions).
+    let _ = r.play(0, 0);
+    let wargreymon_action = wargreymon.index as u16;
+    assert!(
+        r.pending_selection()
+            .is_some_and(|s| s.valid_action_ids.contains(&wargreymon_action)),
+        "precondition: WarGreymon must be a legal DigiXros material"
+    );
+    r.execute_action(0, wargreymon_action)
+        .expect("select WarGreymon as DigiXros material");
+    for _ in 0..4 {
+        let Some(sel) = r.pending_selection() else { break };
+        if sel.kind != digimon_engine::selection::SelectionKind::Material {
+            break;
+        }
+        let Some(pick) = sel
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != digimon_engine::action::space::PASS)
+        else {
+            break;
+        };
+        r.execute_action(0, pick).expect("select DigiXros material");
+    }
+    (r, memory_before)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -104,16 +214,119 @@ fn q5_assembly_declaration_legal_when_cost_can_be_made_payable() {
 
 /// Q26 — Dorbickmon (EX3-014) [DigiXros] targeting WarGreymon; Miraculous Mega
 /// Knight (BT17-095) DNA-evolves mid-resolution, removing WarGreymon ⇒
-/// Dorbickmon's cost becomes unpayable. Judge: returns to hand. (Q25 board:
-/// AD1-004/AD1-014/AD1-025/BT17-095 implemented; only EX3-014 missing.)
+/// Dorbickmon's cost becomes unpayable. Judge: returns to hand.
+///
+/// ── RESOLVED (2026-06-03, G-DIGIXROS-REDIRECT-EXTRACTION) ─────────────────────
+/// The leaving/limbo holding slot now exists (`Game::digixros_leaving_limbo`).
+/// When a DigiXros battle-area material's `WhenWouldLeaveBattleArea` window parks
+/// an optional reward (BT17-095's `<Delay>` accept), the material is moved OUT of
+/// `battle_area` into the limbo slot — so it is no longer a standalone top card
+/// (Q25/Q26 precondition) yet remains resolvable + EXTRACTABLE: the parked DNA-evo
+/// re-materializes it from limbo into the Omnimon merge
+/// (`rematerialize_digixros_limbo` inside `effect_initiated_dna_digivolve_with_hand_partner`).
+/// The host stays in hand until every leave window resolves; a continuation
+/// (`arm_digixros_resume_after_parked_leave`) re-enters the loop once the reward
+/// settles and reaches `finalize_digixros_play_after_leave_windows`, which prunes
+/// the extracted material, finds the DigiXros recipe no longer satisfied (a slot
+/// dropped below its `min`), and returns Dorbickmon to hand for 0 memory.
+///
+/// Two supporting fixes made this faithful: (1) `run_candidate_inner` re-resolves
+/// a parked replacement's `source_permanent`/subject by identity, since moving
+/// the material out of `battle_area` shifts later indices (e.g. BT17-095's
+/// Delay-Option carrier); (2) the in-flight DigiXros host + its selected hand
+/// materials are excluded from intervening hand-selection candidates
+/// (`card_reserved_by_pending_digixros`) so the DNA-evo partner pick can't grab
+/// the host card itself.
 #[test]
-#[ignore = "BLOCKED-CARD: needs EX3-014 (Dorbickmon). AD1-004, AD1-014, AD1-025, BT17-095 implemented."]
-fn q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo() {}
+fn q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo() {
+    let (mut r, _memory_before) = stage_q26_board();
+
+    // Finish material selection — the DigiXros play would commit here. In a
+    // faithful engine BT17-095's [All Turns] observer fires on WarGreymon's
+    // departure mid-DigiXros, its <Delay> DNA-evo pulls WarGreymon (+ the hand
+    // partner) into Omnimon, removing WarGreymon as a Dorbickmon material ⇒
+    // Dorbickmon can no longer pay its DigiXros cost ⇒ Dorbickmon returns to
+    // hand (judge Q26).
+    if r
+        .pending_selection()
+        .is_some_and(|s| s.kind == digimon_engine::selection::SelectionKind::Material)
+    {
+        let _ = r.execute_action(0, digimon_engine::action::space::PASS);
+    }
+    // Drive any DNA-evo / Delay flow the observer would surface (none in the
+    // current engine — the observer never fires).
+    let _ = r.auto_resolve();
+
+    // Load-bearing precondition: the play was genuinely declared with WarGreymon
+    // selected as a material (WarGreymon is no longer a standalone permanent).
+    let wargreymon_standalone = r.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == "AD1-004");
+    assert!(
+        !wargreymon_standalone,
+        "precondition: WarGreymon must have left the battle area as a DigiXros material"
+    );
+
+    // JUDGE Q26: Dorbickmon returns to hand (unpayable play returns to hand).
+    let dorbickmon_in_hand = r.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "EX3-014");
+    let dorbickmon_on_field = r.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == "EX3-014");
+    assert!(
+        dorbickmon_in_hand && !dorbickmon_on_field,
+        "dorbickmon_returned_to_hand — Dorbickmon must RETURN TO HAND when its \
+         DigiXros cost becomes unpayable after BT17-095's DNA-evo pulls \
+         WarGreymon out (judge Q26); instead in_hand={dorbickmon_in_hand}, \
+         on_field={dorbickmon_on_field}"
+    );
+}
 
 /// Q27 — Same board. Judge: pays 0 memory (cost unpayable ⇒ no payment).
+///
+/// ── RESOLVED (2026-06-03, G-DIGIXROS-REDIRECT-EXTRACTION) ─────────────────────
+/// Same substrate as Q26. Because the host commits only at
+/// `finalize_digixros_play_after_leave_windows` (after the leave windows resolve)
+/// and the recipe is found unsatisfied once WarGreymon is DNA-extracted, the
+/// declared play is abandoned with the card still in hand and NO memory paid —
+/// memory is unchanged from before the (failed) play.
 #[test]
-#[ignore = "BLOCKED-CARD: needs EX3-014 (Dorbickmon)."]
-fn q27_dorbickmon_pays_zero_memory_when_returned_to_hand() {}
+fn q27_dorbickmon_pays_zero_memory_when_returned_to_hand() {
+    let (mut r, memory_before) = stage_q26_board();
+
+    if r
+        .pending_selection()
+        .is_some_and(|s| s.kind == digimon_engine::selection::SelectionKind::Material)
+    {
+        let _ = r.execute_action(0, digimon_engine::action::space::PASS);
+    }
+    let _ = r.auto_resolve();
+
+    // Load-bearing precondition: the play was genuinely declared (WarGreymon
+    // selected as a material; it is no longer a standalone permanent).
+    let wargreymon_standalone = r.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == "AD1-004");
+    assert!(
+        !wargreymon_standalone,
+        "precondition: WarGreymon must have left the battle area as a DigiXros material"
+    );
+
+    // JUDGE Q27: the unpayable play pays 0 memory — memory is unchanged.
+    let memory_after = r.memory();
+    assert_eq!(
+        memory_after, memory_before,
+        "zero_memory_paid — an unpayable Dorbickmon DigiXros play (cost becomes \
+         unpayable after BT17-095's DNA-evo pulls WarGreymon out) must pay 0 \
+         memory and leave memory unchanged (judge Q27); before={memory_before}, \
+         after={memory_after}"
+    );
+}
 
 /// Q30 (also cluster E) — MedievalGallantmon (EX8-074) `<Partition>` is
 /// interruptive; cost-reduction lets it suspend Imperialdramon: Dragon Mode

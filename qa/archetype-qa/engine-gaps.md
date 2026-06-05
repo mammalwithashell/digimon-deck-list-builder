@@ -29,12 +29,20 @@ Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' ru
 
 - **First seen / RESOLVED** 2026-05-29, judge-quiz Q18. Neither `execute_blast_digivolve` (combat.rs) nor the Blast DNA field-target generator (`dna_digivolve.rs::valid_blast_dna_field_targets_for_hand_card`) consulted the effect-immunity machinery; a Digimon immune to ALL Digimon effects including its own (Quantumon LM-020 — `CannotBeAffected` with `EffectControllerFilter::Any`) could still `<Blast Digivolve>`, but `<Blast Digivolve>` is itself a Digimon effect. **Fixed** (change `fix-judge-quiz-cluster-wiring-gaps`): gate Blast counter-candidate collection (`combat.rs::try_enter_counter`) AND the Blast DNA field-target generator on `permanent_is_unaffected_by_effect(base, base.player, Digimon)`, plus a defensive abort in `execute_blast_digivolve`. Pinned by `combat::counter_interrupt::blast_target_immune_to_own_effects_is_not_a_counter_candidate`. (Q18 stays BLOCKED-CARD on LM-020 for the end-to-end pin; the substrate is closed.)
 
-### §DigiXros material-consumption fires no leave trigger (G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER) — OPEN
+### §DigiXros material-consumption fires no leave trigger + redirect-extraction / unpayable-return-to-hand — ALL RESOLVED 2026-06-03 (G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER + G-DIGIXROS-REDIRECT-EXTRACTION + G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND)
 
+- **RESOLVED 2026-06-03 — G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER (judge-quiz Q25 PASS).** A DigiXros battle-area material consumption now fires the `WhenWouldLeaveBattleArea` replacement window. Implementation: added `ReplacementCause::DigiXros` (`replacement.rs`; threaded through the exhaustive `trigger_context.rs` `EventCause::from` map → `OwnEffect`, and `dsl_cards/lower_partition.rs` → `"digixros"`). `commit_play_from_hand_after_reductions` (`game_actions.rs`) now routes any pending DigiXros transaction through `run_digixros_leave_windows_then_commit`, which calls `try_replace(WhenWouldLeaveBattleArea, Permanent(material), ReplacementCause::DigiXros, None)` for each battle-area material BEFORE the host is committed. `DigiXros` is NOT `Battle`, so BT17-095's `active_when: { none_of: [replacement_cause: battle] }` passes and its `[All Turns]` `<Delay>` accept installs on a DigiXros departure. Pinned by `tests/judge_quiz/e_partition_digixros.rs::q25_all_turns_fires_on_digixros_departure_not_battle` (un-ignored, green).
+- **RESOLVED 2026-06-03 — G-DIGIXROS-REDIRECT-EXTRACTION (judge-quiz Q26 PASS).** Added a **leaving/limbo holding slot** `Game::digixros_leaving_limbo: Vec<(PlayerId, PermanentHandle, Permanent)>` (`digixros.rs`). When a battle-area material's leave window parks an optional reward, `run_digixros_leave_windows_then_commit` no longer commits the host eagerly — it moves the material OUT of `battle_area` into limbo (`move_battle_permanent_to_limbo`, addressed by handles offset `LIMBO_INDEX_BASE = 200`) and arms a continuation (`arm_digixros_resume_after_parked_leave`) that re-enters the loop once the reward settles. The limbo material is (a) no longer any permanent's top card (Q25/Q26 precondition holds) yet (b) resolvable (`find_battle_permanent_containing_card` + `permanent_top_card_handle` are limbo-aware) and (c) extractable: `effect_initiated_dna_digivolve_with_hand_partner` / `digivolve_replacement_subject_without_cost` call `rematerialize_digixros_limbo` to pull it back into `battle_area` for the merge. Two supporting fixes: (1) `run_candidate_inner` (`replacement.rs`) re-resolves a parked replacement's `source_permanent` by identity (and `remap_digixros_limbo_subject` re-points the subject), because removing the material from `battle_area` shifts later indices (e.g. BT17-095's Delay-Option carrier — `source_is_delayed_option` would otherwise read a stale slot); (2) `card_reserved_by_pending_digixros` excludes the in-flight host + selected hand materials from `matching_hand_candidates`, so the DNA-evo partner pick can't grab the host card itself. Pinned by `q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` (un-ignored, green).
+- **RESOLVED 2026-06-03 — G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND (judge-quiz Q27 PASS).** `finalize_digixros_play_after_leave_windows` (`game_actions.rs`) prunes battle-area materials that left the field (`DigiXrosTransaction::retain_materials`), and — when a material was actually pruned AND the recipe is no longer satisfied (`DigiXrosTransaction::recipe_is_satisfied`: a slot dropped below its `min`) OR the recomputed memory cost overdraws the floor — abandons the play with the host still in hand and 0 memory paid. The recipe check is gated on `materials_pruned` so the engine's existing lenient path (declaring a DigiXros host with fewer than `min` materials and paying base cost) is unchanged. Pinned by `q27_dorbickmon_pays_zero_memory_when_returned_to_hand` (un-ignored, green). Regression-clean: `judge_quiz` (25 pass / 14 ignored), `cards_behavioral` (3891 pass), `combat` (213), `option_flow` (93), `digixros` lib (18), engine lib (212).
 - **First seen:** 2026-05-29, judge-quiz Q25 (probe). When a battle-area Digimon is consumed as a DigiXros material, `Game::take_digixros_material_origin` (game_actions.rs, `DigiXrosMaterialOrigin::BattleArea` arm) silently `battle_area.remove(idx)`s it and tucks its top card under the new Digimon — firing NO `OnLeaveField` / `WhenWouldLeaveBattleArea` trigger, unlike the standard deletion path (`combat.rs` stages 1 + 6). The judge rule (Q25): a DigiXros departure DOES count as "leaving the battle area" (and is NOT "leaving by battle").
 - **DCGO-verified design (2026-05-29).** The observer that must fire is **BT17-095 Miraculous Mega Knight** (already implemented), NOT EX3-014. Its relevant clause is a `[Delay]` keyed off DCGO `EffectTiming.WhenRemoveField` with `CanUseCondition = CanDeclareOptionDelayEffect && CanTriggerWhenPermanentRemoveField(IsOwnerPermanentCondition) && !IsByBattle` — "When one of your level-6 [Greymon]/[Garurumon] **would leave the battle area outside of a battle**". The Rust BT17-095 YAML models this as `kind: replacement` / `trigger: when_would_leave_battle_area` with `active_when: { ..., none_of: [replacement_cause: battle] }`. So the engine must fire the **`WhenWouldLeaveBattleArea` REPLACEMENT WINDOW** (the deletion-batch stage-1 path, `combat.rs::run_replacement_stage(WhenWouldLeaveBattleArea, ...)`) — NOT a post-removal `OnLeaveField` observer — for each `BattleArea` DigiXros material BEFORE it is consumed, with a `ReplacementCause` that is **not `Battle`** (candidate: new `ReplacementCause::DigiXros`, or `Cost`).
 - **Why this is DigiXros-transaction surgery (not simple wiring):** `commit_digixros_material_sources` → `take_digixros_material_origin` must run the replacement window per battle-area material and then handle the OUTCOME — and BT17-095 does NOT proceed: on success it **redirects/substitutes** the leaving WarGreymon into a DNA-digivolve into Omnimon (the material is consumed into Omnimon instead of into Dorbickmon's DigiXros). So the DigiXros commit must tolerate a material being cancelled/redirected/substituted away mid-transaction. Build + validate this as the substrate step of EX3-014 authoring with BT17-095 as the integration oracle (DCGO `BT17_095.cs`, `EX3_014.cs`).
-- **Blocks (judge-quiz):** Q25 (BLOCKED-CARD on EX3-014 regardless).
+- **Second sub-gap (G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND), first seen 2026-06-03 (Q26/Q27):** even after the leave window fires and BT17-095's DNA-evo pulls WarGreymon out of the transaction, the DigiXros play has **no declare-then-pay re-check** that recomputes the play cost when a material vanishes mid-resolution and **returns the played card to hand** when the cost becomes unpayable. `commit_play_from_hand_after_reductions` (`game_actions.rs`) locks `transaction.final_cost()` and `pay_memory`s BEFORE `commit_digixros_material_sources` consumes the materials, with no post-DNA recompute / return-to-hand branch. The judge rule (Q26): a play whose cost becomes unpayable after declaration **returns to hand**; (Q27): it **pays 0 memory** (no payment for the failed play). This stacks on the leave-trigger gap above.
+- **EX3-014 / AD1-004 / BT17-095 now all implemented (2026-06-03).** The judge-quiz Q25/Q26/Q27 scenarios are now **staged-and-pinned** (discover-then-pin) rather than empty `BLOCKED-CARD` stubs:
+  - `tests/judge_quiz/e_partition_digixros.rs::q25_all_turns_fires_on_digixros_departure_not_battle` — **un-ignored, PASSING (2026-06-03).** The DigiXros leave window fires and BT17-095's `[All Turns]` `<Delay>` accept surfaces on WarGreymon's DigiXros departure.
+  - `tests/judge_quiz/c_declare_then_pay.rs::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` — **un-ignored, PASSING (2026-06-03).** The leave window parks BT17-095's `<Delay>`, WarGreymon is held in limbo, the accepted DNA-evo extracts it into Omnimon, the DigiXros recipe drops below `min`, and Dorbickmon returns to hand.
+  - `tests/judge_quiz/c_declare_then_pay.rs::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` — **un-ignored, PASSING (2026-06-03).** The abandoned play pays 0 memory (host never committed).
+- **Blocks (judge-quiz):** Q25, Q26, Q27 — all RESOLVED (PASS).
 
 ### §No digivolve-target restriction modifier (G-DIGIVOLVE-TARGET-RESTRICTION) — ENGINE SUBSTRATE DONE 2026-05-29; DSL-install + card at authoring
 
@@ -51,6 +59,27 @@ Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' ru
 - **Q23 → PASS** via `d_activation_site::q23_inherited_trash_memory_gated_on_remaining_in_trash` (synthetic Medusamon driver over real EX8-051/EX8-005). No engine change was made; the deferral "fix seam" / split-out follow-up change is retired.
 - **Residual narrow open question (no known card; not a blocker):** a SINGLE source trashed then returned WITHIN one effect would still fire synchronously (a lone mandatory trigger doesn't park). If a real card ever needs that gated, re-open then. The single-source synchronous behavior is characterized by `d_activation_site::cluster_d_on_trash_observer_fires_synchronously_not_deferred`.
 - Full resolution note in [`resolved-gaps.md`](../resolved-gaps.md).
+
+### §`[On Deletion]` resolves nested inside the deleting effect, bypassing the topmost-card remain-in-trash gate (G-ON-DELETION-RESOLVES-MID-EFFECT) — RESOLVED 2026-06-05
+
+- **RESOLVED 2026-06-05.** Q19 (`d_activation_site::q19_on_deletion_suppressed_when_returned_to_hand`) flipped to **PASS (0 draws)**, Q20 stays **8**. Two-part fix; the (b) half was far more surgical than the 2026-06-04 prognosis below feared (it is NOT a deletion-model restructuring):
+  - **Part A — top-most-card-in-trash gate.** `run_queued_effect_inner` (`effect_queue.rs`) suppresses an `OnDeletion` queued effect whose `DeletedObjectSnapshot.top_card` is no longer in the former controller's trash (tokens always activate, mirroring DCGO `if (card.IsToken) return true;`). All bundle entries (own + inherited) share the carrier's top-card snapshot, so a returned carrier suppresses the whole bundle. Snapshot gains `is_token` (set across all four capture sites). No-op under the old synchronous drain.
+  - **Part B — defer the post-deletion trigger drain to the outer scope.** The actual premature drain was NOT the OnDeletion-stage `exit_deferred_drain_and_flush` (that already defers when nested — `draining_deferred` stays > 0). It was the **unconditional** `self.drain_effect_queue()` at the END of `drain_batch_on_any_deletion` (`combat.rs`), which force-drained the still-queued OnDeletion + OnAnyDeletion + OnLeaveField entries regardless of the deferred scope. Changing that one call to `self.maybe_drain_effect_queue()` (drains only at `draining_deferred == 0`) lets the entries ride the queue until the causing effect's whole selection chain settles. The existing `resolve_selection` deferred-scope exits then drain them at the first `pending_selection == None` after CFtD's return steps — by which point Eyesmon has left trash and Part A suppresses the bundle. The feared `draining_deferred` counter-leak never materialized because the deferral rides the *existing* enter/exit pairing in `resolve_selection`, not a new scope wrapped around the parking effect.
+  - **Cause-slot follow-on.** Deferring the drain past the batch's exit meant `current_deletion_cause` / `current_deletion_event_cause_override` were already restored when the deferred `OnDeletion` handler ran, so `EffectContext::deletion_cause()` read `None` (caught `combat::overclock_sacrifice_deletion_reports_overclock_cause`). Fixed faithfully per rule 25: `observed_deletion_cause` now prefers the cause threaded into the installed trigger context's `DeletedObjectSnapshot` (via new `replacement_cause_from_event_cause`), falling back to the live slots. Battle/top-level deletions install the same snapshot, so they're unchanged.
+  - **Verification:** judge_quiz 28 (Q19 PASS, Q20 8); cards_behavioral 3894; combat 213; option_flow 93; lib 212; effect_context 142; ace_overflow 6; archetypes 45. Only pre-existing failures across the whole engine suite are 4 `cost_hooks` tests (confirmed failing at pre-Q19 990de2d5 — unrelated to this gap). The secondary "color mis-declaration" blocker below was **stale**: BT7-069/BT2-069/BT3-006/BT2-076 `cards/**.json` already carry `card_colors:[6]` (purple), so CFtD returns Eyesmon and the scenario reproduces.
+
+<details><summary>Original OPEN investigation (kept for history)</summary>
+
+
+- **First seen:** 2026-06-03, judge-quiz Q19 (`d_activation_site::q19_on_deletion_suppressed_when_returned_to_hand`). Distinct from the WITHDRAWN G-ON-TRASH-OBSERVER-SYNCHRONOUS above: that one was about *source-trash* observers (`OnDigivolutionCardTrashed`) and turned out fine. This one is about the *carrier's* `[On Deletion]` bundle (the topmost card's own clause **plus** every inherited source's clause) when the carrier is deleted by an effect that, **in the same resolution**, returns the carrier from trash to hand.
+- **Judge rule (Q19, PDF p.41).** "[On Deletion] effects are tied to the top-most card of the Digimon, not tied to the digivolution cards. Additionally, [On Deletion] effects can only activate if they're in the trash. Since Calling From the Darkness returned Eyesmon: Scatter Mode to the hand, no [On Deletion] effects are able to activate." So the ENTIRE bundle (own + inherited) is gated on the **top-most card** still residing in trash at the moment the bundle resolves — and the bundle resolves only **after the causing effect fully finishes** (Calling From the Darkness = `[Main] Delete 1 of your Digimon. Then, return up to 2 purple Digimon cards from your trash to your hand`). The return runs before the bundle resolves → Eyesmon leaves trash → all suppressed → **0 draws**.
+- **Engine behavior (captured).** Driving the real BT7-107 option (`activate_hand_main`) over the real stack (Eyesmon: Scatter Mode / Gabumon / DemiMeramon): the `delete_permanent` step parks the 3 `[On Deletion]` triggers as a `TriggerOrder` selection and then **resolves them nested inside the delete step** (`delete_permanents_batch` stage 5 `exit_deferred_drain_and_flush`), BEFORE BT7-107's later return-to-hand step runs. Result: **6 draws** (Eyesmon 3 + Gabumon 2 + DemiMeramon 1), judge wants 0. The engine has no "defer the carrier's `[On Deletion]` bundle until the whole causing effect resolves, then gate it on the **top-most card** remaining in trash" check. (Contrast Q20 — Eyesmon stays in trash either way, so the engine's drain-at-delete-time happens to produce the judge-correct **8**; that scenario is PASS.)
+- **Secondary blocker (data, not engine): color mis-declaration.** BT7-069 / BT2-069 / BT3-006 / BT2-076 are declared `color: [black]` in their `code/digimon-engine/cards/**.yaml` specs (the in-file comments even say "Black"), but the printed cards are **purple** (`cards.json` `card_colors:[6]`; PDF images are purple-bordered). BT7-107's return filter is `color_is: purple`, so it can't even target these mis-coloured cards from trash. This is independent of the timing gap (fixing the colour still leaves 6 draws) and is a YAML data fix, not an engine change. *(Candidate spawn: correct the `color` field on these four specs to `[purple]`.)*
+- **DCGO-confirmed design (2026-06-04).** `CardEffectCommons.CanActivateOnDeletion` (`DCGO/.../CanUseEffects/OnDeletion.cs:113`) returns `IsExistOnTrash(TopCard)` — the bundle's activation is gated on the **top-most card** still residing in trash, and this is a `CanActivate` check (re-evaluated at ACTIVATION, distinct from `CanTrigger` at queue time). DCGO stacks the OnDeletion via `StackSkillInfos` and the **outer `TriggeredSkillProcess` drains it after the causing effect returns** — so by activation, CFtD's return has run, Eyesmon is in hand, `IsExistOnTrash` is false → all suppressed. The fix is therefore TWO parts: **(a)** a top-most-card-in-trash gate on the OnDeletion bundle (DCGO-faithful, additive — composes with the drain-loop's existing clause-condition filter at `effect_queue.rs` ~831 and the `run_queued_effect_inner` skip), **and (b)** defer the batch's OnDeletion/OnAnyDeletion/OnLeaveField drain past the causing effect's later steps.
+- **Why (b) is a deletion-model restructuring, not a surgical fix (2026-06-04).** The batch flushes OnDeletion via `exit_deferred_drain_and_flush` (`combat.rs:3763`) at delete-time because the causing effect's body does not hold an open `draining_deferred` scope. Wrapping the causing effect's process in `enter_deferred_drain` to hold the flush **leaks the counter across the effect's selection PARK** (e.g. CFtD's purple-return pick): `enter` runs in `activate_hand_main`'s frame, the body parks and unwinds, and the matching `exit` never runs — the resume callback (`resolve_generic_selection`, `effect_queue.rs:3425`) opens its OWN scope and cannot close the leaked one (no per-effect completion signal). So a clean (b) needs either the batch restructured to **enqueue-only** (OnDeletion/OnAnyDeletion/OnLeaveField enqueued in order, drained by the outer `drain_effect_queue` loop after the causing effect's body completes) or deferred-scope completion threaded through the DSL process park/resume continuation. Both reorder the synchronous deletion-trigger timing the 3894-test deletion path depends on — out of scope for a low-risk session change. Investigated and deliberately deferred.
+- **Blocks (judge-quiz):** Q19 (BLOCKED-ENGINE; test staged + pinned `#[ignore]` on this gap). Also relevant to Q21, which additionally needs BT3-109 (`G-DSL-DELETED-SELF-TRASH-BINDING`).
+
+</details>
 
 <!-- §Return-trash-to-deck-bottom ignores Digi-Egg routing (G-RETURN-TRASH-DIGI-EGG-ROUTING)
      RESOLVED 2026-05-29 by change `fix-judge-quiz-engine-gaps` (Gap 2). Full
@@ -777,7 +806,32 @@ adding a new family entry above, add a matching record to the JSON (the same
 status).
 
 
-### §`kind: digimon` field-select filter excludes Tokens (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT) — OPEN
+### §`kind: digimon` field-select filter excludes Tokens (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT) — RESOLVED 2026-06-02
+
+- **RESOLVED 2026-06-02** (judge-quiz engine-gaps change). Two-part engine fix in
+  `code/digimon-engine/src/dsl_cards/predicate.rs`, both scoped to **field/permanent
+  subjects** (card-search over deck/hand/trash is untouched — tokens never appear there):
+  1. `kind_matches_field` now coalesces `CardKind::Token` into the `Digimon` arm
+     (a battle-area token IS a Digimon per the rules manual / glossary; DCGO
+     `Permanent.IsDigimon` is true for token entities).
+  2. `eval_permanent_fields` strips `kind` from the predicate it delegates to
+     `eval_card_fields` (which used the printed-data card-search matcher
+     `kind_matches_card_search`, with no Token→Digimon coalescing). The
+     authoritative permanent-kind check is now solely `kind_matches_field(want,
+     synth_identity.kind)` — which also correctly makes a `TreatAsDigimon` Tamer
+     (e.g. BT21-044's treated Marcus) satisfy `kind: digimon` field selection, a
+     latent bug the card-search matcher had been masking.
+- **Pinned by** `judge_quiz::f_token_and_memory::q12_token_placeable_as_digivolution_card_unsuspends`
+  (now un-ignored, uses the REAL `TOKEN_PETRIFICATION` permanent — not a Digimon
+  stand-in). Test cmd: `cargo test --manifest-path code/digimon-engine/Cargo.toml
+  --features dsl-yaml-loader --test judge_quiz q12_token_placeable`.
+- **Regression pass:** full `cargo test --features dsl-yaml-loader` green except 4
+  pre-existing `cost_hooks` failures unrelated to this change. One test surfaced the
+  corrected `TreatAsDigimon`-as-Digimon behavior (`bt21_044_on_play_marcus_grants_expire_at_end_of_turn`
+  — it auto-drove the now-legal Marcus attack to game-over, skipping end_turn);
+  updated to decline the optional attack. The per-card `bt24_059` stand-in fixture
+  still passes (validates "any placed permanent counts"); the token-specific pin now
+  lives in the judge_quiz Q12 test.
 
 - **First seen:** 2026-05-29, judge-quiz Q12 pin attempt (`batch-implement-cards-rust-dsl` first wave). The DSL `kind: digimon` target filter lowers to `kind_matches_field` (`code/digimon-engine/src/dsl_cards/predicate.rs` ~2826), which matches `CardKind::Digimon | CardKind::Dual` but NOT `CardKind::Token`. A Petrification token on the field is therefore filtered OUT of a "select 1 of your Digimon" candidate set.
 - **Judge rule (Q12):** a token placed as a digivolution card counts; a Digimon token IS a Digimon on the field. DCGO `BT24_059.cs` uses `IsPermanentExistsOnOwnerBattleAreaDigimon` -> `Permanent.IsDigimon`, and a token's card entity includes `CardKind.Digimon`. So BT24-059's inherited `[When Attacking]` (place 1 of your other Digimon as a source -> unsuspend) should accept the Petrification token as the placed Digimon -> the Digimon unsuspends.
@@ -806,7 +860,32 @@ suspend/unsuspend event context with by_effect"). EX6-004 stays BLOCKED (no card
 authored — no stub) until this lands.
 
 
-### §Mass DP debuff applied as a one-time snapshot, not continuous (G-CONTINUOUS-MASS-DP-DEBUFF) — OPEN
+### §Mass DP debuff applied as a one-time snapshot, not continuous (G-CONTINUOUS-MASS-DP-DEBUFF) — RESOLVED 2026-06-02
+
+- **RESOLVED 2026-06-02** (judge-quiz engine-gaps change). Added a
+  source-independent **floating continuous mass modifier** substrate
+  (`code/digimon-engine/src/floating_modifier.rs`): a data-only descriptor
+  (`CompiledPredicate` filter + `ModifierType` + value + `source_player` +
+  `Expiry` + `pending_skips`) stored on `Game.floating_mass_modifiers`. Each
+  `tick_declarative_effects` re-scans the live candidate set with the predicate
+  (relative to `source_player`, so `of: opponent` stays correct after the source
+  leaves) and installs a `Permanent`-expiry materialized-declarative modifier on
+  every current match — so Digimon entering DURING the window receive it. The
+  descriptor (not the per-permanent entry) is the lifetime authority, pruned at
+  turn-end by `Game::expire_floating_mass_modifiers` (mirroring
+  `ModifierRegistry::expire_end_of_turn`'s `*NextTurn` `pending_skips` semantics),
+  which re-ticks so a `dp_of` read right after turn-end reflects the pruned set.
+- **DSL surface:** `add_modifier` gains `continuous: true` (digimon-dsl
+  `AddModifierArgs` / `CompiledStep::AddModifier`); with a FILTER target it
+  registers a floating descriptor instead of a one-time scan. EX4-074's
+  `[When Digivolving][On Deletion]` mass −5000 is re-authored `continuous: true`.
+- **Pinned by** `judge_quiz::b_deferred_rules_check::q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant`
+  (focused: later-entrant caught, own side untouched, expiry timing) and the full
+  `q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` (un-ignored — the ≤0
+  ShoeShoemon is counted → −6000 debuff). EX4-074's 6 per-card tests updated/green.
+- **Regression:** full `cargo test --features dsl-yaml-loader` green except the 4
+  pre-existing `cost_hooks` failures (unrelated, separately flagged). Test cmd:
+  `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test judge_quiz q14`.
 
 **Surfaced 2026-05-30** (judge-quiz Q14 pin). EX4-074 ShineGreymon: Ruin Mode's
 "[When Digivolving][On Deletion] Until the end of your opponent's next turn, all
@@ -852,6 +931,19 @@ burst-digivolve action resolves, schedule the path's `on_burst_turn_end` steps t
 end of that turn (a delayed/scheduled effect keyed to the burst-digivolution turn); (c) then
 the "DP-less / sub-Lv3 top card can't remain in the battle area" rules-check for the revealed
 Koromon. Likely needs a DebugRunner burst-digivolve driver to pin behaviorally.
+
+**SCOPE UPDATE (2026-06-02):** investigation confirms this is **greenfield, not a
+re-model** — the engine has **no burst-digivolve resolution path at all**, so the
+teardown, the DP-less rules-check, AND `extra_cost` (return-a-Tamer, also
+**unimplemented** — only referenced in `dna_digivolve.rs` exclusion checks) all
+hang off a resolution that does not exist. The burst path is excluded from regular
+digivolve matching (`dna_digivolve.rs:250`) and is not exposed in the action space
+(so it isn't even playable — a rule-17 no-approximations gap on top of the
+teardown gap). Enablers confirmed: `schedule_delayed(EndOfYourTurn, …)` +
+`Game.alt_path_registry` + `Permanent::digivolve`. **Full build plan + the
+confirmed design** in `.claude/plans/rust-engine-gaps-burst-digivolve.md`;
+recommend a dedicated `add-burst-digivolve` OpenSpec change (the `extra_cost`
+executor and action-space exposure are the substantial, design-bearing pieces).
 
 
 ### §DSL-loaded card bodies have empty `evo_costs`, so cost-reduced effect-initiated digivolves into them no-op in DebugRunner (G-DSL-FIXTURE-EVO-COSTS) — OPEN
