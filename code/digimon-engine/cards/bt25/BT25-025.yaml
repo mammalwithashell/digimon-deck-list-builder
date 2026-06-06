@@ -1,0 +1,150 @@
+# BT25-025 Aegiochusmon: Blue — Digimon, Lv.5, Blue/Purple, DP 8000, Cost 8.
+# Traits: Shaman, Iliad, TS.
+# Standard digivolution: Lv.4 Blue / cost 4 (printed evo_costs).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   ＜Blocker＞ (This Digimon can block in the blocker timing.)
+#   ＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other
+#   than in battle, you may play 1 [Aegiomon] from its digivolution cards
+#   without paying the cost.)
+#   [On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon.
+#   (Trash the top card. You can't trash past level 3 cards.) Then, if you have
+#   3 or fewer security cards, 1 of your Digimon unsuspends.
+#
+#   Inherited: [All Turns] [Once Per Turn] When your security stack is removed
+#   from, 1 of your [Shaman] trait Digimon may unsuspend.
+#   Security: (none)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Blue/BT25_025.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alt Digivolution Condition" (None) —
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.EqualsCardName("Aegiomon"),
+#   3, false). A NAME-narrowed cost-3 alt-source on ANY level. Printed evo box
+#   (cards.json) is Lv.4 Blue / cost 4. Per source priority (printed > DCGO) we
+#   author the printed standard alt-path; the DCGO Aegiomon-named cost-3
+#   alt-source is an unprinted implementation source and omitted.
+#
+# Region "Decode <[Aegiomon]>" (WhenRemoveField) — DecodeSelfEffect with
+#   sourceCondition EqualsCardName("Aegiomon"). This is NOT the generic
+#   `Keyword::Decode` (which redirects the leaving permanent to hand). It is
+#   the BT22-015-class "play a matching source from THIS card's digivolution
+#   cards without paying the cost" replacement: triggers on the would-leave
+#   (other than in battle) window, optionally plays a named source, and the
+#   original leave proceeds. Authored as `kind: replacement` +
+#   `trigger: when_would_leave_battle_area` + non-battle cause filter +
+#   `select_material` (Aegiomon-named) + `play_from_materials` (free).
+#
+# Region "Blocker" (None) — BlockerSelfStaticEffect → grant_keyword Blocker.
+#
+# Region "Shared OP / WD" (onPlay + whenDigivolving, optional: false) —
+#   Body: (a) MANDATORY De-Digivolve 1 an opp Digimon (mode Degenerate,
+#   canNoSelect: false); (b) if Owner.SecurityCards.Count <= 3 AND an own
+#   Digimon exists, MANDATORY unsuspend pick (mode UnTap, canNoSelect: false).
+#   → De-Digivolve mandatory; the unsuspend gated on `security_count_lte: 3`.
+#
+# Region "All Turns" (OnLoseSecurity, inherited, OPT) — when your security
+#   stack is removed from, OPTIONAL (canNoSelect: true) unsuspend 1 of your
+#   [Shaman]-trait Digimon. → scope: inherited, when: on_own_security_removed,
+#   once_per_turn, optional, select own Shaman Digimon → unsuspend.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Std digivolve Lv.4 Blue / Cost 4                              | IMPLEMENTED (printed evo_costs) |
+# | <Blocker>                                                     | IMPLEMENTED (grant_keyword) |
+# | <Decode ([Aegiomon])> play Aegiomon source on non-battle leave | IMPLEMENTED (replacement + select_material Aegiomon + play_from_materials) |
+# | [OP][WD] De-Digivolve 1 opp; if <=3 sec, 1 own unsuspends      | IMPLEMENTED (mandatory de_digivolve + sec-gated unsuspend) |
+# | Inherited [All Turns][OPT] sec removed → 1 own [Shaman] unsuspend | IMPLEMENTED (on_own_security_removed) |
+
+card: BT25-025
+name: "Aegiochusmon: Blue"
+kind: digimon
+level: 5
+color: [blue, purple]
+cost: 8
+dp: 8000
+traits: [Shaman, Iliad, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+
+effects:
+  # ─── <Blocker> ───────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── <Decode ([Aegiomon])> — play Aegiomon source on non-battle leave ─────
+  #
+  # Non-cancelling replacement: accepting the optional play runs the
+  # side-effect (play a named [Aegiomon] source without paying), then the
+  # original leave proceeds. BT22-015 idiom, narrowed by name.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Aegiomon"
+          prompt: "Choose an [Aegiomon] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  # ─── [On Play][When Digivolving] De-Digivolve 1 opp; sec-gated unsuspend ──
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] <De-Digivolve 1> 1 opp Digimon; then if <=3 security, 1 of your Digimon unsuspends"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dd_target
+          amount: 1
+          stop_at_level: 3
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - select_own_permanent:
+                bind_as: unsuspend_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - zone: [battle_area]
+                prompt: "1 of your Digimon unsuspends"
+            - unsuspend: { target: unsuspend_target }
+
+  # ─── Inherited [All Turns][OPT] sec removed → 1 own [Shaman] unsuspend ────
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[Inherited][All Turns][OPT] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend"
+    process:
+      - select_own_permanent:
+          bind_as: shaman_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+              - trait_has: Shaman
+          prompt: "1 of your [Shaman] trait Digimon may unsuspend"
+      - unsuspend: { target: shaman_target }

@@ -1,0 +1,105 @@
+# BT25-077 Bacchusmon — Digimon, Lv.6, Black/Green, DP 12000, Cost 12.
+# Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Virus.
+# Standard digivolution: Lv.5 Black / cost 4 (printed evo_costs).
+#
+# Printed card text (card image BT25-077 — authoritative for printed text):
+#   When this card would be played, if there are 12 or more levels' total worth
+#   of Digimon, reduce the cost by 5.
+#   [On Play] [When Digivolving] You may play 1 [TS] trait Digimon card with
+#   6000 DP or less from your hand without paying the cost.
+#   [All Turns] [Once Per Turn] When any Digimon are played or digivolve, you may
+#   suspend 1 Digimon. Then, if played or digivolved by an effect, delete 1 of
+#   your opponent's lowest DP Digimon.
+#
+# Printed evo box (xros_req): "[Digivolve] Lv.5 w/[TS] trait: Cost 3".
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_077.cs
+#
+# DCGO crosscheck:
+#   Alt Digivolution (None): AddSelfDigivolutionRequirementStaticEffect(TopCard
+#     HasTSTraits, cost 3, ignoreReq:true, level 5).
+#   Reduce Play Cost (None): MandatorySelfPlayCostReduction(5) when the sum of
+#     levels of all battle-area Digimon (BOTH players) >= 12. → OMITTED: the DSL
+#     has no board-wide level-sum predicate (G-DSL-BOARD-LEVEL-SUM, logged in
+#     qa/dsl-vocab-gaps.md). Verdict PARTIAL.
+#   Shared OP/WD (optional:false, isSkippable:true, additionalActivateCondition:
+#     a playable [TS] <=6000 DP Digimon in hand): SelectHand PlayForFree
+#     (canNoSelect:true) of a [TS] Digimon with HasDP && CardDP <= 6000.
+#   All Turns (OnEnterFieldAnyone, OPT, isSkippableFunction: NOT IsByEffect):
+#     on any Digimon played OR digivolve, may suspend 1 Digimon (any player,
+#     canNoSelect:true); if IsByEffect, ALSO delete 1 opp lowest-DP Digimon
+#     (mandatory once the suspend resolved / by-effect).
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 Black / Cost 4                          | IMPLEMENTED (evo_costs) |
+# | Alt-source Lv.5 [TS] / Cost 3 ignore                       | IMPLEMENTED (alt_paths) |
+# | Cost -5 if total Digimon levels >= 12                      | OMITTED — G-DSL-BOARD-LEVEL-SUM -> PARTIAL |
+# | [OP][WD] may play 1 [TS] <=6000 DP Digimon from hand free  | IMPLEMENTED (select_hand + play_from_hand_free) |
+# | [All Turns][OPT] suspend 1; if by effect, delete opp lowest DP | IMPLEMENTED (optional suspend + effect-gated lowest-DP delete) |
+
+card: BT25-077
+name: Bacchusmon
+kind: digimon
+level: 6
+color: [black, green]
+dp: 12000
+cost: 12
+traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  # Cost reduction (total board levels >= 12) OMITTED — G-DSL-BOARD-LEVEL-SUM.
+
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OP][WD] You may play 1 [TS] trait Digimon with 6000 DP or less from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+              - dp_lte: 6000
+          prompt: "Play 1 [TS] Digimon with 6000 DP or less from your hand (free)"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  - when: [on_enter_field_anyone, on_digivolve]
+    once_per_turn: true
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_kind: digimon
+    summary: "[All Turns][OPT] When any Digimon are played/digivolve, you may suspend 1 Digimon; then if played/digivolved by an effect, delete 1 of your opponent's lowest DP Digimon"
+    process:
+      - select_any_permanent:
+          bind_as: to_suspend
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may suspend 1 Digimon"
+      - suspend: { target: to_suspend }
+      - if:
+          condition: { event_is_effect_initiated: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte:
+                        aggregate:
+                          selector: lowest_dp
+                          scope: opponent
+                prompt: "Delete 1 of your opponent's lowest DP Digimon"
+            - delete_permanent: { target: victim }

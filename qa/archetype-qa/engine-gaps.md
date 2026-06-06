@@ -779,3 +779,33 @@ status).
   warranted (grep `zone: \[hand\]` / `\[trash\]` / `\[security\]` under an
   `any_permanent` / `no_permanent` / `all_permanents` existential).
 
+
+---
+
+## G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD — aura-granted replacement-effect keywords (Scapegoat etc.) do not install their behavior on the target set
+- **Discovered by:** BT25-097 Guardian Palace (aegiomon-3 slice), 2026-06-06.
+- **Clause:** "[Security] [All Turns] All of your yellow or purple [TS] trait Digimon gain ＜Alliance＞. While you have a Digimon with [Junomon] in its name, they also gain ＜Scapegoat＞."
+- **DCGO (BT25_097.cs):** an `AllianceStaticEffect` over yellow/purple TS own Digimon (gated in-security) plus a conditional `ScapegoatStaticEffect` over the same set, gated on a [Junomon]-named own permanent.
+- **What works:** the Alliance grant ships fine — Alliance is a `has_keyword`-gated **combat** keyword (combat.rs scans for it at AllianceTiming), so the DSL `grant_keyword: Alliance` security aura is sufficient. Rush/Piercing/Blocker (the other Area cards' secondaries) are the same class and work.
+- **Why Scapegoat blocks:** Scapegoat is a **replacement-effect** keyword — it needs an installed `when_would_be_deleted` effect on the carrier (cards/keyword_effects.rs `Keyword::Scapegoat => Effect::when_would_be_deleted(...)`). The aura `grant_keyword` path (`lower_aura.rs` → `grant_declarative_keyword` / `grant_keyword_with_until_condition`) only registers the keyword in `has_keyword`; it does **not** synthesize/install the keyword's replacement auto-effect on the granted target. The only place that synthesizes granted-keyword replacement auto-effects is `Game::effects_for_card` (game.rs:4111-4138), and it (a) only covers the **source card's own** registry grant — not keywords an aura applies to arbitrary **target** permanents — and (b) explicitly **skips conditional grants** ("Conditional grants are omitted here for now because ConditionFn is boxed and not cloneable"; `if !grant.declarative || grant.condition.is_some() { continue; }`). BT25-097's Scapegoat is both target-set-scoped AND conditional.
+- **Faithfulness impact:** shipping the Scapegoat grant via `grant_keyword: Scapegoat` would register `has_keyword(Scapegoat)` but the prevent-deletion-by-deleting-another behavior would never fire — a silent no-op = approximation. (The DSL string-map entry for Scapegoat was intentionally NOT added, to avoid implying support.)
+- **Suggested fix:** when an aura/declarative clause grants a **replacement-type** keyword (Scapegoat, Barrier, ArmorPurge, Evade, Decoy, Fragment, Save, …) to a target permanent, also install that keyword's `keyword_to_auto_effect` on the target while the grant is active — including for conditional and target-set-scoped grants. Requires a cloneable/condition-composable installation path (the boxed-ConditionFn limitation noted at game.rs:4116 is the blocker for the conditional case).
+- **Verdict:** BT25-097 BLOCKED (gap_kind: engine). No YAML shipped.
+
+## G-ENGINE-AURA-GRANT-LINK-MAX — aura cannot grant <Link +1> (max-links increase) to a target set
+- **Discovered by:** BT25-102 Factorial Area (aegiomon-3 slice), 2026-06-06.
+- **Clause:** "[Security] [All Turns] All of your Black or Red [TS] trait Digimon gain ＜Blocker＞. While you have [Vulcanusmon], they also gain ＜Link +1＞ (Add 1 to this Digimon's maximum links.)"
+- **DCGO (BT25_102.cs):** a `BlockerStaticEffect` over black/red TS own Digimon plus a conditional `ChangeMaxLinkStaticEffect(+1)` over the same set, gated on a [Vulcanusmon]-named own permanent.
+- **What works:** the Blocker grant ships fine (Blocker is `has_keyword`-gated; `grant_keyword: Blocker` aura is sufficient).
+- **Why Link +1 blocks:** there is no grantable `Keyword` variant for "Link +1" (`lookup_keyword` has no "Link" entry; Link's max is a numeric modifier, not a keyword toggle). The underlying `ModifierType::ChangeLinkMax` exists and is reachable via the aura `modifier:` field — BUT the aura `modifier:` path applies a **hardcoded value of 0** (`lower_aura.rs`: `ctx.add_declarative_modifier(handle, modifier, 0, Expiry::Permanent)` and the `add_modifier_with_until_condition(handle, modifier_type, 0, …)` self-aura path). So `modifier: ChangeLinkMax` would install a +0 max-link change — a no-op. There is no way to carry `+1` on an aura-granted modifier to a target set.
+- **Suggested fix:** add an optional `modifier_value` (default 0) to the aura body and thread it through both the self-aura and target-set `add_declarative_modifier(...)` calls in `lower_aura.rs` (replacing the hardcoded `0`), so numeric modifiers like `ChangeLinkMax`/`ChangeLinkCost` can be granted with a value. (Alternatively, a `Link` grantable keyword carrying `value:` that maps to `ChangeLinkMax(value)`.)
+- **Faithfulness impact:** shipping `modifier: ChangeLinkMax` with the forced 0 would grant +0 max links — a silent no-op = approximation. Card cannot ship until aura modifiers can carry a value.
+- **Verdict:** BT25-102 BLOCKED (gap_kind: engine). No YAML shipped.
+
+## G-ENGINE-ON-DISCARD-HAND — no "when your hand is trashed from" observer timing
+- **Discovered by:** BT25-084 Titamon (aegiomon-2 slice), 2026-06-06.
+- **Clause:** "[All Turns] When your hand is trashed from, delete 1 of your opponent's lowest DP Digimon."
+- **DCGO (BT25_084.cs):** `EffectTiming.OnDiscardHand` ActivateClass, `CanTriggerOnTrashHand(hashtable, ..., cardSource => cardSource.Owner == card.Owner)` — fires whenever a card leaves the controller's hand to the trash (by any effect), then deletes 1 opp lowest-DP Digimon.
+- **What the DSL/engine has:** `EffectTiming` (code/digimon-engine/src/enums.rs) has `OnTrash` (a card moved to trash) and `OnDiscardSecurity`/`OnLoseSecurity`, but **no** "your hand was trashed from" observer. The DSL `Timing` enum (code/digimon-dsl/src/clause.rs) correspondingly has no `on_discard_hand` value.
+- **Suggested fix:** add an `OnDiscardHand` (or `OnTrashFromHand`) `EffectTiming` variant fired by the hand-trash code path (carrying the trashing player as event context so observers can gate on `event_target_owner: you`), plus the matching DSL `on_discard_hand` timing.
+- **Faithfulness impact:** shipping without it silently drops Titamon's third clause. Implemented clauses 1+2 (mass highest-DP delete + leave-prevention) ship; clause 3 omitted → BT25-084 verdict PARTIAL.

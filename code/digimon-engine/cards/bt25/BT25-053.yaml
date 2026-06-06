@@ -1,0 +1,154 @@
+# BT25-053 Aegiochusmon: Green — Digimon, Lv.5, Green/Black, DP 8000, Cost 8.
+# Traits: Shaman, Iliad, TS.
+# Standard digivolution: Lv.4 Green / cost 4 (printed evo_costs).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   ＜Vortex＞ (At the end of your turn, this Digimon may attack an opponent's
+#   Digimon. With this effect, it can attack the turn it was played.)
+#   ＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other
+#   than in battle, you may play 1 [Aegiomon] from its digivolution cards
+#   without paying the cost.)
+#   [On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers.
+#   It can't unsuspend until their turn ends. Then, if you have 3 or fewer
+#   security cards, this Digimon gains ＜Piercing＞ and +5000 DP for the turn.
+#
+#   Inherited: [All Turns] [Once Per Turn] When your security stack is removed
+#   from, you may suspend 1 of your opponent's Digimon or Tamers.
+#   Security: (none)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_053.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternative Digivolution Condition" (None) — Aegiomon-named cost-3
+#   alt-source. Printed evo box (cards.json) is Lv.4 Green / cost 4. Per source
+#   priority the printed standard alt-path is authored; the unprinted DCGO
+#   Aegiomon-named source is omitted (BT25-025 idiom).
+#
+# Region "Vortex" (OnEndTurn) — VortexSelfEffect → grant_keyword Vortex
+#   (face-up). The engine's end-of-turn Vortex consult drives the EOT attack.
+#
+# Region "Decode <[Aegiomon]>" (WhenRemoveField) — DecodeSelfEffect name
+#   Aegiomon. Same special-Decode replacement shape as BT25-025.
+#
+# Region "Shared OP / WD" (onPlay + whenDigivolving, optional: false) —
+#   (a) MANDATORY pick 1 opp Digimon-or-Tamer (canNoSelect: false) → suspend it
+#   (SuspendPermanentsClass.Tap) AND GainCanNotUnsuspend until end of THEIR
+#   turn (the target is on the opponent's battle area → `end_of_opponents_turn`).
+#   (b) if Owner.SecurityCards.Count <= 3 → THIS Digimon gains GainPierce +
+#   ChangeDigimonDP(+5000), both UntilEachTurnEnd.
+#   → select_opponent_permanent (Digimon OR Tamer) mandatory → suspend +
+#   add_modifier CannotUnsuspend / end_of_opponents_turn; then sec-gated
+#   grant_keyword Piercing (turn) + add_dp_modifier +5000 (turn) on source.
+#
+# Region "Inherit All Turns - OPT" (OnLoseSecurity, inherited, OPT) — when your
+#   security stack is removed from, OPTIONAL (canNoSelect: true) suspend 1 opp
+#   Digimon-or-Tamer. → scope: inherited, when: on_own_security_removed,
+#   once_per_turn, optional, select opp Digimon/Tamer → suspend.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Std digivolve Lv.4 Green / Cost 4                             | IMPLEMENTED (printed evo_costs) |
+# | <Vortex>                                                      | IMPLEMENTED (grant_keyword) |
+# | <Decode ([Aegiomon])>                                        | IMPLEMENTED (replacement + select_material Aegiomon + play_from_materials) |
+# | [OP][WD] suspend+freeze 1 opp; if <=3 sec, this +Piercing +5000 | IMPLEMENTED (mandatory suspend + CannotUnsuspend + sec-gated grant) |
+# | Inherited [All Turns][OPT] sec removed → may suspend 1 opp     | IMPLEMENTED (on_own_security_removed) |
+
+card: BT25-053
+name: "Aegiochusmon: Green"
+kind: digimon
+level: 5
+color: [green, black]
+cost: 8
+dp: 8000
+traits: [Shaman, Iliad, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 4
+
+effects:
+  # ─── <Vortex> ────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Vortex
+    summary: "<Vortex>"
+
+  # ─── <Decode ([Aegiomon])> ───────────────────────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Aegiomon"
+          prompt: "Choose an [Aegiomon] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  # ─── [On Play][When Digivolving] suspend+freeze opp; sec-gated self buff ──
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Suspend 1 opp Digimon/Tamer (can't unsuspend until their turn ends); if <=3 sec, this gains Piercing +5000 DP"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        any_of:
+          - kind: digimon
+          - kind: tamer
+    process:
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Suspend 1 of your opponent's Digimon or Tamers; it can't unsuspend until their turn ends"
+      - suspend: { target: lock_target }
+      - add_modifier:
+          target: lock_target
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - grant_keyword:
+                target: source
+                keyword: Piercing
+                expiry: end_of_turn
+            - add_dp_modifier:
+                target: source
+                value: 5000
+                expiry: end_of_turn
+
+  # ─── Inherited [All Turns][OPT] sec removed → may suspend 1 opp ───────────
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[Inherited][All Turns][OPT] When your security stack is removed from, you may suspend 1 of your opponent's Digimon or Tamers"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          optional: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "You may suspend 1 of your opponent's Digimon or Tamers"
+      - suspend: { target: suspend_target }

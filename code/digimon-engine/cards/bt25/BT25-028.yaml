@@ -1,0 +1,156 @@
+# BT25-028 Dianamon — Digimon, Lv.6, Blue/White, DP 12000, Cost 12.
+# Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Vaccine.
+# Standard digivolution: Lv.5 Blue / cost 4 (printed evo_costs).
+#
+# Printed card text (card image BT25-028 — authoritative for printed text):
+#   When this card would be played, if your opponent has a level 6 or higher
+#   Digimon, reduce the cost by 5.
+#   [On Play] [When Digivolving] None of your opponent's Digimon with 1 or fewer
+#   digivolution cards can suspend until their turn ends. Then, delete 1 of your
+#   opponent's unsuspended Digimon.
+#   [All Turns] [Once Per Turn] When any Digimon are played or digivolve, you may
+#   trash any 4 digivolution cards from your opponent's Digimon. Then, 2 of your
+#   Digimon may DNA digivolve into [GraceNovamon] in the hand.
+#   Inherited: [When Attacking] [Once Per Turn] 1 of your opponent's Digimon or
+#   Tamers can't suspend until their turn ends.
+#
+# Printed evo box (xros_req): "[Digivolve] Lv.5 w/[TS] trait: Cost 3".
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Blue/BT25_028.cs
+#
+# NOTE — "None of opp Digimon with <=1 sources can suspend": DCGO installs a
+# player-level CanNotSuspendClass with a dynamically re-evaluated permanent
+# condition. The DSL has no player-modifier carrying a permanent filter, so this
+# is modelled as a for_each applying CannotSuspend to each currently-matching opp
+# Digimon at install time. Practical per-turn outcome matches; the dynamic
+# re-check nuance is logged G-DSL-PLAYER-CANNOT-SUSPEND-FILTER in
+# qa/dsl-vocab-gaps.md.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 Blue / Cost 4                            | IMPLEMENTED (evo_costs) |
+# | Alt-source Lv.5 [TS] / Cost 3 ignore                        | IMPLEMENTED (alt_paths) |
+# | Cost -5 if opp has a Lv6+ Digimon                           | IMPLEMENTED (cost_reduction) |
+# | [OP][WD] opp <=1-source Digimon can't suspend; delete 1 unsuspended | IMPLEMENTED (for_each CannotSuspend + mandatory delete) |
+# | [All Turns][OPT] trash any 4 opp sources; DNA into GraceNovamon (hand) | IMPLEMENTED (select_opponent_sources 0..4 + may_dna_digivolve_now) |
+# | Inherited [WA][OPT] 1 opp Digimon/Tamer can't suspend      | IMPLEMENTED (inherited select + CannotSuspend) |
+
+card: BT25-028
+name: Dianamon
+kind: digimon
+level: 6
+color: [blue, white]
+cost: 12
+dp: 12000
+traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  - kind: cost_reduction
+    amount: 5
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        all_of:
+          - kind: digimon
+          - level_gte: 6
+    summary: "When played, if your opponent has a level 6 or higher Digimon, reduce cost by 5"
+
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] None of opp Digimon with <=1 digivolution cards can suspend until their turn ends; then delete 1 unsuspended opp Digimon"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - materials_count_lte: 1
+          bind_as: locked
+          body:
+            - add_modifier:
+                target: { binding: locked }
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Delete 1 of your opponent's unsuspended Digimon"
+      - delete_permanent: { target: victim }
+
+  - when: [on_enter_field_anyone, on_digivolve]
+    once_per_turn: true
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_kind: digimon
+    summary: "[All Turns][OPT] When any Digimon are played/digivolve, you may trash any 4 digivolution cards from opp Digimon; then 2 of your Digimon may DNA digivolve into [GraceNovamon] in the hand"
+    process:
+      - select_opponent_sources:
+          min: 0
+          max: 4
+          bind_as: trashed
+          prompt: "Trash any 4 digivolution cards from your opponent's Digimon"
+          then:
+            - trash_selected_sources: { source_refs: trashed }
+      - select_own_permanent:
+          bind_as: dna_anchor
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose the first of 2 of your Digimon to DNA digivolve into [GraceNovamon]"
+      - may_dna_digivolve_now:
+          anchor: { binding: dna_anchor }
+          partner_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          target_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+              - name_contains: "GraceNovamon"
+          cost: 0
+          ignore_requirements: false
+          optional: true
+          prompt: "DNA digivolve 2 of your Digimon into [GraceNovamon] in the hand?"
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][WA][OPT] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        any_of:
+          - kind: digimon
+          - kind: tamer
+    process:
+      - select_opponent_permanent:
+          bind_as: lock
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 opponent Digimon or Tamer that can't suspend until their turn ends"
+      - add_modifier:
+          target: lock
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn

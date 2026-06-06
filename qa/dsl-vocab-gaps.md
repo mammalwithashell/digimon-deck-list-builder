@@ -2940,3 +2940,131 @@ controlling engine gap for the cost-reduction clauses is
 - **Verdict:** BLOCKED (hybrid). BT25-057 ships no YAML — both faces' behavioral
   effects are unauthorable and shipping a stat-only dual card with a
   non-functional Option face would be an approximation.
+
+---
+
+## G-DSL-SELECT-OPP-SOURCES-DYNAMIC-CROSS-PERMANENT — player-choice trash of a dynamic count of opponent digivolution source cards across all opponent Digimon
+- **Discovered by:** BT25-103 GraceNovamon (aegiomon-3 slice), 2026-06-06.
+- **Clause:** "[When Attacking] [Counter] [Once Per Turn] For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon. Then, you may end this attack."
+- **DCGO (BT25_103.cs):** `CardEffectCommons.SelectTrashDigivolutionCards(permanentCondition: IsEnemyDigimon, maxCount: card.PermanentOfThisCard().DigivolutionCards.Count, canNoTrash: true, isFromOnly1Permanent: false, ...)` — the player picks up to N digivolution source cards (N = this Digimon's digivolution-card count) from **any** opponent Digimon (not restricted to one permanent), each pick optional. Then a separate Yes/No "end the attack?" prompt.
+- **What the DSL has:** `select_opponent_sources` (BindingRef-bound source picker) with `min`/`max` as **`u8` literals** and an optional `target` that **restricts the picker to ONE opponent permanent's** digivolution stack (see BT16-085). `trash_selected_sources` + `end_attack` steps both exist; `Counter` timing and `once_per_turn` exist.
+- **Why blocked:** two missing capabilities on `select_opponent_sources`:
+  1. **Dynamic count** — `max` must accept a `FormulaSpec` (here `{ source_material_count: {} }`, the same formula clause 6's bounce uses), not just a literal `u8`.
+  2. **Cross-permanent selection** — when `target` is omitted, the picker must span **all** opponent Digimon's digivolution stacks (DCGO `isFromOnly1Permanent: false`), with each pick choosing both which Digimon and which source card.
+- **Lowers to engine API:** the selection machinery for opponent digivolution sources already exists (single-permanent path); the gap is (a) threading a formula-resolved max and (b) a cross-permanent candidate set. Likely a `max_fn: Option<FormulaSpec>` + a `cross_permanent: bool` (or `target` omitted ⇒ cross-permanent) on `SelectOpponentSourcesArgs` and the corresponding engine candidate enumeration.
+- **Suggested DSL syntax:**
+  ```yaml
+  - select_opponent_sources:
+      max_fn: { source_material_count: {} }   # dynamic count = this Digimon's digivolution cards
+      min: 0                                    # canNoTrash: true (each pick optional)
+      cross_permanent: true                     # span all opponent Digimon (isFromOnly1Permanent: false)
+      bind_as: trashed
+      then:
+        - trash_selected_sources: { source_refs: trashed }
+  ```
+- **Faithfulness impact:** stubbing this as `trash_top_n_digivolution_cards_of_each` (trashes the top-N of EACH opp Digimon with no player choice of which Digimon or which card) would be an auto-selection — a no-approximations violation. Card cannot ship until the dynamic-count cross-permanent source picker exists.
+- **Verdict:** BT25-103 BLOCKED (gap_kind: dsl). No YAML shipped (clauses 1–6 are expressible but the whole card is gated on the Counter clause).
+
+---
+
+## G-DSL-BATTLE-WINNER-BOARDWIDE — gate a trigger on "when any of your [trait] Digimon win a battle"
+- **Discovered by:** BT25-020 Marsmon (aegiomon-1 slice), 2026-06-06.
+- **Clause:** "[All Turns] [Once Per Turn] When any of your [TS] trait Digimon win a battle, trash your opponent's top security card."
+- **DCGO (BT25_020.cs):** `EffectTiming.OnEndBattle` ActivateClass, OPT, gated by `CardEffectCommons.CanTriggerWhenWinBattle(winnerCondition: permanent => permanent.TopCard.Owner == card.Owner && permanent.TopCard.HasTSTraits)`. The trigger fires whenever ANY winner permanent on the controller's side has the [TS] trait — not just the carrier itself.
+- **What the DSL has:** `source_deleted_battle_opponent: true` predicate — fires only when the **carrier** is the battle winner (the "this Digimon wins a battle" idiom, ST4-11; used by BT25-048/051/054). There is **no** board-wide "any ally with trait X won a battle" predicate, and `on_any_deletion`'s `event_target_*` predicates describe the **deleted** permanent (the loser), not the winner.
+- **Why blocked:** the body (`trash_top_security: { of: opponent }`) and `once_per_turn` exist, but the trigger cannot be gated to "any of your [TS] Digimon win a battle". Shipping it on `on_any_deletion` ungated would fire on every deletion (including the opponent's wins) — an approximation. Narrowing to `source_deleted_battle_opponent` would silently drop the board-wide scope (only the carrier's own wins would count) — also an approximation.
+- **Lowers to engine API:** a battle-resolution event already exists (security checks, deletion). The gap is exposing the **winner** permanent (controller + trait) to the triggered-effect predicate layer: e.g. a new timing `on_ally_won_battle` (or `on_battle_end` with `event_winner_*` predicates: `event_winner_owner`, `event_winner_trait_has`).
+- **Suggested DSL syntax:**
+  ```yaml
+  - when: on_ally_won_battle        # fires when a permanent the controller owns wins a battle
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_winner_trait_has: TS
+    process:
+      - trash_top_security: { of: opponent }
+  ```
+- **Faithfulness impact:** BT25-020's other clauses (mandatory cost reduction; [OP][WD][WA] +3000 DP + may-battle) are fully expressible, but the card cannot ship faithfully until the board-wide battle-winner predicate exists. No YAML shipped.
+- **Verdict:** BT25-020 BLOCKED (gap_kind: dsl).
+
+## G-DSL-PROTECT-OTHER-BY-SELF-DELETE — board-wide "when another of your X would leave, by deleting THIS Digimon, they don't leave"
+- **Discovered by:** BT25-039 Sirenmon (aegiomon-1 slice), 2026-06-06.
+- **Clause:** "[All Turns] When any of your other [Shaman] or [Iliad] trait Digimon or Tamers would leave the battle area other than by your effects, by deleting this Digimon, they don't leave."
+- **DCGO (BT25_039.cs):** `EffectTiming.WhenRemoveField` ActivateClass whose `CanUseCondition` matches when **another** owner permanent (Digimon or Tamer, Shaman/Iliad trait, `!IsByEffect(owner)`) would leave; the body deletes THIS permanent (`DeletePeremanentAndProcessAccordingToResult`) and, on success, sets `willBeRemoveField = false` on all such protected permanents (cancels their leave).
+- **What the DSL has:** the existing replacement substrate (`kind: replacement`, `trigger: when_would_leave_battle_area`) and the `Keyword::Decode`/Barrier/Evade auto-installs are all **self-scoped** — they only fire on the carrier's own would-leave (the `replacement_subject == me` guard in `keyword_effects.rs`). There is no replacement/observer that fires on **another** permanent's would-leave with a trait/owner filter and cancels it by paying a self-deletion cost.
+- **Why blocked:** modeling this needs (a) a would-leave replacement whose **subject is a filtered set of OTHER owner permanents** (not self), (b) a cost step that deletes the carrier, and (c) cancelling the original leave for every matching protected permanent. None of these compose from current vocabulary.
+- **Lowers to engine API:** the parked-replacement substrate (`cancel_leave` / `handle_replacement`) and `delete_permanent` exist; the gap is a replacement clause with a non-self subject filter (`replacement_subject_is_mine` exists as a predicate but only on the carrier path) plus a cause filter (`other than by your effects`).
+- **Suggested DSL syntax:**
+  ```yaml
+  - kind: replacement
+    trigger: when_other_would_leave_battle_area
+    subject_filter:
+      all_of:
+        - of: you
+        - other: true
+        - any_of: [ { kind: digimon }, { kind: tamer } ]
+        - any_of: [ { trait_has: Shaman }, { trait_has: Iliad } ]
+    active_when: { none_of: [ { replacement_cause: own_effect } ] }
+    process:
+      - delete_permanent: { target: source }   # cost
+      - cancel_leave: { target: replacement_subject }
+  ```
+- **Verdict:** contributes to BT25-039 BLOCKED (gap_kind: dsl).
+
+## G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER — security-zone End-of-Turn play of a named card at reduced cost, then place this security card as the played Digimon's bottom digivolution source
+- **Discovered by:** BT25-039 Sirenmon (aegiomon-1 slice), 2026-06-06.
+- **Clause:** "[Security] [End of Your Turn] You may play 1 [Ceresmon] from your hand with the cost reduced by 7. If this effect played, you may place this card as the played Digimon's bottom digivolution card."
+- **DCGO (BT25_039.cs):** `EffectTiming.OnEndTurn` ActivateClass gated by `IsExistInSecurity(card, false)` (this card is face-up/in the security stack) `&& IsOwnerTurn`. Body: `SelectHandEffect` Mode.PlayForCost over `EqualsCardName("Ceresmon") && CanPlayAsNewPermanent(fixedCost: cost-7)` with `SetReducedCostTuple((7, null))`; then a Yes/No prompt to `AddDigivolutionCardsBottom([this])` onto the played Ceresmon and `ReduceSecurity()` (move self out of security under the new Digimon).
+- **What the DSL has:** security-scope clauses exist (`scope: security`), `end_of_your_turn` timing exists, and `play_from_hand` with cost reduction exists. What is missing: (a) a security-zone EOT trigger keyed on **this card living in the security stack** (not a face-up battle-area permanent), and (b) a "place THIS security card as the just-played permanent's bottom digivolution source" movement that consumes the play result binding.
+- **Lowers to engine API:** play-from-hand-reduced and add-to-digivolution-bottom both have engine primitives; the gap is the security-resident self trigger at EOT plus binding the freshly-played permanent and moving this security card under it.
+- **Suggested DSL syntax:**
+  ```yaml
+  - scope: security
+    when: end_of_your_turn
+    optional: true
+    process:
+      - play_from_hand:
+          of: you
+          filter: { name_contains: "Ceresmon" }
+          cost_delta: { reduce: 7 }
+          bind_played_as: ceres
+      - if: { binding_present: ceres }
+        then:
+          - place_self_as_bottom_source: { of_permanent: ceres }   # move this security card under the played Digimon
+  ```
+- **Verdict:** contributes to BT25-039 BLOCKED (gap_kind: dsl).
+
+## G-DSL-BEATBREAK-ARTS-OPTION — no dual Digimon+Option (BEATBREAK / Arts Digivolve) identity
+- **Discovered by:** BT25-043 Habakirimon (aegiomon-2 slice), 2026-06-06. (Same family blocks the Option side of every BEATBREAK card; cf. BT25-041 Murasamemon, which shipped Digimon-side-only.)
+- **Clause (Option side):** "Use Req: [Glowing Dawn] trait. [Main] 1 of your opponent's Digimon gets -8000 DP for the turn. Then, by trashing your top security card, all of your opponent's Digimon get -5000 DP for the turn. Arts Digivolve."
+- **DCGO (BT25_043.cs):** the card is BOTH a Digimon and an Option — `EffectTiming.OptionSkill` (the [Main] play body) plus `CardEffectFactory.ArtsDigivolveEffect` and `UseRequirements`. A BEATBREAK card can be played as a Digimon OR used as an Option (Arts Digivolve).
+- **What the DSL has:** `kind: digimon` and `kind: option` are mutually exclusive top-level kinds; there is no `arts_digivolve` alt-path kind (`CompiledAltPathKind` has Digivolve/DnaDigivolve/DigiXros/BurstDigivolve/Assembly/ActivatedDigivolve/BlastDnaDigivolve — no Arts) and no way to attach an Option `[Main]` clause to a `kind: digimon` card.
+- **Lowers to engine API:** would need an engine notion of a card with two play identities (Digimon stat-line + Option [Main]/Arts-Digivolve), surfaced to the action space as two distinct play actions.
+- **Suggested DSL syntax:** a `kind: beatbreak` (or `also_option:` block on a Digimon) carrying the Option [Main] `process:` and an `arts_digivolve:` alt-path.
+- **Verdict:** contributes to BT25-043 PARTIAL (gap_kind: dsl). Digimon-side clauses (Recovery+unsuspend, Glowing-Dawn leave-prevention) ship; the Option side is omitted (per the BT25-041 precedent).
+
+## G-DSL-PLAYER-CANNOT-SUSPEND-FILTER — player-level CannotSuspend/effect-immunity with a dynamic permanent filter
+- **Discovered by:** BT25-028 Dianamon and BT25-059 Ceresmon (aegiomon-2 slice), 2026-06-06.
+- **Clause (Dianamon):** "None of your opponent's Digimon with 1 or fewer digivolution cards can suspend until their turn ends." **(Ceresmon):** "none of your suspended [Vegetation] or [TS] trait Digimon are affected by your opponent's Digimon effects until their turn ends."
+- **DCGO:** installs a player-level `CanNotSuspendClass` / `CanNotAffectedClass` carrying a `PermanentCondition` that is **re-evaluated on each suspend attempt** (Dianamon: `DigivolutionCards.Count <= 1`; Ceresmon: own suspended Veg/TS). So a Digimon that becomes eligible LATER this turn is also covered.
+- **What the DSL has:** `add_player_modifier` (`AddPlayerModifierArgs`) installs a blanket player modifier with NO permanent filter; per-target `add_modifier`/`grant_effect_immunity` only apply to a specific bound permanent.
+- **Current modelling:** a `for_each` over the currently-matching set applying the per-target modifier at install time (a snapshot). Practical per-turn outcome matches in the common case; the dynamic re-check nuance (a permanent that enters the matching set later in the turn) is lost.
+- **Suggested DSL syntax:** `add_player_modifier:` with an optional `permanent_filter:` predicate that the engine re-evaluates per suspend/effect-application.
+- **Verdict:** modelled as a documented snapshot; both cards ship IMPLEMENTED with this nuance noted.
+
+## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate
+- **Discovered by:** BT25-077 Bacchusmon (aegiomon-2 slice), 2026-06-06.
+- **Clause:** "When this card would be played, if there are 12 or more levels' total worth of Digimon, reduce the cost by 5."
+- **DCGO (BT25_077.cs):** sums `permanent.Level` across ALL battle-area Digimon of BOTH players and checks `>= 12`.
+- **What the DSL has:** `count_gte` (counts permanents), `card_count_in_zone` (counts cards in a zone), per-permanent `level_*` predicates, and `source_stack_dp_sum` (one permanent's stack) — but NO aggregate that sums a stat (level / DP) across a player/board set.
+- **Suggested DSL syntax:** a `board_level_sum_gte` / `stat_sum` predicate (e.g. `{ stat: level, scope: any, zone: battle_area, kind: digimon } >= N`).
+- **Verdict:** contributes to BT25-077 PARTIAL (gap_kind: dsl). The cost-reduction clause is omitted (rather than approximated); the two main clauses ship.
+
+## G-DSL-SELF-COLOR-COUNT-LTE — no "distinct colors <= N" / "without N colors" base filter
+- **Discovered by:** BT25-084 Titamon (aegiomon-2 slice), 2026-06-06.
+- **Clause (alt-digivolve box):** "[Digivolve] [Titamon] w/o 3 colors: Cost 2."
+- **DCGO (BT25_084.cs):** `AddSelfDigivolutionRequirementStaticEffect(permanentCondition: TopCard.EqualsCardName("Titamon") && TopCard.CardColors.Distinct().Count() != 3, cost 2)`.
+- **What the DSL has:** `self_color_count_gte` (>= only). There is no `self_color_count_lte` / `!= N` for the base-card `from:` filter.
+- **Suggested DSL syntax:** `self_color_count_lte: N` (and/or `self_color_count_eq`) usable inside an alt-path `from:` predicate.
+- **Verdict:** contributes to BT25-084 PARTIAL (gap_kind: dsl). The standard Lv.5 Purple and Lv.5 [TS] cost-4 alt-paths ship; the Titamon-3-color cost-2 path is omitted.

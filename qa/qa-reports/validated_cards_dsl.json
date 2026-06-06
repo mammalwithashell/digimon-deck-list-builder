@@ -6891,6 +6891,283 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_036.rs",
       "patterns": [],
       "notes": "BLOCKED G-DSL-WHEN-LINKED-TIMING: no when: timing maps to CompiledTiming::Linked for the [When Linking] trash-Appmon->Draw2 clause. Ships no YAML."
+    },
+    "BT25-094": {
+      "card_name": "Cosmic Area",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "aegiomon-3",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-094.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_094.rs",
+      "test_count": 5,
+      "patterns": [
+        "D3",
+        "D4",
+        "D5",
+        "C5",
+        "B2"
+      ],
+      "notes": "Area option; color-ignore floodgate; security aura grant Alliance + conditional Rush (Apollomon/Dianamon); Main replace-bottom-sec + play red/blue TS -3; inherited security play lvl4- free. Mirror of BT25-095."
+    },
+    "BT25-099": {
+      "card_name": "Gear Forest Village",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "aegiomon-3",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-099.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_099.rs",
+      "test_count": 5,
+      "patterns": [
+        "D3",
+        "D4",
+        "D5",
+        "C5",
+        "B2"
+      ],
+      "notes": "Area option; color-ignore floodgate; security aura grant Alliance + conditional Piercing (Bacchusmon/Ceresmon); Main replace-bottom-sec + play green/black TS -3; inherited security play lvl4- free."
+    },
+    "BT25-097": {
+      "card_name": "Guardian Palace",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "aegiomon-3",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "D3",
+        "D4",
+        "D5"
+      ],
+      "notes": "Alliance primary aura is implementable, but the conditional secondary grant of <Scapegoat> (while a [Junomon]-named Digimon is present) to a security-aura TARGET SET is not behaviorally installable. Scapegoat is a replacement-effect keyword requiring an installed when_would_be_deleted effect on each target permanent; the aura grant_keyword path only registers has_keyword and does NOT synthesize the replacement auto-effect for aura-granted (esp. conditional) keywords on a target set (game.rs:4111-4129 explicitly skips conditional grants and only covers the source card via registry). G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD."
+    },
+    "BT25-102": {
+      "card_name": "Factorial Area",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "aegiomon-3",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "D3",
+        "D4",
+        "D5"
+      ],
+      "notes": "Blocker primary aura is implementable (has_keyword-gated), but the conditional secondary grant of <Link +1> (max-links increase, while [Vulcanusmon] present) to a security-aura TARGET SET is not expressible. Link+1 has no grantable Keyword variant; the underlying ChangeLinkMax modifier exists but the aura modifier: path applies a hardcoded value of 0 (lower_aura.rs add_declarative_modifier(...,0,...)), so a +1 cannot be carried. G-ENGINE-AURA-GRANT-LINK-MAX."
+    },
+    "BT25-103": {
+      "card_name": "GraceNovamon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "dsl",
+      "archetype": "aegiomon-3",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "E",
+        "F"
+      ],
+      "notes": "Clauses 1-6 expressible (alt-digivolve, DNA via alt_paths, Security A.+1, Iceclad printed-keyword, Partition Apollomon&Dianamon, source_material_count bounce-to-deck-bottom). BLOCKED on the [When Attacking][Counter][OPT] clause: \"For each of this Digimon digivolution cards, you may trash any 1 digivolution card from your opponent Digimon. Then, you may end this attack.\" No DSL step exposes a player-choice trash of a DYNAMIC count (= source_material_count) of digivolution source cards CROSS-PERMANENT (any opp Digimon, isFromOnly1Permanent:false). select_opponent_sources has a u8-literal max (not a formula) and a single-permanent target. G-DSL-SELECT-OPP-SOURCES-DYNAMIC-CROSS-PERMANENT."
+    },
+    "BT25-033": {
+      "card_name": "Aegiomon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "aegiomon-1",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_033.rs",
+      "test_count": 6,
+      "patterns": [
+        "E2",
+        "F8",
+        "D1"
+      ],
+      "notes": "Barrier (own+inherited); optional [OP][WD] by-adding-top-security-to-hand -5000 DP to 1 opp"
+    },
+    "BT25-025": {
+      "card_name": "Aegiochusmon: Blue",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "aegiomon-1",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_025.rs",
+      "test_count": 8,
+      "patterns": [
+        "H5",
+        "C3",
+        "F9"
+      ],
+      "notes": "Blocker; special Decode([Aegiomon]) replacement; [OP][WD] De-Digivolve 1 + sec<=3 unsuspend; inherited sec-removed Shaman unsuspend"
+    },
+    "BT25-053": {
+      "card_name": "Aegiochusmon: Green",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "aegiomon-1",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-053.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_053.rs",
+      "test_count": 7,
+      "patterns": [
+        "H16",
+        "H3",
+        "F7",
+        "F9"
+      ],
+      "notes": "Vortex; Decode([Aegiomon]); [OP][WD] suspend+freeze opp (CannotUnsuspend) + sec<=3 Piercing+5000; inherited sec-removed suspend"
+    },
+    "BT25-018": {
+      "card_name": "Apollomon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "aegiomon-1",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_018.rs",
+      "test_count": 7,
+      "patterns": [
+        "D2",
+        "D1",
+        "G2",
+        "G4"
+      ],
+      "notes": "Cost reduction; [OP][WD] all opp -2000/own-digimon + delete DP<=this; EOT DNA into GraceNovamon + may attack; inherited [WA][OPT] delete DP<=this"
+    },
+    "BT25-039": {
+      "card_name": "Sirenmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "dsl",
+      "archetype": "aegiomon-1",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "F4"
+      ],
+      "notes": "BLOCKED: G-DSL-PROTECT-OTHER-BY-SELF-DELETE (board-wide protect-other replacement) + G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (security-zone EOT play Ceresmon + place self under). Inherited redirect + OnDeletion->security are expressible but card has un-expressible core clauses."
+    },
+    "BT25-020": {
+      "card_name": "Marsmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "dsl",
+      "archetype": "aegiomon-1",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "BLOCKED: G-DSL-BATTLE-WINNER-BOARDWIDE ([All Turns] when any of your [TS] Digimon win a battle -> trash opp top security; no board-wide battle-winner predicate). Cost reduction + [OP][WD][WA] +3000+may-battle are expressible."
+    },
+    "BT25-043": {
+      "card_name": "Habakirimon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Slice — aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-043.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_043.rs",
+      "patterns": [
+        "E1",
+        "E2",
+        "F3"
+      ],
+      "notes": "Digimon side IMPLEMENTED (Recovery+1 + most-sec-trash unsuspend + Glowing-Dawn leave-prevention). BEATBREAK Option [Main]/Arts-Digivolve side omitted (G-DSL-BEATBREAK-ARTS-OPTION). 8 tests."
+    },
+    "BT25-044": {
+      "card_name": "Junomon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice — aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_044.rs",
+      "patterns": [
+        "D2",
+        "C1",
+        "E2"
+      ],
+      "notes": "Cost-reduce (security-sum), place 1 other Digimon as top sec + trash both top sec, on_lose_security union-zone play-free. 6 tests."
+    },
+    "BT25-028": {
+      "card_name": "Dianamon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice — aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-028.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_028.rs",
+      "patterns": [
+        "D2",
+        "F7",
+        "G2"
+      ],
+      "notes": "Cost-reduce, mass CannotSuspend opp <=1-source + mandatory delete unsuspended, OPT DNA-into-hand GraceNovamon, inherited WA CannotSuspend. Player-cannot-suspend modelled as for_each snapshot (G-DSL-PLAYER-CANNOT-SUSPEND-FILTER). 7 tests."
+    },
+    "BT25-059": {
+      "card_name": "Ceresmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice — aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_059.rs",
+      "patterns": [
+        "D2",
+        "F6"
+      ],
+      "notes": "Cost-reduce (>=2 suspended), suspend up-to-2 (any) + effect-immunity own suspended Veg/TS, on_suspend -3000*suspended DP debuff. Immunity modelled as for_each snapshot. 7 tests."
+    },
+    "BT25-077": {
+      "card_name": "Bacchusmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Slice — aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-077.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_077.rs",
+      "patterns": [
+        "C1"
+      ],
+      "notes": "Play TS<=6000 free + OPT observer suspend + effect-gated delete-opp-lowest IMPLEMENTED. Cost-reduction (board level-sum >=12) omitted — G-DSL-BOARD-LEVEL-SUM. 7 tests."
+    },
+    "BT25-084": {
+      "card_name": "Titamon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Slice — aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_084.rs",
+      "patterns": [
+        "F3"
+      ],
+      "notes": "Trash-1-hand -> delete all opp highest DP (+ effect-gated opp sec trash) + trash-2-hand leave-prevention IMPLEMENTED. Clause 3 (on-hand-trashed -> delete opp lowest DP) omitted — G-ENGINE-ON-DISCARD-HAND. Titamon-3-color cost-2 alt-path omitted — G-DSL-SELF-COLOR-COUNT-LTE. 7 tests."
     }
   }
 }
