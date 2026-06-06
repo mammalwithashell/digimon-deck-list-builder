@@ -82,10 +82,10 @@
 
 ## 6. Cluster D — trigger activation site (Q9, Q19, Q20, Q21, Q23)
 
-- [ ] 6.1 Author the missing cards: Gatomon, Mastemon, Eyesmon: Scatter Mode, Back for Revenge!, plus the On-Deletion/return-to-hand cards Q19/Q23 resolve to in the spike
-- [ ] 6.2 Write Q9, Q19, Q20, Q21, Q23 scenario tests asserting the judge answers (draw counts / memory)
-- [ ] 6.3 Fix any surfaced gap: [On Deletion] activates only from trash (return-to-hand suppresses it, Q19); remaining-in-trash gates inherited [On Deletion] (Q23); play-from-trash mid-resolution suppresses remaining effects (Q21); not-in-battle-area suppresses [All Turns] (Q9) — TDD. Cross-check CLAUDE.md §25 (OnDeletion post-trash contract)
-- [ ] 6.4 Confirm cluster D tests green; archive closed gaps
+- [x] 6.1 Author the missing cards: **Gatomon BT15-037 (PARTIAL — done 2026-06-06; G-DSL-ON-DISCARD-SECURITY-TRIGGER), Mastemon BT23-102 (PARTIAL — done 2026-06-06; G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER)**; Eyesmon: Scatter Mode / Back for Revenge! / Q19-Q23 cards done in prior waves.
+- [x] 6.2 Write Q9, Q19, Q20, Q21, Q23 scenario tests asserting the judge answers — **all PASS** (Q9 done 2026-06-06: `d::q9_gatomon_not_in_battle_area_during_removal_no_memory`).
+- [x] 6.3 Fix any surfaced gap: Q19/Q21/Q23 resolved in prior waves; **Q9 needed no engine change** — the not-in-battle-area suppression of `[All Turns]` falls out of the existing trigger-dispatch (only battle-area permanents' triggers fire). Two incidental gaps logged (controller-trim batch-abort; on-discard-security DSL trigger), neither blocks Q9.
+- [x] 6.4 Confirm cluster D tests green; archive closed gaps — Q9/Q19/Q20/Q21/Q23 all PASS.
 
 ## 7. Cluster E — `<Partition>` / DigiXros departure / de-digivolve (Q15, Q16, Q25, Q29; Q30 shared)
 

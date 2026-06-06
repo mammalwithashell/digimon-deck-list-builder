@@ -186,10 +186,113 @@ fn q23_inherited_trash_memory_gated_on_remaining_in_trash() {
 
 /// Q9 — Mastemon (BT23-102) trashes Gatomon (BT15-037) from security; Gatomon
 /// plays out only after Mastemon resolves and is NOT in the battle area during
-/// security removal. Judge: after both trashed, NO memory from Gatomon [All Turns].
+/// security removal. Judge: NO memory from Gatomon's [All Turns].
+///
+/// ACTIVATION-SITE RULING: Gatomon's "[All Turns][OPT] when a card is removed
+/// from your security stack, gain 1 memory" is gated (DCGO BT15_037.cs) on
+/// `IsExistOnBattleArea(card)` — it only fires while Gatomon is a battle-area
+/// permanent. Here Gatomon sits in P1's SECURITY stack and is trashed by
+/// Mastemon's [When Digivolving] trim, so it is never a battle-area trigger
+/// source during the removal → P1 gains 0 memory.
+///
+/// Board: P0 controls a Mastemon stack with 2 same-level (Lv.5) sources so the
+/// trim fires. P0's own security sits at exactly 3 (no controller-side trim, so
+/// the G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER controller gap is not
+/// exercised). P1's security is 6 cards with GATOMON ON TOP; the trim removes 3
+/// from the top (Gatomon + 2) down to 3.
+///
+/// Control: the same Gatomon on the FIELD *does* gain its owner +1 memory on a
+/// security removal — pinned by
+/// `cards_behavioral::bt15::bt15_037::bt15_037_on_field_gains_memory_when_own_security_removed`.
+/// So the 0-memory result here is the activation-site rule, not Gatomon being a
+/// no-op.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT23-102 (Mastemon), BT15-037 (Gatomon)."]
-fn q9_gatomon_not_in_battle_area_during_removal_no_memory() {}
+fn q9_gatomon_not_in_battle_area_during_removal_no_memory() {
+    use digimon_engine::card_data::CardData;
+    use digimon_engine::enums::{CardColor, CardKind};
+
+    fn lv5(id: &str, color: CardColor) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.level = Some(5);
+        c.dp = Some(9000);
+        c.colors = vec![color];
+        c.card_kind = CardKind::Digimon;
+        c
+    }
+    fn filler(id: &str) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(4);
+        c.dp = Some(3000);
+        c.colors = vec![CardColor::Red];
+        c
+    }
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-102")
+        .expect("BT23-102 (Mastemon) in embedded DSL pack")
+        .dsl_card("BT15-037")
+        .expect("BT15-037 (Gatomon) in embedded DSL pack")
+        .add_card(lv5("MAST-Y5", CardColor::Yellow))
+        .add_card(lv5("MAST-P5", CardColor::Purple))
+        .add_card(filler("F"))
+        .add_card(filler("DECK"))
+        .security(0, &["F", "F", "F"]) // controller at 3 → no controller trim
+        // Top of security = last element ⇒ Gatomon is among the trashed top cards.
+        .security(1, &["F", "F", "F", "F", "F", "BT15-037"])
+        .deck(0, &["DECK"])
+        .deck(1, &["DECK"])
+        .memory(0)
+        .start();
+    runner.skip_mulligan();
+
+    let mastemon = runner.place_field_stack(
+        0,
+        &["MAST-Y5", "MAST-P5", "BT23-102"],
+        false,
+        runner.game.turn_count,
+    );
+
+    assert_eq!(runner.security_count(1), 6, "P1 security starts at 6");
+    let mem_before = runner.memory();
+
+    // Fire Mastemon's [When Digivolving]: trims P1's security to 3, trashing
+    // Gatomon (on top) from the security stack.
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(mastemon));
+    runner.game.drain_effect_queue();
+    // Decline Mastemon's optional free-play / place-security; never accept anything.
+    let mut steps = 0;
+    while runner.game.pending_selection.is_some() && steps < 50 {
+        let (player, action) = {
+            let sel = runner.game.pending_selection.as_ref().unwrap();
+            let id = if sel.valid_action_ids.contains(&digimon_engine::action::space::PASS) {
+                digimon_engine::action::space::PASS
+            } else {
+                sel.valid_action_ids[0]
+            };
+            (sel.selecting_player, id)
+        };
+        let _ = runner.game.resolve_selection(player, action);
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    // Gatomon was actually trashed from security (P1 trimmed 6 → 3).
+    assert_eq!(
+        runner.security_count(1),
+        3,
+        "Mastemon's trim removed 3 of P1's security (incl. Gatomon on top)"
+    );
+    // Judge ruling: Gatomon's [All Turns] memory does NOT fire — it was in
+    // security, not the battle area, during the removal → no memory change.
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "Gatomon trashed FROM SECURITY must not gain memory (not a battle-area trigger source)"
+    );
+}
 
 /// Q19 — Eyesmon: Scatter Mode (BT7-069) returned to hand by Calling From the
 /// Darkness (BT7-107) ⇒ no [On Deletion]. Judge: 0 draws.

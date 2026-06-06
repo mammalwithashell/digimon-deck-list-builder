@@ -1401,3 +1401,32 @@ via `grant_triggered_effect { timing: on_block, body: [gain_memory: 3] }`.
 - **Blocks (precision only):** BT4-098 on_block grant. YAML:
   `code/digimon-engine/cards/bt4/BT4-098.yaml`; tests:
   `code/digimon-engine/tests/cards_behavioral/bt4/bt4_098.rs` (positive case green).
+
+## Multi-card `trash_top_security` aborts when a per-removal observer installs a selection  [G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER]  — OPEN 2026-06-06
+
+Surfaced by **BT23-102 Mastemon** (judge-quiz Q9 authoring). Mastemon's [When
+Digivolving] trims "both players' security stacks so they have 3 cards left" — a
+`trash_top_security` of `count = security - 3` per player.
+
+- **What's wrong:** when the trim removes the **controller's own** security, each
+  removal synchronously fires the carrier's own `[All Turns]` `OnLoseSecurity` OPT
+  (Mastemon's "you may place 1 Digimon as the bottom security card"). After the
+  1st removed card, that observer installs an interactive `pending_selection`, and
+  `EffectContext::trash_top_security` early-returns on `pending_selection.is_some()`
+  — so the remaining controller removals are dropped (controller stays above 3).
+  Root: `fire_effect_security_removal` enqueues + drains `OnLoseSecurity`
+  synchronously per card (`effect_queue.rs`), and `trash_top_security` aborts its
+  loop on the resulting pending selection (`effect_context/mod.rs`).
+- **Scope of impact:** the **opponent**-side trim is unaffected (Mastemon's
+  `OnLoseSecurity` is owner-gated, so removing the opponent's security fires no
+  observer) and reaches exactly 3 — so the judge-quiz Q9 pin (opponent trim) is
+  green. Only the controller-side multi-trim is incomplete.
+- **Suggested fix:** let a multi-count `trash_top_security` either (a) complete its
+  batch before draining the per-card `OnLoseSecurity` observers, or (b) park and
+  resume across the interactive observer selection (capture the remaining count and
+  continue after the selection resolves) rather than early-returning and dropping it.
+- **Blocks:** BT23-102 controller-side [When Digivolving] trim. YAML:
+  `code/digimon-engine/cards/bt23/BT23-102.yaml`; test
+  `bt23_102_when_digivolving_controller_trim_removes_own_security` is `#[ignore]`'d
+  citing this gap. Shared by any effect that removes >1 of its OWN security while
+  carrying a self `OnLoseSecurity` observer.

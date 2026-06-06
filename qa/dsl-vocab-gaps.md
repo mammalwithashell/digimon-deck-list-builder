@@ -3015,3 +3015,30 @@ trait** beneath it.
   predicate.
 - **Blocks:** AD1-002 (alt-digivolve line only). YAML: `code/digimon-engine/cards/ad1/AD1-002.yaml`
   (comment marks the omission); per-card tests `code/digimon-engine/tests/cards_behavioral/ad1/ad1_002.rs`.
+
+## "When an effect trashes this card from your security stack" carrier trigger  [G-DSL-ON-DISCARD-SECURITY-TRIGGER]  — OPEN 2026-06-06
+
+Surfaced by **BT15-037 Gatomon** (judge-quiz Q9 authoring). Card text: "When an
+effect trashes this card from the security stack, you may play it without paying
+the cost."
+
+- **What's missing (DSL):** there is no `when:` trigger token for "this card was
+  trashed/discarded from the security stack by an effect" — DCGO
+  `EffectTiming.OnDiscardSecurity` + `CanTriggerOnTrashSelfSecurity(.., cardEffect
+  != null, card)`. The DSL has `on_security`, `on_own_security_removed`,
+  `on_opponent_security_removed`, `on_check_face_up_security`, `on_lose_security`
+  — none fire for the *card itself being discarded from security by an effect* with
+  a follow-on "play this card free" body.
+- **Impact:** Gatomon's "play this when trashed from your security" clause is
+  omitted (flagged in the YAML header, no stub). The other 3 clauses (`<Barrier>`
+  face + inherited, `[All Turns][OPT]` gain-memory) are implemented. Does NOT
+  affect the Q9 ruling: Gatomon playing out *after* Mastemon's trim adds no
+  security-removal memory (the removals already happened while it was in security).
+- **Suggested fix:** add an `on_discard_security` (or `on_self_trashed_from_security`)
+  carrier trigger token gated on effect-initiated discard of the carrier from its
+  own security, exposing the carrier as `event_card` so a `play_from_security`-style
+  free-play body can consume it. Likely shared by other "when trashed from security,
+  you may play it" Digimon.
+- **Blocks:** BT15-037 (the play-from-security-when-trashed clause). YAML:
+  `code/digimon-engine/cards/bt15/BT15-037.yaml`; per-card tests
+  `code/digimon-engine/tests/cards_behavioral/bt15/bt15_037.rs`.
