@@ -1,26 +1,24 @@
-# BT25-050 Kiwimon — Digimon, Lv.4, Green, DP 4000, Cost 4.
-# Traits: Vegetation, Iliad, TS.
+# BT25-050 Kiwimon — Digimon, Lv.4, Green, DP 4000, Cost 4. Traits: Vegetation, Iliad, TS.
+# Printed: [On Play][When Digivolving] You may suspend 1 Digimon. Then, if there are 2 or
+#   more suspended Digimon, 1 of your opponent's Digimon can't unsuspend until their turn ends.
+# Inherited: [Your Turn] All of your Digimon get +1000 DP.
+# Digivolve box: Lv.3 w/[TS] / cost 2 (cards.json evo_costs empty).
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_050.cs
+#   Shared OP/WD: Step1 optional suspend ANY battle-area Digimon (canNoSelect true).
+#   Step2 gate SuspendedDigimon>=2 (both players) AND opp Digimon exists -> MANDATORY
+#   pick 1 opp Digimon -> GainCanNotUnsuspend(UntilOpponentTurnEnd).
+#   ESS inherited: ChangeDPStaticEffect(+1000) over owner Digimon, owner-turn.
 #
-# Printed card text (data/cards.json effect_description_eng — verbatim):
-#
-#   [On Play] [When Digivolving] You may suspend 1 Digimon. Then, if there are
-#   2 or more suspended Digimon, 1 of your opponent's Digimon can't unsuspend
-#   until their turn ends.
-#
-# Inherited:
-#   [Your Turn] All of your Digimon get +1000 DP.
-#
-# Printed digivolve box (xros_req): "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
-# (cards.json evo_costs empty — the only digivolve path is the alt-source).
-#
-# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_050.cs
-#
-# DCGO crosscheck: Region "Shared OP/WD" — Step 1 optional suspend of ANY
-# battle-area Digimon (canNoSelect: true). Step 2 gate SuspendedDigimon >= 2
-# (both players) AND opp Digimon exists → MANDATORY pick of 1 opp Digimon →
-# GainCanNotUnsuspend(UntilOpponentTurnEnd). Region "ESS" (inherited):
-# ChangeDPStaticEffect(+1000) over OWNER's Digimon, owner-turn gated.
-
+# KNOWN ENGINE GAP (G-ENGINE-IF-AFTER-SELECTION-NOT-RESUMED): the count-gated lock
+# `if` step below DOES NOT FIRE at runtime. When the process resumes after the
+# interactive `select_any_permanent` (suspend) resolves, the engine does not execute
+# the trailing conditional (`if`) step — so the "Then, if 2+ suspended..." consequence
+# is silently skipped. Proven in tests/cards_behavioral/bt25/bt25_050.rs: an
+# UNCONDITIONAL lock after the suspend fires correctly; the same lock wrapped in
+# `if { count_gte ... }` never installs. The clause is authored faithfully (the
+# count gate is REQUIRED — locking unconditionally would lock even with <2 suspended,
+# which is unfaithful), and held BLOCKED until the gap closes rather than shipping the
+# unconditional (wrong) lock. Gap logged to docs/RUST_ENGINE_GAPS.md.
 card: BT25-050
 name: Kiwimon
 kind: digimon
@@ -29,12 +27,10 @@ color: [green]
 cost: 4
 dp: 4000
 traits: [Vegetation, Iliad, TS]
-
 alt_paths:
   - kind: digivolve
     from: { level_eq: 3, trait_has: TS }
     cost: 2
-
 effects:
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] May suspend 1 Digimon; then if 2+ suspended Digimon, 1 opp Digimon can't unsuspend until their turn ends"
@@ -67,7 +63,6 @@ effects:
                 modifier: CannotUnsuspend
                 value: 1
                 expiry: end_of_opponents_turn
-
   - kind: aura
     scope: inherited
     active_when: { your_turn: true }

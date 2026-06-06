@@ -1,0 +1,45 @@
+# BT25-065 Monodramon — Digimon, Lv.3, Black, DP 4000, Cost 3.
+# Traits: Mini Dragon, Iliad, TS. Attribute: Vaccine.
+# [All Turns] When this Digimon suspends, <Draw 1>.
+# [Your Turn] When this Digimon attacks a player, lose 2 memory.
+# Inherited [All Turns] This Digimon gets +1000 DP.
+# Alt-digivolve Lv.2 w/[TS] trait / Cost 0.
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_065.cs
+card: BT25-065
+name: Monodramon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 4000
+traits: [Mini Dragon, Iliad, TS]
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: TS
+    cost: 0
+effects:
+  # [All Turns] When this Digimon suspends, <Draw 1>.
+  - when: on_suspend
+    active_when: { all_turns: true }
+    condition: { event_permanent_is_source: true }
+    summary: "[All Turns] When this Digimon suspends, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }
+  # [Your Turn] When this Digimon attacks a player, lose 2 memory.
+  - when: on_attack
+    active_when: { your_turn: true }
+    condition: { event_target_is_player: true }
+    summary: "[Your Turn] When this Digimon attacks a player, lose 2 memory"
+    process:
+      - lose_memory: 2
+  # Inherited [All Turns] This Digimon gets +1000 DP.
+  - kind: aura
+    scope: inherited
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

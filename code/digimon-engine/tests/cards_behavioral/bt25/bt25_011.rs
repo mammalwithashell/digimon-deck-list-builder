@@ -43,7 +43,7 @@ fn make_digimon(id: &str, level: u8, dp: i32, traits: &[&str]) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(level);
     card.dp = Some(dp);
-    card.play_cost = Some(4);
+    card.play_cost = 4;
     card.traits = traits.iter().map(|t| t.to_string()).collect();
     card.evo_costs = vec![EvoCost {
         card_color: 0,
@@ -118,9 +118,9 @@ fn bt25_011_has_shared_on_play_when_digivolving_clause_with_dna_step() {
     fn has_dna(steps: &[CompiledStep]) -> bool {
         steps.iter().any(|s| match s {
             CompiledStep::MayDnaDigivolveNow { .. } => true,
-            CompiledStep::If { then, otherwise, .. } => {
-                has_dna(then) || otherwise.as_ref().map_or(false, |e| has_dna(e))
-            }
+            CompiledStep::If {
+                then, else_branch, ..
+            } => has_dna(then) || has_dna(else_branch),
             _ => false,
         })
     }

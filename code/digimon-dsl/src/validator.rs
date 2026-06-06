@@ -2127,6 +2127,7 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "BlastDigivolve",
     "Save",
     "Fortitude",
+    "Ascension",
     "Overclock",
     "Barrier",
     "Decoy",
@@ -2140,6 +2141,7 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "Decode",
     "ArmorPurge",
     "Fragment",
+    "Retaliation",
     // Validator-only sigil (engine side dispatches via clause kind, not a
     // runtime `Keyword` variant). Allowlisted on the engine parity test.
     "Delay",

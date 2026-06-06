@@ -52,7 +52,7 @@ fn angel_l4(id: &str) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(4);
     card.dp = Some(4000);
-    card.play_cost = Some(4);
+    card.play_cost = 4;
     card.traits = vec!["Angel".to_string()];
     card
 }
@@ -63,7 +63,7 @@ fn big_nonmatch(id: &str) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(6);
     card.dp = Some(11000);
-    card.play_cost = Some(11);
+    card.play_cost = 11;
     card.traits = vec!["Machine".to_string()];
     card
 }
@@ -121,13 +121,32 @@ fn bt25_042_shared_clause_is_opt_across_three_timings() {
         .expect("must have shared OP/WD/WA clause");
     assert!(clause.once_per_turn, "shared clause is [Once Per Turn]");
     assert!(clause.optional, "DCGO presents a 'Don't trash' decline → optional");
+    // The top/bottom security trash is a genuine player choice.
     assert!(
-        clause.process.iter().any(|s| matches!(
-            s,
-            CompiledStep::GrantEffectImmunity { .. }
-        )),
-        "shared clause grants effect immunity"
+        clause
+            .process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::SelectEffectChoice { .. })),
+        "shared clause exposes the top/bottom security choice"
     );
+    // The effect-immunity grant lives inside the branch bodies (after the
+    // chosen-side trash) — recurse into nested `If` steps to find it.
+    assert!(
+        clause.process.iter().any(step_grants_immunity),
+        "shared clause grants effect immunity inside its trash branches"
+    );
+}
+
+/// Recursively check whether a step (or a nested If branch) grants effect immunity.
+fn step_grants_immunity(step: &CompiledStep) -> bool {
+    match step {
+        CompiledStep::GrantEffectImmunity { .. } => true,
+        CompiledStep::If {
+            then, else_branch, ..
+        } => then.iter().any(step_grants_immunity)
+            || else_branch.iter().any(step_grants_immunity),
+        _ => false,
+    }
 }
 
 #[test]

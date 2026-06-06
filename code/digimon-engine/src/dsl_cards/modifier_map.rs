@@ -408,6 +408,12 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         "DrawX" => Keyword::DrawX(value.unwrap_or(1) as u8),
         "Fragment" => Keyword::Fragment(value.unwrap_or(1) as u8),
         "Progress" => Keyword::Progress,
+        // Retaliation — trigger-type keyword (delete-the-winner-in-battle).
+        // `Keyword::Retaliation` is fully wired behaviorally
+        // (cards/keyword_effects.rs, tests/keyword_phase_e/retaliation.rs); the
+        // DSL grant path just needed the string mapping so `grant_keyword:
+        // Retaliation` (BT25-078, BT25-081) actually installs it.
+        "Retaliation" => Keyword::Retaliation,
         _ => return None,
     })
 }

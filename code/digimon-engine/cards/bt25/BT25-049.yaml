@@ -1,0 +1,74 @@
+# BT25-049 Armalizamon — Digimon, Lv.4, Green, DP 4000, Cost 4.
+# Traits: Reptile, Glowing Dawn, BEATBREAK. Standard digivolution: Lv.3 green / cost 2.
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO):
+#   [On Play] [When Digivolving] You may suspend 1 of your opponent's Digimon.
+#   [Your Turn] [Once Per Turn] When you would use an Option card with the
+#     [Glowing Dawn] trait, by trashing the bottom face-down card under any of
+#     your Tamers, reduce the cost by 3.            <-- BLOCKED, see below
+#   Inherited: ＜Piercing＞ (When this Digimon attacks and deletes an opponent's
+#     Digimon in battle, it checks security before the attack ends.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_049.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 3, TopCard
+#   HasGlowingDawnTraits, cost 2). → alt_paths digivolve from level 3 + Glowing
+#   Dawn trait, cost 2.
+# Clause 1 (shared OP/WD, optional select canNoSelect: true): SelectPermanent
+#   Mode.Tap over opponent Digimon. → optional select_opponent_permanent
+#   { kind: digimon } + suspend.
+# Clause 2 (BeforePayCost) — BLOCKED (engine):
+#   "[Your Turn][OPT] When you would USE a [Glowing Dawn] Option card, by
+#   trashing the bottom face-down card under any Tamer, reduce the cost by 3."
+#   Natural authoring is `kind: cost_reduction` (amount 3) with `pay_cost:
+#   [trash_bottom_face_down_source_under_tamer]`, but that pay_cost is
+#   INTERACTIVE → parks → the cost-reduction accept-path drops the reduction
+#   credit while still trashing the face-down card. Engine gap
+#   G-COST-REDUCTION-INTERACTIVE-PAY-COST (docs/RUST_ENGINE_GAPS.md; same gap as
+#   Kyo/Tomoro). Omitted; verdict PARTIAL.
+# Inherited (OnDetermineDoSecurityCheck): PierceSelfEffect(isInheritedEffect) →
+#   scope: inherited + grant_keyword Piercing.
+
+card: BT25-049
+name: "Armalizamon"
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000
+traits: [Reptile, Glowing Dawn, BEATBREAK]
+
+# Alt-digivolve: Lv.3 with the [Glowing Dawn] trait / cost 2.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: "Glowing Dawn"
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] You may suspend 1 opponent Digimon ────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may suspend 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: false
+          prompt: "You may suspend 1 of your opponent's Digimon"
+      - suspend: { target: tgt }
+
+  # ─── [Your Turn][OPT] Glowing Dawn Option use cost -3 — BLOCKED, omitted
+  #     (G-COST-REDUCTION-INTERACTIVE-PAY-COST). See header. ───────────────────
+
+  # ─── Inherited <Piercing> ──────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "Inherited <Piercing>"

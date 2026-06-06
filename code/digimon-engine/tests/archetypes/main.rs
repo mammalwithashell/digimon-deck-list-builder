@@ -48,4 +48,5 @@ mod gaogamon_beast_bt25;
 mod machine_bt25;
 mod mammal_bt25;
 mod rocks;
+mod thomas_data_squad_bt25;
 mod titan_bt25;

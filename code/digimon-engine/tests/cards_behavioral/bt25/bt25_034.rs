@@ -60,7 +60,7 @@ fn make_angel_hand_card(id: &str) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(4);
     card.dp = Some(4000);
-    card.play_cost = Some(4);
+    card.play_cost = 4;
     card.traits = vec!["Angel".to_string()];
     card
 }
@@ -123,7 +123,7 @@ fn bt25_034_grants_ascension_and_inherited_barrier() {
             ..
         }) = c
         {
-            if keyword.eq_ignore_ascii_case("Ascension") && *scope == CompiledScope::Own {
+            if keyword.eq_ignore_ascii_case("Ascension") && *scope == CompiledScope::FaceUp {
                 ascension_own = true;
             }
             if keyword.eq_ignore_ascii_case("Barrier") && *scope == CompiledScope::Inherited {

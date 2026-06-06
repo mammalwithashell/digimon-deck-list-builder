@@ -1,0 +1,120 @@
+# BT25-015 Garudamon — Digimon, Lv.5, Red/Yellow, DP 7000, Cost 7.
+# Traits: Birdkin, Iliad, TS.  Attribute: Vaccine.
+# Evo: Lv.4 Red / cost 4 (printed evo_costs).
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   ＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1
+#   of your opponent's unsuspended Digimon with the highest DP.)
+#   ＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this
+#   card without paying the cost.)
+#   [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 6000
+#   DP or less.
+#
+# Inherited:
+#   [All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon
+#   in battle, trash their top security card.
+#
+# Printed evo box (alt-digivolution): "[Digivolve] Lv.4 w/[Giant Bird] or [TS]
+# trait: Cost 3" (DCGO PermanentCondition = Giant Bird OR HasTSTraits).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_015.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternative Digivolve Condition" (None):
+#   AddSelfDigivolutionRequirementStaticEffect(level 4, Giant Bird || HasTSTraits,
+#   cost 3). → two alt_paths (Giant Bird, TS) at cost 3. Standard Lv.4 Red /
+#   cost 4 (cards.json evo_costs) also encoded.
+#
+# Region "Raid" (OnAllyAttack): RaidSelfEffect. → `kind: grant_keyword` Raid.
+#
+# Region "Fortitude" (OnDestroyedAnyone): FortitudeSelfEffect. →
+#   `kind: grant_keyword` Fortitude (OnDeletion replay).
+#
+# Region "OP/WD Shared" (onPlay+whenDigivolving, optional:false): mandatory
+#   SelectPermanentEffect over opp Digimon with DP <= 6000, Mode.Destroy. →
+#   `when: [on_play, when_digivolving]`, mandatory select_opponent_permanent
+#   filtered `dp_lte: 6000`, then delete_permanent.
+#
+# Region "ESS" (OnEndBattle, inherited, maxCount 1): when this Digimon deletes
+#   opp Digimon in battle (WinnerCondition: stack contains this card;
+#   LoserCondition: opp permanent), trash opp top security. →
+#   `scope: inherited`, `when: on_any_deletion`,
+#   `condition: source_deleted_battle_opponent: true`, `active_when: all_turns`,
+#   `once_per_turn: true`, process trash_top_security { of: opponent }.
+#   (BT25-054 / ST4-11 idiom — "deletes opp in battle and survives" maps to the
+#   G-DSL-SOURCE-DELETED-BATTLE-OPPONENT predicate on the OnAnyDeletion observer.)
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | <Raid>                                                         | IMPLEMENTED (grant_keyword) |
+# | <Fortitude>                                                   | IMPLEMENTED (grant_keyword) |
+# | Std digivolve Lv.4 Red / Cost 4                               | IMPLEMENTED (printed evo_costs) |
+# | Alt-source Lv.4 [Giant Bird] / Cost 3                        | IMPLEMENTED (alt_paths #1) |
+# | Alt-source Lv.4 [TS] / Cost 3                                | IMPLEMENTED (alt_paths #2) |
+# | [OP][WD] Delete 1 opp Digimon DP <= 6000                     | IMPLEMENTED (mandatory delete + dp_lte filter) |
+# | Inherited [All Turns][OPT] battle-delete → trash opp top sec  | IMPLEMENTED (on_any_deletion + source_deleted_battle_opponent) |
+
+card: BT25-015
+name: Garudamon
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 7
+dp: 7000
+traits: [Birdkin, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  # Standard digivolution: Lv.4 Red / cost 4 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  # Alt-digivolution: Lv.4 with [Giant Bird] trait / cost 3.
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: "Giant Bird" }
+    cost: 3
+  # Alt-digivolution: Lv.4 with [TS] trait / cost 3.
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── <Raid> ─────────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  # ─── <Fortitude> ────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Fortitude
+    summary: "<Fortitude>"
+
+  # ─── Clause A — [On Play][When Digivolving] delete 1 opp Digimon DP <= 6000 ──
+  #
+  # Mandatory (DCGO optional:false). The select silently no-ops when no opp
+  # Digimon has DP <= 6000 (DCGO HasMatchConditionPermanent guard).
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Delete 1 of your opponent's Digimon with 6000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+          prompt: "Delete 1 of your opponent's Digimon with 6000 DP or less"
+      - delete_permanent: { target: del_target }
+
+  # ─── Clause B — Inherited [All Turns][OPT] battle-delete → trash opp top sec ─
+  - scope: inherited
+    when: [on_any_deletion]
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition: { source_deleted_battle_opponent: true }
+    summary: "[Inherited][All Turns][OPT] When this Digimon deletes an opponent Digimon in battle, trash their top security card"
+    process:
+      - trash_top_security: { of: opponent }

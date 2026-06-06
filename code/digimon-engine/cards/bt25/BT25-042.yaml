@@ -61,35 +61,34 @@ effects:
     condition: { security_count_gte: 1 }
     summary: "[OP][WD][WA][OPT] By trashing your top or bottom security, opp Digimon effects don't affect this until their turn ends"
     process:
+      # Top/bottom is a genuine choice whenever any security exists (when only
+      # 1 card remains, top == bottom — the same single card — so offering the
+      # choice is faithful and harmless). The trash + immunity grant live INSIDE
+      # each branch so no step parks an outer tail after the branching select.
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Trash top security"
+            - "Trash bottom security"
+          prompt: "Trash your top or bottom security card"
       - if:
-          condition: { security_count_gte: 2 }
-          then:
-            - select_effect_choice:
-                bind_as: branch
-                labels:
-                  - "Trash top security"
-                  - "Trash bottom security"
-                prompt: "Trash your top or bottom security card"
-            - if:
-                condition: { equals: [branch, 0] }
-                then:
-                  - trash_top_security: { of: you }
-            - if:
-                condition: { equals: [branch, 1] }
-                then:
-                  - trash_bottom_security: { of: you }
-      - if:
-          condition:
-            all_of:
-              - security_count_gte: 1
-              - security_count_lte: 1
+          condition: { equals: [branch, 0] }
           then:
             - trash_top_security: { of: you }
-      - grant_effect_immunity:
-          target: self
-          source_kind: digimon
-          source_controller: opponent
-          expiry: end_of_opponents_turn
+            - grant_effect_immunity:
+                target: self
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - trash_bottom_security: { of: you }
+            - grant_effect_immunity:
+                target: self
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
 
   # ─── [All Turns][OPT] on own security removed → free-play + 2x Reboot/Blocker
   - when: on_own_security_removed

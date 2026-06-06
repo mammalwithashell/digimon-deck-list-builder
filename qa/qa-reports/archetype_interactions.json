@@ -632,8 +632,145 @@
         "passed": true,
         "detail": "cargo test --test archetypes gaogamon_beast_bt25: 13 passed, 0 failed (11 combo tests across C1-C9 + 2 structural anchors); full archetypes binary 49 passed, 0 failed, 3 ignored"
       }
+    },
+    "appmon": {
+      "combos_tested": [],
+      "findings": [],
+      "blocked_combos": [
+        {
+          "name": "Logimon WhenLinked -> play Kazuki & Itsuki free",
+          "cards": [
+            "BT25-052",
+            "BT25-089"
+          ],
+          "blocked_on": [
+            "BT25-052",
+            "BT25-089"
+          ],
+          "reason": "[Link] facet-9 link-of-chosen-card primitive missing (engine) + WhenLinked host self-effect (facet 11); both pieces BLOCKED. Logged in docs/RUST_ENGINE_GAPS.md."
+        },
+        {
+          "name": "Kazuki & Itsuki suspend-link Appmon (cost -2) + End-of-turn App Fuse",
+          "cards": [
+            "BT25-089"
+          ],
+          "blocked_on": [
+            "BT25-089"
+          ],
+          "reason": "link-of-chosen-card primitive (facet 9) + App Fuse net-new keyword both missing (engine). Logged in docs/RUST_ENGINE_GAPS.md."
+        }
+      ],
+      "note": "appmon BT25 slice = {BT25-052, BT25-089, BT25-098}. Only BT25-098 Cyber Engage is implemented; its self-contained reveal->Delay->replay sequence is fully covered by per-card tests (cards_behavioral/bt25/bt25_098.rs) and is not a multi-card interaction. Every cross-card combo names a BLOCKED piece (BT25-052 and/or BT25-089), so 0 interaction tests were authored. Gaps already tracked in docs/RUST_ENGINE_GAPS.md ([Link] facet 9/11 + App Fuse).",
+      "static_tests": {},
+      "run_by": "archetype-interaction-test-author",
+      "run_date": "2026-06-06"
+    },
+    "Thomas DATA SQUAD (BT25)": {
+      "slug": "thomas-data-squad",
+      "model": "qa/archetype-qa/thomas-data-squad-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/thomas_data_squad_bt25.rs",
+      "scope": "explicit card list: BT25-087, BT25-096, BT25-002, BT25-027, BT25-029, BT25-104",
+      "combos_tested": [
+        {
+          "id": "C1",
+          "name": "MachGaogamon WA bounce + trash face-down stash to self-unsuspend",
+          "cards": [
+            "BT25-027"
+          ],
+          "result": "pass"
+        },
+        {
+          "id": "C2",
+          "name": "MachGaogamon WA without stash: bounce resolves, self-unsuspend unpaid (gate)",
+          "cards": [
+            "BT25-027"
+          ],
+          "result": "pass"
+        },
+        {
+          "id": "C3",
+          "name": "Wanyamon inherited both-players draw from under a real MachGaogamon stack on DATA SQUAD Tamer play (+opponent-turn negative)",
+          "cards": [
+            "BT25-002",
+            "BT25-027"
+          ],
+          "result": "pass"
+        },
+        {
+          "id": "C4",
+          "name": "MachGaogamon stash contention: WA self-unsuspend consumes the only face-down source, later leave-prevention cannot pay",
+          "cards": [
+            "BT25-027"
+          ],
+          "result": "pass"
+        }
+      ],
+      "blocked_combos": [
+        {
+          "name": "Thomas stash-build -> Mach/Mirage stash-spend chain",
+          "blocked_on": [
+            "BT25-087"
+          ],
+          "gap": "OnAddToHand trigger inert + BeforePayCost selection-bearing pay_cost Parked-drop (docs/RUST_ENGINE_GAPS.md)"
+        },
+        {
+          "name": "MirageGaogamon double-bounce + add-to-hand unsuspend loop",
+          "blocked_on": [
+            "BT25-029",
+            "BT25-087"
+          ],
+          "gap": "OnAddToHand half of unsuspend clause inert"
+        },
+        {
+          "name": "Mirage Beast Knight shortcut into MirageGaogamon",
+          "blocked_on": [
+            "BT25-096",
+            "BT25-029"
+          ],
+          "gap": "use-cost -2 trash-FD hits BeforePayCost Parked-drop"
+        },
+        {
+          "name": "ShineGreymon: Burst Mode Option-Main activation + Marcus aura",
+          "blocked_on": [
+            "BT25-104"
+          ],
+          "gap": "cross-side Option-Main activation + treated-as-Digimon name-overlay aura"
+        }
+      ],
+      "findings": [],
+      "static_tests": {
+        "note": "Static harness (archetype-static-tests) is deck_library-name-based; this slice was authored from an explicit card list with no deck_library decklist, so the four static invariants were not run via the CLI. Precondition gate applied manually from qa/qa-reports/validated_cards_dsl.json (2026-06-06): only BT25-002 and BT25-027 IMPLEMENTED; the other four BLOCKED.",
+        "coverage_gate": {
+          "passed": true,
+          "detail": "2/6 named cards IMPLEMENTED (BT25-002, BT25-027); 4 BLOCKED on engine gaps already tracked",
+          "data": {
+            "implemented": [
+              "BT25-002",
+              "BT25-027"
+            ],
+            "blocked": [
+              "BT25-087",
+              "BT25-096",
+              "BT25-029",
+              "BT25-104"
+            ]
+          }
+        },
+        "combo_presence": {
+          "passed": true,
+          "detail": "all 4 authored combos have every piece IMPLEMENTED; 4 combos dropped because they name BLOCKED cards (see blocked_combos)",
+          "data": {
+            "combos_total": 4,
+            "blocked": 4
+          }
+        }
+      },
+      "interaction_tests_added": 5,
+      "all_passing": true,
+      "validated_date": "2026-06-06",
+      "report": "archetype-interaction-test-author"
     }
   },
-  "last_updated": "2026-06-06",
+  "last_updated": "2026-06-06T14:21:52",
   "version": 1
 }

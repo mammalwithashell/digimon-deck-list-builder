@@ -1,0 +1,83 @@
+# BT25-090 Tomoro Tenma — Tamer, Green, Cost 4.
+# Traits: Glowing Dawn, BEATBREAK.
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [All Turns] When any Digimon suspend, by suspending this Tamer, you may
+#     place the top 2 cards of your deck face down under this Tamer.
+#   [Your Turn] [Once Per Turn] When you would use [Glowing Dawn] trait Option
+#     cards, by trashing the bottom face-down card from under any of your
+#     Tamers, reduce the cost by 1.                  <-- BLOCKED, see below
+#   Inherited: [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_090.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 (OnStartTurn): SetMemoryTo3TamerEffect → start_of_your_turn +
+#   condition memory_lte: 2 + set_memory: 3.
+# Clause 2 (OnTappedAnyone): "When any Digimon suspend" — CanTriggerWhenPermanent
+#   Suspends gated on PermanentCondition = IsPermanentExistsOnBattleAreaDigimon
+#   (ANY Digimon, either player). Cost "by suspending this Tamer" →
+#   activation_cost { suspend_self }. Payoff "you may place top 2 face down" →
+#   clause-level optional + two place_as_bottom_source { deck_top } face_down.
+#   active_when { all_turns, event_target_kind: digimon } gates the trigger to a
+#   Digimon suspending (not a Tamer). DCGO's 3-way menu (place-2 / suspend-only /
+#   no) reduces to optional suspend-self+place-2; declining = "No".
+# Clause 3 (BeforePayCost) — BLOCKED (engine):
+#   "[Your Turn][OPT] When you would USE a [Glowing Dawn] Option card, by
+#   trashing the bottom face-down card under any Tamer, reduce the cost by 1."
+#   Natural authoring: `kind: cost_reduction` with `pay_cost:
+#   [trash_bottom_face_down_source_under_tamer]`, but that pay_cost is
+#   INTERACTIVE (installs a Tamer selection) → parks → the cost-reduction
+#   accept-path drops the reduction credit while still trashing the face-down
+#   card. Engine gap G-COST-REDUCTION-INTERACTIVE-PAY-COST
+#   (docs/RUST_ENGINE_GAPS.md; same gap as Kyo BT25-088 clause 3, except keyed
+#   on Option-USE rather than card-PLAY). Omitted; verdict PARTIAL.
+# Inherited (SecuritySkill): PlaySelfTamerSecurityEffect → play_from_security.
+
+card: BT25-090
+name: "Tomoro Tenma"
+kind: tamer
+color: [green]
+cost: 4
+traits: [Glowing Dawn, BEATBREAK]
+
+effects:
+  # ─── [Start of Your Turn] If memory <= 2, set it to 3 ──────────────────────
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  # ─── [All Turns] When any Digimon suspends: may suspend self → place top 2 ──
+  - when: on_suspend
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_kind: digimon
+    summary: "[All Turns] When any Digimon suspend, by suspending this Tamer you may place the top 2 deck cards face down under this Tamer"
+    process:
+      - activation_cost: { suspend_self: true }
+      - place_as_bottom_source:
+          source: { deck_top: you }
+          target: source
+          face_down: true
+      - place_as_bottom_source:
+          source: { deck_top: you }
+          target: source
+          face_down: true
+
+  # ─── [Your Turn][OPT] Glowing Dawn Option use cost -1 — BLOCKED, omitted
+  #     (G-COST-REDUCTION-INTERACTIVE-PAY-COST). See header. ───────────────────
+
+  # ─── [Security] Play this card without paying the cost ─────────────────────
+  # (cards.json files this under inherited_effect_description for Tamers; the
+  # Tamer security effect is authored as a plain on_security clause — the
+  # BT25-088 / BT25-091 idiom.)
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

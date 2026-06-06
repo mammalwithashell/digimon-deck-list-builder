@@ -99,7 +99,7 @@ fn drive_take_targets(runner: &mut DebugRunner) {
     while runner.pending_selection().is_some() {
         guard += 1;
         assert!(guard < 32, "selection chain did not terminate");
-        let actions: Vec<u32> = runner
+        let actions: Vec<u16> = runner
             .pending_selection()
             .unwrap()
             .valid_action_ids
@@ -182,12 +182,17 @@ fn bt25_027_structural_clauses_and_alt_path() {
 #[test]
 fn bt25_027_wa_bounce_lv4_trash_facedown_unsuspends_self() {
     let mut runner = runner_field_mach_suspended_with_stash_and_opp();
+    runner.game.turn_count = 3; // avoid summoning sickness on the attacker
+    runner.game.players[1].security.clear(); // attack resolves cleanly
     let mach = find_field(&runner, 0, CARD_ID).expect("mach on field");
+    // Unsuspend so it can declare an attack; attacking suspends it, then the
+    // WA effect unsuspends it again after paying the trash cost.
+    runner.game.players[0].battle_area[mach.index as usize].is_suspended = false;
 
     let opp_hand_before = runner.hand_size(1);
     let trash_before = runner.trash_size(0);
 
-    runner.attack_player(0, mach.index as usize);
+    runner.attack_player(mach, 1, false);
     drive_take_targets(&mut runner);
 
     assert_eq!(
@@ -221,7 +226,7 @@ fn bt25_027_wa_no_stash_does_not_unsuspend() {
     runner.place_stack(0, &["DS-TAMER"]); // face-up only, no stash
     runner.place_on_field(1, "OPP-L4", None);
 
-    runner.attack_player(0, mach.index as usize);
+    runner.attack_player(mach, 1, false);
     drive_take_targets(&mut runner);
 
     let mach2 = find_field(&runner, 0, CARD_ID).expect("mach on field");
@@ -254,7 +259,7 @@ fn bt25_027_leave_prevention_trashes_facedown_and_stays() {
         if matches!(kind, SelectionKind::Replacement) {
             saw_replacement = true;
         }
-        let actions: Vec<u32> = runner
+        let actions: Vec<u16> = runner
             .pending_selection()
             .unwrap()
             .valid_action_ids

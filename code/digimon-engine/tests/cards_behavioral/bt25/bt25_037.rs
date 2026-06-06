@@ -46,7 +46,7 @@ fn make_digimon(id: &str, level: u8, dp: i32, traits: &[&str]) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(level);
     card.dp = Some(dp);
-    card.play_cost = Some(4);
+    card.play_cost = 4;
     card.traits = traits.iter().map(|t| t.to_string()).collect();
     card.evo_costs = vec![EvoCost {
         card_color: 2,

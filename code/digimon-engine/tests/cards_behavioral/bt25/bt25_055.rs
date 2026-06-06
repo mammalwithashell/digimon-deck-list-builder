@@ -58,7 +58,7 @@ fn avian_target(id: &str) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(3);
     card.dp = Some(3000);
-    card.play_cost = Some(3);
+    card.play_cost = 3;
     card.traits = vec!["Avian".to_string()];
     card
 }
@@ -69,7 +69,7 @@ fn big_nonmatch(id: &str) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(5);
     card.dp = Some(9000);
-    card.play_cost = Some(7);
+    card.play_cost = 7;
     card.traits = vec!["Machine".to_string()];
     card
 }

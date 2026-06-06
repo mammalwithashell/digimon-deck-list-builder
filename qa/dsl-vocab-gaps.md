@@ -2872,3 +2872,71 @@ The five cards below are BLOCKED; each is cross-referenced to the controlling ga
 - **Lowers to engine API:** the engine already fires a link-established event (DCGO `EffectTiming.WhenLinked`); the gap is purely DSL-side — add a `Timing::WhenLinked` variant (serde `when_linked`), map it `S::WhenLinked => CompiledTiming::Linked` in `compile.rs`, and confirm `engine_timing` lowering wires `CompiledTiming::Linked` to the engine's link-established timing.
 - **Suggested DSL syntax:** `- when: when_linked` (optionally `scope: linked`) with a `process:` body (here: `select_hand` trash 1 Appmon → `draw 2`).
 - **Verdict:** BLOCKED (dsl). BT25-036 ships no YAML — its App-fusion alt-path, link condition, [Security] play-self, and OnPlay add-top-security + <Recovery +1> are all expressible, but the [When Linking] clause is its mandatory inherited payoff and cannot be silently dropped under the no-approximations policy.
+
+## BT25 "beatbreak" slice — BLOCKED / PARTIAL notes (2026-06-06)
+
+Implemented this slice: BT25-081 (IMPLEMENTED); BT25-088, BT25-090, BT25-049,
+BT25-035, BT25-041 (PARTIAL — each ships its expressible clauses with one
+BLOCKED clause omitted). BT25-057 BLOCKED. Cross-references below; the
+controlling engine gap for the cost-reduction clauses is
+`G-COST-REDUCTION-INTERACTIVE-PAY-COST` in `docs/RUST_ENGINE_GAPS.md`.
+
+### Glowing Dawn "trash a face-down card under a Tamer → reduce a card's cost" — BLOCKED (engine)
+- **Cards:** BT25-088 Kyo Sawashiro (clause 3, play -1), BT25-090 Tomoro Tenma
+  (clause 3, Option-use -1), BT25-049 Armalizamon (clause 2, Option-use -3),
+  and the cost-reduced half of BT25-041's main clause.
+- **What's missing:** `kind: cost_reduction` with a `pay_cost` that installs an
+  interactive selection drops the reduction credit. The
+  `trash_bottom_face_down_source_under_tamer` verb ALWAYS installs a Tamer-pick
+  selection (no-approximations), so as a `pay_cost` it parks
+  (`RunOutcome::Parked`), `apply_cost_reduction_candidate` returns `None`, and
+  the `amount` is discarded while the face-down card is still trashed. Full
+  root-cause + suggested engine fix in `docs/RUST_ENGINE_GAPS.md`
+  `G-COST-REDUCTION-INTERACTIVE-PAY-COST`. (The same verb works fine as a
+  *process activation cost* — see BT25-041's inherited unsuspend and BT25-057's
+  De-Digivolve, which DO compile.)
+- **Verdict:** the affected clause is OMITTED from each card's YAML (PARTIAL);
+  authoring it would either drop the reduction (over-charge) or require
+  auto-resolving the Tamer pick (no-approximations violation).
+
+### BT25-035 Cougarmon — trash-2 free-digivolve — BLOCKED (dsl)
+- The "Then, by trashing 2 bottom face-down cards … may digivolve into a
+  [Glowing Dawn] card in hand for free" half is the existing
+  `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER` gap (multi-count / multi-Tamer
+  trash) plus an effect-driven free-digivolve-into-a-hand-card. Omitted; the
+  -3000 DP, inherited Barrier, and Glowing Dawn alt-digivolve ship (PARTIAL).
+
+### BT25-057 Monarchlizamon / "Final Judgment" — DUAL card — BLOCKED (hybrid)  [G-DSL-DUAL-PER-FACE-EFFECTS + G-DSL-ARTS-DIGIVOLVE]
+- **Note:** `data/cards.json` mislabels this as a plain Digimon (`card_kind: 0`).
+  The card IMAGE + DCGO `BT25_057.cs` confirm it is a **DUAL** card: a Lv.5
+  Cyborg/Glowing Dawn/BEATBREAK Digimon face AND an Option face "Final
+  Judgment" (Use 4).
+- **What's missing (DSL):** `digimon-dsl`'s `DualSpec` (`spec.rs`) carries only
+  metadata + text for each face (`DualDigimonSpec` / `DualOptionSpec` have NO
+  `effects:` field). A dual card therefore cannot attach behavioral clauses to
+  either face via the `dual:` block. (Whether a dual card's top-level `effects:`
+  route correctly to its Digimon face is also unexercised — no shipping card
+  uses `kind: dual` with effects, and the `tests/dual_cards/` suite drives only
+  hand-written `CardData`.)
+- **What's missing (engine/DSL — Arts Digivolve):** the Option face's "Arts
+  Digivolve (instead of trashing after use, your cards may digivolve into this
+  card without paying the cost)" has no DSL authoring path. `Keyword::ArtsDigivolve`
+  exists and the engine has `install_arts_digivolve_selection` /
+  `pending_option_can_arts_digivolve` (checked against `dual.option.keywords`),
+  but `DualOptionSpec.keywords` (a `Vec<String>`) is the only hook and the full
+  arts-digivolve authoring + behavioral path is untested from YAML.
+- **Card faces (all individually expressible IF the dual-per-face-effects gap
+  closes):** Digimon face — alt-digivolve Lv.4 Glowing Dawn cost 3; [WD][WA][OPT]
+  trash a bottom face-down card under a Tamer (process cost, works) → De-Digivolve
+  1 opp Digimon; [WD] this Digimon may battle 1 opp Digimon (`battle:`). Option
+  face — Use Req Glowing Dawn (ignore color), [Main] 1 of your Digimon gains
+  <Rush> + <Security A. +1> + 5000 DP for the turn, then may attack; Arts
+  Digivolve.
+- **Suggested DSL syntax:** add `effects:` (and optionally `inherited`/`security`
+  scoping) to `DualDigimonSpec` and `DualOptionSpec`, lowering each face's
+  clauses onto the appropriate face of the compiled dual card; add an
+  `arts_digivolve: true` shorthand (or `keywords: [ArtsDigivolve]`) on the
+  option face wired to the existing engine arts-digivolve selection.
+- **Verdict:** BLOCKED (hybrid). BT25-057 ships no YAML — both faces' behavioral
+  effects are unauthorable and shipping a stat-only dual card with a
+  non-functional Option face would be an approximation.

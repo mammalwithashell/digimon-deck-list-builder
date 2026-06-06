@@ -32,15 +32,19 @@ effects:
   - when: main_on_field
     once_per_turn: true
     summary: "[Main][OPT] By trashing 1 [Flame]/[TS] card, delete 1 opp Digimon with <=4000 DP; if it didn't delete, Draw 2"
+    # The trash is the activation COST. Gate activation on having a payable cost
+    # (a [Flame] or [TS] card in hand) so the mandatory select_hand always has a
+    # candidate — otherwise the engine's empty-mandatory-select would skip the
+    # cost yet still run the delete (an unfaithful free delete). DCGO enforces
+    # this via the cost SelectHandEffect; we surface it as a `count_gte` gate.
     condition:
       count_gte:
         filter:
-          all_of:
-            - of: you
-            - zone: [hand]
-            - any_of:
-                - trait_has: Flame
-                - trait_has: TS
+          of: you
+          zone: [hand]
+          any_of:
+            - trait_has: Flame
+            - trait_has: TS
         n: 1
     process:
       - select_hand:
