@@ -57,6 +57,69 @@
         }
       },
       "updated": "2026-05-30"
+    },
+    "machine (BT25)": {
+      "slice": "BT25 machine slice (author-set)",
+      "cards": [
+        "BT25-062",
+        "BT25-066",
+        "BT25-074"
+      ],
+      "combos_tested": [
+        "Kokuwamon -> Gatomon: free-digivolve fires [When Digivolving] -3000 DP debuff"
+      ],
+      "combos_dropped": [
+        {
+          "combo": "Kokuwamon -> Guardromon (wall)",
+          "blocked_on": "BT25-066",
+          "reason": "BLOCKED dsl gap: would-leave replacement by trashing own link card not expressible"
+        },
+        {
+          "combo": "Kokuwamon -> Tankdramon (D-Brigade ramp payoff)",
+          "blocked_on": "BT25-074",
+          "reason": "BLOCKED dsl gap: reveal-pool play with non-zero reduced cost not expressible"
+        }
+      ],
+      "test_file": "code/digimon-engine/tests/archetypes/machine_bt25.rs",
+      "test_count": 3,
+      "model_doc": "qa/archetype-qa/machine-bt25-model.md",
+      "findings": [],
+      "cross_set_pulled": [],
+      "cross_set_partner_used": [
+        "BT24-035 Gatomon (already implemented; not pulled)"
+      ],
+      "static_tests": {
+        "deck_legality": {
+          "passed": null,
+          "detail": "not_applicable: BT25 machine slice is a --cards list, not a deck_library archetype; archetype-static-tests CLI errors (archetype not in deck_library.json)"
+        },
+        "smoke_games": {
+          "passed": null,
+          "detail": "not_applicable: same reason as deck_legality"
+        },
+        "coverage_gate": {
+          "passed": false,
+          "detail": "slice coverage 1/3 implemented (BT25-062); BT25-066 + BT25-074 BLOCKED (dsl gap)",
+          "data": {
+            "implemented": 1,
+            "total": 3,
+            "blocked": [
+              "BT25-066",
+              "BT25-074"
+            ]
+          }
+        },
+        "combo_presence": {
+          "passed": true,
+          "detail": "the 1 authored combo (Kokuwamon->Gatomon) has every piece implemented; 2 candidate combos blocked on missing slice cards and were not authored",
+          "data": {
+            "combos_total": 1,
+            "blocked_combos": 2
+          }
+        }
+      },
+      "result": "PASS (3/3 interaction tests green); 2 combos blocked on unimplemented slice cards",
+      "date": "2026-06-05"
     }
   },
   "last_updated": "2026-05-30",

@@ -1729,6 +1729,13 @@ pub struct PlayFromRevealedFreeArgs {
     /// same body. None (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+    /// G-DSL-PLAY-FROM-REVEALED-COST-REDUCED — optional cost adjustment for the
+    /// reveal-pool play. `None` (the default) plays for free, preserving prior
+    /// behavior; `{ reduce: N }` makes the controller pay the printed cost minus
+    /// N (clamped at 0). Mirrors `play_from_hand`'s `cost_delta`. BT25-074 shape:
+    /// "play 1 ... among them with the cost reduced by 5."
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

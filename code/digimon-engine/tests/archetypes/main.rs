@@ -42,4 +42,5 @@ mod fixture_smoke {
 
 // ── Per-archetype interaction suites ─────────────────────────────────────────
 
+mod machine_bt25;
 mod rocks;

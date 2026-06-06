@@ -505,6 +505,14 @@ pub enum Keyword {
     /// Arts Digivolve — DUAL Option-use keyword that offers an optional
     /// digivolution of the used Option card onto a legal Digimon target.
     ArtsDigivolve,
+
+    /// DCGO `Ascension` (`CardEffectCommons/KeyWordEffects/Ascension.cs`).
+    /// Printed: "When this Digimon is deleted, you may place this card as the
+    /// top security card." OnDeletion trigger (`CanTriggerOnDeletion`, no cause
+    /// filter); on fire, an optional Yes/No surfaces — on Yes the carrier is
+    /// rescued from trash to the TOP of the owner's security stack
+    /// (`AddSecurityCard(card, toTop: true)`). BT25-034, BT25-040.
+    Ascension,
 }
 
 /// Zone where a card can exist.

@@ -1114,6 +1114,9 @@ pub enum CompiledStep {
         card: CompiledBindingRef,
         /// Bind the just-played permanent handle for use in later steps.
         bind_as: Option<String>,
+        /// Optional reduced (non-free) cost. `None` = free (prior behavior);
+        /// `Reduce(N)` pays the printed cost minus N. G-DSL-PLAY-FROM-REVEALED-COST-REDUCED.
+        cost_delta: Option<CompiledCostDelta>,
     },
     PlayFromTrash {
         of: CompiledPlayerRef,

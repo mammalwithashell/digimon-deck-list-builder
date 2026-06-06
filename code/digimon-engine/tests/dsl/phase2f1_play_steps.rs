@@ -280,6 +280,7 @@ fn play_from_revealed_free_step_consumes_reveal_and_keeps_memory() {
         of: CompiledPlayerRef::You,
         card: CompiledBindingRef::Named("pick".into()),
         bind_as: Some("played".into()),
+        cost_delta: None,
     };
 
     {
@@ -306,6 +307,58 @@ fn play_from_revealed_free_step_consumes_reveal_and_keeps_memory() {
     assert!(
         bindings.get_played_permanent("played").is_some(),
         "bind_as records the played permanent (as PlayedPermanent)"
+    );
+}
+
+// G-DSL-PLAY-FROM-REVEALED-COST-REDUCED — reveal-pool play at a REDUCED (non-zero)
+// cost, not free. The engine primitive accepts any CostDelta; this proves the DSL
+// step threads `cost_delta` so the player pays the remainder (no over-credit).
+#[test]
+fn play_from_revealed_with_cost_delta_reduce_pays_remainder() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TST-PFRR", "PlayFromRevealedReducedTest"))
+        .memory(5)
+        .start();
+
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "TST-PFRR")
+        .unwrap();
+    let card_index = runner.game.next_card_index();
+    let card = CardSource::new(data_idx, 0, card_index);
+    let src_card = card.handle();
+    runner.game.revealed_cards.push(card);
+
+    let memory_before = runner.game.memory; // 5
+    let battle_before = runner.game.players[0].battle_area.len();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_card("pick", src_card);
+
+    // make_test_card play_cost = 3, reduced by 2 => net 1 memory paid (NOT free).
+    let step = CompiledStep::PlayFromRevealedFree {
+        of: CompiledPlayerRef::You,
+        card: CompiledBindingRef::Named("pick".into()),
+        bind_as: None,
+        cost_delta: Some(CompiledCostDelta::Reduce(2)),
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        battle_before + 1,
+        "card played from reveal pool"
+    );
+    assert_eq!(
+        runner.game.memory,
+        memory_before - 1,
+        "reduced cost (3 - 2 = 1) is paid, not free (no over-credit)"
     );
 }
 

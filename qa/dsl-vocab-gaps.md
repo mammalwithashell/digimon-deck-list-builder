@@ -2693,3 +2693,53 @@ Historical note:
 - **What's missing:** `activation_cost:` accepts only `suspend_self` and `return_self_to_deck_bottom` (per `compile.rs`). There is no `trash_self: true` variant. Per Comprehensive Rules 16-16-2, ＜Delay＞ processing is OPTIONAL — the controller may decline to trash the card and activate the effect. Without a declinable `trash_self` activation cost, the trash-self must be modeled as the first mandatory body step, which forces the activation once the trigger fires and a valid target exists — suppressing a rules-mandated player choice (a no-approximations violation).
 - **Suggested change:** Add `activation_cost: { trash_self: true }` — a declinable activation cost that trashes the source card and gates the body; declining skips the whole Delay.
 - **Workaround:** BT21-093 models the trash as a mandatory first body step. PARTIAL.
+
+## DSL Gap: BT25-066 — trash a permanent's own LINK card as a would-leave replacement cost  [G-DSL-LINK-TRASH-AS-REPLACEMENT-COST]
+- **Status:** OPEN.
+- **Discovered in:** BT25 "machine" slice, BT25-066 Guardromon (batch-implement-cards-rust-dsl, 2026-06-05).
+- **Scope:** DSL.
+- **Card(s):** BT25-066 Guardromon — `[All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave.` Generalizes to any "by trashing 1 of its link cards, it doesn't leave / prevent" replacement.
+- **Effect text:** "[All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave."
+- **What's missing:** No DSL verb selects and trashes one of a permanent's **own link cards** as the cost of a `kind: replacement` clause. The `ReplacementCostBody` only supports `delay_self: true`; `ReplacementChooseBody.from` only supports `hand`. There is no `select_linked_card` / `trash_linked_card` step, and no `from: linked_cards` for the replacement `choose:`. The engine DOES model the substrate: `Permanent.linked_cards`, `EffectTiming::OnLinkedCardTrashed` (fired in `combat.rs`), and `cancel_replacement` all exist — only the DSL vocabulary to pick + trash a self link card (and gate the cancel on that cost being paid, optionally per DCGO `SetIsSkippable(true)`) is missing. Without it the link-trash player choice cannot surface (no-approximations violation), so the whole card is BLOCKED even though its other clauses (Blocker, inherited +1000 DP, TS-trait alt-digivolve) are individually expressible.
+- **Lowers to engine API:** a new `EffectContext` selection over `source_permanent.linked_cards` + trash of the chosen link card (with `OnLinkedCardTrashed` dispatch, already wired) + `cancel_replacement`. The cancel/replacement plumbing already exists.
+- **Suggested DSL syntax:**
+  ```yaml
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true            # DCGO SetIsSkippable(true): the controller may decline
+    active_when: { replacement_subject_is_mine: true }
+    choose:
+      from: linked_cards       # NEW from-zone: this permanent's own link cards
+      min: 1
+      max: 1
+    outcome: prevent           # trashing the chosen link card cancels the leave
+  ```
+  (Alternatively a dedicated `trash_linked_card_and_cancel_replacement: { of_subject: true }` step usable inside the replacement `process:`.)
+- **Workaround:** None faithful. BT25-066 ships no YAML; BLOCKED (dsl).
+
+## DSL Gap: BT25-074 — play a revealed card with the play cost REDUCED by N (not free)  [G-DSL-PLAY-FROM-REVEALED-COST-REDUCED]
+- **Status:** CLOSED (2026-06-05). `play_from_revealed_free` now accepts an optional `cost_delta: { reduce: N }` (default free, preserving prior behavior). Engine adds `EffectContext::play_from_revealed_with_cost(player, card, CostDelta)`; `play_from_revealed_free` delegates with `Free`. DSL: `PlayFromRevealedFreeArgs.cost_delta: Option<CostDelta>` → `CompiledStep::PlayFromRevealedFree.cost_delta` (lowered via `compile_cost_delta`) → handler routes through `play_from_revealed_with_cost` (None ⇒ Free, NOT `lower_cost_delta`'s Reduce(0)). Test: `tests/dsl/phase2f1_play_steps.rs::play_from_revealed_with_cost_delta_reduce_pays_remainder` (cost 3 − reduce 2 ⇒ pays 1, no over-credit). BT25-074 is unblocked on this gap.
+- **Discovered in:** BT25 "machine" slice, BT25-074 Tankdramon (batch-implement-cards-rust-dsl, 2026-06-05).
+- **Scope:** DSL.
+- **Card(s):** BT25-074 Tankdramon — `[When Digivolving] [When Attacking] [Once Per Turn] Reveal the top 3 cards of your deck. You may play 1 play cost 12 or lower [D-Brigade] or [ACCEL] trait Digimon card among them with the cost reduced by 5. Trash the rest.` Generalizes to any "reveal N, play 1 among them with cost reduced by X" (X > 0, the controller pays the remainder).
+- **Effect text:** "Reveal the top 3 cards of your deck. You may play 1 play cost 12 or lower [D-Brigade] or [ACCEL] trait Digimon card among them with the cost reduced by 5. Trash the rest."
+- **What's missing:** The reveal-pool play steps only support a FREE play. `play_from_revealed_free` hard-codes `crate::enums::CostDelta::Free` (`effect_context/mod.rs:3547`); `choose_from_reveal`'s `play_free` destination is likewise free-only. There is no reveal-pool play step that takes a `cost_delta` to pay a non-zero reduced cost. (The hand analog `play_from_hand` DOES carry `cost_delta: Option<CostDelta>`, and BT15-096 plays from hand with cost reduced by 3 — so the gap is reveal-pool-specific.)
+- **Lowers to engine API:** already-present primitive — `play_from_revealed_free` internally calls `Game::play_from_hand_with_cost_result_from_origin(... CostDelta ..., PendingWouldPlayOrigin::Reveal { .. })`, which accepts any `CostDelta`. Only the DSL step pins it to `Free`. `enums::CostDelta::Reduce(i16)` exists.
+- **Suggested DSL syntax:** add an optional `cost_delta: CostDelta` (default `Free`) to `play_from_revealed_free` (or a new `play_from_revealed: { of, card, cost_delta }` step), threaded into the existing `from_origin` call instead of the hard-coded `Free`:
+  ```yaml
+  - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+  - select_reveal_buckets:
+      from: revealed
+      buckets:
+        - bind_as: play_pick
+          min: 0
+          max: 1
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of: [ { trait_has: D-Brigade }, { trait_has: ACCEL } ]
+              - play_cost_lte: 12
+  - play_from_revealed_free: { of: you, card: play_pick, cost_delta: { reduce: 5 } }
+  - per_selected: { selection: revealed, bind_as: rest, body: [ { trash_from_reveal: { of: you, card: rest } } ] }
+  ```
+- **Workaround:** None faithful (playing for free over-credits the player by 5+ memory; a no-approximations violation). BT25-074 ships no YAML; BLOCKED (dsl). The card's secondary clauses ([All Turns][OPT] on_ally_played → opponent CannotDigivolve, and the inherited [Opponent's Turn] Reboot+Blocker) are individually expressible but cannot ship without the main WD/WA clause.
