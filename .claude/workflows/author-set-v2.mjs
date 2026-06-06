@@ -1,6 +1,6 @@
 export const meta = {
-  name: 'author-set',
-  description: 'Mass-implement + combo-test an approved release-set slice partition (Phases 4-6)',
+  name: 'author-set-v2',
+  description: 'Mass-implement + combo-test an approved release-set slice partition (Phases 4-6, schema-free)',
   phases: [
     { title: 'Implement', detail: 'one batch-implement-cards-rust-dsl run per slice, Lv2->Lv7 order' },
     { title: 'ComboTest', detail: 'one archetype-interaction-test-author run per non-orphan slice' },
