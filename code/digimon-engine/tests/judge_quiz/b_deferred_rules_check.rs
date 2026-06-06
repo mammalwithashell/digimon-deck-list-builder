@@ -42,6 +42,52 @@ fn lv4_digimon(id: &str, dp: i32) -> CardData {
     c
 }
 
+/// A Lv.2 Digi-Egg (no DP) — used to exercise §17-1-3-2 (a DP-less card exposed
+/// as the live top of a battle-area permanent can't remain → trashed).
+fn digi_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = None;
+    c
+}
+
+/// §17-1-3-2 PROBE — a Digi-Egg exposed as the live top of a battle-area
+/// permanent (e.g. a Digimon stack de-digivolved/peeled down to its egg) cannot
+/// remain in the battle area and is TRASHED by the state-based rules-check —
+/// the whole permanent, not a deletion. This is the Q8 final step (Koromon
+/// Digi-Egg left exposed under a fully-peeled Greymon line). Independent of card
+/// authoring (synthetic egg).
+#[test]
+fn dp_less_digi_egg_top_trashed_by_rules_check() {
+    let mut r = DebugRunner::builder()
+        .add_card(digi_egg("EGG"))
+        .add_card(make_test_card("DECK", "Deck"))
+        .deck(0, &["DECK"; 5])
+        .memory(10)
+        .start();
+
+    // A lone Digi-Egg exposed as a battle-area permanent — the Q8 end state
+    // (Koromon left after the Greymon line above it is peeled away).
+    let _perm = r.place_field_stack(0, &["EGG"], false, r.game.turn_count);
+    assert_eq!(r.battle_area_size(0), 1, "precondition: the egg is staged");
+    let trash_before = r.game.player(0).trash.len();
+
+    // The post-effect rule-check boundary: the DP-less top can't remain.
+    r.game.drain_effect_queue();
+
+    assert_eq!(
+        r.battle_area_size(0),
+        0,
+        "§17-1-3-2: a Digi-Egg exposed as the live top can't remain → permanent trashed"
+    );
+    assert_eq!(
+        r.game.player(0).trash.len(),
+        trash_before + 1,
+        "the trashed Digi-Egg goes to trash"
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Cluster-B CORE RULE PROBE — ≤0-DP deletion via state-based rules-check
 // ─────────────────────────────────────────────────────────────────────────────
