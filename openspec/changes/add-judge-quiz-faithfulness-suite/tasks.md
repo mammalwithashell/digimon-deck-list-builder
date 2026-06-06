@@ -103,10 +103,10 @@
 
 ## 9. Cluster G — zone/keyword scoping (Q3, Q4)
 
-- [ ] 9.1 Author the missing cards: Puppetmon, Quartzmon (BT12), Aldamon (if 1.3 shows the needed printing is unimplemented)
-- [ ] 9.2 Write Q3 (breeding-area effect inactivity) and Q4 (Security Attack count net +1/−1 ⇒ one check) scenario tests; Q4 reuses/extends the `mid_attack_security_attack_recompute.rs` rule coverage
-- [ ] 9.3 Fix any surfaced gap: effects don't function in breeding area unless specified (Q3); security-check count read from live net Security Attack value (Q4, partially covered) — TDD
-- [ ] 9.4 Confirm cluster G tests green; archive closed gaps
+- [~] 9.1 Author the missing cards: **Aldamon AD1-002 (PARTIAL — done 2026-06-05; alt-path gap G-DSL-DIGISOURCE-TRAIT-COUNT-GTE), Atomic Inferno BT4-098 (IMPLEMENTED — done 2026-06-05)**; Holy Flame ST3-15 already impl. Still TODO for Q3: Puppetmon EX10-020, Quartzmon BT12-057.
+- [~] 9.2 **Q4 (Security Attack count net +1/−1 ⇒ one check) DONE 2026-06-05** — `g::q4_security_attack_net_modifiers_one_check` + false-pass control `g::q4_control_atomic_inferno_plus_one_alone_checks_two`; it is the live-card realization of the `mid_attack_security_attack_recompute.rs` Test-3 *reduction* case. Q3 (breeding-area effect inactivity) still BLOCKED-CARD.
+- [~] 9.3 Q4 surfaced no NEW engine gap on the modifier recompute path (it already reads live net Security Attack value, judge-correct). NOTE: discovered a **pre-existing** RED in `mid_attack_security_attack_recompute` (keyword/digivolve recompute path over-checks; reproduces without the new YAMLs, no engine code touched here) — flagged for a separate fix session. Q3's breeding-area-inactivity gap still pending its cards.
+- [ ] 9.4 Confirm cluster G tests green; archive closed gaps (Q4 green; Q3 pending)
 
 ## 10. Reconcile and verify
 

@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-06-05: **30/30 questions have a test entry; 21 PASS.** `cargo test --test judge_quiz`
-→ 30 passed (21 question pins + loader/probe/analogs), 9 ignored, 0 failed.
+Coverage as of 2026-06-05: **30/30 questions have a test entry; 22 PASS.** `cargo test --test judge_quiz`
+→ 32 passed (22 question pins + loader/probe/analogs + the Q4 control), 8 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -29,7 +29,7 @@ Coverage as of 2026-06-05: **30/30 questions have a test entry; 21 PASS.** `carg
 | 1 | A | YES (Progress guards Digimon, not battle) | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT13-088 Belphemon: Sleep Mode authored; pinned — Medusamon's `<Progress>` is live (would block an affecting opponent effect) yet Belphemon's `[Opp Turn]` end-attack succeeds (ends the battle, doesn't affect the Digimon) | `a::q1_belphemon_opp_turn_ends_attack_through_progress` |
 | 2 | A | NO memory loss | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX1-068 `[Main]` grant authored + granted-trigger dispatch consults `progress_excludes` (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT, Q2 slice resolved) | `a::q2_medusamon_progress_blocks_ice_wall_memory_loss` |
 | 3 | G | YES | BLOCKED-CARD | EX10-020, BT12-057 | `g::q3_breeding_area_effect_inactive_allows_digivolve` |
-| 4 | G | NO another check (+1/−1 net) | BLOCKED-CARD | AD1-002, BT4-098, ST3-15 | `g::q4_security_attack_net_modifiers_one_check` |
+| 4 | G | NO another check (+1/−1 net) | **PASS** | AD1-002 Aldamon + BT4-098 Atomic Inferno authored 2026-06-05 (ST3-15 Holy Flame already impl). The live-card form of the *reduction* case `mid_attack_security_attack_recompute.rs` Test 3 deferred: Aldamon attacks with Atomic Inferno's `<Security A. +1>` (would check 2); Holy Flame on top of P1 security applies `<Security A. −1>` on its check; the engine re-reads net strike (=1) and STOPS after 1 check. Control `q4_control_atomic_inferno_plus_one_alone_checks_two` proves the +1 genuinely extends the loop (no false-pass). | `g::q4_security_attack_net_modifiers_one_check` |
 | 5 | C | YES (declare if cost can be made payable) | **PASS** | Fixed by `fix-ad1-025-assembly-data`: engine Assembly executor (G-ASSEMBLY-PLAY-EXECUTION) + `[Assembly]` restored to AD1-025 data/YAML. Declare-then-pay mask offers the play at memory 0. | `c::q5_assembly_declaration_legal_when_cost_can_be_made_payable` |
 | 6 | B | NO | **PASS** | Pinned 2026-05-30: BT8-109 Flame Hellscythe authored; Pillomon (BT9-033) reduced to ≤0 DP by sub-effect 1 is NOT deleted mid-effect, so its `CannotPlayDigimonByEffect` floodgate persists and sub-effect 2's trash-play is blocked (contrast Q7, where the delete clears it). Pillomon deleted only by the post-resolution rules-check. | `b::q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves` |
 | 7 | B | YES | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT9-108 Eye of the Gorgon authored; pinned — sub-effect 1 deletes Pillomon (clearing its `CannotPlayDigimonByEffect` floodgate), sub-effect 2 then plays the Lv3 (control proves the floodgate was real → no false-pass) | `b::q7_eye_of_the_gorgon_sequential_delete_then_play` |
@@ -61,12 +61,31 @@ Coverage as of 2026-06-05: **30/30 questions have a test entry; 21 PASS.** `carg
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 6 | 3, 4, 9, 15, 29, 30 |
+| BLOCKED-CARD | 5 | 3, 9, 15, 29, 30 |
 | BLOCKED-PRIMITIVE | 3 | 8, 24, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 21 | 1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27 |
+| PASS | 22 | 1, 2, 4, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27 |
 
-(Counts: 6 + 3 + 0 + 21 = 30 of 30.)
+(Counts: 5 + 3 + 0 + 22 = 30 of 30.)
+
+Q4 → **PASS** (2026-06-05): authored AD1-002 Aldamon (PARTIAL — alt-digivolve
+≥2-Hybrid-sources count is `G-DSL-DIGISOURCE-TRAIT-COUNT-GTE`, incidental to Q4) +
+BT4-098 Atomic Inferno (IMPLEMENTED — all 3 clauses; latent engine over-fire
+`G-ENGINE-GRANTED-ONBLOCK-CARRIER-GATE` on the granted on_block trigger, positive
+case correct). Q4 is the live-card realization of the **reduction** case that
+`mid_attack_security_attack_recompute.rs` Test 3 deferred: a Security-Attack-reducing
+*security* effect (Holy Flame's `[Security]` `<Security A. −1>`) flips mid-attack and
+the engine's per-iteration `current_security_strike` recompute correctly drops the
+remaining checks (net +1−1 = 1 check). Pinned by
+`g::q4_security_attack_net_modifiers_one_check` + the false-pass control
+`g::q4_control_atomic_inferno_plus_one_alone_checks_two`. The **modifier** path of
+the recompute is proven correct. **Caveat (pre-existing, out of scope):** the
+`mid_attack_security_attack_recompute` suite itself is currently RED on this branch
+(Medusamon keyword/digivolve path over-checks: 0 remaining vs expected 1) — confirmed
+pre-existing (reproduces with the new YAMLs removed; this change touches no engine
+code), likely regressed in the recent Q19 post-deletion-drain work. Flagged for a
+separate fix session; the keyword-recompute path is a *different* code path from the
+modifier path Q4 exercises.
 
 Q18 → **PASS** (2026-06-05): LM-020 Quantumon fully authored (both clauses). The
 ledger's "only the security→deck clause is blocked" was an undercount — the card

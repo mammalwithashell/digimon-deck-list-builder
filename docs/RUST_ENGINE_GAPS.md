@@ -1375,3 +1375,29 @@ Surfaced by BT13-103 Akihiro Kurata (clause 1 BLOCKED, omitted from YAML per no-
 - **What's missing (DSL):** the `kind: cost_reduction` lowering (`code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs:193`) runs `pay_cost` in a **fresh** `Bindings`, isolated from the `amount_fn` callback, and treats only `RunOutcome::Synchronous` as success. No `FormulaSpec` (`code/digimon-dsl/src/formula.rs`) reads "the printed cost of the permanent(s) deleted/paid during this pay_cost" — `BindingPlayCost` reads a prior `bind_as` binding only.
 - **Suggested fix:** (1) let a cost-reduction `pay_cost` install + resume an interactive `pending_selection` during the BeforePayCost scan; (2) bind the selected/paid permanent into a scope the amount can read, e.g. a `paid_cost_total` formula (sum of printed costs of permanents deleted/paid during this pay_cost) or a `BindingPlayCost` over a pay_cost-produced binding; compute the final reduction AFTER the cost resolves. Backward-compatible: literal `amount:` and the existing synchronous self-suspend / return-to-deck pay_costs are unchanged.
 - **Blocks:** BT13-103 (clause 1). `code/digimon-engine/cards/bt13/BT13-103.yaml` omits the clause (documented BLOCKED in its header); test `bt13_103_belphemon_play_cost_reduced_by_deleted_gizmon_cost` in `code/digimon-engine/tests/cards_behavioral/bt13/bt13_103.rs` is `#[ignore]`'d with this gap-id. Shared by any "by deleting/paying X, reduce the play cost by X's cost" reducer where X is chosen interactively. Companion DSL-vocab entry: `qa/dsl-vocab-gaps.md` `G-DSL-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT`.
+
+## Granted `OnBlock` trigger fires for any carrier, not just the blocked permanent  [G-ENGINE-GRANTED-ONBLOCK-CARRIER-GATE]  — OPEN 2026-06-05
+
+Surfaced by **BT4-098 Atomic Inferno** (judge-quiz Q4 authoring). The `[Main]` clause grants the
+selected Digimon a temporary "[Your Turn] When **this Digimon** is blocked, gain +3 memory" trigger
+via `grant_triggered_effect { timing: on_block, body: [gain_memory: 3] }`.
+
+- **What's wrong:** the granted-trigger dispatch for `OnBlock` fires the granted body for **every**
+  battle-area carrier holding the grant, without checking that the *blocked* permanent (the
+  `BlockDeclared { attacker, .. }` event permanent) is the carrier. DCGO gates this via
+  `CanTriggerOnAttack(selectedPermanent)` (the granted body's `CanUseCondition` requires the blocked
+  attacker == the selected permanent). So if a *different* Digimon is blocked while a granted carrier
+  is also on the field, the carrier's grant over-fires.
+- **Scope of impact:** the **Q4-relevant** behavior is unaffected (Q4 uses Atomic Inferno's
+  `<Security A.>` clause, not the on_block grant). The positive case the card tests assert (the
+  granted Digimon IS the one blocked) is correct; only the cross-Digimon over-fire is wrong. The
+  card YAML is faithful (`on_block` + `gain_memory: 3`); the gap is engine-side in the granted-trigger
+  dispatch, not the DSL. Flagged in the BT4-098 YAML header.
+- **Suggested fix:** in the `OnBlock` branch of the granted-trigger dispatch (`effect_queue.rs`,
+  `BlockDeclared` source), gate firing on `event_permanent == carrier` (the granted body should run
+  only when the carrier is the blocked permanent), mirroring DCGO `CanTriggerOnAttack(selected)`.
+  Likely shared by any granted "[when this is blocked / when this attacks]" body that targets a
+  specific carrier.
+- **Blocks (precision only):** BT4-098 on_block grant. YAML:
+  `code/digimon-engine/cards/bt4/BT4-098.yaml`; tests:
+  `code/digimon-engine/tests/cards_behavioral/bt4/bt4_098.rs` (positive case green).
