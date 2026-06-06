@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-06-05: **30/30 questions have a test entry; 21 PASS.** `cargo test --test judge_quiz`
-→ 30 passed (21 question pins + loader/probe/analogs), 9 ignored, 0 failed.
+Coverage as of 2026-06-06: **30/30 questions have a test entry; 23 PASS.** `cargo test --test judge_quiz`
+→ 33 passed (23 question pins + loader/probe/analogs + the Q4 control), 7 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -29,12 +29,12 @@ Coverage as of 2026-06-05: **30/30 questions have a test entry; 21 PASS.** `carg
 | 1 | A | YES (Progress guards Digimon, not battle) | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT13-088 Belphemon: Sleep Mode authored; pinned — Medusamon's `<Progress>` is live (would block an affecting opponent effect) yet Belphemon's `[Opp Turn]` end-attack succeeds (ends the battle, doesn't affect the Digimon) | `a::q1_belphemon_opp_turn_ends_attack_through_progress` |
 | 2 | A | NO memory loss | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX1-068 `[Main]` grant authored + granted-trigger dispatch consults `progress_excludes` (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT, Q2 slice resolved) | `a::q2_medusamon_progress_blocks_ice_wall_memory_loss` |
 | 3 | G | YES | BLOCKED-CARD | EX10-020, BT12-057 | `g::q3_breeding_area_effect_inactive_allows_digivolve` |
-| 4 | G | NO another check (+1/−1 net) | BLOCKED-CARD | AD1-002, BT4-098, ST3-15 | `g::q4_security_attack_net_modifiers_one_check` |
+| 4 | G | NO another check (+1/−1 net) | **PASS** | AD1-002 Aldamon + BT4-098 Atomic Inferno authored 2026-06-05 (ST3-15 Holy Flame already impl). The live-card form of the *reduction* case `mid_attack_security_attack_recompute.rs` Test 3 deferred: Aldamon attacks with Atomic Inferno's `<Security A. +1>` (would check 2); Holy Flame on top of P1 security applies `<Security A. −1>` on its check; the engine re-reads net strike (=1) and STOPS after 1 check. Control `q4_control_atomic_inferno_plus_one_alone_checks_two` proves the +1 genuinely extends the loop (no false-pass). | `g::q4_security_attack_net_modifiers_one_check` |
 | 5 | C | YES (declare if cost can be made payable) | **PASS** | Fixed by `fix-ad1-025-assembly-data`: engine Assembly executor (G-ASSEMBLY-PLAY-EXECUTION) + `[Assembly]` restored to AD1-025 data/YAML. Declare-then-pay mask offers the play at memory 0. | `c::q5_assembly_declaration_legal_when_cost_can_be_made_payable` |
 | 6 | B | NO | **PASS** | Pinned 2026-05-30: BT8-109 Flame Hellscythe authored; Pillomon (BT9-033) reduced to ≤0 DP by sub-effect 1 is NOT deleted mid-effect, so its `CannotPlayDigimonByEffect` floodgate persists and sub-effect 2's trash-play is blocked (contrast Q7, where the delete clears it). Pillomon deleted only by the post-resolution rules-check. | `b::q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves` |
 | 7 | B | YES | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT9-108 Eye of the Gorgon authored; pinned — sub-effect 1 deletes Pillomon (clearing its `CannotPlayDigimonByEffect` floodgate), sub-effect 2 then plays the Lv3 (control proves the floodgate was real → no false-pass) | `b::q7_eye_of_the_gorgon_sequential_delete_then_play` |
 | 8 | B | Agumon trashed → Koromon trashed | BLOCKED-PRIMITIVE | All cards implemented, but `G-BURST-ON-TURN-END-NOT-EXECUTED` (discovered): the Burst `on_burst_turn_end` (trash top at end of burst turn) is compiled but never executed — `BurstDigivolve` is lowered only to a blast-counter marker — so "Agumon trashed → Koromon trashed" can't occur. (Also needs the DP-less-can't-remain rule + a DebugRunner burst driver.) | `b::q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot` |
-| 9 | D | After both trashed; NO memory | BLOCKED-CARD | BT23-102, BT15-037 | `d::q9_gatomon_not_in_battle_area_during_removal_no_memory` |
+| 9 | D | After both trashed; NO memory | **PASS** | BT23-102 Mastemon + BT15-037 Gatomon authored 2026-06-06 (both PARTIAL on incidental clauses). Activation-site ruling: Gatomon's `[All Turns]` "gain 1 memory when your security is removed" is battle-area-gated (DCGO `IsExistOnBattleArea`); when Mastemon's `[When Digivolving]` trim trashes Gatomon FROM the opponent's security, Gatomon is not a battle-area trigger source → 0 memory. Engine enforces this by construction (only battle-area permanents' triggers dispatch). Control: same Gatomon on the field DOES gain +1 (`bt15_037_on_field_gains_memory_when_own_security_removed`). | `d::q9_gatomon_not_in_battle_area_during_removal_no_memory` |
 | 10 | F | 0 | **PASS** | RESOLVED 2026-06-04 (`G-ON-ADD-TO-HAND-OBSERVER`). The earlier `G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT` co-block was a MISCHARACTERIZATION — the judge line uses Akihiro Kurata's **[End of Opp Turn] draw/trash** (clause 2, implemented), NOT his Belphemon cost-reduction (clause 1, still blocked but unused here). MirageGaogamon's observer now fires for real off Kurata's effect-draw and gains floor(15/4)=3 → 0. Mental Training cost + Gravity Crush −2 staged as memory deltas. | `f::q10_multi_effect_memory_arithmetic_ends_at_zero` |
 | 11 | F | 4 (Gravity Crush not OPT) | **PASS** | RESOLVED 2026-06-04. Follow-up from Q10: a 2nd Mental Training (−2) + Gravity Crush's non-OPT end-of-turn −2 → 4 on Player A's side. (Turns on Gravity Crush being non-OPT, not the observer.) | `f::q11_non_opt_gravity_crush_refires_memory_four` |
 | 12 | F | YES, unsuspends | **PASS** | RESOLVED 2026-06-02 (`G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`): `kind_matches_field` now coalesces `Token` into `Digimon`, and `eval_permanent_fields` defers permanent-kind to the (token-aware) `synth_identity` check — so a REAL Petrification token is a legal placement pick. Test un-ignored with the real `TOKEN_PETRIFICATION` permanent (not a Digimon stand-in). Regression-clean. | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
@@ -61,12 +61,58 @@ Coverage as of 2026-06-05: **30/30 questions have a test entry; 21 PASS.** `carg
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 6 | 3, 4, 9, 15, 29, 30 |
+| BLOCKED-CARD | 4 | 3, 15, 29, 30 |
 | BLOCKED-PRIMITIVE | 3 | 8, 24, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 21 | 1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27 |
+| PASS | 23 | 1, 2, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27 |
 
-(Counts: 6 + 3 + 0 + 21 = 30 of 30.)
+(Counts: 4 + 3 + 0 + 23 = 30 of 30.)
+
+Q9 → **PASS** (2026-06-06): authored BT23-102 Mastemon (PARTIAL — controller-side
+trim blocked by `G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER`) + BT15-037
+Gatomon (PARTIAL — play-from-security-when-trashed blocked by
+`G-DSL-ON-DISCARD-SECURITY-TRIGGER`). Cluster-D activation-site ruling: Gatomon's
+`[All Turns]` memory is gated on the carrier being in the battle area (DCGO
+`IsExistOnBattleArea`); trashed FROM the opponent's security by Mastemon's trim it
+never fires → 0 memory. The engine enforces this by construction (triggered effects
+dispatch only for battle-area permanents), so no engine change was needed — the pin
++ the field control (`bt15_037_on_field_gains_memory...`) jointly prove it isn't a
+no-op false-pass. Pinned to the OPPONENT-side trim to avoid the controller-trim
+gap. Both cards' YAML was recovered from the authoring sub-agent's transcript after
+its untracked output was removed by cross-worktree `git clean` activity, then
+staged/committed immediately.
+
+Q4 → **PASS** (2026-06-05): authored AD1-002 Aldamon (PARTIAL — alt-digivolve
+≥2-Hybrid-sources count is `G-DSL-DIGISOURCE-TRAIT-COUNT-GTE`, incidental to Q4) +
+BT4-098 Atomic Inferno (IMPLEMENTED — all 3 clauses; latent engine over-fire
+`G-ENGINE-GRANTED-ONBLOCK-CARRIER-GATE` on the granted on_block trigger, positive
+case correct). Q4 is the live-card realization of the **reduction** case that
+`mid_attack_security_attack_recompute.rs` Test 3 deferred: a Security-Attack-reducing
+*security* effect (Holy Flame's `[Security]` `<Security A. −1>`) flips mid-attack and
+the engine's per-iteration `current_security_strike` recompute correctly drops the
+remaining checks (net +1−1 = 1 check). Pinned by
+`g::q4_security_attack_net_modifiers_one_check` + the false-pass control
+`g::q4_control_atomic_inferno_plus_one_alone_checks_two`. The **modifier** path of
+the recompute is proven correct.
+
+Recompute-suite RED — **RESOLVED 2026-06-05 (test-only fix).** While running the
+combat hot-path gate, the `mid_attack_security_attack_recompute` suite was found
+RED (2/3, `left:0 right:1`). Systematic root-cause: the recompute is CORRECT — the
+loop checks exactly 2 cards and leaves 1 (verified by instrumenting
+`current_security_strike` + the dispose loop: strike reads 2 every iteration). The
+failure was a **test artifact**, bisected to `053a06ad` (#582,
+`G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`): once tokens became valid `kind: digimon`
+field-select targets, the Petrification token that Medusamon's
+`on_opponent_security_removed` clause plays for the defender became a legal target
+for Medusamon's OPTIONAL `[End of Attack]` "delete 1 of opponent's lowest-DP
+Digimon". The test's blanket `drive_to_completion` auto-activated that optional →
+token deleted → token `[On Deletion]` trashes the defender's TOP security → a 3rd,
+unrelated security loss. The engine is faithful (the cascade is correct Medusamon
+behavior); the test simply must not opt into it. Fix: the driver is now scoped to
+the in-flight security loop (`drive_security_loop_to_completion`, stops when
+`security_resolution` clears), so the check count is asserted at loop completion
+before the post-loop `[End of Attack]` optional. No engine change. Suite green
+(2 passed, 1 ignored).
 
 Q18 → **PASS** (2026-06-05): LM-020 Quantumon fully authored (both clauses). The
 ledger's "only the security→deck clause is blocked" was an undercount — the card

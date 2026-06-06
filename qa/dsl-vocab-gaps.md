@@ -2983,3 +2983,62 @@ Two instances found + fixed:
 
 Sweep otherwise clean: these were the only two implemented `select_opponent_permanent {optional:true}`
 cards whose text is mandatory single-target.
+
+## Alt-digivolve `from:` requiring ≥N sources carrying a trait  [G-DSL-DIGISOURCE-TRAIT-COUNT-GTE]  — OPEN 2026-06-05
+
+Surfaced by **AD1-002 Aldamon** (judge-quiz Q4 authoring). The alt-digivolve line is
+"[Digivolve] [Takuya Kanbara] w/ **2 or more [Hybrid] trait cards under**: Cost 3" — a digivolution
+path whose `from:` base must additionally have **≥2 digivolution sources carrying the [Hybrid]
+trait** beneath it.
+
+- **What's missing (DSL):** an alt-path `from:` predicate that **counts** sources by trait. The
+  closest existing leaf, `self_digivolution_sources_trait_has`, is (a) a ≥1 boolean presence check
+  (no count threshold) and (b) a carrier/permanent-subject predicate, not an alt-path `from`-base
+  predicate (alt-path `from` constrains the base being digivolved *from*, not the resulting stack's
+  source multiset). Neither `materials_count_gte` (whole-stack count, trait-agnostic) nor
+  `trait_has`/`trait_contains` (subject-trait match, no count) expresses "≥2 sources with trait T".
+- **Impact:** AD1-002's alt-path enforces only the [Takuya Kanbara] base name; the "≥2 [Hybrid]
+  sources" qualifier is inexpressible and is omitted with an explicit YAML comment. The **standard**
+  Lv4/Red/Cost-3 digivolution (from `cards.json` `evo_costs`) keeps Aldamon reachable/attackable, so
+  the judge-quiz Q4 pin (which only needs Aldamon on the field) is unaffected. **No-approximations
+  note:** the alt-path is left UNDER-constrained on a cost-reduction line — a player could reach
+  Cost 3 from a [Takuya Kanbara] base without the 2 Hybrid sources. Acceptable only because it is a
+  rarely-reachable alt-cost and is flagged; close before relying on AD1-002 in deck legality.
+- **Audit hazard discovered alongside:** the predicate spec struct does **not** set
+  `deny_unknown_fields`, so a made-up key (e.g. `digivolution_trait_count_gte:`) parses **silently as
+  a no-op** rather than erroring — worth a lint / `deny_unknown_fields` sweep so accidental
+  under-constraint surfaces at load time.
+- **Suggested fix:** add a `digisource_trait_count` formula/predicate leaf usable in alt-path `from:`
+  filters — `{ digisource_trait_count: { trait: Hybrid }, gte: 2 }` — counting the base's
+  digivolution sources whose trait set matches (exact via `trait_has` / substring via
+  `trait_contains`). Threads like the EX3-014 `source_stack_count` selector but as a `from`-base
+  predicate.
+- **Blocks:** AD1-002 (alt-digivolve line only). YAML: `code/digimon-engine/cards/ad1/AD1-002.yaml`
+  (comment marks the omission); per-card tests `code/digimon-engine/tests/cards_behavioral/ad1/ad1_002.rs`.
+
+## "When an effect trashes this card from your security stack" carrier trigger  [G-DSL-ON-DISCARD-SECURITY-TRIGGER]  — OPEN 2026-06-06
+
+Surfaced by **BT15-037 Gatomon** (judge-quiz Q9 authoring). Card text: "When an
+effect trashes this card from the security stack, you may play it without paying
+the cost."
+
+- **What's missing (DSL):** there is no `when:` trigger token for "this card was
+  trashed/discarded from the security stack by an effect" — DCGO
+  `EffectTiming.OnDiscardSecurity` + `CanTriggerOnTrashSelfSecurity(.., cardEffect
+  != null, card)`. The DSL has `on_security`, `on_own_security_removed`,
+  `on_opponent_security_removed`, `on_check_face_up_security`, `on_lose_security`
+  — none fire for the *card itself being discarded from security by an effect* with
+  a follow-on "play this card free" body.
+- **Impact:** Gatomon's "play this when trashed from your security" clause is
+  omitted (flagged in the YAML header, no stub). The other 3 clauses (`<Barrier>`
+  face + inherited, `[All Turns][OPT]` gain-memory) are implemented. Does NOT
+  affect the Q9 ruling: Gatomon playing out *after* Mastemon's trim adds no
+  security-removal memory (the removals already happened while it was in security).
+- **Suggested fix:** add an `on_discard_security` (or `on_self_trashed_from_security`)
+  carrier trigger token gated on effect-initiated discard of the carrier from its
+  own security, exposing the carrier as `event_card` so a `play_from_security`-style
+  free-play body can consume it. Likely shared by other "when trashed from security,
+  you may play it" Digimon.
+- **Blocks:** BT15-037 (the play-from-security-when-trashed clause). YAML:
+  `code/digimon-engine/cards/bt15/BT15-037.yaml`; per-card tests
+  `code/digimon-engine/tests/cards_behavioral/bt15/bt15_037.rs`.

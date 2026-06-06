@@ -82,10 +82,10 @@
 
 ## 6. Cluster D — trigger activation site (Q9, Q19, Q20, Q21, Q23)
 
-- [ ] 6.1 Author the missing cards: Gatomon, Mastemon, Eyesmon: Scatter Mode, Back for Revenge!, plus the On-Deletion/return-to-hand cards Q19/Q23 resolve to in the spike
-- [ ] 6.2 Write Q9, Q19, Q20, Q21, Q23 scenario tests asserting the judge answers (draw counts / memory)
-- [ ] 6.3 Fix any surfaced gap: [On Deletion] activates only from trash (return-to-hand suppresses it, Q19); remaining-in-trash gates inherited [On Deletion] (Q23); play-from-trash mid-resolution suppresses remaining effects (Q21); not-in-battle-area suppresses [All Turns] (Q9) — TDD. Cross-check CLAUDE.md §25 (OnDeletion post-trash contract)
-- [ ] 6.4 Confirm cluster D tests green; archive closed gaps
+- [x] 6.1 Author the missing cards: **Gatomon BT15-037 (PARTIAL — done 2026-06-06; G-DSL-ON-DISCARD-SECURITY-TRIGGER), Mastemon BT23-102 (PARTIAL — done 2026-06-06; G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER)**; Eyesmon: Scatter Mode / Back for Revenge! / Q19-Q23 cards done in prior waves.
+- [x] 6.2 Write Q9, Q19, Q20, Q21, Q23 scenario tests asserting the judge answers — **all PASS** (Q9 done 2026-06-06: `d::q9_gatomon_not_in_battle_area_during_removal_no_memory`).
+- [x] 6.3 Fix any surfaced gap: Q19/Q21/Q23 resolved in prior waves; **Q9 needed no engine change** — the not-in-battle-area suppression of `[All Turns]` falls out of the existing trigger-dispatch (only battle-area permanents' triggers fire). Two incidental gaps logged (controller-trim batch-abort; on-discard-security DSL trigger), neither blocks Q9.
+- [x] 6.4 Confirm cluster D tests green; archive closed gaps — Q9/Q19/Q20/Q21/Q23 all PASS.
 
 ## 7. Cluster E — `<Partition>` / DigiXros departure / de-digivolve (Q15, Q16, Q25, Q29; Q30 shared)
 
@@ -103,10 +103,10 @@
 
 ## 9. Cluster G — zone/keyword scoping (Q3, Q4)
 
-- [ ] 9.1 Author the missing cards: Puppetmon, Quartzmon (BT12), Aldamon (if 1.3 shows the needed printing is unimplemented)
-- [ ] 9.2 Write Q3 (breeding-area effect inactivity) and Q4 (Security Attack count net +1/−1 ⇒ one check) scenario tests; Q4 reuses/extends the `mid_attack_security_attack_recompute.rs` rule coverage
-- [ ] 9.3 Fix any surfaced gap: effects don't function in breeding area unless specified (Q3); security-check count read from live net Security Attack value (Q4, partially covered) — TDD
-- [ ] 9.4 Confirm cluster G tests green; archive closed gaps
+- [~] 9.1 Author the missing cards: **Aldamon AD1-002 (PARTIAL — done 2026-06-05; alt-path gap G-DSL-DIGISOURCE-TRAIT-COUNT-GTE), Atomic Inferno BT4-098 (IMPLEMENTED — done 2026-06-05)**; Holy Flame ST3-15 already impl. Still TODO for Q3: Puppetmon EX10-020, Quartzmon BT12-057.
+- [~] 9.2 **Q4 (Security Attack count net +1/−1 ⇒ one check) DONE 2026-06-05** — `g::q4_security_attack_net_modifiers_one_check` + false-pass control `g::q4_control_atomic_inferno_plus_one_alone_checks_two`; it is the live-card realization of the `mid_attack_security_attack_recompute.rs` Test-3 *reduction* case. Q3 (breeding-area effect inactivity) still BLOCKED-CARD.
+- [~] 9.3 Q4 surfaced no NEW engine gap on the modifier recompute path (it already reads live net Security Attack value, judge-correct). NOTE: discovered + **FIXED (test-only) 2026-06-05** a RED in `mid_attack_security_attack_recompute`. Root cause (bisected to #582 `G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`): the recompute is correct (loop checks exactly 2); the test's blanket driver auto-activated Medusamon's optional `[End of Attack]` delete on a now-targetable Petrification token, whose `[On Deletion]` trashes the defender's top security (a faithful but unrelated cascade). Driver now scoped to the security loop (`drive_security_loop_to_completion`); no engine change. Q3's breeding-area-inactivity gap still pending its cards.
+- [ ] 9.4 Confirm cluster G tests green; archive closed gaps (Q4 green; Q3 pending)
 
 ## 10. Reconcile and verify
 

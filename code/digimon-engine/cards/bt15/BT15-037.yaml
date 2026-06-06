@@ -1,0 +1,86 @@
+# BT15-037 Gatomon — Digimon, Lv.4, Yellow, DP 4000, Cost 5.
+# Champion | Vaccine | Holy Beast. Digivolve: Lv.3 / Cost 2.
+#
+# ─── Printed text (card face authoritative) ───────────────────────────────────
+#
+#   When an effect trashes this card from the security stack, you may play it
+#   without paying the cost.
+#   ＜Barrier＞
+#   [All Turns] [Once Per Turn] When a card is removed from your security stack,
+#   gain 1 memory.
+#
+#   Inherited: ＜Barrier＞ (When this Digimon would be deleted in battle, by
+#   trashing the top card of your security stack, prevent that deletion.)
+#
+# ─── DCGO crosscheck (BT15/Yellow/BT15_037.cs) ────────────────────────────────
+#
+#   - WhenPermanentWouldBeDeleted: BarrierSelfEffect (face) + BarrierSelfEffect
+#     (inherited). → two grant_keyword Barrier clauses (face + inherited scope).
+#   - OnLoseSecurity [All Turns][OPT]: gain 1 memory. CanUseCondition gates on
+#     **IsExistOnBattleArea(card)** AND CanTriggerWhenLoseSecurity(owner). i.e. the
+#     memory only fires while Gatomon is IN THE BATTLE AREA — NOT while it sits in
+#     the security stack. SetUpActivateClass(..., 1, false, ...) → isOptional=false
+#     (MANDATORY when it fires). This is the JUDGE-QUIZ Q9 crux: when Mastemon's
+#     [When Digivolving] trim trashes Gatomon FROM SECURITY, Gatomon is not in the
+#     battle area, so this clause does NOT fire → no memory. The engine enforces
+#     this by construction: triggered effects are dispatched only for battle-area
+#     permanents, so a security-zone Gatomon's trigger is never scanned.
+#   - OnDiscardSecurity: "when an effect trashes this from your security, you may
+#     play it free." See BLOCKED note below.
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                              | Status   |
+# |----------------------------------------------------------------|----------|
+# | <Barrier> (face)                                               | IMPL     |
+# | <Barrier> (inherited)                                          | IMPL     |
+# | [All Turns][OPT] gain 1 memory on own-security removal         | IMPL     |
+# | "when an effect trashes this from security, you may play it"   | BLOCKED  |
+#
+# BLOCKED: the "play this when an effect trashes it from your security stack"
+# clause needs an OnDiscardSecurity / "trashed-from-security" carrier trigger that
+# the DSL has no token for (DCGO EffectTiming.OnDiscardSecurity +
+# CanTriggerOnTrashSelfSecurity). Gap: G-DSL-ON-DISCARD-SECURITY-TRIGGER. Omitted
+# here (no stub); it does not affect the Q9 memory ruling (Gatomon playing out
+# AFTER the trim adds no security-removal memory, since the removals already
+# happened while it was in security).
+
+card: BT15-037
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 4000
+traits: [Holy Beast]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color: yellow }
+    cost: 2
+
+effects:
+  # ─── <Barrier> (face) ───────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  # ─── [All Turns][Once Per Turn] gain 1 memory on own-security removal ─────────
+  #
+  # Mandatory (no "may"). `active_when: all_turns` = fires on either player's turn.
+  # `once_per_turn`. Battle-area presence is implicit (only battle-area permanents'
+  # triggers are dispatched) — the Q9 ruling falls out of that: a Gatomon sitting in
+  # the security stack does not fire this when Mastemon trims it away.
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] When a card is removed from your security stack, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── Inherited <Barrier> ─────────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "Inherited <Barrier>"

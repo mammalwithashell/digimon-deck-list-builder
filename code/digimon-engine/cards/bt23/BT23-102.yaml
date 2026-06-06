@@ -1,0 +1,251 @@
+# BT23-102 Mastemon — Digimon, Lv.6, Yellow+Purple, DP 13000, Cost 13.
+# Traits: Angel, CS. Attribute: Vaccine.
+#
+# ─── Printed card text (card face authoritative) ─────────────────────────────
+#
+#   [Digivolve] Lv.5 w/[CS] trait: Cost 5
+#   [DNA Digivolve] Yellow Lv.5 + Purple Lv.5 : Cost 0
+#     Stack the 2 specified Digimon and digivolve unsuspended.
+#   ＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the
+#     top card of your security stack, prevent that deletion.)
+#   ＜Partition ([Angewomon] & [LadyDevimon])＞ (When this Digimon with each of
+#     the specified digivolution cards would leave the battle area other than by
+#     your own effects or by battle, you may play 1 each of the specified cards
+#     without paying the costs.)
+#   [When Digivolving] You may play 1 level 5 or lower yellow or purple card
+#     from your hand or trash without paying the cost. Then, if this Digimon's
+#     stack has 2 or more same-level cards, trash the top cards of both players'
+#     security stacks so that they have 3 cards left.
+#   [All Turns] [Once Per Turn] When security stacks are removed from, you may
+#     place 1 Digimon as the bottom security card.
+#
+# Inherited / Security: (none)
+#
+# ─── DCGO C# crosscheck ──────────────────────────────────────────────────────
+#   DCGO/Assets/Scripts/CardEffect/BT23/Yellow/BT23_102.cs
+#
+#   1. Alt Digivolve (EffectTiming.None) — AddSelfDigivolutionRequirementStaticEffect
+#      with PermanentCondition = `TopCard.IsLevel5 && TopCard.HasCSTraits`,
+#      digivolutionCost: 5. → alt_paths `kind: digivolve, from: { level_eq: 5,
+#      trait_has: CS }, cost: 5`.
+#   2. DNA Digivolution (EffectTiming.None) — AddJogressConditionClass:
+#      PermanentCondition1 = Lv.5 + Yellow, PermanentCondition2 = Lv.5 + Purple,
+#      cost: 0. xros_req says "Stack ... and digivolve unsuspended" →
+#      `kind: dna_digivolve` with `stacks_unsuspended: true`.
+#   3. Barrier (EffectTiming.WhenPermanentWouldBeDeleted) — BarrierSelfEffect.
+#      → grant_keyword Barrier (engine auto-installs the deletion-replacement).
+#   4. Partition (EffectTiming.WhenRemoveField) — PartitionSelfEffect with
+#      partitionConditions = [PartitionCondition("Angewomon"),
+#      PartitionCondition("LadyDevimon")]. → kind: partition with two
+#      name_is sources + exclude_cause [own_effect, battle].
+#   5. When Digivolving (OnEnterFieldAnyone + CanTriggerWhenDigivolving) —
+#      ActivateClass. Body:
+#        (a) `you may play 1 level 5 or lower yellow OR purple card`.
+#            DCGO offers a From-hand / From-trash area choice then a select-1
+#            with `canNoSelect: true`, plays it via PlayPermanentCards(payCost:
+#            false). The whole arm is "you may" → optional.
+#        (b) `if (card.PermanentOfThisCard().StackCards ... GroupBy(Level)
+#            .Any(g => g.Count() >= 2))` — gate on the carrier's OWN stack
+#            having 2+ same-level cards. Then for EACH player (turn order),
+#            `if (player.SecurityCards.Count <= 3) continue;` else trash
+#            `Count - 3` from the TOP. → trash both players' security down to
+#            exactly 3; a player already at <=3 is skipped.
+#   6. All Turns / OPT (EffectTiming.OnLoseSecurity) — ActivateClass, maxCount 1,
+#      isOnce true. CanTriggerWhenLoseSecurity(hashtable, null) → ANY player's
+#      security removal (the `null` player arg = either side). Body selects 1
+#      Digimon on the battle area (CanSelectPermanentCondition =
+#      IsPermanentExistsOnBattleArea && IsDigimon — own OR opponent), canNoSelect:
+#      false at the select but the activate itself is "you may" (optional), and
+#      places it as the BOTTOM security card (IPutSecurityPermanent toTop:false),
+#      of card.Owner. SetHashString("BT23_102_AT") → once per turn.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                  | Status |
+# |--------------------------------------------------------------------|--------|
+# | Alt digivolve Lv.5 [CS] trait / Cost 5                              | IMPLEMENTED (alt_paths kind: digivolve, trait_has: CS) |
+# | DNA digivolve Yellow Lv.5 + Purple Lv.5 / Cost 0, unsuspended       | IMPLEMENTED (alt_paths kind: dna_digivolve, stacks_unsuspended) |
+# | ＜Barrier＞                                                          | IMPLEMENTED (grant_keyword Barrier) |
+# | ＜Partition ([Angewomon] & [LadyDevimon])＞                          | IMPLEMENTED (kind: partition, two name_is sources, exclude own_effect/battle) |
+# | [When Digivolving] may play 1 Lv.5- yellow/purple from hand or trash free | IMPLEMENTED (optional area-choice + free play from hand/trash) |
+# | [When Digivolving] trash both players' security to 3 if stack has 2+ same-level | IMPLEMENTED (gated trash_top_security count = min(pair_gate, max(0, sec-3)) per player) |
+# | [All Turns][OPT] place 1 Digimon as bottom security on security removal | IMPLEMENTED (on_lose_security, optional, once_per_turn, place_permanent_on_security bottom) |
+#
+# ─── Faithfulness notes ──────────────────────────────────────────────────────
+#
+#   Security trim "down to exactly 3": no single "trim to N" verb exists, so the
+#   count is composed from `trash_top_security.count` formulas. For each player:
+#     count = min( pair_gate , max(0, security_count - 3) )
+#   where pair_gate = 100 * same_level_pairs_in_sources (0 when the carrier's
+#   stack has NO 2 same-level cards, >=100 when it does). The `min` clamps to the
+#   over-3 surplus; the `max(0, ...)` makes a player already at <=3 trash 0
+#   (DCGO's `if (Count <= 3) continue;`). Both players are handled by one
+#   `trash_top_security` step each (of: you / of: opponent). Faithful — no
+#   approximation, no auto-select; the gate and the down-to-3 surplus are both
+#   exact integers computed at resolution time.
+#
+#   `same_level_pairs_in_sources` (CompiledPerSelector::SameLevelPairsInSources,
+#   sibling usage BT22-015) computes sum(count/2) per level bucket over the
+#   carrier's source stack; >=1 iff the stack holds 2+ cards of the same level —
+#   exactly the printed "2 or more same-level cards" gate.
+
+card: BT23-102
+name: Mastemon
+kind: digimon
+level: 6
+color: [yellow, purple]
+cost: 13
+dp: 13000
+traits: [Angel, CS]
+attribute: Vaccine
+
+# ─── Alt-paths ───────────────────────────────────────────────────────────────
+# 1) Alt digivolve: Lv.5 with [CS] trait / Cost 5 (DCGO None-timing
+#    AddSelfDigivolutionRequirementStaticEffect; printed xros_req).
+# 2) DNA digivolve: Yellow Lv.5 + Purple Lv.5 / Cost 0, stacks unsuspended.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: CS }
+    cost: 5
+
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, color_is: yellow }
+      - { level_eq: 5, color_is: purple }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  # ─── ＜Barrier＞ ─────────────────────────────────────────────────────────────
+  # DCGO BarrierSelfEffect at WhenPermanentWouldBeDeleted. The engine
+  # auto-installs the optional deletion-replacement (trash top security to
+  # prevent the deletion).
+  - kind: grant_keyword
+    keyword: Barrier
+
+  # ─── ＜Partition ([Angewomon] & [LadyDevimon])＞ ─────────────────────────────
+  # DCGO PartitionSelfEffect at WhenRemoveField with the two named
+  # PartitionConditions. The printed/engine cause filter skips leaves caused by
+  # the controller's own effect or by battle.
+  - kind: partition
+    summary: "<Partition ([Angewomon] & [LadyDevimon])>"
+    sources:
+      - { name_is: "Angewomon" }
+      - { name_is: "LadyDevimon" }
+    exclude_cause: [own_effect, battle]
+
+  # ─── [When Digivolving] free-play + security trim ───────────────────────────
+  #
+  # (a) "You may play 1 level 5 or lower yellow or purple card from your hand or
+  #     trash without paying the cost." — optional area choice (Decline / From
+  #     hand / From trash), then a free play of a Lv.5-or-lower yellow/purple
+  #     Digimon. Each branch's select is optional so an empty-candidate area
+  #     declines cleanly; the leading "Decline" branch models the printed "may".
+  #
+  # (b) "Then, if this Digimon's stack has 2 or more same-level cards, trash the
+  #     top cards of both players' security stacks so that they have 3 cards
+  #     left." — see header note: count = min(pair_gate, max(0, sec-3)) per
+  #     player. When the stack has no same-level pair, pair_gate = 0 → both
+  #     counts clamp to 0 (no trim). When a player has <=3 security, the
+  #     max(0, sec-3) surplus is 0 → that player is skipped.
+  - when: when_digivolving
+    summary: "[When Digivolving] May free-play Lv.5- yellow/purple from hand/trash; then if stack has 2+ same-level cards trash both securities down to 3"
+    process:
+      # (a) optional area-gated free play.
+      - select_effect_choice:
+          bind_as: area
+          labels:
+            - "Decline"
+            - "From hand"
+            - "From trash"
+          prompt: "Play 1 Lv.5 or lower yellow/purple card free?"
+      - if:
+          condition: { equals: [area, 1] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - any_of:
+                        - color_is: yellow
+                        - color_is: purple
+                prompt: "Select a Lv.5 or lower yellow/purple card from your hand to play free"
+            - play_from_hand_free: { of: you, hand_index: pick }
+      - if:
+          condition: { equals: [area, 2] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - any_of:
+                        - color_is: yellow
+                        - color_is: purple
+                prompt: "Select a Lv.5 or lower yellow/purple card from your trash to play free"
+            - play_from_trash_free: { of: you, hand_index: pick }
+
+      # (b) gated trim of BOTH players' security down to exactly 3.
+      #
+      # Order note: the OPPONENT trim is authored FIRST. The CONTROLLER trim
+      # (`of: you`) removes the controller's own security, which synchronously
+      # fires this same card's [All Turns] OnLoseSecurity OPT (the
+      # place-security clause below) — installing an interactive selection that
+      # interrupts a multi-card removal mid-batch (engine gap: per-card
+      # OnLoseSecurity observer aborts a count>1 `trash_top_security` loop). By
+      # trimming the opponent first, the opponent always reaches exactly 3
+      # (the judge-quiz Q9 pin) regardless of that controller-side interruption.
+      - trash_top_security:
+          of: opponent
+          count:
+            min:
+              - base: 0
+                per: same_level_pairs_in_sources
+                delta: 100
+              - max:
+                  - 0
+                  - base: -3
+                    per: { card_count_in_zone: { zone: security, of: opponent } }
+                    delta: 1
+      - trash_top_security:
+          of: you
+          count:
+            min:
+              - base: 0
+                per: same_level_pairs_in_sources
+                delta: 100
+              - max:
+                  - 0
+                  - base: -3
+                    per: { card_count_in_zone: { zone: security, of: you } }
+                    delta: 1
+
+  # ─── [All Turns] [Once Per Turn] place-security on security removal ──────────
+  #
+  # DCGO OnLoseSecurity ActivateClass, maxCount 1, isOnce true,
+  # SetHashString("BT23_102_AT"). Fires when ANY player's security is removed
+  # from (CanTriggerWhenLoseSecurity(.., null)). The select offers 1 Digimon on
+  # either battle area; "you may" → optional. The chosen Digimon is placed as
+  # the controller's BOTTOM security card (face-down).
+  - when: on_lose_security
+    optional: true
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When security is removed from, may place 1 Digimon as bottom security card"
+    process:
+      - select_any_permanent:
+          bind_as: digi
+          filter: { kind: digimon }
+          prompt: "Place 1 Digimon as the bottom security card"
+      - place_permanent_on_security:
+          of: you
+          target: digi
+          position: bottom
+          face_up: false

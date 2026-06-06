@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-05",
+  "last_updated": "2026-06-06",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -6842,6 +6842,84 @@
         "memory-observer"
       ],
       "notes": "Clause 1 (return Lv5- / else security-to-hand) done; Clause 2 (gain memory per 4 cards in opp hand) BLOCKED G-ON-ADD-TO-HAND-OBSERVER"
+    },
+    "BT4-098": {
+      "card_name": "Atomic Inferno",
+      "validated_date": "2026-06-05",
+      "report": "add-judge-quiz-faithfulness-suite (Q4)",
+      "status": "IMPLEMENTED",
+      "gap_kind": "engine",
+      "archetype": "judge-quiz Q4 (Cluster G / security-attack net count)",
+      "yaml_path": "code/digimon-engine/cards/bt4/BT4-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_098.rs",
+      "test_count": 7,
+      "patterns": [
+        "OPTION-MAIN-TARGET-OWN-HYBRID",
+        "SECURITY-ATTACK-CHANGE",
+        "GRANT-TRIGGERED-ONBLOCK",
+        "SECURITY-EFFECT-MASS-MODIFIER"
+      ],
+      "notes": "[Main] grants a chosen own [Hybrid] Digimon +3000 DP, <Security A. +1>, and an on_block 'gain +3 memory' trigger (all end_of_turn). [Security] grants all your Digimon <Security A. +1> until end of your next turn. All 3 printed clauses implemented.",
+      "audit_note": "Faithful to printed text (card face + DCGO BT4_098.cs). Latent engine gap G-ENGINE-GRANTED-ONBLOCK-CARRIER-GATE: the granted on_block body over-fires for non-carrier blocks (positive case correct); card YAML is correct, fix is engine-side."
+    },
+    "AD1-002": {
+      "card_name": "Aldamon",
+      "validated_date": "2026-06-05",
+      "report": "add-judge-quiz-faithfulness-suite (Q4)",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "judge-quiz Q4 (Cluster G / security-attack net count)",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_002.rs",
+      "test_count": 8,
+      "patterns": [
+        "RUSH",
+        "WHEN-DIGIVOLVING-DELETE-DP-LE",
+        "EOA-OD-CONDITIONAL-TRASH-DRAW",
+        "PLAY-TAMER-FREE-FROM-HAND-OR-TRASH",
+        "INHERITED-YOUR-TURN-DP-AURA"
+      ],
+      "notes": "<Rush>; [When Digivolving] delete opp Digimon with DP <= self; [End of Attack][On Deletion] optional trash 1 Hybrid/Ten Warriors -> conditional Draw 2 -> optional free-play R/B/G Tamer with inherited effects from hand or trash; inherited [Your Turn] +4000 DP. Standard Lv4/Red/Cost3 digivolution intact.",
+      "audit_note": "PARTIAL: alt-digivolve line ([Takuya Kanbara] w/ 2+ [Hybrid] sources: Cost 3) cannot enforce the >=2-Hybrid-source count -> G-DSL-DIGISOURCE-TRAIT-COUNT-GTE (only the base name enforced; alt-path under-constrained, flagged in YAML). All other clauses faithful (DCGO AD1_002.cs)."
+    },
+    "BT23-102": {
+      "card_name": "Mastemon",
+      "validated_date": "2026-06-06",
+      "report": "add-judge-quiz-faithfulness-suite (Q9)",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "judge-quiz Q9 (Cluster D / activation site)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-102.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_102.rs",
+      "test_count": 11,
+      "patterns": [
+        "BARRIER",
+        "PARTITION-NAMED-SPLIT",
+        "WHEN-DIGIVOLVING-SECURITY-TRIM-TO-N",
+        "FREE-PLAY-LEVEL-COLOR-FILTER",
+        "ALL-TURNS-PLACE-BOTTOM-SECURITY",
+        "DNA-DIGIVOLVE",
+        "ALT-DIGIVOLVE-TRAIT-GATE"
+      ],
+      "notes": "<Barrier>; <Partition [Angewomon]&[LadyDevimon]>; [When Digivolving] optional Lv5-or-lower yellow/purple free-play then trim both securities to 3 when stack has 2+ same-level cards; [All Turns][OPT] place-as-bottom-security; Lv5/[CS] alt-digivolve + Lv5+Lv5 DNA.",
+      "audit_note": "PARTIAL: controller-side trim blocked by G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER (aborts mid-batch on the carrier's own OnLoseSecurity OPT). Opponent-side trim (Q9 pin) faithful + green. Recovered from sub-agent transcript after cross-worktree git-clean wipe."
+    },
+    "BT15-037": {
+      "card_name": "Gatomon",
+      "validated_date": "2026-06-06",
+      "report": "add-judge-quiz-faithfulness-suite (Q9)",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "judge-quiz Q9 (Cluster D / activation site)",
+      "yaml_path": "code/digimon-engine/cards/bt15/BT15-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_037.rs",
+      "test_count": 4,
+      "patterns": [
+        "BARRIER-FACE-AND-INHERITED",
+        "ALL-TURNS-OPT-GAIN-MEMORY-ON-OWN-SECURITY-REMOVED"
+      ],
+      "notes": "<Barrier> (face + inherited); [All Turns][OPT] mandatory gain 1 memory when a card is removed from your security (battle-area-gated by trigger dispatch — the Q9 activation-site crux).",
+      "audit_note": "PARTIAL: 'play this when an effect trashes it from your security' clause blocked by G-DSL-ON-DISCARD-SECURITY-TRIGGER (no DSL trigger for OnDiscardSecurity). Non-essential to the Q9 memory ruling."
     }
   }
 }

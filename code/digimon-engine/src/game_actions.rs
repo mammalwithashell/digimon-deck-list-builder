@@ -2797,7 +2797,19 @@ impl Game {
     /// Idempotent: a handle whose slot is already empty is filtered by the
     /// batched-deletion entrypoint, so a re-run is a no-op.
     pub(crate) fn run_state_based_rules_check(&mut self) -> bool {
-        let mut to_delete: Vec<PermanentHandle> = Vec::new();
+        // Per-permanent rule-check action. Both §17-1-3-1 and §17-1-3-2 are
+        // evaluated in one scan; they target disjoint permanents (a ≤0-DP
+        // Digimon has a DP value, a DP-less top has none).
+        enum RuleAction {
+            /// §17-1-3-1 — a Digimon at ≤0 DP is DELETED (fires OnDeletion).
+            DeleteZeroDp,
+            /// §17-1-3-2 — a DP-less card (a Digi-Egg) exposed as the live top
+            /// of a battle-area permanent "is considered to not be in any area
+            /// and is trashed." This is a TRASH of the whole permanent, NOT a
+            /// deletion-from-battle-area, so it fires no OnDeletion observers.
+            TrashDpLess,
+        }
+        let mut actions: Vec<(PermanentHandle, RuleAction)> = Vec::new();
         for pid in 0..self.players.len() {
             for idx in 0..self.players[pid].battle_area.len() {
                 // Skip transiently-empty (zombie) slots. A permanent mid-cleanup
@@ -2814,17 +2826,41 @@ impl Game {
                     player: pid as PlayerId,
                     index: idx as u8,
                 };
+                // §17-1-3-2 — a Digi-Egg can't be a Digimon in the battle area.
+                // When a stack is peeled/de-digivolved down to its egg, that egg
+                // becomes the live top and the whole permanent is trashed. A
+                // legitimately-played Tamer/Option permanent is NOT caught (its
+                // top kind is Tamer/Option, and it is a valid battle-area card);
+                // only a DP-less Digi-Egg top is illegal here.
+                if self.players[pid].battle_area[idx]
+                    .top_card()
+                    .card_kind(&self.card_data)
+                    == crate::enums::CardKind::DigiEgg
+                {
+                    actions.push((handle, RuleAction::TrashDpLess));
+                    continue;
+                }
                 if self.permanent_is_digimon_for_rules(handle)
                     && self.effective_dp(handle).unwrap_or(1) <= 0
                 {
-                    to_delete.push(handle);
+                    actions.push((handle, RuleAction::DeleteZeroDp));
                 }
             }
         }
-        if to_delete.is_empty() {
+        if actions.is_empty() {
             return false;
         }
-        for handle in to_delete.into_iter().rev() {
+        // Apply in descending (player, index) order so each removal — which
+        // shifts higher battle-area indices via `Vec::remove` — does not
+        // invalidate the handles still pending.
+        for (handle, action) in actions.into_iter().rev() {
+            if let RuleAction::TrashDpLess = action {
+                // §17-1-3-2 trash: route every stacked card to the owner's trash
+                // with no deletion/leave triggers ("not considered trashing from
+                // the battle area").
+                self.trash_permanent_stack(handle.player, handle.index as usize);
+                continue;
+            }
             // A ≤0-DP deletion is a STATE-BASED RULE action, not an effect.
             // `infer_deletion_cause` would otherwise attribute it to
             // OwnEffect/OpponentEffect (no battle/security/effect-source is
