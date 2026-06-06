@@ -1,26 +1,41 @@
 # BEATBREAK (BT25 "Glowing Dawn") — Model
 
 > Authored by `/archetype-interaction-test-author` for the **beatbreak** slice of
-> BT25. Scope (as given): `BT25-003, BT25-032, BT25-046, BT25-079, BT25-035,
-> BT25-049, BT25-081, BT25-041, BT25-057, BT25-088, BT25-090`.
+> BT25.
 >
-> **Implementation status (Phase-4 precondition gate, 2026-06-06):** only 4 of the
-> 11 slice cards are implemented (YAML present + loads into the embedded DSL
-> pack): **BT25-003 Frimon, BT25-032 Liollmon, BT25-046 Gekkomon, BT25-079
-> Hyemon**. The other 7 (BT25-035 Cougarmon, BT25-041 Murasamemon, BT25-049
-> Armalizamon, BT25-057 Monarchlizamon, BT25-081 Fangmon, BT25-088 Kyo Sawashiro,
-> BT25-090 Tomoro Tenma) have **empty (0-line) per-card test stubs and no YAML** —
-> they are **BLOCKED / unimplemented**. Per the skill's gating, combos naming any
-> of those 7 are **dropped** (logged below), not authored.
+> **Pass 1 (earlier) scope:** `BT25-003, BT25-032, BT25-046, BT25-079` + the seven
+> below; at that time only BT25-003/032/046/079 were implemented and combos B1/B2/B3
+> were authored in `tests/archetypes/` against them.
 >
-> Caveat carried forward from per-card authoring: the BT25 per-card behavioral
-> files (`cards_behavioral/bt25/bt25_00{3,32,46,79}.rs`) were authored but **never
-> run green** (the shared `cards_behavioral` binary currently fails to compile on
-> stale API: `GameEventKind`, `CompiledCost::Reduce`, `event.kind`,
-> `has_player_modifier`). The card **YAML** themselves compile and load (verified:
-> the `archetypes` binary loads BT25 DSL cards). The interaction tests below are
-> authored against the **current** `archetypes`/`support.rs` API and run in that
-> separate, green binary.
+> **Pass 2 (THIS pass, 2026-06-06) scope:** `BT25-088, BT25-090, BT25-035, BT25-049,
+> BT25-081, BT25-041, BT25-057`. Implementation state **has changed** since Pass 1.
+> Re-running the Phase-4 precondition gate against the live tree:
+>
+> | Card | YAML | per-card test | Status |
+> |------|------|---------------|--------|
+> | BT25-035 Cougarmon | ✅ `cards/bt25/BT25-035.yaml` | ✅ `bt25_035.rs` (green) | IMPLEMENTED (PARTIAL — see below) |
+> | BT25-041 Murasamemon | ✅ `BT25-041.yaml` | ✅ `bt25_041.rs` (green) | IMPLEMENTED (PARTIAL) |
+> | BT25-049 Armalizamon | ✅ `BT25-049.yaml` | ✅ `bt25_049.rs` (green) | IMPLEMENTED (PARTIAL) |
+> | BT25-081 Fangmon | ✅ `BT25-081.yaml` | ✅ `bt25_081.rs` (green) | IMPLEMENTED (full) |
+> | BT25-088 Kyo Sawashiro | ✅ `BT25-088.yaml` | ✅ `bt25_088.rs` (green) | IMPLEMENTED (PARTIAL) |
+> | BT25-090 Tomoro Tenma | ✅ `BT25-090.yaml` | ✅ `bt25_090.rs` (green) | IMPLEMENTED (PARTIAL) |
+> | BT25-057 Monarchlizamon | ❌ no YAML | ❌ 0-byte `bt25_057.rs` stub | **BLOCKED / unimplemented** |
+>
+> Verified 2026-06-06: the `cards_behavioral` binary now **compiles and runs green**
+> (46/46 across the six implemented cards) — the Pass-1 caveat about it failing to
+> compile is **stale**. The `archetypes` binary is also green (50/50 baseline).
+>
+> **The shared BLOCKED clause across the six PARTIAL cards** is the BEATBREAK
+> cost-engine payoff — the cost-reduction / free-digivolve unlocked by *trashing
+> face-down cards banked under your Tamers* (engine gap
+> `G-COST-REDUCTION-INTERACTIVE-PAY-COST` + DSL-vocab gap
+> `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER`). The IMPLEMENTED clauses are the
+> board-affecting halves: −DP, suspend, memory gain, the face-down *banking*
+> itself (Tomoro/Kyo), the inherited keyword grants, and Murasamemon's inherited
+> [End of Attack] unsuspend (which spends a face-down as a **process** cost, not a
+> cost-reduction pay_cost, so it is NOT blocked). The Pass-2 combos below test only
+> these implemented clauses; combos whose payoff is the BLOCKED cost-engine, and
+> any combo naming BT25-057, are dropped + logged.
 
 ## Card pool & roles
 
@@ -164,3 +179,86 @@ Authored (all pieces implemented):
 - Hyemon floodgate vs a **Tamer-sourced** gain (the "allowed" half of B3) —
   needs a Tamer card with a memory-gain effect; deferred (no slice Tamer is
   implemented, and using an out-of-slice Tamer adds non-slice surface).
+
+---
+
+## Pass-2 named combos (2026-06-06) — the now-implemented Lv.4/5 + Tamer slice
+
+These exercise the cards that were BLOCKED in Pass 1 and are now IMPLEMENTED
+(BT25-035/041/049/081/088/090). They live in
+`code/digimon-engine/tests/archetypes/beatbreak_bt25.rs`. Each test fires only
+the *implemented* clauses of these PARTIAL cards (never the BLOCKED cost-engine
+payoff). Cross-set evolution prerequisites are synthesized via `make_test_card`
+neutral fixtures; **no** cross-set card's printed effect is fired, so no
+cross-set implementation is pulled (lazy closure honored).
+
+### BB-IT1 — Armalizamon's suspend feeds Tomoro Tenma's face-down banker
+- **Cards:** BT25-049 Armalizamon (suspends an opp Digimon) + BT25-090 Tomoro
+  Tenma (banks 2 face-down on *any* Digimon suspend).
+- **Expected mechanical outcome:** Armalizamon's `[On Play]/[When Digivolving]`
+  *optional* suspend of an opponent Digimon is a **Digimon-suspend event**;
+  Tomoro's `[All Turns] "When any Digimon suspend"` clause fires off it. Accepting
+  Tomoro's optional clause **suspends Tomoro** (the activation cost) and
+  **banks the top 2 deck cards face-down under Tomoro** (deck −2, Tomoro's source
+  count 1→3, both placed sources face-down). The opponent Digimon is left
+  suspended. The system fact a per-card test can't show: Tomoro's banker is fed
+  by **another slice card's** suspend (the per-card 090 test calls
+  `game.suspend` directly).
+- **Rules/keyword basis:** DCGO `BT25_049.cs` `SelectPermanentEffect Mode.Tap`
+  (opp Digimon); DCGO `BT25_090.cs` `OnTappedAnyone` gated on
+  `IsPermanentExistsOnBattleAreaDigimon` (ANY Digimon) → `AddDigivolutionCardsBottom
+  isFacedown:true`; `general_rule.pdf` suspend/trigger timing.
+- **Rank:** HIGH — this *is* the deck's face-down resource engine (the suspend
+  payoffs fuel the Tamer banker that the Lv.4/5 payoffs later spend).
+
+### BB-IT2 — Tomoro banks the fuel that Murasamemon's inherited unsuspend spends
+- **Cards:** BT25-090 Tomoro Tenma (banks a face-down under itself, a Tamer) +
+  BT25-041 Murasamemon (inherited `[End of Attack][OPT]`: trash a bottom
+  face-down under any Tamer → this `[Glowing Dawn]` Digimon unsuspends).
+- **Expected mechanical outcome:** after Tomoro has banked face-down cards under
+  itself (via BB-IT1's banker), a suspended Glowing-Dawn host carrying Murasamemon
+  as an inherited source fires Murasamemon's `[End of Attack]` clause: it
+  **trashes one bottom face-down under Tomoro** (trash +1) and **unsuspends the
+  host**. Unhappy path: with **no** banked face-down anywhere, the trash cost is
+  unpayable → the host stays suspended. The system fact: the producer (090) and
+  consumer (041) of the face-down resource are **different cards** — the per-card
+  041 test hand-sets `card_sources[0].face_down = true` on a synthetic Tamer; here
+  the face-down is produced by Tomoro's *real* banking clause.
+- **Rules/keyword basis:** DCGO `BT25_090.cs` `AddDigivolutionCardsBottom`
+  (face-down) + DCGO `BT25_041.cs` inherited `EndOfAttack` `IsTamerWithFaceDownCard`
+  → `TrashDigivolutionCardsFromTopOrBottom(isFromTop:false)` → unsuspend self;
+  `general_rule.pdf` §16 inherited-effect / End-of-Attack timing.
+- **Rank:** HIGH — closes the face-down engine loop (bank → spend → unsuspend for
+  a second attack), the grind plan of the deck.
+
+### BB-IT3 — Cougarmon −DP + Armalizamon suspend stack on one target (combined soften+tap)
+- **Cards:** BT25-035 Cougarmon (`[On Play]/[WD]` −3000 DP to an opp Digimon) +
+  BT25-049 Armalizamon (`[On Play]/[WD]` optional suspend of an opp Digimon).
+- **Expected mechanical outcome:** both payoffs target the **same** opponent
+  Digimon: after both resolve it is at **−3000 effective DP** (turn-scoped) **and
+  suspended**. Net board: one opp Digimon softened (easier to out-DP / delete in
+  battle) and tapped (can't block) — the combined removal-prep the deck plays for.
+  Asserts the two independent debuffs **coexist** on one permanent and that the
+  −3000 expires at end of turn while the suspend persists (different lifetimes).
+- **Rules/keyword basis:** DCGO `BT25_035.cs` `-3000 DP UntilEachTurnEnd`; DCGO
+  `BT25_049.cs` `Mode.Tap`; `general_rule.pdf` modifier-expiry vs suspend-state.
+- **Rank:** MEDIUM — two payoffs converging on one target is the deck's standard
+  removal setup; pins that a turn-scoped DP modifier and a suspend stack
+  independently and expire independently.
+
+### Pass-2 dropped (logged, not silently truncated)
+- **Monarchlizamon (BT25-057)** any combo — BLOCKED: 0-byte test stub, no YAML.
+  The "Tomoro banks → Monarchlizamon De-Digivolve by trashing a face-down" loop
+  and "Armalizamon→Monarchlizamon green line + extra battle" are dropped.
+- The **cost-engine payoff** of every PARTIAL card (Cougarmon free-digivolve into
+  a Glowing-Dawn hand card by trashing 2 face-downs; Armalizamon/Tomoro/Kyo
+  Option/play **cost −N** by trashing a face-down; Murasamemon play/use a Glowing
+  Dawn at −3) — BLOCKED on `G-COST-REDUCTION-INTERACTIVE-PAY-COST` /
+  `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER`. These are the deck's defining combos
+  but the substrate cannot express them yet; not authored.
+- **Kyo Sawashiro on-lose-security banker → spends under a Lv.4/5 payoff** —
+  Kyo's banking IS implemented, but its only *implemented* downstream consumer in
+  this slice is Murasamemon's inherited unsuspend, already covered by BB-IT2 using
+  Tomoro (the more on-curve banker). A Kyo-fed variant would be a near-duplicate;
+  dropped to avoid redundancy (BB-IT2 already pins "any Tamer's face-down is a
+  legal Murasamemon cost", which subsumes Kyo).

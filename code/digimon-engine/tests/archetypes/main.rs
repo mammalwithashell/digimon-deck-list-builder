@@ -42,6 +42,7 @@ mod fixture_smoke {
 
 // ── Per-archetype interaction suites ─────────────────────────────────────────
 
+mod beatbreak_bt25;
 mod callismon_dark_animal_bt25;
 mod flaremon_beastkin;
 mod gaogamon_beast_bt25;
