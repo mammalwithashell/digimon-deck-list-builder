@@ -79,13 +79,26 @@ the engine's per-iteration `current_security_strike` recompute correctly drops t
 remaining checks (net +1−1 = 1 check). Pinned by
 `g::q4_security_attack_net_modifiers_one_check` + the false-pass control
 `g::q4_control_atomic_inferno_plus_one_alone_checks_two`. The **modifier** path of
-the recompute is proven correct. **Caveat (pre-existing, out of scope):** the
-`mid_attack_security_attack_recompute` suite itself is currently RED on this branch
-(Medusamon keyword/digivolve path over-checks: 0 remaining vs expected 1) — confirmed
-pre-existing (reproduces with the new YAMLs removed; this change touches no engine
-code), likely regressed in the recent Q19 post-deletion-drain work. Flagged for a
-separate fix session; the keyword-recompute path is a *different* code path from the
-modifier path Q4 exercises.
+the recompute is proven correct.
+
+Recompute-suite RED — **RESOLVED 2026-06-05 (test-only fix).** While running the
+combat hot-path gate, the `mid_attack_security_attack_recompute` suite was found
+RED (2/3, `left:0 right:1`). Systematic root-cause: the recompute is CORRECT — the
+loop checks exactly 2 cards and leaves 1 (verified by instrumenting
+`current_security_strike` + the dispose loop: strike reads 2 every iteration). The
+failure was a **test artifact**, bisected to `053a06ad` (#582,
+`G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`): once tokens became valid `kind: digimon`
+field-select targets, the Petrification token that Medusamon's
+`on_opponent_security_removed` clause plays for the defender became a legal target
+for Medusamon's OPTIONAL `[End of Attack]` "delete 1 of opponent's lowest-DP
+Digimon". The test's blanket `drive_to_completion` auto-activated that optional →
+token deleted → token `[On Deletion]` trashes the defender's TOP security → a 3rd,
+unrelated security loss. The engine is faithful (the cascade is correct Medusamon
+behavior); the test simply must not opt into it. Fix: the driver is now scoped to
+the in-flight security loop (`drive_security_loop_to_completion`, stops when
+`security_resolution` clears), so the check count is asserted at loop completion
+before the post-loop `[End of Attack]` optional. No engine change. Suite green
+(2 passed, 1 ignored).
 
 Q18 → **PASS** (2026-06-05): LM-020 Quantumon fully authored (both clauses). The
 ledger's "only the security→deck clause is blocked" was an undercount — the card
