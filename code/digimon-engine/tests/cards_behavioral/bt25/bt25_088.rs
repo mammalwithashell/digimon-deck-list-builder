@@ -17,14 +17,21 @@
 //! # Patterns this test covers (RUST_DSL_TEST_API.md §4.3)
 //! - B1 start-of-turn tamer (memory swing — set to 3)
 //! - face-down tamer-stash substrate (place_as_bottom_source deck_top x2)
-//! - D2 cost reduction (BeforePayCost) with pay_cost (trash face-down under Tamer)
-//! - E2 OPT + optional decline (cost reduction)
 //! - Tamer [Security] play-self
+//!
+//! # Verdict — PARTIAL
+//! Clause 3 ("[Your Turn][OPT] when a [Glowing Dawn] card would be played, by
+//! trashing the bottom face-down card under a Tamer, reduce the cost by 1") is
+//! BLOCKED on engine gap G-COST-REDUCTION-INTERACTIVE-PAY-COST
+//! (docs/RUST_ENGINE_GAPS.md): a `kind: cost_reduction` `pay_cost` that installs
+//! an interactive selection (the Tamer pick) parks, so the engine drops the
+//! reduction credit while still paying the cost. The clause is OMITTED from the
+//! YAML rather than shipping an over-charge. Clauses 1, 2, 4 are IMPLEMENTED.
 
 #![allow(dead_code)]
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -57,29 +64,6 @@ fn make_security_filler(id: &str) -> CardData {
     c.level = None;
     c.dp = None;
     c.play_cost = 3;
-    c
-}
-
-/// A Glowing Dawn Digimon with a printed play cost — the cost-reduction target.
-fn make_glowing_dawn(id: &str, cost: u16) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.colors = vec![CardColor::Yellow];
-    c.level = Some(4);
-    c.dp = Some(4000);
-    c.play_cost = cost;
-    c.traits = vec!["Glowing Dawn".to_string()];
-    c
-}
-
-/// A non-Glowing-Dawn Digimon with a play cost — used for the negative gate.
-fn make_plain(id: &str, cost: u16) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.colors = vec![CardColor::Yellow];
-    c.level = Some(4);
-    c.dp = Some(4000);
-    c.play_cost = cost;
     c
 }
 
@@ -144,27 +128,22 @@ fn bt25_088_lose_security_clause_is_optional() {
     assert!(clause.optional, "'you may place' → optional clause");
 }
 
+/// The BLOCKED cost-reduction clause (clause 3) is intentionally NOT in the
+/// YAML — there is no `CostReduction` declarative clause to assert.
+/// G-COST-REDUCTION-INTERACTIVE-PAY-COST.
 #[test]
-fn bt25_088_has_optional_opt_cost_reduction_clause() {
+fn bt25_088_blocked_cost_reduction_clause_is_omitted() {
     let card = compiled(CARD_ID);
-    let cr = card
-        .effects
-        .iter()
-        .find_map(|c| match c {
-            CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction {
-                optional,
-                once_per_turn,
-                amount,
-                scope,
-                ..
-            }) => Some((*optional, *once_per_turn, *amount, *scope)),
-            _ => None,
-        })
-        .expect("cost_reduction declarative clause present");
-    assert!(cr.0, "cost reduction is optional ('by trashing ...')");
-    assert!(cr.1, "cost reduction is once per turn");
-    assert_eq!(cr.2, Some(1), "reduces by 1");
-    assert_eq!(cr.3, CompiledScope::FaceUp);
+    let has_cr = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { .. })
+        )
+    });
+    assert!(
+        !has_cr,
+        "the interactive-pay_cost cost-reduction clause must stay omitted (BLOCKED)"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -300,83 +279,7 @@ fn bt25_088_lose_security_decline_does_nothing() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — [Your Turn][OPT] Glowing Dawn play cost reduction by trashing FD
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/// Build a runner with Kyo on field carrying ONE face-down stash source under it,
-/// plus a Glowing Dawn play target in hand.
-fn runner_with_kyo_stash(target_cost: u16) -> DebugRunner {
-    let mut runner = DebugRunner::builder()
-        .add_card(kyo())
-        .add_card(make_glowing_dawn("GD", target_cost))
-        .add_card(make_filler("STASH"))
-        .hand(0, &["GD"])
-        .memory(10)
-        .start();
-    let kyo_perm = runner.place_stack(0, &["STASH", CARD_ID]);
-    runner.game.players[0].battle_area[kyo_perm.index as usize].card_sources[0].face_down = true;
-    runner
-}
-
-fn hand_index(runner: &DebugRunner, player: u8, id: &str) -> usize {
-    runner.game.players[player as usize]
-        .hand
-        .iter()
-        .position(|c| c.card_id(&runner.game.card_data) == id)
-        .unwrap_or_else(|| panic!("{id} not in hand"))
-}
-
-#[test]
-fn bt25_088_play_cost_reduction_reduces_glowing_dawn_by_one() {
-    let mut runner = runner_with_kyo_stash(4);
-    let gd_idx = hand_index(&runner, 0, "GD");
-
-    let memory_before = runner.memory();
-    let _ = runner.play(0, gd_idx);
-    let _ = runner.auto_resolve();
-
-    assert!(
-        runner
-            .game
-            .players[0]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "GD"),
-        "GD must be on the field"
-    );
-    let spent = memory_before - runner.memory();
-    assert_eq!(spent, 3, "Glowing Dawn play cost 4 reduced by 1 → spent 3");
-    assert_eq!(
-        runner.trash_size(0),
-        1,
-        "the trashed face-down stash source is in trash"
-    );
-}
-
-#[test]
-fn bt25_088_play_cost_not_reduced_for_non_glowing_dawn_card() {
-    let mut runner = DebugRunner::builder()
-        .add_card(kyo())
-        .add_card(make_plain("PLAIN", 4))
-        .add_card(make_filler("STASH"))
-        .hand(0, &["PLAIN"])
-        .memory(10)
-        .start();
-    let kyo_perm = runner.place_stack(0, &["STASH", CARD_ID]);
-    runner.game.players[0].battle_area[kyo_perm.index as usize].card_sources[0].face_down = true;
-
-    let plain_idx = hand_index(&runner, 0, "PLAIN");
-    let memory_before = runner.memory();
-    let _ = runner.play(0, plain_idx);
-    let _ = runner.auto_resolve();
-
-    let spent = memory_before - runner.memory();
-    assert_eq!(spent, 4, "non-Glowing-Dawn card pays full cost 4 (no reduction)");
-    assert_eq!(runner.trash_size(0), 0, "no face-down stash trashed");
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Section 5 — [Security] play-self structural
+// Section 4 — [Security] play-self structural
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[test]
