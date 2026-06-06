@@ -1,0 +1,136 @@
+# BT25-017 Flaremon — Digimon, Lv.5, Red, DP 7000, Cost 6.
+# Traits: Beastkin, Iliad, TS.  Attribute: Vaccine.
+# Evo: Lv.4 Red / cost 3 (printed evo_costs).
+#
+# Printed card text (data/cards.json; confirmed against card image BT25-017):
+#
+#   [On Play] [When Digivolving] This Digimon may attack. Then, by trashing 1
+#   card in your hand, delete 1 of your opponent's Digimon with 7000 DP or less.
+#   [Your Turn] When your Digimon are played or digivolve, if any of them are
+#   blue, this Digimon may digivolve into [Apollomon] in the hand with the cost
+#   reduced by 2.
+#
+# Inherited:
+#   <Security A. +1> (This Digimon checks 1 additional security card.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_017.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+#   (1) EffectTiming.None — AddSelfDigivolutionRequirementStaticEffect(level 4,
+#       HasTSTraits, cost 3). Printed "[Digivolve] Lv.4 w/[TS] trait: Cost 3"
+#       (card image). Standard Lv.4 Red / cost 3 evo block also encoded.
+#   (2) Shared OnPlay/WhenDigivolving:
+#         - SelectAttackEffect on card.PermanentOfThisCard() ("This Digimon may
+#           attack."). Only fires when CanAttack.
+#         - Then SelectHandEffect (Discard, canNoSelect:true → "by trashing"
+#           is opt-in). AfterSelectCard: if a card was trashed (count >= 1) AND
+#           an eligible opponent target exists (DP <= 7000), SelectPermanentEffect
+#           (Destroy, canNoSelect:false) over opponent Digimon with DP <= 7000.
+#   (3) OnEnterFieldAnyone — [Your Turn] gate: a played/digivolved OWN Digimon
+#       is blue → this Digimon MAY digivolve into [Apollomon] from hand,
+#       payCost:true, reduceCost 2, isHand:true. Skippable.
+#   (4) ChangeSelfSAttackStaticEffect(+1, isInheritedEffect:true).
+#
+# ─── DSL modelling notes ─────────────────────────────────────────────────────
+#
+# Clause 1 ([On Play][When Digivolving]):
+#   - may_attack_now { attacker: source, optional: true } — "This Digimon may
+#     attack." The optional surfaces PASS so the player can decline.
+#   - "by trashing 1 card in your hand" is an optional cost: select_hand
+#     (optional: true) → trash_hand_card. Then the delete is guarded by
+#     `binding_present: trashed` so declining the trash skips the delete
+#     (no half-paid cost / no free delete).
+#   - delete target gated to opponent Digimon with dp_lte: 7000.
+#
+# Clause 2 ([Your Turn] played/digivolve, blue → digivolve into Apollomon -2):
+#   - when: [on_enter_field_anyone, on_digivolve] (played OR digivolve), gated to
+#     active_when your_turn ([Your Turn]).
+#   - condition: event_target_owner: you ("your Digimon") AND event_card_color_has:
+#     [blue] ("if any of them are blue"). Same shape as BT16-085 Clause 2.
+#   - optional: true ("may digivolve").
+#   - select_hand to [Apollomon]; self effect_initiated_digivolve { target:
+#     source } cost { reduce: 2 } ("the cost reduced by 2"). ignore_requirements:
+#     false (printed reduces cost only, requirements kept).
+#
+# Clause 3 (Inherited <Security A. +1>): grant_keyword SecurityAttackPlus 1.
+
+card: BT25-017
+name: Flaremon
+kind: digimon
+level: 5
+color: [red]
+cost: 6
+dp: 7000
+traits: [Beastkin, Iliad, TS]
+
+alt_paths:
+  # Standard digivolution: Lv.4 Red / cost 3 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+  # Alt-digivolution: Lv.4 with [TS] trait / cost 3 (printed digivolve box).
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── Clause 1 — [On Play][When Digivolving] may attack, then trash→delete ────
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] This Digimon may attack; then by trashing 1 hand card, delete 1 opp Digimon with <=7000 DP"
+    process:
+      # "This Digimon may attack."
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true
+      # "Then, by trashing 1 card in your hand, ..." — optional cost.
+      - select_hand:
+          of: you
+          bind_as: trashed
+          optional: true
+          filter: {}
+          prompt: "You may trash 1 card from your hand to delete an opponent's Digimon (7000 DP or less)"
+      - if:
+          condition: { binding_present: trashed }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: trashed }
+            # "delete 1 of your opponent's Digimon with 7000 DP or less."
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 7000
+                prompt: "Delete 1 of your opponent's Digimon with 7000 DP or less"
+            - delete_permanent: { target: victim }
+
+  # ─── Clause 2 — [Your Turn] blue played/digivolve → digivolve into Apollomon, cost -2 ─
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When your Digimon are played/digivolve and any are blue, this Digimon may digivolve into [Apollomon] in hand with cost -2"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_card_color_has: [blue]
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Apollomon"
+          prompt: "Digivolve into [Apollomon] (cost reduced by 2)"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  # ─── Inherited <Security A. +1> ────────────────────────────────────────────
+  - kind: grant_keyword
+    scope: inherited
+    keyword: SecurityAttackPlus
+    value: 1

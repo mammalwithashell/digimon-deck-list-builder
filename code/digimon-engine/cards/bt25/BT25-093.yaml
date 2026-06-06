@@ -1,0 +1,123 @@
+card: BT25-093
+name: "Ignition Flare"
+kind: option
+color: [red]
+cost: 5
+traits: [TS]
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: TS
+      - all_of:
+          - kind: tamer
+          - trait_has: TS
+
+effects:
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - all_of:
+              - kind: digimon
+              - trait_has: TS
+          - all_of:
+              - kind: tamer
+              - trait_has: TS
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT25-093" }
+    summary: "While you have a TS Digimon or Tamer, ignore color requirements for this card"
+
+  # [Main] Delete all of your opponent's Digimon with the lowest DP. If this
+  # effect didn't delete, trash 1 of your opponent's Option cards in the battle
+  # area. Then, you may link this card to 1 of your Digimon without paying cost.
+  - when: main_from_hand
+    summary: "[Main] Delete opponent's lowest-DP Digimon; if none deleted, trash 1 opponent battle-area Option; then optionally link"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            dp_lte:
+              aggregate:
+                selector: lowest_dp
+                scope: opponent
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - select_opponent_permanent:
+                bind_as: opt_target
+                filter: { kind: option }
+                prompt: "Choose 1 of your opponent's Option cards in the battle area to trash"
+            - delete_permanent: { target: opt_target }
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter: { kind: digimon }
+
+  # [Security] Activate this card's [Main] effects.
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate [Main]: delete opponent's lowest-DP Digimon; if none, trash an opponent Option; then optionally link"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            dp_lte:
+              aggregate:
+                selector: lowest_dp
+                scope: opponent
+          bind_as: sec_victim
+          body:
+            - delete_permanent: { target: sec_victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - select_opponent_permanent:
+                bind_as: sec_opt_target
+                filter: { kind: option }
+                prompt: "Choose 1 of your opponent's Option cards in the battle area to trash"
+            - delete_permanent: { target: sec_opt_target }
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter: { kind: digimon }
+
+  # Inherited (link ESS): [When Attacking] [Once Per Turn] Delete 1 of your
+  # opponent's Digimon with as much DP as this Digimon or less.
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Inherited][When Attacking][OPT] Delete 1 opponent Digimon with DP <= this Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: wa_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { source_dp: {} }
+          prompt: "Delete 1 opponent Digimon with DP as much as this Digimon or less"
+      - delete_permanent: { target: wa_target }
+
+  # [Link] [TS] trait: Cost 3
+  - kind: link_requirement
+    scope: inherited
+    cost: 3
+    filter:
+      kind: digimon
+      trait_has: TS
+    summary: "[Link] [TS] trait: Cost 3"

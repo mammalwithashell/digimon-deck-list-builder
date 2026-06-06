@@ -295,6 +295,7 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Card(s):** BT24-018, BT21-029, BT24-016, BT21-025 — every card with `[All Turns]` triggered clauses.
 - **What's missing:** `active_when: { all_turns: true }` parses but the predicate evaluator may not actually allow firing on the opponent's turn (uncertain — needs verification). Tests for opp-turn triggers are #[ignore]'d pending verification.
 - **Workaround:** Use `active_when: { all_turns: true }` and confirm via behavioral test on opp's turn.
+- **Confirmed sub-case — OPT counter not reset for non-turn-player (2026-06-06, `/archetype-interaction-test-author`, Titan BT25 slice):** An **[All Turns] [Once Per Turn]** effect on a Digimon whose controller is **not** the turn player is wrongly locked out on the opponent's turn after it already fired once on the controller's own turn. Root cause: `Game::continue_begin_turn_after_start_delays` (`code/digimon-engine/src/game_phases.rs:59`) resets per-turn activation state via `self.player_mut(tp).new_turn()` **only for the turn player `tp`**. `Permanent::new_turn` (`permanent.rs:454`) clears `effect_activations`, but it is never called on the *non-turn-player's* permanents at the opponent's turn-start — so their per-turn OPT counters persist across the turn boundary. This contradicts `general_rule.pdf` §15-14-1-1/§15-14-1-2: "[X Per Turn] means an effect can be activated X times **during 1 turn** … won't trigger again **during that turn**" — i.e. the count resets at the start of *each* turn, including the opponent's. DCGO tracks `maxCountPerTurn` per game-turn (reset every turn for all cards). **Reproduced by** `code/digimon-engine/tests/archetypes/titan_bt25.rs::t2_deltamon_de_digivolve_re_arms_on_opponent_turn` (BT25-068 Deltamon's [All Turns][OPT] on-suspend De-Digivolve fires turn 1, then fails to re-arm when re-suspended on the opponent's turn). The same-turn-lockout floor (`t2_deltamon_de_digivolve_same_turn_lockout`) and the cross-card unsuspend engine (`t1_*`) pass, isolating the bug to the turn-boundary reset scope. **Suggested fix:** at turn-start (`continue_begin_turn_after_start_delays`), reset per-turn activation counters for **all** players' permanents (or at minimum clear `effect_activations` for every battle-area permanent regardless of controller), not just `tp`'s. This affects every [All Turns] OPT card while it is on the non-turn-player's board (Deltamon, Orochimon reveal-play, Dorimon's inherited unsuspend, etc.). Cross-check the prior `G-OPT-RESET-VIA-ATTACK-CYCLE` closure (`qa/resolved-gaps.md`): that closure verified the reset trajectory **only for the turn player across their own turn cycle** and never exercised an [All Turns] OPT effect on the opponent's turn — so this is an uncovered, distinct case, not a regression of that fix.
 
 ### ~~`trash_security_card` Verb (Non-Top Security) Missing~~  [G-TRASH-SELECTED-SECURITY] — RESOLVED 2026-05-21
 - **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `EffectContext::trash_security_card(player, handle)` trashes a chosen security card by stable handle; the `trash_selected_security` DSL verb consumes a `select_security` binding. Full entry archived in `qa/resolved-gaps.md`.
@@ -724,4 +725,57 @@ prose source-of-truth; the JSON is the index that points back to it. When
 adding a new family entry above, add a matching record to the JSON (the same
 `family_id`, a distinctive substring pattern, a panic-site reference, and a
 status).
+
+### §Card-faithfulness — GAP-BT25-003-HAND-COND (Frimon inherited clause is dead)
+
+- **First seen:** 2026-06-06, `/archetype-interaction-test-author` run on the BT25
+  "beatbreak" / Glowing Dawn slice (combos B1/B2). Confirmed via
+  [`code/digimon-engine/tests/archetypes/beatbreak_bt25.rs`](../../code/digimon-engine/tests/archetypes/beatbreak_bt25.rs)
+  (`b1_frimon_inherited_clause_is_currently_dead_regression_sentinel` green +
+  `control_egg_inherited_when_attacking_fires_in_this_harness` green; the
+  aspirational `b1_…without_firing_on_play` and `b2_…off_colour…` are `#[ignore]`d
+  pending the fix).
+- **Class:** card-effect faithfulness (wrong DSL predicate chosen in the YAML — the
+  required vocabulary already exists, so this is **NOT** a DSL-vocab or engine
+  gap). Net effect: a printed card effect never fires.
+- **Card:** **BT25-003 Frimon** (Lv.2 Yellow Digi-Egg). Printed inherited effect:
+  *"[When Attacking] [Once Per Turn] By trashing your top security card, this
+  Digimon may digivolve into a [Glowing Dawn] trait card in the hand with the cost
+  reduced by 1."*
+- **Symptom:** the inherited `[When Attacking]` clause **never installs its prompt**,
+  so the card does nothing — declaring an attack with the egg in a stack, top
+  security present, and a [Glowing Dawn] target in hand produces no pending
+  selection and no digivolve.
+- **Root cause:** the clause condition in
+  [`code/digimon-engine/cards/bt25/BT25-003.yaml`](../../code/digimon-engine/cards/bt25/BT25-003.yaml)
+  gates the hand-target presence with
+  `any_permanent: { of: you, zone: [hand], kind: digimon, trait_has: "Glowing Dawn" }`.
+  But the `any_permanent` existential predicate scans **battle areas only** —
+  [`dsl_cards/predicate.rs::existential_any`](../../code/digimon-engine/src/dsl_cards/predicate.rs)
+  iterates `player(p).battle_area` and ignores the `zone` field; the design note at
+  [`digimon-dsl/src/predicate.rs:242`](../../code/digimon-dsl/src/predicate.rs)
+  documents that `any_permanent { zone: [...] }` "cannot see" non-permanent zones.
+  So the hand-presence gate is unsatisfiable and the whole clause is dead. (A
+  diagnostic that placed a Glowing Dawn Digimon on the *battle area* also failed to
+  fire, so a secondary contributor — possibly the YAML's `kind: digimon` where
+  cards.json `card_kind: 3` is **DigiEgg**, cf. the working `kind: digi_egg` egg
+  BT10-003 — is not excluded; the hand-zone predicate is the confirmed primary
+  cause and must be fixed first.)
+- **Suggested fix (not applied — this skill does not edit card/engine code):**
+  replace the `any_permanent { zone: [hand], … }` condition leaf with a hand-zone
+  aggregate that the evaluator supports, e.g.
+  `count_gte: { filter: { of: you, zone: [hand], kind: digimon, trait_has: "Glowing Dawn" }, n: 1 }`
+  — exactly the idiom **BT24-035** uses to gate a Silphymon-in-hand DNA digivolve
+  (`code/digimon-engine/cards/bt24/BT24-035.yaml`). Then re-enable the two
+  `#[ignore]`d B1/B2 interaction tests and the per-card `bt25_003.rs` flow. Also
+  audit whether `kind:` should be `digi_egg`.
+- **Source priority consulted:** card text (cards.json BT25-003) for the intended
+  effect; DCGO C# is ABSENT for BT25-003 (no `BT25_003.cs`), so the printed text is
+  the authority; engine `existential_any` + the `digimon-dsl` predicate design note
+  for the mechanism.
+- **Blast radius:** any other YAML using `any_permanent { zone: [hand|trash|
+  security|…] }` as a *condition* is silently mis-gated the same way. A repo-wide
+  audit of `any_permanent:` blocks carrying a non-`battle_area` `zone:` is
+  warranted (grep `zone: \[hand\]` / `\[trash\]` / `\[security\]` under an
+  `any_permanent` / `no_permanent` / `all_permanents` existential).
 

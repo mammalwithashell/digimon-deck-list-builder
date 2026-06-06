@@ -1,0 +1,139 @@
+# BT25-016 GrapLeomon — Digimon, Lv.5, Red, DP 7000, Cost 7.
+# Traits: Beastkin, Iliad, TS.  Attribute: Vaccine.
+# Evo: Lv.4 Red / cost 4 (printed evo_costs).
+#
+# Printed card text (data/cards.json; confirmed against card image BT25-016):
+#
+#   [On Play] [When Digivolving] 1 of your Digimon gets +3000 DP for the turn.
+#   Then, 1 of your Digimon may attack.
+#   [All Turns] When a Digimon with 13000 DP or more attacks, this Digimon may
+#   digivolve into [Marsmon] or [Callismon] in the hand without paying the cost.
+#
+# Inherited:
+#   <Security A. +1> (This Digimon checks 1 additional security card.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_016.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+#   (1) EffectTiming.None — AddSelfDigivolutionRequirementStaticEffect(level 4,
+#       HasTSTraits, cost 3). This is the printed "[Digivolve] Lv.4 w/[TS]
+#       trait: Cost 3" alt-source (card image shows "Lv.4 w/[TS] trait: Cost 3"
+#       in the digivolve box). Encoded as an alt_path. The standard Lv.4 Red /
+#       cost 4 evo block (cards.json evo_costs) is also encoded.
+#   (2) Shared OnPlay/WhenDigivolving:
+#         - SelectPermanentEffect over own Digimon (canNoSelect:false, mandatory
+#           when a target exists) → ChangeDigimonDP(+3000, UntilEachTurnEnd).
+#         - Then SelectPermanentEffect over own Digimon that CanAttack
+#           (canNoSelect:true → optional) Mode.Attack. "1 of your Digimon may
+#           attack."
+#   (3) OnAllyAttack — when an attacking permanent has DP >= 13000, this Digimon
+#       MAY digivolve (SetIsSkippable) into [Marsmon]/[Callismon] from hand,
+#       payCost:false, isHand:true.
+#   (4) EffectTiming.None — ChangeSelfSAttackStaticEffect(+1, isInheritedEffect:
+#       true) → inherited <Security A. +1>.
+#
+# ─── DSL modelling notes ─────────────────────────────────────────────────────
+#
+# Clause 1 ([On Play][When Digivolving]):
+#   - select_own_permanent (mandatory) for the +3000 DP target → add_dp_modifier
+#     value 3000, expiry end_of_turn ("for the turn").
+#   - may_attack_now with a SELECTED attacker: "1 of your Digimon may attack" is
+#     a player choice, so select_own_permanent (optional: true — the player may
+#     decline the whole "may attack") binds `attacker`, then may_attack_now
+#     { attacker: <binding> }. The select being optional surfaces PASS so the
+#     player can decline to attack (DCGO canNoSelect:true on the attacker pick).
+#
+# Clause 2 ([All Turns] 13000+ DP attacker → free digivolve):
+#   - when: [on_ally_attack] with active_when all_turns so it fires on both
+#     players' turns (DCGO OnAllyAttack observer). The attacking permanent is
+#     the event_target; gate on event_target_dp_gte: 13000.
+#   - optional: true ("may digivolve").
+#   - select_hand filtered to name [Marsmon] OR [Callismon]; self
+#     effect_initiated_digivolve { target: source } cost 0 (without paying).
+#
+# Clause 3 (Inherited <Security A. +1>):
+#   - kind: grant_keyword, scope: inherited, keyword: SecurityAttackPlus, value 1.
+
+card: BT25-016
+name: GrapLeomon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Beastkin, Iliad, TS]
+
+alt_paths:
+  # Standard digivolution: Lv.4 Red / cost 4 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  # Alt-digivolution: Lv.4 with [TS] trait / cost 3 (printed digivolve box).
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── Clause 1 — [On Play][When Digivolving] +3000 DP then 1 may attack ──────
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] 1 of your Digimon gets +3000 DP for the turn; then 1 of your Digimon may attack"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+    process:
+      # "1 of your Digimon gets +3000 DP for the turn." — mandatory pick.
+      - select_own_permanent:
+          bind_as: buff_target
+          filter: { kind: digimon }
+          prompt: "Select 1 of your Digimon to gain +3000 DP for the turn"
+      - add_dp_modifier:
+          target: buff_target
+          value: 3000
+          expiry: end_of_turn
+      # "Then, 1 of your Digimon may attack." — optional pick of the attacker;
+      # declining (PASS) skips the attack entirely.
+      - select_own_permanent:
+          bind_as: attacker_pick
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may choose 1 of your Digimon to attack"
+      - if:
+          condition: { binding_present: attacker_pick }
+          then:
+            - may_attack_now:
+                attacker: attacker_pick
+                targets: any
+                optional: true
+
+  # ─── Clause 2 — [All Turns] 13000+ DP attacker → free digivolve ─────────────
+  - when: [on_ally_attack]
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns] When a 13000+ DP Digimon attacks, this Digimon may digivolve into [Marsmon]/[Callismon] in hand without paying the cost"
+    condition:
+      event_target_dp_gte: 13000
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: "Marsmon"
+                  - name_contains: "Callismon"
+          prompt: "Digivolve into [Marsmon] or [Callismon] (without paying the cost)"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Inherited <Security A. +1> ────────────────────────────────────────────
+  - kind: grant_keyword
+    scope: inherited
+    keyword: SecurityAttackPlus
+    value: 1

@@ -1,0 +1,94 @@
+# BT25-009 Bearmon — Digimon, Lv.3, Red, DP 1000, Cost 3.
+# Traits: Beast, Iliad, TS. Attribute: Vaccine.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [Start of Your Main Phase] If you have 4 or less memory, this Digimon may
+#   digivolve into a Digimon card with [Beast], [Animal] or [Sovereign], other
+#   than [Sea Animal], in any of its traits or the [TS] trait in the hand
+#   without paying the cost.
+#
+# Inherited Effect:
+#   [All Turns] This Digimon gets +1000 DP.
+#
+# Digivolve: printed evo_costs list a Lv.2 Red cost-0 alternate path; DCGO adds
+# a self digivolution requirement gated on `TopCard.HasTSTraits` at level 2 for
+# cost 0.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_009.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "Alternate Digivolution Requirement" — EffectTiming.None,
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.HasTSTraits, 0, false,
+#   level: 2). → alt_paths digivolve from { level_eq: 2, trait_has: TS } cost 0.
+#
+# Clause "Start Of Your Main Phase" — EffectTiming.OnStartMainPhase
+#   ActivateClass. CanActivateCondition: IsExistOnBattleAreaDigimon &&
+#   IsOwnerTurn && Owner.MemoryForPlayer <= 4. SetUpActivateClass(..., -1, true,
+#   ...) → isOptional: true ("may"). Body: DigivolveIntoHandOrTrashCard(this,
+#   condition: IsDigimon && (HasBeastTraits || HasTSTraits), payCost: false,
+#   isHand: true). HasBeastTraits = engine [Beast]/[Animal]/[Sovereign]
+#   (non-[Sea Animal]) family; we model printed text directly.
+#   → when: start_of_your_main_phase, active_when: your_turn + memory_lte: 4,
+#     optional: true, select_hand → effect_initiated_digivolve { target: source,
+#     from_hand: evo, cost: 0, ignore_requirements: true } (BT25-062 idiom).
+#
+# Clause "All Turns - Inherited Effect" — ChangeSelfDPStaticEffect(1000,
+#   isInheritedEffect: true). → kind: aura, scope: inherited, target: {},
+#   dp_modifier: 1000.
+
+card: BT25-009
+name: Bearmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Beast, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: TS }
+    cost: 0
+
+effects:
+  # ─── Clause 0: [Start of Your Main Phase] free-digivolve self from hand ──────
+  - when: start_of_your_main_phase
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - memory_lte: 4
+    summary: "[SOMP] If <=4 memory, this Digimon may free-digivolve into a [Beast]/[Animal]/[Sovereign] (not [Sea Animal])/[TS] Digimon from hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - all_of:
+                      - any_of:
+                          - trait_has: Beast
+                          - trait_has: Animal
+                          - trait_has: Sovereign
+                      - none_of:
+                          - trait_has: Sea Animal
+                  - trait_has: TS
+          prompt: "Digivolve into a [Beast], [Animal] or [Sovereign] (not [Sea Animal]) or [TS] Digimon from your hand without paying the cost"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 1: Inherited [All Turns] +1000 DP ───────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

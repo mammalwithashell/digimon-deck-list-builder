@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-05",
+  "last_updated": "2026-06-06",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -5658,6 +5658,612 @@
         "ALT-DIGIVOLVE-PATH"
       ],
       "notes": "BLOCKED (dsl): [WD][WA][OPT] reveal top 3, may PLAY 1 cost<=12 D-Brigade/ACCEL Digimon among them with cost reduced by 5 (pay the rest), trash rest. play_from_revealed_free hardcodes CostDelta::Free; no reveal-pool play with a non-zero reduced cost. Engine primitive exists (play_from_hand_with_cost_result_from_origin takes a CostDelta; play_from_hand DSL step has cost_delta) but the reveal-pool play step does not expose it. Secondary clauses (on_ally_played CannotDigivolve on opp, inherited Reboot+Blocker) are expressible but the main WD/WA clause cannot be, so the card is BLOCKED."
+    },
+    "BT25-001": {
+      "card_name": "Tokomon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "orphan-staples-1 (BT25)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-001.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_001.rs",
+      "test_count": 7,
+      "patterns": [
+        "G4",
+        "E2"
+      ],
+      "notes": "Digi-Egg inherited [When Attacking][OPT]; TS-carrier-gated Draw 1. OPT lockout + reset covered."
+    },
+    "BT25-010": {
+      "card_name": "Hawkmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "orphan-staples-1 (BT25)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_010.rs",
+      "test_count": 10,
+      "patterns": [
+        "D2",
+        "D4",
+        "H"
+      ],
+      "notes": "Digivolve-into-trait (Avian/Bird/Beast/Animal/Sovereign, not Sea Animal) cost -1, self-source only; 2 cost-0 alt paths (TS/Poromon); inherited [Your Turn] +2000 DP. none_of exclusion veto inside cost_target."
+    },
+    "BT25-004": {
+      "card_name": "Tapmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "orphan-staples-1 (BT25)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "Inherited WhenWouldLink ActivateClass 'you may reduce link cost by 1' — [Link] subsystem gap facet #10 (would-link optional cost-reduction ActivateClass). docs/RUST_ENGINE_GAPS.md."
+    },
+    "BT25-005": {
+      "card_name": "Pagumon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "orphan-staples-1 (BT25)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "OnAddDigivolutionCards trigger ('when [Three Musketeers] placed in this Digimon's digivolution cards') — no such timing. New gap entry in docs/RUST_ENGINE_GAPS.md."
+    },
+    "BT25-007": {
+      "card_name": "Gatchmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "orphan-staples-1 (BT25)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "On Play reveal-3 + 2-bucket add IS expressible, but self-link-condition + WhenLinked 'delete <=3000 DP' (printed inherited slot) need the [Link] subsystem (facet #11). Can't ship faithfully w/o them."
+    },
+    "BT25-045": {
+      "card_name": "Onmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "orphan-staples-1 (BT25)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "WhenWouldLink ActivateClass 'may reduce link cost by 1' (facet #10) + WhenLinked 'suspend 1 opp Digimon' (facet #11). [Link] subsystem gap."
+    },
+    "BT25-006": {
+      "card_name": "Dorimon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "titan (BT25)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_006.rs",
+      "test_count": 5,
+      "patterns": [
+        "B"
+      ],
+      "notes": "Inherited [Opp Turn][OPT] on opp-attack: trash 1 hand card to unsuspend 1 [Titan] Digimon"
+    },
+    "BT25-068": {
+      "card_name": "Deltamon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "titan (BT25)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_068.rs",
+      "test_count": 9,
+      "patterns": [
+        "A",
+        "B",
+        "C",
+        "G",
+        "H"
+      ],
+      "notes": "<Collision>; [All Turns][OPT] on self-suspend De-Digivolve 1 opp; inherited +1000 DP; TS alt-digivolve"
+    },
+    "BT25-071": {
+      "card_name": "Orochimon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "titan (BT25)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-071.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_071.rs",
+      "test_count": 9,
+      "patterns": [
+        "B",
+        "C",
+        "E",
+        "G",
+        "H"
+      ],
+      "notes": "OnPlay/Digivolve lock 1 opp Digimon/Tamer (CannotAttack); [All Turns][OPT] on-suspend reveal-3 play-1 cost<=4 TS, rest to deck bottom (face-up + inherited)"
+    },
+    "BT25-019": {
+      "card_name": "UltimateBrachiomon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "titan (BT25)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-019.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_019.rs",
+      "test_count": 12,
+      "patterns": [
+        "A",
+        "C",
+        "F",
+        "H"
+      ],
+      "notes": "<Reboot>+<Blocker>; OnPlay/Digivolve delete highest-DP opp; EoT[OPT] memory-gated Digimon/Option effect immunity"
+    },
+    "BT25-069": {
+      "card_name": "Raremon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "dsl",
+      "archetype": "titan (BT25)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "link 1 [TS] card from trash to a Digimon free — no DSL verb to select+link a trash card (link_to_own_digimon only links carrier). See qa/dsl-vocab-gaps.md BT25-069."
+    },
+    "BT25-073": {
+      "card_name": "Dragomon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "hybrid",
+      "archetype": "titan (BT25)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "trash a link card as cost + would-leave-by-trashing-link replacement — G-DSL-LINK-TRASH-AS-REPLACEMENT-COST + [Link] subsystem (docs/RUST_ENGINE_GAPS.md)."
+    },
+    "BT25-080": {
+      "card_name": "Witchmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "titan (BT25)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "inherited OnDiscardHand trigger + main-clause played_by_effect condition — both missing. See docs/RUST_ENGINE_GAPS.md OnDiscardHand entry."
+    },
+    "BT25-083": {
+      "card_name": "LadyDevimon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "hybrid",
+      "archetype": "titan (BT25)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "bottom-source-from-hand/trash picker + trash-digivolution-option-as-cost + cost-reduced trash-option use. See qa/dsl-vocab-gaps.md BT25-083."
+    },
+    "BT25-016": {
+      "card_name": "GrapLeomon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Flaremon / beastkin",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-016.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_016.rs",
+      "test_count": 9,
+      "patterns": [
+        "D1"
+      ],
+      "notes": "OnPlay +3000DP then may_attack (selected attacker); all-turns on-attack(>=13000DP) free digivolve into Marsmon/Callismon; inherited SecurityA+1; TS alt-digi cost3."
+    },
+    "BT25-017": {
+      "card_name": "Flaremon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Flaremon / beastkin",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_017.rs",
+      "test_count": 8,
+      "patterns": [
+        "E2",
+        "F"
+      ],
+      "notes": "OnPlay may_attack then by-trashing-hand delete opp<=7000DP; YourTurn blue played/digivolve -> self digivolve into Apollomon cost-2; inherited SecurityA+1."
+    },
+    "BT25-024": {
+      "card_name": "Lekismon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Flaremon / beastkin",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_024.rs",
+      "test_count": 7,
+      "patterns": [
+        "A",
+        "H2"
+      ],
+      "notes": "Draw1 OnPlay/WhenDigi; YourTurn red played/digivolve -> self digivolve into Crescemon in TRASH cost-1 (source: trash-binding, BT16-040 idiom; cards.json said hand, card image says trash - image wins); inherited Jamming."
+    },
+    "BT25-054": {
+      "card_name": "GreatGrizzlymon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Flaremon / beastkin",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-054.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_054.rs",
+      "test_count": 10,
+      "patterns": [
+        "H5",
+        "F"
+      ],
+      "notes": "Blocker; OnPlay taunt 1 opp Digimon (grant_triggered_effect start-of-main force_attack until their turn ends); win-battle(source_deleted_battle_opponent) free digivolve into Callismon/Marsmon; inherited OPT win-battle trash top security."
+    },
+    "BT25-022": {
+      "card_name": "Lunamon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "mammal (TS/Iliad)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_022.rs",
+      "test_count": 6,
+      "patterns": [
+        "E",
+        "G"
+      ],
+      "notes": "[On Play] reveal-3 Iliad+TS two-bucket pick (no_duplicate_cards); inherited Jamming; alt-digivolve Lv.2 Blue/TS cost 0"
+    },
+    "BT25-030": {
+      "card_name": "Elecmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "mammal (TS/Iliad)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_030.rs",
+      "test_count": 9,
+      "patterns": [
+        "D",
+        "E",
+        "G"
+      ],
+      "notes": "[Start of Your Main Phase] optional add-top-security->gain 1 memory (gated security>=1); inherited [When Attacking][OPT] may add top sec then Recovery+1 if 0; alt-digivolve Lv.2 Yellow/TS cost 0"
+    },
+    "BT25-031": {
+      "card_name": "Patamon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "mammal (TS/Iliad)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-031.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_031.rs",
+      "test_count": 6,
+      "patterns": [
+        "E",
+        "G"
+      ],
+      "notes": "[On Play] reveal-3 Angel/Archangel/3-Great-Angels/4-Great-Dragons + TS two-bucket pick; inherited Barrier; alt-digivolve Lv.2 Yellow/TS cost 0"
+    },
+    "BT25-078": {
+      "card_name": "Gazimon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "mammal (TS/Iliad)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-078.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_078.rs",
+      "test_count": 7,
+      "patterns": [
+        "E",
+        "G"
+      ],
+      "notes": "[When Moving][On Play] optional reveal-3 branch: add 1 [Three Musketeers]-in-text to hand OR place 1 [Three Musketeers]-trait card as bottom digivolution source (choice-first P-167 idiom); inherited Retaliation; alt-digivolve Lv.2 Black/TS/TM-text cost 0"
+    },
+    "BT25-082": {
+      "card_name": "BlackGatomon",
+      "status": "IMPLEMENTED",
+      "archetype": "Callismon / dark animal",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-082.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_082.rs",
+      "test_count": 9,
+      "patterns": [
+        "B2",
+        "E2",
+        "H",
+        "G4"
+      ],
+      "notes": "Play TM-text Tamer free; direction:into conditional alt-digivolve into TM Digimon; inherited WA place TM source from hand/trash + Draw 1",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "gap_kind": null
+    },
+    "BT25-058": {
+      "card_name": "Callismon",
+      "status": "IMPLEMENTED",
+      "archetype": "Callismon / dark animal",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-058.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_058.rs",
+      "test_count": 9,
+      "patterns": [
+        "H5",
+        "H7",
+        "E3",
+        "F7"
+      ],
+      "notes": "Reboot/Blocker/Fortitude; Lv5 TS cost4 ignore alt-digivolve; OP/WD/WA OPT suspend+cant-unsuspend; All-Turns effect-init de-digivolve + may battle",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "gap_kind": null
+    },
+    "BT25-095": {
+      "card_name": "Paradise Colosseum",
+      "status": "IMPLEMENTED",
+      "archetype": "Callismon / dark animal",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-095.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_095.rs",
+      "test_count": 9,
+      "patterns": [
+        "D3",
+        "D4",
+        "D5",
+        "C5"
+      ],
+      "notes": "Option: color-ignore floodgate; security +2000 DP aura + conditional Rush w/Marsmon/Callismon; Main replace-bottom-sec + play red/green TS -3; inherited security play lvl4- red/green TS free",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "gap_kind": null
+    },
+    "BT25-091": {
+      "card_name": "Monica Simmons",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "orphan-staples-6 (BT25 TS staples)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-091.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_091.rs",
+      "test_count": 5,
+      "patterns": [
+        "B1",
+        "A4"
+      ],
+      "notes": "Clauses 1 (start-of-turn set-memory-to-3), 2 (On Play return-TS-option-or-draw), 4 (Security play-self) implemented + tested. Clause 3 [Your Turn] OnUseOption suspend-to-lock BLOCKED-dsl (G-DSL-ON-USE-OPTION-TIMING)."
+    },
+    "BT25-092": {
+      "card_name": "Asuna Shiroki",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "orphan-staples-6 (BT25 TS staples)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-092.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_092.rs",
+      "test_count": 3,
+      "patterns": [
+        "B1"
+      ],
+      "notes": "Clause 1 (start-of-main trash-to-draw+memory) + Security implemented + tested. Clause 2 [Main] digivolve-from-{hand|trash}-with-{hand|digivolution-card}-trash-cost BLOCKED-dsl (G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST)."
+    },
+    "BT25-093": {
+      "card_name": "Ignition Flare",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "orphan-staples-6 (BT25 TS staples)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-093.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_093.rs",
+      "test_count": 4,
+      "patterns": [
+        "D3",
+        "C1",
+        "F"
+      ],
+      "notes": "[Main] delete-all-lowest-DP + fallback trash-opponent-Option + optional link + [Security] all implemented and tested. Inherited link-ESS [When Attacking] delete authored faithfully but not host-applied (G-LINK-INHERITED-ESS)."
+    },
+    "BT25-100": {
+      "card_name": "Iron Slash",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "orphan-staples-6 (BT25 TS staples)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-100.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_100.rs",
+      "test_count": 5,
+      "patterns": [
+        "D3",
+        "C1",
+        "H3"
+      ],
+      "notes": "[Main] De-Digivolve 2 + optional link + [Security] implemented and tested. Inherited <Piercing> link-ESS authored but not host-applied — 1 test #[ignore] G-LINK-INHERITED-ESS."
+    },
+    "BT25-101": {
+      "card_name": "Divine Arms Version Ω",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "hybrid",
+      "archetype": "orphan-staples-6 (BT25 TS staples)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "No YAML. [Main] link-[TS]-card-from-trash branch BLOCKED-dsl (link_card_from_trash_to_own_digimon, see BT25-069). Inherited <Security A.+1>/<Reboot> BLOCKED-engine (G-LINK-INHERITED-ESS); leave-replacement BLOCKED-dsl (G-DSL-LINK-TRASH-AS-REPLACEMENT-COST)."
+    },
+    "BT25-008": {
+      "card_name": "Coronamon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gaogamon / beast",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-008.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_008.rs",
+      "test_count": 10,
+      "patterns": [
+        "A",
+        "E2",
+        "G",
+        "H"
+      ],
+      "notes": "OnPlay/WhenMoving trash up-to-2 [Iliad]/[TS] -> draw per trashed; inherited [Your Turn] +2000 DP"
+    },
+    "BT25-009": {
+      "card_name": "Bearmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gaogamon / beast",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_009.rs",
+      "test_count": 17,
+      "patterns": [
+        "B",
+        "F",
+        "G",
+        "H"
+      ],
+      "notes": "SOMP free-digivolve into Beast/Animal/Sovereign(not Sea Animal)/TS from hand; inherited [All Turns] +1000 DP"
+    },
+    "BT25-012": {
+      "card_name": "Grizzlymon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gaogamon / beast",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-012.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_012.rs",
+      "test_count": 6,
+      "patterns": [
+        "E1",
+        "D1",
+        "G",
+        "H"
+      ],
+      "notes": "OnPlay/WhenDigivolving select own Beast-family Digimon -> Raid + 3000 DP for turn; inherited +1000 DP; alt-path ignore_requirements"
+    },
+    "BT25-013": {
+      "card_name": "Firamon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gaogamon / beast",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-013.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_013.rs",
+      "test_count": 6,
+      "patterns": [
+        "A4",
+        "D2",
+        "G"
+      ],
+      "notes": "OnPlay/WhenDigivolving trash 1 -> return red/blue [Iliad] from trash; [Your Turn] on blue Digimon play/digivolve free-ish digivolve into Flaremon cost -1; inherited [Your Turn] +2000 DP"
+    },
+    "BT25-021": {
+      "card_name": "Gaomon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gaogamon / beast",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_021.rs",
+      "test_count": 5,
+      "patterns": [
+        "A2",
+        "G4"
+      ],
+      "notes": "OnPlay reveal 3, add 1 Thomas/DATA SQUAD + 1 Gaogamon-named, bottom rest; inherited [When Attacking][OPT] both players draw 1"
+    },
+    "BT25-023": {
+      "card_name": "Gaogamon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gaogamon / beast",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_023.rs",
+      "test_count": 6,
+      "patterns": [
+        "B2",
+        "E2",
+        "G4"
+      ],
+      "notes": "OnPlay/WhenDigivolving if <=1 Tamers may play Thomas H. Norstein free; inherited [When Attacking][OPT] both players draw 1"
+    },
+    "BT25-048": {
+      "card_name": "Bearmon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gaogamon / beast",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_048.rs",
+      "test_count": 8,
+      "patterns": [
+        "D2",
+        "F",
+        "H"
+      ],
+      "notes": "[Your Turn] -1 cost when THIS digivolves into a [TS] Digimon (source_is_cost_target_permanent gate); inherited [All Turns][OPT] win-battle draw 1"
+    },
+    "BT25-051": {
+      "card_name": "Grizzlymon",
+      "validated_date": "2026-06-06",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gaogamon / beast",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-051.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_051.rs",
+      "test_count": 7,
+      "patterns": [
+        "H5",
+        "D1",
+        "F"
+      ],
+      "notes": "Blocker; OnPlay/WhenDigivolving select own Beast-family Digimon -> +3000 DP until opp turn ends; inherited [All Turns][OPT] win-battle draw 1"
     }
   }
 }

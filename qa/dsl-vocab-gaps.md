@@ -2743,3 +2743,65 @@ Historical note:
   - per_selected: { selection: revealed, bind_as: rest, body: [ { trash_from_reveal: { of: you, card: rest } } ] }
   ```
 - **Workaround:** None faithful (playing for free over-credits the player by 5+ memory; a no-approximations violation). BT25-074 ships no YAML; BLOCKED (dsl). The card's secondary clauses ([All Turns][OPT] on_ally_played → opponent CannotDigivolve, and the inherited [Opponent's Turn] Reboot+Blocker) are individually expressible but cannot ship without the main WD/WA clause.
+
+---
+
+## G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER — multi-card / multi-Tamer face-down trash cost (BT25 BEATBREAK)
+
+- **Cards:** BT25-035 Cougarmon (`[On Play][When Digivolving] ... by trashing 2 bottom face-down cards from under any of your Tamers, this Digimon may digivolve into a [Glowing Dawn] Digimon for free`). Likely also BT25-019 / other BEATBREAK "trash N" cost cards.
+- **What's missing:** The shipping verb `trash_bottom_face_down_source_under_tamer: { of }` trashes exactly **one** bottom face-down source from **one** chosen Tamer (it installs a single `select_own_permanent` over `{ kind: tamer, has_face_down_source: true }` and trashes that Tamer's bottom face-down card, then runs the tail). It has no `count:` parameter and no support for distributing the cost across multiple Tamers (DCGO BT25_035: `maxCount: 2`, `canEndNotMax: true`, `CanEndSelectCondition = (picked==2) || (picked==1 && that Tamer has >=2 face-down sources)` — i.e. "trash 2 total: either 2 from one Tamer, or 1 from each of two Tamers"). Chaining the single-trash verb twice does NOT work: each invocation installs a selection and runs the *captured tail* on resolution, so two sequential invocations cannot share one continuation cleanly, and the "2 from one Tamer OR 1+1 from two Tamers" choice is not expressible.
+- **Lowers to engine API:** the engine already has the per-Tamer bottom-face-down trash primitive (`install_trash_bottom_face_down_source_under_tamer` in `dsl_cards/step/selections.rs`, and DCGO mirrors it with `TrashDigivolutionCardsFromTopOrBottom(trashCount: N, isFromTop: false, CanTrashCard)`). The missing piece is a DSL step that drives an N-total multi-pick over Tamers with the DCGO end-condition.
+- **Suggested DSL syntax:** a `count:`-carrying variant, e.g.
+  ```yaml
+  - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+  ```
+  with semantics: pick Tamers (each must carry >=1 face-down source) until `count` face-down sources are trashed total; a single Tamer with >=`count` face-down sources may satisfy it alone (DCGO `CanEndSelectCondition`). The whole step is the activation cost: if fewer than `count` face-down sources exist across all Tamers, the cost is unpayable → abort the clause (`TailAlreadyRan`), matching the single-card verb's unpayable behavior.
+- **Workaround:** None faithful for BT25-035. The single-trash verb under-charges (trashes 1 instead of 2) — a no-approximations violation. BT25-035 BLOCKED (dsl) on this gap. (Its [On Play][When Digivolving] -3000 DP rider IS expressible; the free-digivolve-by-2-trash cost is the blocked part.)
+
+---
+
+## BT25 "titan" slice — BLOCKED cards (2026-06-06)
+
+Implemented in this slice: BT25-006, BT25-068, BT25-071, BT25-019 (all IMPLEMENTED).
+The four cards below are BLOCKED; each is cross-referenced to the controlling gap.
+
+### BT25-069 Raremon — `[On Play][When Digivolving] link 1 [TS] card from your trash to 1 of your Digimon for free`  [gap_kind: dsl]
+- **What's missing:** A DSL step that **selects a card from the trash and links it** to a chosen own Digimon. The shipping `link_to_own_digimon` verb is hardwired to link the *carrier Option card* (it reads `pending_option` / installs a `LinkSelectHost` over the carrier — see `dsl_cards/step/mod.rs::try_run_link_step`). It cannot select an arbitrary trash card as the link card. DCGO `BT25_069.cs` uses `SelectCardEffect Root.Trash` → `selectedPermanent.AddLinkCard(cardForLinking)`.
+- **Lowers to engine API:** the engine already has the host/link substrate (`Permanent.linked_cards`, link-host selection) — the missing piece is a DSL verb to pick a trash card + pick a host Digimon + attach. Belongs to the broader **`[Link]` subsystem** gap in `docs/RUST_ENGINE_GAPS.md` (item 9: "alternate-source linking from trash").
+- **Suggested DSL syntax:** `link_card_from_trash_to_own_digimon: { of: you, free: true, card_filter: { trait_has: TS }, host_filter: { kind: digimon } }`.
+- **Other clauses** (Jamming, inherited +1000 DP, TS-trait alt-digivolve) are individually expressible; the card ships no YAML because its sole active clause is blocked.
+
+### BT25-073 Dragomon — trash a link card as a cost + "doesn't leave by trashing link card"  [gap_kind: hybrid]
+- **Main clause** `[On Play][When Digivolving] By trashing 1 of your Digimon's link cards, you may play or use 1 [TS] cost<=5 card from hand free`: needs a step to **select a Digimon, select one of its link cards, and trash it as an activation cost**, then a gated play/use. No DSL verb selects+trashes a specific link card from a chosen permanent (`Root.LinkedCards` in DCGO `BT25_073.cs` via `TrashLinkCardsAndProcessAccordingToResult`).
+- **Inherited clause** `[All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave`: **exactly** the existing gap **G-DSL-LINK-TRASH-AS-REPLACEMENT-COST** (BT25-066 Guardromon, above) — no `from: linked_cards` for replacement `choose:` / no `select_linked_card`+`trash_linked_card`.
+- **Lowers to engine API:** substrate exists (`Permanent.linked_cards`, `EffectTiming::OnLinkedCardTrashed`, `cancel_replacement`); only DSL vocabulary is missing for the cost-side link-card pick. Cross-ref the `[Link]` subsystem entry in `docs/RUST_ENGINE_GAPS.md`.
+- **Jamming** (declarative) is expressible; the card ships no YAML because both active clauses are blocked on link-card-as-cost.
+
+### BT25-083 LadyDevimon — bottom-source-from-hand/trash + trash-digivolution-option-as-cost + cost-reduced trash-option use  [gap_kind: hybrid]
+- **Clause 1** `[On Play][When Digivolving] By placing 1 [Three Musketeers] card from your hand OR trash as any of your Digimon's bottom digivolution cards, <Draw 1>`: needs a **zone-choice (hand|trash) picker that places the chosen card as a bottom digivolution source** of a selected Digimon. `place_as_bottom_source` exists for reveal/deck-sourced cards but there is no hand-or-trash-sourced bottom-placement verb with the DCGO 3-way `SetIntSelection` (Hand / Trash / Don't place).
+- **Clause 2** `[When Digivolving][When Attacking][OPT] By trashing 1 Option card from any of your Digimon's digivolution cards, you may use 1 [Three Musketeers] Option from your trash with cost reduced by 3`: needs (a) a step to **select+trash an Option from a permanent's digivolution stack as a cost**, and (b) **use a trash Option with a play/use cost reduction** (`UseOptionFromTrash` with `cost: { reduce: 3 }`). The DSL has `use_option_from_hand` but no trash-rooted reduced-cost option-use, and no "trash an option from digivolution cards" cost step.
+- **Inherited OnDeletion** "play a level 4 or lower [Three Musketeers]-text Digimon from trash free" IS expressible; the card ships no YAML because the two active clauses are blocked.
+
+### BT25-091 Monica Simmons — `[Your Turn] When you use [TS] Option cards` trigger  [G-DSL-ON-USE-OPTION-TIMING]  [gap_kind: dsl]
+- **Card(s):** BT25-091 Monica Simmons (clause 3). Generalizes to any "[Your Turn] When you use … Option cards, …" trigger.
+- **Effect text:** "[Your Turn] When you use [TS] trait Option cards, by suspending this Tamer, 1 of your opponent's Digimon can't attack until their turn ends."
+- **What's missing:** No DSL `when:` token lowers the engine timing `EffectTiming::OnUseOption` (defined in `code/digimon-engine/src/enums.rs:318`, fired by the engine when a player uses an Option). `digimon-dsl/src/compile.rs` has no `on_use_option` / `when_you_use_option` arm, so the clause cannot be authored. DCGO `BT25_091.cs` uses `EffectTiming.OnUseOption` + `CanTriggerWhenOwnerUseOption(OptionTrigger)`.
+- **Lowers to engine API:** the engine timing + dispatch already exist; only the DSL needs a `when: on_use_option` token (optionally with an `option_filter:` predicate for the "[TS] trait Option" gate). The clause body (`activation_cost: { suspend_self: true }` + `select_opponent_permanent` + `add_modifier: CannotAttack` `expiry: end_of_opponents_turn`) is otherwise fully expressible.
+- **Suggested DSL syntax:** `when: on_use_option` with optional `option_filter: { trait_has: TS }`.
+- **Other clauses** (start-of-turn set-memory-to-3, On Play return-or-draw, [Security] play-self) are implemented and tested (`bt25_091.rs`); BT25-091 ships PARTIAL with this one clause deferred.
+
+### BT25-092 Asuna Shiroki — `[Main]` digivolve into a card from {hand|trash} with a {hand|digivolution-card} trash cost  [G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST]  [gap_kind: dsl]
+- **Card(s):** BT25-092 Asuna Shiroki (clause 2).
+- **Effect text:** "[Main] By suspending this Tamer and trashing 1 Option card from your hand or your Digimon's digivolution cards, 1 of your Digimon may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand or trash with the cost reduced by 1."
+- **What's missing:** two distinct union-zone gaps in one clause:
+  1. The digivolve **result** is chosen from a union of **{hand, trash}**, but `effect_initiated_digivolve`'s `from_hand` binding does not accept a `select_union_zone` (hand-or-trash) result, and digivolve-into-a-card-resident-in-trash is unverified in the `EffectInitiatedDigivolve` lowering (`dsl_cards/step/play_digivolve.rs`).
+  2. The **cost** trash is from a union of **{your hand, your Digimon's digivolution cards}** — `select_union_zone` does not span a *permanent's own digivolution sources*, and there is no single verb to trash an Option from "hand OR digivolution cards" as a cost.
+- **Lowers to engine API:** the substrate pieces exist individually (`select_union_zone`, `select_own_sources`, `trash_selected_sources`, `effect_initiated_digivolve` with `cost: { reduce: 1 }`, `activation_cost: { suspend_self: true }`); the missing piece is (a) digivolve `from_source` accepting a union/trash-bound result, and (b) a cost-trash union spanning hand + a chosen permanent's digivolution stack. Authoring a hand-only-result / hand-only-cost reduction would silently drop player choices (no-approximations), so the clause is left BLOCKED rather than approximated.
+- **Suggested DSL syntax:** allow `effect_initiated_digivolve: { source: <select_union_zone binding over {hand, trash}>, cost: { reduce: 1 } }` plus a cost step like `trash_selected_from_union: { zones: [hand, digivolution_cards], filter: { kind: option } }`.
+- **Other clauses** (start-of-main trash-to-draw+memory, [Security] play-self) are implemented and tested (`bt25_092.rs`); BT25-092 ships PARTIAL with clause 2 deferred.
+
+### BT25-101 Divine Arms Version Ω — link a [TS] card from trash + inherited link-ESS clauses  [gap_kind: hybrid]
+- **Card(s):** BT25-101 Divine Arms Version Ω.
+- **Main clause** `[Main] By trashing 1 [TS] card from hand, <Draw 2>; After, you may link this card OR 1 [TS] card from your trash to 1 of your Digimon without paying the cost`: the "link a [TS] card from trash" branch is **exactly** the existing gap documented for BT25-069 above (`link_card_from_trash_to_own_digimon` — `link_to_own_digimon` only links the carrier Option, not an arbitrary trash card). The trash-hand-cost + Draw 2 + link-self half is expressible, but omitting the trash-link branch silently drops a player choice (no-approximations).
+- **Inherited link-ESS clauses** (`<Security A. +1>`, `<Reboot>`, and `[All Turns] When this would leave, by trashing 1 of its link cards, it doesn't leave`): the first two are blocked by **G-LINK-INHERITED-ESS** (engine — see `docs/RUST_ENGINE_GAPS.md`: link-card inherited effects are not aggregated onto the host); the leave-replacement is the existing **G-DSL-LINK-TRASH-AS-REPLACEMENT-COST** (BT25-066/BT25-073).
+- **Verdict:** BLOCKED (hybrid). Ships no YAML — every active clause depends on either the trash-link verb, the link-inherited-ESS engine aggregation, or the link-trash-as-replacement-cost verb. Cross-ref BT25-069, BT25-073, and the `[Link]` subsystem entry in `docs/RUST_ENGINE_GAPS.md`.

@@ -1,0 +1,50 @@
+card: BT25-091
+name: "Monica Simmons"
+kind: tamer
+color: [purple]
+cost: 4
+traits: [TS]
+
+effects:
+  # [Start of Your Turn] If you have 2 or less memory, set it to 3.
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If memory <= 2, set it to 3"
+    process:
+      - set_memory: 3
+
+  # [On Play] You may return 1 [TS] trait Option card from your trash to the
+  # hand. If this effect didn't return, <Draw 1>.
+  - when: on_play
+    summary: "[On Play] May return 1 TS Option from trash to hand; if not, Draw 1"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: TS
+          prompt: "Return 1 [TS] trait Option card from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+      - if:
+          condition: { effect_returned_any_card: false }
+          then:
+            - draw: { of: you, count: 1 }
+
+  # [Your Turn] When you use [TS] trait Option cards, by suspending this Tamer,
+  # 1 of your opponent's Digimon can't attack until their turn ends.
+  #
+  # BLOCKED (dsl): no DSL timing lowers the engine `OnUseOption`
+  # (EffectTiming::OnUseOption exists in enums.rs but `digimon-dsl/src/compile.rs`
+  # has no `on_use_option` / `when_you_use_option` token). Tracked as DSL gap
+  # G-DSL-ON-USE-OPTION-TIMING. Authoring this clause now would require a timing
+  # the compiler rejects. The suspend-self cost + CannotAttack (UntilOpponentTurnEnd)
+  # payload are otherwise expressible; only the trigger timing is missing.
+
+  # [Security] Play this card without paying the cost.
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

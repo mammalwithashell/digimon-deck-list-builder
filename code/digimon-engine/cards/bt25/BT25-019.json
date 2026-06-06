@@ -1,0 +1,32 @@
+{
+  "card_id": "BT25-019",
+  "card_name_eng": "UltimateBrachiomon",
+  "card_kind": 0,
+  "level": 6,
+  "dp": 13000,
+  "play_cost": 13,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "X Antibody",
+    "Titan",
+    "TS"
+  ],
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "dna_costs": null,
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's highest DP Digimon.\r\n[End of Your Turn] [Once Per Turn] If your opponent has 5 or more memory, their Digimon effects don't affect this Digimon until their turn ends. Then, if they have 5 or less, their Option effects don't affect this Digimon until their turn ends.",
+  "inherited_effect_description_eng": "|applinkdp =",
+  "security_effect_description_eng": ""
+}

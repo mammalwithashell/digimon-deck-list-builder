@@ -1,0 +1,92 @@
+# BT25-010 Hawkmon — Digimon, Lv.3, Red/Green, DP 2000, Cost 3.
+# Traits: Avian, Iliad, TS. Attribute: Free.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [Your Turn] When this Digimon would digivolve into a Digimon card with
+#   [Avian], [Bird], [Beast], [Animal] or [Sovereign], other than
+#   [Sea Animal], in any of its traits, reduce the cost by 1.
+#
+# Inherited Effect:
+#   [Your Turn] This Digimon gets +2000 DP.
+#
+# Digivolve: printed evo_costs list a Lv.2 Red cost-1 path. DCGO adds two
+# self-digivolution requirements (both cost 0): from a Lv.2 base with the [TS]
+# trait, and from a base named [Poromon]. `xros_req` text:
+# "[Digivolve] [Poromon]/Lv.2 w/[TS] trait: Cost 0".
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_010.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "Alt Digivolution Requirements" — two
+#   `AddSelfDigivolutionRequirementStaticEffect`:
+#     (TopCard.HasTSTraits, cost 0, level 2) and
+#     (TopCard.EqualsCardName("Poromon"), cost 0).
+#   → two `alt_paths` digivolve entries (cost 0). `ignoreDigivolutionRequirement:
+#   false` → standard color requirement still applies; no `ignore_requirements`.
+#
+# Clause "Your Turn cost reduction" — `ChangeDigivolutionCostStaticEffect(
+#   changeValue: -1, permanentCondition: target == card.PermanentOfThisCard()
+#   [self only], cardCondition: HasBird || HasBeast trait groups, condition:
+#   IsOwnerTurn && IsExistOnBattleAreaDigimon, isInheritedEffect: false,
+#   setFixedCost: false)`. DCGO's HasBird/HasBeast trait-group helpers expand
+#   to the printed list [Avian]/[Bird]/[Beast]/[Animal]/[Sovereign]; the printed
+#   text also excludes [Sea Animal]. We model the exact printed list with a
+#   `none_of: [Sea Animal]` veto. `source_is_cost_target_permanent: true`
+#   pins the reduction to Hawkmon being the digivolving source (DCGO
+#   permanentCondition == self). `reduction_timing: before_pay_cost` +
+#   `amount: 1`.
+#
+# Clause "Inherited [Your Turn] +2000 DP" — `ChangeSelfDPStaticEffect(2000,
+#   isInheritedEffect: true, condition: IsOwnerTurn)`. → `scope: inherited,
+#   kind: aura, target: {}` (carrier-self aura idiom), `active_when: your_turn`,
+#   `dp_modifier: 2000`.
+
+card: BT25-010
+name: Hawkmon
+kind: digimon
+level: 3
+color: [red, green]
+cost: 3
+dp: 2000
+traits: [Avian, Iliad, TS]
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: TS }
+    cost: 0
+  - kind: digivolve
+    from: { name_is: Poromon }
+    cost: 0
+
+effects:
+  # ─── [Your Turn] digivolve-into-trait cost reduction (self-source only) ─────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Avian
+                  - trait_has: Bird
+                  - trait_has: Beast
+                  - trait_has: Animal
+                  - trait_has: Sovereign
+              - none_of:
+                  - trait_has: "Sea Animal"
+    amount: 1
+    summary: "[Your Turn] When this digivolves into Avian/Bird/Beast/Animal/Sovereign (not Sea Animal), reduce cost by 1"
+
+  # ─── Inherited [Your Turn] +2000 DP ────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

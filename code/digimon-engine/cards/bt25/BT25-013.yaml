@@ -1,0 +1,124 @@
+# BT25-013 Firamon — Digimon, Lv.4, Red, DP 5000, Cost 4.
+# Traits: Beast, Iliad, TS. Attribute: Vaccine.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [On Play] [When Digivolving] By trashing 1 card in your hand, you may return
+#   1 red or blue [Iliad] trait Digimon card from your trash to the hand.
+#   [Your Turn] When your Digimon are played or digivolve, if any of them are
+#   blue, this Digimon may digivolve into [Flaremon] in the hand with the cost
+#   reduced by 1.
+#
+# Inherited Effect:
+#   [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_013.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "Alt Digivolution Condition" — EffectTiming.None,
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.HasTSTraits, 2, false,
+#   level: 3). → alt_paths digivolve from { level_eq: 3, trait_has: TS } cost 2.
+#
+# Clause "Shared OP/WD" — ActivateClassesForSharedEffects(onPlay: true,
+#   whenDigivolving: true, optional: false, isSkippable: true). Body:
+#   SelectHandEffect Mode.Discard, maxCount: 1, canNoSelect: true ("By trashing
+#   1 card... you may"). If a card was trashed: SelectCardEffect Root.Trash
+#   Mode.AddHand, canTargetCondition = IsDigimon && HasIliadTraits && (red ||
+#   blue digimon), maxCount: 1, canNoSelect: true. → when: [on_play,
+#   when_digivolving]; an optional `cost: true` select_hand (filter {} = any
+#   card; decline aborts the clause) → trash it, then optional select_trash
+#   (red/blue [Iliad] Digimon) → add_to_hand_from_trash.
+#
+# Clause "Your Turn" — EffectTiming.OnEnterFieldAnyone ActivateClass,
+#   isSkippable: true. CanUseCondition: IsOwnerTurn && (CanTriggerOnPermanentPlay
+#   || CanTriggerWhenPermanentDigivolving) for an own battle-area Digimon.
+#   CanActivateCondition: a [Flaremon]-name card in hand AND the played/
+#   digivolved permanent's TopCard is blue. Body: DigivolveIntoHandOrTrashCard
+#   onto this, cardCondition = EqualsCardName("Flaremon"), payCost: true,
+#   reduceCost: 1. → when: [on_enter_field_anyone, on_digivolve], optional: true,
+#   active_when: your_turn, condition: event_target_owner == you AND
+#   event_card has blue; select_hand (Flaremon) → effect_initiated_digivolve
+#   { target: source, from_hand, cost: { reduce: 1 } }.
+#
+# Clause "Inherit" — ChangeSelfDPStaticEffect(2000, isInheritedEffect: true,
+#   condition: IsOwnerTurn). → kind: aura, scope: inherited, target: {},
+#   active_when: { your_turn: true }, dp_modifier: 2000.
+
+card: BT25-013
+name: Firamon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 5000
+traits: [Beast, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+
+effects:
+  # ─── Clause 0: [On Play][When Digivolving] trash 1 → recover red/blue Iliad ──
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OnPlay/WhenDigivolving] By trashing 1 hand card, may return 1 red/blue [Iliad] Digimon from trash to hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - if:
+          condition: { binding_present: cost_card }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+            - select_trash:
+                of: you
+                bind_as: recover
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: Iliad
+                    - any_of:
+                        - color_is: red
+                        - color_is: blue
+                prompt: "Return 1 red or blue [Iliad] Digimon card from your trash to the hand"
+            - add_to_hand_from_trash: { of: you, card: recover }
+
+  # ─── Clause 1: [Your Turn] on blue Digimon play/digivolve, may digivolve into
+  #              [Flaremon] from hand, cost -1 ─────────────────────────────────
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_card_color_has: [blue]
+    summary: "[Your Turn] When a blue Digimon of yours is played/digivolves, may digivolve this into [Flaremon] from hand, cost -1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: flaremon
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Flaremon"
+          prompt: "Digivolve into [Flaremon] from hand with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: flaremon
+          cost: { reduce: 1 }
+
+  # ─── Clause 2: Inherited [Your Turn] +2000 DP ───────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"
