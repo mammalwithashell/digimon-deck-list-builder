@@ -1,0 +1,92 @@
+card: BT25-027
+name: MachGaogamon
+kind: digimon
+level: 5
+color: [blue, green]
+cost: 7
+dp: 7000
+traits: [Cyborg, DATA SQUAD]
+attribute: Vaccine
+
+# Printed text:
+#   [When Digivolving][When Attacking][Once Per Turn] You may return 1 of your
+#   opponent's level 4 or lower Digimon to the hand. Then, by trashing the
+#   bottom face-down card from under any of your Tamers, this Digimon unsuspends.
+#   [All Turns][Once Per Turn] When this Digimon would leave the battle area, by
+#   trashing the bottom face-down card from under any of your Tamers, it doesn't
+#   leave.
+#   Inherited [All Turns][Once Per Turn] When this Digimon with [Gaogamon] in
+#   its name or the [DATA SQUAD] trait would leave the battle area, by trashing
+#   the bottom face-down card from under any of your Tamers, it doesn't leave.
+#
+# DCGO BT25_027.cs:
+#   - Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect(level 4,
+#     top-card DATA SQUAD trait, cost 3).
+#   - Shared WD/WA: Mode.Bounce opp lvl<=4 (canNoSelect), THEN select a Tamer
+#     with a face-down source (canNoSelect), trash its bottom face-down source,
+#     then unsuspend self if trashed & suspended. optional, OPT.
+#   - WhenRemoveField (main + inherited): trash bottom face-down under a Tamer →
+#     willBeRemoveField=false. optional, OPT.
+#
+# Substrate notes:
+#   - `trash_bottom_face_down_source_under_tamer` is the DATA SQUAD cost verb
+#     (Phase A). Its tail (the steps after it) runs ONLY if a face-down source
+#     was actually trashed — so the self-unsuspend / cancel-replacement is gated
+#     on paying the cost, matching DCGO's `if (trashed)` guards.
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: DATA SQUAD }
+    cost: 3
+
+effects:
+  # ─── WD/WA: bounce opp lvl<=4, then trash face-down → unsuspend self ──────
+  - when: [when_digivolving, when_attacking]
+    optional: true
+    once_per_turn: true
+    summary: "[WD][WA][OPT] May bounce opp lvl<=4; then trash FD under a Tamer to unsuspend self"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "You may return 1 of your opponent's level 4 or lower Digimon to the hand"
+      - return_to_hand: { target: bounce_target }
+      # "Then, by trashing the bottom face-down card from under any of your
+      # Tamers, this Digimon unsuspends." The unsuspend is the tail of the
+      # trash cost — runs only if a face-down source was trashed.
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - unsuspend: { target: source }
+
+  # ─── [All Turns][OPT] leave-prevention (main) ────────────────────────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+    summary: "[All Turns][OPT] Trash FD under a Tamer so this Digimon doesn't leave"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - cancel_replacement: {}
+
+  # ─── Inherited [All Turns][OPT] leave-prevention (Gaogamon-name / DATA SQUAD) ─
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - any_of:
+            - source_permanent_name_contains: Gaogamon
+            - source_permanent_trait_has: DATA SQUAD
+    summary: "Inherited [All Turns][OPT] Gaogamon-name/DATA SQUAD carrier doesn't leave by trashing FD"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - cancel_replacement: {}

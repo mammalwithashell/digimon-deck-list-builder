@@ -1,0 +1,145 @@
+# BT25-055 Deramon — Digimon, Lv.5, Green DP 6000, Cost 6.
+# Traits: Avian, Iliad, TS.
+# Standard digivolution: Lv.4 green / cost 3 (printed evo_costs).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [On Play] [When Digivolving] You may suspend 1 Digimon. Then, if there are
+#   2 or more suspended Digimon, 1 of your Digimon may unsuspend.
+#   [All Turns] [Once Per Turn] When this Digimon suspends, you may play 1
+#   4000 DP or lower Digimon card with [Vegetation], [Plant], [Avian] or [Bird]
+#   in any of its traits or the [TS] trait from your hand without paying the cost.
+#
+#   Inherited: [Opponent's Turn] [Once Per Turn] When one of your opponent's
+#   Digimon attacks, you may change the attack target to 1 of your suspended
+#   Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_055.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 4, TopCard
+#   HasTSTraits, cost 3). → alt_paths digivolve from level 4 + TS trait, cost 3.
+# Shared OP/WD — optional: false (whole effect mandatory to attempt), but each
+#   inner SelectPermanent has canNoSelect: true → both picks are `optional`.
+#   First: suspend 1 Digimon (any battle-area Digimon, not already suspended,
+#   CanSuspend). Then: if >=2 suspended Digimon exist AND you have an
+#   unsuspendable own Digimon, optionally unsuspend 1 of YOUR Digimon.
+#   → suspend (any) + if-guard on suspended>=2 + unsuspend (own).
+# All-turns OPT — OnTappedAnyone, maxCountPerTurn: 1, gated by
+#   CanTriggerWhenSelfPermanentSuspends (the carrier itself suspends) →
+#   when: on_suspend + event_target_is_source: true + once_per_turn.
+#   Body: optional play-for-free of a hand Digimon, DP<=4000, with
+#   Vegetation/Plant/Avian/Bird trait OR TS trait.
+# Inherited — OnAllyAttack, isInheritedEffect, OPT, IsOpponentTurn,
+#   CanTriggerOnPermanentAttack(opponent permanent) → when: on_opponent_attack,
+#   scope: inherited, opponents_turn, once_per_turn, optional. Body: optional
+#   redirect of the attack to 1 of YOUR suspended Digimon.
+
+card: BT25-055
+name: Deramon
+kind: digimon
+level: 5
+color: [green]
+cost: 6
+dp: 6000
+traits: [Avian, Iliad, TS]
+
+# Alt-digivolve: Lv.4 with the [TS] trait / cost 3.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving] suspend 1, then conditional unsuspend ───────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may suspend 1 Digimon. Then if 2+ suspended, 1 of your Digimon may unsuspend"
+    process:
+      - select_any_permanent:
+          bind_as: suspend_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+              - is_suspended: false
+          prompt: "You may suspend 1 Digimon"
+      - suspend: { target: suspend_target }
+      - if:
+          condition:
+            count_gte:
+              filter:
+                owner: any
+                zone: [battle_area]
+                kind: digimon
+                is_suspended: true
+              n: 2
+          then:
+            - select_own_permanent:
+                bind_as: unsuspend_target
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - zone: [battle_area]
+                    - is_suspended: true
+                prompt: "1 of your Digimon may unsuspend"
+            - unsuspend: { target: unsuspend_target }
+
+  # ─── [All Turns][OPT] on this Digimon suspends → may free-play traited L<=4 ──
+  #
+  # The carrier itself suspends (event_target_is_source: true). Optional
+  # free-play of a hand Digimon with DP<=4000 and one of the named traits or
+  # [TS]. The outer accept/decline is the printed "you may play"; declining
+  # costs nothing.
+  - when: on_suspend
+    once_per_turn: true
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_is_source: true
+    summary: "[All Turns][OPT] When this suspends, you may play 1 DP<=4000 Vegetation/Plant/Avian/Bird/TS Digimon from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: play_card
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+              - any_of:
+                  - trait_has: Vegetation
+                  - trait_has: Plant
+                  - trait_has: Avian
+                  - trait_has: Bird
+                  - trait_has: TS
+          prompt: "You may play 1 DP 4000 or lower [Vegetation]/[Plant]/[Avian]/[Bird]/[TS] Digimon from hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: play_card }
+
+  # ─── Inherited [Opponent's Turn][OPT] redirect opp attack to suspended own ──
+  - when: on_opponent_attack
+    scope: inherited
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "[Inherited][Opponent's Turn][OPT] When opp Digimon attacks, you may change the attack target to 1 of your suspended Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: redirect_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+              - is_suspended: true
+          prompt: "Change the attack target to 1 of your suspended Digimon"
+      - redirect_attack_target:
+          new_target: redirect_target
+          optional: true
+          prompt: "Change the attack target to 1 of your suspended Digimon"

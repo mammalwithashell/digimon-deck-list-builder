@@ -1,0 +1,56 @@
+# BT25-034 Angemon — Digimon, Lv.4, Yellow, DP 5000, Cost 5. Traits: Angel, Iliad, TS.
+# Printed: When effects trash this card from the security stack, you may play 1 level 4
+#   or lower [Angel] or [Iliad] trait card from your hand without paying the cost.
+#   <Ascension> (When this Digimon is deleted, you may place this card as the top security card.)
+# Inherited: <Barrier> (When this Digimon would be deleted in battle, by trashing your
+#   top security card, it isn't deleted.)
+# Evo (cards.json): Lv.3 Yellow / cost 2. DCGO digivolve box: Lv.3 [TS] / cost 2.
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_034.cs
+#   When Trashed (OnDiscardSecurity, CanTriggerOnTrashSelfSecurity): optional
+#     (canNoSelect true) SelectHand PlayForFree over HasPlayCost && HasLevel &&
+#     Level<=4 && (Angel||Iliad).
+#   Ascension (OnDestroyedAnyone) -> grant_keyword. Barrier (WhenWouldBeDeleted, inherited).
+# Modelling: "when effects trash this card from security" = scope: security clause on
+#   on_discard_security; engine fires OnDiscardSecurity for the effect-trashed card via
+#   complete_effect_security_removal -> enqueue_from_security_card. Play is optional.
+card: BT25-034
+name: Angemon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+traits: [Angel, Iliad, TS]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+effects:
+  - when: on_discard_security
+    scope: security
+    optional: true
+    summary: "When effects trash this card from security, you may play 1 Lv.4-or-lower [Angel]/[Iliad] card from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Angel
+                  - trait_has: Iliad
+          prompt: "You may play 1 Lv.4-or-lower [Angel] or [Iliad] card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
+  - kind: grant_keyword
+    keyword: Ascension
+    summary: "<Ascension> (When deleted, you may place this card as top security)"
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Barrier
+    summary: "Inherited <Barrier>"
