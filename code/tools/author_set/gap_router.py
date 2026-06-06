@@ -50,6 +50,83 @@ def cards_using_keyword(keyword: str, set_cards: dict) -> list[str]:
     return sorted(hits)
 
 
+# Per-subsystem DCGO call markers. A card *uses* a subsystem keyword only if its
+# DCGO C# actually invokes the subsystem's machinery — NOT merely if its printed
+# text mentions the bracket token (a Digimon that references "[TS] cards with
+# [Link]" or grants nothing is not a Link card). Keyed by normalized keyword.
+SUBSYSTEM_DCGO_MARKERS: dict[str, list[str]] = {
+    "link": [
+        r"LinkCard\s*\(", r"\.LinkCard\b", r"CanLink\b", r"AddLinkRequirement",
+        r"ILinkCard", r"IsLinked", r"LinkEffect", r"ChangeLinkCost", r"ChangeLinkMax",
+        r"SetIsLinkedEffect", r"AddSelfLinkConditionStaticEffect",
+        r"GrantedReduceLinkCostClass", r"applinkdp",
+    ],
+}
+
+
+def _dcgo_path_for(card_id: str, dcgo_root: str, set_prefix: str) -> str | None:
+    """Locate a card's DCGO C# file: ``{root}/Assets/Scripts/CardEffect/{SET}/*/{ID_}.cs``.
+
+    DCGO filenames use underscores (``BT25-075`` -> ``BT25_075.cs``) and live under
+    a per-colour subdir, so the colour is globbed.
+    """
+    base = os.path.join(dcgo_root, "Assets", "Scripts", "CardEffect", set_prefix.upper())
+    if not os.path.isdir(base):
+        return None
+    fname = f"{card_id.replace('-', '_')}.cs"
+    for color in os.listdir(base):
+        path = os.path.join(base, color, fname)
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def cards_using_subsystem_keyword(
+    keyword: str,
+    set_cards: dict,
+    *,
+    dcgo_root: str,
+    set_prefix: str,
+    text_fallback: bool = True,
+) -> list[str]:
+    """Return cards that ACTUALLY use a subsystem keyword, per DCGO C# (not text).
+
+    This is the accurate per-card exclusion for ``auto_ingest_subsystem`` keywords
+    (Link-style). The text-based :func:`cards_using_keyword` over-flags any card
+    whose printed text mentions ``[Link]`` — including archetype members that
+    merely *reference* link Options — which wrongly excludes the whole slice (BT25
+    Aegiomon: 1 of 18 cards actually links, but all 18 mention it). Here a card
+    counts only if its DCGO C# invokes the subsystem's machinery.
+
+    Fallbacks (conservative — prefer over-flagging to silently authoring on a
+    missing primitive):
+    - DCGO file missing for a card -> fall back to the text mention.
+    - keyword has no marker set -> degrade entirely to :func:`cards_using_keyword`.
+    """
+    norm = normalize_keyword(_strip_param(keyword))
+    markers = SUBSYSTEM_DCGO_MARKERS.get(norm)
+    if not markers:
+        return cards_using_keyword(keyword, set_cards)
+    pat = re.compile("|".join(markers))
+    text_hits = set(cards_using_keyword(keyword, set_cards)) if text_fallback else set()
+    hits: list[str] = []
+    for cid in set_cards:
+        path = _dcgo_path_for(cid, dcgo_root, set_prefix)
+        if path is None:
+            if cid in text_hits:
+                hits.append(cid)
+            continue
+        try:
+            src = open(path, encoding="utf-8", errors="replace").read()
+        except OSError:
+            if cid in text_hits:
+                hits.append(cid)
+            continue
+        if pat.search(src):
+            hits.append(cid)
+    return sorted(hits)
+
+
 def blocked_cards(flagged: list[FlaggedKeyword]) -> set[str]:
     """Union of all cards depending on any flagged keyword (excluded from authoring)."""
     out: set[str] = set()

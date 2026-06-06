@@ -61,8 +61,18 @@ Read the report's keyword section:
   action-space entry + attachment state + selection + timing + rule-check), comparable
   to DigiXros — NOT cheap ports. Do **not** naively auto-ingest. Assess the keyword
   (read its DCGO C# + the rules), log it to `docs/RUST_ENGINE_GAPS.md`, and treat it as
-  scheduled engine work. The set is BLOCKED for cards depending on it until it lands.
-  Worked example + full primitive breakdown: the `[Link]` entry in `RUST_ENGINE_GAPS.md`.
+  scheduled engine work. Worked example + full primitive breakdown: the `[Link]` entry
+  in `RUST_ENGINE_GAPS.md`.
+  - **Exclude ONLY the cards that actually use the subsystem — never the whole slice.**
+    The report's `` `link` excludes ONLY (N): … `` line is the DCGO-verified per-card
+    list (from `gap_router.cards_using_subsystem_keyword`, which greps each card's DCGO
+    C# for the subsystem's machinery — NOT a text match on the bracket token). A
+    subsystem keyword typically poisons only a handful of payoff cards; the *rest* of
+    their archetype slice (e.g. the Olympos/Aegiomon gods alongside one `[Link]` payoff)
+    is standard effects and IS authorable. Pass the slices to Phase 4 with just those
+    flagged card IDs removed; mark them BLOCKED on the subsystem. Do NOT drop an entire
+    archetype because one card in it needs the subsystem. (BT25 Aegiomon: `[Link]`
+    excludes 2 of 18 slice cards — the other 16 ship.)
 - **flag_for_human** — in neither the Rust enum nor the DCGO manifest. **HALT.** For
   each, call `tools.author_set.gap_router.route_flagged_keyword` (records the gap in
   `docs/RUST_ENGINE_GAPS.md` + a `.claude/plans/` stub) and `cards_using_keyword` to
