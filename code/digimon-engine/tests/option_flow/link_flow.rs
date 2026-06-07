@@ -877,3 +877,452 @@ effects:
         "unpaid Link cost must not attach for free"
     );
 }
+
+// ─── Section 1 gating diagnostics (change: implement-digilink-mechanic) ───
+//
+// These two tests resolve design decisions D6 and D7 before any Shape-B
+// substrate is built. They assert the CURRENT engine behavior (so the suite
+// stays green) and their comments record the verdict that the change's
+// later tasks implement against.
+
+/// A link card whose `WhenLinked` effect (effect 1) is modeled the faithful
+/// way: an `OnLink` + `.linked()` effect SELF-FILTERED to fire only when the
+/// just-linked card (`ctx.event_card()`) is this card (`ctx.source_card`).
+/// This is the lowering target for DSL `when: when_linked`. The witness
+/// counts every time effect 1 actually fires.
+struct SelfFilteredWhenLinked(Arc<Mutex<u32>>);
+impl CardEffect for SelfFilteredWhenLinked {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let slot = self.0.clone();
+        vec![
+            Effect::on_play(card)
+                .name("Link any host")
+                .link(0, |_ctx, _host| true)
+                .process(|_| {})
+                .build(),
+            Effect::on_play(card)
+                .timing(EffectTiming::OnLink)
+                .name("WhenLinked (OnLink + linked, self-filtered)")
+                .linked()
+                .condition(|rctx| rctx.event_card() == Some(rctx.source_card))
+                .process(move |_ctx| {
+                    *slot.lock().unwrap() += 1;
+                })
+                .build(),
+        ]
+    }
+}
+
+/// D6 regression (task 6.1 / design D6) — a faithful `WhenLinked` fires once
+/// for the card that gets linked and does NOT over-fire when a sibling links
+/// to the same host.
+///
+/// Before the fix, `OnLink` fired via `TriggerSource::PlayerBattleArea`
+/// (no just-linked-card identity) and the `.linked()` fan-out re-scanned ALL
+/// of a host's linked cards every attach, so a `WhenLinked`-as-`OnLink`
+/// effect over-fired on every sibling link. The `TriggerSource::Linked`
+/// variant now carries the just-linked card as `event_card`, so the
+/// self-filter `event_card == source_card` isolates the firing to the actual
+/// link event. No dedicated `WhenLinked` timing was added.
+#[test]
+fn d6_self_filtered_when_linked_fires_once_and_not_on_sibling() {
+    let witness = Arc::new(Mutex::new(0u32));
+
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-A", 0, CardColor::Red))
+        .add_card(option_card("LINK-B", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["LINK-A", "LINK-B"])
+        .memory(0)
+        .start();
+    r.register_effect("LINK-A", Arc::new(SelfFilteredWhenLinked(witness.clone())));
+    r.register_effect("LINK-B", Arc::new(LinkAnyHost));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    // Attach A to the host — A's WhenLinked fires exactly once.
+    let _ = r.game.play_option_from_hand(0, 0);
+    let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action_id);
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1
+    );
+    assert_eq!(
+        *witness.lock().unwrap(),
+        1,
+        "WhenLinked fires once when A is the card that links"
+    );
+
+    // Attach B (sibling) to the same host — A's WhenLinked must NOT re-fire.
+    let _ = r.game.play_option_from_hand(0, 0);
+    let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action_id);
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        2
+    );
+    assert_eq!(
+        *witness.lock().unwrap(),
+        1,
+        "self-filter: sibling B linking does NOT re-fire A's WhenLinked"
+    );
+}
+
+/// A Shape-B Appmon Link Digimon's static self link-condition: may link onto
+/// any of the controller's Digimon for cost 1. Mirrors DCGO
+/// `AddSelfLinkConditionStaticEffect(permanentCondition, linkCost: 1)`.
+struct GatchLinkCondition;
+impl CardEffect for GatchLinkCondition {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::link_condition(card)
+            .name("Link condition: any Digimon host, cost 1")
+            .link_host(1, |_ctx, _host| true)
+            .build()]
+    }
+}
+
+/// §3 (self link-condition metadata) — a Digimon carrying a `LinkCondition`
+/// effect exposes its cost and legal hosts via `digimon_link_condition_targets`,
+/// excludes itself as a host, and a plain Digimon returns `None`.
+#[test]
+fn digimon_self_link_condition_lists_hosts_and_excludes_self() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("GATCH", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("GATCH", Arc::new(GatchLinkCondition));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    let gatch = r.place_on_field(0, "GATCH", Some(0));
+
+    let (cost, hosts) = r
+        .game
+        .digimon_link_condition_targets(gatch)
+        .expect("GATCH carries a self link-condition");
+    assert_eq!(cost, 1, "printed link cost");
+    assert!(hosts.contains(&host), "HOST is a legal link host");
+    assert!(
+        !hosts.contains(&gatch),
+        "a Digimon cannot link onto itself"
+    );
+
+    // A plain Digimon with no link condition is not a link source.
+    assert!(
+        r.game.digimon_link_condition_targets(host).is_none(),
+        "HOST has no self link-condition"
+    );
+}
+
+fn link_bit(perm: digimon_engine::permanent::PermanentHandle) -> usize {
+    use digimon_engine::action::space::{
+        EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_START,
+    };
+    (FIELD_EFFECT_START + perm.index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_LINK)
+        as usize
+}
+
+/// §4/§5 — the on-field Link ability: an un-linked standing Appmon Link
+/// Digimon is exposed a FIELD_EFFECT link sub-slot, and activating it +
+/// picking a host absorbs the linking Digimon (top card → host linked cards),
+/// pays the link cost, and removes it from the battle area.
+#[test]
+fn digimon_link_activate_absorbs_source_into_host() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("GATCH", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .memory(3)
+        .start();
+    r.register_effect("GATCH", Arc::new(GatchLinkCondition));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    let gatch = r.place_on_field(0, "GATCH", Some(0));
+    advance_to_main(&mut r);
+
+    // The mask offers the Link ability on GATCH.
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(mask[link_bit(gatch)], 1.0, "Link ability offered for GATCH");
+
+    let mem_before = r.memory();
+    r.game.decode_action(link_bit(gatch) as u16, 0);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "activating Link installs a host-selection prompt"
+    );
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    // GATCH is absorbed: battle area holds only HOST, which now carries the
+    // GATCH top card as a single linked card; the link cost was paid.
+    assert_eq!(r.battle_area_size(0), 1, "GATCH removed from battle area");
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "GATCH attached to HOST as a linked card"
+    );
+    assert_eq!(r.memory(), mem_before - 1, "link cost 1 paid");
+}
+
+/// A full Shape-B Appmon Link Digimon: a self link-condition (cost 0) + a
+/// self-filtered `WhenLinked` witness + a linked `Raid` ESS. Used to prove the
+/// real link-activate → absorb → OnLink path drives §6's WhenLinked/ESS.
+struct GatchFull(Arc<Mutex<u32>>);
+impl CardEffect for GatchFull {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        use digimon_engine::enums::{Expiry, Keyword};
+        let slot = self.0.clone();
+        vec![
+            Effect::link_condition(card)
+                .name("link cond")
+                .link_host(0, |_ctx, _host| true)
+                .build(),
+            Effect::on_play(card)
+                .timing(EffectTiming::OnLink)
+                .name("WhenLinked")
+                .linked()
+                .condition(|rctx| rctx.event_card() == Some(rctx.source_card))
+                .process(move |_| {
+                    *slot.lock().unwrap() += 1;
+                })
+                .build(),
+            Effect::declarative(card)
+                .name("Linked ESS: Raid")
+                .granted_keyword(Keyword::Raid)
+                .materializes_declarative_state()
+                .linked()
+                .process(|ctx| {
+                    if let Some(h) = ctx.source_permanent {
+                        ctx.grant_declarative_keyword(h, Keyword::Raid, Expiry::Permanent);
+                    }
+                })
+                .build(),
+        ]
+    }
+}
+
+/// §4/§5/§6 integration — activating the Link ability fires the linking
+/// Digimon's own `WhenLinked` exactly once (through the absorb's OnLink) and
+/// its linked `Raid` ESS reaches the host.
+#[test]
+fn digimon_link_activate_fires_when_linked_and_grants_ess() {
+    use digimon_engine::enums::Keyword;
+    let witness = Arc::new(Mutex::new(0u32));
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("GATCH", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .memory(3)
+        .start();
+    r.register_effect("GATCH", Arc::new(GatchFull(witness.clone())));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    let gatch = r.place_on_field(0, "GATCH", Some(0));
+    advance_to_main(&mut r);
+
+    r.game.decode_action(link_bit(gatch) as u16, 0);
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    assert_eq!(
+        *witness.lock().unwrap(),
+        1,
+        "GATCH's WhenLinked fired once through the absorb's OnLink"
+    );
+    r.game.tick_declarative_effects();
+    assert!(
+        r.game.has_keyword(host, Keyword::Raid),
+        "GATCH's linked Raid ESS reaches the host"
+    );
+}
+
+/// §7 — full Shape-B Appmon Link Digimon authored entirely in YAML DSL:
+/// `kind: link_condition` (self link-condition) + `when: when_linked`
+/// (self-filtered draw) + `scope: linked` `grant_keyword` (Raid ESS to host).
+/// Proves the DSL vocabulary lowers and behaves through the real link-activate
+/// → absorb → OnLink path.
+#[test]
+fn dsl_digimon_link_card_full_flow() {
+    use digimon_engine::enums::Keyword;
+
+    let yaml = r#"
+card: GATCH-DSL
+name: Gatchmon
+kind: digimon
+effects:
+  - kind: link_condition
+    cost: 1
+    filter: { kind: digimon }
+  - scope: linked
+    when: when_linked
+    process:
+      - draw: { of: you, count: 1 }
+  - scope: linked
+    kind: grant_keyword
+    keyword: Raid
+"#;
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("GATCH-DSL", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .add_card(digimon_card("FILLER", CardColor::Red))
+        .deck(0, &["FILLER"; 5])
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let host = r.place_on_field(0, "HOST", Some(0));
+    let gatch = r.place_on_field(0, "GATCH-DSL", Some(0));
+    advance_to_main(&mut r);
+
+    // `kind: link_condition` lowers to a readable self link-condition.
+    let (cost, hosts) = r
+        .game
+        .digimon_link_condition_targets(gatch)
+        .expect("DSL link_condition recognized");
+    assert_eq!(cost, 1);
+    assert!(hosts.contains(&host));
+
+    // Activate the Link ability and pick the host.
+    let hand_before = r.hand_size(0);
+    r.game.decode_action(link_bit(gatch) as u16, 0);
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    // Absorbed, WhenLinked drew once, and the linked Raid ESS reaches the host.
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "GATCH-DSL attached as a linked card"
+    );
+    assert_eq!(
+        r.hand_size(0),
+        hand_before + 1,
+        "when_linked drew 1 (self-filtered, fired once)"
+    );
+    r.game.tick_declarative_effects();
+    assert!(
+        r.game.has_keyword(host, Keyword::Raid),
+        "scope: linked grant_keyword Raid reaches the host"
+    );
+}
+
+/// §5 — standing-permanent absorb with a digivolution stack: the linking
+/// Digimon's under-sources are trashed (DCGO DiscardEvoRoots); only its top
+/// card becomes a linked card. Faithful to the flat linked-card model.
+#[test]
+fn digimon_link_absorb_trashes_evo_roots_keeps_only_top() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("LV2", CardColor::Red))
+        .add_card(digimon_card("GATCH", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .memory(3)
+        .start();
+    r.register_effect("GATCH", Arc::new(GatchLinkCondition));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    // GATCH on top of a LV2 source (a 2-card digivolution stack).
+    let gatch = r.place_stack(0, &["LV2", "GATCH"]);
+    advance_to_main(&mut r);
+
+    let trash_before = r.trash_size(0);
+    r.game.decode_action(link_bit(gatch) as u16, 0);
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    // Only HOST remains; it carries exactly the GATCH top card as a linked
+    // card; the LV2 source was trashed.
+    assert_eq!(r.battle_area_size(0), 1, "stack removed from battle area");
+    let linked = &r.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "only the top card is linked");
+    assert_eq!(
+        linked[0].card_id(&r.game.card_data),
+        "GATCH",
+        "the linked card is GATCH's top, not the LV2 source"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before + 1,
+        "the LV2 digivolution source was trashed (DiscardEvoRoots)"
+    );
+}
+
+/// A linked Digimon whose Link-ESS grants its host both the `Raid` keyword
+/// and +1000 DP, modeled the faithful way: two `.linked()` declarative
+/// materializing effects targeting `ctx.source_permanent` (the host).
+/// Mirrors DCGO `RaidSelfEffect(isLinkedEffect: true)`.
+struct LinkedRaidAndDpEss;
+impl CardEffect for LinkedRaidAndDpEss {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        use digimon_engine::enums::{Expiry, Keyword};
+        vec![
+            Effect::declarative(card)
+                .name("Linked ESS: Raid")
+                .granted_keyword(Keyword::Raid)
+                .materializes_declarative_state()
+                .linked()
+                .process(|ctx| {
+                    if let Some(h) = ctx.source_permanent {
+                        ctx.grant_declarative_keyword(h, Keyword::Raid, Expiry::Permanent);
+                    }
+                })
+                .build(),
+            Effect::declarative(card)
+                .name("Linked ESS: +1000 DP")
+                .materializes_declarative_state()
+                .linked()
+                .process(|ctx| {
+                    if let Some(h) = ctx.source_permanent {
+                        ctx.add_declarative_dp_modifier(h, 1000, Expiry::Permanent);
+                    }
+                })
+                .build(),
+        ]
+    }
+}
+
+/// D7 regression (task 6.2 / design D7) — a linked Digimon's continuous
+/// Link-ESS grants (keyword + DP) reach its host.
+///
+/// Before the fix, `tick_declarative_effects` scanned only top cards and
+/// under-stack digivolution sources, so a linked card's `.linked()`
+/// declarative grants never materialized onto the host. The additive
+/// linked-card pass in `tick_declarative_effects` routes them through the
+/// modifier registry attributed to the host — so `has_keyword` and
+/// `effective_dp` both see them.
+#[test]
+fn d7_linked_ess_keyword_and_dp_grant_reach_the_host() {
+    use digimon_engine::enums::Keyword;
+    use digimon_engine::permanent::PermanentHandle;
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("LINK-HOST", CardColor::Red))
+        .add_card(digimon_card("RAID-ESS", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("RAID-ESS", Arc::new(LinkedRaidAndDpEss));
+
+    let host: PermanentHandle = r.place_on_field(0, "LINK-HOST", Some(0));
+    let base_dp = r.game.effective_dp(host).expect("host has DP");
+    assert!(
+        !r.game.has_keyword(host, Keyword::Raid),
+        "baseline: host has no Raid before linking"
+    );
+
+    // Link the ESS card and refresh declaratives.
+    r.push_linked_owned(host, "RAID-ESS", 0);
+    r.game.tick_declarative_effects();
+
+    assert!(
+        r.game.has_keyword(host, Keyword::Raid),
+        "linked Link-ESS grants Raid to the host"
+    );
+    assert_eq!(
+        r.game.effective_dp(host),
+        Some(base_dp + 1000),
+        "linked Link-ESS grants +1000 DP to the host"
+    );
+}

@@ -58,6 +58,10 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnPlaceSecurity => EffectTiming::OnPlaceSecurity,
         CompiledTiming::OnAddedToSecurity => EffectTiming::OnPlaceSecurity,
         CompiledTiming::Main => EffectTiming::OptionMain,
+        // DigiLink Shape-B: `when: when_linked` rides the `OnLink` dispatch;
+        // lower_triggered forces `.linked()` and a self-filter so it fires
+        // only for the just-linked card (design D6).
+        CompiledTiming::WhenLinked => EffectTiming::OnLink,
         // Phase 2a non-targets — skip emission.
         CompiledTiming::Delayed => return None,
     })

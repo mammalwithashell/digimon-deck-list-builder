@@ -90,6 +90,12 @@ pub fn lower_for_kind_with_clause_index(
         let Some(mut engine_timing) = compiled_timing_to_engine(*t) else {
             continue;
         };
+        // DigiLink Shape-B: `when: when_linked` lowers to `OnLink` + `.linked()`
+        // + a self-filter (`event_card == source_card`) so a linked card's
+        // "when this Digimon gets linked" effect fires once for itself and not
+        // when a sibling links to the same host (design D6).
+        let is_when_linked =
+            matches!(*t, digimon_dsl::compiled::CompiledTiming::WhenLinked);
         if matches!(
             card_kind,
             Some(CompiledCardKind::Option | CompiledCardKind::Dual)
@@ -136,7 +142,7 @@ pub fn lower_for_kind_with_clause_index(
         if matches!(scope, CompiledScope::Inherited) {
             builder = builder.inherited();
         }
-        if matches!(scope, CompiledScope::Linked) {
+        if matches!(scope, CompiledScope::Linked) || is_when_linked {
             builder = builder.linked();
         }
         if matches!(scope, CompiledScope::Security) {
@@ -195,10 +201,15 @@ pub fn lower_for_kind_with_clause_index(
             }
         }
 
-        if active_when.is_some() || condition.is_some() {
+        if active_when.is_some() || condition.is_some() || is_when_linked {
             let aw = active_when.clone();
             let cc = condition.clone();
             builder = builder.condition(move |rctx| {
+                // DigiLink Shape-B self-filter: a `when_linked` effect fires
+                // only when THIS card is the just-linked card.
+                if is_when_linked && rctx.event_card() != Some(rctx.source_card) {
+                    return false;
+                }
                 let subject = predicate_subject_for_source(rctx);
                 if let Some(p) = &aw {
                     if !eval_predicate(p, rctx, subject) {

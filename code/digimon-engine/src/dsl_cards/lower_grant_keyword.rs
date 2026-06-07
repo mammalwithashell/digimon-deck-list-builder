@@ -58,6 +58,13 @@ pub fn lower(
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }
+    // DigiLink Shape-B: a `scope: linked` keyword grant is a linked card's
+    // Link-ESS — it applies to the HOST while linked. `.linked()` marks it so
+    // the `tick_declarative_effects` linked-card pass materializes it onto the
+    // host (mirrors DCGO `RaidSelfEffect(isLinkedEffect: true)`).
+    if matches!(scope, CompiledScope::Linked) {
+        builder = builder.linked();
+    }
 
     Some(builder.build())
 }

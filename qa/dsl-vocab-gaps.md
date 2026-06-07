@@ -3068,3 +3068,13 @@ controlling engine gap for the cost-reduction clauses is
 - **What the DSL has:** `self_color_count_gte` (>= only). There is no `self_color_count_lte` / `!= N` for the base-card `from:` filter.
 - **Suggested DSL syntax:** `self_color_count_lte: N` (and/or `self_color_count_eq`) usable inside an alt-path `from:` predicate.
 - **Verdict:** contributes to BT25-084 PARTIAL (gap_kind: dsl). The standard Lv.5 Purple and Lv.5 [TS] cost-4 alt-paths ship; the Titamon-3-color cost-2 path is omitted.
+
+## DSL Vocabulary ADDED: DigiLink Shape-B (Appmon Link Digimon)  [G-DSL-DIGILINK] — LANDED 2026-06-06
+- **Status:** LANDED 2026-06-06 (OpenSpec `implement-digilink-mechanic` §7). New YAML vocabulary for authoring Shape-B Appmon Link *Digimon* (the `[Link]` keyword on `kind: digimon` cards, e.g. BT21-009 Gatchmon) — distinct from the existing Option-scoped `kind: link_requirement` (Plug-Ins).
+- **Scope:** DSL.
+- **Added vocabulary:**
+  - `kind: link_condition` (declarative, body `{ cost, filter }`) — a Digimon's static self link-condition. Lowers to `Effect::link_condition(card).link_host(cost, filter)` at `EffectTiming::LinkCondition`, read by `Game::digimon_link_condition_targets`. Reuses `LinkRequirementBody`.
+  - `when: when_linked` (timing) — "when this Digimon gets linked". Lowers to `EffectTiming::OnLink` + forced `.linked()` + an injected self-filter (`event_card == source_card`) so it fires once for the just-linked card, not on sibling links (design D6). Use on a `scope: linked` effect.
+  - `scope: linked` + `kind: grant_keyword` (and DP grants) — a linked card's Link-ESS now sets `.linked()` (previously only `scope: inherited` set `.inherited()`), so the grant materializes onto the HOST via the `tick_declarative_effects` linked-card pass (mirrors DCGO `RaidSelfEffect(isLinkedEffect: true)`).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- dsl_digimon_link_card_full_flow` (authors a full Appmon Link Digimon in YAML — link_condition + when_linked draw + linked Raid ESS — and exercises the real link-activate → absorb → OnLink path).
+- **Residual:** from-hand Digimon-link initiation + rarer source origins (trash / under-stack / re-link) are not yet wired (engine-side); see `docs/RUST_ENGINE_GAPS.md` 2026-06-06 Shape-B note. Authoring the *named* acceptance cards (BT21-009 Gatchmon etc., with their alt-digivolve / specific WhenLinked bodies) is the §2 follow-up.

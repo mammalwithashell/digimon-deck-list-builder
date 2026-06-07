@@ -348,6 +348,16 @@ pub enum EffectTiming {
     /// `OnLinkCardDiscarded` + explicit zone checks.
     OnUnlink,
 
+    /// Static self link-condition carried by a Shape-B Appmon Link *Digimon*
+    /// (e.g. BT21-009 Gatchmon). The effect at this timing never fires as a
+    /// triggered effect — it is metadata: its `link_cost` + `link_filter`
+    /// describe what host this Digimon may link onto and at what cost, read
+    /// by the link-activate legality / mask path. Mirrors DCGO
+    /// `CardEffectFactory.AddSelfLinkConditionStaticEffect` (a `timing ==
+    /// None` static effect carrying `card.linkCondition`). Distinct from the
+    /// Option-scoped `link_requirement` (which lowers to `OptionMain`).
+    LinkCondition,
+
     /// Observer: fires when a Training Option is trashed from the field.
     /// Rust-engine-specific timing — DCGO expresses the same hook via a
     /// generic on-trash predicate gated on `Training` state rather than a

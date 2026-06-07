@@ -632,6 +632,13 @@ impl Effect {
     pub fn when_would_link(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::WhenWouldLink)
     }
+    /// Builder constructor for a Shape-B Digimon's static self link-condition.
+    /// Pair with `.link(cost, host_filter)` to describe what this Digimon may
+    /// link onto. The effect never fires; it is read as metadata by the
+    /// link-activate legality path. See `EffectTiming::LinkCondition`.
+    pub fn link_condition(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::LinkCondition)
+    }
 }
 
 /// Builder for constructing effects ergonomically.
@@ -1092,18 +1099,32 @@ impl EffectBuilder {
         self
     }
 
-    /// Mark this effect as a Link Option — attaches to a host Digimon for
-    /// `cost` memory. `digimon_filter` selects legal hosts at mask time.
-    /// Sets timing to `OptionMain` so the effect fires as the Option's
-    /// body. Dispatch lands in Task 4.
-    pub fn link<F>(mut self, cost: u16, digimon_filter: F) -> Self
+    /// Record a link cost + host filter on this effect WITHOUT changing its
+    /// timing. Used by a Shape-B Digimon's `link_condition` static effect
+    /// (`Effect::link_condition(card).link_host(cost, filter)`), where the
+    /// link metadata must coexist with `EffectTiming::LinkCondition` rather
+    /// than the Option `OptionMain` body timing.
+    pub fn link_host<F>(mut self, cost: u16, digimon_filter: F) -> Self
     where
         F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,
     {
-        self.inner.timing = EffectTiming::OptionMain;
         self.inner.link_cost = Some(cost);
         self.inner.link_filter = Some(Box::new(digimon_filter));
         self
+    }
+
+    /// Mark this effect as a Link Option — attaches to a host Digimon for
+    /// `cost` memory. `digimon_filter` selects legal hosts at mask time.
+    /// Sets timing to `OptionMain` so the effect fires as the Option's
+    /// body (Shape-A Plug-In Options). For a Shape-B Digimon self
+    /// link-condition use `link_host` on a `link_condition` builder instead.
+    pub fn link<F>(self, cost: u16, digimon_filter: F) -> Self
+    where
+        F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,
+    {
+        let mut builder = self.link_host(cost, digimon_filter);
+        builder.inner.timing = EffectTiming::OptionMain;
+        builder
     }
 
     /// Mark this effect as a Training Option body. Sets timing to
