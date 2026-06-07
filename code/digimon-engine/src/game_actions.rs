@@ -5109,11 +5109,12 @@ impl Game {
         else {
             return false;
         };
-        let Some(_route) =
+        let Some(route) =
             self.normal_digivolve_route_for_hand_card(resume.player, hand_index, resume.permanent)
         else {
             return false;
         };
+        let is_app_fusion = route.app_fusion;
 
         let (from_stack_top, top_card_id) = {
             let player = self.player(resume.player);
@@ -5136,6 +5137,21 @@ impl Game {
         let turn = self.turn_count;
         let removed = self.player_mut(resume.player).hand.remove(hand_index);
         self.player_mut(resume.player).battle_area[field_index].digivolve(removed, turn);
+        // App Fusion: after stacking the App-Fusion card on top of the host
+        // (the digivolve above), the host's existing LINKED cards are moved
+        // UNDER the new top as digivolution sources (consumed). Mirrors DCGO
+        // `CardController.cs` `AddToSources(LinkedCard(card))`. Order is
+        // preserved bottom-to-top by draining front-to-back through
+        // `push_under` (which inserts at position 0): draining in reverse so
+        // the first linked card ends up deepest.
+        if is_app_fusion {
+            let linked: Vec<crate::card_source::CardSource> = std::mem::take(
+                &mut self.player_mut(resume.player).battle_area[field_index].linked_cards,
+            );
+            for card in linked.into_iter().rev() {
+                self.player_mut(resume.player).battle_area[field_index].push_under(card);
+            }
+        }
         let event_card = self
             .player(resume.player)
             .battle_area
