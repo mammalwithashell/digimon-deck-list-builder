@@ -326,6 +326,25 @@ impl CardEffect for DslCardEffect {
                         }
                         out.push(builder.build());
                     }
+                    CompiledDeclarativeClause::LinkCondition {
+                        cost,
+                        filter,
+                        summary,
+                        ..
+                    } => {
+                        // Shape-B Digimon self link-condition: static metadata at
+                        // `EffectTiming::LinkCondition` carrying cost + host
+                        // filter, read by `digimon_link_condition_targets`.
+                        let filter = filter.clone();
+                        let mut builder =
+                            Effect::link_condition(card).link_host(*cost, move |ctx, host| {
+                                eval_predicate(&filter, ctx, PredicateSubject::Permanent(host))
+                            });
+                        if let Some(summary) = summary {
+                            builder = builder.name(summary);
+                        }
+                        out.push(builder.build());
+                    }
                     CompiledDeclarativeClause::AltPathRegistration {
                         scope,
                         active_when,

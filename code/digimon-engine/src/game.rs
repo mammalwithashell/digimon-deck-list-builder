@@ -182,6 +182,19 @@ pub(crate) struct PendingWouldLinkResume {
     pub(crate) card: crate::card_source::CardHandle,
 }
 
+/// Fire-site continuation for a DigiLink Shape-B Digimon-link whose
+/// `WhenWouldLink` replacement parked an interactive selection. Carries the
+/// linking standing Digimon, the chosen host, the link cost, and the linking
+/// card's handle (the `WhenWouldLink` replacement subject) so the resume can
+/// re-validate the source before committing the absorb.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingDigimonLink {
+    pub(crate) source: PermanentHandle,
+    pub(crate) host: PermanentHandle,
+    pub(crate) cost: u16,
+    pub(crate) card: crate::card_source::CardHandle,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PendingWouldDigivolveResume {
     pub(crate) player: PlayerId,
@@ -355,7 +368,8 @@ pub struct Game {
     /// a selection after the linked card has attached but before `OnLink` has
     /// fired.
     #[doc(hidden)]
-    pub(crate) pending_option_placed_link_resume: Option<PermanentHandle>,
+    pub(crate) pending_option_placed_link_resume:
+        Option<(PermanentHandle, crate::card_source::CardHandle)>,
     /// Mid-security-check resolution state. Set by `resolve_security_card`
     /// at phase entry, mutated by `drive_security_resolution` as phases
     /// advance, and cleared at `Dispose`. Non-`None` when the engine is
@@ -412,6 +426,10 @@ pub struct Game {
     /// subject is the pending Link Option card.
     #[doc(hidden)]
     pub(crate) pending_would_link_resume: Option<PendingWouldLinkResume>,
+    /// Fire-site continuation for a DigiLink Shape-B Digimon-link whose
+    /// `WhenWouldLink` replacement parked an interactive selection.
+    #[doc(hidden)]
+    pub(crate) pending_digimon_link: Option<PendingDigimonLink>,
     /// Fire-site continuation for optional `WhenPermanentWouldDigivolve`
     /// replacements whose subject is the permanent about to digivolve.
     #[doc(hidden)]
@@ -884,6 +902,7 @@ impl Game {
             last_play_order_choice: None,
             pending_would_play_resume: None,
             pending_would_link_resume: None,
+            pending_digimon_link: None,
             pending_would_digivolve_resume: None,
             player_digivolve_cost_reducers: Vec::new(),
             pending_player_digivolve_reduction: 0,
@@ -1007,6 +1026,7 @@ impl Game {
         self.last_play_order_choice = None;
         self.pending_would_play_resume = None;
         self.pending_would_link_resume = None;
+        self.pending_digimon_link = None;
         self.pending_would_digivolve_resume = None;
         self.player_digivolve_cost_reducers = Vec::new();
         self.pending_player_digivolve_reduction = 0;
@@ -3562,6 +3582,72 @@ impl Game {
                         self,
                         source_card,
                         source_permanent,
+                        controller,
+                    );
+                    process(&mut ctx);
+                }
+            }
+        }
+
+        // DigiLink Shape-B (task 6.2 / design D7): a linked card's `.linked()`
+        // declarative grants materialize onto its HOST. The main loop above
+        // scans top cards + under-stack digivolution sources but never
+        // `linked_cards`, so a linked Digimon's continuous ESS (e.g. a `Raid`
+        // keyword or DP buff) would never reach the host. This additive pass
+        // runs each linked card's `.linked()` materializing declaratives with
+        // `source_permanent = host` and `controller = host owner`, routing the
+        // grant through the same modifier registry as inherited ESS — so
+        // `Game::has_keyword` (via `modifiers.has_keyword`) and DP math see it.
+        let mut linked_sources: Vec<(
+            String,
+            crate::card_source::CardHandle,
+            PermanentHandle,
+            crate::enums::PlayerId,
+        )> = Vec::new();
+        for (pid, player) in self.players.iter().enumerate() {
+            let player_id = pid as crate::enums::PlayerId;
+            for (index, perm) in player.battle_area.iter().enumerate() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
+                };
+                for linked in &perm.linked_cards {
+                    linked_sources.push((
+                        linked.card_id(&self.card_data).to_string(),
+                        linked.handle(),
+                        host,
+                        player_id,
+                    ));
+                }
+            }
+        }
+        for (card_id, source_card, host, controller) in linked_sources {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.linked || !effect.declarative {
+                    continue;
+                }
+                if !effect.materializes_declarative_state || effect.process.is_none() {
+                    continue;
+                }
+                if let Some(condition) = &effect.condition {
+                    let rctx = crate::effect_context::EffectReadContext::new(
+                        self,
+                        source_card,
+                        Some(host),
+                        controller,
+                    );
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                if let Some(process) = effect.process.as_ref() {
+                    let mut ctx = crate::effect_context::EffectContext::new(
+                        self,
+                        source_card,
+                        Some(host),
                         controller,
                     );
                     process(&mut ctx);

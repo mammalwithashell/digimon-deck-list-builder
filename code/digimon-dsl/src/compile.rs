@@ -255,6 +255,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::BeforePayCost => CompiledTiming::BeforePayCost,
         S::BeforePayCostObserve => CompiledTiming::BeforePayCostObserve,
         S::Delayed => CompiledTiming::Delayed,
+        S::WhenLinked => CompiledTiming::WhenLinked,
     }
 }
 
@@ -1556,6 +1557,13 @@ fn compile_declarative(
             }
         }
         B::LinkRequirement(link) => CompiledDeclarativeClause::LinkRequirement {
+            scope,
+            cost: link.cost,
+            filter: compile_predicate(&link.filter, &format!("{prefix}.filter"), card_id, errors),
+            summary,
+            summary_key,
+        },
+        B::LinkCondition(link) => CompiledDeclarativeClause::LinkCondition {
             scope,
             cost: link.cost,
             filter: compile_predicate(&link.filter, &format!("{prefix}.filter"), card_id, errors),

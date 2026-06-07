@@ -732,6 +732,17 @@ pub enum CompiledDeclarativeClause {
         summary: Option<String>,
         summary_key: Option<String>,
     },
+    /// A Shape-B Appmon Link *Digimon*'s static self link-condition
+    /// (`kind: link_condition`): a link cost + host filter. Lowers to an
+    /// `EffectTiming::LinkCondition` effect read by the link-activate path,
+    /// distinct from the Option-scoped `LinkRequirement`.
+    LinkCondition {
+        scope: CompiledScope,
+        cost: u16,
+        filter: CompiledPredicate,
+        summary: Option<String>,
+        summary_key: Option<String>,
+    },
     FloodGate {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
@@ -831,6 +842,11 @@ pub enum CompiledTiming {
     /// fields. G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
     BeforePayCostObserve,
     Delayed,
+    /// DigiLink Shape-B: "when this Digimon gets linked". Authored as
+    /// `when: when_linked` on a `scope: linked` effect; lowers to
+    /// `EffectTiming::OnLink` with `.linked()` and a self-filter so it fires
+    /// only when THIS card is the just-linked card (design D6).
+    WhenLinked,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

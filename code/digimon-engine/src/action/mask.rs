@@ -366,6 +366,25 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     index: i as u8,
                 };
 
+                // DigiLink Shape-B: an un-linked standing Appmon Link Digimon
+                // may activate its [Main] Link ability (sub-slot 3) to attach
+                // itself onto one of the controller's other Digimon. Coexists
+                // with a [Main] (sub-slot 2) bit on the same permanent. No
+                // once-per-turn map is needed — a linked source is absorbed and
+                // can never re-offer the ability.
+                if let Some((link_cost, link_hosts)) =
+                    game.digimon_link_condition_targets(perm_handle)
+                {
+                    let affordable = (game.memory as i32 - link_cost as i32)
+                        >= game.rules.memory_range.0 as i32;
+                    if !link_hosts.is_empty() && affordable {
+                        let bit = FIELD_EFFECT_START
+                            + i as u16 * EFFECTS_PER_PERMANENT
+                            + FIELD_EFFECT_SLOT_FOR_LINK;
+                        mask[bit as usize] = 1.0;
+                    }
+                }
+
                 // PUPPETS-G009 — standard `<Delay>` `[Main]`-phase activation.
                 // A parked `DelayTrigger::MainPhaseActivated` Option whose
                 // placing turn has passed exposes a player-visible

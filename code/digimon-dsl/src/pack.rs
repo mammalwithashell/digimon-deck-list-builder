@@ -223,6 +223,9 @@ fn collect_declarative_raw_rust_fns(
         CompiledDeclarativeClause::LinkRequirement { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
+        CompiledDeclarativeClause::LinkCondition { filter, .. } => {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
         CompiledDeclarativeClause::FloodGate {
             active_when,
             target,

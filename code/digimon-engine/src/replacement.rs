@@ -1166,6 +1166,16 @@ fn commit_deferred_outcome(
                 game.replacement_pending_outcome = None;
                 return;
             }
+            ReplacementSubject::Card(card, Zone::BattleArea)
+                if game
+                    .pending_digimon_link
+                    .as_ref()
+                    .is_some_and(|resume| resume.card == card) =>
+            {
+                game.commit_digimon_link(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
             ReplacementSubject::Permanent(perm)
                 if game
                     .pending_would_digivolve_resume

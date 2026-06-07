@@ -1513,6 +1513,42 @@ impl Game {
         out
     }
 
+    /// DigiLink Shape-B: if `handle` is an un-linked standing Digimon that
+    /// carries a `LinkCondition` self-effect (an Appmon Link Digimon like
+    /// BT21-009 Gatchmon), return its link cost and the set of legal hosts it
+    /// may link onto right now. Returns `None` when the permanent has no self
+    /// link-condition. Mirrors DCGO `LinkEffect`'s `CanUseCondition` +
+    /// `CanSelectPermanentCondition`: the linking Digimon is excluded as its
+    /// own host, and each host is filtered through the printed link filter and
+    /// the shared `link_host_candidates` eligibility (Digimon, Standard state,
+    /// link-max). Cost is the printed cost before `ChangeLinkCost` modifiers,
+    /// which the initiation applies at pay time via `link_cost_delta_for_player`.
+    pub fn digimon_link_condition_targets(
+        &self,
+        handle: PermanentHandle,
+    ) -> Option<(u16, Vec<PermanentHandle>)> {
+        let owner = handle.player;
+        let perm = self.player(owner).battle_area.get(handle.index as usize)?;
+        // Only an un-linked standing Digimon can be a link SOURCE.
+        if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
+            return None;
+        }
+        if !self.permanent_is_digimon_for_rules(handle) {
+            return None;
+        }
+        let top = perm.top_card();
+        let source_card = top.handle();
+        let effects = self.effects_for_card(top.card_id(&self.card_data), source_card)?;
+        let cost = effects
+            .iter()
+            .find(|e| e.timing == EffectTiming::LinkCondition && e.link_cost.is_some())
+            .and_then(|e| e.link_cost)?;
+        let mut hosts = self.link_host_candidates(owner, source_card, &effects);
+        // A Digimon cannot link onto itself.
+        hosts.retain(|h| *h != handle);
+        Some((cost, hosts))
+    }
+
     /// The set of play modes `player_id` may **afford** for `card` right
     /// now. A dual-mode Plug-In Option yields `[Standard, Link]` when both
     /// fit the memory budget (the player then picks via the mode-select);
@@ -2749,20 +2785,31 @@ impl Game {
         );
         self.drain_effect_queue();
         if self.pending_selection.is_some() {
-            self.pending_option_placed_link_resume = Some(host);
+            self.pending_option_placed_link_resume = Some((host, linked_card));
             return;
         }
 
-        self.fire_on_link_after_option_placed();
+        self.fire_on_link_after_option_placed(host, linked_card);
     }
 
-    fn fire_on_link_after_option_placed(&mut self) {
+    fn fire_on_link_after_option_placed(
+        &mut self,
+        host: PermanentHandle,
+        linked_card: crate::card_source::CardHandle,
+    ) {
         // Fire OnLink globally - every player's battle area scans for
-        // OnLink-timed effects. Load-bearing for Appmon-trait cards.
+        // OnLink-timed effects. Load-bearing for Appmon-trait cards. The
+        // `Linked` trigger source carries the just-linked card so a
+        // `WhenLinked` self-filter (`event_card == source_card`) can fire
+        // for exactly the card that attached, not every sibling (design D6).
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 EffectTiming::OnLink,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
+                TriggerSource::Linked {
+                    player: pid as PlayerId,
+                    host,
+                    card: linked_card,
+                },
             );
         }
         // `maybe_drain` defers when inside a select-callback or outer-tail
@@ -2783,14 +2830,294 @@ impl Game {
     }
 
     pub(crate) fn resume_pending_option_placed_link(&mut self) {
-        if self.pending_option_placed_link_resume.is_none() {
+        let Some((host, linked_card)) = self.pending_option_placed_link_resume else {
             return;
-        }
+        };
         if self.pending_selection.is_some() || !self.effect_queue.is_empty() {
             return;
         }
         self.pending_option_placed_link_resume = None;
-        self.fire_on_link_after_option_placed();
+        self.fire_on_link_after_option_placed(host, linked_card);
+    }
+
+    // ───────────────────── DigiLink Shape-B (Digimon-link) ─────────────────
+    //
+    // An un-linked standing Appmon Link Digimon (e.g. BT21-009 Gatchmon)
+    // activates its printed `[Main]` Link ability to attach itself onto one of
+    // the controller's other Digimon. Mirrors DCGO `CardEffectFactory.LinkEffect`
+    // + `ILinkCard.LinkCard` (root `None`, the standing-permanent path): fire
+    // `WhenWouldLink`, pay the link cost, then absorb the linking permanent —
+    // its digivolution sources are trashed (DCGO `DiscardEvoRoots`) and only its
+    // top card becomes a single linked card on the host — then fire `OnLink`.
+
+    /// Non-mutating affordability of a link cost against the shared memory
+    /// gauge (mirrors `pay_memory`'s floor check).
+    fn can_afford_link_cost(&self, cost: u16) -> bool {
+        (self.memory as i32 - cost as i32) >= self.rules.memory_range.0 as i32
+    }
+
+    /// Decode entry for the FIELD_EFFECT link sub-slot: the standing Digimon at
+    /// `perm_idx` declares a link. Installs a host-selection prompt whose pick
+    /// drives `begin_digimon_link`. No-op if the permanent has no self
+    /// link-condition, no legal host, or the cost is unaffordable (the mask
+    /// already guards all three; this re-checks defensively).
+    pub(crate) fn activate_field_link(&mut self, player: PlayerId, perm_idx: usize) {
+        let source = PermanentHandle {
+            player,
+            index: perm_idx as u8,
+        };
+        let Some((cost, hosts)) = self.digimon_link_condition_targets(source) else {
+            return;
+        };
+        if hosts.is_empty() || !self.can_afford_link_cost(cost) {
+            return;
+        }
+        let Some(source_card) = self
+            .player(player)
+            .battle_area
+            .get(perm_idx)
+            .map(|p| p.top_card().handle())
+        else {
+            return;
+        };
+        self.install_digimon_link_host_selection(player, source, source_card, cost, hosts);
+    }
+
+    /// Install the host-selection prompt for a Digimon-link. Reuses the
+    /// attack-id encoding convention shared with `install_link_host_selection`;
+    /// the resolved pick drives `begin_digimon_link`.
+    pub(crate) fn install_digimon_link_host_selection(
+        &mut self,
+        owner: PlayerId,
+        source: PermanentHandle,
+        source_card: crate::card_source::CardHandle,
+        cost: u16,
+        candidates: Vec<PermanentHandle>,
+    ) {
+        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+        use crate::selection::SelectionKind;
+
+        let valid_action_ids: Vec<u16> = candidates
+            .iter()
+            .map(|h| encode_attack(0, h.index as u16))
+            .collect();
+        let candidate_snapshot = candidates.clone();
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectTarget;
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::OwnField,
+            selecting_player: owner,
+            previous_phase,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Choose a Digimon to link this Digimon to".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: Some(source),
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let offset = action_id.saturating_sub(ATTACK_START);
+                let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+                let picked = candidate_snapshot
+                    .iter()
+                    .copied()
+                    .find(|h| h.index == target_index)
+                    .unwrap_or(PermanentHandle {
+                        player: owner,
+                        index: target_index,
+                    });
+                game.begin_digimon_link(source, picked, cost);
+            }),
+            on_decline: None,
+        });
+    }
+
+    /// Begin the link attach: fire the `WhenWouldLink` replacement window on the
+    /// linking card, then commit (or park if the replacement installs an
+    /// interactive selection, resumed via `commit_digimon_link`).
+    pub(crate) fn begin_digimon_link(
+        &mut self,
+        source: PermanentHandle,
+        host: PermanentHandle,
+        cost: u16,
+    ) {
+        use crate::enums::Zone;
+        use crate::replacement::{ReplacementCause, ReplacementSubject};
+
+        let Some(src_perm) = self.player(source.player).battle_area.get(source.index as usize)
+        else {
+            return;
+        };
+        if !matches!(
+            src_perm.option_state,
+            crate::permanent::OptionState::Standard
+        ) {
+            return;
+        }
+        let source_card = src_perm.top_card().handle();
+        let host_live = self
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+            .map(|p| {
+                self.permanent_is_digimon_for_rules(host)
+                    && matches!(p.option_state, crate::permanent::OptionState::Standard)
+            })
+            .unwrap_or(false);
+        if !host_live {
+            return;
+        }
+
+        self.pending_digimon_link = Some(crate::game::PendingDigimonLink {
+            source,
+            host,
+            cost,
+            card: source_card,
+        });
+        let outcome = self.try_replace(
+            EffectTiming::WhenWouldLink,
+            ReplacementSubject::Card(source_card, Zone::BattleArea),
+            ReplacementCause::OwnEffect,
+            Some(Zone::BattleArea),
+        );
+        if self.pending_selection.is_some() {
+            return;
+        }
+        self.commit_digimon_link(outcome);
+    }
+
+    /// Commit (or abort) a parked Digimon-link after its `WhenWouldLink`
+    /// replacement resolves. Pays the cost and absorbs the linking permanent.
+    pub(crate) fn commit_digimon_link(&mut self, outcome: crate::replacement::ReplacementOutcome) {
+        use crate::permanent::OptionState;
+        use crate::replacement::ReplacementOutcome;
+
+        let Some(p) = self.pending_digimon_link.take() else {
+            return;
+        };
+        if !matches!(outcome, ReplacementOutcome::None) {
+            // Cancelled / redirected / substituted — link aborted, source stays
+            // standing, no cost paid.
+            self.check_turn_end();
+            return;
+        }
+        // Re-validate both permanents are still live (an interactive
+        // replacement may have moved things mid-window).
+        let source_live = self
+            .player(p.source.player)
+            .battle_area
+            .get(p.source.index as usize)
+            .map(|perm| {
+                perm.top_card().handle() == p.card
+                    && matches!(perm.option_state, OptionState::Standard)
+            })
+            .unwrap_or(false);
+        let host_live = self
+            .player(p.host.player)
+            .battle_area
+            .get(p.host.index as usize)
+            .map(|perm| {
+                self.permanent_is_digimon_for_rules(p.host)
+                    && matches!(perm.option_state, OptionState::Standard)
+            })
+            .unwrap_or(false);
+        if !source_live || !host_live {
+            self.check_turn_end();
+            return;
+        }
+        let effective =
+            (p.cost as i32 + self.modifiers.link_cost_delta_for_player(p.source.player)).max(0) as u16;
+        if !self.pay_memory(effective) {
+            self.check_turn_end();
+            return;
+        }
+        self.absorb_standing_digimon_as_link(p.source, p.host);
+        self.check_turn_end();
+    }
+
+    /// Absorb a standing Digimon `source` into `host`'s linked cards. The
+    /// digivolution sources under `source`'s top card are trashed (DCGO
+    /// `DiscardEvoRoots`); only the top card becomes a single linked card.
+    /// Follows the canonical removal sequence (`clear_permanent_full` →
+    /// `delete slot` → `shift_after_battle_area_remove`) and fixes the host
+    /// handle with `shift_handle_after_soft_remove` before attaching.
+    fn absorb_standing_digimon_as_link(&mut self, source: PermanentHandle, host: PermanentHandle) {
+        // Pre-clear modifiers + granted bodies for the leaving permanent.
+        self.clear_permanent_full(source);
+        self.modifiers.expire_player_on_permanent_leave(source);
+        // Remove the slot, taking ownership of the permanent.
+        let perm = {
+            let ba = &mut self.player_mut(source.player).battle_area;
+            if (source.index as usize) >= ba.len() {
+                return;
+            }
+            ba.remove(source.index as usize)
+        };
+        self.modifiers
+            .shift_after_battle_area_remove(source.player, source.index);
+
+        let mut sources = perm.card_sources;
+        let Some(top) = sources.pop() else {
+            return;
+        };
+        let top_handle = top.handle();
+        let top_owner = top.owner;
+        // Digivolution sources under the top → owner's trash + trigger.
+        for card in sources {
+            let scard = card.handle();
+            let owner = card.owner;
+            self.player_mut(owner).trash.push(card);
+            self.fire_digivolution_card_trashed(
+                source.player,
+                source,
+                top_handle,
+                scard,
+                crate::trigger_context::EventCause::OwnEffect,
+            );
+        }
+        // The source's own linked cards (rare) → trash + OnLinkedCardTrashed.
+        let had_linked = !perm.linked_cards.is_empty();
+        for card in perm.linked_cards {
+            let owner = card.owner;
+            self.player_mut(owner).trash.push(card);
+        }
+        if had_linked {
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    EffectTiming::OnLinkedCardTrashed,
+                    TriggerSource::PlayerBattleArea(pid as PlayerId),
+                );
+            }
+            self.drain_effect_queue();
+        }
+        // Fix the host handle after the Vec shift, then attach the top card.
+        let host_adj = Game::shift_handle_after_soft_remove(source, host);
+        match self
+            .player_mut(host_adj.player)
+            .battle_area
+            .get_mut(host_adj.index as usize)
+        {
+            Some(hp) => hp.linked_cards.push(top),
+            None => {
+                // Host vanished — route the top card to its owner's trash.
+                self.player_mut(top_owner).trash.push(top);
+                return;
+            }
+        }
+        // Fire OnLink so the linked card's WhenLinked + ESS resolve. The
+        // `Linked` trigger carries the just-linked card for the self-filter.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnLink,
+                TriggerSource::Linked {
+                    player: pid as PlayerId,
+                    host: host_adj,
+                    card: top_handle,
+                },
+            );
+        }
+        self.drain_effect_queue();
     }
 
     /// Compute the absolute `turn_count` at which a delayed Option should

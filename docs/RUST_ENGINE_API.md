@@ -2378,6 +2378,30 @@ tensor capacity and keeps multiple Plug-Ins independently visible unless a
 modifier narrows the host. Lifecycle entry points that insert or re-link a
 Plug-In enforce this same capacity before mutating the carrier.
 
+### DigiLink Shape-B — Appmon Link *Digimon* (`[Link]` keyword)
+
+The `[Link]` keyword has two card shapes sharing `Permanent.linked_cards`. The
+Plug-In Option above is **Shape A**. **Shape B** is an Appmon Link *Digimon*
+(e.g. BT21-009 Gatchmon) that attaches *itself* onto a host Digimon via a
+player-activated `[Main]` ability. Authored in YAML as `kind: link_condition`
+on a `kind: digimon` card; mirrors DCGO `CardEffectFactory.LinkEffect` +
+`AddSelfLinkConditionStaticEffect` + `ILinkCard.LinkCard` (root `None`).
+
+| Concern | API |
+|---------|-----|
+| Self link-condition | An `EffectTiming::LinkCondition` effect carrying `link_cost` + `link_filter`, built via `Effect::link_condition(card).link_host(cost, filter)`. Never fires; read as metadata. DSL: `kind: link_condition { cost, filter }`. |
+| Read cost + legal hosts | `Game::digimon_link_condition_targets(handle) -> Option<(u16, Vec<PermanentHandle>)>` — excludes self, reuses `link_host_candidates` (Digimon, `Standard` state, link-max, filter). |
+| Action | An un-linked standing source with a link-condition + ≥1 host + affordable cost gets `FIELD_EFFECT` sub-slot `FIELD_EFFECT_SLOT_FOR_LINK` (= 3); no `ACTION_SPACE_SIZE` change. Decode → `Game::activate_field_link`. |
+| Initiation | `activate_field_link` → `install_digimon_link_host_selection` (host pick) → `begin_digimon_link` (fires `WhenWouldLink`, parks interactive replacements in `pending_digimon_link`, resume arm in `replacement.rs`) → `commit_digimon_link` (pays `link_cost_delta`-adjusted cost) → `absorb_standing_digimon_as_link`. |
+| Absorb (root `None`) | `absorb_standing_digimon_as_link(source, host)` — canonical removal (`clear_permanent_full` → remove slot → `shift_after_battle_area_remove` → `shift_handle_after_soft_remove(host)`); per DCGO `DiscardEvoRoots` the under-stack is trashed and only the top card becomes a single linked card (flat `Vec<CardSource>` suffices — DCGO's `LinkedCards` is itself flat). Fires `OnLink` via `TriggerSource::Linked { player, host, card }`. |
+| `WhenLinked` | The linked card's own "when this gets linked" trigger = `OnLink` + `.linked()` + self-filter `event_card == source_card` (the `Linked` trigger carries the just-linked card so siblings don't re-fire). DSL: `scope: linked, when: when_linked`. No dedicated timing. |
+| Linked ESS to host | A linked card's `.linked()` declarative grants (keywords like `Raid`, DP) materialize onto the host through the `tick_declarative_effects` linked-card pass (modifier registry → `has_keyword` / `effective_dp`). DSL: `scope: linked` + `grant_keyword` / DP. Removed automatically when the card unlinks/trashes. |
+
+**Residual (deferred):** from-hand Digimon-link and the rarer source origins
+(trash / under-stack / re-link-from-another-host) are not yet wired — the
+dominant BT21+ shape links a standing/digivolved Digimon (root `None`), which is
+covered. See `docs/RUST_ENGINE_GAPS.md` (2026-06-06 Shape-B note).
+
 ### Shape types added in Task 1
 
 ```rust

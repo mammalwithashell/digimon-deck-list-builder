@@ -141,6 +141,9 @@ pub enum Timing {
     /// G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
     BeforePayCostObserve,
     Delayed,
+    /// DigiLink Shape-B: "when this Digimon gets linked" (`when: when_linked`).
+    /// Use on a `scope: linked` effect; lowers to `OnLink` + a self-filter.
+    WhenLinked,
 }
 
 #[derive(
@@ -201,6 +204,7 @@ pub enum DeclarativeKind {
     GrantKeyword,
     Delay,
     LinkRequirement,
+    LinkCondition,
     FloodGate,
     AltPathRegistration,
     RawRust,
@@ -222,6 +226,7 @@ pub enum TypedDeclarativeBody {
     GrantKeyword(GrantKeywordBody),
     Delay(DelayBody),
     LinkRequirement(LinkRequirementBody),
+    LinkCondition(LinkRequirementBody),
     FloodGate(FloodGateBody),
     AltPathRegistration(AltPathRegistrationBody),
     RawRust(RawRustClauseBody),
@@ -260,6 +265,9 @@ impl DeclarativeClause {
             DeclarativeKind::Delay => TypedDeclarativeBody::Delay(serde_yml::from_value(value)?),
             DeclarativeKind::LinkRequirement => {
                 TypedDeclarativeBody::LinkRequirement(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::LinkCondition => {
+                TypedDeclarativeBody::LinkCondition(serde_yml::from_value(value)?)
             }
             DeclarativeKind::FloodGate => {
                 TypedDeclarativeBody::FloodGate(serde_yml::from_value(value)?)
