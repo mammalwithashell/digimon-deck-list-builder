@@ -2582,6 +2582,10 @@ pub struct LinkToOwnDigimonArgs {
 /// - `self_sources`: the effect's own permanent's digivolution cards.
 /// - `own_digimon_sources`: any of the controller's Digimon's digivolution
 ///   cards (cross-permanent).
+/// - `self_option`: Gap 3b — the Option card currently being played links
+///   ITSELF onto the host (BT25-101 "you may link this card …"). Only valid in
+///   an Option's `[Main]` body; the card is lifted out of `pending_option` so
+///   the Standard dispose does not also trash it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum LinkCardSourceZone {
@@ -2589,6 +2593,7 @@ pub enum LinkCardSourceZone {
     Trash,
     SelfSources,
     OwnDigimonSources,
+    SelfOption,
 }
 
 /// Where the linked card is attached.

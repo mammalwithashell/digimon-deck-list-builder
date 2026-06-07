@@ -941,6 +941,13 @@ pub enum LinkCardSource {
     Hand(PlayerId),
     Trash(PlayerId),
     DigivolutionSource(crate::permanent::PermanentHandle),
+    /// Gap 3b — the Option currently being played (held in `Game.pending_option`)
+    /// links ITSELF onto a host instead of going to trash on dispose. Used by
+    /// BT25-101 Divine Arms Version Ω "you may link this card … to 1 of your
+    /// Digimon". `link_chosen_card_into_host` lifts the card out of
+    /// `pending_option` (so the Standard dispose has nothing left to trash) and
+    /// attaches it; `pending_option` is left consumed.
+    OptionInPlay(PlayerId),
 }
 
 #[cfg(test)]

@@ -1820,6 +1820,62 @@ impl<'a> EffectContext<'a> {
         self.cancel_leave();
     }
 
+    /// Gap 3a — pay the link-card-trash cost of a `WhenWouldLeaveBattleArea`
+    /// replacement ("by trashing 1 of its link cards, it doesn't leave").
+    ///
+    /// Installs a selection over `host`'s link cards (one option per card, so
+    /// the choice of WHICH link card to trash is exposed to the RL action
+    /// space — never auto-selected). On pick, the chosen link card is trashed
+    /// via `Game::trash_specific_link_card` (firing `OnLinkedCardTrashed`) and
+    /// the parked leave is cancelled (`cancel_leave`).
+    ///
+    /// Caller MUST gate on `host.linked_cards.len() >= 1` via the replacement's
+    /// `replacement_condition`/preflight so this is never reached with no cost
+    /// to pay. With exactly one link card a single-option selection still
+    /// installs (faithful to DCGO's `TrashLinkedCards` UI flow — the choice is
+    /// surfaced even when forced).
+    ///
+    /// DCGO ref: `OnTrashLinkCard.cs` (CanUse: has ≥1 link card) +
+    /// `TrashLinkedCards.cs` (the per-card trash + observer dispatch).
+    pub fn trash_own_link_card_and_cancel_leave(&mut self, host: PermanentHandle) {
+        // Snapshot the link-card handles + labels at install time.
+        let Some(perm) = self
+            .game
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+        else {
+            return;
+        };
+        if perm.linked_cards.is_empty() {
+            return;
+        }
+        let cards: Vec<crate::card_source::CardHandle> =
+            perm.linked_cards.iter().map(|c| c.handle()).collect();
+        let labels: Vec<String> = cards
+            .iter()
+            .map(|h| {
+                self.game
+                    .card_data_for_handle(*h)
+                    .map(|d| d.card_name.clone())
+                    .unwrap_or_else(|| "Link card".to_string())
+            })
+            .collect();
+
+        self.select_effect_choice(
+            "Choose 1 link card to trash (it doesn't leave)",
+            labels,
+            move |cb_ctx, idx| {
+                let Some(card) = cards.get(idx).copied() else {
+                    return;
+                };
+                if cb_ctx.game.trash_specific_link_card(host, card) {
+                    cb_ctx.cancel_leave();
+                }
+            },
+        );
+    }
+
     pub fn trash_top_security_and_cancel_current_replacement(&mut self, player: PlayerId) -> bool {
         if self.trash_top_security(player) {
             if self.game.parked_replacement.is_some() {

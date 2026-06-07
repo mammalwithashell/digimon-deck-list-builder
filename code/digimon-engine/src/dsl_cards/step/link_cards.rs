@@ -140,6 +140,14 @@ fn zone_has_candidate(
                     bindings,
                 )
             }),
+        // Gap 3b — the in-play Option is a candidate iff it is currently held in
+        // `pending_option` and owned by the controller. The filter is ignored:
+        // "link this card" names the Option itself, not a filtered pool.
+        CompiledLinkSourceZone::SelfOption => ctx
+            .game
+            .pending_option
+            .as_ref()
+            .is_some_and(|p| p.owner == player),
     }
 }
 
@@ -236,6 +244,7 @@ fn zone_label(zone: CompiledLinkSourceZone) -> String {
         CompiledLinkSourceZone::OwnDigimonSources => {
             "From your Digimon's digivolution cards".to_string()
         }
+        CompiledLinkSourceZone::SelfOption => "This card".to_string(),
     }
 }
 
@@ -266,6 +275,26 @@ fn install_card_select(
             install_card_select_sources(
                 ctx, spec, pick_index, zone, optional, prompt, tail, bindings, runtime,
             );
+        }
+        CompiledLinkSourceZone::SelfOption => {
+            // Gap 3b — "link THIS card": the card is fixed (the in-play Option),
+            // so there is no card-pick to surface. Resolve to the option card
+            // and proceed directly to host selection.
+            let card = ctx.game.pending_option.as_ref().map(|p| p.card.handle());
+            let player = ctx.player;
+            match card {
+                Some(card) => after_card_chosen(
+                    ctx,
+                    spec,
+                    pick_index,
+                    card,
+                    LinkCardSource::OptionInPlay(player),
+                    tail,
+                    bindings,
+                    runtime,
+                ),
+                None => run_captured_tail(ctx, &tail, bindings, &runtime),
+            }
         }
     }
 }

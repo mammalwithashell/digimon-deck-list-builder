@@ -1266,6 +1266,26 @@ fn compile_replacement_process(
 
     let mut process = Vec::new();
 
+    // Gap 3a — `cost: { trash_own_link_card: true }` synthesizes a single
+    // self-contained step that trashes a chosen link card AND cancels the
+    // leave. It owns the `outcome: prevent`, so we emit only this step (and
+    // suppress the trailing `CancelReplacement` below).
+    let trash_own_link_card = r
+        .cost
+        .as_ref()
+        .is_some_and(|cost| cost.trash_own_link_card);
+    if trash_own_link_card {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { trash_own_link_card } requires outcome: prevent".into(),
+            });
+        }
+        process.push(CompiledStep::TrashOwnLinkCardAndCancelLeave);
+        return process;
+    }
+
     if r.cost.as_ref().is_some_and(|cost| cost.delay_self) {
         process.push(CompiledStep::DeletePermanent {
             target: CompiledBindingRef::Source,
@@ -2758,6 +2778,7 @@ fn compile_step(
                     LinkCardSourceZone::OwnDigimonSources => {
                         CompiledLinkSourceZone::OwnDigimonSources
                     }
+                    LinkCardSourceZone::SelfOption => CompiledLinkSourceZone::SelfOption,
                 })
                 .collect();
 

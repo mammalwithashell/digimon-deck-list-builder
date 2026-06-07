@@ -20,6 +20,17 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             set_outcome(ctx, ReplacementOutcome::Cancelled);
             true
         }
+        CompiledStep::TrashOwnLinkCardAndCancelLeave => {
+            // Gap 3a — the leaving permanent is the replacement subject, bound
+            // as `replacement_subject` by lower_replacement. Install the
+            // link-card-trash selection; its callback trashes the chosen card
+            // and cancels the leave. With no subject (shouldn't happen for a
+            // leave replacement) this no-ops and the leave proceeds.
+            if let Some(host) = bindings.get_permanent("replacement_subject") {
+                ctx.trash_own_link_card_and_cancel_leave(host);
+            }
+            true
+        }
         CompiledStep::TrashTopSecurityAndCancelReplacement { of } => {
             let player = crate::dsl_cards::step::resolve_player(ctx, *of);
             if ctx.trash_top_security_and_cancel_current_replacement(player) {

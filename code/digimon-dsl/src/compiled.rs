@@ -125,6 +125,8 @@ pub enum CompiledLinkSourceZone {
     Trash,
     SelfSources,
     OwnDigimonSources,
+    /// Gap 3b — the in-play Option links itself onto the host.
+    SelfOption,
 }
 
 /// Compiled attach target for the `LinkCards` step. Mirrors
@@ -1718,6 +1720,12 @@ pub enum CompiledStep {
         enabled: bool,
     },
     CancelReplacement,
+    /// Gap 3a — trash 1 of the leaving permanent's own link cards as the cost
+    /// of a `when_would_leave_battle_area` replacement, then cancel the leave.
+    /// Synthesized from `cost: { trash_own_link_card: true }` + `outcome:
+    /// prevent`; it owns both the cost-payment (player-chosen which link card)
+    /// and the cancel, so no separate `CancelReplacement` follows it.
+    TrashOwnLinkCardAndCancelLeave,
     HandleReplacement,
     RedirectReplacement {
         zone: CompiledZone,

@@ -2333,3 +2333,387 @@ fn gap5_dsl_when_would_link_to_this() {
         "the source must attach after the reduced cost is paid"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Gap 3a — link-card-trash leave-replacement.
+//
+// BT25-066 / BT25-073 (inherited) / BT25-101:
+//   "[All Turns] When this Digimon would leave the battle area, by trashing 1
+//    of its link cards, it doesn't leave."
+//
+// An OPTIONAL `WhenWouldLeaveBattleArea` replacement. The cost is trashing one
+// of the LEAVING permanent's OWN link cards. If paid → the leave is cancelled
+// (the Digimon stays). Gated on the permanent having ≥1 link card. When >1 the
+// player CHOOSES which to trash (exposed to the RL action space). The trashed
+// link card routes to its owner's trash and fires `OnLinkedCardTrashed`.
+//
+// DCGO ref: OnTrashLinkCard.cs (CanUse: has a link card) + TrashLinkedCards.cs.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// The faithful BT25-066 leave-replacement, hand-written for substrate TDD.
+///
+/// `Effect::when_would_leave_battle_area` builds the replacement. The clause is
+/// `.optional()` (the printed "by trashing … it doesn't leave" = you may pay).
+/// The `replacement_condition` gates on the leaving subject being THIS permanent
+/// AND it having ≥1 link card (so it is not offered when there are no link
+/// cards). The accept-branch installs the link-card-trash selection via the new
+/// engine primitive, which trashes the chosen link card and cancels the leave.
+struct LinkTrashLeaveReplacement;
+impl CardEffect for LinkTrashLeaveReplacement {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_would_leave_battle_area(card)
+            .name("By trashing 1 link card, it doesn't leave")
+            .optional()
+            .replacement_condition(|rctx, subject| {
+                let Some(handle) = subject.permanent() else {
+                    return false;
+                };
+                // Self-filter: only THIS permanent.
+                if rctx.source_permanent != Some(handle) {
+                    return false;
+                }
+                // Gate: must have ≥1 link card to pay the cost.
+                rctx.game
+                    .player(handle.player)
+                    .battle_area
+                    .get(handle.index as usize)
+                    .is_some_and(|p| !p.linked_cards.is_empty())
+            })
+            .replacement_process(|rctx| {
+                if let Some(host) = rctx.subject.permanent() {
+                    rctx.effect.trash_own_link_card_and_cancel_leave(host);
+                }
+            })
+            .build()]
+    }
+}
+
+/// Gap 3a test 1 — accept the replacement: a link card is trashed and the
+/// Digimon stays on the field.
+#[test]
+fn gap3a_leave_replacement_trashes_link_card_and_stays() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("STAYER", CardColor::Red))
+        .add_card(digimon_card("LINKEE", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("STAYER", Arc::new(LinkTrashLeaveReplacement));
+    let perm = r.place_on_field(0, "STAYER", Some(0));
+    r.push_linked_owned(perm, "LINKEE", 0);
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.player(0).battle_area[perm.index as usize]
+            .linked_cards
+            .len(),
+        1
+    );
+    let trash_before = r.trash_size(0);
+
+    // Trigger a leave (effect deletion). The optional replacement prompt installs.
+    r.game.delete_permanent_with_effects(perm);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "leave-replacement offers the optional accept prompt"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the leave replacement");
+
+    // The which-link-card-to-trash choice is surfaced even with one link card
+    // (no auto-selection). Resolve the single-option selection.
+    let pick = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("link-card-trash selection installed")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("pick link card");
+
+    // After accept + pick, the Digimon remains and the link card is trashed.
+    assert_eq!(r.battle_area_size(0), 1, "the Digimon did NOT leave");
+    assert_eq!(
+        r.game.player(0).battle_area[perm.index as usize]
+            .linked_cards
+            .len(),
+        0,
+        "the link card was trashed as the cost"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before + 1,
+        "exactly one card (the link card) went to trash"
+    );
+}
+
+/// Gap 3a test 2 — decline the replacement: no link card trashed, the Digimon
+/// leaves normally.
+#[test]
+fn gap3a_leave_replacement_declined_leaves() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("STAYER", CardColor::Red))
+        .add_card(digimon_card("LINKEE", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("STAYER", Arc::new(LinkTrashLeaveReplacement));
+    let perm = r.place_on_field(0, "STAYER", Some(0));
+    r.push_linked_owned(perm, "LINKEE", 0);
+    advance_to_main(&mut r);
+
+    let trash_before = r.trash_size(0);
+    r.game.delete_permanent_with_effects(perm);
+    assert!(r.game.pending_selection.is_some());
+
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline the leave replacement");
+
+    assert_eq!(r.battle_area_size(0), 0, "declining lets the Digimon leave");
+    // Both the leaving top card and its link card go to trash (host deletion
+    // trashes link cards). Net: trash grows by 2.
+    assert_eq!(
+        r.trash_size(0),
+        trash_before + 2,
+        "top card + link card both trashed on the (un-prevented) leave"
+    );
+}
+
+/// Gap 3a test 3 — with 0 link cards, the replacement is NOT offered; the
+/// Digimon leaves.
+#[test]
+fn gap3a_leave_replacement_no_link_cards_not_offered() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("STAYER", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("STAYER", Arc::new(LinkTrashLeaveReplacement));
+    let perm = r.place_on_field(0, "STAYER", Some(0));
+    advance_to_main(&mut r);
+
+    assert!(
+        r.game.player(0).battle_area[perm.index as usize]
+            .linked_cards
+            .is_empty()
+    );
+
+    r.game.delete_permanent_with_effects(perm);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no link cards → no replacement prompt"
+    );
+    assert_eq!(r.battle_area_size(0), 0, "the Digimon leaves normally");
+}
+
+/// Gap 3a test 4 — with >1 link card the player chooses WHICH to trash. The
+/// trash-choice surfaces as a multi-option selection; the chosen one is trashed
+/// and the Digimon stays.
+#[test]
+fn gap3a_leave_replacement_chooses_which_link_card() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("STAYER", CardColor::Red))
+        .add_card(digimon_card("LINK-A", CardColor::Red))
+        .add_card(digimon_card("LINK-B", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("STAYER", Arc::new(LinkTrashLeaveReplacement));
+    let perm = r.place_on_field(0, "STAYER", Some(0));
+    let link_a = r.push_linked_owned(perm, "LINK-A", 0);
+    let _link_b = r.push_linked_owned(perm, "LINK-B", 0);
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.player(0).battle_area[perm.index as usize]
+            .linked_cards
+            .len(),
+        2
+    );
+
+    r.game.delete_permanent_with_effects(perm);
+    // Accept the optional replacement.
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
+
+    // Now a which-link-card-to-trash selection is live with 2 options.
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("which-link-card selection installed");
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        2,
+        "both link cards are offered as trash choices"
+    );
+    // Choose the first (LINK-A).
+    let action = pending.valid_action_ids[0];
+    r.game.resolve_selection(0, action).expect("pick link card");
+
+    assert_eq!(r.battle_area_size(0), 1, "the Digimon stays");
+    let linked = &r.game.player(0).battle_area[perm.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "exactly one link card remains");
+    assert_eq!(
+        linked[0].handle(),
+        _link_b,
+        "the UN-chosen link card (LINK-B) remains; LINK-A was trashed"
+    );
+    assert!(
+        r.game.player(0).trash.iter().any(|c| c.handle() == link_a),
+        "the chosen link card (LINK-A) is in trash"
+    );
+}
+
+/// Gap 3a test 5 (DSL) — author BT25-066's clause in YAML and prove it.
+#[test]
+fn gap3a_dsl_leave_replacement() {
+    let yaml = r#"
+card: BT25-066
+name: Leave-Stayer
+kind: digimon
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { trash_own_link_card: true }
+    outcome: prevent
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("BT25-066", CardColor::Red))
+        .add_card(digimon_card("LINKEE", CardColor::Red))
+        .memory(0)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let perm = r.place_on_field(0, "BT25-066", Some(0));
+    r.push_linked_owned(perm, "LINKEE", 0);
+    advance_to_main(&mut r);
+
+    let trash_before = r.trash_size(0);
+    r.game.delete_permanent_with_effects(perm);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "DSL leave-replacement offers the optional accept prompt"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
+
+    // Resolve the which-link-card-to-trash choice (surfaced even with one card).
+    let pick = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("link-card-trash selection installed")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("pick link card");
+
+    assert_eq!(r.battle_area_size(0), 1, "the Digimon did NOT leave");
+    assert_eq!(
+        r.game.player(0).battle_area[perm.index as usize]
+            .linked_cards
+            .len(),
+        0,
+        "the link card was trashed as the cost"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before + 1,
+        "exactly the link card went to trash"
+    );
+}
+
+/// Gap 3a (DSL) — with 0 link cards the DSL clause is not offered and the
+/// Digimon leaves (preflight gate on link-card presence).
+#[test]
+fn gap3a_dsl_leave_replacement_no_link_cards_not_offered() {
+    let yaml = r#"
+card: BT25-066
+name: Leave-Stayer
+kind: digimon
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { trash_own_link_card: true }
+    outcome: prevent
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("BT25-066", CardColor::Red))
+        .memory(0)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let perm = r.place_on_field(0, "BT25-066", Some(0));
+    advance_to_main(&mut r);
+
+    r.game.delete_permanent_with_effects(perm);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "DSL: no link cards → no replacement prompt"
+    );
+    assert_eq!(r.battle_area_size(0), 0, "the Digimon leaves normally");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Gap 3b — Option self-as-link-source (BT25-101 Divine Arms Version Ω).
+//
+//   "By trashing 1 [TS] trait card from your hand, Draw 2. After, you may link
+//    THIS CARD or 1 [TS] trait card from your trash to 1 of your Digimon
+//    without paying the cost."
+//
+// "link this card" = the Option being played attaches ITSELF as a persistent
+// link card onto a chosen Digimon (instead of going to trash on dispose). The
+// `link_cards` step is extended with a `self_option` from-zone.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Gap 3b — a `link_cards { from: [self_option], to: own_digimon }` Option
+/// attaches ITSELF as a link card onto the chosen host (not trashed on dispose).
+#[test]
+fn gap3b_option_links_itself_to_host() {
+    let yaml = r#"
+card: BT25-101
+name: Divine Arms Version Omega
+kind: option
+effects:
+  - when: main
+    process:
+      - link_cards:
+          from: [self_option]
+          to: own_digimon
+          count: { exactly: 1 }
+          cost: free
+"#;
+
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("BT25-101", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["BT25-101"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    let trash_before = r.trash_size(0);
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending,
+        "the self-link option parks for the host selection"
+    );
+
+    // Resolve the host-select prompt.
+    let host_action = {
+        use digimon_engine::action::space::encode_attack;
+        encode_attack(host.player as u16, host.index as u16)
+    };
+    let _ = r.game.resolve_selection(0, host_action);
+
+    // The Option attached ITSELF as a link card; it did NOT go to trash.
+    let linked = &r.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "the Option attached itself as a link card");
+    assert_eq!(
+        r.trash_size(0),
+        trash_before,
+        "the self-linked Option is NOT trashed on dispose"
+    );
+    assert_eq!(r.hand_size(0), 0, "the Option left the hand");
+}

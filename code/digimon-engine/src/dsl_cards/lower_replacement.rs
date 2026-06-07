@@ -490,6 +490,19 @@ fn required_selection_step_has_candidate(
         CompiledStep::SelectOrderedPermutation { items, .. } => {
             resolve_card_list_binding(items, bindings).is_some_and(|items| !items.is_empty())
         }
+        // Gap 3a — the trash-own-link-card cost is payable only when the
+        // leaving permanent (the `replacement_subject` binding) has ≥1 link
+        // card. Gates the optional accept prompt so it is not offered with 0
+        // link cards.
+        CompiledStep::TrashOwnLinkCardAndCancelLeave => bindings
+            .get_permanent("replacement_subject")
+            .and_then(|h| {
+                ctx.game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+            })
+            .is_some_and(|perm| !perm.linked_cards.is_empty()),
         // Non-selection first steps may mutate state before a later selection,
         // so this read-only preflight deliberately does not speculate.
         _ => true,

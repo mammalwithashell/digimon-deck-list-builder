@@ -446,6 +446,20 @@ pub struct ReplacementBody {
 pub struct ReplacementCostBody {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub delay_self: bool,
+
+    /// Gap 3a — pay the replacement by trashing 1 of the LEAVING permanent's
+    /// own link cards ("by trashing 1 of its link cards, it doesn't leave",
+    /// BT25-066 / BT25-073 inherited / BT25-101). Only valid on a
+    /// `when_would_leave_battle_area` replacement. The player chooses WHICH
+    /// link card to trash (exposed to the RL action space); the chosen card
+    /// goes to its owner's trash, fires `OnLinkedCardTrashed`, and the leave is
+    /// cancelled. The clause must be `optional: true` (the "by trashing … it
+    /// doesn't leave" is a may-pay). Gated so it is not offered with 0 link
+    /// cards. Lowers to a single `TrashOwnLinkCardAndCancelLeave` step (it owns
+    /// both the cost and the `outcome: prevent`, so no separate
+    /// `cancel_replacement` is emitted).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub trash_own_link_card: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
