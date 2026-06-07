@@ -651,6 +651,9 @@ pub enum CompiledDeclarativeClause {
         security_attack_fn: Option<CompiledFormula>,
         grant_keyword: Option<CompiledGrantKeywordValue>,
         modifier: Option<String>,
+        /// Scalar `value` for the named `modifier` grant (e.g. `ChangeLinkMax`
+        /// "Link +N"). `None` ⇒ `0`. Fixes G-ENGINE-AURA-GRANT-LINK-MAX.
+        modifier_value: Option<i32>,
         /// Track H §4 — install-once continuous gate. When present, the
         /// lowered `Effect` installs its modifier(s) with
         /// `Expiry::UntilCondition` carrying this predicate. Eviction is

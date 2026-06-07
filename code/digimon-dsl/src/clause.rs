@@ -320,6 +320,13 @@ pub struct AuraBody {
     pub grant_keyword: Option<GrantKeywordValue>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier: Option<String>,
+    /// Scalar value for the named `modifier` grant (the modifier's `value`
+    /// field). Required for scalar modifiers like `ChangeLinkMax` ("Link +N")
+    /// and `ChangeLinkCost`; defaults to `0` when omitted (boolean / flag
+    /// modifiers ignore it). Fixes G-ENGINE-AURA-GRANT-LINK-MAX — the aura
+    /// path previously installed every named modifier with a hardcoded `0`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modifier_value: Option<i32>,
     /// Track H §4 — install-once continuous gate. When set, the aura's
     /// modifier installs with `Expiry::UntilCondition` carrying this
     /// predicate. The UntilCondition controller (PR #458) evicts the

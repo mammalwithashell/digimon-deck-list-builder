@@ -1537,6 +1537,78 @@ fn facet10_change_link_cost_reduces_paid_link_cost() {
     );
 }
 
+/// Gap 1 (G-ENGINE-AURA-GRANT-LINK-MAX) — a `kind: aura` with
+/// `modifier: ChangeLinkMax` now carries its scalar `modifier_value`; the aura
+/// path previously installed every named modifier with a hardcoded `0`, so
+/// "Link +1" was a no-op. Self-aura form (BT25-060 Rebootmon's self Link +1).
+#[test]
+fn gap1_self_link_max_aura_grants_nonzero_delta() {
+    let yaml = r#"
+card: REBOOT-DSL
+name: Rebootmon
+kind: digimon
+effects:
+  - kind: aura
+    modifier: ChangeLinkMax
+    modifier_value: 1
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("REBOOT-DSL", CardColor::Red))
+        .memory(0)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let h = r.place_on_field(0, "REBOOT-DSL", Some(0));
+    advance_to_main(&mut r);
+    r.game.tick_declarative_effects();
+    assert_eq!(
+        r.game.modifiers.link_max_delta(h),
+        1,
+        "Link +1 self-aura installs ChangeLinkMax +1 (was hardcoded 0)"
+    );
+}
+
+/// Gap 1 — filter-target aura form (BT25-075 / BT25-102: "all of your [TS]
+/// trait Digimon gain Link +1"). The modifier_value reaches each matched host.
+#[test]
+fn gap1_filter_target_link_max_aura_grants_nonzero_delta() {
+    let yaml = r#"
+card: VULCANUS-DSL
+name: Vulcanusmon
+kind: digimon
+effects:
+  - kind: aura
+    target: { trait_has: TS, controller: you }
+    modifier: ChangeLinkMax
+    modifier_value: 1
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("VULCANUS-DSL", CardColor::Red))
+        .add_card({
+            let mut c = digimon_card("TS-MON", CardColor::Red);
+            c.traits = vec!["TS".to_string()];
+            c
+        })
+        .add_card(digimon_card("PLAIN-MON", CardColor::Red))
+        .memory(0)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    r.place_on_field(0, "VULCANUS-DSL", Some(0));
+    let ts = r.place_on_field(0, "TS-MON", Some(0));
+    let plain = r.place_on_field(0, "PLAIN-MON", Some(0));
+    advance_to_main(&mut r);
+    r.game.tick_declarative_effects();
+    assert_eq!(
+        r.game.modifiers.link_max_delta(ts),
+        1,
+        "TS Digimon gains Link +1 from the aura"
+    );
+    assert_eq!(
+        r.game.modifiers.link_max_delta(plain),
+        0,
+        "a non-TS Digimon is unaffected"
+    );
+}
+
 /// A linked Digimon whose Link-ESS grants its host both the `Raid` keyword
 /// and +1000 DP, modeled the faithful way: two `.linked()` declarative
 /// materializing effects targeting `ctx.source_permanent` (the host).

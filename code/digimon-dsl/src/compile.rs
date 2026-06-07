@@ -1419,6 +1419,7 @@ fn compile_declarative(
                 value: gk.value,
             }),
             modifier: a.modifier,
+            modifier_value: a.modifier_value,
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
