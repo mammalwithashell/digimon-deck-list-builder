@@ -1295,6 +1295,35 @@ impl Game {
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
+    /// Trash one already-removed digivolution source to `trash_owner`'s trash
+    /// and fire `OnDigivolutionCardTrashed` for it on `fire_target`.
+    ///
+    /// The single Tier-2 push+fire primitive for source-trashing where the host
+    /// is known BEFORE the push and the cause is the standard effect cause
+    /// (`EventCause::from(infer_effect_cause(fire_target.player))`). Callers own
+    /// the removal and host-card derivation (those differ per call site). Sites
+    /// that derive the host AFTER the push (`trash_top_source`,
+    /// `trash_bottom_face_down_source`) or use a non-standard cause
+    /// (`EventCause::Return` in the under-tamer drain) intentionally do NOT use
+    /// this helper. See the `engine-effect-context-layering` capability spec.
+    pub(crate) fn trash_source_and_fire(
+        &mut self,
+        trash_owner: PlayerId,
+        fire_target: PermanentHandle,
+        removed: CardSource,
+        host_card: crate::card_source::CardHandle,
+    ) {
+        let source_card = removed.handle();
+        self.player_mut(trash_owner).trash.push(removed);
+        self.fire_digivolution_card_trashed(
+            fire_target.player,
+            fire_target,
+            host_card,
+            source_card,
+            crate::trigger_context::EventCause::from(self.infer_effect_cause(fire_target.player)),
+        );
+    }
+
     /// Low-level source-attribution helper for tests and engine internals.
     ///
     /// Uses the standard De-Digivolve floor (`stop_at_level = Some(3)`) and

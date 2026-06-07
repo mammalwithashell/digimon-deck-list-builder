@@ -1,0 +1,36 @@
+name: Facade Placement Lint (warn)
+
+# Placement-rule lint (RQ1 of the decompose-engine-facade-by-mechanic change):
+# rules machinery (try_replace / fire_* / battle_area[..] mutation) belongs in
+# Tier 2 (game_actions), not the Tier-3 effect_context facade.
+#
+# WARN MODE: `continue-on-error: true` so this never blocks a PR while the
+# broader Tier-3 -> Tier-2 relocation backlog (B1 follow-up) is still open. The
+# check is a RATCHET — it fails only if a file gains a NEW occurrence beyond the
+# committed baseline in code/tools/check_facade_placement.py. Once the baseline
+# reaches zero, promote to required by removing `continue-on-error`.
+# Mirrors the action-space-codegen-drift.yml rollout pattern.
+
+on:
+  pull_request:
+    paths:
+      - 'code/digimon-engine/src/effect_context/**'
+      - 'code/tools/check_facade_placement.py'
+      - '.github/workflows/facade-placement-lint.yml'
+  push:
+    branches: ["main"]
+    paths:
+      - 'code/digimon-engine/src/effect_context/**'
+      - 'code/tools/check_facade_placement.py'
+
+jobs:
+  facade-placement-lint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check facade placement (ratchet)
+        run: python code/tools/check_facade_placement.py

@@ -495,16 +495,7 @@ impl<'a> EffectContext<'a> {
             };
             (permanent.card_sources.remove(pos), host_card)
         };
-        let source_card = removed.handle();
-        let owner = removed.owner;
-        self.game.player_mut(owner).trash.push(removed);
-        self.game.fire_digivolution_card_trashed(
-            perm.player,
-            perm,
-            host_card,
-            source_card,
-            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(perm.player)),
-        );
+        self.game.trash_source_and_fire(removed.owner, perm, removed, host_card);
         // Soft-remove the carrier slot if the trash emptied it. Sibling
         // of the digivolve-from-material fix landed in PR #533. The
         // `fire_digivolution_card_trashed` observer dispatch above runs
@@ -612,22 +603,11 @@ impl<'a> EffectContext<'a> {
                 .unwrap_or_else(|| removed.handle());
             (removed, host_card)
         };
-        let source_card = removed.handle();
-        let owner = removed.owner;
-        self.game.player_mut(owner).trash.push(removed);
-
         // Fire OnDigivolutionCardTrashed for the trashed top card. Mirrors
-        // `armor_purge_top` (effect_context/mod.rs:~1604) and the
-        // sources-below-top dispatch in `Game::return_to_hand` /
-        // `Game::return_to_deck`. Enqueue once per player so observers on
-        // either side of the field pick it up.
-        self.game.fire_digivolution_card_trashed(
-            target.player,
-            target,
-            host_card,
-            source_card,
-            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(target.player)),
-        );
+        // `armor_purge_top` and the sources-below-top dispatch in
+        // `Game::return_to_hand` / `Game::return_to_deck`. Host known
+        // pre-push → use the shared Tier-2 push+fire primitive.
+        self.game.trash_source_and_fire(removed.owner, target, removed, host_card);
         let _ = self.cleanup_exposed_battle_area_digi_egg(target);
         true
     }
@@ -732,18 +712,8 @@ impl<'a> EffectContext<'a> {
                 return trashed;
             };
 
-            let source_card = removed.handle();
-            let owner = removed.owner;
-            self.game.player_mut(owner).trash.push(removed);
-            self.game.fire_digivolution_card_trashed(
-                target.player,
-                target,
-                host_card,
-                source_card,
-                crate::trigger_context::EventCause::from(
-                    self.game.infer_effect_cause(target.player),
-                ),
-            );
+            self.game
+                .trash_source_and_fire(removed.owner, target, removed, host_card);
             trashed += 1;
         }
         trashed

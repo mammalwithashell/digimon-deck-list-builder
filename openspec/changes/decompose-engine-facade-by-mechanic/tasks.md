@@ -30,9 +30,9 @@
 
 **FINDING (revises B1 premise):** code inspection of the 7 remaining sites shows they are NOT identical copies — they differ in removal strategy (`pop` / `remove(pos)` / `remove(index)` / `drain(..)`) and in `host_card` derivation/ordering (sites in `trash.rs` ~685/~815 compute host AFTER the push; others before). The genuinely-identical fragment is the *tail*: `trash.push(removed)` + `fire_digivolution_card_trashed(owner, target, host_card, source_card, EventCause::from(infer_effect_cause(owner)))`. So the safe, faithful B1 is to extract THAT tail into one Tier-2 helper, applied only where ordering is uniform; removal + host-derivation stay per-site. `host_card` feeds `OnDigivolutionCardTrashed`, so consolidating its derivation is parity-risky and intentionally NOT done.
 
-- [ ] 6.1 **DEFERRED to follow-up** (see §10.4). The 7 sites differ in fire-attribution (`removed.owner` for the trash-push vs `perm.player` for the observer fire — these can differ under control-transfer), removal strategy, and host-derivation timing. Safe consolidation needs per-site parity verification of `OnDigivolutionCardTrashed` attribution; rushing it risks silent divergence. Analysis recorded; implementation deferred so each site gets individual parity attention.
-- [ ] 6.2 DEFERRED (see 6.1 / §10.4).
-- [ ] 6.3 DEFERRED (see 6.1 / §10.4).
+- [x] 6.1 Added Tier-2 `Game::trash_source_and_fire(trash_owner, fire_target, removed, host_card)` (push + `source_card` + `fire_digivolution_card_trashed` with `EventCause::from(infer_effect_cause(fire_target.player))`) next to `fire_digivolution_card_trashed` in `game_actions/mod.rs`.
+- [x] 6.2 Migrated the 3 uniform-ordering sites (host known pre-push, standard cause): `trash_card_source`, `trash_top_source`, `trash_top_n_stacked_sources` in `action/trash.rs`. The 4 genuinely-different sites kept per-site BY DESIGN and documented on the helper: `trash.rs` ~665/~795 derive host AFTER push (one with a conditional break); `sources.rs` under-tamer drain uses `EventCause::Return`; `sources.rs` armor-purge derives host inline post-push. Consolidating those would risk `OnDigivolutionCardTrashed` attribution divergence.
+- [x] 6.3 Compile clean (no unused-variable warnings → confirms no stranded `source_card`/`owner`). Full-suite gate PASS: 3548/7 (exactly baseline), all binaries green. No hand-rolled push+fire+EventCause sequence remains at the 3 uniform sites; the 4 divergent sites tracked by the placement lint (§8.2) for future relocation.
 
 ## 7. Phase B3 — Remove the de_digivolve inversion (behavioral, gated)
 
@@ -43,14 +43,14 @@
 ## 8. Placement rule & enforcement
 
 - [x] 8.1 Documented the placement rule + 3-tier model + `<tier>/<mechanic>` address scheme in `docs/RUST_ENGINE_API.md` §3 ("Module layout & the placement rule").
-- [ ] 8.2 **DEFERRED to follow-up (§10.3, RQ1).** The warn-mode lint depends on a stable Tier-3-exception allowlist; ship it after the remaining mechanical splits land. Precedent + reuse noted in §10.3.
+- [x] 8.2 Added the warn-mode placement lint: `code/tools/check_facade_placement.py` (a RATCHET over per-file `try_replace`/`fire_*`/`battle_area[..]`-mutation counts in `effect_context/`, baseline = current 16-occurrence Tier-3->Tier-2 backlog, fails only on NEW additions) + `.github/workflows/facade-placement-lint.yml` with `continue-on-error: true` (warn mode, action-space-drift pattern). Promote to required once the baseline ratchets to zero (§10.3).
 - [x] 8.3 Engine-dev address scheme documented in `docs/RUST_ENGINE_API.md` §3 (the authoritative engine-dev reference that CLAUDE.md points to). CLAUDE.md edit not required — it already routes engine work through RUST_ENGINE_API.md.
 
 ## 9. Verification & close-out
 
 - [x] 9.1 Full suite matches baseline exactly: cards_behavioral 3548 passed / 7 failed (the pre-existing DP-aura set), all other binaries green. Behavior-preserving confirmed. `effect_context/mod.rs` shrank 6933 → 1463 lines.
 - [x] 9.2 PyO3 boundary (`digimon-engine-py`) `cargo check` clean → no public API drift (crate-root tensor/observation paths preserved via re-exports).
-- [x] 9.3 Spec scenarios: **satisfied** — by-mechanic organization (Tier 3), call-surface-unchanged, observation read-only port, de_digivolve no-inversion, behavior-preserved. **Partially satisfied (deferred):** "parallel mechanic names" Tier-2 side (game_actions, §10.5) and "single source-trashing primitive" (B1, §10.4) — broader "all rules machinery out of facade" beyond de_digivolve folds into B1. Honest status: structural decomposition + the exemplar inversion fix landed; the remaining Tier-2 mirror + trash-primitive are documented follow-ups.
+- [x] 9.3 Spec scenarios: **satisfied** — by-mechanic organization (Tier 3 + Tier 2 parallel), call-surface-unchanged, observation read-only port, de_digivolve rules-machinery-in-Tier-2, single source-trashing primitive (3 uniform sites; 4 divergent tracked by lint), behavior-preserved. The placement rule is documented (§8.1) and enforced by a warn-mode ratchet lint (§8.2). Remaining backlog: ratchet the 16 tracked Tier-3 occurrences toward zero (§10.4) and the optional `game.rs` narrow extraction (§10.5 / 4.2).
 
 ## 10. Deferred follow-ups (record, do NOT implement here)
 
