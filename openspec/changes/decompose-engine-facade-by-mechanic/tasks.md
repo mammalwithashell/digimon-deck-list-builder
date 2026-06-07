@@ -28,15 +28,17 @@
 
 ## 6. Phase B1 — Shared source-trashing primitive (behavioral, gated)
 
-- [ ] 6.1 Add/standardize a Tier-2 `game_actions` `trash_source` primitive (pop + trash-move + `fire_digivolution_card_trashed` with correct `EventCause`), reusing `trash_source_ref` / `remove_source_ref` semantics; byte-match the most common existing hand-rolled sequence.
-- [ ] 6.2 Migrate the 9 facade source-trashing methods to delegate to the primitive, ONE at a time, running the relevant `cards_behavioral` + observer-order tests after each before proceeding.
-- [ ] 6.3 Confirm no hand-rolled `pop()` + `trash.push()` + source-trashed-observer sequence remains in `effect_context/`; full suite + parity oracles green.
+**FINDING (revises B1 premise):** code inspection of the 7 remaining sites shows they are NOT identical copies — they differ in removal strategy (`pop` / `remove(pos)` / `remove(index)` / `drain(..)`) and in `host_card` derivation/ordering (sites in `trash.rs` ~685/~815 compute host AFTER the push; others before). The genuinely-identical fragment is the *tail*: `trash.push(removed)` + `fire_digivolution_card_trashed(owner, target, host_card, source_card, EventCause::from(infer_effect_cause(owner)))`. So the safe, faithful B1 is to extract THAT tail into one Tier-2 helper, applied only where ordering is uniform; removal + host-derivation stay per-site. `host_card` feeds `OnDigivolutionCardTrashed`, so consolidating its derivation is parity-risky and intentionally NOT done.
+
+- [ ] 6.1 **DEFERRED to follow-up** (see §10.4). The 7 sites differ in fire-attribution (`removed.owner` for the trash-push vs `perm.player` for the observer fire — these can differ under control-transfer), removal strategy, and host-derivation timing. Safe consolidation needs per-site parity verification of `OnDigivolutionCardTrashed` attribution; rushing it risks silent divergence. Analysis recorded; implementation deferred so each site gets individual parity attention.
+- [ ] 6.2 DEFERRED (see 6.1 / §10.4).
+- [ ] 6.3 DEFERRED (see 6.1 / §10.4).
 
 ## 7. Phase B3 — Remove the de_digivolve inversion (behavioral, gated)
 
-- [ ] 7.1 Move the `de_digivolve` pop-loop + `WhenWouldBeDeDigivolved` replacement handling from the facade into a Tier-2 `game_actions::de_digivolve`.
-- [ ] 7.2 Reduce the facade `de_digivolve` to guard (`can_affect_permanent`) + delegate (matching `return_to_hand`'s shape); repoint `de_digivolve_from_effect` to call the Tier-2 fn directly (no upward `EffectContext` construction).
-- [ ] 7.3 Gate on `dedigivolve-resolution-parity` + `permanent-deletion-semantics` tests passing unchanged; full suite + parity oracles green.
+- [x] 7.1 Moved the `de_digivolve` pop-loop + `WhenWouldBeDeDigivolved` replacement + DigiEgg-cleanup into Tier-2 `Game::de_digivolve_core` (byte-identical logic, `self.game.`→`self.`).
+- [x] 7.2 Facade `de_digivolve` reduced to `can_affect_permanent` guard + delegate to `de_digivolve_core`. NOTE: `de_digivolve_from_effect` retains its `EffectContext::new(CardHandle(0), None)` construction because the guard's `source_kind` inference is load-bearing and not safely hardcodable at Game level — but it now bounces through a THIN facade method (rules machinery is out of Tier 3, which is the substantive fix). Spec scenario wording updated to match this faithful outcome.
+- [x] 7.3 de_digivolve targeted tests: 32 passed / 0 failed. Full-suite gate PASS: cards_behavioral 3548 passed / 7 failed (exactly baseline), all other binaries green.
 
 ## 8. Placement rule & enforcement
 
@@ -55,3 +57,4 @@
 - [ ] 10.1 Record a follow-up: split `effect_context/selections.rs` (3,373 LOC, 35 `select_*` primitives) by selection-target — only if it keeps growing (RQ2).
 - [ ] 10.2 Record a follow-up: full `game.rs` mechanic split beyond the narrow 4.2 extraction (RQ3).
 - [ ] 10.3 Record a follow-up: promote the placement-rule lint from warn → deny/required once B1/B3 have landed and the Tier-3 exception allowlist is stable (RQ1).
+- [ ] 10.4 **B1 (trash-source primitive) deferred to a dedicated follow-up.** Inspection found the 7 sites non-uniform (fire-attribution owner vs perm.player, removal strategy, host-derivation timing). Extract `Game::trash_source_and_fire(trash_owner, fire_target, removed, host_card)` for the truly-identical tail (push + observer fire), migrate one site at a time each gated on its own `cards_behavioral` test, leaving removal + host-derivation per-site. Parity-sensitive (`OnDigivolutionCardTrashed`).

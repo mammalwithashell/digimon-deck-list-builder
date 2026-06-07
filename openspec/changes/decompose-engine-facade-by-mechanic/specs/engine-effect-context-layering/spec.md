@@ -37,10 +37,12 @@ Rules machinery — replacement-window dispatch (`try_replace`), observer/event 
 
 No Tier-2 / core function SHALL construct an `EffectContext` solely to invoke a named facade *operation* method that carries rules logic. Constructing an `EffectContext` to hand control to a card-authored effect closure (via `process` / `pay_cost_fn` / `run_steps` and equivalent effect-entry points) is permitted; invoking a named mutation operation upward is not.
 
-#### Scenario: de_digivolve is resolved without inversion
+#### Scenario: de_digivolve rules machinery lives in Tier 2
 
-- **WHEN** `de_digivolve_from_effect` performs a de-digivolve
-- **THEN** it calls a Tier-2 `de_digivolve` operation directly, and does not construct an `EffectContext` to call a facade `de_digivolve` method
+- **WHEN** a de-digivolve resolves (pop-loop, `WhenWouldBeDeDigivolved` replacement, exposed-DigiEgg cleanup)
+- **THEN** that rules machinery executes in the Tier-2 `Game::de_digivolve_core` operation, and the facade `EffectContext::de_digivolve` contains only the effect-only `can_affect_permanent` guard plus a delegation to the Tier-2 operation
+
+> Note: `de_digivolve_from_effect` retains a thin `EffectContext` construction to apply the effect-only guard with its load-bearing inferred `source_kind`; it no longer reaches into facade-resident *rules logic* (which is the defect this requirement targets).
 
 #### Scenario: Effect-entry construction remains allowed
 

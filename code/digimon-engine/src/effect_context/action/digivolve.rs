@@ -82,6 +82,11 @@ impl<'a> EffectContext<'a> {
     ///   * `amount = None` — unbounded (equivalent to `Some(u8::MAX)`).
     ///
     /// Returns the actual number of cards popped.
+    /// De-digivolve `target` (pop digivolution sources). Thin facade over the
+    /// Tier-2 rules machinery in `Game::de_digivolve_core`: applies the
+    /// effect-only `can_affect_permanent` guard, then delegates. The pop-loop
+    /// and `WhenWouldBeDeDigivolved` replacement window live in Tier 2 (placement
+    /// rule §engine-effect-context-layering) — the facade keeps only the guard.
     pub fn de_digivolve(
         &mut self,
         target: PermanentHandle,
@@ -91,105 +96,7 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return 0;
         }
-
-        use crate::enums::EffectTiming;
-        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-
-        // Phase 7 Task 4: fire WhenWouldBeDeDigivolved once at entry (not
-        // per iteration of the popping loop). Substitute(Permanent) retargets
-        // the loop at another permanent; v1 does not support "reduce N" via
-        // mutable ctx — scripts that want to reduce N should cancel and
-        // re-call with a lower amount.
-        let cause = self.game.infer_effect_cause(target.player);
-        let subject = ReplacementSubject::Permanent(target);
-        let outcome =
-            self.game
-                .try_replace(EffectTiming::WhenWouldBeDeDigivolved, subject, cause, None);
-        if self.game.pending_selection.is_some() {
-            return 0;
-        }
-        let effective_target = match outcome {
-            ReplacementOutcome::None => target,
-            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
-                return 0;
-            }
-            ReplacementOutcome::Redirected(_) => {
-                debug_assert!(
-                    false,
-                    "Redirected not meaningful for WhenWouldBeDeDigivolved"
-                );
-                target
-            }
-            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => other,
-            ReplacementOutcome::Substituted(_) => {
-                debug_assert!(
-                    false,
-                    "non-Permanent substitute for WhenWouldBeDeDigivolved"
-                );
-                target
-            }
-        };
-        let target = effective_target;
-
-        let max = amount.unwrap_or(u8::MAX);
-        let mut popped: u8 = 0;
-
-        while popped < max {
-            let perm = match self
-                .game
-                .player(target.player)
-                .battle_area
-                .get(target.index as usize)
-            {
-                Some(p) => p,
-                None => break,
-            };
-
-            if perm.stack_size() <= 1 {
-                break;
-            }
-
-            let next_top_level = {
-                let stack = perm.digivolution_cards();
-                let next_top = &stack[stack.len() - 2];
-                next_top.level(&self.game.card_data)
-            };
-
-            if let (Some(floor), Some(nt_level)) = (stop_at_level, next_top_level) {
-                if nt_level < floor {
-                    break;
-                }
-            }
-
-            let owner = target.player;
-            let (popped_card, host_card) = {
-                let p = self.game.player_mut(owner);
-                let stack = &mut p.battle_area[target.index as usize].card_sources;
-                debug_assert!(stack.len() >= 2, "stack_size-guard failed");
-                let popped_card = stack.pop().expect("stack_size-guarded pop");
-                let host_card = stack
-                    .last()
-                    .map(|source| source.handle())
-                    .unwrap_or_else(|| popped_card.handle());
-                (popped_card, host_card)
-            };
-            let source_card = popped_card.handle();
-            self.game.player_mut(owner).trash.push(popped_card);
-            self.game.fire_digivolution_card_trashed(
-                owner,
-                target,
-                host_card,
-                source_card,
-                crate::trigger_context::EventCause::from(self.game.infer_effect_cause(owner)),
-            );
-            popped += 1;
-
-            if self.cleanup_exposed_battle_area_digi_egg(target) {
-                break;
-            }
-        }
-
-        popped
+        self.game.de_digivolve_core(target, stop_at_level, amount)
     }
 
     /// Install a player-scoped one-shot future-digivolve cost reducer
