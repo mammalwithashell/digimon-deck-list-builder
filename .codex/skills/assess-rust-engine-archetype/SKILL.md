@@ -1,6 +1,6 @@
 ---
 name: assess-rust-engine-archetype
-description: Assess whether the Digimon Rust engine and YAML DSL can implement a requested archetype, deck, card group, or card list; use when Codex needs to inspect printed card text, current Rust DSL YAML/lowering support, action/pending-selection coverage, and engine tests to produce a readiness report with concrete implementation gaps.
+description: Assess whether the Digimon Rust engine and YAML DSL can implement a requested archetype, deck, card group, or card list; use when Codex needs to inspect printed card text and images, current Rust DSL YAML/lowering support, action/pending-selection coverage, and engine tests to produce a readiness report with concrete implementation gaps.
 ---
 
 # Assess Rust Engine Archetype
@@ -19,9 +19,10 @@ Prefer the Rust engine and DSL as the target. Treat legacy Python and DCGO only 
    - Separate core cards from tech cards when the archetype is broad.
 
 2. Read authoritative card text first.
-   - Use `data/cards.json` fields such as `effect_text`, `inherited_text`, and `security_text`.
-   - Consult `docs/RULES_CONTEXT.md` for keyword/timing semantics.
-   - Use Fandom/wiki or DCGO only when printed text and local rules docs do not resolve a behavior question.
+   - Use `digimon-card-lookup` for specific cards, all printings of a card name, or a full archetype pool. Inspect card images for the cards being assessed instead of relying only on API-ingested JSON or existing YAML.
+   - Printed text priority: card image, then `data/card_overrides.json`, then `data/cards.json` fields such as `effect_text`, `inherited_text`, and `security_text`.
+   - Behavior priority: official rules PDF for rules/keyword semantics, DCGO C# source for card-specific resolution details, then Fandom/wiki ruling notes. Treat `docs/RULES_CONTEXT.md` as an index to verify against primary sources when behavior is subtle.
+   - Call out image/override/JSON/YAML disagreements as `data-gap` or assessment caveats.
 
 3. Inspect the DSL surface.
    - Read `code/digimon-dsl/README.md`, `code/digimon-dsl/src/spec.rs`, `code/digimon-dsl/src/step.rs`, and `code/digimon-dsl/src/predicate.rs` only as needed.

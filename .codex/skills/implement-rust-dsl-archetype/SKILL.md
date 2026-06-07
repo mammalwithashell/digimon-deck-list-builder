@@ -13,7 +13,7 @@ Use subagents as the normal execution model: one fresh implementer/auditor per n
 
 Preserve no approximations: every gameplay choice must go through engine actions or `PendingSelection`, and every behavior change must start with a failing Rust behavioral test.
 
-Required sub-skills: `superpowers:test-driven-development`, `superpowers:subagent-driven-development`, and `superpowers:verification-before-completion`. Use `assess-rust-engine-archetype` for card-pool and gap-resolution evidence.
+Required sub-skills: `superpowers:test-driven-development`, `superpowers:subagent-driven-development`, and `superpowers:verification-before-completion`. Use `digimon-card-lookup` for printed-text/image evidence and `assess-rust-engine-archetype` for card-pool and gap-resolution evidence.
 
 ## Required Docs
 
@@ -63,7 +63,7 @@ Load these references as soon as they become relevant:
 
 Every task must include:
 
-- Printed text and metadata evidence from `code/digimon-engine/cards/<set>/<CARD-ID>.json` when that per-card file exists; use `data/cards.json` only as a fallback or cross-check.
+- Printed text and metadata evidence from the actual card image via `digimon-card-lookup` whenever available, then `data/card_overrides.json`, then `data/cards.json` or per-card engine metadata as fallback/cross-checks.
 - Existing YAML/DSL examples to mimic when possible.
 - A failing test under `code/digimon-engine/tests/` before YAML or engine edits.
 - Action-mask or pending-selection assertions for every player-visible choice.
