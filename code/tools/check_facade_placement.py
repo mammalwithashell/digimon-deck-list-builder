@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1] / "digimon-engine" / "src" / "effect_context"
 
 # Tier-2 fire operations the facade may delegate to (NOT inline machinery).
-ALLOWED_FIRE = {"fire_on_play", "fire_security_removed_observers"}
+ALLOWED_FIRE = {"fire_on_play", "fire_security_removed_observers", "fire_on_add_to_hand_by_effect"}
 
 TRY_REPLACE = re.compile(r"\.try_replace\(")
 FIRE_CALL = re.compile(r"self\.game\.(fire_[a-z_]+)\(")

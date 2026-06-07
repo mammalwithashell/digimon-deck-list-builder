@@ -1,4 +1,4 @@
-//! Read-only query + aura-bonus helpers (Tier 1) — impl Game.
+//! Read-only query + aura-bonus helpers (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;

@@ -1,4 +1,4 @@
-//! DP computation + security DP adjustments (Tier 1) — impl Game.
+//! DP computation + security DP adjustments (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;
@@ -107,9 +107,23 @@ impl Game {
                 continue;
             };
             for effect in &effects {
-                if effect.applies_to_opponent_security_dp {
-                    total = total.saturating_add(effect.dp_modifier);
+                if !effect.applies_to_opponent_security_dp {
+                    continue;
                 }
+                // Honor the aura's `active_when`/condition gate (mirrors
+                // `static_dp_aura_bonus`). Controller is the attacker.
+                let rctx = crate::effect_context::EffectReadContext::new(
+                    self,
+                    source.handle(),
+                    None,
+                    attacker.player,
+                );
+                if let Some(condition) = &effect.condition {
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                total = total.saturating_add(effect.dp_modifier);
             }
         }
         total
@@ -136,9 +150,25 @@ impl Game {
                     continue;
                 };
                 for effect in &effects {
-                    if effect.applies_to_own_security_dp {
-                        total = total.saturating_add(effect.dp_modifier);
+                    if !effect.applies_to_own_security_dp {
+                        continue;
                     }
+                    // Honor the aura's `active_when`/condition gate — e.g. T.K.
+                    // Takaishi's "[Opponent's Turn] ... +2000" must not apply on
+                    // the controller's own turn (mirrors `static_dp_aura_bonus`).
+                    // The controller is `defender`.
+                    let rctx = crate::effect_context::EffectReadContext::new(
+                        self,
+                        source.handle(),
+                        None,
+                        defender,
+                    );
+                    if let Some(condition) = &effect.condition {
+                        if !condition(&rctx) {
+                            continue;
+                        }
+                    }
+                    total = total.saturating_add(effect.dp_modifier);
                 }
             }
         }

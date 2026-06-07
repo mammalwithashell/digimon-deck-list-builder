@@ -103,6 +103,7 @@ fn deleted_source_snapshot_rescue_uses_arbitrary_trait_filter() {
             traits_just_before: vec!["Xros Heart".to_string()],
             source_count_just_before: 3,
             digisources_just_before: vec![xros_source, blue_source, other_source],
+            is_token: false,
         }),
         ..TriggerContext::default()
     });
@@ -184,6 +185,7 @@ fn snapshot_rescue_moves_selected_handles_under_tamer_after_carrier_left_battle(
             traits_just_before: vec!["Xros Heart".to_string()],
             source_count_just_before: 3,
             digisources_just_before: vec![xros_source, blue_source, other_source],
+            is_token: false,
         }),
         ..TriggerContext::default()
     });

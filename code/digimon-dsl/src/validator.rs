@@ -658,6 +658,27 @@ fn validate_step(
                     message: format!("unknown expiry: {}", args.expiry),
                 });
             }
+            // `synth_identity` is the structured payload for `TreatAsDigimon`
+            // and is meaningless on any other modifier. Require it for
+            // TreatAsDigimon (without it the modifier would install with an
+            // empty payload and silently no-op) and forbid it elsewhere.
+            match (args.modifier.as_str(), args.synth_identity.is_some()) {
+                ("TreatAsDigimon", false) => errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.synth_identity"),
+                    message: "TreatAsDigimon requires a synth_identity payload \
+                              (e.g. `synth_identity: { dp: 3000 }`)"
+                        .into(),
+                }),
+                (m, true) if m != "TreatAsDigimon" => errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.synth_identity"),
+                    message: format!(
+                        "synth_identity is only valid for modifier TreatAsDigimon, not {m}"
+                    ),
+                }),
+                _ => {}
+            }
         }
         StepSpec::AddPlayerModifier(args) => {
             if !is_known_modifier(&args.modifier) {
@@ -1890,6 +1911,11 @@ fn validate_per_selector(
             validate_predicate(filter, &format!("{prefix}.filter"), card_id, ctx, errors);
         }
     }
+    if let crate::formula::PerSelector::SourceStackCount(spec) = per {
+        if let Some(filter) = &spec.filter {
+            validate_predicate(filter, &format!("{prefix}.filter"), card_id, ctx, errors);
+        }
+    }
 }
 
 fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
@@ -2035,6 +2061,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "DontBattleSecurityDigimon",
     // Digivolution / color / level
     "CannotDigivolve",
+    "CanOnlyDigivolveInto",
     "ChangeColor",
     "AddColor",
     "ChangeLevel",
@@ -2140,6 +2167,7 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "Decode",
     "ArmorPurge",
     "Fragment",
+    "Retaliation",
     // Validator-only sigil (engine side dispatches via clause kind, not a
     // runtime `Keyword` variant). Allowlisted on the engine parity test.
     "Delay",
@@ -2367,5 +2395,61 @@ effects:
         let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
         let reg = StubRegistry::empty();
         assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    #[test]
+    fn treat_as_digimon_without_synth_identity_is_rejected() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+effects:
+  - when: when_digivolving
+    process:
+      - add_modifier:
+          target: self
+          modifier: TreatAsDigimon
+          value: 0
+          expiry: end_of_turn
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.message.contains("TreatAsDigimon requires a synth_identity")));
+    }
+
+    #[test]
+    fn synth_identity_on_non_treat_as_digimon_is_rejected() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+effects:
+  - when: when_digivolving
+    process:
+      - add_modifier:
+          target: self
+          modifier: CannotDigivolve
+          value: 0
+          expiry: end_of_turn
+          synth_identity:
+            dp: 3000
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs.iter().any(|e| e
+            .message
+            .contains("synth_identity is only valid for modifier TreatAsDigimon")));
     }
 }

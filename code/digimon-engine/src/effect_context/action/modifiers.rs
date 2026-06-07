@@ -64,12 +64,44 @@ impl<'a> EffectContext<'a> {
                 .with_pending_skips(pending_skips),
         );
         self.game.mark_until_condition_dirty();
-        if modifier == ModifierType::ChangeDp
-            && self.game.permanent_is_digimon_for_rules(target)
-            && self.game.effective_dp(target).is_some_and(|dp| dp <= 0)
-        {
-            self.game.delete_permanent_with_effects(target);
+        // NOTE: a DP reduction to ≤0 does NOT delete the Digimon here. Deletion
+        // is a state-based action (rule 17-1-2-2 / `G-NO-GENERAL-ZERO-DP-RULES-CHECK`)
+        // that runs only after the ongoing effect or rule action finishes — see
+        // `Game::run_state_based_rules_check`, invoked at the outermost
+        // `drain_effect_queue` boundary. Deleting inline here would fire
+        // mid-effect and break the judge timing (Q6: Pillomon at 0 DP survives
+        // until Flame Hellscythe resolves; Q13/Q14: ShoeShoemon survives until
+        // Nyabootmon's [When Digivolving] fully resolves).
+    }
+
+    /// Like [`add_modifier`], but carries a structured [`ModifierPayload`]
+    /// (e.g. `SynthIdentity` for `TreatAsDigimon`). Honors the same
+    /// `can_affect_permanent` guard and `*NextTurn` pending-skip semantics.
+    /// Used by the DSL `add_modifier` lowering when a `synth_identity:`
+    /// block is present, and available to raw_rust scripts.
+    pub fn add_modifier_with_payload(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        payload: crate::modifiers::ModifierPayload,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
         }
+        let pending_skips = crate::modifiers::pending_skips_for_install(
+            expiry,
+            self.player,
+            self.game.turn_player(),
+        );
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(modifier, value, expiry, self.player)
+                .with_payload(payload)
+                .with_pending_skips(pending_skips),
+        );
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn add_declarative_modifier(
@@ -363,7 +395,57 @@ impl<'a> EffectContext<'a> {
         self.game
             .modifiers
             .grant_keyword(target, keyword, expiry, self.player);
+        self.grant_keyword_triggered_auto_effects(target, keyword, expiry);
         self.game.mark_until_condition_dirty();
+    }
+
+    /// Register the granted keyword's TRIGGERED auto-effect(s) so they fire
+    /// at runtime — not just register the keyword for `has_keyword`.
+    ///
+    /// Passive keywords (Blocker, Reboot, …) are surfaced purely through the
+    /// modifier registry and yield an empty `keyword_to_auto_effect`, so this
+    /// is a no-op for them. Trigger-based keywords (Retaliation, Fortitude,
+    /// Partition, …) carry a plain `process` body in `keyword_to_auto_effect`;
+    /// because `effects_for_card` only synthesizes keyword auto-effects from
+    /// PRINTED + DECLARATIVE-REGISTRY grants (and OnDeletion handlers re-fetch
+    /// effects POST-TRASH, CLAUDE.md rule 25, so any board-position synthesis
+    /// would have vanished by drain time), a runtime modifier grant would
+    /// otherwise never fire. Route each plain-process triggered auto-effect
+    /// through the BOARD-INDEPENDENT granted-triggered store, carrying the
+    /// grant's `expiry`. Replacement-process keywords (Barrier, Evade, …)
+    /// carry no plain `process` and are skipped here.
+    pub(crate) fn grant_keyword_triggered_auto_effects(
+        &mut self,
+        target: PermanentHandle,
+        keyword: Keyword,
+        expiry: Expiry,
+    ) {
+        // Stable identity of the carrier's top card (the granted-triggered body
+        // re-resolves the carrier from `source_permanent` at fire time, so we
+        // only need the keyword's effect template here).
+        let card = match self
+            .game
+            .players
+            .get(target.player as usize)
+            .and_then(|p| p.battle_area.get(target.index as usize))
+        {
+            Some(perm) => perm.top_card().handle(),
+            None => return,
+        };
+        let autos = crate::cards::keyword_effects::keyword_to_auto_effect(keyword, card);
+        for effect in autos {
+            // Only plain-process triggered timings route through the
+            // granted-triggered store. Replacement-process keywords (no plain
+            // `process`) and declarative-only entries are skipped.
+            let Some(process) = effect.process else {
+                continue;
+            };
+            let timing = effect.timing;
+            let process = std::sync::Arc::new(process);
+            self.grant_triggered_effect(target, timing, expiry, move |inner_ctx| {
+                (process)(inner_ctx);
+            });
+        }
     }
 
     pub fn grant_declarative_keyword(

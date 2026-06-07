@@ -1,0 +1,151 @@
+# BT13-088 Belphemon: Sleep Mode — Digimon, Lv.6, Purple, DP 11000, cost 11.
+# Traits: Demon Lord / Seven Great Demon Lords. Attribute: Virus.
+#
+# Printed card text (cards.json):
+#   [On Play] [When Digivolving] By placing 1 [Belphemon: Rage Mode] from your
+#     trash on top of this Digimon's digivolution cards, this Digimon can't
+#     attack and isn't affected by your opponent's effects until the end of
+#     your opponent's turn.
+#   [Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, you
+#     may trash 2 cards in your hand to end the attack.
+#   Alt digivolve: [Digivolve] [Belphemon: Rage Mode]: Cost 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Purple/BT13_088.cs
+#
+# ── place_as_top_source resolution (PARTIAL) ────────────────────────────────
+# DCGO places Rage Mode with `AddDigivolutionCardsTop` (topmost digivolution
+# SOURCE, just below the face card). The DSL/engine ships only
+# `place_as_bottom_source` — there is no "place as top source" verb. The
+# placement POSITION is behaviorally inert for this card: Belphemon's own
+# effect only needs Rage Mode IN the digivolution stack so Rage Mode's
+# inherited effect (BT13-091 / EX10-022 "[End of Opp Turn] trash top card if
+# [Belphemon: Sleep Mode]") becomes active, and inherited effects fire from
+# ANY source position. No mechanic on this card references the top/bottom
+# source slot. So `place_as_bottom_source` is used with this documented
+# cosmetic position divergence (a top-source verb would only matter for cards
+# that read "top digivolution card"; this card does not).
+
+card: BT13-088
+name: "Belphemon: Sleep Mode"
+kind: digimon
+level: 6
+color: [purple]
+cost: 11
+dp: 11000
+traits: [Demon Lord, Seven Great Demon Lords]
+attribute: Virus
+
+# [Digivolve] [Belphemon: Rage Mode]: Cost 1 — alt-digivolve when the source's
+# top card is a [Belphemon: Rage Mode] (DCGO EffectTiming.None
+# AddSelfDigivolutionRequirementStaticEffect, permanentCondition TopCard name
+# contains "Belphemon: Rage Mode", digivolutionCost 1).
+alt_paths:
+  - kind: digivolve
+    from: { name_contains: "Belphemon: Rage Mode" }
+    cost: 1
+
+effects:
+  # ─── [On Play] / [When Digivolving] (shared body) ─────────────────────────
+  #
+  # "By placing 1 [Belphemon: Rage Mode] from your trash on top of this
+  # Digimon's digivolution cards, this Digimon can't attack and isn't affected
+  # by your opponent's effects until the end of your opponent's turn."
+  #
+  # The "By placing 1 ..." is a may-pay cost: `select_trash` with
+  # `optional: true, cost: true` so declining (or no Rage Mode in trash)
+  # short-circuits the whole body — no placement and no grants. Once the player
+  # commits, exactly the picked Rage Mode card is placed as a digivolution
+  # source and the grants run.
+  # `condition` (count_gte Rage Mode in trash) mirrors DCGO's
+  # CanActivateCondition (HasMatchConditionOwnersCardInTrash): when no
+  # [Belphemon: Rage Mode] is in trash the clause never fires — no prompt,
+  # no placement, no grants. The `select_trash optional:true cost:true`
+  # additionally lets the player DECLINE even when a Rage Mode exists.
+  - when: [on_play, when_digivolving]
+    summary: "[OnPlay/WhenDigi] By placing a Belphemon: Rage Mode from trash as a source, gain CannotAttack + opp-effect immunity until end of opp turn"
+    condition:
+      count_gte:
+        filter: { of: you, zone: [trash], name_is: "Belphemon: Rage Mode" }
+        n: 1
+    process:
+      - select_trash:
+          of: you
+          bind_as: rage
+          optional: true
+          cost: true
+          filter: { name_is: "Belphemon: Rage Mode" }
+          prompt: "Place 1 Belphemon: Rage Mode from trash on this Digimon's digivolution cards"
+      - place_as_bottom_source:
+          source: rage
+          target: source
+      - add_modifier:
+          target: source
+          modifier: CannotAttack
+          value: 1
+          expiry: end_of_opponents_turn
+      # "isn't affected by your opponent's effects" = the 4-source-kind
+      # opponent immunity idiom (EX6-011 / BT16-102), until end of opp turn.
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: tamer
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: option
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: rule
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+
+  # ─── [Opponent's Turn] [Once Per Turn] attack-cancel ──────────────────────
+  #
+  # "When an opponent's Digimon attacks, you may trash 2 cards in your hand to
+  # end the attack."
+  #
+  # DCGO: OnAllyAttack, IsOpponentPermanent, CanActivateCondition
+  # HandCards.Count >= 2, SelectHandEffect Mode.Discard maxCount 2
+  # canEndNotMax false, then attackProcess.EndAttack().
+  #
+  # The whole clause is a "may". The cost is "trash 2 cards in hand" — surfaced
+  # as two sequential hand picks so every card-to-trash choice reaches the RL
+  # action space (the DSL has no single 2-card hand-trash multi-pick consumer).
+  # First pick `optional: true, cost: true` (declining aborts — nothing is
+  # trashed, attack proceeds); second pick mandatory (once committed you must
+  # trash exactly 2). Then `end_attack`. The `count_gte` precheck gates the
+  # clause to a payable state (>= 2 hand cards), matching DCGO's
+  # CanActivateCondition.
+  - when: on_opponent_attack
+    once_per_turn: true
+    active_when: { opponents_turn: true }
+    optional: true
+    summary: "[Opp Turn][OPT] When an opp Digimon attacks, may trash 2 hand cards to end the attack"
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 2
+    process:
+      - select_hand:
+          of: you
+          bind_as: trash_a
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 of 2 cards from your hand to end the attack"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_a }
+      - select_hand:
+          of: you
+          bind_as: trash_b
+          optional: false
+          filter: {}
+          prompt: "Trash the 2nd card from your hand to end the attack"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_b }
+      - end_attack: true

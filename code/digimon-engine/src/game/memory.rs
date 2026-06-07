@@ -1,4 +1,4 @@
-//! Memory gain/loss/pay (Tier 1) — impl Game.
+//! Memory gain/loss/pay (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;

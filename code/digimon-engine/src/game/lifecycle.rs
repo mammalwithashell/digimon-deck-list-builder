@@ -1,4 +1,4 @@
-//! Game-over / elimination / play-order lifecycle (Tier 1) — impl Game.
+//! Game-over / elimination / play-order (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;

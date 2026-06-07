@@ -98,6 +98,12 @@ pub enum Timing {
     OnLeaveField,
     OnSuspend,
     OnUnsuspend,
+    /// `[All Turns]`-style observer: an EFFECT added one or more cards to a
+    /// player's hand (return-to-hand, security/trash/deck/reveal-to-hand, …).
+    /// Gate the gaining player with `event_add_to_hand_player:` and effect-vs-draw
+    /// with `event_is_effect_initiated:` inside `active_when:`. See
+    /// G-ON-ADD-TO-HAND-OBSERVER.
+    OnAddToHand,
     OnHatch,
     OnMove,
     OnDigivolve,

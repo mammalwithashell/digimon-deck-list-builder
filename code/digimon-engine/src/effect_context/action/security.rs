@@ -248,7 +248,6 @@ impl<'a> EffectContext<'a> {
         true
     }
 
-
     /// Move a specific card from `player`'s security stack to their hand.
     pub fn add_to_hand_from_security(
         &mut self,
@@ -279,6 +278,45 @@ impl<'a> EffectContext<'a> {
             self.player,
             removed,
             crate::selection::SecurityRemovalDestination::Hand(owner),
+        );
+        true
+    }
+
+    /// Move a specific card from `player`'s security stack to that player's
+    /// deck (top or bottom; Digi-Eggs route to the digitama deck). Fires the
+    /// `OnLoseSecurity` observer chain via `fire_security_removed_observers`
+    /// with a `Deck` destination. Mirrors `add_to_hand_from_security` but the
+    /// final placement is the deck. Used by LM-020 Quantumon's [When
+    /// Digivolving] clause. Returns `false` if the card is not in the stack.
+    pub fn return_security_card_to_deck(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+        to_bottom: bool,
+    ) -> bool {
+        let Some(idx) = self
+            .game
+            .player(player)
+            .security
+            .iter()
+            .position(|c| c.handle() == card)
+        else {
+            return false;
+        };
+        // Materialize before moving — the card's identity must be real to land
+        // in the deck sensibly (it will later be drawn / revealed).
+        self.game.ensure_security_materialized(player, idx);
+        let removed = self.game.player_mut(player).security.remove(idx);
+        let owner = removed.owner;
+        self.game
+            .player_mut(player)
+            .face_up_security
+            .remove(&removed.card_index);
+        self.game.fire_security_removed_observers(
+            player,
+            self.player,
+            removed,
+            crate::selection::SecurityRemovalDestination::Deck { owner, to_bottom },
         );
         true
     }
@@ -328,6 +366,7 @@ impl<'a> EffectContext<'a> {
 
         let owner = pending.card.owner;
         self.game.player_mut(owner).hand.push(pending.card);
+        self.game.fire_on_add_to_hand_by_effect(owner);
         true
     }
 

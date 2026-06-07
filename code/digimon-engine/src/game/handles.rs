@@ -1,4 +1,4 @@
-//! Card/handle/provenance-token resolution (Tier 1) — impl Game.
+//! Card/handle/provenance-token resolution (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;

@@ -1,4 +1,4 @@
-//! Event drain + declarative/granted trigger machinery (Tier 1) — impl Game.
+//! Event drain + declarative/granted triggers (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;
@@ -127,6 +127,24 @@ impl Game {
                 if !effect.materializes_declarative_state || effect.process.is_none() {
                     continue;
                 }
+                // De-dup: a NON-inherited `grant_keyword` whose keyword is already
+                // a PRINTED (metadata) keyword on this source is redundant with
+                // `card_data` — `face_keywords` (consulted by both
+                // `security_attack_keyword_bonus` and `has_keyword`) already counts
+                // it, so materializing it too would double-count (e.g. BT21-029's
+                // `<Security A. +1>` is both a printed keyword and a `grant_keyword`
+                // clause). Inherited grants are NOT in `card_data`, so they must
+                // still materialize.
+                if !inherited_source {
+                    if let Some(kw) = effect.granted_keyword {
+                        let already_printed = self
+                            .card_data_by_id(&card_id)
+                            .is_some_and(|cd| face_keywords(cd).contains(&kw));
+                        if already_printed {
+                            continue;
+                        }
+                    }
+                }
                 if let Some(condition) = &effect.condition {
                     let rctx = crate::effect_context::EffectReadContext::new(
                         self,
@@ -146,6 +164,36 @@ impl Game {
                         controller,
                     );
                     process(&mut ctx);
+                }
+            }
+        }
+
+        // Source-independent floating mass modifiers: re-scan the live candidate
+        // set with each descriptor's predicate (relative to its `source_player`)
+        // and install a materialized-declarative modifier on every current match
+        // — so Digimon entering during the window receive the effect too
+        // (G-CONTINUOUS-MASS-DP-DEBUFF). Cleared at the top of every tick along
+        // with the source-bound declaratives; the descriptors themselves are
+        // pruned at turn-end by `expire_floating_mass_modifiers`.
+        if !self.floating_mass_modifiers.is_empty() {
+            let floating = self.floating_mass_modifiers.clone();
+            for fm in &floating {
+                let mut ctx = crate::effect_context::EffectContext::new(
+                    self,
+                    fm.source_card,
+                    None,
+                    fm.source_player,
+                );
+                let matches = crate::dsl_cards::step::permanent_scan::scan(&ctx, &fm.filter, None);
+                for h in matches {
+                    // `Expiry::Permanent`: the per-permanent materialized entry is
+                    // tick-ephemeral (cleared + re-installed every tick), so it must
+                    // NOT be expired by the per-turn `expire_end_of_turn` pass — the
+                    // floating DESCRIPTOR (pruned by `expire_floating_mass_modifiers`)
+                    // is the sole lifetime authority. Using `fm.expiry` here would
+                    // expire the entry one turn-end early relative to the descriptor
+                    // (`*NextTurn` skips live on the descriptor, not the entry).
+                    ctx.add_declarative_modifier(h, fm.modifier, fm.value, Expiry::Permanent);
                 }
             }
         }
@@ -198,11 +246,30 @@ impl Game {
     ) {
         let entries = self.modifiers.granted_triggered_for_timing(carrier, timing);
         for (source_card, source_player, body) in entries {
+            // Immunity gate (mirrors the queue dispatcher): skip when the
+            // carrier is unaffected by the grantor's effects — `<Progress>` /
+            // attack-scoped immunity (Q2) or a general `CannotBeAffected`
+            // opponent-effect immunity (Q17). The opponent-effect immunity
+            // filter is source-kind-agnostic, so `Digimon` suffices on this
+            // fallback path.
+            if self.progress_excludes(carrier, Some(source_player))
+                || self.permanent_is_unaffected_by_effect(
+                    carrier,
+                    source_player,
+                    crate::enums::EffectSourceKind::Digimon,
+                )
+            {
+                continue;
+            }
+            // D4 / DCGO: the granted body runs as the carrier's OWN effect
+            // (effect_source_player = carrier.player), so a deletion it causes
+            // is the carrier-controller's OwnEffect (judge-quiz Q16). The
+            // grantor (`source_player`) is used only for the immunity gate.
             let mut ctx = crate::effect_context::EffectContext::new(
                 self,
                 source_card,
                 Some(carrier),
-                source_player,
+                carrier.player,
             );
             body(&mut ctx);
         }

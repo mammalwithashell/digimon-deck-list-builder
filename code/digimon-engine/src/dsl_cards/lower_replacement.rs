@@ -1033,6 +1033,12 @@ fn matching_hand_candidates(
         .take(limit)
         .filter_map(|source| {
             let card = source.handle();
+            // A card reserved by an in-flight DigiXros play (the host being
+            // played, or a hand card already selected as a material) is committed
+            // to that play and not a free hand card for intervening effects.
+            if ctx.game.card_reserved_by_pending_digixros(card) {
+                return None;
+            }
             eval_predicate(filter, &read_ctx, PredicateSubject::Card(card)).then_some(card)
         })
         .collect()

@@ -1,0 +1,160 @@
+# LM-020 Quantumon — Digimon, Yellow/Green, Lv.6, cost 13, DP 13000.
+# Types: Fairy. Form: Mega. Attribute: Data. Evolves from Lv.5 Yellow, cost 5.
+#
+# Printed card text (card image / cards.json):
+#   [When Digivolving] By placing 1 Digimon on top of its owner's security stack,
+#     reveal all of your opponent's security cards, and place 1 card among them on
+#     top of your opponent's deck. Shuffle the rest and return them to the
+#     security stack.
+#   [Start of Opponent's Turn] Declare 1 card category. Then, reveal the top card
+#     of your opponent's deck. If that card is of the declared category, this
+#     Digimon isn't affected by the effects of that card category for the turn.
+#     Return the revealed card to the top or the bottom of your opponent's deck.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/LM/Yellow/LM_020.cs
+#
+# ─── Clause 2 modeling ([Start of Opponent's Turn]) ──────────────────────────
+# DCGO `SkillCondition`: for the declared category, the immunity matches an
+# effect when `cardEffect.IsDigimonEffect || EffectSourceCard.Is<Category>`. The
+# Digimon and Digi-Egg cases both include `IsDigimonEffect`, so declaring either
+# grants Digimon-source immunity (the Digi-Egg-source part is subsumed in our
+# engine, where digi-egg-derived effects are Digimon-source). The immunity is
+# `source_controller: any` — it covers the carrier's OWN Digimon effects too,
+# which is what makes Quantumon unable to <Blast Digivolve> (a Digimon effect on
+# itself) for the turn (judge-quiz Q18). The immunity lasts UntilEachTurnEnd =
+# `end_of_turn` (this fires on the opponent's turn, so it expires at that turn's
+# end). Player declares the category and chooses where the revealed card returns.
+#
+# Clause 1 ([When Digivolving]) is authored separately below.
+
+card: LM-020
+name: Quantumon
+kind: digimon
+level: 6
+color: [yellow, green]
+cost: 13
+dp: 13000
+traits: [Fairy]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 5
+
+effects:
+  # ─── Clause 2: [Start of Opponent's Turn] declare category → conditional immunity
+  - when: start_of_opponents_turn
+    summary: "[Start of Opp Turn] Declare a category; reveal opp deck top; if it matches, immune to that category's effects (incl. own) this turn; return revealed card"
+    process:
+      - select_effect_choice:
+          bind_as: category
+          labels:
+            - "Digimon"
+            - "Tamer"
+            - "Option"
+            - "Digi-Egg"
+          prompt: "Declare 1 card category."
+      - reveal_top_deck: { of: opponent, count: 1, bind_as: revealed }
+      # If the revealed card matches the declared category, grant immunity to
+      # that category's effects from ANY controller (own included) until end of
+      # this (opponent's) turn.
+      - if:
+          condition:
+            all_of:
+              - { equals: [category, 0] }
+              - { binding_card_kind: { binding: revealed, kind: digimon } }
+          then:
+            - grant_effect_immunity:
+                target: self
+                source_kind: digimon
+                source_controller: any
+                expiry: end_of_turn
+      - if:
+          condition:
+            all_of:
+              - { equals: [category, 1] }
+              - { binding_card_kind: { binding: revealed, kind: tamer } }
+          then:
+            - grant_effect_immunity:
+                target: self
+                source_kind: tamer
+                source_controller: any
+                expiry: end_of_turn
+      - if:
+          condition:
+            all_of:
+              - { equals: [category, 2] }
+              - { binding_card_kind: { binding: revealed, kind: option } }
+          then:
+            - grant_effect_immunity:
+                target: self
+                source_kind: option
+                source_controller: any
+                expiry: end_of_turn
+      # Digi-Egg case: DCGO's SkillCondition is `IsDigimonEffect || IsDigiEgg`, so
+      # a matched Digi-Egg declaration grants Digimon-source immunity.
+      - if:
+          condition:
+            all_of:
+              - { equals: [category, 3] }
+              - { binding_card_kind: { binding: revealed, kind: digi_egg } }
+          then:
+            - grant_effect_immunity:
+                target: self
+                source_kind: digimon
+                source_controller: any
+                expiry: end_of_turn
+      # Return the revealed card to the top or bottom of the opponent's deck
+      # (player's choice).
+      - select_effect_choice:
+          bind_as: return_pos
+          labels:
+            - "Top of deck"
+            - "Bottom of deck"
+          prompt: "Return the revealed card to the top or bottom of your opponent's deck."
+      - if:
+          condition: { equals: [return_pos, 0] }
+          then:
+            - return_to_deck_from_reveal: { of: opponent, card: revealed, position: top }
+      - if:
+          condition: { equals: [return_pos, 1] }
+          then:
+            - return_to_deck_from_reveal: { of: opponent, card: revealed, position: bottom }
+
+  # ─── Clause 1: [When Digivolving] cost = place 1 of your Digimon on top of
+  # your security; then move 1 opponent security card to the top of their deck
+  # and shuffle the rest back. ──────────────────────────────────────────────
+  #
+  # "By placing 1 Digimon on top of its owner's security stack" is a mandatory
+  # cost (`pay_cost`). Any of your battle-area Digimon is a valid choice — the
+  # just-digivolved Quantumon itself is always present, so the cost is always
+  # payable. The "reveal all of your opponent's security cards" is informational
+  # (the opponent-security selection surfaces them); the mechanical effect is the
+  # single security→deck-top move plus a shuffle of the remainder.
+  - when: when_digivolving
+    summary: "[When Digivolving] By placing 1 of your Digimon on top of your security, send 1 opponent security card to the top of their deck; shuffle the rest back"
+    process:
+      # Cost: place 1 of your Digimon on top of your security stack. Mandatory
+      # (the just-digivolved Quantumon is always a valid pick), so it is the
+      # leading step of the body rather than a separate `pay_cost`.
+      - select_own_permanent:
+          bind_as: sac_digimon
+          filter: { kind: digimon }
+          prompt: "Place 1 of your Digimon on top of your security stack (cost)."
+      - place_permanent_on_security:
+          of: you
+          target: sac_digimon
+          position: top
+          face_up: false
+      - select_security:
+          of: opponent
+          bind_as: picked_sec
+          filter:
+            any_of:
+              - { kind: digimon }
+              - { kind: tamer }
+              - { kind: option }
+              - { kind: digi_egg }
+          prompt: "Place 1 of your opponent's security cards on top of their deck."
+      - return_selected_security_to_deck: { of: opponent, card: picked_sec, position: top }
+      - shuffle_security: { of: opponent }

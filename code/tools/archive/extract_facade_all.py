@@ -14,7 +14,7 @@ import sys
 
 ROOT = sys.argv[1]  # path to effect_context dir
 MOD = ROOT + '/mod.rs'
-FLOOR = 807
+FLOOR = 844
 
 PREAMBLE = """#![allow(unused_imports)]
 use crate::action::mask::*;
@@ -132,7 +132,7 @@ def main():
     kept=[ln for idx,ln in enumerate(lines) if idx not in remove]
     open(MOD,'w',encoding='utf-8').write('\n'.join(kept))
     # rewrite action/mod.rs
-    allmods=sorted(set(['memory','scheduling'])|set(buckets.keys()))
+    allmods=sorted(buckets.keys())
     hdr="""//! Action mutations on `EffectContext`, split by game mechanic.
 //!
 //! Each submodule holds `impl EffectContext` blocks for one mechanic.

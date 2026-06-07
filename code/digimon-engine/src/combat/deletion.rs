@@ -1,4 +1,4 @@
-//! Permanent deletion lifecycle — batched flow, snapshots, OnDeletion (Tier 1). Independent of the attack state machine; see rule 25 in CLAUDE.md. impl Game.
+//! Permanent deletion lifecycle (Tier 1, rule 25).
 
 #![allow(unused_imports)]
 use super::*;
@@ -401,6 +401,7 @@ impl Game {
                     traits_just_before: Vec::new(),
                     source_count_just_before: 0,
                     digisources_just_before: Vec::new(),
+                    is_token: false,
                 });
             }
         }
@@ -433,6 +434,7 @@ impl Game {
         }
         let source_count = digisources.len();
         let dp_now = self.effective_dp(handle);
+        let is_token = perm.top_card().is_token;
         Some(crate::trigger_context::DeletedObjectSnapshot {
             former_controller: handle.player,
             top_card: top_handle,
@@ -450,6 +452,7 @@ impl Game {
             traits_just_before: data.traits.clone(),
             source_count_just_before: source_count,
             digisources_just_before: digisources,
+            is_token,
         })
     }
 
@@ -681,7 +684,21 @@ impl Game {
                 }
             }
         }
-        self.drain_effect_queue();
+        // Defer the post-deletion trigger drain to the outermost deferred
+        // scope. `maybe_drain_effect_queue` drains only when
+        // `draining_deferred == 0`; inside an effect's resolution window
+        // (e.g. an option like Calling From the Darkness that deletes a
+        // Digimon and THEN returns cards from trash) it leaves the
+        // OnDeletion / OnAnyDeletion / OnLeaveField entries queued so they
+        // resolve only AFTER the causing effect's later steps complete.
+        // Combined with the top-card-in-trash gate in `run_queued_effect_inner`
+        // (Q19 Part A), an [On Deletion] bundle whose top card was returned to
+        // hand by the same effect is then suppressed — DCGO `TriggeredSkillProcess`
+        // drains the [On Deletion] stack after the deleting effect resolves,
+        // and `CanActivateOnDeletion` re-checks `IsExistOnTrash(TopCard)` at
+        // that point. At a top-level deletion (`draining_deferred == 0`, e.g.
+        // combat) this drains immediately, matching prior behavior.
+        self.maybe_drain_effect_queue();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 

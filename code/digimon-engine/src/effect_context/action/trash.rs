@@ -93,6 +93,29 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    pub fn trash_delay_source(&mut self) -> bool {
+        matches!(self.trash_delay_source_status(), DelayCostStatus::Paid)
+    }
+
+    pub fn trash_delay_source_status(&mut self) -> DelayCostStatus {
+        let Some(source) = self.source_permanent else {
+            return DelayCostStatus::Unpaid;
+        };
+        let Some(source_card) = self.permanent_top_card_handle(source) else {
+            return DelayCostStatus::Unpaid;
+        };
+        self.game
+            .delete_permanent_with_cause(source, ReplacementCause::Cost);
+        if self.game.pending_selection.is_some() {
+            return DelayCostStatus::Pending;
+        }
+        if self.delay_source_card_in_trash(source.player, source_card) {
+            DelayCostStatus::Paid
+        } else {
+            DelayCostStatus::Unpaid
+        }
+    }
+
     /// Trash the top N cards of a player's deck (mill effect).
     pub fn trash_from_top(&mut self, player: PlayerId, count: u8) -> u8 {
         let mut trashed = 0;

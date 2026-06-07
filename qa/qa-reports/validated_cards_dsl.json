@@ -1,409 +1,535 @@
 {
   "version": 1,
-  "last_updated": "2026-05-29",
+  "last_updated": "2026-06-06",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-01.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["BATTLE-CONTEXT-PREDICATE", "INHERITED-DP-AURA"],
-      "notes": "Production ST2 sweep: inherited your-turn +1000 DP while battling a no-source opponent Digimon, false for sourced opponent and security-check context."
+      "patterns": [
+        "BATTLE-CONTEXT-PREDICATE",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "Production ST2 sweep: inherited your-turn +1000 DP while battling a no-source opponent Digimon, false for sourced opponent and security-check context.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST2-02": {
       "card_name": "Gomamon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-02.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["VANILLA", "DIGIVOLVE-ALT-PATH"],
-      "notes": "Production ST2 sweep: vanilla metadata and blue Lv2-to-Lv3 digivolution path covered with no fake effect clauses."
+      "patterns": [
+        "VANILLA",
+        "DIGIVOLVE-ALT-PATH"
+      ],
+      "notes": "Production ST2 sweep: vanilla metadata and blue Lv2-to-Lv3 digivolution path covered with no fake effect clauses.",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
     },
     "ST2-03": {
       "card_name": "Gabumon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-03.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["INHERITED-WHEN-ATTACKING", "TRASH-BOTTOM-SOURCES"],
-      "notes": "Production ST2 sweep: inherited attack trigger selects an opponent Lv5-or-lower Digimon with sources, then deterministically trashes the bottom source with no source prompt."
+      "patterns": [
+        "INHERITED-WHEN-ATTACKING",
+        "TRASH-BOTTOM-SOURCES"
+      ],
+      "notes": "Production ST2 sweep: inherited attack trigger selects an opponent Lv5-or-lower Digimon with sources, then deterministically trashes the bottom source with no source prompt.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST2-04": {
       "card_name": "Bearmon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-04.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["VANILLA", "DIGIVOLVE-ALT-PATH"],
-      "notes": "Production ST2 sweep: vanilla metadata and blue Lv2-to-Lv3 digivolution path covered with no fake effect clauses."
+      "patterns": [
+        "VANILLA",
+        "DIGIVOLVE-ALT-PATH"
+      ],
+      "notes": "Production ST2 sweep: vanilla metadata and blue Lv2-to-Lv3 digivolution path covered with no fake effect clauses.",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
     },
     "ST2-05": {
       "card_name": "Ikkakumon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-05.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["VANILLA", "DIGIVOLVE-ALT-PATH"],
-      "notes": "Production ST2 sweep: vanilla metadata and blue Lv3-to-Lv4 digivolution path covered with no fake effect clauses."
+      "patterns": [
+        "VANILLA",
+        "DIGIVOLVE-ALT-PATH"
+      ],
+      "notes": "Production ST2 sweep: vanilla metadata and blue Lv3-to-Lv4 digivolution path covered with no fake effect clauses.",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
     },
     "ST2-06": {
       "card_name": "Garurumon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-06.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["INHERITED-WHEN-ATTACKING", "TRASH-BOTTOM-SOURCES"],
-      "notes": "Production ST2 sweep: inherited attack trigger selects an opponent Digimon with sources, then deterministically trashes the bottom source with no source prompt."
+      "patterns": [
+        "INHERITED-WHEN-ATTACKING",
+        "TRASH-BOTTOM-SOURCES"
+      ],
+      "notes": "Production ST2 sweep: inherited attack trigger selects an opponent Digimon with sources, then deterministically trashes the bottom source with no source prompt.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST2-07": {
       "card_name": "Grizzlymon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-07.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["GRANT-KEYWORD", "LOSE-MEMORY"],
-      "notes": "Production ST2 sweep: printed Blocker is visible through has_keyword, and When Attacking loses exactly 2 memory."
+      "patterns": [
+        "GRANT-KEYWORD",
+        "LOSE-MEMORY"
+      ],
+      "notes": "Production ST2 sweep: printed Blocker is visible through has_keyword, and When Attacking loses exactly 2 memory.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST2-08": {
       "card_name": "WereGarurumon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-08.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["INHERITED-KEYWORD-AURA", "NO-SOURCE-PREDICATE"],
-      "notes": "Production ST2 sweep: inherited SecurityAttackPlus +1 applies only while the opponent controls a no-source Digimon."
+      "patterns": [
+        "INHERITED-KEYWORD-AURA",
+        "NO-SOURCE-PREDICATE"
+      ],
+      "notes": "Production ST2 sweep: inherited SecurityAttackPlus +1 applies only while the opponent controls a no-source Digimon.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST2-09": {
       "card_name": "Zudomon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-09.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["WHEN-DIGIVOLVING", "TRASH-BOTTOM-SOURCES"],
-      "notes": "Production ST2 sweep: When Digivolving selects an opponent Digimon and trashes up to two bottom sources in order with no source prompt."
+      "patterns": [
+        "WHEN-DIGIVOLVING",
+        "TRASH-BOTTOM-SOURCES"
+      ],
+      "notes": "Production ST2 sweep: When Digivolving selects an opponent Digimon and trashes up to two bottom sources in order with no source prompt.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST2-10": {
       "card_name": "Plesiomon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-10.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["VANILLA", "DIGIVOLVE-ALT-PATH"],
-      "notes": "Production ST2 sweep: vanilla metadata and blue Lv5-to-Lv6 digivolution path covered with no fake effect clauses."
+      "patterns": [
+        "VANILLA",
+        "DIGIVOLVE-ALT-PATH"
+      ],
+      "notes": "Production ST2 sweep: vanilla metadata and blue Lv5-to-Lv6 digivolution path covered with no fake effect clauses.",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
     },
     "ST2-11": {
       "card_name": "MetalGarurumon",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-11.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["WHEN-ATTACKING", "ONCE-PER-TURN", "UNSUSPEND"],
-      "notes": "Production ST2 sweep: When Attacking unsuspends this Digimon once per turn and does not refire in the same turn."
+      "patterns": [
+        "WHEN-ATTACKING",
+        "ONCE-PER-TURN",
+        "UNSUSPEND"
+      ],
+      "notes": "Production ST2 sweep: When Attacking unsuspends this Digimon once per turn and does not refire in the same turn.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST2-12": {
       "card_name": "Matt Ishida",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-12.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["START-OF-YOUR-TURN", "PLAY-FROM-SECURITY"],
-      "notes": "Production ST2 sweep: start-turn memory gain is gated by opponent no-source Digimon; security clause lowers to play_from_security."
+      "patterns": [
+        "START-OF-YOUR-TURN",
+        "PLAY-FROM-SECURITY"
+      ],
+      "notes": "Production ST2 sweep: start-turn memory gain is gated by opponent no-source Digimon; security clause lowers to play_from_security.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST2-14": {
       "card_name": "Sorrow Blue",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-14.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["NO-SOURCE-TARGET", "CANNOT-ATTACK-BLOCK"],
-      "notes": "Production ST2 sweep: main/security shapes select only no-source opponent Digimon and apply CannotAttack plus CannotBlock modifiers."
+      "patterns": [
+        "NO-SOURCE-TARGET",
+        "CANNOT-ATTACK-BLOCK"
+      ],
+      "notes": "Production ST2 sweep: main/security shapes select only no-source opponent Digimon and apply CannotAttack plus CannotBlock modifiers.",
+      "audit_note": "FIXED 2026-05-29: [Security] expiry end_of_turn -> end_of_your_next_turn (lasts until end of security owner’s next turn). Test st2_14_security_restriction_survives_until_your_next_turn pins the cross-turn expiry."
     },
     "ST2-15": {
       "card_name": "Kaiser Nail",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-15.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["SELECT-MATERIAL", "PLAY-FROM-MATERIALS"],
-      "notes": "Production ST2 sweep: selected Digimon source is removed from its host stack and played for free through the material-origin path."
+      "patterns": [
+        "SELECT-MATERIAL",
+        "PLAY-FROM-MATERIALS"
+      ],
+      "notes": "Production ST2 sweep: selected Digimon source is removed from its host stack and played for free through the material-origin path.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST2-16": {
       "card_name": "Cocytus Breath",
       "validated_date": "2026-05-29",
-      "report": "implement-st2-cocytus-blue-substrate",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-16.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
       "test_count": 15,
-      "patterns": ["RETURN-TO-HAND", "OPTION-MAIN-SECURITY"],
-      "notes": "Production ST2 sweep: main/security shapes select an opponent Digimon; top card returns to hand and sources route through normal trash rules."
+      "patterns": [
+        "RETURN-TO-HAND",
+        "OPTION-MAIN-SECURITY"
+      ],
+      "notes": "Production ST2 sweep: main/security shapes select an opponent Digimon; top card returns to hand and sources route through normal trash rules.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST4-01": {
       "card_name": "Motimon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-01.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["INHERITED-AURA", "LEVEL-GATED-DP"],
-      "notes": "Inherited [Your Turn] level 6+ carrier DP aura covered by ST4 behavioral suite."
+      "patterns": [
+        "INHERITED-AURA",
+        "LEVEL-GATED-DP"
+      ],
+      "notes": "Inherited [Your Turn] level 6+ carrier DP aura covered by ST4 behavioral suite.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST4-02": {
       "card_name": "Floramon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-02.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["VANILLA"],
-      "notes": "Vanilla card spec compiles and loads with the ST4 pack."
+      "patterns": [
+        "VANILLA"
+      ],
+      "notes": "Vanilla card spec compiles and loads with the ST4 pack.",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
     },
     "ST4-03": {
       "card_name": "Tentomon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-03.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["REVEAL-SEARCH", "GREEN-DIGIMON-FILTER"],
-      "notes": "Reveal top card, add green Digimon hits, and bottom-deck misses covered."
+      "patterns": [
+        "REVEAL-SEARCH",
+        "GREEN-DIGIMON-FILTER"
+      ],
+      "notes": "Reveal top card, add green Digimon hits, and bottom-deck misses covered.",
+      "audit_note": "FIXED 2026-05-29: select_reveal optional:true -> false (mandatory add). Test st4_03_reveal_add_is_mandatory_when_eligible."
     },
     "ST4-04": {
       "card_name": "Palmon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-04.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["INHERITED-AURA", "ATTACK-TARGET-DP"],
-      "notes": "Inherited DP while attacking an opponent Digimon covered."
+      "patterns": [
+        "INHERITED-AURA",
+        "ATTACK-TARGET-DP"
+      ],
+      "notes": "Inherited DP while attacking an opponent Digimon covered.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST4-05": {
       "card_name": "Kunemon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-05.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["VANILLA"],
-      "notes": "Vanilla card spec compiles and loads with the ST4 pack."
+      "patterns": [
+        "VANILLA"
+      ],
+      "notes": "Vanilla card spec compiles and loads with the ST4 pack.",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
     },
     "ST4-06": {
       "card_name": "Togemon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-06.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["INHERITED-AURA", "ATTACK-TARGET-DP"],
-      "notes": "Inherited DP while attacking an opponent Digimon covered."
+      "patterns": [
+        "INHERITED-AURA",
+        "ATTACK-TARGET-DP"
+      ],
+      "notes": "Inherited DP while attacking an opponent Digimon covered.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST4-07": {
       "card_name": "Kuwagamon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-07.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["VANILLA"],
-      "notes": "Vanilla card spec compiles and loads with the ST4 pack."
+      "patterns": [
+        "VANILLA"
+      ],
+      "notes": "Vanilla card spec compiles and loads with the ST4 pack.",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
     },
     "ST4-08": {
       "card_name": "Kabuterimon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-08.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["BLOCKER", "ATTACK-MEMORY-LOSS"],
-      "notes": "Blocker keyword and attack memory loss covered."
+      "patterns": [
+        "BLOCKER",
+        "ATTACK-MEMORY-LOSS"
+      ],
+      "notes": "Blocker keyword and attack memory loss covered.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST4-09": {
       "card_name": "Okuwamon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-09.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["VANILLA"],
-      "notes": "Vanilla card spec compiles and loads with the ST4 pack."
+      "patterns": [
+        "VANILLA"
+      ],
+      "notes": "Vanilla card spec compiles and loads with the ST4 pack.",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
     },
     "ST4-10": {
       "card_name": "Lillymon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-10.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["REVEAL-SEARCH", "LEVEL-GTE-FILTER"],
-      "notes": "Reveal top 5, add level 6+ Digimon hits, and bottom-deck remainder covered."
+      "patterns": [
+        "REVEAL-SEARCH",
+        "LEVEL-GTE-FILTER"
+      ],
+      "notes": "Reveal top 5, add level 6+ Digimon hits, and bottom-deck remainder covered.",
+      "audit_note": "FIXED 2026-05-29: select_reveal optional:true -> false (mandatory add). Test st4_10_reveal_add_is_mandatory_when_eligible."
     },
     "ST4-11": {
       "card_name": "MegaKabuterimon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-11.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["INHERITED-TRIGGER", "BATTLE-OPPONENT-SURVIVOR", "OPT"],
-      "notes": "Uses source_deleted_battle_opponent; covers qualifying battle, mutual destruction, unrelated battle, non-battle deletion, and once-per-turn."
+      "patterns": [
+        "INHERITED-TRIGGER",
+        "BATTLE-OPPONENT-SURVIVOR",
+        "OPT"
+      ],
+      "notes": "Uses source_deleted_battle_opponent; covers qualifying battle, mutual destruction, unrelated battle, non-battle deletion, and once-per-turn.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST4-12": {
       "card_name": "Rosemon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-12.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["DIGIVOLVE-TRIGGER", "SUPPRESSION", "OPPONENT-TURN-EXPIRY"],
-      "notes": "When Digivolving attack/block suppression and expiry covered."
+      "patterns": [
+        "DIGIVOLVE-TRIGGER",
+        "SUPPRESSION",
+        "OPPONENT-TURN-EXPIRY"
+      ],
+      "notes": "When Digivolving attack/block suppression and expiry covered.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST4-13": {
       "card_name": "HerculesKabuterimon",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-13.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["PIERCING", "DIGI-BURST", "SUSPEND"],
-      "notes": "Piercing and Digi-Burst 2 suspend behavior covered."
+      "patterns": [
+        "PIERCING",
+        "DIGI-BURST",
+        "SUSPEND"
+      ],
+      "notes": "Piercing and Digi-Burst 2 suspend behavior covered.",
+      "audit_note": "FIXED 2026-05-29: removed optional:true on the Digi-Burst suspend (mandatory). Test st4_13_digi_burst_suspend_is_mandatory."
     },
     "ST4-14": {
       "card_name": "Izzy Izumi",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-14.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["OPTIONAL-ACTIVATION-COST", "SECURITY-PLAY-TAMER"],
-      "notes": "Optional suspend-as-cost memory gain and security play for free covered."
+      "patterns": [
+        "OPTIONAL-ACTIVATION-COST",
+        "SECURITY-PLAY-TAMER"
+      ],
+      "notes": "Optional suspend-as-cost memory gain and security play for free covered.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST4-15": {
       "card_name": "Needle Spray",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-15.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["OPTION", "SUSPEND", "SECURITY-ADD-TO-HAND"],
-      "notes": "Main suspend and security suspend plus add-to-hand covered."
+      "patterns": [
+        "OPTION",
+        "SUSPEND",
+        "SECURITY-ADD-TO-HAND"
+      ],
+      "notes": "Main suspend and security suspend plus add-to-hand covered.",
+      "audit_note": "FIXED 2026-05-29: removed optional:true on main+security suspend (mandatory). Test st4_15_main_suspend_is_mandatory."
     },
     "ST4-16": {
       "card_name": "Electro Shocker",
       "validated_date": "2026-05-29",
-      "report": "implement-st4-giga-green-starter-deck",
-      "status": "IMPLEMENTED",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "ST-4 Giga Green",
       "yaml_path": "code/digimon-engine/cards/st4/ST4-16.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st4/mod.rs",
       "test_count": 15,
-      "patterns": ["OPTION", "RETURN-TO-HAND", "SECURITY-NO-ADD-TO-HAND"],
-      "notes": "Main and security return suspended opponent Digimon to hand; security does not add this option to hand."
+      "patterns": [
+        "OPTION",
+        "RETURN-TO-HAND",
+        "SECURITY-NO-ADD-TO-HAND"
+      ],
+      "notes": "Main and security return suspended opponent Digimon to hand; security does not add this option to hand.",
+      "audit_note": "FIXED 2026-05-29: removed optional:true on main+security return (mandatory). Test st4_16_main_return_is_mandatory."
     },
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -419,7 +545,7 @@
         "D2",
         "F-DELETE-HIGHEST-DP"
       ],
-      "notes": "G-ACTIVATION-COST-TRASH-SELF resolved 2026-05-21 — <Delay> clause 3 re-authored with declinable activation_cost:{trash_self:true}; decline-path test added. 17/17 tests pass, 0 ignored."
+      "notes": "G-ACTIVATION-COST-TRASH-SELF resolved 2026-05-21 â€” <Delay> clause 3 re-authored with declinable activation_cost:{trash_self:true}; decline-path test added. 17/17 tests pass, 0 ignored."
     },
     "BT24-089": {
       "card_name": "Unique Emblem: Blazing Conductor",
@@ -536,7 +662,7 @@
         "E1",
         "G1-adjacent"
       ],
-      "notes": "G-ZONE-SELECTED-TRASH-TO-DECK-TOP resolved 2026-05-21 — clause B re-authored as a real kind:delay clause using return_trash_list_to_deck_bottom destination:top; raw_rust no-op removed; 4 delay tests implemented. 22/22 tests pass, 0 ignored."
+      "notes": "G-ZONE-SELECTED-TRASH-TO-DECK-TOP resolved 2026-05-21 â€” clause B re-authored as a real kind:delay clause using return_trash_list_to_deck_bottom destination:top; raw_rust no-op removed; 4 delay tests implemented. 22/22 tests pass, 0 ignored."
     },
     "LM-055": {
       "card_name": "Sprint Dash Training",
@@ -671,7 +797,7 @@
         "A4",
         "F9-adjacent"
       ],
-      "notes": "OnPlay optional cost-as-trash â†’ draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
+      "notes": "OnPlay optional cost-as-trash Ã¢â€ â€™ draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
     },
     "EX11-008": {
       "card_name": "Elizamon",
@@ -702,7 +828,7 @@
       "patterns": [
         "H_PROGRESS"
       ],
-      "notes": "Lamiamon — alt-digivolve into Owen Dreadnought + inherited [All Turns] OnOpponentSecurityRemoved free-play. All 11 active tests pass; 2 ignored are card-local body deferrals against Track C + Track D substrate that is already closed."
+      "notes": "Lamiamon â€” alt-digivolve into Owen Dreadnought + inherited [All Turns] OnOpponentSecurityRemoved free-play. All 11 active tests pass; 2 ignored are card-local body deferrals against Track C + Track D substrate that is already closed."
     },
     "BT24-016": {
       "card_name": "Lamiamon",
@@ -737,7 +863,7 @@
         "D-DELETE-DP-LTE",
         "D4"
       ],
-      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete â‰¤4000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
+      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete Ã¢â€°Â¤4000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
     },
     "BT24-011": {
       "card_name": "Cyclonemon",
@@ -772,7 +898,7 @@
         "H4-SECA-PLUS-1",
         "H_PROGRESS"
       ],
-      "notes": "Medusamon — 6 effect clauses including Petrification Token spawn on opp Digimon deletion and inherited Security arm. 15/19 active tests pass; 4 ignored are card-local body deferrals against now-closed substrate (G-OPT-TRIGGERED via Track C, G-DECLARATIVE-KEYWORD via Group 6, G-PREDICATE-DP-FILTER via Group 7)."
+      "notes": "Medusamon â€” 6 effect clauses including Petrification Token spawn on opp Digimon deletion and inherited Security arm. 15/19 active tests pass; 4 ignored are card-local body deferrals against now-closed substrate (G-OPT-TRIGGERED via Track C, G-DECLARATIVE-KEYWORD via Group 6, G-PREDICATE-DP-FILTER via Group 7)."
     },
     "BT24-017": {
       "card_name": "Medusamon",
@@ -806,7 +932,7 @@
         "H1-RUSH",
         "H_PROGRESS"
       ],
-      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave â†’ delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
+      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave Ã¢â€ â€™ delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
     },
     "BT24-018": {
       "card_name": "Styracomon",
@@ -825,7 +951,7 @@
         "H5-BLOCKER",
         "ARMOR-PURGE"
       ],
-      "notes": "G-TRASH-SELECTED-SECURITY resolved 2026-05-21 — [When Digivolving] trash-opponent-security sub-clause added (trash_selected_security verb consuming a select_security binding); trash test un-ignored. 19/19 tests pass, 0 ignored."
+      "notes": "G-TRASH-SELECTED-SECURITY resolved 2026-05-21 â€” [When Digivolving] trash-opponent-security sub-clause added (trash_selected_security verb consuming a select_security binding); trash test un-ignored. 19/19 tests pass, 0 ignored."
     },
     "BT24-082": {
       "card_name": "Owen Dreadnought",
@@ -842,7 +968,7 @@
         "B2",
         "F9"
       ],
-      "notes": "Owen Dreadnought (BT24) — when ally digivolves into Reptile/Dragonkin, may-attack-now wired via Track D inherited-dispatch + G-MAY-ATTACK-NOW closure (2026-05-03). All 13 active tests pass; 1 OPT-lockout placeholder retired in Phase 2 Track G."
+      "notes": "Owen Dreadnought (BT24) â€” when ally digivolves into Reptile/Dragonkin, may-attack-now wired via Track D inherited-dispatch + G-MAY-ATTACK-NOW closure (2026-05-03). All 13 active tests pass; 1 OPT-lockout placeholder retired in Phase 2 Track G."
     },
     "BT18-087": {
       "card_name": "Owen Dreadnought",
@@ -859,7 +985,7 @@
         "B3",
         "F9"
       ],
-      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete â‰¤4000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source â†’ ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
+      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete Ã¢â€°Â¤4000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source Ã¢â€ â€™ ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
     },
     "EX11-054": {
       "card_name": "Owen Dreadnought",
@@ -926,7 +1052,7 @@
         "H_PROGRESS",
         "G-INHERITED-OPT"
       ],
-      "notes": "G-SECURITY-SKILL-RESUME-REFIRE resolved 2026-05-21 (unblock-medusamon-partial-cards) — SecuritySkillDrain re-entry guard (security_skill_drained); decline-path test un-ignored. 23/23 tests pass, 0 ignored."
+      "notes": "G-SECURITY-SKILL-RESUME-REFIRE resolved 2026-05-21 (unblock-medusamon-partial-cards) â€” SecuritySkillDrain re-entry guard (security_skill_drained); decline-path test un-ignored. 23/23 tests pass, 0 ignored."
     },
     "BT24-012": {
       "card_name": "Dimetromon",
@@ -1030,18 +1156,19 @@
     },
     "ST1-07": {
       "card_name": "Greymon",
-      "validated_date": "2026-04-27",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "Medusamon Batch 8",
+      "archetype": "ST-1 Gaia Red",
       "yaml_path": "code/digimon-engine/cards/st1/ST1-07.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st1/st1_07.rs",
       "test_count": 7,
       "patterns": [
         "H4-SECA-PLUS-INHERITED"
       ],
-      "notes": "Single inherited SecurityAttackPlus(1) clause. Inherits via game.has_keyword() stack-walk (Batch 7 fix). 6 active tests pass (4 structural + 2 behavioral: positive stack-walk + negative absent-from-stack). 1 ignored for G-DECLARATIVE-KEYWORD (face-up runtime modifier installation not yet wired)."
+      "notes": "Single inherited SecurityAttackPlus(1) clause. Inherits via game.has_keyword() stack-walk (Batch 7 fix). 6 active tests pass (4 structural + 2 behavioral: positive stack-walk + negative absent-from-stack). 1 ignored for G-DECLARATIVE-KEYWORD (face-up runtime modifier installation not yet wired).",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "BT5-008": {
       "card_name": "Gaossmon",
@@ -1057,7 +1184,7 @@
         "D4",
         "D6"
       ],
-      "notes": "Re-attempt 2026-05-21: fully completed in pure DSL. [Your Turn] filtered aura (other [Gaossmon] +3000 DP — kind:aura, name_contains, other:true) + [Opponent's Turn] flood_gate (opponent CannotReduceDigivolveCost). G-DECLARATIVE-KEYWORD, G-OTHER-PREDICATE-UNEVALUATED, G-PLAYER-FLOOD-GATE-DSL all closed; raw_rust no-op removed. 9/9 tests pass, 0 ignored. Reviewer APPROVED."
+      "notes": "Re-attempt 2026-05-21: fully completed in pure DSL. [Your Turn] filtered aura (other [Gaossmon] +3000 DP â€” kind:aura, name_contains, other:true) + [Opponent's Turn] flood_gate (opponent CannotReduceDigivolveCost). G-DECLARATIVE-KEYWORD, G-OTHER-PREDICATE-UNEVALUATED, G-PLAYER-FLOOD-GATE-DSL all closed; raw_rust no-op removed. 9/9 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "P-137": {
       "card_name": "Flamedramon",
@@ -1094,7 +1221,7 @@
         "D1-adjacent",
         "E2-adjacent"
       ],
-      "notes": "Lv6 Red/White Blast Digivolve ACE — all 21 tests pass (was 19/20 pre-Phase-2). G-MAY-ATTACK-NOW resolved 2026-05-03 already integrated; no remaining ignored tests."
+      "notes": "Lv6 Red/White Blast Digivolve ACE â€” all 21 tests pass (was 19/20 pre-Phase-2). G-MAY-ATTACK-NOW resolved 2026-05-03 already integrated; no remaining ignored tests."
     },
     "EX10-010": {
       "card_name": "BlackWarGreymon",
@@ -1123,7 +1250,7 @@
     "BT21-026": {
       "status": "IMPLEMENTED",
       "date": "2026-04-28",
-      "notes": "WarGreymon — cost reduction by 2 x opp Digimon count, three keyword grants (Rush/Raid/Blocker), and now-wired [All Turns][OPT] deletion arm using event_target_owner: opponent predicate (Phase 2 Track G YAML migration). 11/16 tests pass; 5 are card-local body deferrals against substrate that is already closed.",
+      "notes": "WarGreymon â€” cost reduction by 2 x opp Digimon count, three keyword grants (Rush/Raid/Blocker), and now-wired [All Turns][OPT] deletion arm using event_target_owner: opponent predicate (Phase 2 Track G YAML migration). 11/16 tests pass; 5 are card-local body deferrals against substrate that is already closed.",
       "validated_date": "2026-05-17",
       "report": "phase-2-track-g-medusamon-pilot-completion",
       "gap_kind": null
@@ -1145,7 +1272,7 @@
         "C1",
         "raw_rust"
       ],
-      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete ≤Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED — triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
+      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete â‰¤Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED â€” triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
     },
     "BT23-014": {
       "card_name": "Gallantmon",
@@ -1183,7 +1310,7 @@
         "source_dp_budget",
         "E5-TRASH-TOP-SECURITY"
       ],
-      "notes": "Lv7 Red Blast Digivolve ACE — multi-select opponent DP-budget delete uses native select_opponent_dp_budget with dp_budget: { source_dp: {} } plus delete_bound_permanents. All 17 LM-021 behavioral tests pass."
+      "notes": "Lv7 Red Blast Digivolve ACE â€” multi-select opponent DP-budget delete uses native select_opponent_dp_budget with dp_budget: { source_dp: {} } plus delete_bound_permanents. All 17 LM-021 behavioral tests pass."
     },
     "BT17-018": {
       "card_name": "Gallantmon: Crimson Mode",
@@ -1236,7 +1363,7 @@
         "G-MAY-ATTACK-NOW",
         "G-AURA-DP-FORMULA"
       ],
-      "notes": "G-ALT-PATH-SAVE-IN-TEXT resolved 2026-05-21 — xros_req cost-3 alt-path added using the existing effect_text_contains predicate (no new DSL vocab). 18/18 tests pass, 0 ignored."
+      "notes": "G-ALT-PATH-SAVE-IN-TEXT resolved 2026-05-21 â€” xros_req cost-3 alt-path added using the existing effect_text_contains predicate (no new DSL vocab). 18/18 tests pass, 0 ignored."
     },
     "P-103": {
       "card_name": "Offense Training",
@@ -1254,6 +1381,24 @@
         "E1"
       ],
       "notes": "Re-attempt 2026-05-21: fully completed. [Main] reveal-2/add-red + place-self; [Main]<Delay> digivolve into red Digimon cost-2; [Security] place self. <Delay> trigger corrected on_play->delayed (player-initiated, matches P-035/P-037) per review fix. 23/23 tests pass, 0 ignored. Reviewer APPROVED after fix."
+    },
+    "P-104": {
+      "card_name": "Mental Training",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q10/Q11)",
+      "yaml_path": "code/digimon-engine/cards/p/P-104.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_104.rs",
+      "test_count": 13,
+      "patterns": [
+        "option",
+        "reveal",
+        "delay",
+        "digivolve-cost-reduction"
+      ],
+      "notes": "Reveal2 add-blue + Delay digivolve-into-blue cost-2"
     },
     "BT8-097": {
       "card_name": "Crimson Blaze",
@@ -1287,7 +1432,7 @@
         "A2-remainder-bottom",
         "E2-optional-free-play"
       ],
-      "notes": "Purple Option Cost 3 [LIBERATOR] — use_requirement color bypass is active; all 18 tests pass."
+      "notes": "Purple Option Cost 3 [LIBERATOR] â€” use_requirement color bypass is active; all 18 tests pass."
     },
     "P-206": {
       "card_name": "Digital Gate Open",
@@ -2239,18 +2384,19 @@
     },
     "ST2-13": {
       "card_name": "Hammer Spark",
-      "validated_date": "2026-05-20",
-      "report": "complete-dna-omnimon-archetype",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "DNA Omnimon",
+      "archetype": "ST-2 Cocytus Blue",
       "yaml_path": "code/digimon-engine/cards/st2/ST2-13.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_13.rs",
       "test_count": 14,
       "patterns": [
         "F1"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust.",
+      "audit_note": "Faithful to printed text + DCGO."
     },
     "ST20-10": {
       "card_name": "Agumon",
@@ -2400,7 +2546,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-047.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_047.rs",
-      "notes": "Sister to BT12-021 — Wormmon line reveal-add"
+      "notes": "Sister to BT12-021 â€” Wormmon line reveal-add"
     },
     "BT12-050": {
       "card_name": "Stingmon",
@@ -2411,7 +2557,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-050.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_050.rs",
-      "notes": "Phase 2 Track H — sister of BT12-022 with green→blue swap. Same substrate (before_pay_cost_observe, cost_target, source_is_cost_target_permanent, dna_origin)."
+      "notes": "Phase 2 Track H â€” sister of BT12-022 with greenâ†’blue swap. Same substrate (before_pay_cost_observe, cost_target, source_is_cost_target_permanent, dna_origin)."
     },
     "ST9-09": {
       "card_name": "Stingmon",
@@ -2591,7 +2737,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/lm/LM-030.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_030.rs",
-      "notes": "Phase 2 Track H closed G-OPTIONAL-SELECTION-CONTINUE-TAIL — declining the optional security trash play still adds the option to hand. Re-authored: Delay clause B via move_trash_card_to_deck_top + dp_lte trash filter (G-ZONE-SELECTED-TRASH-TO-DECK-TOP closed).",
+      "notes": "Phase 2 Track H closed G-OPTIONAL-SELECTION-CONTINUE-TAIL â€” declining the optional security trash play still adds the option to hand. Re-authored: Delay clause B via move_trash_card_to_deck_top + dp_lte trash filter (G-ZONE-SELECTED-TRASH-TO-DECK-TOP closed).",
       "test_count": 21
     },
     "BT14-009": {
@@ -3648,7 +3794,7 @@
         "DELAY",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass â€” visible post-placement [Main] activation/decline window is implemented."
     },
     "LM-035": {
       "card_name": "Amber Memory Boost!",
@@ -3667,7 +3813,7 @@
         "DELAY",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass â€” visible post-placement [Main] activation/decline window is implemented."
     },
     "LM-037": {
       "card_name": "Sepia Memory Boost!",
@@ -3686,7 +3832,7 @@
         "DELAY",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass â€” visible post-placement [Main] activation/decline window is implemented."
     },
     "ST19-01": {
       "card_name": "Kyaromon",
@@ -4055,7 +4201,7 @@
         "EVENT-GATED-DELAY",
         "EFFECT-DIGIVOLVE"
       ],
-      "notes": "FULLY IMPLEMENTED \u2014 hybrid gap PUPPETS-G004 closed 2026-05-21. [Main]/[Security] reveal-3 dual-bucket search (1 Puppet Digimon + 1 LIBERATOR, no double-pick, bottom remainder), option battle-area placement (kind: delay \u2192 Option pipeline auto-seats), and the [Your Turn] Mirai-played event-gated <Delay> (level<=6 LIBERATOR digivolve cost-3) all complete. Substrate: lower_delay.rs now maps on_ally_played \u2192 DelayTrigger::OnEvent(OnAllyPlayed); effect_queue.rs enqueue_triggered now fans EnteredField dispatches out to enqueue_event_gated_delayed_options. 13 tests pass, 0 ignored (incl. placing-turn gate, non-Mirai event gate, decline-still-trashes cost)."
+      "notes": "FULLY IMPLEMENTED — hybrid gap PUPPETS-G004 closed 2026-05-21. [Main]/[Security] reveal-3 dual-bucket search (1 Puppet Digimon + 1 LIBERATOR, no double-pick, bottom remainder), option battle-area placement (kind: delay → Option pipeline auto-seats), and the [Your Turn] Mirai-played event-gated <Delay> (level<=6 LIBERATOR digivolve cost-3) all complete. Substrate: lower_delay.rs now maps on_ally_played → DelayTrigger::OnEvent(OnAllyPlayed); effect_queue.rs enqueue_triggered now fans EnteredField dispatches out to enqueue_event_gated_delayed_options. 13 tests pass, 0 ignored (incl. placing-turn gate, non-Mirai event gate, decline-still-trashes cost)."
     },
     "BT22-098": {
       "card_name": "Unique Emblem: Fable Waltz",
@@ -4108,7 +4254,7 @@
         "EFFECT-DIGIVOLVE",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass â€” visible post-placement [Main] activation/decline window is implemented."
     },
     "LM-054": {
       "card_name": "Treadmill Training",
@@ -4127,7 +4273,7 @@
         "EFFECT-DIGIVOLVE",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass â€” visible post-placement [Main] activation/decline window is implemented."
     },
     "BT13-101": {
       "card_name": "Miki Kurosaki & Megumi Shirakawa",
@@ -4418,7 +4564,7 @@
         "ON-PLAY-DRAW",
         "ON-DELETION-PLACE-UNDER-KING-DRASIL"
       ],
-      "notes": "Both clauses authored under Phase 2 Track J. On Play Draw 1 plus On Deletion: pick a [Royal Knight]-traited Digimon from hand and place it under [King Drasil_7D6] in breeding as the bottom digivolution source. Uses RK-G001 filter (Phase 2 Track J PR 1) plus the BreedingPermanentRef → PermanentHandle{BREEDING_TARGET} resolver. Short-circuits gracefully when no King Drasil is in breeding or no Royal Knight is in hand."
+      "notes": "Both clauses authored under Phase 2 Track J. On Play Draw 1 plus On Deletion: pick a [Royal Knight]-traited Digimon from hand and place it under [King Drasil_7D6] in breeding as the bottom digivolution source. Uses RK-G001 filter (Phase 2 Track J PR 1) plus the BreedingPermanentRef â†’ PermanentHandle{BREEDING_TARGET} resolver. Short-circuits gracefully when no King Drasil is in breeding or no Royal Knight is in hand."
     },
     "BT20-083": {
       "card_name": "Omekamon",
@@ -5507,6 +5653,1273 @@
       "test_count": null,
       "patterns": [],
       "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+    },
+    "BT9-108": {
+      "card_name": "Eye of the Gorgon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "test_count": 16,
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-108.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_108.rs",
+      "patterns": [
+        "A4",
+        "E2",
+        "SUPPRESS-ON-PLAY",
+        "SECURITY-MIRROR"
+      ],
+      "notes": "Judge-quiz Q7. [Main]/[Security] delete 1 unsuspended opp Digimon, then optional free play of a purple Lv3 from trash with OnPlay suppressed.",
+      "validated_date": "2026-05-29",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "judge-quiz first wave"
+    },
+    "BT13-088": {
+      "card_name": "Belphemon: Sleep Mode",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "test_count": 14,
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-088.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_088.rs",
+      "patterns": [
+        "E2",
+        "D6",
+        "F6",
+        "OPT"
+      ],
+      "notes": "Judge-quiz Q1. [OppTurn][OPT] trash 2 -> end attack (Q1-critical, fully faithful); [OnPlay/WhenDigivolving] place Belphemon: Rage Mode from trash + CannotAttack + 4-kind opp-effect immunity. PARTIAL: place_as_bottom_source used for Rage Mode (no top-source verb; position behaviorally inert).",
+      "validated_date": "2026-05-29",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "judge-quiz first wave"
+    },
+    "BT24-059": {
+      "card_name": "Sharkmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "test_count": 19,
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_059.rs",
+      "patterns": [
+        "DE-DIGIVOLVE",
+        "REVEAL-PLAY-FREE",
+        "PLACE-PERMANENT-SOURCE",
+        "OPT"
+      ],
+      "notes": "Judge-quiz Q12. De-Digivolve 1; [OnDeletion] reveal 3 play 1 TS<=7 suspended free; inherited [WA][OPT] place another Digimon as bottom source then unsuspend (Q12 token case covered).",
+      "validated_date": "2026-05-29",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "judge-quiz first wave"
+    },
+    "LM-020": {
+      "card_name": "Quantumon",
+      "validated_date": "2026-06-05",
+      "report": "judge-quiz Q18",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q18)",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_020.rs",
+      "test_count": 4,
+      "patterns": [
+        "start-of-opp-turn",
+        "select-effect-choice",
+        "declare-category",
+        "reveal-deck-top",
+        "binding-card-kind",
+        "grant-effect-immunity",
+        "self-inclusive-immunity",
+        "when-digivolving-cost",
+        "place-permanent-on-security",
+        "return-selected-security-to-deck",
+        "shuffle-security"
+      ],
+      "notes": "Both clauses faithful. Clause 2 declare-category conditional immunity (source_controller any → blocks own Blast Digivolve, judge Q18). Clause 1 place-Digimon-on-security cost + 1 opp security to deck top + shuffle. Closed G-DSL-RETURN-SELECTED-SECURITY-TO-DECK + added binding_card_kind predicate."
+    },
+    "BT20-059": {
+      "card_name": "Gankoomon (X Antibody)",
+      "validated_date": "2026-05-29",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz first wave",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_059.rs",
+      "test_count": 17,
+      "patterns": [
+        "F6-IMMUNITY",
+        "DE-DIGIVOLVE",
+        "KEYWORD-AURA",
+        "INHERITED-ESS"
+      ],
+      "notes": "Judge-quiz Q28. [WD] <De-Digivolve 2> + conditional board-wide opp-Digimon immunity (for_each grant_effect_immunity, fire-time snapshot); [OppTurn] Reboot/Blocker auras to Sistermon/Huckmon/Royal Knight allies; inherited Jesmon-GX ESS. Q28 lock-dodge works via can_affect_permanent."
+    },
+    "EX5-060": {
+      "card_name": "Dragomon",
+      "validated_date": "2026-05-29",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "hybrid",
+      "archetype": "judge-quiz first wave",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "ON-PLAY-LOCK",
+        "FORCED-OPPONENT-PLAY"
+      ],
+      "notes": "Judge-quiz Q28. BLOCKED (hybrid): G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED (Clause 1 forces opponent to play Lv<=4 from THEIR trash suspended; play_from_trash_free hardcodes self.player + unsuspended) + G-EVENT-PLAYED-LEVEL-FORMULA (Clause 2 needs event_played_by_effect predicate + event_target_level formula). The [On Play] lock-dodge (CannotActivateOnPlayEffects + can_affect_permanent) was verified working. Inherited <Piercing> faithful. Re-attempt after the two gaps land."
+    },
+    "BT21-042": {
+      "card_name": "GeoGreymon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (DATS / Greymon-Marcus)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-042.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_042.rs",
+      "test_count": 17,
+      "patterns": [
+        "B3",
+        "D4",
+        "E2"
+      ],
+      "notes": "[All Turns][OPT] on_enter_field_anyone observer on own Marcus Damon play -> effect-initiated free self-digivolve into hand yellow [RizeGreymon]; inherited [Your Turn]+2000 self-aura; Agumon alt-path. Reviewer APPROVED."
+    },
+    "AD1-016": {
+      "card_name": "ShineGreymon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (DATS / Greymon-Marcus)",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-016.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_016.rs",
+      "test_count": 22,
+      "patterns": [
+        "H5",
+        "H10",
+        "E1",
+        "E3",
+        "C1",
+        "D1",
+        "B3"
+      ],
+      "notes": "Alliance/Blocker (declarative grant_keyword, runtime-installed via tick + has_keyword — behaviorally tested; stale G-DECLARATIVE-KEYWORD note dropped); [WD][WA][OPT] shared-hash union hand/trash/decline free-play of Marcus Damon + -3000xcount(own Digimon+Tamers) debuff (unfiltered card_count_in_zone); [All Turns][OPT] on_ally_played/on_suspend -> delete opp Digimon with dp_lte source_dp. Reviewer NEEDS-FIX (keyword behavioral tests) -> fixed."
+    },
+    "BT21-044": {
+      "card_name": "RizeGreymon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (DATS / Greymon-Marcus)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_044.rs",
+      "test_count": 20,
+      "patterns": [
+        "B3",
+        "D4",
+        "E2",
+        "F1",
+        "F5",
+        "G1",
+        "H1",
+        "H10"
+      ],
+      "notes": "[OP][WD] treat 1 Marcus Damon as 3000 DP Digimon (TreatAsDigimon+synth_identity — NEW DSL substrate) + CannotDigivolve + Rush + Alliance (end_of_turn) then may_attack_now; [All Turns][OPT] own+inherited yellow/red-Tamer-deletion -> place Marcus from trash as top security; GeoGreymon alt-path cost3. Reviewer APPROVED."
+    },
+    "BT13-020": {
+      "card_name": "ShineGreymon: Burst Mode",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (DATS / Greymon-Marcus)",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_020.rs",
+      "test_count": 18,
+      "patterns": [
+        "B3",
+        "D4",
+        "E2",
+        "G1",
+        "H1"
+      ],
+      "notes": "[WD] optional play Marcus from hand free + bind -> TreatAsDigimon(12000)+CannotDigivolve+Rush (NEW synth_identity substrate); [Your Turn][OPT] own-Tamer suspend -> trash opp security top; Burst Digivolve alt-path (return Marcus, cost 0, trash top source on_burst_turn_end) + named-Lv6 digivolve. Reviewer NEEDS-FIX (missing burst alt-path) -> fixed."
+    },
+    "BT16-101": {
+      "card_name": "Rapidmon (X Antibody)",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (DATS / Rapidmon / Hudie)",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-101.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_101.rs",
+      "test_count": 21,
+      "patterns": [
+        "B3",
+        "D4",
+        "E2",
+        "H"
+      ],
+      "notes": "Armor Purge; [WhenDigivolving] suspend-all-opp + may_attack; [All Turns] aura -4000 to opp SUSPENDED while [Rapidmon]/[X Antibody] in sources; [All Turns][OPT] gain 2 memory on opp Digimon deleted in battle OR by 0 DP (any_of[battle_deletion, rule] — used the new EventCause::Rule 0-DP-cause substrate). Reviewer APPROVED. Keystone Q24/Q13/Q14 card."
+    },
+    "EX4-005": {
+      "card_name": "Agumon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (DATS / Rapidmon / Hudie)",
+      "yaml_path": "code/digimon-engine/cards/ex4/EX4-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_005.rs",
+      "test_count": 13,
+      "patterns": [
+        "B1",
+        "B3",
+        "E2"
+      ],
+      "notes": "[Start of Your Main Phase] conditional gain 1 memory (red/yellow Tamer in play); inherited [Your Turn][OPT] own red/yellow Tamer suspend -> Draw 1; Koromon cost-0 alt-path. Re-authored inline by orchestrator after a sub-agent worktree-persistence loss; 13 tests pass."
+    },
+    "BT21-004": {
+      "card_name": "Koromon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (DATS / Rapidmon / Hudie)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-004.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_004.rs",
+      "test_count": 9,
+      "patterns": [
+        "G4",
+        "B3",
+        "E2"
+      ],
+      "notes": "Egg; ONLY inherited [Your Turn][OPT] yellow/red Tamer suspend -> Draw 1. Re-authored inline by orchestrator after a sub-agent worktree-persistence loss; 9 tests pass."
+    },
+    "ST17-07": {
+      "card_name": "Rapidmon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Judge-quiz cluster B (DATS / Rapidmon / Hudie)",
+      "yaml_path": "code/digimon-engine/cards/st17/ST17-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st17/st17_07.rs",
+      "test_count": 11,
+      "patterns": [
+        "A",
+        "B3",
+        "E2"
+      ],
+      "notes": "[On Play][When Digivolving] De-Digivolve 1 opp Digimon (stop_at_level 3) DONE; inherited [All Turns][OPT] battle-delete-by-this -> trash opp security DONE; Lv4 [Gargomon]/[Rapidmon] cost-3 alt-path. BLOCKED clause: green-Tamer opponent-scoped delete/return protection (G-OPPONENT-SCOPED-EFFECT-PROTECTION-DSL — add_modifier installs cause-agnostic, can't opponent-scope; 2 tests #[ignore]'d). Re-authored inline after worktree loss."
+    },
+    "BT23-101": {
+      "card_name": "Hudiemon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (Hudie / Q6 / Q24)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-101.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_101.rs",
+      "test_count": 12,
+      "patterns": [
+        "H",
+        "C1",
+        "D",
+        "E2",
+        "E3"
+      ],
+      "notes": "Alliance (runtime-installed); [OP][WD] free-play cost<=5 [CS] from hand + -3000 x (your [Hudie] Digimon) to 1 opp; [WA][OPT] return [CS] Tamer -> re-activate [On Play] (inline-duplicated, EX8-074 idiom); CS-trait cost4 + conditional [Erika Mishima] cost3 (count_gte 4 Hudie Tamers) alt-paths. Re-authored inline by orchestrator after a sub-agent worktree-persistence loss."
+    },
+    "BT23-037": {
+      "card_name": "Tentomon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (Hudie / Q6 / Q24)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_037.rs",
+      "test_count": 20,
+      "patterns": [
+        "B",
+        "E2"
+      ],
+      "notes": "[Your Turn] before_pay_cost -1 when digivolving into a [CS] Digimon (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET resolved; BT23-005 sibling); inherited [WA][OPT] play cost<=5 [Hudie] from hand free (On Play fires) + CannotDigivolve + schedule-delete at end of opp turn; Lv2 [CS] cost0 alt-path. Sub-agent (persisted)."
+    },
+    "BT8-109": {
+      "card_name": "Flame Hellscythe",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Judge-quiz cluster B (Hudie / Q6 / Q24)",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-109.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_109.rs",
+      "test_count": 11,
+      "patterns": [
+        "D",
+        "A4",
+        "E2"
+      ],
+      "notes": "[Main] -6000 DP to 1 opp Digimon (turn; Q6: 0-DP deletion deferred to state-based rules-check); then optional free-play of a purple/yellow Digimon DP<=6000 from trash (On Play fires, NOT suppressed); [Security] mirror. Re-authored inline by orchestrator."
+    },
+    "EX6-004": {
+      "card_name": "Kokomon",
+      "validated_date": "2026-05-30",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Judge-quiz cluster B (Hudie / Q6 / Q24)",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "G4",
+        "B3"
+      ],
+      "notes": "Egg, inherited [Your Turn][OPT] 'when an EFFECT suspends one of your Digimon, +2000 DP to 1 of your Digimon'. BLOCKED: G-SUSPEND-EFFECT-INITIATED — TriggerSource::EventObserved (the suspend event) carries no `effect_initiated`/`by_effect` bit, so the 'by an effect' qualifier is un-gatable (the clause would over-trigger on attack/cost suspends). Engine-event plumbing fix (thread by_effect through EffectContext::suspend vs Game::suspend); also tracked in qa/archetype-qa/dsl/zephagamon-2026-05-03-dsl-engine-gaps.md. No card authored (no stub)."
+    },
+    "BT1-085": {
+      "card_name": "Tai Kamiya",
+      "validated_date": "2026-05-30",
+      "report": "wargreymon-security-attack-followup",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Red Hybrid / Adventure",
+      "yaml_path": "code/digimon-engine/cards/bt1/BT1-085.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt1/bt1_085.rs",
+      "test_count": 14,
+      "patterns": [
+        "B1-memory-ramp",
+        "D5-filtered-aura-grant-keyword",
+        "D-OnSecurity"
+      ],
+      "notes": "TDD DSL implementation 2026-05-30 (follow-up to the ST1-11 WarGreymon <Security A.> fix). Clause 1: [Start of Your Turn] memory_lte:2 -> set_memory:3. Clause 2: [Your Turn] filtered aura grant_keyword SecurityAttackPlus(1) to own red Digimon with 4+ digivolution cards (color_is:red + stack_size_gte:5). Clause 3: [Security] play_from_security. Headline interaction tests prove Tai's FLAT <Security A. +1> delta SUMS with WarGreymon's base-inclusive formula (WarGreymon+Tai checks 4; +Greymon checks 5) — confirming the flat-delta path never collides with the formula-aura MAX, matching DCGO Permanent.Strike_AllowMinus. No ignored tests, no raw_rust."
+    },
+    "ST1-01": {
+      "card_name": "Koromon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST1-02": {
+      "card_name": "Biyomon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST1-03": {
+      "card_name": "Agumon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST1-04": {
+      "card_name": "Dracomon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST1-05": {
+      "card_name": "Birdramon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST1-06": {
+      "card_name": "Coredramon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST1-08": {
+      "card_name": "Garudamon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Tests added 2026-05-29: st1_08_when_digivolving_buffs_one_own_digimon (mandatory +3000 target, expires EOT). YAML already faithful."
+    },
+    "ST1-09": {
+      "card_name": "MetalGreymon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST1-10": {
+      "card_name": "Phoenixmon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-10.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST1-11": {
+      "card_name": "WarGreymon",
+      "validated_date": "2026-05-30",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Faithful to printed text + DCGO. 2026-05-30: ST-1 interaction test caught the security_attack_fn authored as a bare delta (base:0 -> floor(n/2)); the engine's formula contract is base-inclusive, so the base-1 was dropped (4-source WarGreymon checked 2 not 3). Fixed to base:2 -> floor((2+n)/2) = 1+floor(n/2). Full WarGreymon+Greymon line now checks 4."
+    },
+    "ST1-12": {
+      "card_name": "Tai Kamiya",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Tests added 2026-05-29: st1_12_security_plays_tamer_for_free. YAML already faithful."
+    },
+    "ST1-13": {
+      "card_name": "Shadow Wing",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST1-14": {
+      "card_name": "Starlight Explosion",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST1-15": {
+      "card_name": "Giga Destroyer",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-15.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST1-16": {
+      "card_name": "Gaia Force",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-1 Gaia Red",
+      "yaml_path": "code/digimon-engine/cards/st1/ST1-16.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st1/gaia_red.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-01": {
+      "card_name": "Tokomon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-02": {
+      "card_name": "Salamon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST3-03": {
+      "card_name": "Tapirmon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST3-04": {
+      "card_name": "Patamon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-05": {
+      "card_name": "Angemon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-06": {
+      "card_name": "Gatomon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST3-07": {
+      "card_name": "Unimon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-08": {
+      "card_name": "MagnaAngemon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-09": {
+      "card_name": "Angewomon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-10": {
+      "card_name": "Magnadramon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-10.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST3-11": {
+      "card_name": "Seraphimon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-12": {
+      "card_name": "T.K. Takaishi",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-13": {
+      "card_name": "Heaven's Gate",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-14": {
+      "card_name": "Heaven's Charm",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-15": {
+      "card_name": "Holy Flame",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-15.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST3-16": {
+      "card_name": "Seven Heavens",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-3 Heaven’s Yellow",
+      "yaml_path": "code/digimon-engine/cards/st3/ST3-16.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st3/st3_starter.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-01": {
+      "card_name": "Kapurimon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-02": {
+      "card_name": "Jazamon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST5-03": {
+      "card_name": "Agumon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-04": {
+      "card_name": "ToyAgumon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-05": {
+      "card_name": "Commandramon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST5-06": {
+      "card_name": "Greymon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-07": {
+      "card_name": "Jazardmon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST5-08": {
+      "card_name": "DarkTyrannomon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-09": {
+      "card_name": "MetalGreymon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-10": {
+      "card_name": "MetalTyrannomon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-10.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST5-11": {
+      "card_name": "Megadramon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-12": {
+      "card_name": "Machinedramon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-13": {
+      "card_name": "BlitzGreymon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-14": {
+      "card_name": "Tai Kamiya",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST5-15": {
+      "card_name": "Laser Eye",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-15.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_options.rs",
+      "audit_note": "FALSE POSITIVE (corrected 2026-05-29): real card is \"<De-Digivolve 1> UP TO 2 of your opponent’s Digimon\" (per-card JSON dropped \"up to\"; DCGO desc + canEndNotMax confirm). Per the \"up to N\" rule (cf. ST1-15/ST5-12/ST6-12) the player may pick 0 — optional_zero:true is correct. The temporary min-1 fix was reverted. De-Digivolve amount 1 per target, up to 2 targets. Test st5_15_main_de_digivolve_targets_up_to_two_and_allows_zero."
+    },
+    "ST5-16": {
+      "card_name": "Dark Side Attack",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-5 Machine Black",
+      "yaml_path": "code/digimon-engine/cards/st5/ST5-16.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-01": {
+      "card_name": "Pagumon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-02": {
+      "card_name": "DemiDevimon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST6-03": {
+      "card_name": "Gabumon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-04": {
+      "card_name": "Dracmon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-05": {
+      "card_name": "Elecmon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST6-06": {
+      "card_name": "Garurumon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-07": {
+      "card_name": "Youkomon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST6-08": {
+      "card_name": "Devimon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-09": {
+      "card_name": "Kyukimon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Vanilla (no effect text) - faithful by construction."
+    },
+    "ST6-10": {
+      "card_name": "SkullSatamon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-10.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-11": {
+      "card_name": "WereGarurumon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-12": {
+      "card_name": "VenomMyotismon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-13": {
+      "card_name": "CresGarurumon",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-14": {
+      "card_name": "Matt Ishida",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-15": {
+      "card_name": "Death Claw",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-15.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "ST6-16": {
+      "card_name": "Nail Bone",
+      "validated_date": "2026-05-29",
+      "report": "audit-starter-decks-st1-6",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "ST-6 Venomous Violet",
+      "yaml_path": "code/digimon-engine/cards/st6/ST6-16.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st6/st6_cards.rs",
+      "audit_note": "Faithful to printed text + DCGO."
+    },
+    "BT24-068": {
+      "card_name": "DemiDevimon",
+      "validated_date": "2026-06-03",
+      "report": "rules-faq-faithfulness-suite (NV-1 vehicle)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "rules-FAQ no-DP vehicle",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-068.yaml",
+      "test_path": "code/digimon-engine/tests/rules_faq/no_level_no_value.rs"
+    },
+    "EX3-014": {
+      "card_name": "Dorbickmon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q25/Q26/Q27)",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_014.rs",
+      "test_count": 14,
+      "patterns": [
+        "Rush-static",
+        "OnPlay-delete-scaling-cap",
+        "DigiXros",
+        "standard-digivolve"
+      ],
+      "notes": "Rush + [On Play] delete (DP cap 3000 + 2000 per Dragon/saur/Ceratopsian digivolution source) + DigiXros -2 (5 distinct Dragon-family Digimon). Widened DSL: per-source-stack-count-filtered formula selector + trait_contains substring predicate (mirrors DCGO ContainsTraits)."
+    },
+    "BT7-069": {
+      "card_name": "Eyesmon: Scatter Mode",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_069.rs",
+      "test_count": 6,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "[On Deletion] Draw 3 then mandatory trash 2 (2 surfaced picks)"
+    },
+    "BT2-069": {
+      "card_name": "Gabumon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt2/BT2-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt2/bt2_069.rs",
+      "test_count": 5,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "Inherited [On Deletion] Draw 2 then trash 1"
+    },
+    "BT3-006": {
+      "card_name": "DemiMeramon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_006.rs",
+      "test_count": 5,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "Digi-Egg inherited [On Deletion] Draw 1 then trash 1"
+    },
+    "BT2-076": {
+      "card_name": "Pumpkinmon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q19/Q20/Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt2/BT2-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt2/bt2_076.rs",
+      "test_count": 5,
+      "patterns": [
+        "on-deletion",
+        "draw-keyword",
+        "trash-from-hand"
+      ],
+      "notes": "Inherited [On Deletion] Draw 2 then trash 1"
+    },
+    "BT3-109": {
+      "card_name": "Back for Revenge!",
+      "validated_date": "2026-06-05",
+      "report": "judge-quiz Q21",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "judge-quiz (Q21)",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-109.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_109.rs",
+      "test_count": 2,
+      "patterns": [
+        "grant-triggered-effect",
+        "on-deletion",
+        "play-from-trash-free",
+        "event-card-binding",
+        "suppress-on-play"
+      ],
+      "notes": "Grants [On Deletion] self-replay-from-trash via event_card binding; closes G-DSL-DELETED-SELF-TRASH-BINDING (play_from_trash_free now accepts a Card-handle binding). Flips judge-quiz Q21."
+    },
+    "BT13-103": {
+      "card_name": "Akihiro Kurata",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "judge-quiz (Q10/Q11)",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_103.rs",
+      "test_count": 7,
+      "patterns": [
+        "tamer",
+        "eot-opp",
+        "place-tamer-under",
+        "security-play"
+      ],
+      "notes": "Clauses 2+3 done; Clause 1 (interactive paycost cost-reduction) BLOCKED G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT"
+    },
+    "BT11-033": {
+      "card_name": "MirageGaogamon",
+      "validated_date": "2026-06-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "judge-quiz (Q10/Q11)",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_033.rs",
+      "test_count": 5,
+      "patterns": [
+        "when-digivolving",
+        "return-to-hand",
+        "memory-observer"
+      ],
+      "notes": "Clause 1 (return Lv5- / else security-to-hand) done; Clause 2 (gain memory per 4 cards in opp hand) BLOCKED G-ON-ADD-TO-HAND-OBSERVER"
+    },
+    "BT4-098": {
+      "card_name": "Atomic Inferno",
+      "validated_date": "2026-06-05",
+      "report": "add-judge-quiz-faithfulness-suite (Q4)",
+      "status": "IMPLEMENTED",
+      "gap_kind": "engine",
+      "archetype": "judge-quiz Q4 (Cluster G / security-attack net count)",
+      "yaml_path": "code/digimon-engine/cards/bt4/BT4-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_098.rs",
+      "test_count": 7,
+      "patterns": [
+        "OPTION-MAIN-TARGET-OWN-HYBRID",
+        "SECURITY-ATTACK-CHANGE",
+        "GRANT-TRIGGERED-ONBLOCK",
+        "SECURITY-EFFECT-MASS-MODIFIER"
+      ],
+      "notes": "[Main] grants a chosen own [Hybrid] Digimon +3000 DP, <Security A. +1>, and an on_block 'gain +3 memory' trigger (all end_of_turn). [Security] grants all your Digimon <Security A. +1> until end of your next turn. All 3 printed clauses implemented.",
+      "audit_note": "Faithful to printed text (card face + DCGO BT4_098.cs). Latent engine gap G-ENGINE-GRANTED-ONBLOCK-CARRIER-GATE: the granted on_block body over-fires for non-carrier blocks (positive case correct); card YAML is correct, fix is engine-side."
+    },
+    "AD1-002": {
+      "card_name": "Aldamon",
+      "validated_date": "2026-06-05",
+      "report": "add-judge-quiz-faithfulness-suite (Q4)",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "judge-quiz Q4 (Cluster G / security-attack net count)",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_002.rs",
+      "test_count": 8,
+      "patterns": [
+        "RUSH",
+        "WHEN-DIGIVOLVING-DELETE-DP-LE",
+        "EOA-OD-CONDITIONAL-TRASH-DRAW",
+        "PLAY-TAMER-FREE-FROM-HAND-OR-TRASH",
+        "INHERITED-YOUR-TURN-DP-AURA"
+      ],
+      "notes": "<Rush>; [When Digivolving] delete opp Digimon with DP <= self; [End of Attack][On Deletion] optional trash 1 Hybrid/Ten Warriors -> conditional Draw 2 -> optional free-play R/B/G Tamer with inherited effects from hand or trash; inherited [Your Turn] +4000 DP. Standard Lv4/Red/Cost3 digivolution intact.",
+      "audit_note": "PARTIAL: alt-digivolve line ([Takuya Kanbara] w/ 2+ [Hybrid] sources: Cost 3) cannot enforce the >=2-Hybrid-source count -> G-DSL-DIGISOURCE-TRAIT-COUNT-GTE (only the base name enforced; alt-path under-constrained, flagged in YAML). All other clauses faithful (DCGO AD1_002.cs)."
+    },
+    "BT23-102": {
+      "card_name": "Mastemon",
+      "validated_date": "2026-06-06",
+      "report": "add-judge-quiz-faithfulness-suite (Q9)",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "judge-quiz Q9 (Cluster D / activation site)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-102.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_102.rs",
+      "test_count": 11,
+      "patterns": [
+        "BARRIER",
+        "PARTITION-NAMED-SPLIT",
+        "WHEN-DIGIVOLVING-SECURITY-TRIM-TO-N",
+        "FREE-PLAY-LEVEL-COLOR-FILTER",
+        "ALL-TURNS-PLACE-BOTTOM-SECURITY",
+        "DNA-DIGIVOLVE",
+        "ALT-DIGIVOLVE-TRAIT-GATE"
+      ],
+      "notes": "<Barrier>; <Partition [Angewomon]&[LadyDevimon]>; [When Digivolving] optional Lv5-or-lower yellow/purple free-play then trim both securities to 3 when stack has 2+ same-level cards; [All Turns][OPT] place-as-bottom-security; Lv5/[CS] alt-digivolve + Lv5+Lv5 DNA.",
+      "audit_note": "PARTIAL: controller-side trim blocked by G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER (aborts mid-batch on the carrier's own OnLoseSecurity OPT). Opponent-side trim (Q9 pin) faithful + green. Recovered from sub-agent transcript after cross-worktree git-clean wipe."
+    },
+    "BT15-037": {
+      "card_name": "Gatomon",
+      "validated_date": "2026-06-06",
+      "report": "add-judge-quiz-faithfulness-suite (Q9)",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "judge-quiz Q9 (Cluster D / activation site)",
+      "yaml_path": "code/digimon-engine/cards/bt15/BT15-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_037.rs",
+      "test_count": 4,
+      "patterns": [
+        "BARRIER-FACE-AND-INHERITED",
+        "ALL-TURNS-OPT-GAIN-MEMORY-ON-OWN-SECURITY-REMOVED"
+      ],
+      "notes": "<Barrier> (face + inherited); [All Turns][OPT] mandatory gain 1 memory when a card is removed from your security (battle-area-gated by trigger dispatch — the Q9 activation-site crux).",
+      "audit_note": "PARTIAL: 'play this when an effect trashes it from your security' clause blocked by G-DSL-ON-DISCARD-SECURITY-TRIGGER (no DSL trigger for OnDiscardSecurity). Non-essential to the Q9 memory ruling."
     }
   }
 }

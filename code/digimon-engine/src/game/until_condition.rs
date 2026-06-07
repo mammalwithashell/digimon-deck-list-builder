@@ -1,4 +1,4 @@
-//! Until-condition modifier expiry/re-evaluation machinery (Tier 1) — impl Game.
+//! Until-condition modifier expiry (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;

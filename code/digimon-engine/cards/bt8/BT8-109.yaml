@@ -1,0 +1,84 @@
+# BT8-109 Flame Hellscythe — Option, Cost 6, Purple/Yellow.
+#
+# Printed card text (BT8-109.json):
+#   [Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, you
+#   may play 1 purple or yellow Digimon card with 6000 DP or less from your
+#   trash without paying its memory cost.
+#   Security Effect [Security] Activate this card's [Main] effect.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT8/Purple/BT8_109.cs
+#   - [Main]: select 1 opponent Digimon (canNoSelect false → mandatory when any
+#     exist) → ChangeDigimonDP -6000 UntilEachTurnEnd. THEN, independently
+#     (no "if you do" gate), optional (canNoSelect true) play 1 trash Digimon
+#     with (Purple OR Yellow) AND DP <= 6000, free. activateETB: true → the
+#     played Digimon's [On Play] effects DO activate (NOT suppressed — unlike
+#     BT9-108).
+#   - [Security] re-runs the [Main] body.
+#
+# Q6 note: a -6000 reduction that drops the target to <=0 DP does NOT delete it
+# mid-effect — the engine's state-based <=0-DP rules-check
+# (G-NO-GENERAL-ZERO-DP-RULES-CHECK, resolved) runs AFTER this effect resolves.
+
+card: BT8-109
+name: Flame Hellscythe
+kind: option
+color: [purple, yellow]
+cost: 6
+
+effects:
+  # ─── Clause 0 — [Main] ─────────────────────────────────────────────────────
+  - when: main_from_hand
+    summary: "[Main] -6000 DP to 1 opp Digimon (turn); then may free-play a purple/yellow Digimon DP<=6000 from trash"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Give 1 of your opponent's Digimon -6000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: -6000
+          expiry: end_of_turn
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+              - any_of:
+                  - color_is: purple
+                  - color_is: yellow
+          prompt: "You may play 1 purple or yellow Digimon with 6000 DP or less from your trash without paying its memory cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: revived
+
+  # ─── Clause 1 — [Security] mirror ──────────────────────────────────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effect"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Give 1 of your opponent's Digimon -6000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: -6000
+          expiry: end_of_turn
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+              - any_of:
+                  - color_is: purple
+                  - color_is: yellow
+          prompt: "You may play 1 purple or yellow Digimon with 6000 DP or less from your trash without paying its memory cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: revived

@@ -62,16 +62,32 @@ fn patch_evo_costs(runner: &mut DebugRunner, card_id: &str, evo_costs: Vec<EvoCo
     card.evo_costs = evo_costs;
 }
 
-/// Resolver: pick the first valid action for every pending selection.
-/// For the mid-attack-digivolve scenario this corresponds to: accept
-/// each TriggerOrder choice in queue order, pick the first valid Digimon
-/// when prompted to choose a digivolve target, pick the first valid
-/// hand card when prompted to choose the new top, and accept any
-/// fallback PASS. Returns the number of steps taken.
-fn drive_to_completion(runner: &mut DebugRunner) -> usize {
+/// Drive the in-flight **security-resolution loop** to completion, accepting the
+/// first valid action for each selection it surfaces (the mid-attack digivolve:
+/// accept each TriggerOrder choice, pick the digivolve target, pick the new top).
+/// STOPS the instant the security loop finishes (`security_resolution` clears),
+/// deliberately leaving any *post-loop* `[End of Attack]` trigger un-driven.
+/// Returns the number of steps taken.
+///
+/// WHY scope to the loop: these tests measure the `<Security A.>` *check count*.
+/// The carrier (BT21-029 Medusamon) also has an OPTIONAL `[End of Attack]` "you
+/// may delete 1 of your opponent's lowest-DP Digimon". Once #582 made tokens
+/// valid `kind: digimon` field-select targets (G-TOKEN-NOT-DIGIMON-FOR-FIELD-
+/// SELECT), the Petrification token Medusamon's `on_opponent_security_removed`
+/// clause plays for the defender becomes a legal target. A blanket
+/// "accept every pending selection" driver would auto-activate that optional and
+/// delete the token, whose `[On Deletion]` trashes the defender's TOP security —
+/// a 3rd, unrelated security loss that has nothing to do with the recompute under
+/// test. The engine behavior is correct (the token IS a Digimon and the cascade
+/// is faithful); this test simply must not opt into it. Asserting the check count
+/// at loop completion isolates the recompute.
+fn drive_security_loop_to_completion(runner: &mut DebugRunner) -> usize {
     let mut step = 0;
     let max = 200;
-    while runner.pending_selection().is_some() && step < max {
+    while runner.game.security_resolution.is_some()
+        && runner.pending_selection().is_some()
+        && step < max
+    {
         step += 1;
         let (player, action) = {
             let sel = runner.pending_selection().unwrap();
@@ -144,7 +160,7 @@ fn mid_attack_digivolve_into_medusamon_extends_security_check_loop() {
         "attack must pause for the post-check triggered-effect ordering"
     );
 
-    let steps = drive_to_completion(&mut runner);
+    let steps = drive_security_loop_to_completion(&mut runner);
     println!("drove {steps} selection steps");
 
     // ── Load-bearing assertions ────────────────────────────────────
@@ -207,7 +223,12 @@ fn stable_security_attack_plus_one_performs_exactly_two_checks() {
 
     assert_eq!(runner.security_count(p2), 3);
     let _ = runner.game.attack_player(attacker, p2, false);
-    let _ = drive_to_completion(&mut runner);
+    // No mid-attack pause here — the loop completes synchronously inside
+    // `attack_player`, so this is a no-op. It is kept (and uses the loop-scoped
+    // driver) so the count is read at loop completion, before Medusamon's
+    // post-loop `[End of Attack]` optional could be activated (see the
+    // `drive_security_loop_to_completion` docstring).
+    let _ = drive_security_loop_to_completion(&mut runner);
 
     assert_eq!(
         runner.security_count(p2),

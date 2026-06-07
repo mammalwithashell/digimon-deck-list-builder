@@ -40,6 +40,15 @@ impl Game {
         true
     }
 
+    /// Low-level source-attribution helper for tests and engine internals.
+    ///
+    /// Uses the standard De-Digivolve floor (`stop_at_level = Some(3)`) and
+    /// returns whether at least one card was popped. Replacement windows are
+    /// resolved by `EffectContext::de_digivolve` under the supplied source
+    /// attribution. Production card effects should prefer an existing
+    /// `EffectContext` so `can_affect_permanent` and source-kind metadata come
+    /// from the real resolving card.
+    #[doc(hidden)]
     pub fn de_digivolve_from_effect(
         &mut self,
         handle: PermanentHandle,

@@ -760,7 +760,44 @@ fn event_dna_origin(game: &Game) -> Option<bool> {
     Some(trigger_origin || scoped_origin)
 }
 
+/// Reverse of `From<ReplacementCause> for EventCause` for the deletion-cause
+/// subset. Used to recover the `ReplacementCause` from a `DeletedObjectSnapshot`
+/// after the live `current_deletion_cause` slot has been restored — e.g. when an
+/// `[On Deletion]` bundle is deferred past the deleting effect's resolution
+/// window (Q19 Part B). Non-deletion event causes map to `None`.
+fn replacement_cause_from_event_cause(
+    ec: crate::trigger_context::EventCause,
+) -> Option<ReplacementCause> {
+    use crate::trigger_context::EventCause;
+    match ec {
+        EventCause::BattleDeletion => Some(ReplacementCause::Battle),
+        EventCause::OwnEffect => Some(ReplacementCause::OwnEffect),
+        EventCause::OpponentEffect => Some(ReplacementCause::OpponentEffect),
+        EventCause::SecurityRemoval => Some(ReplacementCause::SecurityCheck),
+        EventCause::Cost => Some(ReplacementCause::Cost),
+        EventCause::Overclock => Some(ReplacementCause::Overclock),
+        _ => None,
+    }
+}
+
 fn observed_deletion_cause(game: &Game) -> Option<ReplacementCause> {
+    // Rule 25: `[On Deletion]` handlers read pre-removal state from the snapshot,
+    // not live slots. When the bundle is deferred past the deleting effect's
+    // later steps (Q19 Part B), the live `current_deletion_cause` /
+    // `current_deletion_event_cause_override` slots have already been restored by
+    // the batch's exit, so prefer the cause threaded into the installed trigger
+    // context (`deleted_object.cause`), which survives the deferral. Battle and
+    // other top-level deletions install the same snapshot during their handler,
+    // so this is consistent with the live-slot reads they used before.
+    if let Some(snap) = game
+        .current_trigger_context
+        .as_ref()
+        .and_then(|t| t.deleted_object.as_ref())
+    {
+        if let Some(rc) = replacement_cause_from_event_cause(snap.cause) {
+            return Some(rc);
+        }
+    }
     match game.current_deletion_event_cause_override {
         Some(crate::trigger_context::EventCause::Overclock) => Some(ReplacementCause::Overclock),
         _ => game.current_deletion_cause,
@@ -1301,12 +1338,31 @@ impl<'a> EffectContext<'a> {
 
     // ─── Replacement-process outcome-setters (Phase C §4.2) ──────────────
 
+    pub fn delay_source_card_in_trash(&self, player: PlayerId, source_card: CardHandle) -> bool {
+        self.find_battle_permanent_containing_card(player, source_card)
+            .is_none()
+            && self
+                .game
+                .player(player)
+                .trash
+                .iter()
+                .any(|card| card.handle() == source_card)
+    }
+
     /// Resolve a `PermanentHandle` to its top card handle. Returns `None`
     /// when the slot is missing OR has empty `card_sources` (zombie).
     /// All callers wrap in `Option::and_then` / `let Some(…) else`, so the
     /// zombie case is correctly treated as "no top card." Mirrors the same
     /// defensive form used by `Game::top_card_handle` in `effect_queue.rs`.
     pub fn permanent_top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
+        if crate::digixros::is_limbo_index(handle.index) {
+            let pos = (handle.index - crate::digixros::LIMBO_INDEX_BASE) as usize;
+            return self
+                .game
+                .digixros_leaving_limbo
+                .get(pos)
+                .and_then(|(_, _, perm)| perm.card_sources.last().map(|c| c.handle()));
+        }
         self.game
             .player(handle.player)
             .battle_area
@@ -1334,6 +1390,10 @@ impl<'a> EffectContext<'a> {
                 player,
                 index: index as u8,
             })
+            // Fallback: the card may be parked in the DigiXros leaving/limbo slot
+            // (its `WhenWouldLeaveBattleArea` window parked a reward). Resolve to
+            // the limbo-encoded handle so a DNA-evo reward can still extract it.
+            .or_else(|| self.game.find_limbo_permanent_containing_card(player, card))
     }
 
     /// Reborrow this mut context as a read-only context — for condition
@@ -1417,6 +1477,44 @@ impl<'a> EffectContext<'a> {
 
 }
 
+/// Can the `{anchor, partner}` battle-area pair legally DNA-digivolve into the
+/// hand card at `hand_idx` (one of its printed DNA requirements satisfied by the
+/// two materials)? Used by `may_dna_digivolve_now`'s faithful (requirement-checked)
+/// path to mirror DCGO `CardSource.CanJogressFromTargetPermanent`.
+pub(crate) fn dna_pair_can_reach_hand_card(
+    game: &Game,
+    controller: PlayerId,
+    anchor: PermanentHandle,
+    partner: PermanentHandle,
+    hand_idx: usize,
+) -> bool {
+    dna_pair_cost_for_hand_card(game, controller, anchor, partner, hand_idx).is_some()
+}
+
+/// The printed DNA-digivolve memory cost the `{anchor, partner}` pair would pay to
+/// DNA-digivolve into the hand card at `hand_idx`, or `None` if the pair does not
+/// satisfy any of that card's DNA requirements. Mirrors DCGO `condition.cost`.
+pub(crate) fn dna_pair_cost_for_hand_card(
+    game: &Game,
+    controller: PlayerId,
+    anchor: PermanentHandle,
+    partner: PermanentHandle,
+    hand_idx: usize,
+) -> Option<i32> {
+    let hand_card = game.player(controller).hand.get(hand_idx)?;
+    let meta = game.card_data.get(hand_card.data_index)?;
+    let anchor_perm = game
+        .player(anchor.player)
+        .battle_area
+        .get(anchor.index as usize)?;
+    let partner_perm = game
+        .player(partner.player)
+        .battle_area
+        .get(partner.index as usize)?;
+    crate::dna_digivolve::matching_dna_cost(meta, anchor_perm, partner_perm, &game.card_data)
+        .map(|c| c.memory_cost as i32)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1459,5 +1557,141 @@ mod tests {
         let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
         let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
         assert!(ctx.play_token(0, "no-such-token-lol").is_none());
+    }
+
+    // ── may_dna_digivolve_now faithful-path gating (G-FIX-BT12-EOT-DNA-PAYCOST) ──
+    //
+    // The EoT DNA-digivolve effects (BT12-021 Veemon / BT12-047 Wormmon) are a
+    // NORMAL DNA digivolve: DCGO `CanJogressFromTargetPermanent(.., PayCost:true)`
+    // requires the target's printed DNA requirements be met by the {anchor,
+    // partner} pair AND charges the target's printed DNA cost. These tests pin
+    // the gating/cost helpers that `may_dna_digivolve_now` now uses when
+    // `ignore_requirements: false` — proving the pair must be DNA-legal and the
+    // printed DNA cost (not 0) is what gets paid.
+    #[test]
+    fn dna_pair_gating_requires_a_legal_dna_route_and_returns_printed_cost() {
+        use crate::card_data::{DnaCost, DnaRequirement};
+        use crate::debug_runner::{make_test_card, DebugRunner};
+        use crate::enums::{CardColor, CardKind};
+
+        fn mat(id: &str, color: CardColor) -> CardData {
+            let mut c = make_test_card(id, id);
+            c.card_kind = CardKind::Digimon;
+            c.level = Some(4);
+            c.colors = vec![color];
+            c.dp = Some(4000);
+            c
+        }
+        fn req(color: CardColor, level: u8) -> DnaRequirement {
+            DnaRequirement {
+                level,
+                card_colors: vec![color],
+                name_contains: String::new(),
+                text_contains: String::new(),
+            }
+        }
+        // RESULT digivolves via DNA from {Blue Lv.4 + Green Lv.4} for cost 2.
+        let mut result = make_test_card("RESULT-DNA", "ResultDna");
+        result.card_kind = CardKind::Digimon;
+        result.level = Some(5);
+        result.dna_costs = vec![DnaCost {
+            requirement1: req(CardColor::Blue, 4),
+            requirement2: req(CardColor::Green, 4),
+            memory_cost: 2,
+        }];
+
+        let mut runner = DebugRunner::builder()
+            .add_card(mat("MAT-B", CardColor::Blue))
+            .add_card(mat("MAT-G", CardColor::Green))
+            .add_card(mat("MAT-B2", CardColor::Blue))
+            .add_card(result)
+            .hand(0, &["RESULT-DNA"])
+            .memory(10)
+            .start();
+        let blue = runner.place_on_field(0, "MAT-B", Some(0));
+        let green = runner.place_on_field(0, "MAT-G", Some(0));
+        let blue2 = runner.place_on_field(0, "MAT-B2", Some(0));
+
+        // Legal pair (Blue + Green) → reachable, and the charged cost is the
+        // target's PRINTED DNA cost (2), NOT the old free-of-charge 0.
+        assert!(
+            dna_pair_can_reach_hand_card(&runner.game, 0, blue, green, 0),
+            "Blue+Green must satisfy RESULT's DNA requirement"
+        );
+        assert_eq!(
+            dna_pair_cost_for_hand_card(&runner.game, 0, blue, green, 0),
+            Some(2),
+            "the faithful path pays RESULT's printed DNA cost (2), not 0"
+        );
+
+        // Illegal pair (Blue + Blue) → no valid DNA route; the EoT effect must
+        // NOT offer RESULT as a target (the over-permissive bug this fixes).
+        assert!(
+            !dna_pair_can_reach_hand_card(&runner.game, 0, blue, blue2, 0),
+            "Blue+Blue does NOT satisfy RESULT's Blue+Green DNA requirement — must be rejected"
+        );
+        assert_eq!(
+            dna_pair_cost_for_hand_card(&runner.game, 0, blue, blue2, 0),
+            None,
+            "no cost for an illegal DNA pair"
+        );
+    }
+
+    /// G-PLAY-TOKEN-FLOODGATE: a Digimon Token is a Digimon, so an effect that
+    /// plays one must be blocked while the controller carries
+    /// `CannotPlayDigimonByEffect` (BT9-033 Pillomon) — matching DCGO's
+    /// `CanPlayAsNewPermanent` → `CanNotPutFieldClass(IsDigimon)` gate.
+    #[test]
+    fn play_token_blocked_by_cannot_play_digimon_by_effect() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        game.modifiers.add_player_modifier(
+            0,
+            crate::modifiers::PlayerModifierEntry::simple(
+                crate::enums::ModifierType::CannotPlayDigimonByEffect,
+                0,
+                crate::enums::Expiry::Permanent,
+                None,
+                0,
+            ),
+        );
+        let before = game.players[0].battle_area.len();
+        let played = {
+            let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+            ctx.play_token(0, "familiar")
+        };
+        assert!(
+            played.is_none(),
+            "token play must be blocked under CannotPlayDigimonByEffect"
+        );
+        assert_eq!(
+            game.players[0].battle_area.len(),
+            before,
+            "no token permanent is created when the floodgate is installed"
+        );
+    }
+
+    /// No-op control: without the floodgate, the same token play succeeds. Pins
+    /// that the gate (not some unrelated failure) is what blocks above.
+    #[test]
+    fn play_token_allowed_without_floodgate() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        let before = game.players[0].battle_area.len();
+        let played = {
+            let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+            ctx.play_token(0, "familiar")
+        };
+        assert!(
+            played.is_some(),
+            "token spawns normally when no floodgate is installed"
+        );
+        assert_eq!(
+            game.players[0].battle_area.len(),
+            before + 1,
+            "one Familiar Token permanent is created"
+        );
     }
 }

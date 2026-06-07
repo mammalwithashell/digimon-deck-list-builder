@@ -1,4 +1,4 @@
-//! Game setup / construction / deck + mulligan (Tier 1) — impl Game.
+//! Game setup / construction / deck + mulligan (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;
@@ -181,6 +181,7 @@ impl Game {
             #[cfg(feature = "dsl-yaml-loader")]
             alt_path_registry,
             modifiers: ModifierRegistry::new(),
+            floating_mass_modifiers: Vec::new(),
             effect_registry: build_registry(),
             formula_extensions: FormulaExtensionRegistry::empty(),
             token_registry,
@@ -201,11 +202,13 @@ impl Game {
             pending_effect_security_removal: Vec::new(),
             pending_option: None,
             pending_digixros_transaction: None,
+            digixros_leaving_limbo: Vec::new(),
             active_digixros_wildcards: Vec::new(),
             pending_option_placed_turn_check: false,
             pending_option_placed_link_resume: None,
             security_resolution: None,
             effect_chain_depth: 0,
+            effect_drain_depth: 0,
             logger: Box::new(SilentLogger),
             events: Vec::new(),
             event_seq: 0,
@@ -213,6 +216,7 @@ impl Game {
             replacement_pending_outcome: None,
             last_play_order_choice: None,
             pending_would_play_resume: None,
+            pending_assembly_materials: None,
             pending_would_link_resume: None,
             pending_would_digivolve_resume: None,
             player_digivolve_cost_reducers: Vec::new(),
@@ -307,6 +311,7 @@ impl Game {
         // card_data / alt_path_registry / effect_registry / formula_extensions
         // / token_registry intentionally preserved (immutable shared state).
         self.modifiers = ModifierRegistry::new();
+        self.floating_mass_modifiers = Vec::new();
         // Reseed deterministically — mirrors the historical backward-seek
         // rebuild path (`Game::new(.., Some(0))`).
         self.rng = StdRng::seed_from_u64(0);

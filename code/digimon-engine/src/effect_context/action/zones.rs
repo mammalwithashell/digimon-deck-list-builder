@@ -72,6 +72,13 @@ impl<'a> EffectContext<'a> {
         if drawn > 0 {
             self.game.mark_until_condition_dirty();
             self.game.reevaluate_until_condition_modifiers_if_dirty();
+            // An effect-driven draw adds cards to the player's hand — fire the
+            // OnAddToHand observer (DCGO's `cardEffect != null` gate; the normal
+            // turn-start draw does NOT route through this effect method). The
+            // observer is enqueued and drains after the current effect body
+            // (e.g. Akihiro Kurata's "draw 1, then trash 1") fully resolves, so
+            // it reads the post-resolution hand size. See G-ON-ADD-TO-HAND-OBSERVER.
+            self.game.fire_on_add_to_hand_by_effect(player);
         }
         drawn
     }
@@ -82,7 +89,11 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> bool {
-        self.game.add_to_hand_from_deck(player, card)
+        let moved = self.game.add_to_hand_from_deck(player, card);
+        if moved {
+            self.game.fire_on_add_to_hand_by_effect(player);
+        }
+        moved
     }
 
     /// Move a specific card from `player`'s trash to their hand.
@@ -91,7 +102,11 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> bool {
-        self.game.add_to_hand_from_trash(player, card)
+        let moved = self.game.add_to_hand_from_trash(player, card);
+        if moved {
+            self.game.fire_on_add_to_hand_by_effect(player);
+        }
+        moved
     }
 
     /// Reveal up to `n` cards from the top of `player`'s deck. See
@@ -118,7 +133,11 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> bool {
-        self.game.add_to_hand_from_reveal(player, card)
+        let moved = self.game.add_to_hand_from_reveal(player, card);
+        if moved {
+            self.game.fire_on_add_to_hand_by_effect(player);
+        }
+        moved
     }
 
     /// Move a specific revealed card back to `player`'s deck at `position`.
@@ -295,8 +314,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.insert(0, card);
+            self.move_card_to_deck(card, true);
             moved.push(handle);
         }
         moved
@@ -329,8 +347,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            let owner = card.owner;
-            self.game.player_mut(owner).deck.push(card);
+            self.move_card_to_deck(card, false);
             moved.push(handle);
         }
         // `moved` was built in reverse; restore selection order for callers.
@@ -360,9 +377,9 @@ impl<'a> EffectContext<'a> {
             return false;
         };
         let removed = self.game.player_mut(player).trash.remove(pos);
-        let owner = removed.owner;
-        // Deck top = Vec end (drawn first) per engine convention.
-        self.game.player_mut(owner).deck.push(removed);
+        // Deck top = Vec end (drawn first) per engine convention; a Digi-Egg
+        // routes to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING).
+        self.move_card_to_deck(removed, false);
         true
     }
 

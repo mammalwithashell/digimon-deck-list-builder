@@ -146,6 +146,45 @@ fn counter_prompt_installs_with_valid_pair() {
     assert_eq!(sel.valid_action_ids, vec![encode_digivolve(0, 0)]);
 }
 
+/// Q18 (G-BLAST-DIGIVOLVE-IMMUNITY) — a base Digimon immune to ALL Digimon
+/// effects, INCLUDING its own controller's (a bare `CannotBeAffected` = the
+/// `Any` filter), cannot `<Blast Digivolve>` — Blast Digivolve is itself a
+/// Digimon effect. With the immunity installed, the otherwise-valid
+/// (hand, field) blast pair is suppressed at counter-candidate collection, so
+/// no Counter prompt installs and the attack resolves synchronously. (Models
+/// Quantumon LM-020's "isn't affected by any Digimon's effects, including its
+/// own".)
+#[test]
+fn blast_target_immune_to_own_effects_is_not_a_counter_candidate() {
+    let (mut r, _atk) = scenario_with_blast_in_hand("TEST-013", 3, 0, 5000);
+    let target = r.perm_handle(1, 0);
+    let atk = r.perm_handle(0, 0);
+
+    // Sanity: without immunity this pair WOULD install a Counter prompt
+    // (asserted by `counter_prompt_installs_with_valid_pair`). Install an
+    // unconditional `CannotBeAffected` (Any) on the blast base.
+    r.game.modifiers.add(
+        target,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotBeAffected,
+            0,
+            Expiry::Permanent,
+            target.player,
+        ),
+    );
+
+    let result = r.attack_digimon(atk, target, false);
+    assert_eq!(
+        result,
+        AttackResult::AttackerWins,
+        "immune base is not a blast candidate → no Counter window, attack resolves synchronously"
+    );
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no Counter prompt should install for an effect-immune blast base"
+    );
+}
+
 #[test]
 fn native_blast_digivolve_keyword_installs_counter_candidate() {
     let mut r = DebugRunner::builder()

@@ -39,9 +39,12 @@ effects:
           target: target
           amount: 1
           stop_at_level: 3
+      # Mandatory "delete 1 ... with play cost 3 or less" (FAQ MP-29; DCGO
+      # AD1_018.cs SecuritySkill delete uses canEndNotMax: false). Not optional:
+      # when a cost-≤3 target exists the controller must delete it. With no valid
+      # target the select no-ops (delete is the final step, so nothing is lost).
       - select_opponent_permanent:
           bind_as: victim
-          optional: true
           filter:
             all_of:
               - kind: digimon

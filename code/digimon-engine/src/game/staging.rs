@@ -1,4 +1,4 @@
-//! Test-fixture staging helpers (Tier 1) — impl Game.
+//! Test-fixture staging (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;

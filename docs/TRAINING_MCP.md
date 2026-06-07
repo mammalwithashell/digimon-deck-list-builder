@@ -75,6 +75,19 @@ digimon-training-mcp: ready (runs_dir=/path/to/runs, models_dir=/path/to/models,
 
 All read-only. No start/stop/checkpoint controls in v1.
 
+**Model-evaluation artifact readers** (from the `add-model-evaluation-harness`
+harness; see `docs/MODEL_EVALUATION.md`):
+- `champion_standings()` — the registered evaluation champions (frozen anchors)
+  from `<models>/champions/registry.json`: name, provenance, profile,
+  layout hash.
+- `run_elo_ladder(name)` — the persisted Elo ladder for a run
+  (`<models>/<name>/elo_ladder.json`): greedy-anchored ratings + SEs, the
+  pairwise matchup matrix, and forgetting/cycling upsets. Produced by
+  `code/tools/elo_ladder_cli.py`.
+- `run_exploitability(name)` — the persisted approximate-exploitability result
+  (`<models>/<name>/exploitability.json`), labeled as a budget-bound **lower
+  bound**. Produced by `code/tools/exploiter_cli.py`.
+
 ### `list_runs()`
 
 List every subdirectory of `--runs-dir` as one logical run.

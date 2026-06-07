@@ -1,4 +1,4 @@
-//! Once-per-turn (OPT) activation tracking (Tier 1) — impl Game.
+//! OPT activation tracking (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;

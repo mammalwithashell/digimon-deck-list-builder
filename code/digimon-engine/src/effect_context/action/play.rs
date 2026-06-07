@@ -55,6 +55,22 @@ impl<'a> EffectContext<'a> {
             "token_registry entry must map to a CardKind::Token CardData row"
         );
 
+        // `CannotPlayDigimonByEffect` (e.g. BT9-033 Pillomon "Players can't play
+        // Digimon by effects") gates token plays too: a Token is a Digimon (every
+        // registered token is a Digimon token — see `token_registry`), and DCGO
+        // routes `PlayToken` through `CanPlayAsNewPermanent` →
+        // `CanNotPutFieldClass(IsDigimon || IsDigiEgg)`, which blocks Digimon
+        // tokens under this lock. Mirror the hand/trash play-gate
+        // (`Game::play_from_hand_with_cost`) so effect-played tokens are blocked
+        // when the controller carries the modifier. (G-PLAY-TOKEN-FLOODGATE.)
+        if self
+            .game
+            .modifiers
+            .player_has(controller, crate::enums::ModifierType::CannotPlayDigimonByEffect)
+        {
+            return None;
+        }
+
         let slots = self.game.rules.field_slots as usize;
         if self.game.player(controller).battle_area.len() >= slots {
             return None;

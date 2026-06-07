@@ -7,7 +7,7 @@ use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
-use crate::enums::{GamePhase, ModifierType, PlayerId};
+use crate::enums::{Expiry, GamePhase, ModifierType, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
@@ -254,6 +254,11 @@ pub struct Game {
     pub(crate) alt_path_registry: HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>,
     /// Active modifiers (DP buffs, granted keywords, etc.) attached to permanents.
     pub modifiers: ModifierRegistry,
+    /// Source-independent continuous mass modifiers (e.g. "all opponent Digimon
+    /// get -5000DP until end of opponent's next turn"). Re-applied to a live
+    /// candidate set every `tick_declarative_effects`; pruned at turn-end. See
+    /// `crate::floating_modifier`.
+    pub floating_mass_modifiers: Vec<crate::floating_modifier::FloatingMassModifier>,
     /// Card effect registry — maps card_id to effect implementations.
     pub effect_registry: CardEffectRegistry,
     /// Runtime callbacks for DSL `raw_rust` formulas.
@@ -341,6 +346,24 @@ pub struct Game {
     /// installs this before cost hooks run and clears it when the play commits
     /// or aborts. Later slices use it for material selection and source commit.
     pub(crate) pending_digixros_transaction: Option<crate::digixros::DigiXrosTransaction>,
+    /// "Leaving / limbo" holding slot for battle-area DigiXros materials whose
+    /// `WhenWouldLeaveBattleArea` replacement window parked a `pending_selection`
+    /// (e.g. BT17-095's optional `<Delay>` accept). The departing material is
+    /// popped OUT of `battle_area` (so it is no longer any permanent's top card —
+    /// satisfying the "the material has left" precondition) but retained here so
+    /// the parked observer's reward (a DNA-evo) can still EXTRACT it into a new
+    /// permanent. On finalize, any material still in limbo (the observer declined
+    /// / was ineligible) is restored to `battle_area` to be consumed under the
+    /// DigiXros host as normal. Addressed by handles whose index is offset by
+    /// `LIMBO_INDEX_BASE`. See rule G-DIGIXROS-REDIRECT-EXTRACTION (judge-quiz
+    /// Q26/Q27).
+    /// Each entry is `(owner, original_battle_handle, permanent)`. The original
+    /// battle handle (captured BEFORE the `battle_area.remove` shift) lets a
+    /// parked replacement whose subject was the leaving permanent re-resolve to
+    /// the limbo-encoded handle (`remap_digixros_limbo_subject`), since the
+    /// subject is addressed by index alone.
+    pub(crate) digixros_leaving_limbo:
+        Vec<(crate::enums::PlayerId, crate::permanent::PermanentHandle, crate::permanent::Permanent)>,
     /// Turn-scoped DigiXros wildcard material modifiers waiting to be copied
     /// into the next matching transaction.
     pub(crate) active_digixros_wildcards: Vec<crate::digixros::ActiveDigiXrosWildcardSubstitution>,
@@ -370,6 +393,20 @@ pub struct Game {
     /// Consumed by the drainer in PR2.
     #[allow(dead_code)]
     pub(crate) effect_chain_depth: u16,
+
+    /// Re-entrancy depth for the state-based ≤0-DP rules-check
+    /// (`run_state_based_rules_check`). `drain_effect_queue` is called
+    /// re-entrantly from inside effect bodies (effect_context) and from the
+    /// batched-deletion deferred drain. The rules-check runs ONLY at the
+    /// OUTERMOST drain (`effect_drain_depth == 1`) — after a top-level
+    /// effect / rule-action has fully finished — and is run BETWEEN top-level
+    /// queued effects (after each `run_queued_effect`) so a Digimon driven to
+    /// ≤0 DP by one effect is deleted before the next queued trigger resolves
+    /// (judge Q24). It is never run between the sub-steps of one resolving
+    /// effect (the judge rule: "rule checks don't happen until an ongoing
+    /// effect or rule action finishes" — Q6/Q13/Q14). Incremented on entry to
+    /// `drain_effect_queue`, decremented on exit.
+    pub(crate) effect_drain_depth: u16,
 
     /// Game logger. Defaults to `SilentLogger` (zero-overhead for RL
     /// training). Callers that want human-readable traces install a
@@ -408,6 +445,18 @@ pub struct Game {
     /// replacements whose subject is a card in hand.
     #[doc(hidden)]
     pub(crate) pending_would_play_resume: Option<PendingWouldPlayResume>,
+    /// Transient hand-off for an `[Assembly]` play (G-ASSEMBLY-PLAY-EXECUTION):
+    /// the played card's handle plus the trash material handles to place at the
+    /// bottom of its digivolution stack. Consumed by
+    /// `commit_play_from_hand_card_no_replace` AFTER the permanent is created
+    /// but BEFORE its `[On Play]` / `[When Digivolving]` effects fire — so a
+    /// card whose play effects read its own digivolution-card count (e.g.
+    /// AD1-025 Omnimon's bounce) sees the assembled materials. Set immediately
+    /// before the assembly play's `finish_play_from_hand_after_reductions` and
+    /// cleared on consume. Same transient-slot pattern as
+    /// `pending_would_play_resume`.
+    #[doc(hidden)]
+    pub(crate) pending_assembly_materials: Option<(crate::card_source::CardHandle, Vec<crate::card_source::CardHandle>)>,
     /// Fire-site continuation for optional `WhenWouldLink` replacements whose
     /// subject is the pending Link Option card.
     #[doc(hidden)]
@@ -685,20 +734,17 @@ pub struct Game {
     pub(crate) opaque_data_index_map: Option<std::collections::HashMap<String, usize>>,
 }
 
-// Tier-1 `impl Game` mechanic clusters split out of this file for readability
-// (the core accessors / turn-state glue stay here). Each submodule is
-// `impl Game`; child modules reach module-private items via `use super::*`.
-// See docs/RUST_ENGINE_API.md §3.
-mod handles; // card/handle/provenance-token resolution
-mod lifecycle; // game-over / elimination / play-order
-mod memory; // memory gain/loss/pay
-mod opt; // once-per-turn activation tracking
-mod queries; // read-only query + aura-bonus helpers
-mod setup; // construction / deck + mulligan / start
-mod staging; // test-fixture staging helpers
-mod suspend; // suspend / unsuspend / hatch
-mod triggers; // event drain + declarative/granted triggers
-mod until_condition; // until-condition modifier expiry/re-evaluation
+// Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
+mod handles;
+mod lifecycle;
+mod memory;
+mod opt;
+mod queries;
+mod setup;
+mod staging;
+mod suspend;
+mod triggers;
+mod until_condition;
 
 impl Game {
     /// Internal: request one reveal for `pid` and append the materialized
@@ -1910,7 +1956,116 @@ impl Game {
         Some(merged_handle)
     }
 
+    /// Q3 (`G-DIGIVOLVE-TARGET-RESTRICTION`): a base permanent carrying one or
+    /// more `CanOnlyDigivolveInto` modifiers may digivolve ONLY into a card whose
+    /// name matches an allowed name. Returns `true` if `card` would be BLOCKED as
+    /// a digivolve target of `base_handle` — i.e. at least one restriction entry
+    /// is present whose allowed name does not match any of `card`'s names. Each
+    /// entry is ANDed (the target must satisfy every restriction). Returns
+    /// `false` (not blocked) when no restriction is present — the common case, so
+    /// existing cards are unaffected. DCGO parity: `CanNotDigivolveStaticSelfEffect`
+    /// (EX10-020 `cardCondition: !EqualsCardName("Apocalymon")`).
+    pub(crate) fn digivolve_target_blocked_by_restriction(
+        &self,
+        base_handle: PermanentHandle,
+        card: &CardSource,
+    ) -> bool {
+        let entries = self
+            .modifiers
+            .get(base_handle, ModifierType::CanOnlyDigivolveInto);
+        if entries.is_empty() {
+            return false;
+        }
+        let names = card.card_names(&self.card_data);
+        for entry in entries {
+            if let crate::modifiers::ModifierPayload::Name { value, .. } = &entry.payload {
+                let allowed = names.iter().any(|n| *n == value.as_str());
+                if !allowed {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     // ─── Unified keyword query (Phase 3 Task 2) ──────────────────────
+
+    /// Register a source-independent continuous mass modifier (see
+    /// `crate::floating_modifier`). Computes the `*NextTurn` skip count at
+    /// install time (mirroring `ModifierEntry` installs) and materializes it
+    /// immediately so it is visible without waiting for the next tick.
+    pub fn add_floating_mass_modifier(
+        &mut self,
+        filter: digimon_dsl::compiled::CompiledPredicate,
+        modifier: ModifierType,
+        value: i32,
+        source_card: crate::card_source::CardHandle,
+        source_player: PlayerId,
+        expiry: Expiry,
+    ) {
+        let pending_skips = crate::modifiers::pending_skips_for_install(
+            expiry,
+            source_player,
+            self.turn_player(),
+        );
+        self.floating_mass_modifiers
+            .push(crate::floating_modifier::FloatingMassModifier {
+                filter,
+                modifier,
+                value,
+                source_card,
+                source_player,
+                expiry,
+                pending_skips,
+            });
+        self.tick_declarative_effects();
+    }
+
+    /// Prune floating mass modifiers whose turn-relative expiry fires at the end
+    /// of `ending_player`'s turn. Mirrors `ModifierRegistry::expire_end_of_turn`
+    /// (same `pending_skips` `*NextTurn` skip semantics). Called from
+    /// `Game::end_turn` alongside the per-permanent / per-player expiry passes.
+    pub fn expire_floating_mass_modifiers(&mut self, ending_player: PlayerId) {
+        let had_any = !self.floating_mass_modifiers.is_empty();
+        self.floating_mass_modifiers.retain_mut(|fm| {
+            // Does THIS turn-end concern this descriptor's expiry?
+            let relevant = match fm.expiry {
+                // Fires on every turn-end.
+                Expiry::EndOfTurn => true,
+                // Fires when the ending turn is the source's opponent's.
+                Expiry::EndOfOpponentsTurn | Expiry::EndOfOpponentsNextTurn => {
+                    ending_player != fm.source_player
+                }
+                // Fires when the ending turn is the source's own.
+                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
+                    ending_player == fm.source_player
+                }
+                // Not turn-end-relative — not expired here.
+                Expiry::Permanent
+                | Expiry::EndOfAttack
+                | Expiry::EndOfBattle
+                | Expiry::UntilLeaveField
+                | Expiry::UntilCondition
+                | Expiry::OnceUsed(_) => false,
+            };
+            if !relevant {
+                return true;
+            }
+            if fm.pending_skips > 0 {
+                fm.pending_skips -= 1;
+                return true; // `*NextTurn` skip — survive this turn-end
+            }
+            false // expired → drop
+        });
+        // Refresh materialized state so a `dp_of`/`effective_dp` read taken right
+        // after the turn-end (before the next action's tick) reflects the pruned
+        // set: clear the tick-ephemeral materialized entries and re-install only
+        // from the descriptors that survived. Scoped to games that actually use
+        // floating modifiers (`had_any`) so it never perturbs other games.
+        if had_any {
+            self.tick_declarative_effects();
+        }
+    }
 
     /// Soft-remove a permanent whose `card_sources` Vec is now empty after
     /// some effect moved its body card(s) elsewhere. This is the DCGO

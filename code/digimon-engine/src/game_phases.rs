@@ -293,6 +293,9 @@ impl Game {
         }
         // Phase 6: expire player-scoped flood-gate modifiers.
         self.modifiers.expire_player_end_of_turn(ending_player);
+        // Prune source-independent floating mass modifiers whose turn-relative
+        // window closes at this turn-end (G-CONTINUOUS-MASS-DP-DEBUFF).
+        self.expire_floating_mass_modifiers(ending_player);
         self.expire_digixros_wildcards_at_end_of_turn(ending_player);
         // G-COST-REDUCE-ALLY-DIGIVOLVE: expire "For the turn" player-scoped
         // digivolve cost reducers installed by the ending player.

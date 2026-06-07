@@ -821,6 +821,7 @@ impl<'a> EffectContext<'a> {
         let owner = removed.owner;
         self.game.player_mut(owner).hand.push(removed);
         let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
+        self.game.fire_on_add_to_hand_by_effect(owner);
         true
     }
 

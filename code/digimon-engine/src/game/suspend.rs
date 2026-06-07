@@ -1,4 +1,4 @@
-//! Suspend / unsuspend / hatch (Tier 1) — impl Game.
+//! Suspend / unsuspend / hatch (Tier 1).
 
 #![allow(unused_imports)]
 use super::*;

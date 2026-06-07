@@ -5,7 +5,7 @@
 //! and the `activate_*_main` [Main] effect dispatchers live. All three are invoked
 //! by the action decoder and the Tauri/PyO3 bindings; none of them move here.
 
-use crate::card_source::CardSource;
+use crate::card_source::{CardHandle, CardSource};
 use crate::digixros::DigiXrosMaterialOrigin;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{
@@ -25,11 +25,11 @@ use crate::selection::{
 use rand::seq::SliceRandom;
 
 // Tier-2 operations split by mechanic (parallel to effect_context/action/).
-// `impl Game` blocks live in these submodules; shared module-private types
-// and `&self` readers stay in this mod.rs. See docs/RUST_ENGINE_API.md §3.
+// See docs/RUST_ENGINE_API.md §3.
 mod breeding;
 mod cost;
 mod digivolve;
+mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
 mod misc;
 mod movement;
 mod options;
@@ -50,6 +50,21 @@ enum OptionSource {
 struct TakenCardSource {
     card: CardSource,
     restore_face_up_security_for: Option<PlayerId>,
+}
+
+/// Captured state for resuming `run_digixros_leave_windows_then_commit` after a
+/// battle-area DigiXros material's `WhenWouldLeaveBattleArea` window parked a
+/// `pending_selection` (the material is now in the leaving/limbo slot). Once the
+/// parked reward settles, the loop re-enters at `next_material` and ultimately
+/// finalizes the host play (G-DIGIXROS-REDIRECT-EXTRACTION).
+#[derive(Clone)]
+struct DigiXrosResumeContinuation {
+    player: PlayerId,
+    target_card: CardHandle,
+    total_reduction: i32,
+    source: PlaySource,
+    suppress_on_play: bool,
+    next_material: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -454,6 +469,155 @@ impl Game {
         candidates
     }
 
+    // ── Assembly play execution (G-ASSEMBLY-PLAY-EXECUTION) ──────────────
+    //
+    // Faithful to DCGO `SelectAssemblyClass.cs`: a hand card with an
+    // `assembly` alt-path may be played by placing its named materials from
+    // the controller's TRASH under it (digivolution-stack bottom) and paying
+    // a reduced cost. The flow rides the normal PLAY_HAND action (no new
+    // action-space range): after the cost-reduction chain resolves we offer
+    // an optional gate ("use the assembly pieces from trash?") followed by a
+    // per-element surfaced trash selection. Declining the gate plays the card
+    // at full cost. See change `fix-ad1-025-assembly-data`.
+
+    /// Resolve a hand card's eligible `assembly` alt-path: returns the cost
+    /// reduction (D5) and the per-element `(filter, count)` list when the card
+    /// carries an assembly path whose materials are each satisfiable from the
+    /// controller's trash with DISTINCT cards. `None` when the card is not
+    /// assembly-capable or its materials are unavailable. Shared by the play
+    /// flow (`try_begin_assembly_flow`) and the action mask (declare-then-pay
+    /// legality against the reduced cost).
+    #[cfg(feature = "dsl-yaml-loader")]
+    fn resolve_eligible_assembly(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target_card: CardHandle,
+    ) -> Option<(i32, Vec<(digimon_dsl::compiled::CompiledPredicate, u8)>)> {
+        use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCost, CompiledRepeat, CompiledZone};
+
+        let card_id = {
+            let card = self.player(player_id).hand.get(hand_index)?;
+            if card.handle() != target_card {
+                return None;
+            }
+            card.card_id(&self.card_data).to_string()
+        };
+
+        let path = self
+            .alt_path_registry
+            .get(&card_id)?
+            .iter()
+            .find(|p| matches!(p.kind, CompiledAltPathKind::Assembly))?;
+
+        // D5: an assembly alt-path `cost:` is the REDUCTION amount.
+        let assembly_reduction = match &path.cost {
+            None => 0,
+            Some(CompiledCost::Literal(n)) => *n,
+            // Formula reductions are not yet supported for assembly.
+            Some(CompiledCost::Formula(_)) => return None,
+        };
+
+        // Per-element (filter, count). Assembly materials come from trash and
+        // stack under the played card.
+        let mut elements: Vec<(digimon_dsl::compiled::CompiledPredicate, u8)> = Vec::new();
+        for m in &path.materials {
+            if !m.stack_under || !m.zones.iter().any(|z| matches!(z, CompiledZone::Trash)) {
+                return None; // unsupported material shape for assembly
+            }
+            let count = match &m.repeat {
+                None => 1u8,
+                Some(CompiledRepeat::Range { min, max }) if min == max => *max,
+                // Variable / unbounded counts not supported for assembly yet.
+                _ => return None,
+            };
+            elements.push((m.filter.clone(), count));
+        }
+        if elements.is_empty() {
+            return None;
+        }
+
+        // Eligibility: each element satisfiable from trash with distinct cards
+        // (DCGO `CanFulfillConditions` / recursive distinct-assignment check).
+        if !self.assembly_can_fulfill(player_id, target_card, &elements) {
+            return None;
+        }
+
+        Some((assembly_reduction, elements))
+    }
+
+    /// The assembly cost-reduction available for hand card `hand_index` right
+    /// now, or `0` when the card has no eligible assembly path. Used by the
+    /// action mask to offer the play under declare-then-pay legality against
+    /// the REDUCED cost (Q5). Always `0` without the DSL loader feature.
+    pub(crate) fn assembly_play_reduction_for_hand_card(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> i32 {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let Some(target) = self
+                .player(player_id)
+                .hand
+                .get(hand_index)
+                .map(|c| c.handle())
+            else {
+                return 0;
+            };
+            if let Some((reduction, _)) =
+                self.resolve_eligible_assembly(player_id, hand_index, target)
+            {
+                return reduction.max(0);
+            }
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (player_id, hand_index);
+        }
+        0
+    }
+
+    /// True when each assembly element can be matched to a DISTINCT card in
+    /// the controller's trash (a system of distinct representatives exists).
+    #[cfg(feature = "dsl-yaml-loader")]
+    fn assembly_can_fulfill(
+        &self,
+        player_id: PlayerId,
+        source_card: CardHandle,
+        elements: &[(digimon_dsl::compiled::CompiledPredicate, u8)],
+    ) -> bool {
+        use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+
+        let rctx = EffectReadContext::new(self, source_card, None, player_id);
+        let trash = &self.player(player_id).trash;
+
+        // Expand elements into one slot per required card.
+        let mut slots: Vec<&digimon_dsl::compiled::CompiledPredicate> = Vec::new();
+        for (pred, count) in elements {
+            for _ in 0..*count {
+                slots.push(pred);
+            }
+        }
+        // For each slot, the trash indices that satisfy its filter.
+        let match_table: Vec<Vec<usize>> = slots
+            .iter()
+            .map(|pred| {
+                trash
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, cs)| {
+                        eval_predicate(pred, &rctx, PredicateSubject::Card(cs.handle()))
+                    })
+                    .map(|(i, _)| i)
+                    .collect()
+            })
+            .collect();
+
+        let mut used = vec![false; trash.len()];
+        assembly_assign(&match_table, 0, &mut used)
+    }
+
     pub(crate) fn commit_pending_would_play(
         &mut self,
         outcome: crate::replacement::ReplacementOutcome,
@@ -711,6 +875,12 @@ impl Game {
         if !self.can_digivolve(&pending_ref.card, perm) {
             return false;
         }
+        // Q3 (G-DIGIVOLVE-TARGET-RESTRICTION): honor a `CanOnlyDigivolveInto`
+        // restriction on the arts-digivolve base too (the restriction applies to
+        // every digivolve route, not just normal digivolve).
+        if self.digivolve_target_blocked_by_restriction(target, &pending_ref.card) {
+            return false;
+        }
 
         let pending = self.pending_option.take().expect("checked above");
         let arts_card_id = pending.card.card_id(&self.card_data).to_string();
@@ -721,7 +891,11 @@ impl Game {
             .digivolve(pending.card, turn);
         self.player_mut(target.player).draw();
 
-        self.run_rule_check_after_arts();
+        // Arts digivolve runs the ≤0-DP rules-check immediately (before the
+        // WhenDigivolving enqueue) because the next branch keys off whether the
+        // Arts target survived the digivolve. The trailing `drain_effect_queue`
+        // re-runs the general check at the resolution boundary.
+        self.run_state_based_rules_check();
 
         if self
             .player(target.player)
@@ -779,24 +953,109 @@ impl Game {
         true
     }
 
-    pub(crate) fn run_rule_check_after_arts(&mut self) {
-        let mut to_delete: Vec<PermanentHandle> = Vec::new();
+    /// General state-based ≤0-DP rules-check (`G-NO-GENERAL-ZERO-DP-RULES-CHECK`).
+    ///
+    /// Deletes every battle-area Digimon whose effective DP is ≤ 0 — the
+    /// game's "checkup" / DCGO `CheckDeleteDigimon` state-based action. This is
+    /// a SINGLE pass: it collects the current ≤0-DP Digimon and deletes them
+    /// (highest index first, per player, so removals don't shift pending
+    /// handles). The fixpoint loop (re-check after `OnDeletion` handlers and
+    /// aura expiry mutate DP) lives in `drain_effect_queue`'s outermost-drain
+    /// wrapper, which calls this only at top-level resolution boundaries — never
+    /// mid-effect.
+    ///
+    /// Returns `true` if it deleted at least one Digimon (drives the wrapper's
+    /// fixpoint). Deletion routes through `delete_permanent_with_effects` (the
+    /// batched flow + inferred cause), so `OnDeletion` handlers fire post-trash
+    /// per CLAUDE.md §25.
+    ///
+    /// Idempotent: a handle whose slot is already empty is filtered by the
+    /// batched-deletion entrypoint, so a re-run is a no-op.
+    pub(crate) fn run_state_based_rules_check(&mut self) -> bool {
+        // Per-permanent rule-check action. Both §17-1-3-1 and §17-1-3-2 are
+        // evaluated in one scan; they target disjoint permanents (a ≤0-DP
+        // Digimon has a DP value, a DP-less top has none).
+        enum RuleAction {
+            /// §17-1-3-1 — a Digimon at ≤0 DP is DELETED (fires OnDeletion).
+            DeleteZeroDp,
+            /// §17-1-3-2 — a DP-less card (a Digi-Egg) exposed as the live top
+            /// of a battle-area permanent "is considered to not be in any area
+            /// and is trashed." This is a TRASH of the whole permanent, NOT a
+            /// deletion-from-battle-area, so it fires no OnDeletion observers.
+            TrashDpLess,
+        }
+        let mut actions: Vec<(PermanentHandle, RuleAction)> = Vec::new();
         for pid in 0..self.players.len() {
             for idx in 0..self.players[pid].battle_area.len() {
+                // Skip transiently-empty (zombie) slots. A permanent mid-cleanup
+                // (a just-emptied DigiXros source carrier, a trashed last
+                // card_source) can have 0 card_sources before its slot is
+                // removed. `permanent_is_digimon_for_rules` / `effective_dp`
+                // read `top_card()`, which panics on an empty stack — and an
+                // empty slot is not a live Digimon, so it is never a ≤0-DP
+                // deletion candidate anyway.
+                if self.players[pid].battle_area[idx].card_sources.is_empty() {
+                    continue;
+                }
                 let handle = PermanentHandle {
                     player: pid as PlayerId,
                     index: idx as u8,
                 };
+                // §17-1-3-2 — a Digi-Egg can't be a Digimon in the battle area.
+                // When a stack is peeled/de-digivolved down to its egg, that egg
+                // becomes the live top and the whole permanent is trashed. A
+                // legitimately-played Tamer/Option permanent is NOT caught (its
+                // top kind is Tamer/Option, and it is a valid battle-area card);
+                // only a DP-less Digi-Egg top is illegal here.
+                if self.players[pid].battle_area[idx]
+                    .top_card()
+                    .card_kind(&self.card_data)
+                    == crate::enums::CardKind::DigiEgg
+                {
+                    actions.push((handle, RuleAction::TrashDpLess));
+                    continue;
+                }
                 if self.permanent_is_digimon_for_rules(handle)
                     && self.effective_dp(handle).unwrap_or(1) <= 0
                 {
-                    to_delete.push(handle);
+                    actions.push((handle, RuleAction::DeleteZeroDp));
                 }
             }
         }
-        for handle in to_delete.into_iter().rev() {
-            self.delete_permanent_with_effects(handle);
+        if actions.is_empty() {
+            return false;
         }
+        // Apply in descending (player, index) order so each removal — which
+        // shifts higher battle-area indices via `Vec::remove` — does not
+        // invalidate the handles still pending.
+        for (handle, action) in actions.into_iter().rev() {
+            if let RuleAction::TrashDpLess = action {
+                // §17-1-3-2 trash: route every stacked card to the owner's trash
+                // with no deletion/leave triggers ("not considered trashing from
+                // the battle area").
+                self.trash_permanent_stack(handle.player, handle.index as usize);
+                continue;
+            }
+            // A ≤0-DP deletion is a STATE-BASED RULE action, not an effect.
+            // `infer_deletion_cause` would otherwise attribute it to
+            // OwnEffect/OpponentEffect (no battle/security/effect-source is
+            // live between top-level effects), which is wrong for observers
+            // that distinguish "deleted by having 0 DP" from "deleted by an
+            // effect" (e.g. BT16-101's [All Turns] gain-2-memory clause keys
+            // on battle OR 0-DP, NOT effect deletion). Refine the OnDeletion /
+            // OnAnyDeletion observer payload to `EventCause::Rule` via the
+            // same override slot Overclock uses (game_phases.rs); it only
+            // refines the observer cause — replacement-window filtering still
+            // reads `current_deletion_cause` — and the deferred-replacement
+            // path (e.g. an Armor Purge window opened by this deletion)
+            // threads it through ParkedReplacement.
+            let previous = self.current_deletion_event_cause_override;
+            self.current_deletion_event_cause_override =
+                Some(crate::trigger_context::EventCause::Rule);
+            self.delete_permanent_with_effects(handle);
+            self.current_deletion_event_cause_override = previous;
+        }
+        true
     }
 
     /// Dispose an Option that has finished resolving its `OptionMain`
@@ -1293,303 +1552,6 @@ impl Game {
         self.drain_effect_queue();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
-    }
-
-    /// Trash one already-removed digivolution source to `trash_owner`'s trash
-    /// and fire `OnDigivolutionCardTrashed` for it on `fire_target`.
-    ///
-    /// The single Tier-2 push+fire primitive for source-trashing where the host
-    /// is known BEFORE the push and the cause is the standard effect cause
-    /// (`EventCause::from(infer_effect_cause(fire_target.player))`). Callers own
-    /// the removal and host-card derivation (those differ per call site). Sites
-    /// that derive the host AFTER the push (`trash_top_source`,
-    /// `trash_bottom_face_down_source`) or use a non-standard cause
-    /// (`EventCause::Return` in the under-tamer drain) intentionally do NOT use
-    /// this helper. See the `engine-effect-context-layering` capability spec.
-    pub(crate) fn trash_source_and_fire(
-        &mut self,
-        trash_owner: PlayerId,
-        fire_target: PermanentHandle,
-        removed: CardSource,
-        host_card: crate::card_source::CardHandle,
-    ) {
-        let cause =
-            crate::trigger_context::EventCause::from(self.infer_effect_cause(fire_target.player));
-        self.trash_source_and_fire_with_cause(trash_owner, fire_target, removed, host_card, cause);
-    }
-
-    /// Like `trash_source_and_fire` but with an explicit `EventCause` for call
-    /// sites that attribute the trash to a non-standard cause (`Return` for the
-    /// under-tamer source drain, `Cost` for armor-purge). `host_card` must be
-    /// resolved by the caller (it differs per site: pre-removal top, post-pop
-    /// promoted top, etc.).
-    pub(crate) fn trash_source_and_fire_with_cause(
-        &mut self,
-        trash_owner: PlayerId,
-        fire_target: PermanentHandle,
-        removed: CardSource,
-        host_card: crate::card_source::CardHandle,
-        cause: crate::trigger_context::EventCause,
-    ) {
-        let source_card = removed.handle();
-        self.player_mut(trash_owner).trash.push(removed);
-        self.fire_digivolution_card_trashed(
-            fire_target.player,
-            fire_target,
-            host_card,
-            source_card,
-            cause,
-        );
-    }
-
-    /// Fire the security-removed observer fan-out (Tier 2). `effect_player` is
-    /// the controller of the effect that removed the security card (the source
-    /// attribution for the observer). Relocated from the facade so the inline
-    /// `fire_effect_security_removal` dispatch lives in Tier 2.
-    pub(crate) fn fire_security_removed_observers(
-        &mut self,
-        defender: PlayerId,
-        effect_player: PlayerId,
-        card: CardSource,
-        destination: crate::selection::SecurityRemovalDestination,
-    ) {
-        let observer_player = self.next_clockwise(defender);
-        let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
-        self.fire_effect_security_removal(
-            defender,
-            observer_player,
-            effect_player,
-            cause,
-            card,
-            destination,
-        );
-    }
-
-    /// Tier-2 replacement-window dispatch for facade "would-be-X" operations.
-    /// Fires `timing` for `subject` (cause inferred from `cause_player`), then
-    /// reports whether the operation may PROCEED: `false` if a selection parked
-    /// or the window Cancelled/CustomHandled the action; `true` otherwise.
-    /// `Redirected`/`Substituted` are not expected here (debug-asserted) — the
-    /// substitute-retargeting cases (e.g. de_digivolve) keep their own logic.
-    ///
-    /// Centralizes the `try_replace` call out of the Tier-3 facade (placement
-    /// rule §engine-effect-context-layering). Behavior is identical to the
-    /// inlined block each caller previously held.
-    pub(crate) fn would_replacement_proceeds(
-        &mut self,
-        timing: crate::enums::EffectTiming,
-        subject: crate::replacement::ReplacementSubject,
-        cause_player: PlayerId,
-        redirect: Option<crate::enums::Zone>,
-    ) -> bool {
-        use crate::replacement::ReplacementOutcome;
-        let cause = self.infer_effect_cause(cause_player);
-        let outcome = self.try_replace(timing, subject, cause, redirect);
-        if self.pending_selection.is_some() {
-            return false;
-        }
-        match outcome {
-            ReplacementOutcome::None => true,
-            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => false,
-            ReplacementOutcome::Redirected(_) => {
-                debug_assert!(false, "Redirected not supported for {:?} v1", timing);
-                true
-            }
-            ReplacementOutcome::Substituted(_) => {
-                debug_assert!(false, "Substituted not supported for {:?} v1", timing);
-                true
-            }
-        }
-    }
-
-    /// Like `would_replacement_proceeds`, but the caller may proceed ONLY if the
-    /// window returned `None` (no selection parked AND no non-None outcome).
-    /// Used by `place_self_option_at_security`, which restores its pending state
-    /// and bails on ANY interception.
-    pub(crate) fn would_replacement_is_clear(
-        &mut self,
-        timing: crate::enums::EffectTiming,
-        subject: crate::replacement::ReplacementSubject,
-        cause_player: PlayerId,
-        redirect: Option<crate::enums::Zone>,
-    ) -> bool {
-        let cause = self.infer_effect_cause(cause_player);
-        let outcome = self.try_replace(timing, subject, cause, redirect);
-        self.pending_selection.is_none()
-            && matches!(outcome, crate::replacement::ReplacementOutcome::None)
-    }
-
-    /// Tier-2 battle-area source-stack primitives. The facade (effect_context)
-    /// must not index `battle_area[..]` directly (placement rule §3); these
-    /// encapsulate the single stack mutations it needs.
-    pub(crate) fn digivolve_permanent_in_place(
-        &mut self,
-        target: PermanentHandle,
-        card: CardSource,
-    ) {
-        let turn = self.turn_count;
-        self.player_mut(target.player).battle_area[target.index as usize].digivolve(card, turn);
-    }
-
-    pub(crate) fn remove_source_from_permanent(
-        &mut self,
-        target: PermanentHandle,
-        source_index: usize,
-    ) -> CardSource {
-        self.player_mut(target.player).battle_area[target.index as usize]
-            .card_sources
-            .remove(source_index)
-    }
-
-    pub(crate) fn insert_source_into_permanent(
-        &mut self,
-        target: PermanentHandle,
-        source_index: usize,
-        card: CardSource,
-    ) {
-        self.player_mut(target.player).battle_area[target.index as usize]
-            .card_sources
-            .insert(source_index, card);
-    }
-
-    /// Remove the sources at `indices` from `perm` (removing in descending
-    /// index order so earlier removals don't shift later indices). Returns the
-    /// removed sources in removal order (i.e. highest-index first); callers
-    /// that want bottom-to-top order `reverse()` the result.
-    pub(crate) fn remove_sources_from_permanent(
-        &mut self,
-        perm: PermanentHandle,
-        indices: &[usize],
-    ) -> Vec<CardSource> {
-        let p = &mut self.player_mut(perm.player).battle_area[perm.index as usize];
-        let mut out = Vec::with_capacity(indices.len());
-        for &idx in indices.iter().rev() {
-            out.push(p.card_sources.remove(idx));
-        }
-        out
-    }
-
-    /// Low-level source-attribution helper for tests and engine internals.
-    ///
-    /// Uses the standard De-Digivolve floor (`stop_at_level = Some(3)`) and
-    /// returns whether at least one card was popped. Replacement windows are
-    /// resolved by `EffectContext::de_digivolve` under the supplied source
-    /// attribution. Production card effects should prefer an existing
-    /// `EffectContext` so `can_affect_permanent` and source-kind metadata come
-    /// from the real resolving card.
-    #[doc(hidden)]
-    /// Tier-2 de-digivolve rules machinery: fire `WhenWouldBeDeDigivolved`
-    /// once, then pop digivolution sources (honoring `stop_at_level` and the
-    /// `amount` cap), trash each popped source firing
-    /// `OnDigivolutionCardTrashed`, and clean up a newly-exposed DigiEgg.
-    /// Returns the number of sources popped.
-    ///
-    /// Relocated from `EffectContext::de_digivolve` so the rules machinery
-    /// lives in Tier 2 (placement rule §engine-effect-context-layering). The
-    /// facade `de_digivolve` is now a thin `can_affect_permanent` guard that
-    /// delegates here. Behavior is byte-identical to the pre-refactor method.
-    pub(crate) fn de_digivolve_core(
-        &mut self,
-        target: PermanentHandle,
-        stop_at_level: Option<u8>,
-        amount: Option<u8>,
-    ) -> u8 {
-        use crate::enums::EffectTiming;
-        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-
-        // Phase 7 Task 4: fire WhenWouldBeDeDigivolved once at entry (not
-        // per iteration of the popping loop). Substitute(Permanent) retargets
-        // the loop at another permanent; v1 does not support "reduce N" via
-        // mutable ctx — scripts that want to reduce N should cancel and
-        // re-call with a lower amount.
-        let cause = self.infer_effect_cause(target.player);
-        let subject = ReplacementSubject::Permanent(target);
-        let outcome =
-            self.try_replace(EffectTiming::WhenWouldBeDeDigivolved, subject, cause, None);
-        if self.pending_selection.is_some() {
-            return 0;
-        }
-        let effective_target = match outcome {
-            ReplacementOutcome::None => target,
-            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
-                return 0;
-            }
-            ReplacementOutcome::Redirected(_) => {
-                debug_assert!(false, "Redirected not meaningful for WhenWouldBeDeDigivolved");
-                target
-            }
-            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => other,
-            ReplacementOutcome::Substituted(_) => {
-                debug_assert!(false, "non-Permanent substitute for WhenWouldBeDeDigivolved");
-                target
-            }
-        };
-        let target = effective_target;
-
-        let max = amount.unwrap_or(u8::MAX);
-        let mut popped: u8 = 0;
-
-        while popped < max {
-            let perm = match self.player(target.player).battle_area.get(target.index as usize) {
-                Some(p) => p,
-                None => break,
-            };
-
-            if perm.stack_size() <= 1 {
-                break;
-            }
-
-            let next_top_level = {
-                let stack = perm.digivolution_cards();
-                let next_top = &stack[stack.len() - 2];
-                next_top.level(&self.card_data)
-            };
-
-            if let (Some(floor), Some(nt_level)) = (stop_at_level, next_top_level) {
-                if nt_level < floor {
-                    break;
-                }
-            }
-
-            let owner = target.player;
-            let (popped_card, host_card) = {
-                let p = self.player_mut(owner);
-                let stack = &mut p.battle_area[target.index as usize].card_sources;
-                debug_assert!(stack.len() >= 2, "stack_size-guard failed");
-                let popped_card = stack.pop().expect("stack_size-guarded pop");
-                let host_card = stack
-                    .last()
-                    .map(|source| source.handle())
-                    .unwrap_or_else(|| popped_card.handle());
-                (popped_card, host_card)
-            };
-            let source_card = popped_card.handle();
-            self.player_mut(owner).trash.push(popped_card);
-            self.fire_digivolution_card_trashed(
-                owner,
-                target,
-                host_card,
-                source_card,
-                crate::trigger_context::EventCause::from(self.infer_effect_cause(owner)),
-            );
-            popped += 1;
-
-            // Inlined cleanup_exposed_battle_area_digi_egg: if popping exposed
-            // a DigiEgg on top, delete the permanent and stop.
-            let exposed = self
-                .player(target.player)
-                .battle_area
-                .get(target.index as usize)
-                .is_some_and(|perm| {
-                    perm.top_card().card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg
-                });
-            if exposed {
-                self.delete_permanent_with_effects(target);
-                break;
-            }
-        }
-
-        popped
     }
 
     /// Battle-area field indices of `player`'s unsuspended Digimon — the
@@ -2812,4 +2774,166 @@ impl Game {
         true
     }
 
+}
+
+// ── Assembly play-execution free helpers (G-ASSEMBLY-PLAY-EXECUTION) ──────
+//
+// These live at module scope (not on `impl Game`) so the per-element
+// selection chain can recurse from inside a `Box<dyn FnOnce>` selection
+// callback without any self-reference. See `Game::try_begin_assembly_flow`.
+
+/// Immutable bundle of the play parameters threaded through the Assembly
+/// selection chain. `Copy` so each recursive step / closure can take it.
+#[cfg(feature = "dsl-yaml-loader")]
+#[derive(Clone, Copy)]
+struct AssemblyPlayParams {
+    cost_delta: crate::enums::CostDelta,
+    source: PlaySource,
+    origin: PendingWouldPlayOrigin,
+    suppress_on_play: bool,
+    /// Generic cost reduction accumulated by the BeforePayCost chain.
+    total_reduction: i32,
+    /// The assembly-specific reduction (D5 — `cost:` on the alt-path).
+    assembly_reduction: i32,
+}
+
+/// Recursive system-of-distinct-representatives check: can each assembly
+/// slot be matched to a DISTINCT trash card? `match_table[slot]` lists the
+/// trash indices satisfying that slot's filter. Tiny inputs (≤ a few slots,
+/// trash bounded by deck size) keep the backtracking cheap.
+#[cfg(feature = "dsl-yaml-loader")]
+fn assembly_assign(match_table: &[Vec<usize>], slot: usize, used: &mut [bool]) -> bool {
+    if slot >= match_table.len() {
+        return true;
+    }
+    for &t in &match_table[slot] {
+        if !used[t] {
+            used[t] = true;
+            if assembly_assign(match_table, slot + 1, used) {
+                used[t] = false;
+                return true;
+            }
+            used[t] = false;
+        }
+    }
+    false
+}
+
+/// Install the trash selection for assembly element `element_idx`, chaining
+/// to the next element on resolution. Element 0 is the optional gate
+/// (declining plays the card at full cost); later elements are required
+/// (exact count, DCGO `canEndNotMax: false`). After the final element the
+/// play is finished at the reduced cost and the chosen materials are placed
+/// under the new permanent.
+#[cfg(feature = "dsl-yaml-loader")]
+#[allow(clippy::too_many_arguments)]
+fn install_assembly_element(
+    game: &mut Game,
+    player: PlayerId,
+    target_card: CardHandle,
+    params: AssemblyPlayParams,
+    elements: std::sync::Arc<Vec<(digimon_dsl::compiled::CompiledPredicate, u8)>>,
+    element_idx: usize,
+    picked_so_far: Vec<CardHandle>,
+) {
+    use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+    use crate::effect_context::CountCappedZone;
+
+    let (filter_pred, count) = elements[element_idx].clone();
+    let is_first = element_idx == 0;
+    let is_last = element_idx + 1 >= elements.len();
+    let source_card = target_card;
+
+    // Distinctness across elements: exclude handles already picked.
+    let exclude = picked_so_far.clone();
+    let filter = move |g: &Game, cs: &CardSource| -> bool {
+        if exclude.contains(&cs.handle()) {
+            return false;
+        }
+        let rctx = EffectReadContext::new(g, source_card, None, player);
+        eval_predicate(&filter_pred, &rctx, PredicateSubject::Card(cs.handle()))
+    };
+
+    // Element 0 is the optional "use assembly?" gate (declineable at zero
+    // picks); subsequent elements require their exact count.
+    let min = if is_first { 0 } else { count };
+    let max = count;
+    let prompt = format!(
+        "Assembly: select {} card(s) from trash to place under (No Selection to skip).",
+        count
+    );
+
+    let elements_for_cb = std::sync::Arc::clone(&elements);
+    let mut ctx = EffectContext::new(game, source_card, None, player);
+    ctx.select_count_capped_multi_min(
+        player,
+        CountCappedZone::Trash,
+        min,
+        max,
+        &prompt,
+        is_first, // is_optional_zero: only the gate (element 0) may finish at 0 picks
+        None,
+        filter,
+        move |cctx, picks| {
+            let game: &mut Game = cctx.game;
+            // Decline at the gate → play at full cost (no assembly used).
+            if is_first && picks.is_empty() {
+                let _ = assembly_finish(game, player, target_card, params, params.total_reduction);
+                return;
+            }
+            let mut all_picked = picked_so_far;
+            all_picked.extend(picks.iter().copied());
+            if is_last {
+                let total = params.total_reduction + params.assembly_reduction;
+                // Hand the chosen materials to the commit, which places them
+                // under the new permanent BEFORE its [On Play] effects fire.
+                game.pending_assembly_materials = Some((target_card, all_picked));
+                let _ = assembly_finish(game, player, target_card, params, total);
+                // Clear any leftover (e.g. the play failed before commit) so
+                // the slot can't leak into a later play.
+                game.pending_assembly_materials = None;
+            } else {
+                install_assembly_element(
+                    game,
+                    player,
+                    target_card,
+                    params,
+                    elements_for_cb,
+                    element_idx + 1,
+                    all_picked,
+                );
+            }
+        },
+    );
+}
+
+/// Re-resolve the hand index for `target_card` (the selection callbacks fire
+/// after `decode_action` returns, but the queue is paused so the hand should
+/// be unchanged) and finish the play at `total_reduction`.
+#[cfg(feature = "dsl-yaml-loader")]
+fn assembly_finish(
+    game: &mut Game,
+    player: PlayerId,
+    target_card: CardHandle,
+    params: AssemblyPlayParams,
+    total_reduction: i32,
+) -> PlayFromHandCostResult {
+    let Some(hand_index) = game
+        .player(player)
+        .hand
+        .iter()
+        .position(|c| c.handle() == target_card)
+    else {
+        return PlayFromHandCostResult::Failed;
+    };
+    game.finish_play_from_hand_after_reductions(
+        player,
+        hand_index,
+        target_card,
+        params.cost_delta,
+        params.source,
+        params.origin,
+        params.suppress_on_play,
+        total_reduction,
+    )
 }

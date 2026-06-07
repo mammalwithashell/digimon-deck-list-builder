@@ -43,7 +43,14 @@ impl Game {
                 CostReductionKind::Play,
             );
             let Some(candidate) = candidates.into_iter().next() else {
-                return self.finish_play_from_hand_after_reductions(
+                // All generic cost reducers resolved. Before committing the
+                // play, offer the Assembly alt-path (G-ASSEMBLY-PLAY-EXECUTION,
+                // change `fix-ad1-025-assembly-data`) when the played card has
+                // an `assembly` path whose materials are present in the
+                // controller's trash. Falls through to the normal play finish
+                // when the card is not assembly-capable or its materials are
+                // unavailable.
+                return self.assembly_or_finish_play_from_hand(
                     player_id,
                     hand_index,
                     target.card,
@@ -55,7 +62,13 @@ impl Game {
                 );
             };
 
-            if !candidate.optional {
+            // Auto-apply only reducers with NO interactive cost: a reducer
+            // bearing a `pay_cost_fn` (e.g. "trash 2 cards" / "by suspending
+            // this Tamer") imposes a real cost the player chooses to pay, so
+            // it must park behind an explicit acceptance prompt below rather
+            // than fire silently here (Working Rule §17 — no auto-selections;
+            // every choice surfaces through `pending_selection`).
+            if !candidate.optional && !candidate.has_pay_cost {
                 let key = candidate.key.clone();
                 if let Some(amount) = self.apply_cost_reduction_candidate(&key, target) {
                     accumulated_reduction += amount;

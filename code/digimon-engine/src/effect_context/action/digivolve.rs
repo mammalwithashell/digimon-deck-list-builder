@@ -372,6 +372,15 @@ impl<'a> EffectContext<'a> {
         if hand_partner == result_from_hand {
             return None;
         }
+        // The leaving subject may be parked in the DigiXros leaving/limbo slot
+        // (G-DIGIXROS-REDIRECT-EXTRACTION). Re-materialize it into `battle_area`
+        // first so the merge operates on a real permanent — this is the EXTRACT
+        // that pulls the material out of the in-flight DigiXros transaction.
+        let target = if crate::digixros::is_limbo_index(target.index) {
+            self.game.rematerialize_digixros_limbo(target)?
+        } else {
+            target
+        };
         if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
             return None;
         }
@@ -530,7 +539,21 @@ impl<'a> EffectContext<'a> {
                     controller,
                     &target_prompt,
                     optional,
-                    move |g, i| target_filter_for_inner(g, i),
+                    move |g, i| {
+                        if !target_filter_for_inner(g, i) {
+                            return false;
+                        }
+                        // Faithful path (DCGO `CanJogressFromTargetPermanent`,
+                        // PayCost=true): the chosen hand card must be a LEGAL
+                        // DNA-digivolve target for the {anchor, partner} pair —
+                        // one of its printed DNA requirements satisfied by the two
+                        // materials. Only the explicit `ignore_requirements: true`
+                        // escape hatch skips this gate.
+                        if ignore_requirements {
+                            return true;
+                        }
+                        dna_pair_can_reach_hand_card(g, controller, anchor, partner, i)
+                    },
                     move |ctx, hand_idx| {
                         // Final stage: resolve hand_idx to a CardHandle and
                         // delegate to the existing engine primitive.
@@ -544,11 +567,20 @@ impl<'a> EffectContext<'a> {
                             Some(c) => c,
                             None => return,
                         };
+                        // Faithful path pays the TARGET's printed DNA cost (DCGO
+                        // `payCost: true` → `condition.cost`); `ignore_requirements`
+                        // keeps the authored fixed `cost`.
+                        let charge = if ignore_requirements {
+                            cost as i32
+                        } else {
+                            dna_pair_cost_for_hand_card(ctx.game, controller, anchor, partner, hand_idx)
+                                .unwrap_or(cost as i32)
+                        };
                         ctx.effect_initiated_dna_digivolve(
                             anchor,
                             partner,
                             card,
-                            cost as i32,
+                            charge,
                             ignore_requirements,
                         );
                     },
