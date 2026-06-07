@@ -18,8 +18,8 @@
 
 ## 4. Phase A — Tier-2 operations: mechanic split (pure movement)
 
-- [ ] 4.1 **DEFERRED to follow-up (§10.5).** Inspection: `game_actions.rs` holds 136 methods in one `impl Game` block PLUS module-private types (`OptionSource`, `CostReductionKey`, `CostTargetContext`, `BeforePayCostSourceInfo`, …) and private free-fns that submodules would need visibility-promoted, with denser interdependencies than the facade. The scripted toolchain (`code/tools/archive/extract_facade_all.py`, adapted for `impl Game` + `use super::*` over pub(crate)-promoted types) is ready; deferring so it gets its own focused pass + gate rather than rushing a large Tier-2 front in this change.
-- [ ] 4.2 DEFERRED (§10.5) — narrowed `game.rs` extraction (until_condition + read-only query helpers) folds into the same Tier-2 follow-up.
+- [x] 4.1 Split `game_actions.rs` → `game_actions/mod.rs` + 10 `impl Game` submodules (`play`, `digivolve`, `breeding`, `zones`, `movement`, `sources`, `security`, `options`, `cost`, `misc`) mirroring the Tier-3 mechanic names. 84 `&mut self` methods moved; module-private types/`&self` readers stay in `mod.rs`. `use super::*` resolves parent privates → compiled clean first try (0 errors, no promotion needed). Gate PASS: 3548/7 (baseline), all binaries green. Completes the parallel `<tier>/<mechanic>` taxonomy.
+- [ ] 4.2 (Optional, narrowed — RQ3) `game.rs` `until_condition` + query-helper extraction still deferred (§10.5) — lower priority; the Tier-2 verb split (the headline parallel-taxonomy goal) is done.
 
 ## 5. Phase A — Output ports (pure movement)
 
