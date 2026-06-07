@@ -75,6 +75,14 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::ReduceLinkCost { amount } => {
+            // Gap 5 — reduce the in-flight `WhenWouldLink` link cost. This does
+            // NOT set a replacement outcome: the link still resolves (the
+            // replacement stays `None`), but `commit_digimon_link` then pays the
+            // reduced cost. One-shot mutation of `pending_digimon_link.cost`.
+            ctx.reduce_pending_link_cost(*amount);
+            true
+        }
         _ => false,
     }
 }

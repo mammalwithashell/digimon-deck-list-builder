@@ -2975,6 +2975,11 @@ impl Game {
             cost,
             card: source_card,
         });
+        // Expose the link host for the duration of the `WhenWouldLink` window so
+        // a host-side reducer effect can verify "...link to THIS Digimon" via
+        // `EffectContext::pending_link_host` (Gap 5). It is cleared by
+        // `commit_digimon_link` (synchronous and parked paths both route there).
+        self.pending_link_host = Some(host);
         let outcome = self.try_replace(
             EffectTiming::WhenWouldLink,
             ReplacementSubject::Card(source_card, Zone::BattleArea),
@@ -2982,6 +2987,8 @@ impl Game {
             Some(Zone::BattleArea),
         );
         if self.pending_selection.is_some() {
+            // An optional/interactive replacement parked — `pending_link_host`
+            // stays live until the resumed `commit_digimon_link` clears it.
             return;
         }
         self.commit_digimon_link(outcome);
@@ -2996,6 +3003,9 @@ impl Game {
         let Some(p) = self.pending_digimon_link.take() else {
             return;
         };
+        // The `WhenWouldLink` window is closing — the host is no longer "about
+        // to be linked onto". Clear it on every path below (commit or abort).
+        self.pending_link_host = None;
         if !matches!(outcome, ReplacementOutcome::None) {
             // Cancelled / redirected / substituted — link aborted, source stays
             // standing, no cost paid.

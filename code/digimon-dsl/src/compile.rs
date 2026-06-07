@@ -257,6 +257,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::Delayed => CompiledTiming::Delayed,
         S::WhenLinked => CompiledTiming::WhenLinked,
         S::WhenCardLinkedToThis => CompiledTiming::WhenCardLinkedToThis,
+        S::WhenWouldLinkToThis => CompiledTiming::WhenWouldLinkToThis,
     }
 }
 
@@ -818,6 +819,7 @@ fn compile_predicate(
         replacement_cause: p.replacement_cause.map(compile_replacement_cause),
         replacement_source_is_opponent: p.replacement_source_is_opponent,
         replacement_subject_is_mine: p.replacement_subject_is_mine,
+        would_link_card_trait_any_of: p.would_link_card_trait_any_of.clone(),
         equals: p
             .equals
             .as_ref()
@@ -2731,6 +2733,7 @@ fn compile_step(
                 filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             }
         }
+        S::ReduceLinkCost(a) => CompiledStep::ReduceLinkCost { amount: a.amount },
         S::LinkCards(a) => {
             use crate::compiled::{
                 CompiledLinkCount, CompiledLinkSourceZone, CompiledLinkTo,

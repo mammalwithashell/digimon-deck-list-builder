@@ -430,6 +430,14 @@ pub struct Game {
     /// `WhenWouldLink` replacement parked an interactive selection.
     #[doc(hidden)]
     pub(crate) pending_digimon_link: Option<PendingDigimonLink>,
+    /// The host a card is about to link ONTO during the active `WhenWouldLink`
+    /// replacement window. Set by `begin_digimon_link` right before
+    /// `try_replace`, cleared when the link resolves/aborts. Read by a
+    /// host-side reducer effect's `condition` (via `EffectContext::
+    /// pending_link_host`) so it can verify "...link to THIS Digimon" before
+    /// offering its optional cost reduction (Gap 5 — BT25-004 / BT25-045).
+    #[doc(hidden)]
+    pub(crate) pending_link_host: Option<PermanentHandle>,
     /// Fire-site continuation for optional `WhenPermanentWouldDigivolve`
     /// replacements whose subject is the permanent about to digivolve.
     #[doc(hidden)]
@@ -903,6 +911,7 @@ impl Game {
             pending_would_play_resume: None,
             pending_would_link_resume: None,
             pending_digimon_link: None,
+            pending_link_host: None,
             pending_would_digivolve_resume: None,
             player_digivolve_cost_reducers: Vec::new(),
             pending_player_digivolve_reduction: 0,
@@ -1027,6 +1036,7 @@ impl Game {
         self.pending_would_play_resume = None;
         self.pending_would_link_resume = None;
         self.pending_digimon_link = None;
+        self.pending_link_host = None;
         self.pending_would_digivolve_resume = None;
         self.player_digivolve_cost_reducers = Vec::new();
         self.pending_player_digivolve_reduction = 0;

@@ -393,6 +393,7 @@ pub struct CompiledPredicate {
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,
     pub replacement_subject_is_mine: Option<bool>,
+    pub would_link_card_trait_any_of: Option<Vec<String>>,
     pub equals: Option<Vec<CompiledBindingCompare>>,
     pub not_equals: Option<Vec<CompiledBindingCompare>>,
     pub binding_exists: Option<String>,
@@ -882,6 +883,12 @@ pub enum CompiledTiming {
     /// (`event_permanent == source_permanent`) — fires once for the receiving
     /// host only. Mirrors DCGO `CanTriggerWhenLinked`.
     WhenCardLinkedToThis,
+    /// DigiLink host-side pre-link replacement: "a card WOULD link to this
+    /// Digimon". Authored as `when: when_would_link_to_this` on a face-up
+    /// `scope`; lowers to a `EffectTiming::WhenWouldLink` REPLACEMENT effect
+    /// with a host self-filter (`pending_link_host() == source_permanent`).
+    /// Pair with `optional` + a `reduce_link_cost` step (Gap 5).
+    WhenWouldLinkToThis,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1647,6 +1654,12 @@ pub enum CompiledStep {
         optional: bool,
         free: bool,
         filter: CompiledPredicate,
+    },
+    /// Gap 5 — reduce the in-flight `WhenWouldLink` link cost by `amount`.
+    /// Compiled form of `StepSpec::ReduceLinkCost`; the engine lowering calls
+    /// `EffectContext::reduce_pending_link_cost(amount)`.
+    ReduceLinkCost {
+        amount: u16,
     },
     /// Gap 2 — link 1..N chosen cards from a set of source zones onto a
     /// Digimon host. Compiled form of `StepSpec::LinkCards`. The engine

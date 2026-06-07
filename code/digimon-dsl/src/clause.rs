@@ -151,6 +151,16 @@ pub enum Timing {
     /// fires once for the host the card actually attached to and not for a
     /// sibling host. Mirrors DCGO `CardEffectCommons.CanTriggerWhenLinked`.
     WhenCardLinkedToThis,
+    /// DigiLink host-side pre-link **replacement**: "when a card **would** link
+    /// **to this Digimon**" (`when: when_would_link_to_this`). The effect lives
+    /// on the HOST (a face-up `scope`). Lowers to a `WhenWouldLink` REPLACEMENT
+    /// effect (not a triggered observer) + a host self-filter
+    /// (`pending_link_host() == source_permanent`) so it fires only while the
+    /// linking card is attaching to THIS permanent. Pair with an `optional`
+    /// clause + a `reduce_link_cost` step to express "you may reduce the cost"
+    /// (Gap 5 — BT25-004 Tapmon / BT25-045 Onmon). Filter the would-link card's
+    /// traits via `active_when: { would_link_card_trait_any_of: [...] }`.
+    WhenWouldLinkToThis,
 }
 
 #[derive(

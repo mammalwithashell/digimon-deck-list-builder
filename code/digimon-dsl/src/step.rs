@@ -270,6 +270,11 @@ pub enum StepSpec {
     ScheduleDeletePlayedAtTurnEnd(ScheduleDeletePlayedAtTurnEndArgs),
     PlaceSelfAsDelayOption(EmptyArgs),
     LinkToOwnDigimon(LinkToOwnDigimonArgs),
+    /// Gap 5 — reduce the cost of the link about to resolve in the active
+    /// `WhenWouldLink` window by `amount`. Authoring verb over the engine's
+    /// `reduce_pending_link_cost` primitive; the body of a host-side
+    /// `when: when_would_link_to_this` reducer clause (BT25-004 / BT25-045).
+    ReduceLinkCost(ReduceLinkCostArgs),
     /// Gap 2 — link 1..N chosen cards from a set of source zones onto a
     /// Digimon host, without paying a link cost. Drives BT25-060 Rebootmon /
     /// BT25-075 Vulcanusmon / BT25-089 Kazuki & Itsuki. The authoring verb over
@@ -528,6 +533,7 @@ impl Serialize for StepSpec {
             }
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
+            StepSpec::ReduceLinkCost(v) => kv!(s, "reduce_link_cost", v),
             StepSpec::LinkCards(v) => kv!(s, "link_cards", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
@@ -777,6 +783,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
+            "reduce_link_cost" => StepSpec::ReduceLinkCost(map.next_value()?),
             "link_cards" => StepSpec::LinkCards(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
 
@@ -922,6 +929,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "schedule_delayed",
                         "place_self_as_delay_option",
                         "link_to_own_digimon",
+                        "reduce_link_cost",
                         "link_cards",
                         "optional",
                         "battle",
@@ -967,6 +975,16 @@ pub enum BindingRef {
 #[serde(deny_unknown_fields)]
 pub struct DeleteBoundPermanentsArgs {
     pub binding: String,
+}
+
+/// Args for `reduce_link_cost` — reduce the cost of the link about to resolve
+/// in the active `WhenWouldLink` window by `amount` (saturating at 0). Only
+/// meaningful inside a `when: when_would_link_to_this` clause's `process`
+/// (Gap 5 — BT25-004 / BT25-045: "you may reduce the cost by 1").
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReduceLinkCostArgs {
+    pub amount: u16,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

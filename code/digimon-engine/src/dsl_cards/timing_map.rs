@@ -66,6 +66,11 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         // `OnLink` dispatch; lower_triggered forces a host self-filter
         // (`event_permanent == source_permanent`) instead of `.linked()`.
         CompiledTiming::WhenCardLinkedToThis => EffectTiming::OnLink,
+        // DigiLink host-side pre-link replacement: `when: when_would_link_to_this`
+        // lowers to the `WhenWouldLink` REPLACEMENT timing; lower_triggered
+        // forces a host self-filter (`pending_link_host() == source_permanent`)
+        // and routes the body through `replacement_process` (Gap 5).
+        CompiledTiming::WhenWouldLinkToThis => EffectTiming::WhenWouldLink,
         // Phase 2a non-targets — skip emission.
         CompiledTiming::Delayed => return None,
     })

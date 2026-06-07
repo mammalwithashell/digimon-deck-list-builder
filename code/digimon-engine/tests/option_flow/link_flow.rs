@@ -2015,3 +2015,321 @@ effects:
         "two zone options offered (hand / digivolution sources)"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Gap 5 — predicated host-side `WhenWouldLink` cost reduction.
+//
+// BT25-004 Tapmon (Digi-Egg, inherited) / BT25-045 Onmon (face-up):
+//   "[Your Turn] [Once Per Turn] When a [Social], [Tool] or [Game] trait card
+//    would link to this Digimon, you may reduce the cost by 1."
+//
+// The reducer lives on the HOST. It fires only when:
+//   (a) the card is linking onto THIS permanent (`pending_link_host` == self),
+//   (b) the linking card has one of the required traits, and
+//   (c) it is the controller's turn.
+// It is OPTIONAL (accept/decline exposed to the RL action space) and capped at
+// once per turn. The accept-branch reduces the imminent link cost by 1 via
+// `reduce_pending_link_cost`; it does NOT cancel the link.
+// ═══════════════════════════════════════════════════════════════════════════
+
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::replacement::ReplacementSubject;
+
+/// A Digimon at the given trait set — used as the standing link SOURCE.
+fn traited_digimon(card_id: &str, color: CardColor, traits: &[&str]) -> digimon_engine::CardData {
+    let mut cd = make_test_card(card_id, card_id);
+    cd.colors = vec![color];
+    cd.traits = traits.iter().map(|s| s.to_string()).collect();
+    cd
+}
+
+/// True when the replacement SUBJECT card carries one of the required traits.
+fn subject_card_has_required_trait(
+    rctx: &digimon_engine::effect_context::EffectReadContext<'_>,
+    subject: &ReplacementSubject,
+) -> bool {
+    const REQUIRED: &[&str] = &["Social", "Tool", "Game"];
+    let card = match subject {
+        ReplacementSubject::Card(handle, _zone) => *handle,
+        _ => return false,
+    };
+    let Some(data) = rctx.game.card_data_for_handle(card) else {
+        return false;
+    };
+    data.traits
+        .iter()
+        .any(|t| REQUIRED.iter().any(|r| r == t))
+}
+
+/// The faithful BT25-004/045 host-side reducer, hand-written for substrate TDD.
+///
+/// `Effect::when_would_link` builds the replacement at `WhenWouldLink`. The
+/// `condition` gates on (host self-filter via `pending_link_host`) + (your
+/// turn); the `replacement_condition` gates on the linking card's traits (it is
+/// the only hook that can see the would-link SUBJECT card). The accept-branch
+/// reduces the link cost by 1.
+struct LinkCostReducer;
+impl CardEffect for LinkCostReducer {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_would_link(card)
+            .name("Reduce link cost by 1")
+            .optional()
+            .once_per_turn()
+            .condition(|rctx| {
+                // (a) the card is linking onto THIS permanent, and
+                // (c) it is the controller's turn.
+                rctx.pending_link_host() == rctx.source_permanent
+                    && rctx.game.turn_player() == rctx.player
+            })
+            // (b) the linking card carries a required trait.
+            .replacement_condition(|rctx, subject| {
+                subject_card_has_required_trait(rctx, subject)
+            })
+            .replacement_process(|rctx| {
+                rctx.effect.reduce_pending_link_cost(1);
+            })
+            .build()]
+    }
+}
+
+/// A standing Appmon-style link SOURCE: a static `link_condition` declaring it
+/// may link onto any of the controller's Digimon for `cost`.
+struct StandingLinkSource {
+    cost: u16,
+}
+impl CardEffect for StandingLinkSource {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::link_condition(card)
+            .name("Link onto any ally")
+            .link_host(self.cost, |_rctx, _host| true)
+            .build()]
+    }
+}
+
+/// Drive the standing-link path through the action mask + decode, exactly as
+/// the RL agent would: find the FIELD_EFFECT link bit for `source_idx`, take
+/// it (installs the host-selection), then pick `host_idx`. Returns after
+/// `begin_digimon_link` has fired the `WhenWouldLink` window — any optional
+/// reducer prompt is now the live `pending_selection`.
+fn activate_standing_link(r: &mut DebugRunner, source_idx: usize, host_idx: u8) {
+    use digimon_engine::action::space::{
+        encode_attack, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_START,
+    };
+    // 1. The FIELD_EFFECT link bit must be legal in the mask.
+    let link_bit = FIELD_EFFECT_START
+        + source_idx as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_LINK;
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[link_bit as usize], 1.0,
+        "standing link FIELD_EFFECT bit must be legal for source {source_idx}"
+    );
+    // 2. Take it — installs the own-field host-selection prompt.
+    r.game.decode_action(link_bit, 0);
+    // 3. Pick the host. The host-selection encodes targets as encode_attack(0, idx).
+    let host_action = encode_attack(0, host_idx as u16);
+    r.game
+        .resolve_selection(0, host_action)
+        .expect("resolve host-selection");
+}
+
+/// Build a runner with P0's link source + host already on the field and the
+/// turn advanced to P0's main phase. Returns (source_handle, host_handle).
+fn setup_gap5(
+    r_traits: &[&str],
+    link_cost: u16,
+    reducer_on_host: bool,
+) -> (DebugRunner, PermanentHandle, PermanentHandle) {
+    let mut r = DebugRunner::builder()
+        .add_card(traited_digimon("LINK-SRC", CardColor::Red, r_traits))
+        .add_card(traited_digimon("HOST", CardColor::Red, &[]))
+        .memory(10)
+        .start();
+    r.register_effect("LINK-SRC", Arc::new(StandingLinkSource { cost: link_cost }));
+    if reducer_on_host {
+        r.register_effect("HOST", Arc::new(LinkCostReducer));
+    }
+    let host = r.place_on_field(0, "HOST", Some(0));
+    let source = r.place_on_field(0, "LINK-SRC", Some(0));
+    advance_to_main(&mut r);
+    (r, source, host)
+}
+
+/// Gap 5 — accepting the optional reduce lowers the paid link cost by 1.
+#[test]
+fn gap5_predicated_reduce_lowers_paid_cost() {
+    let (mut r, source, host) = setup_gap5(&["Social"], 3, true);
+    let before = r.memory();
+    activate_standing_link(&mut r, source.index as usize, host.index);
+
+    // The optional reducer prompt is live — accept it.
+    assert!(
+        r.pending_is_optional(),
+        "matching-trait link must offer the optional reduce"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept reduce");
+
+    // Cost 3 reduced to 2 — memory dropped by 2, not 3.
+    assert_eq!(
+        r.memory(),
+        before - 2,
+        "accepting the reduce must pay cost-1 (3 -> 2)"
+    );
+    // The source actually linked onto the host.
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "the source must attach to the host after the reduced cost is paid"
+    );
+}
+
+/// Gap 5 — declining the optional reduce pays the full link cost.
+#[test]
+fn gap5_predicated_reduce_declined_pays_full() {
+    let (mut r, source, host) = setup_gap5(&["Tool"], 3, true);
+    let before = r.memory();
+    activate_standing_link(&mut r, source.index as usize, host.index);
+
+    assert!(
+        r.pending_is_optional(),
+        "matching-trait link must offer the optional reduce"
+    );
+    r.game.resolve_selection(0, PASS).expect("decline reduce");
+
+    assert_eq!(
+        r.memory(),
+        before - 3,
+        "declining the reduce must pay the full cost (3)"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "the link still resolves at full cost after declining"
+    );
+}
+
+/// Gap 5 — a non-matching-trait linking card gets no reduce offer (full cost).
+#[test]
+fn gap5_predicated_reduce_wrong_trait_no_offer() {
+    // The source carries no required trait — the reducer must not fire.
+    let (mut r, source, host) = setup_gap5(&["Vaccine"], 3, true);
+    let before = r.memory();
+    activate_standing_link(&mut r, source.index as usize, host.index);
+
+    // No optional reducer prompt installs; the link resolves directly at full
+    // cost.
+    assert!(
+        r.game.pending_selection.is_none(),
+        "a non-matching-trait link must not install the reduce prompt"
+    );
+    assert_eq!(
+        r.memory(),
+        before - 3,
+        "a non-matching-trait link pays the full cost (3)"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "the link resolves at full cost"
+    );
+}
+
+/// Gap 5 — the reduce is once per turn: a second matching link the same turn is
+/// not reduced.
+#[test]
+fn gap5_predicated_reduce_once_per_turn() {
+    // Two standing matching-trait link sources + one host with the reducer.
+    let mut r = DebugRunner::builder()
+        .add_card(traited_digimon("LINK-A", CardColor::Red, &["Social"]))
+        .add_card(traited_digimon("LINK-B", CardColor::Red, &["Game"]))
+        .add_card(traited_digimon("HOST", CardColor::Red, &[]))
+        .memory(20)
+        .start();
+    r.register_effect("LINK-A", Arc::new(StandingLinkSource { cost: 3 }));
+    r.register_effect("LINK-B", Arc::new(StandingLinkSource { cost: 3 }));
+    r.register_effect("HOST", Arc::new(LinkCostReducer));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    let src_a = r.place_on_field(0, "LINK-A", Some(0));
+    let _src_b = r.place_on_field(0, "LINK-B", Some(0));
+    advance_to_main(&mut r);
+
+    // First link — accept the reduce (3 -> 2).
+    let before_a = r.memory();
+    activate_standing_link(&mut r, src_a.index as usize, host.index);
+    assert!(r.pending_is_optional(), "first link offers the reduce");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept first reduce");
+    assert_eq!(r.memory(), before_a - 2, "first link pays cost-1 (3 -> 2)");
+
+    // Second link the SAME turn — once-per-turn is spent, so no reduce prompt
+    // and the full cost is paid. Absorbing src_a (a later slot) shifted the
+    // Vec, so re-resolve LINK-B's current battle-area index. The host is
+    // index 0 (placed first), so it never shifts.
+    let src_b_idx = r.game.player(0).battle_area.iter().position(|p| {
+        p.card_sources
+            .last()
+            .map(|c| c.card_id(&r.game.card_data) == "LINK-B")
+            .unwrap_or(false)
+    });
+    let src_b_idx = src_b_idx.expect("LINK-B still standing on the field");
+    let before_b = r.memory();
+    activate_standing_link(&mut r, src_b_idx, host.index);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "the second link the same turn must not offer the reduce (once per turn)"
+    );
+    assert_eq!(
+        r.memory(),
+        before_b - 3,
+        "the second link pays the full cost (3)"
+    );
+}
+
+/// Gap 5 (DSL) — author BT25-045 Onmon's reducer clause in YAML and prove the
+/// reduce lowers the paid link cost.
+#[test]
+fn gap5_dsl_when_would_link_to_this() {
+    const YAML: &str = "card: BT25-045\nname: Onmon\nkind: digimon\nlevel: 4\ncolor: [red]\ncost: 5\ndp: 5000\ntraits: [Appliance, Social]\neffects:\n  - when: when_would_link_to_this\n    optional: true\n    once_per_turn: true\n    active_when:\n      would_link_card_trait_any_of: [Social, Tool, Game]\n    process:\n      - reduce_link_cost: { amount: 1 }\n";
+    let mut r = DebugRunner::builder()
+        .add_card(traited_digimon("LINK-SRC", CardColor::Red, &["Tool"]))
+        .add_card(traited_digimon("BT25-045", CardColor::Red, &[]))
+        .memory(10)
+        .start();
+    r.register_effect("LINK-SRC", Arc::new(StandingLinkSource { cost: 3 }));
+    register_dsl_yaml(&mut r, YAML);
+    let host = r.place_on_field(0, "BT25-045", Some(0));
+    let source = r.place_on_field(0, "LINK-SRC", Some(0));
+    advance_to_main(&mut r);
+
+    let before = r.memory();
+    activate_standing_link(&mut r, source.index as usize, host.index);
+    assert!(
+        r.pending_is_optional(),
+        "the DSL-authored reducer must offer the optional reduce"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept reduce");
+
+    assert_eq!(
+        r.memory(),
+        before - 2,
+        "the DSL reducer must pay cost-1 (3 -> 2)"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "the source must attach after the reduced cost is paid"
+    );
+}
