@@ -42,9 +42,9 @@
 
 ## 8. Placement rule & enforcement
 
-- [ ] 8.1 Document the placement rule (rules machinery → Tier 2; facade → guards/identity/sugar/entry; Tier-3 exceptions need a doc comment) in `docs/RUST_ENGINE_API.md`.
-- [ ] 8.2 Add the placement-rule lint (RQ1) asserting no `try_replace` / `self.game.fire_*` / `battle_area[..]`-write in `effect_context/` outside effect-entry points, with an explicit allowlist for documented Tier-3-only ops (digixros materials, `attach_tamer`, `play_token`). Ship in WARN / `continue-on-error` mode (deny before B3 lands would red-CI on the still-present de_digivolve inversion). Follow the `action-space-codegen-drift.yml` precedent; reuse the `code/tools/dsl-lint/` crate shape.
-- [ ] 8.3 Update `CLAUDE.md` / engine docs to reference the new `<tier>/<mechanic>.rs` address scheme so new cards/mechanics land in the right module.
+- [x] 8.1 Documented the placement rule + 3-tier model + `<tier>/<mechanic>` address scheme in `docs/RUST_ENGINE_API.md` §3 ("Module layout & the placement rule").
+- [ ] 8.2 **DEFERRED to follow-up (§10.3, RQ1).** The warn-mode lint depends on a stable Tier-3-exception allowlist; ship it after the remaining mechanical splits land. Precedent + reuse noted in §10.3.
+- [x] 8.3 Engine-dev address scheme documented in `docs/RUST_ENGINE_API.md` §3 (the authoritative engine-dev reference that CLAUDE.md points to). CLAUDE.md edit not required — it already routes engine work through RUST_ENGINE_API.md.
 
 ## 9. Verification & close-out
 
