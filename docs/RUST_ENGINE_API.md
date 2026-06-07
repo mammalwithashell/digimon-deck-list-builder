@@ -159,6 +159,17 @@ Key rules:
 
 The context passed into `condition` and `process` closures.
 
+### Module layout & the placement rule (2026-06-07)
+
+The engine has three effect-execution tiers. **Where new code goes is a rule, not a guess:**
+
+- **Tier 1 — core state** (`game.rs`, `player.rs`, `permanent.rs`, `combat.rs`): the state machine, zones, memory, turn lifecycle.
+- **Tier 2 — operations** (`game_actions.rs`): the rules *verbs* (play / digivolve / move / breeding). **Rules machinery lives here** — replacement-window dispatch (`try_replace`), observer/event firing (`fire_*`), and direct `battle_area` / stack mutation.
+- **Tier 3 — scripting facade** (`effect_context/`): the curated card-scripting API. **The facade = effect-only guards + effect-identity injection + type ergonomics + sugar + effect-entry only.** It must NOT hold a pop-loop, a `try_replace`, or a `fire_*` call. An effect-only operation MAY hold logic in Tier 3 *iff* no Tier-2 counterpart exists — and must say so in a doc comment.
+- **Output ports** (`observation/`): read-only `&Game → tensor` projections; never mutate, and the core never depends on them.
+
+`effect_context/` is split by **mechanic**: read accessors stay in `mod.rs`; mutators live in `effect_context/action/<mechanic>.rs` (`play`, `digivolve`, `trash`, `sources`, `security`, `zones`, `combat`, `modifiers`, `digixros`, `scheduling`, `memory`, `suspend`, `replacement`, `refire`, `lifecycle`). `EffectContext` is one type; only its `impl` is split across files (same technique as `impl Game` ×14 and the `selections` sibling). `game_actions` mirrors the same mechanic names so an operation lives at a predictable `<tier>/<mechanic>` address. Exemplar of the rule applied: `de_digivolve`'s rules machinery is `Game::de_digivolve_core` (Tier 2); the facade `de_digivolve` is a thin guard+delegate. See the `engine-effect-context-layering` capability spec.
+
 ### Fields
 
 - `ctx.game: &mut Game` — escape hatch (use sparingly).

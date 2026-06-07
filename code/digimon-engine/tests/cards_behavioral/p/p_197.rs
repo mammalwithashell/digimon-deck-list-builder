@@ -371,11 +371,17 @@ fn p_197_start_main_does_not_offer_when_memory_is_5_or_hand_has_no_angel_or_ts()
 #[test]
 fn p_197_inherited_when_attacking_gives_minus_2000_dp_once_per_turn() {
     let yaml = p_197_yaml();
+    // Give the opponent 3000 DP so the inherited -2000 DP leaves it alive at
+    // 1000. A 2000 DP target would reach 0 DP and be deleted by rule 17-1-3-1,
+    // which would make the Once-Per-Turn check below ambiguous (no second target
+    // because the Digimon is gone, rather than because OPT suppressed the trigger).
+    let mut tough_opp = filler("OPP");
+    tough_opp.dp = Some(3000);
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(&yaml)
         .expect("P-197 YAML parses")
         .add_card(filler("CARRIER"))
-        .add_card(filler("OPP"))
+        .add_card(tough_opp)
         .start();
     let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
     let opp = runner.place_on_field(1, "OPP", Some(0));
@@ -397,7 +403,11 @@ fn p_197_inherited_when_attacking_gives_minus_2000_dp_once_per_turn() {
         .expect("choose opponent Digimon");
     runner.auto_resolve().expect("finish DP modifier");
 
-    assert_eq!(runner.game.effective_dp(opp), Some(0));
+    assert_eq!(
+        runner.game.effective_dp(opp),
+        Some(1000),
+        "3000 DP opponent gets -2000 DP and survives at 1000"
+    );
 
     runner.game.enqueue_triggered(
         EffectTiming::WhenAttacking,
@@ -411,7 +421,7 @@ fn p_197_inherited_when_attacking_gives_minus_2000_dp_once_per_turn() {
     );
     assert_eq!(
         runner.game.effective_dp(opp),
-        Some(0),
+        Some(1000),
         "second same-turn trigger must not apply another -2000 DP"
     );
 }

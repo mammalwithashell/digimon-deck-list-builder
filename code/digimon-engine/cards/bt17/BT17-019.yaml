@@ -88,7 +88,12 @@ effects:
   - when: end_of_your_turn
     scope: inherited
     optional: true
-    summary: "[EoT] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand"
+    # FAITHFULNESS FIX (G-FIX-BT12-EOT-DNA-PAYCOST, 2026-06-02): NORMAL DNA
+    # digivolve. DCGO BT17_019.cs OnEndTurn → CanJogressFromTargetPermanent(this,
+    # PayCost:true) + DNADigivolvePermanentsIntoHandOrTrashCard(payCost: true).
+    # `ignore_requirements: false` → target gated on a valid DNA route from
+    # {this, partner}, charging the printed DNA cost. See BT12-021 for rationale.
+    summary: "[EoT] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand (paying its DNA cost)"
     process:
       - may_dna_digivolve_now:
           partner_filter:
@@ -100,6 +105,6 @@ effects:
               - of: you
               - kind: digimon
           cost: 0
-          ignore_requirements: true
+          ignore_requirements: false
           optional: true
           prompt: "DNA digivolve at end of turn?"

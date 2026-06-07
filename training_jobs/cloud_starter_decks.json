@@ -1,0 +1,36 @@
+{
+  "job_name": "starter_decks_generalist",
+  "description": "Generalist RL agent trained across the six worldwide starter decks (ST-1 Gaia Red, ST-2 Cocytus Blue, ST-3 Heaven's Yellow, ST-4 Giga Green, ST-5 Machine Black, ST-6 Venomous Violet). One LSTM policy learns to pilot all six AUDITED-OK starter archetypes; opponents are sampled from the same starter-deck pool. Cloud-run entrypoint: python tools/run_training_job.py /app/jobs/cloud_starter_decks.json",
+
+  "agent_deck": { "source": "default" },
+
+  "allowed_archetypes": [
+    "ST-1 Gaia Red",
+    "ST-2 Cocytus Blue",
+    "ST-3 Heaven's Yellow",
+    "ST-4 Giga Green",
+    "ST-5 Machine Black",
+    "ST-6 Venomous Violet"
+  ],
+
+  "training": {
+    "generalist": true,
+    "timesteps": 1000000,
+    "opponent": "greedy",
+    "use_lstm": true,
+    "lstm_hidden_size": 256,
+    "learning_rate": 3e-4,
+    "n_steps": 2048,
+    "batch_size": 64,
+    "n_epochs": 4,
+    "gamma": 0.999,
+    "eval_freq": 20000,
+    "n_eval_episodes": 20
+  },
+
+  "output": {
+    "name": "starter_decks_generalist_v1",
+    "save_dir": "models",
+    "log_dir": "runs/pilot_ppo"
+  }
+}

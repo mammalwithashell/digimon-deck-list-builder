@@ -81,19 +81,24 @@ effects:
   #   "[Your Turn] While this Digimon has [Imperialdramon] in its name or the
   #    [Free] trait, it gains ＜Jamming＞"
   #
-  # DCGO: JammingSelfStaticEffect(isInheritedEffect: true), condition checks
-  #   carrier's TopCard name or trait. This is faithful through a self
-  #   inherited aura: `active_when` sees this source's carrier via
-  #   `source_permanent`, and the empty target makes the materialized keyword
-  #   apply only to that carrier.
+  # DCGO BT12_022.cs Condition(): IsOwnerTurn && (TopCard.ContainsCardName(
+  #   "Imperialdramon") || TopCard.CardTraits.Contains("Free")). BOTH checks are
+  #   on the carrier's TOP CARD only.
+  #   FIX (G-FIX-BT12-INHERIT-TOPCARD-NAME, 2026-06-02): the name check now uses
+  #   `source_name_contains` (carrier top-card name, top-only) instead of
+  #   `self_digivolution_contains_name`, which routed through
+  #   `Permanent::contains_card_name` and scanned the top card AND all
+  #   digivolution sources — over-granting Jamming when an [Imperialdramon] card
+  #   sits as a buried source beneath a non-Imperialdramon top card. The [Free]
+  #   trait check (`source_permanent_trait_has`) was already top-only and faithful.
   - scope: inherited
     kind: aura
     active_when:
       all_of:
         - your_turn: true
         - any_of:
-            - self_digivolution_contains_name: "Imperialdramon"
+            - source_name_contains: "Imperialdramon"
             - source_permanent_trait_has: "Free"
     target: {}
     grant_keyword: { keyword: Jamming }
-    summary: "[Inherited][Your Turn] Carrier gains <Jamming> if its stack has [Imperialdramon] in name or its top card has [Free] trait"
+    summary: "[Inherited][Your Turn] Carrier gains <Jamming> if its TOP CARD has [Imperialdramon] in name or the [Free] trait"

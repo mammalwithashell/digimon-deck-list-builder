@@ -38,6 +38,8 @@ fn add_modifier_filter_targets_every_match() {
         modifier: "CannotBeAffected".to_string(),
         value: CompiledModifierValue::Literal(0),
         expiry: "end_of_turn".to_string(),
+    synth_identity: None,
+    continuous: false,
     }];
 
     {
@@ -80,6 +82,8 @@ fn add_modifier_filter_can_install_timing_suppression_modifier() {
         modifier: "CannotActivateWhenAttackingEffects".to_string(),
         value: CompiledModifierValue::Literal(0),
         expiry: "end_of_turn".to_string(),
+    synth_identity: None,
+    continuous: false,
     }];
 
     {

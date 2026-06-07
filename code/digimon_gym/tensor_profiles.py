@@ -1,8 +1,10 @@
 """Board tensor profile metadata used by RL feature extraction.
 
-Rust owns the canonical profile registry. The fallback keeps imports working
-before a local PyO3 wheel has been rebuilt, and it must match
-standard_compact_v1.
+Rust owns the canonical profile registry; this module is a thin adapter over
+the `digimon_engine` PyO3 wheel, which the training env now requires. The
+`standard_compact_v1` profile is retired from the training env (the Rust engine
+keeps its own compact tensor builder for offline parity use); requesting it
+raises a clear error pointing at `standard_lite_v2`.
 """
 
 from __future__ import annotations
@@ -50,10 +52,8 @@ _STANDARD_COMPACT_V1_ALIASES = {
 
 
 def get_tensor_profile(profile_id: str | None = None) -> TensorProfile:
-    digimon_engine = _load_digimon_engine()
-    if digimon_engine is None:
-        _validate_fallback_profile_id(profile_id)
-        return _legacy_standard_compact_v1()
+    _reject_retired_profile(profile_id)
+    digimon_engine = _require_digimon_engine()
 
     get_layout = getattr(digimon_engine, "get_observation_layout", None)
     if get_layout is not None:
@@ -61,8 +61,11 @@ def get_tensor_profile(profile_id: str | None = None) -> TensorProfile:
 
     get_profile = getattr(digimon_engine, "get_tensor_profile", None)
     if get_profile is None:
-        _validate_fallback_profile_id(profile_id)
-        return _legacy_standard_compact_v1()
+        raise RuntimeError(
+            "digimon_engine is installed but exposes neither "
+            "get_observation_layout nor get_tensor_profile; rebuild the wheel "
+            "(`cd code/digimon-engine-py && maturin develop --release`)."
+        )
 
     raw = get_profile(profile_id)
     return TensorProfile(
@@ -99,19 +102,24 @@ def get_tensor_profile_for_observation_shape(shape: tuple[int, ...]) -> TensorPr
 
 def get_tensor_profile_for_tensor_size(tensor_size: int) -> TensorProfile:
     """Resolve a unique registered tensor profile by tensor size."""
-    digimon_engine = _load_digimon_engine()
-    if digimon_engine is None:
-        return _fallback_profile_for_tensor_size(tensor_size)
+    digimon_engine = _require_digimon_engine()
 
     list_profiles = getattr(digimon_engine, "list_observation_profiles", None)
     if list_profiles is None:
         list_profiles = getattr(digimon_engine, "list_tensor_profiles", None)
     if list_profiles is None:
-        return _fallback_profile_for_tensor_size(tensor_size)
+        raise RuntimeError(
+            "digimon_engine is installed but exposes no profile registry; "
+            "rebuild the wheel (`cd code/digimon-engine-py && maturin develop --release`)."
+        )
 
     matches: dict[str, TensorProfile] = {}
     for profile_id in list_profiles():
-        profile = get_tensor_profile(str(profile_id))
+        try:
+            profile = get_tensor_profile(str(profile_id))
+        except ValueError:
+            # Skip profiles retired from the training env (e.g. standard_compact_v1).
+            continue
         if profile.tensor_size == tensor_size:
             matches[profile.id] = profile
 
@@ -130,17 +138,24 @@ def get_tensor_profile_for_tensor_size(tensor_size: int) -> TensorProfile:
 
 
 def list_tensor_profiles() -> list[str]:
-    digimon_engine = _load_digimon_engine()
-    if digimon_engine is None:
-        return [_CANONICAL_STANDARD_COMPACT_V1]
+    digimon_engine = _require_digimon_engine()
 
     list_profiles = getattr(digimon_engine, "list_observation_profiles", None)
     if list_profiles is None:
         list_profiles = getattr(digimon_engine, "list_tensor_profiles", None)
     if list_profiles is None:
-        return [_CANONICAL_STANDARD_COMPACT_V1]
+        raise RuntimeError(
+            "digimon_engine is installed but exposes no profile registry; "
+            "rebuild the wheel (`cd code/digimon-engine-py && maturin develop --release`)."
+        )
 
-    return [_canonicalize_tensor_profile_id(profile_id) for profile_id in list_profiles()]
+    result: list[str] = []
+    for profile_id in list_profiles():
+        canonical = _canonicalize_tensor_profile_id(profile_id)
+        if canonical in _STANDARD_COMPACT_V1_ALIASES:
+            continue  # retired from the training env
+        result.append(canonical)
+    return result
 
 
 def _profile_from_observation_layout(raw: Any) -> TensorProfile:
@@ -198,58 +213,31 @@ def _load_digimon_engine():
     return importlib.import_module("digimon_engine")
 
 
-def _validate_fallback_profile_id(profile_id: str | None) -> None:
-    if profile_id is None or profile_id in _STANDARD_COMPACT_V1_ALIASES:
-        return
-    if profile_id == "standard_lite_v2":
+def _require_digimon_engine():
+    digimon_engine = _load_digimon_engine()
+    if digimon_engine is None:
+        raise RuntimeError(
+            "The Rust engine wheel (digimon_engine) is not installed, but the "
+            "training env requires it. Build it with "
+            "`cd code/digimon-engine-py && maturin develop --release` "
+            "(or install the prebuilt wheel)."
+        )
+    return digimon_engine
+
+
+def _reject_retired_profile(profile_id: str | None) -> None:
+    if profile_id is not None and profile_id in _STANDARD_COMPACT_V1_ALIASES:
         raise ValueError(
-            "standard_lite_v2 requires digimon_engine observation layout support"
-        ) from None
-    raise ValueError(f"unknown tensor profile: {profile_id}") from None
-
-
-def _fallback_profile_for_tensor_size(tensor_size: int) -> TensorProfile:
-    profile = _legacy_standard_compact_v1()
-    if profile.tensor_size == tensor_size:
-        return profile
-    raise ValueError(
-        f"no registered tensor profile matches observation tensor size {tensor_size}; "
-        f"digimon_engine profile registry is unavailable and only "
-        f"{profile.id} size {profile.tensor_size} can be inferred"
-    )
+            "standard_compact_v1 is retired from the training env; use "
+            "standard_lite_v2 (the training default). The Rust engine retains "
+            "its own compact tensor builder for offline parity use."
+        )
 
 
 def _canonicalize_tensor_profile_id(profile_id: str) -> str:
     if profile_id in _STANDARD_COMPACT_V1_ALIASES:
         return _CANONICAL_STANDARD_COMPACT_V1
     return profile_id
-
-
-def _legacy_standard_compact_v1() -> TensorProfile:
-    from engine_py_legacy.engine.data.tensor_layout import (
-        CARD_ID_POSITIONS,
-        NUM_CARD_SLOTS,
-        NUM_SCALAR_SLOTS,
-        SCALAR_POSITIONS,
-    )
-    from engine_py_legacy.engine.game import FIELD_SLOTS, MAX_SOURCES, SLOT_SIZE, TENSOR_SIZE
-
-    return TensorProfile(
-        id=_CANONICAL_STANDARD_COMPACT_V1,
-        game_mode="standard",
-        version=1,
-        tensor_version=1,
-        feature_schema_version="standard_compact_v1.1",
-        layout_hash="",
-        tensor_size=TENSOR_SIZE,
-        field_slots=FIELD_SLOTS,
-        slot_size=SLOT_SIZE,
-        max_sources=MAX_SOURCES,
-        card_id_slot_count=NUM_CARD_SLOTS,
-        scalar_slot_count=NUM_SCALAR_SLOTS,
-        card_id_positions=_as_tuple(CARD_ID_POSITIONS),
-        scalar_positions=_as_tuple(SCALAR_POSITIONS),
-    )
 
 
 def _as_tuple(values: Iterable[int]) -> tuple[int, ...]:

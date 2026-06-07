@@ -271,6 +271,10 @@ pub struct CompiledPredicate {
     pub color_matches_any_field_digimon: Option<CompiledPlayerRef>,
     pub color_matches_binding: Option<String>,
     pub trait_has: Option<String>,
+    /// Substring sibling of `trait_has` — matches when any subject trait
+    /// CONTAINS this token (case-insensitive). Mirrors DCGO
+    /// `ContainsTraits`. G-DSL-TRAIT-CONTAINS-SUBSTRING.
+    pub trait_contains: Option<String>,
     pub form_is: Option<String>,
     pub attribute_is: Option<String>,
     pub name_is: Option<String>,
@@ -326,6 +330,7 @@ pub struct CompiledPredicate {
     pub of_permanent: Option<String>,
     pub not_in_binding: Option<String>,
     pub binding_owner: Option<CompiledBindingOwnerPredicate>,
+    pub binding_card_kind: Option<CompiledBindingCardKindPredicate>,
     pub source_is_tamer: Option<bool>,
     pub source_is_unsuspended: Option<bool>,
     pub source_name_contains: Option<String>,
@@ -435,6 +440,8 @@ pub struct CompiledPredicate {
     pub self_digivolution_sources_contain_name: Option<String>,
     pub self_digivolution_sources_trait_has: Option<String>,
     pub event_target_owner: Option<CompiledPlayerRef>,
+    /// `OnAddToHand` observer: the gaining player must match this ref.
+    pub event_add_to_hand_player: Option<CompiledPlayerRef>,
     /// Event-target permanent color-set intersection test.
     /// G-EVENT-TARGET-COLOR.
     pub event_target_color_any_of: Option<Vec<CompiledColor>>,
@@ -500,6 +507,12 @@ pub enum CompiledBindingCompare {
 pub struct CompiledBindingOwnerPredicate {
     pub binding: String,
     pub of: CompiledPlayerRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledBindingCardKindPredicate {
+    pub binding: String,
+    pub kind: CompiledCardKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -610,6 +623,13 @@ pub enum CompiledPerSelector {
         of: CompiledPlayerRef,
         filter: Option<Box<CompiledPredicate>>,
     },
+    /// Count of the effect carrier's own digivolution sources (beneath its top
+    /// card) matching `filter`. Composes in `BasePerDelta` to scale a numeric
+    /// by source count. Drives EX3-014's scaling DP cap.
+    /// G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
+    SourceStackCountFiltered {
+        filter: Option<Box<CompiledPredicate>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -639,6 +659,18 @@ pub enum CompiledAggregateSelector {
 pub enum CompiledModifierValue {
     Literal(i32),
     Formula(CompiledFormula),
+}
+
+/// Compiled synthetic identity for a `TreatAsDigimon` modifier. Mirrors the
+/// engine's `ModifierPayload::SynthIdentity` fields; the engine lowering
+/// converts `kind`/`colors` to its own enums.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledSynthIdentity {
+    pub kind: CompiledCardKind,
+    pub level: u8,
+    pub colors: Vec<CompiledColor>,
+    pub traits: Vec<String>,
+    pub dp: i32,
 }
 
 // ── Clauses ─────────────────────────────────────────────────────────
@@ -834,6 +866,7 @@ pub enum CompiledTiming {
     OnLeaveField,
     OnSuspend,
     OnUnsuspend,
+    OnAddToHand,
     OnHatch,
     OnMove,
     OnDigivolve,
@@ -985,6 +1018,13 @@ pub enum CompiledStep {
     TrashSelectedSecurity {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
+    },
+    /// Move a bound card from a player's security stack to that player's deck.
+    /// G-DSL-RETURN-SELECTED-SECURITY-TO-DECK.
+    ReturnSelectedSecurityToDeck {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        position: CompiledStackPosition,
     },
     AddTopSecurityToHand {
         of: CompiledPlayerRef,
@@ -1357,6 +1397,19 @@ pub enum CompiledStep {
         modifier: String,
         value: CompiledModifierValue,
         expiry: String,
+        /// Structured payload for `TreatAsDigimon` (lowers to
+        /// `ModifierPayload::SynthIdentity`). `None` for scalar modifiers.
+        /// NOTE: no `skip_serializing_if` — the embedded pack round-trips
+        /// `CompiledStep` through bincode (a non-self-describing format), so
+        /// the field must always be written or the byte stream desyncs.
+        #[serde(default)]
+        synth_identity: Option<CompiledSynthIdentity>,
+        /// CONTINUOUS mass modifier (G-CONTINUOUS-MASS-DP-DEBUFF): with a FILTER
+        /// target, register a source-independent floating effect re-applied each
+        /// tick instead of a one-time scan. No `skip_serializing_if` for the
+        /// same bincode round-trip reason as `synth_identity`.
+        #[serde(default)]
+        continuous: bool,
     },
     AddPlayerModifier {
         target_player: CompiledPlayerRef,
@@ -1608,6 +1661,10 @@ pub enum CompiledStep {
         max: CompiledCountBound,
         /// Minimum required picks. G-SELECT-MULTI-MIN.
         min: u8,
+        /// MP-30/31: clamp the required pick-count to available candidates
+        /// (`min(max, available)`); never no-op for fewer-than-N. Effect-target
+        /// selections only. See `SelectCountCappedArgs::clamp_to_available`.
+        clamp_to_available: bool,
         filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,
@@ -1704,6 +1761,7 @@ pub enum CompiledStep {
         without_suspending: bool,
         ignore_summoning_sickness: bool,
         optional: bool,
+        windowed: bool,
         prompt: Option<String>,
         cost_upgrade: Option<CompiledAttackCostUpgrade>,
     },

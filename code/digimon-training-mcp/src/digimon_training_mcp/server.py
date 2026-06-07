@@ -25,6 +25,11 @@ from mcp.server.stdio import stdio_server
 
 from .checkpoints import run_checkpoints as _run_checkpoints
 from .deck_pool import run_deck_pool as _run_deck_pool
+from .eval_artifacts import (
+    champion_standings as _champion_standings,
+    run_elo_ladder as _run_elo_ladder,
+    run_exploitability as _run_exploitability,
+)
 from .panic_families import load_panic_families
 from .per_game import run_per_game_evals as _run_per_game_evals
 from .recordings import run_recordings as _run_recordings
@@ -169,6 +174,33 @@ TOOL_DEFINITIONS: list[mcp_types.Tool] = [
             "additionalProperties": False,
         },
     ),
+    mcp_types.Tool(
+        name="champion_standings",
+        description=(
+            "List the registered evaluation champions (frozen model snapshots used "
+            "as fixed anchors) from models/champions/registry.json — name, provenance, "
+            "observation profile, tensor-layout hash."
+        ),
+        inputSchema={"type": "object", "properties": {}, "additionalProperties": False},
+    ),
+    mcp_types.Tool(
+        name="run_elo_ladder",
+        description=(
+            "Return the persisted Elo ladder for a run (<models>/<name>/elo_ladder.json): "
+            "greedy-anchored ratings + standard errors, the pairwise matchup matrix, and "
+            "any forgetting/cycling upsets. Produced by code/tools/elo_ladder_cli.py."
+        ),
+        inputSchema=_NAME_SCHEMA,
+    ),
+    mcp_types.Tool(
+        name="run_exploitability",
+        description=(
+            "Return the persisted approximate-exploitability result for a run "
+            "(<models>/<name>/exploitability.json) — the exploiter's peak win rate vs the "
+            "frozen target, labeled as a budget-bound LOWER bound, not a robustness certificate."
+        ),
+        inputSchema=_NAME_SCHEMA,
+    ),
 ]
 
 
@@ -268,6 +300,24 @@ async def _h_run_per_game_evals(ctx: ServerContext, args: Dict[str, Any]) -> Dic
     return _run_per_game_evals(ctx.models_dir, name, filt, limit_int)
 
 
+async def _h_champion_standings(ctx: ServerContext, args: Dict[str, Any]) -> Dict[str, Any]:
+    return _champion_standings(ctx.models_dir)
+
+
+async def _h_run_elo_ladder(ctx: ServerContext, args: Dict[str, Any]) -> Dict[str, Any]:
+    name = args.get("name")
+    if not isinstance(name, str) or not name:
+        return {"ok": False, "error": "missing or invalid 'name' argument"}
+    return _run_elo_ladder(ctx.models_dir, name)
+
+
+async def _h_run_exploitability(ctx: ServerContext, args: Dict[str, Any]) -> Dict[str, Any]:
+    name = args.get("name")
+    if not isinstance(name, str) or not name:
+        return {"ok": False, "error": "missing or invalid 'name' argument"}
+    return _run_exploitability(ctx.models_dir, name)
+
+
 TOOL_HANDLERS: Dict[str, ToolHandler] = {
     "list_runs": _h_list_runs,
     "run_summary": _h_run_summary,
@@ -277,6 +327,9 @@ TOOL_HANDLERS: Dict[str, ToolHandler] = {
     "run_checkpoints": _h_run_checkpoints,
     "run_deck_pool": _h_run_deck_pool,
     "run_per_game_evals": _h_run_per_game_evals,
+    "champion_standings": _h_champion_standings,
+    "run_elo_ladder": _h_run_elo_ladder,
+    "run_exploitability": _h_run_exploitability,
 }
 
 

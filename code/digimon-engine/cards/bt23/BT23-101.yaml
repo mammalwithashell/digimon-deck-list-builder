@@ -1,0 +1,149 @@
+# BT23-101 Hudiemon — Digimon, Lv.4, Green/Yellow, DP 7000, Cost 7.
+# Traits: Insectoid, Hudie, CS.
+#
+# Printed card text (BT23-101.json):
+#   ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other
+#   Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#   ＜Security A. +1＞ for the attack.)
+#   [On Play] [When Digivolving] You may play 1 play cost 5 or lower [CS] trait
+#   card from your hand without paying the cost. Then, to 1 of your opponent's
+#   Digimon, give -3000 DP for the turn for each of your [Hudie] trait Digimon.
+#   [When Attacking] [Once Per Turn] By returning 1 of your [CS] trait Tamers
+#   to the hand, activate 1 of this Digimon's [On Play] effects.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT23/Green/BT23_101.cs
+#
+# Clause layout:
+#   Clause 1: ＜Alliance＞ — declarative grant_keyword (runtime-installed; the
+#             AD1-016 sibling pattern).
+#   Clause 2: [On Play][When Digivolving] — optional free-play of a cost<=5 [CS]
+#             card from hand, THEN mandatory -3000 × (your [Hudie] Digimon count)
+#             DP to 1 opp Digimon for the turn.
+#   Clause 3: [When Attacking][OPT] — "by returning 1 [CS] Tamer to hand,
+#             activate 1 of this Digimon's [On Play] effects." Activation cost
+#             = return a CS Tamer; effect = re-run the Clause 2 [On Play] body.
+#             There is no `activate_own_on_play` verb — the body is inline-
+#             duplicated (the EX8-074 idiom).
+#
+# Alt-paths (xros_req): standard Lv.3 Green/cost 5 is metadata (evo_costs); the
+# two SPECIAL routes are authored here.
+
+card: BT23-101
+name: Hudiemon
+kind: digimon
+level: 4
+color: [green, yellow]
+cost: 7
+dp: 7000
+traits: [Insectoid, Hudie, CS]
+
+alt_paths:
+  # [Digivolve] Lv.3 w/[CS] trait: Cost 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: CS
+    cost: 4
+  # [Digivolve] While you have 4 or more [Hudie] trait Tamers, [Erika Mishima]: Cost 3
+  - kind: digivolve
+    from: { name_contains: "Erika Mishima" }
+    cost: 3
+    condition:
+      count_gte:
+        filter: { of: you, zone: [battle_area], kind: tamer, trait_has: Hudie }
+        n: 4
+
+effects:
+  # ─── Clause 1: ＜Alliance＞ ──────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Alliance
+
+  # ─── Clause 2: [On Play] [When Digivolving] ────────────────────────────────
+  # Optional free-play of a cost<=5 [CS] card from hand; then MANDATORY DP debuff
+  # of -3000 × (count of your [Hudie] trait Digimon) to 1 opp Digimon (turn).
+  # If the optional play is declined, the debuff still fires (no gate).
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] May free-play a cost<=5 [CS] card; then -3000 x (your [Hudie] Digimon) to 1 opp Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cs_pick
+          optional: true
+          filter:
+            all_of:
+              - play_cost_lte: 5
+              - trait_has: CS
+          prompt: "You may play 1 play cost 5 or lower [CS] trait card from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: cs_pick
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Give -3000 DP for the turn per your [Hudie] trait Digimon to 1 opponent Digimon"
+      - add_dp_modifier:
+          target: dp_target
+          value:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  of: you
+                  zone: battle_area
+                  filter: { trait_has: Hudie }
+              delta: -3000
+          expiry: end_of_turn
+
+  # ─── Clause 3: [When Attacking] [Once Per Turn] ────────────────────────────
+  # "By returning 1 of your [CS] trait Tamers to the hand, activate 1 of this
+  # Digimon's [On Play] effects." Optional (you choose to pay the cost); gated on
+  # having a CS Tamer. On accept: return a CS Tamer (cost), then re-run the
+  # Clause 2 [On Play] body (inline-duplicated — no `activate_own_on_play` verb).
+  - when: when_attacking
+    once_per_turn: true
+    optional: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [battle_area], kind: tamer, trait_has: CS }
+        n: 1
+    summary: "[WA][OPT] Return 1 [CS] Tamer to hand → re-activate this Digimon's [On Play]"
+    process:
+      # Activation cost: return 1 of your [CS] trait Tamers to the hand.
+      - select_own_permanent:
+          bind_as: cs_tamer
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: CS
+          prompt: "Return 1 of your [CS] trait Tamers to the hand"
+      - return_to_hand: { target: cs_tamer }
+      # Re-activated [On Play] body (inline duplicate of Clause 2).
+      - select_hand:
+          of: you
+          bind_as: cs_pick
+          optional: true
+          filter:
+            all_of:
+              - play_cost_lte: 5
+              - trait_has: CS
+          prompt: "You may play 1 play cost 5 or lower [CS] trait card from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: cs_pick
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Give -3000 DP for the turn per your [Hudie] trait Digimon to 1 opponent Digimon"
+      - add_dp_modifier:
+          target: dp_target
+          value:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  of: you
+                  zone: battle_area
+                  filter: { trait_has: Hudie }
+              delta: -3000
+          expiry: end_of_turn

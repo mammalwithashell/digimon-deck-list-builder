@@ -97,6 +97,13 @@ pub enum StepSpec {
     /// `select_security` step). G-TRASH-SELECTED-SECURITY. Used by BT24-018
     /// ("You may trash any 1 of your opponent's security cards").
     TrashSelectedSecurity(HandleMoveArgs),
+    /// Move a specific bound card FROM a player's security stack to that
+    /// player's deck (top or bottom; Digi-Eggs route to the digitama deck).
+    /// The `card` binding is a `CardHandle` (typically from a prior
+    /// `select_security` step). G-DSL-RETURN-SELECTED-SECURITY-TO-DECK. Used by
+    /// LM-020 Quantumon ("place 1 card among them on top of your opponent's
+    /// deck"). YAML: `return_selected_security_to_deck: { of, card, position }`.
+    ReturnSelectedSecurityToDeck(ReturnToDeckArgs),
     AddTopSecurityToHand(PlayerArg),
     MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
@@ -367,6 +374,9 @@ impl Serialize for StepSpec {
             StepSpec::AddToHandFromSecurity(v) => kv!(s, "add_to_hand_from_security", v),
             StepSpec::PlaySecurityCard(v) => kv!(s, "play_security_card", v),
             StepSpec::TrashSelectedSecurity(v) => kv!(s, "trash_selected_security", v),
+            StepSpec::ReturnSelectedSecurityToDeck(v) => {
+                kv!(s, "return_selected_security_to_deck", v)
+            }
             StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
             StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
@@ -618,6 +628,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_to_hand_from_security" => StepSpec::AddToHandFromSecurity(map.next_value()?),
             "play_security_card" => StepSpec::PlaySecurityCard(map.next_value()?),
             "trash_selected_security" => StepSpec::TrashSelectedSecurity(map.next_value()?),
+            "return_selected_security_to_deck" => {
+                StepSpec::ReturnSelectedSecurityToDeck(map.next_value()?)
+            }
             "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
             "may_add_top_security_to_hand" => StepSpec::MayAddTopSecurityToHand(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
@@ -840,6 +853,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_to_hand_from_security",
                         "play_security_card",
                         "trash_selected_security",
+                        "return_selected_security_to_deck",
                         "add_top_security_to_hand",
                         "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",
@@ -1260,6 +1274,8 @@ pub struct MayAttackNowArgs {
     pub ignore_summoning_sickness: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub windowed: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1955,6 +1971,46 @@ pub struct AddModifierArgs {
     pub modifier: String,
     pub value: ModifierValueSpec,
     pub expiry: String,
+    /// Structured payload for payload-bearing modifiers. Required for
+    /// `modifier: TreatAsDigimon` ("treat this permanent as a [DP] DP
+    /// Digimon"), forbidden for every other modifier (validated). Carries
+    /// the synthetic identity the target is treated as while the modifier
+    /// is live; lowers to `ModifierPayload::SynthIdentity`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub synth_identity: Option<SynthIdentitySpec>,
+    /// CONTINUOUS mass modifier: instead of a one-time scan over the CURRENT
+    /// matches, install a source-independent floating effect re-applied to the
+    /// live candidate set every tick — so Digimon that ENTER during the window
+    /// also receive it ("Until [turn], all of your opponent's Digimon get ±X").
+    /// Only meaningful with a `target:` FILTER (a single-permanent `bind:` target
+    /// is one-shot). The `expiry` governs the window; the effect survives the
+    /// source leaving the field (e.g. an `[On Deletion]` install).
+    /// G-CONTINUOUS-MASS-DP-DEBUFF.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub continuous: bool,
+}
+
+/// The synthetic Digimon identity a permanent is "treated as" while a
+/// `TreatAsDigimon` modifier is live (e.g. RizeGreymon treating a Marcus
+/// Damon Tamer as a 3000 DP Digimon). `dp` is required; `kind` defaults to
+/// `Digimon` (the only kind this mechanic targets in printed cards);
+/// `level`/`colors`/`traits` default empty when the text grants none.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SynthIdentitySpec {
+    pub dp: i32,
+    #[serde(default = "synth_identity_default_kind")]
+    pub kind: crate::spec::CardKind,
+    #[serde(default)]
+    pub level: u8,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub colors: Vec<crate::spec::ColorSpec>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub traits: Vec<String>,
+}
+
+fn synth_identity_default_kind() -> crate::spec::CardKind {
+    crate::spec::CardKind::Digimon
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2452,6 +2508,15 @@ pub struct SelectCountCappedArgs {
     /// cost is unpayable). G-SELECT-MULTI-MIN.
     #[serde(default, skip_serializing_if = "is_zero_u8")]
     pub min: u8,
+    /// MP-30/31 (General Rules/FAQ): when true the required pick-count clamps to
+    /// the number of available candidates — the player MUST affect
+    /// `min(max, available)` targets and the step never no-ops for "fewer than N
+    /// in play" (a mandatory "N of your opponent's Digimon" effect affects as
+    /// many as are present, but cannot stop early when N are available). Use for
+    /// EFFECT-TARGET selections; leave false for unpayable-cost selections.
+    /// Orthogonal to `min` (the cost floor).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub clamp_to_available: bool,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,

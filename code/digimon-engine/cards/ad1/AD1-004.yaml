@@ -32,6 +32,7 @@ effects:
               attacker: attacker
               targets: any
               optional: true
+              windowed: true
               prompt: "Have the selected Digimon attack now?"
 
   # Omitted:

@@ -452,6 +452,11 @@ fn collect_per_selector_raw_rust_fns(sel: &CompiledPerSelector, names: &mut BTre
         } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
+        CompiledPerSelector::SourceStackCountFiltered {
+            filter: Some(filter),
+        } => {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
         _ => {}
     }
 }

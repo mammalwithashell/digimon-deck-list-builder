@@ -361,6 +361,32 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 ## Open gaps
 
+### `place_self_as_delay_option` does not compose with the real Option-play disposal lifecycle  [G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH]
+- **Severity:** 🟠 BLOCKER (for the affected combo path; per-card coverage exists via a bypass)
+- **Discovered in:** Omnimon ACE interaction tests (2026-06-02, `/archetype-interaction-test-author`).
+- **Card(s):** BT17-095 Miraculous Mega Knight (a **Standard** Option whose [Main]/[Security] body ends with the DSL step `place_self_as_delay_option`). Any future Standard Option that seats *itself* on the field from within its own play body is affected.
+- **Effect text:** "[Main] You may play 1 [Agumon]/[Gabumon] … . **Then, place this card in the battle area.**" (and the inherited [Security] "Then, add this card to the hand" sibling, `add_this_option_to_hand`, may share the hazard on the on-play path).
+- **What's missing:** On the real `Game::play_option_from_hand` / `play_option_from_trash` lifecycle, `play_option_core` removes the Option from hand/trash into the single-occupancy `pending_option` slot **before** firing the [Main] body (`game_actions.rs` step 5). When the body then runs the `place_self_as_delay_option` step, `EffectContext::place_self_as_delay_option_permanent` (non-security branch) only scans the controller's `hand`/`trash` for the source card (`remove_source_option_from_controller_zones`) — the card is in `pending_option`, so the scan finds nothing and the step **no-ops**. Control returns to `play_option_core` step 8, which calls `dispose_option`; the Option is classified `OptionSubtype::Standard` (it has no `kind: delay` clause), so `dispose_option` **trashes** it. Net: the Option ends in trash, never seated as a Delay-Option permanent — the printed "place this card in the battle area" is silently dropped on the path the game actually uses.
+- **Repro (reproducible):** `omnimon_ace::combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay` and `…_declining_recursion_still_seats_delay` — driven through `play_option_from_hand`, P0 trash does not decrease / goes +1 and no `OptionState::Delayed` BT17-095 appears (both `#[ignore]`d on this tag).
+- **Why the per-card test is green:** `tests/cards_behavioral/bt17/bt17_095.rs` drives the [Main] via `Game::activate_hand_main`, which runs the body while the card is **still in hand** and never enters the Option disposal lifecycle (no cost paid, no `pending_option`, no `dispose_option`). The place-self step then finds the card in hand and seats it. That path is a deliberate per-card harness shortcut, not how the deck plays — an interaction test must use the real play path, which exposes the gap.
+- **Suggested API shape:** Make `place_self_as_delay_option_permanent` aware of the in-flight `pending_option` (claim the card from `pending_option` when `source_permanent`/hand/trash all miss but the pending Option's card matches `self.source_card`), AND mark `dispose_option` to skip the Standard trash when the body already re-homed the card (e.g. clear `pending_option`/set a "self-placed" flag inside the place-self step). Mirrors how a `kind: delay` Option is seated by `dispose_option`'s `OptionSubtype::Delay` arm — the Standard+place-self path should reach the same end state. (Sibling `add_this_option_to_hand` on a non-security on-play path may need the same `pending_option`-aware claim; the security path already special-cases `pending_security`.)
+- **Workaround:** None that is faithful on the real play path. Adding a `kind: delay` clause to BT17-095 would mis-model the card (its Delay is set up by the [Main] tail, not a standalone Delay-mode play) and is not how DCGO classifies it. Routing the test through `activate_hand_main` would bypass the Option lifecycle (no cost, no disposal) and is the very shortcut this gap is about — rejected per the no-bypass faithfulness rule.
+- **Related:** `G-PLACE-SELF-AS-OPTION-PERMANENT` (the step itself; closed for the `activate_hand_main` path only). DCGO `BT17_095.cs` Clause A `CardEffectCommons.PlaceDelayOptionCards`.
+
+### Multi-target `per_selected { delete_permanent }` mis-targets after the first deletion  [G-PER-SELECTED-DELETE-INDEX-SHIFT]
+- **Severity:** ✅ RESOLVED 2026-06-03 (ST-1 Gaia Red interaction tests, `/archetype-interaction-test-author`).
+- **Card(s):** ST1-15 Giga Destroyer (`select_count_capped_multi { max: 2, filter dp_lte 4000 } → per_selected { delete_permanent }`); any `select_count_capped_multi`/`select_*_multi` binding consumed by a `per_selected` body that removes permanents.
+- **Root cause:** `iteration.rs`'s `PerSelected` `PermanentList` arm iterated the selected permanents by their **positional** `PermanentHandle` (`{player, index}`). After the first `delete_permanent` shifted `battle_area` down, the next handle's stale index pointed at the wrong (now lower-indexed) permanent. With Biyomon(3000)@0, Dracomon(4000)@1, Birdramon(5000)@2 and both ≤4000 bodies selected, deleting slot 0 shifted Birdramon into slot 1, so the second iteration deleted Birdramon (>4000) and left Dracomon — `survivors == ["Dracomon"]`. The matching `ForEach` arm already snapshotted top-card `CardHandle` stable identity and re-resolved per iteration (G-FOR-EACH-DELETE-INDEX-SHIFT); the `select_count_capped_multi → per_selected` path was never covered by that fix because it flows through `PerSelected`, not `ForEach`.
+- **Fix:** Mirror the `ForEach` machinery in the `PerSelected` `PermanentList` arm (`src/dsl_cards/step/iteration.rs`): snapshot each selected permanent's stable top-card `CardHandle` up front via `top_card_handle`, then `resolve_by_top_card` at the START of each iteration, skipping any that already left play. `CardList`/`SourceRefs` arms and the parked-iteration abort are unaffected.
+- **Gate:** `tests/archetypes/st1.rs::giga_destroyer_deletes_only_le_4000_opponents_and_tai_does_not_widen_window` (survivors == ["Birdramon"], the two ≤4000 deleted). No `cards_behavioral st1` regression.
+
+### DSL `grant_keyword: Retaliation` is unrecognized and never fires  [G-DSL-GRANT-RETALIATION]
+- **Severity:** ✅ RESOLVED 2026-06-03 (ST-6 Venomous Violet interaction tests, `/archetype-interaction-test-author`).
+- **Card(s):** ST6-12 VenomMyotismon ("[When Digivolving] Up to 2 of your Digimon gain ＜Retaliation＞ …"); any DSL card that grants ＜Retaliation＞ at runtime.
+- **Root cause (two parts):** (1) `dsl_cards/modifier_map.rs::lookup_keyword` had no `"Retaliation"` arm, so `CompiledStep::GrantKeyword` early-returned and the keyword was never even registered (`has_keyword` false). (2) Even with registration, ＜Retaliation＞ is a TRIGGERED on-deletion keyword: `effects_for_card` only synthesizes keyword auto-effects from PRINTED + DECLARATIVE-REGISTRY grants, and OnDeletion handlers re-fetch effects POST-TRASH (rule 25), so a board-position synthesis would vanish by drain time. A runtime modifier grant therefore never fired the auto-effect.
+- **Fix:** (1) Add `"Retaliation" => Keyword::Retaliation` to `lookup_keyword` and `"Retaliation"` to `digimon-dsl`'s `validator::KNOWN_KEYWORD_KEYS`. (2) In `EffectContext::grant_keyword` (`src/effect_context/mod.rs`), after granting the keyword modifier, route the granted keyword's plain-`process` triggered auto-effect (`keyword_to_auto_effect`) through the BOARD-INDEPENDENT granted-triggered store (`grant_triggered_effect`) with the grant's expiry. Passive keywords yield an empty `keyword_to_auto_effect` (skip); replacement-process keywords carry no plain `process` (skip).
+- **Gate:** `tests/archetypes/st6.rs::venommyotismon_grants_retaliation_and_trades_in_battle` — `modifiers.has_keyword(trader, Keyword::Retaliation)` is true AND the in-battle trade fires (trader loses to the 9000 opp, is deleted, and its ＜Retaliation＞ deletes the opponent it battled). Lib parity + `--test dsl` green.
+
 ### Same-effect DP modifier visibility in subsequent `dp_lte` selections
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#same-effect-dp-modifier-visibility-in-subsequent-dp_lte-selections--2026-05-24).
 > Remaining BT19-012 work is production YAML/card behavior coverage.
@@ -1309,6 +1335,47 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Suggested API shape:** Make `apply_cost_reduction_candidate` (and the accept-callback that calls it) defer the `amount` credit for an interactive pay_cost: when `pay_cost_fn` installs a selection, capture the candidate's `amount` and add it to `accumulated_reduction` only inside the parked-selection's success continuation (wire it through `wrap_pending_play_cost_continuation`, gating the credit on the pay_cost having actually been paid — e.g. a `paid: bool` the trash step sets on its callback). Synchronous pay_costs (suspend-self, BT5-092) keep their current immediate credit. The OptionUse cost path (`play_option_core` → `scan_before_pay_cost_reduction_with_target`) needs the same fix for BT25-090's "would use Option" variant.
 - **Workaround:** None faithful. Auto-resolving the single-eligible-Tamer pick (to keep the pay_cost synchronous) would violate no-approximations. BT25-088 / BT25-090 / BT25-049 ship YAML with their other clauses working and the cost-reduction clause OMITTED (no silent under/over-charge); each is PARTIAL pending this gap.
 - **Related:** `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER` (`qa/dsl-vocab-gaps.md`, the multi-count sibling — BT25-035 trash-2); `G-COST-REDUCTION-DIGIVOLVE-INTO` (the resolved synchronous-suspend pay_cost precedent, BT5-092). NOTE: `trash_bottom_face_down_source_under_tamer` works correctly as a **process activation cost** (with a captured tail) — only the `cost_reduction` `pay_cost` slot drops the amount.
+## Engine correctness bugs (existing primitives) — found by archetype interaction tests
+
+> Surfaced by the `/archetype-interaction-test-author` capstone on the ST-1…ST-6 starter decks (2026-05-30). **All three are FIXED (2026-05-30).** Two were engine bugs; the first ("base-fold") turned out to be a *card-authoring* bug once the engine's base-inclusive formula contract was understood — see below.
+
+### ✅ FIXED (2026-05-30) — WarGreymon `<Security A.>` formula under-counted (CARD bug: formula authored as a bare delta, not base-inclusive)
+- **Symptom:** a 4-source WarGreymon (ST1-11) checked only 2 security where it should check 3 (base-1 + `floor(4/2)`).
+- **Root cause (the important part):** `security_attack_fn` formula auras are **base-inclusive by engine contract** — the formula returns the *total* base check count (it replaces the default base-1 while active), and multiple formula auras take the **MAX**, not the sum. Flat `<Security A.>` keyword/modifier deltas are then added on top. This contract is pinned by `tests/dsl/group6_dynamic_formulas.rs` (`{ base: 1, … }` ⇒ exactly 1 check). ST1-11's formula was authored `base: 0` (= `floor(n/2)`, a bare *delta*), so it dropped the base-1 and under-counted. An earlier attempt to "fix" this in `current_security_strike` (`1 + aura_bonus`) was the **wrong layer** — it double-counted the base for every correctly-authored base-inclusive formula and regressed the group6 dsl tests.
+- **Fix (card layer):** author the formula base-inclusive — `cards/st1/ST1-11.yaml` now uses `floor_div([{base: 2, per: material_count, delta: 1}, 2]) = floor((2+n)/2) = 1 + floor(n/2)`. The engine keeps its base-inclusive `unwrap_or(1)` contract unchanged.
+- **Test (now green):** `tests/archetypes/st1_gaia_red.rs::tall_stack_security_rush_aura_adds_to_base_one_check` (4-source WarGreymon, Greymon-free, `dynamic_security_attack_aura_bonus == Some(3)`, checks 3); plus the un-`#[ignore]`d full-line `tall_stack_security_rush_full_line_checks_four_security` (checks 4 with Greymon — see next entry).
+- **Sources:** general_rule.pdf §16-3; DCGO `ST1_11.cs` (`count = DigivolutionCards.Count / 2`, applied as a delta — the engine folds in the base).
+
+### ✅ FIXED (2026-05-30) — security-DP auras ignored their `active_when`/`condition` gate
+- **Was:** `Game::defender_security_dp_adjustment` + mirror `attacker_security_dp_adjustment` (`combat.rs`) summed `applies_to_own/opponent_security_dp` auras without evaluating `effect.condition`, so T.K. Takaishi's "[Opponent's Turn] +2000" leaked onto the controller's own turn.
+- **Fix:** both call sites now build an `EffectReadContext` (controller as `player`) and skip the aura when `effect.condition` is false — mirroring `static_dp_aura_bonus`.
+- **Test (now green):** `tests/archetypes/st3_heavens_yellow.rs::tk_takaishi_aura_is_inactive_on_controllers_own_turn`.
+- **Sources:** `ST3-12.json`; DCGO `ST3_12.cs` (`IsOpponentTurn`); general_rule.pdf 15-16-8-1.
+
+### ✅ FIXED (2026-05-30) — declarative inherited `<Security A. +/-N>` grants now counted by the security strike (tick-fresh + de-overlapped)
+- **Was:** the security strike under-counted inherited `<Security A.>` authored as a DSL `grant_keyword` (ST1-07 Greymon and any card whose inherited `<Security A. +/-N>` is a declarative grant rather than a printed `card_data` keyword). A real WarGreymon+Greymon stack checked **3**, not the card-faithful **4**.
+- **Root cause (architectural, root-caused 2026-05-30).** `<Security A.>` for a permanent is aggregated by `Game::security_attack_keyword_bonus` across overlapping representations that must single-count:
+  1. **Printed** `card_data` keywords (`face_keywords` top card, `inherited_keywords` buried sources).
+  2. **Own** (face-up, non-inherited) DSL `grant_keyword` — *also* populates `card_data` (#1 already counts it) **and** materializes into `permanent_keywords` on tick → would double-count if both summed (BT21-029 Medusamon, ST5-13, ST6-13).
+  3. **Inherited DIRECT** `grant_keyword` (`granted_keyword` set) — declarative-only; counted via the materialized registry (ST1-07, BT20-016).
+  4. **Inherited/own AURA** grants (`kind: aura`, `granted_keyword` unset, grants via a process to filter-matched permanents) — materialize into the registry (ST2-08 WereGarurumon; BT5-093 aura-to-Omnimon).
+  5. **Genuine modifier** grants (ally buffs, end-of-turn grants) — real `permanent_keywords` entries (`materialized_declarative = false`).
+
+  The registry (#2–#5) is only fresh after `tick_declarative_effects` — run by the `decode_action`/`LiveGame` path but **not** by `DebugRunner::attack_player` — so a no-tick test read a stale cache. And #2 overlaps #1 (own grants land in both `card_data` and the registry), so a naive "printed + registry" sum double-counts own keywords.
+- **Fix (two coordinated changes, full keyword-suite green):**
+  - **Tick-fresh strike** — `Game::current_security_strike` (`combat.rs`) now calls `self.tick_declarative_effects()` before reading the keyword term, so the materialized registry reflects current inherited/aura grants regardless of the caller (DebugRunner or the real action path). It is idempotent and the per-iteration recompute already re-reads it.
+  - **Tick de-overlap** — `tick_declarative_effects` (`game.rs`) now **skips materializing a non-inherited `granted_keyword` that is already face-printed** in `card_data`, so #2 never double-counts against #1. (Inherited and aura grants still materialize.) This single-counts all five representations: `security_attack_keyword_bonus = printed_true_keywords + registry`.
+- **Tests (now green):** `tests/archetypes/st1_gaia_red.rs::tall_stack_security_rush_full_line_checks_four_security` (full WarGreymon+Greymon line checks 4); the Medusamon mid-attack recompute (BT21-029) and BT20-016 / ST2-08 / BT5-093 grant cases all still single-count (combat + cards_behavioral + dsl suites pass).
+- **Formula + flat-delta co-existence (2026-05-30, BT1-085 Tai Kamiya).** BT1-085's "[Your Turn] your red Digimon with 4+ digivolution cards gain `<Security A. +1>`" was implemented (DSL, `cards/bt1/BT1-085.yaml`) specifically to exercise a formula aura (WarGreymon's `security_attack_fn`) and a flat aura `grant_keyword: SecurityAttackPlus(1)` on the SAME body. They never collide: the formula provides the base-inclusive count (MAX'd, but there is only one formula) and the flat grant is summed via `security_attack_keyword_bonus`. `tests/cards_behavioral/bt1/bt1_085.rs` proves WarGreymon+Tai checks 4 and WarGreymon+Greymon+Tai checks 5 — three independent `<Security A.>` sources (formula + inherited keyword + aura-granted keyword) single-counting and summing, matching DCGO `Strike_AllowMinus`. The flat-delta-vs-formula authoring rule: a count-conditional grant whose *value* is flat (count as FILTER) uses `grant_keyword`/`security_attack`; only a grant whose *value* varies with the count uses `security_attack_fn`.
+- **Distinct, still-open facet:** the `#[ignore]`d `st1_07_security_attack_plus_installed_on_field_via_modifier` (and BT21-029's sibling) target **face-up OWN-scope** `grant_keyword` runtime installation (G-DECLARATIVE-KEYWORD) — a different path than the buried-source inherited-strike aggregation closed here. They stay ignored: ST1-07's grant is inherited-only and correctly does not apply when it is the top card.
+
+### 🔴 OPEN (2026-06-02) — `event_target_*` predicates resolve to the NEW attack target, not the attacker whose target changed  [G-ATC-EVENT-TARGET-IS-NEW-TARGET]
+- **Surfaced by:** the `/archetype-interaction-test-author` capstone on **Medusamon** — `tests/archetypes/medusamon.rs::raid_redirect_fires_lamiamon_attack_target_change_trash_security` (currently `#[ignore]`d with this gap id).
+- **Symptom:** BT21-025 Lamiamon's `[Your Turn][OPT]` clause ("When any of **your** [Reptile]/[Dragonkin] trait Digimon's attack targets change, trash your opponent's top security") does **not** fire when an attack-target change is produced by the real `<Raid>` combat path (a Dragonkin `<Raid>` attacker, e.g. BT24-011 Cyclonemon, redirecting onto the opponent's highest-DP Digimon). Opponent security is untouched.
+- **Root cause:** for an `OnAttackTargetChange` trigger, `dsl_cards/predicate.rs::event_target_owner` (and the sibling `event_target_trait_has` / `event_target_*` family) prioritize `trigger.attack_target_change.new_target` — i.e. the **redirected-to Digimon** — over `trigger.event_permanent`, which the combat layer sets to the **attacker** (`effect_queue.rs` ~line 1220: `AttackTargetChanged { … } => { event_permanent: Some(attacker), attack_target_change: Some(AttackTargetChange { attacker, … }) }`). So BT21-025's gate (`event_target_owner: you` + `event_target_trait_has: Dragonkin`) is evaluated against the opponent-owned, non-Dragonkin **new target** and fails.
+- **Faithfulness basis:** the trait gate belongs to the **attacker whose target changed**, not the new target. DCGO `BT21/Red/BT21_025.cs` `PermanentCondition` → `CardEffectCommons.IsPermanentExistsOnOwnerBattleAreaDigimon(permanent, card)` + `EqualsTraits("Reptile"|"Dragonkin")` over the switching attacker; card text "any of **YOUR** [Reptile]/[Dragonkin] trait Digimon's attack targets change". general_rule.pdf §16 (`<Raid>` switch) + attack-target-change observer timing.
+- **Why per-card tests miss it:** `tests/cards_behavioral/bt21/bt21_025.rs` fires the event via `TriggerSource::EventObserved { permanent: attacker }` (no `attack_target_change` context), so `event_target_owner` falls through to `event_permanent` = attacker and the clause fires. Only the real-combat (Raid redirect) path exposes the divergence — a cross-card / cross-path interaction the per-card TDD cannot see.
+- **Suggested fix direction (not applied — interaction-test runs don't edit engine code):** either (a) add an attacker-scoped predicate family (`event_attacker_owner` / `event_attacker_trait_has`) that reads `attack_target_change.attacker`, and re-author BT21-025 (and any other "your X's attack target changes" card) to use it; or (b) decide which entity `event_target_*` should mean for `OnAttackTargetChange` and align both the predicate resolution and every consumer. Same trash-on-target-change shape recurs on other Reptile/Dragonkin cards, so the substrate choice amortizes.
 
 ## Resolved gaps
 
@@ -1330,3 +1397,154 @@ Resolved Rust engine group summaries have been moved to [qa/resolved-gaps.md](..
 - **BT25-036 Craftmon** (App Fuse): the App Fusion alt-play is implemented end-to-end (`alt_paths: [{ kind: app_fusion, materials: [{ filter: { name_in: [...] } }], cost: 0 }]` → `app_fusion_digivolve_route_for_card` host-eligibility (2 distinct named cards linked) → digivolve route stacks the App-Fusion card on top + drains the host's `linked_cards` under it as sources). Surfaces through the normal `encode_digivolve` action/mask. `tests/cards_behavioral/bt25/bt25_036.rs` (9) + `bt25/app_fusion.rs` (4, mechanic). The prior "AltPathKind::AppFusion parses but resolves to nothing" note is **stale**.
 
 **Still open (BT25-089 Kazuki & Itsuki, PARTIAL):** the `[End of Your Turn][OPT]` clause "1 of your Digimon may **app fuse into a Digimon card in the hand**" is an *effect-initiated* app-fuse (a field Digimon fuses INTO a chosen hand card; DCGO `playCardClass.SetAppFusion`) — distinct from the alt-path App Fusion (which is a play-from-hand digivolve). No DSL process-step / engine primitive exists for the effect-initiated direction yet. BT25-089 also still omits the `[Main]` link source "from your Digimon's digivolution cards" (Tamer-anchored multi-Digimon source scan). Both remain logged; BT25-089 stays PARTIAL.
+
+## Move a security card to a deck (top/bottom)  [G-ENGINE-SECURITY-TO-DECK]  — OPEN 2026-05-29
+
+Surfaced by judge-quiz first wave (LM-020 Quantumon, BLOCKED). No public `EffectContext` method moves a card from a player's **security stack** to a **deck**. The private `move_card_to_deck` helper (`code/digimon-engine/src/effect_context/mod.rs`) is sourced from trash only; security removers route to hand / play / trash (`add_to_hand_from_security`, `play_security_card`, `trash_selected_security`).
+
+- **Suggested primitive:** `pub fn return_security_card_to_deck(&mut self, player: PlayerId, card: CardHandle, to_bottom: bool) -> bool` — locate the card in `player.security`, `ensure_security_materialized`, remove it, drop from `face_up_security`, fire `fire_security_removed_observers` with a new `SecurityRemovalDestination::Deck` variant (parallel to `::Hand`), then route through the existing trash->deck `move_card_to_deck` path.
+- **DSL prerequisite:** the verb `return_selected_security_to_deck` (`G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` in `qa/dsl-vocab-gaps.md`) lowers to it.
+- **Blocks:** LM-020 (judge-quiz Q18) [When Digivolving]. DCGO `LM_020.cs`: `IReduceSecurity` -> `AddLibraryTopCards` -> shuffle.
+
+
+## Opponent plays a Digimon from THEIR OWN trash, SUSPENDED, opponent-selected  [G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED]  — OPEN 2026-05-29
+
+Surfaced by judge-quiz wave (EX5-060 Dragomon, BLOCKED; pins Q28 alongside BT20-059 Gankoomon X). Hybrid engine+DSL gap.
+
+- **Effect text (EX5-060 Clause 1):** "[On Play] [When Digivolving] Your opponent plays 1 level 4 or lower Digimon card from their trash **suspended** without paying the cost. [On Play] effects on Digimon played by this effect don't activate."
+- **What's missing (engine):** no `EffectContext` primitive plays a card from an *arbitrary* player's trash **suspended**. `play_from_trash_free_unsuspended*` hardcodes `self.player` (the controller) as the player who plays — the DSL `play_from_trash_free { of: opponent }` `of:` field is dropped at the engine boundary (the compiled handler looks up the trash card by the bound owner but then calls `ctx.play_from_trash_free_unsuspended(handle)`, which searches `self.player`'s trash and no-ops when the handle lives in the opponent's trash). It also always plays UNSUSPENDED — neither `play_from_trash_with_cost*`, `play_from_trash_free_unsuspended*`, nor the underlying `Game::play_from_trash_with_cost_suppress` chain has a `suspended`/`is_tapped` parameter (DCGO `EX5_060.cs`: `PlayPermanentCards(payCost:false, isTapped:true, root:Trash, activateETB:false, selectPlayer:card.Owner.Enemy)`).
+- **Suggested primitive:** `pub fn play_from_trash_for_player_suspended(&mut self, player: PlayerId, trash_index: usize, suspended: bool, suppress_on_play: bool) -> Option<PermanentHandle>` — plays from `player`'s trash (not `self.player`'s), entering suspended when requested, and surfaces the selection to `player` (the opponent) via `override_selecting_player`. Thread a `suspended` bool through `Game::play_from_trash_with_cost_suppress` (and the shared `play_from_hand_with_cost_result_from_origin_suppress` path it delegates to) so the just-created permanent is marked `is_suspended` at materialization, parallel to the existing `suppress_on_play` thread (PUPPETS-G030). The `[On Play] don't activate` half is ALREADY supported via `suppress_on_play: true`.
+- **DSL prerequisite:** extend `play_from_trash_free` with a `suspended: bool` flag AND honor its `of:` field for non-controller players (route to the new primitive when `of != controller`). Today `of:` is silently ignored. Pair with `as_selecting_player { of: opponent }` so the opponent makes the pick.
+- **Q28 note:** the `[On Play] don't activate` lock is modeled as a `CannotActivateOnPlayEffects` modifier added to the just-played opponent permanent via `EffectContext::add_modifier`, whose `can_affect_permanent` guard already lets a protected target (Gankoomon X) dodge the lock — verified by the live `ex5_060_lock_does_not_attach_to_effect_immune_target` test. Only the play-and-suspend substrate is blocked, not the lock.
+- **Blocks:** EX5-060 (judge-quiz Q28) Clause 1. `code/digimon-engine/cards/ex5/EX5-060.yaml` Clause 1 declared with faithful timing but empty (gap-blocked) `process`. Tests `ex5_060_clause1_*` `#[ignore]`'d with this gap-id.
+
+
+## G-PLAY-TOKEN-FLOODGATE — `play_token` bypasses `CannotPlayDigimonByEffect` (RESOLVED 2026-05-30)
+
+- **RESOLVED 2026-05-30.** `EffectContext::play_token`
+  (`code/digimon-engine/src/effect_context/mod.rs`) now returns `None` (no token
+  spawned) when the controller carries `CannotPlayDigimonByEffect`, mirroring the
+  hand/trash play-gate — every registered token is a Digimon token (see
+  `token_registry`), matching DCGO's `CanPlayAsNewPermanent` →
+  `CanNotPutFieldClass(IsDigimon)`. Pinned by lib unit tests
+  `effect_context::tests::{play_token_blocked_by_cannot_play_digimon_by_effect,
+  play_token_allowed_without_floodgate}` and the un-ignored interaction tests
+  `archetypes/puppets.rs::{s1_pillomon_floodgate_blocks_effect_token_plays,
+  s1b_without_pillomon_the_same_token_play_succeeds}`. Additive guard (no-op when
+  the modifier is absent); behavioral + archetypes suites regression-clean.
+- **First seen:** 2026-05-30, Puppets archetype interaction test
+  `s1_pillomon_floodgate_blocks_effect_token_plays` (`#[ignore]`'d) in
+  `code/digimon-engine/tests/archetypes/puppets.rs`.
+- **Symptom:** with BT9-033 Pillomon ("Players can't play Digimon by effects")
+  on the field — installing `ModifierType::CannotPlayDigimonByEffect` — an
+  effect that plays a **Familiar Token** (e.g. ST19-12 Cendrillmon's "play 2
+  Familiar Tokens") still spawns the tokens. The flood-gate that correctly
+  blocks effect-driven hand/trash plays does not block token spawns.
+- **Root cause:** `EffectContext::play_token`
+  (`code/digimon-engine/src/effect_context/mod.rs`) pushes the new token
+  permanent directly onto `battle_area` and does NOT consult
+  `CannotPlayDigimonByEffect`, unlike `play_from_hand_free` /
+  `play_from_hand_with_cost` (which gate on it — see the `selections.rs` and
+  `game_actions.rs` gate sites). Token plays therefore bypass the lock.
+- **DCGO-verified faithful behaviour:** a Digimon Token is a Digimon; DCGO
+  blocks its play under this lock. `CardEffectCommons.PlayToken` calls
+  `CanPlayAsNewPermanent(...)`, which enforces BT9-033's `CanNotPutFieldClass`
+  whose card-condition is `cardSource.IsDigimon || cardSource.IsDigiEgg` —
+  `IsDigimon` is `true` for the Familiar Token, so the play is blocked
+  (`$BASE_DCGO/Assets/Scripts/CardEffect/BT9/Yellow/BT9_033.cs`,
+  `Script/CardEffectCommons.cs`).
+- **Fix (engine primitive):** have `play_token` consult
+  `CannotPlayDigimonByEffect` for the controller (the token is a Digimon
+  played by an effect) and no-op the spawn when the gate is installed,
+  mirroring the hand/trash play path. Then flip
+  `s1_pillomon_floodgate_blocks_effect_token_plays` to un-ignored.
+- **Blast radius:** every token-spawning effect interacting with a
+  `CannotPlayDigimonByEffect` source (Pillomon BT9-033 and any future
+  "can't play Digimon by effects" floodgate). Additive guard; no behaviour
+  change when the modifier is absent.
+
+
+## Observe an effect adding cards to a player's hand  [G-ON-ADD-TO-HAND-OBSERVER]  — RESOLVED 2026-06-04
+
+**RESOLVED 2026-06-04.** Implemented the `OnAddToHand` observer end-to-end:
+- **Engine:** new `TriggerSource::HandGained { player, effect_initiated }` (fans out to ALL battle areas, carrying the gaining player in `TriggerContext.affected_player`); `Game::fire_on_add_to_hand_by_effect(player)` enqueues it. Called from every EFFECT-driven hand-gain sink — `return_to_hand` (game-level), `add_to_hand_from_{deck,trash,security,reveal}`, `add_pending_security_to_hand`, `return_card_source_to_hand`, and `EffectContext::draw` (effect-draws like Akihiro Kurata's). The normal turn-start draw does NOT route through these, so it never over-fires (DCGO's `cardEffect != null` gate).
+- **DSL:** `when: on_add_to_hand` trigger token (`Timing`/`CompiledTiming`/`compile_timing`/`timing_map`) + the `event_add_to_hand_player:` player-ref predicate (compares `affected_player` to you/opponent). Compose with the existing `event_is_effect_initiated:`.
+- **Card:** BT11-033 MirageGaogamon clause 2 authored (`gain_memory_fn` over `floor_div(card_count_in_zone{of: opponent, zone: hand}, 4)`, `once_per_turn`, gated on `event_add_to_hand_player: opponent`).
+- **Tests:** `tests/cards_behavioral/bt11/bt11_033.rs` — un-ignored memory tests (gain = floor(opp_hand/4): 3→0, 4→1, 8→2), opponent-only gating, OPT lockout + per-turn reset; structural positive assertion. Regression-clean (`cards_behavioral` 3894 pass, `judge_quiz` 25, `combat` 213, `option_flow` 93, lib 212).
+
+Original report (for context):
+
+
+Surfaced by BT11-033 MirageGaogamon (clause 2 BLOCKED, omitted from YAML per no-approximations). Hybrid engine + DSL gap. The card's clause 1 ([When Digivolving] return + security fallback) is fully implemented; only the second clause is blocked.
+
+- **Effect text (BT11-033 clause 2):** "[All Turns] [Once Per Turn] When an effect adds cards to your opponent's hand, gain 1 memory for every 4 cards in your opponent's hand." DCGO `BT11_033.cs`: `EffectTiming.OnAddHand`, `CanUseCondition` gates on `CanTriggerWhenAddHand(player => player == Owner.Enemy, cardEffect => cardEffect != null)` — fires only for *effect-initiated* adds to the **opponent's** hand (not normal draws) — and gains `Owner.Enemy.HandCards.Count / 4` (integer floor, read at trigger time), OPT-locked via `SetHashString("GainMemory_BT11_033")`.
+- **What's missing (engine):** `EffectTiming::OnAddToHand` is **defined** in `code/digimon-engine/src/enums.rs` but is **never dispatched** anywhere — no `enqueue_triggered(OnAddToHand, ..)` / `fire_*` call site exists. The card-to-hand movement paths (`Game::add_to_hand_from_*`, `return_to_hand`, `add_top_security_to_hand`, etc.) do not fan this timing out to battle-area observers, and the `TriggerContext` carries no "which player's hand gained cards / was it effect-initiated" payload for it.
+- **What's missing (DSL):** the `TriggerWhen` enum (`code/digimon-dsl/src/clause.rs`) has no `on_add_to_hand` token and `compile.rs` has no mapping, so no `when: on_add_to_hand` clause can be authored. A companion event-card predicate (e.g. `event_add_to_hand_player: opponent`) plus the existing `event_is_effect_initiated` leaf would gate it to "an effect added cards to the **opponent's** hand."
+- **Composable today (do NOT re-file):** the memory ARITHMETIC is already expressible. `gain_memory_fn` accepts a `FormulaSpec`, and `floor_div: [ {base:0, per:{card_count_in_zone:{zone: hand, of: opponent}}, delta:1}, 4 ]` computes `floor(opp_hand_size / 4)`. Only the **observer trigger** is missing — once it lands, append the clause sketched in the BT11-033 YAML header comment.
+- **Suggested fix:** (1) fan `OnAddToHand` out to battle-area observers at each effect-initiated hand-gain commit (mirroring how `OnDrawCard` / `OnReturn` are fired), threading the gaining player + an `effect_initiated` flag into `TriggerContext`; (2) add the `on_add_to_hand` DSL trigger token + an `event_add_to_hand_player` predicate. Distinguish effect-initiated adds from normal draws (DCGO's `cardEffect != null` gate) so the clause does not over-fire on the draw step.
+- **Blocks:** BT11-033 (clause 2). `code/digimon-engine/cards/bt11/BT11-033.yaml` omits the clause; tests `bt11_033_memory_gain_is_floor_of_opp_hand_over_four` and `bt11_033_memory_observer_is_once_per_turn_and_clears_after_end_turn` are `#[ignore]`'d with this gap-id (and `bt11_033_does_not_author_the_blocked_memory_observer` guards against an approximation landing on the wrong trigger). Likely shared by every "when an effect adds cards to (a player's) hand" observer in the pool.
+
+## BeforePayCost reduction whose amount is set by an interactive in-cost selection  [G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT]  — OPEN 2026-06-03
+
+Surfaced by BT13-103 Akihiro Kurata (clause 1 BLOCKED, omitted from YAML per no-approximations). Hybrid engine + DSL gap. Clauses 2 ([End of Opponent's Turn][OPT] draw/trash/place-self/delete) and 3 ([Security]) are fully implemented; only clause 1 is blocked.
+
+- **Effect text (BT13-103 clause 1):** "[Your Turn] When you would play a card with [Belphemon] in its name, by deleting 1 of your Digimon with [Gizmon] in its name, reduce the play cost by the play cost of the deleted Digimon." DCGO `BT13_103.cs` (EffectTiming.BeforePayCost): `SelectPermanentEffect` over own non-immune [Gizmon]-name Digimon, `canNoSelect: true`; on a pick, delete it, then install a `ChangeCostClass` of `-permanent.CostJustBeforeRemoveField`. The reduction magnitude is the **interactively-selected** Digimon's printed cost — known only AFTER the in-cost selection. (DCGO's AI-only `EffectTiming.None` mirror auto-picks `gizmonCosts.Max()`; we may NOT replicate that approximation under rule 17.)
+- **What's missing (engine):** the BeforePayCost cost-reduction scan computes the amount and pays the cost in two decoupled steps. `apply_cost_reduction_candidate` (`code/digimon-engine/src/game_actions.rs:5848`) evaluates the amount (`inspect_cost_reduction_candidate` → `cost_reduction_fn`, READ context) **before** invoking `pay_cost_fn`, so the amount cannot depend on anything the pay_cost selects. The scan also requires the pay_cost to resolve synchronously (no parked `pending_selection`) and skips paid reducers entirely when there is no real cost target (`game_actions.rs:5678`). There is no mechanism to (a) surface an interactive selection during a BeforePayCost pay_cost and resume, nor (b) feed the selected/paid permanent's cost back into the reduction amount.
+- **What's missing (DSL):** the `kind: cost_reduction` lowering (`code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs:193`) runs `pay_cost` in a **fresh** `Bindings`, isolated from the `amount_fn` callback, and treats only `RunOutcome::Synchronous` as success. No `FormulaSpec` (`code/digimon-dsl/src/formula.rs`) reads "the printed cost of the permanent(s) deleted/paid during this pay_cost" — `BindingPlayCost` reads a prior `bind_as` binding only.
+- **Suggested fix:** (1) let a cost-reduction `pay_cost` install + resume an interactive `pending_selection` during the BeforePayCost scan; (2) bind the selected/paid permanent into a scope the amount can read, e.g. a `paid_cost_total` formula (sum of printed costs of permanents deleted/paid during this pay_cost) or a `BindingPlayCost` over a pay_cost-produced binding; compute the final reduction AFTER the cost resolves. Backward-compatible: literal `amount:` and the existing synchronous self-suspend / return-to-deck pay_costs are unchanged.
+- **Blocks:** BT13-103 (clause 1). `code/digimon-engine/cards/bt13/BT13-103.yaml` omits the clause (documented BLOCKED in its header); test `bt13_103_belphemon_play_cost_reduced_by_deleted_gizmon_cost` in `code/digimon-engine/tests/cards_behavioral/bt13/bt13_103.rs` is `#[ignore]`'d with this gap-id. Shared by any "by deleting/paying X, reduce the play cost by X's cost" reducer where X is chosen interactively. Companion DSL-vocab entry: `qa/dsl-vocab-gaps.md` `G-DSL-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT`.
+
+## Granted `OnBlock` trigger fires for any carrier, not just the blocked permanent  [G-ENGINE-GRANTED-ONBLOCK-CARRIER-GATE]  — OPEN 2026-06-05
+
+Surfaced by **BT4-098 Atomic Inferno** (judge-quiz Q4 authoring). The `[Main]` clause grants the
+selected Digimon a temporary "[Your Turn] When **this Digimon** is blocked, gain +3 memory" trigger
+via `grant_triggered_effect { timing: on_block, body: [gain_memory: 3] }`.
+
+- **What's wrong:** the granted-trigger dispatch for `OnBlock` fires the granted body for **every**
+  battle-area carrier holding the grant, without checking that the *blocked* permanent (the
+  `BlockDeclared { attacker, .. }` event permanent) is the carrier. DCGO gates this via
+  `CanTriggerOnAttack(selectedPermanent)` (the granted body's `CanUseCondition` requires the blocked
+  attacker == the selected permanent). So if a *different* Digimon is blocked while a granted carrier
+  is also on the field, the carrier's grant over-fires.
+- **Scope of impact:** the **Q4-relevant** behavior is unaffected (Q4 uses Atomic Inferno's
+  `<Security A.>` clause, not the on_block grant). The positive case the card tests assert (the
+  granted Digimon IS the one blocked) is correct; only the cross-Digimon over-fire is wrong. The
+  card YAML is faithful (`on_block` + `gain_memory: 3`); the gap is engine-side in the granted-trigger
+  dispatch, not the DSL. Flagged in the BT4-098 YAML header.
+- **Suggested fix:** in the `OnBlock` branch of the granted-trigger dispatch (`effect_queue.rs`,
+  `BlockDeclared` source), gate firing on `event_permanent == carrier` (the granted body should run
+  only when the carrier is the blocked permanent), mirroring DCGO `CanTriggerOnAttack(selected)`.
+  Likely shared by any granted "[when this is blocked / when this attacks]" body that targets a
+  specific carrier.
+- **Blocks (precision only):** BT4-098 on_block grant. YAML:
+  `code/digimon-engine/cards/bt4/BT4-098.yaml`; tests:
+  `code/digimon-engine/tests/cards_behavioral/bt4/bt4_098.rs` (positive case green).
+
+## Multi-card `trash_top_security` aborts when a per-removal observer installs a selection  [G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER]  — OPEN 2026-06-06
+
+Surfaced by **BT23-102 Mastemon** (judge-quiz Q9 authoring). Mastemon's [When
+Digivolving] trims "both players' security stacks so they have 3 cards left" — a
+`trash_top_security` of `count = security - 3` per player.
+
+- **What's wrong:** when the trim removes the **controller's own** security, each
+  removal synchronously fires the carrier's own `[All Turns]` `OnLoseSecurity` OPT
+  (Mastemon's "you may place 1 Digimon as the bottom security card"). After the
+  1st removed card, that observer installs an interactive `pending_selection`, and
+  `EffectContext::trash_top_security` early-returns on `pending_selection.is_some()`
+  — so the remaining controller removals are dropped (controller stays above 3).
+  Root: `fire_effect_security_removal` enqueues + drains `OnLoseSecurity`
+  synchronously per card (`effect_queue.rs`), and `trash_top_security` aborts its
+  loop on the resulting pending selection (`effect_context/mod.rs`).
+- **Scope of impact:** the **opponent**-side trim is unaffected (Mastemon's
+  `OnLoseSecurity` is owner-gated, so removing the opponent's security fires no
+  observer) and reaches exactly 3 — so the judge-quiz Q9 pin (opponent trim) is
+  green. Only the controller-side multi-trim is incomplete.
+- **Suggested fix:** let a multi-count `trash_top_security` either (a) complete its
+  batch before draining the per-card `OnLoseSecurity` observers, or (b) park and
+  resume across the interactive observer selection (capture the remaining count and
+  continue after the selection resolves) rather than early-returning and dropping it.
+- **Blocks:** BT23-102 controller-side [When Digivolving] trim. YAML:
+  `code/digimon-engine/cards/bt23/BT23-102.yaml`; test
+  `bt23_102_when_digivolving_controller_trim_removes_own_security` is `#[ignore]`'d
+  citing this gap. Shared by any effect that removes >1 of its OWN security while
+  carrying a self `OnLoseSecurity` observer.

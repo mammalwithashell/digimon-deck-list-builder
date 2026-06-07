@@ -432,6 +432,55 @@ fn st2_14_sorrow_blue_restricts_only_no_source_opponent_digimon() {
 }
 
 #[test]
+fn st2_14_security_restriction_survives_until_your_next_turn() {
+    // ST2-14 [Security] locks 1 no-source opponent Digimon "until the end of
+    // YOUR next turn" (the security owner's). When P0 attacks and P1's security
+    // flips Sorrow Blue, the lock is installed during P0's turn and must persist
+    // through P0's turn-end, expiring only at the end of P1's next turn.
+    // Both players need a deck so the per-turn draw doesn't deck-out (which would
+    // end the game and stop turn rotation before P1's turn-end fires).
+    let mut runner = st2_builder()
+        .add_card(digimon("LOCKME", 3, 3000))
+        .add_card(digimon("FILLER", 3, 1000))
+        .security(1, &["ST2-14"])
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER", "FILLER", "FILLER"])
+        .memory(10)
+        .start();
+    let attacker = runner.place_on_field(0, "LOCKME", Some(0));
+
+    runner.attack_player(attacker, 1, false);
+    for _ in 0..8 {
+        if runner.pending_selection().is_none() {
+            break;
+        }
+        runner
+            .auto_resolve()
+            .expect("resolve Sorrow Blue security target");
+    }
+
+    assert!(
+        runner.game.modifiers.has(attacker, ModifierType::CannotAttack),
+        "Sorrow Blue [Security] locks the chosen no-source opponent Digimon"
+    );
+
+    // The attacker's (P0's) turn ends — the lock must NOT expire here.
+    runner.end_turn();
+    assert!(
+        runner.game.modifiers.has(attacker, ModifierType::CannotAttack),
+        "lock must survive the attacker's turn-end (it lasts until the END of the \
+         security owner's NEXT turn, not the attacker's current turn)"
+    );
+
+    // The security owner's (P1's) next turn ends — now the lock expires.
+    runner.end_turn();
+    assert!(
+        !runner.game.modifiers.has(attacker, ModifierType::CannotAttack),
+        "lock expires at the end of the security owner's next turn"
+    );
+}
+
+#[test]
 fn st2_15_kaiser_nail_plays_selected_digimon_source_for_free() {
     let mut runner = st2_builder().hand(0, &["ST2-15"]).memory(0).start();
     let host = runner.place_stack(0, &["ST2-03", "ST2-05"]);

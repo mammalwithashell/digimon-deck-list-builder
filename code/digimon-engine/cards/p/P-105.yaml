@@ -21,6 +21,10 @@ effects:
           prompt: "Add 1 yellow card to your hand"
       - add_to_hand_from_reveal: { of: you, card: picked }
       - place_remainder_on_deck: { of: you, position: bottom }
+      # "Then, place this card in the battle area" — DCGO: PlaceDelayOptionCards.
+      # Seats P-105 in the battle area as an OptionState::Delayed permanent so the
+      # <Delay> body can be reached from a normal hand-play (mirrors P-103/P-104).
+      - place_self_as_delay_option: {}
 
   # [Main] <Delay> — player-visible [Main]-phase activation (PUPPETS-G009).
   # `trigger: delayed` parks the Option until its controller chooses to trash

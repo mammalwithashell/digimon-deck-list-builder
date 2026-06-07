@@ -1,0 +1,12 @@
+card: BT24-068
+name: DemiDevimon
+kind: digimon
+level: 3
+color: [purple]
+cost: 0
+traits: [Evil]
+attribute: Virus
+# A "Digimon without a DP value": the printed DP is "-" (no `dp:` field → None).
+# Vanilla — no [Main]/[On Play]/inherited effects on the printed card.
+# Authored as the vehicle for FAQ NV-1 (a no-DP Digimon cannot gain DP);
+# pinned by rules_faq::no_level_no_value::nv1_*.

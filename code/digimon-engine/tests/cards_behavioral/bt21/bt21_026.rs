@@ -394,19 +394,37 @@ fn bt21_026_cost_reduction_does_not_leak_to_other_cards() {
 /// clauses compile to an `Effect::declarative(...)` with
 /// `EffectTiming::Declarative`, but `Declarative` timing is never enqueued
 /// or fired by the engine. The modifier is therefore never installed at runtime.
+/// G-DECLARATIVE-KEYWORD RESOLVED (2026-06-03): an unconditional FaceUp
+/// `grant_keyword` declarative is now surfaced as a native top-card keyword
+/// (`card_data_from_compiled`), so `has_keyword` detects it on the field
+/// without the declarative process needing to fire. Verified here and in
+/// `rules_faq::keyword_identity::mp26_*`.
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — EffectTiming::Declarative not yet fired; Rush modifier not installed at runtime"]
 fn bt21_026_rush_installed_on_field() {
-    todo!("pending G-DECLARATIVE-KEYWORD: Rush grant not installed at runtime")
+    let mut runner = wargreymon_runner();
+    let h = runner.place_on_field(0, "BT21-026", Some(0));
+    runner.game.tick_declarative_effects();
+    assert!(
+        runner
+            .game
+            .has_keyword(h, digimon_engine::enums::Keyword::Rush),
+        "BT21-026's unconditional <Rush> must be present on the field"
+    );
 }
 
 /// Blocker is installed on BT21-026 when it enters the field.
-///
-/// Skipped pending G-DECLARATIVE-KEYWORD.
+/// G-DECLARATIVE-KEYWORD RESOLVED — see `bt21_026_rush_installed_on_field`.
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — EffectTiming::Declarative not yet fired; Blocker modifier not installed at runtime"]
 fn bt21_026_blocker_installed_on_field() {
-    todo!("pending G-DECLARATIVE-KEYWORD: Blocker grant not installed at runtime")
+    let mut runner = wargreymon_runner();
+    let h = runner.place_on_field(0, "BT21-026", Some(0));
+    runner.game.tick_declarative_effects();
+    assert!(
+        runner
+            .game
+            .has_keyword(h, digimon_engine::enums::Keyword::Blocker),
+        "BT21-026's unconditional <Blocker> must be present on the field"
+    );
 }
 
 // ============================================================================

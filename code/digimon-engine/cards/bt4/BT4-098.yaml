@@ -1,0 +1,120 @@
+# BT4-098 Atomic Inferno — Option, Red, Cost 1.
+#
+# Printed card text (card face, authoritative):
+#
+#   [Main] 1 of your Digimon with [Hybrid] in its form gets +3000 DP,
+#     ＜Security Attack +1＞ (This Digimon checks 1 additional security card),
+#     and "[Your Turn] When this Digimon is blocked, gain +3 memory" for the
+#     turn.
+#
+#   [Security] All of your Digimon gain ＜Security Attack +1＞ (This Digimon
+#     checks 1 additional security card) until the end of your next turn.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT4/Red/BT4_098.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# OptionSkill ([Main]):
+#   • CanSelectPermanentCondition: own battle-area Digimon whose
+#     TopCard.CardTraits contains "Hybrid".
+#   • SelectPermanentEffect maxCount = min(1, matches), canNoSelect: false →
+#     MANDATORY pick when ≥1 Hybrid Digimon exists; nothing installs at 0.
+#   • On the pick (SelectPermanentCoroutine):
+#       1. CardEffectCommons.ChangeDigimonDP +3000, EffectDuration.UntilEachTurnEnd
+#       2. CardEffectCommons.ChangeDigimonSAttack +1, EffectDuration.UntilEachTurnEnd
+#       3. AddEffectToPermanent an OnBlockAnyone ActivateClass on the SELECTED
+#          permanent, EffectDuration.UntilEachTurnEnd, whose CanUseCondition is:
+#            IsPermanentExistsOnBattleArea(selected) && IsOwnerTurn(selected)
+#            && CanTriggerOnAttack(hashtable, selected)
+#          i.e. fires only when the SELECTED Digimon is the one being blocked,
+#          on the controller's own turn. Body: selected.Owner.AddMemory(3).
+#
+# SecuritySkill ([Security]):
+#   • ChangeDigimonSAttackPlayerEffect +1 over all of the owner's battle-area
+#     Digimon (PermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon),
+#     EffectDuration.UntilOwnerTurnEnd. "Until the end of your next turn" =
+#     the standard "until owner turn end" expiry on a security effect resolved
+#     on the opponent's turn → end_of_your_next_turn.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                | Status      |
+# |------------------------------------------------------------------|-------------|
+# | [Main] select 1 of your Digimon with [Hybrid] in its form        | IMPLEMENTED |
+# | [Main] +3000 DP for the turn                                      | IMPLEMENTED |
+# | [Main] <Security Attack +1> for the turn                          | IMPLEMENTED |
+# | [Main] grant "[Your Turn] when blocked, gain +3 memory" (turn)    | IMPLEMENTED* |
+# | [Security] all your Digimon <Security Attack +1> until next turn  | IMPLEMENTED |
+#
+# (*) The granted on_block trigger is authored faithfully as a
+#     `grant_triggered_effect { timing: on_block, body: [gain_memory: 3] }` on
+#     the SELECTED Digimon. KNOWN ENGINE GAP — see note below: the engine's
+#     granted-trigger dispatch for OnBlock does not currently gate the body to
+#     "this carrier was the one blocked" (event_permanent == carrier), so it can
+#     over-fire when a DIFFERENT Digimon is blocked while the carrier is on the
+#     field. DCGO gates this via CanTriggerOnAttack(selected). The +3-memory body
+#     and turn expiry are correct; the over-fire is a substrate gap reported to
+#     the orchestrator (G-ENGINE-GRANTED-ONBLOCK-CARRIER-GATE), not stubbed here.
+
+card: BT4-098
+name: Atomic Inferno
+kind: option
+color: [red]
+cost: 1
+traits: []
+
+effects:
+  # ─── [Main] buff 1 of your Hybrid Digimon for the turn ──────────────────────
+  #
+  # MANDATORY select of 1 of your battle-area Digimon whose FORM trait set
+  # includes "Hybrid". If no Hybrid Digimon exists, the select no-ops and the
+  # `then:` grants never run (DCGO canNoSelect:false → nothing installs at 0).
+  - when: main_from_hand
+    summary: "[Main] 1 of your [Hybrid]-form Digimon: +3000 DP, <Security Attack +1>, and '[Your Turn] when blocked gain +3 memory' for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: hybrid
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Hybrid
+          prompt: "Choose 1 of your Digimon with [Hybrid] in its form to gain +3000 DP, Security Attack +1, and the blocked-memory effect"
+      # (a) +3000 DP for the turn.
+      - add_modifier:
+          target: hybrid
+          modifier: ChangeDp
+          value: 3000
+          expiry: end_of_turn
+      # (b) <Security Attack +1> for the turn.
+      - add_modifier:
+          target: hybrid
+          modifier: SecurityAttackChange
+          value: 1
+          expiry: end_of_turn
+      # (c) Granted trigger: "[Your Turn] When this Digimon is blocked, gain +3
+      #     memory" for the turn. on_block fires when the carrier (this selected
+      #     Digimon) is the blocked attacker — a blocked attack can only happen on
+      #     the controller's own turn, satisfying the printed "[Your Turn]" gate
+      #     within the end_of_turn expiry. Body gains 3 memory for the carrier's
+      #     controller.
+      - grant_triggered_effect:
+          target: hybrid
+          timing: on_block
+          expiry: end_of_turn
+          body:
+            - gain_memory: 3
+
+  # ─── [Security] all your Digimon <Security Attack +1> until your next turn ───
+  #
+  # "All of your Digimon gain <Security Attack +1> until the end of your next
+  # turn." Mass SecurityAttackChange +1 over your battle-area Digimon. Mandatory
+  # ([Security] effects are not opt-out). Resolved on the opponent's turn during
+  # their security check → expires at the end of your next turn.
+  - when: on_security
+    summary: "[Security] All of your Digimon gain <Security Attack +1> until the end of your next turn"
+    process:
+      - add_modifier:
+          target: { owner: you, zone: [battle_area], kind: digimon }
+          modifier: SecurityAttackChange
+          value: 1
+          expiry: end_of_your_next_turn

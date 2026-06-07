@@ -86,20 +86,50 @@ def _load_alias_map() -> Dict[str, str]:
 _ALIAS_MAP: Optional[Dict[str, str]] = None
 
 
+def _normalize_archetype_quotes(name: str) -> str:
+    """Fold typographic apostrophes/quotes to ASCII.
+
+    Data sources disagree on apostrophe style — e.g. `data/deck_library.json`
+    has "ST-3 Heaven's Yellow" (straight U+0027) while the DSL ledger has
+    "ST-3 Heaven’s Yellow" (curly U+2019). Without folding, the two never
+    match and ST-3 is silently dropped from the training pool. Also lets a user
+    type a normal apostrophe in `--archetypes`.
+    """
+    return (
+        name.replace("’", "'")
+        .replace("‘", "'")
+        .replace("“", '"')
+        .replace("”", '"')
+    )
+
+
 def canonicalize_archetype(name: str) -> str:
     """Resolve an archetype name to its canonical form via the alias index."""
     global _ALIAS_MAP
     if _ALIAS_MAP is None:
         _ALIAS_MAP = _load_alias_map()
+    name = _normalize_archetype_quotes(name)
     return _ALIAS_MAP.get(name.lower(), name)
 
 
-def _load_fully_implemented_archetypes(path: str = str(_QA_DSL_STATUS_PATH)) -> Optional[Set[str]]:
-    """Return archetypes whose DSL ledger entries are all IMPLEMENTED.
+# DSL ledger verdicts that count as "ready to train". A freshly IMPLEMENTED card
+# and an AUDITED-OK card (an existing YAML spec audited faithful against printed
+# text + DCGO) are both fully playable. Other verdicts (PARTIAL, AUDITED-DRIFT,
+# AUDITED-MISSING-TESTS, BLOCKED) are NOT ready and must still exclude their
+# archetype — `all(...)` below enforces that one non-ready card drops the deck.
+# Gate 2 (`missing_unimplemented_card_ids` against the live Rust registry) still
+# independently verifies every card actually exists in the engine, so widening
+# this verdict set cannot admit a card the engine can't play.
+_TRAINING_READY_DSL_STATUSES = frozenset({"IMPLEMENTED", "AUDITED-OK"})
 
-    Missing status files return None so non-standard test/library callers can
-    still load synthetic data. An existing file with no entry for an archetype
-    means that archetype is not considered ready.
+
+def _load_fully_implemented_archetypes(path: str = str(_QA_DSL_STATUS_PATH)) -> Optional[Set[str]]:
+    """Return archetypes whose DSL ledger entries are all training-ready.
+
+    "Training-ready" = every card's verdict is in `_TRAINING_READY_DSL_STATUSES`
+    (IMPLEMENTED or AUDITED-OK). Missing status files return None so non-standard
+    test/library callers can still load synthetic data. An existing file with no
+    entry for an archetype means that archetype is not considered ready.
     """
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -124,7 +154,7 @@ def _load_fully_implemented_archetypes(path: str = str(_QA_DSL_STATUS_PATH)) -> 
     return {
         archetype
         for archetype, statuses in by_archetype.items()
-        if statuses and all(status == "IMPLEMENTED" for status in statuses)
+        if statuses and all(status in _TRAINING_READY_DSL_STATUSES for status in statuses)
     }
 
 # Deck source priority for within-archetype selection (higher = preferred).

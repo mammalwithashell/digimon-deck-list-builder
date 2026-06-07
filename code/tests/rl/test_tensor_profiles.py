@@ -28,20 +28,15 @@ def test_default_observation_profile_shape():
     assert profile.tensor_size == 8850
 
 
-def test_compact_tensor_profile_remains_compatibility_profile():
+def test_compact_tensor_profile_is_retired():
     from digimon_gym.tensor_profiles import get_tensor_profile
 
-    # `standard_compact_v1` is no longer the engine default but is still
-    # reachable for callers (legacy recordings, parity tests).
-    profile = get_tensor_profile("standard_compact_v1")
-
-    assert profile.id == "standard_compact_v1"
-    assert profile.game_mode == "standard"
-    assert profile.tensor_size == 1375
-    assert profile.card_id_slot_count == 520
-    assert profile.scalar_slot_count == 855
-    assert len(profile.card_id_positions) == 520
-    assert len(profile.scalar_positions) == 855
+    # `standard_compact_v1` is retired from the training env (change
+    # make-training-build-legacy-free). Requesting it raises a clear error
+    # naming the supported default. The Rust engine keeps its own compact
+    # builder independently for offline parity use.
+    with pytest.raises(ValueError, match="standard_lite_v2"):
+        get_tensor_profile("standard_compact_v1")
 
 
 def test_get_standard_lite_v2_tensor_profile_from_rust():
@@ -136,15 +131,14 @@ def test_tensor_profile_positions_cover_tensor():
 
 
 def test_feature_extractor_uses_profile_positions():
+    pytest.importorskip("digimon_engine")
     import torch
     from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
     from digimon_gym.tensor_profiles import get_tensor_profile
 
-    # Pin to standard_compact_v1 (the historical default; reachable by ID
-    # after the engine default flipped to standard_lite_deck_v2). Use the
-    # profile's own tensor_size so the Box shape matches the profile-driven
-    # extractor's expectations.
-    profile = get_tensor_profile("standard_compact_v1")
+    # Use the training default (standard_lite_v2). The extractor is
+    # profile-driven, so its slot counts come from the resolved profile.
+    profile = get_tensor_profile("standard_lite_v2")
     space = spaces.Box(
         shape=(profile.tensor_size,),
         low=-10.0,
@@ -194,43 +188,27 @@ def test_digimon_env_defaults_to_standard_lite_v2_under_rust_backend(monkeypatch
     assert info["tensor_profile"] == "standard_lite_v2"
 
 
-def test_digimon_env_preserves_explicit_compact_profile_with_unset_backend(monkeypatch):
+def test_digimon_env_rejects_compact_profile_with_unset_backend(monkeypatch):
+    pytest.importorskip("digimon_engine")
     monkeypatch.delenv("DIGIMON_BACKEND", raising=False)
     monkeypatch.delenv("DIGIMON_TENSOR_PROFILE", raising=False)
 
     from digimon_gym.digimon_gym import DigimonEnv
 
-    env = DigimonEnv(
-        deck1=DECK,
-        deck2=DECK,
-        tensor_profile="standard_compact_v1",
-    )
-    obs, info = env.reset(seed=7)
-
-    assert env.tensor_profile == "standard_compact_v1"
-    assert env.observation_space.shape == (1375,)
-    assert obs.shape == (1375,)
-    assert info["tensor_profile"] == "standard_compact_v1"
+    # Compact is retired; the env raises in __init__ (before any game is built).
+    with pytest.raises(ValueError, match="standard_lite_v2"):
+        DigimonEnv(deck1=DECK, deck2=DECK, tensor_profile="standard_compact_v1")
 
 
-def test_digimon_env_preserves_explicit_compact_profile_under_rust_backend(monkeypatch):
+def test_digimon_env_rejects_compact_profile_under_rust_backend(monkeypatch):
     pytest.importorskip("digimon_engine")
     monkeypatch.setenv("DIGIMON_BACKEND", "rust")
     monkeypatch.delenv("DIGIMON_TENSOR_PROFILE", raising=False)
 
     from digimon_gym.digimon_gym import DigimonEnv
 
-    env = DigimonEnv(
-        deck1=DECK,
-        deck2=DECK,
-        tensor_profile="standard_compact_v1",
-    )
-    obs, info = env.reset(seed=7)
-
-    assert env.tensor_profile == "standard_compact_v1"
-    assert env.observation_space.shape == (1375,)
-    assert obs.shape == (1375,)
-    assert info["tensor_profile"] == "standard_compact_v1"
+    with pytest.raises(ValueError, match="standard_lite_v2"):
+        DigimonEnv(deck1=DECK, deck2=DECK, tensor_profile="standard_compact_v1")
 
 
 def test_digimon_env_accepts_standard_full_v2_under_rust_backend(monkeypatch):
@@ -357,67 +335,63 @@ def test_feature_extractor_infers_unique_profile_from_observation_space_shape():
     assert extractor.scalar_indices.numel() == profile.scalar_slot_count
 
 
-def test_tensor_profile_falls_back_when_engine_function_missing(monkeypatch):
+def test_tensor_profile_raises_when_engine_lacks_profile_functions(monkeypatch):
     from digimon_gym.tensor_profiles import get_tensor_profile
 
+    # An engine module exposing neither get_observation_layout nor
+    # get_tensor_profile can't serve a profile; the legacy compact fallback was
+    # removed (change make-training-build-legacy-free), so this is a hard error.
     monkeypatch.setitem(sys.modules, "digimon_engine", SimpleNamespace())
 
-    profile = get_tensor_profile()
-
-    assert profile.id == "standard_compact_v1"
-    assert profile.game_mode == "standard"
-    assert profile.card_id_slot_count == 520
-    assert profile.scalar_slot_count == 855
+    with pytest.raises(RuntimeError, match="get_observation_layout"):
+        get_tensor_profile()
 
 
-def test_tensor_profile_falls_back_when_engine_module_absent(monkeypatch):
+def test_tensor_profile_requires_engine_wheel(monkeypatch):
     from digimon_gym.tensor_profiles import get_tensor_profile, list_tensor_profiles
 
+    # No digimon_engine wheel installed → the training env requires it; there is
+    # no Python fallback anymore.
     monkeypatch.delitem(sys.modules, "digimon_engine", raising=False)
     monkeypatch.setattr("importlib.util.find_spec", lambda name: None)
 
-    profile = get_tensor_profile()
-
-    assert profile.id == "standard_compact_v1"
-    assert profile.game_mode == "standard"
-    assert list_tensor_profiles() == ["standard_compact_v1"]
+    with pytest.raises(RuntimeError, match="digimon_engine"):
+        get_tensor_profile()
+    with pytest.raises(RuntimeError, match="digimon_engine"):
+        list_tensor_profiles()
 
 
 @pytest.mark.parametrize(
     "profile_id",
-    [None, "standard_compact_v1", "standard_v1", "compact_v1"],
+    ["standard_compact_v1", "standard_v1", "compact_v1"],
 )
-def test_tensor_profile_fallback_accepts_legacy_aliases(monkeypatch, profile_id):
+def test_compact_aliases_are_rejected(profile_id):
     from digimon_gym.tensor_profiles import get_tensor_profile
 
-    monkeypatch.setitem(sys.modules, "digimon_engine", SimpleNamespace())
-
-    profile = get_tensor_profile(profile_id)
-
-    assert profile.id == "standard_compact_v1"
-    assert profile.game_mode == "standard"
-    assert profile.card_id_slot_count == 520
-    assert profile.scalar_slot_count == 855
+    # Every compact alias is retired from the training env and rejected up front
+    # (before the engine is even consulted), naming the supported default.
+    with pytest.raises(ValueError, match="standard_lite_v2"):
+        get_tensor_profile(profile_id)
 
 
-def test_tensor_profile_fallback_rejects_unknown_profile(monkeypatch):
+def test_unknown_profile_is_rejected():
+    pytest.importorskip("digimon_engine")
     from digimon_gym.tensor_profiles import get_tensor_profile
 
-    monkeypatch.setitem(sys.modules, "digimon_engine", SimpleNamespace())
-
-    with pytest.raises(ValueError, match="unknown tensor profile: unknown_v1"):
+    # A genuinely unknown (non-retired) profile id is rejected by the Rust
+    # engine's profile parser.
+    with pytest.raises((ValueError, RuntimeError)):
         get_tensor_profile("unknown_v1")
 
 
-def test_tensor_profile_fallback_rejects_standard_lite_v2_without_layout(monkeypatch):
+def test_tensor_profile_lite_v2_requires_engine_layout_support(monkeypatch):
     from digimon_gym.tensor_profiles import get_tensor_profile
 
+    # standard_lite_v2 needs the engine's observation-layout API; a stub engine
+    # without it is a hard error (no Python fallback).
     monkeypatch.setitem(sys.modules, "digimon_engine", SimpleNamespace())
 
-    with pytest.raises(
-        ValueError,
-        match="standard_lite_v2 requires digimon_engine observation layout support",
-    ):
+    with pytest.raises(RuntimeError, match="get_observation_layout"):
         get_tensor_profile("standard_lite_v2")
 
 
@@ -500,33 +474,6 @@ def test_tensor_profile_for_tensor_size_rejects_unknown_shape(monkeypatch):
         match="no registered tensor profile matches observation tensor size 9",
     ):
         get_tensor_profile_for_tensor_size(9)
-
-
-def test_tensor_profile_canonicalizes_engine_alias(monkeypatch):
-    from digimon_gym.tensor_profiles import get_tensor_profile
-
-    raw_profile = SimpleNamespace(
-        id="standard_v1",
-        game_mode="standard",
-        version=1,
-        tensor_size=1375,
-        field_slots=27,
-        slot_size=45,
-        max_sources=6,
-        card_id_slot_count=520,
-        scalar_slot_count=855,
-        card_id_positions=range(520),
-        scalar_positions=range(520, 1375),
-    )
-    monkeypatch.setitem(
-        sys.modules,
-        "digimon_engine",
-        SimpleNamespace(get_tensor_profile=lambda _profile_id=None: raw_profile),
-    )
-
-    profile = get_tensor_profile("standard_v1")
-
-    assert profile.id == "standard_compact_v1"
 
 
 def test_tensor_profile_does_not_hide_engine_import_error(monkeypatch):

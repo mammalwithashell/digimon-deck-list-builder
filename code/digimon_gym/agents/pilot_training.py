@@ -2870,7 +2870,9 @@ def _build_argparser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--tensor-profile", type=str, default=None,
-        help="Observation tensor profile, e.g. standard_compact_v1 or standard_lite_v2."
+        help="Observation tensor profile, e.g. standard_lite_v2 (default) or "
+             "standard_lite_deck_v2. standard_compact_v1 is retired from the "
+             "training env."
     )
     parser.add_argument(
         "--record-games",

@@ -26,6 +26,7 @@ pub mod effect_context;
 pub mod effect_queue;
 pub mod enums;
 pub mod events;
+pub mod floating_modifier;
 pub mod game;
 pub mod game_actions;
 pub mod game_phases;
@@ -48,14 +49,14 @@ pub mod rules;
 pub mod runners;
 pub mod scheduled_effects;
 pub mod selection;
-pub mod tensor;
 pub mod tensor_profiles;
 pub mod view;
 pub use tensor_profiles as tensor_profile;
-pub mod tensor_v1;
-pub mod tensor_v2_full;
-pub mod tensor_v2_lite;
-pub mod tensor_v2_lite_deck;
+// Observation output port: the tensor builders live under `observation/`
+// (read-only port — see its module doc). Re-exported here so the crate-root
+// paths `crate::tensor`, `crate::tensor_v1`, … (used by PyO3 + Tauri) are
+// preserved unchanged.
+pub use observation::{tensor, tensor_v1, tensor_v2_full, tensor_v2_lite, tensor_v2_lite_deck};
 pub mod token_registry;
 pub mod trigger_context;
 

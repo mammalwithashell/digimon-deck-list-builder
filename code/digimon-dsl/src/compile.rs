@@ -141,6 +141,18 @@ fn compile_color(c: crate::spec::ColorSpec) -> CompiledColor {
     }
 }
 
+fn compile_synth_identity(
+    s: &crate::step::SynthIdentitySpec,
+) -> crate::compiled::CompiledSynthIdentity {
+    crate::compiled::CompiledSynthIdentity {
+        kind: compile_card_kind(s.kind),
+        level: s.level,
+        colors: s.colors.iter().copied().map(compile_color).collect(),
+        traits: s.traits.clone(),
+        dp: s.dp,
+    }
+}
+
 fn compile_player_ref(p: crate::common::PlayerRef) -> CompiledPlayerRef {
     use crate::common::PlayerRef as S;
     match p {
@@ -221,6 +233,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnLeaveField => CompiledTiming::OnLeaveField,
         S::OnSuspend => CompiledTiming::OnSuspend,
         S::OnUnsuspend => CompiledTiming::OnUnsuspend,
+        S::OnAddToHand => CompiledTiming::OnAddToHand,
         S::OnHatch => CompiledTiming::OnHatch,
         S::OnMove => CompiledTiming::OnMove,
         S::OnDigivolve => CompiledTiming::OnDigivolve,
@@ -351,6 +364,16 @@ fn compile_per_selector(
         S::DistinctColorsCount(spec) => CompiledPerSelector::DistinctColorsCountScoped {
             zone: compile_zone(spec.zone),
             of: compile_player_ref(spec.of),
+            filter: spec.filter.as_ref().map(|filter| {
+                Box::new(compile_predicate(
+                    filter,
+                    &format!("{prefix}.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
+        },
+        S::SourceStackCount(spec) => CompiledPerSelector::SourceStackCountFiltered {
             filter: spec.filter.as_ref().map(|filter| {
                 Box::new(compile_predicate(
                     filter,
@@ -590,6 +613,7 @@ fn compile_predicate(
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
         trait_has: p.trait_has.clone(),
+        trait_contains: p.trait_contains.clone(),
         form_is: p.form_is.clone(),
         attribute_is: p.attribute_is.clone(),
         name_is: p.name_is.clone(),
@@ -665,6 +689,12 @@ fn compile_predicate(
                 binding: b.binding.clone(),
                 of: compile_player_ref(b.of),
             }),
+        binding_card_kind: p.binding_card_kind.as_ref().map(|b| {
+            crate::compiled::CompiledBindingCardKindPredicate {
+                binding: b.binding.clone(),
+                kind: compile_card_kind(b.kind),
+            }
+        }),
         source_is_tamer: p.source_is_tamer,
         source_is_unsuspended: p.source_is_unsuspended,
         source_name_contains: p.source_name_contains.clone(),
@@ -783,6 +813,7 @@ fn compile_predicate(
         attack_target_change_reason: p.attack_target_change_reason.clone(),
         attacker_trait_has: p.attacker_trait_has.clone(),
         event_target_owner: p.event_target_owner.map(compile_player_ref),
+        event_add_to_hand_player: p.event_add_to_hand_player.map(compile_player_ref),
         event_target_color_any_of: p
             .event_target_color_any_of
             .as_ref()
@@ -1823,6 +1854,11 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::ReturnSelectedSecurityToDeck(a) => CompiledStep::ReturnSelectedSecurityToDeck {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+            position: compile_stack_position(a.position),
+        },
         S::AddTopSecurityToHand(a) => CompiledStep::AddTopSecurityToHand {
             of: compile_player_ref(a.of),
         },
@@ -2306,6 +2342,8 @@ fn compile_step(
             modifier: a.modifier.clone(),
             value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
+            synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
+            continuous: a.continuous,
         },
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
             target_player: compile_player_ref(a.target_player),
@@ -2659,6 +2697,7 @@ fn compile_step(
             zone: compile_zone(a.zone),
             max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
             min: a.min,
+            clamp_to_available: a.clamp_to_available,
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
@@ -2847,6 +2886,7 @@ fn compile_step(
             without_suspending: a.without_suspending,
             ignore_summoning_sickness: a.ignore_summoning_sickness,
             optional: a.optional,
+            windowed: a.windowed,
             prompt: a.prompt.clone(),
             cost_upgrade: a.cost_upgrade.map(|u| CompiledAttackCostUpgrade {
                 dp: u.dp.unwrap_or(0),

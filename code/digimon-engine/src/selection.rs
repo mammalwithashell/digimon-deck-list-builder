@@ -455,6 +455,17 @@ pub enum TriggerSource {
         card: CardHandle,
         effect_initiated: bool,
     },
+    /// Observer timing (`OnAddToHand`) fired after an EFFECT adds one or more
+    /// cards to `player`'s hand (return-to-hand, security/trash/deck-to-hand,
+    /// effect-draw, …). Scans ALL players' battle areas so a controller's
+    /// observer can react to the opponent's hand gaining cards. `affected_player`
+    /// in the resulting `TriggerContext` is the gaining player; `effect_initiated`
+    /// distinguishes effect-driven adds from a normal draw (always `true` here,
+    /// since only effect paths enqueue this). See G-ON-ADD-TO-HAND-OBSERVER.
+    HandGained {
+        player: PlayerId,
+        effect_initiated: bool,
+    },
     /// Observer timing fired after a persistent Option is placed. Delay and
     /// Training Options have a standalone permanent; Link Options instead
     /// identify their host and linked card without pretending the linked card
@@ -577,6 +588,14 @@ pub struct PendingSecurity {
 pub enum SecurityRemovalDestination {
     Trash,
     Hand(PlayerId),
+    /// Move the removed security card to its owner's deck (top or bottom).
+    /// Digi-Eggs route to the digitama deck. Used by LM-020 Quantumon's
+    /// [When Digivolving] "place 1 card among them on top of your opponent's
+    /// deck". `owner` is the card owner (= the security stack's player).
+    Deck {
+        owner: PlayerId,
+        to_bottom: bool,
+    },
     BottomSource(PermanentHandle),
     Digivolve {
         player: PlayerId,

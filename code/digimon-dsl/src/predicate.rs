@@ -49,6 +49,18 @@ pub struct PredicateSpec {
         alias = "subject_trait"
     )]
     pub trait_has: Option<String>,
+    /// Substring sibling of `trait_has`. Matches when ANY of the subject's
+    /// traits CONTAINS this token (case-insensitive substring), mirroring
+    /// DCGO `CardSource.ContainsTraits`. `trait_has` is an EXACT
+    /// case-insensitive match; `trait_contains` is the substring reading
+    /// demanded by printed text of the form "[Dragon], [saur] or
+    /// [Ceratopsian] in any of its traits" — where e.g. `saur` only ever
+    /// appears inside `Dinosaur` / `Plesiosaur` and `Dragon` mostly inside
+    /// `Dragonkin` / `Dark Dragon`. Threaded identically to `trait_has`,
+    /// including synth-identity / `ChangeTraits` overlay visibility.
+    /// G-DSL-TRAIT-CONTAINS-SUBSTRING. Driver: EX3-014 Dorbickmon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trait_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -159,6 +171,12 @@ pub struct PredicateSpec {
     pub not_in_binding: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub binding_owner: Option<BindingOwnerPredicate>,
+    /// True when the card bound to `binding` has the given card category.
+    /// Resolves the named card binding (e.g. from `reveal_top_deck { bind_as }`)
+    /// and compares its printed kind. Used by LM-020 Quantumon to test whether
+    /// the revealed opponent deck-top matches the declared category.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_card_kind: Option<BindingCardKindPredicate>,
 
     // Leaf — source-relative
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -321,6 +339,11 @@ pub struct PredicateSpec {
     pub event_host_permanent_is_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
+    /// For `OnAddToHand` observers: the player whose hand gained cards
+    /// (`TriggerContext.affected_player`) must match this player-ref, resolved
+    /// relative to the observer (`you` / `opponent`). See G-ON-ADD-TO-HAND-OBSERVER.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_add_to_hand_player: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_is_player: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -517,6 +540,13 @@ impl PredicateSpec {
 pub struct BindingOwnerPredicate {
     pub binding: String,
     pub of: PlayerRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindingCardKindPredicate {
+    pub binding: String,
+    pub kind: CardKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]

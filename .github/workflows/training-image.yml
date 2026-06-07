@@ -42,6 +42,19 @@ jobs:
           load: true
           push: false
 
+      - name: Smoke real import inside built image (legacy-free contract)
+        # A real import of the training entrypoint chain — NOT --dry-run, which
+        # returns in run_job() before importing pilot_training/digimon_gym and so
+        # cannot catch import-time breakage. The image ships neither
+        # engine_py_legacy nor code/server/, so a reintroduced top-level import
+        # of either fails here instead of at training start. See change
+        # make-training-build-legacy-free.
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/data:/app/data:ro" \
+            digimon-trainer:smoke \
+            python -c "import tools.run_training_job; import digimon_gym.agents.pilot_training; print('IMAGE_IMPORT_OK')"
+
       - name: Smoke --dry-run inside built image
         run: |
           docker run --rm \

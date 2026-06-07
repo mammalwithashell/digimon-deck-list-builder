@@ -46,6 +46,10 @@ import {
   FIELD_SLOTS,
   SELECTION,
 } from '@/utils/constants';
+import {
+  fieldSelectionActionId,
+  fieldSelectionHighlights,
+} from '@/utils/selectionTargets';
 import { GamePhase, type ActionTrace, type PermanentInfo } from '@/types/game';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
@@ -488,12 +492,20 @@ export function GamePage() {
         return;
       }
 
-      // During selection phases, map to selection actions
+      // During selection phases, map a board click to a field-target
+      // selection. The engine encodes own- and opponent-field targets in the
+      // same `OWN_FIELD_START + slot` range and disambiguates by
+      // `pendingSelection.kind`; `fieldSelectionActionId` honours that (the
+      // old `isOpponent ? ENEMY_FIELD_START` branch never matched the engine's
+      // ids, so "delete an opponent's Digimon" prompts swallowed every click).
       if (phase >= GamePhase.SelectTarget && phase <= GamePhase.SelectSecurity) {
-        const selIdx = isOpponent
-          ? SELECTION.ENEMY_FIELD_START + slotIndex
-          : SELECTION.OWN_FIELD_START + slotIndex;
-        if (parsedMask.validSelections.has(selIdx)) {
+        const selIdx = fieldSelectionActionId(
+          store.pendingSelection?.kind,
+          isOpponent,
+          slotIndex,
+          parsedMask.validSelections,
+        );
+        if (selIdx !== null) {
           handleAction(selIdx);
           return;
         }
@@ -736,12 +748,19 @@ export function GamePage() {
   // banner but leave the board un-affordanced — the user sees no hint
   // that opponent (or own) slots are clickable. `handleSlotClick` already
   // routes the dispatch; this purely surfaces *which* slots are valid.
-  for (const idx of parsedMask.validSelections) {
-    if (idx >= SELECTION.OWN_FIELD_START && idx <= SELECTION.OWN_FIELD_END) {
-      highlightedOwnSlots.add(idx - SELECTION.OWN_FIELD_START);
-    } else if (idx >= SELECTION.ENEMY_FIELD_START && idx <= SELECTION.ENEMY_FIELD_END) {
-      highlightedEnemySlots.add(idx - SELECTION.ENEMY_FIELD_START);
-    }
+  //
+  // The engine encodes own- and opponent-field targets in the SAME
+  // `OWN_FIELD_START + slot` id range and disambiguates by
+  // `pendingSelection.kind`, so we must route by `kind`, not by id range
+  // (the old `ENEMY_FIELD_START` branch never matched and left
+  // opponent-target prompts un-highlighted). See `utils/selectionTargets.ts`.
+  {
+    const fieldHighlights = fieldSelectionHighlights(
+      store.pendingSelection?.kind,
+      parsedMask.validSelections,
+    );
+    for (const slot of fieldHighlights.own) highlightedOwnSlots.add(slot);
+    for (const slot of fieldHighlights.enemy) highlightedEnemySlots.add(slot);
   }
 
   // DNA material selection highlights its own-field candidates by RAW

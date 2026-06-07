@@ -622,6 +622,16 @@ pub enum ModifierType {
 
     // Digivolution
     CannotDigivolve,
+    /// Digivolve-TARGET restriction (Q3 / `G-DIGIVOLVE-TARGET-RESTRICTION`):
+    /// the carrying permanent may digivolve ONLY into a card whose name matches
+    /// the allowed name carried in `ModifierPayload::Name { value }`. Multiple
+    /// entries are ANDed (the digivolve target must satisfy every one). Consulted
+    /// by `Game::digivolve_target_blocked_by_restriction`. DCGO parity:
+    /// `CanNotDigivolveStaticSelfEffect` (e.g. EX10-020 Puppetmon "[All Turns]
+    /// this Digimon can only digivolve into [Apocalymon]"). Installed as a
+    /// declarative aura sourced from the battle area, so it is inactive while the
+    /// source is in the breeding area.
+    CanOnlyDigivolveInto,
 
     // Color
     ChangeColor,

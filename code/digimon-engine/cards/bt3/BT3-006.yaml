@@ -1,0 +1,35 @@
+# BT3-006 DemiMeramon — Digi-Egg, Lv.2, Black, no DP, Cost 0. Traits: [Flame].
+#
+# Printed card text (cards.json effect_description_eng):
+#   Inherited Effect [On Deletion] ＜Draw 1＞ (Draw 1 card from your deck.)
+#   Then, trash 1 card in your hand.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT3/Black/BT3_006.cs
+#
+# Digi-Egg with an INHERITED [On Deletion]: fires when the host Digimon this
+# Digi-Egg is stacked under (as its bottom source) is deleted. ＜Draw 1＞
+# keyword draw, then a MANDATORY single hand trash (no "you may"). The player
+# chooses which card via a forced `select_hand` (optional:false); it degrades
+# to a no-op if the hand is empty.
+
+card: BT3-006
+name: DemiMeramon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Flame]
+
+effects:
+  - scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] Draw 1, then trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

@@ -6,6 +6,18 @@ use crate::enums::PlayerId;
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 
+/// Index offset that distinguishes a "leaving / limbo" DigiXros material handle
+/// (`Game::digixros_leaving_limbo`) from a real `battle_area` index. Field slots
+/// cap at 14 (`Rules::field_slots`), so any handle whose index is ≥ this base
+/// addresses limbo entry `index - LIMBO_INDEX_BASE`. Chosen well above the field
+/// cap and below `u8::MAX` to leave headroom. See G-DIGIXROS-REDIRECT-EXTRACTION.
+pub(crate) const LIMBO_INDEX_BASE: u8 = 200;
+
+/// True if `index` addresses the leaving/limbo zone rather than `battle_area`.
+pub(crate) fn is_limbo_index(index: u8) -> bool {
+    index >= LIMBO_INDEX_BASE
+}
+
 /// Origin zones that can contribute cards to a DigiXros transaction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DigiXrosMaterialZone {
@@ -384,6 +396,42 @@ impl DigiXrosTransaction {
         self.selected_materials.len() + self.pre_attached_materials.len()
     }
 
+    /// True if every recipe slot still has at least its `min` materials assigned.
+    /// A DigiXros play is only legal while its recipe is satisfied; when a
+    /// required material is redirected/consumed mid-resolution (e.g. BT17-095
+    /// DNA-extracts a material — judge-quiz Q26) the recipe can drop below `min`,
+    /// making the declared play unpayable so the host returns to hand.
+    pub fn recipe_is_satisfied(&self) -> bool {
+        self.recipe_slots.iter().all(|slot| {
+            if slot.min == 0 {
+                return true;
+            }
+            let filled = self
+                .selected_materials
+                .iter()
+                .chain(self.pre_attached_materials.iter())
+                .filter(|m| m.recipe_slot == Some(slot.slot_index))
+                .count();
+            filled >= slot.min as usize
+        })
+    }
+
+    /// Drop every selected / pre-attached material whose origin fails `keep`,
+    /// then refresh `digixros_count`. Used by the DigiXros declare-then-pay
+    /// recompute when a battle-area material is redirected/consumed away by a
+    /// `WhenWouldLeaveBattleArea` replacement mid-resolution: dropping it both
+    /// removes its negative `cost_delta` from `final_cost()` and stops
+    /// `commit_digixros_material_sources` from trying to consume a vanished
+    /// permanent.
+    pub fn retain_materials<F>(&mut self, keep: F)
+    where
+        F: Fn(DigiXrosMaterialOrigin) -> bool,
+    {
+        self.selected_materials.retain(|m| keep(m.origin));
+        self.pre_attached_materials.retain(|m| keep(m.origin));
+        self.refresh_digixros_count();
+    }
+
     pub fn selected_cost_delta(&self) -> i16 {
         self.selected_materials
             .iter()
@@ -562,6 +610,177 @@ impl Game {
     #[allow(dead_code)]
     pub(crate) fn pending_digixros_transaction_mut(&mut self) -> Option<&mut DigiXrosTransaction> {
         self.pending_digixros_transaction.as_mut()
+    }
+
+    // ─── Leaving / limbo holding slot (G-DIGIXROS-REDIRECT-EXTRACTION) ─────────
+
+    /// Pop the battle-area permanent whose TOP card is `card` (owned by
+    /// `player`) out of `battle_area` and park it in `digixros_leaving_limbo`.
+    /// Used when a DigiXros material's `WhenWouldLeaveBattleArea` window parks an
+    /// optional reward (e.g. BT17-095's `<Delay>` accept): the material is no
+    /// longer a standalone top card, but the parked observer can still extract it
+    /// (`rematerialize_digixros_limbo`). Returns the limbo-encoded handle, or
+    /// `None` if no such standalone permanent exists.
+    pub(crate) fn move_battle_permanent_to_limbo(
+        &mut self,
+        player: PlayerId,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        let idx = self
+            .player(player)
+            .battle_area
+            .iter()
+            .position(|p| p.top_card().handle() == card)?;
+        let original_handle = PermanentHandle {
+            player,
+            index: idx as u8,
+        };
+        let perm = self.player_mut(player).battle_area.remove(idx);
+        // Removing from `battle_area` shifts every later permanent (same player)
+        // down by one, invalidating any captured handle with a higher index — in
+        // particular the parked replacement's / pending selection's
+        // `source_permanent` (e.g. BT17-095's Delay-Option carrier), which the
+        // leave observer re-reads at accept time (`source_is_delayed_option`).
+        // Decrement those so they keep resolving after the shift.
+        self.fixup_source_handles_after_battle_removal(player, idx as u8);
+        let limbo_pos = self.digixros_leaving_limbo.len();
+        self.digixros_leaving_limbo
+            .push((player, original_handle, perm));
+        Some(PermanentHandle {
+            player,
+            index: LIMBO_INDEX_BASE + limbo_pos as u8,
+        })
+    }
+
+    /// If `subject` is a permanent that was moved to the leaving/limbo slot
+    /// (matched by the original battle handle captured at park time), return the
+    /// limbo-encoded handle. A `WhenWouldLeaveBattleArea` replacement's subject is
+    /// addressed by index alone; after the leaving material moves to limbo that
+    /// index is stale (it now aliases a different, shifted-down permanent), so
+    /// re-point it to limbo before the parked process reads it.
+    pub(crate) fn remap_digixros_limbo_subject(
+        &self,
+        subject: crate::replacement::ReplacementSubject,
+    ) -> crate::replacement::ReplacementSubject {
+        let crate::replacement::ReplacementSubject::Permanent(h) = subject else {
+            return subject;
+        };
+        for (pos, (_, original, _)) in self.digixros_leaving_limbo.iter().enumerate() {
+            if *original == h {
+                return crate::replacement::ReplacementSubject::Permanent(PermanentHandle {
+                    player: h.player,
+                    index: LIMBO_INDEX_BASE + pos as u8,
+                });
+            }
+        }
+        subject
+    }
+
+    /// Decrement captured `source_permanent` handles (parked replacement +
+    /// pending selection) that referenced a `battle_area` slot AFTER
+    /// `removed_index` for `player`, so they survive a `battle_area.remove`.
+    fn fixup_source_handles_after_battle_removal(&mut self, player: PlayerId, removed_index: u8) {
+        let shift = |h: &mut PermanentHandle| {
+            if h.player == player && h.index > removed_index {
+                h.index -= 1;
+            }
+        };
+        if let Some(parked) = self.parked_replacement.as_mut() {
+            if let Some(sp) = parked.source_permanent.as_mut() {
+                shift(sp);
+            }
+            if let crate::replacement::ReplacementSubject::Permanent(h) = &mut parked.subject {
+                shift(h);
+            }
+        }
+        if let Some(sel) = self.pending_selection.as_mut() {
+            if let Some(sp) = sel.source_permanent.as_mut() {
+                shift(sp);
+            }
+        }
+    }
+
+    /// If `card` (owned by `player`) is the top card of a limbo permanent, return
+    /// its limbo-encoded handle. Lets `find_battle_permanent_containing_card`
+    /// resolve a leaving subject that is parked in limbo.
+    pub(crate) fn find_limbo_permanent_containing_card(
+        &self,
+        player: PlayerId,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        self.digixros_leaving_limbo
+            .iter()
+            .position(|(owner, _, perm)| {
+                *owner == player
+                    && perm
+                        .card_sources
+                        .iter()
+                        .chain(perm.linked_cards.iter())
+                        .any(|s| s.handle() == card)
+            })
+            .map(|pos| PermanentHandle {
+                player,
+                index: LIMBO_INDEX_BASE + pos as u8,
+            })
+    }
+
+    /// Move the limbo permanent addressed by `handle` (a `LIMBO_INDEX_BASE`-offset
+    /// handle) back into `battle_area`, returning its fresh battle-area handle.
+    /// Used when a parked reward (DNA-evo) extracts the leaving material: it must
+    /// be a real battle-area permanent for the merge to operate on. Other limbo
+    /// entries shift down by one. Returns `None` if `handle` is not a live limbo
+    /// slot.
+    pub(crate) fn rematerialize_digixros_limbo(
+        &mut self,
+        handle: PermanentHandle,
+    ) -> Option<PermanentHandle> {
+        if !is_limbo_index(handle.index) {
+            return None;
+        }
+        let pos = (handle.index - LIMBO_INDEX_BASE) as usize;
+        if pos >= self.digixros_leaving_limbo.len() {
+            return None;
+        }
+        let (owner, _original, perm) = self.digixros_leaving_limbo.remove(pos);
+        let battle_index = self.player(owner).battle_area.len();
+        self.player_mut(owner).battle_area.push(perm);
+        Some(PermanentHandle {
+            player: owner,
+            index: battle_index as u8,
+        })
+    }
+
+    /// True if `card` is RESERVED by the in-flight DigiXros play: it is either
+    /// the host being played (`played_card`) or a hand card already selected as a
+    /// material. Reserved cards are committed to the declared play and must not be
+    /// offered to intervening effects (e.g. BT17-095's DNA-evo partner pick) as a
+    /// free hand card. See G-DIGIXROS-REDIRECT-EXTRACTION (judge-quiz Q26).
+    pub(crate) fn card_reserved_by_pending_digixros(&self, card: CardHandle) -> bool {
+        let Some(tx) = self.pending_digixros_transaction.as_ref() else {
+            return false;
+        };
+        if tx.played_card == card {
+            return true;
+        }
+        tx.selected_materials
+            .iter()
+            .chain(tx.pre_attached_materials.iter())
+            .any(|m| matches!(m.origin, DigiXrosMaterialOrigin::Hand { card: c, .. } if c == card))
+    }
+
+    /// Restore ALL limbo permanents owned by `player` back into `battle_area`
+    /// (appended in limbo order). Called at DigiXros finalize so any material the
+    /// observer DECLINED to extract is consumed under the host as normal.
+    pub(crate) fn restore_digixros_limbo_to_battle_area(&mut self, player: PlayerId) {
+        let mut i = 0;
+        while i < self.digixros_leaving_limbo.len() {
+            if self.digixros_leaving_limbo[i].0 == player {
+                let (owner, _original, perm) = self.digixros_leaving_limbo.remove(i);
+                self.player_mut(owner).battle_area.push(perm);
+            } else {
+                i += 1;
+            }
+        }
     }
 
     pub(crate) fn register_digixros_wildcard_for_current_turn(

@@ -1,0 +1,36 @@
+name: Facade Placement Lint
+
+# Placement-rule lint (RQ1 of the decompose-engine-facade-by-mechanic change):
+# INLINE rules machinery (try_replace / inline fire_* dispatch / battle_area[..]
+# mutation) belongs in Tier 2 (game_actions), not the Tier-3 effect_context
+# facade.
+#
+# REQUIRED: the relocation backlog reached zero (2026-06-07), so this is now a
+# hard gate (no `continue-on-error`). The check remains a RATCHET — the baseline
+# in code/tools/check_facade_placement.py is zero, so ANY new inline machinery
+# in the facade fails CI. Calls that delegate to a cohesive Tier-2 fire op are
+# allowlisted in the linter. (Rolled out warn-mode first, per the
+# action-space-codegen-drift.yml pattern, then promoted.)
+
+on:
+  pull_request:
+    paths:
+      - 'code/digimon-engine/src/effect_context/**'
+      - 'code/tools/check_facade_placement.py'
+      - '.github/workflows/facade-placement-lint.yml'
+  push:
+    branches: ["main"]
+    paths:
+      - 'code/digimon-engine/src/effect_context/**'
+      - 'code/tools/check_facade_placement.py'
+
+jobs:
+  facade-placement-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check facade placement (ratchet)
+        run: python code/tools/check_facade_placement.py

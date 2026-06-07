@@ -270,9 +270,16 @@ pub fn check_deck_legality(decklist: &[String], card_data: &HashMap<String, Card
 // ── invariant 2: coverage gate ───────────────────────────────────────────────
 
 /// Statuses in `validated_cards_dsl.json` that count as a passing per-card
-/// implementation.
+/// implementation. A card is "implemented" for gating purposes when its DSL
+/// verdict is a clean implement/pass OR an audit found the YAML faithful:
+/// `AUDITED-OK` (faithful) and `AUDITED-MISSING-TESTS` (faithful YAML, per-card
+/// test gap) both mean the card is implemented. `AUDITED-DRIFT` (faithfulness
+/// bug) and `BLOCKED` (not implementable) are not passing.
 fn is_passing_status(status: &str) -> bool {
-    matches!(status, "IMPLEMENTED" | "PASS")
+    matches!(
+        status,
+        "IMPLEMENTED" | "PASS" | "AUDITED-OK" | "AUDITED-MISSING-TESTS"
+    )
 }
 
 /// Cross-reference the unique-card pool against `validated_cards_dsl.json`.
