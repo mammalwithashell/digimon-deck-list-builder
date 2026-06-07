@@ -1743,3 +1743,275 @@ fn linked_card_dp_formula_and_static_ess_reach_host() {
         "linked card's Security Attack formula ESS reaches the host"
     );
 }
+
+// ─── Gap 2: `link_cards` DSL step ────────────────────────────────────────
+//
+// The authoring verb over the shipped `link_chosen_card_into_host` primitive.
+// Drives BT25-060 Rebootmon / BT25-075 Vulcanusmon / BT25-089 Kazuki & Itsuki:
+// "link 1..N [Appmon] cards from your hand / trash / digivolution sources to a
+// Digimon without paying the cost". Faithful to DCGO ST22_12: zone-choice-first
+// when multiple source zones have candidates, then a single-zone card select,
+// then (for `to: own_digimon`) a host select, then attach via the primitive.
+
+/// A digimon card carrying the [Appmon] trait — the filter target for the
+/// link-cards step's `trait_has: Appmon` predicate.
+fn appmon_card(card_id: &str, color: CardColor) -> digimon_engine::CardData {
+    let mut cd = make_test_card(card_id, card_id);
+    cd.colors = vec![color];
+    cd.traits = vec!["Appmon".to_string()];
+    cd
+}
+
+/// Gap 2 test 1 — `link_cards { from: [hand], to: self, count: {exactly: 1} }`:
+/// an on-play body that links one matching card from hand onto the source's own
+/// permanent. The card moves hand→host.linked_cards and OnLink fires.
+#[test]
+fn gap2_link_card_from_hand_to_self() {
+    let yaml = r#"
+card: REBOOT-DSL
+name: Rebootmon
+kind: digimon
+effects:
+  - when: on_play
+    process:
+      - link_cards:
+          from: [hand]
+          filter: { trait_has: Appmon }
+          to: self
+          count: { exactly: 1 }
+          cost: free
+"#;
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("REBOOT-DSL", CardColor::Red))
+        .add_card(appmon_card("APPMON", CardColor::Red))
+        .add_card(digimon_card("NOTAPP", CardColor::Red))
+        .hand(0, &["APPMON", "NOTAPP"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let host = r.place_on_field(0, "REBOOT-DSL", Some(0));
+    advance_to_main(&mut r);
+
+    let appmon = r.game.player(0).hand[0].handle();
+    let hand_before = r.hand_size(0);
+
+    // Fire the on-play body. Only one Appmon candidate exists → a single-zone
+    // card select is installed (one source zone, so no zone-choice prompt).
+    r.game.fire_on_play(0, host.index as usize);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "link_cards installs a card-select prompt (no auto-pick)"
+    );
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    assert_eq!(r.hand_size(0), hand_before - 1, "APPMON left the hand");
+    let linked = &r.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "exactly one card linked onto self");
+    assert_eq!(linked[0].handle(), appmon, "the linked card is the Appmon");
+}
+
+/// Gap 2 test 2 — `from: [self_sources]`: the link card is lifted out of the
+/// source permanent's own digivolution stack (an under-source), not the hand.
+#[test]
+fn gap2_link_card_from_self_sources_to_self() {
+    let yaml = r#"
+card: REBOOT-DSL
+name: Rebootmon
+kind: digimon
+effects:
+  - when: on_play
+    process:
+      - link_cards:
+          from: [self_sources]
+          filter: { trait_has: Appmon }
+          to: self
+          count: { exactly: 1 }
+          cost: free
+"#;
+
+    let mut r = DebugRunner::builder()
+        .add_card(appmon_card("APP-SRC", CardColor::Red))
+        .add_card(digimon_card("REBOOT-DSL", CardColor::Red))
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    // REBOOT-DSL on top of an Appmon under-source (a 2-card digivolution stack).
+    let host = r.place_stack(0, &["APP-SRC", "REBOOT-DSL"]);
+    advance_to_main(&mut r);
+
+    let under = r.game.player(0).battle_area[host.index as usize].card_sources[0].handle();
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "host starts as a 2-card stack"
+    );
+
+    r.game.fire_on_play(0, host.index as usize);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "link_cards installs a source-card select prompt"
+    );
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    let perm = &r.game.player(0).battle_area[host.index as usize];
+    assert_eq!(
+        perm.card_sources.len(),
+        1,
+        "the under-source was lifted out of the stack"
+    );
+    assert_eq!(perm.linked_cards.len(), 1, "one card linked onto self");
+    assert_eq!(
+        perm.linked_cards[0].handle(),
+        under,
+        "the linked card is the former under-source"
+    );
+}
+
+/// Gap 2 test 3 — `from: [hand], to: own_digimon, count: {up_to: 2}`: links up
+/// to 2 cards onto a player-selected host. Exercises the per-pick host select
+/// and that declining the loop early (PASS after pick 1) stops it.
+#[test]
+fn gap2_link_up_to_2_to_selected_digimon() {
+    let yaml = r#"
+card: VULC-DSL
+name: Vulcanusmon
+kind: digimon
+effects:
+  - when: on_play
+    process:
+      - link_cards:
+          from: [hand]
+          to: own_digimon
+          count: { up_to: 2 }
+          cost: free
+"#;
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("VULC-DSL", CardColor::Red))
+        .add_card(digimon_card("TARGET", CardColor::Red))
+        .add_card(option_card("CARD-A", 0, CardColor::Red))
+        .add_card(option_card("CARD-B", 0, CardColor::Red))
+        .hand(0, &["CARD-A", "CARD-B"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let vulc = r.place_on_field(0, "VULC-DSL", Some(0));
+    let target = r.place_on_field(0, "TARGET", Some(0));
+    advance_to_main(&mut r);
+
+    let hand_before = r.hand_size(0);
+    r.game.fire_on_play(0, vulc.index as usize);
+
+    // Pick 1: choose the card from hand.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "first card select installed"
+    );
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    // Then choose the host Digimon for that card.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "host select installed for pick 1"
+    );
+    let host_action = {
+        use digimon_engine::action::space::encode_attack;
+        encode_attack(target.player as u16, target.index as u16)
+    };
+    let _ = r.game.resolve_selection(0, host_action);
+
+    assert_eq!(
+        r.game.player(0).battle_area[target.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "first card linked onto the selected host"
+    );
+
+    // Pick 2: another card select is offered (count up_to 2). Decline (PASS)
+    // to stop the loop early — only one card should be linked total.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "second card select offered"
+    );
+    assert!(
+        r.game.pending_selection.as_ref().unwrap().is_optional,
+        "the up_to loop exposes PASS"
+    );
+    let _ = r.game.resolve_selection(0, PASS);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "declining stops the up_to loop"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[target.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "declining early leaves exactly one linked card"
+    );
+    assert_eq!(
+        r.hand_size(0),
+        hand_before - 1,
+        "only one card left the hand"
+    );
+}
+
+/// Gap 2 test 4 — `from: [hand, self_sources]` with candidates in BOTH zones:
+/// a zone-choice selection is installed FIRST (faithful to DCGO's bool prompt),
+/// before any card select. Confirms the multi-zone branch.
+#[test]
+fn gap2_zone_choice_when_both_zones_have_candidates() {
+    let yaml = r#"
+card: REBOOT-DSL
+name: Rebootmon
+kind: digimon
+effects:
+  - when: on_play
+    process:
+      - link_cards:
+          from: [hand, self_sources]
+          filter: { trait_has: Appmon }
+          to: self
+          count: { exactly: 1 }
+          cost: free
+"#;
+
+    let mut r = DebugRunner::builder()
+        .add_card(appmon_card("APP-SRC", CardColor::Red))
+        .add_card(digimon_card("REBOOT-DSL", CardColor::Red))
+        .add_card(appmon_card("APP-HAND", CardColor::Red))
+        .hand(0, &["APP-HAND"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    // REBOOT-DSL on top of an Appmon under-source: a candidate in self_sources,
+    // plus an Appmon in hand → both zones populated.
+    let host = r.place_stack(0, &["APP-SRC", "REBOOT-DSL"]);
+    advance_to_main(&mut r);
+
+    r.game.fire_on_play(0, host.index as usize);
+
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("a selection is installed");
+    assert_eq!(
+        pending.kind,
+        digimon_engine::selection::SelectionKind::EffectChoice,
+        "with candidates in both zones, a zone-choice prompt is installed first"
+    );
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        2,
+        "two zone options offered (hand / digivolution sources)"
+    );
+}

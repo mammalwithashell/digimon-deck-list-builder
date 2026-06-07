@@ -117,6 +117,32 @@ pub enum CompiledZone {
     Material,
 }
 
+/// Compiled source zone for the `LinkCards` step. Mirrors
+/// `step::LinkCardSourceZone`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledLinkSourceZone {
+    Hand,
+    Trash,
+    SelfSources,
+    OwnDigimonSources,
+}
+
+/// Compiled attach target for the `LinkCards` step. Mirrors
+/// `step::LinkCardsTo`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledLinkTo {
+    SelfPermanent,
+    OwnDigimon,
+}
+
+/// Compiled count bound for the `LinkCards` step. `UpTo` makes every pick
+/// declinable; `Exactly` keeps picking until N picks or no candidates remain.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledLinkCount {
+    Exactly(u8),
+    UpTo(u8),
+}
+
 // ── Alt-paths ───────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1621,6 +1647,24 @@ pub enum CompiledStep {
         optional: bool,
         free: bool,
         filter: CompiledPredicate,
+    },
+    /// Gap 2 — link 1..N chosen cards from a set of source zones onto a
+    /// Digimon host. Compiled form of `StepSpec::LinkCards`. The engine
+    /// lowering loops `count` picks: per pick it resolves which `from` zones
+    /// hold a filter-matching candidate, installs a zone-choice prompt when
+    /// ≥2 do, then a single-zone card select, then (for `to: OwnDigimon`) a
+    /// host select, then attaches via `link_chosen_card_into_host`.
+    LinkCards {
+        from: Vec<CompiledLinkSourceZone>,
+        filter: CompiledPredicate,
+        to: CompiledLinkTo,
+        count: CompiledLinkCount,
+        /// Memory cost to pay per linked card. Currently always 0 (the cards
+        /// this step serves all link "without paying the cost" / from a base
+        /// cost of 0). Threaded so a future non-zero base cost extends the
+        /// lowering without a schema change.
+        cost: u8,
+        prompt: Option<String>,
     },
     Optional(Vec<CompiledStep>),
     Battle {

@@ -2731,6 +2731,61 @@ fn compile_step(
                 filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             }
         }
+        S::LinkCards(a) => {
+            use crate::compiled::{
+                CompiledLinkCount, CompiledLinkSourceZone, CompiledLinkTo,
+            };
+            use crate::step::{LinkCardSourceZone, LinkCardsCost, LinkCardsCount, LinkCardsTo};
+
+            if a.from.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.link_cards.from"),
+                    message: "link_cards requires at least one source zone".to_string(),
+                });
+            }
+
+            let from = a
+                .from
+                .iter()
+                .map(|z| match z {
+                    LinkCardSourceZone::Hand => CompiledLinkSourceZone::Hand,
+                    LinkCardSourceZone::Trash => CompiledLinkSourceZone::Trash,
+                    LinkCardSourceZone::SelfSources => CompiledLinkSourceZone::SelfSources,
+                    LinkCardSourceZone::OwnDigimonSources => {
+                        CompiledLinkSourceZone::OwnDigimonSources
+                    }
+                })
+                .collect();
+
+            let to = match a.to {
+                LinkCardsTo::SelfPermanent => CompiledLinkTo::SelfPermanent,
+                LinkCardsTo::OwnDigimon => CompiledLinkTo::OwnDigimon,
+            };
+
+            let count = match a.count {
+                LinkCardsCount::Exactly(n) => CompiledLinkCount::Exactly(n),
+                LinkCardsCount::UpTo(n) => CompiledLinkCount::UpTo(n),
+            };
+
+            // `free` pays 0; `reduce: N` pays max(0, base - N). The cards this
+            // step serves have a base link cost of 0 in this context, so both
+            // resolve to 0. Threaded faithfully so a non-zero base cost extends
+            // here later without a schema change.
+            let cost = match a.cost {
+                LinkCardsCost::Free => 0u8,
+                LinkCardsCost::Reduce(n) => 0u8.saturating_sub(n),
+            };
+
+            CompiledStep::LinkCards {
+                from,
+                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+                to,
+                count,
+                cost,
+                prompt: a.prompt.clone(),
+            }
+        }
         // OptionalStep is a newtype wrapping Vec<StepSpec> — access via .0
         S::Optional(o) => CompiledStep::Optional(
             o.0.iter()

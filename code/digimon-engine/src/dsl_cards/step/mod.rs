@@ -12,6 +12,7 @@ pub mod draw;
 pub mod effects;
 pub mod grant_triggered;
 pub mod iteration;
+pub mod link_cards;
 pub mod memory;
 pub mod modifiers;
 pub mod permanent_mutations;
@@ -382,6 +383,18 @@ fn run_steps_with_runtime_inner(
             }
             i += 1;
             continue;
+        }
+
+        // `link_cards` (Gap 2) captures the remaining slice itself and drives a
+        // pick loop of chained selections. It always either parks on a pending
+        // selection or runs the captured tail synchronously — in both cases the
+        // outer loop must stop (the tail was consumed inside the step).
+        if link_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
+            return if ctx.game.pending_selection.is_some() {
+                RunOutcome::Parked
+            } else {
+                RunOutcome::Synchronous
+            };
         }
 
         // Selection steps either install the remainder as their callback, no-op

@@ -346,6 +346,12 @@ fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
             min, optional_zero, ..
         } => *min == 0 || *optional_zero,
         CompiledStep::SelectOwnSources { min, .. } => *min == 0,
+        // `link_cards` with `up_to` exposes PASS on its first card pick, so the
+        // clause's first decision point is already declinable; `exactly` is a
+        // mandatory link, so it needs the outer accept/decline prompt.
+        CompiledStep::LinkCards { count, .. } => {
+            matches!(count, digimon_dsl::compiled::CompiledLinkCount::UpTo(_))
+        }
         CompiledStep::SelectOpponentDpBudget { min_picks, .. }
         | CompiledStep::SelectOpponentPlayCostBudget { min_picks, .. } => *min_picks == 0,
         // Any other leading step is mandatory work — the printed "you may"

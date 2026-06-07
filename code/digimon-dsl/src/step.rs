@@ -270,6 +270,14 @@ pub enum StepSpec {
     ScheduleDeletePlayedAtTurnEnd(ScheduleDeletePlayedAtTurnEndArgs),
     PlaceSelfAsDelayOption(EmptyArgs),
     LinkToOwnDigimon(LinkToOwnDigimonArgs),
+    /// Gap 2 — link 1..N chosen cards from a set of source zones onto a
+    /// Digimon host, without paying a link cost. Drives BT25-060 Rebootmon /
+    /// BT25-075 Vulcanusmon / BT25-089 Kazuki & Itsuki. The authoring verb over
+    /// the engine's `link_chosen_card_into_host` primitive: per pick it presents
+    /// a zone-choice prompt (when ≥2 source zones have candidates — DCGO ST22_12
+    /// parity), a single-zone card select, then (for `to: own_digimon`) a host
+    /// select, then attaches the card and fires `OnLink`.
+    LinkCards(LinkCardsArgs),
     Optional(OptionalStep),
 
     // Combat / replacement process outcomes
@@ -520,6 +528,7 @@ impl Serialize for StepSpec {
             }
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
+            StepSpec::LinkCards(v) => kv!(s, "link_cards", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
             StepSpec::Battle(v) => kv!(s, "battle", v),
@@ -768,6 +777,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
+            "link_cards" => StepSpec::LinkCards(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
 
             // Combat / replacement process outcomes
@@ -912,6 +922,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "schedule_delayed",
                         "place_self_as_delay_option",
                         "link_to_own_digimon",
+                        "link_cards",
                         "optional",
                         "battle",
                         "may_attack_now",
@@ -2545,6 +2556,89 @@ pub struct LinkToOwnDigimonArgs {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub free: bool,
     pub filter: PredicateSpec,
+}
+
+/// A source zone the `link_cards` step may draw a card from.
+///
+/// - `hand` / `trash`: the controller's hand / trash.
+/// - `self_sources`: the effect's own permanent's digivolution cards.
+/// - `own_digimon_sources`: any of the controller's Digimon's digivolution
+///   cards (cross-permanent).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkCardSourceZone {
+    Hand,
+    Trash,
+    SelfSources,
+    OwnDigimonSources,
+}
+
+/// Where the linked card is attached.
+///
+/// - `self`: the effect's own permanent (BT25-060 Rebootmon).
+/// - `own_digimon`: a player-selected own Digimon, chosen per pick
+///   (BT25-075 Vulcanusmon, BT25-089 Kazuki & Itsuki).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkCardsTo {
+    #[serde(rename = "self")]
+    SelfPermanent,
+    OwnDigimon,
+}
+
+/// How many cards to link.
+///
+/// - `{ exactly: N }`: mandatory until N picks or no candidates remain.
+/// - `{ up_to: N }`: each pick is declinable; the player may stop early.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum LinkCardsCount {
+    Exactly(u8),
+    UpTo(u8),
+}
+
+/// The link cost the controller pays.
+///
+/// - `free`: pay nothing (BT25-060, BT25-075 "without paying the cost").
+/// - `{ reduce: N }`: the printed link cost reduced by N (BT25-089 "the cost
+///   reduced by 2"). The cards this step serves carry no base link cost in
+///   this context, so both branches currently pay 0; the field is threaded so
+///   a future card with a non-zero base cost can extend the lowering without a
+///   schema change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum LinkCardsCost {
+    Free,
+    Reduce(u8),
+}
+
+impl Default for LinkCardsCost {
+    fn default() -> Self {
+        LinkCardsCost::Free
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct LinkCardsArgs {
+    /// Source zones, in author-declared order. When ≥2 of them currently hold
+    /// a filter-matching candidate, the player is first prompted to choose a
+    /// zone (DCGO ST22_12 bool-select parity); when exactly 1 does, it is used
+    /// directly with no extra prompt.
+    pub from: Vec<LinkCardSourceZone>,
+    /// Card-level filter applied to every candidate. Empty = match all.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    /// Where the chosen card(s) attach.
+    pub to: LinkCardsTo,
+    /// How many cards to link.
+    pub count: LinkCardsCount,
+    /// Link cost paid (defaults to `free`).
+    #[serde(default)]
+    pub cost: LinkCardsCost,
+    /// Optional prompt override for the card-select step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
