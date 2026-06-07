@@ -4564,6 +4564,22 @@ impl<'a> EffectContext<'a> {
         target_player.battle_area[digimon_idx].push_under(top);
     }
 
+    /// Facet #9 — link a chosen card from a non-battle-area zone (hand /
+    /// trash / a permanent's digivolution sources) onto `host`'s linked cards
+    /// (DCGO `ILinkCard.LinkCard` with `root != None`). The card is lifted out
+    /// of `from`, attached sideways onto the host, and `OnLink` fires globally.
+    /// Cost payment + `WhenWouldLink` cost reduction are the calling effect's
+    /// responsibility (register via the cost step before invoking). Returns
+    /// `true` when the card was found and attached.
+    pub fn link_chosen_card_into_host(
+        &mut self,
+        host: PermanentHandle,
+        card: CardHandle,
+        from: crate::enums::LinkCardSource,
+    ) -> bool {
+        self.game.link_chosen_card_into_host(host, card, from)
+    }
+
     /// Trash the current top Digimon of `perm` and promote the next-highest
     /// digivolution source to become the new visible top. The remainder of the
     /// stack is preserved intact.

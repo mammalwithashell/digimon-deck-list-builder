@@ -973,6 +973,109 @@ fn d6_self_filtered_when_linked_fires_once_and_not_on_sibling() {
     );
 }
 
+/// Facet #6/#11 — host-side `[When Linked]`: an effect on the HOST Digimon
+/// that fires when a card gets linked **to that host**. The self-filter
+/// `event_permanent() == source_permanent` isolates firing to the host the
+/// card actually attached to, so a sibling host carrying the same effect does
+/// not over-fire. Mirrors DCGO `CardEffectCommons.CanTriggerWhenLinked`
+/// (`permanentCondition` matches the receiving permanent).
+struct HostSideWhenLinked(Arc<Mutex<u32>>);
+impl CardEffect for HostSideWhenLinked {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let slot = self.0.clone();
+        vec![Effect::on_play(card)
+            .name("[When Linked] host-side")
+            .timing(EffectTiming::OnLink)
+            .condition(|rctx| rctx.event_permanent() == rctx.source_permanent)
+            .process(move |_ctx| {
+                *slot.lock().unwrap() += 1;
+            })
+            .build()]
+    }
+}
+
+/// Facet #6/#11 (host-side `[When Linked]`) — a card linking to a host fires
+/// that host's own `[When Linked]` effect exactly once, and a sibling host
+/// carrying the same effect does NOT fire when the link lands elsewhere.
+#[test]
+fn host_side_when_linked_fires_for_receiving_host_only() {
+    let host_a_witness = Arc::new(Mutex::new(0u32));
+    let host_b_witness = Arc::new(Mutex::new(0u32));
+
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-A", 0, CardColor::Red))
+        .add_card(option_card("LINK-B", 0, CardColor::Red))
+        .add_card(digimon_card("HOST-A", CardColor::Red))
+        .add_card(digimon_card("HOST-B", CardColor::Red))
+        .hand(0, &["LINK-A", "LINK-B"])
+        .memory(0)
+        .start();
+    r.register_effect("LINK-A", Arc::new(LinkAnyHost));
+    r.register_effect("LINK-B", Arc::new(LinkAnyHost));
+    r.register_effect("HOST-A", Arc::new(HostSideWhenLinked(host_a_witness.clone())));
+    r.register_effect("HOST-B", Arc::new(HostSideWhenLinked(host_b_witness.clone())));
+    let host_a = r.place_on_field(0, "HOST-A", Some(0));
+    let host_b = r.place_on_field(0, "HOST-B", Some(0));
+    advance_to_main(&mut r);
+
+    // Link LINK-A specifically to HOST-A.
+    let _ = r.game.play_option_from_hand(0, 0);
+    let pa = r.game.pending_selection.as_ref().unwrap();
+    let target_a = pa
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&aid| {
+            use digimon_engine::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+            ((aid.saturating_sub(ATTACK_START)) % TARGETS_PER_ATTACKER) as u8 == host_a.index
+        })
+        .expect("HOST-A offered as a link host");
+    let _ = r.game.resolve_selection(0, target_a);
+
+    assert_eq!(
+        r.game.player(0).battle_area[host_a.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "LINK-A attached to HOST-A"
+    );
+    assert_eq!(
+        *host_a_witness.lock().unwrap(),
+        1,
+        "HOST-A's [When Linked] fires once for the card linked to it"
+    );
+    assert_eq!(
+        *host_b_witness.lock().unwrap(),
+        0,
+        "HOST-B's [When Linked] does NOT fire for a link that landed on HOST-A"
+    );
+
+    // Now link LINK-B to HOST-B — only HOST-B fires this time.
+    let _ = r.game.play_option_from_hand(0, 0);
+    let pb = r.game.pending_selection.as_ref().unwrap();
+    let target_b = pb
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&aid| {
+            use digimon_engine::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+            ((aid.saturating_sub(ATTACK_START)) % TARGETS_PER_ATTACKER) as u8 == host_b.index
+        })
+        .expect("HOST-B offered as a link host");
+    let _ = r.game.resolve_selection(0, target_b);
+
+    assert_eq!(
+        *host_a_witness.lock().unwrap(),
+        1,
+        "HOST-A unchanged when the next link lands on HOST-B"
+    );
+    assert_eq!(
+        *host_b_witness.lock().unwrap(),
+        1,
+        "HOST-B's [When Linked] fires for the card linked to it"
+    );
+}
+
 /// A Shape-B Appmon Link Digimon's static self link-condition: may link onto
 /// any of the controller's Digimon for cost 1. Mirrors DCGO
 /// `AddSelfLinkConditionStaticEffect(permanentCondition, linkCost: 1)`.
@@ -1211,6 +1314,55 @@ effects:
     );
 }
 
+/// Facet #6/#11 (DSL host-side) — a host Digimon authored in YAML with
+/// `when: when_card_linked_to_this` fires its body once when a card gets
+/// linked to it. Confirms the DSL timing lowers to `OnLink` + the host
+/// self-filter and does not require the linked card itself to carry anything.
+#[test]
+fn dsl_host_side_when_card_linked_to_this_fires_on_attach() {
+    let yaml = r#"
+card: HOST-DSL
+name: Linked Host
+kind: digimon
+effects:
+  - when: when_card_linked_to_this
+    process:
+      - draw: { of: you, count: 1 }
+"#;
+
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-CARD", 0, CardColor::Red))
+        .add_card(digimon_card("HOST-DSL", CardColor::Red))
+        .add_card(digimon_card("FILLER", CardColor::Red))
+        .hand(0, &["LINK-CARD"])
+        .deck(0, &["FILLER"; 5])
+        .memory(0)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    r.register_effect("LINK-CARD", Arc::new(LinkAnyHost));
+    let host = r.place_on_field(0, "HOST-DSL", Some(0));
+    advance_to_main(&mut r);
+
+    let hand_before = r.hand_size(0);
+    let _ = r.game.play_option_from_hand(0, 0);
+    let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action_id);
+
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "LINK-CARD attached to HOST-DSL"
+    );
+    // hand: -1 for the played LINK-CARD, +1 for the host-side draw.
+    assert_eq!(
+        r.hand_size(0),
+        hand_before,
+        "when_card_linked_to_this drew 1 (net: -1 played +1 drawn)"
+    );
+}
+
 /// §5 — standing-permanent absorb with a digivolution stack: the linking
 /// Digimon's under-sources are trashed (DCGO DiscardEvoRoots); only its top
 /// card becomes a linked card. Faithful to the flat linked-card model.
@@ -1247,6 +1399,141 @@ fn digimon_link_absorb_trashes_evo_roots_keeps_only_top() {
         r.trash_size(0),
         trash_before + 1,
         "the LV2 digivolution source was trashed (DiscardEvoRoots)"
+    );
+}
+
+/// Facet #9 — `link_chosen_card_into_host` lifts a chosen card from HAND and
+/// attaches it onto a host, firing `OnLink` (so the host's `[When Linked]`
+/// resolves). Mirrors DCGO `ILinkCard.LinkCard` with `root == Hand` →
+/// `Permanent.AddLinkCard`.
+#[test]
+fn facet9_link_chosen_card_from_hand_attaches_and_fires_onlink() {
+    use digimon_engine::enums::LinkCardSource;
+
+    let host_witness = Arc::new(Mutex::new(0u32));
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .add_card(digimon_card("LINKEE", CardColor::Red))
+        .hand(0, &["LINKEE"])
+        .memory(3)
+        .start();
+    r.register_effect("HOST", Arc::new(HostSideWhenLinked(host_witness.clone())));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    let linkee = r.game.player(0).hand[0].handle();
+    assert_eq!(r.hand_size(0), 1);
+
+    let ok = r
+        .game
+        .link_chosen_card_into_host(host, linkee, LinkCardSource::Hand(0));
+    assert!(ok, "card found in hand and attached");
+
+    assert_eq!(r.hand_size(0), 0, "LINKEE left the hand");
+    let linked = &r.game.player(0).battle_area[host.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "LINKEE attached as a linked card");
+    assert_eq!(linked[0].handle(), linkee, "the attached card is LINKEE");
+    assert_eq!(
+        *host_witness.lock().unwrap(),
+        1,
+        "OnLink fired so the host's [When Linked] resolved once"
+    );
+}
+
+/// Facet #9 — `link_chosen_card_into_host` can also lift a card from another
+/// permanent's digivolution sources (DCGO `root == DigivolutionCards`). The
+/// stack top is NOT eligible (it is the live Digimon); only an under-source
+/// can be linked out.
+#[test]
+fn facet9_link_chosen_card_from_digivolution_sources() {
+    use digimon_engine::enums::LinkCardSource;
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .add_card(digimon_card("UNDER", CardColor::Red))
+        .add_card(digimon_card("TOP", CardColor::Red))
+        .memory(3)
+        .start();
+    let host = r.place_on_field(0, "HOST", Some(0));
+    // Donor: UNDER beneath TOP (a 2-card digivolution stack).
+    let donor = r.place_stack(0, &["UNDER", "TOP"]);
+    advance_to_main(&mut r);
+
+    let under = r.game.player(0).battle_area[donor.index as usize].card_sources[0].handle();
+    let top = r.game.player(0).battle_area[donor.index as usize].card_sources[1].handle();
+
+    // The stack top cannot be linked out as a digivolution source.
+    assert!(
+        !r.game
+            .link_chosen_card_into_host(host, top, LinkCardSource::DigivolutionSource(donor)),
+        "the live top card is not an eligible under-source"
+    );
+
+    // The under-source links out fine.
+    let ok =
+        r.game
+            .link_chosen_card_into_host(host, under, LinkCardSource::DigivolutionSource(donor));
+    assert!(ok, "under-source lifted and attached");
+
+    let host_idx = host.index as usize;
+    assert_eq!(
+        r.game.player(0).battle_area[host_idx].linked_cards.len(),
+        1,
+        "UNDER attached to the host"
+    );
+    // Donor still standing with just its top card.
+    let donor_sources = &r.game.player(0).battle_area[donor.index as usize].card_sources;
+    assert_eq!(donor_sources.len(), 1, "donor reduced to its top card");
+    assert_eq!(donor_sources[0].handle(), top, "donor top is unchanged");
+}
+
+/// Facet #10 — a `ChangeLinkCost` reduction modifier lowers the memory paid
+/// when a standing Digimon activates its link. ST22-12's
+/// `GrantedReduceLinkCostClass(reducedCost: 2, _ => true, _ => true, _ => true)`
+/// is a flat player-scoped reduction; this confirms the consult site in
+/// `commit_digimon_link` applies `link_cost_delta_for_player`.
+struct GatchLinkConditionCost2;
+impl CardEffect for GatchLinkConditionCost2 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::link_condition(card)
+            .name("Link condition: any Digimon host, cost 2")
+            .link_host(2, |_ctx, _host| true)
+            .build()]
+    }
+}
+
+#[test]
+fn facet10_change_link_cost_reduces_paid_link_cost() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::enums::ModifierType;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("GATCH", CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .memory(3)
+        .start();
+    r.register_effect("GATCH", Arc::new(GatchLinkConditionCost2)); // link cost 2
+    let _host = r.place_on_field(0, "HOST", Some(0));
+    let gatch = r.place_on_field(0, "GATCH", Some(0));
+    advance_to_main(&mut r);
+
+    // Flat -1 link-cost reduction for player 0 (ST22-12's reducedCost shape).
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::ChangeLinkCost, -1, Expiry::EndOfTurn, None, 0),
+    );
+
+    let memory_before = r.game.memory;
+    r.game.decode_action(link_bit(gatch) as u16, 0);
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    // Printed link cost 2, reduced by 1 → 1 memory paid (not 2).
+    assert_eq!(
+        r.game.memory,
+        memory_before - 1,
+        "ChangeLinkCost -1 reduced the cost-2 link to 1 memory paid"
     );
 }
 
@@ -1324,5 +1611,63 @@ fn d7_linked_ess_keyword_and_dp_grant_reach_the_host() {
         r.game.effective_dp(host),
         Some(base_dp + 1000),
         "linked Link-ESS grants +1000 DP to the host"
+    );
+}
+
+/// A link card whose inherited Link-ESS is a CONTINUOUS DP formula + static DP
+/// (not a materializing modifier grant). Exercises the two formula collectors
+/// `live_declarative_formula_sum` / `static_dp_aura_bonus`, which scan
+/// `card_sources` but historically not `linked_cards` (G-LINK-INHERITED-ESS).
+struct LinkedFormulaEss;
+impl CardEffect for LinkedFormulaEss {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![
+            // Dynamic DP formula ESS → live_declarative_formula_sum.
+            Effect::declarative(card)
+                .name("linked dynamic +2000 DP")
+                .linked()
+                .dp_modifier_fn(|_ctx, _target| Some(2000))
+                .build(),
+            // Static DP ESS → static_dp_aura_bonus.
+            Effect::declarative(card)
+                .name("linked static +500 DP")
+                .linked()
+                .dp_modifier(500)
+                .build(),
+            // Dynamic Security Attack formula ESS → live_declarative_formula_sum
+            // (security_attack=true branch).
+            Effect::declarative(card)
+                .name("linked Security A. +1")
+                .linked()
+                .security_attack_fn(|_ctx, _target| Some(1))
+                .build(),
+        ]
+    }
+}
+
+/// G-LINK-INHERITED-ESS — a link card's continuous DP-formula / static-DP ESS
+/// must reach its host (the formula collectors must scan `linked_cards`).
+#[test]
+fn linked_card_dp_formula_and_static_ess_reach_host() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .add_card(digimon_card("DP-ESS", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("DP-ESS", Arc::new(LinkedFormulaEss));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    let base = r.game.effective_dp(host).expect("host DP");
+
+    r.push_linked_owned(host, "DP-ESS", 0);
+
+    assert_eq!(
+        r.game.effective_dp(host),
+        Some(base + 2500),
+        "linked card's dynamic (+2000) and static (+500) DP ESS reach the host"
+    );
+    assert_eq!(
+        r.game.dynamic_security_attack_aura_bonus(host),
+        Some(1),
+        "linked card's Security Attack formula ESS reaches the host"
     );
 }

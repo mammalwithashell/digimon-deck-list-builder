@@ -256,6 +256,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::BeforePayCostObserve => CompiledTiming::BeforePayCostObserve,
         S::Delayed => CompiledTiming::Delayed,
         S::WhenLinked => CompiledTiming::WhenLinked,
+        S::WhenCardLinkedToThis => CompiledTiming::WhenCardLinkedToThis,
     }
 }
 

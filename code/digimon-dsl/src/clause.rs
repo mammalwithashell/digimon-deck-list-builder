@@ -144,6 +144,13 @@ pub enum Timing {
     /// DigiLink Shape-B: "when this Digimon gets linked" (`when: when_linked`).
     /// Use on a `scope: linked` effect; lowers to `OnLink` + a self-filter.
     WhenLinked,
+    /// DigiLink host-side: "[When Linked] when a card gets linked **to this
+    /// Digimon**" (`when: when_card_linked_to_this`). The effect lives on the
+    /// HOST (a face-up `scope`), not on the linked card. Lowers to `OnLink`
+    /// + a host self-filter (`event_permanent == source_permanent`) so it
+    /// fires once for the host the card actually attached to and not for a
+    /// sibling host. Mirrors DCGO `CardEffectCommons.CanTriggerWhenLinked`.
+    WhenCardLinkedToThis,
 }
 
 #[derive(

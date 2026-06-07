@@ -62,6 +62,10 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         // lower_triggered forces `.linked()` and a self-filter so it fires
         // only for the just-linked card (design D6).
         CompiledTiming::WhenLinked => EffectTiming::OnLink,
+        // DigiLink host-side: `when: when_card_linked_to_this` also rides the
+        // `OnLink` dispatch; lower_triggered forces a host self-filter
+        // (`event_permanent == source_permanent`) instead of `.linked()`.
+        CompiledTiming::WhenCardLinkedToThis => EffectTiming::OnLink,
         // Phase 2a non-targets — skip emission.
         CompiledTiming::Delayed => return None,
     })
