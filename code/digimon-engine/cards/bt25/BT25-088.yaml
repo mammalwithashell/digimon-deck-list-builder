@@ -1,0 +1,83 @@
+# BT25-088 Kyo Sawashiro — Tamer, Yellow, Cost 4.
+# Traits: Glowing Dawn, BEATBREAK.
+#
+# Printed card text (CARD IMAGE — authoritative; data/cards.json is WRONG for
+# this card, it only carried the inherited [Security] line):
+#
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [All Turns] When your security stack is removed from, by suspending this
+#     Tamer, you may place the top 2 cards of your deck face down under this
+#     Tamer.
+#   [Your Turn] [Once Per Turn] When any of your [Glowing Dawn] trait cards
+#     would be played, by trashing the bottom face-down card from under any of
+#     your Tamers, reduce the cost by 1.            <-- BLOCKED, see below
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_088.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 (OnStartTurn): SetMemoryTo3TamerEffect → start_of_your_turn +
+#   condition memory_lte: 2 + set_memory: 3.
+# Clause 2 (OnLoseSecurity): "When your security stack is removed from" — fires
+#   when THIS player loses a security card. The cost is "by suspending this
+#   Tamer" → activation_cost { suspend_self }. The payoff "you may place the top
+#   2 cards face down" → clause-level optional + two sequential
+#   place_as_bottom_source { deck_top } face_down. (DCGO surfaces a 3-way
+#   place-2 / suspend-only / no menu; the printed text + no-approximations
+#   reduce to: optionally suspend self then place 2 — declining the optional
+#   clause is the "No"; the DCGO "suspend only" middle option is a UI nicety not
+#   in the printed text.)
+# Clause 3 (BeforePayCost) — BLOCKED (engine):
+#   "[Your Turn][OPT] When any of your [Glowing Dawn] cards would be PLAYED, by
+#   trashing the bottom face-down card under any Tamer, reduce the cost by 1."
+#   The natural authoring is `kind: cost_reduction` with `pay_cost:
+#   [trash_bottom_face_down_source_under_tamer: { of: you }]`, but that pay_cost
+#   step is INTERACTIVE (installs a 1-option Tamer selection — no-approximations
+#   never auto-resolves), so it returns RunOutcome::Parked and the cost-reduction
+#   accept-path drops the `amount` credit while still trashing the face-down
+#   card (player pays the cost, gets NO reduction). Engine gap
+#   G-COST-REDUCTION-INTERACTIVE-PAY-COST (docs/RUST_ENGINE_GAPS.md). Omitted
+#   here rather than shipping an under/over-charge — authoring it would silently
+#   diverge. Verdict PARTIAL.
+# Clause 4 (SecuritySkill): PlaySelfTamerSecurityEffect → play_from_security.
+
+card: BT25-088
+name: "Kyo Sawashiro"
+kind: tamer
+color: [yellow]
+cost: 4
+traits: [Glowing Dawn, BEATBREAK]
+
+effects:
+  # ─── [Start of Your Turn] If memory <= 2, set it to 3 ──────────────────────
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  # ─── [All Turns] On your security loss: may suspend self → place top 2 FD ──
+  - when: on_lose_security
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns] When your security is removed from, by suspending this Tamer you may place the top 2 deck cards face down under this Tamer"
+    process:
+      - activation_cost: { suspend_self: true }
+      - place_as_bottom_source:
+          source: { deck_top: you }
+          target: source
+          face_down: true
+      - place_as_bottom_source:
+          source: { deck_top: you }
+          target: source
+          face_down: true
+
+  # ─── [Your Turn][OPT] Glowing Dawn play cost -1 — BLOCKED, intentionally
+  #     omitted (G-COST-REDUCTION-INTERACTIVE-PAY-COST). See header. ───────────
+
+  # ─── [Security] Play this card without paying the cost ─────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

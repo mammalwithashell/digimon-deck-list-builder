@@ -268,6 +268,9 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::BeforePayCost => CompiledTiming::BeforePayCost,
         S::BeforePayCostObserve => CompiledTiming::BeforePayCostObserve,
         S::Delayed => CompiledTiming::Delayed,
+        S::WhenLinked => CompiledTiming::WhenLinked,
+        S::WhenCardLinkedToThis => CompiledTiming::WhenCardLinkedToThis,
+        S::WhenWouldLinkToThis => CompiledTiming::WhenWouldLinkToThis,
     }
 }
 
@@ -847,6 +850,7 @@ fn compile_predicate(
         replacement_cause: p.replacement_cause.map(compile_replacement_cause),
         replacement_source_is_opponent: p.replacement_source_is_opponent,
         replacement_subject_is_mine: p.replacement_subject_is_mine,
+        would_link_card_trait_any_of: p.would_link_card_trait_any_of.clone(),
         equals: p
             .equals
             .as_ref()
@@ -1293,6 +1297,26 @@ fn compile_replacement_process(
 
     let mut process = Vec::new();
 
+    // Gap 3a — `cost: { trash_own_link_card: true }` synthesizes a single
+    // self-contained step that trashes a chosen link card AND cancels the
+    // leave. It owns the `outcome: prevent`, so we emit only this step (and
+    // suppress the trailing `CancelReplacement` below).
+    let trash_own_link_card = r
+        .cost
+        .as_ref()
+        .is_some_and(|cost| cost.trash_own_link_card);
+    if trash_own_link_card {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { trash_own_link_card } requires outcome: prevent".into(),
+            });
+        }
+        process.push(CompiledStep::TrashOwnLinkCardAndCancelLeave);
+        return process;
+    }
+
     if r.cost.as_ref().is_some_and(|cost| cost.delay_self) {
         process.push(CompiledStep::DeletePermanent {
             target: CompiledBindingRef::Source,
@@ -1448,6 +1472,7 @@ fn compile_declarative(
                 value: gk.value,
             }),
             modifier: a.modifier,
+            modifier_value: a.modifier_value,
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
@@ -1587,6 +1612,13 @@ fn compile_declarative(
             }
         }
         B::LinkRequirement(link) => CompiledDeclarativeClause::LinkRequirement {
+            scope,
+            cost: link.cost,
+            filter: compile_predicate(&link.filter, &format!("{prefix}.filter"), card_id, errors),
+            summary,
+            summary_key,
+        },
+        B::LinkCondition(link) => CompiledDeclarativeClause::LinkCondition {
             scope,
             cost: link.cost,
             filter: compile_predicate(&link.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2061,6 +2093,10 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
             bind_as: a.bind_as.clone(),
+            cost_delta: a
+                .cost_delta
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
         },
         // PlayFromTrash reuses PlayFromHandArgs but the compiled form uses `trash_index`
         S::PlayFromTrash(a) => {
@@ -2758,6 +2794,79 @@ fn compile_step(
                 optional: a.optional,
                 free: a.free,
                 filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            }
+        }
+        S::LinkCardToSelf(a) => {
+            if a.from.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.link_card_to_self.from"),
+                    message: "link_card_to_self requires at least one source zone".to_string(),
+                });
+            }
+            CompiledStep::LinkCardToSelf {
+                from: a.from.clone(),
+                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+                to: a.to,
+                cost: a.cost,
+                optional: a.optional,
+            }
+        }
+        S::ReduceLinkCost(a) => CompiledStep::ReduceLinkCost { amount: a.amount },
+        S::LinkCards(a) => {
+            use crate::compiled::{
+                CompiledLinkCount, CompiledLinkSourceZone, CompiledLinkTo,
+            };
+            use crate::step::{LinkCardSourceZone, LinkCardsCost, LinkCardsCount, LinkCardsTo};
+
+            if a.from.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.link_cards.from"),
+                    message: "link_cards requires at least one source zone".to_string(),
+                });
+            }
+
+            let from = a
+                .from
+                .iter()
+                .map(|z| match z {
+                    LinkCardSourceZone::Hand => CompiledLinkSourceZone::Hand,
+                    LinkCardSourceZone::Trash => CompiledLinkSourceZone::Trash,
+                    LinkCardSourceZone::SelfSources => CompiledLinkSourceZone::SelfSources,
+                    LinkCardSourceZone::OwnDigimonSources => {
+                        CompiledLinkSourceZone::OwnDigimonSources
+                    }
+                    LinkCardSourceZone::SelfOption => CompiledLinkSourceZone::SelfOption,
+                })
+                .collect();
+
+            let to = match a.to {
+                LinkCardsTo::SelfPermanent => CompiledLinkTo::SelfPermanent,
+                LinkCardsTo::OwnDigimon => CompiledLinkTo::OwnDigimon,
+            };
+
+            let count = match a.count {
+                LinkCardsCount::Exactly(n) => CompiledLinkCount::Exactly(n),
+                LinkCardsCount::UpTo(n) => CompiledLinkCount::UpTo(n),
+            };
+
+            // `free` pays 0; `reduce: N` pays max(0, base - N). The cards this
+            // step serves have a base link cost of 0 in this context, so both
+            // resolve to 0. Threaded faithfully so a non-zero base cost extends
+            // here later without a schema change.
+            let cost = match a.cost {
+                LinkCardsCost::Free => 0u8,
+                LinkCardsCost::Reduce(n) => 0u8.saturating_sub(n),
+            };
+
+            CompiledStep::LinkCards {
+                from,
+                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+                to,
+                count,
+                cost,
+                prompt: a.prompt.clone(),
             }
         }
         // OptionalStep is a newtype wrapping Vec<StepSpec> — access via .0

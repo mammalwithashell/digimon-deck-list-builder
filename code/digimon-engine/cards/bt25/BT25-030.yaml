@@ -1,0 +1,47 @@
+# BT25-030 Elecmon — Digimon, Lv.3, Yellow, DP 2000, Cost 3.
+# Traits: Mammal, Iliad, TS. Attribute: Data.
+# [Start of Your Main Phase] By adding your top security card to the hand, gain 1 memory.
+# Inherited [When Attacking][OPT] you may add top security to hand; if 0 security, Recovery +1.
+# Alt-digivolve Lv.2 Yellow or Lv.2 [TS] / Cost 0.
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_030.cs (start-of-main isOptional: true,
+# gated on SecurityCards.Count > 0; inherited OPT may-add then Recovery if 0).
+card: BT25-030
+name: Elecmon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Mammal, Iliad, TS]
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: yellow
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: TS
+    cost: 0
+effects:
+  - when: start_of_your_main_phase
+    optional: true
+    condition: { security_count_gte: 1 }
+    summary: "[Start of Your Main Phase] By adding your top security card to the hand, gain 1 memory"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - gain_memory: 1
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] You may add top security to hand; then if you have 0 security, Recovery +1"
+    process:
+      - may_add_top_security_to_hand: { of: you }
+      - if:
+          condition: { security_count_lte: 0 }
+          then:
+            - recover: { of: you, count: 1 }

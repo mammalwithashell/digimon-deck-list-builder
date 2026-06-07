@@ -1,0 +1,256 @@
+# BT25-038 Shakkoumon — Digimon, Lv.5, Yellow/Black, DP 8000, Cost 8.
+# Traits: Mutant, Iliad, TS.  Attribute: Free.
+# Evo: Lv.4 Yellow / cost 4 (printed evo_costs).
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   [On Play] [When Digivolving] You may place 1 [Angel], [Archangel], [Three
+#   Great Angels] or [Iliad] trait Digimon card from your hand or your Digimon's
+#   digivolution cards as the top or bottom security card. Then, if DNA
+#   digivolving, trash both players' top security cards.
+#   [All Turns] [Once Per Turn] When your security stack is added to,
+#   ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You
+#   can't trash past level 3 cards.)
+#
+# Inherited:
+#   [All Turns] [Once Per Turn] When your security stack is removed from, 1 of
+#   your opponent's Digimon gets -4000 DP for the turn.
+#
+# Printed evo box (alt-digivolution): "[Digivolve] Lv.4 w/[TS] trait: Cost 3".
+# Printed DNA box (xros_req): Yellow Lv.4 + Black/Blue Lv.4 / Cost 0.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_038.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternate Digivolution Requirement" (None):
+#   AddSelfDigivolutionRequirementStaticEffect(level 4, HasTSTraits, cost 3,
+#   ignoreDigivolutionRequirement: TRUE). → alt_path Lv.4 [TS] cost 3,
+#   ignore_requirements: true. Standard Lv.4 Yellow / cost 4 also encoded.
+#
+# Region "DNA Digivolution" (None): AddJogressConditionClass — element 1: own
+#   Yellow Lv.4 Digimon; element 2: own Black OR Blue Lv.4 Digimon; cost 0. →
+#   alt_path kind: dna_digivolve, materials [Yellow Lv.4], [Black|Blue Lv.4],
+#   cost 0.
+#
+# Region "Shared OP/WD" (onPlay+whenDigivolving, skippable when not DNA):
+#   The player may place 1 (Angel|Archangel|Three Great Angels|Iliad) Digimon
+#   card from HAND or from a chosen own Digimon's DIGIVOLUTION CARDS as the TOP
+#   or BOTTOM security card (DCGO: From hand / From sources / Don't place →
+#   then Top/Bottom/don't-place). Then, IF DNA digivolving, trash BOTH players'
+#   top security cards. →
+#     - The place clause is `optional: true` ("you may"). Zone choice modelled as
+#       select_effect_choice [From hand, From sources] (decline = PASS on the
+#       optional select / effect choice). Hand path: select_hand (Angel/Archangel/
+#       Three Great Angels/Iliad Digimon) → top/bottom choice → place_on_security.
+#       Sources path: select_own_permanent gated on
+#       `self_digivolution_sources_trait_has` (one of the four traits) → select_material
+#       from that carrier (same trait filter) → top/bottom → security_place_stacked_card.
+#     - The "if DNA digivolving, trash both top security" rider is a SEPARATE
+#       `when: on_dna_digivolve` clause (BT16-025 split idiom — fires only on DNA),
+#       trashing your top sec then the opponent's top sec.
+#
+# Region "All Turns" (OnAddSecurity, OPT): when your security is added to,
+#   <De-Digivolve 1> 1 opp Digimon (Mode.Degenerate). → when: on_added_to_security,
+#   once_per_turn, active_when all_turns, mandatory select_opponent_permanent →
+#   de_digivolve amount 1 stop_at_level 3.
+#
+# Region "Inherited" (OnLoseSecurity, OPT): when your security removed, 1 opp
+#   Digimon gets -4000 DP for the turn. → scope: inherited, when:
+#   on_own_security_removed, once_per_turn, active_when all_turns,
+#   select_opponent_permanent → add_dp_modifier -4000 / end_of_turn.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Std digivolve Lv.4 Yellow / Cost 4                            | IMPLEMENTED (printed evo_costs) |
+# | Alt-source Lv.4 [TS] / Cost 3 (ignore reqs)                  | IMPLEMENTED (alt_paths, ignore_requirements) |
+# | DNA digivolve Yellow Lv.4 + Black/Blue Lv.4 / Cost 0         | IMPLEMENTED (alt_paths dna_digivolve) |
+# | [OP][WD] may place traited Digimon from hand OR sources as top/bottom sec | IMPLEMENTED (zone branch: select_hand + select_own_permanent→select_material) |
+# | [OP][WD] Then if DNA, trash both players' top sec           | IMPLEMENTED (on_dna_digivolve split clause) |
+# | [All Turns][OPT] security added → De-Digivolve 1 opp        | IMPLEMENTED (on_added_to_security + de_digivolve) |
+# | Inherited [All Turns][OPT] security removed → 1 opp -4000 DP | IMPLEMENTED (on_own_security_removed) |
+
+card: BT25-038
+name: Shakkoumon
+kind: digimon
+level: 5
+color: [yellow, black]
+cost: 8
+dp: 8000
+traits: [Mutant, Iliad, TS]
+attribute: Free
+
+alt_paths:
+  # Standard digivolution: Lv.4 Yellow / cost 4 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  # Alt-digivolution: Lv.4 with [TS] trait / cost 3, ignore digivolution requirements.
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+    ignore_requirements: true
+  # DNA digivolution: Yellow Lv.4 + (Black or Blue) Lv.4 / cost 0.
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 4, color_is: yellow }
+      - { level_eq: 4, any_of: [ { color_is: black }, { color_is: blue } ] }
+    cost: 0
+
+effects:
+  # ─── Clause A — [On Play][When Digivolving] may place traited Digimon as security ─
+  #
+  # Optional ("you may"). The player chooses From hand or From sources (decline =
+  # PASS). Hand path: pick a (Angel/Archangel/Three Great Angels/Iliad) Digimon,
+  # then Top/Bottom, then place. Sources path: pick a own Digimon that has such a
+  # source (self_digivolution_sources_trait_has gate), pick the source card, then
+  # Top/Bottom, then security_place_stacked_card. Placement is face-down.
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OP][WD] You may place 1 [Angel]/[Archangel]/[Three Great Angels]/[Iliad] Digimon from hand or your Digimon's sources as top/bottom security"
+    process:
+      - select_effect_choice:
+          bind_as: zone
+          labels:
+            - "From your hand"
+            - "From your Digimon's digivolution cards"
+          prompt: "Place a Digimon card as security from which area?"
+      # ── From hand ──
+      - if:
+          condition: { equals: [zone, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: hpick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Angel
+                        - trait_has: Archangel
+                        - trait_has: "Three Great Angels"
+                        - trait_has: Iliad
+                prompt: "Place 1 [Angel]/[Archangel]/[Three Great Angels]/[Iliad] Digimon from your hand as security"
+            - if:
+                condition: { binding_present: hpick }
+                then:
+                  - select_effect_choice:
+                      bind_as: hpos
+                      labels: ["Top of security", "Bottom of security"]
+                      prompt: "Place as top or bottom security card?"
+                  - if:
+                      condition: { equals: [hpos, 0] }
+                      then:
+                        - place_on_security:
+                            of: you
+                            source: { binding: hpick, zone: hand }
+                            position: top
+                            face_up: false
+                  - if:
+                      condition: { equals: [hpos, 1] }
+                      then:
+                        - place_on_security:
+                            of: you
+                            source: { binding: hpick, zone: hand }
+                            position: bottom
+                            face_up: false
+      # ── From your Digimon's digivolution cards ──
+      - if:
+          condition: { equals: [zone, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: carrier
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - self_digivolution_sources_trait_has: Angel
+                        - self_digivolution_sources_trait_has: Archangel
+                        - self_digivolution_sources_trait_has: "Three Great Angels"
+                        - self_digivolution_sources_trait_has: Iliad
+                prompt: "Choose 1 of your Digimon to take a digivolution card from"
+            - if:
+                condition: { binding_present: carrier }
+                then:
+                  - select_material:
+                      of_permanent: carrier
+                      bind_as: spick
+                      filter:
+                        any_of:
+                          - trait_has: Angel
+                          - trait_has: Archangel
+                          - trait_has: "Three Great Angels"
+                          - trait_has: Iliad
+                      prompt: "Choose 1 [Angel]/[Archangel]/[Three Great Angels]/[Iliad] digivolution card to place as security"
+                  - if:
+                      condition: { binding_present: spick }
+                      then:
+                        - select_effect_choice:
+                            bind_as: spos
+                            labels: ["Top of security", "Bottom of security"]
+                            prompt: "Place as top or bottom security card?"
+                        - if:
+                            condition: { equals: [spos, 0] }
+                            then:
+                              - security_place_stacked_card:
+                                  carrier: carrier
+                                  source: spick
+                                  of: you
+                                  position: top
+                                  face: down
+                        - if:
+                            condition: { equals: [spos, 1] }
+                            then:
+                              - security_place_stacked_card:
+                                  carrier: carrier
+                                  source: spick
+                                  of: you
+                                  position: bottom
+                                  face: down
+
+  # ─── Clause B — [On DNA Digivolve] trash both players' top security ──────────
+  #
+  # "Then, if DNA digivolving, trash both players' top security cards." Modelled
+  # as a separate on_dna_digivolve clause (BT16-025 split idiom — fires only when
+  # the preceding digivolve was via DNA, avoiding the dna_origin process-predicate
+  # gap G-ENGINE-DNA-ORIGIN-PRED).
+  - when: on_dna_digivolve
+    summary: "[On DNA Digivolve] Trash both players' top security cards"
+    process:
+      - trash_top_security: { of: you }
+      - trash_top_security: { of: opponent }
+
+  # ─── Clause C — [All Turns][OPT] security added → De-Digivolve 1 opp ─────────
+  - when: on_added_to_security
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When your security stack is added to, <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dd_target
+          amount: 1
+          stop_at_level: 3
+
+  # ─── Clause D — Inherited [All Turns][OPT] security removed → 1 opp -4000 DP ─
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[Inherited][All Turns][OPT] When your security stack is removed from, 1 opp Digimon gets -4000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: inh_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -4000 DP for the turn"
+      - add_dp_modifier:
+          target: inh_target
+          value: -4000
+          expiry: end_of_turn

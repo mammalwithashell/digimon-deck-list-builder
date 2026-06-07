@@ -1046,11 +1046,11 @@ impl Game {
         );
         self.drain_effect_queue();
         if self.pending_selection.is_some() {
-            self.pending_option_placed_link_resume = Some(host);
+            self.pending_option_placed_link_resume = Some((host, linked_card));
             return;
         }
 
-        self.fire_on_link_after_option_placed();
+        self.fire_on_link_after_option_placed(host, linked_card);
     }
 
     pub(crate) fn insert_card_into_deck(

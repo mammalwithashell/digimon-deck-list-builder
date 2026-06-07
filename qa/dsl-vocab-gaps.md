@@ -2775,6 +2775,476 @@ Historical note:
 - **Suggested change:** Add `activation_cost: { trash_self: true }` — a declinable activation cost that trashes the source card and gates the body; declining skips the whole Delay.
 - **Workaround:** BT21-093 models the trash as a mandatory first body step. PARTIAL.
 
+## DSL Gap: BT25-066 — trash a permanent's own LINK card as a would-leave replacement cost  [G-DSL-LINK-TRASH-AS-REPLACEMENT-COST]
+- **Status:** CLOSED (2026-06-07). `cost: { trash_own_link_card: true }` on a `when_would_leave_battle_area` replacement (gap-3a, commit 297a00ab) lowers to `CompiledStep::TrashOwnLinkCardAndCancelLeave`; the preflight gates the optional accept on `replacement_subject.linked_cards.len() >= 1` and surfaces the WHICH-link-card choice even for a single card. **link-finish-replacement slice (2026-06-07)** extends it to the **`scope: linked`** case (an Option's link-card ESS, BT25-101 Divine Arms Version Ω): `lower_replacement.rs` and `lower_aura.rs` now emit `.linked()` for `CompiledScope::Linked`; `replacement.rs::collect_candidates` scans each permanent's `linked_cards` for `.linked()` would-* replacement effects; `source_permanent_is_still_active` accepts the `linked_cards` zone. BT25-066 IMPLEMENTED (`cards/bt25/BT25-066.yaml`, 8/8); BT25-101 inherited leave-replacement IMPLEMENTED (7/7). Verify: `cargo test --test cards_behavioral -- bt25_066 bt25_101`; `cargo test --test option_flow` (126/126).
+- **Discovered in:** BT25 "machine" slice, BT25-066 Guardromon (batch-implement-cards-rust-dsl, 2026-06-05).
+- **Scope:** DSL.
+- **Card(s):** BT25-066 Guardromon — `[All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave.` Generalizes to any "by trashing 1 of its link cards, it doesn't leave / prevent" replacement.
+- **Effect text:** "[All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave."
+- **What's missing:** No DSL verb selects and trashes one of a permanent's **own link cards** as the cost of a `kind: replacement` clause. The `ReplacementCostBody` only supports `delay_self: true`; `ReplacementChooseBody.from` only supports `hand`. There is no `select_linked_card` / `trash_linked_card` step, and no `from: linked_cards` for the replacement `choose:`. The engine DOES model the substrate: `Permanent.linked_cards`, `EffectTiming::OnLinkedCardTrashed` (fired in `combat.rs`), and `cancel_replacement` all exist — only the DSL vocabulary to pick + trash a self link card (and gate the cancel on that cost being paid, optionally per DCGO `SetIsSkippable(true)`) is missing. Without it the link-trash player choice cannot surface (no-approximations violation), so the whole card is BLOCKED even though its other clauses (Blocker, inherited +1000 DP, TS-trait alt-digivolve) are individually expressible.
+- **Lowers to engine API:** a new `EffectContext` selection over `source_permanent.linked_cards` + trash of the chosen link card (with `OnLinkedCardTrashed` dispatch, already wired) + `cancel_replacement`. The cancel/replacement plumbing already exists.
+- **Suggested DSL syntax:**
+  ```yaml
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true            # DCGO SetIsSkippable(true): the controller may decline
+    active_when: { replacement_subject_is_mine: true }
+    choose:
+      from: linked_cards       # NEW from-zone: this permanent's own link cards
+      min: 1
+      max: 1
+    outcome: prevent           # trashing the chosen link card cancels the leave
+  ```
+  (Alternatively a dedicated `trash_linked_card_and_cancel_replacement: { of_subject: true }` step usable inside the replacement `process:`.)
+- **Workaround:** None faithful. BT25-066 ships no YAML; BLOCKED (dsl).
+
+## DSL Gap: BT25-074 — play a revealed card with the play cost REDUCED by N (not free)  [G-DSL-PLAY-FROM-REVEALED-COST-REDUCED]
+- **Status:** CLOSED (2026-06-05). `play_from_revealed_free` now accepts an optional `cost_delta: { reduce: N }` (default free, preserving prior behavior). Engine adds `EffectContext::play_from_revealed_with_cost(player, card, CostDelta)`; `play_from_revealed_free` delegates with `Free`. DSL: `PlayFromRevealedFreeArgs.cost_delta: Option<CostDelta>` → `CompiledStep::PlayFromRevealedFree.cost_delta` (lowered via `compile_cost_delta`) → handler routes through `play_from_revealed_with_cost` (None ⇒ Free, NOT `lower_cost_delta`'s Reduce(0)). Test: `tests/dsl/phase2f1_play_steps.rs::play_from_revealed_with_cost_delta_reduce_pays_remainder` (cost 3 − reduce 2 ⇒ pays 1, no over-credit). BT25-074 is unblocked on this gap.
+- **Discovered in:** BT25 "machine" slice, BT25-074 Tankdramon (batch-implement-cards-rust-dsl, 2026-06-05).
+- **Scope:** DSL.
+- **Card(s):** BT25-074 Tankdramon — `[When Digivolving] [When Attacking] [Once Per Turn] Reveal the top 3 cards of your deck. You may play 1 play cost 12 or lower [D-Brigade] or [ACCEL] trait Digimon card among them with the cost reduced by 5. Trash the rest.` Generalizes to any "reveal N, play 1 among them with cost reduced by X" (X > 0, the controller pays the remainder).
+- **Effect text:** "Reveal the top 3 cards of your deck. You may play 1 play cost 12 or lower [D-Brigade] or [ACCEL] trait Digimon card among them with the cost reduced by 5. Trash the rest."
+- **What's missing:** The reveal-pool play steps only support a FREE play. `play_from_revealed_free` hard-codes `crate::enums::CostDelta::Free` (`effect_context/mod.rs:3547`); `choose_from_reveal`'s `play_free` destination is likewise free-only. There is no reveal-pool play step that takes a `cost_delta` to pay a non-zero reduced cost. (The hand analog `play_from_hand` DOES carry `cost_delta: Option<CostDelta>`, and BT15-096 plays from hand with cost reduced by 3 — so the gap is reveal-pool-specific.)
+- **Lowers to engine API:** already-present primitive — `play_from_revealed_free` internally calls `Game::play_from_hand_with_cost_result_from_origin(... CostDelta ..., PendingWouldPlayOrigin::Reveal { .. })`, which accepts any `CostDelta`. Only the DSL step pins it to `Free`. `enums::CostDelta::Reduce(i16)` exists.
+- **Suggested DSL syntax:** add an optional `cost_delta: CostDelta` (default `Free`) to `play_from_revealed_free` (or a new `play_from_revealed: { of, card, cost_delta }` step), threaded into the existing `from_origin` call instead of the hard-coded `Free`:
+  ```yaml
+  - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+  - select_reveal_buckets:
+      from: revealed
+      buckets:
+        - bind_as: play_pick
+          min: 0
+          max: 1
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of: [ { trait_has: D-Brigade }, { trait_has: ACCEL } ]
+              - play_cost_lte: 12
+  - play_from_revealed_free: { of: you, card: play_pick, cost_delta: { reduce: 5 } }
+  - per_selected: { selection: revealed, bind_as: rest, body: [ { trash_from_reveal: { of: you, card: rest } } ] }
+  ```
+- **Workaround:** None faithful (playing for free over-credits the player by 5+ memory; a no-approximations violation). BT25-074 ships no YAML; BLOCKED (dsl). The card's secondary clauses ([All Turns][OPT] on_ally_played → opponent CannotDigivolve, and the inherited [Opponent's Turn] Reboot+Blocker) are individually expressible but cannot ship without the main WD/WA clause.
+
+---
+
+## G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER — multi-card / multi-Tamer face-down trash cost (BT25 BEATBREAK)
+
+- **Cards:** BT25-035 Cougarmon (`[On Play][When Digivolving] ... by trashing 2 bottom face-down cards from under any of your Tamers, this Digimon may digivolve into a [Glowing Dawn] Digimon for free`). Likely also BT25-019 / other BEATBREAK "trash N" cost cards.
+- **What's missing:** The shipping verb `trash_bottom_face_down_source_under_tamer: { of }` trashes exactly **one** bottom face-down source from **one** chosen Tamer (it installs a single `select_own_permanent` over `{ kind: tamer, has_face_down_source: true }` and trashes that Tamer's bottom face-down card, then runs the tail). It has no `count:` parameter and no support for distributing the cost across multiple Tamers (DCGO BT25_035: `maxCount: 2`, `canEndNotMax: true`, `CanEndSelectCondition = (picked==2) || (picked==1 && that Tamer has >=2 face-down sources)` — i.e. "trash 2 total: either 2 from one Tamer, or 1 from each of two Tamers"). Chaining the single-trash verb twice does NOT work: each invocation installs a selection and runs the *captured tail* on resolution, so two sequential invocations cannot share one continuation cleanly, and the "2 from one Tamer OR 1+1 from two Tamers" choice is not expressible.
+- **Lowers to engine API:** the engine already has the per-Tamer bottom-face-down trash primitive (`install_trash_bottom_face_down_source_under_tamer` in `dsl_cards/step/selections.rs`, and DCGO mirrors it with `TrashDigivolutionCardsFromTopOrBottom(trashCount: N, isFromTop: false, CanTrashCard)`). The missing piece is a DSL step that drives an N-total multi-pick over Tamers with the DCGO end-condition.
+- **Suggested DSL syntax:** a `count:`-carrying variant, e.g.
+  ```yaml
+  - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+  ```
+  with semantics: pick Tamers (each must carry >=1 face-down source) until `count` face-down sources are trashed total; a single Tamer with >=`count` face-down sources may satisfy it alone (DCGO `CanEndSelectCondition`). The whole step is the activation cost: if fewer than `count` face-down sources exist across all Tamers, the cost is unpayable → abort the clause (`TailAlreadyRan`), matching the single-card verb's unpayable behavior.
+- **Workaround:** None faithful for BT25-035. The single-trash verb under-charges (trashes 1 instead of 2) — a no-approximations violation. BT25-035 BLOCKED (dsl) on this gap. (Its [On Play][When Digivolving] -3000 DP rider IS expressible; the free-digivolve-by-2-trash cost is the blocked part.)
+
+---
+
+## BT25 "titan" slice — BLOCKED cards (2026-06-06)
+
+Implemented in this slice: BT25-006, BT25-068, BT25-071, BT25-019 (all IMPLEMENTED).
+The four cards below are BLOCKED; each is cross-referenced to the controlling gap.
+
+### BT25-069 Raremon — `[On Play][When Digivolving] link 1 [TS] card from your trash to 1 of your Digimon for free`  [gap_kind: dsl]
+- **What's missing:** A DSL step that **selects a card from the trash and links it** to a chosen own Digimon. The shipping `link_to_own_digimon` verb is hardwired to link the *carrier Option card* (it reads `pending_option` / installs a `LinkSelectHost` over the carrier — see `dsl_cards/step/mod.rs::try_run_link_step`). It cannot select an arbitrary trash card as the link card. DCGO `BT25_069.cs` uses `SelectCardEffect Root.Trash` → `selectedPermanent.AddLinkCard(cardForLinking)`.
+- **Lowers to engine API:** the engine already has the host/link substrate (`Permanent.linked_cards`, link-host selection) — the missing piece is a DSL verb to pick a trash card + pick a host Digimon + attach. Belongs to the broader **`[Link]` subsystem** gap in `docs/RUST_ENGINE_GAPS.md` (item 9: "alternate-source linking from trash").
+- **Suggested DSL syntax:** `link_card_from_trash_to_own_digimon: { of: you, free: true, card_filter: { trait_has: TS }, host_filter: { kind: digimon } }`.
+- **Other clauses** (Jamming, inherited +1000 DP, TS-trait alt-digivolve) are individually expressible; the card ships no YAML because its sole active clause is blocked.
+
+### BT25-073 Dragomon — trash a link card as an ACTIVATION cost  [gap_kind: dsl]  [G-DSL-LINK-TRASH-AS-COST]
+- **Status:** OPEN (re-adjudicated 2026-06-07, link-finish-replacement slice). gap_kind narrowed `hybrid → dsl`: the inherited leave-replacement is now expressible (see G-DSL-LINK-TRASH-AS-REPLACEMENT-COST, CLOSED) and Jamming is declarative, but the **Main clause activation cost is still BLOCKED** on the DSL — so the card ships no YAML.
+- **Main clause** `[On Play][When Digivolving] By trashing 1 of your Digimon's link cards, you may play or use 1 [TS] cost<=5 card from hand free`: needs a step that **selects an own Digimon (with >=1 link card), selects one of ITS link cards, and trashes it as an ACTIVATION cost**, then runs a gated play/use of the chosen hand card. DCGO `BT25_073.cs`: `SelectPermanentEffect` (own Digimon, `!HasNoLinkCards`) → `SelectCardEffect Root.LinkedCards` (maxCount 1) → `TrashLinkCardsAndProcessAccordingToResult` → `successProcess` plays/uses the hand card free.
+- **What's missing:** the only link-card-trash vocabulary, `cost: { trash_own_link_card: true }`, is **replacement-only** — it reads the `replacement_subject` binding, cancels the leave, and is valid solely on a `when_would_leave_battle_area` replacement (`outcome: prevent`). There is no **general activation-cost** step that picks an arbitrary own Digimon + one of its link cards + trashes it (then continues a tail). The `link_cards` step family only *attaches* cards; none trashes a permanent's link card.
+- **Lowers to engine API:** substrate exists — `Permanent.linked_cards`, `Game::trash_specific_link_card(host, card)` (added in gap-3a, fires `OnLinkedCardTrashed`), and the standard play/use-free flow. The missing piece is a DSL cost step, e.g. `trash_link_card_of_own_digimon: { of: you }` that installs the own-Digimon select (filter `has_link_cards`) → link-card select → `trash_specific_link_card`, exposed as an activation cost whose success gates the tail (the play/use). Unpayable (no own Digimon has a link card) ⇒ abort the clause.
+- **Suggested DSL syntax:**
+  ```yaml
+  - when: [on_play, when_digivolving]
+    process:
+      - trash_link_card_of_own_digimon: { of: you }   # NEW cost step
+      - select_hand:
+          of: you
+          bind_as: play_pick
+          optional: true
+          filter: { all_of: [ { trait_has: TS }, { play_or_use_cost_lte: 5 } ] }
+      - play_or_use_from_hand: { of: you, card: play_pick, cost: free }
+  ```
+- **Other clauses** (Jamming; inherited leave-replacement) are expressible, but the Main clause is the defining active clause, so BT25-073 ships no YAML. BLOCKED (dsl).
+
+### BT25-083 LadyDevimon — bottom-source-from-hand/trash + trash-digivolution-option-as-cost + cost-reduced trash-option use  [gap_kind: hybrid]
+- **Clause 1** `[On Play][When Digivolving] By placing 1 [Three Musketeers] card from your hand OR trash as any of your Digimon's bottom digivolution cards, <Draw 1>`: needs a **zone-choice (hand|trash) picker that places the chosen card as a bottom digivolution source** of a selected Digimon. `place_as_bottom_source` exists for reveal/deck-sourced cards but there is no hand-or-trash-sourced bottom-placement verb with the DCGO 3-way `SetIntSelection` (Hand / Trash / Don't place).
+- **Clause 2** `[When Digivolving][When Attacking][OPT] By trashing 1 Option card from any of your Digimon's digivolution cards, you may use 1 [Three Musketeers] Option from your trash with cost reduced by 3`: needs (a) a step to **select+trash an Option from a permanent's digivolution stack as a cost**, and (b) **use a trash Option with a play/use cost reduction** (`UseOptionFromTrash` with `cost: { reduce: 3 }`). The DSL has `use_option_from_hand` but no trash-rooted reduced-cost option-use, and no "trash an option from digivolution cards" cost step.
+- **Inherited OnDeletion** "play a level 4 or lower [Three Musketeers]-text Digimon from trash free" IS expressible; the card ships no YAML because the two active clauses are blocked.
+
+### BT25-091 Monica Simmons — `[Your Turn] When you use [TS] Option cards` trigger  [G-DSL-ON-USE-OPTION-TIMING]  [gap_kind: dsl]
+- **Card(s):** BT25-091 Monica Simmons (clause 3). Generalizes to any "[Your Turn] When you use … Option cards, …" trigger.
+- **Effect text:** "[Your Turn] When you use [TS] trait Option cards, by suspending this Tamer, 1 of your opponent's Digimon can't attack until their turn ends."
+- **What's missing:** No DSL `when:` token lowers the engine timing `EffectTiming::OnUseOption` (defined in `code/digimon-engine/src/enums.rs:318`, fired by the engine when a player uses an Option). `digimon-dsl/src/compile.rs` has no `on_use_option` / `when_you_use_option` arm, so the clause cannot be authored. DCGO `BT25_091.cs` uses `EffectTiming.OnUseOption` + `CanTriggerWhenOwnerUseOption(OptionTrigger)`.
+- **Lowers to engine API:** the engine timing + dispatch already exist; only the DSL needs a `when: on_use_option` token (optionally with an `option_filter:` predicate for the "[TS] trait Option" gate). The clause body (`activation_cost: { suspend_self: true }` + `select_opponent_permanent` + `add_modifier: CannotAttack` `expiry: end_of_opponents_turn`) is otherwise fully expressible.
+- **Suggested DSL syntax:** `when: on_use_option` with optional `option_filter: { trait_has: TS }`.
+- **Other clauses** (start-of-turn set-memory-to-3, On Play return-or-draw, [Security] play-self) are implemented and tested (`bt25_091.rs`); BT25-091 ships PARTIAL with this one clause deferred.
+
+### BT25-092 Asuna Shiroki — `[Main]` digivolve into a card from {hand|trash} with a {hand|digivolution-card} trash cost  [G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST]  [gap_kind: dsl]
+- **Card(s):** BT25-092 Asuna Shiroki (clause 2).
+- **Effect text:** "[Main] By suspending this Tamer and trashing 1 Option card from your hand or your Digimon's digivolution cards, 1 of your Digimon may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand or trash with the cost reduced by 1."
+- **What's missing:** two distinct union-zone gaps in one clause:
+  1. The digivolve **result** is chosen from a union of **{hand, trash}**, but `effect_initiated_digivolve`'s `from_hand` binding does not accept a `select_union_zone` (hand-or-trash) result, and digivolve-into-a-card-resident-in-trash is unverified in the `EffectInitiatedDigivolve` lowering (`dsl_cards/step/play_digivolve.rs`).
+  2. The **cost** trash is from a union of **{your hand, your Digimon's digivolution cards}** — `select_union_zone` does not span a *permanent's own digivolution sources*, and there is no single verb to trash an Option from "hand OR digivolution cards" as a cost.
+- **Lowers to engine API:** the substrate pieces exist individually (`select_union_zone`, `select_own_sources`, `trash_selected_sources`, `effect_initiated_digivolve` with `cost: { reduce: 1 }`, `activation_cost: { suspend_self: true }`); the missing piece is (a) digivolve `from_source` accepting a union/trash-bound result, and (b) a cost-trash union spanning hand + a chosen permanent's digivolution stack. Authoring a hand-only-result / hand-only-cost reduction would silently drop player choices (no-approximations), so the clause is left BLOCKED rather than approximated.
+- **Suggested DSL syntax:** allow `effect_initiated_digivolve: { source: <select_union_zone binding over {hand, trash}>, cost: { reduce: 1 } }` plus a cost step like `trash_selected_from_union: { zones: [hand, digivolution_cards], filter: { kind: option } }`.
+- **Other clauses** (start-of-main trash-to-draw+memory, [Security] play-self) are implemented and tested (`bt25_092.rs`); BT25-092 ships PARTIAL with clause 2 deferred.
+
+### BT25-101 Divine Arms Version Ω — link a [TS] card from trash + inherited link-ESS clauses  [gap_kind: hybrid]
+- **Status:** RESOLVED → **IMPLEMENTED** (link-finish-replacement slice, 2026-06-07). `cards/bt25/BT25-101.yaml`, `tests/cards_behavioral/bt25/bt25_101.rs` (7/7).
+- **Card(s):** BT25-101 Divine Arms Version Ω.
+- **Main clause** `[Main] By trashing 1 [TS] card from hand, <Draw 2>; After, you may link this card OR 1 [TS] card from your trash to 1 of your Digimon without paying the cost`: now expressed with `link_cards: { from: [self_option, trash], filter: { trait_has: TS }, to: own_digimon, count: { up_to: 1 }, cost: free }` (gap-2 `link_cards` step + gap-3b `self_option` from-zone). The "link THIS card" branch attaches the Option to itself; the "1 [TS] from trash" branch links a chosen trash card; a zone-choice surfaces when both qualify. Trash-hand-cost gates Draw 2 + the link via `select_hand { cost: true }` → `if binding_present` → `draw` → `link_cards`.
+- **Inherited link-ESS clauses** (`<Security A. +1>`, `<Reboot>`, leave-replacement): authored as **`scope: linked`** (the working link-ESS convention) and now reach the host. Required engine widening this slice: `lower_aura.rs` + `lower_replacement.rs` emit `.linked()` for `CompiledScope::Linked`; `replacement.rs::collect_candidates` scans `linked_cards` for `.linked()` would-* replacement effects; `source_permanent_is_still_active` accepts the `linked_cards` zone. (The keyword/DP/formula ESS host-reach via `tick_declarative_effects` / `live_declarative_formula_sum` linked passes was already closed — see `docs/RUST_ENGINE_GAPS.md` G-LINK-INHERITED-ESS.)
+- **Verdict:** IMPLEMENTED. The DCGO `EqualsCardName("Vulcanusmon")` host gate is an implementation detail not in the printed text; the link requirement is modeled as a generic Digimon-host link (cost 3) per printed text.
+
+---
+
+## BT25 "orphan-d" slice — BLOCKED cards (2026-06-06)
+
+Implemented in this slice: BT25-055 Deramon, BT25-042 ClavisAngemon (both IMPLEMENTED).
+The five cards below are BLOCKED; each is cross-referenced to the controlling gap.
+
+> **Re-adjudicated 2026-06-07 ("link-appmon-2" slice — BT25-070/056/072/060).** Re-ran
+> these (plus BT25-070 Logamon, same family) against current `main`. Update: the
+> **`when: when_linked` DSL token HAS since landed** (`Timing::WhenLinked` →
+> `CompiledTiming::WhenLinked`, `clause.rs:146` / `compile.rs:258`; G-DSL-WHEN-LINKED-TIMING
+> closed), so the secondary "no when-token" blocker noted below is stale. The **controlling
+> blocker is unchanged and still open**: there is no engine primitive — and no DSL verb
+> lowering to one — to link a *chosen* card from `{hand | trash | digivolution-cards}` onto
+> a host Digimon (the shipping `link_to_own_digimon` links only the carrier Option; the
+> 2026-06-06 Shape-B substrate only *absorbs a standing permanent*, root `None`). This is
+> facet **#9** of the `docs/RUST_ENGINE_GAPS.md` `[Link]` keyword subsystem (DCGO
+> `ILinkCard(cardSource, host)` / `Permanent.AddLinkCard(cardSource)` with `SelectCardEffect.Root`
+> = `Hand`/`Trash`/`DigivolutionCards`). All four remain **BLOCKED (hybrid)**; ship no YAML
+> under the no-approximations policy (the link clause is each card's central mechanic and
+> gates the `WhenLinked`/`[When Linking]` payloads). DCGO confirmed this run:
+> `BT25_070.cs:181`, `BT25_056.cs:196`, `BT25_072.cs:201`, `BT25_060.cs:160`.
+
+### BT25-056 Bootmon — host-Digimon link-from-{hand|digivolution-cards} + `When this gets linked` trigger  [gap_kind: hybrid]
+- **Effect text:** "[On Play][When Digivolving][When Attacking] If it's your turn, you may link 1 [Social], [Tool] or [Game] trait Digimon card from your hand or this Digimon's digivolution cards to this Digimon with the cost reduced by 2. [All Turns] When this Digimon gets linked, suspend 1 of your opponent's Digimon or Tamers." Plus `<Barrier>` (expressible) and inherited "Return 1 of your opponent's suspended Digimon to the bottom of the deck" (expressible).
+- **What's missing (two facets):**
+  1. **Host-Digimon link from a chosen card in hand / digivolution-cards** (with a `-2` link-cost reduction). The shipping `link_to_own_digimon` links only the *carrier Option* (reads `pending_option` / installs `LinkSelectHost` over the carrier). No DSL verb selects a Digimon card from hand or this permanent's digivolution stack and attaches it as a link card to the carrier Digimon. DCGO `BT25_056.cs`: `AddSelfLinkConditionStaticEffect` + 3-way `SetIntSelection` (Hand / DigivolutionCards / Don't) → `ILinkCard(cardSource, card.PermanentOfThisCard())` + `GrantedReduceLinkCostClass`. Same family as `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem (facet #6) and the documented `link_card_from_trash_to_own_digimon` gap (BT25-069/101) — here zones are hand + digivolution-cards.
+  2. **`When this Digimon gets linked` trigger.** Engine has `EffectTiming::WhenLinked` (`enums.rs:333`) but no DSL `when:` token lowers to it (`CompiledTiming` has no `WhenLinked`; `compile.rs` has no `when_linked`/`gets_linked` arm). Consumer side of `docs/RUST_ENGINE_GAPS.md` facet #11.
+- **Lowers to engine API:** link substrate (`Permanent.linked_cards`, `attach_linked_card`, `ChangeLinkCost`) + `EffectTiming::WhenLinked` dispatch exist; missing are (a) a DSL host-link-from-source verb and (b) a `when: when_linked` token.
+- **Verdict:** BLOCKED (hybrid). Ships no YAML. Cross-ref `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem + BT25-069/101.
+
+### BT25-072 Shutmon — host-Digimon link-from-{trash|digivolution-cards} + `When this gets linked` deny-digivolve  [gap_kind: hybrid]
+- **Effect text:** "[On Play][When Digivolving][When Attacking] If it's your turn, you may link 1 [Social], [Tool] or [Game] trait Digimon card from your trash or this Digimon's digivolution cards to this Digimon with the cost reduced by 2. [All Turns][Once Per Turn] When this Digimon gets linked, 1 of your opponent's Digimon or Tamers can't digivolve until their turn ends." Plus `<Jamming>` (expressible) and inherited "2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends" (expressible).
+- **What's missing:** identical two facets as BT25-056 — (1) host-Digimon link from a chosen card (here **trash** + digivolution-cards), exactly the documented `link_card_from_trash_to_own_digimon` gap (BT25-069/101) extended to also span the carrier's digivolution stack; (2) the `When this gets linked` (`WhenLinked`) DSL `when:` token. DCGO `BT25_072.cs`: `ILinkCard` from `SelectCardEffect.Root.Trash`/`DigivolutionCards` + `WhenLinked` ActivateClass installing `CannotDigivolve` until the opponent's turn ends.
+- **Lowers to engine API:** as BT25-056; plus `ModifierType::CannotDigivolve` (exists) for the gets-linked body.
+- **Verdict:** BLOCKED (hybrid). Cross-ref BT25-056, BT25-069/101, `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem.
+
+### BT25-060 Rebootmon — host-Digimon free-link-from-{hand|digivolution-cards} + `When this gets linked OR unsuspends` self-buff  [gap_kind: hybrid]
+- **Effect text:** "[When Digivolving][When Attacking][Once Per Turn] By linking 1 [Appmon] trait Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost, 1 of your Digimon may unsuspend. [All Turns][Once Per Turn] When this Digimon gets linked or unsuspends, until your turn ends, this Digimon gains <Piercing> and <Blocker>, and your opponent's Digimon effects don't affect it." Plus `<Security A. +1>`, `<Reboot>`, `<Link +1>` (declarative — expressible).
+- **What's missing:** (1) host-Digimon **free link from hand / digivolution-cards** as an *activation cost* (the "by linking …, 1 may unsuspend" is gated on the link succeeding) — same missing host-link-from-source verb as BT25-056; (2) the **`When this gets linked OR unsuspends`** trigger — `OnUnsuspend` has a DSL token but **`WhenLinked` does not**, so one leg of the multi-timing trigger is unauthorable. DCGO `BT25_060.cs`: `AddLinkCard(cardSource)` as cost → unsuspend; `WhenLinked` + `OnUnTapped` ActivateClasses granting Piercing/Blocker + DigimonEffectImmunity.
+- **Lowers to engine API:** link substrate + `EffectTiming::WhenLinked`/`OnUnsuspend` exist; `grant_keyword` Piercing/Blocker + `grant_effect_immunity` exist for the body. Missing: host-link-from-source verb (as activation cost) + `when: when_linked` token.
+- **Verdict:** BLOCKED (hybrid). Cross-ref BT25-056, `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem (facets #6/#10/#11).
+
+### BT25-085 BeelStarmon — use-Option-from-{hand|digivolution-cards} free + trash-Option-from-{digivolution|link}-cards-as-cost → unsuspend  [G-DSL-USE-OPTION-FROM-SOURCES + G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST]  [gap_kind: dsl]
+- **Effect text:** "[When Digivolving][When Attacking][Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost. [When Digivolving][When Attacking][Counter][Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends." Plus `<Blocker>` (expressible). Inherited [Main]: "Delete 1 of your opponent's highest level Digimon. Then, you may place 1 card from your hand or trash as any of your Digimon's bottom digivolution card."
+- **What's missing (two facets):**
+  1. **Use an Option card from a permanent's digivolution stack** (not just hand). Shipping `use_option_from_hand` is hand-only (`UseOptionFromHandArgs` reads `select_hand`). DCGO `BT25_085.cs` offers a `SelectCardEffect.Root.DigivolutionCards` branch with `customRootCardList`.
+  2. **Trash 1 Option from any of your Digimon's digivolution OR link cards as an activation cost** (then unsuspend self). DCGO uses `permanent.DigivolutionOrLinkCards` as the trash pool. No DSL step selects+trashes an Option from the union of a permanent's digivolution + link cards as a cost. Same family as BT25-083's "trash an Option from digivolution cards as cost", extended to also span link cards.
+  (The inherited [Main] highest-level delete is expressible; the bottom-source-from-{hand|trash} place is the same gap as BT25-083 clause 1.)
+- **Lowers to engine API:** the use-Option / source-trash primitives exist in principle; missing is DSL vocabulary to root a use/trash at a permanent's digivolution+link stack.
+- **Verdict:** BLOCKED (dsl). Ships no YAML — both [WD][WA] active clauses depend on source-rooted Option verbs.
+
+### BT25-076 Ghoulmon — `When this would be played, by deleting your own Digimon, reduce cost by the deleted Digimon's play cost`  [G-DSL-BEFORE-PAY-COST-DELETE-OWN-FOR-VARIABLE-REDUCTION]  [gap_kind: hybrid]
+- **Effect text:** "When this card would be played, by deleting 1 of your play cost 11 or lower Digimon with [Negamon] in its digivolution cards and [Negamon] in its text, reduce the cost by the deleted Digimon's play cost." Plus `<Rush>`, `<Reboot>`, `<Blocker>` (declarative — expressible) and "[On Play][When Attacking][On Deletion] Delete 1 of your opponent's lowest-play-cost Digimon; if it didn't delete, trash your opponent's top security" (expressible: `select_opponent_permanent` over a lowest-play-cost gate → `delete_permanent`, else `trash_top_security`).
+- **What's missing:** a **`BeforePayCost` cost reducer whose payment is a player-selected deletion of an OWN permanent and whose reduction amount is that permanent's play cost (variable)**. Shipping `BeforePayCost` reducers (`lower_cost_reduction.rs`) carry a passive `amount`/`amount_fn`/`raw_rust` value; none install an interactive `select_own_permanent` + `delete_permanent` *as the cost*, nor read the deleted permanent's `GetCostItself` as the reduction delta. DCGO `BT25_076.cs` `EffectTiming.BeforePayCost`: optional `SelectPermanent` (canNoSelect modulated by affordability) over own Negamon-text + Negamon-source cost<=11 Digimon → `DeletePeremanentAndProcessAccordingToResult` → register a `ChangeCostClass` of `-reducedCost`.
+- **Why not approximated:** authoring an `amount_fn` (max-cost-Negamon) without the player-selectable deletion would (a) silently auto-pick which Negamon to delete and (b) silently delete it — two no-approximations violations; DCGO presents an explicit `canNoSelect` choice. The cost-reduction-by-player-deletion is this card's core play-enabler, so the card is BLOCKED rather than shipping a PARTIAL that drops the choice.
+- **Lowers to engine API:** deletion, play-cost read, and cost-delta primitives exist individually; missing is a DSL `BeforePayCost` reduction clause that drives an interactive delete-own-as-cost with a variable, deleted-permanent-sourced reduction. Engine-side, the `BeforePayCost` dispatch would need to host an interactive selection at cost-calc time (currently passive) — hence `gap_kind: hybrid`.
+- **Verdict:** BLOCKED (hybrid). Ships no YAML.
+
+### BT25-061 Offmon — Appmon `<Link>` keyword on a Digimon + `[When Linking]` trigger  [gap_kind: dsl]
+- **✅ RESOLVED 2026-06-07.** Both cited facets landed with DigiLink Shape-B (`G-DSL-DIGILINK`, 2026-06-06): facet 1 → `kind: link_condition` (Digimon self link-condition), facet 2 → `when: when_linked`. BT25-061 now ships `code/digimon-engine/cards/bt25/BT25-061.yaml` + 7 green tests (`tests/cards_behavioral/bt25/bt25_061.rs`); verdict IMPLEMENTED in `validated_cards_dsl.json`. (Original gap text retained below for history.)
+- **Effect text:** "[Start of Your Main Phase] By trashing 1 card with the [Appmon] trait from your hand, <Draw 1> and gain 1 memory. [When Linking] 1 of your opponent's Digimon can't unsuspend until their turn ends." Plus the Appmon `<Link>` keyword (Offmon is itself a *Digimon* that gets linked to another [Appmon] host) and alt-digivolve Lv.2 [Appmon] / Cost 0 (alt-path is expressible). NOTE: cards.json labels the "can't unsuspend" line as the *inherited* effect, but DCGO `BT25_061.cs` implements it as a `WhenLinked` ActivateClass behind the card's Link keyword (`AddSelfLinkConditionStaticEffect` + `LinkEffect` + `WhenLinked`).
+- **What's missing (two facets, both already-documented families):**
+  1. **A Digimon declaring itself as a Link-keyword Digimon** — DCGO `AddSelfLinkConditionStaticEffect(permanentCondition: HasAppmonTraits, linkCost: 1)`. The shipping DSL `kind: link_requirement` is documented as "for Link **Options**" only (`LinkRequirementBody`), and every current consumer is `kind: option`. No vocabulary lets a `kind: digimon` card register itself as a host-attachable Link card with a host predicate + link cost.
+  2. **The `[When Linking]` / `WhenLinked` trigger** — `EffectTiming::WhenLinked` exists in `enums.rs` but no DSL `when:` token lowers to it (`CompiledTiming` has no `WhenLinked`; `compile.rs` has no `when_linked`/`when_linking`/`gets_linked` arm). This is the SAME consumer-side gap already logged for BT25-056 / BT25-072 / BT25-060 — cross-ref `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem facet #11.
+- **Why BLOCKED not PARTIAL:** the Start-of-Your-Main-Phase trash→draw+memory clause and the alt-digivolve ARE expressible, but the `<Link>` keyword and its `[When Linking]` payload are the card's defining Appmon mechanic; shipping them dropped would be a silent omission (no-approximations). Ships no YAML.
+- **Lowers to engine API:** `WhenLinked` timing + link substrate exist; missing is (a) a Digimon-scoped self-link-condition DSL declarative and (b) a `when: when_linked` token. The "can't unsuspend until their turn ends" payload itself (`CannotUnsuspend` + `UntilOpponentTurnEnd` over a selected opponent Digimon) is expressible once the trigger exists.
+- **Verdict:** BLOCKED (dsl). Cross-ref BT25-056 / BT25-072 / BT25-060 (`WhenLinked` token) and `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem.
+
+### BT25-086 Dan Yuki — DP modifier formula `× opponent's memory count`  [G-DSL-FORMULA-OPPONENT-MEMORY]  [gap_kind: dsl]
+- **Effect text:** "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory. [End of Your Turn] By suspending this Tamer, 1 of your [TS] trait Digimon gains +1000 DP for the turn for each memory your opponent has. Then, it may attack. [Security] Play this card without paying the cost." (Cost 3 [TS] Tamer.)
+- **What's missing:** a **formula source that reads a player's memory-gauge value as a scalar**, so `add_dp_modifier` can compute `+1000 × opponent_memory`. `FormulaSpec::BasePerDelta`'s `PerSelector` enum (`formula.rs`) covers `material_count` / `stack_size` / `ally_count` / `suspended_count` / color counts / `card_count_in_zone` — but there is **no `per: opponent_memory`** (nor `your_memory`) selector, and `CompoundFormula::Aggregate` only ranks permanents by DP/level/cost. The memory gauge is a single signed integer on `Game` (`game.memory` / `gain_memory_for_player`), not a zone count, so `card_count_in_zone` cannot express it either. DCGO `BT25_086.cs`: `dpGain = Math.Max(0, card.Owner.Enemy.MemoryForPlayer * 1000)`.
+- **Why BLOCKED not PARTIAL:** the Start-of-Your-Main-Phase memory-floor gain (`condition: { memory_lte: 4 }` → `gain_memory: 1`) and the `[Security] play_from_security` clause ARE expressible; the suspend-self cost (`activation_cost: { suspend_self: true }`) and `may_attack_now` exist too. But the End-of-Turn clause's DP grant is *variable in the opponent's memory* — authoring it with a literal or any existing `per:` source would misstate the buff (no-approximations). The End-of-Turn clause is the card's whole payoff, so it ships no YAML rather than a PARTIAL that fakes the DP amount.
+- **Lowers to engine API:** `ctx` can already read `game.memory` (and DCGO reads `Enemy.MemoryForPlayer`); the gap is purely a DSL formula vocabulary one — add a `PerSelector::PlayerMemory { of: PlayerRef }` (or a `FormulaSpec::PlayerMemory`) that the existing `formula_eval` evaluates against the gauge, then `add_dp_modifier: { value: { formula: { base: 0, per: { player_memory: { of: opponent } }, delta: 1000 } }, expiry: end_of_turn }`.
+- **Verdict:** BLOCKED (dsl). Ships no YAML.
+
+## G-DSL-WHEN-LINKED-TIMING — [When Linking] triggered clause has no `when:` timing (2026-06-06)
+
+- **✅ RESOLVED 2026-06-07 (the DSL timing).** `when: when_linked` landed with DigiLink Shape-B (`G-DSL-DIGILINK`, 2026-06-06): `Timing::WhenLinked` → `CompiledTiming::WhenLinked` → `EffectTiming::OnLink` + forced `.linked()` + self-filter. The `[When Linking]` clause is now authorable (see BT25-007/BT25-061 which use it). **BT25-036 itself remains BLOCKED**, but on a *different* primitive: **App Fuse** (`AddAppfuseMethodByName`) is not implemented in the engine (no lowering, no handler; `AltPathKind::AppFusion` parses but resolves to nothing) — re-classified to `gap_kind: engine`, tracked in `docs/RUST_ENGINE_GAPS.md` App Fuse entry. (Original gap text retained below for history.)
+- **Card:** BT25-036 Craftmon (orphan-b slice). DCGO `BT25_036.cs` region "When Linking" uses `EffectTiming.WhenLinked` + `SetIsLinkedEffect(true)` for "[When Linking] By trashing 1 [Appmon] trait card from your hand, <Draw 2>."
+- **Gap:** the `digimon_dsl::clause::Timing` enum (the `when:` surface) has no `WhenLinked` / `Linked` variant. `compiled::CompiledTiming::Linked` and `compiled::CompiledScope::Linked` exist, and `lower_triggered.rs` already routes `CompiledScope::Linked` through `builder.linked()`, but there is no `Timing` string that lowers to `CompiledTiming::Linked`, so a "[When Linking]" triggered body cannot be authored.
+- **Lowers to engine API:** the engine already fires a link-established event (DCGO `EffectTiming.WhenLinked`); the gap is purely DSL-side — add a `Timing::WhenLinked` variant (serde `when_linked`), map it `S::WhenLinked => CompiledTiming::Linked` in `compile.rs`, and confirm `engine_timing` lowering wires `CompiledTiming::Linked` to the engine's link-established timing.
+- **Suggested DSL syntax:** `- when: when_linked` (optionally `scope: linked`) with a `process:` body (here: `select_hand` trash 1 Appmon → `draw 2`).
+- **Verdict:** BLOCKED (dsl). BT25-036 ships no YAML — its App-fusion alt-path, link condition, [Security] play-self, and OnPlay add-top-security + <Recovery +1> are all expressible, but the [When Linking] clause is its mandatory inherited payoff and cannot be silently dropped under the no-approximations policy.
+
+## BT25 "beatbreak" slice — BLOCKED / PARTIAL notes (2026-06-06)
+
+Implemented this slice: BT25-081 (IMPLEMENTED); BT25-088, BT25-090, BT25-049,
+BT25-035, BT25-041 (PARTIAL — each ships its expressible clauses with one
+BLOCKED clause omitted). BT25-057 BLOCKED. Cross-references below; the
+controlling engine gap for the cost-reduction clauses is
+`G-COST-REDUCTION-INTERACTIVE-PAY-COST` in `docs/RUST_ENGINE_GAPS.md`.
+
+### Glowing Dawn "trash a face-down card under a Tamer → reduce a card's cost" — BLOCKED (engine)
+- **Cards:** BT25-088 Kyo Sawashiro (clause 3, play -1), BT25-090 Tomoro Tenma
+  (clause 3, Option-use -1), BT25-049 Armalizamon (clause 2, Option-use -3),
+  and the cost-reduced half of BT25-041's main clause.
+- **What's missing:** `kind: cost_reduction` with a `pay_cost` that installs an
+  interactive selection drops the reduction credit. The
+  `trash_bottom_face_down_source_under_tamer` verb ALWAYS installs a Tamer-pick
+  selection (no-approximations), so as a `pay_cost` it parks
+  (`RunOutcome::Parked`), `apply_cost_reduction_candidate` returns `None`, and
+  the `amount` is discarded while the face-down card is still trashed. Full
+  root-cause + suggested engine fix in `docs/RUST_ENGINE_GAPS.md`
+  `G-COST-REDUCTION-INTERACTIVE-PAY-COST`. (The same verb works fine as a
+  *process activation cost* — see BT25-041's inherited unsuspend and BT25-057's
+  De-Digivolve, which DO compile.)
+- **Verdict:** the affected clause is OMITTED from each card's YAML (PARTIAL);
+  authoring it would either drop the reduction (over-charge) or require
+  auto-resolving the Tamer pick (no-approximations violation).
+
+### BT25-035 Cougarmon — trash-2 free-digivolve — BLOCKED (dsl)
+- The "Then, by trashing 2 bottom face-down cards … may digivolve into a
+  [Glowing Dawn] card in hand for free" half is the existing
+  `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER` gap (multi-count / multi-Tamer
+  trash) plus an effect-driven free-digivolve-into-a-hand-card. Omitted; the
+  -3000 DP, inherited Barrier, and Glowing Dawn alt-digivolve ship (PARTIAL).
+
+### BT25-057 Monarchlizamon / "Final Judgment" — DUAL card — BLOCKED (hybrid)  [G-DSL-DUAL-PER-FACE-EFFECTS + G-DSL-ARTS-DIGIVOLVE]
+- **Note:** `data/cards.json` mislabels this as a plain Digimon (`card_kind: 0`).
+  The card IMAGE + DCGO `BT25_057.cs` confirm it is a **DUAL** card: a Lv.5
+  Cyborg/Glowing Dawn/BEATBREAK Digimon face AND an Option face "Final
+  Judgment" (Use 4).
+- **What's missing (DSL):** `digimon-dsl`'s `DualSpec` (`spec.rs`) carries only
+  metadata + text for each face (`DualDigimonSpec` / `DualOptionSpec` have NO
+  `effects:` field). A dual card therefore cannot attach behavioral clauses to
+  either face via the `dual:` block. (Whether a dual card's top-level `effects:`
+  route correctly to its Digimon face is also unexercised — no shipping card
+  uses `kind: dual` with effects, and the `tests/dual_cards/` suite drives only
+  hand-written `CardData`.)
+- **What's missing (engine/DSL — Arts Digivolve):** the Option face's "Arts
+  Digivolve (instead of trashing after use, your cards may digivolve into this
+  card without paying the cost)" has no DSL authoring path. `Keyword::ArtsDigivolve`
+  exists and the engine has `install_arts_digivolve_selection` /
+  `pending_option_can_arts_digivolve` (checked against `dual.option.keywords`),
+  but `DualOptionSpec.keywords` (a `Vec<String>`) is the only hook and the full
+  arts-digivolve authoring + behavioral path is untested from YAML.
+- **Card faces (all individually expressible IF the dual-per-face-effects gap
+  closes):** Digimon face — alt-digivolve Lv.4 Glowing Dawn cost 3; [WD][WA][OPT]
+  trash a bottom face-down card under a Tamer (process cost, works) → De-Digivolve
+  1 opp Digimon; [WD] this Digimon may battle 1 opp Digimon (`battle:`). Option
+  face — Use Req Glowing Dawn (ignore color), [Main] 1 of your Digimon gains
+  <Rush> + <Security A. +1> + 5000 DP for the turn, then may attack; Arts
+  Digivolve.
+- **Suggested DSL syntax:** add `effects:` (and optionally `inherited`/`security`
+  scoping) to `DualDigimonSpec` and `DualOptionSpec`, lowering each face's
+  clauses onto the appropriate face of the compiled dual card; add an
+  `arts_digivolve: true` shorthand (or `keywords: [ArtsDigivolve]`) on the
+  option face wired to the existing engine arts-digivolve selection.
+- **Verdict:** BLOCKED (hybrid). BT25-057 ships no YAML — both faces' behavioral
+  effects are unauthorable and shipping a stat-only dual card with a
+  non-functional Option face would be an approximation.
+
+---
+
+## G-DSL-SELECT-OPP-SOURCES-DYNAMIC-CROSS-PERMANENT — player-choice trash of a dynamic count of opponent digivolution source cards across all opponent Digimon
+- **Discovered by:** BT25-103 GraceNovamon (aegiomon-3 slice), 2026-06-06.
+- **Clause:** "[When Attacking] [Counter] [Once Per Turn] For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon. Then, you may end this attack."
+- **DCGO (BT25_103.cs):** `CardEffectCommons.SelectTrashDigivolutionCards(permanentCondition: IsEnemyDigimon, maxCount: card.PermanentOfThisCard().DigivolutionCards.Count, canNoTrash: true, isFromOnly1Permanent: false, ...)` — the player picks up to N digivolution source cards (N = this Digimon's digivolution-card count) from **any** opponent Digimon (not restricted to one permanent), each pick optional. Then a separate Yes/No "end the attack?" prompt.
+- **What the DSL has:** `select_opponent_sources` (BindingRef-bound source picker) with `min`/`max` as **`u8` literals** and an optional `target` that **restricts the picker to ONE opponent permanent's** digivolution stack (see BT16-085). `trash_selected_sources` + `end_attack` steps both exist; `Counter` timing and `once_per_turn` exist.
+- **Why blocked:** two missing capabilities on `select_opponent_sources`:
+  1. **Dynamic count** — `max` must accept a `FormulaSpec` (here `{ source_material_count: {} }`, the same formula clause 6's bounce uses), not just a literal `u8`.
+  2. **Cross-permanent selection** — when `target` is omitted, the picker must span **all** opponent Digimon's digivolution stacks (DCGO `isFromOnly1Permanent: false`), with each pick choosing both which Digimon and which source card.
+- **Lowers to engine API:** the selection machinery for opponent digivolution sources already exists (single-permanent path); the gap is (a) threading a formula-resolved max and (b) a cross-permanent candidate set. Likely a `max_fn: Option<FormulaSpec>` + a `cross_permanent: bool` (or `target` omitted ⇒ cross-permanent) on `SelectOpponentSourcesArgs` and the corresponding engine candidate enumeration.
+- **Suggested DSL syntax:**
+  ```yaml
+  - select_opponent_sources:
+      max_fn: { source_material_count: {} }   # dynamic count = this Digimon's digivolution cards
+      min: 0                                    # canNoTrash: true (each pick optional)
+      cross_permanent: true                     # span all opponent Digimon (isFromOnly1Permanent: false)
+      bind_as: trashed
+      then:
+        - trash_selected_sources: { source_refs: trashed }
+  ```
+- **Faithfulness impact:** stubbing this as `trash_top_n_digivolution_cards_of_each` (trashes the top-N of EACH opp Digimon with no player choice of which Digimon or which card) would be an auto-selection — a no-approximations violation. Card cannot ship until the dynamic-count cross-permanent source picker exists.
+- **Verdict:** BT25-103 BLOCKED (gap_kind: dsl). No YAML shipped (clauses 1–6 are expressible but the whole card is gated on the Counter clause).
+
+---
+
+## G-DSL-BATTLE-WINNER-BOARDWIDE — gate a trigger on "when any of your [trait] Digimon win a battle"
+- **Discovered by:** BT25-020 Marsmon (aegiomon-1 slice), 2026-06-06.
+- **Clause:** "[All Turns] [Once Per Turn] When any of your [TS] trait Digimon win a battle, trash your opponent's top security card."
+- **DCGO (BT25_020.cs):** `EffectTiming.OnEndBattle` ActivateClass, OPT, gated by `CardEffectCommons.CanTriggerWhenWinBattle(winnerCondition: permanent => permanent.TopCard.Owner == card.Owner && permanent.TopCard.HasTSTraits)`. The trigger fires whenever ANY winner permanent on the controller's side has the [TS] trait — not just the carrier itself.
+- **What the DSL has:** `source_deleted_battle_opponent: true` predicate — fires only when the **carrier** is the battle winner (the "this Digimon wins a battle" idiom, ST4-11; used by BT25-048/051/054). There is **no** board-wide "any ally with trait X won a battle" predicate, and `on_any_deletion`'s `event_target_*` predicates describe the **deleted** permanent (the loser), not the winner.
+- **Why blocked:** the body (`trash_top_security: { of: opponent }`) and `once_per_turn` exist, but the trigger cannot be gated to "any of your [TS] Digimon win a battle". Shipping it on `on_any_deletion` ungated would fire on every deletion (including the opponent's wins) — an approximation. Narrowing to `source_deleted_battle_opponent` would silently drop the board-wide scope (only the carrier's own wins would count) — also an approximation.
+- **Lowers to engine API:** a battle-resolution event already exists (security checks, deletion). The gap is exposing the **winner** permanent (controller + trait) to the triggered-effect predicate layer: e.g. a new timing `on_ally_won_battle` (or `on_battle_end` with `event_winner_*` predicates: `event_winner_owner`, `event_winner_trait_has`).
+- **Suggested DSL syntax:**
+  ```yaml
+  - when: on_ally_won_battle        # fires when a permanent the controller owns wins a battle
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_winner_trait_has: TS
+    process:
+      - trash_top_security: { of: opponent }
+  ```
+- **Faithfulness impact:** BT25-020's other clauses (mandatory cost reduction; [OP][WD][WA] +3000 DP + may-battle) are fully expressible, but the card cannot ship faithfully until the board-wide battle-winner predicate exists. No YAML shipped.
+- **Verdict:** BT25-020 BLOCKED (gap_kind: dsl).
+
+## G-DSL-PROTECT-OTHER-BY-SELF-DELETE — board-wide "when another of your X would leave, by deleting THIS Digimon, they don't leave"
+- **Discovered by:** BT25-039 Sirenmon (aegiomon-1 slice), 2026-06-06.
+- **Clause:** "[All Turns] When any of your other [Shaman] or [Iliad] trait Digimon or Tamers would leave the battle area other than by your effects, by deleting this Digimon, they don't leave."
+- **DCGO (BT25_039.cs):** `EffectTiming.WhenRemoveField` ActivateClass whose `CanUseCondition` matches when **another** owner permanent (Digimon or Tamer, Shaman/Iliad trait, `!IsByEffect(owner)`) would leave; the body deletes THIS permanent (`DeletePeremanentAndProcessAccordingToResult`) and, on success, sets `willBeRemoveField = false` on all such protected permanents (cancels their leave).
+- **What the DSL has:** the existing replacement substrate (`kind: replacement`, `trigger: when_would_leave_battle_area`) and the `Keyword::Decode`/Barrier/Evade auto-installs are all **self-scoped** — they only fire on the carrier's own would-leave (the `replacement_subject == me` guard in `keyword_effects.rs`). There is no replacement/observer that fires on **another** permanent's would-leave with a trait/owner filter and cancels it by paying a self-deletion cost.
+- **Why blocked:** modeling this needs (a) a would-leave replacement whose **subject is a filtered set of OTHER owner permanents** (not self), (b) a cost step that deletes the carrier, and (c) cancelling the original leave for every matching protected permanent. None of these compose from current vocabulary.
+- **Lowers to engine API:** the parked-replacement substrate (`cancel_leave` / `handle_replacement`) and `delete_permanent` exist; the gap is a replacement clause with a non-self subject filter (`replacement_subject_is_mine` exists as a predicate but only on the carrier path) plus a cause filter (`other than by your effects`).
+- **Suggested DSL syntax:**
+  ```yaml
+  - kind: replacement
+    trigger: when_other_would_leave_battle_area
+    subject_filter:
+      all_of:
+        - of: you
+        - other: true
+        - any_of: [ { kind: digimon }, { kind: tamer } ]
+        - any_of: [ { trait_has: Shaman }, { trait_has: Iliad } ]
+    active_when: { none_of: [ { replacement_cause: own_effect } ] }
+    process:
+      - delete_permanent: { target: source }   # cost
+      - cancel_leave: { target: replacement_subject }
+  ```
+- **Verdict:** contributes to BT25-039 BLOCKED (gap_kind: dsl).
+
+## G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER — security-zone End-of-Turn play of a named card at reduced cost, then place this security card as the played Digimon's bottom digivolution source
+- **Discovered by:** BT25-039 Sirenmon (aegiomon-1 slice), 2026-06-06.
+- **Clause:** "[Security] [End of Your Turn] You may play 1 [Ceresmon] from your hand with the cost reduced by 7. If this effect played, you may place this card as the played Digimon's bottom digivolution card."
+- **DCGO (BT25_039.cs):** `EffectTiming.OnEndTurn` ActivateClass gated by `IsExistInSecurity(card, false)` (this card is face-up/in the security stack) `&& IsOwnerTurn`. Body: `SelectHandEffect` Mode.PlayForCost over `EqualsCardName("Ceresmon") && CanPlayAsNewPermanent(fixedCost: cost-7)` with `SetReducedCostTuple((7, null))`; then a Yes/No prompt to `AddDigivolutionCardsBottom([this])` onto the played Ceresmon and `ReduceSecurity()` (move self out of security under the new Digimon).
+- **What the DSL has:** security-scope clauses exist (`scope: security`), `end_of_your_turn` timing exists, and `play_from_hand` with cost reduction exists. What is missing: (a) a security-zone EOT trigger keyed on **this card living in the security stack** (not a face-up battle-area permanent), and (b) a "place THIS security card as the just-played permanent's bottom digivolution source" movement that consumes the play result binding.
+- **Lowers to engine API:** play-from-hand-reduced and add-to-digivolution-bottom both have engine primitives; the gap is the security-resident self trigger at EOT plus binding the freshly-played permanent and moving this security card under it.
+- **Suggested DSL syntax:**
+  ```yaml
+  - scope: security
+    when: end_of_your_turn
+    optional: true
+    process:
+      - play_from_hand:
+          of: you
+          filter: { name_contains: "Ceresmon" }
+          cost_delta: { reduce: 7 }
+          bind_played_as: ceres
+      - if: { binding_present: ceres }
+        then:
+          - place_self_as_bottom_source: { of_permanent: ceres }   # move this security card under the played Digimon
+  ```
+- **Verdict:** contributes to BT25-039 BLOCKED (gap_kind: dsl).
+
+## G-DSL-BEATBREAK-ARTS-OPTION — no dual Digimon+Option (BEATBREAK / Arts Digivolve) identity
+- **Discovered by:** BT25-043 Habakirimon (aegiomon-2 slice), 2026-06-06. (Same family blocks the Option side of every BEATBREAK card; cf. BT25-041 Murasamemon, which shipped Digimon-side-only.)
+- **Clause (Option side):** "Use Req: [Glowing Dawn] trait. [Main] 1 of your opponent's Digimon gets -8000 DP for the turn. Then, by trashing your top security card, all of your opponent's Digimon get -5000 DP for the turn. Arts Digivolve."
+- **DCGO (BT25_043.cs):** the card is BOTH a Digimon and an Option — `EffectTiming.OptionSkill` (the [Main] play body) plus `CardEffectFactory.ArtsDigivolveEffect` and `UseRequirements`. A BEATBREAK card can be played as a Digimon OR used as an Option (Arts Digivolve).
+- **What the DSL has:** `kind: digimon` and `kind: option` are mutually exclusive top-level kinds; there is no `arts_digivolve` alt-path kind (`CompiledAltPathKind` has Digivolve/DnaDigivolve/DigiXros/BurstDigivolve/Assembly/ActivatedDigivolve/BlastDnaDigivolve — no Arts) and no way to attach an Option `[Main]` clause to a `kind: digimon` card.
+- **Lowers to engine API:** would need an engine notion of a card with two play identities (Digimon stat-line + Option [Main]/Arts-Digivolve), surfaced to the action space as two distinct play actions.
+- **Suggested DSL syntax:** a `kind: beatbreak` (or `also_option:` block on a Digimon) carrying the Option [Main] `process:` and an `arts_digivolve:` alt-path.
+- **Verdict:** contributes to BT25-043 PARTIAL (gap_kind: dsl). Digimon-side clauses (Recovery+unsuspend, Glowing-Dawn leave-prevention) ship; the Option side is omitted (per the BT25-041 precedent).
+
+## G-DSL-PLAYER-CANNOT-SUSPEND-FILTER — player-level CannotSuspend/effect-immunity with a dynamic permanent filter
+- **Discovered by:** BT25-028 Dianamon and BT25-059 Ceresmon (aegiomon-2 slice), 2026-06-06.
+- **Clause (Dianamon):** "None of your opponent's Digimon with 1 or fewer digivolution cards can suspend until their turn ends." **(Ceresmon):** "none of your suspended [Vegetation] or [TS] trait Digimon are affected by your opponent's Digimon effects until their turn ends."
+- **DCGO:** installs a player-level `CanNotSuspendClass` / `CanNotAffectedClass` carrying a `PermanentCondition` that is **re-evaluated on each suspend attempt** (Dianamon: `DigivolutionCards.Count <= 1`; Ceresmon: own suspended Veg/TS). So a Digimon that becomes eligible LATER this turn is also covered.
+- **What the DSL has:** `add_player_modifier` (`AddPlayerModifierArgs`) installs a blanket player modifier with NO permanent filter; per-target `add_modifier`/`grant_effect_immunity` only apply to a specific bound permanent.
+- **Current modelling:** a `for_each` over the currently-matching set applying the per-target modifier at install time (a snapshot). Practical per-turn outcome matches in the common case; the dynamic re-check nuance (a permanent that enters the matching set later in the turn) is lost.
+- **Suggested DSL syntax:** `add_player_modifier:` with an optional `permanent_filter:` predicate that the engine re-evaluates per suspend/effect-application.
+- **Verdict:** modelled as a documented snapshot; both cards ship IMPLEMENTED with this nuance noted.
+
+## G-DSL-BOARD-LEVEL-SUM — no board-wide level/stat sum predicate
+- **Discovered by:** BT25-077 Bacchusmon (aegiomon-2 slice), 2026-06-06.
+- **Clause:** "When this card would be played, if there are 12 or more levels' total worth of Digimon, reduce the cost by 5."
+- **DCGO (BT25_077.cs):** sums `permanent.Level` across ALL battle-area Digimon of BOTH players and checks `>= 12`.
+- **What the DSL has:** `count_gte` (counts permanents), `card_count_in_zone` (counts cards in a zone), per-permanent `level_*` predicates, and `source_stack_dp_sum` (one permanent's stack) — but NO aggregate that sums a stat (level / DP) across a player/board set.
+- **Suggested DSL syntax:** a `board_level_sum_gte` / `stat_sum` predicate (e.g. `{ stat: level, scope: any, zone: battle_area, kind: digimon } >= N`).
+- **Verdict:** contributes to BT25-077 PARTIAL (gap_kind: dsl). The cost-reduction clause is omitted (rather than approximated); the two main clauses ship.
+
+## G-DSL-SELF-COLOR-COUNT-LTE — no "distinct colors <= N" / "without N colors" base filter
+- **Discovered by:** BT25-084 Titamon (aegiomon-2 slice), 2026-06-06.
+- **Clause (alt-digivolve box):** "[Digivolve] [Titamon] w/o 3 colors: Cost 2."
+- **DCGO (BT25_084.cs):** `AddSelfDigivolutionRequirementStaticEffect(permanentCondition: TopCard.EqualsCardName("Titamon") && TopCard.CardColors.Distinct().Count() != 3, cost 2)`.
+- **What the DSL has:** `self_color_count_gte` (>= only). There is no `self_color_count_lte` / `!= N` for the base-card `from:` filter.
+- **Suggested DSL syntax:** `self_color_count_lte: N` (and/or `self_color_count_eq`) usable inside an alt-path `from:` predicate.
+- **Verdict:** contributes to BT25-084 PARTIAL (gap_kind: dsl). The standard Lv.5 Purple and Lv.5 [TS] cost-4 alt-paths ship; the Titamon-3-color cost-2 path is omitted.
+
+## DSL Vocabulary ADDED: DigiLink Shape-B (Appmon Link Digimon)  [G-DSL-DIGILINK] — LANDED 2026-06-06
+- **Status:** LANDED 2026-06-06 (OpenSpec `implement-digilink-mechanic` §7). New YAML vocabulary for authoring Shape-B Appmon Link *Digimon* (the `[Link]` keyword on `kind: digimon` cards, e.g. BT21-009 Gatchmon) — distinct from the existing Option-scoped `kind: link_requirement` (Plug-Ins).
+- **Scope:** DSL.
+- **Added vocabulary:**
+  - `kind: link_condition` (declarative, body `{ cost, filter }`) — a Digimon's static self link-condition. Lowers to `Effect::link_condition(card).link_host(cost, filter)` at `EffectTiming::LinkCondition`, read by `Game::digimon_link_condition_targets`. Reuses `LinkRequirementBody`.
+  - `when: when_linked` (timing) — "when this Digimon gets linked". Lowers to `EffectTiming::OnLink` + forced `.linked()` + an injected self-filter (`event_card == source_card`) so it fires once for the just-linked card, not on sibling links (design D6). Use on a `scope: linked` effect.
+  - `scope: linked` + `kind: grant_keyword` (and DP grants) — a linked card's Link-ESS now sets `.linked()` (previously only `scope: inherited` set `.inherited()`), so the grant materializes onto the HOST via the `tick_declarative_effects` linked-card pass (mirrors DCGO `RaidSelfEffect(isLinkedEffect: true)`).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- dsl_digimon_link_card_full_flow` (authors a full Appmon Link Digimon in YAML — link_condition + when_linked draw + linked Raid ESS — and exercises the real link-activate → absorb → OnLink path).
+- **Residual:** from-hand Digimon-link initiation + rarer source origins (trash / under-stack / re-link) are not yet wired (engine-side); see `docs/RUST_ENGINE_GAPS.md` 2026-06-06 Shape-B note. Authoring the *named* acceptance cards (BT21-009 Gatchmon etc., with their alt-digivolve / specific WhenLinked bodies) is the §2 follow-up.
+
+## BT25 "link-ts" slice — BLOCKED card (2026-06-07)
+
+Re-run of the BT25 link-ts slice (BT25-069, BT25-066, BT25-075, BT25-101, BT25-102, BT25-089)
+against the post–DigiLink-Shape-B substrate (commit 5514135c, 2026-06-07). Shape-B added the
+player-activated link of a *standing Digimon onto a host* (root `None`) plus the `kind: link_condition`
+/ `when: when_linked` / `scope: linked` authoring layer — but it did **NOT** add a verb/primitive for
+"link a card **chosen from trash / hand / digivolution-cards** to one of your Digimon as an effect"
+(the deferred residual at `docs/RUST_ENGINE_GAPS.md` §"[Link] subsystem", Shape-B note line ~585:
+"from-hand Digimon-link initiation and the rarer source origins (trash / under-stack / re-link) are
+not yet wired"). All six slice cards remain BLOCKED on that same residual. Five were already tracked
+(BT25-069/066/101 here; BT25-102 in engine-gaps; BT25-089 in RUST_ENGINE_GAPS); BT25-075 is added below.
+
+### BT25-075 Vulcanusmon — link up-to-2 chosen cards from {hand|trash} + per-link <De-Digivolve 1> + aura <Link +1>  [gap_kind: hybrid]
+- **Card(s):** BT25-075 Vulcanusmon (Lv.6 Black, Undead/Titan/TS).
+- **Effect text:**
+  - `When this card would be played, if you have fewer Digimon than your opponent, reduce the cost by 5.` (expressible — fewer-own-Digimon cost reducer.)
+  - `[On Play] [When Digivolving] You may link up to 2 cards from your hand or trash to any of your Digimon without paying the cost. Then, for each of your link cards, <De-Digivolve 1> all of your opponent's Digimon.` — **BLOCKED.** Linking up-to-2 cards **chosen from hand or trash** (DCGO `BT25_075.cs`: per-card `SetIntSelection` "from Hand / from Trash / Do not link" → `ILinkCard`) is exactly the deferred "link a chosen card from hand/trash" primitive (cross-ref BT25-069/072/101/056/089 and `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem facet #9). The `link_to_own_digimon` DSL verb links only the carrier Option; there is no verb to attach an arbitrary hand/trash card as a link to *any* of your Digimon. The follow-up `<De-Digivolve 1> all opp Digimon for each of your link cards` is expressible in isolation but can only fire after the (unauthorable) link step, so it cannot ship.
+  - `[All Turns] All of your [TS] trait Digimon gain <Rush> and <Link +1>.` — Rush grant is expressible (`grant_keyword: Rush` aura); the **`<Link +1>`** grant is **BLOCKED** by the same engine gap as BT25-102 (`G-ENGINE-AURA-GRANT-LINK-MAX` in `qa/archetype-qa/engine-gaps.md` — auras apply `ModifierType::ChangeLinkMax` with a hardcoded value of 0, so a +1 max-link grant is unauthorable without an approximation).
+  - `[Your Turn] When your Digimon get linked, one of them may attack.` — depends on a `WhenLinked` host trigger over *any* of your Digimon getting linked (not the self-link of `when: when_linked`, which is self-filtered to the just-linked card). Even were that authorable, it is downstream of the blocked link step.
+- **What's missing (two facets):**
+  1. **Link N chosen cards from hand/trash to any own Digimon (free).** Engine has the link substrate (`Permanent.linked_cards`, `attach_linked_card`) but no effect-driven "pick a card from hand/trash and attach it as a link to a chosen Digimon" path; the DSL has no verb. (Shape-B only absorbs a *standing Digimon* onto a host.)
+  2. **Aura-granted `<Link +1>` carrying a non-zero value** — `G-ENGINE-AURA-GRANT-LINK-MAX` (engine; see engine-gaps.md).
+- **Lowers to engine API:** facet 1 → a new effect-link-chosen-card primitive over `Permanent.linked_cards`; facet 2 → `ModifierType::ChangeLinkMax(+1)` via an aura modifier that can carry a value.
+- **Verdict:** BLOCKED (hybrid). Ships no YAML — every active clause depends on the chosen-card link primitive and/or the valued aura-Link+1 grant. Cross-ref BT25-069/072/101/056/089, BT25-102 (`G-ENGINE-AURA-GRANT-LINK-MAX`), and `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem.
+
+## DSL Vocabulary ADDED: host-side `[When Linked]` timing  [G-DSL-WHEN-LINKED-HOST] — LANDED 2026-06-07
+- **Status:** LANDED 2026-06-07. New timing `when: when_card_linked_to_this` — the host-POV "[When Linked] when a card gets linked **to this Digimon**" (DCGO `CardEffectCommons.CanTriggerWhenLinked`). Lives on a face-up `scope` effect on the host. Lowers to `EffectTiming::OnLink` + a host self-filter (`event_permanent() == source_permanent`) so it fires once for the receiving host only, not for a sibling host. Distinct from the card-POV `when: when_linked` (`event_card == source_card`).
+- **Scope:** DSL. Plumbing: `Timing::WhenCardLinkedToThis` (clause.rs) → `CompiledTiming::WhenCardLinkedToThis` (compiled.rs / compile.rs) → `timing_map.rs` (→ `OnLink`) + `lower_triggered.rs` (`is_host_linked` forces the host self-filter).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- dsl_host_side_when_card_linked_to_this_fires_on_attach host_side_when_linked_fires_for_receiving_host_only`.
+
+## LANDED: `link_card_to_self` step (facet #9 authoring verb)  [G-DSL-LINK-CARD-FROM-ZONE]
+- **Status:** LANDED 2026-06-07. DSL step `link_card_to_self` authored: `{ from: [hand|trash|digivolution_sources], filter: PredicateSpec, to: self|chosen_own_digimon (default self), cost: u16 (default 0), optional: bool }`. Lowering in `code/digimon-engine/src/dsl_cards/step/link_card.rs` gathers candidates across the requested zones into ONE RL-visible `SelectionKind::Target` prompt (no auto-pick — disjoint per-zone action ranges so the union is unambiguous), and on resolution computes effective cost (`cost + link_cost_delta_for_player`).max(0), pays it, and calls the primitive `Game::link_chosen_card_into_host(host, chosen, source_zone)`. With `to: chosen_own_digimon` a SECOND RL-visible selection over the controller's standing Digimon picks the host ("link to 1 of your Digimon" — e.g. BT25-069/089). DSL surface: `StepSpec::LinkCardToSelf` / `LinkCardToSelfArgs` / `LinkFromZone` / `LinkToHost` in `code/digimon-dsl/src/step.rs`; `CompiledStep::LinkCardToSelf` in `compiled.rs`; lowering in `compile.rs`. **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- link_card_to_self_links_chosen_hand_card_pays_cost_and_fires_onlink link_card_to_self_applies_change_link_cost_reduction` (both green; first pins selection + cost + OnLink propagation via a host-side `when_card_linked_to_this` reaction, second pins the `ChangeLinkCost` reduction path). Chosen-host path pinned by `bt25_069_on_play_links_ts_from_trash_to_chosen_own_digimon` + `bt25_089_main_links_appmon_from_hand_to_chosen_digimon`. Cards authored on it: BT25-052/056/070/072 (self-host), BT25-069/089 (chosen-host). Pairs with facet #10's flat `ChangeLinkCost`.
+- **Cost-modeling note:** the printed "with the cost reduced by N" is a reduction on the LINKED card's own link cost. DSL card fixtures carry no engine-side link cost on the linked candidate, so cards author `cost: 0` (the reduction makes the typical 1–2 link free in practice); the flat `ChangeLinkCost` path covers any nonzero residual. Faithful for the no-engine-link-cost fixtures; revisit if a linked candidate carries a nonzero engine link cost.
+- **Residual (NOT yet authored — separate gaps):**
+  - `G-DSL-LINK-N-CARDS-PER-HOST` (BT25-075): "link up to 2 cards from hand/trash, each to a *separately chosen* Digimon" — the single-card step does not loop with per-card host selection. Needs a `count: N` extension that repeats the (card → host) pair selection. **NOT done — BT25-075 left BLOCKED.**
+  - `G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES` (BT25-089 [Main]): "from your *Digimon's* digivolution cards" scans EVERY own Digimon's under-sources; the step's `digivolution_sources` zone anchors only to the effect's own permanent. BT25-089 authored the hand source (PARTIAL — that source clause omitted).
+- **Superseded OPEN notes below (historical):**
+- **gap_kind:** dsl.
+- **What it authors:** "[…] you may link 1 [card matching FILTER] from your hand / this Digimon's digivolution cards / your trash to this Digimon […]" (DCGO `ILinkCard.LinkCard` with `root != None` → `Permanent.AddLinkCard`). Representative card: **ST22-12** ("link 1 Digimon card with [Social]/[Navi]/[Tool] from your hand or this Digimon's digivolution cards to this Digimon with the link cost reduced by 2").
+- **Engine primitive (ready, exposed):** `EffectContext::link_chosen_card_into_host(host, card, LinkCardSource)` → `Game::link_chosen_card_into_host` — lifts the chosen card out of `LinkCardSource::{Hand|Trash|DigivolutionSource}`, attaches onto the host's `linked_cards`, fires `OnLink`. Tested: `facet9_link_chosen_card_from_hand_attaches_and_fires_onlink`, `facet9_link_chosen_card_from_digivolution_sources`.
+- **Remaining DSL surface:** a `StepSpec` (e.g. `link_card_to_self: { from: [hand, digivolution_sources, trash], filter: PredicateSpec, cost: N, optional: bool }`) that (1) gathers candidate cards across the chosen zones, (2) installs the zone→card selection, (3) on resolution computes effective cost (`base − link_cost_delta_for_player`), pays it, and calls the primitive with the host = the effect's own permanent. Distinct from the existing `link_to_own_digimon` step (Plug-In Option self-link, host-selection, tied to `pending_option`). Pairs with facet #10's flat `ChangeLinkCost` for the "link cost reduced by N" clause.
+
+## DEFERRED (no card needs it): predicated `ChangeLinkCost` reduction  [G-DSL-LINK-COST-PREDICATED]
+- **Status:** DEFERRED-until-needed (not a blocking gap). The **flat** player-/permanent-scoped `ModifierType::ChangeLinkCost` (DSL-authorable; summed by `link_cost_delta_for_player`; consulted at all three link-cost sites) covers every real cost-reducer — DCGO's `GrantedReduceLinkCostClass` is invoked with `_ => true` for all of `cardSourceCondition`/`permanentCondition`/`rootCondition` (see ST22-12). DCGO's general `ChangeLinkCostClass` supports per-(source/host/root) predicates, but no printed card exercises them, so building predicated reduction now would be speculative machinery. File a concrete card here if one is found. Confirming test for the flat path: `facet10_change_link_cost_reduces_paid_link_cost`.
+
+## DSL Gap: BT25-075 — formula source "number of your own link cards" (total across all your Digimon)  [G-DSL-FORMULA-OWN-LINK-CARD-COUNT]
+- **Discovered by:** BT25-075 Vulcanusmon (link-finish-aura slice), 2026-06-07.
+- **Effect text:** "[On Play] [When Digivolving] You may link up to 2 cards from your hand or trash to any of your Digimon without paying the cost. **Then, for each of your link cards, ＜De-Digivolve 1＞ all of your opponent's Digimon.**"
+- **DCGO (BT25_075.cs):** `int degenerationCount = card.Owner.GetBattleAreaDigimons().Map(p => p.LinkedCards).Flat().Count();` then loops `IMassDegeneration(enemy Digimon, 1)` that many times — i.e. De-Digivolve 1 applied to **all** opponent Digimon, repeated N times where N = the total count of link cards across every one of the controller's battle-area Digimon (counted *after* the link step above resolves).
+- **What's already expressible (today):** the link half ships via the new `link_cards` step (`from: [hand, trash]`, `to: own_digimon`, `count: { up_to: 2 }`, `cost: free`) — that step was authored partly for this card (its doc names BT25-075). The `<Link +1>`/`<Rush>` `[All Turns]` aura ships via aura `modifier: ChangeLinkMax` + `modifier_value: 1` and `grant_keyword: Rush` (G-ENGINE-AURA-GRANT-LINK-MAX resolved 2026-06-07). The `de_digivolve` step exists with `amount` / `amount_fn` (FormulaSpec) and can target all opp Digimon.
+- **What's missing:** a **`FormulaSpec` / `PerSelector` source that counts own link cards**. `code/digimon-dsl/src/formula.rs` `PerSelector` has `MaterialCount`, `SuspendedCount`, `AllyCount`, `CardCountInZone`, etc., but nothing that sums `permanent.linked_cards.len()` across the controller's battle-area Digimon. Without it, `de_digivolve: { target: all_opp_digimon, amount_fn: <own-link-card-count> }` cannot be authored, and the De-Digivolve clause's magnitude (a player-visible board swing) cannot be modeled → no-approximations violation, whole card BLOCKED.
+- **Lowers to engine API:** the substrate exists — `Permanent.linked_cards` is populated and counted at multiple sites (e.g. `game_actions.rs:1494`, `tensor_v1.rs:267`). The missing piece is purely a DSL formula selector + its evaluator reading `ctx`'s controller battle-area Digimon and summing `linked_cards.len()`.
+- **Suggested DSL syntax:** a `FormulaSpec` variant `{ own_link_card_count: { of: you } }` (or a `PerSelector::OwnLinkCardCount { of }` usable in `base_per_delta`), evaluating to `Σ over of.battle_area Digimon of permanent.linked_cards.len()`. Used as `de_digivolve: { target: <all opp digimon>, amount_fn: { own_link_card_count: { of: you } } }` — but note DCGO applies De-Digivolve-1 N *separate* times to the whole opp board, not De-Digivolve-N once; the lowering must repeat the mass De-Digivolve-1 N times (or `amount: 1` with an outer `repeat: <formula>`), matching `IMassDegeneration(..., 1)` × N. A `repeat_n: <FormulaSpec>` wrapper around a step would also close this.
 
 ## LM-020 — return a selected SECURITY card to a deck  [G-DSL-RETURN-SELECTED-SECURITY-TO-DECK]
 

@@ -9,6 +9,7 @@ mod combat;
 mod digivolve;
 mod digixros;
 mod lifecycle;
+mod link;
 mod modifiers;
 mod play;
 mod refire;

@@ -1,0 +1,78 @@
+# BT25-007 Gatchmon — Digimon, Lv.3, Red, DP 2000, Cost 3.
+# Trait line: Search (App Name) — Appmon.
+#
+# DCGO BT25_007.cs (authoritative — cards.json mis-slots the WhenLinked clause
+# as the card's "inherited" text):
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 1)
+#       → kind: link_condition, cost 1, filter trait_has Appmon (host filter).
+#   - AddSelfDigivolutionRequirementStaticEffect(HasAppmonTraits, 0, lvl 2)
+#       → alt_paths digivolve from { level_eq: 2, trait_has: Appmon } cost 0.
+#   - OnEnterFieldAnyone (On Play): reveal top 3, add 1 Appmon + 1
+#       Social/Tool/Reboot/Creation, rest to deck bottom.
+#       → reveal_top_deck + select_reveal_buckets (two mandatory buckets,
+#         no_duplicate_cards) + add_to_hand_from_reveal x2 + place_remainder bottom.
+#   - WhenLinked (SetIsLinkedEffect true): delete 1 opp Digimon DP<=3000.
+#       → scope: linked, when: when_linked, delete via select_opponent_permanent
+#         filter dp_lte 3000.
+
+card: BT25-007
+name: Gatchmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Search, Appmon]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 1 ─────────────
+  - kind: link_condition
+    cost: 1
+    filter: { trait_has: Appmon }
+
+  # ─── [On Play] reveal 3; add 1 Appmon + 1 Social/Tool/Reboot/Creation ──────
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Appmon] and 1 [Social]/[Tool]/[Reboot]/[Creation]; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: appmon_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Appmon }
+            - bind_as: support_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_has: Social
+                  - trait_has: Tool
+                  - trait_has: Reboot
+                  - trait_has: Creation
+          no_duplicate_cards: true
+          prompt: "Add 1 [Appmon] card and 1 [Social]/[Tool]/[Reboot]/[Creation] card to the hand"
+      - add_to_hand_from_reveal: { of: you, card: appmon_pick }
+      - add_to_hand_from_reveal: { of: you, card: support_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── [When Linking] delete 1 opp Digimon with DP<=3000 ─────────────────────
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Delete 1 of your opponent's Digimon with 3000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 3000
+          prompt: "Delete 1 opponent Digimon with 3000 DP or less"
+      - delete_permanent: { target: del_target }

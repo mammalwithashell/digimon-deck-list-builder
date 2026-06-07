@@ -1,0 +1,188 @@
+# BT25-082 BlackGatomon — Digimon, Lv.4, Purple/Black, DP 6000, Cost 6.
+# Traits: Dark Animal, Iliad, TS. Attribute: Virus.
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   [On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1
+#   Tamer card with [Three Musketeers] in its text from your hand without paying
+#   the cost.
+#   [All Turns] While you have a Tamer with [Three Musketeers] in its text, this
+#   Digimon may digivolve into a [Three Musketeers] trait Digimon card for a
+#   digivolution cost of 4, ignoring digivolution requirements.
+#
+# Inherited Effect (inherited_effect_description_eng):
+#   [When Attacking] [Once Per Turn] By placing 1 [Three Musketeers] trait card
+#   from your hand or trash as this Digimon's bottom digivolution card,
+#   ＜Draw 1＞ (Draw 1 card from your deck.)
+#
+# Printed evo box (xros_req):
+#   "[Digivolve] Lv.3 w/[Three Musketeers] in text or w/[TS] trait: Cost 2"
+#   Standard evo_costs: Lv.3 Purple / Cost 3.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_082.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Digivolution Condition" (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(level: 3, permanentCondition:
+#   TopCard.HasText("Three Musketeers") || TopCard.EqualsTraits("TS"),
+#   digivolutionCost: 2, ignoreDigivolutionRequirement: false). This is the
+#   printed xros_req box — a requirement-respecting alt-source from a Lv.3 base
+#   whose top card carries [Three Musketeers] text OR the [TS] trait, cost 2.
+#   → `kind: digivolve` alt-path; `from: { level_eq: 3, any_of: [TM-text, TS] }`,
+#     cost 2, NO ignore_requirements (the standard colour check still applies).
+#
+# Region "Shared OP/WD" (onPlay + whenDigivolving, optional: false outer; inner
+#   SelectHandEffect canNoSelect: true → "you may"):
+#   AdditionalActivateCondition = owner has a TM-text Tamer in HAND
+#   (HasMatchConditionOwnersHand) && owner battle-area Tamer count <= 1. Body
+#   plays the chosen TM-text Tamer for free.
+#   → `when: [on_play, when_digivolving]`, `optional: true` (printed "may"),
+#     condition `count_lte` over own battle-area Tamers (n: 1), select_hand
+#     (kind: tamer + effect_text_contains "Three Musketeers"), play_from_hand_free.
+#
+# Region "All Turns" (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(permanentCondition: target ==
+#   card.PermanentOfThisCard(), cardCondition: IsDigimon && EqualsTraits("Three
+#   Musketeers"), digivolutionCost: 4, ignoreDigivolutionRequirement: true,
+#   condition: self-on-field && owner has a TM-text Tamer on battle area).
+#   The `permanentCondition: target == self` makes THIS Digimon the digivolve
+#   base, and `cardCondition` constrains the card digivolved INTO. This is the
+#   ST20-10 `direction: into` shape: the alt-path lives on the source card
+#   (BlackGatomon) and `from:` filters the destination card (a TM-trait Digimon
+#   in hand). `condition:` carries the "while you have a TM-text Tamer" gate.
+#   → `kind: digivolve`, `direction: into`, `from: { kind: digimon, trait_has:
+#     "Three Musketeers", zone: [hand], of: you }`, cost 4, ignore_requirements,
+#     condition: any TM-text Tamer on own battle area.
+#
+# Region "Inherited When Attacking" (OnAllyAttack), inherited, oncePerTurn 1:
+#   CanActivateCondition gates on a TM-trait card existing in HAND or TRASH.
+#   Body: choose hand-or-trash, SelectHand/SelectCard over TM-trait cards
+#   (canNoSelect: false once the area is chosen), AddDigivolutionCardsBottom
+#   (selected) then Draw 1. The "By placing ..." is a COST — mandatory once the
+#   clause activates, but the OUTER trigger is optional ("you may" is implied by
+#   the cost-payment idiom for [When Attacking] OPT effects; DCGO oncePerTurn 1).
+#   → `scope: inherited`, `when: when_attacking`, `once_per_turn: true`,
+#     `optional: true` (the player may decline the whole trigger),
+#     select_union_zone (hand/trash, trait_has TM) → place_as_bottom_source
+#     (target: source) → draw 1.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                  | Status |
+# |--------------------------------------------------------------------|--------|
+# | Std digivolve Lv.3 Purple / Cost 3                                 | IMPLEMENTED (printed evo_costs; engine reads cards.json) |
+# | Alt-source Lv.3 w/[Three Musketeers] text or [TS] trait / Cost 2   | IMPLEMENTED (alt_paths kind: digivolve) |
+# | [On Play][When Digivolving] if <=1 Tamer, may free-play TM-text Tamer | IMPLEMENTED (optional + count_lte gate + select_hand + play_from_hand_free) |
+# | [All Turns] while TM-text Tamer, may digivolve into TM Digimon cost 4 ignore reqs | IMPLEMENTED (alt_paths direction: into + condition) |
+# | [Inherited][WA][OPT] place TM card from hand/trash as bottom source → Draw 1 | IMPLEMENTED (select_union_zone + place_as_bottom_source + draw) |
+
+card: BT25-082
+name: BlackGatomon
+kind: digimon
+level: 4
+color: [purple, black]
+cost: 6
+dp: 6000
+traits: [Dark Animal, Iliad, TS]
+attribute: Virus
+
+alt_paths:
+  # ─── Printed evo box alt-source: Lv.3 base w/[Three Musketeers] text or [TS]
+  # trait, cost 2 (requirement-respecting — colour check still applies). ───────
+  - kind: digivolve
+    from:
+      level_eq: 3
+      any_of:
+        - effect_text_contains: "Three Musketeers"
+        - trait_has: TS
+    cost: 2
+
+  # ─── [All Turns] into-path: this Digimon (source) may digivolve INTO a
+  # [Three Musketeers] trait Digimon card in hand for cost 4, ignoring
+  # digivolution requirements, while you have a TM-text Tamer. ─────────────────
+  - kind: digivolve
+    direction: into
+    from:
+      kind: digimon
+      trait_has: "Three Musketeers"
+      zone: [hand]
+      of: you
+    cost: 4
+    ignore_requirements: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        effect_text_contains: "Three Musketeers"
+
+effects:
+  # ─── Clause 1: [On Play][When Digivolving] free-play TM-text Tamer ──────────
+  #
+  # "If you have 1 or fewer Tamers, you may play 1 Tamer card with [Three
+  # Musketeers] in its text from your hand without paying the cost."
+  #
+  # `optional: true` installs the outer accept/decline ("you may"). The
+  # `count_lte` gate counts the controller's battle-area Tamers (<= 1). The
+  # inner `select_hand` picks a TM-text Tamer; `play_from_hand_free` plays it
+  # without paying the cost. `effect_text_contains` scans the card's printed
+  # text (sibling idiom: BT24-088 Asuna).
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] If <=1 Tamer, may free-play 1 [Three Musketeers]-text Tamer from hand"
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer_pick
+          filter:
+            all_of:
+              - kind: tamer
+              - effect_text_contains: "Three Musketeers"
+          prompt: "Play 1 Tamer with [Three Musketeers] in its text from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: tamer_pick }
+
+  # ─── Clause 2: Inherited [When Attacking][OPT] place TM source → Draw 1 ─────
+  #
+  # "[When Attacking] [Once Per Turn] By placing 1 [Three Musketeers] trait card
+  # from your hand or trash as this Digimon's bottom digivolution card,
+  # ＜Draw 1＞."
+  #
+  # `scope: inherited` + `when: when_attacking` + `once_per_turn: true`. The
+  # outer trigger is `optional: true` (the player may decline). "By placing ..."
+  # is the cost: `select_union_zone` over hand+trash for a TM-trait card, then
+  # `place_as_bottom_source` under the carrier (`target: source`), then Draw 1.
+  # The select is NOT optional once the trigger is accepted — it is the cost
+  # that must be paid for the Draw (reference_dsl_optional_mandatory_selection:
+  # the inner select stays mandatory; only the outer trigger is optional).
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[Inherited][When Attacking][OPT] Place 1 [Three Musketeers] card from hand/trash as this Digimon's bottom source → Draw 1"
+    # DCGO CanActivateCondition gates the trigger on a TM-trait card existing in
+    # HAND or TRASH (HasMatchConditionOwnersHand || ...InTrash). Without it the
+    # cost ("By placing ...") cannot be paid, so the trigger must not surface.
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          trait_has: "Three Musketeers"
+        n: 1
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: tm_card
+          filter:
+            trait_has: "Three Musketeers"
+          prompt: "Place 1 [Three Musketeers] trait card from your hand or trash as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: tm_card
+          target: source
+      - draw: { of: you, count: 1 }

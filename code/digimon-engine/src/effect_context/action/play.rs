@@ -373,6 +373,21 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         card: CardHandle,
     ) -> Option<PermanentHandle> {
+        self.play_from_revealed_with_cost(player, card, crate::enums::CostDelta::Free)
+    }
+
+    /// Reduced-cost sibling of [`play_from_revealed_free`]: play a specific card
+    /// from the reveal pool paying `cost_delta` (e.g. `CostDelta::Reduce(5)` for
+    /// "with the cost reduced by 5"), routing through the same hand-transit play
+    /// pipeline. The underlying `play_from_hand_with_cost_result_from_origin`
+    /// already accepts any `CostDelta`; the free variant just pins it to `Free`.
+    /// G-DSL-PLAY-FROM-REVEALED-COST-REDUCED (BT25-074 shape).
+    pub fn play_from_revealed_with_cost(
+        &mut self,
+        player: PlayerId,
+        card: CardHandle,
+        cost_delta: crate::enums::CostDelta,
+    ) -> Option<PermanentHandle> {
         let reveal_index = self
             .game
             .revealed_cards
@@ -387,7 +402,7 @@ impl<'a> EffectContext<'a> {
         match self.game.play_from_hand_with_cost_result_from_origin(
             player,
             hand_index,
-            crate::enums::CostDelta::Free,
+            cost_delta,
             PlaySource::ByEffect,
             false,
             PendingWouldPlayOrigin::Reveal {

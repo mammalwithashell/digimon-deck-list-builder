@@ -1,0 +1,137 @@
+# BT25-059 Ceresmon — Digimon, Lv.6, Green/Blue, DP 12000, Cost 12.
+# Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Data.
+# Standard digivolution: Lv.5 Green / cost 4 (printed evo_costs).
+#
+# Printed card text (card image BT25-059 — authoritative for printed text):
+#   When this card would be played, if there are 2 or more suspended Digimon,
+#   reduce the cost by 5.
+#   [On Play] [When Digivolving] You may suspend up to 2 Digimon. Then, none of
+#   your suspended [Vegetation] or [TS] trait Digimon are affected by your
+#   opponent's Digimon effects until their turn ends.
+#   [All Turns] [Once Per Turn] When any Digimon suspend, to 1 of your opponent's
+#   Digimon, give -3000 DP until their turn ends for each suspended Digimon.
+#   Rule: Trait: Has [Vegetation] Type.
+#
+# Printed evo box (xros_req): "[Digivolve] Lv.5 w/[Vegetation]/[TS] trait: Cost 3".
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_059.cs
+#
+# DCGO crosscheck:
+#   Alt Digivolution (None): AddSelfDigivolutionRequirementStaticEffect(TopCard
+#     HasTSTraits OR EqualsTraits Vegetation, cost 3, ignoreReq:true, level 5).
+#   Reduce Play Cost (None): MandatorySelfPlayCostReduction(5) when
+#     MatchConditionPermanentCount(IsSuspendedDigimon) >= 2 (any player).
+#   Shared OP/WD (optional:false): SelectPermanent Tap, maxCount min(2, #Digimon),
+#     canNoSelect:true, canEndNotMax:true (suspend UP TO 2, any player). Then add
+#     a player-level CanNotAffected (opp Digimon effects) over OWN suspended
+#     [Vegetation]/[TS] Digimon until opponent turn end.
+#   All Turns (OnTappedAnyone, OPT): when any Digimon suspend, MANDATORY select 1
+#     opp Digimon → -3000 DP * (#suspended Digimon) until opponent turn end.
+#
+# NOTE — the immunity grant ("none of your suspended Veg/TS Digimon are affected
+# by opp Digimon effects") is a player-level CanNotAffected with a permanent
+# condition in DCGO (dynamically re-evaluated). The DSL has no player-modifier
+# with a permanent filter, so it is modelled as a for_each granting effect
+# immunity to each currently-suspended own Veg/TS Digimon at install time
+# (G-DSL-PLAYER-CANNOT-SUSPEND-FILTER family; logged in qa/dsl-vocab-gaps.md).
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 Green / Cost 4                          | IMPLEMENTED (evo_costs) |
+# | Alt-source Lv.5 [Vegetation]/[TS] / Cost 3 ignore          | IMPLEMENTED (alt_paths x2) |
+# | Cost -5 if >=2 suspended Digimon                           | IMPLEMENTED (cost_reduction + count_gte) |
+# | [OP][WD] suspend up to 2 Digimon                          | IMPLEMENTED (select_count_capped_multi any 0..2 + per_selected suspend) |
+# | [OP][WD] own suspended Veg/TS ignore opp Digimon effects   | IMPLEMENTED (for_each grant_effect_immunity snapshot) |
+# | [All Turns][OPT] on suspend: -3000 * #suspended to 1 opp   | IMPLEMENTED (on_suspend + add_dp_modifier formula) |
+
+card: BT25-059
+name: Ceresmon
+kind: digimon
+level: 6
+color: [green, blue]
+dp: 12000
+cost: 12
+traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 3
+    ignore_requirements: true
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Vegetation }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  - kind: cost_reduction
+    amount: 5
+    condition:
+      count_gte:
+        filter:
+          all_of:
+            - zone: [battle_area]
+            - kind: digimon
+            - is_suspended: true
+        n: 2
+    summary: "When played, if there are 2 or more suspended Digimon, reduce cost by 5"
+
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Suspend up to 2 Digimon; then your suspended [Vegetation]/[TS] Digimon ignore opp Digimon effects until their turn ends"
+    process:
+      - select_count_capped_multi:
+          of: any
+          zone: battle_area
+          max: 2
+          optional_zero: true
+          filter: { kind: digimon }
+          bind_as: to_suspend
+          prompt: "You may suspend up to 2 Digimon"
+      - per_selected:
+          selection: to_suspend
+          bind_as: tgt
+          body:
+            - suspend: { target: { binding: tgt } }
+      - for_each:
+          over:
+            all_of:
+              - of: you
+              - zone: [battle_area]
+              - kind: digimon
+              - is_suspended: true
+              - any_of:
+                  - trait_has: Vegetation
+                  - trait_has: TS
+          bind_as: protege
+          body:
+            - grant_effect_immunity:
+                target: { binding: protege }
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+
+  - when: on_suspend
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When any Digimon suspend, give 1 opp Digimon -3000 DP for each suspended Digimon until their turn ends"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: debuff
+          filter: { kind: digimon }
+          prompt: "Give 1 of your opponent's Digimon -3000 DP for each suspended Digimon"
+      - add_dp_modifier:
+          target: debuff
+          value:
+            formula:
+              base: 0
+              per:
+                suspended_count: { of: any }
+              delta: -3000
+          expiry: end_of_opponents_turn

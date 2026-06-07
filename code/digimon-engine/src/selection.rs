@@ -476,6 +476,18 @@ pub enum TriggerSource {
         linked_host: Option<PermanentHandle>,
         card: CardHandle,
     },
+    /// `OnLink` observer fired after a card attaches to a host's linked
+    /// cards. Scans one player's battle area (fired once per player so both
+    /// sides observe) while carrying the just-linked `card` and its `host`
+    /// as event context. The `card` identity is what lets a faithful
+    /// `WhenLinked` ("when THIS card gets linked") self-filter on
+    /// `event_card == source_card` instead of over-firing every time any
+    /// sibling links to the same host (DigiLink design D6).
+    Linked {
+        player: PlayerId,
+        host: PermanentHandle,
+        card: CardHandle,
+    },
     /// Observer timing fired after a persistent Option is trashed through the
     /// lifecycle API.
     OptionTrashed {

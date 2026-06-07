@@ -1,0 +1,135 @@
+# BT25-044 Junomon — Digimon, Lv.6, Yellow/White, DP 12000, Cost 12.
+# Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Vaccine.
+# Standard digivolution: Lv.5 Yellow / cost 4 (printed evo_costs).
+#
+# Printed card text (card image BT25-044 — authoritative for printed text):
+#   When this card would be played, if there are 6 or fewer total cards in both
+#   players' security stacks, reduce the cost by 5.
+#   [On Play] [When Digivolving] By placing 1 other Digimon as the top security
+#   card, trash both players' top security cards.
+#   [All Turns] [Once Per Turn] When your security stack is removed from, you may
+#   play 1 play cost 8 or lower [Angel], [Archangel] or [Iliad] trait card from
+#   your hand or trash without paying the cost.
+#
+# Printed evo box (xros_req): "[Digivolve] Lv.5 w/[Angel]/[Archangel]/[TS]: Cost 3".
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_044.cs
+#
+# DCGO crosscheck:
+#   Region "Alt Digivolution" (None): AddSelfDigivolutionRequirementStaticEffect(
+#     TopCard HasTSTraits OR EqualsTraits Angel OR Archangel, cost 3, ignoreReq:
+#     true, level 5).
+#   Region "Reduce Play Cost" (None): MandatorySelfPlayCostReduction(5) when
+#     (own.SecurityCards + opp.SecurityCards) <= 6.
+#   Region "Shared OP/WD" (onPlay+whenDigivolving, optional:false,
+#     isSkippable:true, additionalActivateCondition: HasMatchConditionPermanent
+#     OtherDigimon): select 1 OTHER battle-area Digimon (canNoSelect:true) →
+#     PlacePermanentInSecurityAndProcessAccordingToResult(toTop:true) → on
+#     success, IDestroySecurity opp top (1) then own top (1).
+#   Region "All Turns" (OnLoseSecurity, OPT, isSkippable, CanTrigger when YOUR
+#     security lost): may play 1 cost<=8 [Angel]/[Archangel]/[Iliad] Digimon (or
+#     any card; DCGO HasPlayCost && cost<=8 && trait) from HAND or TRASH free.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 Yellow / Cost 4                          | IMPLEMENTED (evo_costs) |
+# | Alt-source Lv.5 [Angel]/[Archangel]/[TS] / Cost 3 ignore    | IMPLEMENTED (alt_paths x3) |
+# | Cost -5 if total security in both stacks <= 6               | IMPLEMENTED (cost_reduction + sum formula) |
+# | [OP][WD] place 1 OTHER Digimon as top sec → trash both top  | IMPLEMENTED (optional select_any_permanent + place_permanent_on_security + trash both) |
+# | [All Turns][OPT] sec removed → play cost<=8 Angel/Arch/Iliad free | IMPLEMENTED (on_lose_security + union-zone play-free) |
+
+card: BT25-044
+name: Junomon
+kind: digimon
+level: 6
+color: [yellow, white]
+cost: 12
+dp: 12000
+traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 3
+    ignore_requirements: true
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Angel }
+    cost: 3
+    ignore_requirements: true
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Archangel }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  # ─── Cost reduction: -5 when total security in BOTH stacks <= 6 ──────────────
+  # own_count + opp_count <= 6  ⟺  own_count <= 6 - opp_count, encoded as
+  # security_count_lte (own) <= (6 - card_count_in_zone(opponent, security)).
+  - kind: cost_reduction
+    amount: 5
+    condition:
+      security_count_lte:
+        formula:
+          base: 6
+          per:
+            card_count_in_zone:
+              of: opponent
+              zone: security
+          delta: -1
+    summary: "When played, if both players' security stacks total 6 or fewer, reduce cost by 5"
+
+  # ─── [On Play][When Digivolving] place 1 OTHER Digimon as top sec → trash both ─
+  # Optional ("By placing…"): the player may decline (no other Digimon, or choose
+  # not to). On a successful placement, trash both players' top security cards.
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OP][WD] By placing 1 other Digimon as your top security card, trash both players' top security cards"
+    condition:
+      any_permanent:
+        zone: [battle_area]
+        all_of:
+          - kind: digimon
+          - other: true
+    process:
+      - select_any_permanent:
+          bind_as: placed
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "Place 1 other Digimon as your top security card"
+      - if:
+          condition: { binding_present: placed }
+          then:
+            - place_permanent_on_security:
+                of: you
+                target: placed
+                position: top
+                face_up: false
+            - trash_top_security: { of: opponent }
+            - trash_top_security: { of: you }
+
+  # ─── [All Turns][OPT] security removed → play cost<=8 Angel/Archangel/Iliad free ─
+  - when: on_lose_security
+    once_per_turn: true
+    active_when: { all_turns: true }
+    optional: true
+    summary: "[All Turns][OPT] When your security stack is removed from, you may play 1 cost<=8 [Angel]/[Archangel]/[Iliad] card from hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: pick
+          filter:
+            all_of:
+              - play_cost_lte: 8
+              - any_of:
+                  - trait_has: Angel
+                  - trait_has: Archangel
+                  - trait_has: Iliad
+          prompt: "Play 1 cost 8 or lower [Angel]/[Archangel]/[Iliad] card from hand or trash (free)"
+      - play_union_bound_free: { binding: pick }

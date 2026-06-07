@@ -578,6 +578,7 @@ pub fn parse_printed_keywords(
                 ("Execute", Keyword::Execute),
                 ("Training", Keyword::Training),
                 ("Arts Digivolve", Keyword::ArtsDigivolve),
+                ("Ascension", Keyword::Ascension),
             ] {
                 if trimmed.starts_with(prefix) {
                     push_unique(kw, &mut found);

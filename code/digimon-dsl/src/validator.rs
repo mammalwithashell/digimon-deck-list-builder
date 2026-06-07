@@ -2154,6 +2154,7 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "BlastDigivolve",
     "Save",
     "Fortitude",
+    "Ascension",
     "Overclock",
     "Barrier",
     "Decoy",

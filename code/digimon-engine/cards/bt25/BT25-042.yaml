@@ -1,0 +1,129 @@
+# BT25-042 ClavisAngemon — Digimon, Lv.6, (Yellow/Black) DP 12000, Cost 12.
+# Traits: Virtue, Iliad, TS.
+# Standard digivolution: Lv.5 yellow / cost 4 (printed evo_costs).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing
+#   your top or bottom security card, your opponent's Digimon effects don't
+#   affect this Digimon until their turn ends.
+#   [All Turns] [Once Per Turn] When your security stack is removed from, you
+#   may play 1 level 4 or lower [Angel] or [Iliad] trait card from your hand
+#   without paying the cost. Then, 2 of your Digimon gain <Reboot> (This Digimon
+#   also unsuspends in your opponent's unsuspend phase.) and <Blocker> (This
+#   Digimon can block in the blocker timing.) until your opponent's turn ends.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_042.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 5, TopCard
+#   Angel/Archangel trait OR HasTSTraits, cost 3). → alt_paths digivolve from
+#   level 5 + (Angel/Archangel/TS) trait, cost 3.
+# Shared OP/WD/WA — maxCountPerTurn: 1 (shared OPT across the 3 timings,
+#   SharedHashString "BT25_042_OP_WD_WA"). additionalUseCondition: owner has
+#   >=1 security. isSkippable: true; DCGO presents Top/Bottom/Don't (when 2+
+#   security) or "Trash only security card"/Don't (when exactly 1), and on
+#   "Don't" calls RemoveUse (OPT not consumed) → modeled as `optional: true`.
+#   On a successful trash, grant DigimonEffectImmunity to THIS permanent until
+#   the opponent's turn ends.
+# All-turns OPT — OnLoseSecurity (your own security stack removed),
+#   maxCountPerTurn: 1. Body: optional free-play of a hand card level<=4 with
+#   Angel OR Iliad trait. Then select up to min(2, own Digimon count) of YOUR
+#   Digimon (canNoSelect: false) and grant each Reboot+Blocker until opp turn ends.
+
+card: BT25-042
+name: ClavisAngemon
+kind: digimon
+level: 6
+color: [yellow, black]
+cost: 12
+dp: 12000
+traits: [Virtue, Iliad, TS]
+
+# Alt-digivolve: Lv.5 with [Angel]/[Archangel] trait OR [TS] trait / cost 3.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: Angel
+            - trait_has: Archangel
+            - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── [OP][WD][WA][OPT] trash top/bottom security → self effect immunity ─────
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    condition: { security_count_gte: 1 }
+    summary: "[OP][WD][WA][OPT] By trashing your top or bottom security, opp Digimon effects don't affect this until their turn ends"
+    process:
+      # Top/bottom is a genuine choice whenever any security exists (when only
+      # 1 card remains, top == bottom — the same single card — so offering the
+      # choice is faithful and harmless). The trash + immunity grant live INSIDE
+      # each branch so no step parks an outer tail after the branching select.
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Trash top security"
+            - "Trash bottom security"
+          prompt: "Trash your top or bottom security card"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - trash_top_security: { of: you }
+            - grant_effect_immunity:
+                target: self
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - trash_bottom_security: { of: you }
+            - grant_effect_immunity:
+                target: self
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+
+  # ─── [All Turns][OPT] on own security removed → free-play + 2x Reboot/Blocker
+  - when: on_own_security_removed
+    once_per_turn: true
+    summary: "[All Turns][OPT] When your security removed, you may free-play L<=4 Angel/Iliad card; then 2 of your Digimon gain Reboot+Blocker until opp turn ends"
+    process:
+      - select_hand:
+          of: you
+          bind_as: play_card
+          optional: true
+          filter:
+            all_of:
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Angel
+                  - trait_has: Iliad
+          prompt: "You may play 1 level 4 or lower [Angel] or [Iliad] card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: play_card }
+      - select_count_capped_multi:
+          of: you
+          zone: battle_area
+          max: 2
+          bind_as: boosted
+          filter: { kind: digimon }
+          prompt: "Choose up to 2 of your Digimon to gain <Reboot> and <Blocker> until your opponent's turn ends"
+          optional_zero: false
+      - per_selected:
+          selection: boosted
+          bind_as: boost
+          body:
+            - grant_keyword:
+                target: { binding: boost }
+                keyword: Reboot
+                expiry: end_of_opponents_turn
+            - grant_keyword:
+                target: { binding: boost }
+                keyword: Blocker
+                expiry: end_of_opponents_turn

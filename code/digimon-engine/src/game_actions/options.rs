@@ -467,13 +467,24 @@ impl Game {
         }
     }
 
-    pub(crate) fn fire_on_link_after_option_placed(&mut self) {
+    pub(crate) fn fire_on_link_after_option_placed(
+        &mut self,
+        host: PermanentHandle,
+        linked_card: crate::card_source::CardHandle,
+    ) {
         // Fire OnLink globally - every player's battle area scans for
-        // OnLink-timed effects. Load-bearing for Appmon-trait cards.
+        // OnLink-timed effects. Load-bearing for Appmon-trait cards. The
+        // `Linked` trigger source carries the just-linked card so a
+        // `WhenLinked` self-filter (`event_card == source_card`) can fire
+        // for exactly the card that attached, not every sibling (design D6).
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 EffectTiming::OnLink,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
+                TriggerSource::Linked {
+                    player: pid as PlayerId,
+                    host,
+                    card: linked_card,
+                },
             );
         }
         // `maybe_drain` defers when inside a select-callback or outer-tail

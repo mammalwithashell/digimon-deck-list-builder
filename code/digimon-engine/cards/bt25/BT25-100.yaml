@@ -1,0 +1,88 @@
+card: BT25-100
+name: "Iron Slash"
+kind: option
+color: [black]
+cost: 3
+traits: [TS]
+
+# <Use Req. ([TS] trait)> — ignore color requirements while you have a [TS]
+# Digimon or Tamer in the battle area.
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: TS
+      - all_of:
+          - kind: tamer
+          - trait_has: TS
+
+effects:
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - all_of:
+              - kind: digimon
+              - trait_has: TS
+          - all_of:
+              - kind: tamer
+              - trait_has: TS
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT25-100" }
+    summary: "While you have a TS Digimon or Tamer, ignore color requirements for this card"
+
+  # [Main] <De-Digivolve 2> 1 of your opponent's Digimon. Then, you may link
+  # this card to 1 of your Digimon on the field without paying the cost.
+  - when: main_from_hand
+    summary: "[Main] De-Digivolve 2 one opponent Digimon; then optionally link this card to one of your Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
+      - de_digivolve:
+          target: target
+          amount: 2
+          stop_at_level: 3
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter: { kind: digimon }
+
+  # [Security] Activate this card's [Main] effects.
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate [Main]: De-Digivolve 2 one opponent Digimon; then optionally link this card"
+    process:
+      - select_opponent_permanent:
+          bind_as: sec_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
+      - de_digivolve:
+          target: sec_target
+          amount: 2
+          stop_at_level: 3
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter: { kind: digimon }
+
+  # Inherited (link ESS): <Piercing>
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Piercing
+    summary: "Inherited <Piercing>"
+
+  # [Link] [TS] trait: Cost 2 (host predicate is a TS Digimon)
+  - kind: link_requirement
+    scope: inherited
+    cost: 2
+    filter:
+      kind: digimon
+      trait_has: TS
+    summary: "[Link] [TS] trait: Cost 2"

@@ -1,0 +1,74 @@
+# BT25-035 Cougarmon — Digimon, Lv.4, Yellow, DP 6000, Cost 5.
+# Traits: Mammal, Glowing Dawn, BEATBREAK. Standard digivolution: Lv.3 yellow / cost 2.
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO):
+#   [On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for
+#     the turn. Then, by trashing 2 bottom face-down cards from under any of
+#     your Tamers, this Digimon may digivolve into a [Glowing Dawn] trait
+#     Digimon card in the hand without paying the cost.   <-- "Then" half BLOCKED
+#   Inherited: ＜Barrier＞ (When this Digimon would be deleted in battle, by
+#     trashing your top security card, it isn't deleted.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_035.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 3, TopCard
+#   HasGlowingDawnTraits, cost 2). → alt_paths digivolve from level 3 + Glowing
+#   Dawn trait, cost 2.
+# Clause 1a (shared OP/WD): mandatory (canNoSelect: false, gated on opp having a
+#   Digimon) select 1 opponent Digimon → -3000 DP UntilEachTurnEnd. → when
+#   [on_play, when_digivolving], select_opponent_permanent { kind: digimon } +
+#   add_dp_modifier { value: -3000, expiry: end_of_turn }.
+# Clause 1b ("Then, …") — BLOCKED (dsl): "by trashing 2 bottom face-down cards
+#   from under any of your Tamers, this Digimon may digivolve into a [Glowing
+#   Dawn] card in the hand without paying the cost." The trash-2 cost is the
+#   multi-count / multi-Tamer face-down trash gap G-TRASH-N-BOTTOM-FACE-DOWN-
+#   UNDER-TAMER (qa/dsl-vocab-gaps.md): the shipping
+#   trash_bottom_face_down_source_under_tamer verb trashes exactly ONE source
+#   from ONE Tamer and chaining it twice cannot express DCGO's "2 from one Tamer
+#   OR 1+1 from two Tamers" CanEndSelectCondition. Plus the free-digivolve-into-
+#   a-hand-card-by-effect (DigivolveIntoHandOrTrashCard, payCost: false) is a
+#   second piece. The "Then" half is OMITTED rather than under-charging (trash 1
+#   instead of 2). Verdict PARTIAL.
+# Inherited (WhenPermanentWouldBeDeleted): BarrierSelfEffect(isInheritedEffect)
+#   → scope: inherited + grant_keyword Barrier.
+
+card: BT25-035
+name: "Cougarmon"
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 6000
+traits: [Mammal, Glowing Dawn, BEATBREAK]
+
+# Alt-digivolve: Lv.3 with the [Glowing Dawn] trait / cost 2.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: "Glowing Dawn"
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] 1 opp Digimon gets -3000 DP for the turn ──
+  # (The "Then, … may digivolve …" half is BLOCKED on G-TRASH-N and omitted.)
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP for the turn"
+      - add_dp_modifier:
+          target: tgt
+          value: -3000
+          expiry: end_of_turn
+
+  # ─── Inherited <Barrier> ───────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "Inherited <Barrier>"

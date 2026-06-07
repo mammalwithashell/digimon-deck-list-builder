@@ -375,6 +375,7 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Card(s):** BT24-018, BT21-029, BT24-016, BT21-025 — every card with `[All Turns]` triggered clauses.
 - **What's missing:** `active_when: { all_turns: true }` parses but the predicate evaluator may not actually allow firing on the opponent's turn (uncertain — needs verification). Tests for opp-turn triggers are #[ignore]'d pending verification.
 - **Workaround:** Use `active_when: { all_turns: true }` and confirm via behavioral test on opp's turn.
+- **Confirmed sub-case — OPT counter not reset for non-turn-player (2026-06-06, `/archetype-interaction-test-author`, Titan BT25 slice):** An **[All Turns] [Once Per Turn]** effect on a Digimon whose controller is **not** the turn player is wrongly locked out on the opponent's turn after it already fired once on the controller's own turn. Root cause: `Game::continue_begin_turn_after_start_delays` (`code/digimon-engine/src/game_phases.rs:59`) resets per-turn activation state via `self.player_mut(tp).new_turn()` **only for the turn player `tp`**. `Permanent::new_turn` (`permanent.rs:454`) clears `effect_activations`, but it is never called on the *non-turn-player's* permanents at the opponent's turn-start — so their per-turn OPT counters persist across the turn boundary. This contradicts `general_rule.pdf` §15-14-1-1/§15-14-1-2: "[X Per Turn] means an effect can be activated X times **during 1 turn** … won't trigger again **during that turn**" — i.e. the count resets at the start of *each* turn, including the opponent's. DCGO tracks `maxCountPerTurn` per game-turn (reset every turn for all cards). **Reproduced by** `code/digimon-engine/tests/archetypes/titan_bt25.rs::t2_deltamon_de_digivolve_re_arms_on_opponent_turn` (BT25-068 Deltamon's [All Turns][OPT] on-suspend De-Digivolve fires turn 1, then fails to re-arm when re-suspended on the opponent's turn). The same-turn-lockout floor (`t2_deltamon_de_digivolve_same_turn_lockout`) and the cross-card unsuspend engine (`t1_*`) pass, isolating the bug to the turn-boundary reset scope. **Suggested fix:** at turn-start (`continue_begin_turn_after_start_delays`), reset per-turn activation counters for **all** players' permanents (or at minimum clear `effect_activations` for every battle-area permanent regardless of controller), not just `tp`'s. This affects every [All Turns] OPT card while it is on the non-turn-player's board (Deltamon, Orochimon reveal-play, Dorimon's inherited unsuspend, etc.). Cross-check the prior `G-OPT-RESET-VIA-ATTACK-CYCLE` closure (`qa/resolved-gaps.md`): that closure verified the reset trajectory **only for the turn player across their own turn cycle** and never exercised an [All Turns] OPT effect on the opponent's turn — so this is an uncovered, distinct case, not a regression of that fix.
 
 ### ~~`trash_security_card` Verb (Non-Top Security) Missing~~  [G-TRASH-SELECTED-SECURITY] — RESOLVED 2026-05-21
 - **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `EffectContext::trash_security_card(player, handle)` trashes a chosen security card by stable handle; the `trash_selected_security` DSL verb consumes a `select_security` binding. Full entry archived in `qa/resolved-gaps.md`.
@@ -805,6 +806,98 @@ adding a new family entry above, add a matching record to the JSON (the same
 `family_id`, a distinctive substring pattern, a panic-site reference, and a
 status).
 
+### §Card-faithfulness — GAP-BT25-003-HAND-COND (Frimon inherited clause is dead)
+
+- **First seen:** 2026-06-06, `/archetype-interaction-test-author` run on the BT25
+  "beatbreak" / Glowing Dawn slice (combos B1/B2). Confirmed via
+  [`code/digimon-engine/tests/archetypes/beatbreak_bt25.rs`](../../code/digimon-engine/tests/archetypes/beatbreak_bt25.rs)
+  (`b1_frimon_inherited_clause_is_currently_dead_regression_sentinel` green +
+  `control_egg_inherited_when_attacking_fires_in_this_harness` green; the
+  aspirational `b1_…without_firing_on_play` and `b2_…off_colour…` are `#[ignore]`d
+  pending the fix).
+- **Class:** card-effect faithfulness (wrong DSL predicate chosen in the YAML — the
+  required vocabulary already exists, so this is **NOT** a DSL-vocab or engine
+  gap). Net effect: a printed card effect never fires.
+- **Card:** **BT25-003 Frimon** (Lv.2 Yellow Digi-Egg). Printed inherited effect:
+  *"[When Attacking] [Once Per Turn] By trashing your top security card, this
+  Digimon may digivolve into a [Glowing Dawn] trait card in the hand with the cost
+  reduced by 1."*
+- **Symptom:** the inherited `[When Attacking]` clause **never installs its prompt**,
+  so the card does nothing — declaring an attack with the egg in a stack, top
+  security present, and a [Glowing Dawn] target in hand produces no pending
+  selection and no digivolve.
+- **Root cause:** the clause condition in
+  [`code/digimon-engine/cards/bt25/BT25-003.yaml`](../../code/digimon-engine/cards/bt25/BT25-003.yaml)
+  gates the hand-target presence with
+  `any_permanent: { of: you, zone: [hand], kind: digimon, trait_has: "Glowing Dawn" }`.
+  But the `any_permanent` existential predicate scans **battle areas only** —
+  [`dsl_cards/predicate.rs::existential_any`](../../code/digimon-engine/src/dsl_cards/predicate.rs)
+  iterates `player(p).battle_area` and ignores the `zone` field; the design note at
+  [`digimon-dsl/src/predicate.rs:242`](../../code/digimon-dsl/src/predicate.rs)
+  documents that `any_permanent { zone: [...] }` "cannot see" non-permanent zones.
+  So the hand-presence gate is unsatisfiable and the whole clause is dead. (A
+  diagnostic that placed a Glowing Dawn Digimon on the *battle area* also failed to
+  fire, so a secondary contributor — possibly the YAML's `kind: digimon` where
+  cards.json `card_kind: 3` is **DigiEgg**, cf. the working `kind: digi_egg` egg
+  BT10-003 — is not excluded; the hand-zone predicate is the confirmed primary
+  cause and must be fixed first.)
+- **Suggested fix (not applied — this skill does not edit card/engine code):**
+  replace the `any_permanent { zone: [hand], … }` condition leaf with a hand-zone
+  aggregate that the evaluator supports, e.g.
+  `count_gte: { filter: { of: you, zone: [hand], kind: digimon, trait_has: "Glowing Dawn" }, n: 1 }`
+  — exactly the idiom **BT24-035** uses to gate a Silphymon-in-hand DNA digivolve
+  (`code/digimon-engine/cards/bt24/BT24-035.yaml`). Then re-enable the two
+  `#[ignore]`d B1/B2 interaction tests and the per-card `bt25_003.rs` flow. Also
+  audit whether `kind:` should be `digi_egg`.
+- **Source priority consulted:** card text (cards.json BT25-003) for the intended
+  effect; DCGO C# is ABSENT for BT25-003 (no `BT25_003.cs`), so the printed text is
+  the authority; engine `existential_any` + the `digimon-dsl` predicate design note
+  for the mechanism.
+- **Blast radius:** any other YAML using `any_permanent { zone: [hand|trash|
+  security|…] }` as a *condition* is silently mis-gated the same way. A repo-wide
+  audit of `any_permanent:` blocks carrying a non-`battle_area` `zone:` is
+  warranted (grep `zone: \[hand\]` / `\[trash\]` / `\[security\]` under an
+  `any_permanent` / `no_permanent` / `all_permanents` existential).
+
+
+---
+
+## G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD — aura-granted replacement-effect keywords (Scapegoat etc.) do not install their behavior on the target set
+- **Discovered by:** BT25-097 Guardian Palace (aegiomon-3 slice), 2026-06-06.
+- **Clause:** "[Security] [All Turns] All of your yellow or purple [TS] trait Digimon gain ＜Alliance＞. While you have a Digimon with [Junomon] in its name, they also gain ＜Scapegoat＞."
+- **DCGO (BT25_097.cs):** an `AllianceStaticEffect` over yellow/purple TS own Digimon (gated in-security) plus a conditional `ScapegoatStaticEffect` over the same set, gated on a [Junomon]-named own permanent.
+- **What works:** the Alliance grant ships fine — Alliance is a `has_keyword`-gated **combat** keyword (combat.rs scans for it at AllianceTiming), so the DSL `grant_keyword: Alliance` security aura is sufficient. Rush/Piercing/Blocker (the other Area cards' secondaries) are the same class and work.
+- **Why Scapegoat blocks:** Scapegoat is a **replacement-effect** keyword — it needs an installed `when_would_be_deleted` effect on the carrier (cards/keyword_effects.rs `Keyword::Scapegoat => Effect::when_would_be_deleted(...)`). The aura `grant_keyword` path (`lower_aura.rs` → `grant_declarative_keyword` / `grant_keyword_with_until_condition`) only registers the keyword in `has_keyword`; it does **not** synthesize/install the keyword's replacement auto-effect on the granted target. The only place that synthesizes granted-keyword replacement auto-effects is `Game::effects_for_card` (game.rs:4111-4138), and it (a) only covers the **source card's own** registry grant — not keywords an aura applies to arbitrary **target** permanents — and (b) explicitly **skips conditional grants** ("Conditional grants are omitted here for now because ConditionFn is boxed and not cloneable"; `if !grant.declarative || grant.condition.is_some() { continue; }`). BT25-097's Scapegoat is both target-set-scoped AND conditional.
+- **Faithfulness impact:** shipping the Scapegoat grant via `grant_keyword: Scapegoat` would register `has_keyword(Scapegoat)` but the prevent-deletion-by-deleting-another behavior would never fire — a silent no-op = approximation. (The DSL string-map entry for Scapegoat was intentionally NOT added, to avoid implying support.)
+- **Suggested fix:** when an aura/declarative clause grants a **replacement-type** keyword (Scapegoat, Barrier, ArmorPurge, Evade, Decoy, Fragment, Save, …) to a target permanent, also install that keyword's `keyword_to_auto_effect` on the target while the grant is active — including for conditional and target-set-scoped grants. Requires a cloneable/condition-composable installation path (the boxed-ConditionFn limitation noted at game.rs:4116 is the blocker for the conditional case).
+- **Verdict:** BT25-097 BLOCKED (gap_kind: engine). No YAML shipped.
+
+## G-ENGINE-AURA-GRANT-LINK-MAX — aura cannot grant <Link +1> (max-links increase) to a target set
+- **✅ RESOLVED 2026-06-07.** The DSL now carries an optional `modifier_value` on the aura body (`code/digimon-dsl/src/clause.rs:339`, doc-commented for `ChangeLinkMax` / "Link +N") and `code/digimon-engine/src/dsl_cards/lower_aura.rs` threads `modifier_value.unwrap_or(0)` into BOTH the self-aura `add_modifier_with_until_condition(...)` and the target-set `add_declarative_modifier(...)` paths (replacing the hardcoded `0`). An aura clause `modifier: ChangeLinkMax` + `modifier_value: 1` now grants +1 max links to a target set, so the <Link +1> aura is no longer a blocker on any card. BT25-060 / BT25-075 / BT25-102 each remain BLOCKED on a *different* clause (see their re-adjudications in validated_cards_dsl.json — App Fuse, own-link-card-count De-Digivolve, and security-zone-sourced field aura respectively), but NOT on this gap. Original text retained below for history.
+- **Discovered by:** BT25-102 Factorial Area (aegiomon-3 slice), 2026-06-06.
+- **Clause:** "[Security] [All Turns] All of your Black or Red [TS] trait Digimon gain ＜Blocker＞. While you have [Vulcanusmon], they also gain ＜Link +1＞ (Add 1 to this Digimon's maximum links.)"
+- **DCGO (BT25_102.cs):** a `BlockerStaticEffect` over black/red TS own Digimon plus a conditional `ChangeMaxLinkStaticEffect(+1)` over the same set, gated on a [Vulcanusmon]-named own permanent.
+- **What works:** the Blocker grant ships fine (Blocker is `has_keyword`-gated; `grant_keyword: Blocker` aura is sufficient).
+- **Why Link +1 blocks:** there is no grantable `Keyword` variant for "Link +1" (`lookup_keyword` has no "Link" entry; Link's max is a numeric modifier, not a keyword toggle). The underlying `ModifierType::ChangeLinkMax` exists and is reachable via the aura `modifier:` field — BUT the aura `modifier:` path applies a **hardcoded value of 0** (`lower_aura.rs`: `ctx.add_declarative_modifier(handle, modifier, 0, Expiry::Permanent)` and the `add_modifier_with_until_condition(handle, modifier_type, 0, …)` self-aura path). So `modifier: ChangeLinkMax` would install a +0 max-link change — a no-op. There is no way to carry `+1` on an aura-granted modifier to a target set.
+- **Suggested fix:** add an optional `modifier_value` (default 0) to the aura body and thread it through both the self-aura and target-set `add_declarative_modifier(...)` calls in `lower_aura.rs` (replacing the hardcoded `0`), so numeric modifiers like `ChangeLinkMax`/`ChangeLinkCost` can be granted with a value. (Alternatively, a `Link` grantable keyword carrying `value:` that maps to `ChangeLinkMax(value)`.)
+- **Faithfulness impact:** shipping `modifier: ChangeLinkMax` with the forced 0 would grant +0 max links — a silent no-op = approximation. Card cannot ship until aura modifiers can carry a value.
+- **Verdict:** BT25-102 BLOCKED (gap_kind: engine). No YAML shipped.
+
+## G-ENGINE-ON-DISCARD-HAND — no "when your hand is trashed from" observer timing
+- **Discovered by:** BT25-084 Titamon (aegiomon-2 slice), 2026-06-06.
+- **Clause:** "[All Turns] When your hand is trashed from, delete 1 of your opponent's lowest DP Digimon."
+- **DCGO (BT25_084.cs):** `EffectTiming.OnDiscardHand` ActivateClass, `CanTriggerOnTrashHand(hashtable, ..., cardSource => cardSource.Owner == card.Owner)` — fires whenever a card leaves the controller's hand to the trash (by any effect), then deletes 1 opp lowest-DP Digimon.
+- **What the DSL/engine has:** `EffectTiming` (code/digimon-engine/src/enums.rs) has `OnTrash` (a card moved to trash) and `OnDiscardSecurity`/`OnLoseSecurity`, but **no** "your hand was trashed from" observer. The DSL `Timing` enum (code/digimon-dsl/src/clause.rs) correspondingly has no `on_discard_hand` value.
+- **Suggested fix:** add an `OnDiscardHand` (or `OnTrashFromHand`) `EffectTiming` variant fired by the hand-trash code path (carrying the trashing player as event context so observers can gate on `event_target_owner: you`), plus the matching DSL `on_discard_hand` timing.
+- **Faithfulness impact:** shipping without it silently drops Titamon's third clause. Implemented clauses 1+2 (mass highest-DP delete + leave-prevention) ship; clause 3 omitted → BT25-084 verdict PARTIAL.
+
+## G-ENGINE-SECURITY-ZONE-SOURCED-FIELD-AURA — a face-down Option in the security zone cannot grant a continuous aura to battle-area Digimon
+- **Discovered by:** BT25-102 Factorial Area (link-finish-aura slice), 2026-06-07. (This is the *residual* BT25-102 blocker after G-ENGINE-AURA-GRANT-LINK-MAX was resolved — the Link+1 value-carry is now fine; the security-zone sourcing is the wall.)
+- **Clause:** "[Security] [All Turns] All of your Black or Red [TS] trait Digimon gain ＜Blocker＞ ... While you have [Vulcanusmon], they also gain ＜Link +1＞." — i.e. while THIS Option card is sitting **face-down in your security stack**, it continuously grants Blocker (and conditionally Link+1) to your field Digimon.
+- **DCGO (BT25_102.cs):** `BlockerStaticEffect` / `ChangeLinkMaxStaticEffect` registered at `EffectTiming.None` and gated on `CardEffectCommons.IsExistInSecurity(card, false)` — the static effects are live while the card is in the security zone (not flipped). This is a security-zone-sourced *continuous static aura over battle-area permanents*, distinct from a `[Security]` *trigger* (which fires once when the card is checked).
+- **What the DSL/engine has:** aura/static-effect lowering (`lower_aura.rs`) only emanates from **battle-area** carriers and digivolution sources (the `tick_declarative_effects` pass scans battle-area permanents + their sources/linked cards). There is no path for a card in the **security zone** to register a live aura over the field. `EffectBuilder::applies_to_{own,opponent}_security_dp` is the inverse (a field source touching security DP), not a security source touching the field. (See the pre-existing "Declarative aura sourced from security zone" note at engine-gaps.md ~line 147/150 — same family, still open.)
+- **Suggested fix:** allow declarative auras whose carrier is a non-flipped security card to participate in the field-aura tick (a `source_zone: security` flag on the aura + a security-stack scan pass in `tick_declarative_effects`), gated on `!flipped`. Pairs with a DSL `when: on_security_static` (or `scope` qualifier) so YAML can mark "this clause is live while in security, not a one-shot [Security] trigger."
+- **Faithfulness impact:** the entire `[Security][All Turns]` clause (a core, always-on board buff) cannot be modeled; shipping only the [Main] + inherited [Security] halves would silently drop it. BT25-102 BLOCKED (gap_kind: engine).
 
 ### §`kind: digimon` field-select filter excludes Tokens (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT) — RESOLVED 2026-06-02
 

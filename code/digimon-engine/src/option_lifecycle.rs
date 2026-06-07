@@ -214,7 +214,11 @@ impl Game {
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 EffectTiming::OnLink,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
+                TriggerSource::Linked {
+                    player: pid as PlayerId,
+                    host: carrier,
+                    card: placed_card,
+                },
             );
         }
         self.drain_effect_queue();

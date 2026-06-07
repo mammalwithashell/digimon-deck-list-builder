@@ -1,0 +1,104 @@
+# BT25-033 Aegiomon — Digimon, Lv.4, Yellow, DP 5000, Cost 5.
+# Traits: Shaman, Iliad, TS. Attribute: (per cards.json).
+# Standard digivolution: Lv.3 Yellow / cost 2 (printed evo_costs).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   ＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your
+#   top security card, it isn't deleted.)
+#   [On Play] [When Digivolving] By adding your top security card to the hand,
+#   1 of your opponent's Digimon gets -5000 DP for the turn.
+#
+#   Inherited: ＜Barrier＞ (same as above).
+#   Security: (none)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_033.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternative Digivolve Condition" (None) —
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.HasTSTraits, 2, false,
+#   level: 3). This is a TS-narrowed cost-2 alt-SOURCE on Lv.3 ANY colour.
+#   The printed evo box (cards.json evo_costs) is Lv.3 Yellow / cost 2 — the
+#   DCGO TS-narrowed alt-source is an additional implementation source not
+#   printed on the card face. Per source priority (printed text > DCGO), we
+#   author the printed standard alt-path `from: { level_eq: 3, color_is:
+#   yellow }, cost: 2`. The DCGO TS-trait alt-source is omitted (unprinted).
+#
+# Region "Barrier" (WhenPermanentWouldBeDeleted, own) — BarrierSelfEffect.
+#   → `kind: grant_keyword` Barrier (own scope). The engine's Barrier
+#   replacement reads the printed-keyword semantics (trash top security to
+#   prevent battle deletion).
+#
+# Region "Shared OP / WD" (onPlay + whenDigivolving, optional: true,
+#   maxCountPerTurn: -1) — AdditionCanActivate gates on `Owner.SecurityCards.
+#   Any()` (you must have a security card to pay the cost). Body:
+#     1. Add your top security card to hand (AddHandCards + ReduceSecurity).
+#     2. If an opp Digimon exists, MANDATORY pick (canNoSelect: false) → that
+#        Digimon gets -5000 DP UntilEachTurnEnd.
+#   The whole effect is OPTIONAL ("By adding..., 1 of your opponent's Digimon
+#   gets -5000 DP" — the "By [cost]" optional). `optional: true` on the clause
+#   surfaces the accept/decline. The cost (add top security to hand) is paid
+#   first; declining costs nothing.
+#
+# Region "Inherited" (WhenPermanentWouldBeDeleted, inherited) —
+#   BarrierSelfEffect isInheritedEffect: true. → `kind: grant_keyword` Barrier
+#   inherited scope.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Std digivolve Lv.3 Yellow / Cost 2                            | IMPLEMENTED (printed evo_costs) |
+# | <Barrier> (own)                                              | IMPLEMENTED (grant_keyword) |
+# | [OP][WD] By adding top sec to hand, 1 opp Digimon -5000 DP    | IMPLEMENTED (optional clause: cost add-top-sec-to-hand + -5000 DP) |
+# | Inherited <Barrier>                                          | IMPLEMENTED (grant_keyword inherited) |
+
+card: BT25-033
+name: Aegiomon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+traits: [Shaman, Iliad, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+
+effects:
+  # ─── <Barrier> (own) ─────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  # ─── [On Play][When Digivolving] add top sec → 1 opp -5000 DP ────────────
+  #
+  # The whole clause is the printed "By [cost], effect" optional: `optional:
+  # true` surfaces the accept/decline. Accepting pays the cost (add your top
+  # security card to hand) then applies -5000 DP to a chosen opp Digimon.
+  # DCGO gates the outer activation on having a security card to add
+  # (AdditionCanActivate → SecurityCards.Any()).
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OP][WD] By adding top security to hand, 1 opp Digimon gets -5000 DP for the turn"
+    condition:
+      security_count_gte: 1
+    process:
+      - add_top_security_to_hand: { of: you }
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -5000
+          expiry: end_of_turn
+
+  # ─── Inherited <Barrier> ─────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Barrier
+    scope: inherited
+    summary: "[Inherited] <Barrier>"

@@ -1,0 +1,102 @@
+# BT25-037 Pegasusmon — Digimon, Lv.4, Yellow/Green, DP 6000, Cost 6.
+# Traits: Holy Beast, Iliad, TS.
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   ＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top
+#   card of this Digimon to prevent that deletion.)
+#   [On Play] [When Digivolving] Add your top security card to the hand. Then,
+#   you may place 1 [Angel], [Archangel], [Three Great Angels] or [Iliad] trait
+#   Digimon card or 1 [TS] trait Tamer card from your hand as the top or bottom
+#   security card.
+#
+# Inherited: (none — cards.json inherited_effect_description_eng is a wiki table
+#   artifact "|applinkdp =", i.e. an absent inherited effect.)
+#
+# Printed evo box (cards.json evo_costs): Lv.3 Yellow / cost 3.
+# Printed digivolve boxes (DCGO): [Patamon] (name) / cost 2; Lv.3 [TS] / cost 2.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_037.cs
+#
+# DCGO crosscheck:
+#   Region "Armor Purge" (WhenPermanentWouldBeDeleted) → grant_keyword.
+#   Region "Shared OP/WD": add top security to hand; then optional (canNoSelect
+#   true) SelectHand over (Digimon && (Angel|Archangel|Three Great Angels|
+#   Iliad)) OR (Tamer && TS); on select a Bool Top/Bottom selection →
+#   AddSecurityCard(toTop: position).
+#
+# Modelling note: the "top or bottom" placement is a real player choice (DCGO
+# SetBoolSelection) → select_effect_choice [Top, Bottom] then branch into
+# place_on_security with the chosen fixed position. Placement is face-down.
+
+card: BT25-037
+name: Pegasusmon
+kind: digimon
+level: 4
+color: [yellow, green]
+cost: 6
+dp: 6000
+traits: [Holy Beast, Iliad, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { name_contains: "Patamon" }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge> (when would be deleted, may trash top card to prevent)"
+
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Add top security to hand; then may place 1 [Angel]/[Archangel]/[Three Great Angels]/[Iliad] Digimon or 1 [TS] Tamer from hand to top/bottom security"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_has: Angel
+                      - trait_has: Archangel
+                      - trait_has: "Three Great Angels"
+                      - trait_has: Iliad
+              - all_of:
+                  - kind: tamer
+                  - trait_has: TS
+          prompt: "You may place 1 [Angel]/[Archangel]/[Three Great Angels]/[Iliad] Digimon or 1 [TS] Tamer from your hand as security"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - select_effect_choice:
+                bind_as: pos
+                labels:
+                  - "Top of security"
+                  - "Bottom of security"
+                prompt: "Place as top or bottom security card?"
+            - if:
+                condition: { equals: [pos, 0] }
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { binding: pick, zone: hand }
+                      position: top
+                      face_up: false
+            - if:
+                condition: { equals: [pos, 1] }
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { binding: pick, zone: hand }
+                      position: bottom
+                      face_up: false

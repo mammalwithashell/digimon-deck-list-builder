@@ -1,0 +1,61 @@
+card: BT25-092
+name: "Asuna Shiroki"
+kind: tamer
+color: [purple]
+cost: 4
+traits: [TS]
+
+effects:
+  # [Start of Your Main Phase] By trashing 1 card with [Three Musketeers] in its
+  # text or the [TS] trait from your hand, <Draw 1> and gain 1 memory.
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Your Main Phase] Trash 1 [Three Musketeers]-text or [TS] card from hand → Draw 1 + gain 1 memory"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - effect_text_contains: "Three Musketeers"
+            - trait_has: TS
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          filter:
+            any_of:
+              - effect_text_contains: "Three Musketeers"
+              - trait_has: TS
+          prompt: "Trash 1 card with [Three Musketeers] in its text or the [TS] trait"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+
+  # [Main] By suspending this Tamer and trashing 1 Option card from your hand or
+  # your Digimon's digivolution cards, 1 of your Digimon may digivolve into a
+  # Digimon card with [Three Musketeers] in its text or the [TS] trait in the
+  # hand or trash with the cost reduced by 1.
+  #
+  # BLOCKED (dsl): no faithful encoding exists yet for the compound effect:
+  #   (a) the digivolve RESULT card must be chosen from a union of {hand, trash}
+  #       and fed to `effect_initiated_digivolve` — the `from_hand` binding does
+  #       not accept a `select_union_zone` (hand-or-trash) result, and
+  #       digivolve-into-a-card-from-trash is unverified in lowering;
+  #   (b) the COST trash must come from a union of {your hand, your Digimon's
+  #       digivolution cards} — `select_union_zone` does not span a permanent's
+  #       own digivolution sources, and there is no single verb to trash an
+  #       Option from "hand OR digivolution cards" as a cost.
+  # Tracked as DSL gap G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
+  # The suspend-self cost + cost-reduction (`cost_delta: { reduce: 1 }`) and the
+  # target select are individually expressible; the multi-zone source/cost union
+  # is the blocker. Authoring a reduced version (hand-only result, hand-only
+  # cost) would silently drop player choices and violate the no-approximations
+  # policy, so this clause is left BLOCKED rather than approximated.
+
+  # [Security] Play this card without paying the cost.
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -61,6 +61,7 @@ pub fn lower_all(
     security_attack_fn: Option<CompiledFormula>,
     grant_keyword: Option<CompiledGrantKeywordValue>,
     modifier: Option<String>,
+    modifier_value: Option<i32>,
     while_condition: Option<CompiledPredicate>,
     applies_to_opponent_security_dp: bool,
     applies_to_own_security_dp: bool,
@@ -108,6 +109,7 @@ pub fn lower_all(
                 dp_modifier,
                 security_attack,
                 modifier,
+                modifier_value,
                 grant_keyword,
             );
         }
@@ -127,6 +129,7 @@ pub fn lower_all(
         security_attack_fn,
         grant_keyword,
         modifier,
+        modifier_value,
         raw,
     ) {
         vec![effect]
@@ -146,10 +149,12 @@ fn lower_self_while_condition(
     dp_modifier: Option<i32>,
     security_attack: Option<i32>,
     modifier: Option<String>,
+    modifier_value: Option<i32>,
     grant_keyword: Option<CompiledGrantKeywordValue>,
 ) -> Vec<Effect> {
     let active_when = active_when.map(Arc::new);
     let predicate = Arc::new(predicate);
+    let modifier_value = modifier_value.unwrap_or(0);
     let modifier_type = modifier.as_deref().and_then(lookup_modifier_type);
     let granted_kw = grant_keyword.and_then(|g| lookup_keyword(&g.keyword, g.value));
     let dp = dp_modifier;
@@ -198,7 +203,12 @@ fn lower_self_while_condition(
             );
         }
         if let Some(modifier_type) = modifier_type {
-            ctx.add_modifier_with_until_condition(handle, modifier_type, 0, until.clone());
+            ctx.add_modifier_with_until_condition(
+                handle,
+                modifier_type,
+                modifier_value,
+                until.clone(),
+            );
         }
         if let Some(kw) = granted_kw {
             // Track H §4 — keyword grant + while_condition. Uses the
@@ -245,14 +255,26 @@ pub fn lower(
     security_attack_fn: Option<CompiledFormula>,
     grant_keyword: Option<CompiledGrantKeywordValue>,
     modifier: Option<String>,
+    modifier_value: Option<i32>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
+    // Scalar `value` for the named `modifier` grant (e.g. ChangeLinkMax
+    // "Link +N"); `0` for boolean/flag modifiers (G-ENGINE-AURA-GRANT-LINK-MAX).
+    let modifier_value = modifier_value.unwrap_or(0);
     let is_self_aura = target == CompiledPredicate::default();
     let active_when = active_when.map(Arc::new);
 
     let mut builder: EffectBuilder = Effect::declarative(card).name("Aura");
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
+    }
+    // A `scope: linked` self-aura is a link card's continuous Link-ESS (DP /
+    // Security-Attack / keyword) — it applies to the HOST while the card is
+    // attached. `.linked()` marks it so the host-side effect/formula collectors
+    // fold it in (BT25-101 Divine Arms Version Ω: inherited <Security A. +1>;
+    // DCGO `ChangeSelfSAttackStaticEffect(isLinkedEffect: true)`).
+    if matches!(scope, CompiledScope::Linked) {
+        builder = builder.linked();
     }
     if let Some(aw) = active_when.clone() {
         builder = builder.condition(move |rctx| eval_active_when(&aw, rctx, is_self_aura));
@@ -320,7 +342,7 @@ pub fn lower(
                     ctx.grant_declarative_keyword(handle, kw, Expiry::Permanent);
                 }
                 if let Some(modifier) = modifier {
-                    ctx.add_declarative_modifier(handle, modifier, 0, Expiry::Permanent);
+                    ctx.add_declarative_modifier(handle, modifier, modifier_value, Expiry::Permanent);
                 }
             });
         return Some(builder.build());
@@ -348,7 +370,12 @@ pub fn lower(
         .process(move |ctx| {
             if let (Some(player_ref), Some(modifier)) = (target_player, modifier) {
                 for player in players_for_ref(player_ref, ctx) {
-                    ctx.add_declarative_player_modifier(player, modifier, 0, Expiry::Permanent);
+                    ctx.add_declarative_player_modifier(
+                        player,
+                        modifier,
+                        modifier_value,
+                        Expiry::Permanent,
+                    );
                 }
                 return;
             }
@@ -388,7 +415,7 @@ pub fn lower(
                     ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);
                 }
                 if let Some(modifier) = modifier {
-                    ctx.add_declarative_modifier(h, modifier, 0, Expiry::Permanent);
+                    ctx.add_declarative_modifier(h, modifier, modifier_value, Expiry::Permanent);
                 }
             }
         });

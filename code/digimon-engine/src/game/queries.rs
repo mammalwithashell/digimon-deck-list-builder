@@ -301,6 +301,39 @@ impl Game {
                 total += effect.dp_modifier;
             }
         }
+        // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's `.linked()`
+        // static-DP Link-ESS applies to its host. The `card_sources` loop above
+        // never scans `linked_cards`; fold them in here with the host as target.
+        let linked: Vec<(String, crate::card_source::CardHandle)> = permanent
+            .linked_cards
+            .iter()
+            .map(|c| (c.card_id(&self.card_data).to_string(), c.handle()))
+            .collect();
+        for (card_id, source_card) in linked {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || !effect.linked {
+                    continue;
+                }
+                if effect.materializes_declarative_state
+                    || effect.dp_modifier == 0
+                    || effect.dp_modifier_fn.is_some()
+                    || effect.applies_to_opponent_security_dp
+                {
+                    continue;
+                }
+                let rctx =
+                    EffectReadContext::new(self, source_card, Some(target), target.player);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                total += effect.dp_modifier;
+            }
+        }
         total
     }
 

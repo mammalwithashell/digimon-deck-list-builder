@@ -1,0 +1,21 @@
+{
+  "card_id": "BT25-089",
+  "card_name_eng": "Kazuki & Itsuki",
+  "card_kind": 1,
+  "level": null,
+  "dp": null,
+  "play_cost": 4,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "App Driver",
+    "Appmon"
+  ],
+  "evo_costs": [],
+  "dna_costs": null,
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Main] By suspending this Tamer, you may link 1 [Appmon] trait Digimon card from your hand or your Digimon's digivolution cards to 1 of your Digimon with the cost reduced by 2.\r\n[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse into a Digimon card in the hand.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": ""
+}

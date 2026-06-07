@@ -1,0 +1,55 @@
+card: BT25-098
+name: "Cyber Engage"
+kind: option
+color: [yellow]
+cost: 3
+traits: [Appmon]
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: Appmon
+    any_of:
+      - kind: digimon
+      - kind: tamer
+effects:
+  - kind: flood_gate
+    active_when:
+      any_of:
+        - any_permanent: { of: you, kind: digimon, trait_has: Appmon }
+        - any_permanent: { of: you, kind: tamer, trait_has: Appmon }
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT25-098" }
+    summary: "While you have an Appmon Digimon or Tamer, ignore color requirements for this card"
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add 1 Appmon to hand; trash the rest; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter: { trait_has: Appmon }
+          prompt: "Add 1 [Appmon] trait card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+      - place_self_as_delay_option: {}
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Play 1 Appmon from hand with cost reduced by 3"
+    process:
+      - select_hand:
+          of: you
+          bind_as: play_pick
+          optional: true
+          filter: { trait_has: Appmon }
+          prompt: "You may play 1 [Appmon] trait card with the cost reduced by 3"
+      - play_from_hand: { of: you, hand_index: play_pick, cost_delta: { reduce: 3 } }
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

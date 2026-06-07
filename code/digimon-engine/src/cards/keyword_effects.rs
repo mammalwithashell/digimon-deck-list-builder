@@ -1510,6 +1510,63 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
+        // DCGO `CardEffectCommons/KeyWordEffects/Ascension.cs` — OnDeletion
+        // trigger (`CanTriggerOnDeletion`, no cause filter). The carrier has
+        // already moved to trash when this drains (rule 25), so it is read from
+        // the pre-removal snapshot and rescued from trash to the TOP of the
+        // owner's security stack, face-down. "You may" is a real Yes/No branch
+        // (no auto-resolution) — declining ("No") is a clean no-op.
+        Keyword::Ascension => vec![Effect::on_deletion(card)
+            .name("<Ascension>")
+            .process(|ctx| {
+                let Some(snap) = ctx.deleted_object_snapshot().cloned() else {
+                    return;
+                };
+                let owner = snap.former_controller;
+                let self_card = snap.top_card;
+                // Only offer if the carrier actually landed in the owner's
+                // trash (always true under the batched deletion flow).
+                if !ctx
+                    .game
+                    .player(owner)
+                    .trash
+                    .iter()
+                    .any(|c| c.handle() == self_card)
+                {
+                    return;
+                }
+                ctx.select_effect_choice(
+                    "you may place this card as the top security card",
+                    vec!["Yes".to_string(), "No".to_string()],
+                    move |ctx, choice| {
+                        if choice != 0 {
+                            return; // declined ("No")
+                        }
+                        // Re-locate by stable handle (robust to intervening
+                        // trash shifts), then place on security top face-down.
+                        // Routes through `place_on_security_observed`, so
+                        // `WhenWouldPlaceInSecurity` replacements and
+                        // `CannotAddSecurity` gates apply.
+                        let Some(idx) = ctx
+                            .game
+                            .player(owner)
+                            .trash
+                            .iter()
+                            .position(|c| c.handle() == self_card)
+                        else {
+                            return;
+                        };
+                        ctx.place_on_security(
+                            owner,
+                            crate::enums::CardSourceRef::Trash(owner, idx),
+                            crate::enums::StackPosition::Top,
+                            /*face_up=*/ false,
+                        );
+                    },
+                );
+            })
+            .build()],
+
         // Intentionally NOT auto-installed (see file-header docstring for
         // rationale). The printed `<Digi-Burst N>` token is a cost prefix for
         // a per-card body that DSL `digi_burst: { count: N, then: [...] }`

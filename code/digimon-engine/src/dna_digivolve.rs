@@ -41,6 +41,35 @@ pub struct DnaRouteMatch {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct DigivolveRouteMatch {
     pub memory_cost: u16,
+    /// True when this route is an **App Fusion** alt-play (Appmon
+    /// "App Fusion" mechanic). Unlike a normal/alt digivolve, App Fusion
+    /// (a) ignores printed evo-cost / level / colour requirements (it is
+    /// gated only by the host having ≥2 of the named cards across its
+    /// top card + linked cards), and (b) after stacking the App-Fusion
+    /// card on top, the host's existing **linked cards** are moved under
+    /// the new top as digivolution sources (consumed). The commit path
+    /// (`commit_digivolve_from_hand_no_replace`) inspects this flag to run
+    /// the linked-card consumption step. See `general_rule.pdf` §App
+    /// Fusion and DCGO `AddAppfusionMethod.cs` / `CardController.cs`.
+    pub app_fusion: bool,
+}
+
+impl DigivolveRouteMatch {
+    /// A normal / non-App-Fusion digivolve route (printed or alt-digivolve).
+    pub fn digivolve(memory_cost: u16) -> Self {
+        Self {
+            memory_cost,
+            app_fusion: false,
+        }
+    }
+
+    /// An App-Fusion alt-play route.
+    pub fn app_fusion(memory_cost: u16) -> Self {
+        Self {
+            memory_cost,
+            app_fusion: true,
+        }
+    }
 }
 
 impl Game {
@@ -182,8 +211,14 @@ impl Game {
 
         [
             self.rules_digivolve_memory_cost(card, base_handle, base)
-                .map(|memory_cost| DigivolveRouteMatch { memory_cost }),
+                .map(DigivolveRouteMatch::digivolve),
             self.dsl_alt_digivolve_route_for_card(card, base_handle),
+            // App Fusion is a named-card-driven alt-play (cost 0, ignores
+            // evo-cost / level / colour). It is folded into the digivolve
+            // route funnel so it surfaces through the existing digivolve
+            // action + mask + commit path. The commit path checks
+            // `route.app_fusion` to also consume the host's linked cards.
+            self.app_fusion_digivolve_route_for_card(card, base_handle),
         ]
         .into_iter()
         .flatten()
@@ -338,7 +373,7 @@ impl Game {
                         memory_cost
                     }
                 };
-                let route = DigivolveRouteMatch { memory_cost };
+                let route = DigivolveRouteMatch::digivolve(memory_cost);
                 if best.is_none_or(|current| route.memory_cost < current.memory_cost) {
                     best = Some(route);
                 }
@@ -349,6 +384,108 @@ impl Game {
         {
             None
         }
+    }
+
+    /// App Fusion route lookup (Appmon "App Fusion" mechanic).
+    ///
+    /// The hand `card` carries an `app_fusion` alt-path whose `materials`
+    /// list the named cards (e.g. Kabemon / Gomimon / Ecomon / Puzzlemon).
+    /// The play is legal onto `base_handle` when that host Digimon has
+    /// **2 distinct named cards linked together**: the host's TOP card
+    /// matches one named condition AND one of the host's LINKED cards
+    /// matches a *different* named condition. This mirrors DCGO's
+    /// `GetAppFusion` `digimonCondition` (`AddAppfusionMethod.cs`): for
+    /// each `i`, top matches condition[i]; for some `j != i`, a linked
+    /// card matches condition[j].
+    ///
+    /// The cost is the path's `cost` (App Fusion is printed `Cost 0`).
+    /// App Fusion ignores printed evo-cost / level / colour requirements,
+    /// so — unlike a normal digivolve — there is no evo-cost gate here.
+    fn app_fusion_digivolve_route_for_card(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+    ) -> Option<DigivolveRouteMatch> {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            if base_handle.player != card.owner {
+                return None;
+            }
+            let card_id = card.card_id(&self.card_data);
+            let paths = self.alt_path_registry.get(card_id)?;
+            let base = self
+                .players
+                .get(base_handle.player as usize)?
+                .battle_area
+                .get(base_handle.index as usize)?;
+
+            let mut best: Option<DigivolveRouteMatch> = None;
+            for path in paths
+                .iter()
+                .filter(|path| matches!(path.kind, CompiledAltPathKind::AppFusion))
+            {
+                if !self.app_fusion_host_eligible(path, base) {
+                    continue;
+                }
+                let memory_cost = match &path.cost {
+                    Some(CompiledCost::Literal(n)) => u16::try_from(*n).ok()?,
+                    // App Fusion is printed Cost 0; non-literal costs are
+                    // not defined for the mechanic. Treat a missing cost as
+                    // 0 (the printed value for every App-Fusion card).
+                    None => 0,
+                    Some(CompiledCost::Formula(_)) => continue,
+                };
+                let route = DigivolveRouteMatch::app_fusion(memory_cost);
+                if best.is_none_or(|current| route.memory_cost < current.memory_cost) {
+                    best = Some(route);
+                }
+            }
+            best
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (card, base_handle);
+            None
+        }
+    }
+
+    /// DCGO `GetAppFusion.digimonCondition` parity: the host has 2 distinct
+    /// named cards linked together — its TOP card matches one named
+    /// condition and one of its LINKED cards matches a *different* named
+    /// condition.
+    ///
+    /// DCGO builds one `EqualsCardName` condition per listed name, then
+    /// requires `top == name[i]` and `linked == name[j]` with `i != j`.
+    /// We mirror that at the **name** granularity (not the material-slot
+    /// granularity), so the four App-Fusion names may be authored either as
+    /// four `name_is` materials OR as a single material with a four-entry
+    /// `name_in` list — both yield the same distinct-name conditions.
+    #[cfg(feature = "dsl-yaml-loader")]
+    fn app_fusion_host_eligible(&self, path: &CompiledAltPath, base: &Permanent) -> bool {
+        let names = app_fusion_condition_names(path);
+        // Need at least two distinct named conditions to fuse.
+        if names.len() < 2 {
+            return false;
+        }
+        let top = base.top_card();
+        let top_data = &self.card_data[top.data_index];
+        for (i, name_i) in names.iter().enumerate() {
+            if !card_name_equals(top_data, name_i) {
+                continue;
+            }
+            for (j, name_j) in names.iter().enumerate() {
+                if i == j {
+                    continue;
+                }
+                if base.linked_cards.iter().any(|linked| {
+                    let linked_data = &self.card_data[linked.data_index];
+                    card_name_equals(linked_data, name_j)
+                }) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub(crate) fn valid_dna_first_targets_for_hand_card(
@@ -859,6 +996,53 @@ fn registered_blast_dna_literal_cost(path: &CompiledAltPath) -> Option<i16> {
         Some(CompiledCost::Literal(n)) => i16::try_from(*n).ok(),
         Some(CompiledCost::Formula(_)) => None,
     }
+}
+
+/// Collect the distinct App-Fusion condition names from a compiled
+/// `app_fusion` alt-path. DCGO's `AddAppfuseMethodByName` builds one
+/// `EqualsCardName` condition per listed name; we gather those names from
+/// each material's `name_is` / `name_in` (including names nested under
+/// `all_of` / `any_of`). App Fusion conditions are purely name-based — no
+/// level / trait / colour gates — matching the printed mechanic. Names are
+/// de-duplicated case-insensitively so the distinct-condition requirement
+/// (`i != j`) is meaningful regardless of authoring style (four `name_is`
+/// materials vs one `name_in` list).
+#[cfg(feature = "dsl-yaml-loader")]
+fn app_fusion_condition_names(path: &CompiledAltPath) -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
+    let mut push = |name: &str| {
+        if !names.iter().any(|n| n.eq_ignore_ascii_case(name)) {
+            names.push(name.to_string());
+        }
+    };
+    for material in &path.materials {
+        collect_predicate_names(&material.filter, &mut push);
+    }
+    names
+}
+
+#[cfg(feature = "dsl-yaml-loader")]
+fn collect_predicate_names<F: FnMut(&str)>(
+    pred: &digimon_dsl::compiled::CompiledPredicate,
+    push: &mut F,
+) {
+    if let Some(name) = pred.name_is.as_ref() {
+        push(name);
+    }
+    if let Some(list) = pred.name_in.as_ref() {
+        for name in list {
+            push(name);
+        }
+    }
+    for child in pred.all_of.iter().chain(pred.any_of.iter()) {
+        collect_predicate_names(child, push);
+    }
+}
+
+/// Exact card-name equality (DCGO `EqualsCardName`).
+#[cfg(feature = "dsl-yaml-loader")]
+fn card_name_equals(card: &CardData, name: &str) -> bool {
+    card.card_name.eq_ignore_ascii_case(name)
 }
 
 fn material_matches(

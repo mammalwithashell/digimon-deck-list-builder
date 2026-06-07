@@ -1,0 +1,125 @@
+# BT25-067 Sealsdramon — Digimon, Lv.4, Black/Purple, DP 5000, Cost 4.
+# Traits: Cyborg, D-Brigade, ACCEL.  Attribute: Virus.
+# Evo: Lv.3 Black / cost 3 (printed evo_costs).
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   [Your Turn] When any of your [D-Brigade] or [ACCEL] trait Digimon are
+#   played, this Digimon may digivolve into a [D-Brigade] or [ACCEL] trait
+#   Digimon card in the hand with the cost reduced by 2.
+#
+# Inherited:
+#   [All Turns] This Digimon gets +1000 DP.
+#
+# Printed evo box (alt-digivolution): "[Digivolve] Lv.3 w/[D-Brigade] or
+# [ACCEL] trait: Cost 2".
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_067.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternative Digivolve Condition" (None):
+#   AddSelfDigivolutionRequirementStaticEffect(level 3,
+#   TopCard.EqualsTraits("D-Brigade") || EqualsTraits("ACCEL"), cost 2). →
+#   `alt_paths: kind: digivolve, from: { level_eq: 3, trait_has: ... }, cost 2`.
+#   The DSL `from` predicate takes a single `trait_has`; D-Brigade/ACCEL is an
+#   OR over two traits, so TWO alt-path entries (one per trait) reproduce it.
+#   Standard Lv.3 Black / cost 3 (cards.json evo_costs) also encoded.
+#
+# Region "Your Turn" (OnEnterFieldAnyone):
+#   CanUseCondition = IsOwnerTurn AND CanTriggerOnPermanentPlay where the played
+#   OWN battle-area Digimon has trait D-Brigade OR ACCEL.
+#   CanActivateCondition = a D-Brigade/ACCEL Digimon card exists in the owner's
+#   hand. Body = DigivolveIntoHandOrTrashCard(this, cardCondition: D-Brigade ||
+#   ACCEL, payCost:true, reduceCost 2, isHand:true). ActivateClass is `true`
+#   (optional/skippable). →
+#   `when: on_ally_played` (own-play trigger — DCGO gates on
+#   IsPermanentExistsOnOwnerBattleAreaDigimon, i.e. an OWN played Digimon),
+#   `active_when: { your_turn: true }`, `optional: true`,
+#   `condition: event_target_kind digimon AND event_card_trait_has (D-Brigade
+#   OR ACCEL)`. Body: select_hand filtered D-Brigade/ACCEL Digimon, then
+#   effect_initiated_digivolve { target: source, from_hand: <pick>,
+#   cost: { reduce: 2 } } — digivolves THIS Digimon (the source permanent) into
+#   the chosen hand card. (DCGO is play-only, NOT digivolve — text "are played".)
+#
+# Region "All Turns - Inherited" (None):
+#   ChangeSelfDPStaticEffect(+1000, isInheritedEffect:true, condition: true). →
+#   `kind: aura`, `scope: inherited`, `target: {}` (self), `dp_modifier: 1000`,
+#   no active_when (applies on all turns).
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Std digivolve Lv.3 Black / Cost 3                              | IMPLEMENTED (printed evo_costs) |
+# | Alt-source Lv.3 [D-Brigade] / Cost 2                          | IMPLEMENTED (alt_paths #1) |
+# | Alt-source Lv.3 [ACCEL] / Cost 2                              | IMPLEMENTED (alt_paths #2) |
+# | [Your Turn] D-Brigade/ACCEL played → may digivolve into hand -2 | IMPLEMENTED (on_ally_played + self digivolve into hand) |
+# | Inherited [All Turns] +1000 DP                                | IMPLEMENTED (inherited self-aura) |
+
+card: BT25-067
+name: Sealsdramon
+kind: digimon
+level: 4
+color: [black, purple]
+cost: 4
+dp: 5000
+traits: [Cyborg, D-Brigade, ACCEL]
+attribute: Virus
+
+alt_paths:
+  # Standard digivolution: Lv.3 Black / cost 3 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  # Alt-digivolution: Lv.3 with [D-Brigade] trait / cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "D-Brigade" }
+    cost: 2
+  # Alt-digivolution: Lv.3 with [ACCEL] trait / cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ACCEL }
+    cost: 2
+
+effects:
+  # ─── Clause 1 — [Your Turn] D-Brigade/ACCEL played → self digivolve into hand, cost -2 ─
+  #
+  # Triggers on an OWN Digimon being PLAYED (not digivolved — printed "are
+  # played"). The played card must have the D-Brigade or ACCEL trait. This
+  # Digimon may then digivolve into a D-Brigade/ACCEL Digimon card in the hand
+  # with cost reduced by 2. Optional ("may"). The select_hand finds no
+  # candidate when the hand holds no D-Brigade/ACCEL Digimon, so the clause
+  # self-gates (DCGO CanActivateCondition: HasMatchConditionOwnersHand).
+  - when: on_ally_played
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When your D-Brigade/ACCEL Digimon are played, this Digimon may digivolve into a D-Brigade/ACCEL Digimon in hand with cost -2"
+    condition:
+      all_of:
+        - event_target_kind: digimon
+        - any_of:
+            - event_card_trait_has: "D-Brigade"
+            - event_card_trait_has: ACCEL
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "D-Brigade"
+                  - trait_has: ACCEL
+          prompt: "Digivolve into a [D-Brigade] or [ACCEL] Digimon in hand (cost reduced by 2)"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  # ─── Inherited [All Turns] +1000 DP ─────────────────────────────────────────
+  - kind: aura
+    scope: inherited
+    target: {}
+    dp_modifier: 1000
+    summary: "Inherited [All Turns] This Digimon gets +1000 DP"

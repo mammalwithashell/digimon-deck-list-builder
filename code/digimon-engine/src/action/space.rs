@@ -114,6 +114,14 @@ pub const FIELD_EFFECT_SLOT_FOR_MAIN: u16 = 2;
 /// `1000 + i * EFFECTS_PER_PERM + 0`.
 pub const FIELD_EFFECT_SLOT_FOR_OVERCLOCK: u16 = 0;
 
+/// Sub-slot 3 of the per-permanent effect range is the DigiLink Shape-B
+/// "activate Link" ability — an un-linked standing Appmon Link Digimon
+/// (e.g. BT21-009 Gatchmon) declares a link onto one of the controller's
+/// other Digimon. Reuses an otherwise-unused sub-slot, so `ACTION_SPACE_SIZE`
+/// is unchanged (DigiLink design D2). Host selection follows via the existing
+/// pending-selection mask, not a new action ID.
+pub const FIELD_EFFECT_SLOT_FOR_LINK: u16 = 3;
+
 /// Upper bound on how many trash cards the mask inspects for [Trash] [Main]
 /// activations. Python enforces 45 in `action_mask.py` (TRASH_EFFECT_END -
 /// TRASH_EFFECT_START = 1195 - 1150).

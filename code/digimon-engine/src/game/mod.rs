@@ -182,6 +182,19 @@ pub(crate) struct PendingWouldLinkResume {
     pub(crate) card: crate::card_source::CardHandle,
 }
 
+/// Fire-site continuation for a DigiLink Shape-B Digimon-link whose
+/// `WhenWouldLink` replacement parked an interactive selection. Carries the
+/// linking standing Digimon, the chosen host, the link cost, and the linking
+/// card's handle (the `WhenWouldLink` replacement subject) so the resume can
+/// re-validate the source before committing the absorb.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingDigimonLink {
+    pub(crate) source: PermanentHandle,
+    pub(crate) host: PermanentHandle,
+    pub(crate) cost: u16,
+    pub(crate) card: crate::card_source::CardHandle,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PendingWouldDigivolveResume {
     pub(crate) player: PlayerId,
@@ -376,9 +389,11 @@ pub struct Game {
     pub(crate) pending_option_placed_turn_check: bool,
     /// Link Option continuation parked when `OnOptionPlaced` observers install
     /// a selection after the linked card has attached but before `OnLink` has
-    /// fired.
+    /// fired. Carries the host and the just-linked card so `OnLink` fires with
+    /// the `Linked` trigger source identifying exactly the card that attached.
     #[doc(hidden)]
-    pub(crate) pending_option_placed_link_resume: Option<PermanentHandle>,
+    pub(crate) pending_option_placed_link_resume:
+        Option<(PermanentHandle, crate::card_source::CardHandle)>,
     /// Mid-security-check resolution state. Set by `resolve_security_card`
     /// at phase entry, mutated by `drive_security_resolution` as phases
     /// advance, and cleared at `Dispose`. Non-`None` when the engine is
@@ -461,6 +476,18 @@ pub struct Game {
     /// subject is the pending Link Option card.
     #[doc(hidden)]
     pub(crate) pending_would_link_resume: Option<PendingWouldLinkResume>,
+    /// Fire-site continuation for a DigiLink Shape-B Digimon-link whose
+    /// `WhenWouldLink` replacement parked an interactive selection.
+    #[doc(hidden)]
+    pub(crate) pending_digimon_link: Option<PendingDigimonLink>,
+    /// The host a card is about to link ONTO during the active `WhenWouldLink`
+    /// replacement window. Set by `begin_digimon_link` right before
+    /// `try_replace`, cleared when the link resolves/aborts. Read by a
+    /// host-side reducer effect's `condition` (via `EffectContext::
+    /// pending_link_host`) so it can verify "...link to THIS Digimon" before
+    /// offering its optional cost reduction (Gap 5 — BT25-004 / BT25-045).
+    #[doc(hidden)]
+    pub(crate) pending_link_host: Option<PermanentHandle>,
     /// Fire-site continuation for optional `WhenPermanentWouldDigivolve`
     /// replacements whose subject is the permanent about to digivolve.
     #[doc(hidden)]
@@ -2226,6 +2253,65 @@ impl Game {
                     continue;
                 };
                 let ctx = EffectReadContext::new(self, source_card, source_permanent, controller);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&ctx) {
+                        continue;
+                    }
+                }
+                if let Some(value) = formula_fn(&ctx, target) {
+                    if security_attack {
+                        total = if found { total.max(value) } else { value };
+                    } else {
+                        total += value;
+                    }
+                    found = true;
+                }
+            }
+        }
+
+        // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's `.linked()`
+        // dynamic DP / Security-Attack formula Link-ESS contributes to its host.
+        // The loop above scans `card_sources` / breeding only; fold in every
+        // host's `linked_cards` with the host as `source_permanent`.
+        let mut linked_sources: Vec<(
+            String,
+            crate::card_source::CardHandle,
+            PermanentHandle,
+            PlayerId,
+        )> = Vec::new();
+        for (pid, player) in self.players.iter().enumerate() {
+            let player_id = pid as PlayerId;
+            for (index, perm) in player.battle_area.iter().enumerate() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
+                };
+                for linked in &perm.linked_cards {
+                    linked_sources.push((
+                        linked.card_id(&self.card_data).to_string(),
+                        linked.handle(),
+                        host,
+                        player_id,
+                    ));
+                }
+            }
+        }
+        for (card_id, source_card, host, controller) in linked_sources {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || !effect.linked {
+                    continue;
+                }
+                let Some(formula_fn) = (if security_attack {
+                    effect.security_attack_fn.as_ref()
+                } else {
+                    effect.dp_modifier_fn.as_ref()
+                }) else {
+                    continue;
+                };
+                let ctx = EffectReadContext::new(self, source_card, Some(host), controller);
                 if let Some(condition) = &effect.condition {
                     if !condition(&ctx) {
                         continue;

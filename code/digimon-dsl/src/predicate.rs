@@ -397,6 +397,14 @@ pub struct PredicateSpec {
     pub replacement_source_is_opponent: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replacement_subject_is_mine: Option<bool>,
+    /// True when the card about to link in the active `WhenWouldLink` window
+    /// (the standing-Digimon link subject) carries AT LEAST ONE of the listed
+    /// traits. Used by a host-side `when_would_link_to_this` reducer to gate on
+    /// the linking card's traits — "when a [Social]/[Tool]/[Game] trait card
+    /// would link to this Digimon" (Gap 5 — BT25-004 / BT25-045). `None`
+    /// outside a standing-link `WhenWouldLink` window.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub would_link_card_trait_any_of: Option<Vec<String>>,
 
     // Binding comparisons
     #[serde(skip_serializing_if = "Option::is_none")]

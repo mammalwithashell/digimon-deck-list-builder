@@ -42,9 +42,15 @@ mod fixture_smoke {
 
 // ── Per-archetype interaction suites ─────────────────────────────────────────
 
+mod beatbreak_bt25;
 mod bg_imperial;
+mod callismon_dark_animal_bt25;
 mod dna_omnimon;
+mod flaremon_beastkin;
+mod gaogamon_beast_bt25;
+mod machine_bt25;
 mod magneticdra;
+mod mammal_bt25;
 mod medusamon;
 mod nokia_alters;
 mod omni_nokia;
@@ -52,6 +58,8 @@ mod omnimon_ace;
 mod puppet_sister;
 mod puppets;
 mod rocks;
+mod thomas_data_squad_bt25;
+mod titan_bt25;
 
 // Starter-deck interaction suites (ST-1 … ST-6), authored by the
 // `/archetype-interaction-test-author` capstone run. Real-card / synthetic-free.

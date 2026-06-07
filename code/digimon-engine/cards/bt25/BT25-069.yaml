@@ -1,0 +1,47 @@
+# BT25-069 Raremon — Digimon, Lv.4, Purple, DP 4000, Cost 4.
+# Trait line: Undead / Titan / TS. Attribute: Virus.
+#
+# DCGO BT25_069.cs (authoritative):
+#   - Jamming (self, non-inherited).
+#   - Shared [On Play]/[When Digivolving]: you may link 1 [TS] trait card from
+#     your trash to 1 of YOUR Digimon without paying the cost.
+#     → link_card_to_self { from: [trash], filter trait_has TS, to: chosen_own_digimon,
+#       cost 0, optional: true }.
+#   - Inherited [All Turns]: this Digimon gets +1000 DP.
+#     → scope: inherited, kind: dp_buff +1000 (all turns).
+
+card: BT25-069
+name: Raremon
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 4000
+traits: [Undead, Titan, TS]
+attribute: Virus
+
+effects:
+  # ─── <Jamming> (self) ───────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Jamming
+
+  # ─── [On Play]/[When Digivolving] link 1 [TS] from trash to 1 of your Digimon ─
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may link 1 [TS] trait card from your trash to 1 of your Digimon without paying the cost"
+    process:
+      - link_card_to_self:
+          from: [trash]
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+          to: chosen_own_digimon
+          cost: 0
+          optional: true
+
+  # ─── Inherited [All Turns] +1000 DP ────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

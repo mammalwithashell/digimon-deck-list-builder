@@ -1,0 +1,132 @@
+# BT25-084 Titamon — Digimon, Lv.6, Purple/(Black), DP 13000, Cost 13.
+# Traits: Shaman, Titan, TS. Attribute: Virus.
+# Standard digivolution: Lv.5 Purple / cost 5 (printed evo_costs).
+#
+# Printed card text (card image BT25-084 — authoritative for printed text):
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing 1
+#   card in your hand, delete all of your opponent's highest DP Digimon. After,
+#   if played or digivolved by an effect, trash their top security card.
+#   [All Turns] [Once Per Turn] When this Digimon would leave the battle area, by
+#   trashing 2 cards in your hand, it doesn't leave.
+#   [All Turns] When your hand is trashed from, delete 1 of your opponent's
+#   lowest DP Digimon.
+#
+# Printed evo boxes (xros_req): "[Digivolve] [Titamon] w/o 3 colors: Cost 2" and
+#   "[Digivolve] Lv.5 w/[TS] trait: Cost 4".
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_084.cs
+#
+# DCGO crosscheck:
+#   Digivolution Condition (None): (1) AddSelfDigivolutionRequirementStaticEffect(
+#     permanentCondition: TopCard EqualsCardName "Titamon" && distinct colors != 3,
+#     cost 2); (2) level 5, TopCard HasTSTraits, cost 4.
+#   Shared OP/WD/WA (maxCountPerTurn 1, optional:false, isSkippable:true,
+#     additionalActivateCondition: HandCards.Count > 0): SelectHand Discard 1
+#     (canNoSelect:true). If discarded → delete all opp highest-DP Digimon; then
+#     if EnteredByEffect (OP/WD by effect) → trash opp top security.
+#   All Turns WhenRemoveField (OPT, skippable, requires Hand>=2): SelectHand
+#     Discard 2; if 2 discarded → willBeRemoveField=false (doesn't leave).
+#   All Turns OnDiscardHand: when your hand is trashed from, delete 1 opp lowest
+#     DP Digimon. → ENGINE GAP: no OnDiscardHand observer timing in the Rust
+#     EffectTiming enum (G-ENGINE-ON-DISCARD-HAND, logged in
+#     qa/archetype-qa/engine-gaps.md). Clause OMITTED → verdict PARTIAL.
+#
+# NOTE — "[Titamon] w/o 3 colors: Cost 2" alt-path OMITTED: the DSL `from:`
+# filter has no "distinct colors != 3" / self_color_count_lte predicate
+# (G-DSL-SELF-COLOR-COUNT-LTE). The standard Lv.5 Purple path and the Lv.5 [TS]
+# cost-4 path are encoded.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 Purple / Cost 5                         | IMPLEMENTED (evo_costs) |
+# | Alt-source Lv.5 [TS] / Cost 4                              | IMPLEMENTED (alt_paths) |
+# | Alt-source [Titamon] w/o 3 colors / Cost 2                 | OMITTED — G-DSL-SELF-COLOR-COUNT-LTE |
+# | [OP][WD][WA][OPT] trash 1 hand -> delete all opp highest DP; if by effect trash opp sec | IMPLEMENTED |
+# | [All Turns][OPT] would-leave -> trash 2 hand -> doesn't leave | IMPLEMENTED (replacement + 2x hand trash + cancel) |
+# | [All Turns] on hand-trashed -> delete opp lowest DP        | OMITTED — G-ENGINE-ON-DISCARD-HAND -> PARTIAL |
+
+card: BT25-084
+name: Titamon
+kind: digimon
+level: 6
+color: [purple, black]
+dp: 13000
+cost: 13
+traits: [Shaman, Titan, TS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 4
+
+effects:
+  # ─── [OP][WD][WA][OPT] trash 1 hand -> delete all opp highest DP; if effect, trash opp sec ─
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    summary: "[OP][WD][WA][OPT] By trashing 1 hand card, delete all opp highest DP Digimon; after, if played/digivolved by an effect, trash their top security"
+    process:
+      # `cost: true` -> declining the optional hand-trash aborts the rest of the
+      # clause (printed "By trashing 1 card in your hand, ...").
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - dp_gte:
+                  aggregate:
+                    selector: highest_dp
+                    scope: opponent
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }
+      - if:
+          condition: { event_is_effect_initiated: true }
+          then:
+            - trash_top_security: { of: opponent }
+
+  # ─── [All Turns][OPT] would-leave -> trash 2 hand -> doesn't leave ──────────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - card_number_is: "BT25-084"
+        - count_gte:
+            filter:
+              all_of:
+                - owner: you
+                - zone: [hand]
+            n: 2
+    summary: "[All Turns][OPT] When this Digimon would leave, by trashing 2 cards in your hand, it doesn't leave"
+    process:
+      - select_hand:
+          of: you
+          bind_as: c1
+          filter: {}
+          prompt: "Trash 1st of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: c1 }
+      - select_hand:
+          of: you
+          bind_as: c2
+          filter: {}
+          prompt: "Trash 2nd of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: c2 }
+      - cancel_replacement: {}
+
+  # [All Turns] "When your hand is trashed from, delete 1 opp lowest DP Digimon"
+  # OMITTED — no OnDiscardHand observer timing in the engine
+  # (G-ENGINE-ON-DISCARD-HAND). Verdict PARTIAL.

@@ -666,6 +666,24 @@ fn eval_replacement_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_
             return false;
         }
     }
+    if let Some(traits) = pred.would_link_card_trait_any_of.as_ref() {
+        // Read the card about to link in the active standing-Digimon
+        // `WhenWouldLink` window and check it carries one of the listed traits
+        // (Gap 5 — BT25-004 / BT25-045 host-side reducer trait gate).
+        let Some(card) = rctx.would_link_subject_card() else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !data
+            .traits
+            .iter()
+            .any(|t| traits.iter().any(|want| want == t))
+        {
+            return false;
+        }
+    }
     true
 }
 

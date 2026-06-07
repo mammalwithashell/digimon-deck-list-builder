@@ -242,11 +242,22 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::PlayFromRevealedFree { of, card, bind_as } => {
+        CompiledStep::PlayFromRevealedFree {
+            of,
+            card,
+            bind_as,
+            cost_delta,
+        } => {
             let owner = resolve_player(ctx, *of);
+            // None => FREE (prior behavior — unlike play_from_trash, whose None
+            // means "pay full"); Some => pay the reduced cost.
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
+            };
             match resolve_binding_ref(card, ctx, bindings) {
                 Some(ResolvedBinding::Card(handle)) => {
-                    if let Some(played) = ctx.play_from_revealed_free(owner, handle) {
+                    if let Some(played) = ctx.play_from_revealed_with_cost(owner, handle, delta) {
                         bindings.record_played(played);
                         if let Some(name) = bind_as {
                             bind_played_with_provenance(bindings, ctx, name, played);
@@ -256,7 +267,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 Some(ResolvedBinding::CardList(handles)) => {
                     let mut last_played = None;
                     for handle in handles {
-                        if let Some(played) = ctx.play_from_revealed_free(owner, handle) {
+                        if let Some(played) =
+                            ctx.play_from_revealed_with_cost(owner, handle, delta.clone())
+                        {
                             bindings.record_played(played);
                             last_played = Some(played);
                         }

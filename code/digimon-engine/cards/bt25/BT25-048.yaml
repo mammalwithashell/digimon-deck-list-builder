@@ -1,0 +1,74 @@
+# BT25-048 Bearmon — Digimon, Lv.3, Green, DP 2000, Cost 3.
+# Traits: Beast, Iliad, TS. Attribute: Vaccine.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [Your Turn] When this Digimon would digivolve into a [TS] trait Digimon
+#   card, reduce the cost by 1.
+#
+# Inherited Effect:
+#   [All Turns] [Once Per Turn] When this Digimon wins a battle, ＜Draw 1＞
+#   (Draw 1 card from your deck.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_048.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "Alternative Digivolve Condition" — EffectTiming.None,
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.HasTSTraits, 0, false,
+#   level: 2). → alt_paths digivolve from { level_eq: 2, trait_has: TS } cost 0.
+#
+# Clause "Your Turn" — EffectTiming.None ChangeDigivolutionCostStaticEffect(-1,
+#   permanentCondition: targetPermanent == this, cardCondition: HasTSTraits &&
+#   green, condition: IsOwnerTurn && IsExistOnBattleAreaDigimon).
+#   → kind: cost_reduction, scope: face_up, when_any_ally_digivolves_into:
+#     { trait_has: TS }, condition: source_is_cost_target_permanent (= "THIS
+#     Digimon is the digivolve base"), active_when: your_turn, amount: 1.
+#   SOURCE-PRIORITY NOTE: printed text restricts the digivolve TARGET to a "[TS]
+#   trait Digimon card" with NO color clause; DCGO additionally requires green.
+#   Per CLAUDE.md source priority (printed text wins over DCGO), we model the
+#   TS-trait restriction only and intentionally omit DCGO's green gate.
+#
+# Clause "ESS - Win Battle" — EffectTiming.OnEndBattle ActivateClass,
+#   maxCountPerTurn: 1 (OPT), isInheritedEffect: true. CanUseCondition:
+#   CanTriggerWhenWinBattle(winnerCondition: this is a source of the winner).
+#   Draw 1. → scope: inherited, when: on_any_deletion, condition:
+#   source_deleted_battle_opponent (the "wins a battle" idiom, ST4-11),
+#   once_per_turn: true, draw 1.
+
+card: BT25-048
+name: Bearmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Beast, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: TS }
+    cost: 0
+
+effects:
+  # ─── Clause 0: [Your Turn] -1 cost when THIS digivolves into a [TS] Digimon ──
+  - kind: cost_reduction
+    scope: face_up
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    when_any_ally_digivolves_into:
+      trait_has: TS
+    condition:
+      source_is_cost_target_permanent: true
+    amount: 1
+    summary: "[Your Turn] When THIS Digimon digivolves into a [TS] Digimon card, reduce the cost by 1"
+
+  # ─── Clause 1: Inherited [All Turns][OPT] on winning a battle, draw 1 ────────
+  - scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    condition: { source_deleted_battle_opponent: true }
+    summary: "[Inherited][All Turns][OPT] When this Digimon wins a battle, draw 1"
+    process:
+      - draw: { of: you, count: 1 }

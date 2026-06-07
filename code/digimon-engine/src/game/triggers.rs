@@ -168,6 +168,72 @@ impl Game {
             }
         }
 
+        // DigiLink Shape-B (task 6.2 / design D7): a linked card's `.linked()`
+        // declarative grants materialize onto its HOST. The main loop above
+        // scans top cards + under-stack digivolution sources but never
+        // `linked_cards`, so a linked Digimon's continuous ESS (e.g. a `Raid`
+        // keyword or DP buff) would never reach the host. This additive pass
+        // runs each linked card's `.linked()` materializing declaratives with
+        // `source_permanent = host` and `controller = host owner`, routing the
+        // grant through the same modifier registry as inherited ESS — so
+        // `Game::has_keyword` (via `modifiers.has_keyword`) and DP math see it.
+        let mut linked_sources: Vec<(
+            String,
+            crate::card_source::CardHandle,
+            PermanentHandle,
+            crate::enums::PlayerId,
+        )> = Vec::new();
+        for (pid, player) in self.players.iter().enumerate() {
+            let player_id = pid as crate::enums::PlayerId;
+            for (index, perm) in player.battle_area.iter().enumerate() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
+                };
+                for linked in &perm.linked_cards {
+                    linked_sources.push((
+                        linked.card_id(&self.card_data).to_string(),
+                        linked.handle(),
+                        host,
+                        player_id,
+                    ));
+                }
+            }
+        }
+        for (card_id, source_card, host, controller) in linked_sources {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.linked || !effect.declarative {
+                    continue;
+                }
+                if !effect.materializes_declarative_state || effect.process.is_none() {
+                    continue;
+                }
+                if let Some(condition) = &effect.condition {
+                    let rctx = crate::effect_context::EffectReadContext::new(
+                        self,
+                        source_card,
+                        Some(host),
+                        controller,
+                    );
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                if let Some(process) = effect.process.as_ref() {
+                    let mut ctx = crate::effect_context::EffectContext::new(
+                        self,
+                        source_card,
+                        Some(host),
+                        controller,
+                    );
+                    process(&mut ctx);
+                }
+            }
+        }
+
         // Source-independent floating mass modifiers: re-scan the live candidate
         // set with each descriptor's predicate (relative to its `source_player`)
         // and install a materialized-declarative modifier on every current match

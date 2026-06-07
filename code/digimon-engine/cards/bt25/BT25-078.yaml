@@ -1,0 +1,67 @@
+# BT25-078 Gazimon — Digimon, Lv.3, Black, DP 1000, Cost 3.
+# Traits: Mammal, Iliad, TS. Attribute: Virus.
+# [When Moving][On Play] Reveal top 3; add 1 card with [Three Musketeers] in text to hand,
+# OR you may place 1 [Three Musketeers] trait card as bottom digivolution card; rest to bottom.
+# Inherited <Retaliation>. Alt-digivolve Lv.2 Black, or Lv.2 [TS]/[Three Musketeers]-text / Cost 0.
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_078.cs (canNoSelect → optional;
+# choice-first P-167 idiom; the two options have different eligibility filters).
+card: BT25-078
+name: Gazimon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Mammal, Iliad, TS]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: black
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - any_of:
+            - trait_has: TS
+            - effect_text_contains: "Three Musketeers"
+    cost: 0
+effects:
+  - when: [on_move, on_play]
+    optional: true
+    once_per_turn: true
+    summary: "[When Moving][On Play] Reveal 3; add 1 [Three Musketeers]-in-text card to hand OR place 1 [Three Musketeers]-trait card as bottom source; rest to bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_effect_choice:
+          labels:
+            - "Add a [Three Musketeers] card to hand"
+            - "Place a [Three Musketeers] trait card as bottom digivolution card"
+          bind_as: branch
+          prompt: "Add 1 [Three Musketeers] card to hand, or place 1 [Three Musketeers] trait card as this Digimon's bottom digivolution card?"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - choose_from_reveal:
+                of: you
+                filter: { effect_text_contains: "Three Musketeers" }
+                destination: hand
+                bind_as: hand_pick
+                prompt: "Add 1 card with [Three Musketeers] in its text to your hand"
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - choose_from_reveal:
+                of: you
+                filter: { trait_has: "Three Musketeers" }
+                destination:
+                  bottom_source_of: { target: this }
+                bind_as: source_pick
+                prompt: "Place 1 [Three Musketeers] trait card as this Digimon's bottom digivolution card"
+      - place_remainder_on_deck: { of: you, position: bottom }
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation

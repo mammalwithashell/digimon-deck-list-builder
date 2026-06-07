@@ -262,6 +262,23 @@ impl Game {
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
+            TriggerSource::Linked { player, .. } => {
+                // Same battle-area scan as `PlayerBattleArea`, but the trigger
+                // context carries the just-linked card so a `WhenLinked`
+                // self-filter (`event_card == source_card`) is possible. The
+                // `.linked()` OnLink effect on the just-linked card is reached
+                // through `enqueue_from_permanent`'s linked-card scan.
+                let count = self.player(player).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player,
+                        index: i as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+            }
             TriggerSource::PlayerBreedingArea(player) => {
                 let handle = PermanentHandle {
                     player,
@@ -1202,6 +1219,17 @@ impl Game {
                 event_card: Some(card),
                 source_player: Some(player),
                 effect_initiated,
+                ..TriggerContext::default()
+            },
+            TriggerSource::Linked { player, host, card } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(host),
+                event_card: Some(card),
+                event_source_card: Some(card),
+                event_host_card: self.top_card_handle(host),
+                event_host_permanent: Some(host),
+                source_player: Some(player),
                 ..TriggerContext::default()
             },
             TriggerSource::OptionPlaced {

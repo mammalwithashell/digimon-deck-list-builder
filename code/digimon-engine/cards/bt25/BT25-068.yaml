@@ -1,0 +1,83 @@
+# BT25-068 Deltamon — Digimon, Lv.4, Black, DP 4000, Cost 4.
+# Traits: Composite, Titan, TS.
+# Standard digivolution: Lv.3 Black / cost 2 (printed evo_costs).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   <Collision> (During this Digimon's attack, all of your opponent's Digimon
+#   gain <Blocker>, and must block if possible.)
+#   [All Turns] [Once Per Turn] When this Digimon suspends, <De-Digivolve 1> 1
+#   of your opponent's Digimon. (Trash the top card. You can't trash past level
+#   3 cards.)
+#
+# Inherited Effect:
+#   [All Turns] This Digimon gets +1000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_068.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Collision — `OnCounterTiming` CollisionSelfStaticEffect → grant_keyword
+#   Collision.
+# On-suspend — `OnTappedAnyone` ActivateClass gated by
+#   `CanTriggerWhenSelfPermanentSuspends` (this Digimon suspends), OPT
+#   (maxCountPerTurn: 1), isOptional: false (mandatory once it fires). Body:
+#   SelectPermanent Degenerate (canNoSelect: false) on an opponent Digimon →
+#   De-Digivolve 1, stop at level 3.
+#   → on_suspend, once_per_turn, active_when all_turns, condition
+#     event_permanent_is_source (THIS Digimon), mandatory de_digivolve 1.
+# Inherited +1000 DP — ChangeSelfDPStaticEffect(1000, isInheritedEffect: true).
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 3,
+#   TopCard TS, cost 2). Matches the printed Lv.3 / cost 2 route but gated on a
+#   [TS] base; authored as an alt_path.
+
+card: BT25-068
+name: Deltamon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+traits: [Composite, Titan, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+
+effects:
+  # ─── <Collision> ───────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Collision
+    summary: "<Collision>"
+
+  # ─── [All Turns][OPT] on self-suspend → De-Digivolve 1 opp Digimon ──────────
+  #
+  # `event_permanent_is_source: true` restricts the trigger to THIS Digimon
+  # suspending (DCGO CanTriggerWhenSelfPermanentSuspends). The de_digivolve is
+  # mandatory once the trigger fires (DCGO canNoSelect: false), so the target
+  # select is a plain mandatory `select_opponent_permanent`. `stop_at_level: 3`
+  # encodes the printed "You can't trash past level 3 cards."
+  - when: on_suspend
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns][OPT] When this Digimon suspends, De-Digivolve 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "De-Digivolve 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: victim
+          amount: 1
+          stop_at_level: 3
+
+  # ─── Inherited [All Turns] +1000 DP ────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

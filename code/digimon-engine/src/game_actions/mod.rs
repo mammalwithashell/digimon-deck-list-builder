@@ -30,6 +30,7 @@ mod breeding;
 mod cost;
 mod digivolve;
 mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
+mod link; // DigiLink Shape-B (Digimon-link) — activate/begin/commit/absorb + facet-#9 chosen-card link
 mod misc;
 mod movement;
 mod options;
@@ -1421,14 +1422,14 @@ impl Game {
     }
 
     pub(crate) fn resume_pending_option_placed_link(&mut self) {
-        if self.pending_option_placed_link_resume.is_none() {
+        let Some((host, linked_card)) = self.pending_option_placed_link_resume else {
             return;
-        }
+        };
         if self.pending_selection.is_some() || !self.effect_queue.is_empty() {
             return;
         }
         self.pending_option_placed_link_resume = None;
-        self.fire_on_link_after_option_placed();
+        self.fire_on_link_after_option_placed(host, linked_card);
     }
 
     /// Compute the absolute `turn_count` at which a delayed Option should
