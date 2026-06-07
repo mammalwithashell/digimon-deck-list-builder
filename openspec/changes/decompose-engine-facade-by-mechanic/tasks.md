@@ -23,8 +23,8 @@
 
 ## 5. Phase A — Output ports (pure movement)
 
-- [ ] 5.1 Create `observation/` and move `tensor*.rs`, `observation.rs`, `tensor_profiles/` under it; update `lib.rs` re-exports.
-- [ ] 5.2 Add a module-level doc comment on `observation/` stating the read-only output-port invariant; full suite green.
+- [x] 5.1 Moved `observation.rs`→`observation/mod.rs` and the 5 `tensor*.rs` builders under `observation/`; `lib.rs` re-exports preserve crate-root paths (`crate::tensor`, …). `tensor_profiles/` (layout-spec) left at root. Engine + PyO3 (`cargo check`) both compile clean → external paths preserved.
+- [x] 5.2 Added module-level doc on `observation/mod.rs` stating the read-only output-port invariant (entry points take `&Game`, core does not depend on observation).
 
 ## 6. Phase B1 — Shared source-trashing primitive (behavioral, gated)
 
