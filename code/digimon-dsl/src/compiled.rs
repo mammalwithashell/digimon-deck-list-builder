@@ -117,6 +117,34 @@ pub enum CompiledZone {
     Material,
 }
 
+/// Compiled source zone for the `LinkCards` step. Mirrors
+/// `step::LinkCardSourceZone`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledLinkSourceZone {
+    Hand,
+    Trash,
+    SelfSources,
+    OwnDigimonSources,
+    /// Gap 3b — the in-play Option links itself onto the host.
+    SelfOption,
+}
+
+/// Compiled attach target for the `LinkCards` step. Mirrors
+/// `step::LinkCardsTo`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledLinkTo {
+    SelfPermanent,
+    OwnDigimon,
+}
+
+/// Compiled count bound for the `LinkCards` step. `UpTo` makes every pick
+/// declinable; `Exactly` keeps picking until N picks or no candidates remain.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledLinkCount {
+    Exactly(u8),
+    UpTo(u8),
+}
+
 // ── Alt-paths ───────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -367,6 +395,7 @@ pub struct CompiledPredicate {
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,
     pub replacement_subject_is_mine: Option<bool>,
+    pub would_link_card_trait_any_of: Option<Vec<String>>,
     pub equals: Option<Vec<CompiledBindingCompare>>,
     pub not_equals: Option<Vec<CompiledBindingCompare>>,
     pub binding_exists: Option<String>,
@@ -651,6 +680,9 @@ pub enum CompiledDeclarativeClause {
         security_attack_fn: Option<CompiledFormula>,
         grant_keyword: Option<CompiledGrantKeywordValue>,
         modifier: Option<String>,
+        /// Scalar `value` for the named `modifier` grant (e.g. `ChangeLinkMax`
+        /// "Link +N"). `None` ⇒ `0`. Fixes G-ENGINE-AURA-GRANT-LINK-MAX.
+        modifier_value: Option<i32>,
         /// Track H §4 — install-once continuous gate. When present, the
         /// lowered `Effect` installs its modifier(s) with
         /// `Expiry::UntilCondition` carrying this predicate. Eviction is
@@ -853,6 +885,12 @@ pub enum CompiledTiming {
     /// (`event_permanent == source_permanent`) — fires once for the receiving
     /// host only. Mirrors DCGO `CanTriggerWhenLinked`.
     WhenCardLinkedToThis,
+    /// DigiLink host-side pre-link replacement: "a card WOULD link to this
+    /// Digimon". Authored as `when: when_would_link_to_this` on a face-up
+    /// `scope`; lowers to a `EffectTiming::WhenWouldLink` REPLACEMENT effect
+    /// with a host self-filter (`pending_link_host() == source_permanent`).
+    /// Pair with `optional` + a `reduce_link_cost` step (Gap 5).
+    WhenWouldLinkToThis,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1631,6 +1669,30 @@ pub enum CompiledStep {
         cost: u16,
         optional: bool,
     },
+    /// Gap 5 — reduce the in-flight `WhenWouldLink` link cost by `amount`.
+    /// Compiled form of `StepSpec::ReduceLinkCost`; the engine lowering calls
+    /// `EffectContext::reduce_pending_link_cost(amount)`.
+    ReduceLinkCost {
+        amount: u16,
+    },
+    /// Gap 2 — link 1..N chosen cards from a set of source zones onto a
+    /// Digimon host. Compiled form of `StepSpec::LinkCards`. The engine
+    /// lowering loops `count` picks: per pick it resolves which `from` zones
+    /// hold a filter-matching candidate, installs a zone-choice prompt when
+    /// ≥2 do, then a single-zone card select, then (for `to: OwnDigimon`) a
+    /// host select, then attaches via `link_chosen_card_into_host`.
+    LinkCards {
+        from: Vec<CompiledLinkSourceZone>,
+        filter: CompiledPredicate,
+        to: CompiledLinkTo,
+        count: CompiledLinkCount,
+        /// Memory cost to pay per linked card. Currently always 0 (the cards
+        /// this step serves all link "without paying the cost" / from a base
+        /// cost of 0). Threaded so a future non-zero base cost extends the
+        /// lowering without a schema change.
+        cost: u8,
+        prompt: Option<String>,
+    },
     Optional(Vec<CompiledStep>),
     Battle {
         attacker: CompiledBindingRef,
@@ -1670,6 +1732,12 @@ pub enum CompiledStep {
         enabled: bool,
     },
     CancelReplacement,
+    /// Gap 3a — trash 1 of the leaving permanent's own link cards as the cost
+    /// of a `when_would_leave_battle_area` replacement, then cancel the leave.
+    /// Synthesized from `cost: { trash_own_link_card: true }` + `outcome:
+    /// prevent`; it owns both the cost-payment (player-chosen which link card)
+    /// and the cancel, so no separate `CancelReplacement` follows it.
+    TrashOwnLinkCardAndCancelLeave,
     HandleReplacement,
     RedirectReplacement {
         zone: CompiledZone,

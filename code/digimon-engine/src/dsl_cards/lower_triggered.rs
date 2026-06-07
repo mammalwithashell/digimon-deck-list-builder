@@ -104,6 +104,16 @@ pub fn lower_for_kind_with_clause_index(
             *t,
             digimon_dsl::compiled::CompiledTiming::WhenCardLinkedToThis
         );
+        // DigiLink host-side pre-link REPLACEMENT: `when: when_would_link_to_this`
+        // lowers to a `WhenWouldLink` replacement effect + a HOST self-filter
+        // (`pending_link_host() == source_permanent`). Its body runs through
+        // `.replacement_process(...)` (not `.process(...)`), and the optional
+        // accept/decline is the replacement framework's own prompt — so it must
+        // NOT also install the outer-optional triggered prompt (Gap 5).
+        let is_would_link_to_this = matches!(
+            *t,
+            digimon_dsl::compiled::CompiledTiming::WhenWouldLinkToThis
+        );
         if matches!(
             card_kind,
             Some(CompiledCardKind::Option | CompiledCardKind::Dual)
@@ -182,7 +192,12 @@ pub fn lower_for_kind_with_clause_index(
             // body would force a mandatory action the printed "you may"
             // forbids. When the first step IS an optional selection, the
             // inner PASS already provides the decline path (no double prompt).
-            if needs_outer_optional {
+            //
+            // A `when_would_link_to_this` replacement is EXEMPT: the replacement
+            // framework installs its own accept/decline prompt for an optional
+            // `WhenWouldLink` effect, so an outer-optional prompt would
+            // double-prompt and never reach the replacement dispatch (Gap 5).
+            if needs_outer_optional && !is_would_link_to_this {
                 builder = builder.needs_outer_optional_prompt();
                 // Suppress the prompt when the body's first selection step
                 // has zero candidates — DCGO does not prompt for an optional
@@ -209,7 +224,12 @@ pub fn lower_for_kind_with_clause_index(
             }
         }
 
-        if active_when.is_some() || condition.is_some() || is_when_linked || is_host_linked {
+        if active_when.is_some()
+            || condition.is_some()
+            || is_when_linked
+            || is_host_linked
+            || is_would_link_to_this
+        {
             let aw = active_when.clone();
             let cc = condition.clone();
             builder = builder.condition(move |rctx| {
@@ -221,6 +241,12 @@ pub fn lower_for_kind_with_clause_index(
                 // DigiLink host-side self-filter: a `when_card_linked_to_this`
                 // effect fires only when the receiving host is THIS permanent.
                 if is_host_linked && rctx.event_permanent() != rctx.source_permanent {
+                    return false;
+                }
+                // DigiLink host-side pre-link self-filter: a
+                // `when_would_link_to_this` replacement fires only while the
+                // linking card is attaching to THIS permanent (Gap 5).
+                if is_would_link_to_this && rctx.pending_link_host() != rctx.source_permanent {
                     return false;
                 }
                 let subject = predicate_subject_for_source(rctx);
@@ -238,16 +264,38 @@ pub fn lower_for_kind_with_clause_index(
             });
         }
 
-        builder = builder.process(move |ctx| {
-            let mut bindings = Bindings::new();
-            // Phase 2b: `run_steps` drives the slice and yields control to
-            // a selection step if one is encountered — installing the tail
-            // as the selection's resolve callback so it continues once the
-            // player picks a target.
-            let runtime = StepRuntime::new(raw_for_process.clone())
-                .with_dna_origin(ctx.game.current_dna_origin);
-            run_steps_with_runtime(process_steps.as_slice(), ctx, &mut bindings, &runtime);
-        });
+        if is_would_link_to_this {
+            // Gap 5 — the host-side pre-link reducer body runs inside the
+            // `WhenWouldLink` REPLACEMENT process, not the normal triggered
+            // process. The replacement framework installs the optional
+            // accept/decline prompt; on accept it invokes this closure with a
+            // `ReplacementContext` whose `effect` is the mutable
+            // `EffectContext`. The body (a `reduce_link_cost` step) mutates the
+            // in-flight `pending_digimon_link.cost` and leaves the outcome
+            // `None` so the link still resolves at the reduced cost.
+            builder = builder.replacement_process(move |rctx| {
+                let mut bindings = Bindings::new();
+                let runtime = StepRuntime::new(raw_for_process.clone())
+                    .with_dna_origin(rctx.effect.game.current_dna_origin);
+                run_steps_with_runtime(
+                    process_steps.as_slice(),
+                    rctx.effect,
+                    &mut bindings,
+                    &runtime,
+                );
+            });
+        } else {
+            builder = builder.process(move |ctx| {
+                let mut bindings = Bindings::new();
+                // Phase 2b: `run_steps` drives the slice and yields control to
+                // a selection step if one is encountered — installing the tail
+                // as the selection's resolve callback so it continues once the
+                // player picks a target.
+                let runtime = StepRuntime::new(raw_for_process.clone())
+                    .with_dna_origin(ctx.game.current_dna_origin);
+                run_steps_with_runtime(process_steps.as_slice(), ctx, &mut bindings, &runtime);
+            });
+        }
 
         // Phase 2 Track B — wire the lifted activation-cost kind onto the
         // builder so `effect_queue::run_queued_effect_inner` consults the
@@ -346,6 +394,12 @@ fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
             min, optional_zero, ..
         } => *min == 0 || *optional_zero,
         CompiledStep::SelectOwnSources { min, .. } => *min == 0,
+        // `link_cards` with `up_to` exposes PASS on its first card pick, so the
+        // clause's first decision point is already declinable; `exactly` is a
+        // mandatory link, so it needs the outer accept/decline prompt.
+        CompiledStep::LinkCards { count, .. } => {
+            matches!(count, digimon_dsl::compiled::CompiledLinkCount::UpTo(_))
+        }
         CompiledStep::SelectOpponentDpBudget { min_picks, .. }
         | CompiledStep::SelectOpponentPlayCostBudget { min_picks, .. } => *min_picks == 0,
         // Any other leading step is mandatory work — the printed "you may"

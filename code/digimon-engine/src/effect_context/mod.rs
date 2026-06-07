@@ -417,6 +417,23 @@ impl<'a> EffectReadContext<'a> {
             })
     }
 
+    /// The host a card is about to link ONTO during the active `WhenWouldLink`
+    /// replacement window, or `None` outside that window. A host-side reducer
+    /// effect (Gap 5 — BT25-004 / BT25-045) compares this against its own
+    /// `source_permanent` to fire only when the linking card is attaching to
+    /// THIS Digimon ("...link to this Digimon").
+    pub fn pending_link_host(&self) -> Option<PermanentHandle> {
+        self.game.pending_link_host
+    }
+
+    /// The card about to link (the `WhenWouldLink` replacement subject) during
+    /// the active standing-Digimon link window, or `None` outside it. Lets a
+    /// host-side `condition` / DSL `active_when` predicate inspect the linking
+    /// card's traits ("when a [Social]/[Tool]/[Game] card would link...").
+    pub fn would_link_subject_card(&self) -> Option<CardHandle> {
+        self.game.pending_digimon_link.as_ref().map(|p| p.card)
+    }
+
     pub fn deleted_object_snapshot(
         &self,
     ) -> Option<&crate::trigger_context::DeletedObjectSnapshot> {
@@ -1472,6 +1489,34 @@ impl<'a> EffectContext<'a> {
             })
     }
 
+    /// See [`EffectReadContext::pending_link_host`].
+    pub fn pending_link_host(&self) -> Option<PermanentHandle> {
+        self.game.pending_link_host
+    }
+
+    /// See [`EffectReadContext::would_link_subject_card`].
+    pub fn would_link_subject_card(&self) -> Option<CardHandle> {
+        self.game.pending_digimon_link.as_ref().map(|p| p.card)
+    }
+
+    /// Reduce the cost of the link about to resolve in the active
+    /// `WhenWouldLink` window by `n` (saturating at 0). Called from a host-side
+    /// reducer effect's `replacement_process` accept-branch (Gap 5 — BT25-004 /
+    /// BT25-045: "you may reduce the cost by 1"). `commit_digimon_link` then
+    /// pays the reduced `pending_digimon_link.cost`.
+    ///
+    /// This is a one-shot mutation of the in-flight pending link only — it does
+    /// NOT install a persistent `ChangeLinkCost` modifier, so it cannot leak to
+    /// any other link this turn. Returns `true` if a pending link was present.
+    pub fn reduce_pending_link_cost(&mut self, n: u16) -> bool {
+        if let Some(p) = self.game.pending_digimon_link.as_mut() {
+            p.cost = p.cost.saturating_sub(n);
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn deleted_object_snapshot(
         &self,
     ) -> Option<&crate::trigger_context::DeletedObjectSnapshot> {
@@ -1773,6 +1818,62 @@ impl<'a> EffectContext<'a> {
     /// whose card text names the current replacement rather than "leaving".
     pub fn cancel_current_replacement(&mut self) {
         self.cancel_leave();
+    }
+
+    /// Gap 3a — pay the link-card-trash cost of a `WhenWouldLeaveBattleArea`
+    /// replacement ("by trashing 1 of its link cards, it doesn't leave").
+    ///
+    /// Installs a selection over `host`'s link cards (one option per card, so
+    /// the choice of WHICH link card to trash is exposed to the RL action
+    /// space — never auto-selected). On pick, the chosen link card is trashed
+    /// via `Game::trash_specific_link_card` (firing `OnLinkedCardTrashed`) and
+    /// the parked leave is cancelled (`cancel_leave`).
+    ///
+    /// Caller MUST gate on `host.linked_cards.len() >= 1` via the replacement's
+    /// `replacement_condition`/preflight so this is never reached with no cost
+    /// to pay. With exactly one link card a single-option selection still
+    /// installs (faithful to DCGO's `TrashLinkedCards` UI flow — the choice is
+    /// surfaced even when forced).
+    ///
+    /// DCGO ref: `OnTrashLinkCard.cs` (CanUse: has ≥1 link card) +
+    /// `TrashLinkedCards.cs` (the per-card trash + observer dispatch).
+    pub fn trash_own_link_card_and_cancel_leave(&mut self, host: PermanentHandle) {
+        // Snapshot the link-card handles + labels at install time.
+        let Some(perm) = self
+            .game
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+        else {
+            return;
+        };
+        if perm.linked_cards.is_empty() {
+            return;
+        }
+        let cards: Vec<crate::card_source::CardHandle> =
+            perm.linked_cards.iter().map(|c| c.handle()).collect();
+        let labels: Vec<String> = cards
+            .iter()
+            .map(|h| {
+                self.game
+                    .card_data_for_handle(*h)
+                    .map(|d| d.card_name.clone())
+                    .unwrap_or_else(|| "Link card".to_string())
+            })
+            .collect();
+
+        self.select_effect_choice(
+            "Choose 1 link card to trash (it doesn't leave)",
+            labels,
+            move |cb_ctx, idx| {
+                let Some(card) = cards.get(idx).copied() else {
+                    return;
+                };
+                if cb_ctx.game.trash_specific_link_card(host, card) {
+                    cb_ctx.cancel_leave();
+                }
+            },
+        );
     }
 
     pub fn trash_top_security_and_cancel_current_replacement(&mut self, player: PlayerId) -> bool {

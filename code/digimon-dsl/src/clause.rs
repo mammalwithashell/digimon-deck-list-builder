@@ -151,6 +151,16 @@ pub enum Timing {
     /// fires once for the host the card actually attached to and not for a
     /// sibling host. Mirrors DCGO `CardEffectCommons.CanTriggerWhenLinked`.
     WhenCardLinkedToThis,
+    /// DigiLink host-side pre-link **replacement**: "when a card **would** link
+    /// **to this Digimon**" (`when: when_would_link_to_this`). The effect lives
+    /// on the HOST (a face-up `scope`). Lowers to a `WhenWouldLink` REPLACEMENT
+    /// effect (not a triggered observer) + a host self-filter
+    /// (`pending_link_host() == source_permanent`) so it fires only while the
+    /// linking card is attaching to THIS permanent. Pair with an `optional`
+    /// clause + a `reduce_link_cost` step to express "you may reduce the cost"
+    /// (Gap 5 — BT25-004 Tapmon / BT25-045 Onmon). Filter the would-link card's
+    /// traits via `active_when: { would_link_card_trait_any_of: [...] }`.
+    WhenWouldLinkToThis,
 }
 
 #[derive(
@@ -320,6 +330,13 @@ pub struct AuraBody {
     pub grant_keyword: Option<GrantKeywordValue>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier: Option<String>,
+    /// Scalar value for the named `modifier` grant (the modifier's `value`
+    /// field). Required for scalar modifiers like `ChangeLinkMax` ("Link +N")
+    /// and `ChangeLinkCost`; defaults to `0` when omitted (boolean / flag
+    /// modifiers ignore it). Fixes G-ENGINE-AURA-GRANT-LINK-MAX — the aura
+    /// path previously installed every named modifier with a hardcoded `0`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modifier_value: Option<i32>,
     /// Track H §4 — install-once continuous gate. When set, the aura's
     /// modifier installs with `Expiry::UntilCondition` carrying this
     /// predicate. The UntilCondition controller (PR #458) evicts the
@@ -429,6 +446,20 @@ pub struct ReplacementBody {
 pub struct ReplacementCostBody {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub delay_self: bool,
+
+    /// Gap 3a — pay the replacement by trashing 1 of the LEAVING permanent's
+    /// own link cards ("by trashing 1 of its link cards, it doesn't leave",
+    /// BT25-066 / BT25-073 inherited / BT25-101). Only valid on a
+    /// `when_would_leave_battle_area` replacement. The player chooses WHICH
+    /// link card to trash (exposed to the RL action space); the chosen card
+    /// goes to its owner's trash, fires `OnLinkedCardTrashed`, and the leave is
+    /// cancelled. The clause must be `optional: true` (the "by trashing … it
+    /// doesn't leave" is a may-pay). Gated so it is not offered with 0 link
+    /// cards. Lowers to a single `TrashOwnLinkCardAndCancelLeave` step (it owns
+    /// both the cost and the `outcome: prevent`, so no separate
+    /// `cancel_replacement` is emitted).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub trash_own_link_card: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

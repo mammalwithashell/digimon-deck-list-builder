@@ -2975,6 +2975,11 @@ impl Game {
             cost,
             card: source_card,
         });
+        // Expose the link host for the duration of the `WhenWouldLink` window so
+        // a host-side reducer effect can verify "...link to THIS Digimon" via
+        // `EffectContext::pending_link_host` (Gap 5). It is cleared by
+        // `commit_digimon_link` (synchronous and parked paths both route there).
+        self.pending_link_host = Some(host);
         let outcome = self.try_replace(
             EffectTiming::WhenWouldLink,
             ReplacementSubject::Card(source_card, Zone::BattleArea),
@@ -2982,6 +2987,8 @@ impl Game {
             Some(Zone::BattleArea),
         );
         if self.pending_selection.is_some() {
+            // An optional/interactive replacement parked — `pending_link_host`
+            // stays live until the resumed `commit_digimon_link` clears it.
             return;
         }
         self.commit_digimon_link(outcome);
@@ -2996,6 +3003,9 @@ impl Game {
         let Some(p) = self.pending_digimon_link.take() else {
             return;
         };
+        // The `WhenWouldLink` window is closing — the host is no longer "about
+        // to be linked onto". Clear it on every path below (commit or abort).
+        self.pending_link_host = None;
         if !matches!(outcome, ReplacementOutcome::None) {
             // Cancelled / redirected / substituted — link aborted, source stays
             // standing, no cost paid.
@@ -3202,6 +3212,20 @@ impl Game {
                     None => None,
                 }
             }
+            LinkCardSource::OptionInPlay(owner) => {
+                // Gap 3b — lift the in-play Option out of `pending_option` so
+                // its Standard dispose finds nothing to trash. The card must be
+                // the one currently held in `pending_option` and owned by
+                // `owner`; otherwise no-op (defensive).
+                match self.pending_option.as_ref() {
+                    Some(pending)
+                        if pending.owner == owner && pending.card.handle() == card =>
+                    {
+                        self.pending_option.take().map(|p| p.card)
+                    }
+                    _ => None,
+                }
+            }
         };
         let Some(moved) = moved else {
             return false;
@@ -3233,6 +3257,47 @@ impl Game {
                     host,
                     card: moved_handle,
                 },
+            );
+        }
+        self.maybe_drain_effect_queue();
+        true
+    }
+
+    /// Trash one specific link card off `host` (addressed by `card` handle),
+    /// routing it to its owner's trash and firing `OnLinkedCardTrashed` globally.
+    /// Returns `true` if the card was found among `host.linked_cards` and
+    /// trashed; `false` otherwise (host gone / card not linked there).
+    ///
+    /// Used by the Gap-3a leave-replacement cost ("by trashing 1 of its link
+    /// cards, it doesn't leave"). The trashed card leaves the host but the host
+    /// itself stays — this is NOT a host-leave path, so only the single chosen
+    /// link card moves. DCGO ref: `TrashLinkedCards.cs` (per-card trash + the
+    /// `OnLinkedCardTrashed` observer dispatch).
+    pub fn trash_specific_link_card(
+        &mut self,
+        host: PermanentHandle,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(perm) = self
+            .player_mut(host.player)
+            .battle_area
+            .get_mut(host.index as usize)
+        else {
+            return false;
+        };
+        let Some(pos) = perm.linked_cards.iter().position(|c| c.handle() == card) else {
+            return false;
+        };
+        let removed = perm.linked_cards.remove(pos);
+        let owner = removed.owner;
+        self.player_mut(owner).trash.push(removed);
+
+        // Fire OnLinkedCardTrashed globally — mirrors the host-leave linked-card
+        // disposition at game.rs:3749 and place_permanent_on_security_observed.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnLinkedCardTrashed,
+                TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
             );
         }
         self.maybe_drain_effect_queue();
@@ -5044,11 +5109,12 @@ impl Game {
         else {
             return false;
         };
-        let Some(_route) =
+        let Some(route) =
             self.normal_digivolve_route_for_hand_card(resume.player, hand_index, resume.permanent)
         else {
             return false;
         };
+        let is_app_fusion = route.app_fusion;
 
         let (from_stack_top, top_card_id) = {
             let player = self.player(resume.player);
@@ -5071,6 +5137,21 @@ impl Game {
         let turn = self.turn_count;
         let removed = self.player_mut(resume.player).hand.remove(hand_index);
         self.player_mut(resume.player).battle_area[field_index].digivolve(removed, turn);
+        // App Fusion: after stacking the App-Fusion card on top of the host
+        // (the digivolve above), the host's existing LINKED cards are moved
+        // UNDER the new top as digivolution sources (consumed). Mirrors DCGO
+        // `CardController.cs` `AddToSources(LinkedCard(card))`. Order is
+        // preserved bottom-to-top by draining front-to-back through
+        // `push_under` (which inserts at position 0): draining in reverse so
+        // the first linked card ends up deepest.
+        if is_app_fusion {
+            let linked: Vec<crate::card_source::CardSource> = std::mem::take(
+                &mut self.player_mut(resume.player).battle_area[field_index].linked_cards,
+            );
+            for card in linked.into_iter().rev() {
+                self.player_mut(resume.player).battle_area[field_index].push_under(card);
+            }
+        }
         let event_card = self
             .player(resume.player)
             .battle_area
