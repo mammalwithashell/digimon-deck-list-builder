@@ -1,15 +1,16 @@
-name: Facade Placement Lint (warn)
+name: Facade Placement Lint
 
 # Placement-rule lint (RQ1 of the decompose-engine-facade-by-mechanic change):
-# rules machinery (try_replace / fire_* / battle_area[..] mutation) belongs in
-# Tier 2 (game_actions), not the Tier-3 effect_context facade.
+# INLINE rules machinery (try_replace / inline fire_* dispatch / battle_area[..]
+# mutation) belongs in Tier 2 (game_actions), not the Tier-3 effect_context
+# facade.
 #
-# WARN MODE: `continue-on-error: true` so this never blocks a PR while the
-# broader Tier-3 -> Tier-2 relocation backlog (B1 follow-up) is still open. The
-# check is a RATCHET — it fails only if a file gains a NEW occurrence beyond the
-# committed baseline in code/tools/check_facade_placement.py. Once the baseline
-# reaches zero, promote to required by removing `continue-on-error`.
-# Mirrors the action-space-codegen-drift.yml rollout pattern.
+# REQUIRED: the relocation backlog reached zero (2026-06-07), so this is now a
+# hard gate (no `continue-on-error`). The check remains a RATCHET — the baseline
+# in code/tools/check_facade_placement.py is zero, so ANY new inline machinery
+# in the facade fails CI. Calls that delegate to a cohesive Tier-2 fire op are
+# allowlisted in the linter. (Rolled out warn-mode first, per the
+# action-space-codegen-drift.yml pattern, then promoted.)
 
 on:
   pull_request:
@@ -26,7 +27,6 @@ on:
 jobs:
   facade-placement-lint:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

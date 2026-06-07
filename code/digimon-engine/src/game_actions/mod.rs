@@ -1419,6 +1419,56 @@ impl Game {
             && matches!(outcome, crate::replacement::ReplacementOutcome::None)
     }
 
+    /// Tier-2 battle-area source-stack primitives. The facade (effect_context)
+    /// must not index `battle_area[..]` directly (placement rule §3); these
+    /// encapsulate the single stack mutations it needs.
+    pub(crate) fn digivolve_permanent_in_place(
+        &mut self,
+        target: PermanentHandle,
+        card: CardSource,
+    ) {
+        let turn = self.turn_count;
+        self.player_mut(target.player).battle_area[target.index as usize].digivolve(card, turn);
+    }
+
+    pub(crate) fn remove_source_from_permanent(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+    ) -> CardSource {
+        self.player_mut(target.player).battle_area[target.index as usize]
+            .card_sources
+            .remove(source_index)
+    }
+
+    pub(crate) fn insert_source_into_permanent(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+        card: CardSource,
+    ) {
+        self.player_mut(target.player).battle_area[target.index as usize]
+            .card_sources
+            .insert(source_index, card);
+    }
+
+    /// Remove the sources at `indices` from `perm` (removing in descending
+    /// index order so earlier removals don't shift later indices). Returns the
+    /// removed sources in removal order (i.e. highest-index first); callers
+    /// that want bottom-to-top order `reverse()` the result.
+    pub(crate) fn remove_sources_from_permanent(
+        &mut self,
+        perm: PermanentHandle,
+        indices: &[usize],
+    ) -> Vec<CardSource> {
+        let p = &mut self.player_mut(perm.player).battle_area[perm.index as usize];
+        let mut out = Vec::with_capacity(indices.len());
+        for &idx in indices.iter().rev() {
+            out.push(p.card_sources.remove(idx));
+        }
+        out
+    }
+
     /// Low-level source-attribution helper for tests and engine internals.
     ///
     /// Uses the standard De-Digivolve floor (`stop_at_level = Some(3)`) and

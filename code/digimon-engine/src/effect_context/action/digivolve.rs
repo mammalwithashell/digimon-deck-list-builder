@@ -46,10 +46,8 @@ impl<'a> EffectContext<'a> {
             return false;
         };
 
-        let turn = self.game.turn_count;
         let card = self.game.player_mut(self.player).hand.remove(hand_index);
-        self.game.player_mut(target.player).battle_area[target.index as usize]
-            .digivolve(card, turn);
+        self.game.digivolve_permanent_in_place(target, card);
 
         self.game.enqueue_triggered(
             EffectTiming::WhenDigivolving,

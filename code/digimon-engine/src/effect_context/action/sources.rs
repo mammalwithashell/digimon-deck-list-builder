@@ -264,14 +264,9 @@ impl<'a> EffectContext<'a> {
             return 0;
         }
 
-        let mut moved = Vec::with_capacity(source_indices.len());
-        {
-            let source_perm =
-                &mut self.game.player_mut(source.player).battle_area[source.index as usize];
-            for &idx in source_indices.iter().rev() {
-                moved.push(source_perm.card_sources.remove(idx));
-            }
-        }
+        let mut moved = self
+            .game
+            .remove_sources_from_permanent(source, &source_indices);
         moved.reverse();
         let moved_count = moved.len();
 

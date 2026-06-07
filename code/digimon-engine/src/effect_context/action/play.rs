@@ -583,9 +583,7 @@ impl<'a> EffectContext<'a> {
         // Extract the source. `Vec::remove` shifts subsequent sources down
         // one index — that's the desired behavior for material extraction
         // (the stack closes the gap left by the removed source).
-        let source = self.game.player_mut(player).battle_area[target.index as usize]
-            .card_sources
-            .remove(source_index);
+        let source = self.game.remove_source_from_permanent(target, source_index);
 
         // Park at the end of `player`'s hand and route through the standard
         // play-from-hand path. The hand index is the new last position.
@@ -663,9 +661,8 @@ impl<'a> EffectContext<'a> {
                 // The target permanent index is still valid here — only
                 // hand was mutated by the failed play attempt; the
                 // battle-area entry was left untouched.
-                self.game.player_mut(player).battle_area[target.index as usize]
-                    .card_sources
-                    .insert(source_index, card);
+                self.game
+                    .insert_source_into_permanent(target, source_index, card);
                 None
             }
         }
