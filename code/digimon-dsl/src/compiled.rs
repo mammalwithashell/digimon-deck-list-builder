@@ -1622,6 +1622,15 @@ pub enum CompiledStep {
         free: bool,
         filter: CompiledPredicate,
     },
+    /// Facet #9 — link 1 chosen card from `from` zones onto the effect's own
+    /// permanent (G-DSL-LINK-CARD-FROM-ZONE).
+    LinkCardToSelf {
+        from: Vec<crate::step::LinkFromZone>,
+        filter: CompiledPredicate,
+        to: crate::step::LinkToHost,
+        cost: u16,
+        optional: bool,
+    },
     Optional(Vec<CompiledStep>),
     Battle {
         attacker: CompiledBindingRef,

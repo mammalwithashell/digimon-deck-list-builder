@@ -2734,6 +2734,22 @@ fn compile_step(
                 filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             }
         }
+        S::LinkCardToSelf(a) => {
+            if a.from.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.link_card_to_self.from"),
+                    message: "link_card_to_self requires at least one source zone".to_string(),
+                });
+            }
+            CompiledStep::LinkCardToSelf {
+                from: a.from.clone(),
+                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+                to: a.to,
+                cost: a.cost,
+                optional: a.optional,
+            }
+        }
         // OptionalStep is a newtype wrapping Vec<StepSpec> — access via .0
         S::Optional(o) => CompiledStep::Optional(
             o.0.iter()

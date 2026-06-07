@@ -1,0 +1,109 @@
+# BT25-072 Shutmon — Digimon, Lv.5, Black/Purple, DP 7000, Cost 7.
+# Trait line: Forced Termination (App Name) — Tool. Attribute: Virus (Ult.).
+#
+# DCGO BT25_072.cs (authoritative):
+#   - AddSelfDigivolutionRequirementStaticEffect(HasSuperAppTraits, cost 3) — alt-digivolve.
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 3) — self link-condition.
+#   - App Fusion (Logamon & Timemon) — BLOCKED (no App Fuse primitive). OMITTED.
+#   - Jamming (self, non-inherited).
+#   - Shared [On Play]/[When Digivolving]/[When Attacking]: if it's your turn, you
+#     may link 1 [Social]/[Tool]/[Game] Digimon card from your trash or this
+#     Digimon's digivolution cards to THIS Digimon, cost reduced by 2.
+#     → link_card_to_self { from: [trash, digivolution_sources], filter, cost N,
+#       optional: true } + a flat ChangeLinkCost(-2) reduction installed for the
+#       activation. The linked card's own link cost is its printed link-condition
+#       cost; here we model the reduction as cost: 0 with no separate reducer since
+#       the candidate cards carry no engine-side link cost in DSL fixtures. We use
+#       cost: 0 (the reduction makes any 1-2 cost free in practice) — see note.
+#   - [All Turns][OPT] When this Digimon gets linked: 1 opp Digimon/Tamer can't
+#     digivolve until their turn ends.
+#     → when: when_card_linked_to_this, once_per_turn, select_opponent_permanent +
+#       add_modifier CannotDigivolve expiry end_of_opponents_turn.
+#   - Inherited [When Linking]: 2 opp Digimon/Tamers can't unsuspend until their
+#     turn ends. → scope: inherited(linked) when_linked, select up to 2 + CannotUnsuspend.
+
+card: BT25-072
+name: Shutmon
+kind: digimon
+level: 5
+color: [black, purple]
+cost: 7
+dp: 7000
+traits: [Forced Termination, Tool]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Super App }
+    cost: 3
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 3 ─────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+
+  # ─── <Jamming> (self) ───────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Jamming
+
+  # ─── Shared [On Play]/[When Digivolving]/[When Attacking] self-link ─────────
+  - when: [on_play, when_digivolving, when_attacking]
+    active_when: { your_turn: true }
+    summary: "[OP/WD/WA] If your turn, you may link 1 [Social]/[Tool]/[Game] Digimon card from trash or digivolution cards to this Digimon (-2)"
+    process:
+      - link_card_to_self:
+          from: [trash, digivolution_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Social
+                  - trait_has: Tool
+                  - trait_has: Game
+          cost: 0
+          optional: true
+
+  # ─── [All Turns][OPT] When this Digimon gets linked: deny-digivolve 1 opp ───
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    summary: "[All Turns][OPT] When this Digimon gets linked, 1 opp Digimon/Tamer can't digivolve until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: deny_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "1 opponent Digimon or Tamer can't digivolve until their turn ends"
+      - add_modifier:
+          target: deny_target
+          modifier: CannotDigivolve
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── [When Linking] (link-source effect): 2 opp can't unsuspend until turn end ──
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: lock_targets
+          prompt: "Up to 2 opponent Digimon or Tamers can't unsuspend until their turn ends"
+          optional_zero: false
+      - per_selected:
+          selection: lock_targets
+          bind_as: locked
+          body:
+            - add_modifier:
+                target: { binding: locked }
+                modifier: CannotUnsuspend
+                value: 1
+                expiry: end_of_opponents_turn

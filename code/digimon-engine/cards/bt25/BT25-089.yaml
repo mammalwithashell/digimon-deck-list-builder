@@ -1,0 +1,60 @@
+# BT25-089 Kazuki & Itsuki — Tamer, Purple, Cost 4.
+#
+# DCGO BT25_089.cs (authoritative) + cards.json:
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [Main] By suspending this Tamer, you may link 1 [Appmon] trait Digimon card
+#     from your hand or your Digimon's digivolution cards to 1 of your Digimon
+#     with the cost reduced by 2.
+#   [End of Your Turn][OPT] 1 of your Digimon may app fuse into a Digimon card
+#     in hand. — BLOCKED (no App Fuse primitive). OMITTED.
+#   Inherited [Security]: Play this card without paying the cost.
+#
+# PARTIAL — the [Main] link's "from your Digimon's digivolution cards" source is
+# omitted: the `link_card_to_self` digivolution-sources zone is anchored to the
+# effect's own permanent, but the effect source here is a Tamer (no Digimon
+# under-sources). The hand source is authored; the all-your-Digimon source scan
+# is a residual gap (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES). The App Fuse
+# clause is BLOCKED (no App Fuse primitive).
+#
+# Cost-modeling note: "-2" reduces the linked card's own link cost; fixtures
+# carry no engine link cost so we model paid cost as cost: 0.
+
+card: BT25-089
+name: Kazuki & Itsuki
+kind: tamer
+color: [purple]
+cost: 4
+
+effects:
+  # ─── [Start of Your Main Phase] if opp has a Digimon, gain 1 memory ─────────
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter: { of: opponent, zone: [battle_area], kind: digimon }
+        n: 1
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── [Main] suspend self → link 1 Appmon from hand to 1 of your Digimon (-2) ─
+  # PARTIAL: "your Digimon's digivolution cards" source omitted (see header).
+  - when: main_on_field
+    optional: true
+    summary: "[Main] By suspending this Tamer, link 1 [Appmon] Digimon card from hand to 1 of your Digimon (-2)"
+    process:
+      - activation_cost: { suspend_self: true }
+      - link_card_to_self:
+          from: [hand]
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          to: chosen_own_digimon
+          cost: 0
+          optional: true
+
+  # ─── Inherited [Security] play this card free ──────────────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

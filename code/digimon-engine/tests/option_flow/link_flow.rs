@@ -1671,3 +1671,172 @@ fn linked_card_dp_formula_and_static_ess_reach_host() {
         "linked card's Security Attack formula ESS reaches the host"
     );
 }
+
+// ─── Facet #9 DSL authoring verb: `link_card_to_self` ────────────────────────
+
+/// A test digimon trait-tagged with `Tool` so the `link_card_to_self` filter
+/// (`trait_has: Tool`) can match it.
+fn tool_digimon(card_id: &str) -> digimon_engine::CardData {
+    let mut cd = make_test_card(card_id, card_id);
+    cd.colors = vec![CardColor::Red];
+    cd.traits = vec!["Tool".to_string()];
+    cd
+}
+
+/// The `link_card_to_self` host: a Lv4 Digimon whose [On Play] links 1 [Tool]
+/// card from the controller's hand onto itself for the printed link cost 1,
+/// then a [When Linking] clause gains 5 memory (proving the step's call to the
+/// engine primitive fires `OnLink` through the host's own when-linked clause).
+const LINK_SELF_YAML: &str = r#"
+card: LINK-SELF
+name: LinkSelf
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 5000
+traits: [Tester]
+effects:
+  - when: on_play
+    summary: "[On Play] link 1 [Tool] card from hand to this Digimon (cost 1)"
+    process:
+      - link_card_to_self:
+          from: [hand]
+          filter: { trait_has: Tool }
+          cost: 1
+  - when: when_card_linked_to_this
+    summary: "[When this Digimon gets linked] gain 5 memory"
+    process:
+      - gain_memory: 5
+"#;
+
+/// A variant of `LINK-SELF` with no host-side reaction, so memory deltas are
+/// purely the paid link cost (isolates the cost-reduction assertion).
+const LINK_SELF_NO_REACTION_YAML: &str = r#"
+card: LINK-SELF
+name: LinkSelf
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 5000
+traits: [Tester]
+effects:
+  - when: on_play
+    summary: "[On Play] link 1 [Tool] card from hand to this Digimon (cost 1)"
+    process:
+      - link_card_to_self:
+          from: [hand]
+          filter: { trait_has: Tool }
+          cost: 1
+"#;
+
+/// TDD pin for G-DSL-LINK-CARD-FROM-ZONE — the `link_card_to_self` step
+/// surfaces a real selection over the matching hand card (no auto-pick),
+/// pays the printed link cost minus any reduction, then calls
+/// `Game::link_chosen_card_into_host` so the card moves into the host's
+/// `linked_cards` and `OnLink` fires.
+#[test]
+fn link_card_to_self_links_chosen_hand_card_pays_cost_and_fires_onlink() {
+    let mut r = DebugRunner::builder()
+        .add_card({
+            let mut cd = make_test_card("LINK-SELF", "LinkSelf");
+            cd.level = Some(4);
+            cd.dp = Some(5000);
+            cd.play_cost = 4;
+            cd.colors = vec![CardColor::Red];
+            cd
+        })
+        .add_card(tool_digimon("TOOL-LINKEE"))
+        .add_card(digimon_card("NON-TOOL", CardColor::Red))
+        .hand(0, &["LINK-SELF", "TOOL-LINKEE", "NON-TOOL"])
+        .memory(10)
+        .start();
+    register_dsl_yaml(&mut r, LINK_SELF_YAML);
+    advance_to_main(&mut r);
+
+    // TOOL-LINKEE sits at hand index 1 before the play.
+    let linkee = r.game.player(0).hand[1].handle();
+
+    // Play LINK-SELF (hand index 0). On Play installs the link selection.
+    let host_idx = r.play(0, 0).expect("LINK-SELF played");
+    let memory_after_play = r.game.memory;
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "link_card_to_self installs a real selection (no auto-pick)"
+    );
+    // Only the [Tool] card is a legal candidate; the non-Tool card is excluded.
+    assert_eq!(
+        r.game.pending_selection.as_ref().unwrap().valid_action_ids.len(),
+        1,
+        "exactly one Tool candidate is offered"
+    );
+
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    // The chosen Tool card left the hand and attached to the host.
+    let linked = &r.game.player(0).battle_area[host_idx].linked_cards;
+    assert_eq!(linked.len(), 1, "Tool card attached as a linked card");
+    assert_eq!(linked[0].handle(), linkee, "the attached card is TOOL-LINKEE");
+    assert!(
+        !r.game.player(0).hand.iter().any(|c| c.handle() == linkee),
+        "TOOL-LINKEE left the hand"
+    );
+
+    // Cost paid: link cost 1 deducted at resolution. Plus +5 from When Linking.
+    assert_eq!(
+        r.game.memory,
+        memory_after_play - 1 + 5,
+        "paid the printed link cost 1, then When Linking gained 5"
+    );
+}
+
+/// `ChangeLinkCost` reduction lowers the cost paid by `link_card_to_self`,
+/// confirming the step consults `link_cost_delta_for_player` (facet #10).
+#[test]
+fn link_card_to_self_applies_change_link_cost_reduction() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+
+    let mut r = DebugRunner::builder()
+        .add_card({
+            let mut cd = make_test_card("LINK-SELF", "LinkSelf");
+            cd.level = Some(4);
+            cd.dp = Some(5000);
+            cd.play_cost = 4;
+            cd.colors = vec![CardColor::Red];
+            cd
+        })
+        .add_card(tool_digimon("TOOL-LINKEE"))
+        .hand(0, &["LINK-SELF", "TOOL-LINKEE"])
+        .memory(10)
+        .start();
+    register_dsl_yaml(&mut r, LINK_SELF_NO_REACTION_YAML);
+    advance_to_main(&mut r);
+
+    let host_idx = r.play(0, 0).expect("LINK-SELF played");
+    // Flat -1 link-cost reduction for player 0.
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::ChangeLinkCost, -1, Expiry::EndOfTurn, None, 0),
+    );
+    let memory_before = r.game.memory;
+
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+
+    assert_eq!(
+        r.game.player(0).battle_area[host_idx]
+            .linked_cards
+            .len(),
+        1,
+        "Tool card attached"
+    );
+    // Printed cost 1, reduced by 1 → 0 paid: memory unchanged by the link.
+    assert_eq!(
+        r.game.memory, memory_before,
+        "ChangeLinkCost -1 made the cost-1 link free (no memory paid)"
+    );
+}

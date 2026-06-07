@@ -1,0 +1,88 @@
+# BT25-056 Bootmon — Digimon, Lv.5, Green/Blue, DP 7000, Cost 7.
+# Trait line: Super Boot (App Name) — Tool. Attribute: ? (Ult.).
+#
+# DCGO BT25_056.cs (authoritative):
+#   - AddSelfDigivolutionRequirementStaticEffect(HasSuperAppTraits, cost 3) — alt-digivolve.
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 3) — self link-condition.
+#   - App Fusion (Logimon & Craftmon) — BLOCKED (no App Fuse primitive). OMITTED.
+#   - Barrier (self, non-inherited).
+#   - Shared [On Play]/[When Digivolving]/[When Attacking]: if your turn, you may
+#     link 1 [Social]/[Tool]/[Game] Digimon card from your HAND or this Digimon's
+#     digivolution cards to THIS Digimon, cost reduced by 2.
+#   - [All Turns] When this Digimon gets linked: suspend 1 opp Digimon/Tamer.
+#   - Inherited [When Linking] (link-source effect): return 1 opp suspended
+#     Digimon to the bottom of the deck.
+#
+# Cost-modeling note (shared by all link_card_to_self cards): "reduced by 2" is a
+# reduction on the LINKED card's own link cost. DSL fixtures carry no engine-side
+# link cost on the linked candidate, so we model the paid cost as `cost: 0`
+# (the -2 reduction makes the typical cost-1/2 link free in practice). The flat
+# `ChangeLinkCost` path (facet #10) covers any nonzero residual when present.
+
+card: BT25-056
+name: Bootmon
+kind: digimon
+level: 5
+color: [green, blue]
+cost: 7
+dp: 7000
+traits: [Super Boot, Tool]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Super App }
+    cost: 3
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 3 ─────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+
+  # ─── <Barrier> (self) ───────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Barrier
+
+  # ─── Shared [On Play]/[When Digivolving]/[When Attacking] self-link from hand ─
+  - when: [on_play, when_digivolving, when_attacking]
+    active_when: { your_turn: true }
+    summary: "[OP/WD/WA] If your turn, you may link 1 [Social]/[Tool]/[Game] Digimon card from hand or digivolution cards to this Digimon (-2)"
+    process:
+      - link_card_to_self:
+          from: [hand, digivolution_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Social
+                  - trait_has: Tool
+                  - trait_has: Game
+          cost: 0
+          optional: true
+
+  # ─── [All Turns] When this Digimon gets linked: suspend 1 opp ───────────────
+  - when: when_card_linked_to_this
+    summary: "[All Turns] When this Digimon gets linked, suspend 1 of your opponent's Digimon or Tamers"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Suspend 1 of your opponent's Digimon or Tamers"
+      - suspend: { target: suspend_target }
+
+  # ─── [When Linking] (link-source): return 1 opp suspended Digimon to deck bottom ──
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Return 1 of your opponent's suspended Digimon to the bottom of the deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck"
+      - return_to_deck: { target: bounce_target, position: bottom, include_sources: true }

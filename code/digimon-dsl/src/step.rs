@@ -270,6 +270,13 @@ pub enum StepSpec {
     ScheduleDeletePlayedAtTurnEnd(ScheduleDeletePlayedAtTurnEndArgs),
     PlaceSelfAsDelayOption(EmptyArgs),
     LinkToOwnDigimon(LinkToOwnDigimonArgs),
+    /// Facet #9 authoring verb (G-DSL-LINK-CARD-FROM-ZONE) — the effect's own
+    /// permanent links 1 chosen card matching `filter` out of one of the
+    /// `from` zones (hand / trash / this Digimon's digivolution sources) onto
+    /// itself, paying the printed link cost reduced by any `ChangeLinkCost`.
+    /// Distinct from `LinkToOwnDigimon` (the Plug-In Option self-link tied to
+    /// `pending_option`). Mirrors DCGO `ILinkCard.LinkCard` with `root != None`.
+    LinkCardToSelf(LinkCardToSelfArgs),
     Optional(OptionalStep),
 
     // Combat / replacement process outcomes
@@ -520,6 +527,7 @@ impl Serialize for StepSpec {
             }
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
+            StepSpec::LinkCardToSelf(v) => kv!(s, "link_card_to_self", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
             StepSpec::Battle(v) => kv!(s, "battle", v),
@@ -768,6 +776,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
+            "link_card_to_self" => StepSpec::LinkCardToSelf(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
 
             // Combat / replacement process outcomes
@@ -912,6 +921,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "schedule_delayed",
                         "place_self_as_delay_option",
                         "link_to_own_digimon",
+                        "link_card_to_self",
                         "optional",
                         "battle",
                         "may_attack_now",
@@ -2552,6 +2562,64 @@ pub struct LinkToOwnDigimonArgs {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub free: bool,
     pub filter: PredicateSpec,
+}
+
+/// Source zone a `link_card_to_self` candidate may be lifted from. Lowers to
+/// `crate::enums::LinkCardSource` at resolution: `Hand` → `Hand(owner)`,
+/// `Trash` → `Trash(owner)`, `DigivolutionSources` → `DigivolutionSource(self)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkFromZone {
+    Hand,
+    Trash,
+    DigivolutionSources,
+}
+
+/// Host the chosen card is linked onto. `SelfPermanent` (default) links onto
+/// the effect's own permanent ("to this Digimon"). `ChosenOwnDigimon` installs
+/// a second RL-visible selection over the controller's standing Digimon
+/// ("to 1 of your Digimon"). Mirrors DCGO `ILinkCard.LinkCard` /
+/// `selectedPermanent.AddLinkCard` with a `SelectPermanentEffect` for the host.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkToHost {
+    SelfPermanent,
+    ChosenOwnDigimon,
+}
+
+fn default_link_to_host() -> LinkToHost {
+    LinkToHost::SelfPermanent
+}
+
+/// Args for the `link_card_to_self` step (facet #9). Links 1 chosen card
+/// matching `filter` out of one of `from` (defaults to all three zones) onto a
+/// host (`to`, defaulting to the effect's own permanent), paying `cost` reduced
+/// by any `ChangeLinkCost`. `optional` adds an RL-visible decline.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct LinkCardToSelfArgs {
+    /// Zones the chosen card may come from. Defaults to all three.
+    #[serde(default = "default_link_from_zones")]
+    pub from: Vec<LinkFromZone>,
+    /// Card predicate the candidate must satisfy.
+    pub filter: PredicateSpec,
+    /// Host the card is linked onto. Defaults to the effect's own permanent.
+    #[serde(default = "default_link_to_host")]
+    pub to: LinkToHost,
+    /// Printed link cost N (memory). Defaults to 0 (free link).
+    #[serde(default)]
+    pub cost: u16,
+    /// Whether the player may decline ("you may link").
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+fn default_link_from_zones() -> Vec<LinkFromZone> {
+    vec![
+        LinkFromZone::Hand,
+        LinkFromZone::Trash,
+        LinkFromZone::DigivolutionSources,
+    ]
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
