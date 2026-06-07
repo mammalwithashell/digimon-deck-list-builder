@@ -1342,6 +1342,83 @@ impl Game {
         );
     }
 
+    /// Fire the security-removed observer fan-out (Tier 2). `effect_player` is
+    /// the controller of the effect that removed the security card (the source
+    /// attribution for the observer). Relocated from the facade so the inline
+    /// `fire_effect_security_removal` dispatch lives in Tier 2.
+    pub(crate) fn fire_security_removed_observers(
+        &mut self,
+        defender: PlayerId,
+        effect_player: PlayerId,
+        card: CardSource,
+        destination: crate::selection::SecurityRemovalDestination,
+    ) {
+        let observer_player = self.next_clockwise(defender);
+        let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
+        self.fire_effect_security_removal(
+            defender,
+            observer_player,
+            effect_player,
+            cause,
+            card,
+            destination,
+        );
+    }
+
+    /// Tier-2 replacement-window dispatch for facade "would-be-X" operations.
+    /// Fires `timing` for `subject` (cause inferred from `cause_player`), then
+    /// reports whether the operation may PROCEED: `false` if a selection parked
+    /// or the window Cancelled/CustomHandled the action; `true` otherwise.
+    /// `Redirected`/`Substituted` are not expected here (debug-asserted) — the
+    /// substitute-retargeting cases (e.g. de_digivolve) keep their own logic.
+    ///
+    /// Centralizes the `try_replace` call out of the Tier-3 facade (placement
+    /// rule §engine-effect-context-layering). Behavior is identical to the
+    /// inlined block each caller previously held.
+    pub(crate) fn would_replacement_proceeds(
+        &mut self,
+        timing: crate::enums::EffectTiming,
+        subject: crate::replacement::ReplacementSubject,
+        cause_player: PlayerId,
+        redirect: Option<crate::enums::Zone>,
+    ) -> bool {
+        use crate::replacement::ReplacementOutcome;
+        let cause = self.infer_effect_cause(cause_player);
+        let outcome = self.try_replace(timing, subject, cause, redirect);
+        if self.pending_selection.is_some() {
+            return false;
+        }
+        match outcome {
+            ReplacementOutcome::None => true,
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => false,
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(false, "Redirected not supported for {:?} v1", timing);
+                true
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(false, "Substituted not supported for {:?} v1", timing);
+                true
+            }
+        }
+    }
+
+    /// Like `would_replacement_proceeds`, but the caller may proceed ONLY if the
+    /// window returned `None` (no selection parked AND no non-None outcome).
+    /// Used by `place_self_option_at_security`, which restores its pending state
+    /// and bails on ANY interception.
+    pub(crate) fn would_replacement_is_clear(
+        &mut self,
+        timing: crate::enums::EffectTiming,
+        subject: crate::replacement::ReplacementSubject,
+        cause_player: PlayerId,
+        redirect: Option<crate::enums::Zone>,
+    ) -> bool {
+        let cause = self.infer_effect_cause(cause_player);
+        let outcome = self.try_replace(timing, subject, cause, redirect);
+        self.pending_selection.is_none()
+            && matches!(outcome, crate::replacement::ReplacementOutcome::None)
+    }
+
     /// Low-level source-attribution helper for tests and engine internals.
     ///
     /// Uses the standard De-Digivolve floor (`stop_at_level = Some(3)`) and

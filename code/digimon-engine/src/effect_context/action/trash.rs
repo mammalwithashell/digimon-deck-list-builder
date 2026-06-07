@@ -140,35 +140,21 @@ impl<'a> EffectContext<'a> {
             Some(c) => c.handle(),
             None => return false,
         };
-        let cause = self.game.infer_effect_cause(player);
-        let subject = ReplacementSubject::Card(top_handle, Zone::Security);
-        let outcome = self.game.try_replace(
+        if !self.game.would_replacement_proceeds(
             EffectTiming::WhenWouldBeTrashed,
-            subject,
-            cause,
+            ReplacementSubject::Card(top_handle, Zone::Security),
+            player,
             Some(Zone::Trash),
-        );
-        if self.game.pending_selection.is_some() {
+        ) {
             return false;
-        }
-        match outcome {
-            ReplacementOutcome::None => {}
-            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
-                return false;
-            }
-            ReplacementOutcome::Redirected(_) => {
-                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
-            }
-            ReplacementOutcome::Substituted(_) => {
-                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
-            }
         }
 
         let p = self.game.player_mut(player);
         if let Some(card) = p.security.pop() {
             p.face_up_security.remove(&card.card_index);
-            self.fire_security_removed_observers(
+            self.game.fire_security_removed_observers(
                 player,
+                self.player,
                 card,
                 crate::selection::SecurityRemovalDestination::Trash,
             );
@@ -200,28 +186,13 @@ impl<'a> EffectContext<'a> {
             Some(c) => c.handle(),
             None => return false,
         };
-        let cause = self.game.infer_effect_cause(player);
-        let subject = ReplacementSubject::Card(bottom_handle, Zone::Security);
-        let outcome = self.game.try_replace(
+        if !self.game.would_replacement_proceeds(
             EffectTiming::WhenWouldBeTrashed,
-            subject,
-            cause,
+            ReplacementSubject::Card(bottom_handle, Zone::Security),
+            player,
             Some(Zone::Trash),
-        );
-        if self.game.pending_selection.is_some() {
+        ) {
             return false;
-        }
-        match outcome {
-            ReplacementOutcome::None => {}
-            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
-                return false;
-            }
-            ReplacementOutcome::Redirected(_) => {
-                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
-            }
-            ReplacementOutcome::Substituted(_) => {
-                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
-            }
         }
 
         let p = self.game.player_mut(player);
@@ -230,8 +201,9 @@ impl<'a> EffectContext<'a> {
         }
         let card = p.security.remove(0);
         p.face_up_security.remove(&card.card_index);
-        self.fire_security_removed_observers(
+        self.game.fire_security_removed_observers(
             player,
+            self.player,
             card,
             crate::selection::SecurityRemovalDestination::Trash,
         );
@@ -272,28 +244,13 @@ impl<'a> EffectContext<'a> {
             return false;
         };
         self.game.ensure_security_materialized(player, initial_pos);
-        let cause = self.game.infer_effect_cause(player);
-        let subject = ReplacementSubject::Card(handle, Zone::Security);
-        let outcome = self.game.try_replace(
+        if !self.game.would_replacement_proceeds(
             EffectTiming::WhenWouldBeTrashed,
-            subject,
-            cause,
+            ReplacementSubject::Card(handle, Zone::Security),
+            player,
             Some(Zone::Trash),
-        );
-        if self.game.pending_selection.is_some() {
+        ) {
             return false;
-        }
-        match outcome {
-            ReplacementOutcome::None => {}
-            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
-                return false;
-            }
-            ReplacementOutcome::Redirected(_) => {
-                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
-            }
-            ReplacementOutcome::Substituted(_) => {
-                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
-            }
         }
 
         // Re-find the card by handle — the replacement window may have mutated
@@ -304,8 +261,9 @@ impl<'a> EffectContext<'a> {
         };
         let card = p.security.remove(pos);
         p.face_up_security.remove(&card.card_index);
-        self.fire_security_removed_observers(
+        self.game.fire_security_removed_observers(
             player,
+            self.player,
             card,
             crate::selection::SecurityRemovalDestination::Trash,
         );
@@ -389,28 +347,13 @@ impl<'a> EffectContext<'a> {
             }
             p.hand[hand_index].handle()
         };
-        let cause = self.game.infer_effect_cause(player);
-        let subject = ReplacementSubject::Card(card_handle, Zone::Hand);
-        let outcome = self.game.try_replace(
+        if !self.game.would_replacement_proceeds(
             EffectTiming::WhenWouldBeTrashed,
-            subject,
-            cause,
+            ReplacementSubject::Card(card_handle, Zone::Hand),
+            player,
             Some(Zone::Trash),
-        );
-        if self.game.pending_selection.is_some() {
+        ) {
             return None;
-        }
-        match outcome {
-            ReplacementOutcome::None => {}
-            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
-                return None;
-            }
-            ReplacementOutcome::Redirected(_) => {
-                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
-            }
-            ReplacementOutcome::Substituted(_) => {
-                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
-            }
         }
 
         self.game.trash_from_hand_by_index(player, hand_index)

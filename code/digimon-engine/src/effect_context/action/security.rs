@@ -208,15 +208,12 @@ impl<'a> EffectContext<'a> {
         // Route through WhenWouldPlaceInSecurity. If a selection is installed
         // or the replacement returns a non-None outcome, restore pending and
         // bail — the original Option flow will then continue normally.
-        let cause = self.game.infer_effect_cause(self.player);
-        let subject = ReplacementSubject::Card(card_handle, source_zone);
-        let outcome = self.game.try_replace(
+        if !self.game.would_replacement_is_clear(
             crate::enums::EffectTiming::WhenWouldPlaceInSecurity,
-            subject,
-            cause,
+            ReplacementSubject::Card(card_handle, source_zone),
+            self.player,
             Some(Zone::Security),
-        );
-        if self.game.pending_selection.is_some() || !matches!(outcome, ReplacementOutcome::None) {
+        ) {
             // Restore so the dispose flow can complete normally.
             self.game.pending_option = Some(pending);
             return false;
@@ -251,24 +248,6 @@ impl<'a> EffectContext<'a> {
         true
     }
 
-    pub(crate) fn fire_security_removed_observers(
-        &mut self,
-        defender: PlayerId,
-        card: crate::card_source::CardSource,
-        destination: crate::selection::SecurityRemovalDestination,
-    ) {
-        let observer_player = self.game.next_clockwise(defender);
-        let cause =
-            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(defender));
-        self.game.fire_effect_security_removal(
-            defender,
-            observer_player,
-            self.player,
-            cause,
-            card,
-            destination,
-        );
-    }
 
     /// Move a specific card from `player`'s security stack to their hand.
     pub fn add_to_hand_from_security(
@@ -295,8 +274,9 @@ impl<'a> EffectContext<'a> {
             .player_mut(player)
             .face_up_security
             .remove(&removed.card_index);
-        self.fire_security_removed_observers(
+        self.game.fire_security_removed_observers(
             player,
+            self.player,
             removed,
             crate::selection::SecurityRemovalDestination::Hand(owner),
         );

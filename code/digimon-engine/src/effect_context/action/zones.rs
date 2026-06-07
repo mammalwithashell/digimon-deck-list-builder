@@ -39,30 +39,16 @@ impl<'a> EffectContext<'a> {
             return 0;
         }
 
-        // Phase 7 Task 4: fire WhenWouldDraw once per draw call (not once
-        // per card). Subject is the drawing player; no original_destination.
-        let cause = self.game.infer_effect_cause(player);
-        let subject = ReplacementSubject::Player(player);
-        let outcome = self
-            .game
-            .try_replace(EffectTiming::WhenWouldDraw, subject, cause, None);
-        if self.game.pending_selection.is_some() {
+        // Phase 7 Task 4: fire WhenWouldDraw once per draw call (not once per
+        // card). Subject is the drawing player; no original_destination. The
+        // replacement-window dispatch lives in Tier 2 (placement rule).
+        if !self.game.would_replacement_proceeds(
+            EffectTiming::WhenWouldDraw,
+            ReplacementSubject::Player(player),
+            player,
+            None,
+        ) {
             return 0;
-        }
-        match outcome {
-            ReplacementOutcome::None => {}
-            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
-                return 0;
-            }
-            ReplacementOutcome::Redirected(_) => {
-                debug_assert!(
-                    false,
-                    "Redirected not meaningful for WhenWouldDraw (player-scoped)"
-                );
-            }
-            ReplacementOutcome::Substituted(_) => {
-                debug_assert!(false, "Substituted not supported for WhenWouldDraw v1");
-            }
         }
 
         // Opaque-aware: replace draw_many with N calls to
