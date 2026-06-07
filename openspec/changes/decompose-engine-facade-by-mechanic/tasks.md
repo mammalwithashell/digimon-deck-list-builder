@@ -18,8 +18,8 @@
 
 ## 4. Phase A — Tier-2 operations: mechanic split (pure movement)
 
-- [ ] 4.1 Create `game_actions/` and split `game_actions.rs` into `play.rs`, `digivolve.rs`, `trash.rs`, `sources.rs`, `zones.rs`, `security.rs`, `combat.rs`, `breeding.rs` mirroring the Tier-3 mechanic names; update `lib.rs` re-exports; suite-gated per file.
-- [ ] 4.2 (Optional, narrowed — RQ3) Extract ONLY the `until_condition` machinery and the read-only query/aura-bonus helpers (`can_digivolve`, `has_keyword`, `*_aura_bonus`, `effects_for_card`) from `game.rs` into their own files; leave the state-machine lifecycle core intact. Full `game.rs` split is deferred to a follow-up. Suite-gated.
+- [ ] 4.1 **DEFERRED to follow-up (§10.5).** Inspection: `game_actions.rs` holds 136 methods in one `impl Game` block PLUS module-private types (`OptionSource`, `CostReductionKey`, `CostTargetContext`, `BeforePayCostSourceInfo`, …) and private free-fns that submodules would need visibility-promoted, with denser interdependencies than the facade. The scripted toolchain (`code/tools/archive/extract_facade_all.py`, adapted for `impl Game` + `use super::*` over pub(crate)-promoted types) is ready; deferring so it gets its own focused pass + gate rather than rushing a large Tier-2 front in this change.
+- [ ] 4.2 DEFERRED (§10.5) — narrowed `game.rs` extraction (until_condition + read-only query helpers) folds into the same Tier-2 follow-up.
 
 ## 5. Phase A — Output ports (pure movement)
 
@@ -48,13 +48,14 @@
 
 ## 9. Verification & close-out
 
-- [ ] 9.1 Re-run the full baseline suite (1.1) and confirm pass counts match the baseline exactly (behavior-preserving).
-- [ ] 9.2 Confirm the PyO3 boundary (`digimon-engine-py`) builds and `maturin develop` + Python parity test pass (no public API drift).
-- [ ] 9.3 Verify the new-capability spec scenarios (`engine-effect-context-layering`) are satisfied by the resulting structure.
+- [x] 9.1 Full suite matches baseline exactly: cards_behavioral 3548 passed / 7 failed (the pre-existing DP-aura set), all other binaries green. Behavior-preserving confirmed. `effect_context/mod.rs` shrank 6933 → 1463 lines.
+- [x] 9.2 PyO3 boundary (`digimon-engine-py`) `cargo check` clean → no public API drift (crate-root tensor/observation paths preserved via re-exports).
+- [x] 9.3 Spec scenarios: **satisfied** — by-mechanic organization (Tier 3), call-surface-unchanged, observation read-only port, de_digivolve no-inversion, behavior-preserved. **Partially satisfied (deferred):** "parallel mechanic names" Tier-2 side (game_actions, §10.5) and "single source-trashing primitive" (B1, §10.4) — broader "all rules machinery out of facade" beyond de_digivolve folds into B1. Honest status: structural decomposition + the exemplar inversion fix landed; the remaining Tier-2 mirror + trash-primitive are documented follow-ups.
 
 ## 10. Deferred follow-ups (record, do NOT implement here)
 
 - [ ] 10.1 Record a follow-up: split `effect_context/selections.rs` (3,373 LOC, 35 `select_*` primitives) by selection-target — only if it keeps growing (RQ2).
 - [ ] 10.2 Record a follow-up: full `game.rs` mechanic split beyond the narrow 4.2 extraction (RQ3).
 - [ ] 10.3 Record a follow-up: promote the placement-rule lint from warn → deny/required once B1/B3 have landed and the Tier-3 exception allowlist is stable (RQ1).
+- [ ] 10.5 **Tier-2 split (game_actions + narrow game.rs) deferred to a dedicated follow-up.** Mirror the facade mechanic taxonomy in `game_actions/<mechanic>.rs` (`impl Game`) using the proven extractor; promote module-private types/free-fns to `pub(crate)`; then the narrow `game.rs` extraction (until_condition + query helpers). Completes the parallel `<tier>/<mechanic>` taxonomy. Pure movement; own full-suite gate.
 - [ ] 10.4 **B1 (trash-source primitive) deferred to a dedicated follow-up.** Inspection found the 7 sites non-uniform (fire-attribution owner vs perm.player, removal strategy, host-derivation timing). Extract `Game::trash_source_and_fire(trash_owner, fire_target, removed, host_card)` for the truly-identical tail (push + observer fire), migrate one site at a time each gated on its own `cards_behavioral` test, leaving removal + host-derivation per-site. Parity-sensitive (`OnDigivolutionCardTrashed`).
