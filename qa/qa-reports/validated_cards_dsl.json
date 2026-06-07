@@ -5688,16 +5688,16 @@
     },
     "BT25-004": {
       "card_name": "Tapmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
       "gap_kind": "engine",
-      "archetype": "orphan-staples-1 (BT25)",
+      "archetype": "link-appmon-1 (BT25)",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "Inherited WhenWouldLink ActivateClass 'you may reduce link cost by 1' — [Link] subsystem gap facet #10 (would-link optional cost-reduction ActivateClass). docs/RUST_ENGINE_GAPS.md."
+      "notes": "RE-ADJUDICATED 2026-06-07: DigiLink Shape-B landed but did NOT close facet #10. Tapmon's ONLY effect is the inherited [Your Turn][OPT] WhenWouldLink host-filtered optional link-cost-reduction ActivateClass (DCGO GrantedReduceLinkCostClass, card/permanent/root-filtered, registered via UntilCalculateFixedCostEffect). The wired Shape-B WhenWouldLink path is a replacement that pays via player-global link_cost_delta_for_player (unconditional, not host/card-filtered) and exposes no optional cost-reduction outcome + no DSL step registers a filtered one-shot ChangeLinkCost. No faithful clause -> BLOCKED. docs/RUST_ENGINE_GAPS.md [Link] facet #10."
     },
     "BT25-005": {
       "card_name": "Pagumon",
@@ -5714,29 +5714,35 @@
     },
     "BT25-007": {
       "card_name": "Gatchmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "orphan-staples-1 (BT25)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "On Play reveal-3 + 2-bucket add IS expressible, but self-link-condition + WhenLinked 'delete <=3000 DP' (printed inherited slot) need the [Link] subsystem (facet #11). Can't ship faithfully w/o them."
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "link-appmon-1 (BT25)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_007.rs",
+      "test_count": 7,
+      "patterns": [
+        "G-DSL-DIGILINK",
+        "when_linked",
+        "select_reveal_buckets",
+        "alt_digivolve",
+        "delete_by_dp"
+      ],
+      "notes": "DigiLink Shape-B landed (G-DSL-DIGILINK 2026-06-06): link_condition (Appmon cost1) + alt-digivolve + OnPlay reveal-3 two-bucket add + when_linked delete opp DP<=3000. Prior BLOCKED reason (link subsystem) now closed."
     },
     "BT25-045": {
       "card_name": "Onmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
       "gap_kind": "engine",
-      "archetype": "orphan-staples-1 (BT25)",
+      "archetype": "link-appmon-1 (BT25)",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "WhenWouldLink ActivateClass 'may reduce link cost by 1' (facet #10) + WhenLinked 'suspend 1 opp Digimon' (facet #11). [Link] subsystem gap."
+      "notes": "RE-ADJUDICATED 2026-06-07: link_condition + alt-digivolve + when_linked 'suspend 1 opp Digimon' ARE now expressible (DigiLink Shape-B), but Onmon ALSO has the [Your Turn][OPT] WhenWouldLink host-filtered optional link-cost-reduction ActivateClass (facet #10, same unwired primitive as BT25-004). That clause is a real player choice that cannot be silently dropped -> whole card BLOCKED (not PARTIAL) per no-approximations. docs/RUST_ENGINE_GAPS.md [Link] facet #10."
     },
     "BT25-006": {
       "card_name": "Dorimon",
@@ -6290,16 +6296,16 @@
     },
     "BT25-052": {
       "card_name": "Logimon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
-      "gap_kind": "hybrid",
-      "archetype": "appmon",
+      "gap_kind": "engine",
+      "archetype": "link-appmon-1 (BT25)",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "BLOCKED hybrid. [Main][OPT] link a chosen [Social]/[Tool]/[Game] Digimon card from hand or this Digimon digivolution-cards to self (cost -1): link-of-chosen-card primitive missing. [Your Turn][OPT] WhenLinked play Kazuki & Itsuki free is a host WhenLinked self-effect (facet 11) and also depends on the link primitive firing. Logged to docs/RUST_ENGINE_GAPS.md [Link] subsystem facet 9/11."
+      "notes": "RE-ADJUDICATED 2026-06-07: DigiLink Shape-B wired the standing-permanent absorb path but NOT facet #9 (link-a-chosen-card-from-hand/digivolution-cards). Logimon's [Main][OPT] 'link 1 Social/Tool/Game Digimon card from hand or this Digimon's digivolution cards to this Digimon (cost -1)' needs that unwired link-of-chosen-card initiation (DCGO ILinkCard.LinkCard from Hand/DigivolutionCards). The when_linked suspend + when_linked play-Kazuki&Itsuki host-self clauses depend on a link first firing. Mandatory [Main] clause -> BLOCKED. docs/RUST_ENGINE_GAPS.md [Link] facet #9 (cross-ref BT25-089/070)."
     },
     "BT25-047": {
       "card_name": "Floramon",
@@ -6371,16 +6377,21 @@
     },
     "BT25-061": {
       "card_name": "Offmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "orphan-a (TS/Iliad rookies + Monodramon)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "Appmon <Link> keyword on a Digimon (self-link-condition declarative) + [When Linking] (WhenLinked) trigger both unauthorable. SOMP trash->draw+memory and alt-digivolve are expressible. See qa/dsl-vocab-gaps.md (cross-ref BT25-056/072/060)."
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "link-appmon-1 (BT25)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_061.rs",
+      "test_count": 7,
+      "patterns": [
+        "G-DSL-DIGILINK",
+        "when_linked",
+        "start_of_your_main_phase",
+        "CannotUnsuspend"
+      ],
+      "notes": "DigiLink Shape-B: link_condition (Appmon cost1) + alt-digivolve + [Start Main] optional trash-Appmon->draw+memory + when_linked CannotUnsuspend (end_of_opponents_turn). Prior BLOCKED reason now closed."
     },
     "BT25-086": {
       "card_name": "Dan Yuki",
@@ -6876,15 +6887,16 @@
     },
     "BT25-036": {
       "card_name": "Craftmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "BT25 orphan-b (Iliad/TS rookie-to-champ + Appmon)",
+      "gap_kind": "engine",
+      "archetype": "link-appmon-1 (BT25)",
       "yaml_path": null,
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_036.rs",
+      "test_count": 0,
       "patterns": [],
-      "notes": "BLOCKED G-DSL-WHEN-LINKED-TIMING: no when: timing maps to CompiledTiming::Linked for the [When Linking] trash-Appmon->Draw2 clause. Ships no YAML."
+      "notes": "RE-ADJUDICATED 2026-06-07: prior G-DSL-WHEN-LINKED-TIMING block RESOLVED (when: when_linked landed). Now BLOCKED on App Fuse play-flow (AddAppfuseMethodByName Kabemon/Gomimon/Ecomon/Puzzlemon) — not implemented in engine (no lowering, no handler; AltPathKind::AppFusion parses but resolves to nothing). Mandatory alt-path clause, can't ship partial. See docs/RUST_ENGINE_GAPS.md App Fuse entry."
     },
     "BT25-094": {
       "card_name": "Cosmic Area",
