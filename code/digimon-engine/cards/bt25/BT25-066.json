@@ -1,0 +1,30 @@
+{
+  "card_id": "BT25-066",
+  "card_name_eng": "Guardromon",
+  "card_kind": 0,
+  "level": 4,
+  "dp": 5000,
+  "play_cost": 5,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine",
+    "Iliad",
+    "TS"
+  ],
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "dna_costs": null,
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": ""
+}
