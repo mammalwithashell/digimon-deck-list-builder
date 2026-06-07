@@ -19,7 +19,7 @@
 ## 4. Phase A — Tier-2 operations: mechanic split (pure movement)
 
 - [x] 4.1 Split `game_actions.rs` → `game_actions/mod.rs` + 10 `impl Game` submodules (`play`, `digivolve`, `breeding`, `zones`, `movement`, `sources`, `security`, `options`, `cost`, `misc`) mirroring the Tier-3 mechanic names. 84 `&mut self` methods moved; module-private types/`&self` readers stay in `mod.rs`. `use super::*` resolves parent privates → compiled clean first try (0 errors, no promotion needed). Gate PASS: 3548/7 (baseline), all binaries green. Completes the parallel `<tier>/<mechanic>` taxonomy.
-- [ ] 4.2 (Optional, narrowed — RQ3) `game.rs` `until_condition` + query-helper extraction still deferred (§10.5) — lower priority; the Tier-2 verb split (the headline parallel-taxonomy goal) is done.
+- [x] 4.2 (RQ3) Narrow `game.rs` extraction DONE: converted `game.rs` → `game/mod.rs` and pulled the `until_condition` machinery (5 methods → `game/until_condition.rs`) and the read-only query/aura-bonus helpers (12 methods → `game/queries.rs`: `can_digivolve`, `has_keyword`, `progress_excludes`, `permanent_is_unaffected_by_effect`, `*_aura_bonus`, `attack_target_blocked_by_modifier`, `source_dp_contribution`, …). Lifecycle/state-machine core stays in `game/mod.rs`. Compiled clean first try (`use super::*`).
 
 ## 5. Phase A — Output ports (pure movement)
 
@@ -57,5 +57,5 @@
 - [ ] 10.1 Record a follow-up: split `effect_context/selections.rs` (3,373 LOC, 35 `select_*` primitives) by selection-target — only if it keeps growing (RQ2).
 - [ ] 10.2 Record a follow-up: full `game.rs` mechanic split beyond the narrow 4.2 extraction (RQ3).
 - [x] 10.3 **DONE** — placement lint promoted warn → REQUIRED (removed `continue-on-error`) now that the relocation backlog hit zero. Baseline = 0, so any new inline machinery in the facade fails CI; Tier-2 fire delegations allowlisted.
-- [x] 10.5 **DONE — Tier-2 game_actions split landed** (commit `92549ae9`): 10 `impl Game` mechanic submodules mirroring the facade; parallel `<tier>/<mechanic>` taxonomy complete. Residual: optional narrow `game.rs` extraction (4.2) still open, low priority.
+- [x] 10.5 **DONE (full)** — Tier-2 game_actions split (commit `92549ae9`) + the narrow `game.rs` extraction (4.2). The Tier-1 lifecycle core (`game/mod.rs`), its read-only/until-condition helpers (`game/queries.rs`, `game/until_condition.rs`), and the Tier-2 verb modules (`game_actions/*`) now all follow the `<tier>/<mechanic>` taxonomy.
 - [x] 10.4 **DONE (full) — B1 trash-source primitive complete.** `Game::trash_source_and_fire` (39766d80) + `trash_source_and_fire_with_cause` variant. ALL 7 `fire_digivolution_card_trashed` sites now route through the Tier-2 primitive: 3 uniform (39766d80) + the 4 divergent — `trash_bottom_sources`/`trash_bottom_face_down_source` (below-top source → host unchanged, computed pre-push), `attach_tamer_to_digimon` drain (`EventCause::Return` variant), `armor_purge_top` (`EventCause::Cost` variant, host = post-pop promoted top). Zero trash-source fire calls remain in the facade. Lint ratcheted 16 → 12. Gate: 3548/7 (baseline), all binaries green.
