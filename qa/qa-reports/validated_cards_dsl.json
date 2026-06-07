@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-06",
+  "last_updated": "2026-06-07",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -5623,22 +5623,16 @@
     },
     "BT25-066": {
       "card_name": "Guardromon",
-      "validated_date": "2026-06-05",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
       "gap_kind": "dsl",
-      "archetype": "machine (BT25)",
+      "archetype": "BT25 link-ts slice",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
-      "patterns": [
-        "BLOCKER",
-        "WOULD-LEAVE-REPLACEMENT",
-        "LINK-CARD-TRASH-COST",
-        "INHERITED-DP-AURA",
-        "ALT-DIGIVOLVE-PATH"
-      ],
-      "notes": "BLOCKED (dsl): [All Turns] would-leave replacement whose cost is trashing 1 of this permanent LINK cards. Engine models linked_cards + OnLinkedCardTrashed + cancel_replacement, but no DSL verb selects/trashes a permanent own link card as a replacement cost (replacement cost body only supports delay_self; choose: only from hand). Other clauses (Blocker, +1000 DP inherited, TS-trait alt-digivolve) are individually expressible but the card as a whole is BLOCKED per no-approximations (the link-trash choice cannot surface)."
+      "patterns": [],
+      "notes": "[All Turns] leave-replacement by trashing 1 of its link cards = G-DSL-LINK-TRASH-AS-REPLACEMENT-COST. <Blocker> + inherited +1000 DP expressible but the leave-replacement is the defining clause. Cross-ref dsl-vocab-gaps BT25-066."
     },
     "BT25-074": {
       "card_name": "Tankdramon",
@@ -5817,16 +5811,16 @@
     },
     "BT25-069": {
       "card_name": "Raremon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "titan (BT25)",
+      "gap_kind": "hybrid",
+      "archetype": "BT25 link-ts slice",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "link 1 [TS] card from trash to a Digimon free — no DSL verb to select+link a trash card (link_to_own_digimon only links carrier). See qa/dsl-vocab-gaps.md BT25-069."
+      "notes": "[On Play][When Digivolving] link 1 [TS] card from trash to a Digimon = deferred link-chosen-card-from-trash primitive (no DSL verb / no effect-link-chosen path). <Jamming> + inherited +1000 DP expressible but only active main clause is the link. Cross-ref RUST_ENGINE_GAPS [Link] subsystem; dsl-vocab-gaps BT25-069."
     },
     "BT25-073": {
       "card_name": "Dragomon",
@@ -6116,16 +6110,16 @@
     },
     "BT25-101": {
       "card_name": "Divine Arms Version Ω",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
       "gap_kind": "hybrid",
-      "archetype": "orphan-staples-6 (BT25 TS staples)",
+      "archetype": "BT25 link-ts slice",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "No YAML. [Main] link-[TS]-card-from-trash branch BLOCKED-dsl (link_card_from_trash_to_own_digimon, see BT25-069). Inherited <Security A.+1>/<Reboot> BLOCKED-engine (G-LINK-INHERITED-ESS); leave-replacement BLOCKED-dsl (G-DSL-LINK-TRASH-AS-REPLACEMENT-COST)."
+      "notes": "[Main] \"OR link 1 [TS] card from trash\" branch = deferred link-chosen-card-from-trash (omitting it drops a player choice); inherited <Security A.+1>/<Reboot> link-ESS = G-LINK-INHERITED-ESS (engine); leave-replacement = G-DSL-LINK-TRASH-AS-REPLACEMENT-COST. Cross-ref dsl-vocab-gaps BT25-101, RUST_ENGINE_GAPS."
     },
     "BT25-008": {
       "card_name": "Coronamon",
@@ -6283,16 +6277,16 @@
     },
     "BT25-089": {
       "card_name": "Kazuki & Itsuki",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
       "gap_kind": "hybrid",
-      "archetype": "appmon",
+      "archetype": "BT25 link-ts slice",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "BLOCKED hybrid. [Main] link a chosen [Appmon] Digimon card from hand or digivolution-cards to a Digimon (cost -2): link-of-chosen-card primitive missing (link_to_own_digimon only links the carrier Option). [End of Your Turn][OPT] App Fuse: net-new keyword, no app_fuse anywhere in engine/DSL. Logged to docs/RUST_ENGINE_GAPS.md ([Link] subsystem facet 9 + App Fuse entry). [Start of Main] memory ramp is expressible but the card has no faithful subset."
+      "notes": "[Main] suspend->link 1 [Appmon] card from hand/digivolution-cards (-2) = deferred link-chosen-card primitive; [End of Turn][OPT] App Fuse = no App Fuse engine primitive. Start-of-Main memory ramp + inherited security free-play expressible but two core clauses BLOCKED. Cross-ref RUST_ENGINE_GAPS [Link] subsystem + App Fuse entry."
     },
     "BT25-052": {
       "card_name": "Logimon",
@@ -6547,42 +6541,42 @@
     },
     "BT25-056": {
       "card_name": "Bootmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
       "gap_kind": "hybrid",
-      "archetype": "BT25 orphan-d slice",
+      "archetype": "BT25 link-appmon-2 slice",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "host-Digimon link from hand/digivolution-cards (link_to_own_digimon links only carrier Option) + WhenLinked DSL when-token missing. See qa/dsl-vocab-gaps.md orphan-d."
+      "notes": "BLOCKED: Barrier (ok) + [OnPlay/WhenDigivolving/WhenAttacking] link Social/Tool/Game card from hand/digivolution-cards to self -2; [All Turns] WhenLinked suspend 1 opp; inherited [When Linking] return suspended opp to bottom of deck. WhenLinked when-token has since LANDED; controlling blocker is the missing engine primitive + DSL verb to link a CHOSEN card from {hand|trash|digivolution-cards} onto the host Digimon (facet #9, distinct from carrier-Option link_to_own_digimon and from the LANDED standing-permanent absorb). DCGO ILinkCard/AddLinkCard(cardSource, host). See docs/RUST_ENGINE_GAPS.md [Link] subsystem facet #9 + qa/dsl-vocab-gaps.md orphan-d."
     },
     "BT25-072": {
       "card_name": "Shutmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
       "gap_kind": "hybrid",
-      "archetype": "BT25 orphan-d slice",
+      "archetype": "BT25 link-appmon-2 slice",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "host-Digimon link from trash/digivolution-cards (link_card_from_trash_to_own_digimon gap, BT25-069/101) + WhenLinked when-token missing. See qa/dsl-vocab-gaps.md orphan-d."
+      "notes": "BLOCKED: Jamming (ok) + [OnPlay/WhenDigivolving/WhenAttacking] link Social/Tool/Game card from trash/digivolution-cards to self -2; [All Turns][OPT] WhenLinked deny-digivolve 1 opp; inherited [When Linking] 2 opp cant-unsuspend. WhenLinked when-token has since LANDED; controlling blocker is the missing engine primitive + DSL verb to link a CHOSEN card from {hand|trash|digivolution-cards} onto the host Digimon (facet #9, distinct from carrier-Option link_to_own_digimon and from the LANDED standing-permanent absorb). DCGO ILinkCard/AddLinkCard(cardSource, host). See docs/RUST_ENGINE_GAPS.md [Link] subsystem facet #9 + qa/dsl-vocab-gaps.md orphan-d."
     },
     "BT25-060": {
       "card_name": "Rebootmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
       "gap_kind": "hybrid",
-      "archetype": "BT25 orphan-d slice",
+      "archetype": "BT25 link-appmon-2 slice",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
       "patterns": [],
-      "notes": "host-Digimon free-link from hand/digivolution-cards as cost + WhenLinked-or-OnUnsuspend trigger (WhenLinked when-token missing). See qa/dsl-vocab-gaps.md orphan-d."
+      "notes": "BLOCKED: SecurityA+1/Reboot/Link+1 (declarative ok) + [WhenDigivolving/WhenAttacking][OPT] free-link 1 Appmon card from hand/digivolution-cards as cost -> unsuspend; [All Turns][OPT] WhenLinked-or-OnUnsuspend self-buff Piercing/Blocker/effect-immunity. WhenLinked when-token has since LANDED; controlling blocker is the missing engine primitive + DSL verb to link a CHOSEN card from {hand|trash|digivolution-cards} onto the host Digimon (facet #9, distinct from carrier-Option link_to_own_digimon and from the LANDED standing-permanent absorb). DCGO ILinkCard/AddLinkCard(cardSource, host). See docs/RUST_ENGINE_GAPS.md [Link] subsystem facet #9 + qa/dsl-vocab-gaps.md orphan-d."
     },
     "BT25-085": {
       "card_name": "BeelStarmon",
@@ -6687,14 +6681,14 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_040.rs"
     },
     "BT25-070": {
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
-      "archetype": "orphan-c (BT25)",
-      "gap_kind": "engine",
+      "archetype": "BT25 link-appmon-2 slice",
+      "gap_kind": "hybrid",
       "card_name": "Logamon",
       "status": "BLOCKED",
       "patterns": [],
-      "notes": "BLOCKED — entire effect kit depends on the [Link] subsystem: [Main][OPT] link a Social/Tool/Game Digimon card from trash/sources to self -1 (no WhenLinked/[When Linking] triggered timing in EffectTiming; no link-from-trash/sources step); [Your Turn][OPT] WhenLinked delete opp cost<=4; inherited [When Linking] cant-unsuspend. Logged to docs/RUST_ENGINE_GAPS.md [Link] subsystem entry.",
+      "notes": "BLOCKED: [Main][OPT] link a Social/Tool/Game Digimon card from trash/digivolution-cards to self -1; [Your Turn][OPT] WhenLinked delete opp cost<=4; inherited [When Linking] cant-unsuspend. WhenLinked when-token has since LANDED; controlling blocker is the missing engine primitive + DSL verb to link a CHOSEN card from {hand|trash|digivolution-cards} onto the host Digimon (facet #9, distinct from carrier-Option link_to_own_digimon and from the LANDED standing-permanent absorb). DCGO ILinkCard/AddLinkCard(cardSource, host). See docs/RUST_ENGINE_GAPS.md [Link] subsystem facet #9 + qa/dsl-vocab-gaps.md orphan-d.",
       "yaml_path": null,
       "test_path": null
     },
@@ -6949,20 +6943,16 @@
     },
     "BT25-102": {
       "card_name": "Factorial Area",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-07",
       "report": "batch-implement-cards-rust-dsl",
       "status": "BLOCKED",
       "gap_kind": "engine",
-      "archetype": "aegiomon-3",
+      "archetype": "BT25 link-ts slice",
       "yaml_path": null,
       "test_path": null,
       "test_count": 0,
-      "patterns": [
-        "D3",
-        "D4",
-        "D5"
-      ],
-      "notes": "Blocker primary aura is implementable (has_keyword-gated), but the conditional secondary grant of <Link +1> (max-links increase, while [Vulcanusmon] present) to a security-aura TARGET SET is not expressible. Link+1 has no grantable Keyword variant; the underlying ChangeLinkMax modifier exists but the aura modifier: path applies a hardcoded value of 0 (lower_aura.rs add_declarative_modifier(...,0,...)), so a +1 cannot be carried. G-ENGINE-AURA-GRANT-LINK-MAX."
+      "patterns": [],
+      "notes": "[Security][All Turns] conditional <Link +1> aura = G-ENGINE-AURA-GRANT-LINK-MAX (auras apply ChangeLinkMax with hardcoded 0). Blocker grant + [Main] swap/play-with-reduction expressible but the Link+1 security aura is a core clause. Cross-ref engine-gaps.md G-ENGINE-AURA-GRANT-LINK-MAX."
     },
     "BT25-103": {
       "card_name": "GraceNovamon",
@@ -7168,6 +7158,19 @@
         "F3"
       ],
       "notes": "Trash-1-hand -> delete all opp highest DP (+ effect-gated opp sec trash) + trash-2-hand leave-prevention IMPLEMENTED. Clause 3 (on-hand-trashed -> delete opp lowest DP) omitted — G-ENGINE-ON-DISCARD-HAND. Titamon-3-color cost-2 alt-path omitted — G-DSL-SELF-COLOR-COUNT-LTE. 7 tests."
+    },
+    "BT25-075": {
+      "card_name": "Vulcanusmon",
+      "validated_date": "2026-06-07",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "hybrid",
+      "archetype": "BT25 link-ts slice",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [],
+      "notes": "[On Play][When Digivolving] link up-to-2 chosen cards from hand/trash + per-link <De-Digivolve 1> = deferred link-chosen-card primitive; [All Turns] aura <Link +1> = G-ENGINE-AURA-GRANT-LINK-MAX (engine). New tracker entry. Cross-ref BT25-102, RUST_ENGINE_GAPS [Link] subsystem."
     }
   }
 }

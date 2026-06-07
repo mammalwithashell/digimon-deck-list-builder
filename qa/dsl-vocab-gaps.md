@@ -2813,6 +2813,22 @@ The four cards below are BLOCKED; each is cross-referenced to the controlling ga
 Implemented in this slice: BT25-055 Deramon, BT25-042 ClavisAngemon (both IMPLEMENTED).
 The five cards below are BLOCKED; each is cross-referenced to the controlling gap.
 
+> **Re-adjudicated 2026-06-07 ("link-appmon-2" slice — BT25-070/056/072/060).** Re-ran
+> these (plus BT25-070 Logamon, same family) against current `main`. Update: the
+> **`when: when_linked` DSL token HAS since landed** (`Timing::WhenLinked` →
+> `CompiledTiming::WhenLinked`, `clause.rs:146` / `compile.rs:258`; G-DSL-WHEN-LINKED-TIMING
+> closed), so the secondary "no when-token" blocker noted below is stale. The **controlling
+> blocker is unchanged and still open**: there is no engine primitive — and no DSL verb
+> lowering to one — to link a *chosen* card from `{hand | trash | digivolution-cards}` onto
+> a host Digimon (the shipping `link_to_own_digimon` links only the carrier Option; the
+> 2026-06-06 Shape-B substrate only *absorbs a standing permanent*, root `None`). This is
+> facet **#9** of the `docs/RUST_ENGINE_GAPS.md` `[Link]` keyword subsystem (DCGO
+> `ILinkCard(cardSource, host)` / `Permanent.AddLinkCard(cardSource)` with `SelectCardEffect.Root`
+> = `Hand`/`Trash`/`DigivolutionCards`). All four remain **BLOCKED (hybrid)**; ship no YAML
+> under the no-approximations policy (the link clause is each card's central mechanic and
+> gates the `WhenLinked`/`[When Linking]` payloads). DCGO confirmed this run:
+> `BT25_070.cs:181`, `BT25_056.cs:196`, `BT25_072.cs:201`, `BT25_060.cs:160`.
+
 ### BT25-056 Bootmon — host-Digimon link-from-{hand|digivolution-cards} + `When this gets linked` trigger  [gap_kind: hybrid]
 - **Effect text:** "[On Play][When Digivolving][When Attacking] If it's your turn, you may link 1 [Social], [Tool] or [Game] trait Digimon card from your hand or this Digimon's digivolution cards to this Digimon with the cost reduced by 2. [All Turns] When this Digimon gets linked, suspend 1 of your opponent's Digimon or Tamers." Plus `<Barrier>` (expressible) and inherited "Return 1 of your opponent's suspended Digimon to the bottom of the deck" (expressible).
 - **What's missing (two facets):**
@@ -3078,3 +3094,28 @@ controlling engine gap for the cost-reduction clauses is
   - `scope: linked` + `kind: grant_keyword` (and DP grants) — a linked card's Link-ESS now sets `.linked()` (previously only `scope: inherited` set `.inherited()`), so the grant materializes onto the HOST via the `tick_declarative_effects` linked-card pass (mirrors DCGO `RaidSelfEffect(isLinkedEffect: true)`).
 - **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- dsl_digimon_link_card_full_flow` (authors a full Appmon Link Digimon in YAML — link_condition + when_linked draw + linked Raid ESS — and exercises the real link-activate → absorb → OnLink path).
 - **Residual:** from-hand Digimon-link initiation + rarer source origins (trash / under-stack / re-link) are not yet wired (engine-side); see `docs/RUST_ENGINE_GAPS.md` 2026-06-06 Shape-B note. Authoring the *named* acceptance cards (BT21-009 Gatchmon etc., with their alt-digivolve / specific WhenLinked bodies) is the §2 follow-up.
+
+## BT25 "link-ts" slice — BLOCKED card (2026-06-07)
+
+Re-run of the BT25 link-ts slice (BT25-069, BT25-066, BT25-075, BT25-101, BT25-102, BT25-089)
+against the post–DigiLink-Shape-B substrate (commit 5514135c, 2026-06-07). Shape-B added the
+player-activated link of a *standing Digimon onto a host* (root `None`) plus the `kind: link_condition`
+/ `when: when_linked` / `scope: linked` authoring layer — but it did **NOT** add a verb/primitive for
+"link a card **chosen from trash / hand / digivolution-cards** to one of your Digimon as an effect"
+(the deferred residual at `docs/RUST_ENGINE_GAPS.md` §"[Link] subsystem", Shape-B note line ~585:
+"from-hand Digimon-link initiation and the rarer source origins (trash / under-stack / re-link) are
+not yet wired"). All six slice cards remain BLOCKED on that same residual. Five were already tracked
+(BT25-069/066/101 here; BT25-102 in engine-gaps; BT25-089 in RUST_ENGINE_GAPS); BT25-075 is added below.
+
+### BT25-075 Vulcanusmon — link up-to-2 chosen cards from {hand|trash} + per-link <De-Digivolve 1> + aura <Link +1>  [gap_kind: hybrid]
+- **Card(s):** BT25-075 Vulcanusmon (Lv.6 Black, Undead/Titan/TS).
+- **Effect text:**
+  - `When this card would be played, if you have fewer Digimon than your opponent, reduce the cost by 5.` (expressible — fewer-own-Digimon cost reducer.)
+  - `[On Play] [When Digivolving] You may link up to 2 cards from your hand or trash to any of your Digimon without paying the cost. Then, for each of your link cards, <De-Digivolve 1> all of your opponent's Digimon.` — **BLOCKED.** Linking up-to-2 cards **chosen from hand or trash** (DCGO `BT25_075.cs`: per-card `SetIntSelection` "from Hand / from Trash / Do not link" → `ILinkCard`) is exactly the deferred "link a chosen card from hand/trash" primitive (cross-ref BT25-069/072/101/056/089 and `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem facet #9). The `link_to_own_digimon` DSL verb links only the carrier Option; there is no verb to attach an arbitrary hand/trash card as a link to *any* of your Digimon. The follow-up `<De-Digivolve 1> all opp Digimon for each of your link cards` is expressible in isolation but can only fire after the (unauthorable) link step, so it cannot ship.
+  - `[All Turns] All of your [TS] trait Digimon gain <Rush> and <Link +1>.` — Rush grant is expressible (`grant_keyword: Rush` aura); the **`<Link +1>`** grant is **BLOCKED** by the same engine gap as BT25-102 (`G-ENGINE-AURA-GRANT-LINK-MAX` in `qa/archetype-qa/engine-gaps.md` — auras apply `ModifierType::ChangeLinkMax` with a hardcoded value of 0, so a +1 max-link grant is unauthorable without an approximation).
+  - `[Your Turn] When your Digimon get linked, one of them may attack.` — depends on a `WhenLinked` host trigger over *any* of your Digimon getting linked (not the self-link of `when: when_linked`, which is self-filtered to the just-linked card). Even were that authorable, it is downstream of the blocked link step.
+- **What's missing (two facets):**
+  1. **Link N chosen cards from hand/trash to any own Digimon (free).** Engine has the link substrate (`Permanent.linked_cards`, `attach_linked_card`) but no effect-driven "pick a card from hand/trash and attach it as a link to a chosen Digimon" path; the DSL has no verb. (Shape-B only absorbs a *standing Digimon* onto a host.)
+  2. **Aura-granted `<Link +1>` carrying a non-zero value** — `G-ENGINE-AURA-GRANT-LINK-MAX` (engine; see engine-gaps.md).
+- **Lowers to engine API:** facet 1 → a new effect-link-chosen-card primitive over `Permanent.linked_cards`; facet 2 → `ModifierType::ChangeLinkMax(+1)` via an aura modifier that can carry a value.
+- **Verdict:** BLOCKED (hybrid). Ships no YAML — every active clause depends on the chosen-card link primitive and/or the valued aura-Link+1 grant. Cross-ref BT25-069/072/101/056/089, BT25-102 (`G-ENGINE-AURA-GRANT-LINK-MAX`), and `docs/RUST_ENGINE_GAPS.md` `[Link]` subsystem.
