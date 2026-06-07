@@ -648,10 +648,9 @@ impl<'a> EffectContext<'a> {
                 permanent.card_sources.remove(0)
             };
 
-            let source_card = removed.handle();
-            let owner = removed.owner;
-            self.game.player_mut(owner).trash.push(removed);
-
+            // Host = the (unchanged) top card; the below-top source was already
+            // removed from the stack above, so this is its final state and the
+            // helper's push-to-trash doesn't alter it. Standard cause.
             let Some(host_card) = self
                 .game
                 .player(target.player)
@@ -661,16 +660,8 @@ impl<'a> EffectContext<'a> {
             else {
                 break;
             };
-
-            self.game.fire_digivolution_card_trashed(
-                target.player,
-                target,
-                host_card,
-                source_card,
-                crate::trigger_context::EventCause::from(
-                    self.game.infer_effect_cause(target.player),
-                ),
-            );
+            self.game
+                .trash_source_and_fire(removed.owner, target, removed, host_card);
             removed_count += 1;
         }
         let _ = self.cleanup_exposed_battle_area_digi_egg(target);
@@ -765,30 +756,16 @@ impl<'a> EffectContext<'a> {
             }
             permanent.card_sources.remove(0)
         };
-        let source_card = removed.handle();
-        let owner = removed.owner;
-        self.game.player_mut(owner).trash.push(removed);
-
-        // Compute the host's CURRENT top card AFTER the removal — the
-        // permanent still exists with its remaining sources / its own top
-        // card. A Tamer always retains its own card as the top.
-        //
-        // The direct index (not `.get()`) is infallible by construction here:
-        // the permanent was validated present at the top of this function, and
-        // only a source — never the permanent — was removed.
+        // Host = the permanent's top card. The below-top source was already
+        // removed above; the perm still exists with its top intact (a Tamer
+        // always retains its own card as the top), so the host is unchanged by
+        // the helper's push-to-trash. Direct index is infallible by
+        // construction (validated present at the top of this function).
         let host_card = self.game.player(target.player).battle_area[target.index as usize]
             .top_card()
             .handle();
-
-        // Fire OnDigivolutionCardTrashed for the trashed bottom source, the
-        // same observer dispatch as `trash_card_source` / `trash_top_source`.
-        self.game.fire_digivolution_card_trashed(
-            target.player,
-            target,
-            host_card,
-            source_card,
-            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(target.player)),
-        );
+        self.game
+            .trash_source_and_fire(removed.owner, target, removed, host_card);
         true
     }
 

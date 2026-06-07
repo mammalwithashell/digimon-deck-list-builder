@@ -37,9 +37,12 @@ BASELINE = {
     ("action/security.rs", "try_replace (replacement window)"): 1,
     ("action/trash.rs", "try_replace (replacement window)"): 4,
     ("action/zones.rs", "try_replace (replacement window)"): 1,
+    # fire_* trash-source sites (the 4 divergent OnDigivolutionCardTrashed
+    # dispatches) ratcheted to ZERO 2026-06-07: all route through the Tier-2
+    # `trash_source_and_fire[_with_cause]` primitive (§10.4 complete). The two
+    # remaining fire_* below are DIFFERENT observers (security-removal,
+    # on-play), part of the broader Tier-3->Tier-2 backlog.
     ("action/security.rs", "fire_* (observer dispatch)"): 1,
-    ("action/sources.rs", "fire_* (observer dispatch)"): 2,
-    ("action/trash.rs", "fire_* (observer dispatch)"): 2,
     ("selections.rs", "fire_* (observer dispatch)"): 1,
     ("action/digivolve.rs", "battle_area[..] source mutation"): 1,
     ("action/play.rs", "battle_area[..] source mutation"): 2,

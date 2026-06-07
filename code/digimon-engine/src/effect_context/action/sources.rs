@@ -552,14 +552,13 @@ impl<'a> EffectContext<'a> {
         // Mirror `Game::return_to_deck` (game_actions.rs:1497-1506): fire
         // `OnDigivolutionCardTrashed` per source, per player, draining
         // between each so observers see them one at a time.
+        let top_handle = top.handle();
         for source in tamer_perm.card_sources.drain(..) {
-            let source_card = source.handle();
-            self.game.player_mut(controller).trash.push(source);
-            self.game.fire_digivolution_card_trashed(
+            self.game.trash_source_and_fire_with_cause(
                 controller,
                 tamer,
-                top.handle(),
-                source_card,
+                source,
+                top_handle,
                 crate::trigger_context::EventCause::Return,
             );
         }
@@ -656,27 +655,27 @@ impl<'a> EffectContext<'a> {
         // The new top is now `permanent.card_sources.last()` automatically —
         // no extra work needed (previous next-highest is now visible).
         let controller = perm.player;
-        self.game.player_mut(controller).trash.push(top);
         // Modifier cleanup: no per-card-source tracking exists in this engine;
         // permanent-handle modifiers remain valid for the promoted top card.
-        // See doc comment above for the DCGO deviation note.
-
-        // Fire OnDigivolutionCardTrashed for the trashed top card. Mirrors the
-        // existing dispatch in `Game::return_to_hand` /
-        // `Game::return_to_deck` (game_actions.rs:1345-1357 / 1481-1493) for
-        // sources-below-top, and matches DCGO `ArmorPurge.cs:65-78` which
-        // re-stacks `EffectTiming.WhenTopCardTrashed` after the trash. We
-        // pick it up.
-        self.game.fire_digivolution_card_trashed(
+        //
+        // Host = the promoted new top. The `top` was already popped above, and
+        // pushing it to TRASH (inside the helper) does not touch the perm's
+        // battle-area stack, so the host is identical computed here vs after
+        // the push. Cause = `Cost` (matches DCGO `ArmorPurge.cs:65-78`, which
+        // re-stacks `WhenTopCardTrashed`). Trash + fire via the shared Tier-2
+        // primitive.
+        let host_card = self
+            .game
+            .player(perm.player)
+            .battle_area
+            .get(perm.index as usize)
+            .map(|permanent| permanent.top_card().handle())
+            .unwrap_or(top_handle);
+        self.game.trash_source_and_fire_with_cause(
             controller,
             perm,
-            self.game
-                .player(perm.player)
-                .battle_area
-                .get(perm.index as usize)
-                .map(|permanent| permanent.top_card().handle())
-                .unwrap_or(top_handle),
-            top_handle,
+            top,
+            host_card,
             crate::trigger_context::EventCause::Cost,
         );
     }

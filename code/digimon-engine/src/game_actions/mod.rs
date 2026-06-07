@@ -1313,6 +1313,24 @@ impl Game {
         removed: CardSource,
         host_card: crate::card_source::CardHandle,
     ) {
+        let cause =
+            crate::trigger_context::EventCause::from(self.infer_effect_cause(fire_target.player));
+        self.trash_source_and_fire_with_cause(trash_owner, fire_target, removed, host_card, cause);
+    }
+
+    /// Like `trash_source_and_fire` but with an explicit `EventCause` for call
+    /// sites that attribute the trash to a non-standard cause (`Return` for the
+    /// under-tamer source drain, `Cost` for armor-purge). `host_card` must be
+    /// resolved by the caller (it differs per site: pre-removal top, post-pop
+    /// promoted top, etc.).
+    pub(crate) fn trash_source_and_fire_with_cause(
+        &mut self,
+        trash_owner: PlayerId,
+        fire_target: PermanentHandle,
+        removed: CardSource,
+        host_card: crate::card_source::CardHandle,
+        cause: crate::trigger_context::EventCause,
+    ) {
         let source_card = removed.handle();
         self.player_mut(trash_owner).trash.push(removed);
         self.fire_digivolution_card_trashed(
@@ -1320,7 +1338,7 @@ impl Game {
             fire_target,
             host_card,
             source_card,
-            crate::trigger_context::EventCause::from(self.infer_effect_cause(fire_target.player)),
+            cause,
         );
     }
 
