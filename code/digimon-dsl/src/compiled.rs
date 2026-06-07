@@ -847,6 +847,12 @@ pub enum CompiledTiming {
     /// `EffectTiming::OnLink` with `.linked()` and a self-filter so it fires
     /// only when THIS card is the just-linked card (design D6).
     WhenLinked,
+    /// DigiLink host-side: "[When Linked] a card gets linked to this Digimon".
+    /// Authored as `when: when_card_linked_to_this` on a face-up `scope`;
+    /// lowers to `EffectTiming::OnLink` with a host self-filter
+    /// (`event_permanent == source_permanent`) — fires once for the receiving
+    /// host only. Mirrors DCGO `CanTriggerWhenLinked`.
+    WhenCardLinkedToThis,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

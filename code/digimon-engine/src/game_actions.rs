@@ -3120,6 +3120,125 @@ impl Game {
         self.drain_effect_queue();
     }
 
+    /// Facet #9 — link a **chosen card** from a non-battle-area zone (hand,
+    /// trash, or another permanent's digivolution sources) onto `host`'s
+    /// linked cards. This is the DCGO `ILinkCard.LinkCard` path with
+    /// `root != None` (`Permanent.AddLinkCard`): a single card is moved out of
+    /// its zone and attached sideways — no standing permanent is absorbed and
+    /// no `DiscardEvoRoots` runs (the chosen card was never a stack top).
+    ///
+    /// Cost payment and `WhenWouldLink` are the calling effect's
+    /// responsibility (effect-driven links register their own cost reduction
+    /// and pay via the effect body) — the standing-permanent activate path
+    /// (`begin_digimon_link`) owns the interactive `WhenWouldLink` replacement
+    /// window. After the move, `OnLink` fires globally so the linked card's
+    /// `[When Linking]` self-filter, the host's `[When Linked]`, and the
+    /// linked-card ESS all resolve, identical to every other attach site.
+    ///
+    /// Returns `true` if the card was found in `from` and attached.
+    pub fn link_chosen_card_into_host(
+        &mut self,
+        host: PermanentHandle,
+        card: crate::card_source::CardHandle,
+        from: crate::enums::LinkCardSource,
+    ) -> bool {
+        use crate::enums::LinkCardSource;
+        use crate::permanent::OptionState;
+
+        // Host must be a live standing Digimon.
+        let host_ok = self
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+            .map(|p| {
+                self.permanent_is_digimon_for_rules(host)
+                    && matches!(p.option_state, OptionState::Standard)
+            })
+            .unwrap_or(false);
+        if !host_ok {
+            return false;
+        }
+
+        // Lift the chosen card out of its source zone.
+        let moved = match from {
+            LinkCardSource::Hand(owner) => {
+                let pos = self
+                    .player(owner)
+                    .hand
+                    .iter()
+                    .position(|c| c.handle() == card);
+                pos.map(|i| self.player_mut(owner).hand.remove(i))
+            }
+            LinkCardSource::Trash(owner) => {
+                let pos = self
+                    .player(owner)
+                    .trash
+                    .iter()
+                    .position(|c| c.handle() == card);
+                pos.map(|i| self.player_mut(owner).trash.remove(i))
+            }
+            LinkCardSource::DigivolutionSource(src) => {
+                // A digivolution source under another permanent's top card.
+                // It must not be the stack top (the top is the live Digimon).
+                match self
+                    .player(src.player)
+                    .battle_area
+                    .get(src.index as usize)
+                {
+                    Some(perm) => {
+                        let top_pos = perm.card_sources.len().saturating_sub(1);
+                        let pos = perm
+                            .card_sources
+                            .iter()
+                            .position(|c| c.handle() == card)
+                            .filter(|&i| i != top_pos);
+                        pos.and_then(|i| {
+                            self.player_mut(src.player)
+                                .battle_area
+                                .get_mut(src.index as usize)
+                                .map(|p| p.card_sources.remove(i))
+                        })
+                    }
+                    None => None,
+                }
+            }
+        };
+        let Some(moved) = moved else {
+            return false;
+        };
+        let moved_handle = moved.handle();
+        let moved_owner = moved.owner;
+
+        // Attach onto the host. If the host vanished between the validity
+        // check and here (it cannot in synchronous flow, but be defensive),
+        // route the lifted card to its owner's trash.
+        match self
+            .player_mut(host.player)
+            .battle_area
+            .get_mut(host.index as usize)
+        {
+            Some(hp) => hp.linked_cards.push(moved),
+            None => {
+                self.player_mut(moved_owner).trash.push(moved);
+                return false;
+            }
+        }
+
+        // Fire OnLink globally with the just-linked card identity.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnLink,
+                TriggerSource::Linked {
+                    player: pid as PlayerId,
+                    host,
+                    card: moved_handle,
+                },
+            );
+        }
+        self.maybe_drain_effect_queue();
+        true
+    }
+
     /// Compute the absolute `turn_count` at which a delayed Option should
     /// self-trash. The rule is "end/start of the **owner**'s next turn" for
     /// next-turn triggers, and the current turn for `EndOfThisTurn`.

@@ -96,6 +96,14 @@ pub fn lower_for_kind_with_clause_index(
         // when a sibling links to the same host (design D6).
         let is_when_linked =
             matches!(*t, digimon_dsl::compiled::CompiledTiming::WhenLinked);
+        // DigiLink host-side: `when: when_card_linked_to_this` lowers to
+        // `OnLink` + a HOST self-filter (`event_permanent == source_permanent`)
+        // so the host's "[When Linked]" fires once for the host the card
+        // actually attached to and not for a sibling host (facet #6/#11).
+        let is_host_linked = matches!(
+            *t,
+            digimon_dsl::compiled::CompiledTiming::WhenCardLinkedToThis
+        );
         if matches!(
             card_kind,
             Some(CompiledCardKind::Option | CompiledCardKind::Dual)
@@ -201,13 +209,18 @@ pub fn lower_for_kind_with_clause_index(
             }
         }
 
-        if active_when.is_some() || condition.is_some() || is_when_linked {
+        if active_when.is_some() || condition.is_some() || is_when_linked || is_host_linked {
             let aw = active_when.clone();
             let cc = condition.clone();
             builder = builder.condition(move |rctx| {
                 // DigiLink Shape-B self-filter: a `when_linked` effect fires
                 // only when THIS card is the just-linked card.
                 if is_when_linked && rctx.event_card() != Some(rctx.source_card) {
+                    return false;
+                }
+                // DigiLink host-side self-filter: a `when_card_linked_to_this`
+                // effect fires only when the receiving host is THIS permanent.
+                if is_host_linked && rctx.event_permanent() != rctx.source_permanent {
                     return false;
                 }
                 let subject = predicate_subject_for_source(rctx);

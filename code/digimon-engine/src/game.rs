@@ -3992,6 +3992,39 @@ impl Game {
                 total += effect.dp_modifier;
             }
         }
+        // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's `.linked()`
+        // static-DP Link-ESS applies to its host. The `card_sources` loop above
+        // never scans `linked_cards`; fold them in here with the host as target.
+        let linked: Vec<(String, crate::card_source::CardHandle)> = permanent
+            .linked_cards
+            .iter()
+            .map(|c| (c.card_id(&self.card_data).to_string(), c.handle()))
+            .collect();
+        for (card_id, source_card) in linked {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || !effect.linked {
+                    continue;
+                }
+                if effect.materializes_declarative_state
+                    || effect.dp_modifier == 0
+                    || effect.dp_modifier_fn.is_some()
+                    || effect.applies_to_opponent_security_dp
+                {
+                    continue;
+                }
+                let rctx =
+                    EffectReadContext::new(self, source_card, Some(target), target.player);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                total += effect.dp_modifier;
+            }
+        }
         total
     }
 
@@ -4103,6 +4136,65 @@ impl Game {
                     continue;
                 };
                 let ctx = EffectReadContext::new(self, source_card, source_permanent, controller);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&ctx) {
+                        continue;
+                    }
+                }
+                if let Some(value) = formula_fn(&ctx, target) {
+                    if security_attack {
+                        total = if found { total.max(value) } else { value };
+                    } else {
+                        total += value;
+                    }
+                    found = true;
+                }
+            }
+        }
+
+        // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's `.linked()`
+        // dynamic DP / Security-Attack formula Link-ESS contributes to its host.
+        // The loop above scans `card_sources` / breeding only; fold in every
+        // host's `linked_cards` with the host as `source_permanent`.
+        let mut linked_sources: Vec<(
+            String,
+            crate::card_source::CardHandle,
+            PermanentHandle,
+            PlayerId,
+        )> = Vec::new();
+        for (pid, player) in self.players.iter().enumerate() {
+            let player_id = pid as PlayerId;
+            for (index, perm) in player.battle_area.iter().enumerate() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
+                };
+                for linked in &perm.linked_cards {
+                    linked_sources.push((
+                        linked.card_id(&self.card_data).to_string(),
+                        linked.handle(),
+                        host,
+                        player_id,
+                    ));
+                }
+            }
+        }
+        for (card_id, source_card, host, controller) in linked_sources {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || !effect.linked {
+                    continue;
+                }
+                let Some(formula_fn) = (if security_attack {
+                    effect.security_attack_fn.as_ref()
+                } else {
+                    effect.dp_modifier_fn.as_ref()
+                }) else {
+                    continue;
+                };
+                let ctx = EffectReadContext::new(self, source_card, Some(host), controller);
                 if let Some(condition) = &effect.condition {
                     if !condition(&ctx) {
                         continue;

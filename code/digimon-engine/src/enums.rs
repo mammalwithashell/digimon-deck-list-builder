@@ -939,6 +939,18 @@ pub enum CardSourceRef {
     Reveal(CardHandle),
 }
 
+/// Facet #9 — the source zone a chosen card is lifted from when an effect
+/// links it onto a host Digimon (DCGO `ILinkCard.LinkCard` roots Hand /
+/// Trash / DigivolutionCards). Carries the card's owner (Hand/Trash) or the
+/// donor permanent (DigivolutionSource) so `link_chosen_card_into_host` can
+/// locate and remove it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LinkCardSource {
+    Hand(PlayerId),
+    Trash(PlayerId),
+    DigivolutionSource(crate::permanent::PermanentHandle),
+}
+
 #[cfg(test)]
 mod rarity_tests {
     use super::*;
