@@ -1,0 +1,56 @@
+# BT25-066 Guardromon — Digimon, Lv.4, Black, DP 5000, Cost 5.
+# Trait line: Machine / Iliad / TS. Attribute: Virus.
+#
+# DCGO BT25_066.cs (authoritative):
+#   - <Blocker> (self, non-inherited) → grant_keyword Blocker.
+#   - [All Turns] When this Digimon would leave the battle area, by trashing 1
+#     of its link cards, it doesn't leave. (WhenRemoveField ActivateClass,
+#     SetIsSkippable(true) ⇒ optional "may"; CanActivateCondition gated on
+#     !HasNoLinkCards; SelectCardEffect over LinkedCards maxCount 1 ⇒ the WHICH-
+#     link-card choice is surfaced even for one card; on trash willBeRemoveField
+#     = false.)
+#     → kind: replacement, trigger when_would_leave_battle_area,
+#       optional: true, cost { trash_own_link_card: true }, outcome: prevent.
+#       (G-DSL-LINK-TRASH-AS-REPLACEMENT-COST.)
+#   - Inherited [All Turns]: this Digimon gets +1000 DP.
+#     → scope: inherited aura dp_modifier +1000.
+#   - Alt-digivolution requirement: may digivolve from a level-3 [TS] Digimon for
+#     cost 2 (AddSelfDigivolutionRequirementStaticEffect TopCard.HasTSTraits,
+#     level 3, digivolutionCost 2).
+#     → alt_paths digivolve from { level_eq: 3, trait_has: TS } cost 2.
+
+card: BT25-066
+name: Guardromon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+traits: [Machine, Iliad, TS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+
+effects:
+  # ─── <Blocker> (self) ───────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── [All Turns] leave-replacement: trash 1 link card → doesn't leave ───────
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { trash_own_link_card: true }
+    outcome: prevent
+    summary: "[All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave"
+
+  # ─── Inherited [All Turns] +1000 DP ────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

@@ -91,6 +91,14 @@ pub fn lower_with_raw(
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }
+    // A `scope: linked` replacement is a link card's Link-ESS — it applies to
+    // the HOST while the card is attached as a link card. `.linked()` marks it
+    // so the host-side `enqueue_from_permanent` linked-card scan consults it
+    // (BT25-101 Divine Arms Version Ω: the leave-replacement is a linked
+    // effect, DCGO `SetIsLinkedEffect(true)`).
+    if matches!(scope, CompiledScope::Linked) {
+        builder = builder.linked();
+    }
     if optional {
         builder = builder.optional();
     }
@@ -799,8 +807,13 @@ fn source_permanent_is_still_active(ctx: &EffectReadContext<'_>) -> bool {
     };
 
     permanent.is_some_and(|perm| {
+        // The source card may live in the digivolution stack (normal /
+        // inherited effects) OR in `linked_cards` (a `.linked()` Link-ESS whose
+        // host is this permanent — BT25-101 Divine Arms Version Ω leave-
+        // replacement). Accept either zone.
         perm.card_sources
             .iter()
+            .chain(perm.linked_cards.iter())
             .any(|source| source.handle() == ctx.source_card)
     })
 }

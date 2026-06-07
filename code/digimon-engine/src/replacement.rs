@@ -442,9 +442,87 @@ fn collect_candidates(
         }
     };
 
+    // Collect from a permanent's LINK cards: a `.linked()` replacement effect
+    // on a link card is a host-side Link-ESS — it fires for the host the card
+    // is attached to (BT25-101 Divine Arms Version Ω: "[All Turns] when this
+    // would leave, by trashing 1 of its link cards, it doesn't leave"; DCGO
+    // `SetIsLinkedEffect(true)`). The host `h` is the subject/source-permanent;
+    // the linked card is the effect source. Mirrors the `enqueue_from_permanent`
+    // linked-card scan for triggered effects.
+    let push_linked_from_perm = |out: &mut Vec<Candidate>, h: PermanentHandle| {
+        let Some(player) = game.players.get(h.player as usize) else {
+            return;
+        };
+        let Some(perm) = player.battle_area.get(h.index as usize) else {
+            return;
+        };
+        for linked in perm.linked_cards.iter() {
+            let card_id = linked.card_id(&game.card_data).to_string();
+            let source_card = linked.handle();
+            let Some(effects) = game.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for (slot, effect) in effects.iter().enumerate() {
+                if !effect.linked {
+                    continue;
+                }
+                if effect.timing != timing {
+                    continue;
+                }
+                if effect.replacement_process.is_none() {
+                    continue;
+                }
+                if effect.max_per_turn > 0 {
+                    let Some(activation_count) =
+                        source_permanent_activation_count(game, h, source_card, slot as u8)
+                    else {
+                        continue;
+                    };
+                    if activation_count >= effect.max_per_turn {
+                        continue;
+                    }
+                }
+                if let Some(cond) = &effect.condition {
+                    let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                        .with_replacement_context(
+                            cause,
+                            replacement_source_controller,
+                            replacement_subject_controller,
+                        );
+                    if !cond(&ctx) {
+                        continue;
+                    }
+                }
+                if let Some(rcond) = &effect.replacement_condition {
+                    let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                        .with_replacement_context(
+                            cause,
+                            replacement_source_controller,
+                            replacement_subject_controller,
+                        );
+                    if !rcond(&ctx, &subject) {
+                        continue;
+                    }
+                }
+                out.push(Candidate {
+                    source_card,
+                    source_permanent: Some(h),
+                    source_controller: h.player,
+                    is_mandatory: !effect.optional,
+                    effect_name: effect.name.clone(),
+                    kind: CandidateKind::EffectClosure {
+                        card_id: card_id.clone(),
+                        effect_slot: slot as u8,
+                    },
+                });
+            }
+        }
+    };
+
     // (1) Subject's own effects first (for Permanent subjects).
     if let Some(h) = subject_perm {
         push_from_perm(&mut out, h);
+        push_linked_from_perm(&mut out, h);
     }
 
     // (2) Other battle-area permanents' effects.

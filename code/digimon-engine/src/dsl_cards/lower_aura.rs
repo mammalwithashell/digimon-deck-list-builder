@@ -268,6 +268,14 @@ pub fn lower(
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }
+    // A `scope: linked` self-aura is a link card's continuous Link-ESS (DP /
+    // Security-Attack / keyword) — it applies to the HOST while the card is
+    // attached. `.linked()` marks it so the host-side effect/formula collectors
+    // fold it in (BT25-101 Divine Arms Version Ω: inherited <Security A. +1>;
+    // DCGO `ChangeSelfSAttackStaticEffect(isLinkedEffect: true)`).
+    if matches!(scope, CompiledScope::Linked) {
+        builder = builder.linked();
+    }
     if let Some(aw) = active_when.clone() {
         builder = builder.condition(move |rctx| eval_active_when(&aw, rctx, is_self_aura));
     }
