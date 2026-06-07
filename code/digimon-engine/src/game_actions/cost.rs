@@ -62,13 +62,25 @@ impl Game {
                 );
             };
 
-            // Auto-apply only reducers with NO interactive cost: a reducer
-            // bearing a `pay_cost_fn` (e.g. "trash 2 cards" / "by suspending
-            // this Tamer") imposes a real cost the player chooses to pay, so
-            // it must park behind an explicit acceptance prompt below rather
-            // than fire silently here (Working Rule §17 — no auto-selections;
-            // every choice surfaces through `pending_selection`).
-            if !candidate.optional && !candidate.has_pay_cost {
+            // Auto-apply reducers with NO interactive cost: a reducer bearing
+            // a `pay_cost_fn` (e.g. "trash 2 cards" / "by suspending this
+            // Tamer") imposes a real cost the player chooses to pay, so it
+            // must park behind an explicit acceptance prompt below rather than
+            // fire silently here (Working Rule §17 — no auto-selections; every
+            // choice surfaces through `pending_selection`).
+            //
+            // EXCEPTION — a `pay_cost` that *begins with its own declinable
+            // selection* (`pay_cost_self_gated`, e.g. BT12-112's optional
+            // "place 1 [Shoutmon]") already surfaces the player's opt-in/opt-out
+            // as its first prompt. Wrapping it in the confirmation gate would
+            // be redundant AND wrongly mandatory (the gate's `is_optional`
+            // tracks the effect-level `optional`, which such cards leave
+            // `false`). Auto-apply runs the `pay_cost` directly so its inner
+            // optional select IS the acceptance prompt — matching DCGO, which
+            // surfaces the Shoutmon preattach as an optional "you may".
+            if !candidate.optional
+                && (!candidate.has_pay_cost || candidate.pay_cost_self_gated)
+            {
                 let key = candidate.key.clone();
                 if let Some(amount) = self.apply_cost_reduction_candidate(&key, target) {
                     accumulated_reduction += amount;
@@ -403,6 +415,7 @@ impl Game {
                 amount,
                 optional: effect.optional,
                 has_pay_cost: effect.pay_cost_fn.is_some(),
+                pay_cost_self_gated: effect.pay_cost_self_gated,
             });
         }
         candidates

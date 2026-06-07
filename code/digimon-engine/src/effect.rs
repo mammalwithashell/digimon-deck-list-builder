@@ -321,6 +321,19 @@ pub struct Effect {
     /// prompt" (used when the first step's actionability cannot be
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
+
+    /// `BeforePayCost` cost reducers only: when `true`, this reducer's
+    /// `pay_cost_fn` begins with a declinable (PASS-able) selection, so
+    /// running it surfaces the player's own opt-in/opt-out rather than
+    /// silently committing an un-opted cost. Such a reducer is auto-applied
+    /// (its inner optional select IS the acceptance prompt) instead of being
+    /// parked behind the redundant "Use X to reduce play cost?" confirmation
+    /// gate that a mandatory-cost reducer (e.g. "by suspending this Tamer",
+    /// "trash 2 cards") needs. Set by the DSL cost-reduction lowering from
+    /// `body_first_step_is_declinable(pay_cost)`. The self-suspend idiom and
+    /// mandatory leading steps leave this `false`. See `game_actions::cost`
+    /// `continue_play_from_hand_cost_reduction_chain` and BT12-112.
+    pub pay_cost_self_gated: bool,
 }
 
 impl std::fmt::Debug for Effect {
@@ -700,6 +713,7 @@ impl EffectBuilder {
                 when_playing_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                pay_cost_self_gated: false,
             },
         }
     }
@@ -840,6 +854,15 @@ impl EffectBuilder {
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
         self.inner.outer_optional_guard = Some(Box::new(f));
+        self
+    }
+
+    /// Mark a `BeforePayCost` cost reducer whose `pay_cost_fn` begins with a
+    /// declinable selection so it auto-applies (the inner optional select is
+    /// the acceptance prompt) instead of being parked behind the redundant
+    /// confirmation gate. See `Effect::pay_cost_self_gated`.
+    pub fn pay_cost_self_gated(mut self, v: bool) -> Self {
+        self.inner.pay_cost_self_gated = v;
         self
     }
 

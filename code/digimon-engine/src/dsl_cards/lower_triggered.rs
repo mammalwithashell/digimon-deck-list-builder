@@ -364,7 +364,7 @@ fn steps_provide_resource_flow(steps: &[CompiledStep]) -> bool {
 /// attack step, or a `CompiledStep::Optional(...)` wrapper is itself the
 /// inner decline path. Only a clause whose first step is unconditionally
 /// mandatory needs the outer prompt. `G-OUTER-OPTIONAL-NOT-INSTALLED`.
-fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
+pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
     let Some(first) = body.first() else {
         // Empty body — nothing to run; an outer prompt would be pointless.
         return true;

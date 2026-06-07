@@ -149,6 +149,10 @@ struct CostReductionCandidate {
     amount: i32,
     optional: bool,
     has_pay_cost: bool,
+    /// The `pay_cost` begins with a declinable selection, so it carries its
+    /// own opt-in/opt-out and can be auto-applied without the redundant
+    /// acceptance gate. Mirrors `Effect::pay_cost_self_gated`.
+    pay_cost_self_gated: bool,
 }
 
 struct BeforePayCostSourceInfo {
