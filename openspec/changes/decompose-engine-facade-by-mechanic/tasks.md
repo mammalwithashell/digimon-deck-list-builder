@@ -6,9 +6,9 @@
 
 ## 2. Phase A — Tier-3 facade: query split (pure movement)
 
-- [ ] 2.1 Create `effect_context/query/` and move read accessors into `state.rs`, `event_ctx.rs`, `deletion_ctx.rs`, `source_ctx.rs` as `impl EffectContext` blocks.
-- [ ] 2.2 Move facade infra (`new*`, `as_read`, `can_affect_permanent`, `override_selecting_player`, `refire_*`) into `effect_context/core.rs`.
-- [ ] 2.3 Update `effect_context/mod.rs` to declare submodules and re-export; verify the full suite is green (no body edits expected).
+- [ ] 2.1 DEFERRED (lower priority). Query/read-accessor split: the `&self` accessors are duplicated across `EffectContext` and `EffectReadContext` (same names, two impls), so the `&mut self` extractor doesn't apply directly — needs a `&self`/dual-impl-aware variant. The action split (the bloat) is done; `mod.rs` is already down to 1463 lines. Folds into a future facade-tidy pass.
+- [ ] 2.2 DEFERRED with 2.1.
+- [ ] 2.3 DEFERRED with 2.1.
 
 ## 3. Phase A — Tier-3 facade: action split (pure movement)
 
@@ -57,5 +57,5 @@
 - [ ] 10.1 Record a follow-up: split `effect_context/selections.rs` (3,373 LOC, 35 `select_*` primitives) by selection-target — only if it keeps growing (RQ2).
 - [ ] 10.2 Record a follow-up: full `game.rs` mechanic split beyond the narrow 4.2 extraction (RQ3).
 - [ ] 10.3 Record a follow-up: promote the placement-rule lint from warn → deny/required once B1/B3 have landed and the Tier-3 exception allowlist is stable (RQ1).
-- [ ] 10.5 **Tier-2 split (game_actions + narrow game.rs) deferred to a dedicated follow-up.** Mirror the facade mechanic taxonomy in `game_actions/<mechanic>.rs` (`impl Game`) using the proven extractor; promote module-private types/free-fns to `pub(crate)`; then the narrow `game.rs` extraction (until_condition + query helpers). Completes the parallel `<tier>/<mechanic>` taxonomy. Pure movement; own full-suite gate.
-- [ ] 10.4 **B1 (trash-source primitive) deferred to a dedicated follow-up.** Inspection found the 7 sites non-uniform (fire-attribution owner vs perm.player, removal strategy, host-derivation timing). Extract `Game::trash_source_and_fire(trash_owner, fire_target, removed, host_card)` for the truly-identical tail (push + observer fire), migrate one site at a time each gated on its own `cards_behavioral` test, leaving removal + host-derivation per-site. Parity-sensitive (`OnDigivolutionCardTrashed`).
+- [x] 10.5 **DONE — Tier-2 game_actions split landed** (commit `92549ae9`): 10 `impl Game` mechanic submodules mirroring the facade; parallel `<tier>/<mechanic>` taxonomy complete. Residual: optional narrow `game.rs` extraction (4.2) still open, low priority.
+- [x] 10.4 **DONE (partial) — B1 trash-source primitive landed** (commit `39766d80`): `Game::trash_source_and_fire` + 3 uniform sites migrated. Residual: the 4 divergent sites (post-push host / `EventCause::Return`) remain per-site by design, tracked by the placement lint to ratchet down later.
