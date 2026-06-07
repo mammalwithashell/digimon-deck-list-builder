@@ -1,3 +1,21 @@
+//! Observation output port — read-only projection of `Game` into RL tensors.
+//!
+//! This module is the engine's sole observation/output-port boundary: every
+//! entry point takes an immutable `&Game` and returns a tensor; nothing here
+//! mutates game state. The rules core does NOT depend on this module — the
+//! dependency points only inward (observation → core). The per-profile tensor
+//! builders (`tensor`, `tensor_v1`, `tensor_v2_full`, `tensor_v2_lite`,
+//! `tensor_v2_lite_deck`) are submodules here; their public paths are
+//! preserved at the crate root via `pub use` re-exports in `lib.rs`
+//! (`crate::tensor`, …) so the PyO3 and Tauri consumers are unaffected.
+//! Layout/spec data lives in the sibling `crate::tensor_profiles`.
+
+pub mod tensor;
+pub mod tensor_v1;
+pub mod tensor_v2_full;
+pub mod tensor_v2_lite;
+pub mod tensor_v2_lite_deck;
+
 use crate::card_registry::CardRegistry;
 use crate::enums::PlayerId;
 use crate::game::Game;
