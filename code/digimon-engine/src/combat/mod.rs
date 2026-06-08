@@ -3136,6 +3136,20 @@ impl Game {
 
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
+
+        // An attack-time effect — e.g. ST1-06 Coredramon's [When Attacking]
+        // "Lose 2 memory" — can push memory across to the opponent's side. The
+        // attack state machine is the only action that resolves entirely below
+        // the action decoder (and `DebugRunner`/`LiveGame` call the combat
+        // entry points directly), so nothing else re-checks turn end once the
+        // attack completes. Do it here, at the single attack terminal, now that
+        // `pending_attack` is cleared. Guard on Main phase: end-of-turn
+        // Vortex/MayAttack attacks resolve their own rotation via
+        // `pass_end_of_turn_action`, and `check_turn_end` internally no-ops
+        // unless memory < 0 with no pending selection.
+        if self.current_phase == crate::enums::GamePhase::Main {
+            self.check_turn_end();
+        }
         outcome
     }
 
