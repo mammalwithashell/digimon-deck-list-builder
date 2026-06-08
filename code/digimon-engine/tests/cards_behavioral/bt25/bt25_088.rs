@@ -206,7 +206,11 @@ fn bt25_088_lose_security_suspends_self_and_places_top_two_face_down() {
         .start();
 
     let kyo_perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.end_turn(); // → P1's turn
+    // `pass_turn` (memory → +3 for P1), not a raw `end_turn` (which would flip
+    // memory(8) to -8, an impossible real-game state): an attack now correctly
+    // ends a turn whose memory sits on the opponent's side, which would
+    // otherwise rotate back to P0 and unsuspend Kyo before the assertions run.
+    runner.pass_turn(); // → P1's turn
     let attacker = runner.place_on_field(1, "ATK", Some(0));
 
     let deck_before = runner.deck_size(0);
@@ -259,7 +263,10 @@ fn bt25_088_lose_security_decline_does_nothing() {
         .start();
 
     let kyo_perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.end_turn();
+    // `pass_turn` (memory → +3 for P1), not a raw `end_turn`: see the sibling
+    // test — an attack now ends a turn whose memory is on the opponent's side,
+    // so P1 must start their turn with valid non-negative memory.
+    runner.pass_turn();
     let attacker = runner.place_on_field(1, "ATK", Some(0));
     let deck_before = runner.deck_size(0);
 
