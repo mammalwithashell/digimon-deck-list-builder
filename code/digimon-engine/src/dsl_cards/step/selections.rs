@@ -1962,10 +1962,16 @@ fn install_select_count_capped_permanents(
         collect_matching_permanents(ctx, target_player, &filter, Some(&bindings))
             .into_iter()
             .map(|handle| {
-                (
-                    encode_attack(handle.player as u16, handle.index as u16),
-                    handle,
-                )
+                // Encode opponent- AND own-field targets identically as
+                // `encode_attack(0, slot)` = ATTACK_START + slot — the SAME
+                // encoding the single-target `install_field_selection` path
+                // uses. The frontend's field-click router disambiguates which
+                // player's field by the `OppField`/`OwnField` selection kind
+                // (set in `install_count_capped_permanent_step`), never by id
+                // range. Passing the target's player id as the attacker pushed
+                // opponent targets out of the field-click range and left
+                // "delete an opponent's Digimon" prompts unclickable.
+                (encode_attack(0, handle.index as u16), handle)
             })
             .collect();
     let tail = Arc::new(tail);
@@ -1995,6 +2001,10 @@ fn install_select_count_capped_permanents(
     }
 
     let selecting_player = ctx.override_selecting_player().unwrap_or(ctx.player);
+    // Targets on a player OTHER than the one making the choice render on the
+    // selecting player's opponent half; drives the OppField/OwnField kind so
+    // the frontend's field-click router can map board clicks to these picks.
+    let target_is_opponent = target_player != selecting_player;
     let controller = ctx.player;
     let override_pin = ctx.override_selecting_player();
     let source_card = ctx.source_card;
@@ -2031,6 +2041,7 @@ fn install_select_count_capped_permanents(
         source_permanent,
         source_kind,
         selecting_player,
+        target_is_opponent,
         previous_phase,
         final_callback,
     );
@@ -2050,6 +2061,7 @@ fn install_count_capped_permanent_step(
     source_permanent: Option<PermanentHandle>,
     source_kind: crate::enums::EffectSourceKind,
     selecting_player: u8,
+    target_is_opponent: bool,
     previous_phase: GamePhase,
     final_callback: Box<dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync>,
 ) {
@@ -2069,7 +2081,16 @@ fn install_count_capped_permanent_step(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
-        kind: SelectionKind::CountCappedMultiSelect { max, picked },
+        // Reuse the single-target field-selection kind so the frontend's
+        // field-click router (which keys off `OppField`/`OwnField`, not the
+        // phase or id range) can map board clicks to these picks. The
+        // multi-select / accumulate-and-commit semantics are carried by the
+        // re-installed step + `is_optional` PASS gating, not by the kind tag.
+        kind: if target_is_opponent {
+            SelectionKind::OppField
+        } else {
+            SelectionKind::OwnField
+        },
         selecting_player,
         previous_phase,
         valid_action_ids,
@@ -2127,6 +2148,7 @@ fn install_count_capped_permanent_step(
                 source_permanent,
                 source_kind,
                 selecting_player,
+                target_is_opponent,
                 previous_phase,
                 next_cb,
             );

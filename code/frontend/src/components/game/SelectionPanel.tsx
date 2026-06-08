@@ -1,6 +1,7 @@
 import { Card } from '@/components/shared/Card';
-import { GamePhase, type PendingSelection } from '@/types/game';
+import { GamePhase, type PendingSelection, type PermanentInfo } from '@/types/game';
 import { SELECTION } from '@/utils/constants';
+import { isSourceSelectAction, sourceSelectionCards } from '@/utils/sourceSelection';
 
 interface SelectionPanelProps {
   currentPhase: GamePhase;
@@ -12,6 +13,8 @@ interface SelectionPanelProps {
   trashIds: string[];
   /** The local player's security card IDs (may be empty if face-down) */
   securityIds: string[];
+  /** The local player's battle-area permanents (for source-card picks). */
+  battleArea: PermanentInfo[];
   onAction: (actionId: number) => void;
   localPlayer: number;
 }
@@ -38,16 +41,24 @@ export function SelectionPanel({
   handIds,
   trashIds,
   securityIds,
+  battleArea,
   onAction,
   localPlayer,
 }: SelectionPanelProps) {
   // Only show for specific selection phases where the local player is selecting
   if (!pendingSelection) return null;
   if (pendingSelection.selectingPlayer !== localPlayer) return null;
-  if (!PANEL_PHASES.has(currentPhase)) return null;
 
   // Keyword prompt is handled by KeywordPromptDialog instead
   if (pendingSelection.keywordPrompt) return null;
+
+  // Source-card (digivolution material) picks are identified by their
+  // SOURCE_SELECT-range action ids, NOT a dedicated phase: `select_material`
+  // runs in SelectMaterial (shared with the board-driven DNA pick) and
+  // SelectSource. Gate the modal on the id range so it opens for source picks
+  // but stays out of the DNA flow (which is board-clicked by raw field index).
+  const isSourceSelect = pendingSelection.validIndices.some(isSourceSelectAction);
+  if (!PANEL_PHASES.has(currentPhase) && !isSourceSelect) return null;
 
   const isEffectChoice = currentPhase === GamePhase.SelectEffectChoice;
   let title = pendingSelection.prompt || (isEffectChoice
@@ -98,6 +109,15 @@ export function SelectionPanel({
         label: `Effect ${i + 1}`,
       }));
     }
+  } else if (isSourceSelect) {
+    // Pick a specific digivolution card from under one of your Digimon
+    // (`select_material`). Each SOURCE_SELECT id resolves to the non-top
+    // source card the engine would act on.
+    cards = sourceSelectionCards(pendingSelection.validIndices, battleArea).map((t) => ({
+      cardId: t.cardId,
+      actionId: t.actionId,
+      isValid: actionMask[t.actionId] === 1,
+    }));
   }
 
   const canDecline = actionMask[SELECTION.DECLINE] === 1;

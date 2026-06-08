@@ -116,4 +116,37 @@ describe('dtoToGameState', () => {
 
     expect(state.player1.handCards[0]?.cardKind).toBe(2);
   });
+
+  // The engine reports `winner` as a raw Rust player id (0/1), but the UI
+  // (ResultOverlay/PhaseIndicator `localPlayer={1}`, playerLabels `{1,2}`) is
+  // 1-indexed. Without the +1 conversion, the local human (engine 0) winning
+  // compares `0 === 1` → false → "Defeat" shown on a win. Map it like
+  // `selectingPlayer`.
+  it('maps the engine winner (0/1) to the UI 1-indexed convention', () => {
+    const player = (id: number) => ({
+      id,
+      hand: [],
+      battle_area: [],
+      breeding: null,
+      deck_count: 50,
+      trash_count: 0,
+      security_count: 5,
+      is_eliminated: false,
+    });
+    const dto = (winner: number | null) => ({
+      turn_count: 1,
+      turn_player: 0,
+      current_phase: 'Main',
+      memory: 0,
+      game_over: winner !== null,
+      winner,
+      mulligan_current_player: null,
+      mulligan_used: [false, false],
+      players: [player(0), player(1)],
+    });
+
+    expect(dtoToGameState(dto(0)).winner).toBe(1); // engine 0 (human) → UI 1
+    expect(dtoToGameState(dto(1)).winner).toBe(2); // engine 1 (opponent) → UI 2
+    expect(dtoToGameState(dto(null)).winner).toBeNull();
+  });
 });

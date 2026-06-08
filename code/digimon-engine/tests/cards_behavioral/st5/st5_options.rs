@@ -36,7 +36,7 @@ fn st5_15_main_de_digivolves_up_to_two_opponent_digimon() {
     assert!(runner.game.activate_hand_main(0, 0));
     assert_eq!(
         runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 })
+        Some(SelectionKind::OppField)
     );
     let first = runner.pending_selection_view().unwrap().valid_action_ids[0];
     runner
@@ -44,7 +44,7 @@ fn st5_15_main_de_digivolves_up_to_two_opponent_digimon() {
         .expect("select first Laser Eye target");
     assert_eq!(
         runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 1 })
+        Some(SelectionKind::OppField)
     );
     let second = runner.pending_selection_view().unwrap().valid_action_ids[0];
     runner
@@ -75,7 +75,7 @@ fn st5_15_security_activates_laser_eye_main_effect() {
 
     assert_eq!(
         runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 })
+        Some(SelectionKind::OppField)
     );
     let pick = runner.pending_selection_view().unwrap().valid_action_ids[0];
     runner
@@ -165,7 +165,7 @@ fn st5_15_main_de_digivolve_targets_up_to_two_and_allows_zero() {
         .expect("ST5-15 installs an up-to-2 De-Digivolve selection");
     assert_eq!(
         view.kind,
-        SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 },
+        SelectionKind::OppField,
         "caps the De-Digivolve at 2 targets"
     );
     assert!(

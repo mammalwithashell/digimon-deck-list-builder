@@ -78,6 +78,10 @@ pub struct CardDto {
     /// without DigiXros aliases. Frontend uses these for material-match hints.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub digixros_aliases: Vec<String>,
+    /// Printed digivolution costs (color/level/cost rows). The desktop UI
+    /// previously had no digivolve-cost data; the browser path exposes these.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evo_costs: Vec<EvoCostDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,6 +92,105 @@ pub struct PermanentDto {
     pub is_suspended: bool,
     pub stack_size: usize,
     pub turn_played: u16,
+    /// The digivolution-source cards UNDER the active top card, ordered
+    /// bottom→top (the top/active card is excluded). Index `i` here lines up
+    /// with the engine's `source_index` in `encode_source_select(field, i)`
+    /// (= `SOURCE_SELECT_START + field*SOURCES_PER_FIELD + i`), so the
+    /// frontend's source picker can map a `SOURCE_SELECT`-range action id back
+    /// to the card it removes/plays. Empty when the permanent has no sources.
+    #[serde(default)]
+    pub sources: Vec<SourceCardDto>,
+    /// Active keyword display names (mirrors `serialization::perm_data`'s
+    /// `keywords`). Empty for the breeding-area construction (no live handle).
+    #[serde(default)]
+    pub keywords: Vec<String>,
+    /// Innate vs modifier-gained keyword split.
+    #[serde(default)]
+    pub keyword_breakdown: KeywordBreakdownDto,
+    /// Security-attack modifier (delta from the default of 1).
+    #[serde(default)]
+    pub security_attack_modifier: i32,
+    /// Linked-card ids (e.g. for cards with a linked-Digimon mechanic).
+    #[serde(default)]
+    pub linked_card_ids: Vec<String>,
+    /// The top card's printed main effect text.
+    #[serde(default)]
+    pub main_effect_text: String,
+    /// Inherited effects conferred by non-top digivolution sources.
+    #[serde(default)]
+    pub inherited_effects: Vec<InheritedEffectDto>,
+    /// Active modifiers on this permanent (DCGO PermanentDetail parity).
+    #[serde(default)]
+    pub modifiers: Vec<PermanentModifierDto>,
+    /// Printed (base) vs effective DP split.
+    #[serde(default)]
+    pub dp_breakdown: DpBreakdownDto,
+}
+
+/// A single digivolution-source card under a permanent. Minimal shape for the
+/// source picker (and stack inspector); richer per-source detail for the
+/// inspector lives in the engine's own serialization.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SourceCardDto {
+    pub card_id: String,
+    pub card_name: String,
+    pub colors: Vec<String>,
+    /// This source card's printed main effect text (for the stack inspector).
+    #[serde(default)]
+    pub main_effect_text: String,
+    /// This source card's printed inherited effect text.
+    #[serde(default)]
+    pub inherited_effect_text: String,
+}
+
+/// A single digivolution cost entry (one color/level/cost row from
+/// `CardData.evo_costs`). Mirrors `EvoCost` (`card_data.rs`) with the
+/// frontend's field names (`color`/`level`/`cost`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvoCostDto {
+    pub color: u8,
+    pub level: u8,
+    pub cost: u16,
+}
+
+/// Innate vs modifier-gained keyword split (mirrors `serialization::perm_data`'s
+/// `keywordBreakdown`). "innate" = printed/inherited on the cards; "gained" =
+/// present via a runtime grant modifier.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct KeywordBreakdownDto {
+    pub innate: Vec<String>,
+    pub gained: Vec<String>,
+}
+
+/// One inherited effect conferred by a non-top digivolution source (mirrors
+/// `serialization::perm_data`'s `inheritedEffects`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InheritedEffectDto {
+    pub source_index: usize,
+    pub card_id: String,
+    pub card_name: String,
+    pub text: String,
+}
+
+/// One active modifier on a permanent (mirrors `serialization::perm_data`'s
+/// `modifiers` — DCGO PermanentDetail parity). `type_` is the stable wire
+/// string from `serialization::modifier_type_str`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermanentModifierDto {
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub value: i32,
+    pub expiry: String,
+    pub source_card_id: Option<String>,
+}
+
+/// Printed (base) vs effective DP split (mirrors `serialization::perm_data`'s
+/// `dpBreakdown`). `temporary` is the delta contributed by modifiers.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DpBreakdownDto {
+    pub base: Option<i32>,
+    pub temporary: i32,
+    pub total: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,7 +200,16 @@ pub struct PlayerDto {
     pub battle_area: Vec<PermanentDto>,
     pub breeding: Option<PermanentDto>,
     pub deck_count: usize,
+    /// Number of cards remaining in the digitama (egg) deck. The desktop UI
+    /// previously had no egg-deck count.
+    #[serde(default)]
+    pub egg_deck_count: usize,
     pub trash_count: usize,
+    /// Full trash contents (top-of-pile last). The trash is a PUBLIC zone in
+    /// the Digimon TCG — both players see both trashes — so the cards are sent
+    /// for every player. The desktop UI previously got only `trash_count`, so
+    /// the trash always rendered empty even as deletions piled up.
+    pub trash: Vec<CardDto>,
     pub security_count: usize,
     pub is_eliminated: bool,
 }
@@ -116,6 +228,13 @@ pub struct PendingSelectionDto {
     pub valid_action_ids: Vec<u16>,
     pub is_optional: bool,
     pub prompt: String,
+    /// Engine `SelectionKind` discriminant as a stable string (e.g.
+    /// `"OwnField"` / `"OppField"` / `"Hand"`, via `PendingSelection::
+    /// kind_str()`). The frontend's board-click router keys off this to map a
+    /// slot click to a field-target action — WITHOUT it (the prior desktop DTO
+    /// omitted it) every own- AND opponent-field selection is unclickable in
+    /// the Tauri app, because `isFieldSelectionKind(undefined)` is false.
+    pub kind: String,
     /// For `SelectionKind::EffectChoice` prompts (`select_effect_choice`),
     /// the branches the player picks among. Each entry's `action_id` is one
     /// of the `valid_action_ids` above; the engine uses the
@@ -261,7 +380,7 @@ fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -
         play_cost,
         colors,
         traits: _,
-        evo_costs: _,
+        evo_costs,
         dna_costs: _,
         effect_text: _,
         inherited_text: _,
@@ -285,22 +404,151 @@ fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -
         colors: colors.iter().map(|&c| color_str(c).to_string()).collect(),
         ace_overflow: *ace_overflow,
         digixros_aliases: digixros_aliases.clone(),
+        evo_costs: evo_costs
+            .iter()
+            .map(|e| EvoCostDto {
+                color: e.card_color,
+                level: e.level,
+                cost: e.memory_cost,
+            })
+            .collect(),
     }
 }
 
+/// Non-top digivolution-source cards of a permanent, ordered bottom→top so
+/// index `i` matches the engine's `source_index` in `encode_source_select`
+/// (`SOURCE_SELECT_START + field*SOURCES_PER_FIELD + i`). The active top card
+/// (last in `card_sources`) is excluded — it is never a `select_material`
+/// candidate. The frontend source picker maps a `SOURCE_SELECT` action id back
+/// to the card here.
+fn perm_sources_dto(
+    perm: &digimon_engine::permanent::Permanent,
+    data: &[CardData],
+) -> Vec<SourceCardDto> {
+    let stack = &perm.card_sources;
+    let non_top = stack.len().saturating_sub(1);
+    stack[..non_top]
+        .iter()
+        .map(|cs| {
+            let cd = &data[cs.data_index];
+            SourceCardDto {
+                card_id: cd.card_id.clone(),
+                card_name: cd.card_name.clone(),
+                colors: cd.colors.iter().map(|&c| color_str(c).to_string()).collect(),
+                main_effect_text: cd.effect_text.clone(),
+                inherited_effect_text: cd.inherited_text.clone(),
+            }
+        })
+        .collect()
+}
+
 fn perm_dto(game: &Game, player: PlayerId, index: usize) -> PermanentDto {
+    use digimon_engine::enums::ModifierType;
+    use digimon_engine::serialization::{
+        modifier_type_str, expiry_str, DISPLAY_KEYWORDS,
+    };
+
     let perm = &game.player(player).battle_area[index];
+    let data = &game.card_data;
     let handle = PermanentHandle {
         player,
         index: index as u8,
     };
+    let stack_size = perm.stack_size();
+    let top = perm.top_card();
+    let top_data = &data[top.data_index];
+    let base_dp = top_data.dp.unwrap_or(0);
+
+    // ── Active keywords + innate/gained breakdown (mirrors perm_data) ──
+    let mut keywords: Vec<String> = Vec::new();
+    let mut innate: Vec<String> = Vec::new();
+    let mut gained: Vec<String> = Vec::new();
+    for (kw, name) in DISPLAY_KEYWORDS {
+        if game.has_keyword(handle, *kw) {
+            keywords.push((*name).to_string());
+            if game.modifiers.has_keyword(handle, *kw) {
+                gained.push((*name).to_string());
+            } else {
+                innate.push((*name).to_string());
+            }
+        }
+    }
+
+    // ── Security-attack modifier (delta from the default of 1) ──
+    let security_attack_modifier = game.security_attack_keyword_bonus(handle)
+        + game.modifiers.sum(handle, ModifierType::SecurityAttackChange);
+
+    // ── DP: base (printed) vs effective (with modifiers) ──
+    let total_dp = game.effective_dp(handle).unwrap_or(base_dp);
+    let temporary_dp = total_dp - base_dp;
+
+    // ── Inherited effects conferred by non-top digivolution sources ──
+    let inherited_effects: Vec<InheritedEffectDto> = perm
+        .card_sources
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| i + 1 < stack_size) // exclude the top card
+        .filter_map(|(i, cs)| {
+            let cd = &data[cs.data_index];
+            if cd.inherited_text.trim().is_empty() {
+                return None;
+            }
+            Some(InheritedEffectDto {
+                source_index: i,
+                card_id: cs.card_id(data).to_string(),
+                card_name: cd.card_name.clone(),
+                text: cd.inherited_text.clone(),
+            })
+        })
+        .collect();
+
+    // ── Active modifier list (DCGO PermanentDetail parity) ──
+    let modifiers: Vec<PermanentModifierDto> = game
+        .modifiers
+        .permanent_modifiers_iter(handle)
+        .filter_map(|entry| {
+            let type_str = modifier_type_str(entry.modifier)?;
+            let source_card_id = entry.source_permanent.and_then(|sh| {
+                game.players
+                    .get(sh.player as usize)
+                    .and_then(|pl| pl.battle_area.get(sh.index as usize))
+                    .map(|p| p.top_card().card_id(data).to_string())
+            });
+            Some(PermanentModifierDto {
+                type_: type_str.to_string(),
+                value: entry.value,
+                expiry: expiry_str(entry.expiry).to_string(),
+                source_card_id,
+            })
+        })
+        .collect();
+
+    let linked_card_ids: Vec<String> = perm
+        .linked_cards
+        .iter()
+        .map(|c| c.card_id(data).to_string())
+        .collect();
+
     PermanentDto {
         field_index: index as u8,
-        top_card: card_dto(perm.top_card(), &game.card_data),
+        top_card: card_dto(top, data),
         effective_dp: game.effective_dp(handle),
         is_suspended: perm.is_suspended,
-        stack_size: perm.stack_size(),
+        stack_size,
         turn_played: perm.turn_played,
+        sources: perm_sources_dto(perm, data),
+        keywords,
+        keyword_breakdown: KeywordBreakdownDto { innate, gained },
+        security_attack_modifier,
+        linked_card_ids,
+        main_effect_text: top_data.effect_text.clone(),
+        inherited_effects,
+        modifiers,
+        dp_breakdown: DpBreakdownDto {
+            base: Some(base_dp),
+            temporary: temporary_dp,
+            total: Some(total_dp),
+        },
     }
 }
 
@@ -314,13 +562,35 @@ fn player_dto(game: &Game, id: PlayerId) -> PlayerDto {
         .iter()
         .map(|c| card_dto(c, &game.card_data))
         .collect();
-    let breeding = p.breeding_area.as_ref().map(|perm| PermanentDto {
-        field_index: 255, // breeding indicator
-        top_card: card_dto(perm.top_card(), &game.card_data),
-        effective_dp: perm.base_dp(&game.card_data),
-        is_suspended: perm.is_suspended,
-        stack_size: perm.stack_size(),
-        turn_played: perm.turn_played,
+    let breeding = p.breeding_area.as_ref().map(|perm| {
+        // Breeding permanents are not battle-area-addressable, so the live
+        // keyword / modifier / effective-DP queries (which take a
+        // PermanentHandle) don't apply — fall back to printed/neutral values,
+        // mirroring `serialization::perm_data`'s `handle == None` branch.
+        let base_dp = perm.base_dp(&game.card_data);
+        PermanentDto {
+            field_index: 255, // breeding indicator
+            top_card: card_dto(perm.top_card(), &game.card_data),
+            effective_dp: base_dp,
+            is_suspended: perm.is_suspended,
+            stack_size: perm.stack_size(),
+            turn_played: perm.turn_played,
+            sources: perm_sources_dto(perm, &game.card_data),
+            keywords: Vec::new(),
+            keyword_breakdown: KeywordBreakdownDto::default(),
+            security_attack_modifier: 0,
+            linked_card_ids: Vec::new(),
+            main_effect_text: game.card_data[perm.top_card().data_index]
+                .effect_text
+                .clone(),
+            inherited_effects: Vec::new(),
+            modifiers: Vec::new(),
+            dp_breakdown: DpBreakdownDto {
+                base: base_dp,
+                temporary: 0,
+                total: base_dp,
+            },
+        }
     });
     PlayerDto {
         id,
@@ -328,7 +598,13 @@ fn player_dto(game: &Game, id: PlayerId) -> PlayerDto {
         battle_area,
         breeding,
         deck_count: p.deck.len(),
+        egg_deck_count: p.digitama_deck.len(),
         trash_count: p.trash.len(),
+        trash: p
+            .trash
+            .iter()
+            .map(|c| card_dto(c, &game.card_data))
+            .collect(),
         security_count: p.security.len(),
         is_eliminated: p.is_eliminated,
     }
@@ -357,6 +633,9 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
         valid_action_ids: sel.valid_action_ids.clone(),
         is_optional: sel.is_optional,
         prompt: sel.prompt.clone(),
+        // Same stable discriminant string the engine's own serialization
+        // emits (`PendingSelectionView::kind_str()` == `format!("{:?}", kind)`).
+        kind: format!("{:?}", sel.kind),
         effect_choices,
     })
 }
@@ -1224,6 +1503,182 @@ mod tests {
         let parsed: GameStateDto = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.turn_count, 1);
         assert_eq!(parsed.players.len(), 2);
+    }
+
+    /// Regression: the desktop DTO previously omitted `kind`, so EVERY own- and
+    /// opponent-field selection was unclickable in the Tauri app (the frontend
+    /// routes board clicks via `isFieldSelectionKind(pendingSelection.kind)`,
+    /// and `isFieldSelectionKind(undefined)` is false). Drive a real
+    /// opponent-field selection (ST1-15 Giga Destroyer) and assert the
+    /// engine's `SelectionKind` reaches the DTO as the string `"OppField"`.
+    #[test]
+    fn pending_selection_dto_threads_field_selection_kind() {
+        use digimon_engine::card_data::CardData;
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+        fn opp_digimon(id: &str, dp: i32) -> CardData {
+            let mut c = make_test_card(id, id);
+            c.card_kind = CardKind::Digimon;
+            c.colors = vec![CardColor::Red];
+            c.level = Some(3);
+            c.dp = Some(dp);
+            c.play_cost = 3;
+            c
+        }
+
+        let mut runner = DebugRunner::builder()
+            .dsl_card("ST1-15")
+            .expect("ST1-15 in embedded DSL pack")
+            .add_card(opp_digimon("OPP-SMALL", 2000))
+            .hand(0, &["ST1-15"])
+            .memory(10)
+            .start();
+        runner.place_on_field(1, "OPP-SMALL", Some(0));
+        runner.play(0, 0).expect("play Giga Destroyer from hand");
+
+        let dto = pending_selection_dto(&runner.game)
+            .expect("Giga Destroyer installs an opponent-field selection");
+        assert_eq!(
+            dto.kind, "OppField",
+            "field-selection kind must reach the desktop DTO so the frontend can route board clicks"
+        );
+    }
+
+    /// The source picker needs each permanent's non-top digivolution cards (in
+    /// `encode_source_select` order) — the desktop DTO previously exposed only
+    /// `stack_size`, so the frontend had no card to render for a
+    /// `select_material` pick (ST2-15 Kaiser Nail "play 1 source from under 1
+    /// of your Digimon").
+    #[test]
+    fn perm_dto_exposes_non_top_sources_in_encode_order() {
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC-A", "Source A"))
+            .add_card(make_test_card("SRC-B", "Source B"))
+            .add_card(make_test_card("TOP-C", "Top C"))
+            .start();
+        // place_stack is bottom→top: [SRC-A, SRC-B] are sources, TOP-C is the
+        // active top card (must be excluded).
+        runner.place_stack(0, &["SRC-A", "SRC-B", "TOP-C"]);
+
+        let dto = perm_dto(&runner.game, 0, 0);
+        let ids: Vec<&str> = dto.sources.iter().map(|s| s.card_id.as_str()).collect();
+        assert_eq!(
+            ids,
+            vec!["SRC-A", "SRC-B"],
+            "non-top sources, bottom→top order matching encode_source_select; top card excluded"
+        );
+    }
+
+    /// The desktop DTO previously omitted per-permanent runtime data (keyword
+    /// badges, security-attack value, modifiers, dp breakdown) that the browser
+    /// `serialization::perm_data` already exposes, so the Tauri UI rendered
+    /// empty keyword badges and an empty stack inspector. Assert the keyword
+    /// reaches the typed DTO (mirrors `perm_data`'s `keywords` / breakdown).
+    #[test]
+    fn perm_dto_exposes_keywords() {
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+        use digimon_engine::enums::Keyword;
+
+        let mut blocker = make_test_card("BLK-A", "Blocker A");
+        blocker.keywords = vec![Keyword::Blocker];
+
+        let mut runner = DebugRunner::builder().add_card(blocker).start();
+        runner.place_on_field(0, "BLK-A", Some(0));
+
+        let dto = perm_dto(&runner.game, 0, 0);
+        assert!(
+            dto.keywords.iter().any(|k| k == "blocker"),
+            "innate Blocker must surface in the desktop DTO keywords: {:?}",
+            dto.keywords
+        );
+        assert!(
+            dto.keyword_breakdown.innate.iter().any(|k| k == "blocker"),
+            "an innate (printed) keyword belongs in the innate breakdown, not gained"
+        );
+        assert!(
+            !dto.keyword_breakdown.gained.iter().any(|k| k == "blocker"),
+            "printed keyword is not a modifier-granted (gained) keyword"
+        );
+    }
+
+    /// The egg-deck count and per-card digivolution costs are exposed by the
+    /// browser path but were dropped on desktop (empty egg-deck count, missing
+    /// digivolve costs in hand). Assert both reach the typed DTO.
+    #[test]
+    fn player_and_card_dto_expose_egg_deck_and_evo_costs() {
+        use digimon_engine::card_data::EvoCost;
+        use digimon_engine::card_source::CardSource;
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+        let mut evo_card = make_test_card("EVO-A", "Evo A");
+        evo_card.evo_costs = vec![EvoCost {
+            card_color: 1,
+            level: 3,
+            memory_cost: 2,
+        }];
+
+        let mut runner = DebugRunner::builder().add_card(evo_card).start();
+        // Seed the digitama (egg) deck so the count is non-zero.
+        let next = runner.game.next_card_index();
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "EVO-A")
+            .unwrap();
+        runner.game.players[0]
+            .digitama_deck
+            .push(CardSource::new(idx, 0, next));
+
+        let dto = player_dto(&runner.game, 0);
+        assert_eq!(
+            dto.egg_deck_count, 1,
+            "egg-deck count must mirror digitama_deck.len()"
+        );
+
+        let source = CardSource::new(idx, 0, 0);
+        let cdto = card_dto(&source, &runner.game.card_data);
+        assert_eq!(cdto.evo_costs.len(), 1);
+        assert_eq!(cdto.evo_costs[0].color, 1);
+        assert_eq!(cdto.evo_costs[0].level, 3);
+        assert_eq!(cdto.evo_costs[0].cost, 2);
+    }
+
+    /// The trash is a PUBLIC zone — the desktop DTO previously exposed only
+    /// `trash_count`, so the trash always rendered empty even as deletions
+    /// piled cards in. Assert the cards themselves reach the DTO.
+    #[test]
+    fn player_dto_exposes_trash_cards_not_just_count() {
+        use digimon_engine::card_source::CardSource;
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TRASHED-A", "Trashed A"))
+            .add_card(make_test_card("TRASHED-B", "Trashed B"))
+            .start();
+        let next_a = runner.game.next_card_index();
+        let idx_a = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TRASHED-A")
+            .unwrap();
+        runner.game.players[0].trash.push(CardSource::new(idx_a, 0, next_a));
+        let next_b = runner.game.next_card_index();
+        let idx_b = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TRASHED-B")
+            .unwrap();
+        runner.game.players[0].trash.push(CardSource::new(idx_b, 0, next_b));
+
+        let dto = player_dto(&runner.game, 0);
+        let ids: Vec<&str> = dto.trash.iter().map(|c| c.card_id.as_str()).collect();
+        assert_eq!(ids, vec!["TRASHED-A", "TRASHED-B"]);
+        assert_eq!(dto.trash_count, 2, "count stays consistent with the cards");
     }
 
     /// Track C synth-profile fields (`ace_overflow`, `digixros_aliases`) must

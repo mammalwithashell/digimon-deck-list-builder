@@ -426,17 +426,19 @@ fn giga_destroyer_deletes_only_le_4000_opponents_and_tai_does_not_widen_window()
     assert!(
         !prompt
             .valid_action_ids
-            .contains(&encode_attack(1, opp_5k.index as u16)),
+            .contains(&encode_attack(0, opp_5k.index as u16)),
         "the 5000-DP body must NOT be an eligible Giga Destroyer target"
     );
 
     // Select both eligible targets EXPLICITLY by their encoded ids (the two
     // ≤4000 bodies), so the survivor can't be a blind-pick artifact.
-    // During a selection prompt, opponent-field targets are encoded with the
-    // attack-space owner dimension = 1 (opponent), target = slot index.
-    let pick_3k = encode_attack(1, opp_3k.index as u16);
-    let pick_4k = encode_attack(1, opp_4k.index as u16);
-    let pick_5k = encode_attack(1, opp_5k.index as u16);
+    // During a selection prompt, field targets (own OR opponent) are encoded
+    // identically as encode_attack(0, slot) = ATTACK_START + slot; which
+    // player's field they belong to is carried by the OppField/OwnField
+    // selection kind, not the action-id range.
+    let pick_3k = encode_attack(0, opp_3k.index as u16);
+    let pick_4k = encode_attack(0, opp_4k.index as u16);
+    let pick_5k = encode_attack(0, opp_5k.index as u16);
     assert!(
         prompt.valid_action_ids.contains(&pick_3k) && prompt.valid_action_ids.contains(&pick_4k),
         "both ≤4000 bodies are first-pick eligible"

@@ -131,7 +131,7 @@ fn bt25_059_on_play_installs_suspend_up_to_2_prompt() {
     assert!(
         matches!(
             runner.pending_kind(),
-            Some(SelectionKind::CountCappedMultiSelect { .. })
+            Some(SelectionKind::OwnField)
         ),
         "suspend-up-to-2 prompt installs"
     );
@@ -172,7 +172,7 @@ fn bt25_059_on_suspend_debuffs_opponent_digimon() {
     // Resolve the suspend-up-to-2 selection by suspending Ceresmon itself.
     if matches!(
         runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { .. })
+        Some(SelectionKind::OwnField)
     ) {
         let view = runner.pending_selection_view().unwrap();
         runner

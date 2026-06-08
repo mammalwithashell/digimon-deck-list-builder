@@ -627,16 +627,16 @@ fn bt22_015_when_digivolving_bottom_decks_n_opp_digimon_per_same_level_pair() {
         !pending.valid_action_ids.contains(&PASS),
         "the mandatory bottom-deck arm cannot be declined while targets exist"
     );
-    match pending.kind {
-        SelectionKind::CountCappedMultiSelect { max, picked } => {
-            assert_eq!(
-                max, 2,
-                "2 same-level pairs in source stack should cap picks at 2"
-            );
-            assert_eq!(picked, 0);
-        }
-        other => panic!("expected count-capped multi-select, got {other:?}"),
-    }
+    // Bottom-decking opponent Digimon is surfaced as an opponent-field
+    // selection so the UI's field-click router can map board clicks (the pick
+    // cap of 2 same-level pairs is still enforced by the engine, just no longer
+    // exposed via the selection-kind tag).
+    assert_eq!(
+        pending.kind,
+        SelectionKind::OppField,
+        "expected opponent-field selection, got {:?}",
+        pending.kind
+    );
 
     let first = runner
         .pending_selection_view()

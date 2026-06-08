@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
-import { fieldSelectionActionId, fieldSelectionHighlights } from './selectionTargets';
+import {
+  fieldSelectionActionId,
+  fieldSelectionHighlights,
+  isFieldSelectionKind,
+} from './selectionTargets';
 import { SELECTION } from './constants';
 
 // The engine encodes EVERY field-target selection — own field or opponent
@@ -10,6 +14,29 @@ import { SELECTION } from './constants';
 // NOT in a separate ID range. These tests pin that contract so the UI can
 // never regress back to the bogus `ENEMY_FIELD_START (114)` assumption that
 // made "delete an opponent's Digimon" prompts unclickable.
+
+// `isFieldSelectionKind` is the gate GamePage's board-click handler uses to
+// decide whether a slot click is a field-target pick. It MUST key off the kind
+// alone — NOT the selection phase — because both single-target field prompts
+// (phase `SelectTarget`) AND capped-multi-select field prompts (phase
+// `SelectBudgeted`, e.g. "delete up to 2 of your opponent's Digimon") surface
+// as `OppField` / `OwnField`. A prior phase-range gate excluded `SelectBudgeted`
+// and left those multi-select prompts unclickable. These cases pin the contract.
+describe('isFieldSelectionKind', () => {
+  it('accepts OppField and OwnField (single- AND multi-target field prompts)', () => {
+    expect(isFieldSelectionKind('OppField')).toBe(true);
+    expect(isFieldSelectionKind('OwnField')).toBe(true);
+  });
+
+  it('rejects non-field kinds and undefined so their clicks are not mis-routed', () => {
+    // The bespoke multi-select tag must never reach the board router again —
+    // capped-multi-select field prompts now arrive tagged OppField/OwnField.
+    expect(isFieldSelectionKind('CountCappedMultiSelect')).toBe(false);
+    expect(isFieldSelectionKind('Material')).toBe(false);
+    expect(isFieldSelectionKind('Hand')).toBe(false);
+    expect(isFieldSelectionKind(undefined)).toBe(false);
+  });
+});
 
 describe('fieldSelectionActionId', () => {
   // Opponent field slots 0, 1, 2, 4 are valid targets — encoded by the engine

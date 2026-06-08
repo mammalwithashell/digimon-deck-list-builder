@@ -337,11 +337,9 @@ fn machinedramon_grants_reboot_to_chosen_wall_members_only() {
 
     fire_when_digivolving(&mut runner, machinedramon);
 
-    // Up-to-2 multi-select; pick two of the three wall members.
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 })
-    );
+    // Up-to-2 multi-select over your OWN wall members; surfaced as an
+    // own-field selection so the UI's field-click router can map board clicks.
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
     let first = runner.pending_selection_view().unwrap().valid_action_ids[1];
     runner.execute_action(0, first).expect("pick first Reboot target");
     let second = runner.pending_selection_view().unwrap().valid_action_ids[1];
@@ -544,10 +542,9 @@ fn laser_eye_trims_two_opponent_stacks() {
         runner.game.activate_hand_main(0, 0),
         "Laser Eye [Main] should activate"
     );
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 })
-    );
+    // Up-to-2 multi-select over the OPPONENT's stacks; surfaced as an
+    // opponent-field selection so the UI's field-click router can map clicks.
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
     let first = runner.pending_selection_view().unwrap().valid_action_ids[0];
     runner
         .execute_action(0, first)

@@ -242,6 +242,7 @@ function mapColors(colors: string[]): number[] {
 
 function toPermanentInfo(perm: PermanentDto): PermanentInfo {
   const top = perm.top_card;
+  const mainEffectText = perm.main_effect_text ?? '';
   return {
     topCardId: top.card_id,
     topCardName: top.card_name,
@@ -249,10 +250,10 @@ function toPermanentInfo(perm: PermanentDto): PermanentInfo {
     level: top.level,
     isSuspended: perm.is_suspended,
     sourceCount: perm.stack_size,
-    keywords: [],
-    keywordBreakdown: { innate: [], gained: [] },
-    securityAttackModifier: 0,
-    linkedCardIds: [],
+    keywords: perm.keywords ?? [],
+    keywordBreakdown: perm.keyword_breakdown ?? { innate: [], gained: [] },
+    securityAttackModifier: perm.security_attack_modifier ?? 0,
+    linkedCardIds: perm.linked_card_ids ?? [],
     sources: [
       {
         cardId: top.card_id,
@@ -260,22 +261,41 @@ function toPermanentInfo(perm: PermanentDto): PermanentInfo {
         isTop: true,
         optState: 0,
         dpContribution: perm.effective_dp ?? 0,
-        mainEffectText: '',
+        mainEffectText,
         inheritedEffectText: '',
         colors: mapColors(top.colors),
       },
+      // Non-top digivolution sources (bottom→top). Kept after the top so the
+      // source picker can `filter(!isTop)` and index by engine source_index.
+      ...(perm.sources ?? []).map((s) => ({
+        cardId: s.card_id,
+        cardName: s.card_name,
+        isTop: false,
+        optState: 0,
+        dpContribution: 0,
+        mainEffectText: s.main_effect_text ?? '',
+        inheritedEffectText: s.inherited_effect_text ?? '',
+        colors: mapColors(s.colors),
+      })),
     ],
-    mainEffectText: '',
-    inheritedEffects: [],
-    // This REST DTO path does not carry per-permanent modifier data; the
-    // engine `to_ui_json` (WebSocket) path is the source of the inspector's
-    // modifier list. Empty here keeps the type satisfied.
-    modifiers: [],
+    mainEffectText,
+    inheritedEffects: (perm.inherited_effects ?? []).map((e) => ({
+      sourceIndex: e.source_index,
+      cardId: e.card_id,
+      cardName: e.card_name,
+      text: e.text,
+    })),
+    modifiers: (perm.modifiers ?? []).map((m) => ({
+      type: m.type,
+      value: m.value,
+      expiry: m.expiry,
+      sourceCardId: m.source_card_id,
+    })),
     dpBreakdown: {
-      base: top.dp,
+      base: perm.dp_breakdown?.base ?? top.dp,
       sources: [],
-      temporary: 0,
-      total: perm.effective_dp ?? top.dp,
+      temporary: perm.dp_breakdown?.temporary ?? 0,
+      total: perm.dp_breakdown?.total ?? (perm.effective_dp ?? top.dp),
     },
     turnPlayed: perm.turn_played,
     colors: mapColors(top.colors),
@@ -297,16 +317,23 @@ function toPlayerState(player: PlayerDto, memory: number): PlayerState {
       dp: c.dp,
       colors: mapColors(c.colors),
       cardKind: mapCardKind(c.card_kind),
-      evoCosts: [],
+      evoCosts:
+        c.evo_costs?.map((e) => ({
+          color: e.color,
+          level: e.level,
+          cost: e.cost,
+        })) ?? [],
     })),
     securityCount: player.security_count,
     securityIds: [],
     deckCount: player.deck_count,
-    eggDeckCount: 0,
+    eggDeckCount: player.egg_deck_count ?? 0,
     battleAreaCount: battleArea.length,
     battleArea,
     breedingArea: player.breeding ? toPermanentInfo(player.breeding) : null,
-    trashIds: [],
+    // Trash is a public zone — render its cards (top-of-pile last). Falls back
+    // to the count via an empty list on older engine builds without `trash`.
+    trashIds: (player.trash ?? []).map((c) => c.card_id),
   };
 }
 
@@ -325,7 +352,11 @@ export function dtoToGameState(dto: GameStateDto): GameState {
     currentPlayer: dto.turn_player,
     memoryGauge: dto.memory,
     isGameOver: dto.game_over,
-    winner: dto.winner,
+    // Convert the engine's raw player id (0/1) to the UI's 1-indexed
+    // convention (1/2), matching `localPlayer={1}` + `playerLabels{1,2}` in
+    // ResultOverlay/PhaseIndicator and the `selectingPlayer + 1` mapping below.
+    // Without this, the local human (engine 0) winning shows "Defeat".
+    winner: dto.winner == null ? null : dto.winner + 1,
     player1: toPlayerState(player1, memory0),
     player2: toPlayerState(player2, -memory0),
     revealedCards: (dto.revealed_cards ?? []).map((rc) => ({

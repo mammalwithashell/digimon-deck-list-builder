@@ -49,6 +49,7 @@ import {
 import {
   fieldSelectionActionId,
   fieldSelectionHighlights,
+  isFieldSelectionKind,
 } from '@/utils/selectionTargets';
 import { GamePhase, type ActionTrace, type PermanentInfo } from '@/types/game';
 
@@ -492,13 +493,19 @@ export function GamePage() {
         return;
       }
 
-      // During selection phases, map a board click to a field-target
-      // selection. The engine encodes own- and opponent-field targets in the
-      // same `OWN_FIELD_START + slot` range and disambiguates by
-      // `pendingSelection.kind`; `fieldSelectionActionId` honours that (the
-      // old `isOpponent ? ENEMY_FIELD_START` branch never matched the engine's
-      // ids, so "delete an opponent's Digimon" prompts swallowed every click).
-      if (phase >= GamePhase.SelectTarget && phase <= GamePhase.SelectSecurity) {
+      // Map a board click to a field-target selection. The engine encodes
+      // own- and opponent-field targets in the same `OWN_FIELD_START + slot`
+      // range and disambiguates by `pendingSelection.kind`;
+      // `fieldSelectionActionId` honours that (the old `isOpponent ?
+      // ENEMY_FIELD_START` branch never matched the engine's ids, so "delete
+      // an opponent's Digimon" prompts swallowed every click).
+      //
+      // Gate on the selection KIND, NOT a phase range: single-target field
+      // prompts run in `SelectTarget`, but capped-multi-select field prompts
+      // ("delete up to 2 of your opponent's Digimon") run in `SelectBudgeted`,
+      // which a `SelectTarget..SelectSecurity` range excluded — leaving those
+      // multi-select prompts unclickable.
+      if (isFieldSelectionKind(store.pendingSelection?.kind)) {
         const selIdx = fieldSelectionActionId(
           store.pendingSelection?.kind,
           isOpponent,
@@ -1073,6 +1080,7 @@ export function GamePage() {
         handIds={store.player1?.handIds ?? []}
         trashIds={store.player1?.trashIds ?? []}
         securityIds={store.player1?.securityIds ?? []}
+        battleArea={store.player1?.battleArea ?? []}
         onAction={handleAction}
         localPlayer={1}
       />

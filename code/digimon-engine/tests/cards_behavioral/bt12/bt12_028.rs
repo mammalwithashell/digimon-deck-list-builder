@@ -238,7 +238,7 @@ fn bt12_028_dna_digivolve_applies_cannot_attack_to_two_digimon_with_no_sources()
         .expect("DNA branch must park a visible target selection");
     assert_eq!(
         view.kind,
-        SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 },
+        SelectionKind::OppField,
         "DNA branch selects up to 2 opponent Digimon"
     );
     assert_eq!(
@@ -263,7 +263,7 @@ fn bt12_028_dna_digivolve_applies_cannot_attack_to_two_digimon_with_no_sources()
         .expect("second DNA target selection remains pending");
     assert_eq!(
         view.kind,
-        SelectionKind::CountCappedMultiSelect { max: 2, picked: 1 }
+        SelectionKind::OppField
     );
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[0])

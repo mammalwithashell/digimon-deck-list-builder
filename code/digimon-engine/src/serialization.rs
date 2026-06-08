@@ -240,7 +240,7 @@ fn evo_costs_of(cd: &CardData) -> Vec<Value> {
 /// maps key on. Parameterised keywords (`SecurityAttackPlus`, `DeDigivolve`,
 /// `DrawX`, `MaterialSave`, `DigiBurst`, `Fragment`, `Decoy`) are conveyed via
 /// `securityAttackModifier` and printed effect text rather than as chips.
-const DISPLAY_KEYWORDS: &[(Keyword, &str)] = &[
+pub const DISPLAY_KEYWORDS: &[(Keyword, &str)] = &[
     (Keyword::Blocker, "blocker"),
     (Keyword::Rush, "rush"),
     (Keyword::Jamming, "jamming"),
@@ -275,7 +275,7 @@ const DISPLAY_KEYWORDS: &[(Keyword, &str)] = &[
 /// Returns `None` for modifiers that are internal/bookkeeping or player-scoped
 /// (those are not buffs on a single permanent and are not emitted). Uses an
 /// explicit match — NOT `{:?}` — so the UI contract survives enum refactors.
-fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
+pub fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
     Some(match m {
         // Stat changes
         ModifierType::ChangeDp => "ChangeDp",
@@ -328,7 +328,7 @@ fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
 }
 
 /// Stable wire string for a modifier's `Expiry` (when it wears off).
-fn expiry_str(e: Expiry) -> &'static str {
+pub fn expiry_str(e: Expiry) -> &'static str {
     match e {
         Expiry::Permanent => "Permanent",
         Expiry::EndOfTurn => "EndOfTurn",
