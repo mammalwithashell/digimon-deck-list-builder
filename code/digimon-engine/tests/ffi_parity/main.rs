@@ -4,6 +4,7 @@
 //! don't have to travel through Python to be diagnosed.
 
 mod events;
+mod perm_inspector;
 mod recorder;
 mod selection_view;
 mod ui_json;

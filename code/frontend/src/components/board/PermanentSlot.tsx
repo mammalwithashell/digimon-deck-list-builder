@@ -12,6 +12,8 @@ interface PermanentSlotProps {
   onClick?: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  /** Right-click (context-menu) to open the stack inspector. */
+  onInspect?: () => void;
 }
 
 export function PermanentSlot({
@@ -23,6 +25,7 @@ export function PermanentSlot({
   onClick,
   onMouseEnter,
   onMouseLeave,
+  onInspect,
 }: PermanentSlotProps) {
   const activeEffectSlot = useGameStore((s) => s.activeEffectSlot);
   const activeEffectPlayer = useGameStore((s) => s.activeEffectPlayer);
@@ -43,6 +46,16 @@ export function PermanentSlot({
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      onContextMenu={
+        onInspect
+          ? (e) => {
+              // Suppress the browser menu and open the stack inspector.
+              e.preventDefault();
+              e.stopPropagation();
+              onInspect();
+            }
+          : undefined
+      }
     >
       <Card
         cardId={perm.topCardId}

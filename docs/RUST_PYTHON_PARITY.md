@@ -777,21 +777,31 @@ addressed as card-migration and engine completeness work proceeds.
 
 ### Stubbed per-permanent fields (card-script-dependent)
 
-`serialization::to_ui_json` emits neutral/empty defaults for these per-permanent fields until the corresponding card scripts are migrated to Rust:
+**Mostly CLOSED (2026-06-07) by `add-permanent-stack-inspector`.** `perm_data`
+in `serialization::to_ui_json` now computes the runtime fields below from live
+engine state for battle-area permanents (breeding permanents, which aren't
+`PermanentHandle`-addressable, keep printed/neutral values):
 
-- `mainEffectText` — empty string
-- `inheritedEffectText` — empty string
-- `inheritedEffects` — empty array
-- `keywords` — empty array
-- `keywordBreakdown` — `{innate: [], gained: []}`
-- `securityAttackModifier` — 0
-- `dpBreakdown.sources` — empty array
+- `keywords` + `keywordBreakdown.innate`/`.gained` — from `Game::has_keyword`
+  + `face_keywords`/`inherited_keywords` (innate) and the grant registry (gained)
+- `securityAttackModifier` — `Game::security_attack_keyword_bonus` + summed
+  `SecurityAttackChange` modifiers
+- `dpBreakdown.base` / `.total` / `.temporary` — printed DP, `Game::effective_dp`,
+  and their difference
+- `mainEffectText` / per-source `mainEffectText` / `inheritedEffectText` /
+  permanent-level `inheritedEffects` — from `CardData.{effect_text,inherited_text}`
+- NEW `modifiers` array — structured active-modifier list (immunities,
+  restrictions, stat changes) from `ModifierRegistry::permanent_modifiers_iter`
+
+Still stubbed (intentionally out of scope — see that change's Non-Goals):
+
+- `dpBreakdown.sources` — empty array (per-source DP attribution; DP deltas
+  surface as `ChangeDp` entries in `modifiers` instead, matching DCGO)
 - `dpBreakdown.aura` — 0
-- `dpBreakdown.temporary` — 0.0
 - Per-source `optState`, `dpContribution` — 0.0 / 0
 
-Rule 17 (no-approximations) applies to card effects; these are UI-rendering
-artifacts that follow naturally once card scripts land in Rust.
+Rule 17 (no-approximations) applies to card effects; the remaining stubs are
+UI-rendering artifacts.
 
 ### GameEvent emission coverage
 

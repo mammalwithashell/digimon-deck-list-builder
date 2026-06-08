@@ -13,9 +13,9 @@ use serde_json::{json, Map, Value};
 
 use crate::action::space::SECURITY_TARGET;
 use crate::card_data::CardData;
-use crate::enums::{CardColor, CardKind, GamePhase};
+use crate::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType};
 use crate::game::Game;
-use crate::permanent::Permanent;
+use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
 use crate::selection::{AttackTarget, PendingAttack, PendingSelectionView};
 
@@ -115,13 +115,23 @@ fn player_ui_data(player: &Player, data: &[CardData], game: &Game) -> Value {
     let battle_area: Vec<Value> = player
         .battle_area
         .iter()
-        .map(|p| perm_data(p, data, game))
+        .enumerate()
+        .map(|(i, p)| {
+            let handle = PermanentHandle {
+                player: player.id,
+                index: i as u8,
+            };
+            perm_data(p, data, game, Some(handle))
+        })
         .collect();
 
+    // Breeding-area permanents are not battle-area-addressable, so live
+    // keyword/modifier/DP queries (which key off a `PermanentHandle` into
+    // `battle_area`) don't apply — pass `None` to fall back to printed state.
     let breeding_area = player
         .breeding_area
         .as_ref()
-        .map(|p| perm_data(p, data, game))
+        .map(|p| perm_data(p, data, game, None))
         .unwrap_or(Value::Null);
 
     let trash_ids: Vec<&str> = player.trash.iter().map(|c| c.card_id(data)).collect();
@@ -225,16 +235,161 @@ fn evo_costs_of(cd: &CardData) -> Vec<Value> {
         .collect()
 }
 
-/// Per-permanent dict. Card-script-specific fields (keyword breakdown,
-/// dp breakdown sources, effect text) are populated with neutral defaults —
-/// shape parity is the goal; richness arrives with card migration.
-fn perm_data(perm: &Permanent, data: &[CardData], _game: &Game) -> Value {
+/// Non-parameterised keywords surfaced as inspector "chips", paired with the
+/// snake_case wire string the frontend's `KEYWORD_DISPLAY`/`KEYWORD_COLORS`
+/// maps key on. Parameterised keywords (`SecurityAttackPlus`, `DeDigivolve`,
+/// `DrawX`, `MaterialSave`, `DigiBurst`, `Fragment`, `Decoy`) are conveyed via
+/// `securityAttackModifier` and printed effect text rather than as chips.
+const DISPLAY_KEYWORDS: &[(Keyword, &str)] = &[
+    (Keyword::Blocker, "blocker"),
+    (Keyword::Rush, "rush"),
+    (Keyword::Jamming, "jamming"),
+    (Keyword::Piercing, "piercing"),
+    (Keyword::Reboot, "reboot"),
+    (Keyword::Blitz, "blitz"),
+    (Keyword::Raid, "raid"),
+    (Keyword::Alliance, "alliance"),
+    (Keyword::BlastDigivolve, "blast_digivolve"),
+    (Keyword::Save, "save"),
+    (Keyword::Fortitude, "fortitude"),
+    (Keyword::Overclock, "overclock"),
+    (Keyword::Barrier, "barrier"),
+    (Keyword::Partition, "partition"),
+    (Keyword::Vortex, "vortex"),
+    (Keyword::Collision, "collision"),
+    (Keyword::Evade, "evade"),
+    (Keyword::Decode, "decode"),
+    (Keyword::ArmorPurge, "armor_purge"),
+    (Keyword::Progress, "progress"),
+    (Keyword::Retaliation, "retaliation"),
+    (Keyword::Scapegoat, "scapegoat"),
+    (Keyword::Execute, "execute"),
+    (Keyword::Iceclad, "iceclad"),
+    (Keyword::MindLink, "mind_link"),
+    (Keyword::Training, "training"),
+    (Keyword::ArtsDigivolve, "arts_digivolve"),
+    (Keyword::Ascension, "ascension"),
+];
+
+/// Stable wire string for a display-relevant, permanent-scoped `ModifierType`.
+/// Returns `None` for modifiers that are internal/bookkeeping or player-scoped
+/// (those are not buffs on a single permanent and are not emitted). Uses an
+/// explicit match — NOT `{:?}` — so the UI contract survives enum refactors.
+fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
+    Some(match m {
+        // Stat changes
+        ModifierType::ChangeDp => "ChangeDp",
+        ModifierType::ChangeBaseDp => "ChangeBaseDp",
+        ModifierType::DpFloor => "DpFloor",
+        ModifierType::DontHaveDp => "DontHaveDp",
+        ModifierType::SecurityAttackChange => "SecurityAttackChange",
+        ModifierType::ChangeLevel => "ChangeLevel",
+        ModifierType::ChangeColor => "ChangeColor",
+        ModifierType::AddColor => "AddColor",
+        // Immunities / protection
+        ModifierType::CannotBeDestroyed => "CannotBeDestroyed",
+        ModifierType::CannotBeDestroyedByBattle => "CannotBeDestroyedByBattle",
+        ModifierType::CannotBeDestroyedByEffect => "CannotBeDestroyedByEffect",
+        ModifierType::CannotBeRemoved => "CannotBeRemoved",
+        ModifierType::CannotBeReturnedToDeck => "CannotBeReturnedToDeck",
+        ModifierType::CannotBeReturnedToHand => "CannotBeReturnedToHand",
+        ModifierType::CannotBeTrashedByEffect => "CannotBeTrashedByEffect",
+        ModifierType::CannotBeDeDigivolved => "CannotBeDeDigivolved",
+        ModifierType::CannotBeSelectedByEffect => "CannotBeSelectedByEffect",
+        ModifierType::CannotBeAffected => "CannotBeAffected",
+        ModifierType::ImmunityToOpponentEffects => "ImmunityToOpponentEffects",
+        ModifierType::ImmuneFromDPMinus => "ImmuneFromDPMinus",
+        // Attack / suspend / block restrictions
+        ModifierType::CannotAttack => "CannotAttack",
+        ModifierType::CannotAttackPlayer => "CannotAttackPlayer",
+        ModifierType::CannotBlock => "CannotBlock",
+        ModifierType::CannotCounter => "CannotCounter",
+        ModifierType::CannotSuspend => "CannotSuspend",
+        ModifierType::CannotUnsuspend => "CannotUnsuspend",
+        ModifierType::CannotDigivolve => "CannotDigivolve",
+        // Effect-activation restrictions
+        ModifierType::CannotActivateOnPlayEffects => "CannotActivateOnPlayEffects",
+        ModifierType::CannotActivateMainEffects => "CannotActivateMainEffects",
+        ModifierType::CannotActivateWhenDigivolvingEffects => "CannotActivateWhenDigivolvingEffects",
+        ModifierType::CannotActivateWhenAttackingEffects => "CannotActivateWhenAttackingEffects",
+        ModifierType::CannotActivateSecurityEffects => "CannotActivateSecurityEffects",
+        // Attack grants / mandates
+        ModifierType::MayAttack => "MayAttack",
+        ModifierType::ForceAttack => "ForceAttack",
+        // NOTE: granted keywords (`GrantBlocker`, etc.) are intentionally NOT
+        // listed here. They are stored in a separate `permanent_keywords` store
+        // (via `grant_keyword`), so they never appear in `permanent_modifiers`;
+        // they surface to the UI through `keywordBreakdown.gained` instead.
+        //
+        // Everything else (player-scoped flood gates, internal bookkeeping) is
+        // not a per-permanent buff and is intentionally not surfaced.
+        _ => return None,
+    })
+}
+
+/// Stable wire string for a modifier's `Expiry` (when it wears off).
+fn expiry_str(e: Expiry) -> &'static str {
+    match e {
+        Expiry::Permanent => "Permanent",
+        Expiry::EndOfTurn => "EndOfTurn",
+        Expiry::EndOfOpponentsTurn => "EndOfOpponentsTurn",
+        Expiry::EndOfYourTurn => "EndOfYourTurn",
+        Expiry::EndOfOpponentsNextTurn => "EndOfOpponentsNextTurn",
+        Expiry::EndOfYourNextTurn => "EndOfYourNextTurn",
+        Expiry::EndOfAttack => "EndOfAttack",
+        Expiry::EndOfBattle => "EndOfBattle",
+        Expiry::UntilLeaveField => "UntilLeaveField",
+        Expiry::UntilCondition => "UntilCondition",
+        Expiry::OnceUsed(_) => "OnceUsed",
+    }
+}
+
+/// Per-permanent dict for `to_ui_json`. When `handle` is `Some` (battle-area
+/// permanent) the runtime fields — keywords, keyword breakdown, security-attack
+/// modifier, effective DP, and the active-modifier list — are computed from
+/// live engine state. When `handle` is `None` (breeding area) those fields fall
+/// back to printed/neutral values, since breeding permanents are not
+/// battle-area-addressable for the live queries.
+fn perm_data(perm: &Permanent, data: &[CardData], game: &Game, handle: Option<PermanentHandle>) -> Value {
     let top = perm.top_card();
     let top_data = &data[top.data_index];
     let base_dp = top_data.dp.unwrap_or(0);
     let level = top_data.level.unwrap_or(0);
     let colors = colors_of(top_data);
+    let stack_size = perm.card_sources.len();
 
+    // ── Active keywords + innate/gained breakdown ──
+    // "gained" = present via a registry grant modifier; "innate" = present
+    // via the cards themselves (printed face / inherited from sources).
+    let mut keywords: Vec<&str> = Vec::new();
+    let mut innate: Vec<&str> = Vec::new();
+    let mut gained: Vec<&str> = Vec::new();
+    if let Some(h) = handle {
+        for (kw, name) in DISPLAY_KEYWORDS {
+            if game.has_keyword(h, *kw) {
+                keywords.push(name);
+                if game.modifiers.has_keyword(h, *kw) {
+                    gained.push(name);
+                } else {
+                    innate.push(name);
+                }
+            }
+        }
+    }
+
+    // ── Security-attack modifier (delta from the default of 1) ──
+    let security_attack_modifier = handle
+        .map(|h| {
+            game.security_attack_keyword_bonus(h)
+                + game.modifiers.sum(h, ModifierType::SecurityAttackChange)
+        })
+        .unwrap_or(0);
+
+    // ── DP: base (printed) vs effective (with modifiers) ──
+    let total_dp = handle.and_then(|h| game.effective_dp(h)).unwrap_or(base_dp);
+    let temporary_dp = total_dp - base_dp;
+
+    // ── Stack sources with printed effect text ──
     let sources: Vec<Value> = perm
         .card_sources
         .iter()
@@ -244,15 +399,59 @@ fn perm_data(perm: &Permanent, data: &[CardData], _game: &Game) -> Value {
             json!({
                 "cardId": cs.card_id(data),
                 "cardName": cd.card_name,
-                "isTop": i + 1 == perm.card_sources.len(),
+                "isTop": i + 1 == stack_size,
                 "optState": 0.0,
                 "dpContribution": 0,
-                "mainEffectText": "",
-                "inheritedEffectText": "",
+                "mainEffectText": cd.effect_text,
+                "inheritedEffectText": cd.inherited_text,
                 "colors": colors_of(cd),
             })
         })
         .collect();
+
+    // ── Inherited effects conferred by non-top digivolution sources ──
+    let inherited_effects: Vec<Value> = perm
+        .card_sources
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| i + 1 < stack_size) // exclude the top card
+        .filter_map(|(i, cs)| {
+            let cd = &data[cs.data_index];
+            if cd.inherited_text.trim().is_empty() {
+                return None;
+            }
+            Some(json!({
+                "sourceIndex": i,
+                "cardId": cs.card_id(data),
+                "cardName": cd.card_name,
+                "text": cd.inherited_text,
+            }))
+        })
+        .collect();
+
+    // ── Active modifier list (DCGO PermanentDetail parity) ──
+    let modifiers: Vec<Value> = handle
+        .map(|h| {
+            game.modifiers
+                .permanent_modifiers_iter(h)
+                .filter_map(|entry| {
+                    let type_str = modifier_type_str(entry.modifier)?;
+                    let source_card_id = entry.source_permanent.and_then(|sh| {
+                        game.players
+                            .get(sh.player as usize)
+                            .and_then(|pl| pl.battle_area.get(sh.index as usize))
+                            .map(|p| p.top_card().card_id(data).to_string())
+                    });
+                    Some(json!({
+                        "type": type_str,
+                        "value": entry.value,
+                        "expiry": expiry_str(entry.expiry),
+                        "sourceCardId": source_card_id,
+                    }))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
 
     let linked_card_ids: Vec<&str> = perm.linked_cards.iter().map(|c| c.card_id(data)).collect();
 
@@ -262,20 +461,21 @@ fn perm_data(perm: &Permanent, data: &[CardData], _game: &Game) -> Value {
         "dp": base_dp,
         "level": level,
         "isSuspended": perm.is_suspended,
-        "sourceCount": perm.card_sources.len(),
-        "keywords": Vec::<String>::new(),
-        "keywordBreakdown": json!({ "innate": [], "gained": [] }),
-        "securityAttackModifier": 0,
+        "sourceCount": stack_size,
+        "keywords": keywords,
+        "keywordBreakdown": json!({ "innate": innate, "gained": gained }),
+        "securityAttackModifier": security_attack_modifier,
         "linkedCardIds": linked_card_ids,
         "sources": sources,
-        "mainEffectText": "",
-        "inheritedEffects": [],
+        "mainEffectText": top_data.effect_text,
+        "inheritedEffects": inherited_effects,
+        "modifiers": modifiers,
         "dpBreakdown": json!({
             "base": base_dp,
             "sources": [],
-            "temporary": 0.0,
+            "temporary": temporary_dp,
             "aura": 0,
-            "total": base_dp,
+            "total": total_dp,
         }),
         "turnPlayed": perm.turn_played,
         "colors": colors,

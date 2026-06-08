@@ -1,3 +1,13 @@
+> **⚠️ SUPERSEDED / CANCELLED (2026-06-07) — folded into [`add-permanent-stack-inspector`](../add-permanent-stack-inspector/proposal.md).**
+> This change was never implemented (all tasks unchecked). Its effect-text work
+> (per-source `mainEffectText`/`inheritedEffectText` + the permanent-level
+> `inheritedEffects` array) is now part of `add-permanent-stack-inspector`,
+> which populates the **entire** `perm_data` runtime surface in one place to
+> avoid two changes editing the same function. Note its premise below is
+> **incorrect**: DP and keyword breakdowns were NOT already exposed — they were
+> stubbed to empty/zero alongside the text fields, and the absorbing change
+> populates all of them. Do not implement this change; see the successor.
+
 ## Why
 
 The engine's frontend UI serialization (`digimon-engine/src/serialization.rs::to_ui_json`) already exposes runtime DP and keyword breakdowns per permanent, but it hard-codes every **card-effect text** field to empty: each stack source's `mainEffectText`/`inheritedEffectText` is `""` and the permanent-level `inheritedEffects` is `[]` (the code even comments them as "neutral defaults"). As a result, any consumer that reads engine state directly — the in-game digivolution-stack inspector (`CardOverlay`), WebSocket/`state_filter` clients, and engine-state debugging — sees a stack of cards with no effect text and no indication of which inherited effects a permanent actually has from its sources. Unlike a printed-card preview (static metadata), this is meant to be the engine's authoritative, runtime-accurate view of what a permanent on the field can do.

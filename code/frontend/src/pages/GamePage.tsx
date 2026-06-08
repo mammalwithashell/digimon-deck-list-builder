@@ -551,6 +551,27 @@ export function GamePage() {
     [store, parsedMask, handleAction, digivolvingHandIndex],
   );
 
+  // Right-click inspect: open the stack inspector for ANY permanent (own,
+  // opponent, or breeding), at any time. Read-only — submits no action and is
+  // independent of pendingSelection / attack state.
+  const handleSlotInspect = useCallback(
+    (isOpponent: boolean, slotIndex: number) => {
+      const player = isOpponent ? store.player2 : store.player1;
+      const perm = player?.battleArea[slotIndex];
+      if (perm) setInspectedPerm(perm);
+    },
+    [store],
+  );
+
+  const handleBreedingInspect = useCallback(
+    (isOpponent: boolean) => {
+      const player = isOpponent ? store.player2 : store.player1;
+      const perm = player?.breedingArea;
+      if (perm) setInspectedPerm(perm);
+    },
+    [store],
+  );
+
   const handleRevealedClick = useCallback(
     (index: number) => {
       const selIdx = SELECTION.REVEALED_START + index;
@@ -916,6 +937,8 @@ export function GamePage() {
             <GameBoard
               onPlayCard={handlePlayCard}
               onSlotClick={handleSlotClick}
+              onSlotInspect={handleSlotInspect}
+              onBreedingInspect={handleBreedingInspect}
               onHatch={() => handleAction(ACTION.HATCH)}
               onMove={() => handleAction(ACTION.MOVE)}
               onBreedingClick={

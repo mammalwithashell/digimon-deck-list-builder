@@ -11,6 +11,10 @@ import type { ActionTrace, TensorSummary } from '@/types/game';
 interface GameBoardProps {
   onPlayCard?: (handIndex: number) => void;
   onSlotClick?: (isOpponent: boolean, slotIndex: number) => void;
+  /** Right-click (context-menu) a permanent to open the stack inspector. */
+  onSlotInspect?: (isOpponent: boolean, slotIndex: number) => void;
+  /** Right-click a breeding-area permanent to inspect it. */
+  onBreedingInspect?: (isOpponent: boolean) => void;
   onHatch?: () => void;
   onMove?: () => void;
   onBreedingClick?: () => void;
@@ -43,6 +47,8 @@ interface GameBoardProps {
 export function GameBoard({
   onPlayCard,
   onSlotClick,
+  onSlotInspect,
+  onBreedingInspect,
   onHatch,
   onMove,
   onBreedingClick,
@@ -141,6 +147,8 @@ export function GameBoard({
           onTrashClick={onOpponentTrashClick}
           targetedSlots={targetedSlots}
           onSlotClick={(i) => onSlotClick?.(true, i)}
+          onSlotInspect={(i) => onSlotInspect?.(true, i)}
+          onBreedingInspect={() => onBreedingInspect?.(true)}
         />
       </div>
 
@@ -174,6 +182,8 @@ export function GameBoard({
           canDigivolveBreeding={canDigivolveBreeding}
           highlightBreeding={highlightBreeding}
           onSlotClick={(i) => onSlotClick?.(false, i)}
+          onSlotInspect={(i) => onSlotInspect?.(false, i)}
+          onBreedingInspect={() => onBreedingInspect?.(false)}
           onHatch={onHatch}
           onMove={onMove}
           onBreedingClick={onBreedingClick}

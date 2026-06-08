@@ -11,6 +11,8 @@ interface BreedingAreaProps {
   highlighted?: boolean;
   dropId?: string;
   onClick?: () => void;
+  /** Right-click (context-menu) opens the stack inspector for this permanent. */
+  onInspect?: () => void;
 }
 
 export function BreedingArea({
@@ -20,6 +22,7 @@ export function BreedingArea({
   highlighted = false,
   dropId = 'breeding-slot',
   onClick,
+  onInspect,
 }: BreedingAreaProps) {
   const dragData: DragData = { type: 'breeding-perm' };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -53,6 +56,7 @@ export function BreedingArea({
             perm={permanent}
             slotIndex={-1}
             isOpponent={false}
+            onInspect={onInspect}
           />
         </div>
       ) : (

@@ -63,6 +63,21 @@ export interface DpBreakdown {
   total: number | null;
 }
 
+/** A single active modifier on a permanent (immunity, restriction, stat
+ * change, etc.), emitted structurally by the engine's `to_ui_json`. The
+ * human label and grouping are derived frontend-side from `type` via
+ * `MODIFIER_DISPLAY`. */
+export interface PermanentModifier {
+  /** Stable modifier-type string (e.g. "CannotBeDestroyed", "ChangeDp"). */
+  type: string;
+  /** Signed magnitude for stat-change modifiers; 0 for flag-style ones. */
+  value: number;
+  /** When the modifier wears off (e.g. "Permanent", "EndOfTurn"). */
+  expiry: string;
+  /** Top-card id of the permanent that applied this modifier, if known. */
+  sourceCardId: string | null;
+}
+
 export interface PermanentInfo {
   topCardId: string | null;
   topCardName: string | null;
@@ -77,6 +92,7 @@ export interface PermanentInfo {
   sources: SourceInfo[];
   mainEffectText: string;
   inheritedEffects: InheritedEffectInfo[];
+  modifiers: PermanentModifier[];
   dpBreakdown: DpBreakdown;
   turnPlayed: number;
   colors: number[];

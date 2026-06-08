@@ -267,6 +267,10 @@ function toPermanentInfo(perm: PermanentDto): PermanentInfo {
     ],
     mainEffectText: '',
     inheritedEffects: [],
+    // This REST DTO path does not carry per-permanent modifier data; the
+    // engine `to_ui_json` (WebSocket) path is the source of the inspector's
+    // modifier list. Empty here keeps the type satisfied.
+    modifiers: [],
     dpBreakdown: {
       base: top.dp,
       sources: [],

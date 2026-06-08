@@ -4,6 +4,7 @@ import { KeywordBadges } from '@/components/board/KeywordBadges';
 import type { PermanentInfo, SourceInfo } from '@/types/game';
 import { useGameStore } from '@/stores/gameStore';
 import { COLOR_HEX, COLOR_NAMES } from '@/utils/constants';
+import { groupModifiers } from '@/utils/modifierDisplay';
 
 interface CardOverlayProps {
   permanent: PermanentInfo | null;
@@ -48,6 +49,8 @@ export function CardOverlay({ permanent, onClose }: CardOverlayProps) {
   const stackSources = [...permanent.sources].reverse();
   // Linked cards (from linkedCardIds)
   const linkedIds = permanent.linkedCardIds;
+  // Active modifiers, grouped (immunities / restrictions / stat changes / other)
+  const modifierGroups = groupModifiers(permanent.modifiers ?? []);
 
   return (
     <div className="absolute bottom-4 left-4 z-30 w-[340px] max-h-[calc(100%-32px)] overflow-hidden bg-gray-900/95 border border-gray-600 rounded-lg shadow-2xl backdrop-blur-sm animate-overlay-open flex flex-col">
@@ -109,6 +112,28 @@ export function CardOverlay({ permanent, onClose }: CardOverlayProps) {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Active modifiers (immunities, restrictions, stat changes) — DCGO-style */}
+        {modifierGroups.length > 0 && (
+          <div data-testid="active-modifiers" className="pt-1 mt-1 border-t border-gray-700/40 space-y-1">
+            <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wide">
+              Active Modifiers
+            </div>
+            {modifierGroups.map((grp) => (
+              <div key={grp.group} className="space-y-0.5">
+                {grp.items.map((item, i) => (
+                  <div key={`${grp.group}-${i}`} className="text-[11px] flex items-baseline gap-1">
+                    <span style={{ color: grp.color }}>•</span>
+                    <span className="text-gray-200">{item.label}</span>
+                    {item.expiryHint && (
+                      <span className="text-gray-500 text-[9px]">({item.expiryHint})</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         )}
       </div>
