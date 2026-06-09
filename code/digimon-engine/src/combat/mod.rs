@@ -2467,26 +2467,28 @@ impl Game {
     /// safety cap: any future modifier interaction that produces a
     /// runaway strike value is clamped here and an `EffectFizzled`
     /// event is emitted on first overflow.
-    fn current_security_strike(&mut self, attacker: PermanentHandle) -> u8 {
-        if !self.handle_valid(attacker) {
-            return 0;
-        }
-        // Refresh declarative state so the `<Security A.>` keyword term below
-        // reads the CURRENT materialized grants. Inherited/aura declarative
-        // `grant_keyword` grants (e.g. ST1-07 Greymon's inherited `<Security A.
-        // +1>`) live in the keyword registry only after a tick; the strike must
-        // not read a stale cache. The `decode_action` path ticks before resolving
-        // an attack, but direct callers (and mid-attack board changes between the
-        // per-iteration recomputes) would otherwise miss it. `tick_declarative_
-        // effects` is idempotent and de-dups own grants already printed in
-        // `card_data`, so this does not double-count.
-        self.tick_declarative_effects();
+    /// Read-only `<Security A.>` strike components (unclamped), in the DCGO
+    /// `Permanent.Strike` shape. Shared by the mutable combat-time
+    /// [`Self::current_security_strike`] (which ticks declarative state first)
+    /// and the read-only [`Self::effective_security_strike`] display path so
+    /// the two never drift.
+    ///
+    /// A `security_attack_fn` formula aura is BASE-INCLUSIVE: it returns the
+    /// total base check count (the default 1, replaced by the formula's value
+    /// when active), and multiple formula auras take the MAX rather than
+    /// summing. Flat `<Security A.>` keyword/modifier deltas (`sa_keyword`,
+    /// `sa_modifier`, `change_s_attack`) are then added on top. A card whose
+    /// `<Security A.>` is itself variable (e.g. WarGreymon's `1 + floor(n/2)`)
+    /// must author its formula base-inclusive — `base: 2` over `material_count`
+    /// yields `floor((2 + n)/2) = 1 + floor(n/2)`, NOT a bare delta `base: 0`.
+    /// When no formula aura is active the default base of 1 applies.
+    pub(crate) fn raw_security_strike(&self, target: PermanentHandle) -> i32 {
         let sa_modifier = self
             .modifiers
-            .sum(attacker, ModifierType::SecurityAttackChange);
+            .sum(target, ModifierType::SecurityAttackChange);
         let change_s_attack: i32 = self
             .modifiers
-            .get(attacker, ModifierType::ChangeSAttack)
+            .get(target, ModifierType::ChangeSAttack)
             .into_iter()
             .map(|entry| match &entry.payload {
                 crate::modifiers::ModifierPayload::SecurityAttack { delta, invert } => {
@@ -2500,20 +2502,42 @@ impl Game {
                 _ => 0,
             })
             .sum();
-        let sa_keyword = self.security_attack_keyword_bonus(attacker);
-        // A `security_attack_fn` formula aura is BASE-INCLUSIVE: it returns the
-        // total base check count (the default 1, replaced by the formula's value
-        // when active), and multiple formula auras take the MAX rather than
-        // summing. Flat `<Security A.>` keyword/modifier deltas (`sa_keyword`,
-        // `sa_modifier`, `change_s_attack`) are then added on top. A card whose
-        // `<Security A.>` is itself variable (e.g. WarGreymon's `1 + floor(n/2)`)
-        // must author its formula base-inclusive — `base: 2` over `material_count`
-        // yields `floor((2 + n)/2) = 1 + floor(n/2)`, NOT a bare delta `base: 0`.
-        // When no formula aura is active the default base of 1 applies.
-        let base_checks = self
-            .dynamic_security_attack_aura_bonus(attacker)
-            .unwrap_or(1);
-        let raw = base_checks + sa_modifier + change_s_attack + sa_keyword;
+        let sa_keyword = self.security_attack_keyword_bonus(target);
+        let base_checks = self.dynamic_security_attack_aura_bonus(target).unwrap_or(1);
+        base_checks + sa_modifier + change_s_attack + sa_keyword
+    }
+
+    /// Read-only effective `<Security A.>` strike TOTAL for display / queries,
+    /// clamped to `[0, MAX_SECURITY_CHECKS]`. This is exactly what the attacker
+    /// would check if it attacked the player right now — the value the UI must
+    /// render. Unlike [`Self::current_security_strike`] it does NOT tick
+    /// declarative effects or emit fizzle events (callers mid-attack that need a
+    /// guaranteed-fresh value use the combat-time variant). Returns 0 for an
+    /// invalid handle.
+    pub fn effective_security_strike(&self, target: PermanentHandle) -> i32 {
+        if !self.handle_valid(target) {
+            return 0;
+        }
+        self.raw_security_strike(target)
+            .clamp(0, Self::MAX_SECURITY_CHECKS as i32)
+    }
+
+    fn current_security_strike(&mut self, attacker: PermanentHandle) -> u8 {
+        if !self.handle_valid(attacker) {
+            return 0;
+        }
+        // Refresh declarative state so the `<Security A.>` keyword term in
+        // `raw_security_strike` reads the CURRENT materialized grants.
+        // Inherited/aura declarative `grant_keyword` grants (e.g. ST1-07
+        // Greymon's inherited `<Security A. +1>`) live in the keyword registry
+        // only after a tick; the strike must not read a stale cache. The
+        // `decode_action` path ticks before resolving an attack, but direct
+        // callers (and mid-attack board changes between the per-iteration
+        // recomputes) would otherwise miss it. `tick_declarative_effects` is
+        // idempotent and de-dups own grants already printed in `card_data`, so
+        // this does not double-count.
+        self.tick_declarative_effects();
+        let raw = self.raw_security_strike(attacker);
         let clamped = raw.max(0) as u32;
         if clamped > Self::MAX_SECURITY_CHECKS as u32 {
             // Safety cap. Log + emit a single fizzle so test runners and
@@ -2975,9 +2999,30 @@ impl Game {
                     if checks_performed >= current_strike {
                         return Some(AttackResult::SecurityCheckSurvived);
                     }
+                    // `<Security A. +N>` overflow: if the defender already ran
+                    // out of security during this same attack, the remaining
+                    // extra checks simply do not happen — and crucially do NOT
+                    // win the game. The 0-security knockout is decided exactly
+                    // once, at the FIRST check (the primary attack connecting),
+                    // in `resolve_player_security_loop`'s opening pop. An empty
+                    // stack reached here is always a *subsequent* check
+                    // (`checks_performed >= 1`), so it must end as a survived
+                    // check, never `GameWon`.
+                    //
+                    // DCGO authority: `CardController.cs` `ISecurityCheck`'s
+                    // multi-check loop `break`s on an empty stack (the
+                    // `else { break; }` at the `SecurityCards.Count >= 1`
+                    // guard) and never ends the game; the win is decided in
+                    // `AttackProcess.DetermineAttackOutcome` BEFORE the loop.
+                    // Rule 11-5-1-2 + the `wargreymon_security_attack` tests.
+                    if self.player(defender).security.is_empty() {
+                        return Some(AttackResult::SecurityCheckSurvived);
+                    }
                     if !self.pop_and_start_security_check(attacker, defender, checks_performed) {
-                        // Deck out on the next card: attacker wins the game.
-                        return Some(AttackResult::GameWon);
+                        // Unreachable given the emptiness guard above, but keep
+                        // the terminal branch defensive: an empty stack on a
+                        // non-first check is a survived check, not a win.
+                        return Some(AttackResult::SecurityCheckSurvived);
                     }
                     // Loop continues with a fresh state in SecuritySkillDrain.
                 }
