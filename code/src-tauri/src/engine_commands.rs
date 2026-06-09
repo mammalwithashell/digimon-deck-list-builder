@@ -443,7 +443,6 @@ fn perm_sources_dto(
 }
 
 fn perm_dto(game: &Game, player: PlayerId, index: usize) -> PermanentDto {
-    use digimon_engine::enums::ModifierType;
     use digimon_engine::serialization::{
         modifier_type_str, expiry_str, DISPLAY_KEYWORDS,
     };
@@ -475,8 +474,12 @@ fn perm_dto(game: &Game, player: PlayerId, index: usize) -> PermanentDto {
     }
 
     // ── Security-attack modifier (delta from the default of 1) ──
-    let security_attack_modifier = game.security_attack_keyword_bonus(handle)
-        + game.modifiers.sum(handle, ModifierType::SecurityAttackChange);
+    // Mirror combat's effective strike (`Game::effective_security_strike`),
+    // which is BASE-INCLUSIVE of the `security_attack_fn` formula aura (e.g.
+    // WarGreymon's `1 + floor(materials/2)`). Summing only the flat keyword +
+    // modifier deltas dropped the formula, so a WarGreymon that actually
+    // checks 4 security rendered as "Security Attack: 2" in the desktop UI.
+    let security_attack_modifier = game.effective_security_strike(handle) - 1;
 
     // ── DP: base (printed) vs effective (with modifiers) ──
     let total_dp = game.effective_dp(handle).unwrap_or(base_dp);

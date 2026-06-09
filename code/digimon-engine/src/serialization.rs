@@ -378,11 +378,15 @@ fn perm_data(perm: &Permanent, data: &[CardData], game: &Game, handle: Option<Pe
     }
 
     // ── Security-attack modifier (delta from the default of 1) ──
+    // Mirror combat's effective strike (`Game::effective_security_strike`),
+    // which is BASE-INCLUSIVE of the `security_attack_fn` formula aura
+    // (e.g. WarGreymon's `1 + floor(materials/2)`). The earlier display
+    // computation summed only the flat `<Security A.>` keyword + modifier
+    // deltas and dropped the formula, so a WarGreymon that actually checks
+    // 4 security rendered as "2". The total minus the implicit base of 1 is
+    // the delta the UI adds back.
     let security_attack_modifier = handle
-        .map(|h| {
-            game.security_attack_keyword_bonus(h)
-                + game.modifiers.sum(h, ModifierType::SecurityAttackChange)
-        })
+        .map(|h| game.effective_security_strike(h) - 1)
         .unwrap_or(0);
 
     // ── DP: base (printed) vs effective (with modifiers) ──
