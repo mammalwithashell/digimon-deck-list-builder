@@ -47,3 +47,14 @@ Run these from the repo root. Use your background-task tooling for the long-runn
 - **Stop `cargo tauri dev` before running any `src-tauri` `cargo` build/test** — two concurrent builds of the crate corrupt the build and surface as `error: proc macro panicked`.
 - **Web (browser) mode is different**: `npm run dev` (not `dev:desktop`) + the hosted API `python -m uvicorn server.api:app` from the repo root (its SQLite path `./data/app.db` is cwd-relative, so launch from the root). Desktop mode needs neither the browser build nor uvicorn for local bot games.
 - The app downloads trained AI models at runtime from the hosted API's manifest; local greedy-bot games work fully offline.
+
+## Optional: agent-driven staging via the debug bridge
+
+To let the `digimon-scenario-mcp` drive the *running desktop game* (stage arbitrary boards, snapshot state, author tests without playing), build + run with the dev-only bridge enabled:
+
+```bash
+cd code/src-tauri && DIGIMON_DEBUG_BRIDGE=1 cargo tauri dev --features debug-bridge \
+  --config '{"build":{"beforeDevCommand":""}}'
+```
+
+The bridge is a localhost-only (`127.0.0.1:5174`, override with `DIGIMON_DEBUG_BRIDGE_PORT`) HTTP server compiled **only** under the `debug-bridge` feature and started **only** when `DIGIMON_DEBUG_BRIDGE=1` — it is absent from release/prod builds. It drops a discovery file at `<data_dir>/digimon-tcg/debug_bridge.json` the MCP auto-reads. See `docs/SCENARIO_MCP.md`. Without the flag, the normal launch (step 4) has no network surface.

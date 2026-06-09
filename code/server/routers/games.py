@@ -340,6 +340,22 @@ def game_state(game_id: str):
     return game.to_ui_json()
 
 
+@router.post("/games/{game_id}/export-scenario")
+def export_scenario(game_id: str):
+    """Capture the current full-information board as a scenario fixture
+    (`qa/scenarios/` schema, empty assertions). Works for any active game —
+    a normal `RustHeadlessGame` or a debug-staged `RustDebugGame` — because
+    both expose the one engine `to_scenario()` primitive. The returned
+    fixture re-stages (via `/debug`) to the identical board.
+
+    Engine-only route: no DB/auth dependency."""
+    game = _require_game(game_id)
+    try:
+        return game.to_scenario()
+    except Exception as exc:  # pragma: no cover - defensive
+        raise HTTPException(status_code=400, detail=f"Capture failed: {exc}")
+
+
 @router.get("/games/{game_id}/action-mask")
 @router.get("/game/{game_id}/mask", include_in_schema=False)
 def game_mask(game_id: str):

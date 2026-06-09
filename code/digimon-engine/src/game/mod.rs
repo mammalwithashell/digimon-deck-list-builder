@@ -768,6 +768,7 @@ mod memory;
 mod opt;
 mod queries;
 mod setup;
+mod snapshot;
 mod staging;
 mod suspend;
 mod triggers;

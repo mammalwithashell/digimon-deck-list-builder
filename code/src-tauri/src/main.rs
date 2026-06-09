@@ -39,6 +39,19 @@ fn main() {
         .setup(|app| {
             let handle = app.handle().clone();
             updater::spawn_min_version_check(handle);
+            // Dev-only staging bridge (feature `debug-bridge`, env-gated).
+            // Shares the managed game/session Arcs so external staging is
+            // reflected live in the window.
+            #[cfg(feature = "debug-bridge")]
+            {
+                use tauri::Manager;
+                let state = app.state::<RustEngineState>();
+                digimon_tcg::debug_bridge::maybe_spawn(
+                    &app.handle().clone(),
+                    state.game.clone(),
+                    state.session.clone(),
+                );
+            }
             Ok(())
         })
         .manage(RustEngineState::default())

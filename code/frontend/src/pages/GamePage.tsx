@@ -214,6 +214,49 @@ export function GamePage() {
       }
     }
   }, [urlGameId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Dev-only: the desktop debug bridge (Tauri feature `debug-bridge`) can
+  // stage / mutate the game out of band (driven by the scenario MCP). It
+  // emits `debug:state-changed` after each external mutation; refetch so
+  // the board reflects the staged state without a manual reload. Inert
+  // outside the Tauri runtime (browser-dev / web) — the event API is
+  // imported lazily and only when Tauri's IPC hooks are present.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hasTauri = Boolean(
+      (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__,
+    );
+    if (!hasTauri) return;
+    let cancelled = false;
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        const un = await listen('debug:state-changed', async () => {
+          try {
+            const gid = useGameStore.getState().gameId ?? 'rust-local';
+            const [state, maskData] = await Promise.all([
+              gameApi.getState(gid),
+              gameApi.getMask(gid),
+            ]);
+            store.setGameState(state);
+            store.setActionMask(maskData);
+          } catch (err) {
+            console.error('debug bridge refresh failed:', err);
+          }
+        });
+        if (cancelled) un();
+        else unlisten = un;
+      } catch {
+        // Tauri event API unavailable (browser-dev) — no bridge here.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [inspectedPerm, setInspectedPerm] = useState<PermanentInfo | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [draggedHandIndex, setDraggedHandIndex] = useState<number | null>(null);

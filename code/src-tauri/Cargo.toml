@@ -21,6 +21,9 @@ thiserror = "1"
 dirs = "5"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
+# Dev-only debug bridge (feature `debug-bridge`). Optional so release
+# bundles link no HTTP server.
+axum = { version = "0.7", optional = true }
 
 [lib]
 name = "digimon_tcg"
@@ -37,3 +40,6 @@ tauri-build = { version = "2", features = [] }
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+# Dev-only localhost staging bridge into the live desktop game. NEVER enable
+# for release/production bundles. Pulls in axum + tokio's net stack.
+debug-bridge = ["dep:axum", "tokio/net"]

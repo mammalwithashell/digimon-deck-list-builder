@@ -785,6 +785,14 @@ impl RustHeadlessGame {
         json_to_pyobject(py, &value)
     }
 
+    /// Capture the current full-information game as a scenario fixture
+    /// (`qa/scenarios/` schema, empty assertions). The inverse of the
+    /// staging importer — re-staging the result reproduces this board.
+    fn to_scenario(&self, py: Python) -> PyResult<PyObject> {
+        let value = self.inner.game.to_scenario();
+        json_to_pyobject(py, &value)
+    }
+
     /// Snapshot of the currently installed `PendingSelection`, or `None`
     /// if no prompt is pending. Keys: `kind`, `phase`, `selectingPlayer`
     /// (Python 1/2 convention), `validIndices`, `isOptional`, `prompt`,
@@ -1111,6 +1119,14 @@ impl RustDebugGame {
 
     fn to_ui_json(&self, py: Python) -> PyResult<PyObject> {
         let value = ::digimon_engine::serialization::to_ui_json(&self.inner.game);
+        json_to_pyobject(py, &value)
+    }
+
+    /// Capture the current staged game as a scenario fixture
+    /// (`qa/scenarios/` schema, empty assertions). Same primitive as the
+    /// live runner — one engine `Game::to_scenario()` implementation.
+    fn to_scenario(&self, py: Python) -> PyResult<PyObject> {
+        let value = self.inner.game.to_scenario();
         json_to_pyobject(py, &value)
     }
 

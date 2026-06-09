@@ -9,7 +9,7 @@
 //! `play_card` / `attack_digimon` / `attack_player` / `end_turn` to drive it.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::explain::{explain_action, ActionExplanation};
@@ -39,10 +39,16 @@ pub struct GameSession {
 }
 
 /// Shared mutable Rust-engine state, held by Tauri.
-#[derive(Default)]
+///
+/// `game` / `session` are wrapped in `Arc` so the optional dev-only debug
+/// bridge (`debug_bridge.rs`, feature `debug-bridge`) can hold a second
+/// handle to the same game and drive staging from its localhost server.
+/// `.lock()` derefs through the `Arc`, so existing command code is
+/// unchanged; only construction/sharing differs.
+#[derive(Default, Clone)]
 pub struct RustEngineState {
-    pub game: Mutex<Option<Game>>,
-    pub session: Mutex<GameSession>,
+    pub game: Arc<Mutex<Option<Game>>>,
+    pub session: Arc<Mutex<GameSession>>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -650,7 +656,7 @@ fn revealed_cards_dto(game: &Game) -> Vec<RevealedCardDto> {
         .collect()
 }
 
-fn game_state_dto(game: &Game) -> GameStateDto {
+pub fn game_state_dto(game: &Game) -> GameStateDto {
     let players: Vec<PlayerDto> = (0..game.rules.player_count)
         .map(|i| player_dto(game, i))
         .collect();
@@ -985,7 +991,7 @@ pub struct SurrenderResponseDto {
 
 /// Mirror of HeadlessRunner::current_decision_player — who is expected to
 /// submit the next action.
-fn current_decision_player(game: &Game) -> PlayerId {
+pub fn current_decision_player(game: &Game) -> PlayerId {
     if let Some(p) = game.mulligan_current_player() {
         return p;
     }
@@ -997,7 +1003,7 @@ fn current_decision_player(game: &Game) -> PlayerId {
 
 /// Build a `u8` action mask for the current decider. The frontend stores
 /// `number[]`; `0`/`1` bytes round-trip transparently through Tauri/serde.
-fn action_mask_bytes(game: &Game) -> Vec<u8> {
+pub fn action_mask_bytes(game: &Game) -> Vec<u8> {
     let pid = current_decision_player(game);
     build_action_mask(game, pid)
         .into_iter()

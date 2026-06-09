@@ -205,6 +205,9 @@ commands on desktop):
 - `digimon-engine-mcp` (Rust binary, `code/digimon-engine-mcp/`) — per-game engine forensics over `LiveGame` and recordings.
 - `digimon-training-mcp` (Python package, `code/digimon-training-mcp/`) — cross-game / time-series inspection of `runs/` + `models/` filesystem artifacts. Does not import from `server.*`, `digimon_gym.db.*`, or any binding crate.
 
+**Write-capable dev/test MCP** (local + dev only — documented exception to the read-only rule above):
+- `digimon-scenario-mcp` (Python package, `code/digimon-scenario-mcp/`) — stages, snapshots, and authors game-state scenario tests. It **mutates game state and writes files** (`qa/scenarios/`, `code/frontend/e2e/`) — that is its purpose. Bounded: dev/test-only, never bundled into any production build, never imported by `server.*` / `digimon_gym.*`, and talks only to dev-gated surfaces (the hosted-API `/debug` router in browser-dev mode, and the feature-gated Tauri debug bridge on desktop via `target: browser|desktop`). See `docs/SCENARIO_MCP.md` and the `add-scenario-capture-mcp` change.
+
 **Requirements files:**
 - `requirements.txt` — full hosted API (all deps)
 - `requirements-training.txt` — training CLI (engine + torch/SB3, no FastAPI/DB)
