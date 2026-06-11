@@ -4,7 +4,7 @@
 FROM rust:1.94-slim AS rust-builder
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-dev python3-pip pkg-config \
+    python3 python3-dev python3-pip pkg-config g++ \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir --break-system-packages 'maturin>=1.7,<2'
 COPY Cargo.lock ./
@@ -30,6 +30,10 @@ COPY --from=rust-builder /wheels/*.whl /wheels/
 # ── Stage 3: Runtime ──────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+# libstdc++6: the digimon_engine wheel links the ort (ONNX Runtime) crate,
+# which needs the C++ runtime at import time.
+RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
 RUN useradd -u 1001 -m app
 WORKDIR /app
 COPY --from=py-builder /wheels /wheels
