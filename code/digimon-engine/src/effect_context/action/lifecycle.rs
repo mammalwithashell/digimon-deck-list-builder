@@ -232,8 +232,16 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn lose_memory(&mut self, amount: i16) {
-        let new_memory = self.game.memory - amount;
-        self.game.set_memory(new_memory);
+        // Controller-relative, mirroring `gain_memory`: the effect's
+        // controller loses the memory (general_rule.pdf p.7 — "Lose X
+        // memory" moves the marker toward YOUR opponent's side; DCGO
+        // scripts run `card.Owner.AddMemory(-n)`). A raw seesaw
+        // subtraction would charge the TURN player when a non-turn
+        // player's effect (e.g. a defender's [On Deletion]) loses memory.
+        // Memory-GAIN restrictions (CannotGainMemoryByEffect etc.) do not
+        // apply to losses — DCGO only consults CanAddMemory for gains.
+        let target = self.player;
+        self.game.lose_memory_for_player(target, amount);
     }
 
     pub fn set_memory(&mut self, value: i16) {

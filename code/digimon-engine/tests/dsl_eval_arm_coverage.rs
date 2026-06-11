@@ -41,6 +41,9 @@ const STEP_MOD_SRC: &str = include_str!("../src/dsl_cards/step/mod.rs");
 const STEP_AS_SELECTING: &str = include_str!("../src/dsl_cards/step/as_selecting_player.rs");
 const STEP_COMBAT: &str = include_str!("../src/dsl_cards/step/combat.rs");
 const STEP_CONTROL_FLOW: &str = include_str!("../src/dsl_cards/step/control_flow.rs");
+const STEP_DIGIXROS_TRANSACTION: &str =
+    include_str!("../src/dsl_cards/step/digixros_transaction.rs");
+const STEP_DNA_DIGIVOLVE: &str = include_str!("../src/dsl_cards/step/dna_digivolve.rs");
 const STEP_DRAW: &str = include_str!("../src/dsl_cards/step/draw.rs");
 const STEP_EFFECTS: &str = include_str!("../src/dsl_cards/step/effects.rs");
 const STEP_GRANT_TRIGGERED: &str = include_str!("../src/dsl_cards/step/grant_triggered.rs");
@@ -64,6 +67,8 @@ fn step_corpus() -> String {
         STEP_AS_SELECTING,
         STEP_COMBAT,
         STEP_CONTROL_FLOW,
+        STEP_DIGIXROS_TRANSACTION,
+        STEP_DNA_DIGIVOLVE,
         STEP_DRAW,
         STEP_EFFECTS,
         STEP_GRANT_TRIGGERED,
