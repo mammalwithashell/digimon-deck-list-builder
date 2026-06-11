@@ -158,6 +158,9 @@ _TRAIN_KWARGS = {
     "eval_freq", "n_eval_episodes", "learning_rate", "n_steps",
     "batch_size", "n_epochs", "gamma", "bounty_threshold", "bounty_bonus",
     "use_lstm", "lstm_hidden_size",
+    # `harden-training-pipeline` D5/D3: continue-from-checkpoint and
+    # pool-opponent (fictitious self-play) wiring for cloud job configs.
+    "init_from", "opponent_pool_manifest", "opponent_pool_mode",
 }
 
 

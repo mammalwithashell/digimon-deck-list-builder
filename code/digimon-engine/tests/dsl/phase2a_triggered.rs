@@ -155,6 +155,7 @@ fn fixture_on_play_gain_memory(n: i32) -> CompiledCard {
             active_when: None,
             condition: None,
             optional: false,
+            outer_prompt: false,
             once_per_turn: false,
             max_per_turn: None,
             process: vec![CompiledStep::GainMemory(n)],

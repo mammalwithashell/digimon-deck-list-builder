@@ -2135,8 +2135,13 @@ effects:
         "own ally must NOT receive opponent-targeted grant"
     );
 
-    // Fire opp A's WhenAttacking — granted body runs (lose_memory: 2,
-    // controller-independent so the −2 delta holds under the D4 carrier model).
+    // Fire opp A's WhenAttacking — granted body runs. `lose_memory: 2` is
+    // CONTROLLER-relative (general_rule.pdf p.7; DCGO EX1-068 runs
+    // `cardSource.Owner.AddMemory(-2)`): the carrier's controller P1 loses
+    // the memory. This staged fire happens during P0's turn (a real attack
+    // would happen on P1's own turn), so from the stored turn-player
+    // perspective the marker moves +2 toward P0. The ±2 magnitude is the
+    // witness that the granted body fired.
     let starting_memory = runner.game.memory;
     runner.game.enqueue_triggered(
         EffectTiming::WhenAttacking,
@@ -2145,7 +2150,7 @@ effects:
     runner.game.drain_effect_queue();
     assert_eq!(
         runner.game.memory - starting_memory,
-        -2,
+        2,
         "opp A attack must trigger the DSL-authored grant body"
     );
 
@@ -2817,11 +2822,13 @@ fn ex1_068_ice_wall_grants_when_attacking_loses_2_memory_to_all_opp_digimon() {
                 |inner| {
                     // "[When Attacking] lose 2 memory" — the granted effect is
                     // the GRANTEE's own effect (D4 / DCGO sources it from the
-                    // carrier), so the body runs with effect_source_player =
-                    // carrier.player. `lose_memory(2)` mutates the shared gauge
-                    // by −2 (turn-player-relative), matching EX1-068's actual
-                    // `lose_memory: 2` body — controller-independent, so the
-                    // −2/−4 deltas below hold regardless of grantor/grantee.
+                    // carrier), so the body runs with ctx.player =
+                    // carrier.player (P1). `lose_memory(2)` is CONTROLLER-
+                    // relative (general_rule.pdf p.7; DCGO EX1-068 runs
+                    // `cardSource.Owner.AddMemory(-2)`): P1 loses the memory.
+                    // This staged fire happens during P0's turn (a real attack
+                    // would be on P1's own turn), so the stored turn-player-
+                    // perspective gauge moves +2/+4 toward P0 below.
                     inner.lose_memory(2);
                 },
             );
@@ -2846,7 +2853,8 @@ fn ex1_068_ice_wall_grants_when_attacking_loses_2_memory_to_all_opp_digimon() {
         1
     );
 
-    // First opp attack — granted body fires, memory drops by 2.
+    // First opp attack — granted body fires; P1 loses 2 (marker moves +2
+    // toward P0 from the staged P0-turn perspective).
     runner.game.enqueue_triggered(
         EffectTiming::WhenAttacking,
         digimon_engine::selection::TriggerSource::Permanent(opp_a_h),
@@ -2854,7 +2862,7 @@ fn ex1_068_ice_wall_grants_when_attacking_loses_2_memory_to_all_opp_digimon() {
     runner.game.drain_effect_queue();
     assert_eq!(
         runner.game.memory - starting_memory,
-        -2,
+        2,
         "opp A attack must trigger granted body and drop memory by 2"
     );
 
@@ -2866,7 +2874,7 @@ fn ex1_068_ice_wall_grants_when_attacking_loses_2_memory_to_all_opp_digimon() {
     runner.game.drain_effect_queue();
     assert_eq!(
         runner.game.memory - starting_memory,
-        -4,
+        4,
         "opp B attack must also trigger granted body"
     );
 

@@ -77,8 +77,15 @@ pub fn lower_for_kind_with_clause_index(
         .iter()
         .filter(|t| compiled_timing_to_engine(**t).is_some())
         .count();
-    let needs_shared_opt = real_timing_count > 1
-        && (clause.once_per_turn || matches!(clause.max_per_turn, Some(n) if n > 0));
+    let has_opt_cap =
+        clause.once_per_turn || matches!(clause.max_per_turn, Some(n) if n > 0);
+    // A clause containing a `refund_opt` step needs its OPT key to be
+    // STATICALLY known (the step un-records the activation at runtime via the
+    // StepRuntime — G-OPT-REFUND-ON-DECLINE). Forcing such a clause into its
+    // own shared-opt group makes the key `0x80 | clause_index` instead of the
+    // effect-slot index, which the lowering cannot know here.
+    let has_refund_opt = steps_contain_refund_opt(&clause.process);
+    let needs_shared_opt = has_opt_cap && (real_timing_count > 1 || has_refund_opt);
     // Disjoint keyspace: real effect slots are vec indices (0..N). A shared
     // group key sets the high bit so it can never collide with a slot index.
     let shared_opt_group: Option<u8> = if needs_shared_opt {
@@ -137,11 +144,18 @@ pub fn lower_for_kind_with_clause_index(
         // G-OUTER-OPTIONAL-NOT-INSTALLED: decide whether a "you may" clause
         // needs an explicit outer accept/decline prompt — computed before
         // `body_steps` is moved into the `Arc` below.
-        let needs_outer_optional = clause.optional && !body_first_step_is_declinable(&body_steps);
+        // `outer_prompt: true` FORCES the confirm even when the first body
+        // step is declinable — DCGO's always-shown initial Yes/No
+        // (G-OPT-REFUND-ON-DECLINE: declining the confirm drops the queued
+        // effect before its OPT is recorded, i.e. DCGO `RemoveUse`).
+        let needs_outer_optional = clause.optional
+            && (clause.outer_prompt || !body_first_step_is_declinable(&body_steps));
         // Guard predicate: when the body's first step is a selection, the
         // outer prompt only installs if it has >=1 candidate. `None` ⇒ no
-        // guard (always prompt).
-        let outer_optional_first_step = if needs_outer_optional {
+        // guard (always prompt). A FORCED outer prompt (`outer_prompt: true`)
+        // takes no guard — DCGO shows the bool prompt regardless of targets
+        // (the body may still have target-free legs, e.g. a self-unsuspend).
+        let outer_optional_first_step = if needs_outer_optional && !clause.outer_prompt {
             body_steps.first().cloned()
         } else {
             None
@@ -292,7 +306,8 @@ pub fn lower_for_kind_with_clause_index(
                 // as the selection's resolve callback so it continues once the
                 // player picks a target.
                 let runtime = StepRuntime::new(raw_for_process.clone())
-                    .with_dna_origin(ctx.game.current_dna_origin);
+                    .with_dna_origin(ctx.game.current_dna_origin)
+                    .with_opt_key(shared_opt_group);
                 run_steps_with_runtime(process_steps.as_slice(), ctx, &mut bindings, &runtime);
             });
         }
@@ -355,6 +370,22 @@ fn predicate_subject_for_source(
 
 fn steps_provide_resource_flow(steps: &[CompiledStep]) -> bool {
     steps.iter().any(step_provides_resource_flow)
+}
+
+/// Recursive scan for a `refund_opt` step anywhere in a clause body
+/// (including `if:` / `optional:` / `for_each:` nests). A refund-bearing
+/// once-per-turn clause is forced into its own shared-opt group so the
+/// OPT key is statically known to the StepRuntime. G-OPT-REFUND-ON-DECLINE.
+fn steps_contain_refund_opt(steps: &[CompiledStep]) -> bool {
+    steps.iter().any(|s| match s {
+        CompiledStep::RefundOpt => true,
+        CompiledStep::Optional(body) => steps_contain_refund_opt(body),
+        CompiledStep::If {
+            then, else_branch, ..
+        } => steps_contain_refund_opt(then) || steps_contain_refund_opt(else_branch),
+        CompiledStep::ForEach { body, .. } => steps_contain_refund_opt(body),
+        _ => false,
+    })
 }
 
 /// True when the body's first step already exposes a declinable (PASS-able)

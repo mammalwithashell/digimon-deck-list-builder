@@ -97,6 +97,18 @@ impl Bindings {
         self.get_ref(name).cloned()
     }
 
+    /// Overlay every named slot from `other` onto self (`other` wins on
+    /// conflict). Used when resuming a parked outer tail: the inner
+    /// resolution's bindings are the park-time snapshot's lineage plus any
+    /// picks made since, and the outer tail must see those picks — a sibling
+    /// `binding_exists` / `binding_absent` after a nested select would
+    /// otherwise read a stale absence (G-OPT-REFUND-ON-DECLINE fallout).
+    pub fn merge_slots_from(&mut self, other: &Bindings) {
+        for (k, v) in &other.slots {
+            self.slots.insert(k.clone(), v.clone());
+        }
+    }
+
     /// Borrowing variant of `get`. Prefer this when the caller only needs to
     /// inspect the value — avoids cloning the inner `Vec` for `PermanentList`
     /// / `CardList`. `get` remains the convenience method for callers that

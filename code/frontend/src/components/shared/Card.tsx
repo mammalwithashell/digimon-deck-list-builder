@@ -31,6 +31,7 @@ interface CardProps {
   isAltArt?: boolean;
   overlay?: CardOverlay;
   onClick?: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   className?: string;
@@ -49,6 +50,7 @@ export function Card({
   isAltArt = false,
   overlay,
   onClick,
+  onContextMenu,
   onMouseEnter,
   onMouseLeave,
   className = '',
@@ -75,6 +77,7 @@ export function Card({
       style={{ width, height }}
       title={faceDown ? undefined : cardId}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

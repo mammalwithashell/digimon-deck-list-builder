@@ -199,7 +199,15 @@ fn run_tail_preserving_trigger_context(
     let previous = cb_ctx.game.current_trigger_context.clone();
     cb_ctx.game.current_trigger_context = trigger_context;
     run_steps_with_runtime(tail, cb_ctx, bindings, runtime);
-    drain_dsl_outer_tail(cb_ctx);
+    // Overlay this resolution's bindings onto the parked outer tail so
+    // binding-gated siblings after a nested select see the pick.
+    crate::dsl_cards::step::drain_dsl_outer_tail_with_bindings(cb_ctx, Some(bindings));
+    // Publish the freshest bindings of this resolution for any WRAPPED outer
+    // tail (`wrap_pending_selection_with_tail` composed around this callback)
+    // — its wrap-time snapshot predates the pick this resolution just made.
+    // The wrapper clears the channel before invoking us and takes it right
+    // after, so the value never leaks across resolutions.
+    cb_ctx.game.dsl_resolved_tail_bindings = Some(bindings.clone());
     cb_ctx.game.current_trigger_context = previous;
 }
 
@@ -305,6 +313,7 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            continue_on_decline,
             ..
         } => {
             install_select_own_permanent(
@@ -314,6 +323,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                *continue_on_decline,
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
@@ -357,6 +367,7 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            continue_on_decline,
             ..
         } => {
             install_select_opponent_permanent(
@@ -366,6 +377,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                *continue_on_decline,
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
@@ -1472,6 +1484,7 @@ fn install_select_own_permanent(
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
+    continue_on_decline: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -1493,6 +1506,10 @@ fn install_select_own_permanent(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    let tail_for_decline = tail.clone();
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     ctx.select_own_permanent(
         &prompt,
         optional,
@@ -1519,6 +1536,33 @@ fn install_select_own_permanent(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // `continue_on_decline: true` — PASS leaves the binding unresolved and the
+    // clause CONTINUES (DCGO's declined SelectPermanentEffect resolves with an
+    // empty list and the coroutine carries on), so binding-gated follow-ups
+    // run. The default keeps the historical permanent-select semantic (decline
+    // drops the tail) which existing cards use as a cost/accept gate.
+    // G-OPT-REFUND-ON-DECLINE.
+    if optional && continue_on_decline {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }));
+        }
+    }
 }
 
 /// Install the Tamer pick for `trash_bottom_face_down_source_under_tamer`.
@@ -1605,6 +1649,7 @@ fn install_select_opponent_permanent(
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
+    continue_on_decline: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -1628,6 +1673,10 @@ fn install_select_opponent_permanent(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    let tail_for_decline = tail.clone();
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     ctx.select_opponent_permanent(
         &prompt,
         optional,
@@ -1656,6 +1705,34 @@ fn install_select_opponent_permanent(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // `continue_on_decline: true` — PASS leaves the binding unresolved and
+    // CONTINUES the clause (same semantic the hand/trash selects carry; DCGO's
+    // declined SelectPermanentEffect resolves with an empty list and the
+    // coroutine continues), so binding-gated follow-ups (`binding_exists` /
+    // `binding_absent`) and independent legs still execute. The default keeps
+    // the historical drop-the-tail semantic existing cards rely on as their
+    // accept/decline cost gate. G-OPT-REFUND-ON-DECLINE.
+    if optional && continue_on_decline {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }));
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

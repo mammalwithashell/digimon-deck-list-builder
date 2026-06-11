@@ -778,6 +778,7 @@ fn select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_st
         prompt: "Choose a Tamer with a face-down stash".to_string(),
         prompt_key: None,
         optional: false,
+        continue_on_decline: false,
     }];
 
     let mut bindings = Bindings::new();
@@ -845,6 +846,7 @@ fn select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_so
         prompt: "Choose a Tamer with a face-down stash".to_string(),
         prompt_key: None,
         optional: false,
+        continue_on_decline: false,
     }];
 
     let mut bindings = Bindings::new();
@@ -906,6 +908,7 @@ fn select_own_permanent_has_face_down_source_false_offers_only_tamer_without_sta
         prompt: "Choose a Tamer without a face-down stash".to_string(),
         prompt_key: None,
         optional: false,
+        continue_on_decline: false,
     }];
 
     let mut bindings = Bindings::new();

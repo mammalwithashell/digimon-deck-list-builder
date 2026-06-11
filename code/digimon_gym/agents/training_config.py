@@ -10,7 +10,23 @@ import yaml
 
 
 VALID_ALGORITHMS = {"mlp", "lstm"}
-VALID_OPPONENTS = {"greedy", "random", "agent", "pool", "self-play"}
+VALID_OPPONENTS = {"greedy", "random", "agent", "pool"}
+
+# `harden-training-pipeline` D1: opponent="self-play" is retired. DigimonEnv
+# builds observations from Player 1's perspective only, so the old mode (which
+# simply skipped OpponentWrapper) had the agent picking Player 2's actions
+# against wrong-perspective input. The 2026-05-31 self-play run collapsed
+# (22.5% vs greedy at 500k steps) while reporting a flat 100% in-run win rate.
+SELF_PLAY_RETIRED_MSG = (
+    "opponent='self-play' is retired: DigimonEnv observations are built from "
+    "Player 1's perspective only, so self-play (which skipped OpponentWrapper) "
+    "made the agent select Player 2's actions against wrong-perspective input, "
+    "silently corrupting the policy. Use pool-based fictitious self-play "
+    "instead: opponent='pool' with a champion-derived manifest "
+    "(python code/tools/champion_admin.py emit-pool --out pool.json), "
+    "then --opponent pool --opponent-pool-manifest pool.json. "
+    "See docs/TRAINING_RUNBOOK.md and openspec/changes/harden-training-pipeline."
+)
 VALID_RECORD_GAME_MODES = {"off", "all", "sampled", "draws", "anomalies", "eval"}
 VALID_MULLIGAN_LOG_MODES = {"on", "off"}
 VALID_EVAL_GAME_LOG_MODES = {"on", "off"}
@@ -42,6 +58,13 @@ class TrainingConfig:
     eval_freq: int = 25_000
     eval_episodes: int = 50
     eval_suite: Optional[str] = None
+    # In-training anchored eval (`harden-training-pipeline` D2): every
+    # `anchored_eval_freq` steps, play `anchored_eval_games` seat-balanced
+    # games per anchor (greedy + layout-compatible champions from
+    # `champions_registry`). 0 disables the panel entirely.
+    anchored_eval_freq: int = 100_000
+    anchored_eval_games: int = 24
+    champions_registry: str = "models/champions/registry.json"
     checkpoint_every: int = 50_000
     keep_last_checkpoints: int = 3
     resume_from: Optional[str] = None
@@ -121,6 +144,8 @@ class TrainingConfig:
             raise ValueError(
                 f"algorithm must be one of {sorted(VALID_ALGORITHMS)}, got {self.algorithm}"
             )
+        if self.opponent == "self-play":
+            raise ValueError(SELF_PLAY_RETIRED_MSG)
         if self.opponent not in VALID_OPPONENTS:
             raise ValueError(
                 f"opponent must be one of {sorted(VALID_OPPONENTS)}, got {self.opponent}"
@@ -137,6 +162,10 @@ class TrainingConfig:
             raise ValueError("eval_freq must be >= 0")
         if self.eval_episodes <= 0:
             raise ValueError("eval_episodes must be > 0")
+        if self.anchored_eval_freq < 0:
+            raise ValueError("anchored_eval_freq must be >= 0 (0 disables)")
+        if self.anchored_eval_games <= 0:
+            raise ValueError("anchored_eval_games must be > 0")
         if self.checkpoint_every < 0:
             raise ValueError("checkpoint_every must be >= 0")
         if self.keep_last_checkpoints < 1:

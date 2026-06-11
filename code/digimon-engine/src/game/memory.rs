@@ -75,6 +75,14 @@ impl Game {
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
+    /// Lose memory for a specific player. Rules manual p.7: "'Lose X
+    /// memory' means moving the memory marker X spaces toward your
+    /// opponent's side" — the exact mirror of a gain, relative to the
+    /// losing player (DCGO: `Owner.AddMemory(-n)`).
+    pub fn lose_memory_for_player(&mut self, player: PlayerId, amount: i16) {
+        self.gain_memory_for_player(player, -amount);
+    }
+
     /// Set memory to a specific value.
     pub fn set_memory(&mut self, value: i16) {
         let before = self.memory;

@@ -4,8 +4,14 @@
   "version": "0.1.0",
   "identifier": "com.digimon-tcg.desktop",
   "build": {
-    "beforeDevCommand": "cd ../frontend && npm run dev:desktop",
-    "beforeBuildCommand": "cd ../frontend && npm run build:desktop",
+    "beforeDevCommand": {
+      "script": "npm run dev:desktop",
+      "cwd": "../frontend"
+    },
+    "beforeBuildCommand": {
+      "script": "npm run build:desktop",
+      "cwd": "../frontend"
+    },
     "frontendDist": "../frontend/dist",
     "devUrl": "http://localhost:5173"
   },
