@@ -1,11 +1,11 @@
 # xros_req parser coverage
 
-Generated: 2026-04-26T02:41:42Z
+Generated: 2026-06-11T14:29:44Z
 
-- Total cards: 4085
-- Fully parsed (incl. no xros_req): 3633
-- Partially parsed: 55
-- Wholly unparsed (with xros_req): 397
+- Total cards: 4220
+- Fully parsed (incl. no xros_req): 3733
+- Partially parsed: 66
+- Wholly unparsed (with xros_req): 421
 
 ## Cards with partial xros_req parses
 
@@ -46,6 +46,16 @@ Generated: 2026-04-26T02:41:42Z
 - BT24-077
 - BT24-079
 - BT24-101
+- BT25-036
+- BT25-038
+- BT25-052
+- BT25-056
+- BT25-060
+- BT25-070
+- BT25-072
+- BT25-084
+- BT25-103
+- BT25-104
 - EX10-017
 - EX10-018
 - EX10-019
@@ -64,6 +74,7 @@ Generated: 2026-04-26T02:41:42Z
 - P-203
 - P-220
 - ST22-12
+- ST24-05
 
 ## Cards with wholly unparsed xros_req
 
@@ -325,8 +336,23 @@ Generated: 2026-04-26T02:41:42Z
 - BT24-074
 - BT24-075
 - BT24-081
+- BT25-010
+- BT25-011
+- BT25-014
+- BT25-015
+- BT25-019
+- BT25-021
+- BT25-029
+- BT25-037
+- BT25-042
 - BT25-044
+- BT25-063
+- BT25-067
+- BT25-074
+- BT25-078
 - BT25-082
+- BT25-083
+- BT25-085
 - BT8-015
 - BT8-032
 - BT8-042
@@ -351,6 +377,9 @@ Generated: 2026-04-26T02:41:42Z
 - EX11-052
 - EX11-073
 - EX11-074
+- EX12-018
+- EX12-048
+- EX12-065
 - EX3-010
 - EX3-014
 - EX3-018
@@ -430,6 +459,9 @@ Generated: 2026-04-26T02:41:42Z
 - LM-040
 - LM-042
 - LM-043
+- LM-066
+- LM-067
+- LM-068
 - P-094
 - P-109
 - P-141
@@ -462,5 +494,8 @@ Generated: 2026-04-26T02:41:42Z
 - ST20-11
 - ST22-14
 - ST24-04
+- ST24-06
+- ST24-07
+- ST24-11
 - ST9-05
 - ST9-11
