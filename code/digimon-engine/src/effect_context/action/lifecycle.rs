@@ -231,9 +231,14 @@ impl<'a> EffectContext<'a> {
         self.game.gain_memory_for_player(target, amount);
     }
 
+    /// "Lose N memory" charges the effect's controller, not the turn player
+    /// (DCGO: `card.Owner.AddMemory(-n)`; Python legacy: `player.add_memory(-n)`).
+    /// For a turn-player controller this is the familiar gauge subtract; for a
+    /// non-turn controller (e.g. an `[On Deletion]` loss on the defender's
+    /// Digimon) the seesaw moves TOWARD the turn player instead.
     pub fn lose_memory(&mut self, amount: i16) {
-        let new_memory = self.game.memory - amount;
-        self.game.set_memory(new_memory);
+        let target = self.player;
+        self.game.gain_memory_for_player(target, -amount);
     }
 
     pub fn set_memory(&mut self, value: i16) {

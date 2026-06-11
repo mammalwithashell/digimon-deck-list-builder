@@ -133,6 +133,7 @@ fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
         .add_card(blue_digimon("P0BLUE")) // grantor's color-requirement Digimon
         .add_card(blue_digimon("VANILLA")) // non-Progress control carrier (P1)
         .hand(0, &["EX1-068"]) // Player 0 (grantor) holds Ice Wall, plays on turn 0
+        .deck(1, &["VANILLA"]) // P1's turn-start draw after `pass_turn` below
         .memory(10)
         .start();
     r.skip_mulligan();
@@ -169,8 +170,17 @@ fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
         "the vanilla control Digimon must also carry the grant"
     );
 
+    // Advance to Player 1's turn: a granted "[When Attacking] lose 2 memory"
+    // fires when the carrier attacks, and a Digimon attacks on its OWNER's
+    // turn. "Lose 2 memory" charges the carrier's owner (DCGO:
+    // `card.Owner.AddMemory(-2)`), so the staging must make P1 the turn
+    // player for the loss to read as a gauge subtract.
+    r.pass_turn();
+    assert_eq!(r.turn_player(), 1, "control fires on the carrier owner's turn");
+
     // Control: the non-Progress Digimon is the active attacker → firing
-    // WhenAttacking runs the granted body → the turn player loses 2 memory.
+    // WhenAttacking runs the granted body → the attacking owner (P1, the
+    // turn player) loses 2 memory.
     set_active_attacker(&mut r, vanilla);
     r.game.set_memory(5);
     r.game
