@@ -933,7 +933,30 @@ status).
 - **Blocks (judge-quiz):** Q12 (cards BT24-040 + BT24-059 + Petrification token ALL implemented — this is now a PRIMITIVE block, not a card block).
 
 
-### §Suspend event carries no effect-initiated bit (G-SUSPEND-EFFECT-INITIATED) — OPEN
+### §Suspend event carries no effect-initiated bit (G-SUSPEND-EFFECT-INITIATED) — RESOLVED 2026-06-10
+
+- **RESOLVED 2026-06-10** (judge-quiz Q24). Implemented exactly per the fix shape
+  below: `TriggerSource::EventObserved` gained `effect_initiated: bool`;
+  `Game::suspend_with_cause` / `unsuspend_with_cause` thread it (plain
+  `suspend`/`unsuspend` = `false`); `EffectContext::suspend`/`unsuspend` pass
+  `true`; `effect_queue.rs` populates `TriggerContext.effect_initiated`. The
+  pre-existing DSL predicate `event_is_effect_initiated` now gates for real.
+  EX6-004 Kokomon authored (`cards/ex6/EX6-004.yaml` + 7 behavioral tests in
+  `tests/cards_behavioral/ex6/ex6_004.rs`, incl. the raw-suspend negative).
+  Q24 pin `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger`
+  PASSES. The same Q24 slice also fixed four adjacent divergences (see the
+  judge-quiz ledger 2026-06-10 note): `<Alliance>` keyword moved to the
+  ATTACKER side (was inverted onto the ally), Alliance suspend-then-read-DP
+  order through the canonical chokepoint + deferred-drain scope, the
+  `effective_dp` 0-floor (17-1-3-1 / DCGO), the outermost-drain rules check
+  running BEFORE parked-trigger activation, an aura re-tick at the suspend
+  chokepoint, and `<Armor Purge>`'s accept dialog subject-scoped upstream
+  (was offered on a neighbor's deletion).
+  Verification: `judge_quiz` 35 passed / 6 ignored; `combat` 209 passed +
+  5 PRE-EXISTING failures (confirmed failing at 8b027821, before this work);
+  `cards_behavioral` regression run at change time.
+
+<details><summary>Original OPEN entry (kept for history)</summary>
 
 **Surfaced 2026-05-30** (judge-quiz cluster B, EX6-004 Kokomon — BLOCKED). EX6-004's
 inherited clause is "[Your Turn][OPT] When an EFFECT suspends one of your Digimon,
@@ -951,6 +974,8 @@ path vs `false` on the raw `Game::suspend`/attack/cost path, and populate the
 `qa/archetype-qa/dsl/zephagamon-2026-05-03-dsl-engine-gaps.md` ("Extend
 suspend/unsuspend event context with by_effect"). EX6-004 stays BLOCKED (no card
 authored — no stub) until this lands.
+
+</details>
 
 
 ### §Mass DP debuff applied as a one-time snapshot, not continuous (G-CONTINUOUS-MASS-DP-DEBUFF) — RESOLVED 2026-06-02

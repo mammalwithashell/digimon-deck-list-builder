@@ -1126,17 +1126,19 @@ impl Game {
         Ok(())
     }
 
-    /// Scan the attacker's side for unsuspended allies with the Alliance
-    /// keyword. Install a `PendingSelection` in `AllianceTiming` if any
-    /// candidate exists. Returns `true` if a selection was installed.
+    /// If the ATTACKER has `<Alliance>`, scan its side for unsuspended
+    /// allies to declare. Install a `PendingSelection` in `AllianceTiming`
+    /// if any candidate exists. Returns `true` if a selection was installed.
     ///
-    /// PR5 implementation: any unsuspended ally with modifier-granted
-    /// Alliance is a candidate. The declared ally is suspended and the
-    /// attacker gains `ALLIANCE_DP_BONUS` DP until end of attack, plus a
-    /// +1 Security Attack modifier. Trait-matching (Alliance only fires
-    /// when the ally shares a trait with the attacker) is residual work
-    /// — blocked on the trait-parsing infrastructure noted in parity
-    /// doc §2.1b; for now any Alliance-keyword ally qualifies.
+    /// Official keyword (16-x / DCGO `AllianceSelfEffect`): the keyword is
+    /// on the ATTACKING Digimon — "When this Digimon attacks, by suspending
+    /// 1 of your OTHER Digimon, add the suspended Digimon's DP to this
+    /// Digimon and it gains <Security Attack +1> for the attack." Any other
+    /// unsuspended own Digimon is a legal ally (DCGO
+    /// `CanSelectPermanentCondition` requires only own battle-area Digimon ≠
+    /// carrier + `CanActivateSuspendCostEffect`); the ally itself does NOT
+    /// need the keyword. (The pre-judge-quiz-Q24 model had this inverted —
+    /// gating on the ALLY carrying Alliance.)
     fn try_enter_alliance(&mut self) -> bool {
         use crate::action::space::encode_attack;
 
@@ -1145,6 +1147,11 @@ impl Game {
         };
         let attacker = pa.attacker;
         let attacker_player = attacker.player;
+
+        // The keyword lives on the attacker.
+        if !self.has_keyword(attacker, Keyword::Alliance) {
+            return false;
+        }
 
         let battle_area_len = self.player(attacker_player).battle_area.len();
         let mut candidates: Vec<u8> = Vec::new();
@@ -1162,9 +1169,6 @@ impl Game {
                 continue;
             }
             if !self.permanent_is_digimon_for_rules(h) {
-                continue;
-            }
-            if !self.has_keyword(h, Keyword::Alliance) {
                 continue;
             }
             candidates.push(i as u8);
@@ -1208,8 +1212,25 @@ impl Game {
                     index: ally_index,
                 };
 
-                // Grant attacker +ally_dp DP for the duration of the attack,
-                // plus +1 security attack. Matches DCGO's Alliance effect.
+                // DCGO `AllianceProcess` order (judge-quiz Q24):
+                //   1. Suspend the ally THROUGH the canonical chokepoint —
+                //      a keyword effect's "by suspending" cost is
+                //      effect-initiated, so OnSuspend observers ("when an
+                //      EFFECT suspends…", EX6-004) see the event. The
+                //      deferred-drain scope parks those observers (and the
+                //      ≤0-DP rules check) until the Alliance grant below
+                //      completes — official timing: rule processing and
+                //      trigger activation wait for the resolving effect.
+                //   2. Read the ally's DP AFTER suspension — a
+                //      suspended-Digimon debuff (BT16-101's −4000) applies
+                //      first, and `effective_dp` floors at 0, so a debuffed
+                //      ally can contribute +0 (judge Q24: "Tentomon won't
+                //      give any DP to Hudiemon").
+                //   3. Grant the attacker +DP and <Security Attack +1>
+                //      until end of attack (the Sec.A.+1 lands even when
+                //      the DP contribution is 0 — judge Q24 bonus tip).
+                game.enter_deferred_drain();
+                game.suspend_with_cause(ally, true);
                 let ally_dp = game.effective_dp(ally).unwrap_or(0);
                 game.modifiers.add(
                     attacker,
@@ -1229,14 +1250,11 @@ impl Game {
                         attacker_player,
                     ),
                 );
-                // Suspend the ally.
-                if let Some(perm) = game
-                    .player_mut(attacker_player)
-                    .battle_area
-                    .get_mut(ally_index as usize)
-                {
-                    perm.is_suspended = true;
-                }
+                // Alliance has fully resolved — flush: the rules check
+                // deletes a ≤0-DP ally BEFORE its parked OnSuspend
+                // observers activate (judge Q24: Kokomon's trigger fires
+                // but the carrier dies before the inherited effect runs).
+                game.exit_deferred_drain_and_flush();
 
                 if let Some(pa) = game.pending_attack.as_mut() {
                     pa.state = AttackState::CounterOpen;

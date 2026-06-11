@@ -498,10 +498,18 @@ pub enum TriggerSource {
     },
     /// Generic observer timing carrying the permanent/card that caused the
     /// event. Used by event-gated delayed Options such as suspend watchers.
+    ///
+    /// `effect_initiated` is `true` when the event was caused by a card
+    /// effect (the `EffectContext::suspend`/`unsuspend` path) and `false`
+    /// for game-rule causes (attack declaration, blocker declaration,
+    /// digivolution-reduction costs). Feeds the DSL
+    /// `event_is_effect_initiated` predicate ("when an EFFECT suspends…",
+    /// EX6-004 / G-SUSPEND-EFFECT-INITIATED).
     EventObserved {
         player: PlayerId,
         permanent: PermanentHandle,
         card: CardHandle,
+        effect_initiated: bool,
     },
     /// Observer timing scoped to one player's battle area while carrying the
     /// attacking permanent as event context.

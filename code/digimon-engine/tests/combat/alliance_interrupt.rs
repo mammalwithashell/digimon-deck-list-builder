@@ -1,10 +1,18 @@
 //! Alliance interrupt tests.
 //!
-//! Exercises the PR5 `try_enter_alliance` path:
-//!   - no Alliance allies present → window is skipped, attack proceeds
-//!   - Alliance ally present → AllianceTiming prompt installed for the
-//!     attacker's controller
-//!   - declared ally: attacker gains +ally_DP, ally is suspended, +1 SA
+//! Exercises the `try_enter_alliance` path. The `<Alliance>` keyword lives
+//! on the ATTACKER ("When THIS Digimon attacks, by suspending 1 of your
+//! other Digimon, add the suspended Digimon's DP to this Digimon and it
+//! gains <Security Attack +1>" — DCGO `AllianceSelfEffect`; corrected for
+//! judge-quiz Q24, which exposed the pre-existing ally-side model as
+//! inverted):
+//!   - attacker without Alliance → window is skipped, attack proceeds
+//!   - Alliance on the ALLY only → window is NOT offered (keyword is
+//!     attacker-side)
+//!   - attacker with Alliance + unsuspended other Digimon → AllianceTiming
+//!     prompt installed for the attacker's controller
+//!   - declared ally: ally suspended FIRST, then attacker gains +ally_DP
+//!     (post-suspension, floored at 0), +1 SA
 //!   - declined: attack proceeds to Counter/Block with no changes
 //!   - Alliance modifiers expire at end of attack
 //!   - Vortex skips Alliance too
@@ -55,6 +63,32 @@ fn no_alliance_allies_skips_window() {
     assert!(r.game.pending_selection.is_none());
 }
 
+/// `<Alliance>` is printed on the ATTACKER, not the ally — a non-Alliance
+/// attacker gets no window even when another own Digimon carries the
+/// keyword (the pre-judge-quiz-Q24 model had this inverted).
+#[test]
+fn alliance_on_ally_only_does_not_open_window() {
+    let mut r = DebugRunner::builder()
+        .add_card(dgmn("ATK", 5000))
+        .add_card(dgmn("DEF", 3000))
+        .add_card(dgmn("ALLY", 4000))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let ally = r.place_on_field(0, "ALLY", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(ally, Keyword::Alliance, Expiry::Permanent, 0);
+
+    let result = r.attack_digimon(atk, def, false);
+    assert_eq!(result, AttackResult::AttackerWins);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "the ally carrying <Alliance> does not give a keyword-less ATTACKER \
+         the Alliance window"
+    );
+}
+
 #[test]
 fn alliance_ally_installs_prompt() {
     let mut r = DebugRunner::builder()
@@ -67,7 +101,7 @@ fn alliance_ally_installs_prompt() {
     let def = r.place_on_field(1, "DEF", Some(0));
     r.game
         .modifiers
-        .grant_keyword(ally, Keyword::Alliance, Expiry::Permanent, 0);
+        .grant_keyword(atk, Keyword::Alliance, Expiry::Permanent, 0);
 
     let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::InProgress);
@@ -96,7 +130,7 @@ fn alliance_declared_buffs_attacker_and_suspends_ally() {
     let def = r.place_on_field(1, "DEF", Some(0));
     r.game
         .modifiers
-        .grant_keyword(ally, Keyword::Alliance, Expiry::Permanent, 0);
+        .grant_keyword(atk, Keyword::Alliance, Expiry::Permanent, 0);
 
     r.attack_digimon(atk, def, false);
     let ally_action = encode_attack(0, 1);
@@ -133,7 +167,7 @@ fn alliance_declined_preserves_board_state() {
     let def = r.place_on_field(1, "DEF", Some(0));
     r.game
         .modifiers
-        .grant_keyword(ally, Keyword::Alliance, Expiry::Permanent, 0);
+        .grant_keyword(atk, Keyword::Alliance, Expiry::Permanent, 0);
 
     r.attack_digimon(atk, def, false);
     r.game.resolve_selection(0, PASS).expect("decline alliance");
@@ -156,7 +190,7 @@ fn vortex_bypasses_alliance() {
     let def = r.place_on_field(1, "DEF", Some(0));
     r.game
         .modifiers
-        .grant_keyword(ally, Keyword::Alliance, Expiry::Permanent, 0);
+        .grant_keyword(atk, Keyword::Alliance, Expiry::Permanent, 0);
 
     let result = r.attack_digimon(atk, def, /* vortex = */ true);
     assert_eq!(result, AttackResult::AttackerWins);
@@ -175,7 +209,7 @@ fn suspended_alliance_ally_is_not_a_candidate() {
     let def = r.place_on_field(1, "DEF", Some(0));
     r.game
         .modifiers
-        .grant_keyword(ally, Keyword::Alliance, Expiry::Permanent, 0);
+        .grant_keyword(atk, Keyword::Alliance, Expiry::Permanent, 0);
     r.game.players[0].battle_area[ally.index as usize].is_suspended = true;
 
     let result = r.attack_digimon(atk, def, false);
@@ -198,7 +232,7 @@ fn alliance_then_block_sequence() {
     let blk = r.place_on_field(1, "BLK", Some(0));
     r.game
         .modifiers
-        .grant_keyword(ally, Keyword::Alliance, Expiry::Permanent, 0);
+        .grant_keyword(atk, Keyword::Alliance, Expiry::Permanent, 0);
     r.game
         .modifiers
         .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);

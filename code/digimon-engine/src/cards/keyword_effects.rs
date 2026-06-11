@@ -405,6 +405,18 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 };
                 perm.card_sources.len() >= 2
             })
+            // Self-scope UPSTREAM: "when THIS Digimon would be deleted" —
+            // drop the candidate when the deletion subject is a different
+            // permanent, so the outer accept dialog never parks on a
+            // neighbor's deletion (judge-quiz Q24 surfaced the phantom
+            // prompt: Rapidmon X's <Armor Purge> offered on the opponent's
+            // Tentomon dying to the 0-DP rules check).
+            .replacement_condition(|ctx, subject| {
+                let Some(me) = ctx.source_permanent else {
+                    return false;
+                };
+                matches!(subject, ReplacementSubject::Permanent(h) if *h == me)
+            })
             .replacement_process(|rctx| {
                 // Self-scope guard: only fire on the carrier's own deletion.
                 // `collect_candidates` enumerates this effect for every

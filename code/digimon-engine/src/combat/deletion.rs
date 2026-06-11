@@ -646,6 +646,9 @@ impl Game {
                         player: handle.player,
                         permanent: *handle,
                         card: *card,
+                        // Deletion observers read the cause from the
+                        // snapshot (`trigger.cause`), not this bit.
+                        effect_initiated: false,
                     },
                 );
                 for queued in self.effect_queue.iter_mut().skip(queue_start) {
@@ -668,6 +671,9 @@ impl Game {
                         player: handle.player,
                         permanent: *handle,
                         card: *card,
+                        // Deletion observers read the cause from the
+                        // snapshot (`trigger.cause`), not this bit.
+                        effect_initiated: false,
                     },
                 );
                 for queued in self.effect_queue.iter_mut().skip(queue_start_lf) {

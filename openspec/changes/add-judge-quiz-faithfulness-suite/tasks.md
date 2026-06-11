@@ -68,10 +68,10 @@
 
 ## 4. Cluster B — deferred rules-check (Q6, Q7, Q8, Q13, Q14, Q24)
 
-- [ ] 4.1 Author the missing cards: Flame Hellscythe, Pillomon, Eye of the Gorgon, Agumon (Burst Digivolve), Koromon, Rapidmon (X Antibody), Hudiemon, Tentomon, Kokomon (Nyabootmon/ShoeShoemon/ShineGreymon: Ruin Mode already implemented)
-- [ ] 4.2 Write Q6, Q7, Q8, Q13, Q14, Q24 scenario tests asserting the judge answers
-- [ ] 4.3 Fix any surfaced gap: rules-check deferred until the ongoing effect fully resolves; DP measured at the right moment; sequential sub-effect ordering (delete-then-play); DP-less / Burst-Digivolve trash chain — TDD
-- [ ] 4.4 Confirm cluster B tests green; archive closed gaps
+- [~] 4.1 Author the missing cards: **Kokomon EX6-004 (IMPLEMENTED — done 2026-06-10, with G-SUSPEND-EFFECT-INITIATED)**; Flame Hellscythe, Pillomon, Eye of the Gorgon, Rapidmon (X Antibody), Hudiemon, Tentomon done in prior waves. Still TODO for Q8: the Burst stack is implemented but blocked on `add-burst-digivolve` (G-BURST-ON-TURN-END-NOT-EXECUTED — greenfield burst resolution path, see `.claude/plans/rust-engine-gaps-burst-digivolve.md`).
+- [~] 4.2 Write Q6, Q7, Q8, Q13, Q14, Q24 scenario tests asserting the judge answers — **Q6/Q7/Q13/Q14/Q24 PASS** (Q24 done 2026-06-10: `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger`); Q8 `#[ignore]` on the burst gap.
+- [~] 4.3 Fix any surfaced gap — Q24 (2026-06-10) closed `G-SUSPEND-EFFECT-INITIATED` and surfaced+fixed four more: `<Alliance>` keyword was modeled on the ALLY (now attacker-side per DCGO `AllianceSelfEffect`); Alliance resolution order (suspend via chokepoint in a deferred-drain scope, read ally DP AFTER suspension); `effective_dp` floors at 0 (rules 17-1-3-1 / DCGO); outermost drain runs the state-based rules check BEFORE activating parked triggers. Incidental: `<Armor Purge>` accept dialog subject-scoped (was offered on neighbors' deletions); suspend chokepoint re-ticks declarative auras. Q8's burst gap remains (own change).
+- [ ] 4.4 Confirm cluster B tests green; archive closed gaps (Q6/Q7/Q13/Q14/Q24 green; Q8 pending `add-burst-digivolve`)
 
 ## 5. Cluster C — declare-then-pay cost window (Q5, Q26, Q27, Q30)
 

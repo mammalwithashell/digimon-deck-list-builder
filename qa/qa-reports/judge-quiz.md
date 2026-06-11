@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-06-06: **30/30 questions have a test entry; 23 PASS.** `cargo test --test judge_quiz`
-→ 33 passed (23 question pins + loader/probe/analogs + the Q4 control), 7 ignored, 0 failed.
+Coverage as of 2026-06-10: **30/30 questions have a test entry; 24 PASS.** `cargo test --test judge_quiz`
+→ 35 passed (24 question pins + loader/probe/analogs + the Q4 control), 6 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -49,7 +49,7 @@ Coverage as of 2026-06-06: **30/30 questions have a test entry; 23 PASS.** `carg
 | 21 | D | 0 draws | PASS | `G-DSL-DELETED-SELF-TRASH-BINDING` CLOSED 2026-06-05 + BT3-109 authored. `event_card` already resolved the deleted-self top card in trash; the only fix was making `play_from_trash_free` accept a `Card`-handle binding. Back for Revenge! grants Eyesmon `[On Deletion]` self-replay-from-trash; replaying it leaves the trash, so the remaining draw bundle is suppressed by the Q19 top-card-in-trash gate ⇒ 0 draws. (Q19's co-blocker on this row resolved 2026-06-05.) | `d::q21_remaining_on_deletion_suppressed_when_played_from_trash` |
 | 22 | F | YES, 2 tokens | **PASS** | Fixed by `fix-judge-quiz-engine-gaps` (Gap 2): `move_card_to_deck` routes a Digi-Egg returned from trash to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING, resolved) | `f::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck` |
 | 23 | D/F | 1 memory | PASS | Engine already correct (2026-05-30, run to completion): trashing 3 Tumblemon mid-effect enqueues 3 mandatory `OnDigivolutionCardTrashed` observers → multi-trigger `TriggerOrder` selection PARKS them past Medusamon's return-2; on resolution each clause condition is re-evaluated, dropping the 2 returned cards → only the 1 still in trash fires (+1). The earlier `G-ON-TRASH-OBSERVER-SYNCHRONOUS` "+3 over-count" was a mischaracterization (single-source probe + abstract reasoning, never run end-to-end). No engine change needed. | `d::q23_inherited_trash_memory_gated_on_remaining_in_trash` |
-| 24 | B | Hudiemon DP 3000 | BLOCKED-PRIMITIVE | BT23-101, BT23-037, BT16-101, ST17-07 implemented; needs EX6-004 (Kokomon), itself BLOCKED on `G-SUSPEND-EFFECT-INITIATED` (suspend event carries no by_effect bit, so Kokomon's "when an EFFECT suspends" is un-gatable). | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
+| 24 | B | Hudiemon DP 3000 | **PASS** | RESOLVED 2026-06-10: `G-SUSPEND-EFFECT-INITIATED` closed (suspend/unsuspend events carry `effect_initiated`; `EffectContext::suspend` tags true) + EX6-004 Kokomon authored. The pin surfaced FOUR more engine fixes: (1) `<Alliance>` keyword was modeled on the ALLY — moved to the ATTACKER (DCGO `AllianceSelfEffect`); (2) Alliance resolution now suspends through the canonical chokepoint inside a deferred-drain scope and reads the ally's DP AFTER suspension (DCGO `AllianceProcess` order); (3) `effective_dp` floors at 0 (rules 17-1-3-1 / DCGO `Permanent.DP`) so the debuffed ally contributes +0; (4) the outermost drain runs the state-based rules check BEFORE activating parked triggers (official: rule processing precedes trigger activation), so Tentomon dies before Kokomon's inherited +2000 can activate. Bonus-tip pinned: Sec.A.+1 retained → 2 checks. Also fixed: `<Armor Purge>`'s accept prompt offered on a NEIGHBOR's deletion (now subject-scoped upstream). | `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger` |
 | 25 | E | YES (DigiXros departure ≠ battle) | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER`): added `ReplacementCause::DigiXros` + fire the `WhenWouldLeaveBattleArea` replacement window per battle-area material before consuming. BT17-095's `[All Turns]` leave observer now fires on a DigiXros departure. | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
 | 26 | C | Returns to hand | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-REDIRECT-EXTRACTION`): added the leaving/limbo holding slot (`Game::digixros_leaving_limbo`). The leave window parks BT17-095's `<Delay>` without committing the host; WarGreymon is held in limbo (resolvable + extractable); the accepted DNA-evo re-materializes it into Omnimon; finalize finds the DigiXros recipe dropped below `min` and returns Dorbickmon to hand. Supporting fixes: identity re-resolution of the parked replacement's source/subject after the `battle_area` index shift, and excluding the in-flight host from DNA-partner candidates. | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
 | 27 | C | Pays 0 memory | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND`): the host commits only at `finalize_digixros_play_after_leave_windows`; when a pruned material leaves the recipe unsatisfied the play is abandoned with 0 memory paid. | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
@@ -62,11 +62,45 @@ Coverage as of 2026-06-06: **30/30 questions have a test entry; 23 PASS.** `carg
 | Verdict | Count | Questions |
 |---------|-------|-----------|
 | BLOCKED-CARD | 4 | 3, 15, 29, 30 |
-| BLOCKED-PRIMITIVE | 3 | 8, 24, 28 |
+| BLOCKED-PRIMITIVE | 2 | 8, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 23 | 1, 2, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27 |
+| PASS | 24 | 1, 2, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27 |
 
-(Counts: 4 + 3 + 0 + 23 = 30 of 30.)
+(Counts: 4 + 2 + 0 + 24 = 30 of 30.)
+
+Q24 → **PASS** (2026-06-10): `G-SUSPEND-EFFECT-INITIATED` closed — the suspend /
+unsuspend events now carry an `effect_initiated` bit (`EffectContext::suspend`
+tags `true`; attack/blocker/cost suspends `false`), feeding the existing DSL
+`event_is_effect_initiated` predicate — and EX6-004 Kokomon authored (single
+inherited `[Your Turn][OPT]` clause). Discover-then-pin yield was unusually
+rich: the scenario exposed FOUR adjacent engine divergences, all fixed:
+1. **`<Alliance>` keyword side inversion** — the engine gated the window on
+   the ALLY carrying Alliance; officially (and DCGO `AllianceSelfEffect`) the
+   keyword is on the ATTACKER and any other unsuspended own Digimon is a
+   legal ally. `try_enter_alliance` corrected; `combat/alliance_interrupt.rs`
+   re-pinned to the attacker-side model (+ a new negative pin).
+2. **Alliance resolution order** — the callback suspended by raw flag-set
+   (no OnSuspend observers, no aura re-tick) and read the ally's DP BEFORE
+   suspension. Now: suspend through `Game::suspend_with_cause(ally, true)`
+   inside a deferred-drain scope, read DP AFTER (DCGO `AllianceProcess`),
+   grant +DP/Sec.A.+1, then flush.
+3. **DP floor at 0** — `effective_dp` returned negative values; rules
+   17-1-3-1 + DCGO `Permanent.DP` floor at 0. A suspended Tentomon at
+   1000−4000 reads 0 → Alliance adds +0 ("won't give any DP").
+4. **Rule processing before trigger activation** — the outermost
+   `drain_effect_queue` now runs `run_state_based_rules_check` BEFORE
+   resolving queued triggers, so the ≤0-DP Tentomon is deleted before
+   Kokomon's parked inherited trigger activates (the judge's exact line:
+   "deleted due to rules check before the inherited effect has a chance to
+   activate").
+Plus an incidental: `<Armor Purge>`'s optional accept dialog was offered on
+a NEIGHBOR's deletion (candidate collection enumerates all permanents);
+now subject-scoped upstream via `replacement_condition`. Suspending also
+re-ticks declarative auras at the chokepoint so suspension-keyed auras
+(BT16-101) materialize immediately. Q14's pin was adjusted: the earlier
+rules check means the blanket driver now ACCEPTS Nyabootmon's faithful
+optional `[On Any Deletion]` recursion, so the assertion pins the FIRST
+application (−6000) and tolerates the −3000 recursion entry.
 
 Q9 → **PASS** (2026-06-06): authored BT23-102 Mastemon (PARTIAL — controller-side
 trim blocked by `G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER`) + BT15-037

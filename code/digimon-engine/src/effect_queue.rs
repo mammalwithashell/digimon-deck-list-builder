@@ -770,6 +770,14 @@ impl Game {
     /// the selection resolves.
     pub fn drain_effect_queue(&mut self) {
         self.effect_drain_depth = self.effect_drain_depth.saturating_add(1);
+        // Official timing: complete rule processing BEFORE activating queued
+        // triggered effects (judge-quiz Q24 — a Digimon driven to ≤0 DP
+        // while its trigger was parked is deleted by the rules check first,
+        // so the trigger's source is gone when activation is attempted).
+        // Outermost entries only; nested drains are mid-effect (Q6/Q13/Q14).
+        if self.effect_drain_depth == 1 && self.pending_selection.is_none() {
+            self.run_state_based_rules_check();
+        }
         self.drain_effect_queue_inner();
         if self.effect_drain_depth == 1 {
             let mut guard: u16 = 0;
@@ -1276,12 +1284,14 @@ impl Game {
                 player,
                 permanent,
                 card,
+                effect_initiated,
             } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 event_permanent: Some(permanent),
                 event_card: Some(card),
                 source_player: Some(player),
+                effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::AttackTargetChanged {
