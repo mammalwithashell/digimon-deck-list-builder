@@ -25,6 +25,7 @@ import { PhaseBanner } from '@/components/game/PhaseBanner';
 import { DigivolveBanner } from '@/components/game/DigivolveBanner';
 import { BattleEffect } from '@/components/game/BattleEffect';
 import { CardOverlay } from '@/components/game/CardOverlay';
+import { CardDetailOverlay } from '@/components/game/CardDetailOverlay';
 import { GameLogDrawer } from '@/components/game/GameLogDrawer';
 import { SecurityRevealOverlay } from '@/components/board/SecurityRevealOverlay';
 import { EffectPopup } from '@/components/game/EffectPopup';
@@ -258,6 +259,8 @@ export function GamePage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [inspectedPerm, setInspectedPerm] = useState<PermanentInfo | null>(null);
+  // Right-click card inspect (DCGO CardDetail) — enlarged single-card view.
+  const [inspectedHandCardId, setInspectedHandCardId] = useState<string | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [draggedHandIndex, setDraggedHandIndex] = useState<number | null>(null);
   const [isOverValid, setIsOverValid] = useState(false);
@@ -970,6 +973,10 @@ export function GamePage() {
             permanent={inspectedPerm}
             onClose={() => setInspectedPerm(null)}
           />
+          <CardDetailOverlay
+            cardId={inspectedHandCardId}
+            onClose={() => setInspectedHandCardId(null)}
+          />
           <SecurityRevealOverlay />
           <EffectPopup />
           <GameLogDrawer logs={store.logs} />
@@ -1021,6 +1028,7 @@ export function GamePage() {
               canPlayDragged={draggedHandIndex !== null && parsedMask.canPlayFromHand.has(draggedHandIndex)}
               previewCost={previewCost}
               onHandCardHoverIndex={setHoveredHandIndex}
+              onHandCardInspect={setInspectedHandCardId}
               actionTraces={store.actionTraces}
               latestTensorSummary={store.latestTensorSummary}
             />

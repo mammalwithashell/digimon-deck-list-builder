@@ -1115,6 +1115,18 @@ body {
   animation: overlayOpen 0.15s ease-out;
 }
 
+/* ─── Card detail (right-click inspect) open animation ────── */
+/* Matches DCGO's CardDetail: quick slide-in + scale-up (0.12s). */
+
+@keyframes cardDetailOpen {
+  0% { opacity: 0; transform: translate(calc(-50% - 24px), -50%) scale(0.8); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.animate-card-detail-open {
+  animation: cardDetailOpen 0.12s ease-out;
+}
+
 /* ─── Security break animation ────────────────────────────── */
 
 @keyframes securityBreak {
