@@ -14,12 +14,14 @@ jobs:
       fail-fast: true
       matrix:
         include:
+          # NOTE: src-tauri is a cargo WORKSPACE member, so bundles land in
+          # the workspace-root target/, not code/src-tauri/target/.
           - runner: windows-latest
             target: windows-x86_64
-            bundle_glob: 'code/src-tauri/target/release/bundle/nsis/*-setup.exe'
+            bundle_glob: 'target/release/bundle/nsis/*-setup.exe'
           - runner: ubuntu-latest
             target: linux-x86_64
-            bundle_glob: 'code/src-tauri/target/release/bundle/appimage/*.AppImage'
+            bundle_glob: 'target/release/bundle/appimage/*.AppImage'
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
