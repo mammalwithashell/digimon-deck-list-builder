@@ -6,7 +6,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from digimon_gym.agents.gauntlet import MetaGauntlet
@@ -503,14 +503,14 @@ async def cancel_gauntlet(
     gauntlet.status = "canceled"
 
     # Cancel all queued jobs for this gauntlet
-    jobs_result = await db.execute(
-        select(TrainingJob).where(
+    await db.execute(
+        update(TrainingJob)
+        .where(
             TrainingJob.gauntlet_id == gauntlet_id,
             TrainingJob.status == "queued",
         )
+        .values(status="canceled")
     )
-    for job in jobs_result.scalars().all():
-        job.status = "canceled"
 
     await db.commit()
     return {"gauntlet_id": gauntlet_id, "status": "canceled"}
