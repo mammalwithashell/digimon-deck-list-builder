@@ -58,6 +58,25 @@ For architecture details, see `../AGENTS.md`.
 > maturin develop`) before retraining so `digimon_engine` reports the new
 > layout. `standard_compact_v1` (`1375`) is unchanged.
 
+> ## ⚠️ Self-play retirement + reward-YAML fail-fast — 2026-06-11 (`harden-training-pipeline`)
+>
+> **`opponent="self-play"` / `--self-play` is RETIRED and fails at startup.**
+> `DigimonEnv` builds observations from Player 1's perspective only; the old
+> mode skipped `OpponentWrapper`, so the learner picked Player 2's actions
+> against wrong-perspective input — silently corrupting the policy. (The
+> 2026-05-31 self-play run collapsed to 22.5% vs greedy while its in-run eval
+> read a flat 100%.) Use **pool-based fictitious self-play** instead: train
+> against frozen champions via `--opponent pool --opponent-pool-manifest
+> pool.json`, where the manifest is emitted from the champion registry with
+> `python code/tools/champion_admin.py emit-pool --out pool.json`. Promotion
+> grows the pool between runs (see the standing-cadence section).
+>
+> **Reward-YAML loading is now fail-fast (BREAKING).** A configured
+> `reward_profiles_path` / `reward_gameplay_path` (including the defaults)
+> whose file does not exist raises `FileNotFoundError` at run start, instead
+> of silently training with legacy rewards. To intentionally train with the
+> legacy reward path, set `reward_profiles_path: null` explicitly.
+
 ---
 
 ## 0. Pre-flight: release-mode bindings
@@ -109,8 +128,10 @@ python -m digimon_gym.agents.pilot_training --timesteps 500000
 # LSTM vs greedy
 python -m digimon_gym.agents.pilot_training --lstm --timesteps 500000
 
-# Self-play
-python -m digimon_gym.agents.pilot_training --self-play --timesteps 1000000
+# Pool-based fictitious self-play (train vs frozen champions; the old
+# `--self-play` flag is RETIRED — see "Self-play retirement" below)
+python code/tools/champion_admin.py emit-pool --out pool.json
+python -m digimon_gym.agents.pilot_training --opponent pool --opponent-pool-manifest pool.json --timesteps 1000000
 
 # With MetaGauntlet opponent sampling
 python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
@@ -145,7 +166,8 @@ python -m digimon_gym.agents.pilot_training --lstm --lstm-hidden-size 256 \
 |---|---|---|
 | `--timesteps` | 100000 | Total training timesteps |
 | `--opponent` | greedy | Opponent policy (`greedy`, `random`) |
-| `--self-play` | off | Agent plays both sides (mutually exclusive with `--opponent`) |
+| `--self-play` | — | **RETIRED** — fails at startup with migration guidance (see "Self-play retirement") |
+| `--opponent-pool-manifest` | none | OpponentPool manifest JSON for `--opponent pool` (emit from the champion registry via `champion_admin.py emit-pool`) |
 | `--lr` | 3e-4 | Learning rate |
 | `--batch-size` | 64 | Minibatch size |
 | `--n-steps` | 2048 | Rollout buffer size |
@@ -734,7 +756,51 @@ generalist: true
 
 **Deprecation**: `digivolve_reward` / `dna_digivolve_bonus` flat fields warn when set to non-default values. `digivolve_shaping: true` is now INERT — it is accepted with no warning and has no effect on profile selection (the universal gameplay shape always carries the new digivolve weights). The `legacy_terminal_exclusivity` flag, the `_digivolve_shaped` profile, and the `_base_terminal` profile have all been removed; the loader errors with a migration message if YAML still sets the flag. Flat-field removal still targeted for v2.
 
-## 14. Dependencies
+## 14. Standing cadence: the champion loop
+
+The loop that turns individual runs into monotonic progress
+(`harden-training-pipeline`; see `docs/MODEL_EVALUATION.md` for the
+rationale). One cycle:
+
+```bash
+# 1. Derive the opponent pool from the champion registry (uniform weights;
+#    PFSP reweighting happens at sample time).
+python code/tools/champion_admin.py emit-pool --out pool.json
+
+# 2. Train against the frozen pool (pool-based fictitious self-play).
+#    The in-training anchored panel (anchored_eval_freq, default 100k)
+#    gives a trustworthy in-run curve vs greedy + champions.
+python -m digimon_gym.agents.pilot_training --generalist \
+  --opponent pool --opponent-pool-manifest pool.json --timesteps 1000000
+
+# 3. Evaluate the result against the FIXED reference frame.
+python code/tools/anchored_eval_cli.py --candidate models/<run>/final.zip \
+  --deck-pool-snapshot models/<run>/deck_pool_snapshot.json --n 100
+python code/tools/elo_ladder_cli.py --run models/<run>     # forgetting check
+
+# 4. Gated promotion (≥55% vs the compatible champion panel, seat-balanced).
+python code/tools/champion_admin.py promote --candidate models/<run>/final.zip \
+  --name v<NN> --deck-pool-snapshot models/<run>/deck_pool_snapshot.json
+
+# 5. The registry grew — the NEXT run's step 1 derives a larger pool.
+```
+
+**Promotion decisions come ONLY from the anchored frame** (anchored eval /
+the gate panel / the Elo ladder). The in-run training-opponent win rate and
+any mirror metric are never promotion evidence — CLAUDE.md rule 30. The
+`pilot/anchored/*` scalars exist precisely so a collapsing run is visible
+mid-run; they are still in-run conveniences, and the gate panel is the
+decision of record.
+
+**Recorded promotion decisions:**
+
+| Date | Candidate | Decision | Evidence |
+|---|---|---|---|
+| 2026-05-31 | `v020-generalist-v1` | registered (seed, `--force`) | first champion; 65% in-run vs greedy |
+| 2026-05-31 | `v022-generalist-v1` | registered | best model; ~77.5% anchored vs greedy |
+| 2026-06-11 | `starter1_6_flat_control_v1` | **not registered — candidate weights lost** | The 2026-05-31 control run (fresh + vs-greedy + `starter1_6_flat` reward) reached ~70–85% vs greedy and validated the flat reward, but its `final.zip` no longer exists locally (`cloud_downloads/starter1_6_flat_control_v1/` absent) and the RunPod pod was terminated without a volume. Gate panel could not be played. Follow-up: re-train the recipe fresh (it is cheap — vs-greedy, ~1M steps) and gate that result instead. |
+
+## 15. Dependencies
 
 Key RL/ML packages:
 

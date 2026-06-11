@@ -19,7 +19,9 @@
 use std::sync::{Arc, Mutex};
 
 use digimon_engine::action::build_action_mask;
-use digimon_engine::action::space::{PLAY_HAND_START, SEL_REVEAL_START, TRASH_EFFECT_START};
+use digimon_engine::action::space::{
+    CONCEDE_GAME, PLAY_HAND_START, SEL_REVEAL_START, TRASH_EFFECT_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
@@ -361,7 +363,8 @@ fn permutation_then_opponent_union_zone_tech_flow() {
     //
     // While the union-zone selection is pending and routed to p1:
     // - p0 mask must have zero selection-action bits
-    // - p1 mask must expose exactly the 4 union-zone action IDs
+    // - p1 mask must expose exactly the 4 union-zone action IDs (plus
+    //   CONCEDE_GAME, legal at every agent decision point)
 
     let mask_p0 = build_action_mask(&r.game, p0);
     let legal_p0: Vec<usize> = mask_p0
@@ -383,9 +386,13 @@ fn permutation_then_opponent_union_zone_tech_flow() {
         .collect();
     assert_eq!(
         legal_p1.len(),
-        4,
-        "p1 must see exactly 4 legal actions (2 hand + 2 trash); got {:?}",
+        5,
+        "p1 must see exactly 5 legal actions (2 hand + 2 trash + concede); got {:?}",
         legal_p1
+    );
+    assert!(
+        legal_p1.contains(&(CONCEDE_GAME as usize)),
+        "concede is legal at every agent decision point"
     );
     assert!(
         legal_p1.contains(&(PLAY_HAND_START as usize)),

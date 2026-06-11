@@ -119,10 +119,13 @@ fn cluster_a_self_immunity_blocks_own_controller_effect() {
 /// change `add-grant-triggered-effect-dsl`): EX1-068's `[Main]` grant is now
 /// authored, and the granted-trigger dispatch consults `progress_excludes`, so
 /// a `<Progress>` opponent Digimon does not fire the granted "[When Attacking]
-/// lose 2 memory" while it attacks. Player 1 (grantor) plays Ice Wall on its
-/// turn → Player 0's Medusamon (`<Progress>`) and a vanilla control Digimon
-/// both receive the grant → on Player 0's turn each attacks: the vanilla loses
-/// 2 memory, Medusamon (Progress) loses none.
+/// lose 2 memory" while it attacks. Player 0 (grantor) plays Ice Wall on its
+/// turn → Player 1's Medusamon (`<Progress>`) and a vanilla control Digimon
+/// both receive the grant → the turn passes to Player 1, and each carrier
+/// attacks on its controller's own turn (faithful staging — [When Attacking]
+/// fires on the attacker's turn): the vanilla's controller P1 loses 2 memory
+/// (controller-relative, general_rule.pdf p.7), Medusamon (Progress) loses
+/// none.
 #[test]
 fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
     let mut r = DebugRunner::builder()
@@ -133,7 +136,7 @@ fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
         .add_card(blue_digimon("P0BLUE")) // grantor's color-requirement Digimon
         .add_card(blue_digimon("VANILLA")) // non-Progress control carrier (P1)
         .hand(0, &["EX1-068"]) // Player 0 (grantor) holds Ice Wall, plays on turn 0
-        .deck(1, &["VANILLA"]) // P1's turn-start draw after `pass_turn` below
+        .deck(1, &["VANILLA"]) // feeds P1's turn-start draw after the turn passes
         .memory(10)
         .start();
     r.skip_mulligan();
@@ -170,17 +173,16 @@ fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
         "the vanilla control Digimon must also carry the grant"
     );
 
-    // Advance to Player 1's turn: a granted "[When Attacking] lose 2 memory"
-    // fires when the carrier attacks, and a Digimon attacks on its OWNER's
-    // turn. "Lose 2 memory" charges the carrier's owner (DCGO:
-    // `card.Owner.AddMemory(-2)`), so the staging must make P1 the turn
-    // player for the loss to read as a gauge subtract.
+    // Pass the turn to Player 1 — the judge scenario has the carriers attack
+    // on THEIR controller's turn ("on Player A's turn, Medusamon declares an
+    // attack"). The grant's EndOfOpponentsNextTurn expiry is keyed to P1's
+    // turn END, so it survives into P1's turn.
     r.pass_turn();
-    assert_eq!(r.turn_player(), 1, "control fires on the carrier owner's turn");
+    assert_eq!(r.turn_player(), 1, "carriers attack on their own turn");
 
     // Control: the non-Progress Digimon is the active attacker → firing
-    // WhenAttacking runs the granted body → the attacking owner (P1, the
-    // turn player) loses 2 memory.
+    // WhenAttacking runs the granted body → its controller (P1, the turn
+    // player) loses 2 memory.
     set_active_attacker(&mut r, vanilla);
     r.game.set_memory(5);
     r.game

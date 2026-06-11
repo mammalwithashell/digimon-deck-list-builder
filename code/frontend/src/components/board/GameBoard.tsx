@@ -40,6 +40,8 @@ interface GameBoardProps {
   previewCost?: number | null;
   /** Callback when hovering a hand card by index */
   onHandCardHoverIndex?: (index: number | null) => void;
+  /** Right-click (context-menu) a hand card to open the enlarged card detail. */
+  onHandCardInspect?: (cardId: string) => void;
   actionTraces?: ActionTrace[];
   latestTensorSummary?: TensorSummary | null;
 }
@@ -69,6 +71,7 @@ export function GameBoard({
   onOpponentTrashClick,
   previewCost,
   onHandCardHoverIndex,
+  onHandCardInspect,
   actionTraces = [],
   latestTensorSummary = null,
 }: GameBoardProps) {
@@ -202,6 +205,7 @@ export function GameBoard({
           handCards={player1.handCards}
           onCardClick={onPlayCard}
           onCardHoverIndex={onHandCardHoverIndex}
+          onCardInspect={onHandCardInspect}
         />
       </div>
 

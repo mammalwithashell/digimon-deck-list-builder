@@ -94,6 +94,9 @@ export interface EffectChoiceDto {
   index: number;
   label: string;
   action_id: number;
+  /** Card whose effect this branch resolves — the chooser renders its image. */
+  card_id?: string | null;
+  card_name?: string | null;
 }
 
 export interface PendingSelectionDto {

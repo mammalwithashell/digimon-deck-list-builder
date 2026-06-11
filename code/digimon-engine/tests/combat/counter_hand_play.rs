@@ -444,16 +444,15 @@ fn counter_field_ability_fires_without_play_cost() {
     // to trash" assertion holds — otherwise the permanent gets deleted by
     // the subsequent battle resolution, which is orthogonal to the field-
     // ability firing we want to witness.
-    //
-    // 5 starting memory keeps the defender's +2 on P0's side of the gauge:
-    // an attack now correctly ends the turn when memory crosses to the
-    // opponent (pinned by st1_06/st2_13), and a turn rotation here would
-    // muddy this test's subject (the field counter ability firing).
+    // `.memory(3)`: the counter body gives the defender +2 — pre-fund so
+    // the gauge does not cross zero, which would (faithfully) end P0's
+    // turn at the attack terminal and disturb the hand/trash observables
+    // (turn rotation draws for P1 / deck-outs on an empty deck).
     let mut r = DebugRunner::builder()
         .add_card(dgmn("FIELD-CTR", 4, 9000))
         .add_card(dgmn("ATK", 4, 5000))
         .hand(1, &[])
-        .memory(5)
+        .memory(3)
         .start();
     r.register_effect(
         "FIELD-CTR",
@@ -494,7 +493,7 @@ fn counter_field_ability_fires_without_play_cost() {
     assert_eq!(r.trash_size(1), trash_before, "no card consumed to trash");
     // Field counter body gained +2 memory for the defender.
     assert_eq!(r.memory(), memory_before - 2);
-    assert_eq!(r.turn_player(), 0, "gauge stayed on P0's side — no turn end");
+    assert_eq!(r.turn_player(), 0, "memory stayed on P0's side — no turn end");
 }
 
 #[test]

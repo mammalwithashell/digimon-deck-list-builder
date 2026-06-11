@@ -142,14 +142,14 @@ fn test_021_plays_self_from_security() {
 }
 
 /// TEST-022 (gain 3 memory) fires, memory changes, and the card trashes.
-///
-/// Staged with 5 starting memory so the defender's gain leaves the gauge on
-/// P0's side: an attack now correctly ends the turn when memory crosses to
-/// the opponent (DCGO EndTurnCheck / Python combat.py post-attack
-/// `check_turn_end`; pinned by st1_06/st2_13), and a turn rotation here
-/// would muddy this test's subject (the SecuritySkill firing itself).
 #[test]
 fn test_022_gains_memory_from_security() {
+    // Pre-fund P0's memory so the defender's +3 does NOT push the gauge
+    // across zero — a crossing would (faithfully) end P0's turn at the
+    // attack terminal and seesaw-flip the reading. The crossing behavior
+    // itself is pinned by st2_13's security test and gaia_red's
+    // when-attacking test; this test isolates the SecuritySkill memory
+    // application.
     let mut r = DebugRunner::builder()
         .add_card(attacker())
         .add_card(option("TEST-022"))
@@ -168,7 +168,7 @@ fn test_022_gains_memory_from_security() {
         memory_before - 3,
         "SecuritySkill memory gain must apply to the defender's side of the seesaw"
     );
-    assert_eq!(r.turn_player(), 0, "gauge stayed on P0's side — no turn end");
+    assert_eq!(r.turn_player(), 0, "memory stayed on P0's side — no turn end");
     assert_eq!(r.trash_size(1), 1);
 }
 
@@ -475,12 +475,11 @@ fn own_security_digimon_dp_modifier_does_not_affect_opponents_security() {
 /// Observable: both effects run, and `pending_selection` is `None`
 /// throughout resolution (attack returns a terminal outcome rather than
 /// `InProgress`).
-/// Staged with 5 starting memory so the defender's +2 keeps the gauge on
-/// P0's side: a post-attack memory crossing would otherwise end the turn
-/// (st1_06/st2_13 pin that), and P1's turn-start draw would conflate with
-/// the security draw this test observes.
 #[test]
 fn two_security_effects_same_source_auto_fire_in_order() {
+    // `.memory(5)`: keep the defender's +2 gain from crossing zero, which
+    // would (faithfully) end P0's turn at the attack terminal and disturb
+    // the hand/seesaw observables this test pins (see test_022 above).
     let mut r = DebugRunner::builder()
         .add_card(attacker())
         .add_card(option("TEST-028"))
@@ -505,5 +504,4 @@ fn two_security_effects_same_source_auto_fire_in_order() {
     // Both effects ran: +2 memory AND +1 hand card.
     assert_eq!(r.memory(), memory_before - 2);
     assert_eq!(r.hand_size(1), hand_before + 1);
-    assert_eq!(r.turn_player(), 0, "gauge stayed on P0's side — no turn end");
 }

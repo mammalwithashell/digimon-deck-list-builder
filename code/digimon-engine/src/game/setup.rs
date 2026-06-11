@@ -239,6 +239,7 @@ impl Game {
             in_counter_window: false,
             active_deletion_batch: None,
             dsl_outer_tail: None,
+            dsl_resolved_tail_bindings: None,
             dsl_clause_aborted: false,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
@@ -365,6 +366,7 @@ impl Game {
         self.in_counter_window = false;
         self.active_deletion_batch = None;
         self.dsl_outer_tail = None;
+        self.dsl_resolved_tail_bindings = None;
         self.dsl_clause_aborted = false;
         self.scheduled_effects = Vec::new();
         self.scheduled_drain_tail = None;

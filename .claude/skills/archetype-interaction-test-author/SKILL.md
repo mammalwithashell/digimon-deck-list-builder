@@ -26,6 +26,12 @@ trackers.
   another card's digivolve, a cost-reduction loop, a security-trigger chain).
 - You want a durable, reviewable model of how an archetype works as a system.
 
+Two saved workflows fan this skill out across archetypes — pick by intent:
+`author-archetype-combo-tests` (greenfield: author suites for archetypes that
+have none) and `audit-archetype-faithfulness` (audit: re-verify existing suites
+against card text / `general_rule.pdf` / DCGO, gap-fill untested top combos,
+and emit per-archetype faithfulness verdicts + a dated report).
+
 If cards are still missing/red, run `/assess-archetype-rust` then
 `/batch-implement-cards-rust-dsl` first — this skill will *report* what's missing
 (precondition gating, Phase 4) but won't author tests that can't pass.

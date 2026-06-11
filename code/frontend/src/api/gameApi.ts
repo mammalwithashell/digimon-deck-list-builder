@@ -385,8 +385,11 @@ export function dtoToGameState(dto: GameStateDto): GameState {
           // range scan can't find them otherwise.
           effectChoices: dto.pending_selection.effect_choices?.map((c) => ({
             index: c.index,
-            cardId: `effect-${c.index}`,
-            cardName: c.label,
+            // Real source card when the engine resolved one (renders the
+            // card face in the chooser); synthetic id otherwise so the
+            // entry still keys/renders as a placeholder.
+            cardId: c.card_id ?? `effect-${c.index}`,
+            cardName: c.card_name ?? c.label,
             label: c.label,
             // Pass engine action_id through so SelectionPanel can dispatch
             // it directly without recomputing from index.

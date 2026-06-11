@@ -250,11 +250,10 @@ fn counter_declared_stacks_card_and_fires_when_digivolving() {
     // the battle outright — this lets us inspect the stacked state after
     // the attack terminates.
     let (mut r, atk) = scenario_with_blast_in_hand("TEST-013", 3, 0, /* atk_dp = */ 3000);
-    // 5 starting memory keeps the defender's +1 on P0's side of the gauge:
-    // an attack now correctly ends the turn when memory crosses to the
-    // opponent (pinned by st1_06/st2_13), and a turn rotation here would
-    // muddy this test's subject (the blast stack + WhenDigivolving fire).
-    r.game.set_memory(5);
+    // Pre-fund P0's memory: the blast pilot's WhenDigivolving gives the
+    // defender +1, and a zero-crossing would (faithfully) end P0's turn at
+    // the attack terminal, disturbing the hand/stack observables below.
+    r.game_mut().set_memory(2);
     let hand_before = r.hand_size(1);
     let memory_before = r.memory();
     let target = r.perm_handle(1, 0);
@@ -276,7 +275,7 @@ fn counter_declared_stacks_card_and_fires_when_digivolving() {
     // WhenDigivolving fired — pilot grants +1 memory to the defender,
     // moving the seesaw toward player 1 during player 0's attack.
     assert_eq!(r.memory(), memory_before - 1);
-    assert_eq!(r.turn_player(), 0, "gauge stayed on P0's side — no turn end");
+    assert_eq!(r.turn_player(), 0, "memory stayed on P0's side — no turn end");
     // Attacker deleted by defender's stacked Digimon.
     assert_eq!(r.battle_area_size(0), 0);
 }
