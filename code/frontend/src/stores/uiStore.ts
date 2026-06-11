@@ -16,9 +16,9 @@ const BOT_SPEED_STORAGE_KEY = 'gameplay.botSpeed';
 export type BotSpeed = 'slow' | 'normal' | 'fast' | 'instant';
 
 export const BOT_SPEED_DELAY_MS: Record<Exclude<BotSpeed, 'instant'>, number> = {
-  slow: 1500,
-  normal: 900,
-  fast: 400,
+  slow: 3000,
+  normal: 1500,
+  fast: 700,
 };
 
 const BOT_SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];

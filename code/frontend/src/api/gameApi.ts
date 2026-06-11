@@ -365,7 +365,13 @@ export function dtoToGameState(dto: GameStateDto): GameState {
     turnCount: dto.turn_count,
     currentPhase: mapPhase(dto.current_phase),
     currentPlayer: dto.turn_player,
-    memoryGauge: dto.memory,
+    // Engine `memory` is from the TURN PLAYER's perspective; the UI contract
+    // (MemoryGauge, and the browser wire's `to_ui_json` memoryGauge) is
+    // player-1's perspective. Without this flip, the opponent's memory
+    // renders on the local player's side of the gauge during the
+    // opponent's turn — visible since paced bot turns exposed mid-turn
+    // states (add-bot-action-pacing).
+    memoryGauge: memory0,
     isGameOver: dto.game_over,
     // Convert the engine's raw player id (0/1) to the UI's 1-indexed
     // convention (1/2), matching `localPlayer={1}` + `playerLabels{1,2}` in

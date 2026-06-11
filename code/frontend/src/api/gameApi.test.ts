@@ -149,4 +149,41 @@ describe('dtoToGameState', () => {
     expect(dtoToGameState(dto(1)).winner).toBe(2); // engine 1 (opponent) → UI 2
     expect(dtoToGameState(dto(null)).winner).toBeNull();
   });
+
+  // Engine `memory` is from the TURN PLAYER's perspective; `memoryGauge` (like
+  // the browser wire's to_ui_json) must be from PLAYER 1's perspective. Without
+  // the flip, the opponent's memory renders on the local player's side of the
+  // gauge during paced bot turns (regression caught playtesting
+  // add-bot-action-pacing).
+  it('orients memoryGauge to player 1 regardless of whose turn it is', () => {
+    const player = (id: number) => ({
+      id,
+      hand: [],
+      battle_area: [],
+      breeding: null,
+      deck_count: 50,
+      trash_count: 0,
+      security_count: 5,
+      is_eliminated: false,
+    });
+    const dto = (turnPlayer: number, memory: number) => ({
+      turn_count: 2,
+      turn_player: turnPlayer,
+      current_phase: 'Main',
+      memory,
+      game_over: false,
+      winner: null,
+      mulligan_current_player: null,
+      mulligan_used: [false, false],
+      players: [player(0), player(1)],
+    });
+
+    // My turn, I hold 6 memory → my side of the gauge (positive).
+    expect(dtoToGameState(dto(0, 6)).memoryGauge).toBe(6);
+    // Opponent's turn, THEY hold 6 memory → their side (negative for p1).
+    expect(dtoToGameState(dto(1, 6)).memoryGauge).toBe(-6);
+    // Player states stay consistent with the gauge.
+    expect(dtoToGameState(dto(1, 6)).player1.memory).toBe(-6);
+    expect(dtoToGameState(dto(1, 6)).player2.memory).toBe(6);
+  });
 });

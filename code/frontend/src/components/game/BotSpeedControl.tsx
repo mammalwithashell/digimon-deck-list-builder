@@ -1,9 +1,9 @@
 import { useUiStore, type BotSpeed } from '@/stores/uiStore';
 
 const SPEEDS: { value: BotSpeed; label: string; title: string }[] = [
-  { value: 'slow', label: 'Slow', title: 'Bot acts every 1.5s' },
-  { value: 'normal', label: 'Normal', title: 'Bot acts every 0.9s' },
-  { value: 'fast', label: 'Fast', title: 'Bot acts every 0.4s' },
+  { value: 'slow', label: 'Slow', title: 'Bot acts every 3s' },
+  { value: 'normal', label: 'Normal', title: 'Bot acts every 1.5s' },
+  { value: 'fast', label: 'Fast', title: 'Bot acts every 0.7s' },
   { value: 'instant', label: 'Instant', title: 'Bot turn resolves at once' },
 ];
 
