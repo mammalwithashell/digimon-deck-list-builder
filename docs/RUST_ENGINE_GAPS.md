@@ -1548,3 +1548,73 @@ Digivolving] trims "both players' security stacks so they have 3 cards left" —
   `bt23_102_when_digivolving_controller_trim_removes_own_security` is `#[ignore]`'d
   citing this gap. Shared by any effect that removes >1 of its OWN security while
   carrying a self `OnLoseSecurity` observer.
+
+## Parametric keyword token inside a conditional/formula clause is double-parsed as a flat keyword (2026-06-08)
+
+- **Symptom:** WarGreymon (ST1-11) reports `<Security A.>` total **4** when it should
+  be **3**. With 4 digivolution sources, the printed effect "[Your Turn] For every 2
+  digivolution cards this Digimon has, it gains ＜Security A. +1＞" grants Security A.
+  +2 (two pairs) on top of the base 1 check → 3 security checked. Engine resolves 4.
+  This is a **combat** bug, not just display: `effective_security_strike` returns 4, so
+  WarGreymon really checks one extra security card. Found live via the desktop debug
+  bridge (`digimon-scenario-mcp`) during a starter-deck game.
+- **Root cause:** double-count. The DSL models the effect correctly as a base-inclusive
+  `security_attack_fn` formula (`ST1-11.yaml`): `floor((2 + material_count)/2) = 3` for
+  4 sources. But `parse_printed_keywords` (`card_data.rs:531`) scans the effect text for
+  any `＜…＞` token and extracts the literal `＜Security A. +1＞` (the per-pair unit inside
+  the conditional clause) as an **unconditional** `Keyword::SecurityAttackPlus(1)`
+  (`card_data.rs:595–612`). `raw_security_strike` (`combat/mod.rs:2485–2507`) then sums
+  `base_checks (formula) 3 + sa_keyword (parsed) 1 = 4`. Both display wires
+  (`serialization.rs:388`, `engine_commands.rs:488`) faithfully mirror the engine via
+  `effective_security_strike - 1`, so the display is *correct given the wrong engine
+  value* — `serialization.rs:385` even documents the mistaken belief that 4 is right.
+- **Scope:** any card whose **conditional/formula** text embeds a parametric keyword
+  token — `＜Security A. +N＞`, and likely `＜Draw N＞` / `＜De-Digivolve N＞` — inside a
+  "For every / While / it gains …" clause is at risk of the same flat double-parse. The
+  parser cannot distinguish a standalone granted keyword from one that is the unit of a
+  formula already modeled by the DSL.
+- **Suggested fix:** stop the parser from emitting a flat parametric keyword when the
+  token is part of a conditional/formula grant. Options: (a) when a card defines a
+  `security_attack_fn` (or analogous formula aura), suppress the auto-parsed flat
+  `SecurityAttackPlus/Minus` for that card; (b) make `parse_printed_keywords` only treat
+  a parametric keyword as flat when it is a standalone declaration (not preceded by
+  "gains"/"For every"/"While" in the same clause); or (c) a per-card `card_overrides`
+  keyword suppression. (a) is the most principled — the DSL formula is the source of
+  truth and the printed token is reminder text.
+- **Repro / regression:** `qa/scenarios/st1-11-wargreymon-security-attack-doublecount.json`
+  (minimal: WarGreymon over 4 sources, P1's turn). The assertion vocabulary has **no
+  security-attack assertion kind** (secondary gap, STILL OPEN — add `security_attack` to
+  the `/debug` evaluator + fixture schema), so the durable test is a Rust real-card-data
+  test asserting `game.effective_security_strike(handle) == 3`.
+- **RESOLVED 2026-06-08 at the ROOT CAUSE (parser), via the `fix-innate-keyword-overextraction`
+  change** — superseding an earlier combat-site patch. The real bug was that
+  `parse_printed_keywords` (`card_data.rs`) inferred a card's INNATE keywords by scanning the
+  whole effect blob, so WarGreymon's `<Security A. +1>` (the reminder unit of its
+  base-inclusive `security_attack_fn` formula) was extracted as a flat `SecurityAttackPlus(1)`
+  and added on top of the formula → 4 (and +1 even off-turn). The fix replaces the blob scan
+  with a **per-token left-context classifier**: a `<kw>` is innate only when its left context
+  is empty / ends with `]` (a `[Timing/Location]` label) / `)` (a prior keyword reminder) /
+  `＞` (a chained keyword) — i.e. it is a printed attribute, not introduced by a grant verb
+  (`gains <…>`), a filter (`with <…>`), or a DP-and-keyword comma. WarGreymon's token
+  (`…it gains <Security A. +1>`) is now correctly NOT innate, so `security_attack_keyword_bonus`
+  returns 0 and the formula alone governs: 3 on your turn, 1 off-turn. A pool-wide audit
+  (`openspec/changes/fix-innate-keyword-overextraction/keyword-{diff,audit}.md`) confirmed
+  0 genuine regressions across the implemented pool; full `cards_behavioral` suite: 4521 pass,
+  0 fail. Regression tests (build from `full_card_data()` so the phantom is actually parsed):
+  `cards_behavioral/st1/wargreymon_security_attack.rs::wargreymon_real_data_clean_stack_checks_three_on_your_turn`
+  (→3) and `..._checks_one_off_turn` (→1). The earlier `combat/mod.rs` subtraction + the
+  `top_card_has_security_attack_formula` / `top_face_security_attack_keyword_bonus` helpers
+  were removed (one mechanism, at the root, not two).
+
+## Keyword innate-vs-granted parsing — durable contract (2026-06-08)
+
+- `parse_printed_keywords` (`card_data.rs`) now distinguishes a card's INNATE (printed-attribute)
+  keywords from keywords its effects GRANT/reference, by per-token left-context (see the
+  WarGreymon resolution above). This fixed a broad latent class: granted/conditional/formula
+  keyword tokens (`Security A.`, `Draw`, `De-Digivolve`, boolean keywords) and target-filter
+  references (`Delete a Digimon with <Blocker>`) were all being treated as innate attributes.
+- **Deferred follow-up (not yet needed):** a fully DSL-authoritative keyword source — the
+  unused `spec.keywords` field declaring innate keywords in YAML instead of parsing prose. The
+  context-classifier proved robust enough (0 genuine regressions in the pool audit) that this
+  re-architecture is not required now; revisit only if a future card layout defeats the
+  context rule.

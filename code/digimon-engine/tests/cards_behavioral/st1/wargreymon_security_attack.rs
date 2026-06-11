@@ -267,3 +267,78 @@ fn wargreymon_attacking_zero_security_player_wins() {
     assert_eq!(runner.winner(), Some(0));
     assert_eq!(result, AttackResult::GameWon);
 }
+
+// ── Real-card-data regression (add-scenario-capture-mcp bug-hunt, 2026-06-08) ──
+//
+// The `dsl_card` builder above registers compiled effects with EMPTY printed
+// `effect_text`, so `face_keywords` never parses WarGreymon's reminder token
+// `<Security A. +1>` — the bug is invisible to those tests. The LIVE game (and
+// these tests) build from `full_card_data()`, whose `effect_text` IS populated,
+// so `parse_printed_keywords` extracts a phantom flat `SecurityAttackPlus(1)`
+// on top of the base-inclusive `security_attack_fn` formula → one extra check.
+// Found live via the desktop debug bridge: a clean 4-source WarGreymon read 4.
+
+use digimon_engine::deck_tools::full_card_data;
+use digimon_engine::enums::GamePhase;
+use digimon_engine::game::Game;
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::rules::Rules;
+
+/// Vanilla ST-1 line: Koromon → Agumon → Birdramon → MetalGreymon → WarGreymon.
+/// Birdramon (ST1-05) has no inherited `<Security A.>`, so WarGreymon's own
+/// formula + its own phantom face keyword are the ONLY security-attack inputs.
+const REAL_BIRDRAMON_STACK: [&str; 5] = ["ST1-01", "ST1-03", "ST1-05", "ST1-09", "ST1-11"];
+
+/// Build a real-card-data game (populated `effect_text`) with the WarGreymon
+/// stack on player 0's field, on player 0's turn iff `controller_turn`.
+fn real_data_game(stack: &[&str], controller_turn: bool) -> (Game, PermanentHandle) {
+    let db = full_card_data();
+    let deck: Vec<String> = std::iter::repeat("ST1-01".to_string())
+        .take(5)
+        .chain(std::iter::repeat("ST1-03".to_string()).take(45))
+        .collect();
+    let decks = vec![deck.clone(), deck];
+    let mut game = Game::new(&decks, &db, Rules::standard(), Some(0))
+        .expect("ST1 deck must construct from full card data");
+    game.start_game();
+    while let Some(p) = game.mulligan_current_player() {
+        let _ = game.accept_mulligan(p, true);
+    }
+    game.stage_set_first_player(if controller_turn { 0 } else { 1 });
+    game.current_phase = GamePhase::Main;
+    let index = game.stage_place_field_stack(0, stack, false, 1);
+    let handle = PermanentHandle {
+        player: 0,
+        index: index as u8,
+    };
+    game.tick_declarative_effects();
+    (game, handle)
+}
+
+/// THE reported bug. With real card data, a clean 4-source WarGreymon on your
+/// turn must check exactly 3 (base-inclusive formula `1 + floor(4/2)`), NOT 4.
+/// The `<Security A. +1>` inside its own conditional reminder text must not be
+/// re-added as a flat keyword on top of the formula.
+#[test]
+fn wargreymon_real_data_clean_stack_checks_three_on_your_turn() {
+    let (game, h) = real_data_game(&REAL_BIRDRAMON_STACK, true);
+    assert_eq!(
+        game.effective_security_strike(h),
+        3,
+        "4-source WarGreymon on your turn = 1 + floor(4/2) = 3; the formula's own \
+         <Security A. +1> reminder token must NOT double-count as a flat keyword"
+    );
+}
+
+/// Off-turn: WarGreymon's `[Your Turn]` formula is inactive → base 1 check. The
+/// phantom flat keyword must not leak a +1 here either.
+#[test]
+fn wargreymon_real_data_clean_stack_checks_one_off_turn() {
+    let (game, h) = real_data_game(&REAL_BIRDRAMON_STACK, false);
+    assert_eq!(
+        game.effective_security_strike(h),
+        1,
+        "off-turn: the [Your Turn] formula is inactive → base 1, with no phantom \
+         <Security A. +1> from WarGreymon's own reminder text"
+    );
+}
