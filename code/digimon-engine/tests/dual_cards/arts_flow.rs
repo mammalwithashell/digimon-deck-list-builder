@@ -316,6 +316,22 @@ fn arts_runs_rule_check_before_trigger_resolution() {
         .resolve_selection(0, encode_attack(0, 1))
         .expect("accept Arts");
 
+    // The ≤0-DP rule-check deletion leaves [On Deletion] and [When
+    // Digivolving] pending simultaneously for player 0, so the engine
+    // surfaces the resolution order as a TriggerOrder prompt. Either
+    // order fires both witnesses exactly once.
+    while r
+        .game
+        .pending_selection
+        .as_ref()
+        .is_some_and(|sel| sel.kind == SelectionKind::TriggerOrder)
+    {
+        let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        r.game
+            .resolve_selection(0, action)
+            .expect("resolve trigger-order prompt");
+    }
+
     assert_eq!(r.battle_area_size(0), 1, "0-DP Arts stack was deleted");
     assert_eq!(
         r.trash_size(0),
