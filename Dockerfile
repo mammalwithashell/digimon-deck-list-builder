@@ -29,7 +29,9 @@ COPY --from=rust-builder /wheels/*.whl /wheels/
 
 # ── Stage 3: Runtime ──────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+# PYTHONPATH: alembic (unlike uvicorn) does not add the cwd to sys.path,
+# so `alembic upgrade head` can't import server.db.models without it.
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app
 # libstdc++6: the digimon_engine wheel links the ort (ONNX Runtime) crate,
 # which needs the C++ runtime at import time.
 RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 \
