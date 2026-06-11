@@ -1,6 +1,6 @@
 ---
 name: run-desktop
-description: Start the Digimon TCG simulator UI in DESKTOP mode (the Tauri app window) for local play / manual testing. Use whenever the user wants to run, start, launch, open, relaunch, or "see" the desktop app, the Tauri app, the game window, or "the UI in desktop mode" — and after editing frontend or src-tauri/engine code that you want to verify in the real desktop app. This is the verified launch recipe; prefer it over rediscovering `cargo tauri dev` flags, because the repo's configured `beforeDevCommand` is broken in this environment and a naive `cargo tauri dev` fails.
+description: Start the Digimon TCG simulator UI in DESKTOP mode (the Tauri app window) for local play / manual testing, with the dev-only scenario debug bridge enabled so digimon-scenario-mcp can stage/snapshot/test the running game. Use whenever the user wants to run, start, launch, open, relaunch, or "see" the desktop app, the Tauri app, the game window, or "the UI in desktop mode" — and after editing frontend or src-tauri/engine code that you want to verify in the real desktop app. This is the verified launch recipe; prefer it over rediscovering `cargo tauri dev` flags, because the repo's configured `beforeDevCommand` is broken in this environment and a naive `cargo tauri dev` fails. To launch without the bridge (pure play / release-shaped), drop the bridge flags noted in step 4.
 ---
 
 # Run the desktop app (Tauri)
@@ -29,11 +29,14 @@ Run these from the repo root. Use your background-task tooling for the long-runn
    until netstat -ano | grep -q ':5173.*LISTEN'; do sleep 1; done; echo "5173 READY"
    ```
 
-4. **Launch the Tauri app, skipping the broken `beforeDevCommand`** (background), from `code/src-tauri`:
+4. **Launch the Tauri app with the debug bridge, skipping the broken `beforeDevCommand`** (background), from `code/src-tauri`:
    ```bash
-   cd code/src-tauri && cargo tauri dev --config '{"build":{"beforeDevCommand":""}}'
+   cd code/src-tauri && DIGIMON_DEBUG_BRIDGE=1 cargo tauri dev --features debug-bridge \
+     --config '{"build":{"beforeDevCommand":""}}'
    ```
-   First build compiles the engine + shell (~1–3 min); incremental relaunches are ~15–60s. When it prints `Running .../target/debug/digimon-tcg.exe`, the window is open. Confirm with `tasklist | grep -i digimon-tcg.exe` (Windows).
+   First build compiles the engine + shell + `axum` (~1–3 min; the `debug-bridge` feature pulls `axum` the first time); incremental relaunches are ~15–60s. When it prints `Running .../target/debug/digimon-tcg.exe`, the window is open. Confirm with `tasklist | grep -i digimon-tcg.exe` (Windows).
+
+   The `debug-bridge` feature + `DIGIMON_DEBUG_BRIDGE=1` start a localhost-only staging server (`127.0.0.1:5174`, override with `DIGIMON_DEBUG_BRIDGE_PORT`) so the `digimon-scenario-mcp` can stage boards / snapshot state / author tests against the *running* window — see "the debug bridge" below. To launch **without** the bridge (e.g. a pure play session, or to reproduce a release-shaped build), drop both `DIGIMON_DEBUG_BRIDGE=1` and `--features debug-bridge`; the bridge is then absent and inert.
 
 ## After it's running
 
@@ -48,13 +51,8 @@ Run these from the repo root. Use your background-task tooling for the long-runn
 - **Web (browser) mode is different**: `npm run dev` (not `dev:desktop`) + the hosted API `python -m uvicorn server.api:app` from the repo root (its SQLite path `./data/app.db` is cwd-relative, so launch from the root). Desktop mode needs neither the browser build nor uvicorn for local bot games.
 - The app downloads trained AI models at runtime from the hosted API's manifest; local greedy-bot games work fully offline.
 
-## Optional: agent-driven staging via the debug bridge
+## The debug bridge (enabled by this skill)
 
-To let the `digimon-scenario-mcp` drive the *running desktop game* (stage arbitrary boards, snapshot state, author tests without playing), build + run with the dev-only bridge enabled:
+Step 4 launches with the dev-only **debug bridge** on, so `digimon-scenario-mcp` can drive the *running desktop game* — stage arbitrary boards, snapshot state, author tests without playing. The bridge is a localhost-only (`127.0.0.1:5174`, override with `DIGIMON_DEBUG_BRIDGE_PORT`) HTTP server compiled **only** under the `debug-bridge` cargo feature and started **only** when `DIGIMON_DEBUG_BRIDGE=1` — it is absent from release/prod builds entirely. It drops a discovery file at `<data_dir>/digimon-tcg/debug_bridge.json` the MCP auto-reads, and emits a `debug:state-changed` window event after each external mutation so the board refreshes without a reload. See `docs/SCENARIO_MCP.md`.
 
-```bash
-cd code/src-tauri && DIGIMON_DEBUG_BRIDGE=1 cargo tauri dev --features debug-bridge \
-  --config '{"build":{"beforeDevCommand":""}}'
-```
-
-The bridge is a localhost-only (`127.0.0.1:5174`, override with `DIGIMON_DEBUG_BRIDGE_PORT`) HTTP server compiled **only** under the `debug-bridge` feature and started **only** when `DIGIMON_DEBUG_BRIDGE=1` — it is absent from release/prod builds. It drops a discovery file at `<data_dir>/digimon-tcg/debug_bridge.json` the MCP auto-reads. See `docs/SCENARIO_MCP.md`. Without the flag, the normal launch (step 4) has no network surface.
+To launch a **bridge-free** session (pure play, or a release-shaped build with no network surface), drop both `DIGIMON_DEBUG_BRIDGE=1` and `--features debug-bridge` from the step-4 command.
