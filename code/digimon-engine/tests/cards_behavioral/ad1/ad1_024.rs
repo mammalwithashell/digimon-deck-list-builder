@@ -206,6 +206,10 @@ fn ad1_024_all_turns_observer_covers_play_and_digivolve() {
         observer.once_per_turn,
         "[All Turns] clause must be once_per_turn"
     );
+    assert!(
+        observer.optional,
+        "[All Turns] clause must be optional ('you may' — DCGO SetIsSkippable initial Yes/No)"
+    );
 }
 
 /// Alt-paths: standard Blue Lv.5 cost 5 (printed), Dragon-Mode-name cost 1,
@@ -326,10 +330,14 @@ fn ad1_024_wd_bounces_lowest_dp_opp_to_deck_bottom() {
     );
 }
 
-/// With NO opponent Digimon, the [When Digivolving] bounce silently no-ops:
-/// no selection installs and nothing panics.
+/// With NO opponent Digimon, the [When Digivolving] bounce silently no-ops.
+/// The only selection left after the digivolve is the [All Turns] observer's
+/// outer Yes/No (it fires off AD1-024's own digivolve and DCGO always shows
+/// the initial prompt); declining it leaves nothing pending.
 #[test]
-fn ad1_024_wd_no_target_installs_no_selection() {
+fn ad1_024_wd_no_target_installs_no_bounce_selection() {
+    use digimon_engine::selection::SelectionKind;
+
     let mut runner = fighter_mode_runner(&[]);
 
     let base = runner.place_on_field(0, "AD1-024-BASE", Some(0));
@@ -341,9 +349,26 @@ fn ad1_024_wd_no_target_installs_no_selection() {
     );
     runner.game.drain_effect_queue();
 
+    // No OppField bounce select may install — at most the All Turns outer
+    // Yes/No confirm (Replacement kind).
+    if let Some(p) = runner.game.pending_selection.as_ref() {
+        assert_eq!(
+            p.kind,
+            SelectionKind::Replacement,
+            "the only permissible selection is the [All Turns] outer confirm; got {:?} ({})",
+            p.kind,
+            p.prompt
+        );
+        let (player, _) = (p.selecting_player, ());
+        runner
+            .game
+            .resolve_selection(player, PASS)
+            .expect("declining the outer confirm resolves");
+        runner.game.drain_effect_queue();
+    }
     assert!(
         runner.game.pending_selection.is_none(),
-        "with no opponent Digimon the mandatory bounce select must silently no-op"
+        "nothing further may be pending after declining the All Turns confirm"
     );
 }
 
@@ -587,5 +612,180 @@ fn ad1_024_all_turns_is_once_per_turn() {
     assert!(
         runner.game.pending_selection.is_none(),
         "second play in the same turn must be locked by [Once Per Turn]"
+    );
+}
+
+// ─── SECTION 4 — [All Turns] decline + OPT refund (DCGO RemoveUse) ──────────
+
+/// Decline the selection currently pending (PASS on an optional selection).
+fn decline_pending(runner: &mut DebugRunner) {
+    let player = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("a selection must be pending to decline")
+        .selecting_player;
+    runner
+        .game
+        .resolve_selection(player, PASS)
+        .expect("decline resolves");
+    runner.game.drain_effect_queue();
+}
+
+/// The observer always leads with DCGO's initial Yes/No (the outer confirm),
+/// even though its first body step is itself declinable. DECLINING the outer
+/// confirm refunds the [Once Per Turn] (DCGO RemoveUse): a second qualifying
+/// play in the same turn fires the observer again.
+#[test]
+fn ad1_024_all_turns_decline_outer_confirm_refunds_opt() {
+    use digimon_engine::selection::SelectionKind;
+
+    let mut runner = fighter_mode_runner(&[
+        opp_digimon("AD1-024-OPP-A", "OppA", 5000),
+        friendly_filler("AD1-024-FILLER"),
+        friendly_filler("AD1-024-FILLER-2"),
+    ]);
+
+    runner.place_on_field(0, "AD1-024", Some(0));
+    runner.place_on_field(1, "AD1-024-OPP-A", None);
+
+    let first = runner.place_on_field(0, "AD1-024-FILLER", None);
+    runner.fire_play_event_triggers(0, first.index as usize, false, false);
+
+    let p = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the [All Turns] outer confirm must install");
+    assert_eq!(
+        p.kind,
+        SelectionKind::Replacement,
+        "the first prompt must be the outer Yes/No confirm (DCGO initial bool prompt)"
+    );
+    decline_pending(&mut runner); // "No" — nothing executed
+
+    // The OPT must be refunded: a second play the same turn prompts again.
+    let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
+    runner.fire_play_event_triggers(0, second.index as usize, false, false);
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "declining the outer confirm must refund the OPT (DCGO RemoveUse) — \
+         the observer must fire again on the next qualifying play this turn"
+    );
+}
+
+/// Accepting the outer confirm but then declining every sub-pick also refunds
+/// the OPT (DCGO's executed-flag: nothing ran → RemoveUse).
+#[test]
+fn ad1_024_all_turns_accept_then_decline_everything_refunds_opt() {
+    let mut runner = fighter_mode_runner(&[
+        opp_digimon("AD1-024-OPP-A", "OppA", 5000),
+        friendly_filler("AD1-024-FILLER"),
+        friendly_filler("AD1-024-FILLER-2"),
+    ]);
+
+    let fighter = runner.place_on_field(0, "AD1-024", Some(0));
+    let opp = runner.place_on_field(1, "AD1-024-OPP-A", None);
+
+    let first = runner.place_on_field(0, "AD1-024-FILLER", None);
+    runner.fire_play_event_triggers(0, first.index as usize, false, false);
+
+    pick_first(&mut runner); // accept the outer confirm
+    // The suspend pick is DECLINABLE (DCGO canNoSelect: true) — decline it.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "the suspend pick must install after accepting the confirm"
+    );
+    assert!(
+        runner.pending_is_optional(),
+        "the suspend pick must be declinable (DCGO canNoSelect: true)"
+    );
+    decline_pending(&mut runner);
+
+    // Nothing executed: no suspend, no unsuspend (opp Digimon existed, so no
+    // standalone-unsuspend branch), not by effect (no bounce leg).
+    let opp_perm = &runner.game.players[1].battle_area[opp.index as usize];
+    assert!(!opp_perm.is_suspended, "nothing may have been suspended");
+
+    // OPT refunded: a second qualifying play prompts again.
+    let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
+    runner.fire_play_event_triggers(0, second.index as usize, false, false);
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "accept-then-decline-everything must refund the OPT (DCGO executed-flag RemoveUse)"
+    );
+    let _ = fighter;
+}
+
+/// Declining the suspend pick does NOT skip the by-effect bounce leg — in DCGO
+/// the two are independent once the initial Yes/No is accepted. And because the
+/// bounce executed, the OPT is consumed (no refund).
+#[test]
+fn ad1_024_all_turns_declined_pick_still_offers_byeffect_bounce() {
+    let mut runner = fighter_mode_runner(&[
+        opp_digimon("AD1-024-OPP-A", "OppA", 5000),
+        opp_digimon("AD1-024-OPP-B", "OppB", 7000),
+        friendly_filler("AD1-024-FILLER"),
+        friendly_filler("AD1-024-FILLER-2"),
+    ]);
+
+    runner.place_on_field(0, "AD1-024", Some(0));
+    runner.place_on_field(1, "AD1-024-OPP-A", None);
+    let opp_b = runner.place_on_field(1, "AD1-024-OPP-B", None);
+    {
+        // Pre-suspend OppB so the by-effect leg has a target even though the
+        // suspend pick is declined.
+        let perm = &mut runner.game.players[1].battle_area[opp_b.index as usize];
+        perm.is_suspended = true;
+    }
+
+    let opp_field_before = runner.battle_area_size(1);
+    let opp_deck_before = runner.deck_size(1);
+
+    // Play BY EFFECT.
+    let first = runner.place_on_field(0, "AD1-024-FILLER", None);
+    runner.fire_play_event_triggers(0, first.index as usize, true, false);
+
+    pick_first(&mut runner); // accept the outer confirm
+    decline_pending(&mut runner); // decline the suspend pick
+
+    // The by-effect bounce leg must still offer the suspended OppB.
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the by-effect bounce select must install despite the declined pick");
+    let non_pass: Vec<_> = pending
+        .valid_action_ids
+        .iter()
+        .filter(|&&a| a != PASS)
+        .copied()
+        .collect();
+    assert_eq!(
+        non_pass.len(),
+        1,
+        "only the pre-suspended OppB qualifies for the by-effect bounce; got {}",
+        non_pass.len()
+    );
+    pick_first(&mut runner);
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        opp_field_before - 1,
+        "the suspended Digimon must leave the field"
+    );
+    assert_eq!(runner.deck_size(1), opp_deck_before + 1);
+    assert_eq!(
+        runner.game.players[1].deck[0].card_id(&runner.game.card_data),
+        "AD1-024-OPP-B",
+        "OppB must land on the deck bottom"
+    );
+
+    // The bounce executed → OPT consumed → no refund.
+    let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
+    runner.fire_play_event_triggers(0, second.index as usize, false, false);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "the bounce executed, so the OPT is consumed — no second fire this turn"
     );
 }

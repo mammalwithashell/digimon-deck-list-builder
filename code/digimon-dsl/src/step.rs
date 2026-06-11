@@ -308,6 +308,13 @@ pub enum StepSpec {
     RedirectAttackTarget(RedirectAttackTargetArgs),
     CancelAttack(EmptyArgs),
     OpenCounterWindow(EmptyArgs),
+    /// Refund this clause's once-per-turn use (DCGO `ActivateClass.RemoveUse()`
+    /// — "if nothing executed, the per-turn use is not consumed"). Place it
+    /// under a final `if:` whose condition detects the nothing-executed case
+    /// (typically `binding_absent` over every pick the body could make).
+    /// Only meaningful inside a `once_per_turn`/`max_per_turn` triggered
+    /// clause; a no-op elsewhere. G-OPT-REFUND-ON-DECLINE.
+    RefundOpt(EmptyArgs),
     RefireEffect(RefireEffectArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
@@ -563,6 +570,7 @@ impl Serialize for StepSpec {
             StepSpec::RedirectAttackTarget(v) => kv!(s, "redirect_attack_target", v),
             StepSpec::CancelAttack(v) => kv!(s, "cancel_attack", v),
             StepSpec::OpenCounterWindow(v) => kv!(s, "open_counter_window", v),
+            StepSpec::RefundOpt(v) => kv!(s, "refund_opt", v),
             StepSpec::RefireEffect(v) => kv!(s, "refire_effect", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
@@ -818,6 +826,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "redirect_attack_target" => StepSpec::RedirectAttackTarget(map.next_value()?),
             "cancel_attack" => StepSpec::CancelAttack(map.next_value()?),
             "open_counter_window" => StepSpec::OpenCounterWindow(map.next_value()?),
+            "refund_opt" => StepSpec::RefundOpt(map.next_value()?),
             "refire_effect" => StepSpec::RefireEffect(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
@@ -2193,6 +2202,16 @@ pub struct SelectFieldArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// PASSing this optional pick CONTINUES the clause with the binding
+    /// unresolved (DCGO: a declined `SelectPermanentEffect` resolves with an
+    /// empty list and the coroutine continues), so binding-gated follow-ups
+    /// (`binding_exists` / `binding_absent`) and independent legs still run.
+    /// Default `false` keeps the historical permanent-select semantic —
+    /// decline drops the rest of the clause — which many existing cards use
+    /// as their accept/decline cost gate (e.g. P-169's "by suspending this
+    /// Tamer"). G-OPT-REFUND-ON-DECLINE.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub continue_on_decline: bool,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]

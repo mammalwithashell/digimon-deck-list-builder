@@ -2932,6 +2932,34 @@ impl Game {
         }
     }
 
+    /// Refund one recorded activation — DCGO `ActivateClass.RemoveUse()`.
+    /// Driven by the DSL `refund_opt` step when an optional once-per-turn
+    /// body executed nothing (G-OPT-REFUND-ON-DECLINE).
+    pub(crate) fn unrecord_source_permanent_activation(
+        &mut self,
+        handle: PermanentHandle,
+        source_card: CardHandle,
+        effect_slot: u8,
+    ) {
+        if handle.index == BREEDING_TARGET as u8 {
+            if let Some(perm) = self
+                .players
+                .get_mut(handle.player as usize)
+                .and_then(|p| p.breeding_area.as_mut())
+            {
+                perm.unrecord_activation(source_card, effect_slot);
+            }
+            return;
+        }
+        if let Some(perm) = self
+            .players
+            .get_mut(handle.player as usize)
+            .and_then(|p| p.battle_area.get_mut(handle.index as usize))
+        {
+            perm.unrecord_activation(source_card, effect_slot);
+        }
+    }
+
     fn resume_queued_effect_process_tail(&mut self, qe: QueuedEffect) {
         let prev_effect_source = self.effect_source_player;
         let prev_effect_source_card = self.effect_source_card;

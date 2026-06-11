@@ -8545,15 +8545,19 @@
    "archetype": "BG Imperial / DNA Omnimon (AD1)",
    "yaml_path": "code/digimon-engine/cards/ad1/AD1-024.yaml",
    "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_024.rs",
-   "test_count": 13,
+   "test_count": 16,
    "patterns": [
     "lowest_dp selector",
     "multi-timing shared OPT (WD/WA)",
     "on_any_digimon_played + on_digivolve observer",
     "event_is_effect_initiated in if:",
-    "coupled optional sub-block (suspend+unsuspend)"
+    "coupled optional sub-block (suspend+unsuspend)",
+    "outer_prompt clause confirm",
+    "refund_opt (DCGO RemoveUse)",
+    "is_source select filter",
+    "decline-runs-tail permanent selects"
    ],
-   "notes": "TDD from card image + DCGO AD1_024.cs. 13/13 behavioral tests green: WD/WA shared-OPT mandatory lowest-DP bottom-deck bounce; [All Turns] observer fires on any play/digivolve (incl. its own digivolve), coupled suspend+unsuspend, by-effect-only suspended-bounce leg, OPT enforced. One documented divergence: DCGO refunds the OPT when the optional body fully declines (RemoveUse) - not expressible, logged as G-OPT-REFUND-ON-DECLINE.",
+   "notes": "TDD from card image + DCGO AD1_024.cs. 16/16 behavioral tests green: WD/WA shared-OPT mandatory lowest-DP bottom-deck bounce; [All Turns] observer (any play/digivolve incl. own digivolve) with DCGO-faithful initial Yes/No (outer_prompt), declinable suspend pick coupled to self-unsuspend via binding_exists, standalone unsuspend offer (is_source select), independent by-effect bounce leg, and FULL RemoveUse OPT-refund semantics (decline outer confirm OR accept-then-decline-everything both refund; any executed leg consumes). G-OPT-REFUND-ON-DECLINE closed in qa/resolved-gaps.md (2026-06-10).",
    "audit_note": null
   }
  }
