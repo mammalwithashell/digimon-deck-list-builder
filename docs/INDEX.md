@@ -20,6 +20,7 @@
 | Document | Description |
 |----------|-------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Service architecture, API surface, frontend components, RL contracts, desktop distribution |
+| [UI_ROADMAP.md](UI_ROADMAP.md) | UI roadmap toward DCGO parity for players — survey-based gap analysis (DCGO Unity client vs our React frontend), phased plan (bot pacing, per-card command panel, gameplay options/auto-processing, info access, sound), and the constraints that bind UI work |
 | [ENVIRONMENT.md](ENVIRONMENT.md) | Environment variables — every var consumed by the hosted API, training CLI, desktop build, and frontend, grouped by subsystem |
 | [TENSOR_SPEC.md](TENSOR_SPEC.md) | Observation tensor layout (1375 floats) |
 | [ACTION_SPEC.md](ACTION_SPEC.md) | Action space (2192 actions) — ranges and conventions |
