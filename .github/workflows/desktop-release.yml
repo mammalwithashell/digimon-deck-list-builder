@@ -11,7 +11,9 @@ permissions:
 jobs:
   build:
     strategy:
-      fail-fast: true
+      # fail-fast off: let the Windows leg run to completion even when the
+      # Linux leg fails, so each iteration yields signal from both targets.
+      fail-fast: false
       matrix:
         include:
           # NOTE: src-tauri is a cargo WORKSPACE member, so bundles land in
