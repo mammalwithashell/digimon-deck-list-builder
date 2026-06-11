@@ -1,0 +1,113 @@
+# EX10-039 ChuuChuumon — Digimon, Lv.3, Purple, DP 1000, Cost 4.
+# Traits: Beast / Bagra Army. Form: Rookie. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.2 Purple / Cost 0 — also
+# authored as an alt_path (DSL fixtures carry no printed evo_costs).
+#
+# Printed card text (card image — verified):
+#   [Start of Your Main Phase] You may place 1 Digimon card with the
+#     [Bagra Army] trait from your hand or trash as any of your
+#     [Bagra Army] trait Digimon's bottom digivolution cards or under any
+#     of your [Bagra Army] trait Tamers.
+#   [On Deletion] <Save> (You may place this card under one of your Tamers.)
+#   Inherited: When effects trash this card from a [Bagra Army] trait
+#     Digimon's digivolution cards, <Draw 1>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_039.cs
+#
+# Modeling: zone choice (hand/trash) → card pick → destination pick (own
+# [Bagra Army] Digimon OR Tamer) → place_as_bottom_source. <Save> is the
+# printed keyword (auto replacement). The inherited on-trash draw is the
+# EX10-036-family `on_digivolution_card_trashed` self-filter idiom, gated
+# on the carrier having the [Bagra Army] trait.
+#
+# Verdict: IMPLEMENTED.
+
+card: EX10-039
+name: "ChuuChuumon"
+kind: digimon
+level: 3
+color: [purple]
+cost: 4
+dp: 1000
+traits: [Beast, Bagra Army]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+
+effects:
+  # ─── [Start of Your Main Phase] place a [Bagra Army] card ──────────────────
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Your Main Phase] You may place 1 [Bagra Army] trait Digimon card from your hand or trash as any of your [Bagra Army] trait Digimon's bottom digivolution cards or under any of your [Bagra Army] trait Tamers"
+    process:
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you place a card?"
+      # The destination pick + placement live INSIDE each zone branch: a
+      # binding made by a parked select inside an `if:` body is not visible
+      # to steps after the `if:` (G-DSL-IF-BODY-PARK-RESULT-LOG pitfall).
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: placed_pick
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Bagra Army"
+                prompt: "Select 1 [Bagra Army] trait Digimon card to place"
+            - select_own_permanent:
+                bind_as: dest
+                filter:
+                  all_of:
+                    - trait_has: "Bagra Army"
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                prompt: "Place it as a [Bagra Army] Digimon's bottom digivolution card or under a [Bagra Army] Tamer"
+            - place_as_bottom_source:
+                source: placed_pick
+                target: dest
+          else:
+            - select_trash:
+                of: you
+                bind_as: placed_pick
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Bagra Army"
+                prompt: "Select 1 [Bagra Army] trait Digimon card to place"
+            - select_own_permanent:
+                bind_as: dest
+                filter:
+                  all_of:
+                    - trait_has: "Bagra Army"
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                prompt: "Place it as a [Bagra Army] Digimon's bottom digivolution card or under a [Bagra Army] Tamer"
+            - place_as_bottom_source:
+                source: placed_pick
+                target: dest
+
+  # ─── [On Deletion] <Save> ──────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Save
+
+  # ─── Inherited — on-trash-from-Bagra-stack Draw 1 ──────────────────────────
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: EX10-039
+        - host_permanent_trait_has: "Bagra Army"
+    summary: "Inherited: When effects trash this card from a [Bagra Army] trait Digimon's digivolution cards, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

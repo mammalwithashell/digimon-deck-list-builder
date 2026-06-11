@@ -1,0 +1,96 @@
+# EX10-056 Bagramon — Digimon, Lv.6, Purple, DP 13000, Cost 13.
+# Traits: Demon Lord / Bagra Army. Form: Mega. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.5 Purple / Cost 5 (alt_path).
+#
+# Printed card text (card image — verified):
+#   [On Play] [When Digivolving] You may place 1 of your opponent's Digimon
+#     as any of their other Digimon's bottom digivolution card or under any
+#     of their Tamers.
+#   [All Turns] [Once Per Turn] When any of your opponent's Digimon or
+#     Tamers digivolve or effects place cards under them, by trashing any 2
+#     of this Digimon's digivolution cards, trash your opponent's top
+#     security card.
+#   DigiXros -2: 2 Digimon cards w/ [Bagra Army] trait
+#     (reminder: "When this would be played, you may place specified cards
+#     from your hand/battle area under it. Each one reduces the play cost.")
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_056.cs
+#
+# Modeling notes:
+# - [OP][WD] tuck-a-permanent: ***OMITTED — PARTIAL.*** "Place 1 of your
+#   opponent's DIGIMON (a battle-area PERMANENT, whole stack) as another of
+#   their Digimon's bottom digivolution card or under their Tamer" needs a
+#   place-PERMANENT-as-source verb (`place_as_bottom_source` takes CARD
+#   bindings; a permanent tuck must move the entire stack and fire leave
+#   semantics). Logged as G-DSL-PLACE-PERMANENT-AS-SOURCE in
+#   qa/dsl-vocab-gaps.md. NOT stubbed. (Q29-irrelevant: in the quiz line
+#   Bagramon is a DigiXros MATERIAL in hand, never on the field.)
+# - [All Turns][OPT] observer: ***PARTIAL.*** The "opponent digivolves"
+#   half is `on_digivolve` filtered to the opponent; the "effects place
+#   cards under them" half needs the placed-under trigger
+#   (G-DSL-ON-CARD-PLACED-UNDER-TRIGGER — same gap as BT10-093 clause 1).
+#   The digivolve half is authored; the placed-under half is logged.
+# - DigiXros -2: generic [Bagra Army] materials ×2 from hand or battle
+#   area, each reducing the cost by 2... the printed line reads
+#   "DigiXros -2" with two slots — each used material reduces by 2
+#   (cards.json xros_req + Bandai DigiXros rules).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+# | Card-text element                                       | Status          |
+# |----------------------------------------------------------|----------------|
+# | Std digivolve Lv.5 Purple/5 + DigiXros -2 alt paths      | IMPLEMENTED    |
+# | [OP][WD] tuck an opponent Digimon permanent              | OMITTED (G-DSL-PLACE-PERMANENT-AS-SOURCE) |
+# | [All Turns][OPT] digivolve-half observer → trash security| IMPLEMENTED    |
+# | [All Turns][OPT] placed-under-half observer              | OMITTED (G-DSL-ON-CARD-PLACED-UNDER-TRIGGER) |
+# Verdict: PARTIAL (two clauses on missing vocabulary; Q29-irrelevant).
+
+card: EX10-056
+name: "Bagramon"
+kind: digimon
+level: 6
+color: [purple]
+cost: 13
+dp: 13000
+traits: [Demon Lord, Bagra Army]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 5
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - trait_has: "Bagra Army"
+        repeat: { min: 2, max: 2 }
+        zones: [hand, battle_area]
+        cost_delta: -2
+    cost: 13
+
+effects:
+  # ─── [All Turns][OPT] (digivolve half) — trash 2 sources → trash security ──
+  - when: on_digivolve
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_target_owner: opponent
+    summary: "[All Turns][Once Per Turn] When any of your opponent's Digimon or Tamers digivolve (placed-under half pending G-DSL-ON-CARD-PLACED-UNDER-TRIGGER), by trashing any 2 of this Digimon's digivolution cards, trash your opponent's top security card"
+    process:
+      # Cost: ANY 2 of this Digimon's digivolution cards — a player-choice
+      # pick scoped to self (the EX10-036 idiom with `target: self`).
+      - select_own_sources:
+          target: source
+          filter: {}
+          min: 2
+          max: 2
+          bind_as: paid_sources
+          prompt: "Trash any 2 of this Digimon's digivolution cards"
+          then:
+            - trash_selected_sources: { source_refs: paid_sources }
+            - trash_top_security:
+                of: opponent

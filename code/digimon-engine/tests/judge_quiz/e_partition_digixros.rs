@@ -461,12 +461,271 @@ fn q25_all_turns_fires_on_digixros_departure_not_battle() {
     );
 }
 
-/// Q29 — Yuu Amano (BT10-093) top-placement (either order) + DigiXros bottom
-/// placement (spec order): 3 legal DarknessBagramon (EX10-059) stacks. Judge:
-/// the 3 specific orderings.
+// ═══════════════════════════════════════════════════════════════════════════════
+// Q29 — Yuu Amano + DarknessBagramon DigiXros: legal stack orderings
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Quiz board (judge_quiz, card-resolution.md row 29): Player A controls Yuu
+// Amano (BT10-093) with ChuuChuumon (EX10-039) and Damemon (EX10-044) under
+// it, and has DarknessBagramon (EX10-059), Bagramon (EX10-056) and
+// DarkKnightmon (EX10-031) in hand. A plays DarknessBagramon via its
+// [DigiXros -3: [Bagramon]×[DarkKnightmon]], using both hand materials, and
+// accepts Yuu Amano's [Your Turn][Once Per Turn] would-play hook, placing
+// purple Digimon cards from under the Tamer in the played card's digivolution
+// cards (−2 cost each).
+//
+// Judge feedback: the DigiXros placement resolves after would-play interrupts;
+// Yuu Amano's cards go on TOP of the digivolution cards (in either pick
+// order); the DigiXros materials go to the BOTTOM in requirement-spec order
+// ([Bagramon] above [DarkKnightmon]). The 3 legal stacks (top→bottom):
+//   L1: DarknessBagramon / Damemon / ChuuChuumon / Bagramon / DarkKnightmon
+//   L2: DarknessBagramon / ChuuChuumon / Damemon / Bagramon / DarkKnightmon
+//   L3: DarknessBagramon / ChuuChuumon / Bagramon / DarkKnightmon
+//       (only 1 of the up-to-3 purple cards placed)
+//
+// Cost arithmetic: 16 −3 (Bagramon) −3 (DarkKnightmon) −2×placed.
+
+/// Build the Q29 board: Yuu Amano with ChuuChuumon (pushed first → lower
+/// source slot) and Damemon under it; DarknessBagramon + both DigiXros
+/// materials in Player A's hand; memory 10 (engine ceiling).
+fn q29_runner() -> DebugRunner {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT10-093")
+        .expect("BT10-093 Yuu Amano loads")
+        .dsl_card("EX10-039")
+        .expect("EX10-039 ChuuChuumon loads")
+        .dsl_card("EX10-044")
+        .expect("EX10-044 Damemon loads")
+        .dsl_card("EX10-031")
+        .expect("EX10-031 DarkKnightmon loads")
+        .dsl_card("EX10-056")
+        .expect("EX10-056 Bagramon loads")
+        .dsl_card("EX10-059")
+        .expect("EX10-059 DarknessBagramon loads")
+        .memory(10)
+        .hand(0, &["EX10-059", "EX10-056", "EX10-031"])
+        .start();
+    r.skip_mulligan();
+    r.set_first_player(0);
+    let yuu = r.place_on_field(0, "BT10-093", Some(0));
+    r.push_source(yuu, "EX10-039"); // ChuuChuumon — first/lower under-Tamer slot
+    r.push_source(yuu, "EX10-044"); // Damemon — second/higher under-Tamer slot
+    r
+}
+
+/// Drive the DarknessBagramon DigiXros play end-to-end. `under_tamer_picks`
+/// drives Yuu Amano's hook: each entry selects an under-Tamer source action
+/// (`true` = the highest remaining source action id, `false` = the lowest);
+/// an empty slice declines nothing — after the picks, the multi-select is
+/// closed with PASS if it is still open. Then both DigiXros material slots
+/// are filled from hand and the transaction committed.
+fn q29_drive_darkness_bagramon_play(r: &mut DebugRunner, under_tamer_picks: &[bool]) {
+    use digimon_engine::action::space::{PASS, SOURCE_SELECT_START};
+    use digimon_engine::selection::SelectionKind;
+
+    let _ = r.play(0, 0); // EX10-059 is hand index 0
+
+    // ── Phase 1 — Yuu Amano's would-play hook (before the cost is fixed) ────
+    // The optional [Your Turn][Once Per Turn] hook first surfaces an accept
+    // prompt (the Taiki BT10-087 idiom); accepting opens its pay_cost
+    // select_under_tamer_sources (min 0 / max 3, purple Digimon). All of it
+    // must surface BEFORE the recipe Material prompts (judge: would-play
+    // interrupts resolve first).
+    {
+        let view = r
+            .pending_selection_view()
+            .expect("Yuu Amano's would-play hook must surface before materials");
+        assert_ne!(
+            view.kind,
+            SelectionKind::Material,
+            "judge Q29: Yuu Amano's would-play hook resolves BEFORE the DigiXros \
+             material selection"
+        );
+        if !view.valid_action_ids.iter().any(|&a| a >= SOURCE_SELECT_START) {
+            assert!(view.is_optional, "Yuu Amano's hook accept prompt is optional");
+            let accept = view.valid_action_ids[0];
+            r.execute_action(0, accept)
+                .expect("accept Yuu Amano's would-play hook");
+        }
+    }
+    for &pick_highest in under_tamer_picks {
+        let view = r
+            .pending_selection_view()
+            .expect("Yuu Amano's under-Tamer source pick must surface before materials");
+        assert_ne!(
+            view.kind,
+            SelectionKind::Material,
+            "judge Q29: Yuu Amano's would-play hook resolves BEFORE the DigiXros \
+             material selection"
+        );
+        let mut source_actions: Vec<u16> = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&a| a >= SOURCE_SELECT_START)
+            .collect();
+        source_actions.sort_unstable();
+        assert!(
+            !source_actions.is_empty(),
+            "under-Tamer purple Digimon sources must be selectable; got {:?}",
+            view.valid_action_ids
+        );
+        let action = if pick_highest {
+            *source_actions.last().unwrap()
+        } else {
+            source_actions[0]
+        };
+        r.execute_action(0, action)
+            .expect("pick an under-Tamer purple Digimon card for Yuu Amano's hook");
+    }
+    // Close the up-to-3 multi-select if it is still open (PASS is legal on a
+    // min-0 selection).
+    if r
+        .pending_selection_view()
+        .is_some_and(|v| v.kind != SelectionKind::Material && v.valid_action_ids.contains(&PASS))
+    {
+        r.execute_action(0, PASS)
+            .expect("close Yuu Amano's up-to-3 multi-select");
+    }
+
+    // ── Phase 2 — DigiXros recipe materials ([Bagramon] × [DarkKnightmon]) ──
+    for slot in 0..2 {
+        let Some(view) = r.pending_selection_view() else {
+            panic!("DigiXros material slot {slot} must surface a selection");
+        };
+        assert_eq!(
+            view.kind,
+            SelectionKind::Material,
+            "slot {slot} must be a Material selection; got {:?}",
+            view.kind
+        );
+        let pick = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .unwrap_or_else(|| panic!("material slot {slot} must have a hand candidate"));
+        r.execute_action(0, pick)
+            .expect("select DigiXros material from hand");
+    }
+    // Close the material selection if the transaction is still collecting.
+    if r
+        .pending_selection_view()
+        .is_some_and(|v| v.kind == SelectionKind::Material)
+    {
+        let _ = r.execute_action(0, PASS);
+    }
+    // EX10-059 has no [On Play] authored (PARTIAL — see the YAML); drain any
+    // residual prompts defensively so assertions read settled state.
+    let _ = r.auto_resolve();
+}
+
+/// Collect Player A's DarknessBagramon stack as card ids, bottom→top
+/// (the top card is the LAST element of `card_sources`).
+fn q29_db_stack(r: &DebugRunner) -> Vec<String> {
+    let perm = r
+        .game
+        .players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&r.game.card_data) == "EX10-059")
+        .expect("DarknessBagramon must be on Player A's field after the DigiXros play");
+    perm.card_sources
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect()
+}
+
+/// Q29 (both purple cards placed, Damemon picked first): legal stack L1 —
+/// DarknessBagramon / Damemon / ChuuChuumon / Bagramon / DarkKnightmon
+/// (top→bottom), and the play costs 16 −3 −3 −2 −2 = 6.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT10-093 (Yuu Amano), EX10-039 (ChuuChuumon), EX10-044 (Damemon), EX10-059 (DarknessBagramon), EX10-056 (Bagramon), EX10-031 (DarkKnightmon)."]
-fn q29_legal_digixros_stack_orderings_with_yuu_amano() {}
+fn q29_legal_digixros_stack_orderings_with_yuu_amano() {
+    let mut r = q29_runner();
+    let memory_before = r.memory();
+    assert_eq!(memory_before, 10, "staged memory must be at the engine ceiling");
+
+    // Pick Damemon (the higher under-Tamer slot) first, then ChuuChuumon.
+    q29_drive_darkness_bagramon_play(&mut r, &[true, false]);
+
+    // ── THE JUDGE ANSWER (L1) ───────────────────────────────────────────────
+    // Yuu Amano's cards sit on TOP of the digivolution cards in pick order
+    // (first-picked directly under the top card); the DigiXros materials sit
+    // at the BOTTOM in requirement order (Bagramon above DarkKnightmon).
+    assert_eq!(
+        q29_db_stack(&r),
+        vec!["EX10-031", "EX10-056", "EX10-039", "EX10-044", "EX10-059"],
+        "judge Q29 (L1, bottom→top): DarkKnightmon / Bagramon / ChuuChuumon / \
+         Damemon / DarknessBagramon"
+    );
+
+    // Cost: 16 −3 (Bagramon) −3 (DarkKnightmon) −2 −2 (Yuu Amano) = 6.
+    assert_eq!(
+        r.turn_player(),
+        0,
+        "paying 6 from 10 memory keeps the turn with Player A"
+    );
+    assert_eq!(
+        r.memory(),
+        memory_before - 6,
+        "the DigiXros play must cost 16 −3 −3 −2×2 = 6 memory"
+    );
+
+    // The placed cards left Yuu Amano's source stack.
+    let yuu = r
+        .game
+        .players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")
+        .expect("Yuu Amano remains on field");
+    assert!(
+        !yuu.card_sources
+            .iter()
+            .any(|c| matches!(c.card_id(&r.game.card_data), "EX10-039" | "EX10-044")),
+        "both purple cards must leave Yuu Amano's source stack"
+    );
+    // Both hand materials were consumed.
+    assert_eq!(r.hand_size(0), 0, "Bagramon + DarkKnightmon left the hand as materials");
+}
+
+/// Q29 (only ChuuChuumon placed — "up to 3" allows fewer): legal stack L3 —
+/// DarknessBagramon / ChuuChuumon / Bagramon / DarkKnightmon (top→bottom),
+/// and the play costs 16 −3 −3 −2 = 8.
+#[test]
+fn q29_single_under_tamer_card_yields_third_legal_stack() {
+    let mut r = q29_runner();
+    let memory_before = r.memory();
+
+    // Pick only ChuuChuumon (the lower under-Tamer slot), then PASS.
+    q29_drive_darkness_bagramon_play(&mut r, &[false]);
+
+    assert_eq!(
+        q29_db_stack(&r),
+        vec!["EX10-031", "EX10-056", "EX10-039", "EX10-059"],
+        "judge Q29 (L3, bottom→top): DarkKnightmon / Bagramon / ChuuChuumon / \
+         DarknessBagramon"
+    );
+    assert_eq!(
+        r.memory(),
+        memory_before - 8,
+        "the DigiXros play must cost 16 −3 −3 −2 = 8 memory"
+    );
+    // Damemon stays under Yuu Amano.
+    let yuu = r
+        .game
+        .players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")
+        .expect("Yuu Amano remains on field");
+    assert!(
+        yuu.card_sources
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "EX10-044"),
+        "the unpicked Damemon must remain under Yuu Amano"
+    );
+}
 
 // Q30 spans clusters C and E — its test lives in `c_declare_then_pay.rs`
 // (`q30_partition_interruptive_suspends_both_with_cost_reduction`).

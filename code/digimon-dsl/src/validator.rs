@@ -1180,7 +1180,7 @@ fn validate_step_binding_scope(
             );
             declare_optional_binding(scope, &args.bind_as);
         }
-        StepSpec::SelectOwnSources(args) => {
+        StepSpec::SelectOwnSources(args) | StepSpec::SelectUnderTamerSources(args) => {
             validate_predicate_binding_scope(
                 &args.filter,
                 &format!("{prefix}.filter"),

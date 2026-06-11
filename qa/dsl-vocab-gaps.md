@@ -3579,3 +3579,49 @@ Surfaced: judge-quiz Q15 authoring (BT17-016 first draft).
 - **Symptom:** wrapping `select_* → delete_permanent` inside an `if: { condition: any_permanent…, then: […] }` and following the `if` with `if: { condition: { effect_deleted_any_opponent_digimon: false } … }` makes the deleted-tracker read FALSE NEGATIVE: the select inside the `if` body parks, `park_outer_tail` captures the clause's remaining steps with a CLONE of the bindings taken BEFORE the deletion is recorded, so the outer `effect_deleted_*` predicate never sees the result log written by the continuation.
 - **Workaround (validated idiom, BT25-014):** keep `select_* + delete_permanent` at the TOP LEVEL of the process — an empty mandatory select is skipped silently and the result log stays on the single continuation chain. BT17-016 / BT12-016 / EX3-057 / EX8-073 all use this shape.
 - **Fix shape (if ever needed):** share the result log via the `EffectContext`/game rather than per-continuation `Bindings` clones, or merge the continuation's result log into the parked outer-tail bindings at drain time.
+
+## Q29 EX10 Bagra cluster — new gaps (2026-06-11, judge-quiz Q29 authoring)
+
+### BT10-093 / EX10-056 — "when a card is placed under this permanent" trigger  [G-DSL-ON-CARD-PLACED-UNDER-TRIGGER]
+
+- **Card text:** BT10-093 Yuu Amano "[All Turns][Once Per Turn] When a purple card is placed under this Tamer, <Draw 1> and gain 1 memory." / EX10-056 Bagramon's [All Turns] observer also fires when "effects place cards under" opponent Digimon/Tamers (that half omitted; the digivolve half is authored).
+- **DCGO:** `BT10_093.cs` `CanTriggerOnAddDigivolutionCard(permanent == self, card has Purple)`.
+- **Gap:** the DSL has `on_digivolution_card_trashed` (the REMOVAL direction) but no ADDITION-direction timing ("card placed under this/any permanent"). Fix shape: fire a `DigivolutionCardAdded` event from `push_under`/`place_as_bottom_source`/DigiXros commit sites, expose `when: on_card_placed_under` + host/event-card filters.
+- **Consumers:** BT10-093 (clause 1, OMITTED), EX10-056 (observer's placed-under half, OMITTED).
+
+### EX10-031 — would-leave triggered observer with stack access  [G-DSL-WOULD-LEAVE-TRIGGERED-OBSERVER]
+
+- **Card text:** "[All Turns][Once Per Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower card from its digivolution cards without paying the cost."
+- **DCGO:** `EX10_031.cs` plays the card from the still-intact stack in the WOULD-LEAVE window; the leave still happens (non-replacement).
+- **Gap:** DSL would-leave lowering covers REPLACEMENTS (cancel/substitute) only; a triggered observer in that window that reads the carrier's digivolution cards has no vocabulary. OMITTED.
+
+### EX10-056 — place an opponent PERMANENT as a digivolution source  [G-DSL-PLACE-PERMANENT-AS-SOURCE]
+
+- **Card text:** "[On Play][When Digivolving] You may place 1 of your opponent's Digimon as any of their other Digimon's bottom digivolution card or under any of their Tamers."
+- **Gap:** `place_as_bottom_source` moves CARDS; tucking a battle-area PERMANENT must move the whole stack with leave semantics, and the destination is OPPONENT-controlled (own-side selects only today). OMITTED.
+
+### EX10-059 — blind opponent-hand pick + cross-player tuck  [G-DSL-BLIND-OPP-HAND-PLACE]
+
+- **Card text:** "[On Play][When Digivolving] Choose 1 card in your opponent's hand without looking and place it as any of their Digimon's bottom digivolution card or under any of their Tamers."
+- **Gap:** no unrevealed/blind opponent-hand selection, and no cross-player tuck destination flow. Sentence 2 ("by placing 3 [Bagra Army] trait Digimon cards from your trash as this Digimon's TOP digivolution cards, delete 1 of their Digimon or Tamers with cards under it") additionally needs the pre-existing G-DSL-PLACE-AS-TOP-SOURCE (BT13-088). Both sentences OMITTED.
+
+### EX10-059 — gain sources' [All Turns] effects  [G-DSL-GAIN-ALL-TURNS-FROM-SOURCES]
+
+- **Card text:** "[All Turns] This Digimon gains all [All Turns] effects on all level 6 [Bagra Army] trait Digimon cards in its digivolution cards."
+- **DCGO:** source-card effect adoption (reads the source CARDS' text boxes).
+- **Gap:** no DSL/engine machinery grants a permanent the printed effects of its digivolution source cards. OMITTED.
+
+> **Pre-attach outside the recipe — RESOLVED 2026-06-11 (judge-quiz Q29).**
+> `preattach_digixros_material` previously *validated the card against the
+> DigiXros recipe slots* (`try_pre_attach_material` → `resolve_material_origin`),
+> silently dropping any pre-attach that matched no slot — which broke Yuu Amano
+> (BT10-093): its would-play hook places arbitrary purple Digimon from under
+> Tamers, none of which are `[Bagramon]`/`[DarkKnightmon]` recipe materials.
+> DCGO parity (`SelectDigiXrosClass.AddDigivolutionCardInfos`) does not
+> recipe-validate pre-attached cards. Fixed: `EffectContext::
+> preattach_digixros_material` now falls back to the new slot-independent
+> `DigiXrosTransaction::pre_attach_extra_material` (recipe_slot `None`), so
+> the card joins the transaction with its cost delta and the pre-attached
+> placement order. BT12-112 (whose pre-attach coincidentally matches its own
+> recipe) keeps the slot-resolving path. Pinned by
+> `judge_quiz::e_partition_digixros::q29_*`.

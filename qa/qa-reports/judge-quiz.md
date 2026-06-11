@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-06-11: **30/30 questions have a test entry; 27 PASS.** `cargo test --test judge_quiz`
-→ 39 passed (27 question pins + loader/probe/analogs + the Q4 + Q28 controls), 3 ignored, 0 failed.
+Coverage as of 2026-06-11: **30/30 questions have a test entry; 28 PASS.** `cargo test --test judge_quiz`
+→ 41 passed (28 question pins + loader/probe/analogs + the Q4 + Q28 controls + the Q29 single-card variant), 2 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -54,19 +54,33 @@ Coverage as of 2026-06-11: **30/30 questions have a test entry; 27 PASS.** `carg
 | 26 | C | Returns to hand | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-REDIRECT-EXTRACTION`): added the leaving/limbo holding slot (`Game::digixros_leaving_limbo`). The leave window parks BT17-095's `<Delay>` without committing the host; WarGreymon is held in limbo (resolvable + extractable); the accepted DNA-evo re-materializes it into Omnimon; finalize finds the DigiXros recipe dropped below `min` and returns Dorbickmon to hand. Supporting fixes: identity re-resolution of the parked replacement's source/subject after the `battle_area` index shift, and excluding the in-flight host from DNA-partner candidates. | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
 | 27 | C | Pays 0 memory | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND`): the host commits only at `finalize_digixros_play_after_leave_windows`; when a pruned material leaves the recipe unsatisfied the play is abandoned with 0 memory paid. | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
 | 28 | A | YES, plays AND activates | **PASS** | RESOLVED 2026-06-11: EX5-060 Dragomon authored (IMPLEMENTED) on four substrate widenings — (1) `play_from_trash_free` plays for the BINDING OWNER's side (`G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED`: "your opponent plays… from THEIR trash" enters THEIR battle area); (2) `suspended: true` (`G-PLAY-ENTERS-SUSPENDED`: the permanent ENTERS suspended, before play-event observers); (3) `event_target_level` formula (`G-EVENT-PLAYED-LEVEL-FORMULA`: "level less than or equal to IT"); (4) the `[On Play]` suppress rider is now CONSULT-GATED on `permanent_is_unaffected_by_effect` vs the recorded suppressor (the rider is an effect of Dragomon on the played Digimon). BT20-059's protection re-authored as the CONTINUOUS `grant_effect_immunity` form (`G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA` resolved via the floating-modifier substrate + immunity payload) — the prior snapshot form missed the later-played Ciel; the quiz board has Ciel in the TRASH at grant time (the first-wave note claiming otherwise misread the board). Control pins the unsuppressed-rider false-pass. | `a::q28_gankoomon_x_protection_beats_dragomon_on_play_lock` (+ `a::q28_control_no_protection_on_play_suppressed`) |
-| 29 | E | 3 legal stacks | BLOCKED-CARD | BT10-093, EX10-039, EX10-044, EX10-059, EX10-056, EX10-031 | `e::q29_legal_digixros_stack_orderings_with_yuu_amano` |
+| 29 | E | 3 legal stacks | **PASS** | RESOLVED 2026-06-11: the full 6-card Bagra cluster authored — BT10-093 Yuu Amano (PARTIAL: clause 1 needs `G-DSL-ON-CARD-PLACED-UNDER-TRIGGER`), EX10-039 ChuuChuumon (IMPLEMENTED), EX10-044 Damemon (IMPLEMENTED), EX10-031 DarkKnightmon (PARTIAL: would-leave replay needs `G-DSL-WOULD-LEAVE-TRIGGERED-OBSERVER`), EX10-056 Bagramon (PARTIAL ×2), EX10-059 DarknessBagramon (PARTIAL ×3 — DigiXros path faithful). Engine fix: `preattach_digixros_material` recipe-validated pre-attached cards and silently dropped non-recipe ones — Yuu Amano's hook places arbitrary purple Digimon (DCGO `AddDigivolutionCardInfos` does not recipe-validate); added slot-independent `pre_attach_extra_material` fallback. Pins assert TWO of the 3 legal stacks (both purple cards in pick order; single-card variant) bottom→top exactly, the cost stack 16 −3 −3 −2×N, that Yuu's hook resolves BEFORE material selection, and that recipe materials commit at the bottom in spec order. | `e::q29_legal_digixros_stack_orderings_with_yuu_amano` (+ `e::q29_single_under_tamer_card_yields_third_legal_stack`) |
 | 30 | C/E | Suspend both w/ cost reduction | BLOCKED-CARD | BT20-037, BT20-036, EX3-063, BT16-077, EX3-008 | `c::q30_partition_interruptive_suspends_both_with_cost_reduction` |
 
 ## Verdict tally
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 2 | 29, 30 |
+| BLOCKED-CARD | 1 | 30 |
 | BLOCKED-PRIMITIVE | 1 | 8 |
 | CANDIDATE | 0 | — |
-| PASS | 27 | 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28 |
+| PASS | 28 | 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29 |
 
-(Counts: 2 + 1 + 0 + 27 = 30 of 30.)
+(Counts: 1 + 1 + 0 + 28 = 30 of 30.)
+
+Q29 → **PASS** (2026-06-11): the 6-card Bagra DigiXros cluster authored
+(BT10-093 Yuu Amano, EX10-039, EX10-044, EX10-031, EX10-056, EX10-059).
+The two pins reproduce the judge's stack-legality ruling end-to-end through
+a real `r.play()` DigiXros transaction: Yuu Amano's would-play hook resolves
+BEFORE material selection; its placed cards sit on TOP of the digivolution
+cards in pick order; the recipe materials commit at the BOTTOM in
+requirement-spec order ([Bagramon] above [DarkKnightmon]); and the cost
+stacks 16 −3 −3 −2×placed. Engine widening: pre-attached materials no
+longer have to satisfy a recipe slot (DCGO `AddDigivolutionCardInfos`
+parity) — `DigiXrosTransaction::pre_attach_extra_material`. Side-discovery
+while QA'ing EX10-044: a mid-tail free play that fires a would-play
+cost-reduction interrupt clobbers the outer deletion trigger context
+(`G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT`, engine-gaps.md).
 
 Q28 → **PASS** (2026-06-11): EX5-060 Dragomon authored with four substrate
 widenings (opponent-side trash play; suspended entry; event-level formula;

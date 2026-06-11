@@ -97,23 +97,37 @@ impl<'a> EffectContext<'a> {
         transaction.apply_optional_modifier(accepted, apply)
     }
 
+    /// Pre-attach `card` to the pending DigiXros transaction. Returns
+    /// `Ok(Some(slot))` when the card satisfies a recipe slot, or `Ok(None)`
+    /// when it joins slot-independently — DCGO parity
+    /// (`SelectDigiXrosClass.AddDigivolutionCardInfos`): a would-play hook may
+    /// pre-attach cards that match NO recipe slot (Yuu Amano BT10-093 places
+    /// arbitrary purple Digimon from under Tamers in the played card's
+    /// digivolution cards — judge-quiz Q29). Only the effect's own selection
+    /// filter constrains such cards.
     pub fn preattach_digixros_material(
         &mut self,
         origin: DigiXrosMaterialOrigin,
         card: &CardData,
         cost_delta: i16,
-    ) -> Result<usize, DigiXrosMaterialValidationError> {
+    ) -> Result<Option<usize>, DigiXrosMaterialValidationError> {
         let Some(transaction) = self.game.pending_digixros_transaction_mut() else {
             return Err(DigiXrosMaterialValidationError::NoMatchingRecipeSlot);
         };
-        transaction.try_pre_attach_material(origin, card, cost_delta)
+        match transaction.try_pre_attach_material(origin, card, cost_delta) {
+            Ok(slot) => Ok(Some(slot)),
+            Err(_) => {
+                transaction.pre_attach_extra_material(origin, cost_delta);
+                Ok(None)
+            }
+        }
     }
 
     pub fn preattach_digixros_material_by_handle(
         &mut self,
         card: CardHandle,
         cost_delta: i16,
-    ) -> Result<usize, DigiXrosMaterialValidationError> {
+    ) -> Result<Option<usize>, DigiXrosMaterialValidationError> {
         let Some(card_data) = self.game.card_data_for_handle(card).cloned() else {
             return Err(DigiXrosMaterialValidationError::NoMatchingRecipeSlot);
         };

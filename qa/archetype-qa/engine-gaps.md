@@ -2,8 +2,15 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-06-02
+Last updated: 2026-06-11
 Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
+
+### §Trigger context clobbered by a mid-tail cost-reduction interrupt (G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT) — OPEN 2026-06-11
+
+- **First seen** 2026-06-11, judge-quiz Q29 cluster (EX10-044 Damemon per-card QA).
+- **Repro:** Damemon (EX10-044) is deleted while Yuu Amano (BT10-093, a would-play cost-reduction hook) is on the field with a [Tuwarmon] under a Tamer. Damemon's [On Deletion] plays Tuwarmon free (`play_under_tamer_source`), which fires Yuu Amano's BeforePayCost interrupt ("Use Cost reduction to reduce play cost?"). After the interrupt resolves, the REMAINING steps of the [On Deletion] tail (the "Then, <Save>" placement) run with the interrupt's trigger context, not the deletion's — `event_card` (the deleted-object snapshot) no longer resolves, so `place_as_bottom_source { source: event_card }` silently no-ops and the Save never happens. Without the interrupting Tamer the same flow works end-to-end (`ex10_044_on_deletion_plays_tuwarmon_from_under_tamer_then_saves`, which stages a plain Tamer specifically to avoid this bug).
+- **Shape of fix:** the parked-tail resume machinery (`run_tail_preserving_trigger_context`) restores the context captured at INSTALL time, but a tail step that runs SYNCHRONOUSLY between two parks (here `play_under_tamer_source`) can fire an interrupt that replaces `current_trigger_context` before the NEXT select in the same tail installs — so that select captures the interrupt's context. The tail runner should snapshot the trigger context once per tail (at first install) and re-assert it before EVERY subsequent step, not only inside select callbacks.
+- **Consumers blocked:** EX10-044's Save when a cost-reduction Tamer is present (the per-card test sidesteps it); any [On Deletion]/[On Play] tail that plays a card mid-tail while a would-play observer is fielded.
 
 ### §DSL-loaded fixtures have empty `evo_costs` (G-DSL-FIXTURE-EVO-COSTS) — RESOLVED 2026-06-02
 

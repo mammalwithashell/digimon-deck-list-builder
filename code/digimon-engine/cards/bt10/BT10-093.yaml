@@ -1,0 +1,90 @@
+# BT10-093 Yuu Amano — Tamer, Purple, Cost 3. Traits: General / Bagra Army.
+#
+# Printed card text (card image — verified):
+#   [All Turns] [Once Per Turn] When a purple card is placed under this
+#     Tamer, <Draw 1> (Draw 1 card from your deck.) and gain 1 memory.
+#   [Your Turn] [Once Per Turn] When you would play 1 level 4 or higher
+#     Digimon card with [Bagra Army] in its traits, by placing up to 3
+#     purple Digimon cards from under your Tamers in the played Digimon
+#     card's digivolution cards, reduce the play cost of that Digimon by 2
+#     for each card placed.
+#   [Security] Play this card without paying its memory cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT10/Purple/BT10_093.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 (OnAddDigivolutionCards, [All Turns][OPT]): ***OMITTED — PARTIAL.***
+#   DCGO `CanTriggerOnAddDigivolutionCard(permanent == self, card has Purple)`
+#   → DrawClass(1) + AddMemory(1). The DSL has NO "when a card is placed
+#   under this permanent" trigger timing (the only related timing is
+#   `on_digivolution_card_trashed`, the REMOVAL direction). Logged as
+#   G-DSL-ON-CARD-PLACED-UNDER-TRIGGER in qa/dsl-vocab-gaps.md. NOT stubbed.
+#   (Q29-irrelevant: the quiz line REMOVES cards from under this Tamer.)
+#
+# Clause 2 (would-play interrupt, [Your Turn][OPT]): DCGO
+#   `CanTriggerWhenPermanentWouldPlay(card: owner's Digimon, level ≥ 4,
+#   CardTraits contains "Bagra Army")`, body: loop-select up to 3 purple
+#   Digimon cards from under the owner's Tamers (DCGO message: "cards with
+#   lower numbers are on top"), register them via
+#   `SelectDigiXrosClass.AddDigivolutionCardInfos` (the engine's
+#   PRE-ATTACHED-MATERIAL slot — placed as the played card's TOP
+#   digivolution cards at commit, judge-quiz Q29), then install a
+#   ChangeCostClass −2 × count. → `kind: cost_reduction` with
+#   `when_any_ally_played` (level_gte 4 + trait Bagra Army), `amount: 0`,
+#   and a `pay_cost` of `select_under_tamer_sources` (min 0 / max 3,
+#   purple Digimon) + `per_selected` → `preattach_digixros_material`
+#   (cost_delta −2 each) — the BT12-112 idiom.
+#
+# Clause 3 ([Security]): standard Tamer security self-play →
+#   `when: on_security` + `play_from_security` (BT13-103 idiom).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+# | Card-text element                                       | Status          |
+# |----------------------------------------------------------|----------------|
+# | [All Turns][OPT] purple card placed under → Draw+memory  | OMITTED (G-DSL-ON-CARD-PLACED-UNDER-TRIGGER) |
+# | [Your Turn][OPT] would-play preattach + cost −2/card     | IMPLEMENTED    |
+# | [Security] play this card free                           | IMPLEMENTED    |
+# Verdict: PARTIAL (clause 1 blocked on a missing trigger timing).
+
+card: BT10-093
+name: "Yuu Amano"
+kind: tamer
+color: [purple]
+cost: 3
+traits: [General, Bagra Army]
+
+effects:
+  # ─── Clause 2 — [Your Turn][OPT] would-play preattach + cost reduction ─────
+  - kind: cost_reduction
+    when_any_ally_played:
+      all_of:
+        - kind: digimon
+        - level_gte: 4
+        - trait_has: "Bagra Army"
+    active_when: { your_turn: true }
+    once_per_turn: true
+    optional: true
+    amount: 0
+    pay_cost:
+      - select_under_tamer_sources:
+          min: 0
+          max: 3
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+          bind_as: placed_cards
+          prompt: "Place up to 3 purple Digimon cards from under your Tamers in the played Digimon card's digivolution cards (cards picked first are placed on top)"
+      - per_selected:
+          selection: placed_cards
+          bind_as: placed_one
+          body:
+            - preattach_digixros_material: { card: placed_one, cost_delta: -2 }
+
+  # ─── Clause 3 — [Security] play this card free ─────────────────────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying its memory cost"
+    process:
+      - play_from_security: {}
