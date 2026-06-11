@@ -78,6 +78,11 @@ pub enum RunOutcome {
 pub struct StepRuntime {
     raw: Arc<EngineRawRustRegistry>,
     dna_origin: Option<bool>,
+    /// The clause's once-per-turn counter key (`Effect::shared_opt_group`),
+    /// captured statically by the lowering so the `refund_opt` step can
+    /// un-record the activation — DCGO `RemoveUse` (G-OPT-REFUND-ON-DECLINE).
+    /// Cloned into parked tails, so it survives mid-process selections.
+    opt_key: Option<u8>,
 }
 
 impl Default for StepRuntime {
@@ -91,6 +96,7 @@ impl StepRuntime {
         Self {
             raw,
             dna_origin: None,
+            opt_key: None,
         }
     }
 
@@ -101,6 +107,15 @@ impl StepRuntime {
     pub fn with_dna_origin(mut self, dna_origin: Option<bool>) -> Self {
         self.dna_origin = dna_origin;
         self
+    }
+
+    pub fn with_opt_key(mut self, opt_key: Option<u8>) -> Self {
+        self.opt_key = opt_key;
+        self
+    }
+
+    pub fn opt_key(&self) -> Option<u8> {
+        self.opt_key
     }
 }
 
@@ -206,14 +221,23 @@ fn wrap_pending_selection_with_tail(
     let accept_bindings = bindings.clone();
     let accept_runtime = runtime.clone();
     pending.callback = Box::new(move |game: &mut Game, action_id: u16| {
+        // Binding-freshness channel: clear before, take after — whatever the
+        // inner resolution published reflects picks made AFTER our wrap-time
+        // snapshot, and must be visible to binding-gated outer-tail steps
+        // (G-OPT-REFUND-ON-DECLINE).
+        game.dsl_resolved_tail_bindings = None;
         original_callback(game, action_id);
+        let mut merged = accept_bindings;
+        if let Some(fresh) = game.dsl_resolved_tail_bindings.take() {
+            merged.merge_slots_from(&fresh);
+        }
         drain_or_rewrap_pending_tail(
             game,
             source_card,
             source_permanent,
             player,
             accept_tail,
-            accept_bindings,
+            merged,
             accept_runtime,
         );
     });
@@ -223,14 +247,19 @@ fn wrap_pending_selection_with_tail(
         let decline_bindings = bindings;
         let decline_runtime = runtime;
         pending.on_decline = Some(Box::new(move |game: &mut Game| {
+            game.dsl_resolved_tail_bindings = None;
             original_decline(game);
+            let mut merged = decline_bindings;
+            if let Some(fresh) = game.dsl_resolved_tail_bindings.take() {
+                merged.merge_slots_from(&fresh);
+            }
             drain_or_rewrap_pending_tail(
                 game,
                 source_card,
                 source_permanent,
                 player,
                 decline_tail,
-                decline_bindings,
+                merged,
                 decline_runtime,
             );
         }));
@@ -275,7 +304,21 @@ fn park_pending_selection_tail(
 /// running the outer tail; the inner body's chained selects already saw
 /// the override via the parked-callback's reconstructed ctx (Task 1).
 pub(crate) fn drain_dsl_outer_tail(cb_ctx: &mut EffectContext<'_>) {
+    drain_dsl_outer_tail_with_bindings(cb_ctx, None)
+}
+
+/// Variant of [`drain_dsl_outer_tail`] that overlays the inner resolution's
+/// bindings onto the park-time snapshot before the outer tail runs, so
+/// binding-gated sibling steps (`binding_exists` / `binding_absent`) see the
+/// picks a nested selection made after the park. G-OPT-REFUND-ON-DECLINE.
+pub(crate) fn drain_dsl_outer_tail_with_bindings(
+    cb_ctx: &mut EffectContext<'_>,
+    inner_bindings: Option<&Bindings>,
+) {
     if let Some((outer_tail, mut outer_b, runtime)) = cb_ctx.game.dsl_outer_tail.take() {
+        if let Some(inner) = inner_bindings {
+            outer_b.merge_slots_from(inner);
+        }
         cb_ctx.set_override_selecting_player(None);
         if cb_ctx.game.pending_selection.is_some() {
             wrap_pending_selection_with_tail(
@@ -475,6 +518,17 @@ pub fn run_step_with_runtime(
     }
     if matches!(step, CompiledStep::PlaceSelfAsDelayOption) {
         ctx.place_self_as_delay_option_permanent();
+        return;
+    }
+    // G-OPT-REFUND-ON-DECLINE — DCGO `ActivateClass.RemoveUse()`. Refund the
+    // running clause's once-per-turn use; the key was captured statically by
+    // the lowering into the StepRuntime (and survives parked tails).
+    if matches!(step, CompiledStep::RefundOpt) {
+        if let (Some(opt_key), Some(perm)) = (runtime.opt_key(), ctx.source_permanent) {
+            let source_card = ctx.source_card;
+            ctx.game
+                .unrecord_source_permanent_activation(perm, source_card, opt_key);
+        }
         return;
     }
     // Phase 2 Track B — `CompiledStep::ActivationCost` is normally lifted

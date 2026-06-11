@@ -38,6 +38,7 @@ fn outer_steps_wait_for_inner_park() {
                     prompt: "Pick".to_string(),
                     prompt_key: None,
                     optional: false,
+                    continue_on_decline: false,
                 },
                 CompiledStep::DeletePermanent {
                     target: CompiledBindingRef::Named("tgt".to_string()),

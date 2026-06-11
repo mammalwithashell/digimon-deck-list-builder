@@ -574,6 +574,7 @@ mod tests {
                     active_when: None,
                     condition: None,
                     optional: false,
+                    outer_prompt: false,
                     once_per_turn: false,
                     max_per_turn: None,
                     process: vec![CompiledStep::RawRust {

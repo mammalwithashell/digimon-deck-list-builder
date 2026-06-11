@@ -10,6 +10,17 @@
 > `code/digimon-engine/tests/archetypes/bg_imperial.rs` map to 1:1. The older
 > `bg-imperial.md` is a per-card QA verdict table (2026-04-05, batch-fix-cards),
 > not this system model.
+>
+> **Spot-check 2026-06-10:** combo claims re-verified against DCGO C#
+> (`ST9_05.cs`, `BT16_025.cs`, `ST9_06.cs` — all confirmed) and
+> `general_rule.pdf`. Rule citations refreshed: DNA digivolution is **§8-2**
+> (8-2-1 shows the exact "[DNA Digivolution] Blue Lv.4 + green Lv.4: Cost 0"
+> template; 8-2-3 is the procedure; 8-2-4 restricts DNA to DNA-specific
+> effects), standard digivolution requirements are **§8-1 + §2-3-6** — the
+> earlier "§6" citations were wrong (§6 is the turn flow). Per-card status
+> re-confirmed in `qa/qa-reports/validated_cards_dsl.json`: all Combo 1–4/6
+> pieces IMPLEMENTED; AD1-011 and AD1-024 have **no YAML** (unimplemented),
+> reinforcing their dropped placement.
 
 ## Card pool & roles (the implemented Imperialdramon line)
 
@@ -91,7 +102,7 @@ line cannot currently be built in the engine. Logged to `qa/archetype-qa/engine-
 ### Combo 1 — "DNA Bounce" (ST9-05)
 - Cards: EX1-014 ExVeemon (Blue Lv.4) + ST9-09 Stingmon (Green Lv.4) → ST9-05 Paildramon.
 - Expected mechanical outcome: the DNA path satisfies the blue+green colour requirement and reaches Paildramon at cost 0; the `[When Digivolving] *When DNA digivolving*` clause installs an OppField selection and returns an opp Digimon with DP≤6000 to the bottom of its deck (opp field −1, opp deck +1). A *regular* digivolve into the same Paildramon does **not** fire the DNA clause.
-- Rules/keyword basis: DNA digivolution (`general_rule.pdf` §6 / §16 digivolve); ST9-05 `when: on_dna_digivolve`; DCGO `ST9_05.cs` (`IsJogress` gate, `PutLibraryBottom`, `DP<=6000`).
+- Rules/keyword basis: DNA digivolution `general_rule.pdf` §8-2 (8-2-1: "[DNA Digivolution] Blue Lv.4 + green Lv.4: Cost 0" is the printed template; 8-2-3 procedure); ST9-05 `when: on_dna_digivolve`; DCGO `ST9_05.cs` (`IsJogress` gate, `Mode.PutLibraryBottom`, `DP<=6000`, materials = own battle-area Blue Lv.4 + Green Lv.4 via `Levels_ForJogress`).
 - Rank: very high (core payoff, every game; the user's "Paildramon effects work" target).
 
 ### Combo 2 — "DNA Lockdown" (BT16-025, meta Paildramon)
@@ -109,13 +120,13 @@ line cannot currently be built in the engine. Logged to `qa/archetype-qa/engine-
 ### Combo 4 — "Evolution-cost & colour gate" (structural + behavioural)
 - Cards: ST9-05 / BT16-025 / ST9-06 alt-paths.
 - Expected mechanical outcome: the compiled DNA alt-path for Paildramon enforces the `{Lv.4 Blue}` + `{Lv.4 Green}` material colours at cost 0; the standard digivolve costs 4; ST9-06's standard digivolve is from Blue Lv.5 at cost 4. A DNA attempt that cannot supply both a blue **and** a green Lv.4 material does not complete as DNA.
-- Rules/keyword basis: `cards.json` `evo_costs`/`dna_costs`/`xros_req`; compiled `CompiledAltPath`.
+- Rules/keyword basis: `general_rule.pdf` §8-2 (8-2-1 cost template; 8-2-3-2 the chosen DNA requirement's cost is paid) + §8-1-3-2 / §2-3-6 for the standard path; `cards.json` `evo_costs`/`dna_costs`/`xros_req`; compiled `CompiledAltPath`.
 - Rank: medium-high (the user's "evolution costs and colour requirements" target).
 
 ### Combo 6 — "Digivolution colour gate" (ExVeemon / Stingmon / Wormmon)
 - Cards: the rookie/champion DNA legs vs eggs/Lv.3 bases of varying colour.
 - Expected mechanical outcome: a standard digivolve is permitted only when the base's colour list contains the evo-cost colour and the level matches (`Game::can_digivolve`). Concretely: **Wormmon (Green, evo Green Lv.2) CANNOT digivolve over a blue DemiVeemon egg** (it needs a green Lv.2), but Veemon (Blue) can; ExVeemon (EX1-014, single Blue evo) is locked to a blue Lv.3 and Stingmon (ST9-09, single Green evo) to a green Lv.3, while the dual-colour BT12-022 ExVeemon / BT12-050 Stingmon accept either colour Lv.3.
-- Rules/keyword basis: digivolution colour+level requirement (`general_rule.pdf` §6 digivolve; evo-cost is a (colour, level) pair); `Game::can_digivolve` game.rs:3390 → `matching_evo_cost`.
+- Rules/keyword basis: digivolution colour+level requirement (`general_rule.pdf` §8-1-3-1 — the player chooses 1 digivolution requirement and 1 of their cards that meets it; §2-3-6 defines the requirement as a (colour, level, cost) triple); `Game::can_digivolve` (game.rs) → `matching_evo_cost`.
 - Rank: high (directly answers "can Wormmon digivolve over a blue egg?" — **no**).
 - **Harness note:** the embedded DSL pack builds CardData from YAML only and `card_data_from_compiled` sets `evo_costs: Vec::new()`, so a real DSL-loaded card carries no printed digivolution cost unless its YAML declares a `digivolve` alt-path. The Imperialdramon line's printed evo-costs live in `cards.json` (production), not the YAML — so this combo exercises the gate with synthetic cards encoding the real printed evo-costs (per-card-test convention, `st9_05.rs::make_lv4_regular_base`). This is a test-fixture limitation, **not** an engine bug.
 
@@ -138,6 +149,6 @@ line cannot currently be built in the engine. Logged to `qa/archetype-qa/engine-
 
 ### Dropped / deferred (logged, not silently truncated)
 - **BT12-028 Paildramon** (trash-top-3-sources; *if DNA* 2 opp can't attack) — same DNA-fork shape as Combos 1–2; deferred to avoid redundant coverage.
-- **AD1-011 Paildramon** (Partition + battle-immunity + [WA] -2-cost digivolve into Imperialdramon) — strong, but the [WA] self-digivolve spans more machinery; deferred to a later pass.
+- **AD1-011 Paildramon** (Partition + battle-immunity + [WA] -2-cost digivolve into Imperialdramon) — strong, but the [WA] self-digivolve spans more machinery; deferred to a later pass. **2026-06-10: no YAML spec exists (`cards/ad1/` has AD1-011.json only) — blocked on implementation, route to `/batch-implement-cards-rust-dsl`.**
 - **BT16-028 DM → BT16-027/BT12-031 FM** free/cost-reduced digivolve chain — multi-step finisher line; deferred (depends on the Tamer-trigger [All Turns] clause).
 - **BT17-077 Paladin Mode** mass source-trash + recycle — apex finisher; deferred (White/Blue, outside the Blue+Green core the user named).
