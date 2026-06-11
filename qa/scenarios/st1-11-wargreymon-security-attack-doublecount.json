@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "st1-11-wargreymon-security-attack-doublecount",
+  "title": "WarGreymon (ST1-11) Security Attack double-counts the formula keyword",
+  "readiness": "expected_pass",
+  "blocked_reason": "",
+  "notes": "Minimal repro of a (now-fixed) engine bug. P1 field stack is Koromon/Agumon/Birdramon/MetalGreymon/WarGreymon (top): WarGreymon with 4 digivolution sources, on P1's turn (the [Your Turn] aura is active). WarGreymon grants Security A. +1 per 2 sources => +2 => checks 3 security total. RESOLVED 2026-06-08: parse_printed_keywords extracted the <Security A. +1> token out of the conditional formula text as a flat SecurityAttackPlus(1), which raw_security_strike added on top of the base-inclusive security_attack_fn formula (=3) => 4. Fixed in combat/mod.rs by subtracting the top card's own face <Security A.> when it has a security_attack_fn formula. NOTE: the scenario assertion vocabulary still has no security-attack kind, so the only machine assertion here (stack_top) passes; the authoritative regression test is cards_behavioral/st1/wargreymon_security_attack.rs::wargreymon_real_data_clean_stack_checks_three_on_your_turn (asserts effective_security_strike == 3 from full_card_data). See docs/RUST_ENGINE_GAPS.md.",
+  "decks": {
+    "1": ["ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-01",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03"],
+    "2": ["ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-01",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03",
+          "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-03"]
+  },
+  "seed": 0,
+  "state": {
+    "memory": 3,
+    "phase": "Main",
+    "turn": 1,
+    "first_player": 1
+  },
+  "zones": {
+    "1": {
+      "field": [
+        { "stack": ["ST1-01", "ST1-03", "ST1-05", "ST1-09", "ST1-11"], "is_suspended": false, "turn_played": 1 }
+      ]
+    }
+  },
+  "assertions": {
+    "engine": [
+      { "kind": "stack_top", "player": 1, "field_index": 0, "card_id": "ST1-11" }
+    ],
+    "ui": []
+  }
+}

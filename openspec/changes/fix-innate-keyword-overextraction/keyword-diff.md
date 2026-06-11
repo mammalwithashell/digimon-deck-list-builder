@@ -1,0 +1,1152 @@
+# Innate-keyword parse diff
+
+- cards scanned: 4220
+- cards losing >=1 keyword: 1108
+- **implemented (DSL) losers: 167**  <- Step 3 worklist
+- unimplemented losers: 941
+- cards where NEW gained a token OLD missed: 0 (should be ~0)
+
+## Implemented-loser keyword histogram
+
+- `Draw 1`: 52
+- `Security A. +1`: 28
+- `Blocker`: 25
+- `Rush`: 19
+- `Draw 2`: 11
+- `Piercing`: 11
+- `Reboot`: 11
+- `De-Digivolve 1`: 9
+- `Security A. -1`: 7
+- `Alliance`: 7
+- `Collision`: 4
+- `Save`: 3
+- `Raid`: 3
+- `Jamming`: 2
+- `De-Digivolve`: 2
+- `Overclock ([Puppet] Trait)`: 2
+- `Ascension`: 2
+- `Progress`: 2
+- `De-Digivolve 2`: 1
+- `Security A.`: 1
+- `Material Save 1`: 1
+- `Evade`: 1
+- `Security A. -2`: 1
+- `Vortex`: 1
+- `Overclock`: 1
+- `Security A. -3`: 1
+- `Retaliation`: 1
+- `Decoy (Red/Black)`: 1
+
+## Implemented losers (Step 3 worklist)
+
+- AD1-002 Aldamon: Draw 2
+- AD1-004 WarGreymon: Security A. +1
+- AD1-012 CresGarurumon: Security A. +1
+- AD1-016 ShineGreymon: Security A. +1
+- AD1-017 Dynasmon: Security A. -1
+- AD1-018 LordKnightmon: De-Digivolve 2
+- BT1-085 Tai Kamiya: Security A. +1
+- BT10-003 Pickmons: Draw 1
+- BT10-029 Starmons: Draw 1
+- BT10-042 Venusmon: Security A., Security A. -1
+- BT10-111 Shoutmon (King Version): Material Save 1
+- BT11-095 Taiki, Kiriha, & Nene: Draw 1
+- BT12-002 DemiVeemon: Draw 1
+- BT12-022 ExVeemon: Jamming
+- BT12-031 Imperialdramon: Fighter Mode: Blocker, Security A. +1
+- BT12-050 Stingmon: Piercing
+- BT13-020 ShineGreymon: Burst Mode: Rush
+- BT13-040 Magnamon: Draw 1
+- BT13-101 Miki Kurosaki & Megumi Shirakawa: Draw 1
+- BT13-102 Keenan Crier: Draw 1
+- BT13-110 Royal Knights of the Purge: Rush
+- BT13-111 Gallantmon: Rush
+- BT13-112 Omnimon: Rush
+- BT14-001 Koromon: Draw 1
+- BT15-020 Gabumon: Blocker
+- BT15-084 Kari Kamiya: Security A. -1
+- BT15-101 MetalGarurumon: Evade
+- BT16-055 Namakemon: Blocker, De-Digivolve, Reboot
+- BT17-019 Gabumon: Draw 1
+- BT17-093 Tai Kamiya & Kari Kamiya: Draw 1
+- BT19-008 Shoutmon: Rush, Save
+- BT19-012 OmniShoutmon: Rush
+- BT19-014 Shoutmon EX6: Security A. +1
+- BT19-026 ZeigGreymon: Save
+- BT19-033 Dorulumon: Piercing
+- BT19-035 ShootingStarmon: Security A. -1
+- BT19-038 JaegerDorulumon: Piercing
+- BT19-047 Ballistamon: Blocker
+- BT19-051 AtlurBallistamon: Blocker
+- BT19-057 Sparrowmon: Blocker, Collision
+- BT19-061 RaptorSparrowmon: Blocker, Collision
+- BT19-093 Queen Device: Security A. -2
+- BT20-016 Paildramon: Piercing
+- BT20-017 Jesmon: Reboot
+- BT20-059 Gankoomon (X Antibody): Blocker, Reboot
+- BT20-091 Cool Boy: Draw 1
+- BT20-102 Omnimon (X Antibody): Rush
+- BT21-004 Koromon: Draw 1
+- BT21-011 Shoutmon: Rush
+- BT21-021 OmniShoutmon: Rush, Save
+- BT21-026 WarGreymon: Rush
+- BT21-027 Shoutmon DX: Security A. +1
+- BT21-044 RizeGreymon: Alliance, Rush, Security A. +1
+- BT21-081 Owen Dreadnought: Piercing
+- BT21-083 Taiki Kudo: Draw 1
+- BT21-086 Marcus Damon: Piercing
+- BT21-095 Wind Guardians: Vortex
+- BT21-102 Tai Kamiya: Draw 1
+- BT22-002 Kyaromon: Draw 1
+- BT22-005 Tsumemon: Draw 1
+- BT22-029 Shoemon: Blocker
+- BT22-036 Chaperomon: Overclock ([Puppet] Trait)
+- BT22-041 Kentaurosmon: Blocker
+- BT22-052 Leopardmon: Blocker
+- BT22-088 Arisa Kinosaki: Draw 1
+- BT22-089 Mirei Mikagura: Draw 2
+- BT23-013 Jesmon: Reboot, Security A. +1
+- BT23-035 Dynasmon: Security A. +1
+- BT23-057 Gankoomon: Alliance
+- BT23-072 King Drasil_7D6: Blocker, Draw 1, Raid, Reboot, Rush
+- BT23-077 Sistermon Ciel: De-Digivolve 1
+- BT23-101 Hudiemon: Security A. +1
+- BT24-004 Wanyamon: Draw 1
+- BT24-008 Elizamon: Draw 2
+- BT24-020 Gomamon: Draw 1
+- BT24-037 Silphymon: Security A. +1
+- BT24-041 Minervamon: Blocker, De-Digivolve 1, Reboot
+- BT24-051 Merukimon: Piercing, Rush
+- BT24-088 Asuna Shiroki: Draw 2
+- BT24-090 Abyss Sanctuary: Throne Room: Alliance, Blocker, Security A. +1
+- BT24-102 Homeros: Draw 1
+- BT25-001 Tokomon: Draw 1
+- BT25-002 Wanyamon: Draw 1
+- BT25-008 Coronamon: Draw 1
+- BT25-012 Grizzlymon: Raid
+- BT25-014 Meramon: Draw 2
+- BT25-021 Gaomon: Draw 1
+- BT25-023 Gaogamon: Draw 1
+- BT25-034 Angemon: Ascension
+- BT25-038 Shakkoumon: De-Digivolve 1
+- BT25-040 MagnaAngemon: Ascension
+- BT25-041 Murasamemon: Security A. +1
+- BT25-042 ClavisAngemon: Blocker, Reboot
+- BT25-048 Bearmon: Draw 1
+- BT25-051 Grizzlymon: Draw 1
+- BT25-053 Aegiochusmon: Green: Piercing
+- BT25-058 Callismon: De-Digivolve 1
+- BT25-061 Offmon: Draw 1
+- BT25-065 Monodramon: Draw 1
+- BT25-068 Deltamon: Blocker, De-Digivolve 1
+- BT25-082 BlackGatomon: Draw 1
+- BT25-091 Monica Simmons: Draw 1
+- BT25-092 Asuna Shiroki: Draw 1
+- BT25-094 Cosmic Area: Alliance, Rush, Security A. +1
+- BT25-095 Paradise Colosseum: Rush
+- BT25-099 Gear Forest Village: Alliance, Piercing, Security A. +1
+- BT25-101 Divine Arms Version Ω: Draw 2
+- BT3-002 DemiVeemon: Draw 1, Jamming
+- BT4-098 Atomic Inferno: Security A. +1
+- BT5-093 Tai Kamiya & Matt Ishida: Security A. +1
+- BT6-082 Sistermon Blanc: Blocker
+- BT8-094 Digimon Emperor: Draw 1
+- BT9-092 Cool Boy: Draw 1
+- EX10-002 Koromon: Draw 1
+- EX10-028 Landramon: Blocker, Reboot
+- EX10-032 Proganomon: Blocker, Collision, De-Digivolve 1, Piercing
+- EX10-034 Blastmon: Security A. +1
+- EX11-008 Elizamon: Raid
+- EX11-023 Kaguyamon: Security A. +1
+- EX11-024 Cendrillmon: Security A. +1
+- EX11-038 Sunarizamon: Draw 1
+- EX11-053 Omekamon: Draw 1
+- EX11-054 Owen Dreadnought: Draw 1, Progress
+- EX11-060 Arisa Kinosaki: Draw 1, Overclock
+- EX4-003 Tsunomon: Draw 1
+- EX4-005 Agumon: Draw 1
+- EX4-006 Guilmon: Rush
+- EX6-011 RagnaLoardmon: De-Digivolve 1
+- EX8-046 Gotsumon: Draw 2
+- EX8-051 Proganomon: Blocker, De-Digivolve 1
+- EX8-055 Pyramidimon: Security A. +1
+- EX8-070 Zofr Kabus: Blocker, Collision, Piercing, Reboot
+- EX8-074 MedievalGallantmon: Alliance, Security A. +1
+- EX9-013 BlitzGreymon: Security A. +1
+- EX9-033 Kaguyamon: Alliance, Blocker, Security A. +1
+- EX9-066 Tai Kamiya & Matt Ishida: Draw 1
+- P-101 Raremon: Draw 2
+- P-117 Veemon: Draw 1
+- P-134 Shoemon: Security A. -1
+- P-167 Landramon: De-Digivolve 1
+- P-186 Gallantmon: Rush
+- P-189 Dimetromon: Progress
+- P-196 Gomamon: Draw 1
+- P-215 Icemon: De-Digivolve
+- P-224 Kotone Amano: Draw 1
+- RB1-035 Hokuto Amanokawa: Draw 1
+- ST1-11 WarGreymon: Security A. +1
+- ST1-13 Shadow Wing: Security A. +1
+- ST12-12 Sistermon Blanc: Decoy (Red/Black), Draw 2
+- ST19-01 Kyaromon: Draw 1
+- ST19-04 PawnChessmon: Draw 2
+- ST19-05 PawnChessmon: Draw 2
+- ST19-06 Doggymon: Security A. -1
+- ST19-08 ShoeShoemon: Overclock ([Puppet] Trait)
+- ST19-14 Arisa Kinosaki: Rush
+- ST2-08 WereGarurumon: Security A. +1
+- ST21-13 Matt Ishida & T.K. Takaishi: Rush
+- ST22-11 Defense Plug-In F: Reboot
+- ST3-15 Holy Flame: Security A. -1, Security A. -3
+- ST5-01 Kapurimon: Blocker
+- ST5-04 ToyAgumon: Draw 1
+- ST5-06 Greymon: Draw 1
+- ST5-09 MetalGreymon: Blocker
+- ST5-12 Machinedramon: Reboot
+- ST5-14 Tai Kamiya: Blocker
+- ST6-12 VenomMyotismon: Retaliation
+- ST9-09 Stingmon: Draw 1
+
+## Unimplemented losers (log to RUST_ENGINE_GAPS)
+
+- AD1-015 Beowolfmon: Draw 2
+- AD1-020 Tommy, Takuya, & Zoe: Draw 1, Security A. +1
+- AD1-021 Marcus Damon & Agumon: Draw 1, Rush
+- AD1-023 J.P., Koji, & Koichi: Draw 1
+- BT1-002 Bebydomon: Piercing
+- BT1-003 Upamon: Draw 1
+- BT1-006 Cupimon: Draw 1
+- BT1-017 Birdramon: Security A. +1
+- BT1-018 Flarerizamon: Security A. +1
+- BT1-022 Garudamon: Draw 1
+- BT1-023 SkullGreymon: Blocker
+- BT1-025 WarGreymon: Security A. +1
+- BT1-046 Kudamon: Draw 1
+- BT1-049 Labramon: Draw 1
+- BT1-053 Darcmon: Draw 1
+- BT1-063 Seraphimon: Security A. +1
+- BT1-068 Kokuwamon: Security A. +1
+- BT1-079 Lillymon: Blocker
+- BT1-091 Scrap Claw: Piercing
+- BT1-093 Great Tornado: Security A. +1
+- BT1-094 Oblivion Bird: Blocker
+- BT1-095 Brave Shield: Blocker
+- BT1-098 V-Nova Blast: Jamming
+- BT1-103 Testament: Blocker
+- BT1-110 Flower Cannon: Blocker
+- BT10-002 Bebydomon: Draw 1
+- BT10-006 Tokomon: Draw 1
+- BT10-008 Shoutmon: Rush
+- BT10-011 Canoweissmon: Security A. +1
+- BT10-023 Thetismon: Draw 2
+- BT10-024 MetalGreymon: Rush
+- BT10-030 Tinkermon: Security A. -1
+- BT10-031 Pulsemon: Blocker
+- BT10-035 Darcmon: Security A. -1
+- BT10-036 Kyubimon: Draw 2
+- BT10-038 Sanzomon: Security A. -1
+- BT10-044 Angoramon: Draw 1
+- BT10-048 Sunflowmon: Draw 1
+- BT10-049 Ballistamon: Blocker, Piercing
+- BT10-057 BloomLordmon: Piercing, Security A. +1
+- BT10-059 Spadamon: De-Digivolve 1
+- BT10-060 Sparrowmon: Reboot
+- BT10-070 Blastmon: Blitz
+- BT10-071 Gazimon: Retaliation
+- BT10-072 Soundbirdmon: Draw 1
+- BT10-078 GulusGammamon: Retaliation
+- BT10-084 Tactimon: Blocker
+- BT10-089 Akari Hinomoto: Draw 1
+- BT10-092 Nene Amano: Blocker
+- BT10-093 Yuu Amano: Draw 1
+- BT10-094 Breaclaw: Draw 1
+- BT10-095 Hero of the Skies!: Draw 2, Security A. +1
+- BT10-099 Healing Therapy: Security A. -1
+- BT10-102 Pyon Dump: Piercing
+- BT10-105 Defense Plug-In C: Blocker, Reboot
+- BT10-112 Jesmon GX: Blitz, Blocker, Piercing, Security A. +1
+- BT11-001 Yokomon: Draw 1
+- BT11-002 Wanyamon: Draw 1
+- BT11-003 Tokomon: Draw 1
+- BT11-004 Tanemon: Draw 1
+- BT11-005 Koromon: Draw 1
+- BT11-015 OmniShoutmon: Security A. +1
+- BT11-022 Dracomon: Draw 1
+- BT11-024 Penguinmon: Draw 1
+- BT11-027 Veedramon: Draw 1
+- BT11-028 MachGaogamon: Blocker
+- BT11-031 ZeigGreymon: Blocker
+- BT11-041 Etemon: Security A. -1
+- BT11-042 Angewomon: Blocker
+- BT11-043 KingSukamon: Security A. +1
+- BT11-054 Panjyamon: Rush
+- BT11-063 Geremon: Draw 2
+- BT11-065 Snatchmon: Blocker
+- BT11-068 Mamemon: Blocker
+- BT11-069 MetalGreymon (X Antibody): De-Digivolve
+- BT11-071 MusouKnightmon: De-Digivolve 1
+- BT11-073 Justimon: Accel Arm: Piercing, Security A. +1
+- BT11-080 Devimon: Retaliation, Rush
+- BT11-081 MadLeomon: Armed Mode: Draw 2
+- BT11-083 LadyDevimon: Retaliation
+- BT11-086 Mervamon: Blocker, Retaliation, Rush
+- BT11-089 Akiho Rindou: Rush
+- BT11-090 Nicolai Petrov: Jamming
+- BT11-092 Analogman: Draw 1
+- BT11-101 Holy Sunshine: Security A. -1
+- BT11-104 Buster Dive: Rush
+- BT11-112 Rina Shinomiya: Blocker, Evade
+- BT12-005 Kozenimon: Draw 1, Save
+- BT12-006 Monimon: Draw 1, Save
+- BT12-009 Flamemon: Draw 2
+- BT12-014 OmniShoutmon: Save, Security A. +1
+- BT12-024 Lanamon: Jamming
+- BT12-035 Ekakimon: Save
+- BT12-039 Gokuumon: Security A., Security A. -1
+- BT12-040 Sagomon: Security A., Security A. -1
+- BT12-041 Cho-Hakkaimon: Draw 1, Save
+- BT12-043 ShineGreymon: Security A. +1
+- BT12-044 Lampmon: Security A., Security A. +1, Security A. -2
+- BT12-048 Dracmon: Draw 1
+- BT12-060 ChuuChuumon: Blocker
+- BT12-063 Damemon: Blocker
+- BT12-064 Tuwarmon: Blocker
+- BT12-066 Mercurymon: Blocker
+- BT12-068 MetalGreymon: Piercing
+- BT12-070 WarGreymon: Reboot
+- BT12-074 Gumdramon: Draw 1
+- BT12-075 Psychemon: Draw 1
+- BT12-077 Arresterdramon: Draw 1, Rush
+- BT12-078 Wizardmon (X Antibody): Blocker
+- BT12-081 Astamon: Draw 1, Save
+- BT12-083 Arresterdramon: Superior Mode: Draw 1, Save
+- BT12-084 JetMervamon: Blocker
+- BT12-086 Clockmon: Jamming
+- BT12-087 Taiki Kudo: Draw 1, Save
+- BT12-091 Airu Suzaki: Save
+- BT12-093 Ren Tobari: Save
+- BT12-094 Yuu Amano: Save
+- BT12-095 Tai Kamiya: Blocker
+- BT12-096 Tagiru Akashi: Save
+- BT12-097 Ryoma Mogami: Save
+- BT12-098 Watchmaker: Save, Security A. +1
+- BT12-103 Home Run Blast: Security A. -1
+- BT12-109 Overflowing Power: Save
+- BT13-003 Kyaromon: Jamming
+- BT13-005 Dorimon: Draw 1
+- BT13-018 ShineGreymon: Blocker
+- BT13-038 Reppamon: Security A. -2
+- BT13-051 Mikemon: Piercing
+- BT13-054 Lilamon: Security A. +1
+- BT13-056 Leopardmon: Blocker
+- BT13-074 PrinceMamemon: Jamming, Reboot
+- BT13-076 KingEtemon: Blocker, Security A. -1
+- BT13-079 Falcomon: Retaliation
+- BT13-086 Gizmon: XT: Blocker
+- BT13-091 Belphemon: Rage Mode: Security A. +1
+- BT13-099 Spencer Damon: Blocker
+- BT13-106 Odin's Breath: Security A. -1
+- BT14-002 Bukamon: Jamming
+- BT14-003 Tokomon: Draw 1
+- BT14-018 Goldramon: Blocker, Rush
+- BT14-039 Monzaemon: Security A. +1
+- BT14-041 Seraphimon: Security A. +1
+- BT14-058 Numemon: Rush
+- BT14-065 Vademon: De-Digivolve 1
+- BT14-068 Brigadramon: Blocker
+- BT14-074 Loogarmon: Draw 1
+- BT14-076 SkullGreymon: Rush
+- BT14-078 Helloogarmon: Draw 2
+- BT14-080 Ghoulmon: Security A. +1
+- BT14-086 Satsuki Tamahime: Jamming, Reboot
+- BT14-087 Eiji Nagasumi: Alliance, Blocker, Security A. +1
+- BT14-099 Dark Wings Delusion: Security A. +1
+- BT14-100 Pummel Whack: Draw 1
+- BT14-101 WarGreymon: Piercing, Raid, Security A. +1
+- BT15-005 Kyokyomon: Draw 1
+- BT15-006 DemiMeramon: Draw 2
+- BT15-008 Muchomon: Draw 1
+- BT15-014 Garudamon: Blocker
+- BT15-015 SkullMeramon: Security A. +1
+- BT15-019 Crabmon: Draw 1
+- BT15-035 Geremon: Security A. -1
+- BT15-046 Woodmon: Draw 1
+- BT15-051 Lillymon (X Antibody): Draw 1
+- BT15-053 HerculesKabuterimon: Piercing
+- BT15-059 Airdramon: De-Digivolve 1
+- BT15-060 Omekamon: Blocker
+- BT15-065 WaruMonzaemon: De-Digivolve 1, Security A. +1
+- BT15-069 Candlemon: Draw 1
+- BT15-071 Loogamon: Draw 1
+- BT15-075 Loogarmon: Draw 1
+- BT15-081 Leviamon (X Antibody): Security A. +2
+- BT15-086 Marvin Jackson: Blocker, Jamming
+- BT15-087 Shuu Yulin: Alliance, Reboot, Security A. +1
+- BT15-099 Venom Infusion: Draw 2
+- BT16-003 Upamon: Blocker
+- BT16-005 Dorimon: Blocker
+- BT16-011 Garudamon (X Antibody): Rush
+- BT16-013 Valkyrimon: Security A. +1
+- BT16-022 Mantaraymon: Security A. -1
+- BT16-024 MagnaAngemon: Blocker
+- BT16-032 Sheepmon: Blocker
+- BT16-034 Tempomon: Security A. -2
+- BT16-038 Terriermon (X Antibody): Piercing
+- BT16-046 GranKuwagamon: Security A. +1
+- BT16-054 Sealsdramon: Rush
+- BT16-057 Mekanorimon: De-Digivolve 1
+- BT16-058 Dorugamon: Blocker, Draw 1
+- BT16-059 Shootmon: De-Digivolve 1
+- BT16-060 Tankdramon: De-Digivolve 1
+- BT16-061 DoruGreymon: Blocker
+- BT16-064 Dorugoramon: Blocker
+- BT16-067 Lopmon (X Antibody): Draw 1
+- BT16-068 Dobermon: Blocker, Draw 1
+- BT16-074 Climbmon: Draw 2
+- BT16-075 Cerberusmon: Rush
+- BT16-077 Dinobeemon: Rush
+- BT16-079 Cherubimon (X Antibody): Security A. +1
+- BT16-086 Hacker Judge: Barrier, Blocker
+- BT16-087 Kosuke Kisakata: Blocker, Piercing
+- BT16-088 Cody Hida & T.K. Takaishi: De-Digivolve 1
+- BT16-091 Beastly Storm Dance of Affection: Security A. +1
+- BT16-092 Invincible Dragon-Insect Fusion: Blocker
+- BT17-002 Xiaomon: Draw 1
+- BT17-004 Argomon: Blocker
+- BT17-012 BurningGreymon: Raid
+- BT17-013 WarGrowlmon: Security A. +1
+- BT17-016 Gallantmon: Blocker
+- BT17-021 Labramon: Draw 1, Jamming
+- BT17-022 Lobomon: Draw 1
+- BT17-029 Agumon: Draw 1
+- BT17-031 Renamon: Security A. -1
+- BT17-032 Kyubimon: Security A. -1
+- BT17-037 RizeGreymon: Piercing
+- BT17-040 Kazuchimon: Security A. -1
+- BT17-041 ShineGreymon: Burst Mode: Security A. +1
+- BT17-049 Antylamon: Security A. +1
+- BT17-050 Parasitemon: Alliance, Security A. +1
+- BT17-052 Agumon: Draw 1
+- BT17-054 Trailmon: Blocker, Collision
+- BT17-056 Locomon: Blocker, Collision
+- BT17-060 Armageddemon: Rush
+- BT17-065 DexDorugamon: Draw 1
+- BT17-067 DexDoruGreymon: Draw 1
+- BT17-072 Ornismon: Security A. +1
+- BT17-075 Eosmon: De-Digivolve 1
+- BT17-079 Takuya Kanbara: Piercing
+- BT17-082 Minami Uehara: Rush
+- BT17-083 Koji Minamoto: Jamming
+- BT17-086 Leon Alexander: Barrier, Blocker
+- BT17-087 Marcus Damon: Blocker
+- BT17-089 Rhythm: Draw 1
+- BT17-091 Code Cracker Fang: Alliance, Blocker, Security A. +1
+- BT17-092 Menoa Bellucci: Draw 2
+- BT18-005 Kozenimon: Draw 1
+- BT18-014 Gigasmon: Rush
+- BT18-018 EmperorGreymon: Security A. +1
+- BT18-026 DaiPenmon: Iceclad
+- BT18-036 Wizardmon: Draw 1
+- BT18-037 Lobomon: Draw 1
+- BT18-040 Dynasmon: Blocker
+- BT18-041 MetalEtemon: De-Digivolve 1, Security A. -2
+- BT18-052 CannonBeemon: Blocker, De-Digivolve 1
+- BT18-053 JetSilphymon: Raid
+- BT18-058 Kotemon: Draw 2
+- BT18-061 Trailmon: Blocker, Collision
+- BT18-065 Snatchmon: Blocker
+- BT18-070 RhinoKabuterimon: Blocker, Collision
+- BT18-081 Rhihimon: Jamming
+- BT18-083 LordKnightmon: Blocker, Collision
+- BT18-085 Zanbamon: Security A. +1
+- BT18-089 Tommy Himi: Draw 1
+- BT18-090 Zoe Orimoto: Draw 1
+- BT18-091 J.P. Shibayama: Draw 1
+- BT18-092 Zenith: De-Digivolve 1, Draw 1
+- BT18-093 Violet Inboots: Draw 1
+- BT18-099 Fist of Athena: Piercing, Security A. +1
+- BT19-001 Pickmons: Draw 1
+- BT19-005 Hopmon: Reboot
+- BT19-015 Gallantmon: Piercing
+- BT19-016 Gaossmon: Draw 1
+- BT19-020 Greymon: Save
+- BT19-022 MailBirdramon: Save
+- BT19-025 MetalGreymon: Rush
+- BT19-032 Airdramon: Security A. -1
+- BT19-037 Taomon: Security A. -1
+- BT19-040 Sakuyamon: Blocker
+- BT19-041 Dynasmon: Blocker
+- BT19-052 Vespamon: Blocker
+- BT19-053 QueenBeemon: Security A. +1
+- BT19-062 Cyberdramon: Blocker
+- BT19-064 Justimon: Blitz Arm: Blocker
+- BT19-066 Gizamon: Draw 2
+- BT19-068 Shademon: Save
+- BT19-071 Beelzemon: Blocker
+- BT19-073 LordKnightmon (X Antibody): Alliance, Blocker, De-Digivolve 1, Security A. +1
+- BT19-080 Takato Matsuki: Raid
+- BT19-086 Ryo Akiyama: Draw 1
+- BT19-091 Trinity Burst!: Alliance
+- BT19-095 Knight Device: Piercing
+- BT2-005 Kapurimon: Reboot
+- BT2-015 Garudamon: Draw 1
+- BT2-021 Veemon: Draw 1
+- BT2-026 Veedramon: Jamming
+- BT2-028 AeroVeedramon: Jamming
+- BT2-031 Vikemon: Security A. +1
+- BT2-033 Agumon: Draw 1
+- BT2-038 RizeGreymon: Security A. +1
+- BT2-050 Argomon: Security A. +1
+- BT2-053 Keramon: Draw 1
+- BT2-057 Greymon: Jamming, Reboot
+- BT2-063 MetalGreymon: Security A. +1
+- BT2-071 Wizardmon: Retaliation
+- BT2-088 Taiga: Piercing
+- BT2-092 Radiation Blade: Security A. +1
+- BT2-103 Spiral Sword: Blocker
+- BT2-104 Atomic Ray: Blocker
+- BT20-002 Bebydomon: Draw 1
+- BT20-005 Kapurimon: Jamming
+- BT20-007 Dracomon: Draw 1
+- BT20-008 Huckmon: Draw 1
+- BT20-014 SaviorHuckmon: Alliance, Security A. +1
+- BT20-015 Hisyaryumon: Security A. +1
+- BT20-019 Jesmon (X Antibody): Piercing, Security A. +1
+- BT20-022 Crabmon (X Antibody): Draw 1
+- BT20-024 Seadramon (X Antibody): Draw 1
+- BT20-028 GigaSeadramon: De-Digivolve 2
+- BT20-057 Gankoomon: Reboot
+- BT20-067 Soulmon: Retaliation
+- BT20-069 Punkmon: Blocker, Retaliation
+- BT20-071 Soloogarmon: Raid
+- BT20-075 Loudmon: Piercing, Raid, Security A. +1
+- BT20-077 HeavyMetaldramon: Blocker, Rush
+- BT20-078 Reapermon: De-Digivolve 1
+- BT20-089 Code Cracker Fang & Hacker Judge: Alliance, Barrier, Mind Link, Piercing, Security A. +1
+- BT20-092 Battle NPC: Draw 1
+- BT20-098 Apparition Legion: Blocker, Rush
+- BT21-002 Gurimon: Draw 1
+- BT21-003 Yokomon: Draw 1
+- BT21-005 Swipemon: Draw 1
+- BT21-014 BurningGreymon: Piercing
+- BT21-016 Shoutmon (King Version): Save
+- BT21-020 Aldamon: Security A. +1
+- BT21-034 Kiwimon: Draw 1
+- BT21-039 Gryphonmon: Security A. +1
+- BT21-045 ShineGreymon: Security A. +1
+- BT21-054 Shotmon: De-Digivolve 1
+- BT21-059 Timemon: De-Digivolve 1
+- BT21-060 Destromon: De-Digivolve 1
+- BT21-061 MetalGreymon: De-Digivolve 1, Security A. +1
+- BT21-063 Gumdramon: Draw 2
+- BT21-064 Guilmon: Draw 2
+- BT21-066 Arresterdramon: Save
+- BT21-074 Satellamon: De-Digivolve, De-Digivolve 1
+- BT21-075 SkullGreymon: Raid, Retaliation
+- BT21-076 WarGrowlmon: Raid, Retaliation
+- BT21-077 Regulusmon: Blocker, Collision
+- BT21-078 WereGarurumon: Security A. +1
+- BT21-080 Hiro Amanokawa: Draw 1
+- BT21-084 Haru Shinkai: Draw 1
+- BT21-085 Davis Motomiya: Draw 1
+- BT21-088 Tagiru Akashi: Draw 1, Save
+- BT21-089 Takato Matsuki: Blocker
+- BT21-091 Spirit Evolution!: Draw 2
+- BT21-096 The Champion Ultimate Fighter!: Rush
+- BT21-099 Xros Up: Save
+- BT22-001 Puyoyomon: Draw 1
+- BT22-006 Moonmon: Draw 1
+- BT22-010 Meramon: Piercing, Raid
+- BT22-011 BlueMeramon: Security A. +1
+- BT22-014 Gaiomon: Piercing
+- BT22-018 Sangomon: Blocker
+- BT22-020 KausGammamon: Draw 1
+- BT22-024 MarineBullmon: Decode (Lv.4 w/[Aqua]/[Sea Animal] in any trait)
+- BT22-031 GoldNumemon: Security A. -2
+- BT22-035 Entermon: Security A. +1
+- BT22-038 Monzaemon: Armor Purge
+- BT22-039 Ouranosmon: Security A. +1
+- BT22-043 Terriermon: Draw 1
+- BT22-044 Palmon: Draw 1
+- BT22-045 WezenGammamon: Blocker
+- BT22-048 Togemon: Piercing, Raid
+- BT22-054 Hagurumon: Draw 1
+- BT22-055 Recomon: Draw 2
+- BT22-056 Guardromon: De-Digivolve 1
+- BT22-060 Datamon: De-Digivolve
+- BT22-061 Vademon: Fragment (3)
+- BT22-062 MetalTyrannomon (X Antibody): Blocker
+- BT22-064 Diaboromon: Security A. +1
+- BT22-066 Raidenmon: De-Digivolve 1
+- BT22-069 Lunamon: Draw 1
+- BT22-074 SkullMeramon: Security A. +1
+- BT22-076 ShinMonzaemon: Security A. +1
+- BT22-085 Rina Shinomiya: Jamming
+- BT22-086 Yao Qinglan: Draw 1
+- BT22-095 Akemi Suedou: Alliance, Draw 1, Rush, Scapegoat, Security A. +1
+- BT23-001 Flickmon: Draw 1
+- BT23-002 Yokomon: Draw 1
+- BT23-004 DemiMeramon: Blocker, Retaliation
+- BT23-010 GeoGreymon: Raid
+- BT23-012 Garudamon: Raid
+- BT23-020 Seadramon: Draw 1, Security A. +1
+- BT23-025 MarineAngemon: Security A. -1
+- BT23-029 Antylamon: Security A. +1
+- BT23-030 Etemon: Blocker, Reboot, Security A. +1
+- BT23-031 Angewomon: Security A. +1
+- BT23-032 Shakkoumon: De-Digivolve 1
+- BT23-036 BanchoLeomon: Raid
+- BT23-041 Kabuterimon: Piercing, Security A. +1
+- BT23-043 CannonBeemon: Blocker
+- BT23-049 Monodramon: Draw 1
+- BT23-051 Golemon: Security A. +1
+- BT23-056 WereGarurumon: De-Digivolve 1
+- BT23-061 Ghostmon: Blocker
+- BT23-067 LadyDevimon: Blocker
+- BT23-074 Eater Legion: Security A. +1
+- BT23-083 Fei: Draw 1
+- BT23-084 Erika Mishima: Alliance, Security A. +1
+- BT23-085 Ryuji Mishima: Blocker, Reboot
+- BT23-087 Violet Inboots: Rush
+- BT23-094 Nanomachine Break: Security A. -1
+- BT24-006 Tapmon: Draw 1
+- BT24-009 Shamanmon: Draw 2
+- BT24-013 Fugamon: Draw 1
+- BT24-015 MetalGreymon: Blocker
+- BT24-022 Ikkakumon: Draw 1
+- BT24-026 Hyogamon: Blocker, Draw 1, Jamming
+- BT24-027 Lanamon: Draw 1
+- BT24-039 Piximon: Blocker
+- BT24-045 Ogremon: Draw 1
+- BT24-055 Ginryumon: De-Digivolve
+- BT24-063 Locomon: Blocker
+- BT24-064 Ouryumon: De-Digivolve 2
+- BT24-065 Diaboromon (X Antibody): De-Digivolve 1
+- BT24-069 Vilemon: Blocker
+- BT24-071 Raidramon: Security A. +1
+- BT24-072 SkullGreymon: Blocker, Retaliation, Security A. +1}
+- BT24-073 SkullSatamon: Security A. +1
+- BT24-075 SkullBaluchimon: Security A. +1}
+- BT24-080 Megidramon: Blocker
+- BT24-086 The Crossroad Witch: Alliance, Mind Link, Reboot, Security A. +1
+- BT24-087 Rei Katsura: Draw 1
+- BT24-094 Central Town: Throne Room: Alliance, Security A. +1
+- BT24-099 Super Hacking: Draw 2
+- BT25-057 Monarchlizamon: De-Digivolve 1
+- BT25-060 Rebootmon: Blocker, Piercing
+- BT25-074 Tankdramon: Blocker, Reboot
+- BT25-075 Vulcanusmon: De-Digivolve 1, Rush
+- BT25-076 Ghoulmon: Rush
+- BT25-083 LadyDevimon: Draw 1
+- BT25-097 Guardian Palace: Alliance, Scapegoat, Security A. +1
+- BT25-102 Factorial Area: Blocker
+- BT25-104 ShineGreymon: Burst Mode: Rush
+- BT3-003 Upamon: Draw 1
+- BT3-010 ZubaEagermon: Security A. +1
+- BT3-013 Duramon: Security A. +1
+- BT3-030 Leopardmon: Jamming
+- BT3-031 Imperialdramon Dragon Mode: Jamming
+- BT3-034 Lopmon: Draw 1
+- BT3-039 Angewomon: Security A. -2
+- BT3-040 Shakkoumon: Security A. -1
+- BT3-043 Kentaurosmon: Security A. -2
+- BT3-057 MegaGargomon: Security A. +1
+- BT3-058 BanchoStingmon: Security A. +2
+- BT3-064 TiaLudomon: De-Digivolve 1
+- BT3-069 RaijiLudomon: De-Digivolve 1
+- BT3-095 Joe Kido: Blocker
+- BT3-101 Bifrost: Security A. -1
+- BT3-105 Breath of the Gods: Reboot
+- BT3-106 Beast Cyclone: Blocker, Reboot, Security A. +1
+- BT3-108 Dark Despair: Retaliation
+- BT3-111 Imperialdramon Dragon Mode: Piercing
+- BT4-004 Budmon: Digi-Burst
+- BT4-006 Xiaomon: Retaliation
+- BT4-008 Agumon: Digi-Burst
+- BT4-020 ShineGreymon: Security A. +1
+- BT4-021 Gaomon: Digi-Burst
+- BT4-026 Gaogamon: Draw 1
+- BT4-034 Regalecusmon: Draw 1
+- BT4-051 DoKunemon: Digi-Burst
+- BT4-052 Lalamon: Digi-Burst
+- BT4-058 Orochimon: Piercing
+- BT4-064 Sunarizamon: Digi-Burst
+- BT4-068 Baboongamon: De-Digivolve 1
+- BT4-077 Ghostmon: Digi-Burst
+- BT4-087 Anubismon: Rush
+- BT4-095 Yoshino Fujieda: Digi-Burst
+- BT4-107 Pollen Spray: Digi-Burst
+- BT4-109 Final Zubagon Punch: Blocker, Reboot, Security A. +1
+- BT4-113 AncientGreymon: Security A. +1
+- BT5-001 Koromon: Draw 1
+- BT5-004 Yokomon: Digi-Burst
+- BT5-005 Tsumemon: Draw 1
+- BT5-009 Shoutmon: Blitz
+- BT5-014 OmniShoutmon: Blitz, Security A. +1
+- BT5-016 WarGreymon: Blocker
+- BT5-028 CrysPaledramon: Security A. +1
+- BT5-029 WereGarurumon: Sagittarius Mode: Jamming
+- BT5-032 Hexeblaumon: Jamming
+- BT5-036 Renamon: Security A. -1
+- BT5-044 Sakuyamon: Security A. -3
+- BT5-050 Weedmon: Digi-Burst
+- BT5-056 Rafflesimon: Digi-Burst
+- BT5-057 Rosemon: Digi-Burst, Security A. +1
+- BT5-063 Kurisarimon: Rush
+- BT5-064 BlackGaogamon: Jamming, Reboot
+- BT5-065 Shademon: Blocker
+- BT5-076 BlackGrowlmon: Security A. +1
+- BT5-085 Armageddemon: Rush
+- BT5-091 Takumi Aiba: Draw 1
+- BT5-094 Rowdy Rocker: Draw 2
+- BT5-102 Wisselen: Digi-Burst
+- BT5-103 A Blazing Storm of Metal!: Blocker, Reboot
+- BT6-002 Kyaromon: Draw 1
+- BT6-004 Pinamon: Draw 1
+- BT6-006 Tsunomon: Draw 1
+- BT6-007 Agumon: Security A. +1
+- BT6-008 Shoutmon: Blitz, Draw 1
+- BT6-010 Flamemon: Piercing
+- BT6-016 Jesmon: Piercing
+- BT6-024 Mojyamon: Jamming
+- BT6-029 Azulongmon: Security A. +1
+- BT6-031 Tinkermon: Security A. -1
+- BT6-032 Tapirmon: Draw 1
+- BT6-033 Pulsemon: Jamming
+- BT6-035 Baluchimon: Draw 2
+- BT6-037 Bulkmon: Security A. +1
+- BT6-050 Petaldramon: Piercing
+- BT6-054 AncientTroymon: Blocker
+- BT6-056 Chikurimon: De-Digivolve 1
+- BT6-057 ToyAgumon: Blocker
+- BT6-062 Volcanomon: Security A. +1
+- BT6-066 PileVolcamon: De-Digivolve 1
+- BT6-067 Gankoomon: Security A. +1
+- BT6-075 Ginkakumon Promote: Draw 1
+- BT6-077 Rebellimon: Blocker, Retaliation
+- BT6-081 Titamon: Security A. +1
+- BT6-086 Eosmon: Security A. +1
+- BT6-087 Tai Kamiya: Draw 1
+- BT6-088 Matt Ishida: Draw 1
+- BT6-090 Izzy Izumi & Joe Kido: Draw 1
+- BT6-091 Sora Takenouchi & Mimi Tachikawa: Draw 1
+- BT6-108 Underworld's Call: Draw 1
+- BT7-003 Pusurimon: Digi-Burst
+- BT7-005 Dorimon: Draw 1
+- BT7-018 Gomamon: Draw 2
+- BT7-022 KendoGarurumon: Jamming
+- BT7-024 DaiPenmon: Draw 1
+- BT7-030 AncientMegatheriummon: Draw 2
+- BT7-031 Herissmon: Digi-Burst
+- BT7-033 Bulkmon: Blocker
+- BT7-034 Filmon: Security A. -2
+- BT7-039 Stefilmon: Digi-Burst, Draw 1, Security A. +1
+- BT7-041 Kazuchimon: Security A. +1
+- BT7-058 SkullKnightmon: Security A. +1
+- BT7-061 Gigasmon: Blocker
+- BT7-062 Dorugamon: Blocker
+- BT7-064 DoruGreymon: Security A. +1
+- BT7-070 Wendigomon: Draw 1
+- BT7-073 KaiserLeomon: Retaliation
+- BT7-076 Orochimon: Draw 1
+- BT7-085 Takuya Kanbara: Security A. +1
+- BT7-092 Flame Memory Boost!: Security A. +1
+- BT7-100 Qualialise Blast: Security A. +1
+- BT7-104 Metal Cannon: Draw 1
+- BT7-112 Susanoomon: Security A. +2
+- BT8-001 Gurimon: Draw 1
+- BT8-006 DemiMeramon: Draw 1
+- BT8-008 Gammamon: Draw 1
+- BT8-019 Zhuqiaomon: Security A. +1
+- BT8-028 CaptainHookmon: Draw 1
+- BT8-040 Betsumon: Draw 2
+- BT8-043 Cherubimon: Security A. -2
+- BT8-048 Shurimon: Blocker
+- BT8-060 Ryudamon: Decoy (Black)
+- BT8-062 SkullKnightmon Cavalier Mode: Blocker, Jamming
+- BT8-063 Ginryumon: Blocker
+- BT8-064 Greymon: Blocker
+- BT8-065 CatchMamemon: De-Digivolve 1
+- BT8-066 Hisyaryumon: Reboot
+- BT8-068 BanchoMamemon: Security A. +1
+- BT8-087 T.K. Takaishi: Draw 1
+- BT8-092 Yuji Musya: Draw 1
+- BT8-095 Fire Rocket: Blocker, Security A. +1
+- BT8-103 Lightning Blade: Piercing
+- BT8-108 Mist Memory Boost!: Draw 1
+- BT9-005 Tumblemon: Blocker
+- BT9-015 MetalGreymon (X Antibody): Security A. +1
+- BT9-021 Jellymon: Draw 1
+- BT9-031 MetalGarurumon (X Antibody): Blocker
+- BT9-038 Pegasusmon: Security A. -1
+- BT9-040 Angewomon (X Antibody): Security A. -1
+- BT9-049 Kuwagamon (X Antibody): Piercing
+- BT9-058 Dorumon: Draw 2
+- BT9-066 Alphamon: De-Digivolve 1
+- BT9-067 Raidenmon: De-Digivolve 1
+- BT9-068 Gaiomon: Blitz, De-Digivolve 1
+- BT9-075 DexDorugamon: Blocker, Retaliation
+- BT9-086 Kiyoshiro Higashimitarai: Draw 1
+- BT9-088 Mimi Tachikawa & Joe Kido: Draw 1
+- BT9-089 Daigo Nishijima: Blocker
+- BT9-102 Attack of the Heavy Mobile Digimon!: Blitz, Rush
+- BT9-107 Metal Impulse: De-Digivolve 1
+- EX1-002 Biyomon: Draw 1
+- EX1-007 Megadramon: Security A. +1
+- EX1-008 MetalGreymon: Piercing
+- EX1-009 WarGreymon: Blocker
+- EX1-010 Phoenixmon: Draw 2
+- EX1-020 Plesiomon: Draw 2
+- EX1-023 Elecmon: Security A. -1
+- EX1-025 Salamon: Draw 1
+- EX1-039 Lillymon: Security A. +1
+- EX1-045 Hagurumon: Draw 2
+- EX1-047 Guardromon: Draw 2
+- EX1-048 Andromon: Blocker
+- EX1-049 MetalTyrannomon: Reboot
+- EX1-052 Etemon: Jamming
+- EX1-055 Tapirmon: Draw 1
+- EX1-057 Wizardmon: Rush
+- EX1-059 Ogremon: Security A. +1
+- EX1-061 Myotismon: Retaliation
+- EX1-064 Piedmon: Draw 1
+- EX1-065 Diaboromon: Blocker
+- EX1-067 Baptism by Fire!: Blocker
+- EX1-069 Ultimate Connection!: Draw 1
+- EX1-070 Fight for Your Pride!: Blocker
+- EX10-004 Cupimon: Draw 1
+- EX10-005 Pagumon: Draw 1
+- EX10-008 MetalGreymon: Blocker, Collision
+- EX10-014 Weatherdramon: Security A. -1
+- EX10-015 Psychemon: Draw 1
+- EX10-018 Astamon: Save
+- EX10-022 Belphemon: Rage Mode: Piercing, Security A. +2
+- EX10-029 Warpmon: Blocker
+- EX10-030 Cometmon: Blocker
+- EX10-031 DarkKnightmon: De-Digivolve
+- EX10-039 ChuuChuumon: Draw 1
+- EX10-041 Wizardmon: Security A. -1
+- EX10-044 Damemon: Draw 1, Save
+- EX10-045 Tuwarmon: Blocker, Draw 1, Retaliation
+- EX10-048 Myotismon: Blocker, Retaliation
+- EX10-049 SkullSatamon: Security A. +1
+- EX10-050 Baalmon: Blocker, Reboot
+- EX10-051 Mummymon: De-Digivolve 1
+- EX10-061 Apocalymon: Rush
+- EX10-062 Yujin Ozora: Draw 1
+- EX10-064 Yuu Amano & Nene Amano: Draw 1
+- EX10-065 Yukio Oikawa: Rush
+- EX10-067 Ryoma Mogami: Alliance, Save, Security A. +1
+- EX10-071 Paradise Lost: Blocker, Piercing, Raid
+- EX10-074 Beelzemon: De-Digivolve 2
+- EX11-003 Puroromon: Draw 1
+- EX11-004 Kapurimon: Draw 1
+- EX11-007 Agumon: Piercing, Raid
+- EX11-013 Sangomon: Draw 1
+- EX11-016 PolarBearmon: Piercing, Security A. +1
+- EX11-025 FunBeemon: Reboot
+- EX11-030 ForgeBeemon: Reboot
+- EX11-031 Vespamon: Blocker
+- EX11-037 Espimon: Draw 1
+- EX11-041 Oblivimon: De-Digivolve 1
+- EX11-043 Invisimon: Security A. +1
+- EX11-046 Galacticmon: Blocker
+- EX11-048 Ghostmon: Retaliation
+- EX11-050 Loudmon: Scapegoat, Security A. +1
+- EX11-055 Chitose Horaiji: Draw 1
+- EX11-058 Yao Qinglan: Decode, Draw 1
+- EX11-059 Reina Oumi: Draw 1
+- EX11-062 Shoto Kazama: Draw 1, Vortex
+- EX11-063 Winr: Blocker, Collision, Piercing
+- EX11-066 Xeno: Draw 1
+- EX11-068 Violet Inboots: Draw 1, Execute
+- EX11-070 Unchained: Mind Link
+- EX12-065 Kaguyamon: Blocker, Retaliation
+- EX2-001 Gigimon: Draw 1
+- EX2-003 Viximon: Draw 1
+- EX2-004 Gummymon: Draw 1
+- EX2-013 Labramon: Jamming
+- EX2-017 Leomon: Blocker, Draw 1
+- EX2-027 Rapidmon: Security A. +1
+- EX2-035 Cyberdramon: De-Digivolve 1
+- EX2-037 Reapermon: De-Digivolve 1
+- EX2-045 Calumon: Draw 1
+- EX2-050 ADR-05 Creep Hands: Blocker
+- EX2-052 ADR-06 Horn Striker: Rush
+- EX2-054 ADR-09 Gatekeeper: Security A. -1
+- EX2-055 Reaper: Rush
+- EX2-058 Jeri Kato: Draw 1
+- EX2-059 Shu-Chong Wong: Draw 1
+- EX2-063 Kazu Shioda: Draw 1
+- EX2-066 Offensive Plug-In A: Security A. +1
+- EX2-067 Fire Ball: Draw 2
+- EX2-068 High-Speed Plug-In D: Jamming
+- EX2-074 Beelzemon Blast Mode: Security A. +1
+- EX3-002 Missimon: Reboot
+- EX3-004 Veemon: Draw 2
+- EX3-006 Flarerizamon: Draw 1
+- EX3-009 Volcdramon: Draw 1
+- EX3-010 Paildramon: Security A. +1
+- EX3-013 Chaosdramon: De-Digivolve 1
+- EX3-015 Crabmon: Jamming
+- EX3-017 Ebidramon: Blocker
+- EX3-027 Agumon: Draw 1
+- EX3-030 Gatomon: Rush
+- EX3-031 Veedramon: Rush
+- EX3-032 Majiramon: Security A. -2
+- EX3-033 AeroVeedramon: Blocker
+- EX3-036 Magnadramon: Security A. -1, Security A. -2
+- EX3-049 Sealsdramon: Rush
+- EX3-052 Jazarichmon: Security A. +1
+- EX3-053 Metallicdramon: Blocker, Reboot
+- EX3-055 Wormmon: Retaliation
+- EX3-057 Growlmon: Security A. +1
+- EX3-063 Imperialdramon: Dragon Mode: Blitz
+- EX3-070 Avalon's Gate: Piercing
+- EX4-001 Missimon: Draw 1
+- EX4-002 Kokomon: Draw 1
+- EX4-007 GeoGreymon: Draw 1
+- EX4-014 Gaossmon: Draw 1
+- EX4-020 MetalGreymon: Material Save 2, Rush
+- EX4-025 Turuiemon: Security A. +1
+- EX4-026 Youkomon: Blocker
+- EX4-029 Antylamon: Security A. +1
+- EX4-031 Cherubimon: Security A. +1
+- EX4-032 Terriermon: Alliance
+- EX4-033 Terriermon Assistant: Alliance
+- EX4-034 Lopmon: Alliance
+- EX4-035 BlackGargomon: Security A. +1
+- EX4-036 BlackRapidmon: Piercing, Security A. +1
+- EX4-037 BlackMegaGargomon: Blocker, Reboot
+- EX4-041 DeadlyAxemon: Draw 2
+- EX4-047 DarkKnightmon: Blocker, De-Digivolve 1
+- EX4-050 ShadowSeraphimon: De-Digivolve 1
+- EX4-051 BlitzGreymon: De-Digivolve 1
+- EX4-052 Fake Agumon Expert: Draw 2
+- EX4-054 Wendigomon: Security A. +1
+- EX4-057 Antylamon: Security A. +1
+- EX4-059 Cherubimon: Security A. +1
+- EX4-064 Keenan Crier: Draw 1
+- EX5-004 Frimon: Draw 1
+- EX5-005 Tokomon: Draw 1
+- EX5-006 Xiaomon: Draw 1
+- EX5-009 Indramon: Security A. +1
+- EX5-010 Sandiramon: Security A. +1
+- EX5-011 Pajiramon: Security A. +1
+- EX5-013 Zhuqiaomon: Security A. +1
+- EX5-014 Apollomon: Security A. +1
+- EX5-032 LoaderLeomon: Blocker
+- EX5-033 Mitamamon: Barrier, Rush, Security A. -2
+- EX5-034 BanchoLeomon: Security A. -1
+- EX5-035 Hawkmon: Fortitude
+- EX5-037 Vajramon: Piercing
+- EX5-038 Vikaralamon: Piercing
+- EX5-040 Kumbhiramon: Piercing
+- EX5-042 Merukimon: Rush
+- EX5-049 GrapLeomon: Piercing
+- EX5-050 Sinduramon: Blocker
+- EX5-052 Makuramon: Blocker
+- EX5-056 Syakomon: Draw 1
+- EX5-059 Dobermon (X Antibody): Retaliation
+- EX5-062 Anubismon: Draw 1
+- EX6-007 Zubamon: Draw 1
+- EX6-008 ZubaEagermon: Piercing, Raid
+- EX6-009 Duramon: Piercing, Raid, Security A. +1
+- EX6-010 Durandamon: Raid
+- EX6-017 Luxmon: Draw 1
+- EX6-019 Angemon: Draw 1
+- EX6-021 ArkhaiAngemon: Blocker
+- EX6-022 Angewomon: Alliance, Security A. +1, Security A. -2
+- EX6-023 Gokuumon: Security A. -1
+- EX6-024 Sagomon: Security A. -1
+- EX6-025 Sanzomon: Security A. -1
+- EX6-026 Cho-Hakkaimon: Blocker, Security A. -1
+- EX6-027 Ophanimon: Security A. +1
+- EX6-031 Shakamon: Security A., Security A. +, Security A. -, Security A. -1
+- EX6-034 Antylamon: Security A. +1
+- EX6-035 Cherubimon: Security A. +1
+- EX6-037 Spadamon: Draw 1, Draw 2
+- EX6-038 Ludomon: Draw 1
+- EX6-040 TiaLudomon: Blocker, Reboot
+- EX6-041 Infermon: De-Digivolve 1
+- EX6-042 RaijiLudomon: Blocker, Reboot
+- EX6-043 Diaboromon: Blocker, Jamming
+- EX6-044 BryweLudramon: De-Digivolve 1
+- EX6-046 DemiDevimon: Draw 1
+- EX6-053 LadyDevimon: Scapegoat
+- EX6-055 DanDevimon: Rush, Security A. +1
+- EX6-056 Beelzemon: De-Digivolve 2
+- EX6-062 UltimateChaosmon: Piercing, Security A. +3
+- EX6-063 T.K. Takaishi & Kari Kamiya: Barrier
+- EX7-002 Hiyarimon: Draw 1
+- EX7-013 MagnaKidmon: Security A. +1
+- EX7-020 Paledramon: Blocker, Jamming
+- EX7-021 CrysPaledramon: Piercing, Security A. +1
+- EX7-039 Jazamon: Draw 1
+- EX7-040 ToyAgumon: Draw 2
+- EX7-042 Jazardmon: Draw 2
+- EX7-043 Tankmon: De-Digivolve 1
+- EX7-044 Gigadramon: Blocker
+- EX7-045 Jagamon: Blocker
+- EX7-051 Sparrowmon: Draw 1
+- EX7-054 BlackGatomon: Blocker, Retaliation
+- EX7-057 Loudmon: Security A. +1
+- EX7-058 LadyDevimon (X Antibody): Blocker
+- EX7-060 Nidhoggmon: Blocker
+- EX7-064 Shoto Kazama: Blocker, Piercing
+- EX7-070 Der Blitz: De-Digivolve 1
+- EX8-017 Crabmon: Blocker
+- EX8-018 Gomamon: Draw 1
+- EX8-019 Penguinmon: Security A. -1
+- EX8-020 Dolphmon: Draw 1
+- EX8-022 Frigimon: Security A. -1
+- EX8-023 PolarBearmon: Piercing, Security A. +1
+- EX8-034 Mammothmon: Security A. -1
+- EX8-035 MarineAngemon: Security A. -1
+- EX8-037 Sakuyamon (X Antibody): Rush
+- EX8-043 MetalTyrannomon: De-Digivolve, De-Digivolve 1
+- EX8-044 HerculesKabuterimon: Piercing
+- EX8-045 Callismon: Piercing, Security A. +1
+- EX8-052 Cyberdramon (X Antibody): De-Digivolve 2
+- EX8-069 Nature Spirits: Alliance, Security A. +1
+- EX8-071 Nightmare Soldiers: Scapegoat
+- EX9-020 CresGarurumon: Security A. +1
+- EX9-026 Angemon: Security A. -1
+- EX9-031 Etemon: Security A. +1
+- EX9-041 ExTyrannomon: Fortitude
+- EX9-043 MetalTyrannomon: De-Digivolve 1
+- EX9-045 Cernumon: Security A. +1
+- EX9-047 Eyesmon: Blocker
+- EX9-048 Eyesmon: Scatter Mode: Draw 2
+- EX9-051 Monochromon: De-Digivolve 1
+- EX9-053 Mamemon: Blocker
+- EX9-057 Abbadomon Core: Collision
+- EX9-060 Devidramon: Draw 1
+- EX9-063 Digitamamon: Scapegoat, Security A. +1
+- EX9-065 Titamon: Blocker, Retaliation
+- EX9-068 Analogman: Draw 1
+- EX9-069 Analog Youth: Draw 1, Reboot
+- LM-002 Jellymon: Draw 1
+- LM-003 TeslaJellymon: Draw 1
+- LM-004 Thetismon: Blocker
+- LM-005 Amphimon: Security A. +1
+- LM-009 Airdramon: Rush
+- LM-011 SymbareAngoramon: Blocker
+- LM-014 Espimon: Blocker, Draw 1
+- LM-025 Cyberdramon: De-Digivolve 1
+- LM-039 Valkyrimon: Security A. +1
+- P-002 Biyomon: Draw 1
+- P-007 Garurumon: Draw 1
+- P-008 WereGarurumon: Security A. +1
+- P-010 Greymon: Security A. +1
+- P-011 Veedramon Zero: Draw 1
+- P-012 Tai Kamiya (V-Tamer): Draw 1
+- P-016 Diaboromon: Security A. +1
+- P-024 Tai's Growing Up!: Draw 3
+- P-025 GranKuwagamon: Security A. +1
+- P-028 Pulsemon: Draw 1
+- P-031 Gatomon: Blocker
+- P-032 Palmon: Digi-Burst, Jamming
+- P-033 Sunarizamon: Piercing, Security A. +1
+- P-045 Kurisarimon: Decoy (Black/White)
+- P-049 Phoenixmon: Security A. +1
+- P-051 MetalGarurumon: Draw 2
+- P-061 Jellymon: Draw 1
+- P-062 Hiro Amanokawa: Security A. +1
+- P-064 Kiyoshiro Higashimitarai: Jamming
+- P-066 Huckmon: Draw 1
+- P-067 Bulucomon: Draw 2
+- P-068 Herissmon: Security A. -1
+- P-075 Okuwamon: Piercing
+- P-078 Espimon: Draw 1
+- P-084 Lopmon: Security A. -1
+- P-087 Ritsu Kodo: Draw 1
+- P-096 Prism Garrett: Save
+- P-097 Zubamon: Raid
+- P-098 Seadramon: Rush
+- P-115 SkullKnightmon: Save, Security A. +1
+- P-132 Galemon: Piercing
+- P-135 ShoeShoemon: Jamming, Security A. -1
+- P-139 Leomon (X Antibody): Blocker, Fortitude
+- P-146 Recharge Plug-In Q: Security A. -1
+- P-148 Wanyamon: Draw 1
+- P-157 Monimon: Draw 1
+- P-159 Rook Device: Blocker, Reboot
+- P-162 Coelamon: De-Digivolve
+- P-170 AvengeKidmon: Raid
+- P-171 Pukumon: Blocker
+- P-172 Magnadramon: Blocker
+- P-174 Boltmon: Blocker
+- P-184 Dorugoramon: Blocker
+- P-188 DemiVeemon: Draw 1
+- P-193 The Wicked God Emerges!: Draw 2
+- P-203 Justimon: Accel Arm: Piercing, Security A. +1
+- P-204 Release of the Sealed Knight!: Draw 2
+- P-207 Minervamon: Security A. +1
+- P-209 Titamon: Security A. +1
+- P-213 Aegiochusmon: Rush
+- P-219 Flame Inferno: Blocker, Rush
+- P-223 Kuzuhamon: Blocker
+- RB1-001 Gurimon: Draw 1
+- RB1-007 Greymon: Security A. +1
+- RB1-017 Numemon: Blocker
+- RB1-018 Monzaemon: Security A. +1, Security A. -1
+- RB1-019 ShinMonzaemon: Security A. -1
+- RB1-024 Lamortmon: Piercing
+- RB1-027 HoverEspimon: Blocker, Draw 1
+- RB1-028 BlackGatomon Uver.: Draw 1
+- RB1-032 Hiro Amanokawa: Draw 1
+- RB1-033 Kiyoshiro Higashimitarai: Draw 1
+- ST10-01 Nyaromon: Draw 1
+- ST10-05 Angewomon: Security A. +1, Security A. -2
+- ST10-07 Ghostmon: Blocker
+- ST10-12 LadyDevimon: Retaliation
+- ST12-10 Jesmon: Security A. +1
+- ST12-11 Gankoomon: De-Digivolve 1
+- ST12-13 Sistermon Ciel: Reboot
+- ST12-14 Aus Generics: Piercing
+- ST13-05 Durandamon: Security A. +1
+- ST13-09 Ludomon: Blocker
+- ST13-11 TiaLudomon: Blocker, Reboot
+- ST14-03 Candlemon: Draw 1
+- ST14-08 Beelzemon: Security A. +1
+- ST14-09 BeelStarmon: Rush
+- ST15-08 Greymon: Blocker
+- ST15-14 Tai Kamiya: Draw 1
+- ST16-01 Tsunomon: Draw 1
+- ST17-01 Gummymon: Draw 1
+- ST17-03 Lopmon: Alliance, Security A. +1
+- ST17-05 Gargomon: Jamming
+- ST17-09 Cherubimon: Security A. +1
+- ST17-10 Henry Wong: Rush
+- ST17-13 Magnamon: Blocker
+- ST18-08 Galemon: Vortex
+- ST20-04 Garudamon: Security A. +1
+- ST20-05 Gatomon: Security A. -1
+- ST20-06 Angewomon: Security A. +1
+- ST20-09 MegaKabuterimon: Security A. +1
+- ST20-13 Tai Kamiya & Izzy Izumi: Blocker
+- ST21-03 Ikkakumon: Draw 1
+- ST21-04 Zudomon: Security A. +1
+- ST21-06 MagnaAngemon: Security A. +1
+- ST21-07 Palmon: Draw 2
+- ST21-09 Lillymon: Security A. +1
+- ST22-05 Sakuyamon: Blocker, Security A. +1
+- ST22-07 Rika Nonaka: Draw 1
+- ST23-04 Murasamemon: Security A. +1
+- ST23-08 Monarchlizamon: Security A. +1
+- ST23-10 Pristimon: Draw 2
+- ST23-14 Reina Sakuya & Makoto Kuonji: Jamming
+- ST23-15 e-Pulse: Draw 1
+- ST24-02 Gaomon: Draw 1, Draw 2
+- ST24-03 Gaogamon: Draw 1
+- ST24-13 Marcus Damon & Thomas H. Norstein: Jamming
+- ST24-15 DNA Charge: Draw 1
+- ST7-03 Guilmon: Draw 1
+- ST7-08 WarGrowlmon: Security A. +1
+- ST7-11 Lightning Joust: Security A. +1
+- ST8-04 Veemon: Draw 1
+- ST8-08 AeroVeedramon: Security A. +1
+- ST8-09 Slayerdramon: Security A. +1
+- ST9-07 KoKabuterimon: Blocker
+- ST9-15 Hell Masquerade: Piercing
