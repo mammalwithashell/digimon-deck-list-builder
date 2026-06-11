@@ -197,26 +197,6 @@ fn training_trashes_on_breeding_promotion() {
     // Hatch an egg into breeding, then promote it. The promotion must
     // trash every Training permanent the owner controls.
     assert!(r.game.hatch(0), "hatch egg into breeding");
-    // §17-1-3-2: a bare Digi-Egg-kind top card in the battle area is
-    // swept (trashed) by the state-based rules check, which would add a
-    // second trash card and obscure the Training-trash assertion. Stack
-    // a real Digimon on the hatched egg — as in a real game, where only
-    // a digivolved (level-3+) stack can leave breeding.
-    let rookie_data_idx = r
-        .game
-        .card_data
-        .iter()
-        .position(|c| c.card_id == "RED-MATCH")
-        .unwrap();
-    let next_idx = r.game.next_card_index();
-    let rookie =
-        digimon_engine::card_source::CardSource::new(rookie_data_idx, 0, next_idx);
-    let turn = r.game.turn_count;
-    r.game.players[0]
-        .breeding_area
-        .as_mut()
-        .expect("hatched egg occupies breeding")
-        .digivolve(rookie, turn);
     let trash_before = r.trash_size(0);
     assert!(r.game.move_from_breeding(0), "promote egg to battle_area");
 

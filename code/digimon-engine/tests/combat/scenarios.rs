@@ -233,21 +233,23 @@ fn test_005_on_deletion_fires_during_combat() {
     let atk = r.place_on_field(0, "BIG", Some(0));
     let def = r.place_on_field(1, "TEST-005", Some(0));
 
+    let m_before = r.memory();
     let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::AttackerWins);
-    // TEST-005's deletion effect pushes the gauge to -1 from P0's
-    // perspective. With the attack fully resolved, P0's turn ends and
-    // passes to P1 (post-attack `check_turn_end`, DCGO EndTurnCheck
-    // parity); the gauge seesaws to +1 for the new active player.
-    assert_eq!(
-        r.turn_player(),
-        1,
-        "memory crossed to the opponent's side, so P0's turn ends"
-    );
+    // "Lose 1 memory" is controller-relative (general_rule.pdf p.7: the
+    // marker moves toward the losing player's opponent's side; DCGO
+    // `Owner.AddMemory(-1)`). TEST-005's controller is the defender P1, so
+    // the marker moves 1 toward P0. Memory stays on P0's side, so P0's
+    // turn does NOT end.
     assert_eq!(
         r.memory(),
-        1,
-        "TEST-005's lose-1-memory reads as +1 from the new turn player"
+        m_before + 1,
+        "P1's on-deletion memory loss moves the marker toward P0"
+    );
+    assert_eq!(
+        r.turn_player(),
+        0,
+        "memory stayed on P0's side — the turn continues"
     );
     assert_eq!(r.battle_area_size(1), 0);
 }

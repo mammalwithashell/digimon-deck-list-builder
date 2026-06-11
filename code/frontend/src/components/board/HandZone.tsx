@@ -16,9 +16,10 @@ interface DraggableHandCardProps {
   onClick: () => void;
   onHover?: (cardId: string | null) => void;
   onHoverIndex?: (index: number | null) => void;
+  onInspect?: (cardId: string) => void;
 }
 
-function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, onClick, onHover, onHoverIndex }: DraggableHandCardProps) {
+function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, onClick, onHover, onHoverIndex, onInspect }: DraggableHandCardProps) {
   const setHoveredCard = useGameStore((s) => s.setHoveredCard);
   const dragData: DragData = { type: 'hand-card', handIndex: index, cardId };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -38,6 +39,13 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
       {...attributes}
       className={`ib-hand-card ${highlighted ? 'ib-hand-card--ready' : ''} ${isDragging ? 'ib-hand-card--dragging' : ''}`}
       style={{ marginLeft: index > 0 ? '-12px' : 0, zIndex: isDragging ? 100 : index }}
+      onContextMenu={(e) => {
+        // DCGO parity: right-click inspects your own (visible) hand cards;
+        // the opponent's face-down hand stays private. Always suppress the
+        // webview's native context menu over the hand.
+        e.preventDefault();
+        if (!isOpponent && !isDragging) onInspect?.(cardId);
+      }}
     >
       <Card
         cardId={cardId}
@@ -107,6 +115,8 @@ interface HandZoneProps {
   onCardClick?: (handIndex: number) => void;
   onCardHover?: (cardId: string | null) => void;
   onCardHoverIndex?: (index: number | null) => void;
+  /** Right-click (context-menu) a hand card to open the enlarged card detail. */
+  onCardInspect?: (cardId: string) => void;
 }
 
 export function HandZone({
@@ -117,6 +127,7 @@ export function HandZone({
   onCardClick,
   onCardHover,
   onCardHoverIndex,
+  onCardInspect,
 }: HandZoneProps) {
   return (
     <div className={`ib-hand-zone ${isOpponent ? 'ib-hand-zone--opp' : 'ib-hand-zone--you'}`}>
@@ -131,6 +142,7 @@ export function HandZone({
           onClick={() => onCardClick?.(i)}
           onHover={onCardHover}
           onHoverIndex={onCardHoverIndex}
+          onInspect={onCardInspect}
         />
       ))}
       {cardIds.length === 0 && (

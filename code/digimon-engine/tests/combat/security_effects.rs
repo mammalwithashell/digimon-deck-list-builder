@@ -144,10 +144,17 @@ fn test_021_plays_self_from_security() {
 /// TEST-022 (gain 3 memory) fires, memory changes, and the card trashes.
 #[test]
 fn test_022_gains_memory_from_security() {
+    // Pre-fund P0's memory so the defender's +3 does NOT push the gauge
+    // across zero — a crossing would (faithfully) end P0's turn at the
+    // attack terminal and seesaw-flip the reading. The crossing behavior
+    // itself is pinned by st2_13's security test and gaia_red's
+    // when-attacking test; this test isolates the SecuritySkill memory
+    // application.
     let mut r = DebugRunner::builder()
         .add_card(attacker())
         .add_card(option("TEST-022"))
         .security(1, &["TEST-022"])
+        .memory(5)
         .start();
 
     let atk = r.place_on_field(0, "ATK", Some(0));
@@ -156,19 +163,12 @@ fn test_022_gains_memory_from_security() {
     let result = r.attack_player(atk, 1, false);
     assert_eq!(result, AttackResult::SecurityCheckSurvived);
 
-    // The defender's [Security] gain pushes the gauge to -3 from P0's
-    // perspective; with the attack fully resolved, P0's turn ends
-    // (post-attack `check_turn_end`) and the gauge seesaws to +3 for P1.
-    assert_eq!(
-        r.turn_player(),
-        1,
-        "memory crossed to the defender's side, so P0's turn ends"
-    );
     assert_eq!(
         r.memory(),
-        memory_before + 3,
+        memory_before - 3,
         "SecuritySkill memory gain must apply to the defender's side of the seesaw"
     );
+    assert_eq!(r.turn_player(), 0, "memory stayed on P0's side — no turn end");
     assert_eq!(r.trash_size(1), 1);
 }
 
@@ -477,12 +477,16 @@ fn own_security_digimon_dp_modifier_does_not_affect_opponents_security() {
 /// `InProgress`).
 #[test]
 fn two_security_effects_same_source_auto_fire_in_order() {
+    // `.memory(5)`: keep the defender's +2 gain from crossing zero, which
+    // would (faithfully) end P0's turn at the attack terminal and disturb
+    // the hand/seesaw observables this test pins (see test_022 above).
     let mut r = DebugRunner::builder()
         .add_card(attacker())
         .add_card(option("TEST-028"))
         .add_card(make_test_card("FILLER", "Filler"))
         .deck(1, &["FILLER"])
         .security(1, &["TEST-028"])
+        .memory(5)
         .start();
 
     let atk = r.place_on_field(0, "ATK", Some(0));
@@ -497,15 +501,7 @@ fn two_security_effects_same_source_auto_fire_in_order() {
         r.game.pending_selection.is_none(),
         "TriggerOrder prompt must NOT install for single-source security bundle"
     );
-    // Both effects ran: +2 memory AND +1 hand card. The defender's gain
-    // pushes the gauge to -2 from P0's perspective; the attack resolving
-    // then ends P0's turn (post-attack `check_turn_end`) and the gauge
-    // seesaws to +2 for P1.
-    assert_eq!(
-        r.turn_player(),
-        1,
-        "memory crossed to the defender's side, so P0's turn ends"
-    );
-    assert_eq!(r.memory(), memory_before + 2);
+    // Both effects ran: +2 memory AND +1 hand card.
+    assert_eq!(r.memory(), memory_before - 2);
     assert_eq!(r.hand_size(1), hand_before + 1);
 }
