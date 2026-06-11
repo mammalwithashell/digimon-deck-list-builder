@@ -4,11 +4,17 @@ Promotion plays the candidate against the current champion panel (seat-balanced)
 and registers it only if its aggregate win rate clears the gate (default 55%,
 the AlphaGo-Zero rule). ``--force`` registers without gating (manual blessing).
 
+``emit-pool`` derives an OpponentPool manifest from the registry (uniform
+weights, filtered to one tensor-layout cohort) so a new run can train against
+all promoted champions — the pool-based fictitious-self-play loop
+(`harden-training-pipeline` D3).
+
 Examples:
     python code/tools/champion_admin.py list
     python code/tools/champion_admin.py promote --candidate run/final.zip --name v23 \
         --deck-pool-snapshot run/deck_pool_snapshot.json --n 40
     python code/tools/champion_admin.py promote --candidate m.zip --name v0 --force
+    python code/tools/champion_admin.py emit-pool --out pool.json
 """
 from __future__ import annotations
 
@@ -104,12 +110,36 @@ def cmd_promote(args) -> None:
         print(f"registered champion {champ.name!r}")
 
 
+def cmd_emit_pool(args) -> None:
+    from digimon_gym.agents.opponent_pool import OpponentPool
+
+    layout_hash = args.layout_hash or DEFAULT_HASH
+    pool = OpponentPool.from_champion_registry(
+        args.champions, layout_hash, manifest_path=args.out
+    )
+    pool.save()
+    print(f"wrote {pool.size}-champion opponent pool to {args.out} "
+          f"(layout {layout_hash[:22]}…)")
+    for entry in pool.entries:
+        print(f"  {entry.name:<24} {entry.algorithm}  {entry.weights_path}")
+    print("train with: --opponent pool --opponent-pool-manifest "
+          f"{args.out}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Champion registry admin.")
     ap.add_argument("--champions", default="models/champions/registry.json")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("list")
+
+    ep = sub.add_parser(
+        "emit-pool",
+        help="derive an OpponentPool manifest from the champion registry",
+    )
+    ep.add_argument("--out", required=True, help="manifest JSON output path")
+    ep.add_argument("--layout-hash", default=None,
+                    help="tensor-layout cohort (default: the lite-deck-v2 hash)")
 
     p = sub.add_parser("promote")
     p.add_argument("--candidate", required=True)
@@ -127,7 +157,8 @@ def main() -> None:
     p.add_argument("--archetypes", default=None)
 
     args = ap.parse_args()
-    (cmd_list if args.cmd == "list" else cmd_promote)(args)
+    handlers = {"list": cmd_list, "promote": cmd_promote, "emit-pool": cmd_emit_pool}
+    handlers[args.cmd](args)
 
 
 if __name__ == "__main__":

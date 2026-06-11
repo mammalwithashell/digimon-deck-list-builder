@@ -2411,6 +2411,11 @@ fn eval_permanent_fields(
     if pred.other == Some(true) && rctx.source_permanent == Some(handle) {
         return false;
     }
+    // Mirror of `other` — `is_source: true` requires the subject to BE the
+    // effect's source permanent ("this Digimon" as a select filter).
+    if pred.is_source == Some(true) && rctx.source_permanent != Some(handle) {
+        return false;
+    }
 
     let in_breeding = handle.index == crate::action::space::BREEDING_TARGET as u8;
     let perm = if in_breeding {

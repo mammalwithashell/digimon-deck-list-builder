@@ -261,6 +261,13 @@ pub struct EffectChoiceDto {
     pub label: String,
     /// Concrete action ID the engine accepts for this branch.
     pub action_id: u16,
+    /// Card whose effect this branch resolves (e.g. the digivolution source
+    /// granting an inherited trigger). The trigger-order chooser renders this
+    /// card's image; without it the UI shows a blank placeholder.
+    #[serde(default)]
+    pub card_id: Option<String>,
+    #[serde(default)]
+    pub card_name: Option<String>,
 }
 
 /// One card from `game.revealed_cards`. Effects like "reveal X cards" push
@@ -628,10 +635,15 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
             choices
                 .iter()
                 .enumerate()
-                .map(|(i, entry)| EffectChoiceDto {
-                    index: i as u8,
-                    label: entry.label.clone(),
-                    action_id: entry.action_id,
+                .map(|(i, entry)| {
+                    let card = entry.source_card.map(|h| game.card(h));
+                    EffectChoiceDto {
+                        index: i as u8,
+                        label: entry.label.clone(),
+                        action_id: entry.action_id,
+                        card_id: card.map(|c| c.card_id.clone()),
+                        card_name: card.map(|c| c.card_name.clone()),
+                    }
                 })
                 .collect()
         })

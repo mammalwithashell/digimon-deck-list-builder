@@ -8541,6 +8541,30 @@
       "notes": "<Barrier> (face + inherited); [All Turns][OPT] mandatory gain 1 memory when a card is removed from your security (battle-area-gated by trigger dispatch — the Q9 activation-site crux).",
       "audit_note": "PARTIAL: 'play this when an effect trashes it from your security' clause blocked by G-DSL-ON-DISCARD-SECURITY-TRIGGER (no DSL trigger for OnDiscardSecurity). Non-essential to the Q9 memory ruling."
     },
+    "AD1-024": {
+      "card_name": "Imperialdramon: Fighter Mode",
+      "validated_date": "2026-06-10",
+      "report": "ad1-024-wd-allturns-tdd",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial / DNA Omnimon (AD1)",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_024.rs",
+      "test_count": 16,
+      "patterns": [
+        "lowest_dp selector",
+        "multi-timing shared OPT (WD/WA)",
+        "on_any_digimon_played + on_digivolve observer",
+        "event_is_effect_initiated in if:",
+        "coupled optional sub-block (suspend+unsuspend)",
+        "outer_prompt clause confirm",
+        "refund_opt (DCGO RemoveUse)",
+        "is_source select filter",
+        "decline-runs-tail permanent selects"
+      ],
+      "notes": "TDD from card image + DCGO AD1_024.cs. 16/16 behavioral tests green: WD/WA shared-OPT mandatory lowest-DP bottom-deck bounce; [All Turns] observer (any play/digivolve incl. own digivolve) with DCGO-faithful initial Yes/No (outer_prompt), declinable suspend pick coupled to self-unsuspend via binding_exists, standalone unsuspend offer (is_source select), independent by-effect bounce leg, and FULL RemoveUse OPT-refund semantics (decline outer confirm OR accept-then-decline-everything both refund; any executed leg consumes). G-OPT-REFUND-ON-DECLINE closed in qa/resolved-gaps.md (2026-06-10).",
+      "audit_note": null
+    },
     "EX10-020": {
       "card_name": "Puppetmon",
       "validated_date": "2026-06-10",

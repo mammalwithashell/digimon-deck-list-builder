@@ -1006,17 +1006,26 @@ impl Game {
                     player: pid as PlayerId,
                     index: idx as u8,
                 };
-                // §17-1-3-2 — a Digi-Egg can't be a Digimon in the battle area.
-                // When a stack is peeled/de-digivolved down to its egg, that egg
-                // becomes the live top and the whole permanent is trashed. A
-                // legitimately-played Tamer/Option permanent is NOT caught (its
-                // top kind is Tamer/Option, and it is a valid battle-area card);
-                // only a DP-less Digi-Egg top is illegal here.
-                if self.players[pid].battle_area[idx]
-                    .top_card()
-                    .card_kind(&self.card_data)
-                    == crate::enums::CardKind::DigiEgg
-                {
+                // §17-1-3-2 — "A Digimon without DP in the battle area is
+                // considered to not be in any area and is trashed." The rule
+                // keys on the ABSENCE of a DP value (general_rule.pdf
+                // §17-1-3-2; DCGO `Permanent.HasDP` likewise only fails for
+                // a top that lacks DP), NOT on the Digi-Egg card type: the
+                // canonical case is a stack peeled/de-digivolved down to its
+                // egg (every printed Digi-Egg has no DP), while a
+                // Digimon-presenting top WITH a DP value is a legal
+                // battle-area Digimon. A legitimately-played Tamer/Option
+                // permanent is NOT caught (its top kind is Tamer/Option,
+                // governed by §17-1-3-3/-4 instead).
+                let presents_as_digimon = matches!(
+                    self.players[pid].battle_area[idx]
+                        .top_card()
+                        .card_kind(&self.card_data),
+                    crate::enums::CardKind::Digimon
+                        | crate::enums::CardKind::DigiEgg
+                        | crate::enums::CardKind::Dual
+                );
+                if presents_as_digimon && self.effective_dp(handle).is_none() {
                     actions.push((handle, RuleAction::TrashDpLess));
                     continue;
                 }

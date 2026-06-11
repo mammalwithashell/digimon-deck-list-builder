@@ -663,6 +663,18 @@ pub struct Game {
         crate::dsl_cards::step::StepRuntime,
     )>,
 
+    /// Short-lived channel carrying the FRESHEST bindings of the
+    /// just-resolved DSL selection chain. Set by
+    /// `run_tail_preserving_trigger_context` when an inner tail completes;
+    /// cleared-then-consumed by `wrap_pending_selection_with_tail`'s composed
+    /// callbacks so a wrapped outer tail sees the picks a nested selection
+    /// made after the wrap-time snapshot (a sibling `binding_exists` /
+    /// `binding_absent` would otherwise read a stale absence —
+    /// G-OPT-REFUND-ON-DECLINE). Never read across resolutions: the wrapper
+    /// clears it before the original callback and takes it immediately after.
+    #[doc(hidden)]
+    pub dsl_resolved_tail_bindings: Option<crate::dsl_cards::bindings::Bindings>,
+
     /// Cost-pay abort flag — set when the player PASSes on a cost-pay
     /// selection (a `select_hand` / `select_trash` / `select_union_zone`
     /// with `cost: true`). The DSL step runner checks this at the top of

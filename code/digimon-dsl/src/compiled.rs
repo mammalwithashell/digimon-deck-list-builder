@@ -327,6 +327,9 @@ pub struct CompiledPredicate {
     pub zone: Vec<CompiledZone>,
     pub owner: Option<CompiledPlayerRef>,
     pub other: Option<bool>,
+    /// Mirror of `other` — subject must BE the source permanent. G-OPT-REFUND-ON-DECLINE.
+    #[serde(default)]
+    pub is_source: Option<bool>,
     pub of_permanent: Option<String>,
     pub not_in_binding: Option<String>,
     pub binding_owner: Option<CompiledBindingOwnerPredicate>,
@@ -700,6 +703,12 @@ pub struct CompiledTriggeredClause {
     pub active_when: Option<CompiledPredicate>,
     pub condition: Option<CompiledPredicate>,
     pub optional: bool,
+    /// Force the explicit outer accept/decline confirm even when the first
+    /// body step is declinable (DCGO's always-shown initial Yes/No). Declining
+    /// the confirm drops the queued effect before the OPT is recorded — DCGO
+    /// `RemoveUse` semantics. G-OPT-REFUND-ON-DECLINE.
+    #[serde(default)]
+    pub outer_prompt: bool,
     pub once_per_turn: bool,
     pub max_per_turn: Option<u8>,
     pub process: Vec<CompiledStep>,
@@ -1515,6 +1524,10 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// Decline continues the clause tail (binding unresolved) instead of
+        /// dropping it. G-OPT-REFUND-ON-DECLINE.
+        #[serde(default)]
+        continue_on_decline: bool,
     },
     SelectOpponentPermanent {
         filter: CompiledPredicate,
@@ -1523,6 +1536,10 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// Decline continues the clause tail (binding unresolved) instead of
+        /// dropping it. G-OPT-REFUND-ON-DECLINE.
+        #[serde(default)]
+        continue_on_decline: bool,
     },
     SelectAnyPermanent {
         filter: CompiledPredicate,
@@ -1825,6 +1842,10 @@ pub enum CompiledStep {
     },
     CancelAttack,
     OpenCounterWindow,
+    /// Refund the running clause's once-per-turn use (DCGO `RemoveUse`).
+    /// The engine resolves the OPT key from the step runtime (the lowering
+    /// captures it statically per clause). G-OPT-REFUND-ON-DECLINE.
+    RefundOpt,
     RefireEffect {
         source: CompiledBindingRef,
         timing: String,
@@ -2029,6 +2050,7 @@ mod tests {
                 active_when: None,
                 condition: None,
                 optional: false,
+                outer_prompt: false,
                 once_per_turn: false,
                 max_per_turn: None,
                 process: vec![CompiledStep::GainMemory(1)],
@@ -2087,6 +2109,7 @@ mod tests {
                 active_when: None,
                 condition: Some(pred),
                 optional: false,
+                outer_prompt: false,
                 once_per_turn: false,
                 max_per_turn: None,
                 process: vec![],

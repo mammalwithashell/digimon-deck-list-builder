@@ -59,6 +59,16 @@ pub struct TriggeredClause {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
 
+    /// Force the explicit outer accept/decline confirm for an `optional: true`
+    /// clause even when its first body step is itself declinable (where the
+    /// lowering would normally let the inner PASS double as the decline).
+    /// Use for DCGO's always-shown initial Yes/No (`SetIsSkippable` bool
+    /// prompt) — declining the outer confirm drops the queued effect before
+    /// its body runs, so a `once_per_turn` use is NOT consumed (DCGO
+    /// `RemoveUse` semantics). G-OPT-REFUND-ON-DECLINE.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub outer_prompt: bool,
+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub once_per_turn: bool,
 

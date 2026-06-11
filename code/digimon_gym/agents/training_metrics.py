@@ -10,6 +10,30 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 import json
+import subprocess
+
+
+def resolve_git_sha(cwd: Path | None = None) -> str:
+    """Best-effort `git rev-parse HEAD` for run provenance.
+
+    Returns the literal "unknown" when git is unavailable or the working
+    directory is not inside a git repository (e.g. cloud training images
+    shipped without `.git`). Never raises.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(cwd) if cwd is not None else None,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+    sha = result.stdout.strip()
+    if result.returncode != 0 or not sha:
+        return "unknown"
+    return sha
 
 
 @dataclass
@@ -116,6 +140,25 @@ class TrainingRunMetadata:
     # Empty defaults preserve backward-compat with pre-feature sidecars.
     reward_gameplay_path: str = ""
     reward_gameplay_hash: str = ""
+
+    # Run provenance (`harden-training-pipeline` D5). `git_sha` is the
+    # best-effort HEAD commit at run start ("unknown" outside a git
+    # checkout). Bounty knobs are persisted so gauntlet runs are
+    # auditable after the fact. Defaults preserve backward-compat with
+    # pre-feature sidecars.
+    git_sha: str = ""
+    bounty_threshold: float = 0.0
+    bounty_bonus: float = 0.0
+    # Action-space sub-range boundaries
+    # (SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START,
+    # BREEDING_SOURCE_SELECT_END) — validated on resume_from/init_from so
+    # an engine change that moves boundaries while keeping the total
+    # action-space size constant cannot silently load. Empty list on
+    # pre-feature sidecars (validation warns and skips).
+    action_space_structure: list[int] = field(default_factory=list)
+    # Path of the opponent-pool manifest when opponent="pool"
+    # (`harden-training-pipeline` D3 — registry-derived curricula).
+    opponent_pool_manifest: str = ""
 
     def save(self, path: Path) -> None:
         """Write metadata to a JSON file."""

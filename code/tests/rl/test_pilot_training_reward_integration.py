@@ -58,12 +58,33 @@ def test_default_config_factory_is_active_and_points_at_shipped_yaml():
     assert "dna_omnimon_combo_v1" in by_name
 
 
-def test_factory_inactive_when_profiles_path_missing():
+def test_factory_raises_when_profiles_path_missing():
+    """`harden-training-pipeline` D4: typo'd path is a hard error, not a
+    silent fallback to legacy rewards."""
     cfg = TrainingConfig(reward_profiles_path="does/not/exist.yaml")
+    with pytest.raises(FileNotFoundError, match=r"does[/\\]not[/\\]exist\.yaml"):
+        _build_reward_profile_factory(cfg)
+
+
+def test_factory_raises_when_gameplay_path_missing():
+    """The default-shaped case observed on cloud images: profiles.yaml
+    present, gameplay.yaml absent → fail loudly naming the file."""
+    cfg = TrainingConfig(reward_gameplay_path="missing/gameplay.yaml")
+    with pytest.raises(FileNotFoundError, match=r"reward_gameplay_path"):
+        _build_reward_profile_factory(cfg)
+
+
+def test_factory_null_opt_out_yields_legacy_identity():
+    """Explicit `reward_profiles_path: null` (None) is the only way to get
+    the legacy reward path — no profile files required."""
+    cfg = TrainingConfig(reward_profiles_path=None)
     factory = _build_reward_profile_factory(cfg)
     assert factory.active is False
     assert factory.loader is None
     assert factory.effective_override is None
+
+    sentinel = object()
+    assert factory(sentinel) is sentinel
 
 
 def test_factory_loader_failure_raises_at_run_start():

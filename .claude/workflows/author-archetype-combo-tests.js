@@ -2,7 +2,7 @@ export const meta = {
   name: 'author-archetype-combo-tests',
   description: 'Author multi-card interaction (combo) tests for implemented Rust archetypes',
   whenToUse:
-    'After an archetype family has its cards implemented in Rust (DSL) and per-card tests are green, to add the cross-card combo tests the per-card TDD misses. Discovers which archetypes are implemented (coverage gate), then fans out the /archetype-interaction-test-author skill across them.',
+    'After an archetype family has its cards implemented in Rust (DSL) and per-card tests are green, to add the cross-card combo tests the per-card TDD misses. Discovers which archetypes are implemented (coverage gate), then fans out the /archetype-interaction-test-author skill across them. Greenfield authoring only — to RE-VERIFY archetypes that already have combo suites (cross-examine assertions vs card text / rules / DCGO, gap-fill, faithfulness verdicts), use the audit-archetype-faithfulness workflow instead.',
   phases: [
     { title: 'Discover', detail: 'list archetypes + run the coverage gate to find implemented ones' },
     { title: 'Model', detail: 'scout each archetype as a system → model doc + ranked combos (Sonnet)' },

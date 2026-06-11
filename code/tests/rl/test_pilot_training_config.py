@@ -248,7 +248,7 @@ def test_make_env_passes_tensor_profile(monkeypatch):
     _patch_digimon_env(monkeypatch, _FakeDigimonEnv)
 
     env = pilot_training.make_env(
-        opponent="self-play",
+        opponent="greedy",
         tensor_profile="standard_lite_v2",
     )
 
@@ -263,7 +263,7 @@ def test_make_env_defaults_to_standard_lite_v2(monkeypatch):
     _FakeDigimonEnv.created = []
     _patch_digimon_env(monkeypatch, _FakeDigimonEnv)
 
-    env = pilot_training.make_env(opponent="self-play")
+    env = pilot_training.make_env(opponent="greedy")
 
     base_env = pilot_training._unwrap_to_digimon_env(env)
     assert base_env.tensor_profile == "standard_lite_v2"
@@ -277,7 +277,7 @@ def test_make_env_passes_deck2(monkeypatch):
     _patch_digimon_env(monkeypatch, _FakeDigimonEnv)
 
     env = pilot_training.make_env(
-        opponent="self-play",
+        opponent="greedy",
         deck1=["ST1-01"],
         deck2=["ST1-03"],
     )
@@ -301,7 +301,7 @@ def test_make_env_wraps_generalist_pool(monkeypatch):
     )
 
     env = pilot_training.make_env(
-        opponent="self-play",
+        opponent="greedy",
         generalist_deck_pool=pool,
         curriculum_seed=1,
     )
@@ -573,6 +573,62 @@ def test_checkpoint_contract_rejects_incompatible_tensor_profile(tmp_path):
 
     with pytest.raises(ValueError, match="observation_profile"):
         pilot_training._validate_checkpoint_contract(checkpoint, layout)
+
+
+def _write_contract_meta(tmp_path, extra: str = "") -> "Path":
+    """Sidecar matching the live contract except for `extra` fields."""
+    from digimon_gym.agents import pilot_training
+
+    checkpoint = tmp_path / "base.zip"
+    checkpoint.write_text("model")
+    checkpoint.with_suffix(".meta.json").write_text(
+        '{"observation_profile":"standard_lite_v2",'
+        '"tensor_layout_hash":"sha256:test",'
+        f'"action_space_size":{pilot_training.ACTION_SPACE_SIZE}'
+        f'{extra}}}'
+    )
+    return checkpoint
+
+
+def test_checkpoint_contract_rejects_action_space_structure_mismatch(tmp_path):
+    """harden-training-pipeline D5: boundaries moved, total size unchanged."""
+    from digimon_gym.agents import pilot_training
+
+    current = pilot_training.current_action_space_structure()
+    shifted = [current[0] - 8, current[1] - 8, current[2]]
+    checkpoint = _write_contract_meta(
+        tmp_path, extra=f',"action_space_structure":{shifted}'
+    )
+    layout = SimpleNamespace(id="standard_lite_v2", layout_hash="sha256:test")
+
+    with pytest.raises(ValueError, match="action_space_structure"):
+        pilot_training._validate_checkpoint_contract(checkpoint, layout)
+
+
+def test_checkpoint_contract_accepts_matching_structure(tmp_path):
+    from digimon_gym.agents import pilot_training
+
+    current = pilot_training.current_action_space_structure()
+    checkpoint = _write_contract_meta(
+        tmp_path, extra=f',"action_space_structure":{current}'
+    )
+    layout = SimpleNamespace(id="standard_lite_v2", layout_hash="sha256:test")
+
+    pilot_training._validate_checkpoint_contract(checkpoint, layout)
+
+
+def test_checkpoint_contract_warns_when_structure_absent(tmp_path, caplog):
+    """Legacy checkpoints (pre-feature) warn and proceed."""
+    import logging
+
+    from digimon_gym.agents import pilot_training
+
+    checkpoint = _write_contract_meta(tmp_path)
+    layout = SimpleNamespace(id="standard_lite_v2", layout_hash="sha256:test")
+
+    with caplog.at_level(logging.WARNING, logger="digimon_gym.agents.pilot_training"):
+        pilot_training._validate_checkpoint_contract(checkpoint, layout)
+    assert any("action_space_structure" in rec.message for rec in caplog.records)
 
 
 def test_train_model_kwargs_include_observation_layout(monkeypatch, tmp_path):
