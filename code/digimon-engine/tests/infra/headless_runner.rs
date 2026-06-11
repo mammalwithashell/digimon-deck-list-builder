@@ -130,21 +130,28 @@ fn st4_giga_green_deck() -> Vec<String> {
 }
 
 #[test]
-fn runner_default_observation_profile_is_standard_lite_v2() {
+fn runner_default_observation_profile_is_standard_lite_deck_v2() {
     let runner = sample_runner();
 
-    assert_eq!(runner.observation_profile_id(), "standard_lite_v2");
-    assert_eq!(runner.observation_layout().tensor_size, 8410);
-    assert_eq!(runner.get_board_tensor(None).len(), 8410);
+    // The decklist-aware profile is the default; the crate-root
+    // `tensor::TENSOR_SIZE` constant tracks it.
+    assert_eq!(runner.observation_profile_id(), "standard_lite_deck_v2");
+    assert_eq!(runner.observation_layout().tensor_size, TENSOR_SIZE);
+    assert_eq!(runner.get_board_tensor(None).len(), TENSOR_SIZE);
 }
 
 #[test]
 fn runner_can_use_standard_compact_v1_observation_profile() {
+    use digimon_engine::tensor_profiles::standard::v1::TENSOR_SIZE as COMPACT_V1_TENSOR_SIZE;
+
     let runner = sample_runner_with_observation_profile("standard_compact_v1");
 
     assert_eq!(runner.observation_profile_id(), "standard_compact_v1");
-    assert_eq!(runner.observation_layout().tensor_size, TENSOR_SIZE);
-    assert_eq!(runner.get_board_tensor(None).len(), TENSOR_SIZE);
+    assert_eq!(
+        runner.observation_layout().tensor_size,
+        COMPACT_V1_TENSOR_SIZE
+    );
+    assert_eq!(runner.get_board_tensor(None).len(), COMPACT_V1_TENSOR_SIZE);
 }
 
 #[test]

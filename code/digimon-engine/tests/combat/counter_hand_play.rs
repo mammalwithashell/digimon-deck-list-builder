@@ -487,8 +487,16 @@ fn counter_field_ability_fires_without_play_cost() {
     assert_eq!(*witness.lock().unwrap(), 1);
     assert_eq!(r.hand_size(1), hand_before, "no card consumed from hand");
     assert_eq!(r.trash_size(1), trash_before, "no card consumed to trash");
-    // Field counter body gained +2 memory for the defender.
-    assert_eq!(r.memory(), memory_before - 2);
+    // Field counter body gained +2 memory for the defender, pushing the
+    // gauge to -2 from P0's perspective. With the attack fully resolved,
+    // P0's turn ends (post-attack `check_turn_end`) and the gauge seesaws
+    // to +2 for the new active player P1.
+    assert_eq!(
+        r.turn_player(),
+        1,
+        "memory crossed to the defender's side, so P0's turn ends"
+    );
+    assert_eq!(r.memory(), memory_before + 2);
 }
 
 #[test]

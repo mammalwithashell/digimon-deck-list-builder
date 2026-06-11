@@ -156,9 +156,17 @@ fn test_022_gains_memory_from_security() {
     let result = r.attack_player(atk, 1, false);
     assert_eq!(result, AttackResult::SecurityCheckSurvived);
 
+    // The defender's [Security] gain pushes the gauge to -3 from P0's
+    // perspective; with the attack fully resolved, P0's turn ends
+    // (post-attack `check_turn_end`) and the gauge seesaws to +3 for P1.
+    assert_eq!(
+        r.turn_player(),
+        1,
+        "memory crossed to the defender's side, so P0's turn ends"
+    );
     assert_eq!(
         r.memory(),
-        memory_before - 3,
+        memory_before + 3,
         "SecuritySkill memory gain must apply to the defender's side of the seesaw"
     );
     assert_eq!(r.trash_size(1), 1);
@@ -489,7 +497,15 @@ fn two_security_effects_same_source_auto_fire_in_order() {
         r.game.pending_selection.is_none(),
         "TriggerOrder prompt must NOT install for single-source security bundle"
     );
-    // Both effects ran: +2 memory AND +1 hand card.
-    assert_eq!(r.memory(), memory_before - 2);
+    // Both effects ran: +2 memory AND +1 hand card. The defender's gain
+    // pushes the gauge to -2 from P0's perspective; the attack resolving
+    // then ends P0's turn (post-attack `check_turn_end`) and the gauge
+    // seesaws to +2 for P1.
+    assert_eq!(
+        r.turn_player(),
+        1,
+        "memory crossed to the defender's side, so P0's turn ends"
+    );
+    assert_eq!(r.memory(), memory_before + 2);
     assert_eq!(r.hand_size(1), hand_before + 1);
 }

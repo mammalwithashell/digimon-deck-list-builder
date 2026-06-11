@@ -233,13 +233,21 @@ fn test_005_on_deletion_fires_during_combat() {
     let atk = r.place_on_field(0, "BIG", Some(0));
     let def = r.place_on_field(1, "TEST-005", Some(0));
 
-    let m_before = r.memory();
     let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::AttackerWins);
+    // TEST-005's deletion effect pushes the gauge to -1 from P0's
+    // perspective. With the attack fully resolved, P0's turn ends and
+    // passes to P1 (post-attack `check_turn_end`, DCGO EndTurnCheck
+    // parity); the gauge seesaws to +1 for the new active player.
+    assert_eq!(
+        r.turn_player(),
+        1,
+        "memory crossed to the opponent's side, so P0's turn ends"
+    );
     assert_eq!(
         r.memory(),
-        m_before - 1,
-        "TEST-005 should lose 1 memory on deletion"
+        1,
+        "TEST-005's lose-1-memory reads as +1 from the new turn player"
     );
     assert_eq!(r.battle_area_size(1), 0);
 }
