@@ -344,6 +344,12 @@ pub struct CompiledPredicate {
     pub rules_text_contains: Option<String>,
     pub memory_lte: Option<CompiledDpConstraint>,
     pub memory_gte: Option<CompiledDpConstraint>,
+    /// Controller-relative memory bound ("while you have N or less memory").
+    /// G-DSL-OWN-MEMORY-PREDICATE.
+    #[serde(default)]
+    pub own_memory_lte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub own_memory_gte: Option<CompiledDpConstraint>,
     pub security_count_lte: Option<CompiledDpConstraint>,
     pub security_count_gte: Option<CompiledDpConstraint>,
     pub opponent_security_count_lte: Option<CompiledDpConstraint>,
@@ -528,12 +534,14 @@ pub struct CompiledExistential {
 }
 
 /// Compiled form of `no_face_up_security_named`. Exactly one of
-/// `card_number_is` / `name_is` is populated. G-PRED-NO-FACE-UP-SECURITY-NAMED.
+/// `card_number_is` / `name_is` / `color_is` is populated.
+/// G-PRED-NO-FACE-UP-SECURITY-NAMED (+ color arm for EX10-020 / Q3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompiledFaceUpSecurityNamed {
     pub of: CompiledPlayerRef,
     pub card_number_is: Option<String>,
     pub name_is: Option<String>,
+    pub color_is: Option<CompiledColor>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -715,6 +723,10 @@ pub enum CompiledDeclarativeClause {
         /// Scalar `value` for the named `modifier` grant (e.g. `ChangeLinkMax`
         /// "Link +N"). `None` ⇒ `0`. Fixes G-ENGINE-AURA-GRANT-LINK-MAX.
         modifier_value: Option<i32>,
+        /// Name payload for the named `modifier` grant — installed as
+        /// `ModifierPayload::Name { value, base: false }`. Used by
+        /// `CanOnlyDigivolveInto` (judge-quiz Q3, EX10-020).
+        modifier_name: Option<String>,
         /// Track H §4 — install-once continuous gate. When present, the
         /// lowered `Effect` installs its modifier(s) with
         /// `Expiry::UntilCondition` carrying this predicate. Eviction is
@@ -726,6 +738,11 @@ pub enum CompiledDeclarativeClause {
         /// during the security battle (rather than as a battle-area aura).
         applies_to_opponent_security_dp: bool,
         applies_to_own_security_dp: bool,
+        /// Continuous filtered `CannotBeAffected` grant — "this Digimon
+        /// isn't affected by [your opponent's] [<kind>] effects" as a
+        /// per-tick aura. Self-aura only. G-DSL-AURA-EFFECT-IMMUNITY.
+        #[serde(default)]
+        effect_immunity: Option<CompiledAuraEffectImmunity>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -945,6 +962,16 @@ pub enum CompiledEffectController {
     Any,
     Opponent,
     Own,
+}
+
+/// Compiled form of `AuraEffectImmunity` — the continuous filtered
+/// `CannotBeAffected` slot on `CompiledDeclarativeClause::Aura`.
+/// `source_kind: None` ⇒ immune to effects from ANY source kind.
+/// G-DSL-AURA-EFFECT-IMMUNITY.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompiledAuraEffectImmunity {
+    pub source_kind: Option<CompiledEffectSourceKind>,
+    pub source_controller: CompiledEffectController,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

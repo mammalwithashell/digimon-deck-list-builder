@@ -139,9 +139,152 @@ fn q16_partition_not_triggered_when_leaving_by_own_granted_effect() {
 /// Q15 — LordKnightmon (X Antibody) (BT19-073) does `<De-Digivolve 1>` repeatedly;
 /// after the first, Gallantmon (X Antibody) (EX8-073)'s [All Turns] immunity halts
 /// the rest. Judge: Gallantmon (X Antibody) is the topmost card.
+///
+/// Quiz board (judge_quiz p.30, card-resolution.md row 15): the memory gauge
+/// is at 1 on Player A's side. Player A has LordKnightmon (BT19-072) and 4
+/// other random Digimon. Player B's stack (top→bottom): Omnimon (X Antibody)
+/// BT20-102 / Gallantmon (X Antibody) EX8-073 / Gallantmon BT17-016 /
+/// WarGrowlmon BT12-016 / Growlmon EX3-057 / Guilmon EX4-006. Player A
+/// digivolves LordKnightmon into BT19-073 for 1 memory (gauge → 0), then
+/// resolves the [When Digivolving], targeting the Omnimon (X Antibody) stack.
+///
+/// Judge feedback: LordKnightmon (X Antibody) performs `<De-Digivolve 1>`
+/// MULTIPLE TIMES (not one `<De-Digivolve X>`), each done 1 card at a time.
+/// After the first, Gallantmon (X Antibody) becomes the top stacked card; its
+/// [All Turns] immunity (opponent-Digimon effects while the gauge is at 0 or
+/// higher on Player A's side, i.e. Player B has 0-or-less memory) applies
+/// IMMEDIATELY, so the remaining `<De-Digivolve 1>` do not affect it.
+/// Answer: **Gallantmon (X Antibody) is the topmost card.**
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT19-073 (LordKnightmon X), BT17-016 (Gallantmon), BT12-016 (WarGrowlmon), EX3-057 (Growlmon). BT19-072, BT20-102, EX8-073, EX4-006 implemented."]
-fn q15_sequential_de_digivolve_halted_by_x_antibody_immunity() {}
+fn q15_sequential_de_digivolve_halted_by_x_antibody_immunity() {
+    let mut builder = DebugRunner::builder()
+        .dsl_card("BT19-073")
+        .expect("BT19-073 LordKnightmon (X Antibody) loads")
+        .dsl_card("BT19-072")
+        .expect("BT19-072 LordKnightmon loads")
+        .dsl_card("BT20-102")
+        .expect("BT20-102 Omnimon (X Antibody) loads")
+        .dsl_card("EX8-073")
+        .expect("EX8-073 Gallantmon (X Antibody) loads")
+        .dsl_card("BT17-016")
+        .expect("BT17-016 Gallantmon loads")
+        .dsl_card("BT12-016")
+        .expect("BT12-016 WarGrowlmon loads")
+        .dsl_card("EX3-057")
+        .expect("EX3-057 Growlmon loads")
+        .dsl_card("EX4-006")
+        .expect("EX4-006 Guilmon loads");
+    // "4 other random Digimon" on Player A's side — the [When Digivolving]
+    // counts 5 of A's Digimon ⇒ 5 separate <De-Digivolve 1> instances.
+    for i in 0..4 {
+        builder = builder.add_card({
+            let mut c = make_test_card(&format!("Q15-RND{i}"), &format!("Random{i}"));
+            c.card_kind = CardKind::Digimon;
+            c.level = Some(4);
+            c.dp = Some(4000);
+            c
+        });
+    }
+    let mut r = builder
+        .add_card({
+            let mut c = make_test_card("Q15-FILL", "Filler");
+            c.card_kind = CardKind::Digimon;
+            c
+        })
+        .deck(0, &["Q15-FILL"; 5])
+        .deck(1, &["Q15-FILL"; 5])
+        .memory(0)
+        .start();
+    r.skip_mulligan();
+    r.set_first_player(0);
+    // Player A paid 1 from a gauge of 1 ⇒ the gauge sits at 0 on A's side
+    // while the [When Digivolving] resolves (Player B has 0 memory ⇒
+    // EX8-073's "while you have 0 or less memory" gate holds for B).
+    r.game.set_memory(0);
+
+    // Player A: LordKnightmon (X Antibody) over LordKnightmon + 4 others.
+    let lkx = r.place_stack(0, &["BT19-072", "BT19-073"]);
+    for i in 0..4 {
+        let _ = r.place_on_field(0, &format!("Q15-RND{i}"), Some(0));
+    }
+    // Player B: the 6-deep stack, bottom→top Guilmon … Omnimon (X Antibody).
+    let omnimon_stack = r.place_stack(
+        1,
+        &[
+            "EX4-006", "EX3-057", "BT12-016", "BT17-016", "EX8-073", "BT20-102",
+        ],
+    );
+    assert_eq!(
+        r.game.player(1).battle_area[omnimon_stack.index as usize].stack_size(),
+        6,
+        "precondition: Player B's stack is 6 deep"
+    );
+    let b_trash_before = r.trash_size(1);
+
+    // Resolve LordKnightmon (X Antibody)'s [When Digivolving].
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(lkx),
+    );
+    r.game.drain_effect_queue();
+
+    // Selection 1 — the <De-Digivolve 1> target: Player A targets the
+    // Omnimon (X Antibody) stack (the only opponent Digimon).
+    let view = r
+        .pending_selection_view()
+        .expect("the De-Digivolve target selection must install");
+    assert_eq!(view.selecting_player, 0);
+    assert!(!view.is_optional, "the De-Digivolve pick is mandatory");
+    r.execute_action(0, view.valid_action_ids[0])
+        .expect("target the Omnimon (X Antibody) stack");
+
+    // Selection 2 — "1 of their Digimon can't digivolve": mandatory pick of
+    // the (sole) opponent Digimon. The APPLICATION is consult-gated by the
+    // immunity (DCGO checks CanNotBeAffected at apply time), but the pick
+    // itself surfaces — no auto-selection.
+    if let Some(view) = r.pending_selection_view() {
+        r.execute_action(0, view.valid_action_ids[0])
+            .expect("pick the can't-digivolve Digimon");
+    }
+    let _ = r.auto_resolve();
+
+    // ── THE JUDGE ANSWER ────────────────────────────────────────────────────
+    // Only the FIRST <De-Digivolve 1> resolves (trashing Omnimon X Antibody);
+    // the exposed Gallantmon (X Antibody)'s [All Turns] immunity halts the
+    // remaining four. Gallantmon (X Antibody) is the topmost card.
+    let perm = &r.game.player(1).battle_area[omnimon_stack.index as usize];
+    assert_eq!(
+        perm.top_card().card_id(&r.game.card_data),
+        "EX8-073",
+        "judge Q15: Gallantmon (X Antibody) must be the topmost card of \
+         Player B's stack after the multi-step De-Digivolve"
+    );
+    assert_eq!(
+        perm.stack_size(),
+        5,
+        "exactly ONE card (Omnimon (X Antibody)) was trashed"
+    );
+    assert_eq!(
+        r.trash_size(1),
+        b_trash_before + 1,
+        "only Omnimon (X Antibody) landed in Player B's trash"
+    );
+    assert!(
+        r.game.player(1).trash.iter().any(|c| c.card_id(&r.game.card_data) == "BT20-102"),
+        "the trashed card is Omnimon (X Antibody) BT20-102"
+    );
+    // The rest of the stack is intact, in order (bottom→top).
+    let ids: Vec<&str> = r.game.player(1).battle_area[omnimon_stack.index as usize]
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data))
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["EX4-006", "EX3-057", "BT12-016", "BT17-016", "EX8-073"],
+        "Guilmon / Growlmon / WarGrowlmon / Gallantmon / Gallantmon (X Antibody) all remain"
+    );
+}
 
 /// Q25 — Miraculous Mega Knight (BT17-095) [All Turns] fires on DigiXros departure
 /// of WarGreymon (AD1-004) (departure ≠ battle). Judge: YES, triggers.

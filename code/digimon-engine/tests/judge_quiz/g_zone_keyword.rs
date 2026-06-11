@@ -52,11 +52,82 @@ fn drive_declining(runner: &mut DebugRunner) {
     assert!(steps < 100, "selection loop exceeded 100 steps");
 }
 
-/// Q3 — Puppetmon (EX10-020) [All Turns] doesn't function in the breeding area, so
-/// it can digivolve into Quartzmon (BT12-057). Judge: YES.
+/// Q3 — Puppetmon (EX10-020) in the BREEDING AREA can digivolve into
+/// Quartzmon (BT12-057). **Judge: YES.**
+///
+/// Board (card-resolution.md Q3 / PDF p.5): Player A has EX10 Puppetmon in
+/// the breeding area. Can Puppetmon digivolve into BT12 Quartzmon?
+///
+/// Judge rationale (quiz feedback): "Unless specified otherwise, no effect
+/// can work in the breeding area. Since Puppetmon's [All Turns] effect
+/// doesn't specify it can work in the breeding area, Puppetmon is able to
+/// digivolve into Quartzmon."
+///
+/// Engine: the restriction is a battle-area-sourced declarative aura
+/// installing `CanOnlyDigivolveInto("Apocalymon")` — declarative ticks
+/// enumerate battle-area sources only, so a breeding Puppetmon installs
+/// nothing (DCGO `Condition: IsExistOnBattleArea`). The battle-area CONTROL
+/// (restriction live → a non-Apocalymon digivolve blocked) lives in
+/// `cards_behavioral/ex10/ex10_020.rs::ex10_020_battle_area_restriction_…`
+/// — jointly they prove this is not a no-op false-pass.
+///
+/// DCGO: `EX10_020.cs` `CanNotDigivolveStaticSelfEffect`; rules: the quiz
+/// feedback's breeding-area-inactivity rule.
 #[test]
-#[ignore = "BLOCKED-CARD: needs EX10-020 (Puppetmon), BT12-057 (Quartzmon)."]
-fn q3_breeding_area_effect_inactive_allows_digivolve() {}
+fn q3_breeding_area_effect_inactive_allows_digivolve() {
+    use digimon_engine::card_data::EvoCost;
+    use digimon_engine::enums::{GamePhase, PlaySource};
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX10-020")
+        .expect("EX10-020 Puppetmon loads")
+        .dsl_card("BT12-057")
+        .expect("BT12-057 Quartzmon loads")
+        .hand(0, &["BT12-057"])
+        .memory(20)
+        .start();
+    r.skip_mulligan();
+
+    // The embedded DSL pack carries no printed evo_costs
+    // (G-DSL-FIXTURE-EVO-COSTS) — mirror Quartzmon's REAL printed route
+    // (cards.json BT12-057 evo_costs: green Lv.6 / memory 6) onto the
+    // fixture CardData, per the bg_imperial.rs Combo-6 convention.
+    {
+        let idx = r.game.players[0].hand[0].card_index as usize;
+        r.game.card_data[idx].evo_costs = vec![EvoCost {
+            card_color: 3, // green
+            level: 6,
+            memory_cost: 6,
+        }];
+    }
+
+    // Puppetmon raised in the breeding area.
+    let _breeding = r.place_in_breeding(0, "EX10-020");
+    r.game.tick_declarative_effects();
+    r.set_phase(GamePhase::Main);
+
+    // Judge: YES — the [All Turns] "can only digivolve into [Apocalymon]"
+    // does not function in the breeding area, so the Quartzmon digivolve
+    // is legal.
+    let ok = r
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
+    assert!(
+        ok,
+        "Puppetmon in the BREEDING AREA must be able to digivolve into \
+         Quartzmon — its [All Turns] restriction does not function there"
+    );
+    assert_eq!(
+        r.game.players[0]
+            .breeding_area
+            .as_ref()
+            .expect("breeding permanent remains")
+            .top_card()
+            .card_id(&r.game.card_data),
+        "BT12-057",
+        "the breeding permanent's top card is now Quartzmon"
+    );
+}
 
 /// Q4 — Aldamon (AD1-002) given `<Security A. +1>` by Atomic Inferno (BT4-098) and
 /// `<Security A. −1>` by Holy Flame (ST3-15): base 1 + 1 − 1 = 1 check; one done ⇒

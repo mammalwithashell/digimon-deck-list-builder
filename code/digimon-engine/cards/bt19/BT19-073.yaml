@@ -1,0 +1,151 @@
+# BT19-073 LordKnightmon (X Antibody) — Digimon, Lv.6, Purple/White, DP 12000, Cost 12.
+# Traits: Holy Warrior / X Antibody / Royal Knight. Form: Mega. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.5 Purple / Cost 4.
+#
+# Printed card text (card image — verbatim):
+#
+#   Digivolve: [LordKnightmon]: Cost 1
+#   <Collision> (During this Digimon's attack, all of your opponent's Digimon
+#     gain <Blocker>, and must block if possible.)
+#   <Piercing> (When this Digimon attacks and deletes an opponent's Digimon
+#     and survives the battle, it performs any security checks it normally
+#     would.)
+#   [When Digivolving] For each of your Digimon, <De-Digivolve 1> 1 of your
+#     opponent's Digimon. Then, until the end of their turn, 1 of their
+#     Digimon can't digivolve.
+#   [All Turns] While [LordKnightmon] or [X Antibody] is in this Digimon's
+#     digivolution cards, all of your Digimon with [Knightmon] in their texts
+#     gain <Alliance> and get +3000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT19/Purple/BT19_073.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect:
+#   PermanentCondition `TopCard.EqualsCardName("LordKnightmon")`, cost 1.
+#
+# Collision / Piercing — CollisionSelfStaticEffect + PierceSelfEffect →
+#   grant_keyword declaratives.
+#
+# Clause 1 — [When Digivolving] (OnEnterFieldAnyone): maxCount = count of
+#   YOUR battle-area Digimon (including this one). ONE mandatory
+#   SelectPermanentEffect picks 1 opponent Digimon, then DeDigivolvePermanent
+#   runs `for(i < maxCount) IDegeneration(permanent, 1)` — N SEPARATE
+#   <De-Digivolve 1> instances against the SAME selected permanent, each
+#   applied one card at a time with the immunity re-check between trashes
+#   (judge-quiz Q15: once Gallantmon (X Antibody) EX8-073 is exposed and its
+#   [All Turns] immunity is live, the remaining instances do nothing).
+#   Then a SECOND mandatory select: 1 opponent Digimon gains "can't digivolve"
+#   until the end of the opponent's turn (CanNotDigivolveClass installed in
+#   UntilOwnerTurnEndEffects; the apply checks CanNotBeAffected at use time —
+#   our add_modifier honors `can_affect_permanent` the same way).
+#   → select_opponent_permanent → de_digivolve with amount_fn = your Digimon
+#   count; then select_opponent_permanent → add_modifier CannotDigivolve,
+#   expiry end_of_opponents_turn. Both selects guarded on a candidate
+#   existing (DCGO canNoSelect: false but selection only runs when the
+#   activate gate passes; with no opponent Digimon there is no target).
+#
+# Clause 2 — [All Turns] (EffectTiming.None): gated on
+#   `DigivolutionCards.Count(EqualsCardName("X Antibody") || EqualsCardName(
+#   "LordKnightmon")) > 0` — DIGIVOLUTION CARDS ONLY (the top card itself
+#   does not satisfy the gate). Grants, to every OWNER battle-area Digimon
+#   whose top card HasText("Knightmon") (DCGO HasText scans the card NAME +
+#   effect text), ChangeDPStaticEffect +3000 and AllianceSelfEffect.
+#   → filtered aura over own Digimon with name_contains OR
+#   rules_text_contains "Knightmon", granting dp_modifier 3000 +
+#   grant_keyword Alliance, active_when sources-contain gate.
+
+card: BT19-073
+name: "LordKnightmon (X Antibody)"
+kind: digimon
+level: 6
+color: [purple, white]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, X Antibody, Royal Knight]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "LordKnightmon" }
+    cost: 1
+  # Standard printed route (cards.json evo_costs: Lv.5 Purple / 4) — also
+  # authored as an alt_path so the route exists for DSL-loaded fixtures
+  # (G-DSL-FIXTURE-EVO-COSTS: compiled cards carry no printed evo_costs).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+
+effects:
+  # ─── <Collision> / <Piercing> ──────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Collision
+    summary: "<Collision>"
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  # ─── [When Digivolving] N x <De-Digivolve 1>; then 1 can't digivolve ───────
+  - when: when_digivolving
+    summary: "[When Digivolving] For each of your Digimon, <De-Digivolve 1> 1 of your opponent's Digimon. Then, until the end of their turn, 1 of their Digimon can't digivolve"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigi_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon for each of your Digimon"
+      # N separate <De-Digivolve 1> instances = one pop per own Digimon, with
+      # the per-pop immunity re-check in de_digivolve_core (rule: De-Digivolve
+      # trashes one card at a time; judge-quiz Q15).
+      - de_digivolve:
+          target: dedigi_target
+          stop_at_level: 3
+          amount_fn:
+            base: 0
+            per:
+              card_count_in_zone:
+                of: you
+                zone: battle_area
+                filter: { kind: digimon }
+            delta: 1
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: no_evo
+                filter: { kind: digimon }
+                prompt: "Select 1 of your opponent's Digimon that can't digivolve until the end of their turn"
+            - add_modifier:
+                target: { binding: no_evo }
+                modifier: CannotDigivolve
+                value: 1
+                expiry: end_of_opponents_turn
+
+  # ─── [All Turns] Knightmon-text allies gain <Alliance> and +3000 DP ────────
+  - kind: aura
+    active_when:
+      any_of:
+        - self_digivolution_sources_contain_name: "LordKnightmon"
+        - self_digivolution_sources_contain_name: "X Antibody"
+    target:
+      all_of:
+        - owner: you
+        - zone: [battle_area]
+        - kind: digimon
+        # "[Knightmon] in their texts" — DCGO HasText scans the card NAME as
+        # well as the printed effect text, so a vanilla-text [Knightmon] (the
+        # name alone) qualifies.
+        - any_of:
+            - name_contains: "Knightmon"
+            - rules_text_contains: "Knightmon"
+    dp_modifier: 3000
+    grant_keyword: { keyword: Alliance }
+    summary: "[All Turns] While [LordKnightmon]/[X Antibody] is in this Digimon's digivolution cards, your Digimon with [Knightmon] in their texts gain <Alliance> and +3000 DP"

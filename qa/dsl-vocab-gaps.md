@@ -4,6 +4,24 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+## EX10-020 — [Hand][Main] reduced-cost SELF-play + delete-at-EoT rider  [G-DSL-HAND-MAIN-SELF-PLAY-REDUCED]
+
+Surfaced: 2026-06-10, judge-quiz Q3 authoring. EX10-020 Puppetmon PARTIAL (the Q3-relevant clauses are complete).
+
+- **Card text:** "[Hand] [Main] If you don't have any Digimon other than Digimon with [Dark Masters] in their texts, you may play this card with the play cost reduced by 5. At turn end, delete the Digimon this effect played."
+- **DCGO:** `EX10_020.cs` OnDeclaration — temp `ChangeCostClass` −5 on `UntilCalculateFixedCostEffect`, `PlayPermanentCards(self, payCost: true)`, then an `UntilOwnerTurnEndEffects` "[End of Your Turn] delete" attached to the played permanent.
+- **Gap:** the `main_from_hand` timing exists, but every play verb plays a SELECTED card — there is no "play THIS CARD from hand, paying its cost with a delta" verb, and no rider to schedule the played permanent's EoT delete from the same activation. (`play_from_hand` + `cost_delta` exists for selected cards; the SELF-play form with pay-cost semantics is the missing piece.)
+- **Consumers:** EX10-020 Puppetmon; the Q29 EX10 Bagra family shares the idiom (EX10-031 DarkKnightmon, EX10-056 Bagramon, EX10-059 DarknessBagramon) — land the verb with that cluster.
+
+## EX10-020 — [Security] "if this card was face-up" gate  [G-DSL-SECURITY-WAS-FACE-UP-GATE]
+
+Surfaced: 2026-06-10, judge-quiz Q3 authoring. EX10-020 Puppetmon PARTIAL.
+
+- **Card text:** "[Security] If this card was face-up, you may play 1 level 5 or lower card with [Dark Masters] in its text from your hand or trash without paying the cost."
+- **DCGO:** `EX10_020.cs` SecuritySkill gated `!CardEffectCommons.GetFaceDownFromHashtable(hashtable)` — the security card must have been FACE-UP when checked (e.g. placed face-up by its own [On Deletion]).
+- **Gap:** the `on_security` trigger has no condition leaf exposing whether the checked security card was already face-up. Authoring the clause without the gate would over-fire on every normal (face-down) check — unfaithful, so the clause is OMITTED. Fix shape: thread the face-up bit from the security-check dispatch (`Player.face_up_security` membership at check time) into the trigger context + a `security_card_was_face_up: bool` condition leaf.
+- **Body once unblocked:** `select_union_zone` (hand, trash) over `{ kind: digimon, level_lte: 5, effect_text_contains: "Dark Masters" }` + `play_union_bound_free` (BT25-094 idiom).
+
 > **Substring trait predicate `trait_contains` — RESOLVED 2026-06-03**
 > (EX3-014 Dorbickmon code-review fix). The DSL had only `trait_has`, an EXACT
 > case-insensitive trait match (`x.eq_ignore_ascii_case(t)`). Printed text of the
@@ -3512,3 +3530,27 @@ the cost."
 - **Blocks:** BT15-037 (the play-from-security-when-trashed clause). YAML:
   `code/digimon-engine/cards/bt15/BT15-037.yaml`; per-card tests
   `code/digimon-engine/tests/cards_behavioral/bt15/bt15_037.rs`.
+
+## RESOLVED 2026-06-10 — controller-relative memory predicate  [G-DSL-OWN-MEMORY-PREDICATE]
+
+Surfaced: judge-quiz Q15 authoring (EX8-073 / BT17-016 memory-gated immunities).
+
+- **Card text shape:** "While **you** have 0 or less memory, this Digimon isn't affected by …" — the bound is on the CARD CONTROLLER's signed memory, but `memory_lte`/`memory_gte` compare the raw turn-player-perspective gauge, which cannot express a controller-relative bound for the non-turn player.
+- **Resolution:** new predicate leaves `own_memory_lte` / `own_memory_gte` — evaluate the controller's signed memory (`game.memory` when it is the controller's turn, `-game.memory` otherwise). Spec `digimon-dsl/src/predicate.rs` → compiled (`compiled.rs`) → compile copy-through → engine eval (`dsl_cards/predicate.rs`).
+- **Consumers:** EX8-073 Gallantmon (X Antibody) `[All Turns]` immunity, BT17-016 Gallantmon `[Your Turn]` immunity (both `active_when` gates on continuous auras).
+
+## RESOLVED 2026-06-10 — continuous effect-immunity aura payload  [G-DSL-AURA-EFFECT-IMMUNITY]
+
+Surfaced: judge-quiz Q15 authoring (EX8-073's stub header listed "memory aura immunity" as a gap).
+
+- **Card text shape:** "[All Turns] While …, this Digimon isn't affected by [your opponent's] [Digimon] effects" — a CONTINUOUS immunity (DCGO `CanNotAffectedClass` with a `CanUseCondition`), not the one-shot expiry-bound `grant_effect_immunity` step.
+- **Resolution:** new `kind: aura` body slot `effect_immunity: { source_kind?: digimon|tamer|option|rule, source_controller: any|opponent|own }` (omit `source_kind` for all-kind immunity). Self-aura only (`target: {}`). Lowered on the declarative-tick path to a MATERIALIZED filtered `CannotBeAffected` install (`EffectContext::add_declarative_effect_immunity_modifier`), re-evaluated each tick under `active_when` — so the immunity turns on/off with its printed gate, including MID-De-Digivolve via the per-pop re-tick in `Game::de_digivolve_core` (judge-quiz Q15).
+- **Consumers:** EX8-073 (opponent Digimon effects, `own_memory_lte: 0`), BT17-016 (all opponent effects, `your_turn` + `own_memory_lte: 0`).
+
+## Result-log invisible across an `if:`-body park  [G-DSL-IF-BODY-PARK-RESULT-LOG]  — OPEN 2026-06-10 (pitfall)
+
+Surfaced: judge-quiz Q15 authoring (BT17-016 first draft).
+
+- **Symptom:** wrapping `select_* → delete_permanent` inside an `if: { condition: any_permanent…, then: […] }` and following the `if` with `if: { condition: { effect_deleted_any_opponent_digimon: false } … }` makes the deleted-tracker read FALSE NEGATIVE: the select inside the `if` body parks, `park_outer_tail` captures the clause's remaining steps with a CLONE of the bindings taken BEFORE the deletion is recorded, so the outer `effect_deleted_*` predicate never sees the result log written by the continuation.
+- **Workaround (validated idiom, BT25-014):** keep `select_* + delete_permanent` at the TOP LEVEL of the process — an empty mandatory select is skipped silently and the result log stays on the single continuation chain. BT17-016 / BT12-016 / EX3-057 / EX8-073 all use this shape.
+- **Fix shape (if ever needed):** share the result log via the `EffectContext`/game rather than per-continuation `Bindings` clones, or merge the continuation's result log into the parked outer-tail bindings at drain time.

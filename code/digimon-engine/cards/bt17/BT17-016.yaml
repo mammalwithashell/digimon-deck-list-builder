@@ -1,0 +1,89 @@
+# BT17-016 Gallantmon — Digimon, Lv.6, Red, DP 11000, Cost 11.
+# Traits: Holy Warrior / Royal Knight. Form: Mega. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.5 Red / Cost 3.
+#
+# Printed card text (card image — verbatim):
+#
+#   [When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon
+#     with 8000 DP or less. If this effect didn't delete, this Digimon gets
+#     +3000 DP and gains <Blocker> until the end of your opponent's turn.
+#   [Your Turn] While you have 0 or less memory, this Digimon isn't affected
+#     by your opponent's effects.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/Red/BT17_016.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Clause 1 — [When Digivolving] (OnEnterFieldAnyone) and [When Attacking]
+#   (OnAllyAttack), identical bodies: mandatory select 1 opp Digimon with
+#   DP <= MaxDP_DeleteEffect(8000) when one exists; then
+#   DeletePermanentAndProcessAccordingToResult — FailureProcess grants the
+#   carrier +3000 DP and Blocker, both UntilOpponentTurnEnd. → one clause on
+#   [when_digivolving, when_attacking]; if-any-candidate select+delete;
+#   `effect_deleted_any_opponent_digimon: false` → add_dp_modifier +
+#   grant_keyword Blocker, expiry end_of_opponents_turn.
+#
+# Clause 2 — [Your Turn] continuous CanNotAffectedClass: CanUse gates on
+#   IsOwnerTurn AND owner.MemoryForPlayer <= 0; SkillCondition is
+#   IsOpponentEffect (ANY opponent effect — Digimon, Tamer, Option, …).
+#   → `kind: aura` self-aura with `effect_immunity` (no source_kind filter,
+#   source_controller: opponent) and `active_when` your_turn + own_memory_lte
+#   (controller-relative memory, G-DSL-OWN-MEMORY-PREDICATE). Re-materialized
+#   each declarative tick — and consulted between De-Digivolve pops by the
+#   de_digivolve immunity recheck (judge-quiz Q15 machinery).
+
+card: BT17-016
+name: Gallantmon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 11000
+traits: [Holy Warrior, Royal Knight]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+
+effects:
+  # ─── [When Digivolving][When Attacking] delete <=8000 DP; else +3000/Blocker ─
+  - when: [when_digivolving, when_attacking]
+    summary: "[When Digivolving][When Attacking] Delete 1 opp Digimon with 8000 DP or less; if this effect didn't delete, +3000 DP and <Blocker> until end of opponent's turn"
+    process:
+      # Top-level select+delete (BT25-014 idiom): an empty mandatory select
+      # is skipped, and the result-log stays visible to the trailing
+      # `effect_deleted_*` check (an `if`-wrapped select+delete parks the
+      # outer tail with PRE-delete bindings — see qa/dsl-vocab-gaps.md
+      # G-DSL-IF-BODY-PARK-RESULT-LOG).
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 8000
+          prompt: "Delete 1 of your opponent's Digimon with 8000 DP or less"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - add_dp_modifier:
+                target: source
+                value: 3000
+                expiry: end_of_opponents_turn
+            - grant_keyword:
+                target: source
+                keyword: Blocker
+                expiry: end_of_opponents_turn
+
+  # ─── [Your Turn] while you have 0 or less memory: opponent-effect immunity ──
+  - kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - own_memory_lte: 0
+    effect_immunity:
+      source_controller: opponent
+    summary: "[Your Turn] While you have 0 or less memory, this Digimon isn't affected by your opponent's effects"

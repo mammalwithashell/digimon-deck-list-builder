@@ -1,6 +1,6 @@
 {
  "version": 1,
- "last_updated": "2026-06-10",
+ "last_updated": "2026-06-11",
  "cards": {
   "ST2-01": {
    "card_name": "Tsunomon",
@@ -5127,21 +5127,23 @@
   },
   "EX8-073": {
    "card_name": "Gallantmon (X Antibody)",
-   "validated_date": "2026-05-05",
-   "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
-   "status": "BLOCKED",
-   "gap_kind": "engine/dsl-gap",
-   "archetype": "Royal Knights",
+   "validated_date": "2026-06-11",
+   "report": "judge-quiz",
+   "status": "IMPLEMENTED",
+   "gap_kind": null,
+   "archetype": "judge-quiz cluster E (Q15)",
    "yaml_path": "code/digimon-engine/cards/ex8/EX8-073.yaml",
    "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_073.rs",
-   "test_count": 2,
-   "tests_passing": 1,
-   "tests_ignored": 1,
+   "test_count": 11,
+   "tests_passing": 11,
    "patterns": [
-    "ROYAL-KNIGHTS-POOL-STUB",
-    "GAP-STUB"
+    "SOURCE-GATED-DP-SWING",
+    "DELETE-OR-SECURITY-FALLBACK",
+    "SHARED-OPT-GROUP",
+    "AURA-EFFECT-IMMUNITY",
+    "OWN-MEMORY-PREDICATE"
    ],
-   "notes": "Load-only gap stub; source-gated DP swings, delete-or-security fallback, and memory aura immunity remain blocked."
+   "notes": "Stub completed: [WD][WA] source-gated +4000/-4000; [WD][EoA] shared-OPT delete <=10000 or security-trash+unsuspend; [All Turns] while you have 0-or-less memory unaffected by opponent DIGIMON effects (judge-quiz Q15 load-bearing clause). Re-authored 2026-06-11 (Q15): [All Turns] 0-or-less-memory immunity now a real effect_immunity aura (new DSL slot); full DCGO crosscheck in YAML header."
   },
   "AD1-004": {
    "card_name": "WarGreymon",
@@ -8536,6 +8538,102 @@
    ],
    "notes": "<Barrier> (face + inherited); [All Turns][OPT] mandatory gain 1 memory when a card is removed from your security (battle-area-gated by trigger dispatch — the Q9 activation-site crux).",
    "audit_note": "PARTIAL: 'play this when an effect trashes it from your security' clause blocked by G-DSL-ON-DISCARD-SECURITY-TRIGGER (no DSL trigger for OnDiscardSecurity). Non-essential to the Q9 memory ruling."
+  },
+  "EX10-020": {
+   "card_name": "Puppetmon",
+   "validated_date": "2026-06-10",
+   "report": "judge-quiz",
+   "status": "PARTIAL",
+   "gap_kind": "dsl",
+   "archetype": "judge-quiz cluster G (Q3)",
+   "yaml_path": "code/digimon-engine/cards/ex10/EX10-020.yaml",
+   "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_020.rs",
+   "test_count": 6,
+   "patterns": [
+    "DIGIVOLVE-TARGET-RESTRICTION-AURA",
+    "MODIFIER-NAME-PAYLOAD",
+    "ON-DELETION-SELF-TO-SECURITY"
+   ],
+   "notes": "Q3 clauses complete: [On Play][When Attacking] bottom-deck suspended opp; [All Turns] CanOnlyDigivolveInto(Apocalymon) via new modifier_name aura (breeding-inactive by construction); [On Deletion] self to bottom security gated on no GREEN face-up security (new color_is arm). OMITTED pending vocab: [Hand][Main] reduced self-play (G-DSL-HAND-MAIN-SELF-PLAY-REDUCED, land with Q29 EX10 wave) + [Security] was-face-up gate (G-DSL-SECURITY-WAS-FACE-UP-GATE)."
+  },
+  "BT12-057": {
+   "card_name": "Quartzmon",
+   "validated_date": "2026-06-10",
+   "report": "judge-quiz",
+   "status": "IMPLEMENTED",
+   "gap_kind": null,
+   "archetype": "judge-quiz cluster G (Q3)",
+   "yaml_path": "code/digimon-engine/cards/bt12/BT12-057.yaml",
+   "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_057.rs",
+   "test_count": 4,
+   "patterns": [
+    "MASS-SUSPEND-FOR-EACH",
+    "FLOOR-DIV-MEMORY-FORMULA",
+    "CANNOT-UNSUSPEND-AURA"
+   ],
+   "notes": "All 3 clauses + both digivolve alt-paths (Lv6 green/6 printed; Lv5 w/ Save-in-text/9). TDD exposed + fixed the engine turn-start unsuspend ignoring CannotUnsuspend (game_phases.rs)."
+  },
+  "BT19-073": {
+   "card_name": "LordKnightmon (X Antibody)",
+   "validated_date": "2026-06-11",
+   "report": "judge-quiz",
+   "status": "IMPLEMENTED",
+   "gap_kind": null,
+   "archetype": "judge-quiz cluster E (Q15)",
+   "yaml_path": "code/digimon-engine/cards/bt19/BT19-073.yaml",
+   "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_073.rs",
+   "test_count": 13,
+   "patterns": [
+    "MULTI-INSTANCE-DE-DIGIVOLVE",
+    "ALLIANCE-GRANT-AURA",
+    "COLLISION"
+   ],
+   "notes": "All clauses + alt-digivolve. [When Digivolving] = N separate De-Digivolve 1 instances vs one target with per-card immunity re-check (Q15 driver)."
+  },
+  "BT17-016": {
+   "card_name": "Gallantmon",
+   "validated_date": "2026-06-11",
+   "report": "judge-quiz",
+   "status": "IMPLEMENTED",
+   "gap_kind": null,
+   "archetype": "judge-quiz cluster E (Q15)",
+   "yaml_path": "code/digimon-engine/cards/bt17/BT17-016.yaml",
+   "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_016.rs",
+   "test_count": 10,
+   "patterns": [
+    "Q15-STACK-MATERIAL"
+   ],
+   "notes": "Full text; Q15 stack material."
+  },
+  "BT12-016": {
+   "card_name": "WarGrowlmon",
+   "validated_date": "2026-06-11",
+   "report": "judge-quiz",
+   "status": "IMPLEMENTED",
+   "gap_kind": null,
+   "archetype": "judge-quiz cluster E (Q15)",
+   "yaml_path": "code/digimon-engine/cards/bt12/BT12-016.yaml",
+   "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_016.rs",
+   "test_count": 9,
+   "patterns": [
+    "Q15-STACK-MATERIAL"
+   ],
+   "notes": "Full text; Q15 stack material."
+  },
+  "EX3-057": {
+   "card_name": "Growlmon",
+   "validated_date": "2026-06-11",
+   "report": "judge-quiz",
+   "status": "IMPLEMENTED",
+   "gap_kind": null,
+   "archetype": "judge-quiz cluster E (Q15)",
+   "yaml_path": "code/digimon-engine/cards/ex3/EX3-057.yaml",
+   "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_057.rs",
+   "test_count": 9,
+   "patterns": [
+    "Q15-STACK-MATERIAL"
+   ],
+   "notes": "Full text; Q15 stack material."
   }
  }
 }

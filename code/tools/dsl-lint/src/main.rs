@@ -164,6 +164,19 @@ fn walk_yaml(path: &Path) -> Vec<PathBuf> {
 }
 
 fn main() -> ExitCode {
+    // Windows defaults the main thread stack to 1 MiB, which is too small
+    // for the recursive YAML deserializer that parses card specs (the same
+    // workaround digimon-engine's build.rs uses). Run the real work on a
+    // worker thread with a larger stack.
+    std::thread::Builder::new()
+        .stack_size(16 * 1024 * 1024)
+        .spawn(real_main)
+        .expect("spawn lint worker")
+        .join()
+        .expect("lint worker panicked")
+}
+
+fn real_main() -> ExitCode {
     let args = match parse_args() {
         Ok(a) => a,
         Err(e) => {

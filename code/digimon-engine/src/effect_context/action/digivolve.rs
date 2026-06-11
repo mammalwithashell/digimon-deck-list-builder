@@ -94,7 +94,17 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return 0;
         }
-        self.game.de_digivolve_core(target, stop_at_level, amount)
+        // Per-pop immunity recheck (judge-quiz Q15): De-Digivolve is applied
+        // one card at a time and a newly-exposed top card's continuous
+        // immunity halts the remaining pops. The core also re-ticks
+        // declarative effects after each pop so the entry guard of any
+        // FOLLOW-UP de_digivolve call sees the refreshed registry.
+        self.game.de_digivolve_core(
+            target,
+            stop_at_level,
+            amount,
+            Some((self.player, self.source_kind)),
+        )
     }
 
     /// Install a player-scoped one-shot future-digivolve cost reducer

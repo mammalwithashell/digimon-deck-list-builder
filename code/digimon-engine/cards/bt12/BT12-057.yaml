@@ -1,0 +1,162 @@
+# BT12-057 Quartzmon — Digimon, Lv.7, Green, DP 15000, Cost 16.
+# Traits: Unidentified. Attribute: Unknown.
+# Standard digivolve (cards.json evo_costs): Lv.6 Green / Cost 6 — also
+# authored as an alt_path so the route exists for DSL-loaded fixtures
+# (G-DSL-FIXTURE-EVO-COSTS: compiled cards carry no printed evo_costs).
+# xros_req (cards.json): "[Digivolve] Lv.5 w/＜Save＞ in text: Cost 9".
+#
+# Printed card text (card image, judge-quiz PDF p.5 + cards.json — agree):
+#
+#   [When Digivolving] Suspend all other Digimon and all Tamers. Then, for
+#     every 2 suspended Digimon and/or Tamers, gain 1 memory.
+#   [All Turns] All other Digimon and Tamers don't unsuspend.
+#   [When Attacking] Suspend 1 of your opponent's Digimon or Tamers. Then,
+#     trash the top card of your opponent's security stack for every 5
+#     suspended Digimon and Tamers.
+#
+#   Inherited Effect: (none)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT12/Green/BT12_057.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt-digivolve (AddSelfDigivolutionRequirementStaticEffect):
+#   PermanentCondition `TopCard.HasSaveText && Level == 5`, cost 9,
+#   ignoreDigivolutionRequirement: false. "w/＜Save＞ in text" → the base's
+#   top card has ＜Save＞ in its printed text — `effect_text_contains: "Save"`
+#   (the full-text scan; DCGO HasSaveText is the dedicated form of the same
+#   check — a substring false-positive would need a card with the bare word
+#   "Save" outside the keyword, which the pool does not have).
+#
+# Clause 1 — [When Digivolving] (OnEnterFieldAnyone, CanTriggerWhenDigivolving):
+#   suspendTargets = ALL players' battle-area permanents ≠ self that are
+#   Digimon or Tamer and not CanNotBeAffected → SuspendPermanentsClass.Tap().
+#   Then gainMemory = count(ALL suspended battle-area Digimon+Tamers,
+#   including any already-suspended before the effect) / 2 → AddMemory.
+#   → for_each over `{ of: any, battle_area, digimon|tamer }` excluding self
+#   (not_in_binding on a self-binding) → suspend; then gain_memory with a
+#   floor_div formula over the suspended Digimon+Tamer count.
+#
+# Clause 2 — [All Turns] (EffectTiming.None, CantUnsuspendStaticEffect):
+#   PermanentCondition = battle-area Digimon/Tamer ≠ self (BOTH players —
+#   "All other Digimon and Tamers"). → targeted aura installing
+#   `CannotUnsuspend` on every other battle-area Digimon/Tamer (owner: any).
+#
+# Clause 3 — [When Attacking] (OnAllyAttack, CanTriggerOnAttack): if the
+#   opponent has a Digimon or Tamer: mandatory select 1 → Mode.Tap. Then
+#   trashCount = count(ALL suspended battle-area Digimon+Tamers) / 5 →
+#   IDestroySecurity(opponent, trashCount, fromTop). The security trash runs
+#   even when the suspend pick had no candidates.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                          | Status        |
+# |------------------------------------------------------------|---------------|
+# | Standard digivolve Lv.6 Green / Cost 6 (as alt_path)       | IMPLEMENTED   |
+# | Alt-digivolve Lv.5 w/＜Save＞ in text / Cost 9              | IMPLEMENTED   |
+# | [When Digivolving] suspend all others + memory ÷2          | IMPLEMENTED   |
+# | [All Turns] all other Digimon/Tamers don't unsuspend       | IMPLEMENTED   |
+# | [When Attacking] suspend 1 opp + trash security ÷5         | IMPLEMENTED   |
+#
+# Verdict: IMPLEMENTED.
+
+card: BT12-057
+name: "Quartzmon"
+kind: digimon
+level: 7
+color: [green]
+cost: 16
+dp: 15000
+traits: [Unidentified]
+attribute: Unknown
+
+alt_paths:
+  # Standard printed route (cards.json evo_costs: Lv.6 Green / 6).
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 6
+  # "[Digivolve] Lv.5 w/＜Save＞ in text: Cost 9" (DCGO HasSaveText).
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - effect_text_contains: "Save"
+    cost: 9
+
+effects:
+  # ─── Clause 1 — [When Digivolving] suspend all others; memory per 2 ───────
+  # `other: true` excludes the source permanent ("all OTHER Digimon").
+  - when: when_digivolving
+    summary: "[When Digivolving] Suspend all other Digimon and all Tamers. Then, for every 2 suspended Digimon and/or Tamers, gain 1 memory"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - owner: any
+              - zone: [battle_area]
+              - other: true
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          bind_as: suspend_target
+          body:
+            - suspend: { target: suspend_target }
+      - gain_memory_fn:
+          formula:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone:
+                    of: any
+                    zone: battle_area
+                    filter:
+                      all_of:
+                        - is_suspended: true
+                        - any_of:
+                            - kind: digimon
+                            - kind: tamer
+                delta: 1
+              - 2
+
+  # ─── Clause 2 — [All Turns] all other Digimon and Tamers don't unsuspend ──
+  - kind: aura
+    target:
+      all_of:
+        - owner: any
+        - zone: [battle_area]
+        - other: true
+        - any_of:
+            - kind: digimon
+            - kind: tamer
+    modifier: CannotUnsuspend
+    summary: "[All Turns] All other Digimon and Tamers don't unsuspend"
+
+  # ─── Clause 3 — [When Attacking] suspend 1 opp; trash security per 5 ──────
+  - when: when_attacking
+    summary: "[When Attacking] Suspend 1 of your opponent's Digimon or Tamers. Then, trash the top card of your opponent's security stack for every 5 suspended Digimon and Tamers"
+    process:
+      - select_opponent_permanent:
+          bind_as: tap_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Suspend 1 of your opponent's Digimon or Tamers"
+      - suspend: { target: tap_target }
+      - trash_top_security:
+          of: opponent
+          count:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone:
+                    of: any
+                    zone: battle_area
+                    filter:
+                      all_of:
+                        - is_suspended: true
+                        - any_of:
+                            - kind: digimon
+                            - kind: tamer
+                delta: 1
+              - 5

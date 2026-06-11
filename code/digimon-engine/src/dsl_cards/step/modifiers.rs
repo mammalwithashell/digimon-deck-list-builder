@@ -118,7 +118,7 @@ fn resolve_permanent_target(
     }
 }
 
-fn lower_effect_source_kind(kind: CompiledEffectSourceKind) -> EffectSourceKind {
+pub(crate) fn lower_effect_source_kind(kind: CompiledEffectSourceKind) -> EffectSourceKind {
     match kind {
         CompiledEffectSourceKind::Digimon => EffectSourceKind::Digimon,
         CompiledEffectSourceKind::Tamer => EffectSourceKind::Tamer,
@@ -127,7 +127,7 @@ fn lower_effect_source_kind(kind: CompiledEffectSourceKind) -> EffectSourceKind 
     }
 }
 
-fn lower_effect_controller(controller: CompiledEffectController) -> EffectControllerFilter {
+pub(crate) fn lower_effect_controller(controller: CompiledEffectController) -> EffectControllerFilter {
     match controller {
         CompiledEffectController::Any => EffectControllerFilter::Any,
         CompiledEffectController::Opponent => EffectControllerFilter::OpponentOnly,

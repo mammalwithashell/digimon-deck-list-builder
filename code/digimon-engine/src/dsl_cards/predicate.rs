@@ -160,6 +160,28 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // Controller-relative memory ("while YOU have N or less memory").
+    // `game.memory` is stored from the turn player's perspective, so the
+    // controller's signed memory is the gauge when it is their turn and the
+    // negated gauge otherwise. G-DSL-OWN-MEMORY-PREDICATE (EX8-073 /
+    // BT17-016 "while you have 0 or less memory" immunity gates).
+    if pred.own_memory_lte.is_some() || pred.own_memory_gte.is_some() {
+        let own_memory = if rctx.game.turn_player() == rctx.player {
+            rctx.game.memory as i32
+        } else {
+            -(rctx.game.memory as i32)
+        };
+        if let Some(cap) = &pred.own_memory_lte {
+            if own_memory > eval_int_constraint_read(cap, rctx, None, bindings) {
+                return false;
+            }
+        }
+        if let Some(floor) = &pred.own_memory_gte {
+            if own_memory < eval_int_constraint_read(floor, rctx, None, bindings) {
+                return false;
+            }
+        }
+    }
     if let Some(cap) = &pred.security_count_lte {
         if (rctx.security_count(rctx.player) as i32)
             > eval_int_constraint_read(cap, rctx, None, bindings)
@@ -220,6 +242,11 @@ pub fn eval_predicate_with_bindings(
                     card.card_id(card_data).eq_ignore_ascii_case(card_number)
                 } else if let Some(name) = &spec.name_is {
                     card.card_name(card_data).eq_ignore_ascii_case(name)
+                } else if let Some(want) = spec.color_is {
+                    // Color arm (EX10-020 "no GREEN face-up security" — Q3).
+                    card.colors(card_data)
+                        .iter()
+                        .any(|&got| color_matches(want, got))
                 } else {
                     false
                 }

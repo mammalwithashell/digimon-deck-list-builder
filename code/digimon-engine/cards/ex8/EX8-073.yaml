@@ -1,3 +1,51 @@
+# EX8-073 Gallantmon (X Antibody) — Digimon, Lv.6, Red/Blue, DP 12000, Cost 12.
+# Traits: Holy Warrior / X Antibody / Royal Knight. Form: Mega. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.5 Red / Cost 4.
+#
+# Printed card text (card image — verbatim):
+#
+#   Digivolve: [Gallantmon]: Cost 1
+#   [When Digivolving] [When Attacking] If [Gallantmon] or [X Antibody] is in
+#     this Digimon's digivolution cards, this Digimon gets +4000 DP and 1 of
+#     your opponent's Digimon gets -4000 DP until the end of their turn.
+#   [When Digivolving] [End of Attack] [Once Per Turn] Delete 1 of your
+#     opponent's Digimon with 10000 DP or less. If this didn't delete, trash
+#     your opponent's top security card and this Digimon unsuspends.
+#   [All Turns] While you have 0 or less memory, this Digimon isn't affected
+#     by the effects of your opponent's Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX8/Red/EX8_073.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect:
+#   PermanentCondition `TopCard.EqualsCardName("Gallantmon")`, cost 1.
+#
+# Clause 1 — [When Digivolving] (OnEnterFieldAnyone) + [When Attacking]
+#   (OnAllyAttack), identical bodies, CanActivate gated on
+#   DigivolutionCards.Count(name == "Gallantmon" || name == "X Antibody") >= 1:
+#   +4000 DP to self (UntilOpponentTurnEnd); then, if an opponent Digimon
+#   exists, mandatory select 1 → -4000 DP (UntilOpponentTurnEnd).
+#
+# Clause 2 — [When Digivolving] + [End of Attack], SHARED [Once Per Turn]
+#   (both ActivateClasses carry SetHashString("Delete_EX8_073")): mandatory
+#   select 1 opp Digimon with DP <= MaxDP_DeleteEffect(10000) when one
+#   exists; DeletePermanentAndProcessAccordingToResult — FailureProcess
+#   trashes the opponent's top security card (if any) and unsuspends this
+#   Digimon. → one clause on [when_digivolving, end_of_attack] with
+#   once_per_turn (shared OPT shell).
+#
+# Clause 3 — [All Turns] continuous CanNotAffectedClass: CanUse gates on
+#   owner.MemoryForPlayer <= 0; SkillCondition = IsOpponentEffect AND
+#   IsDigimonEffect (opponent DIGIMON effects only). → `kind: aura`
+#   self-aura with `effect_immunity { source_kind: digimon,
+#   source_controller: opponent }` and `active_when: { own_memory_lte: 0 }`
+#   (controller-relative memory, G-DSL-OWN-MEMORY-PREDICATE). This is the
+#   load-bearing clause for judge-quiz Q15: once a De-Digivolve exposes this
+#   card as the top card (with the gauge at 0+ for the opponent), the
+#   immunity is live IMMEDIATELY and halts the remaining <De-Digivolve 1>
+#   instances (per-pop recheck in `de_digivolve_core`).
+
 card: EX8-073
 name: "Gallantmon (X Antibody)"
 kind: digimon
@@ -10,15 +58,68 @@ attribute: Virus
 
 alt_paths:
   - kind: digivolve
+    from: { name_is: "Gallantmon" }
+    cost: 1
+  - kind: digivolve
     from: { level_eq: 5, color_is: red }
     cost: 4
 
-effects: []
+effects:
+  # ─── [WD][WA] source-gated +4000 self / -4000 to 1 opp Digimon ────────────
+  - when: [when_digivolving, when_attacking]
+    summary: "[When Digivolving][When Attacking] If [Gallantmon]/[X Antibody] is in this Digimon's digivolution cards, +4000 DP and 1 opp Digimon gets -4000 DP until the end of their turn"
+    condition:
+      any_of:
+        - self_digivolution_sources_contain_name: "Gallantmon"
+        - self_digivolution_sources_contain_name: "X Antibody"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 4000
+          expiry: end_of_opponents_turn
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: debuff_target
+                filter: { kind: digimon }
+                prompt: "Select 1 Digimon that will get DP -4000"
+            - add_dp_modifier:
+                target: { binding: debuff_target }
+                value: -4000
+                expiry: end_of_opponents_turn
 
-# Stubbed:
-# - [When Digivolving][When Attacking] source-gated +4000 self DP and -4000
-#   opponent DP needs a source-name/source-trait condition on this Digimon.
-# - [When Digivolving][End of Attack][Once Per Turn] delete <=10000 DP; if no
-#   deletion occurred, trash top security and unsuspend. Needs effect-result
-#   branch/fallback.
-# - Memory <=0 opponent Digimon effect immunity needs a continuous memory aura.
+  # ─── [WD][End of Attack][OPT] delete <=10000; else security trash + unsuspend ─
+  - when: [when_digivolving, end_of_attack]
+    once_per_turn: true
+    summary: "[When Digivolving][End of Attack][OPT] Delete 1 opp Digimon with 10000 DP or less; if this didn't delete, trash opponent's top security and unsuspend this Digimon"
+    process:
+      # Top-level select+delete (BT25-014 idiom): an empty mandatory select
+      # is skipped, and the result-log stays visible to the trailing
+      # `effect_deleted_*` check (G-DSL-IF-BODY-PARK-RESULT-LOG).
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 10000
+          prompt: "Delete 1 of your opponent's Digimon with 10000 DP or less"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - trash_top_security: { of: opponent }
+            - unsuspend: { target: source }
+
+  # ─── [All Turns] while you have 0 or less memory: opp-Digimon-effect immunity ─
+  - kind: aura
+    target: {}
+    active_when: { own_memory_lte: 0 }
+    effect_immunity:
+      source_kind: digimon
+      source_controller: opponent
+    summary: "[All Turns] While you have 0 or less memory, this Digimon isn't affected by the effects of your opponent's Digimon"

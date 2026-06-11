@@ -714,6 +714,12 @@ fn compile_predicate(
             .memory_gte
             .as_ref()
             .map(|d| compile_dp_constraint(d, &format!("{prefix}.memory_gte"), card_id, errors)),
+        own_memory_lte: p.own_memory_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.own_memory_lte"), card_id, errors)
+        }),
+        own_memory_gte: p.own_memory_gte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.own_memory_gte"), card_id, errors)
+        }),
         security_count_lte: p.security_count_lte.as_ref().map(|d| {
             compile_dp_constraint(d, &format!("{prefix}.security_count_lte"), card_id, errors)
         }),
@@ -753,17 +759,27 @@ fn compile_predicate(
             )
         }),
         no_face_up_security_named: p.no_face_up_security_named.as_ref().map(|f| {
-            if f.card_number_is.is_some() == f.name_is.is_some() {
+            let set_count = [
+                f.card_number_is.is_some(),
+                f.name_is.is_some(),
+                f.color_is.is_some(),
+            ]
+            .iter()
+            .filter(|b| **b)
+            .count();
+            if set_count != 1 {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.no_face_up_security_named"),
-                    message: "exactly one of `card_number_is` / `name_is` must be set".to_string(),
+                    message: "exactly one of `card_number_is` / `name_is` / `color_is` must be set"
+                        .to_string(),
                 });
             }
             CompiledFaceUpSecurityNamed {
                 of: compile_player_ref(f.of),
                 card_number_is: f.card_number_is.clone(),
                 name_is: f.name_is.clone(),
+                color_is: f.color_is.map(compile_color),
             }
         }),
         binding_count_eq: p
@@ -1473,11 +1489,16 @@ fn compile_declarative(
             }),
             modifier: a.modifier,
             modifier_value: a.modifier_value,
+            modifier_name: a.modifier_name,
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
             applies_to_opponent_security_dp: a.applies_to_opponent_security_dp.unwrap_or(false),
             applies_to_own_security_dp: a.applies_to_own_security_dp.unwrap_or(false),
+            effect_immunity: a.effect_immunity.map(|imm| CompiledAuraEffectImmunity {
+                source_kind: imm.source_kind.map(compile_effect_source_kind),
+                source_controller: compile_effect_controller(imm.source_controller),
+            }),
             summary,
             summary_key,
         },

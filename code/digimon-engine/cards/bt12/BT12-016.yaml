@@ -1,0 +1,102 @@
+# BT12-016 WarGrowlmon — Digimon, Lv.5, Red, DP 8000, Cost 8.
+# Traits: Cyborg. Form: Ultimate. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.4 Red / Cost 3.
+#
+# Printed card text (card image — verbatim):
+#
+#   [When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or
+#     less. If no opponent's Digimon was deleted by this effect, you may
+#     digivolve this Digimon into a level 6 Digimon card with [Gallantmon] in
+#     its name in your hand for the digivolution cost. When this Digimon would
+#     digivolve by this effect, reduce the digivolution cost by 1.
+#   Inherited [End of Attack] [Once Per Turn] If your opponent has no Digimon
+#     in play, and this Digimon has [Growlmon] or [Gallantmon] in its name,
+#     gain 2 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT12/Red/BT12_016.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Clause 1 — [When Digivolving] (OnEnterFieldAnyone): mandatory select 1 opp
+#   Digimon with DP <= MaxDP_DeleteEffect(4000) when one exists; then
+#   DeletePermanentAndProcessAccordingToResult — FailureProcess runs
+#   DigivolveIntoHandOrTrashCard(cardCondition: name contains "Gallantmon" &&
+#   Level == 6 && IsDigimon, payCost: true, reduceCostTuple: (1, null),
+#   isHand: true). The hand pick is the player's choice and DECLINABLE
+#   (printed "you may"). → if-any-candidate select+delete; on
+#   `effect_deleted_any_opponent_digimon: false`, optional select_hand
+#   (Lv.6 Digimon, [Gallantmon] in name) → effect_initiated_digivolve with
+#   cost { reduce: 1 } honoring digivolution requirements.
+#
+# Clause 2 — inherited [End of Attack][Once Per Turn] (OnEndAttack,
+#   SetIsInheritedEffect): CanActivate gates on opponent battle-area Digimon
+#   count == 0 AND carrier TOP card name contains "Growlmon" OR "Gallantmon"
+#   (the carrier digivolved past WarGrowlmon, so the name check is the
+#   PERMANENT's current name). Mandatory gain 2 memory.
+#   → no_permanent(opponent digimon) + source_name_contains any-of.
+
+card: BT12-016
+name: WarGrowlmon
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 8000
+traits: [Cyborg]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+effects:
+  # ─── [When Digivolving] delete <=4000 DP; else may digivolve into Gallantmon ─
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 opp Digimon with 4000 DP or less; if none was deleted, you may digivolve into a Lv.6 [Gallantmon] in hand for the digivolution cost reduced by 1"
+    process:
+      # Top-level select+delete (BT25-014 idiom): an empty mandatory select
+      # is skipped, and the result-log stays visible to the trailing
+      # `effect_deleted_*` check (G-DSL-IF-BODY-PARK-RESULT-LOG).
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - select_hand:
+                of: you
+                bind_as: gallantmon
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 6
+                    - name_contains: "Gallantmon"
+                prompt: "Digivolve into a level 6 [Gallantmon] from your hand for the digivolution cost, reduced by 1"
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: gallantmon
+                cost: { reduce: 1 }
+
+  # ─── Inherited [End of Attack][OPT] no opp Digimon + Growlmon/Gallantmon name ─
+  - scope: inherited
+    when: end_of_attack
+    once_per_turn: true
+    summary: "Inherited [End of Attack][OPT] If your opponent has no Digimon and this Digimon has [Growlmon]/[Gallantmon] in its name, gain 2 memory"
+    condition:
+      all_of:
+        - no_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+        - any_of:
+            - source_name_contains: "Growlmon"
+            - source_name_contains: "Gallantmon"
+    process:
+      - gain_memory: 2

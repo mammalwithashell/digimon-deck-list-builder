@@ -44,8 +44,27 @@ Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' ru
   - `tests/judge_quiz/c_declare_then_pay.rs::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` — **un-ignored, PASSING (2026-06-03).** The abandoned play pays 0 memory (host never committed).
 - **Blocks (judge-quiz):** Q25, Q26, Q27 — all RESOLVED (PASS).
 
-### §No digivolve-target restriction modifier (G-DIGIVOLVE-TARGET-RESTRICTION) — ENGINE SUBSTRATE DONE 2026-05-29; DSL-install + card at authoring
+### §No digivolve-target restriction modifier (G-DIGIVOLVE-TARGET-RESTRICTION) — RESOLVED 2026-06-10 (DSL install landed; Q3 PASS)
 
+- **DSL install IMPLEMENTED 2026-06-10** (judge-quiz Q3 authoring): the aura
+  clause gained `modifier_name: <string>` — a named `modifier:` grant now
+  installs with `ModifierPayload::Name { value, base: false }` via
+  `EffectContext::add_declarative_modifier_with_payload` (both the self-aura
+  and filtered-aura paths in `lower_aura.rs`). EX10-020 Puppetmon authors the
+  `[All Turns]` as `kind: aura / target: {} / modifier: CanOnlyDigivolveInto /
+  modifier_name: "Apocalymon"`. Battle-area-sourced declarative aura ⇒
+  breeding-inactive for free (the Q3 ruling). Pins:
+  `cards_behavioral/ex10/ex10_020.rs::ex10_020_battle_area_restriction_blocks_non_apocalymon_digivolve`
+  (restriction live: Megadramon blocked, Apocalymon allowed) +
+  `judge_quiz g::q3_breeding_area_effect_inactive_allows_digivolve` (breeding:
+  Quartzmon digivolve legal). **Q3 → PASS.**
+- **Incidental engine fix landed with the same slice:** the turn-start bulk
+  unsuspend (`Player::unsuspend_all`, called from `game_phases.rs`) never
+  consulted `ModifierType::CannotUnsuspend` — only Reboot's effect-driven
+  unsuspend did — so every "[All Turns] … don't unsuspend" aura (BT12-057
+  Quartzmon) was silently inert at the main consult site. The unsuspend
+  phase now skips locked permanents (battle area + breeding). Pinned by
+  `cards_behavioral/bt12/bt12_057.rs::bt12_057_aura_blocks_other_unsuspends_at_turn_start`.
 - **Engine substrate IMPLEMENTED** 2026-05-29 (change `fix-judge-quiz-cluster-wiring-gaps`). `ModifierType::CanOnlyDigivolveInto` added (carries the allowed name in `ModifierPayload::Name { value }`); consulted by `Game::digivolve_target_blocked_by_restriction`, wired into the single central digivolve-route function `normal_digivolve_route_for_card` (feeds the digivolve action mask, the Blast counter path, and hand-digivolve execution) AND the arts-digivolve path (`game_actions.rs`). A base carrying the modifier offers NO digivolve route into a non-matching card; no-op when absent (zero blast radius for existing cards). Registered in `modifier_map.rs` (lookup + exhaustiveness + all_variants), `validator::KNOWN_MODIFIER_KEYS`, and the `payload_matches_modifier` guard. Pinned by `dna_digivolve::tests_q3_digivolve_target_restriction::{can_only_digivolve_into_blocks_nonmatching_name, no_restriction_is_a_noop}`. Full suite regression-clean.
 - **Remaining (deferred to EX10-020 authoring):** a DSL step/keyword to INSTALL `CanOnlyDigivolveInto` with a card-specific allowed name as a declarative aura sourced from the battle area (so it's breeding-inactive for free — see breeding-area note below). The allowed name is card-specific ("Apocalymon"), so this thin lowering lands with EX10-020 (cluster G — NOT first wave). The `ChangeBaseCardName` Name-payload-aura lowering is the template.
 - **First seen:** 2026-05-29, judge-quiz Q3 (probe). The `ModifierType` enum has `CannotDigivolve` (the source can't digivolve at all) but NO "can only digivolve INTO [X]" / "cannot digivolve into [X]" digivolve-TARGET restriction. EX10-020's `[All Turns] This Digimon can only digivolve into [Apocalymon]` (a self-restriction on its own digivolution targets) has no primitive.

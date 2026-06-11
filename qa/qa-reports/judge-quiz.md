@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-06-10: **30/30 questions have a test entry; 24 PASS.** `cargo test --test judge_quiz`
-→ 35 passed (24 question pins + loader/probe/analogs + the Q4 control), 6 ignored, 0 failed.
+Coverage as of 2026-06-11: **30/30 questions have a test entry; 26 PASS.** `cargo test --test judge_quiz`
+→ 37 passed (26 question pins + loader/probe/analogs + the Q4 control), 4 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -28,7 +28,7 @@ Coverage as of 2026-06-10: **30/30 questions have a test entry; 24 PASS.** `carg
 |---|---------|--------------|---------|---------------|---------|
 | 1 | A | YES (Progress guards Digimon, not battle) | **PASS** | Fixed by `batch-implement-cards-rust-dsl` first wave: BT13-088 Belphemon: Sleep Mode authored; pinned — Medusamon's `<Progress>` is live (would block an affecting opponent effect) yet Belphemon's `[Opp Turn]` end-attack succeeds (ends the battle, doesn't affect the Digimon) | `a::q1_belphemon_opp_turn_ends_attack_through_progress` |
 | 2 | A | NO memory loss | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX1-068 `[Main]` grant authored + granted-trigger dispatch consults `progress_excludes` (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT, Q2 slice resolved) | `a::q2_medusamon_progress_blocks_ice_wall_memory_loss` |
-| 3 | G | YES | BLOCKED-CARD | EX10-020, BT12-057 | `g::q3_breeding_area_effect_inactive_allows_digivolve` |
+| 3 | G | YES | **PASS** | RESOLVED 2026-06-10: EX10-020 Puppetmon (PARTIAL — `[Hand][Main]` self-play `G-DSL-HAND-MAIN-SELF-PLAY-REDUCED` + `[Security]` was-face-up gate `G-DSL-SECURITY-WAS-FACE-UP-GATE`, both incidental to Q3) + BT12-057 Quartzmon (IMPLEMENTED) authored. The `[All Turns]` restriction is the new `modifier_name` aura install of `CanOnlyDigivolveInto` (G-DIGIVOLVE-TARGET-RESTRICTION DSL slice landed) — a battle-area-sourced declarative aura, so it is INACTIVE in the breeding area for free, exactly the judge rule. Battle-area control (`ex10_020_battle_area_restriction_blocks_non_apocalymon_digivolve`) proves no false-pass. Incidental engine fix: the turn-start bulk unsuspend ignored `CannotUnsuspend` (`Player::unsuspend_all`) — Quartzmon's "[All Turns] don't unsuspend" TDD caught it; now honored at the phase site. | `g::q3_breeding_area_effect_inactive_allows_digivolve` |
 | 4 | G | NO another check (+1/−1 net) | **PASS** | AD1-002 Aldamon + BT4-098 Atomic Inferno authored 2026-06-05 (ST3-15 Holy Flame already impl). The live-card form of the *reduction* case `mid_attack_security_attack_recompute.rs` Test 3 deferred: Aldamon attacks with Atomic Inferno's `<Security A. +1>` (would check 2); Holy Flame on top of P1 security applies `<Security A. −1>` on its check; the engine re-reads net strike (=1) and STOPS after 1 check. Control `q4_control_atomic_inferno_plus_one_alone_checks_two` proves the +1 genuinely extends the loop (no false-pass). | `g::q4_security_attack_net_modifiers_one_check` |
 | 5 | C | YES (declare if cost can be made payable) | **PASS** | Fixed by `fix-ad1-025-assembly-data`: engine Assembly executor (G-ASSEMBLY-PLAY-EXECUTION) + `[Assembly]` restored to AD1-025 data/YAML. Declare-then-pay mask offers the play at memory 0. | `c::q5_assembly_declaration_legal_when_cost_can_be_made_payable` |
 | 6 | B | NO | **PASS** | Pinned 2026-05-30: BT8-109 Flame Hellscythe authored; Pillomon (BT9-033) reduced to ≤0 DP by sub-effect 1 is NOT deleted mid-effect, so its `CannotPlayDigimonByEffect` floodgate persists and sub-effect 2's trash-play is blocked (contrast Q7, where the delete clears it). Pillomon deleted only by the post-resolution rules-check. | `b::q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves` |
@@ -40,7 +40,7 @@ Coverage as of 2026-06-10: **30/30 questions have a test entry; 24 PASS.** `carg
 | 12 | F | YES, unsuspends | **PASS** | RESOLVED 2026-06-02 (`G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`): `kind_matches_field` now coalesces `Token` into `Digimon`, and `eval_permanent_fields` defers permanent-kind to the (token-aware) `synth_identity` check — so a REAL Petrification token is a legal placement pick. Test un-ignored with the real `TOKEN_PETRIFICATION` permanent (not a Digimon stand-in). Regression-clean. | `f::q12_token_placeable_as_digivolution_card_unsuspends` |
 | 13 | B | −6000 DP | **PASS** | Pinned 2026-05-30: BT22-042 Nyabootmon's `-3000 × (your Digimon)` is counted (2: Nyabootmon + ShoeShoemon) BEFORE ShoeShoemon (P-165)'s deferred `[On Play]` adds a Familiar token → −6000 (token not counted; a count of 3 would give −9000). | `b::q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play` |
 | 14 | B | −6000 DP | **PASS** | RESOLVED 2026-06-02 (`G-CONTINUOUS-MASS-DP-DEBUFF`): EX4-074 re-authored `continuous: true` → a source-independent floating mass modifier catches the later-played ShoeShoemon at ≤0 DP, which is still counted → Nyabootmon's debuff is −6000 (count 2). Asserts the per-application debuff value (the ruling) — the net Ruin DP additionally reflects Nyabootmon's faithful OPTIONAL `[On Any Deletion]` recursion. Focused substrate pin: `b::q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant`. | `b::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode` |
-| 15 | E | Gallantmon (X Antibody) topmost | BLOCKED-CARD | BT19-073, BT17-016, BT12-016, EX3-057 | `e::q15_sequential_de_digivolve_halted_by_x_antibody_immunity` |
+| 15 | E | Gallantmon (X Antibody) topmost | **PASS** | RESOLVED 2026-06-11: BT19-073 LordKnightmon (X Antibody), BT17-016 Gallantmon, BT12-016 WarGrowlmon, EX3-057 Growlmon authored (all IMPLEMENTED); EX8-073 re-authored so its `[All Turns]` 0-or-less-memory immunity is a REAL `effect_immunity` aura (new DSL aura slot landed with this slice). BT19-073's `[When Digivolving]` runs N SEPARATE `<De-Digivolve 1>` instances against the picked stack with the immunity re-checked per trashed card (DCGO `IDegeneration` loop) — after the first trash exposes Gallantmon (X Antibody), its live immunity halts the remaining instances. Pin asserts topmost = EX8-073, exactly 1 card trashed, and the full remaining stack order. | `e::q15_sequential_de_digivolve_halted_by_x_antibody_immunity` |
 | 16 | E | NO (`<Partition>` not triggered) | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: EX6-057 Lilithmon authored + granted body runs as the carrier's own effect (D4/DCGO), so the granted self-delete is OwnEffect → `<Partition>` cause-filter skips it | `e::q16_partition_not_triggered_when_leaving_by_own_granted_effect` |
 | 17 | A | NO | **PASS** | Fixed by `add-grant-triggered-effect-dsl`: BT16-102 Magnamon X + EX6-057 authored; the granted-trigger dispatch suppresses a granted opponent effect when the carrier is immune to the grantor (`permanent_is_unaffected_by_effect`). BT21-036 not needed (its only role was an Armor-Form source — staged synthetically) | `a::q17_magnamon_x_immunity_removes_granted_eot_delete` |
 | 18 | A | NO | PASS | LM-020 Quantumon fully authored 2026-06-05. `[Start of Opp Turn]` declares a category (`select_effect_choice`) + reveals opp deck-top + grants category immunity (`grant_effect_immunity` source_controller `any` → covers OWN effects) gated on the new `binding_card_kind` predicate. Self-inclusive Digimon immunity blocks Quantumon's own `<Blast Digivolve>` (combat gates blast candidacy/execution on `permanent_is_unaffected_by_effect(.., own, Digimon)`). `[When Digivolving]` clause uses the new `return_selected_security_to_deck` verb (`G-DSL-RETURN-SELECTED-SECURITY-TO-DECK` CLOSED). | `a::q18_quantumon_self_immunity_blocks_own_blast_digivolve` |
@@ -61,12 +61,42 @@ Coverage as of 2026-06-10: **30/30 questions have a test entry; 24 PASS.** `carg
 
 | Verdict | Count | Questions |
 |---------|-------|-----------|
-| BLOCKED-CARD | 4 | 3, 15, 29, 30 |
+| BLOCKED-CARD | 2 | 29, 30 |
 | BLOCKED-PRIMITIVE | 2 | 8, 28 |
 | CANDIDATE | 0 | — |
-| PASS | 24 | 1, 2, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27 |
+| PASS | 26 | 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27 |
 
-(Counts: 4 + 2 + 0 + 24 = 30 of 30.)
+(Counts: 2 + 2 + 0 + 26 = 30 of 30.)
+
+Q15 → **PASS** (2026-06-11): the four-card Q15 wave (BT19-073 / BT17-016 /
+BT12-016 / EX3-057, all IMPLEMENTED) landed via a background authoring agent
+(its run stalled overnight against build-lock collisions; the on-disk work
+was salvaged, verified, and finished by the orchestrator). EX8-073 was
+re-authored so the "[All Turns] while you have 0 or less memory, this
+Digimon isn't affected by your opponent's Digimon's effects" rides a new
+`effect_immunity` aura slot instead of an approximation. The sequential
+De-Digivolve rule pins: BT19-073's `[When Digivolving]` is N separate
+`<De-Digivolve 1>` instances (DCGO `IDegeneration` per-instance loop), each
+re-checking the target's immunity after every trashed card — so exposing
+Gallantmon (X Antibody) mid-sequence halts the rest (judge: it stays
+topmost; exactly one card trashed).
+
+Q3 → **PASS** (2026-06-10): EX10-020 Puppetmon + BT12-057 Quartzmon authored.
+The restriction clause landed the **`modifier_name` aura widening** — a DSL
+aura can now install a Name-payload modifier (`CanOnlyDigivolveInto
+"Apocalymon"`), completing the deferred DSL slice of
+G-DIGIVOLVE-TARGET-RESTRICTION. Because declarative auras tick from
+battle-area sources only, the restriction is automatically inactive in the
+breeding area — the Q3 ruling falls out by construction (DCGO
+`IsExistOnBattleArea` agrees). Two incidental EX10-020 clauses are PARTIAL
+on new vocab gaps (hand-main self-play; security was-face-up gate — see
+qa/dsl-vocab-gaps.md), both irrelevant to Q3. TDD on Quartzmon's
+"[All Turns] all other Digimon and Tamers don't unsuspend" exposed and fixed
+a real engine gap: the turn-start bulk unsuspend (`Player::unsuspend_all`)
+never consulted `CannotUnsuspend` (only Reboot's path did) — the unsuspend
+phase now skips locked permanents. A small predicate widening also landed:
+`no_face_up_security_named` gained a `color_is` arm (EX10-020's "no GREEN
+face-up security" On-Deletion gate).
 
 Q24 → **PASS** (2026-06-10): `G-SUSPEND-EFFECT-INITIATED` closed — the suspend /
 unsuspend events now carry an `effect_initiated` bit (`EffectContext::suspend`
