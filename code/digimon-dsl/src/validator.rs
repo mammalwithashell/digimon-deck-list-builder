@@ -1756,6 +1756,7 @@ fn validate_formula_binding_scope(
         FormulaSpec::Literal(_)
         | FormulaSpec::SourceDp { .. }
         | FormulaSpec::SourceMaterialCount { .. }
+        | FormulaSpec::EventTargetLevel { .. }
         | FormulaSpec::SourceColorCount { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_))
@@ -1921,6 +1922,7 @@ fn validate_formula(
         FormulaSpec::Literal(_)
         | FormulaSpec::SourceDp { .. }
         | FormulaSpec::SourceMaterialCount { .. }
+        | FormulaSpec::EventTargetLevel { .. }
         | FormulaSpec::SourceColorCount { .. }
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::BindingValue { .. }
@@ -1974,6 +1976,7 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
         FormulaSpec::Literal(_)
         | FormulaSpec::SourceDp { .. }
         | FormulaSpec::SourceMaterialCount { .. }
+        | FormulaSpec::EventTargetLevel { .. }
         | FormulaSpec::SourceColorCount { .. }
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::BindingValue { .. }

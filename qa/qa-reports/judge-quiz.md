@@ -10,8 +10,8 @@ Change: `openspec/changes/add-judge-quiz-faithfulness-suite/`. Authoritative car
 rule) is NOT written that way. An `#[ignore]` always cites a specific blocker; it never hides a
 known-wrong result.
 
-Coverage as of 2026-06-11: **30/30 questions have a test entry; 26 PASS.** `cargo test --test judge_quiz`
-→ 37 passed (26 question pins + loader/probe/analogs + the Q4 control), 4 ignored, 0 failed.
+Coverage as of 2026-06-11: **30/30 questions have a test entry; 27 PASS.** `cargo test --test judge_quiz`
+→ 39 passed (27 question pins + loader/probe/analogs + the Q4 + Q28 controls), 3 ignored, 0 failed.
 
 ## Verdict legend
 
@@ -53,7 +53,7 @@ Coverage as of 2026-06-11: **30/30 questions have a test entry; 26 PASS.** `carg
 | 25 | E | YES (DigiXros departure ≠ battle) | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER`): added `ReplacementCause::DigiXros` + fire the `WhenWouldLeaveBattleArea` replacement window per battle-area material before consuming. BT17-095's `[All Turns]` leave observer now fires on a DigiXros departure. | `e::q25_all_turns_fires_on_digixros_departure_not_battle` |
 | 26 | C | Returns to hand | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-REDIRECT-EXTRACTION`): added the leaving/limbo holding slot (`Game::digixros_leaving_limbo`). The leave window parks BT17-095's `<Delay>` without committing the host; WarGreymon is held in limbo (resolvable + extractable); the accepted DNA-evo re-materializes it into Omnimon; finalize finds the DigiXros recipe dropped below `min` and returns Dorbickmon to hand. Supporting fixes: identity re-resolution of the parked replacement's source/subject after the `battle_area` index shift, and excluding the in-flight host from DNA-partner candidates. | `c::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo` |
 | 27 | C | Pays 0 memory | **PASS** | RESOLVED 2026-06-03 (`G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND`): the host commits only at `finalize_digixros_play_after_leave_windows`; when a pruned material leaves the recipe unsatisfied the play is abandoned with 0 memory paid. | `c::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` |
-| 28 | A | YES, plays AND activates | BLOCKED-PRIMITIVE | BT20-059 Gankoomon X authored (first wave; protection verified to dodge the lock via `can_affect_permanent`); EX5-060 Dragomon BLOCKED on `G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED` + `G-EVENT-PLAYED-LEVEL-FORMULA` | `a::q28_gankoomon_x_protection_beats_dragomon_on_play_lock` |
+| 28 | A | YES, plays AND activates | **PASS** | RESOLVED 2026-06-11: EX5-060 Dragomon authored (IMPLEMENTED) on four substrate widenings — (1) `play_from_trash_free` plays for the BINDING OWNER's side (`G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED`: "your opponent plays… from THEIR trash" enters THEIR battle area); (2) `suspended: true` (`G-PLAY-ENTERS-SUSPENDED`: the permanent ENTERS suspended, before play-event observers); (3) `event_target_level` formula (`G-EVENT-PLAYED-LEVEL-FORMULA`: "level less than or equal to IT"); (4) the `[On Play]` suppress rider is now CONSULT-GATED on `permanent_is_unaffected_by_effect` vs the recorded suppressor (the rider is an effect of Dragomon on the played Digimon). BT20-059's protection re-authored as the CONTINUOUS `grant_effect_immunity` form (`G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA` resolved via the floating-modifier substrate + immunity payload) — the prior snapshot form missed the later-played Ciel; the quiz board has Ciel in the TRASH at grant time (the first-wave note claiming otherwise misread the board). Control pins the unsuppressed-rider false-pass. | `a::q28_gankoomon_x_protection_beats_dragomon_on_play_lock` (+ `a::q28_control_no_protection_on_play_suppressed`) |
 | 29 | E | 3 legal stacks | BLOCKED-CARD | BT10-093, EX10-039, EX10-044, EX10-059, EX10-056, EX10-031 | `e::q29_legal_digixros_stack_orderings_with_yuu_amano` |
 | 30 | C/E | Suspend both w/ cost reduction | BLOCKED-CARD | BT20-037, BT20-036, EX3-063, BT16-077, EX3-008 | `c::q30_partition_interruptive_suspends_both_with_cost_reduction` |
 
@@ -62,11 +62,24 @@ Coverage as of 2026-06-11: **30/30 questions have a test entry; 26 PASS.** `carg
 | Verdict | Count | Questions |
 |---------|-------|-----------|
 | BLOCKED-CARD | 2 | 29, 30 |
-| BLOCKED-PRIMITIVE | 2 | 8, 28 |
+| BLOCKED-PRIMITIVE | 1 | 8 |
 | CANDIDATE | 0 | — |
-| PASS | 26 | 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27 |
+| PASS | 27 | 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28 |
 
-(Counts: 2 + 2 + 0 + 26 = 30 of 30.)
+(Counts: 2 + 1 + 0 + 27 = 30 of 30.)
+
+Q28 → **PASS** (2026-06-11): EX5-060 Dragomon authored with four substrate
+widenings (opponent-side trash play; suspended entry; event-level formula;
+protection-gated [On Play] suppression) and BT20-059's "none of your
+Digimon are affected…" re-authored as a CONTINUOUS controlled immunity
+(floating descriptor + immunity payload — covers the later-played Ciel,
+matching the judge's "persistent effect" language; the prior per-permanent
+snapshot was wrong for the quiz's own board, which has Ciel in the trash at
+grant time). One faithful side-discovery while pinning: an unsuppressed
+[On Play] memory gain that crosses the gauge ENDS the turn (rule 8-3) and
+the new turn's unsuspend phase would mask the suspended-entry assertion —
+the pin stages gauge headroom; the real-game line where B is at 0 memory
+genuinely passes the turn.
 
 Q15 → **PASS** (2026-06-11): the four-card Q15 wave (BT19-073 / BT17-016 /
 BT12-016 / EX3-057, all IMPLEMENTED) landed via a background authoring agent

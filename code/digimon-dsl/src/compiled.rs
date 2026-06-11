@@ -586,6 +586,10 @@ pub enum CompiledFormula {
     /// [On Play][When Digivolving] bounce-by-digivolution-card-count.
     /// G-FORMULA-SOURCE-MATERIAL-COUNT.
     SourceMaterialCount,
+    /// Level of the current trigger's EVENT card (e.g. the just-played
+    /// Digimon for an `on_any_digimon_played` observer). 0 when no trigger
+    /// context / no level. G-EVENT-PLAYED-LEVEL-FORMULA (EX5-060, Q28).
+    EventTargetLevel,
     /// Distinct colors represented by source cards beneath the effect carrier's top card.
     SourceColorCount,
     SourceStackCount {
@@ -1255,7 +1259,12 @@ pub enum CompiledStep {
         trash_index: CompiledBindingRef,
         /// PUPPETS-G030 — when `true`, the played Digimon's own `[On Play]`
         /// effects are skipped for this play event only (BT5-106 [Security]).
+        /// The skip is consult-gated on the played permanent NOT being
+        /// protected from the suppressing effect (judge-quiz Q28).
         suppress_on_play: bool,
+        /// G-PLAY-ENTERS-SUSPENDED — the played permanent enters the battle
+        /// area suspended (EX5-060 "plays ... suspended", Q28).
+        suspended: bool,
     },
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
     /// true origin zone (hand, trash, or material). `binding` names a `select_union_zone`
@@ -1470,10 +1479,18 @@ pub enum CompiledStep {
         zone: Option<CompiledZone>,
     },
     GrantEffectImmunity {
-        target: CompiledBindingRef,
+        /// Per-permanent grant target (`None` for the continuous form).
+        target: Option<CompiledBindingRef>,
         source_kind: CompiledEffectSourceKind,
         source_controller: CompiledEffectController,
         expiry: String,
+        /// G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA (Q28 / BT20-059): a
+        /// source-independent continuous immunity over `targets`, re-scanned
+        /// every declarative tick — covers permanents played later in the
+        /// window (DCGO `CanNotAffectedClass` re-evaluated CardCondition).
+        continuous: bool,
+        /// Battle-area predicate for the continuous form.
+        targets: Option<CompiledPredicate>,
     },
     /// PUPPETS-G024 — install the narrow opponent-effect protection
     /// bundle (opponent-scoped ImmuneFromDPMinus + opponent-scoped

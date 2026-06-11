@@ -57,4 +57,11 @@ pub struct FloatingMassModifier {
     /// Turn-end firings still to skip before this descriptor expires — the same
     /// mechanism `ModifierEntry` uses (`modifiers::pending_skips_for_install`).
     pub pending_skips: u8,
+    /// When `Some`, each materialized per-permanent entry carries this
+    /// effect-immunity filter (the modifier is a `CannotBeAffected`-class
+    /// protection rather than a numeric delta). Continuous controlled
+    /// immunity — G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA (judge-quiz
+    /// Q28 / BT20-059): the live re-scan covers permanents played later in
+    /// the window.
+    pub effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
 }

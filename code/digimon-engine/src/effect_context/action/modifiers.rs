@@ -127,6 +127,35 @@ impl<'a> EffectContext<'a> {
         self.game.mark_until_condition_dirty();
     }
 
+    /// Materialized-declarative install carrying an effect-immunity filter
+    /// (continuous controlled immunity - Q28 / BT20-059). Tick-ephemeral
+    /// like every materialized declarative; the floating descriptor owns
+    /// the lifetime.
+    pub fn add_declarative_modifier_with_immunity(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        immunity: crate::modifiers::EffectImmunityFilter,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::materialized_declarative(
+                modifier,
+                value,
+                expiry,
+                self.source_permanent,
+                self.player,
+            )
+            .with_effect_immunity_filter(immunity),
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
     pub fn add_declarative_modifier_with_payload(
         &mut self,
         target: PermanentHandle,

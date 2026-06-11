@@ -775,7 +775,14 @@ impl Game {
 
         let turn = self.turn_count;
         let card = self.player_mut(player_id).hand.remove(hand_index);
-        let perm = crate::permanent::Permanent::new(card, turn);
+        let mut perm = crate::permanent::Permanent::new(card, turn);
+        // G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060 "plays ... suspended"):
+        // a flagged play enters the battle area suspended, BEFORE the
+        // play-event triggers fire (observers see the suspended state).
+        if self.play_enters_suspended {
+            self.play_enters_suspended = false;
+            perm.is_suspended = true;
+        }
         self.player_mut(player_id).battle_area.push(perm);
         let field_index = self.player(player_id).battle_area.len() - 1;
         let mut entered = PermanentHandle {

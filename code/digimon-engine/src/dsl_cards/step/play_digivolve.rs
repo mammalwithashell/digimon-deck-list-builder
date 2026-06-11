@@ -303,6 +303,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             of: _,
             trash_index,
             suppress_on_play,
+            suspended,
         } => {
             // `play_from_trash_free_unsuspended` takes a `CardHandle`. The
             // binding may address the card either by trash index
@@ -314,22 +315,52 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // "Back for Revenge!" needs to "Play this card" from trash. The
             // engine call self-guards: it returns `None` if the handle is not
             // actually in the controller's trash.
-            let handle: Option<CardHandle> = match resolve_binding_ref(trash_index, ctx, bindings) {
-                Some(ResolvedBinding::TrashIndex(owner, i)) => {
-                    ctx.game.player(owner).trash.get(i as usize).map(|cs| cs.handle())
+            // The playing CONTROLLER follows the card's trash owner — for
+            // `of: opponent` ("YOUR OPPONENT plays 1 ... from THEIR trash",
+            // EX5-060 / Q28) the binding's owner IS the opponent; the card
+            // enters THEIR battle area. A card-handle binding locates its
+            // owner by trash scan; fallback: the effect controller.
+            let resolved: Option<(crate::enums::PlayerId, CardHandle)> =
+                match resolve_binding_ref(trash_index, ctx, bindings) {
+                    Some(ResolvedBinding::TrashIndex(owner, i)) => ctx
+                        .game
+                        .player(owner)
+                        .trash
+                        .get(i as usize)
+                        .map(|cs| (owner, cs.handle())),
+                    Some(ResolvedBinding::Card(h)) => {
+                        let owner = (0..ctx.game.players.len() as crate::enums::PlayerId)
+                            .find(|&p| {
+                                ctx.game.player(p).trash.iter().any(|c| c.handle() == h)
+                            })
+                            .unwrap_or(ctx.player);
+                        Some((owner, h))
+                    }
+                    _ => None,
+                };
+            if let Some((controller, h)) = resolved {
+                // G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060): a flagged play
+                // enters suspended — the commit site consumes the slot.
+                if *suspended {
+                    ctx.game.play_enters_suspended = true;
                 }
-                Some(ResolvedBinding::Card(h)) => Some(h),
-                _ => None,
-            };
-            if let Some(h) = handle {
                 // PUPPETS-G030 — when `suppress_on_play` is set, the
                 // played Digimon's own `[On Play]` effects do not fire
-                // for this play event (BT5-106 [Security]).
+                // for this play event (BT5-106 [Security]). The skip is an
+                // EFFECT of this card on the played Digimon, so record the
+                // suppressor identity — `fire_play_event_triggers` consults
+                // `permanent_is_unaffected_by_effect` against it before
+                // honoring the skip (judge-quiz Q28).
                 let played = if *suppress_on_play {
-                    ctx.play_from_trash_free_unsuspended_suppress_on_play(h)
+                    ctx.game.on_play_suppressor = Some((ctx.player, ctx.source_kind));
+                    ctx.play_from_trash_free_unsuspended_for(controller, h, true)
                 } else {
-                    ctx.play_from_trash_free_unsuspended(h)
+                    ctx.play_from_trash_free_unsuspended_for(controller, h, false)
                 };
+                // The play may have been rejected (full field, lock) — clear
+                // any unconsumed slots so they cannot leak to a later play.
+                ctx.game.play_enters_suspended = false;
+                ctx.game.on_play_suppressor = None;
                 if let Some(played) = played {
                     bindings.record_played(played);
                 }

@@ -432,6 +432,7 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
         CompiledFormula::Literal(_)
         | CompiledFormula::SourceDp
         | CompiledFormula::SourceMaterialCount
+        | CompiledFormula::EventTargetLevel
         | CompiledFormula::SourceColorCount
         | CompiledFormula::Aggregate(_)
         | CompiledFormula::AggregateScoped { .. }

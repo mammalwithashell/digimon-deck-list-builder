@@ -252,6 +252,7 @@ pub fn try_run(
                             ctx.source_card,
                             ctx.player,
                             expiry,
+                            None,
                         );
                     } else {
                         // Phase 2d Task 8: scan battle-area, apply modifier to every match.
@@ -318,8 +319,36 @@ pub fn try_run(
             source_kind,
             source_controller,
             expiry,
+            continuous,
+            targets,
         } => {
             let Some(expiry) = resolve_expiry("grant_effect_immunity", expiry) else {
+                return true;
+            };
+            if *continuous {
+                // G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA (Q28 /
+                // BT20-059): a source-independent floating immunity over
+                // the live `targets` set — permanents played later in the
+                // window are covered by the per-tick re-scan.
+                let Some(filter) = targets else {
+                    return true;
+                };
+                let immunity = crate::modifiers::EffectImmunityFilter {
+                    source_kind: Some(lower_effect_source_kind(*source_kind)),
+                    controller: lower_effect_controller(*source_controller),
+                };
+                ctx.game.add_floating_mass_modifier(
+                    filter.clone(),
+                    crate::enums::ModifierType::CannotBeAffected,
+                    0,
+                    ctx.source_card,
+                    ctx.player,
+                    expiry,
+                    Some(immunity),
+                );
+                return true;
+            }
+            let Some(target) = target.as_ref() else {
                 return true;
             };
             let Some(h) = resolve_permanent_target(target, ctx, bindings) else {

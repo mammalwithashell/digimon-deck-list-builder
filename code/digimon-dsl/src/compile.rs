@@ -492,6 +492,9 @@ fn compile_formula(
         FormulaSpec::SourceMaterialCount {
             source_material_count: _,
         } => CompiledFormula::SourceMaterialCount,
+        FormulaSpec::EventTargetLevel {
+            event_target_level: _,
+        } => CompiledFormula::EventTargetLevel,
         FormulaSpec::SourceColorCount {
             source_color_count: _,
         } => CompiledFormula::SourceColorCount,
@@ -2142,6 +2145,7 @@ fn compile_step(
             of: compile_player_ref(a.of),
             trash_index: compile_binding_ref(&a.hand_index),
             suppress_on_play: a.suppress_on_play,
+            suspended: a.suspended,
         },
         S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
             binding: a.binding.clone(),
@@ -2427,12 +2431,41 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
                 .collect(),
         },
-        S::GrantEffectImmunity(a) => CompiledStep::GrantEffectImmunity {
-            target: compile_binding_ref(&a.target),
-            source_kind: compile_effect_source_kind(a.source_kind),
-            source_controller: compile_effect_controller(a.source_controller),
-            expiry: a.expiry.clone(),
-        },
+        S::GrantEffectImmunity(a) => {
+            // Continuous form requires `targets` and no `target`; the
+            // per-permanent form requires `target` (Q28 / BT20-059).
+            if a.continuous {
+                if a.targets.is_none() || a.target.is_some() {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.grant_effect_immunity"),
+                        message: "continuous: true requires `targets` and no `target`"
+                            .to_string(),
+                    });
+                }
+            } else if a.target.is_none() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.grant_effect_immunity"),
+                    message: "`target` is required unless `continuous: true`".to_string(),
+                });
+            }
+            CompiledStep::GrantEffectImmunity {
+                target: a.target.as_ref().map(compile_binding_ref),
+                source_kind: compile_effect_source_kind(a.source_kind),
+                source_controller: compile_effect_controller(a.source_controller),
+                expiry: a.expiry.clone(),
+                continuous: a.continuous,
+                targets: a.targets.as_ref().map(|p| {
+                    compile_predicate(
+                        p,
+                        &format!("{prefix}.grant_effect_immunity.targets"),
+                        card_id,
+                        errors,
+                    )
+                }),
+            }
+        }
         S::GrantNarrowOpponentEffectProtection(a) => {
             CompiledStep::GrantNarrowOpponentEffectProtection {
                 target: compile_binding_ref(&a.target),

@@ -3297,7 +3297,32 @@ Surfaced: 2026-05-29, judge-quiz first wave. BT13-088 Belphemon: Sleep Mode ship
 - **Missing DSL verb / engine primitive:** a "place card as the TOP digivolution source" (just below the face card) — DCGO `AddDigivolutionCardsTop`. The engine ships `place_as_bottom_source` (inserts at index 0) only; no top-source insertion.
 - **Resolution used:** BT13-088 uses `place_as_bottom_source` for "place [Belphemon: Rage Mode] on top of this Digimon's digivolution cards." Position is **behaviorally inert** for this card (it only needs Rage Mode IN the stack to gain the inherited effect; no mechanic reads the top-source slot) -> shipped PARTIAL, not BLOCKED. A future card whose text/behavior depends on the top-source position would need this verb (+ an `EffectContext::place_as_top_source` primitive).
 
-## EX5-060 — opponent plays from their OWN trash SUSPENDED + played-permanent-level formula  [G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED] / [G-EVENT-PLAYED-LEVEL-FORMULA]
+## EX5-060 — opponent plays from their OWN trash SUSPENDED + played-permanent-level formula  [G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED] / [G-EVENT-PLAYED-LEVEL-FORMULA] — **RESOLVED 2026-06-11 (judge-quiz Q28)**
+
+> **RESOLVED 2026-06-11.** All pieces landed with the Q28 slice: (1)
+> `play_from_trash_free` now plays for the BINDING OWNER's side (the trash
+> owner) — `play_from_trash_free_unsuspended_for(controller, …)`; (2) new
+> `suspended: true` arg (G-PLAY-ENTERS-SUSPENDED — the permanent ENTERS the
+> battle area suspended, before play-event observers, via
+> `Game::play_enters_suspended` consumed at the single commit site); (3) new
+> `event_target_level: {}` FormulaSpec leaf (reads the trigger's event card's
+> level — DCGO `LevelJustAfterPlayed`) usable inside `level_lte: { formula: … }`;
+> (4) the `suppress_on_play` rider is consult-gated on
+> `permanent_is_unaffected_by_effect` vs the recorded suppressor identity
+> (`Game::on_play_suppressor`) — a protected played Digimon still fires its
+> [On Play] (the Q28 ruling). The `event_played_by_effect` predicate from the
+> original sketch was NOT needed — the existing `event_is_effect_initiated`
+> leaf covers it (the suspend-bit work threaded `effect_initiated` through
+> `TriggerSource::EnteredField`). EX5-060 Dragomon IMPLEMENTED; pins:
+> `cards_behavioral/ex5/ex5_060.rs` (5) +
+> `judge_quiz a::q28_*` (pin + control). RELATED: BT20-059's board-wide
+> protection re-authored as the CONTINUOUS `grant_effect_immunity` form
+> (`continuous: true` + `targets:` → floating mass modifier carrying an
+> `EffectImmunityFilter` payload), closing
+> G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA — the per-tick re-scan covers
+> permanents played later in the window (the judge's "persistent effect").
+
+### Original entry (history)
 
 Surfaced: 2026-05-29, judge-quiz wave (`batch-implement-cards-rust-dsl`). EX5-060 Dragomon BLOCKED (pins Q28 alongside BT20-059 Gankoomon X).
 

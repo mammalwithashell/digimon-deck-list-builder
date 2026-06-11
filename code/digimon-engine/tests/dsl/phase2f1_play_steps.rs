@@ -453,6 +453,7 @@ fn play_from_trash_free_step_consumes_trash_and_keeps_memory() {
         of: CompiledPlayerRef::You,
         trash_index: CompiledBindingRef::Named("idx".into()),
         suppress_on_play: false,
+        suspended: false,
     };
 
     {
@@ -854,6 +855,7 @@ fn suppress_on_play_step_lowering_skips_played_permanents_on_play() {
         of: CompiledPlayerRef::You,
         trash_index: CompiledBindingRef::Named("idx".into()),
         suppress_on_play: true,
+        suspended: false,
     };
     {
         let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);

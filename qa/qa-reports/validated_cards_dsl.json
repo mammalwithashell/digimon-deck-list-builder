@@ -7352,7 +7352,7 @@
   },
   "BT20-059": {
    "card_name": "Gankoomon (X Antibody)",
-   "validated_date": "2026-05-29",
+   "validated_date": "2026-06-11",
    "report": "batch-implement-cards-rust-dsl",
    "status": "IMPLEMENTED",
    "gap_kind": null,
@@ -7366,23 +7366,25 @@
     "KEYWORD-AURA",
     "INHERITED-ESS"
    ],
-   "notes": "Judge-quiz Q28. [WD] <De-Digivolve 2> + conditional board-wide opp-Digimon immunity (for_each grant_effect_immunity, fire-time snapshot); [OppTurn] Reboot/Blocker auras to Sistermon/Huckmon/Royal Knight allies; inherited Jesmon-GX ESS. Q28 lock-dodge works via can_affect_permanent."
+   "notes": "Judge-quiz Q28. [WD] <De-Digivolve 2> + conditional board-wide opp-Digimon immunity (for_each grant_effect_immunity, fire-time snapshot); [OppTurn] Reboot/Blocker auras to Sistermon/Huckmon/Royal Knight allies; inherited Jesmon-GX ESS. Q28 lock-dodge works via can_affect_permanent. Re-authored 2026-06-11 (Q28): the board-wide protection is now the CONTINUOUS grant_effect_immunity form (floating immunity; covers Digimon played later in the window)."
   },
   "EX5-060": {
    "card_name": "Dragomon",
-   "validated_date": "2026-05-29",
-   "report": "batch-implement-cards-rust-dsl",
-   "status": "BLOCKED",
-   "gap_kind": "hybrid",
-   "archetype": "judge-quiz first wave",
-   "yaml_path": null,
-   "test_path": null,
-   "test_count": 0,
+   "validated_date": "2026-06-11",
+   "report": "judge-quiz",
+   "status": "IMPLEMENTED",
+   "gap_kind": null,
+   "archetype": "judge-quiz cluster A (Q28)",
+   "yaml_path": "code/digimon-engine/cards/ex5/EX5-060.yaml",
+   "test_path": "code/digimon-engine/tests/cards_behavioral/ex5/ex5_060.rs",
+   "test_count": 5,
    "patterns": [
-    "ON-PLAY-LOCK",
-    "FORCED-OPPONENT-PLAY"
+    "OPPONENT-PLAYS-FROM-OWN-TRASH",
+    "SUSPENDED-ENTRY",
+    "ON-PLAY-SUPPRESS-RIDER",
+    "EVENT-TARGET-LEVEL-FORMULA"
    ],
-   "notes": "Judge-quiz Q28. BLOCKED (hybrid): G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED (Clause 1 forces opponent to play Lv<=4 from THEIR trash suspended; play_from_trash_free hardcodes self.player + unsuspended) + G-EVENT-PLAYED-LEVEL-FORMULA (Clause 2 needs event_played_by_effect predicate + event_target_level formula). The [On Play] lock-dodge (CannotActivateOnPlayEffects + can_affect_permanent) was verified working. Inherited <Piercing> faithful. Re-attempt after the two gaps land."
+   "notes": "All clauses + alt path. Landed: opponent-side play_from_trash_free, suspended: true entry, event_target_level formula, protection-gated on-play suppression (Q28)."
   },
   "BT21-042": {
    "card_name": "GeoGreymon",

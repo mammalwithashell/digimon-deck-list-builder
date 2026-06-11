@@ -513,7 +513,180 @@ fn q18_quantumon_self_immunity_blocks_own_blast_digivolve() {
 }
 
 /// Q28 — Gankoomon (X Antibody) (BT20-059) protection beats Dragomon (EX5-060)
-/// "[On Play] don't activate" on Sistermon Ciel (BT6-084). Judge: YES, plays AND activates.
+/// "[On Play] don't activate" on Sistermon Ciel (BT6-084).
+/// **Judge: YES — Ciel is played AND activates its [On Play].**
+///
+/// Board (card-resolution.md Q28 / PDF p.62-64): Player A has Gankoomon
+/// (X Antibody) over Gankoomon in the battle area, with ONLY Sistermon Ciel
+/// in their trash. Player B has Dragomon in hand. On A's turn, Gankoomon X
+/// activated its [When Digivolving] — "…until the end of your opponent's
+/// turn, none of your Digimon are affected by your opponent's Digimon's
+/// effects" (a PERSISTENT effect per the judge feedback). On B's turn, B
+/// plays Dragomon and activates its [On Play]: A plays 1 Lv≤4 Digimon from
+/// their trash suspended; "[On Play] effects on Digimon played by this
+/// effect don't activate."
+///
+/// Judge rationale: the protection is persistent — when Ciel is played INTO
+/// the battle area (it was in the TRASH at grant time), the protection
+/// covers it immediately, making it immune to Dragomon's don't-activate
+/// rider (an opponent-Digimon effect). Ciel's [On Play] (gain 1 memory)
+/// activates.
+///
+/// Engine: the protection is the CONTINUOUS `grant_effect_immunity` form
+/// (G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA — a floating descriptor
+/// re-scanned per tick, covering later entrants); the suppression rider is
+/// consult-gated on `permanent_is_unaffected_by_effect` (Q28 fix in
+/// `fire_play_event_triggers`). The companion control
+/// (`q28_control_no_protection_on_play_suppressed`) proves the rider is
+/// real — no false-pass.
+///
+/// DCGO: `EX5_060.cs` (the played card's `CanNotBeAffected` is checked
+/// before applying the don't-activate); `BT20_059.cs` `CanNotAffectedClass`
+/// (re-evaluated CardCondition).
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT20-059 (Gankoomon X), EX5-060 (Dragomon). BT23-057, BT6-084 implemented."]
-fn q28_gankoomon_x_protection_beats_dragomon_on_play_lock() {}
+fn q28_gankoomon_x_protection_beats_dragomon_on_play_lock() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT20-059")
+        .expect("BT20-059 Gankoomon (X Antibody) loads")
+        .dsl_card("BT23-057")
+        .expect("BT23-057 Gankoomon loads")
+        .dsl_card("EX5-060")
+        .expect("EX5-060 Dragomon loads")
+        .dsl_card("BT6-084")
+        .expect("BT6-084 Sistermon Ciel loads")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.set_first_player(0);
+    assert_eq!(r.turn_player(), 0, "Player A's turn first");
+
+    // Player A: Gankoomon (X Antibody) over Gankoomon (the [Gankoomon]
+    // digivolution source satisfies the protection's source gate).
+    let gank_x = r.place_stack(0, &["BT23-057", "BT20-059"]);
+    // A's trash: ONLY Sistermon Ciel.
+    r.inject_trash(0, "BT6-084");
+    // Player B: Dragomon staged on field; its [On Play] is fired as the
+    // trigger (the hard-play cost mechanics are not the ruling under test).
+    let dragomon = r.place_on_field(1, "EX5-060", Some(0));
+
+    // On A's turn: Gankoomon X's [When Digivolving] resolves — B has no
+    // Digimon eligible for the <De-Digivolve 2> pick beyond Dragomon; drive
+    // any picks to completion; the persistent protection installs
+    // (continuous, until the end of B's turn).
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(gank_x),
+    );
+    r.game.drain_effect_queue();
+    let _ = r.auto_resolve();
+
+    // A's turn ends → B's turn (the protection window is still live).
+    r.end_turn();
+    let _ = r.auto_resolve();
+    assert_eq!(r.turn_player(), 1, "Player B's turn");
+    // Give B gauge headroom so Ciel's +1 for A does NOT cross the gauge
+    // (crossing would faithfully END B's turn — rule 8-3 — and A's
+    // turn-start unsuspend would mask the suspended-entry assertion).
+    r.game.set_memory(5);
+
+    let memory_before = r.memory();
+    let a_field_before = r.battle_area_size(0);
+
+    // B activates Dragomon's [On Play].
+    r.game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(dragomon));
+    r.game.drain_effect_queue();
+
+    // A (the opponent of Dragomon's controller) picks from A's OWN trash —
+    // Ciel is the only candidate.
+    let view = r
+        .pending_selection_view()
+        .expect("Dragomon's opponent-trash pick must surface");
+    assert_eq!(
+        view.selecting_player, 0,
+        "the OPPONENT (Player A) chooses from their own trash"
+    );
+    r.execute_action(0, view.valid_action_ids[0])
+        .expect("A picks Sistermon Ciel");
+    let _ = r.auto_resolve();
+
+    // ── Judge assertions ────────────────────────────────────────────────
+    // Ciel was played onto A's field, SUSPENDED.
+    assert_eq!(
+        r.battle_area_size(0),
+        a_field_before + 1,
+        "Sistermon Ciel is played to Player A's battle area"
+    );
+    let ciel_idx = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "BT6-084")
+        .expect("Ciel on A's field");
+    assert!(
+        r.game.players[0].battle_area[ciel_idx].is_suspended,
+        "Dragomon plays the Digimon SUSPENDED"
+    );
+    assert_eq!(r.trash_size(0), 0, "Ciel left A's trash");
+
+    // The rider is beaten: Ciel's [On Play] "Gain 1 memory" ACTIVATED —
+    // memory moved 1 toward Player A (negative for turn player B).
+    assert_eq!(
+        r.memory(),
+        memory_before - 1,
+        "judge Q28: the protected Ciel's [On Play] activates through \
+         Dragomon's \"don't activate\" rider (gain 1 memory for A)"
+    );
+}
+
+/// Q28 CONTROL — same staging WITHOUT Gankoomon X's protection: Dragomon's
+/// rider suppresses Ciel's [On Play] (no memory gain) while the play itself
+/// still happens, suspended. Proves the Q28 pin cannot false-pass on a
+/// broken (never-suppressing) rider.
+#[test]
+fn q28_control_no_protection_on_play_suppressed() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX5-060")
+        .expect("EX5-060 Dragomon loads")
+        .dsl_card("BT6-084")
+        .expect("BT6-084 Sistermon Ciel loads")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.set_first_player(1); // B's turn; no protection was ever granted
+    r.inject_trash(0, "BT6-084");
+    let dragomon = r.place_on_field(1, "EX5-060", Some(0));
+
+    let memory_before = r.memory();
+    r.game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(dragomon));
+    r.game.drain_effect_queue();
+    let view = r
+        .pending_selection_view()
+        .expect("Dragomon's opponent-trash pick must surface");
+    assert_eq!(view.selecting_player, 0);
+    r.execute_action(0, view.valid_action_ids[0])
+        .expect("A picks Sistermon Ciel");
+    let _ = r.auto_resolve();
+
+    let ciel_idx = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "BT6-084")
+        .expect("Ciel on A's field");
+    assert!(
+        r.game.players[0].battle_area[ciel_idx].is_suspended,
+        "played suspended"
+    );
+    assert_eq!(
+        r.memory(),
+        memory_before,
+        "without protection the rider SUPPRESSES Ciel's [On Play] — no \
+         memory gain (control for Q28)"
+    );
+}

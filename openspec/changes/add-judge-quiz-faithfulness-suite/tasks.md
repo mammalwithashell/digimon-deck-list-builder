@@ -61,10 +61,10 @@
 
 ## 3. Cluster A — immunity scope (Q1, Q2, Q17, Q18, Q28)
 
-- [ ] 3.1 Author the missing cards: Belphemon: Sleep Mode, Magnamon (X Antibody), Quantumon, (Imperialdramon: PM ACE if 1.2 unblocks), Gankoomon (X Antibody), Dragomon — full text, per-card TDD tests via the batch pipeline
-- [ ] 3.2 Write Q1, Q2, Q17, Q18, Q28 scenario tests asserting the judge answers
-- [ ] 3.3 Fix any surfaced gap: "affects me vs affects the battle" immunity scope (Q1/Q2), granted-effect ownership removal under immunity (Q17), self-immunity blocking own effect (Q18), protection beating "[On Play] don't activate" (Q28) — TDD, minimal primitive each
-- [ ] 3.4 Confirm cluster A tests green; archive closed gaps
+- [x] 3.1 Author the missing cards — ALL DONE: BT13-088 Belphemon: Sleep Mode + BT16-102 Magnamon (X Antibody) + BT20-059 Gankoomon (X Antibody) (prior waves), LM-020 Quantumon (2026-06-05), **EX5-060 Dragomon (IMPLEMENTED — 2026-06-11)**; BT17-077 Imperialdramon: PM ACE unblocked by 1.2.
+- [x] 3.2 Write Q1, Q2, Q17, Q18, Q28 scenario tests — **all five PASS** (Q28 done 2026-06-11 with a no-protection control).
+- [x] 3.3 Gaps fixed: Q1/Q2/Q17 (grant-triggered-effect waves), Q18 (immunity + security-return verbs), **Q28 (2026-06-11): protection-gated [On Play] suppression (`fire_play_event_triggers` consults `permanent_is_unaffected_by_effect` vs the recorded suppressor), opponent-side trash play, suspended entry (`G-PLAY-ENTERS-SUSPENDED`), `event_target_level` formula, and the CONTINUOUS `grant_effect_immunity` form (`G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA` — floating immunity covering later entrants; BT20-059 re-authored)**.
+- [x] 3.4 Cluster A green — Q1/Q2/Q17/Q18/Q28 all PASS (judge_quiz 39/0/3 as of 2026-06-11).
 
 ## 4. Cluster B — deferred rules-check (Q6, Q7, Q8, Q13, Q14, Q24)
 
