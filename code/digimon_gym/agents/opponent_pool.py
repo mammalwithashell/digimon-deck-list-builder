@@ -38,6 +38,44 @@ class OpponentPool:
             entries=entries,
         )
 
+    @classmethod
+    def from_champion_registry(
+        cls,
+        registry_path: Path | str,
+        layout_hash: str,
+        manifest_path: Path | str = Path("opponent_pool.json"),
+    ) -> "OpponentPool":
+        """Derive a training opponent pool from the champion registry
+        (`harden-training-pipeline` D3 — pool-based fictitious self-play).
+
+        Includes every champion whose tensor-layout hash matches
+        ``layout_hash``, with uniform weights (``win_rate_vs_pool=0.5``,
+        ``games_played=0`` — PFSP reweighting happens at sample time, not
+        in the manifest). An empty compatible cohort is an explicit error:
+        a silently-empty pool would leave the opponent seat passive.
+        """
+        from digimon_gym.agents.champion_registry import ChampionRegistry
+
+        registry = ChampionRegistry.load(registry_path)
+        compatible = registry.compatible(layout_hash)
+        if not compatible:
+            raise ValueError(
+                f"no champions in {registry_path} match layout hash "
+                f"{layout_hash!r} — register one (champion_admin.py promote) "
+                "or pick a different opponent mode"
+            )
+        entries = [
+            OpponentEntry(
+                name=c.name,
+                weights_path=c.weights_path,
+                algorithm=c.algorithm,
+                win_rate_vs_pool=0.5,
+                games_played=0,
+            )
+            for c in compatible
+        ]
+        return cls(manifest_path=Path(manifest_path), entries=entries)
+
     @property
     def size(self) -> int:
         return len(self.entries)

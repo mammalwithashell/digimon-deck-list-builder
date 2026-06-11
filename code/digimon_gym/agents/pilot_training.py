@@ -11,7 +11,7 @@ Supports two modes:
 Usage:
     python -m digimon_gym.agents.pilot_training
     python -m digimon_gym.agents.pilot_training --lstm --timesteps 500000
-    python -m digimon_gym.agents.pilot_training --self-play --timesteps 1000000
+    python -m digimon_gym.agents.pilot_training --opponent pool --opponent-pool-manifest pool.json
 
 Requires: pip install stable-baselines3 sb3-contrib tensorboard
 """
@@ -19,6 +19,7 @@ Requires: pip install stable-baselines3 sb3-contrib tensorboard
 import os
 import argparse
 import json
+import logging
 import random
 import time
 from dataclasses import dataclass
@@ -33,12 +34,21 @@ import yaml
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODELS_DIR = str(_REPO_ROOT / "models")
 
+logger = logging.getLogger(__name__)
+
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
-from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
+from digimon_gym.digimon_gym import (
+    ACTION_BREEDING_SOURCE_END,
+    ACTION_BREEDING_SOURCE_START,
+    ACTION_PASS_TURN,
+    DigimonEnv,
+    SOURCE_SELECT_END,
+    greedy_policy,
+)
 from digimon_gym.tensor_profiles import get_tensor_profile
 from digimon_engine import (
     ACTION_SPACE_SIZE,
@@ -67,7 +77,10 @@ from digimon_gym.agents.env_utils import (
     unwrap_to_digimon_env as _unwrap_to_digimon_env,
 )
 from digimon_gym.agents.opponent_pool import OpponentPool
-from digimon_gym.agents.training_config import TrainingConfig
+from digimon_gym.agents.training_config import (
+    SELF_PLAY_RETIRED_MSG,
+    TrainingConfig,
+)
 from digimon_gym.agents.training_recording import (
     TrainingGameRecorder,
     TrainingRecordingWrapper,
@@ -166,15 +179,17 @@ def _build_reward_profile_factory(cfg: TrainingConfig):
     (Group 8 wiring).
 
     Returns a callable `apply(env) -> Env` that EITHER wraps `env` in a
-    `RewardProfileWrapper` (when `cfg.reward_profiles_path` resolves to
-    a readable YAML file and loads successfully) OR returns `env`
-    unchanged (when the file is missing — letting the legacy reward
-    path run as before).
+    `RewardProfileWrapper` (when both reward YAML paths resolve to
+    readable files and load successfully) OR returns `env` unchanged
+    (ONLY when the operator explicitly opted out by setting
+    `reward_profiles_path`/`reward_gameplay_path` to null/empty).
 
-    A loader-load failure aborts the run (vs silent fallback) — silent
-    fallback would mask configuration bugs in the YAML the operator
-    just edited. Missing-file (path doesn't exist) IS the silent path
-    so legacy runs without a YAML keep working.
+    `harden-training-pipeline` D4 (BREAKING): a configured non-null
+    path whose file does not exist raises `FileNotFoundError` at run
+    start. The old behavior silently fell back to legacy rewards on a
+    missing file — which meant a typo'd path or a cloud image missing
+    a config file trained with a different reward function than the
+    operator believed. Loader-load failures abort the run as before.
 
     Per `add-gameplay-reward-config` (D9): `digivolve_shaping=True` is
     now inert. The `_digivolve_shaped` profile is removed and the
@@ -205,16 +220,11 @@ def _build_reward_profile_factory(cfg: TrainingConfig):
     # `digivolve_shaping=True` no longer maps to anything — see docstring.
     effective_override: Optional[str] = cfg.reward_profile_override
 
-    if (
-        profiles_path is None
-        or not profiles_path.exists()
-        or gameplay_path is None
-        or not gameplay_path.exists()
-    ):
-        # Either file missing — legacy reward path stays active. Return
-        # an identity factory + None loader so downstream code can
-        # detect the "not active" state. The two-file architecture
-        # requires both files; partial config falls back to legacy.
+    if profiles_path is None or gameplay_path is None:
+        # Explicit legacy opt-out (`reward_profiles_path: null` /
+        # `reward_gameplay_path: null` or empty string). Return an
+        # identity factory + None loader so downstream code can detect
+        # the "not active" state.
         def apply_identity(env):
             return env
 
@@ -222,6 +232,19 @@ def _build_reward_profile_factory(cfg: TrainingConfig):
         apply_identity.effective_override = None  # type: ignore[attr-defined]
         apply_identity.active = False  # type: ignore[attr-defined]
         return apply_identity
+
+    # `harden-training-pipeline` D4: configured-but-missing reward YAML
+    # is a hard error, not a silent fallback to legacy rewards.
+    for label, path in (
+        ("reward_gameplay_path", gameplay_path),
+        ("reward_profiles_path", profiles_path),
+    ):
+        if not path.exists():
+            raise FileNotFoundError(
+                f"{label} is set to {path} but the file does not exist. "
+                "Fix the path (or restore the file on this image), or "
+                f"explicitly opt into legacy rewards with `{label}: null`."
+            )
 
     try:
         loader = ProfileLoader(
@@ -268,6 +291,22 @@ def _model_meta_path(model_path: str | Path) -> Path:
     return Path(model_path).with_suffix(".meta.json")
 
 
+def current_action_space_structure() -> list[int]:
+    """Sub-range boundary tuple for the checkpoint contract.
+
+    `harden-training-pipeline` D5: the total `ACTION_SPACE_SIZE` alone
+    cannot detect an engine change that reorders or resizes internal
+    sub-ranges while keeping the total constant; this tuple pins the
+    boundaries that have historically moved (Task S1.3 appended the
+    breeding-carrier source-select range).
+    """
+    return [
+        int(SOURCE_SELECT_END),
+        int(ACTION_BREEDING_SOURCE_START),
+        int(ACTION_BREEDING_SOURCE_END),
+    ]
+
+
 def _validate_checkpoint_contract(
     model_path: str | Path,
     observation_layout,
@@ -288,6 +327,25 @@ def _validate_checkpoint_contract(
             raise ValueError(
                 f"Checkpoint incompatible: {key}={actual!r}, expected {expected!r}"
             )
+    # Action-space STRUCTURE check (`harden-training-pipeline` D5):
+    # compare sub-range boundaries when the checkpoint recorded them;
+    # warn-only for checkpoints written before the field existed.
+    recorded = metadata.get("action_space_structure")
+    if recorded:
+        expected_structure = current_action_space_structure()
+        if list(recorded) != expected_structure:
+            raise ValueError(
+                "Checkpoint incompatible: action_space_structure="
+                f"{list(recorded)!r}, expected {expected_structure!r} "
+                "(sub-range boundaries moved even though the total "
+                "action-space size may match)"
+            )
+    else:
+        logger.warning(
+            "Checkpoint %s has no action_space_structure field "
+            "(pre-harden-training-pipeline); structure validation skipped.",
+            model_path,
+        )
 
 
 def _validate_explicit_deck(
@@ -1809,8 +1867,9 @@ def make_env(opponent: str = "greedy",
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
-        opponent: Opponent policy name ("greedy", "random", or "self-play").
-                  "self-play" skips the opponent wrapper (agent plays both sides).
+        opponent: Opponent policy name ("greedy" or "random"). "self-play"
+                  is retired and raises (see SELF_PLAY_RETIRED_MSG); use
+                  opponent="pool" with a champion-derived manifest instead.
         deck1: Player 1 deck (card IDs). Defaults to ST1 starter.
         deck2: Player 2 deck (card IDs). Defaults to ST1 starter.
         gauntlet: MetaGauntlet instance for opponent sampling. When provided,
@@ -1863,21 +1922,20 @@ def make_env(opponent: str = "greedy",
         base_env = reward_profile_factory(base_env)
 
     if opponent == "self-play":
-        env = base_env
-    else:
-        opponent_policies = {
-            "greedy": greedy_policy,
-            "random": random_policy,
-        }
-        try:
-            opponent_fn = opponent_policies[opponent]
-        except KeyError:
-            valid_opponents = list(opponent_policies.keys()) + ["self-play"]
-            raise ValueError(
-                f"Unknown opponent {opponent!r}. "
-                f"Expected one of {valid_opponents}."
-            )
-        env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+        raise ValueError(SELF_PLAY_RETIRED_MSG)
+    opponent_policies = {
+        "greedy": greedy_policy,
+        "random": random_policy,
+    }
+    try:
+        opponent_fn = opponent_policies[opponent]
+    except KeyError:
+        valid_opponents = list(opponent_policies.keys())
+        raise ValueError(
+            f"Unknown opponent {opponent!r}. "
+            f"Expected one of {valid_opponents}."
+        )
+    env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
 
     # BO3 match wrapper sits between OpponentWrapper and any deck-pool
     # wrappers so each deck-pool reset corresponds to a MATCH (not a
@@ -2089,6 +2147,9 @@ def train(total_timesteps: int = 100_000,
           curriculum_seed: Optional[int] = None,
           eval_seed: Optional[int] = None,
           deck_pool_snapshot_path: Optional[str] = None,
+          init_from: Optional[str] = None,
+          opponent_pool_manifest: Optional[str] = None,
+          opponent_pool_mode: Optional[str] = None,
           cfg: Optional[TrainingConfig] = None,
           reward_profiles_override_mismatch: bool = False,
           ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
@@ -2096,7 +2157,9 @@ def train(total_timesteps: int = 100_000,
 
     Args:
         total_timesteps: Total environment steps to train for.
-        opponent: Opponent policy ("greedy", "random", "self-play").
+        opponent: Opponent policy ("greedy", "random", or "pool" via cfg).
+                  "self-play" is retired and raises at startup
+                  (see SELF_PLAY_RETIRED_MSG).
         eval_freq: Steps between evaluation rounds.
         n_eval_episodes: Games per evaluation round.
         learning_rate: PPO learning rate.
@@ -2130,6 +2193,16 @@ def train(total_timesteps: int = 100_000,
     """
     config_driven = cfg is not None
     if cfg is None:
+        # `harden-training-pipeline` D5: kwargs-path callers (the
+        # cloud job runner) can pass init_from / opponent-pool wiring
+        # directly instead of needing a TrainingConfig.
+        _cfg_overrides: Dict[str, Any] = {}
+        if init_from is not None:
+            _cfg_overrides["init_from"] = init_from
+        if opponent_pool_manifest is not None:
+            _cfg_overrides["opponent_pool_manifest"] = opponent_pool_manifest
+        if opponent_pool_mode is not None:
+            _cfg_overrides["opponent_pool_mode"] = opponent_pool_mode
         cfg = TrainingConfig(
             algorithm="lstm" if use_lstm else "mlp",
             timesteps=total_timesteps,
@@ -2147,6 +2220,7 @@ def train(total_timesteps: int = 100_000,
             tensorboard_log=tensorboard_log,
             curriculum_seed=curriculum_seed,
             eval_seed=eval_seed,
+            **_cfg_overrides,
         )
     else:
         total_timesteps = cfg.timesteps
@@ -2165,16 +2239,23 @@ def train(total_timesteps: int = 100_000,
         curriculum_seed = cfg.curriculum_seed if curriculum_seed is None else curriculum_seed
         eval_seed = cfg.eval_seed if eval_seed is None else eval_seed
 
+    # `harden-training-pipeline` D1: fail at startup (before any env or
+    # model construction) so job-runner configs surface the actionable
+    # message instead of dying partway through setup.
+    if opponent == "self-play":
+        raise ValueError(SELF_PLAY_RETIRED_MSG)
+
     _seed_everything(cfg.seed)
     observation_layout = get_tensor_profile(cfg.tensor_profile)
     run_name = cfg.run_name or datetime.now().strftime("pilot_ppo_%Y%m%d_%H%M%S")
     run_dir = Path(save_dir) / run_name
 
     # `add-reward-profiles` Group 8: build the reward-profile factory
-    # once at run-start. The factory is an identity no-op when the
-    # configured `reward_profiles_path` doesn't exist (legacy reward
-    # path stays active). Loader failures abort the run — silent
-    # fallback would mask config bugs.
+    # once at run-start. `harden-training-pipeline` D4: a configured
+    # non-null reward YAML path that doesn't exist is a hard error;
+    # the identity no-op (legacy rewards) requires an explicit
+    # `reward_profiles_path: null` opt-out. Loader failures abort the
+    # run — silent fallback would mask config bugs.
     reward_profile_factory = _build_reward_profile_factory(cfg)
     if verbose and reward_profile_factory.active:
         loader = reward_profile_factory.loader
@@ -2264,6 +2345,18 @@ def train(total_timesteps: int = 100_000,
         raise ValueError("resume_from and init_from are mutually exclusive")
     if cfg.init_from:
         _validate_checkpoint_contract(cfg.init_from, observation_layout)
+    if cfg.resume_from:
+        # Periodic checkpoints (checkpoints/step_*.zip) carry no sidecar;
+        # validate when one exists, warn-and-skip otherwise
+        # (`harden-training-pipeline` D5).
+        if _model_meta_path(cfg.resume_from).exists():
+            _validate_checkpoint_contract(cfg.resume_from, observation_layout)
+        else:
+            logger.warning(
+                "Resume checkpoint %s has no metadata sidecar; "
+                "tensor/action contract validation skipped.",
+                cfg.resume_from,
+            )
     if generalist_deck_pool is not None:
         if deck_pool_snapshot_path is None:
             deck_pool_snapshot_path = cfg.curriculum_pool_out
@@ -2567,6 +2660,39 @@ def train(total_timesteps: int = 100_000,
     )
     action_validity_cb = ActionValidityCallback()
     callbacks: list[BaseCallback] = [win_rate_cb, action_validity_cb]
+
+    # In-training anchored panel (`harden-training-pipeline` D2).
+    # freq == 0 means the callback is never attached — no anchored
+    # artifacts are produced at all.
+    anchored_cb = None
+    if cfg.anchored_eval_freq > 0:
+        from digimon_gym.agents.anchored_eval_callback import (
+            ANCHORED_SIDECAR_FILENAME,
+            AnchoredEvalCallback,
+            build_anchored_deck_pool,
+        )
+
+        _anchored_pool_args = (generalist_deck_pool, deck1, deck2)
+
+        def _anchored_deck_pool_factory(_args=_anchored_pool_args):
+            return build_anchored_deck_pool(*_args)
+
+        anchored_cb = AnchoredEvalCallback(
+            freq=cfg.anchored_eval_freq,
+            games=cfg.anchored_eval_games,
+            registry_path=cfg.champions_registry,
+            layout_hash=observation_layout.layout_hash,
+            tensor_profile=cfg.tensor_profile,
+            deck_pool_factory=_anchored_deck_pool_factory,
+            sidecar_path=(
+                Path(tensorboard_log) / ANCHORED_SIDECAR_FILENAME
+                if tensorboard_log
+                else None
+            ),
+            verbose=verbose,
+        )
+        callbacks.append(anchored_cb)
+
     checkpoint_cb = None
     if cfg.checkpoint_every > 0:
         checkpoint_cb = PeriodicCheckpointCallback(
@@ -2606,7 +2732,10 @@ def train(total_timesteps: int = 100_000,
         print(f"  Model saved to: {model_path}")
 
     # Save training run metadata as JSON sidecar
-    from digimon_gym.agents.training_metrics import TrainingRunMetadata
+    from digimon_gym.agents.training_metrics import (
+        TrainingRunMetadata,
+        resolve_git_sha,
+    )
 
     run_id = Path(model_path).stem
     if generalist_deck_pool is not None:
@@ -2697,6 +2826,14 @@ def train(total_timesteps: int = 100_000,
             if reward_profile_factory.active
             else ""
         ),
+        # `harden-training-pipeline` D5: run provenance.
+        git_sha=resolve_git_sha(),
+        bounty_threshold=bounty_threshold,
+        bounty_bonus=bounty_bonus,
+        action_space_structure=current_action_space_structure(),
+        opponent_pool_manifest=(
+            cfg.opponent_pool_manifest or "" if opponent == "pool" else ""
+        ),
     )
     if checkpoint_cb is not None:
         meta.checkpoint_timestamps = checkpoint_cb.saved_at
@@ -2748,13 +2885,21 @@ def _build_argparser() -> argparse.ArgumentParser:
     )
     opponent_group = parser.add_mutually_exclusive_group()
     opponent_group.add_argument(
-        "--opponent", choices=["greedy", "random"],
+        "--opponent", choices=["greedy", "random", "pool"],
         default=None,
-        help="Opponent policy."
+        help="Opponent policy. 'pool' samples frozen opponents from "
+             "--opponent-pool-manifest (pool-based fictitious self-play)."
     )
     opponent_group.add_argument(
         "--self-play", action="store_true",
-        help="Enable self-play (agent plays both sides)"
+        help="RETIRED — fails at startup with migration guidance "
+             "(use --opponent pool with a champion-derived manifest)."
+    )
+    parser.add_argument(
+        "--opponent-pool-manifest", type=str, default=None,
+        help="OpponentPool manifest JSON for --opponent pool "
+             "(emit one from the champion registry via "
+             "champion_admin.py emit-pool)."
     )
     parser.add_argument(
         "--lr", type=float, default=None,
@@ -2775,6 +2920,15 @@ def _build_argparser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--eval-episodes", type=int, default=None,
         help="Games per evaluation."
+    )
+    parser.add_argument(
+        "--anchored-eval-freq", type=int, default=None,
+        help="Steps between in-training anchored panels (greedy + "
+             "champions); 0 disables."
+    )
+    parser.add_argument(
+        "--anchored-eval-games", type=int, default=None,
+        help="Seat-balanced games per anchor per panel."
     )
     parser.add_argument(
         "--log-dir", type=str, default=None,
@@ -2954,6 +3108,8 @@ def main():
         "n_steps": args.n_steps,
         "eval_freq": args.eval_freq,
         "eval_episodes": args.eval_episodes,
+        "anchored_eval_freq": args.anchored_eval_freq,
+        "anchored_eval_games": args.anchored_eval_games,
         "tensorboard_log": args.log_dir,
         "models_dir": args.save_dir,
         "lstm_hidden_size": args.lstm_hidden_size,
@@ -2979,6 +3135,8 @@ def main():
         overrides["opponent"] = "self-play"
     elif args.opponent is not None:
         overrides["opponent"] = args.opponent
+    if args.opponent_pool_manifest is not None:
+        overrides["opponent_pool_manifest"] = args.opponent_pool_manifest
     if args.lstm:
         overrides["algorithm"] = "lstm"
     if args.resume:

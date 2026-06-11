@@ -87,6 +87,14 @@ harness; see `docs/MODEL_EVALUATION.md`):
 - `run_exploitability(name)` — the persisted approximate-exploitability result
   (`<models>/<name>/exploitability.json`), labeled as a budget-bound **lower
   bound**. Produced by `code/tools/exploiter_cli.py`.
+- `run_anchored_evals(name, limit?)` — in-training anchored panel rows from
+  `<runs>/<name>/anchored_evals.jsonl`, most recent first: per-anchor
+  seat-balanced win rates vs greedy + frozen champions, with failed-anchor
+  flags and panel wall-clock seconds. Written by `AnchoredEvalCallback`
+  (`harden-training-pipeline`) when `anchored_eval_freq > 0`. This is the
+  trustworthy in-run progress signal (CLAUDE.md rule 30) — independent of
+  the training opponent. `run_summary` also surfaces the latest row as
+  `latest_anchored`.
 
 ### `list_runs()`
 
@@ -140,7 +148,9 @@ Compose the four headline pieces.
       "other": 1
     }
   },
-  "recent_console_tail": [ /* last 50 lines of console.log */ ]
+  "recent_console_tail": [ /* last 50 lines of console.log */ ],
+  "latest_anchored": { /* latest anchored_evals.jsonl row, or null —
+    per-anchor win rates vs greedy + champions (harden-training-pipeline) */ }
 }
 ```
 

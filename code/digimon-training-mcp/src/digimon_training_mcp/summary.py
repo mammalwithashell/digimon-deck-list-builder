@@ -24,6 +24,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from .anchored import latest_anchored_row
 from .panic_families import PANIC_LINE_RE, PanicFamily, match_family
 
 
@@ -222,4 +223,7 @@ def run_summary(run_dir: Path, tail_evals: int, families: Iterable[PanicFamily])
         # BO3 match-training artifacts (`add-bo3-match-training`). Empty
         # list for pre-BO3 / single-game runs.
         "matchup_grids": _list_matchup_grid_sidecars(run_dir),
+        # Latest in-training anchored panel (`harden-training-pipeline`).
+        # None for runs without anchored_evals.jsonl.
+        "latest_anchored": latest_anchored_row(run_dir),
     }
