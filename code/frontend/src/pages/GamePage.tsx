@@ -1136,6 +1136,7 @@ export function GamePage() {
         battleArea={store.player1?.battleArea ?? []}
         onAction={handleAction}
         localPlayer={1}
+        onInspectCard={setInspectedCardId}
       />
 
       {/* Keyword prompt dialog for optional keyword activations */}

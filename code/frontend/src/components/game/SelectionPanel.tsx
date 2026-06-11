@@ -17,6 +17,8 @@ interface SelectionPanelProps {
   battleArea: PermanentInfo[];
   onAction: (actionId: number) => void;
   localPlayer: number;
+  /** Right-click a card in the panel to open the enlarged card detail. */
+  onInspectCard?: (cardId: string) => void;
 }
 
 /** Phases where this panel should auto-open */
@@ -44,6 +46,7 @@ export function SelectionPanel({
   battleArea,
   onAction,
   localPlayer,
+  onInspectCard,
 }: SelectionPanelProps) {
   // Only show for specific selection phases where the local player is selecting
   if (!pendingSelection) return null;
@@ -123,6 +126,13 @@ export function SelectionPanel({
   const canDecline = actionMask[SELECTION.DECLINE] === 1;
   const validCount = cards.filter((c) => c.isValid).length;
 
+  // Right-click a card to open the enlarged detail (DCGO parity). Synthetic
+  // ids (`effect-N` fallbacks with no resolved source card) have no image.
+  const inspectOnRightClick = (cardId: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!cardId.startsWith('effect-')) onInspectCard?.(cardId);
+  };
+
   if (cards.length === 0 && !canDecline) return null;
 
   return (
@@ -176,6 +186,7 @@ export function SelectionPanel({
                   <Card
                     cardId={entry.cardId}
                     size="md"
+                    onContextMenu={inspectOnRightClick(entry.cardId)}
                   />
                   {entry.label && (
                     <span className="text-xs text-slate-200 text-center max-w-[120px] leading-tight">
@@ -203,6 +214,7 @@ export function SelectionPanel({
                     highlighted={entry.isValid}
                     dimmed={!entry.isValid}
                     onClick={entry.isValid ? () => onAction(entry.actionId) : undefined}
+                    onContextMenu={inspectOnRightClick(entry.cardId)}
                   />
                 </div>
               ))}

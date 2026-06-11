@@ -34,7 +34,9 @@ export function CardDetailOverlay({ cardId, onClose }: CardDetailOverlayProps) {
   return (
     <div
       data-testid="card-detail-overlay"
-      className="absolute inset-0 z-40 cursor-pointer"
+      // z-50: above the stack inspector (z-30) AND the fixed selection panel
+      // (z-40) — the enlarged detail is always the top-most layer.
+      className="absolute inset-0 z-50 cursor-pointer"
       onClick={onClose}
       onContextMenu={(e) => {
         e.preventDefault();
