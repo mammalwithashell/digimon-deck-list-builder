@@ -1,0 +1,151 @@
+# AD1-024 Imperialdramon: Fighter Mode — Digimon, Lv.6, Blue/Green, DP 13000, Cost 13.
+# Traits: Ancient Dragonkin, Hero
+# Evo: Lv.5 Blue / Cost 5 (printed default)
+# xros_req: [Imperialdramon: Dragon Mode]: Cost 1 ; Lv.5 w/[Hero] trait: Cost 5
+#
+# Printed card text (verified against the card image):
+#
+# ＜Security A. +1＞ (This Digimon checks 1 additional security card.)
+# ＜Blocker＞ (This Digimon can block in the blocker timing.)
+# [When Digivolving] [When Attacking] [Once Per Turn] Return 1 of your
+# opponent's lowest DP Digimon to the bottom of the deck.
+# [All Turns] [Once Per Turn] When Digimon are played or digivolve, you may
+# suspend 1 of your opponent's Digimon and unsuspend this Digimon. Then, if
+# played or digivolved by effects, you may return 1 of your opponent's
+# suspended Digimon to the bottom of the deck.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_024.cs
+#
+# Clause layout:
+#   Clause 1 (declarative): grant_keyword SecurityAttackPlus +1
+#   Clause 2 (declarative): grant_keyword Blocker
+#   Clause 3 (triggered, multi-timing OPT, MANDATORY):
+#     [When Digivolving][When Attacking] shared OPT (DCGO SharedHashString
+#     "AD1_024_WD_WA") — return 1 opp lowest-DP Digimon to deck bottom.
+#     DCGO canNoSelect: false → no `optional:` anywhere; the select silently
+#     no-ops when the opponent has no Digimon (guarded in DCGO by
+#     HasMatchConditionOpponentsPermanent).
+#   Clause 4 (triggered observer, [All Turns][OPT], hash "AD1_024_AT"):
+#     "When Digimon are played or digivolve" — when: [on_any_digimon_played,
+#     on_digivolve]. on_any_digimon_played lowers to OnEnterFieldAnyone (plays;
+#     DCGO CanTriggerOnPermanentPlay) and on_digivolve to the global OnDigivolve
+#     broadcast (DCGO CanTriggerWhenPermanentDigivolving); the engine's
+#     digivolve bundle does NOT fire OnEnterFieldAnyone, so the pair cannot
+#     double-fire. event_target_kind: digimon closes "Digimon" (either owner).
+#
+#     Body: DCGO shows ONE initial Yes/No (SetIsSkippable) and couples
+#     suspend-1-opp with unsuspend-self (self unsuspends only when a suspend
+#     target was actually picked — AfterSelect permanents.Count > 0 — or, when
+#     the opponent has NO Digimon at all, via a standalone unsuspend offer).
+#     Encoded as ONE `optional:` sub-block = the initial Yes/No; inside it the
+#     suspend select is MANDATORY (no `optional:`), which both enforces the
+#     coupling (accepting the block with targets present forces the pick) and
+#     reproduces the no-target branch (the mandatory select silently no-ops and
+#     the unsuspend still runs). The deck-bottom leg is gated on the triggering
+#     play/digivolve being effect-initiated (DCGO CardEffectCommons.IsByEffect →
+#     `event_is_effect_initiated`), and its select IS optional (DCGO
+#     canNoSelect: true).
+#
+#     KNOWN OPT-REFUND DIVERGENCE: DCGO refunds the once-per-turn when nothing
+#     executed (RemoveUse — e.g. the player declines the initial Yes/No). The
+#     DSL has no OPT-refund vocabulary, so declining still consumes the OPT.
+#     Logged in qa/dsl-vocab-gaps.md (G-OPT-REFUND-ON-DECLINE).
+
+card: AD1-024
+name: "Imperialdramon: Fighter Mode"
+kind: digimon
+level: 6
+color: [blue, green]
+cost: 13
+dp: 13000
+traits: ["Ancient Dragonkin", Hero]
+
+alt_paths:
+  # Standard digivolve: Lv.5 Blue / Cost 5 (printed evo_costs).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 5
+
+  # xros_req: [Imperialdramon: Dragon Mode] / Cost 1. DCGO accepts both the
+  # colon and colon-less spellings (EqualsCardName x2); no level gate.
+  - kind: digivolve
+    from:
+      any_of:
+        - { name_contains: "Imperialdramon: Dragon Mode" }
+        - { name_contains: "Imperialdramon Dragon Mode" }
+    cost: 1
+    ignore_requirements: true
+
+  # xros_req: Lv.5 with [Hero] trait / Cost 5 (any color).
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Hero }
+    cost: 5
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 1 — ＜Security A. +1＞ ───────────────────────────────────────────
+  # DCGO: ChangeSelfSAttackStaticEffect(changeValue: 1).
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  # ─── Clause 2 — ＜Blocker＞ ──────────────────────────────────────────────────
+  # DCGO: BlockerSelfStaticEffect.
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── Clause 3 — [When Digivolving][When Attacking][Once Per Turn] ───────────
+  #
+  # "Return 1 of your opponent's lowest DP Digimon to the bottom of the deck."
+  #
+  # DCGO: shared ActivateClass body on OnEnterFieldAnyone + OnAllyAttack with
+  # SharedHashString "AD1_024_WD_WA" (one OPT across both timings),
+  # SelectPermanentEffect over CardEffectCommons.IsMinDP, canNoSelect: false,
+  # Mode.PutLibraryBottom.
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[WD][WA][OPT] Return 1 opp lowest-DP Digimon to the deck bottom"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          selector: lowest_dp
+          filter: { kind: digimon }
+          prompt: "Return 1 of your opponent's lowest DP Digimon to the bottom of the deck"
+      - return_to_deck: { target: bounce_target, position: bottom }
+
+  # ─── Clause 4 — [All Turns][Once Per Turn] play/digivolve observer ──────────
+  #
+  # "When Digimon are played or digivolve, you may suspend 1 of your opponent's
+  #  Digimon and unsuspend this Digimon. Then, if played or digivolved by
+  #  effects, you may return 1 of your opponent's suspended Digimon to the
+  #  bottom of the deck."
+  - when: [on_any_digimon_played, on_digivolve]
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] On any Digimon play/digivolve: may suspend 1 opp Digimon + unsuspend self; if by effect, may bottom-deck 1 suspended opp Digimon"
+    condition:
+      all_of:
+        - event_target_kind: digimon
+    process:
+      - optional:
+          - select_opponent_permanent:
+              bind_as: suspend_target
+              filter: { kind: digimon }
+              prompt: "Suspend 1 of your opponent's Digimon"
+          - suspend: { target: suspend_target }
+          - unsuspend: { target: source }
+          - if:
+              condition: { event_is_effect_initiated: true }
+              then:
+                - select_opponent_permanent:
+                    bind_as: byeffect_bounce
+                    optional: true
+                    filter:
+                      all_of:
+                        - kind: digimon
+                        - is_suspended: true
+                    prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck"
+                - return_to_deck: { target: byeffect_bounce, position: bottom }

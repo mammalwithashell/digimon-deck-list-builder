@@ -3512,3 +3512,26 @@ the cost."
 - **Blocks:** BT15-037 (the play-from-security-when-trashed clause). YAML:
   `code/digimon-engine/cards/bt15/BT15-037.yaml`; per-card tests
   `code/digimon-engine/tests/cards_behavioral/bt15/bt15_037.rs`.
+
+## G-OPT-REFUND-ON-DECLINE — no once-per-turn refund when an optional body fully declines
+
+Surfaced by **AD1-024 Imperialdramon: Fighter Mode** ([All Turns][Once Per Turn]
+play/digivolve observer). DCGO `AD1_024.cs` tracks whether anything actually
+executed in the optional body and calls `activateClass.RemoveUse()` when nothing
+did — declining the initial Yes/No (or accepting it and then doing nothing)
+REFUNDS the once-per-turn, so the effect can still fire on a later qualifying
+trigger the same turn.
+
+- **What's missing (DSL):** `once_per_turn: true` consumes the per-turn use as
+  soon as the clause fires; there is no way to express "refund the use if the
+  player declined / no step executed" (DCGO's `executed`-flag + `RemoveUse`
+  pattern, also used by other skippable ActivateClass bodies).
+- **Impact (AD1-024):** declining the [All Turns] optional sub-block consumes
+  the OPT for that turn; in DCGO the decline leaves the OPT available. Minor —
+  affects only multi-trigger turns where the player declines the first offer
+  and wants the second. All other behavior is faithful
+  (`code/digimon-engine/cards/ad1/AD1-024.yaml` Clause 4 header documents it).
+- **Suggested fix:** a clause-level `refund_opt_on_decline: true` (or implicit:
+  refund when the clause's optional gate is declined and no step mutated state),
+  mirroring DCGO's executed-flag semantics.
+- **Blocks:** nothing fully; AD1-024 Clause 4 carries the divergence note.
