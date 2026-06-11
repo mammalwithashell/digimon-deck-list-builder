@@ -1,6 +1,6 @@
 # Cloud Training Runbook
 
-End-to-end procedure for running a generalist, gauntlet, or self-play pilot
+End-to-end procedure for running a generalist, gauntlet, or pool-opponent pilot
 training job on a cheap cloud GPU pod, watching it via TensorBoard, and
 mirroring `runs/` back to your laptop so `digimon-training-mcp` can query
 the run from Claude sessions.
@@ -10,20 +10,20 @@ training. Read this one when:
 
 - A training job will exceed a few hours and you'd rather not tie up your
   laptop.
-- You're hitting local VRAM ceilings on LSTM or self-play runs and want
+- You're hitting local VRAM ceilings on LSTM or pool-opponent runs and want
   headroom (your 12 GB card is full at 11.7+ GB; a 24 GB cloud card doubles
   the headroom).
 - You want phone/away-from-desk visibility into training progress.
 
 ## 0. Decision: GPU or CPU?
 
-The LSTM and self-play training paths are **VRAM-bound** on a 12 GB local
+The LSTM and pool-opponent training paths are **VRAM-bound** on a 12 GB local
 card (~11.7 GB used, ~300 MiB free). They need a GPU with ≥ 12 GB VRAM —
 ideally 24 GB for 2× headroom. The MLP-vs-greedy path is **env-bound** and
 runs fine on CPU.
 
 ```
-                       lstm / self-play       mlp / vs-greedy
+                       lstm / pool-opponent   mlp / vs-greedy
                        ─────────────────      ───────────────
   needs GPU?           yes (VRAM-bound)       no
   recommended host     RunPod 3090 Secure     Hetzner CCX23
@@ -66,7 +66,7 @@ The decisions below are recorded in detail in
 
 ---
 
-# Path A: GPU runs on RunPod (LSTM, self-play, anything VRAM-heavy)
+# Path A: GPU runs on RunPod (LSTM, pool-opponent, anything VRAM-heavy)
 
 ## A.1 Prerequisites (one-time)
 
@@ -290,17 +290,25 @@ The trainer runs in foreground; TB scalars appear in your browser at the
 > Then re-SSH for the change to take effect. Or use inline-env on every
 > command: `PYTHONPATH=/app DIGIMON_DATA_DIR=/app/data python ...`.
 
-### Example job config: scoped self-play LSTM
+### Example job config: scoped pool-opponent LSTM
+
+> `opponent: "self-play"` is **retired** and fails at startup (P1-perspective
+> observations made the mode structurally unsound — see
+> `harden-training-pipeline` and the TRAINING_RUNBOOK banner). Train against
+> a frozen champion pool instead; emit the manifest from the champion
+> registry with `python code/tools/champion_admin.py emit-pool --out
+> /workspace/pool.json` and ship it to the pod alongside the job config.
 
 ```json
 {
-  "job_name": "cloud_rocks_self_play",
+  "job_name": "cloud_rocks_pool",
   "agent_deck": { "source": "default" },
   "training": {
     "generalist": true,
     "allowed_archetypes": ["Rocks", "Yellow Hybrid"],
     "timesteps": 5000000,
-    "opponent": "self-play",
+    "opponent": "pool",
+    "opponent_pool_manifest": "/workspace/pool.json",
     "use_lstm": true,
     "lstm_hidden_size": 256,
     "learning_rate": 3e-4,
@@ -310,7 +318,7 @@ The trainer runs in foreground; TB scalars appear in your browser at the
     "n_eval_episodes": 50
   },
   "output": {
-    "name": "cloud_rocks_sp_v1",
+    "name": "cloud_rocks_pool_v1",
     "save_dir": "models",
     "log_dir": "runs/pilot_ppo"
   }
@@ -432,7 +440,7 @@ deploy; revisit if symptoms match.
 
 For MLP-vs-greedy runs that don't need a GPU. Roughly 3× cheaper than DO at
 the same vCPU shape. Skip this whole section if you're running LSTM or
-self-play.
+pool-opponent jobs.
 
 ## B.1 Prerequisites (one-time)
 
