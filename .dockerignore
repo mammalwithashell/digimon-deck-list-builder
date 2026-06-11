@@ -1,0 +1,25 @@
+# Allowlist build context: ignore everything, then re-include only what the
+# Dockerfile COPYs. Keeps the multi-GB target/, node_modules/, models/,
+# DCGO/ etc. out of the docker build context.
+*
+!code/digimon-dsl/
+!code/digimon-engine/
+!code/digimon-engine-py/
+!code/server/
+!code/digimon_gym/
+!code/engine_py_legacy/
+!code/tools/decklist_analysis.py
+!code/tools/provision_ci_release_user.py
+!code/data_paths.py
+!data/
+!alembic/
+!alembic.ini
+!Cargo.toml
+!Cargo.lock
+!requirements-server.txt
+# Re-excludes inside the allowed trees
+code/engine_py_legacy/tests/
+**/target/
+**/node_modules/
+**/__pycache__/
+**/*.pyc

@@ -1,0 +1,75 @@
+name: Build API image
+
+# Manually-dispatched image build + optional droplet deploy. Exists so the
+# API image can be published independently of deploy-api.yml's test gates
+# (fast-tests is currently red pending the engine-wheel CI fix). The droplet
+# pull authenticates with the run's GITHUB_TOKEN, so the GHCR package can
+# stay private with no extra secrets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy to droplet after push"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/digimon-api:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/digimon-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-push
+    if: ${{ inputs.deploy }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER
+          script: |
+            set -e
+            cd /opt/digimon
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            docker compose -f docker-compose.prod.yml pull
+            docker logout ghcr.io
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
+      - name: Post-deploy healthcheck
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf https://inbetweentheatre.duckdns.org/health; then exit 0; fi
+            sleep 3
+          done
+          echo "health endpoint did not come up"
+          exit 1

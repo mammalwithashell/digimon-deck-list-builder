@@ -6,6 +6,12 @@ gymnasium>=0.29
 fastapi>=0.100
 httpx>=0.24
 uvicorn>=0.20
+# App config / middleware / logging (all on the server.api startup path)
+pydantic-settings>=2.0
+slowapi>=0.1.9
+structlog>=24.1
+platformdirs>=4.0
+sentry-sdk[fastapi]>=2.0
 # Database & auth
 sqlalchemy[asyncio]>=2.0
 aiosqlite>=0.19
