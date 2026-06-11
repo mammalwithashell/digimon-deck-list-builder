@@ -1550,6 +1550,30 @@ mod tests {
         assert_eq!(ctx.memory(), 1);
     }
 
+    /// "Lose X memory" moves the marker toward the LOSING player's
+    /// opponent's side (general_rule.pdf p.7: "'Lose X memory' means moving
+    /// the memory marker X spaces toward your opponent's side"; DCGO scripts
+    /// run `card.Owner.AddMemory(-n)`; Python `Player.lose_memory` delegates
+    /// to `add_memory(-amount)` with the same turn-player seesaw branch).
+    /// A non-turn-player controller losing memory therefore moves the
+    /// seesaw TOWARD the turn player — it must not raw-subtract from the
+    /// turn player's side.
+    #[test]
+    fn lose_memory_is_controller_relative() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        let non_turn_player = 1 - game.turn_player();
+        let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, non_turn_player);
+        ctx.set_memory(0);
+        ctx.lose_memory(2);
+        assert_eq!(
+            ctx.memory(),
+            2,
+            "non-turn player losing 2 memory moves the marker 2 toward the turn player"
+        );
+    }
+
     #[test]
     fn play_token_unknown_name_returns_none() {
         let db = min_db();

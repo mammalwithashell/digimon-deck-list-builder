@@ -165,6 +165,13 @@ pub struct PredicateSpec {
     pub owner: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other: Option<bool>,
+    /// `is_source: true` — the subject permanent must BE the effect's source
+    /// permanent (the mirror of `other: true`). Use it to filter a select
+    /// down to "this Digimon" — e.g. DCGO's standalone "Will you unsuspend
+    /// this card?" prompt becomes an optional `select_own_permanent` with
+    /// `is_source: true`, exposing the Yes/No to the RL action space.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub of_permanent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

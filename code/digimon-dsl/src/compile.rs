@@ -680,6 +680,7 @@ fn compile_predicate(
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
         other: p.other,
+        is_source: p.is_source,
         of_permanent: p.of_permanent.clone(),
         not_in_binding: p.not_in_binding.clone(),
         binding_owner: p
@@ -1267,6 +1268,7 @@ fn compile_triggered(
             .as_ref()
             .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
         optional: t.optional,
+        outer_prompt: t.outer_prompt,
         once_per_turn: t.once_per_turn,
         max_per_turn: t.max_per_turn,
         process: t
@@ -2426,6 +2428,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            continue_on_decline: a.continue_on_decline,
         },
         S::SelectOpponentPermanent(a) => CompiledStep::SelectOpponentPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2434,6 +2437,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            continue_on_decline: a.continue_on_decline,
         },
         S::SelectAnyPermanent(a) => CompiledStep::SelectAnyPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2930,6 +2934,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
         },
         S::CancelAttack(_) => CompiledStep::CancelAttack,
+        S::RefundOpt(_) => CompiledStep::RefundOpt,
         S::OpenCounterWindow(_) => CompiledStep::OpenCounterWindow,
         S::RefireEffect(a) => {
             if a.timing == "on_play_or_when_digivolving" && a.optional {

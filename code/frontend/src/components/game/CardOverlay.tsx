@@ -9,6 +9,12 @@ import { groupModifiers } from '@/utils/modifierDisplay';
 interface CardOverlayProps {
   permanent: PermanentInfo | null;
   onClose: () => void;
+  /**
+   * Right-click (context-menu) a card image in the stack to open it in the
+   * enlarged CardDetailOverlay — without closing this panel (DCGO's
+   * CardInfo → OpenCardDetail flow).
+   */
+  onInspectCard?: (cardId: string) => void;
 }
 
 /**
@@ -16,7 +22,7 @@ interface CardOverlayProps {
  * to the bottom-left. Shows a vertical scrollable card stack with
  * color-coded borders and inline inherited effect text.
  */
-export function CardOverlay({ permanent, onClose }: CardOverlayProps) {
+export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayProps) {
   const hoveredCard = useGameStore((s) => s.hoveredCard);
 
   // Dismiss on Escape
@@ -51,6 +57,11 @@ export function CardOverlay({ permanent, onClose }: CardOverlayProps) {
   const linkedIds = permanent.linkedCardIds;
   // Active modifiers, grouped (immunities / restrictions / stat changes / other)
   const modifierGroups = groupModifiers(permanent.modifiers ?? []);
+
+  const inspectOnRightClick = (cardId: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    onInspectCard?.(cardId);
+  };
 
   return (
     <div className="absolute bottom-4 left-4 z-30 w-[340px] max-h-[calc(100%-32px)] overflow-hidden bg-gray-900/95 border border-gray-600 rounded-lg shadow-2xl backdrop-blur-sm animate-overlay-open flex flex-col">
@@ -147,7 +158,11 @@ export function CardOverlay({ permanent, onClose }: CardOverlayProps) {
             style={{ borderLeft: `3px solid ${colorBorder(permanent.colors)}` }}
           >
             <div className="p-2 bg-gray-800/40">
-              <Card cardId={permanent.topCardId} size="inspector" />
+              <Card
+                cardId={permanent.topCardId}
+                size="inspector"
+                onContextMenu={inspectOnRightClick(permanent.topCardId)}
+              />
               {permanent.mainEffectText && (
                 <div className="mt-2 text-[11px] text-gray-300 whitespace-pre-wrap leading-relaxed">
                   {permanent.mainEffectText}
@@ -161,7 +176,11 @@ export function CardOverlay({ permanent, onClose }: CardOverlayProps) {
         {stackSources
           .filter((src) => !src.isTop)
           .map((src, i) => (
-            <StackCardEntry key={`${src.cardId}-${i}`} source={src} />
+            <StackCardEntry
+              key={`${src.cardId}-${i}`}
+              source={src}
+              onInspectCard={onInspectCard}
+            />
           ))}
 
         {/* Linked cards */}
@@ -175,7 +194,11 @@ export function CardOverlay({ permanent, onClose }: CardOverlayProps) {
               >
                 <div className="p-2 bg-purple-900/20">
                   <div className="text-[9px] text-purple-400 font-bold uppercase mb-1">Linked</div>
-                  <Card cardId={cardId} size="md" />
+                  <Card
+                    cardId={cardId}
+                    size="md"
+                    onContextMenu={inspectOnRightClick(cardId)}
+                  />
                 </div>
               </div>
             ))}
@@ -214,7 +237,13 @@ export function CardOverlay({ permanent, onClose }: CardOverlayProps) {
 }
 
 /** Single card entry in the digivolution stack, matching DCGO's CardInfo. */
-function StackCardEntry({ source }: { source: SourceInfo }) {
+function StackCardEntry({
+  source,
+  onInspectCard,
+}: {
+  source: SourceInfo;
+  onInspectCard?: (cardId: string) => void;
+}) {
   const borderColor = colorBorder(source.colors);
   const hasInherited = source.inheritedEffectText.trim().length > 0;
 
@@ -239,7 +268,14 @@ function StackCardEntry({ source }: { source: SourceInfo }) {
     >
       <div className="p-2 bg-gray-800/40">
         <div className="flex items-start gap-2">
-          <Card cardId={source.cardId} size="md" />
+          <Card
+            cardId={source.cardId}
+            size="md"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onInspectCard?.(source.cardId);
+            }}
+          />
           {hasInherited && (
             <div className="flex-1 min-w-0 pt-1">
               <div className="text-[9px] text-amber-500 font-bold uppercase mb-0.5">
