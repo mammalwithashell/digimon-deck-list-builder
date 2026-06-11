@@ -213,6 +213,36 @@ def _parse_xros_costs(xros_req):
     )
 
 
+# The printed "Inherited Effect" label at the very start of the API's
+# `main_effect` — the API returns some cards' inherited effect there with
+# `source_effect` empty (common on older sets' eggs/rookies, e.g. ST6-03).
+_MISFILED_INHERITED_RE = re.compile(r"^\s*Inherited Effect\s*")
+
+
+def normalize_misfiled_inherited(card: dict) -> bool:
+    """File an "Inherited Effect ..."-prefixed main effect where it belongs.
+
+    When `effect_description_eng` starts with the printed "Inherited Effect"
+    label and `inherited_effect_description_eng` is empty, move the text
+    (label stripped) into the inherited field. Without this the engine's
+    `CardData.inherited_text` stays empty and the UI shows no inherited
+    effect for the card as a digivolution source. Dual cards are skipped
+    (their `source_effect` is the option half, handled separately).
+
+    Returns True iff the card was modified.
+    """
+    if "dual" in card:
+        return False
+    effect = card.get("effect_description_eng") or ""
+    inherited = card.get("inherited_effect_description_eng") or ""
+    m = _MISFILED_INHERITED_RE.match(effect)
+    if not m or inherited.strip():
+        return False
+    card["inherited_effect_description_eng"] = effect[m.end():].strip()
+    card["effect_description_eng"] = ""
+    return True
+
+
 def convert_card(api_card):
     """Convert a digimoncard.io API card to our cards.json format."""
     card_id = api_card["id"]
@@ -291,6 +321,7 @@ def convert_card(api_card):
                 "keywords": ["ArtsDigivolve"],
             },
         }
+    normalize_misfiled_inherited(out)
     return out
 
 

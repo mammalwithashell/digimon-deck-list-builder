@@ -495,7 +495,7 @@ fn perm_data(perm: &Permanent, data: &[CardData], game: &Game, handle: Option<Pe
 /// serialization.py:338 output — it surfaces the SelectionKind variant string
 /// so typed WebSocket/UI consumers can route selection prompts without
 /// re-deriving the kind from phase + validIndices alone.
-fn pending_selection_data(v: &PendingSelectionView) -> Value {
+fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
     let mut m = Map::new();
     m.insert("kind".into(), Value::String(v.kind_str()));
     // phase: int matching Python's GamePhase.value (not a debug string).
@@ -516,7 +516,18 @@ fn pending_selection_data(v: &PendingSelectionView) -> Value {
             Value::Array(
                 choices
                     .iter()
-                    .map(|c| json!({"label": c.label, "actionId": c.action_id}))
+                    .map(|c| {
+                        // Resolve the branch's source card so the chooser can
+                        // render the actual card face instead of a blank box
+                        // (mirrors the desktop wire's EffectChoiceDto).
+                        let card = c.source_card.map(|h| game.card(h));
+                        json!({
+                            "label": c.label,
+                            "actionId": c.action_id,
+                            "cardId": card.map(|cd| cd.card_id.clone()),
+                            "cardName": card.map(|cd| cd.card_name.clone()),
+                        })
+                    })
                     .collect(),
             ),
         );
@@ -547,7 +558,7 @@ pub fn to_ui_json(game: &Game) -> Value {
     let pending_sel_value = game
         .pending_selection
         .as_ref()
-        .map(|s| pending_selection_data(&s.view()))
+        .map(|s| pending_selection_data(&s.view(), game))
         .unwrap_or(Value::Null);
 
     let pending_attack = game
