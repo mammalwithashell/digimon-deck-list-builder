@@ -259,8 +259,9 @@ export function GamePage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [inspectedPerm, setInspectedPerm] = useState<PermanentInfo | null>(null);
-  // Right-click card inspect (DCGO CardDetail) — enlarged single-card view.
-  const [inspectedHandCardId, setInspectedHandCardId] = useState<string | null>(null);
+  // Right-click card inspect (DCGO CardDetail) — enlarged single-card view,
+  // opened from the hand or from a card image in the stack inspector.
+  const [inspectedCardId, setInspectedCardId] = useState<string | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [draggedHandIndex, setDraggedHandIndex] = useState<number | null>(null);
   const [isOverValid, setIsOverValid] = useState(false);
@@ -972,10 +973,11 @@ export function GamePage() {
           <CardOverlay
             permanent={inspectedPerm}
             onClose={() => setInspectedPerm(null)}
+            onInspectCard={setInspectedCardId}
           />
           <CardDetailOverlay
-            cardId={inspectedHandCardId}
-            onClose={() => setInspectedHandCardId(null)}
+            cardId={inspectedCardId}
+            onClose={() => setInspectedCardId(null)}
           />
           <SecurityRevealOverlay />
           <EffectPopup />
@@ -1028,7 +1030,7 @@ export function GamePage() {
               canPlayDragged={draggedHandIndex !== null && parsedMask.canPlayFromHand.has(draggedHandIndex)}
               previewCost={previewCost}
               onHandCardHoverIndex={setHoveredHandIndex}
-              onHandCardInspect={setInspectedHandCardId}
+              onHandCardInspect={setInspectedCardId}
               actionTraces={store.actionTraces}
               latestTensorSummary={store.latestTensorSummary}
             />

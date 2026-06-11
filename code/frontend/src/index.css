@@ -1116,11 +1116,14 @@ body {
 }
 
 /* ─── Card detail (right-click inspect) open animation ────── */
-/* Matches DCGO's CardDetail: quick slide-in + scale-up (0.12s). */
+/* Matches DCGO's CardDetail: quick slide-in + scale-up (0.12s).
+   NOTE: Tailwind v4's -translate-x-1/2/-translate-y-1/2 use the standalone
+   `translate` property, which COMPOSES with `transform` — so these keyframes
+   must not repeat the centering translate, only the slide/scale delta. */
 
 @keyframes cardDetailOpen {
-  0% { opacity: 0; transform: translate(calc(-50% - 24px), -50%) scale(0.8); }
-  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  0% { opacity: 0; transform: translateX(-24px) scale(0.8); }
+  100% { opacity: 1; transform: none; }
 }
 
 .animate-card-detail-open {

@@ -18,10 +18,15 @@ export function CardDetailOverlay({ cardId, onClose }: CardDetailOverlayProps) {
   useEffect(() => {
     if (!cardId) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      // Capture phase + stopPropagation: this is the top-most layer, so
+      // Escape closes only the enlarged detail — not an underlying panel
+      // (e.g. the stack inspector) that also listens for Escape.
+      e.stopPropagation();
+      onClose();
     };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    window.addEventListener('keydown', handleKey, true);
+    return () => window.removeEventListener('keydown', handleKey, true);
   }, [cardId, onClose]);
 
   if (!cardId) return null;
