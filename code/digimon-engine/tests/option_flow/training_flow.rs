@@ -103,9 +103,15 @@ fn digimon_card(card_id: &str, color: CardColor) -> digimon_engine::CardData {
     cd
 }
 
-fn digi_egg(card_id: &str, color: CardColor) -> digimon_engine::CardData {
+/// Digitama-deck card for hatch/promote staging. Deliberately Digimon-kind
+/// (Lv3, `make_test_card` default) rather than `CardKind::DigiEgg`: the
+/// §17-1-3-2 rules check trashes any battle-area permanent whose live top is
+/// a DP-less Digi-Egg, so promoting a bare egg-kind card is an impossible
+/// real-game state (a real promotion requires digivolving to Lv3+ first,
+/// which leaves a Digimon on top). Same staging shortcut as
+/// `timing_dispatch.rs`'s ROOKIE.
+fn hatchable_rookie(card_id: &str, color: CardColor) -> digimon_engine::CardData {
     let mut cd = make_test_card(card_id, card_id);
-    cd.card_kind = CardKind::DigiEgg;
     cd.colors = vec![color];
     cd
 }
@@ -169,7 +175,7 @@ fn training_trashes_on_breeding_promotion() {
     let mut r = DebugRunner::builder()
         .add_card(option_card("TRAIN-TRSH", 0, CardColor::Red))
         .add_card(digimon_card("RED-MATCH", CardColor::Red))
-        .add_card(digi_egg("EGG", CardColor::Red))
+        .add_card(hatchable_rookie("EGG", CardColor::Red))
         .hand(0, &["TRAIN-TRSH"])
         .digitama(0, &["EGG"])
         .memory(0)
@@ -277,7 +283,7 @@ fn training_inherited_effect_applies_to_breeding_permanent() {
     let mut r = DebugRunner::builder()
         .add_card(option_card("TRAIN-INH", 0, CardColor::Red))
         .add_card(digimon_card("RED-MATCH", CardColor::Red))
-        .add_card(digi_egg("EGG", CardColor::Red))
+        .add_card(hatchable_rookie("EGG", CardColor::Red))
         .hand(0, &["TRAIN-INH"])
         .digitama(0, &["EGG"])
         .memory(0)
