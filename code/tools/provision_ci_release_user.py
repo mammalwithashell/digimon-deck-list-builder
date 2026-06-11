@@ -19,7 +19,7 @@ import asyncio
 import sys
 from datetime import datetime, timedelta, timezone
 
-import jwt
+from jose import jwt
 from sqlalchemy import select
 
 from server.db.auth import (
