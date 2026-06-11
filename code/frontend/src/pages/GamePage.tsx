@@ -51,10 +51,23 @@ import {
   fieldSelectionHighlights,
   isFieldSelectionKind,
 } from '@/utils/selectionTargets';
-import { GamePhase, type ActionTrace, type PermanentInfo } from '@/types/game';
+import {
+  GamePhase,
+  type ActionTrace,
+  type GameEvent,
+  type GameState,
+  type PermanentInfo,
+} from '@/types/game';
+import { useUiStore } from '@/stores/uiStore';
+import { BotSpeedControl } from '@/components/game/BotSpeedControl';
+import { usePacedAgentDriver } from '@/hooks/usePacedAgentDriver';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 type ActionTraceResponse = { action_traces?: ActionTrace[] };
+// Stable empty mask used to lock all mask-derived affordances while a paced
+// agent sequence is draining (the response mask belongs to the AGENT during
+// those beats — rendering it would light up wrong affordances).
+const EMPTY_MASK: number[] = [];
 // Desktop builds have no server-side Deck rows, so deck list/load must go
 // through the Tauri-backed deckStore. parseDeck / validateDeckRaw already
 // branch internally, so those stay on deckApiMod.
@@ -75,7 +88,14 @@ export function GamePage() {
   const store = useGameStore();
   const { opponentMode } = usePlayFlowStore();
   useEffectHighlight();
-  const parsedMask = useActionMask(store.actionMask);
+  // Bot action pacing (add-bot-action-pacing): non-instant speeds advance
+  // local bot games one agent action per request, paced by the driver
+  // effect below. WebSocket games are server-paced and never use this.
+  const botSpeed = useUiStore((s) => s.botSpeed);
+  const paced = !useWebSocket && botSpeed !== 'instant';
+  // While the bot's beats are draining, all mask-derived affordances are
+  // locked — the in-flight mask belongs to the agent, not the human.
+  const parsedMask = useActionMask(store.agentPending ? EMPTY_MASK : store.actionMask);
   const actionPendingRef = useRef(false);
 
   // WebSocket connection (active for PvP, vs-AI-online, and spectator modes)
@@ -112,6 +132,26 @@ export function GamePage() {
     [store],
   );
 
+  // Apply any step/action-shaped response to the store, including the
+  // paced-mode `agent_pending` flag the pacing driver keys off.
+  const applyGameResponse = useCallback(
+    (res: {
+      state: GameState;
+      action_mask: number[];
+      logs?: string[];
+      events?: GameEvent[];
+      agent_pending?: boolean;
+    } & ActionTraceResponse) => {
+      store.setGameState(res.state);
+      store.setActionMask(res.action_mask);
+      if (res.logs) store.appendLogs(res.logs);
+      if (res.events) store.appendEvents(res.events);
+      appendResponseActionTraces(res);
+      store.setAgentPending(res.agent_pending ?? false);
+    },
+    [appendResponseActionTraces, store],
+  );
+
   // Use WebSocket sendAction for PvP / vs-AI-online / spectator; HTTP for local games.
   const sendAction = useCallback(
     async (actionId: number) => {
@@ -120,15 +160,17 @@ export function GamePage() {
         return;
       }
       if (!store.gameId || actionPendingRef.current) return;
+      // Paced bot sequence draining — the human has no legal input until
+      // the beats finish (mask is locked too; this is a belt-and-braces
+      // guard against queued clicks).
+      if (store.agentPending) return;
       actionPendingRef.current = true;
 
       try {
-        const actionResult = await gameApi.sendAction(store.gameId, actionId);
-        store.setGameState(actionResult.state);
-        store.setActionMask(actionResult.action_mask);
-        if (actionResult.logs) store.appendLogs(actionResult.logs);
-        if (actionResult.events) store.appendEvents(actionResult.events);
-        appendResponseActionTraces(actionResult);
+        const actionResult = await gameApi.sendAction(store.gameId, actionId, {
+          paced,
+        });
+        applyGameResponse(actionResult);
 
         // If the human is still mid-decision — a multi-stage selection like
         // DNA digivolve's two material picks leaves a pending_selection
@@ -139,20 +181,27 @@ export function GamePage() {
         const humanStillDeciding =
           actionResult.state.pendingSelection?.selectingPlayer === 1;
 
-        if (!actionResult.is_game_over && !humanStillDeciding) {
+        // Paced mode: the response already executed at most one agent beat;
+        // the pacing driver effect advances the rest on a timer. Only the
+        // legacy instant path drains agents inline here.
+        if (!paced && !actionResult.is_game_over && !humanStillDeciding) {
           const stepResult = await gameApi.stepGame(store.gameId);
-          store.setGameState(stepResult.state);
-          store.setActionMask(stepResult.action_mask);
-          if (stepResult.logs) store.appendLogs(stepResult.logs);
-          if (stepResult.events) store.appendEvents(stepResult.events);
-          appendResponseActionTraces(stepResult);
+          applyGameResponse(stepResult);
         }
       } finally {
         actionPendingRef.current = false;
       }
     },
-    [appendResponseActionTraces, store, useWebSocket, ws],
+    [applyGameResponse, paced, store, useWebSocket, ws],
   );
+
+  // Pacing driver: while the bot has actions left, request the next beat
+  // after the configured delay; retry-once + stall-with-Continue on
+  // failure. Inert for WebSocket games (server-paced).
+  const { pacingStalled, resumePacing } = usePacedAgentDriver({
+    active: !useWebSocket,
+    applyGameResponse,
+  });
   const { savedDecks, setSavedDecks } = useDeckBuilderStore();
   const { getDropAction } = useDropZone(parsedMask);
 
@@ -325,6 +374,10 @@ export function GamePage() {
           null,
           agentType === 'trained' ? selectedModelId : null,
         ],
+        // Paced mode: the browser wire's create runs an opening agent
+        // prelude — cap it at one beat so the opening bot turn is paced
+        // too. (Desktop create runs no prelude; the flag is inert there.)
+        paced,
       });
 
       // Set game state before gameId so the board has player data when it first renders
@@ -341,15 +394,13 @@ export function GamePage() {
       store.clearLogs();
       store.clearEvents();
       store.clearActionTraces();
+      store.setAgentPending(result.agent_pending ?? false);
       store.setGameId(result.game_id);
 
-      // Step once to handle initial agent turn if agent goes first
-      const stepResult = await gameApi.stepGame(result.game_id);
-      store.setGameState(stepResult.state);
-      store.setActionMask(stepResult.action_mask);
-      if (stepResult.logs) store.appendLogs(stepResult.logs);
-      if (stepResult.events) store.appendEvents(stepResult.events);
-      appendResponseActionTraces(stepResult);
+      // Step once to handle initial agent turn if agent goes first. Paced
+      // mode advances a single beat; the pacing driver takes it from there.
+      const stepResult = await gameApi.stepGame(result.game_id, { paced });
+      applyGameResponse(stepResult);
     } catch (err) {
       console.error('Failed to create game:', err);
       // If gameId was set but step failed, reset to avoid blank board
@@ -380,6 +431,7 @@ export function GamePage() {
       if (res.events) store.appendEvents(res.events);
       // Clear any in-flight UI selection state so we land on the
       // replayed snapshot with a clean slate.
+      store.setAgentPending(res.agent_pending ?? false);
       setActionChoice(null);
       setDigivolvingHandIndex(null);
       setSurrenderedBy(null);
@@ -397,6 +449,7 @@ export function GamePage() {
       if (res.logs) store.appendLogs(res.logs);
       if (res.events) store.appendEvents(res.events);
       appendResponseActionTraces(res as typeof res & ActionTraceResponse);
+      store.setAgentPending(false);
       setSurrenderedBy(1);
     } catch {
       // Ignore errors (e.g. game already over)
@@ -959,7 +1012,22 @@ export function GamePage() {
           pendingSelection={store.pendingSelection}
           localPlayer={1}
           isGameOver={store.isGameOver}
+          agentActing={store.agentPending}
         />
+        {pacingStalled && (
+          <div className="flex items-center justify-center gap-3 px-4 py-2 bg-red-900/50 border-b border-red-700/60">
+            <span className="text-sm text-red-200">
+              The bot&apos;s turn could not advance (connection problem?).
+            </span>
+            <button
+              type="button"
+              className="px-3 py-0.5 text-sm rounded border border-red-400 text-red-100 hover:bg-red-800/60"
+              onClick={resumePacing}
+            >
+              Continue
+            </button>
+          </div>
+        )}
 
         <PhaseBanner phase={store.currentPhase} isGameOver={store.isGameOver} />
         <DigivolveBanner />
@@ -1079,9 +1147,16 @@ export function GamePage() {
           </div>
         )}
 
+        {/* Bot speed selector — only meaningful for locally-paced bot
+            games; hidden for server-paced WebSocket games. */}
+        {!useWebSocket && (
+          <div className="flex justify-end px-3 py-1">
+            <BotSpeedControl />
+          </div>
+        )}
         <ActionBar
           phase={store.currentPhase}
-          actionMask={store.actionMask}
+          actionMask={store.agentPending ? EMPTY_MASK : store.actionMask}
           onAction={handleAction}
           onSurrender={handleSurrender}
           isGameOver={store.isGameOver}

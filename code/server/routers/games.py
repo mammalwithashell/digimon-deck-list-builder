@@ -145,6 +145,12 @@ def _build_state_payload(
         "logs": logs or [],
         "events": events or [],
         "is_human_turn": _is_human_turn(game, meta),
+        # True while a non-human agent still has actions to take — a paced
+        # client should POST /games/{id}/agent-step for the next beat.
+        # Unpaced responses always report False (autoplay drained to a human
+        # decision point or game end). Key name mirrors the desktop wire's
+        # `agent_pending` (cross-wire parity, add-bot-action-pacing).
+        "agent_pending": not game.is_game_over and not _is_human_turn(game, meta),
         "player_labels": meta.player_labels,
     }
 
@@ -202,9 +208,21 @@ def create_game(request: CreateGameRequest):
     # If the opening turn belongs to an agent, advance until a human
     # decision (or game end). All emitted logs/events flow into the
     # initial response so the client never misses the agent's prelude.
+    # Paced mode caps the prelude at ONE agent action so the client can
+    # render each beat (it drives the rest via /agent-step) — but never
+    # while an action_script is replaying, since the script's human actions
+    # require agents to fully resolve between them (staging, not
+    # presentation).
+    paced_create = request.paced and not request.action_script
     log_buffer: list[str] = []
     event_buffer: list[dict[str, Any]] = []
-    _autoplay_agent_turns(game, meta, log_buffer=log_buffer, event_buffer=event_buffer)
+    _autoplay_agent_turns(
+        game,
+        meta,
+        log_buffer=log_buffer,
+        event_buffer=event_buffer,
+        max_steps=1 if paced_create else 4096,
+    )
 
     # Scenario fast-forward: replay each scripted HUMAN action in order,
     # auto-playing agent turns between them, to land in a mid-game state
@@ -303,8 +321,16 @@ def game_action(game_id: str, request: GameActionRequest):
     event_buffer = list(game.get_events_since_last_step())
 
     # If after the human step the next decision is an agent's, advance
-    # through agent turns automatically.
-    _autoplay_agent_turns(game, meta, log_buffer=log_buffer, event_buffer=event_buffer)
+    # through agent turns automatically. Paced requests cap this at ONE
+    # agent action so the client can render each beat and pull the rest
+    # via /agent-step.
+    _autoplay_agent_turns(
+        game,
+        meta,
+        log_buffer=log_buffer,
+        event_buffer=event_buffer,
+        max_steps=1 if request.paced else 4096,
+    )
 
     payload = _build_state_payload(game, meta, logs=log_buffer, events=event_buffer)
     payload["action_context"] = {
@@ -329,6 +355,26 @@ def game_step(game_id: str):
     log_buffer: list[str] = []
     event_buffer: list[dict[str, Any]] = []
     _autoplay_agent_turns(game, meta, log_buffer=log_buffer, event_buffer=event_buffer)
+    return _build_state_payload(game, meta, logs=log_buffer, events=event_buffer)
+
+
+@router.post("/games/{game_id}/agent-step")
+def game_agent_step(game_id: str):
+    """Advance exactly ONE agent action (paced mode, add-bot-action-pacing).
+
+    The paced client loop: render the previous response's beat, wait the
+    user-configured delay, then POST here while `agent_pending` is true.
+    No-op (returns current state) if the decision is already a human's or
+    the game is over — safe against double-fires from a re-rendering
+    client."""
+    game = _require_game(game_id)
+    meta = _require_meta(game_id)
+
+    log_buffer: list[str] = []
+    event_buffer: list[dict[str, Any]] = []
+    _autoplay_agent_turns(
+        game, meta, log_buffer=log_buffer, event_buffer=event_buffer, max_steps=1
+    )
     return _build_state_payload(game, meta, logs=log_buffer, events=event_buffer)
 
 

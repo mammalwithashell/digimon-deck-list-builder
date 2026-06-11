@@ -7,6 +7,43 @@ import {
 
 const PRESET_STORAGE_KEY = 'desktop.graphicsPreset';
 const FULLSCREEN_STORAGE_KEY = 'desktop.fullscreen';
+const BOT_SPEED_STORAGE_KEY = 'gameplay.botSpeed';
+
+/** Bot action pacing (add-bot-action-pacing). Non-instant speeds make
+ *  local bot games advance one agent action per request, with this
+ *  inter-beat delay, so a human can perceive each action. `instant`
+ *  keeps the legacy drain-the-whole-bot-turn-in-one-response behavior. */
+export type BotSpeed = 'slow' | 'normal' | 'fast' | 'instant';
+
+export const BOT_SPEED_DELAY_MS: Record<Exclude<BotSpeed, 'instant'>, number> = {
+  slow: 1500,
+  normal: 900,
+  fast: 400,
+};
+
+const BOT_SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];
+const DEFAULT_BOT_SPEED: BotSpeed = 'normal';
+
+function loadPersistedBotSpeed(): BotSpeed {
+  if (typeof window === 'undefined') return DEFAULT_BOT_SPEED;
+  try {
+    const raw = window.localStorage.getItem(BOT_SPEED_STORAGE_KEY);
+    return BOT_SPEEDS.includes(raw as BotSpeed)
+      ? (raw as BotSpeed)
+      : DEFAULT_BOT_SPEED;
+  } catch {
+    return DEFAULT_BOT_SPEED;
+  }
+}
+
+function persistBotSpeed(value: BotSpeed): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(BOT_SPEED_STORAGE_KEY, value);
+  } catch {
+    // Best-effort persistence.
+  }
+}
 
 /** Read a persisted preset from localStorage, falling back to the
  *  default. Validates that the persisted dimensions match one of the
@@ -81,6 +118,10 @@ interface UiStore {
    *  1.0 in non-desktop builds. */
   canvasScale: number;
 
+  /** Bot action pacing speed for local games vs an agent. Persisted;
+   *  changes apply from the next agent beat without restarting. */
+  botSpeed: BotSpeed;
+
   setHoveredCard: (cardId: string | null) => void;
   openModal: (modal: string) => void;
   closeModal: () => void;
@@ -89,6 +130,7 @@ interface UiStore {
   setGraphicsPreset: (preset: ResolutionPreset) => void;
   setFullscreen: (value: boolean) => void;
   setCanvasScale: (value: number) => void;
+  setBotSpeed: (value: BotSpeed) => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -98,6 +140,7 @@ export const useUiStore = create<UiStore>((set) => ({
   graphicsPreset: loadPersistedPreset(),
   fullscreen: loadPersistedFullscreen(),
   canvasScale: 1,
+  botSpeed: loadPersistedBotSpeed(),
 
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
   openModal: (modal) => set({ activeModal: modal }),
@@ -113,12 +156,18 @@ export const useUiStore = create<UiStore>((set) => ({
     set({ fullscreen: value });
   },
   setCanvasScale: (value) => set({ canvasScale: value }),
+  setBotSpeed: (value) => {
+    persistBotSpeed(value);
+    set({ botSpeed: value });
+  },
 }));
 
 // Exported for tests and direct CanvasScaler reads pre-mount.
 export const __uiStoreInternals = {
   PRESET_STORAGE_KEY,
   FULLSCREEN_STORAGE_KEY,
+  BOT_SPEED_STORAGE_KEY,
   loadPersistedPreset,
   loadPersistedFullscreen,
+  loadPersistedBotSpeed,
 };

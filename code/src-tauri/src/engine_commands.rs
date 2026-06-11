@@ -962,6 +962,12 @@ pub struct ActionResponseDto {
     pub events: Vec<GameEventDto>,
     pub action_context: serde_json::Value,
     pub action_traces: Vec<ActionTraceDto>,
+    /// True when a non-human agent still has actions to take — a paced
+    /// caller should invoke `rust_step_game { paced: true }` to advance the
+    /// next beat. Always `false` for unpaced calls (they drain agents to the
+    /// next human decision point). Field name must stay aligned with the
+    /// browser wire's `agent_pending` (cross-wire parity).
+    pub agent_pending: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -980,6 +986,9 @@ pub struct StepResponseDto {
     pub is_human_turn: bool,
     pub is_game_over: bool,
     pub action_traces: Vec<ActionTraceDto>,
+    /// See `ActionResponseDto::agent_pending` — same semantics and same
+    /// cross-wire field-name contract.
+    pub agent_pending: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1186,6 +1195,7 @@ pub fn rust_submit_action(
     state: tauri::State<'_, RustEngineState>,
     inference: tauri::State<'_, InferenceState>,
     action: u32,
+    paced: Option<bool>,
 ) -> Result<ActionResponseDto, String> {
     let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
     let session_guard = state.session.lock().map_err(|e| e.to_string())?;
@@ -1202,11 +1212,22 @@ pub fn rust_submit_action(
         optional_tensor_summary_for(game, pid, session_guard.registry.as_ref(), &mask_before),
     );
     game.decode_action(action_u16, pid);
+    // Paced mode: the human's action lands, then at most ONE agent action
+    // executes per request so the frontend can render each beat (the
+    // pacing driver keeps calling `rust_step_game { paced: true }` while
+    // `agent_pending`).
+    let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
     let mut action_traces = vec![human_trace];
-    action_traces.extend(run_agent_steps(game, &session_guard, &inference)?);
+    action_traces.extend(run_agent_steps(
+        game,
+        &session_guard,
+        &inference,
+        max_agent_actions,
+    )?);
     let events = drain_events(game);
     let mask = action_mask_bytes(game);
     let is_over = game.game_over;
+    let pending = agent_pending(game, &session_guard);
     Ok(ActionResponseDto {
         state: game_state_dto(game),
         action_mask: mask,
@@ -1215,6 +1236,7 @@ pub fn rust_submit_action(
         events,
         action_context: serde_json::json!({}),
         action_traces,
+        agent_pending: pending,
     })
 }
 
@@ -1233,16 +1255,22 @@ pub fn rust_submit_action(
 pub fn rust_step_game(
     state: tauri::State<'_, RustEngineState>,
     inference: tauri::State<'_, InferenceState>,
+    paced: Option<bool>,
 ) -> Result<StepResponseDto, String> {
     let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
     let session_guard = state.session.lock().map_err(|e| e.to_string())?;
     let game = ensure_game(&mut game_guard)?;
-    let action_traces = run_agent_steps(game, &session_guard, &inference)?;
+    // Paced mode executes exactly one agent action per invoke; this command
+    // doubles as the "advance one beat" call the frontend pacing driver
+    // repeats while `agent_pending` is true.
+    let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
+    let action_traces = run_agent_steps(game, &session_guard, &inference, max_agent_actions)?;
     let mask = action_mask_bytes(game);
     let pid = current_decision_player(game);
     let is_human_turn =
         matches!(decider_kind(&session_guard, pid), PlayerKind::Human) || game.game_over;
     let is_over = game.game_over;
+    let pending = agent_pending(game, &session_guard);
     Ok(StepResponseDto {
         state: game_state_dto(game),
         action_mask: mask,
@@ -1251,6 +1279,7 @@ pub fn rust_step_game(
         is_human_turn,
         is_game_over: is_over,
         action_traces,
+        agent_pending: pending,
     })
 }
 
@@ -1262,10 +1291,29 @@ fn decider_kind(session: &GameSession, pid: PlayerId) -> PlayerKind {
         .unwrap_or(PlayerKind::Human)
 }
 
+/// True when the next decision belongs to a non-human agent and the game is
+/// still live — i.e. a paced caller should request another agent advance.
+/// Unpaced calls always land on a human decision point or game end, so this
+/// reports `false` for them by construction.
+pub fn agent_pending(game: &Game, session: &GameSession) -> bool {
+    !game.game_over
+        && !matches!(
+            decider_kind(session, current_decision_player(game)),
+            PlayerKind::Human
+        )
+}
+
 /// Step the game forward while the current decider is a non-human agent.
 /// Bail out as soon as the game ends or a human seat is up — matches the
 /// hosted API's `InteractiveGame.run_step` contract so the frontend
 /// state machine doesn't care which backend is driving.
+///
+/// `max_actions` caps how many agent actions execute in this call: `None`
+/// runs to the next human decision point / game end (legacy behavior);
+/// `Some(n)` returns after at most `n` actions so the frontend can pace
+/// the agent's turn into human-perceivable beats (see the
+/// `add-bot-action-pacing` change). Whether agent actions *remain* after
+/// a capped return is reported separately by [`agent_pending`].
 ///
 /// `pub` so integration tests under `tests/` can drive the game loop
 /// directly without going through the Tauri IPC layer.
@@ -1273,6 +1321,7 @@ pub fn run_agent_steps(
     game: &mut Game,
     session: &GameSession,
     inference: &InferenceState,
+    max_actions: Option<usize>,
 ) -> Result<Vec<ActionTraceDto>, String> {
     // Cap iterations defensively so a bug in mask generation can't turn this
     // into an infinite spin. Normal games resolve in far fewer than this.
@@ -1280,6 +1329,9 @@ pub fn run_agent_steps(
     let mut traces = Vec::new();
     for _ in 0..MAX_AGENT_STEPS {
         if game.game_over {
+            return Ok(traces);
+        }
+        if matches!(max_actions, Some(cap) if traces.len() >= cap) {
             return Ok(traces);
         }
         let pid = current_decision_player(game);
@@ -1769,6 +1821,7 @@ mod tests {
             events: Vec::<GameEventDto>::new(),
             action_context: serde_json::json!({}),
             action_traces: Vec::new(),
+            agent_pending: false,
         };
 
         assert_eq!(
@@ -1781,6 +1834,9 @@ mod tests {
         assert!(json.contains("\"action_mask\""));
         assert!(json.contains("\"events\""));
         assert!(json.contains("\"is_game_over\":false"));
+        // Cross-wire contract: the pacing flag serializes under the same
+        // snake_case key the browser wire emits.
+        assert!(json.contains("\"agent_pending\":false"));
     }
 
     // ─── agent step loop ───────────────────────────────────────────────
@@ -1929,6 +1985,7 @@ mod tests {
             events: Vec::<GameEventDto>::new(),
             action_context: serde_json::json!({}),
             action_traces: vec![human_trace],
+            agent_pending: false,
         };
 
         assert_eq!(resp.action_traces.len(), 1);
@@ -1959,6 +2016,7 @@ mod tests {
             events: Vec::<GameEventDto>::new(),
             action_context: serde_json::json!({}),
             action_traces: vec![human_trace],
+            agent_pending: false,
         };
 
         assert_eq!(resp.action_traces.len(), 1);
@@ -1977,7 +2035,7 @@ mod tests {
         };
         let inference = InferenceState::default();
         let before = (game.turn_count, game.current_phase);
-        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference, None).unwrap();
         let after = (game.turn_count, game.current_phase);
         assert!(traces.is_empty());
         assert_eq!(before, after, "human seat should not advance state");
@@ -1995,7 +2053,7 @@ mod tests {
             player_model_ids: vec![None, None],
         };
         let inference = InferenceState::default();
-        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference, None).unwrap();
         assert!(!traces.is_empty());
         assert!(traces.iter().all(|trace| trace.actor.starts_with("agent_")));
         assert!(
@@ -2013,7 +2071,7 @@ mod tests {
             player_model_ids: vec![None, None],
         };
         let inference = InferenceState::default();
-        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference, None).unwrap();
 
         assert!(!traces.is_empty());
         assert!(traces.iter().all(|trace| trace.actor == "agent_greedy"));
@@ -2021,6 +2079,104 @@ mod tests {
         assert!(
             game.game_over,
             "two greedy agents should still play to completion without registry"
+        );
+    }
+
+    // ─── paced agent stepping (add-bot-action-pacing) ───────────────────
+
+    #[test]
+    fn run_agent_steps_paced_caps_at_one_action_and_reports_pending() {
+        let (mut game, registry) = build_playable_game();
+        let session = GameSession {
+            registry: Some(registry),
+            player_kinds: vec![PlayerKind::Greedy, PlayerKind::Greedy],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+
+        let traces = run_agent_steps(&mut game, &session, &inference, Some(1)).unwrap();
+        assert_eq!(
+            traces.len(),
+            1,
+            "paced advance must execute exactly one agent action"
+        );
+        assert!(
+            agent_pending(&game, &session),
+            "with both seats greedy and the game live, another agent action must be pending"
+        );
+    }
+
+    #[test]
+    fn paced_advances_replay_the_exact_unpaced_action_sequence() {
+        // Same seed + deterministic greedy policy → the paced one-beat-at-a-
+        // time path must reproduce the unpaced run's action sequence exactly,
+        // and `agent_pending` must flip false only at game end.
+        let session_for = |registry| GameSession {
+            registry: Some(registry),
+            player_kinds: vec![PlayerKind::Greedy, PlayerKind::Greedy],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+
+        let (mut unpaced_game, registry_a) = build_playable_game();
+        let session_a = session_for(registry_a);
+        let unpaced = run_agent_steps(&mut unpaced_game, &session_a, &inference, None).unwrap();
+        assert!(unpaced_game.game_over);
+
+        let (mut paced_game, registry_b) = build_playable_game();
+        let session_b = session_for(registry_b);
+        let mut paced: Vec<ActionTraceDto> = Vec::new();
+        // Generous safety bound — every iteration must advance one action.
+        for _ in 0..20_000 {
+            let step = run_agent_steps(&mut paced_game, &session_b, &inference, Some(1)).unwrap();
+            assert!(
+                step.len() <= 1,
+                "a paced advance must never execute more than one action"
+            );
+            paced.extend(step);
+            if !agent_pending(&paced_game, &session_b) {
+                break;
+            }
+        }
+        assert!(
+            paced_game.game_over,
+            "paced advances must drive a two-greedy game to completion"
+        );
+        assert!(!agent_pending(&paced_game, &session_b));
+
+        let ids = |ts: &[ActionTraceDto]| ts.iter().map(|t| t.action_id).collect::<Vec<_>>();
+        assert_eq!(
+            ids(&paced),
+            ids(&unpaced),
+            "paced and unpaced runs must produce identical action sequences"
+        );
+    }
+
+    #[test]
+    fn agent_pending_is_false_for_human_decider_and_finished_games() {
+        let (game, registry) = build_playable_game();
+        let human_session = GameSession {
+            registry: Some(registry),
+            player_kinds: vec![PlayerKind::Human, PlayerKind::Human],
+            player_model_ids: vec![None, None],
+        };
+        assert!(
+            !agent_pending(&game, &human_session),
+            "a human decision point must not report a pending agent"
+        );
+
+        let (mut over_game, registry2) = build_playable_game();
+        let greedy_session = GameSession {
+            registry: Some(registry2),
+            player_kinds: vec![PlayerKind::Greedy, PlayerKind::Greedy],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+        run_agent_steps(&mut over_game, &greedy_session, &inference, None).unwrap();
+        assert!(over_game.game_over);
+        assert!(
+            !agent_pending(&over_game, &greedy_session),
+            "a finished game must not report a pending agent"
         );
     }
 
@@ -2055,7 +2211,7 @@ mod tests {
         };
 
         let before_pid = current_decision_player(&game);
-        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference, None).unwrap();
         assert!(!traces.is_empty());
         assert!(traces.iter().all(|trace| trace.actor.starts_with("agent_")));
         // After the trained seat's turn the loop should have left us on a
@@ -2086,7 +2242,7 @@ mod tests {
             player_model_ids: model_ids,
         };
         let inference = InferenceState::default();
-        let err = run_agent_steps(&mut game, &session, &inference)
+        let err = run_agent_steps(&mut game, &session, &inference, None)
             .expect_err("missing model should error");
         assert!(
             err.contains("not loaded") || err.contains("nope"),
