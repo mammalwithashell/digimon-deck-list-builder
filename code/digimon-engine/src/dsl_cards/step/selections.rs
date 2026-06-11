@@ -1320,6 +1320,7 @@ fn install_use_option_from_hand(
             if matches!(result, crate::selection::OptionPlayResult::Invalid) {
                 return;
             }
+            let tail_context = trigger_for_accept.clone();
             drain_or_rewrap_pending_tail(
                 cb_ctx.game,
                 source_card,
@@ -1328,6 +1329,7 @@ fn install_use_option_from_hand(
                 tail_for_accept,
                 bindings_for_accept,
                 runtime_for_accept,
+                tail_context,
             );
         },
     );
@@ -1337,6 +1339,7 @@ fn install_use_option_from_hand(
             pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
                 let previous = game.current_trigger_context.clone();
                 game.current_trigger_context = trigger_for_decline.clone();
+                let tail_context = trigger_for_decline.clone();
                 drain_or_rewrap_pending_tail(
                     game,
                     source_card,
@@ -1345,6 +1348,7 @@ fn install_use_option_from_hand(
                     tail_for_decline,
                     bindings_for_decline,
                     runtime_for_decline,
+                    tail_context,
                 );
                 game.current_trigger_context = previous;
             }));

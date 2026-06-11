@@ -8692,7 +8692,7 @@
       "archetype": "Bagra Army",
       "yaml_path": "code/digimon-engine/cards/ex10/EX10-044.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_044.rs",
-      "notes": "[On Play] place-from-hand/trash cost -> Draw 1; [On Deletion] free Tuwarmon from under Tamers (cost_delta: free) + Then <Save> via event_card; inherited draw. Known engine bug when a cost-reduction interrupt intervenes: G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT."
+      "notes": "[On Play] place-from-hand/trash cost -> Draw 1; [On Deletion] free Tuwarmon from under Tamers (cost_delta: free) + Then <Save> via event_card; inherited draw. The Save now survives a mid-tail cost-reduction interrupt (G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT resolved 2026-06-11; pinned by ex10_044_save_survives_cost_reduction_interrupt)."
     },
     "EX10-031": {
       "card_name": "DarkKnightmon",

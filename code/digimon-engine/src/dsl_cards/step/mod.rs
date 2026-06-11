@@ -181,6 +181,7 @@ pub(crate) fn drain_or_rewrap_pending_tail(
     outer_tail: Vec<CompiledStep>,
     mut bindings: Bindings,
     runtime: StepRuntime,
+    tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
 ) {
     if game.pending_selection.is_some() {
         wrap_pending_selection_with_tail(
@@ -191,6 +192,7 @@ pub(crate) fn drain_or_rewrap_pending_tail(
             outer_tail,
             bindings,
             runtime,
+            tail_trigger_context,
         );
         return;
     }
@@ -199,10 +201,22 @@ pub(crate) fn drain_or_rewrap_pending_tail(
         return;
     }
 
+    // Re-assert the trigger context the tail was AUTHORED under (captured at
+    // wrap/park time). A synchronous mid-tail step can fire an interrupt that
+    // replaces `current_trigger_context` before this deferred tail finally
+    // runs — e.g. an [On Deletion] tail's free play raising a BeforePayCost
+    // cost-reduction dialog (Yuu Amano BT10-093 over Damemon EX10-044's
+    // "Then, <Save>") — and event bindings (`event_card`, the deleted-object
+    // snapshot) would silently fail to resolve.
+    // G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT.
+    let previous = game.current_trigger_context.clone();
+    game.current_trigger_context = tail_trigger_context;
     let mut ctx = EffectContext::new(game, source_card, source_permanent, player);
     run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
+    game.current_trigger_context = previous;
 }
 
+#[allow(clippy::too_many_arguments)]
 fn wrap_pending_selection_with_tail(
     game: &mut Game,
     source_card: crate::card_source::CardHandle,
@@ -211,6 +225,7 @@ fn wrap_pending_selection_with_tail(
     outer_tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
+    tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
 ) {
     let Some(mut pending) = game.pending_selection.take() else {
         return;
@@ -220,6 +235,7 @@ fn wrap_pending_selection_with_tail(
     let accept_tail = outer_tail.clone();
     let accept_bindings = bindings.clone();
     let accept_runtime = runtime.clone();
+    let accept_trigger_context = tail_trigger_context.clone();
     pending.callback = Box::new(move |game: &mut Game, action_id: u16| {
         // Binding-freshness channel: clear before, take after — whatever the
         // inner resolution published reflects picks made AFTER our wrap-time
@@ -239,6 +255,7 @@ fn wrap_pending_selection_with_tail(
             accept_tail,
             merged,
             accept_runtime,
+            accept_trigger_context,
         );
     });
 
@@ -246,6 +263,7 @@ fn wrap_pending_selection_with_tail(
         let decline_tail = outer_tail;
         let decline_bindings = bindings;
         let decline_runtime = runtime;
+        let decline_trigger_context = tail_trigger_context;
         pending.on_decline = Some(Box::new(move |game: &mut Game| {
             game.dsl_resolved_tail_bindings = None;
             original_decline(game);
@@ -261,6 +279,7 @@ fn wrap_pending_selection_with_tail(
                 decline_tail,
                 merged,
                 decline_runtime,
+                decline_trigger_context,
             );
         }));
     }
@@ -276,6 +295,11 @@ fn park_pending_selection_tail(
     runtime: &StepRuntime,
 ) {
     let outer_tail = steps[i + 1..].to_vec();
+    // Capture the LIVE trigger context: the wrapped tail must run under the
+    // context its clause was authored against, even if the interloping
+    // selection's resolution replaces it (G-TRIGGER-CONTEXT-CLOBBERED-BY-
+    // COST-REDUCTION-INTERRUPT).
+    let tail_trigger_context = ctx.game.current_trigger_context.clone();
     wrap_pending_selection_with_tail(
         ctx.game,
         ctx.source_card,
@@ -284,6 +308,7 @@ fn park_pending_selection_tail(
         outer_tail,
         bindings.clone(),
         runtime.clone(),
+        tail_trigger_context,
     );
 }
 
@@ -321,6 +346,7 @@ pub(crate) fn drain_dsl_outer_tail_with_bindings(
         }
         cb_ctx.set_override_selecting_player(None);
         if cb_ctx.game.pending_selection.is_some() {
+            let tail_trigger_context = cb_ctx.game.current_trigger_context.clone();
             wrap_pending_selection_with_tail(
                 cb_ctx.game,
                 cb_ctx.source_card,
@@ -329,6 +355,7 @@ pub(crate) fn drain_dsl_outer_tail_with_bindings(
                 outer_tail,
                 outer_b,
                 runtime,
+                tail_trigger_context,
             );
         } else {
             // Wrap the outer-tail run in a deferred-drain scope so any

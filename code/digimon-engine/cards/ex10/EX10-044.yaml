@@ -22,12 +22,12 @@
 #   binding) may be placed under one of your Tamers (the printed <Save>
 #   body, run as an On-Deletion step: optional Tamer pick +
 #   place_as_bottom_source from trash).
-# - KNOWN ENGINE BUG (not this card's): if the free Tuwarmon play fires a
-#   would-play cost-reduction interrupt (e.g. Yuu Amano BT10-093 fielded),
-#   the interrupt clobbers the deletion trigger context, so the trailing
-#   <Save>'s `event_card` no longer resolves — the Save silently no-ops.
-#   G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT in
-#   qa/archetype-qa/engine-gaps.md.
+# - Interrupt interplay (RESOLVED 2026-06-11): if the free Tuwarmon play
+#   fires a would-play cost-reduction interrupt (e.g. Yuu Amano BT10-093
+#   fielded), the wrapped tail now re-asserts the deletion trigger context
+#   so the trailing <Save>'s `event_card` still resolves
+#   (G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT, closed; pinned
+#   by ex10_044_save_survives_cost_reduction_interrupt).
 #
 # Verdict: IMPLEMENTED.
 

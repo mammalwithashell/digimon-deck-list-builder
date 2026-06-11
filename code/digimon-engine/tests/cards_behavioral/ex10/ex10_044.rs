@@ -196,6 +196,92 @@ fn ex10_044_on_deletion_plays_tuwarmon_from_under_tamer_then_saves() {
     );
 }
 
+/// G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT repro: the same
+/// [On Deletion] flow, but the Tamer is Yuu Amano (BT10-093) — a would-play
+/// cost-reduction observer. The free Tuwarmon play mid-tail fires Yuu's
+/// BeforePayCost accept dialog; after it resolves, the trailing <Save>'s
+/// `event_card` (the deleted-object snapshot) must STILL resolve so Damemon
+/// is placed under the Tamer. Before the fix, the interrupt replaced
+/// `current_trigger_context` and the Save silently no-op'd (Damemon stayed
+/// in trash).
+#[test]
+fn ex10_044_save_survives_cost_reduction_interrupt() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX10-044")
+        .expect("EX10-044 loads")
+        .dsl_card("BT10-093")
+        .expect("BT10-093 Yuu Amano (would-play cost-reduction Tamer) loads")
+        .add_card(make_tuwarmon())
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.set_first_player(0);
+
+    let yuu = r.place_on_field(0, "BT10-093", Some(0));
+    r.push_source(yuu, "TUWARMON-T");
+    let dame = r.place_on_field(0, "EX10-044", Some(0));
+
+    let _ = r
+        .game
+        .delete_permanents_batch(vec![dame], ReplacementCause::OpponentEffect);
+    r.game.drain_effect_queue();
+
+    // Drive: Tuwarmon pick → Yuu Amano's "Use Cost reduction?" accept dialog
+    // (the interrupt under test) → the Save destination pick. Always prefer a
+    // real pick over PASS.
+    let pass = digimon_engine::action::space::PASS;
+    for _ in 0..8 {
+        let Some(view) = r.pending_selection_view() else { break };
+        let action = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != pass)
+            .unwrap_or(pass);
+        let player = view.selecting_player;
+        if r.execute_action(player, action).is_err() {
+            break;
+        }
+    }
+
+    // Tuwarmon was still played for free.
+    assert!(
+        r.game
+            .players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "TUWARMON-T"),
+        "Tuwarmon must be played from under the Tamer"
+    );
+
+    // ── THE PIN ─────────────────────────────────────────────────────────────
+    // The Save must survive the interleaved cost-reduction interrupt: the
+    // deleted Damemon sits under Yuu Amano, not in the trash.
+    let yuu_perm = r
+        .game
+        .players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")
+        .expect("Yuu Amano remains on field");
+    assert!(
+        yuu_perm
+            .card_sources
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "EX10-044"),
+        "Save must place the deleted Damemon under the Tamer even when a \
+         cost-reduction interrupt fired mid-tail \
+         (G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT)"
+    );
+    assert!(
+        !r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "EX10-044"),
+        "the saved Damemon must not remain in the trash"
+    );
+}
+
 /// Inherited: trashed by an effect from a [Bagra Army] Digimon's digivolution
 /// cards → Draw 1.
 #[test]
