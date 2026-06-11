@@ -17,6 +17,7 @@ sqlalchemy[asyncio]>=2.0
 aiosqlite>=0.19
 asyncpg>=0.29
 alembic>=1.12
+psycopg2-binary>=2.9  # sync driver for alembic migrations (app uses asyncpg)
 bcrypt>=4.0
 python-jose[cryptography]>=3.3
 python-multipart>=0.0.6

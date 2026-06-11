@@ -17,9 +17,12 @@ if config.config_file_name is not None:
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
-    # Alembic uses sync URLs; convert async sqlite URL when provided.
+    # Alembic uses sync URLs; convert async URLs when provided.
     if database_url.startswith("sqlite+aiosqlite://"):
         database_url = database_url.replace("sqlite+aiosqlite://", "sqlite://", 1)
+    if database_url.startswith("postgresql+asyncpg://"):
+        # psycopg2 (sync) drives migrations; the app itself stays on asyncpg.
+        database_url = database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
     config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
