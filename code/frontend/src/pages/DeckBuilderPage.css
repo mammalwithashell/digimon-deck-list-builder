@@ -24,7 +24,11 @@
   --bld-display: "Bebas Neue", Impact, sans-serif;
   --bld-body: "Geist", Inter, system-ui, sans-serif;
   --bld-mono: "JetBrains Mono", ui-monospace, monospace;
-  min-height: calc(var(--app-vh100, 100vh) - 56px);
+  /* Definite height (not min-height): the pool grid scrolls internally
+     via overflow-y, which only engages when its ancestors are
+     height-constrained. With min-height the .bld 1fr row sizes to the
+     full card-pool content and overflow:hidden clips it unscrollably. */
+  height: calc(var(--app-vh100, 100vh) - 56px);
   background:
     radial-gradient(ellipse at 50% 0%, rgba(58, 166, 255, 0.08), transparent 50%),
     var(--bld-bg-0);
@@ -188,7 +192,11 @@
   display: grid;
   grid-template-rows: 56px auto 1fr;
   height: 100%;
-  min-height: calc(var(--app-vh100, 100vh) - 56px);
+  /* No viewport min-height here: it would re-expand .bld past its
+     height-constrained parent and break the pool grid's internal
+     scrolling. The <=1120px media query restores it for the
+     page-scrolling layout. */
+  min-height: 0;
 }
 
 .deck-builder-page .bld-top,
@@ -1283,6 +1291,8 @@
 @media (max-width: 1120px) {
   .deck-builder-page,
   .deck-builder-app {
+    height: auto;
+    min-height: calc(var(--app-vh100, 100vh) - 56px);
     overflow: auto;
   }
 
