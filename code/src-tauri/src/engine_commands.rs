@@ -241,6 +241,12 @@ pub struct PendingSelectionDto {
     /// omitted it) every own- AND opponent-field selection is unclickable in
     /// the Tauri app, because `isFieldSelectionKind(undefined)` is false.
     pub kind: String,
+    /// For `Hand`/`Trash` kinds, the player whose zone `valid_action_ids`
+    /// index into — effects like EX11-012 Medusamon prompt the selecting
+    /// player to pick from the OPPONENT's trash. `None` = the selecting
+    /// player's own zone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone_owner: Option<PlayerId>,
     /// For `SelectionKind::EffectChoice` prompts (`select_effect_choice`),
     /// the branches the player picks among. Each entry's `action_id` is one
     /// of the `valid_action_ids` above; the engine uses the
@@ -657,6 +663,7 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
         // Same stable discriminant string the engine's own serialization
         // emits (`PendingSelectionView::kind_str()` == `format!("{:?}", kind)`).
         kind: format!("{:?}", sel.kind),
+        zone_owner: sel.zone_owner,
         effect_choices,
     })
 }

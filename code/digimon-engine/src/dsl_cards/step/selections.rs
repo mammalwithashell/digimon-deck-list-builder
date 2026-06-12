@@ -1784,6 +1784,7 @@ fn install_select_any_permanent(
     let previous_phase = ctx.game.current_phase;
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Target,
         selecting_player,
         previous_phase,
@@ -1875,6 +1876,7 @@ fn install_select_dna_pair(
 
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Target,
         selecting_player,
         previous_phase,
@@ -2162,6 +2164,7 @@ fn install_count_capped_permanent_step(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         // Reuse the single-target field-selection kind so the frontend's
         // field-click router (which keys off `OppField`/`OwnField`, not the
         // phase or id range) can map board clicks to these picks. The

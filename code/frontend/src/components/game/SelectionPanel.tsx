@@ -11,6 +11,11 @@ interface SelectionPanelProps {
   handIds: string[];
   /** The local player's trash card IDs */
   trashIds: string[];
+  /** The opponent's trash card IDs (public zone). Trash selections can
+   *  target the opponent's trash (e.g. EX11-012 Medusamon "return 1 card
+   *  from your opponent's trash") — `pendingSelection.zoneOwner` says
+   *  which side the action ids index into. */
+  opponentTrashIds?: string[];
   /** The local player's security card IDs (may be empty if face-down) */
   securityIds: string[];
   /** The local player's battle-area permanents (for source-card picks). */
@@ -42,6 +47,7 @@ export function SelectionPanel({
   actionMask,
   handIds,
   trashIds,
+  opponentTrashIds = [],
   securityIds,
   battleArea,
   onAction,
@@ -76,7 +82,15 @@ export function SelectionPanel({
       isValid: actionMask[SELECTION.HAND_START + i] === 1,
     }));
   } else if (currentPhase === GamePhase.SelectTrash) {
-    cards = trashIds.map((cardId, i) => ({
+    // The engine's trash action ids are indices into `zoneOwner`'s trash —
+    // which can be the OPPONENT's (EX11-012 Medusamon). Zip against the
+    // owning side's list or the cards (and the clickable mask bits)
+    // misalign and the prompt is unfulfillable.
+    const ownerIds =
+      pendingSelection.zoneOwner != null && pendingSelection.zoneOwner !== localPlayer
+        ? opponentTrashIds
+        : trashIds;
+    cards = ownerIds.map((cardId, i) => ({
       cardId,
       actionId: SELECTION.TRASH_START + i,
       isValid: actionMask[SELECTION.TRASH_START + i] === 1,

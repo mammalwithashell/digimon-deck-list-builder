@@ -107,6 +107,9 @@ export interface PendingSelectionDto {
   prompt: string;
   /** Engine `SelectionKind` discriminant (e.g. "OwnField" / "OppField"). */
   kind?: string;
+  /** Whose zone Hand/Trash action ids index into (engine 0/1). Absent =
+   *  the selecting player's own zone. */
+  zone_owner?: number | null;
   effect_choices?: EffectChoiceDto[];
 }
 

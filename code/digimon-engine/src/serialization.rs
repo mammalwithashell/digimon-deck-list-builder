@@ -504,6 +504,11 @@ fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
         "selectingPlayer".into(),
         Value::from(py_pid(v.selecting_player)),
     );
+    // Whose zone Hand/Trash valid indices refer to (e.g. EX11-012 picks from
+    // the OPPONENT's trash). Absent/null = the selecting player's own zone.
+    if let Some(owner) = v.zone_owner {
+        m.insert("zoneOwner".into(), Value::from(py_pid(owner)));
+    }
     m.insert(
         "validIndices".into(),
         Value::Array(v.valid_action_ids.iter().map(|i| json!(*i)).collect()),

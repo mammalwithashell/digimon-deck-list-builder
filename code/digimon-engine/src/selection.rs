@@ -242,6 +242,14 @@ pub struct PendingSelection {
     /// Fired instead of `callback` when the player passes on an optional
     /// selection. Runs exactly once.
     pub on_decline: Option<DeclineCallback>,
+    /// For zone-indexed kinds (`Hand`, `Trash`), the player whose zone the
+    /// `valid_action_ids` index into. The selecting player can be prompted
+    /// to pick from the OPPONENT's trash (e.g. EX11-012 Medusamon "return 1
+    /// card from your opponent's trash") — without this the UI has no way
+    /// to know which zone's card list the indices refer to and renders the
+    /// selector against the wrong list. `None` = not zone-indexed or the
+    /// kind disambiguates by action-id range already (e.g. Security).
+    pub zone_owner: Option<PlayerId>,
 }
 
 impl std::fmt::Debug for PendingSelection {
@@ -257,6 +265,7 @@ impl std::fmt::Debug for PendingSelection {
             .field("source_card", &self.source_card)
             .field("source_permanent", &self.source_permanent)
             .field("source_kind", &self.source_kind)
+            .field("zone_owner", &self.zone_owner)
             .finish_non_exhaustive()
     }
 }
@@ -277,6 +286,8 @@ pub struct PendingSelectionView {
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
     pub source_kind: EffectSourceKind,
+    /// See `PendingSelection::zone_owner`.
+    pub zone_owner: Option<PlayerId>,
 }
 
 impl PendingSelectionView {
@@ -308,6 +319,7 @@ impl PendingSelection {
             source_card: self.source_card,
             source_permanent: self.source_permanent,
             source_kind: self.source_kind,
+            zone_owner: self.zone_owner,
         }
     }
 }
