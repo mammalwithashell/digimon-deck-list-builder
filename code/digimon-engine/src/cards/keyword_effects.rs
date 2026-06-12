@@ -405,6 +405,18 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 };
                 perm.card_sources.len() >= 2
             })
+            // Self-scope UPSTREAM: "when THIS Digimon would be deleted" —
+            // drop the candidate when the deletion subject is a different
+            // permanent, so the outer accept dialog never parks on a
+            // neighbor's deletion (judge-quiz Q24 surfaced the phantom
+            // prompt: Rapidmon X's <Armor Purge> offered on the opponent's
+            // Tentomon dying to the 0-DP rules check).
+            .replacement_condition(|ctx, subject| {
+                let Some(me) = ctx.source_permanent else {
+                    return false;
+                };
+                matches!(subject, ReplacementSubject::Permanent(h) if *h == me)
+            })
             .replacement_process(|rctx| {
                 // Self-scope guard: only fire on the carrier's own deletion.
                 // `collect_candidates` enumerates this effect for every
@@ -826,53 +838,155 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // DCGO `Partition.cs:9-23, 71-162`: fires post-trash, walks the
         // permanent's pre-removal `cardSources` (preserved via
         // `PermanentJustBeforeRemoveField`) — we mirror via the snapshot.
-        Keyword::Partition => vec![Effect::on_deletion(card)
+        // ## INTERRUPTIVE re-timing (judge-quiz Q30, 2026-06-11)
+        //
+        // The printed reminder text reads "When this Digimon ... WOULD LEAVE
+        // the battle area...", and the judge ruling (quiz Q30 feedback) is
+        // explicit: "<Partition> is an interruptive effect which activates
+        // BEFORE Chaosmon: Valdur Arm is deleted" — the carrier is still in
+        // the battle area while the partition plays (and their would-play
+        // interrupts, e.g. MedievalGallantmon's suspend-2 cost reduction)
+        // resolve, so the carrier itself is a legal target for those
+        // interrupts. The earlier post-trash `OnDeletion` model (copied from
+        // DCGO `Partition.cs`) was unfaithful to both.
+        //
+        // Shape: an OPTIONAL, NON-CANCELLING `WhenWouldLeaveBattleArea`
+        // replacement (the Fragment/Scapegoat family):
+        //   - accept dialog = the printed "you may" ("chooses to activate
+        //     <Partition>" in the quiz);
+        //   - cause filter unchanged (skips Battle | OwnEffect);
+        //   - mandatory 2-source pick from the carrier's LIVE stack
+        //     (`CountCappedZone::Material`);
+        //   - both picks are extracted from the stack FIRST (silently — the
+        //     cards are PLAYED, not trashed, so no on-trash event fires;
+        //     they only transit the trash zone), so neither is in the battle
+        //     area while the other's would-play interrupts resolve (the
+        //     judge's "played out simultaneously" observable);
+        //   - the second play is chained via `run_after_selections_drain` so
+        //     it starts only after the first play's interrupt chain settles;
+        //   - NO `cancel_leave()` — the leave proceeds with the remaining
+        //     stack (interruptive, not preventive).
+        Keyword::Partition => vec![Effect::when_would_leave_battle_area(card)
             .name("<Partition>")
-            .process(|ctx| {
-                use crate::replacement::ReplacementCause;
-
+            .optional()
+            .replacement_condition(|ctx, subject| {
+                use crate::replacement::{ReplacementCause, ReplacementSubject};
                 // Cause filter: skip Battle and same-controller (OwnEffect).
-                let cause = ctx.deletion_cause();
                 if matches!(
-                    cause,
+                    ctx.replacement_cause(),
                     Some(ReplacementCause::Battle | ReplacementCause::OwnEffect)
                 ) {
-                    return;
+                    return false;
                 }
-
-                let Some(snap) = ctx.deleted_object_snapshot().cloned() else {
-                    return;
+                // Self-scope: only the carrier's own departure.
+                let ReplacementSubject::Permanent(subject) = subject else {
+                    return false;
                 };
-                let owner = snap.former_controller;
+                if ctx.source_permanent != Some(*subject) {
+                    return false;
+                }
+                // Gate: >=2 sources under the top card, read off the LIVE
+                // stack (the carrier has not left yet).
+                ctx.game
+                    .player(subject.player)
+                    .battle_area
+                    .get(subject.index as usize)
+                    .is_some_and(|p| p.card_sources.len() >= 3)
+            })
+            .replacement_process(|rctx| {
+                use crate::replacement::ReplacementSubject;
 
-                // Gate: ≥2 selectable sources under the top.
-                if snap.source_count_just_before < 2 {
+                let me_perm = rctx.effect.source_permanent;
+                let subject = match rctx.subject {
+                    ReplacementSubject::Permanent(h) => h,
+                    _ => return,
+                };
+                if Some(subject) != me_perm {
+                    return;
+                }
+                // Re-check the gate at process time (an earlier replacement
+                // in the chain could have shrunk the stack).
+                let stack_len = rctx
+                    .effect
+                    .game
+                    .player(subject.player)
+                    .battle_area
+                    .get(subject.index as usize)
+                    .map(|p| p.card_sources.len())
+                    .unwrap_or(0);
+                if stack_len < 3 {
                     return;
                 }
 
-                // Pick 2 from the snapshot's digisources. They've already
-                // been trashed by the batched flow's trash stage, so the
-                // candidate filter checks "in this player's trash AND
-                // a member of the pre-removal source list."
-                let candidate_set: std::collections::HashSet<crate::card_source::CardHandle> =
-                    snap.digisources_just_before.iter().copied().collect();
-                let candidate_set_for_filter = candidate_set.clone();
-                ctx.select_count_capped_multi(
-                    owner,
-                    CountCappedZone::Trash,
+                let controller = subject.player;
+                rctx.effect.select_count_capped_multi(
+                    controller,
+                    CountCappedZone::Material(subject),
                     /*max=*/ 2,
                     "select 2 cards to play",
                     /*is_optional_zero=*/ false,
                     /*distinct_by=*/ None,
-                    move |_g, src| candidate_set_for_filter.contains(&src.handle()),
+                    |_g, _src| true,
                     move |ctx, picks| {
                         if picks.len() != 2 {
                             return;
                         }
-                        // Play each picked source from trash directly.
+                        // Extract BOTH picks from the live stack first —
+                        // silently (these cards are played, not trashed;
+                        // no on-trash event). With both out of the stack,
+                        // neither is on the field while the other's
+                        // would-play interrupts resolve.
+                        let mut extracted: Vec<crate::card_source::CardHandle> = Vec::new();
                         for handle in picks {
-                            let _ = ctx.play_from_trash_free_unsuspended(handle);
+                            let removed = {
+                                let Some(permanent) = ctx
+                                    .game
+                                    .player_mut(subject.player)
+                                    .battle_area
+                                    .get_mut(subject.index as usize)
+                                else {
+                                    continue;
+                                };
+                                let Some(pos) = permanent
+                                    .card_sources
+                                    .iter()
+                                    .position(|c| c.handle() == handle)
+                                else {
+                                    continue;
+                                };
+                                permanent.card_sources.remove(pos)
+                            };
+                            let owner = removed.owner;
+                            ctx.game.player_mut(owner).trash.push(removed);
+                            extracted.push(handle);
                         }
+                        // Play sequentially: the second play starts only
+                        // after the first play's interrupt chain (if any)
+                        // fully resolves.
+                        let mut iter = extracted.into_iter();
+                        if let Some(first) = iter.next() {
+                            let second = iter.next();
+                            let source_card = ctx.source_card;
+                            let player = ctx.player;
+                            let _ = ctx.play_from_trash_free_unsuspended(first);
+                            if let Some(second) = second {
+                                ctx.game.run_after_selections_drain(Box::new(
+                                    move |game| {
+                                        let mut c2 =
+                                            crate::effect_context::EffectContext::new(
+                                                game,
+                                                source_card,
+                                                None,
+                                                player,
+                                            );
+                                        let _ = c2
+                                            .play_from_trash_free_unsuspended(second);
+                                    },
+                                ));
+                            }
+                        }
+                        // No cancel_leave(): the carrier's departure
+                        // proceeds with the remaining stack.
                     },
                 );
             })

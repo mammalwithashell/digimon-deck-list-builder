@@ -4,6 +4,24 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+## EX10-020 — [Hand][Main] reduced-cost SELF-play + delete-at-EoT rider  [G-DSL-HAND-MAIN-SELF-PLAY-REDUCED]
+
+Surfaced: 2026-06-10, judge-quiz Q3 authoring. EX10-020 Puppetmon PARTIAL (the Q3-relevant clauses are complete).
+
+- **Card text:** "[Hand] [Main] If you don't have any Digimon other than Digimon with [Dark Masters] in their texts, you may play this card with the play cost reduced by 5. At turn end, delete the Digimon this effect played."
+- **DCGO:** `EX10_020.cs` OnDeclaration — temp `ChangeCostClass` −5 on `UntilCalculateFixedCostEffect`, `PlayPermanentCards(self, payCost: true)`, then an `UntilOwnerTurnEndEffects` "[End of Your Turn] delete" attached to the played permanent.
+- **Gap:** the `main_from_hand` timing exists, but every play verb plays a SELECTED card — there is no "play THIS CARD from hand, paying its cost with a delta" verb, and no rider to schedule the played permanent's EoT delete from the same activation. (`play_from_hand` + `cost_delta` exists for selected cards; the SELF-play form with pay-cost semantics is the missing piece.)
+- **Consumers:** EX10-020 Puppetmon; the Q29 EX10 Bagra family shares the idiom (EX10-031 DarkKnightmon, EX10-056 Bagramon, EX10-059 DarknessBagramon) — land the verb with that cluster.
+
+## EX10-020 — [Security] "if this card was face-up" gate  [G-DSL-SECURITY-WAS-FACE-UP-GATE]
+
+Surfaced: 2026-06-10, judge-quiz Q3 authoring. EX10-020 Puppetmon PARTIAL.
+
+- **Card text:** "[Security] If this card was face-up, you may play 1 level 5 or lower card with [Dark Masters] in its text from your hand or trash without paying the cost."
+- **DCGO:** `EX10_020.cs` SecuritySkill gated `!CardEffectCommons.GetFaceDownFromHashtable(hashtable)` — the security card must have been FACE-UP when checked (e.g. placed face-up by its own [On Deletion]).
+- **Gap:** the `on_security` trigger has no condition leaf exposing whether the checked security card was already face-up. Authoring the clause without the gate would over-fire on every normal (face-down) check — unfaithful, so the clause is OMITTED. Fix shape: thread the face-up bit from the security-check dispatch (`Player.face_up_security` membership at check time) into the trigger context + a `security_card_was_face_up: bool` condition leaf.
+- **Body once unblocked:** `select_union_zone` (hand, trash) over `{ kind: digimon, level_lte: 5, effect_text_contains: "Dark Masters" }` + `play_union_bound_free` (BT25-094 idiom).
+
 > **Substring trait predicate `trait_contains` — RESOLVED 2026-06-03**
 > (EX3-014 Dorbickmon code-review fix). The DSL had only `trait_has`, an EXACT
 > case-insensitive trait match (`x.eq_ignore_ascii_case(t)`). Printed text of the
@@ -3279,7 +3297,32 @@ Surfaced: 2026-05-29, judge-quiz first wave. BT13-088 Belphemon: Sleep Mode ship
 - **Missing DSL verb / engine primitive:** a "place card as the TOP digivolution source" (just below the face card) — DCGO `AddDigivolutionCardsTop`. The engine ships `place_as_bottom_source` (inserts at index 0) only; no top-source insertion.
 - **Resolution used:** BT13-088 uses `place_as_bottom_source` for "place [Belphemon: Rage Mode] on top of this Digimon's digivolution cards." Position is **behaviorally inert** for this card (it only needs Rage Mode IN the stack to gain the inherited effect; no mechanic reads the top-source slot) -> shipped PARTIAL, not BLOCKED. A future card whose text/behavior depends on the top-source position would need this verb (+ an `EffectContext::place_as_top_source` primitive).
 
-## EX5-060 — opponent plays from their OWN trash SUSPENDED + played-permanent-level formula  [G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED] / [G-EVENT-PLAYED-LEVEL-FORMULA]
+## EX5-060 — opponent plays from their OWN trash SUSPENDED + played-permanent-level formula  [G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED] / [G-EVENT-PLAYED-LEVEL-FORMULA] — **RESOLVED 2026-06-11 (judge-quiz Q28)**
+
+> **RESOLVED 2026-06-11.** All pieces landed with the Q28 slice: (1)
+> `play_from_trash_free` now plays for the BINDING OWNER's side (the trash
+> owner) — `play_from_trash_free_unsuspended_for(controller, …)`; (2) new
+> `suspended: true` arg (G-PLAY-ENTERS-SUSPENDED — the permanent ENTERS the
+> battle area suspended, before play-event observers, via
+> `Game::play_enters_suspended` consumed at the single commit site); (3) new
+> `event_target_level: {}` FormulaSpec leaf (reads the trigger's event card's
+> level — DCGO `LevelJustAfterPlayed`) usable inside `level_lte: { formula: … }`;
+> (4) the `suppress_on_play` rider is consult-gated on
+> `permanent_is_unaffected_by_effect` vs the recorded suppressor identity
+> (`Game::on_play_suppressor`) — a protected played Digimon still fires its
+> [On Play] (the Q28 ruling). The `event_played_by_effect` predicate from the
+> original sketch was NOT needed — the existing `event_is_effect_initiated`
+> leaf covers it (the suspend-bit work threaded `effect_initiated` through
+> `TriggerSource::EnteredField`). EX5-060 Dragomon IMPLEMENTED; pins:
+> `cards_behavioral/ex5/ex5_060.rs` (5) +
+> `judge_quiz a::q28_*` (pin + control). RELATED: BT20-059's board-wide
+> protection re-authored as the CONTINUOUS `grant_effect_immunity` form
+> (`continuous: true` + `targets:` → floating mass modifier carrying an
+> `EffectImmunityFilter` payload), closing
+> G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA — the per-tick re-scan covers
+> permanents played later in the window (the judge's "persistent effect").
+
+### Original entry (history)
 
 Surfaced: 2026-05-29, judge-quiz wave (`batch-implement-cards-rust-dsl`). EX5-060 Dragomon BLOCKED (pins Q28 alongside BT20-059 Gankoomon X).
 
@@ -3512,3 +3555,73 @@ the cost."
 - **Blocks:** BT15-037 (the play-from-security-when-trashed clause). YAML:
   `code/digimon-engine/cards/bt15/BT15-037.yaml`; per-card tests
   `code/digimon-engine/tests/cards_behavioral/bt15/bt15_037.rs`.
+
+## RESOLVED 2026-06-10 — controller-relative memory predicate  [G-DSL-OWN-MEMORY-PREDICATE]
+
+Surfaced: judge-quiz Q15 authoring (EX8-073 / BT17-016 memory-gated immunities).
+
+- **Card text shape:** "While **you** have 0 or less memory, this Digimon isn't affected by …" — the bound is on the CARD CONTROLLER's signed memory, but `memory_lte`/`memory_gte` compare the raw turn-player-perspective gauge, which cannot express a controller-relative bound for the non-turn player.
+- **Resolution:** new predicate leaves `own_memory_lte` / `own_memory_gte` — evaluate the controller's signed memory (`game.memory` when it is the controller's turn, `-game.memory` otherwise). Spec `digimon-dsl/src/predicate.rs` → compiled (`compiled.rs`) → compile copy-through → engine eval (`dsl_cards/predicate.rs`).
+- **Consumers:** EX8-073 Gallantmon (X Antibody) `[All Turns]` immunity, BT17-016 Gallantmon `[Your Turn]` immunity (both `active_when` gates on continuous auras).
+
+## RESOLVED 2026-06-10 — continuous effect-immunity aura payload  [G-DSL-AURA-EFFECT-IMMUNITY]
+
+Surfaced: judge-quiz Q15 authoring (EX8-073's stub header listed "memory aura immunity" as a gap).
+
+- **Card text shape:** "[All Turns] While …, this Digimon isn't affected by [your opponent's] [Digimon] effects" — a CONTINUOUS immunity (DCGO `CanNotAffectedClass` with a `CanUseCondition`), not the one-shot expiry-bound `grant_effect_immunity` step.
+- **Resolution:** new `kind: aura` body slot `effect_immunity: { source_kind?: digimon|tamer|option|rule, source_controller: any|opponent|own }` (omit `source_kind` for all-kind immunity). Self-aura only (`target: {}`). Lowered on the declarative-tick path to a MATERIALIZED filtered `CannotBeAffected` install (`EffectContext::add_declarative_effect_immunity_modifier`), re-evaluated each tick under `active_when` — so the immunity turns on/off with its printed gate, including MID-De-Digivolve via the per-pop re-tick in `Game::de_digivolve_core` (judge-quiz Q15).
+- **Consumers:** EX8-073 (opponent Digimon effects, `own_memory_lte: 0`), BT17-016 (all opponent effects, `your_turn` + `own_memory_lte: 0`).
+
+## Result-log invisible across an `if:`-body park  [G-DSL-IF-BODY-PARK-RESULT-LOG]  — OPEN 2026-06-10 (pitfall)
+
+Surfaced: judge-quiz Q15 authoring (BT17-016 first draft).
+
+- **Symptom:** wrapping `select_* → delete_permanent` inside an `if: { condition: any_permanent…, then: […] }` and following the `if` with `if: { condition: { effect_deleted_any_opponent_digimon: false } … }` makes the deleted-tracker read FALSE NEGATIVE: the select inside the `if` body parks, `park_outer_tail` captures the clause's remaining steps with a CLONE of the bindings taken BEFORE the deletion is recorded, so the outer `effect_deleted_*` predicate never sees the result log written by the continuation.
+- **Workaround (validated idiom, BT25-014):** keep `select_* + delete_permanent` at the TOP LEVEL of the process — an empty mandatory select is skipped silently and the result log stays on the single continuation chain. BT17-016 / BT12-016 / EX3-057 / EX8-073 all use this shape.
+- **Fix shape (if ever needed):** share the result log via the `EffectContext`/game rather than per-continuation `Bindings` clones, or merge the continuation's result log into the parked outer-tail bindings at drain time.
+
+## Q29 EX10 Bagra cluster — new gaps (2026-06-11, judge-quiz Q29 authoring)
+
+### BT10-093 / EX10-056 — "when a card is placed under this permanent" trigger  [G-DSL-ON-CARD-PLACED-UNDER-TRIGGER]
+
+- **Card text:** BT10-093 Yuu Amano "[All Turns][Once Per Turn] When a purple card is placed under this Tamer, <Draw 1> and gain 1 memory." / EX10-056 Bagramon's [All Turns] observer also fires when "effects place cards under" opponent Digimon/Tamers (that half omitted; the digivolve half is authored).
+- **DCGO:** `BT10_093.cs` `CanTriggerOnAddDigivolutionCard(permanent == self, card has Purple)`.
+- **Gap:** the DSL has `on_digivolution_card_trashed` (the REMOVAL direction) but no ADDITION-direction timing ("card placed under this/any permanent"). Fix shape: fire a `DigivolutionCardAdded` event from `push_under`/`place_as_bottom_source`/DigiXros commit sites, expose `when: on_card_placed_under` + host/event-card filters.
+- **Consumers:** BT10-093 (clause 1, OMITTED), EX10-056 (observer's placed-under half, OMITTED).
+
+### EX10-031 — would-leave triggered observer with stack access  [G-DSL-WOULD-LEAVE-TRIGGERED-OBSERVER]
+
+- **Card text:** "[All Turns][Once Per Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower card from its digivolution cards without paying the cost."
+- **DCGO:** `EX10_031.cs` plays the card from the still-intact stack in the WOULD-LEAVE window; the leave still happens (non-replacement).
+- **Gap:** DSL would-leave lowering covers REPLACEMENTS (cancel/substitute) only; a triggered observer in that window that reads the carrier's digivolution cards has no vocabulary. OMITTED.
+
+### EX10-056 — place an opponent PERMANENT as a digivolution source  [G-DSL-PLACE-PERMANENT-AS-SOURCE]
+
+- **Card text:** "[On Play][When Digivolving] You may place 1 of your opponent's Digimon as any of their other Digimon's bottom digivolution card or under any of their Tamers."
+- **Gap:** `place_as_bottom_source` moves CARDS; tucking a battle-area PERMANENT must move the whole stack with leave semantics, and the destination is OPPONENT-controlled (own-side selects only today). OMITTED.
+
+### EX10-059 — blind opponent-hand pick + cross-player tuck  [G-DSL-BLIND-OPP-HAND-PLACE]
+
+- **Card text:** "[On Play][When Digivolving] Choose 1 card in your opponent's hand without looking and place it as any of their Digimon's bottom digivolution card or under any of their Tamers."
+- **Gap:** no unrevealed/blind opponent-hand selection, and no cross-player tuck destination flow. Sentence 2 ("by placing 3 [Bagra Army] trait Digimon cards from your trash as this Digimon's TOP digivolution cards, delete 1 of their Digimon or Tamers with cards under it") additionally needs the pre-existing G-DSL-PLACE-AS-TOP-SOURCE (BT13-088). Both sentences OMITTED.
+
+### EX10-059 — gain sources' [All Turns] effects  [G-DSL-GAIN-ALL-TURNS-FROM-SOURCES]
+
+- **Card text:** "[All Turns] This Digimon gains all [All Turns] effects on all level 6 [Bagra Army] trait Digimon cards in its digivolution cards."
+- **DCGO:** source-card effect adoption (reads the source CARDS' text boxes).
+- **Gap:** no DSL/engine machinery grants a permanent the printed effects of its digivolution source cards. OMITTED.
+
+> **Pre-attach outside the recipe — RESOLVED 2026-06-11 (judge-quiz Q29).**
+> `preattach_digixros_material` previously *validated the card against the
+> DigiXros recipe slots* (`try_pre_attach_material` → `resolve_material_origin`),
+> silently dropping any pre-attach that matched no slot — which broke Yuu Amano
+> (BT10-093): its would-play hook places arbitrary purple Digimon from under
+> Tamers, none of which are `[Bagramon]`/`[DarkKnightmon]` recipe materials.
+> DCGO parity (`SelectDigiXrosClass.AddDigivolutionCardInfos`) does not
+> recipe-validate pre-attached cards. Fixed: `EffectContext::
+> preattach_digixros_material` now falls back to the new slot-independent
+> `DigiXrosTransaction::pre_attach_extra_material` (recipe_slot `None`), so
+> the card joins the transaction with its cost delta and the pre-attached
+> placement order. BT12-112 (whose pre-attach coincidentally matches its own
+> recipe) keeps the slot-resolving path. Pinned by
+> `judge_quiz::e_partition_digixros::q29_*`.

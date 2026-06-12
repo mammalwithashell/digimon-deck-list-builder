@@ -1,0 +1,138 @@
+# EX10-044 Damemon — Digimon, Lv.4, Purple, DP 3000, Cost 4.
+# Traits: Mutant / Bagra Army. Form: Champion. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.3 Purple / Cost 2 (alt_path).
+#
+# Printed card text (card image — verified):
+#   [On Play] By placing 1 [Bagra Army] trait Digimon card from your hand
+#     or trash under any of your Tamers, <Draw 1>.
+#   [On Deletion] You may play 1 [Tuwarmon] with a play cost of 7 or less
+#     from under your Tamers without paying the cost. Then, <Save>.
+#   Inherited: When effects trash this card from a [Bagra Army] trait
+#     Digimon's digivolution cards, <Draw 1>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_044.cs
+#
+# Modeling notes:
+# - [On Play]: the placement is the COST of the draw ("By placing … ,
+#   <Draw 1>") — declining the optional pick skips the draw. Zone choice →
+#   pick → own-Tamer destination → place_as_bottom_source → draw.
+# - [On Deletion]: select [Tuwarmon] (play cost ≤ 7) from under your Tamers
+#   → play it free (`play_under_tamer_source`). "Then, <Save>" — the
+#   just-deleted Damemon (top card, now in trash — the Q19/Q21 `event_card`
+#   binding) may be placed under one of your Tamers (the printed <Save>
+#   body, run as an On-Deletion step: optional Tamer pick +
+#   place_as_bottom_source from trash).
+# - Interrupt interplay (RESOLVED 2026-06-11): if the free Tuwarmon play
+#   fires a would-play cost-reduction interrupt (e.g. Yuu Amano BT10-093
+#   fielded), the wrapped tail now re-asserts the deletion trigger context
+#   so the trailing <Save>'s `event_card` still resolves
+#   (G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT, closed; pinned
+#   by ex10_044_save_survives_cost_reduction_interrupt).
+#
+# Verdict: IMPLEMENTED.
+
+card: EX10-044
+name: "Damemon"
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 3000
+traits: [Mutant, Bagra Army]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 2
+
+effects:
+  # ─── [On Play] place a [Bagra Army] card under a Tamer → Draw 1 ────────────
+  - when: on_play
+    optional: true
+    summary: "[On Play] By placing 1 [Bagra Army] trait Digimon card from your hand or trash under any of your Tamers, Draw 1"
+    process:
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you place a card?"
+      # The destination pick + placement + draw live INSIDE each zone branch:
+      # a binding made by a parked select inside an `if:` body is not visible
+      # to steps after the `if:` (G-DSL-IF-BODY-PARK-RESULT-LOG pitfall).
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: placed_pick
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Bagra Army"
+                prompt: "Select 1 [Bagra Army] trait Digimon card to place under a Tamer"
+            - select_own_permanent:
+                bind_as: dest_tamer
+                filter: { kind: tamer }
+                prompt: "Place it under one of your Tamers"
+            - place_as_bottom_source:
+                source: placed_pick
+                target: dest_tamer
+            - draw: { of: you, count: 1 }
+          else:
+            - select_trash:
+                of: you
+                bind_as: placed_pick
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Bagra Army"
+                prompt: "Select 1 [Bagra Army] trait Digimon card to place under a Tamer"
+            - select_own_permanent:
+                bind_as: dest_tamer
+                filter: { kind: tamer }
+                prompt: "Place it under one of your Tamers"
+            - place_as_bottom_source:
+                source: placed_pick
+                target: dest_tamer
+            - draw: { of: you, count: 1 }
+
+  # ─── [On Deletion] play a [Tuwarmon] from under Tamers; then <Save> ────────
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] You may play 1 [Tuwarmon] with a play cost of 7 or less from under your Tamers without paying the cost. Then, Save"
+    process:
+      - select_under_tamer_sources:
+          min: 0
+          max: 1
+          filter:
+            all_of:
+              - name_is: "Tuwarmon"
+              - play_cost_lte: 7
+          bind_as: tuwarmon_pick
+          prompt: "Play 1 [Tuwarmon] with a play cost of 7 or less from under your Tamers without paying the cost"
+      - play_under_tamer_source:
+          source_refs: tuwarmon_pick
+          cost_delta: free
+      # Then, <Save>: place the just-deleted Damemon (top card in trash)
+      # under one of your Tamers (optional — printed <Save> is a "you may").
+      - select_own_permanent:
+          bind_as: save_tamer
+          optional: true
+          filter: { kind: tamer }
+          prompt: "Save: place this card under one of your Tamers"
+      - place_as_bottom_source:
+          source: event_card
+          target: save_tamer
+
+  # ─── Inherited — on-trash-from-Bagra-stack Draw 1 ──────────────────────────
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: EX10-044
+        - host_permanent_trait_has: "Bagra Army"
+    summary: "Inherited: When effects trash this card from a [Bagra Army] trait Digimon's digivolution cards, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

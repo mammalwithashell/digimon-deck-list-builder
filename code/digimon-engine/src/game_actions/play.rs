@@ -252,6 +252,26 @@ impl Game {
             .top_card()
             .handle();
 
+        // Judge-quiz Q28: the [On Play] suppression is itself an EFFECT of
+        // the suppressor on the played Digimon. When the suppressor's
+        // identity is recorded, a played permanent protected from that
+        // effect (Gankoomon X's "none of your Digimon are affected by your
+        // opponent's Digimon's effects") still fires its [On Play]. Tick
+        // first so continuous protections materialize on the new entrant.
+        let suppressor = self.on_play_suppressor.take();
+        let suppress_on_play = if suppress_on_play {
+            match suppressor {
+                Some((sp, sk)) => {
+                    self.tick_declarative_effects();
+                    !self.permanent_is_unaffected_by_effect(entered, sp, sk)
+                }
+                // No recorded suppressor (raw-rust / legacy callers):
+                // preserve the unconditional skip.
+                None => true,
+            }
+        } else {
+            false
+        };
         self.enter_deferred_drain();
         if !suppress_on_play {
             // `fire_on_play` uses `maybe_drain_effect_queue` internally,

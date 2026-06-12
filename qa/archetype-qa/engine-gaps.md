@@ -2,8 +2,15 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-06-02
+Last updated: 2026-06-11
 Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
+
+### §Trigger context clobbered by a mid-tail cost-reduction interrupt (G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT) — RESOLVED 2026-06-11
+
+- **First seen / RESOLVED** 2026-06-11, judge-quiz Q29 cluster (EX10-044 Damemon per-card QA).
+- **Repro (pre-fix):** Damemon (EX10-044) is deleted while Yuu Amano (BT10-093, a would-play cost-reduction hook) is on the field with a [Tuwarmon] under a Tamer. Damemon's [On Deletion] plays Tuwarmon free (`play_under_tamer_source`), which fires Yuu Amano's BeforePayCost interrupt ("Use Cost reduction to reduce play cost?"). The step dispatcher saw the interrupt's pending selection after the synchronous play step and parked the REMAINING tail steps onto it (`park_pending_selection_tail` → `wrap_pending_selection_with_tail`) — but the wrap captured no trigger context, so when `drain_or_rewrap_pending_tail` later ran the tail it ran under whatever `current_trigger_context` the interrupt's resolution left behind. `event_card` (the deleted-object snapshot) no longer resolved, and the "Then, <Save>" `place_as_bottom_source { source: event_card }` silently no-op'd.
+- **Fix:** `wrap_pending_selection_with_tail` / `drain_or_rewrap_pending_tail` now thread a `tail_trigger_context` captured at WRAP time (`park_pending_selection_tail` and `drain_dsl_outer_tail_with_bindings` pass the live context); the deferred tail run sets/restores `current_trigger_context` around `run_steps_with_runtime` — the same discipline `run_tail_preserving_trigger_context` already applied to select callbacks. The two pre-existing manual set/restore sites in `selections.rs` (option-play accept/decline) pass their already-asserted context through unchanged.
+- **Pinned by:** `cards_behavioral::ex10::ex10_044_save_survives_cost_reduction_interrupt` (verified FAILING with the fix reverted; the plain-Tamer control `ex10_044_on_deletion_plays_tuwarmon_from_under_tamer_then_saves` covers the interrupt-free path).
 
 ### §DSL-loaded fixtures have empty `evo_costs` (G-DSL-FIXTURE-EVO-COSTS) — RESOLVED 2026-06-02
 
@@ -44,8 +51,27 @@ Surfaced by `openspec/changes/add-judge-quiz-faithfulness-suite` (TCG-Judges' ru
   - `tests/judge_quiz/c_declare_then_pay.rs::q27_dorbickmon_pays_zero_memory_when_returned_to_hand` — **un-ignored, PASSING (2026-06-03).** The abandoned play pays 0 memory (host never committed).
 - **Blocks (judge-quiz):** Q25, Q26, Q27 — all RESOLVED (PASS).
 
-### §No digivolve-target restriction modifier (G-DIGIVOLVE-TARGET-RESTRICTION) — ENGINE SUBSTRATE DONE 2026-05-29; DSL-install + card at authoring
+### §No digivolve-target restriction modifier (G-DIGIVOLVE-TARGET-RESTRICTION) — RESOLVED 2026-06-10 (DSL install landed; Q3 PASS)
 
+- **DSL install IMPLEMENTED 2026-06-10** (judge-quiz Q3 authoring): the aura
+  clause gained `modifier_name: <string>` — a named `modifier:` grant now
+  installs with `ModifierPayload::Name { value, base: false }` via
+  `EffectContext::add_declarative_modifier_with_payload` (both the self-aura
+  and filtered-aura paths in `lower_aura.rs`). EX10-020 Puppetmon authors the
+  `[All Turns]` as `kind: aura / target: {} / modifier: CanOnlyDigivolveInto /
+  modifier_name: "Apocalymon"`. Battle-area-sourced declarative aura ⇒
+  breeding-inactive for free (the Q3 ruling). Pins:
+  `cards_behavioral/ex10/ex10_020.rs::ex10_020_battle_area_restriction_blocks_non_apocalymon_digivolve`
+  (restriction live: Megadramon blocked, Apocalymon allowed) +
+  `judge_quiz g::q3_breeding_area_effect_inactive_allows_digivolve` (breeding:
+  Quartzmon digivolve legal). **Q3 → PASS.**
+- **Incidental engine fix landed with the same slice:** the turn-start bulk
+  unsuspend (`Player::unsuspend_all`, called from `game_phases.rs`) never
+  consulted `ModifierType::CannotUnsuspend` — only Reboot's effect-driven
+  unsuspend did — so every "[All Turns] … don't unsuspend" aura (BT12-057
+  Quartzmon) was silently inert at the main consult site. The unsuspend
+  phase now skips locked permanents (battle area + breeding). Pinned by
+  `cards_behavioral/bt12/bt12_057.rs::bt12_057_aura_blocks_other_unsuspends_at_turn_start`.
 - **Engine substrate IMPLEMENTED** 2026-05-29 (change `fix-judge-quiz-cluster-wiring-gaps`). `ModifierType::CanOnlyDigivolveInto` added (carries the allowed name in `ModifierPayload::Name { value }`); consulted by `Game::digivolve_target_blocked_by_restriction`, wired into the single central digivolve-route function `normal_digivolve_route_for_card` (feeds the digivolve action mask, the Blast counter path, and hand-digivolve execution) AND the arts-digivolve path (`game_actions.rs`). A base carrying the modifier offers NO digivolve route into a non-matching card; no-op when absent (zero blast radius for existing cards). Registered in `modifier_map.rs` (lookup + exhaustiveness + all_variants), `validator::KNOWN_MODIFIER_KEYS`, and the `payload_matches_modifier` guard. Pinned by `dna_digivolve::tests_q3_digivolve_target_restriction::{can_only_digivolve_into_blocks_nonmatching_name, no_restriction_is_a_noop}`. Full suite regression-clean.
 - **Remaining (deferred to EX10-020 authoring):** a DSL step/keyword to INSTALL `CanOnlyDigivolveInto` with a card-specific allowed name as a declarative aura sourced from the battle area (so it's breeding-inactive for free — see breeding-area note below). The allowed name is card-specific ("Apocalymon"), so this thin lowering lands with EX10-020 (cluster G — NOT first wave). The `ChangeBaseCardName` Name-payload-aura lowering is the template.
 - **First seen:** 2026-05-29, judge-quiz Q3 (probe). The `ModifierType` enum has `CannotDigivolve` (the source can't digivolve at all) but NO "can only digivolve INTO [X]" / "cannot digivolve into [X]" digivolve-TARGET restriction. EX10-020's `[All Turns] This Digimon can only digivolve into [Apocalymon]` (a self-restriction on its own digivolution targets) has no primitive.
@@ -933,7 +959,30 @@ status).
 - **Blocks (judge-quiz):** Q12 (cards BT24-040 + BT24-059 + Petrification token ALL implemented — this is now a PRIMITIVE block, not a card block).
 
 
-### §Suspend event carries no effect-initiated bit (G-SUSPEND-EFFECT-INITIATED) — OPEN
+### §Suspend event carries no effect-initiated bit (G-SUSPEND-EFFECT-INITIATED) — RESOLVED 2026-06-10
+
+- **RESOLVED 2026-06-10** (judge-quiz Q24). Implemented exactly per the fix shape
+  below: `TriggerSource::EventObserved` gained `effect_initiated: bool`;
+  `Game::suspend_with_cause` / `unsuspend_with_cause` thread it (plain
+  `suspend`/`unsuspend` = `false`); `EffectContext::suspend`/`unsuspend` pass
+  `true`; `effect_queue.rs` populates `TriggerContext.effect_initiated`. The
+  pre-existing DSL predicate `event_is_effect_initiated` now gates for real.
+  EX6-004 Kokomon authored (`cards/ex6/EX6-004.yaml` + 7 behavioral tests in
+  `tests/cards_behavioral/ex6/ex6_004.rs`, incl. the raw-suspend negative).
+  Q24 pin `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger`
+  PASSES. The same Q24 slice also fixed four adjacent divergences (see the
+  judge-quiz ledger 2026-06-10 note): `<Alliance>` keyword moved to the
+  ATTACKER side (was inverted onto the ally), Alliance suspend-then-read-DP
+  order through the canonical chokepoint + deferred-drain scope, the
+  `effective_dp` 0-floor (17-1-3-1 / DCGO), the outermost-drain rules check
+  running BEFORE parked-trigger activation, an aura re-tick at the suspend
+  chokepoint, and `<Armor Purge>`'s accept dialog subject-scoped upstream
+  (was offered on a neighbor's deletion).
+  Verification: `judge_quiz` 35 passed / 6 ignored; `combat` 209 passed +
+  5 PRE-EXISTING failures (confirmed failing at 8b027821, before this work);
+  `cards_behavioral` regression run at change time.
+
+<details><summary>Original OPEN entry (kept for history)</summary>
 
 **Surfaced 2026-05-30** (judge-quiz cluster B, EX6-004 Kokomon — BLOCKED). EX6-004's
 inherited clause is "[Your Turn][OPT] When an EFFECT suspends one of your Digimon,
@@ -951,6 +1000,8 @@ path vs `false` on the raw `Game::suspend`/attack/cost path, and populate the
 `qa/archetype-qa/dsl/zephagamon-2026-05-03-dsl-engine-gaps.md` ("Extend
 suspend/unsuspend event context with by_effect"). EX6-004 stays BLOCKED (no card
 authored — no stub) until this lands.
+
+</details>
 
 
 ### §Mass DP debuff applied as a one-time snapshot, not continuous (G-CONTINUOUS-MASS-DP-DEBUFF) — RESOLVED 2026-06-02
@@ -1207,3 +1258,13 @@ G-code below until fixed.
   event_target_kind: token]` (matching BT22-040 / EX11-060). No engine change.
   Flip `s3_kaguyamon_recursion_fires_on_familiar_token_deletion` to un-ignored
   on fix.
+
+### §`<Partition>` re-timed to the interruptive would-leave window (2026-06-11, judge-quiz Q30) — RESOLVED
+
+- The printed reminder ("...WOULD LEAVE the battle area...") and the quiz Q30 judge feedback ("<Partition> is an interruptive effect which activates before Chaosmon: Valdur Arm is deleted") both place Partition in the would-leave window with the carrier still on field; the engine's post-trash `OnDeletion` model (copied from DCGO `Partition.cs`) was unfaithful. Now an OPTIONAL, NON-CANCELLING `WhenWouldLeaveBattleArea` replacement (`src/cards/keyword_effects.rs`): cause filter unchanged; mandatory 2-pick from the LIVE stack; both picks extracted silently (played, not trashed — no on-trash event) BEFORE either plays; second play chained via the new `Game::run_after_selections_drain` so the first play's would-play interrupt chain settles first (the judge's "played out simultaneously"). DSL: `kind: partition` granters now carry `granted_keyword` so the replacement candidate walk synthesizes the keyword auto-effect (`lower_partition.rs`).
+- **Pinned by:** `judge_quiz::c::q30_partition_interruptive_suspends_both_with_cost_reduction` (full board) + `keyword_phase_d::partition::*` (re-pinned to the new contract).
+
+### §Nested parked replacement (single-park boundary) (G-NESTED-PARKED-REPLACEMENT) — OPEN 2026-06-11
+
+- **Repro:** during Q30 pin development — while one replacement's outcome is parked (interruptive Partition's 2-pick on Chaosmon), a cascading second would-leave replacement that also parks (Medieval's [All Turns] re-activation deleting Imperialdramon, whose inherited <Partition> then fires) trips the `debug_assert` at `replacement.rs` run_candidate_inner ("nested replacement park; outer outcome would be lost ... extend ParkedReplacement into a Vec-stack").
+- **Shape of fix:** per the assert's own note — make `Game::parked_replacement` a stack. Real-cards trigger: chained Partitions / leave-replacements interleaved with would-play interrupts. The Q30 pin sidesteps it by declining the trailing optional re-activation (the judge line ends there).

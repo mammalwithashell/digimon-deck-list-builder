@@ -839,12 +839,35 @@ impl<'a> EffectContext<'a> {
         self.play_from_trash_free_unsuspended_inner(card, true)
     }
 
+    /// As the `_inner` form, but the playing CONTROLLER is explicit —
+    /// "YOUR OPPONENT plays 1 ... Digimon card from THEIR trash"
+    /// (EX5-060 Dragomon, judge-quiz Q28 /
+    /// G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED): the card is located in
+    /// `controller`'s trash and enters `controller`'s battle area.
+    pub fn play_from_trash_free_unsuspended_for(
+        &mut self,
+        controller: crate::enums::PlayerId,
+        card: CardHandle,
+        suppress_on_play: bool,
+    ) -> Option<PermanentHandle> {
+        self.play_from_trash_free_unsuspended_inner_for(controller, card, suppress_on_play)
+    }
+
     pub(crate) fn play_from_trash_free_unsuspended_inner(
         &mut self,
         card: CardHandle,
         suppress_on_play: bool,
     ) -> Option<PermanentHandle> {
         let controller = self.player;
+        self.play_from_trash_free_unsuspended_inner_for(controller, card, suppress_on_play)
+    }
+
+    pub(crate) fn play_from_trash_free_unsuspended_inner_for(
+        &mut self,
+        controller: crate::enums::PlayerId,
+        card: CardHandle,
+        suppress_on_play: bool,
+    ) -> Option<PermanentHandle> {
         let trash_index = self
             .game
             .player(controller)

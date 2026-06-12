@@ -372,6 +372,17 @@ impl DigiXrosTransaction {
         Ok(slot)
     }
 
+    /// Pre-attach a material that satisfies NO recipe slot (slot-independent).
+    /// DCGO parity (`SelectDigiXrosClass.AddDigivolutionCardInfos`): would-play
+    /// hooks like Yuu Amano (BT10-093) place cards in the played card's
+    /// digivolution cards that are not DigiXros requirement materials at all —
+    /// they bypass recipe/zone validation entirely (the granting effect's own
+    /// selection filter is the only constraint) but still carry a per-card
+    /// cost delta and ride the pre-attached placement order (judge-quiz Q29).
+    pub fn pre_attach_extra_material(&mut self, origin: DigiXrosMaterialOrigin, cost_delta: i16) {
+        self.add_pre_attached_material(DigiXrosSelectedMaterial::new(origin, None, cost_delta));
+    }
+
     pub fn add_one_shot_cost_delta(&mut self, delta: i16) {
         self.one_shot_cost_delta += delta;
     }

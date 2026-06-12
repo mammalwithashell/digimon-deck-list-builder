@@ -259,7 +259,19 @@ impl Game {
                     // is the sole lifetime authority. Using `fm.expiry` here would
                     // expire the entry one turn-end early relative to the descriptor
                     // (`*NextTurn` skips live on the descriptor, not the entry).
-                    ctx.add_declarative_modifier(h, fm.modifier, fm.value, Expiry::Permanent);
+                    if let Some(imm) = fm.effect_immunity {
+                        // Continuous controlled immunity (Q28 / BT20-059):
+                        // the materialized entry carries the immunity filter.
+                        ctx.add_declarative_modifier_with_immunity(
+                            h,
+                            fm.modifier,
+                            fm.value,
+                            Expiry::Permanent,
+                            imm,
+                        );
+                    } else {
+                        ctx.add_declarative_modifier(h, fm.modifier, fm.value, Expiry::Permanent);
+                    }
                 }
             }
         }

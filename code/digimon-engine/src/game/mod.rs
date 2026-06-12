@@ -748,6 +748,18 @@ pub struct Game {
     /// where `dsl_outer_tail` is empty.
     #[doc(hidden)]
     pub(crate) draining_deferred: u32,
+    /// G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060): the next play commit enters
+    /// the battle area suspended. Set by the `play_from_trash_free`
+    /// `suspended: true` DSL arm; consumed (and cleared) at the
+    /// entry-commit site.
+    pub(crate) play_enters_suspended: bool,
+    /// Identity of the effect requesting `suppress_on_play` for the next
+    /// play — `(controller, source kind)`. The suppression is an EFFECT on
+    /// the played Digimon, so `fire_play_event_triggers` consults
+    /// `permanent_is_unaffected_by_effect` against this identity before
+    /// honoring the skip (judge-quiz Q28: Gankoomon X's protection lets the
+    /// played Ciel's [On Play] activate through Dragomon's rider).
+    pub(crate) on_play_suppressor: Option<(PlayerId, crate::enums::EffectSourceKind)>,
 
     until_condition_dirty: bool,
     until_condition_last_cycle_evaluations: usize,
@@ -2042,6 +2054,7 @@ impl Game {
         source_card: crate::card_source::CardHandle,
         source_player: PlayerId,
         expiry: Expiry,
+        effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
     ) {
         let pending_skips = crate::modifiers::pending_skips_for_install(
             expiry,
@@ -2057,6 +2070,7 @@ impl Game {
                 source_player,
                 expiry,
                 pending_skips,
+                effect_immunity,
             });
         self.tick_declarative_effects();
     }

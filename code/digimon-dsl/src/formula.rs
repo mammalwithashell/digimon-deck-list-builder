@@ -45,6 +45,18 @@ pub enum FormulaSpec {
     SourceMaterialCount {
         source_material_count: SourceDpSpec,
     },
+    /// Level of the current trigger's EVENT card (the card that caused the
+    /// observed event — e.g. the just-played Digimon for an
+    /// `on_any_digimon_played` observer). YAML form:
+    /// `{ event_target_level: {} }`. Card text shape: "you may play 1
+    /// purple Digimon card with a level LESS THAN OR EQUAL TO IT from your
+    /// trash" (EX5-060 Dragomon clause 2 — DCGO reads
+    /// `permanent.LevelJustAfterPlayed`). Evaluates to 0 when there is no
+    /// trigger context or the event card has no level (filters comparing
+    /// against it then match nothing). G-EVENT-PLAYED-LEVEL-FORMULA.
+    EventTargetLevel {
+        event_target_level: SourceDpSpec,
+    },
     /// Number of distinct colors represented by source cards beneath the effect
     /// carrier's top card. YAML form: `{ source_color_count: {} }`.
     /// This is source-relative, unlike `digivolution_color_count`, whose target

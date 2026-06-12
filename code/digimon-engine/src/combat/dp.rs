@@ -83,7 +83,12 @@ impl Game {
             .sum();
         let bonus =
             change_dp_sum + self.static_dp_aura_bonus(handle) + self.dynamic_dp_aura_bonus(handle);
-        Some(base + bonus)
+        // DP floors at 0 (rules manual 17-1-3-1 speaks of DP "becoming 0",
+        // never negative; DCGO `Permanent.DP` ends `if (DP < 0) DP = 0`).
+        // Judge-quiz Q24: an <Alliance> ally debuffed below 0 contributes
+        // +0 DP, not a negative delta. The ≤0 rules check still fires —
+        // a floored 0 is exactly the deletable state.
+        Some((base + bonus).max(0))
     }
 
     /// Sum the attacker's digivolution-stack DP adjustments that apply to

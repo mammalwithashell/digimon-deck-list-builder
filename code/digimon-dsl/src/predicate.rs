@@ -244,6 +244,17 @@ pub struct PredicateSpec {
     pub memory_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory_gte: Option<DpConstraint>,
+    /// Memory from the perspective of the predicate's CONTROLLER (the
+    /// effect's owner), unlike `memory_lte`/`memory_gte` which compare the
+    /// raw turn-player-perspective gauge. "While you have 0 or less memory"
+    /// (EX8-073 / BT17-016 immunity) is `own_memory_lte: 0` — true when the
+    /// controller's signed memory (the gauge when it is their turn, the
+    /// negated gauge otherwise) is at or below the bound.
+    /// G-DSL-OWN-MEMORY-PREDICATE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub own_memory_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub own_memory_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security_count_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -645,8 +656,9 @@ pub struct MaterialCountAggregatePredicate {
 }
 
 /// Identity filter for the `no_face_up_security_named` predicate leaf.
-/// Exactly one of `card_number_is` / `name_is` is required — the leaf
-/// counts face-up security cards of `of`'s player matching that filter.
+/// Exactly one of `card_number_is` / `name_is` / `color_is` is required —
+/// the leaf counts face-up security cards of `of`'s player matching that
+/// filter.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FaceUpSecurityNamedPredicate {
@@ -658,6 +670,11 @@ pub struct FaceUpSecurityNamedPredicate {
     /// Match a face-up security card by exact (case-insensitive) name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name_is: Option<String>,
+    /// Match a face-up security card by printed color (EX10-020 Puppetmon
+    /// "[On Deletion] If you have no GREEN face-up security cards, …" —
+    /// judge-quiz Q3 authoring).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color_is: Option<ColorSpec>,
 }
 
 fn default_face_up_security_of() -> PlayerRef {

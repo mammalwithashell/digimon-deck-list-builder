@@ -249,6 +249,8 @@ impl Game {
             pending_delayed_option_lifecycle_stack: Vec::new(),
             pending_end_turn_resume: None,
             draining_deferred: 0,
+            play_enters_suspended: false,
+            on_play_suppressor: None,
             until_condition_dirty: false,
             until_condition_last_cycle_evaluations: 0,
             until_condition_total_evaluations: 0,

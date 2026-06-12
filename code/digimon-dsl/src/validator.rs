@@ -212,13 +212,42 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                     && b.security_attack_fn.is_none()
                                     && b.grant_keyword.is_none()
                                     && b.modifier.is_none()
+                                    && b.effect_immunity.is_none()
                                 {
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
                                         path: prefix.clone(),
-                                        message: "aura requires a payload: dp_modifier, dp_modifier_fn, security_attack_fn, grant_keyword, or modifier"
+                                        message: "aura requires a payload: dp_modifier, dp_modifier_fn, security_attack_fn, grant_keyword, modifier, or effect_immunity"
                                             .to_string(),
                                     });
+                                }
+                                // `effect_immunity` only lowers on the
+                                // self-aura declarative-tick path
+                                // (G-DSL-AURA-EFFECT-IMMUNITY).
+                                if b.effect_immunity.is_some() {
+                                    let is_self_target = b
+                                        .target
+                                        .as_ref()
+                                        .map(|t| t.is_empty())
+                                        .unwrap_or(true);
+                                    if !is_self_target || b.target_player.is_some() {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{prefix}.effect_immunity"),
+                                            message:
+                                                "effect_immunity is a self-aura payload: use target: {} and no target_player"
+                                                    .to_string(),
+                                        });
+                                    }
+                                    if b.while_condition.is_some() {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{prefix}.effect_immunity"),
+                                            message:
+                                                "effect_immunity does not support while_condition; gate it with active_when (re-evaluated each tick)"
+                                                    .to_string(),
+                                        });
+                                    }
                                 }
                                 if let Some(formula) = &b.dp_modifier_fn {
                                     validate_formula(
@@ -423,6 +452,8 @@ fn validate_predicate(
         ("materials_count_gte", &pred.materials_count_gte),
         ("memory_lte", &pred.memory_lte),
         ("memory_gte", &pred.memory_gte),
+        ("own_memory_lte", &pred.own_memory_lte),
+        ("own_memory_gte", &pred.own_memory_gte),
         ("security_count_lte", &pred.security_count_lte),
         ("security_count_gte", &pred.security_count_gte),
         ("face_up_security_count_lte", &pred.face_up_security_count_lte),
@@ -1149,7 +1180,7 @@ fn validate_step_binding_scope(
             );
             declare_optional_binding(scope, &args.bind_as);
         }
-        StepSpec::SelectOwnSources(args) => {
+        StepSpec::SelectOwnSources(args) | StepSpec::SelectUnderTamerSources(args) => {
             validate_predicate_binding_scope(
                 &args.filter,
                 &format!("{prefix}.filter"),
@@ -1498,6 +1529,8 @@ fn validate_predicate_binding_scope(
         ("materials_count_gte", &pred.materials_count_gte),
         ("memory_lte", &pred.memory_lte),
         ("memory_gte", &pred.memory_gte),
+        ("own_memory_lte", &pred.own_memory_lte),
+        ("own_memory_gte", &pred.own_memory_gte),
         ("security_count_lte", &pred.security_count_lte),
         ("security_count_gte", &pred.security_count_gte),
     ] {
@@ -1723,6 +1756,7 @@ fn validate_formula_binding_scope(
         FormulaSpec::Literal(_)
         | FormulaSpec::SourceDp { .. }
         | FormulaSpec::SourceMaterialCount { .. }
+        | FormulaSpec::EventTargetLevel { .. }
         | FormulaSpec::SourceColorCount { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_))
@@ -1888,6 +1922,7 @@ fn validate_formula(
         FormulaSpec::Literal(_)
         | FormulaSpec::SourceDp { .. }
         | FormulaSpec::SourceMaterialCount { .. }
+        | FormulaSpec::EventTargetLevel { .. }
         | FormulaSpec::SourceColorCount { .. }
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::BindingValue { .. }
@@ -1941,6 +1976,7 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
         FormulaSpec::Literal(_)
         | FormulaSpec::SourceDp { .. }
         | FormulaSpec::SourceMaterialCount { .. }
+        | FormulaSpec::EventTargetLevel { .. }
         | FormulaSpec::SourceColorCount { .. }
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::BindingValue { .. }

@@ -1,0 +1,124 @@
+# BT20-036 BanchoLeomon — Digimon, Lv.6, Yellow/Black, DP 12000, Cost 12.
+# Traits: Beastkin / Boss / ACCEL. Form: Mega. Attribute: Vaccine.
+# Digivolve: Lv.5 yellow / 4 (cards.json) + DCGO alt "Lv.5 w/[ACCEL] trait: 3".
+#
+# Printed text (card image + DCGO BT20_036.cs — image too low-res for full
+# read; DCGO descriptions used for clause wording, cards.json for stats):
+#   When this card would be played, if you have a Digimon with the [ACCEL]
+#     trait, reduce the play cost by 5.  (MANDATORY — DCGO
+#     MandatorySelfPlayCostReduction.)
+#   [On Play] [When Digivolving] <De-Digivolve 2> 1 of your opponent's
+#     Digimon. Then, 1 of their Digimon gets -5000 DP until the end of
+#     their turn.
+#   [End of Your Turn] This Digimon and any of your other Digimon may DNA
+#     digivolve into a Digimon card with [Chaosmon] in its name in the hand.
+#     Then, the DNA digivolved Digimon may attack.
+#   Inherited: [Opponent's Turn][Once Per Turn] When one of your opponent's
+#     Digimon attacks, you may change the attack target to this Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT20/Yellow/BT20_036.cs
+#
+# Modeling notes:
+# - [EoT] "the DNA digivolved Digimon may attack": the windowed attack grant
+#   (`may_attack_now { windowed: true }`) on the merged permanent after the
+#   DNA digivolve resolves.
+# - Inherited redirect: the EX10-031/BT19-072 `redirect_attack_target` idiom.
+# Verdict: IMPLEMENTED.
+
+card: BT20-036
+name: "BanchoLeomon"
+kind: digimon
+level: 6
+color: [yellow, black]
+cost: 12
+dp: 12000
+traits: [Beastkin, Boss, ACCEL]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: "ACCEL"
+    cost: 3
+
+effects:
+  # ─── Mandatory would-play −5 with an [ACCEL] Digimon in play ────────────────
+  - kind: cost_reduction
+    when_playing_this: true
+    condition:
+      count_gte:
+        filter:
+          owner: you
+          zone: [battle_area]
+          kind: digimon
+          trait_has: "ACCEL"
+        n: 1
+    amount: 5
+    summary: "When this card would be played, if you have a Digimon with the [ACCEL] trait, reduce the play cost by 5"
+
+  # ─── [On Play][When Digivolving] De-Digivolve 2 → −5000 DP ─────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] De-Digivolve 2 on 1 of your opponent's Digimon. Then, 1 of their Digimon gets -5000 DP until the end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "De-Digivolve 2: select 1 of your opponent's Digimon"
+      - de_digivolve: { target: dd_target, amount: 2 }
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of their Digimon gets -5000 DP until the end of their turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -5000
+          expiry: end_of_opponents_turn
+
+  # ─── [End of Your Turn] DNA digivolve into a [Chaosmon]-named hand card ────
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card with [Chaosmon] in its name in the hand. Then, the DNA digivolved Digimon may attack"
+    process:
+      - select_own_permanent:
+          bind_as: dna_partner
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "Select your other DNA digivolution material"
+      - select_hand:
+          of: you
+          bind_as: dna_result
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Chaosmon"
+          prompt: "DNA digivolve into a Digimon card with [Chaosmon] in its name"
+      - effect_initiated_dna_digivolve:
+          target_a: source
+          target_b: dna_partner
+          from_hand: dna_result
+          cost: free
+      # After the merge, the BanchoLeomon card is a digivolution source of
+      # the merged permanent, so `source` resolves to the DNA-digivolved
+      # Digimon — the "may attack" rider's subject.
+      - may_attack_now:
+          attacker: source
+          windowed: true
+
+  # ─── Inherited — [Opp Turn][OPT] attack redirect ───────────────────────────
+  - scope: inherited
+    when: on_opponent_attack
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "Inherited: [Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon"
+    process:
+      - redirect_attack_target: { new_target: self }

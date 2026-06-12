@@ -1,0 +1,77 @@
+# EX10-059 DarknessBagramon — Digimon, Lv.7, Purple/Black, DP 16000, Cost 16.
+# Traits: Composite / Bagra Army. Form: Mega. Attribute: Virus.
+# Standard digivolve (card image): Lv.6 Purple / Cost 6 (alt_path).
+#
+# Printed card text (card image — verified):
+#   [On Play] [When Digivolving] Choose 1 card in your opponent's hand
+#     without looking and place it as any of their Digimon's bottom
+#     digivolution card or under any of their Tamers. Then, by placing 3
+#     [Bagra Army] trait Digimon cards from your trash as this Digimon's
+#     top digivolution cards, delete 1 of their Digimon or Tamers with
+#     cards under it.
+#   [All Turns] This Digimon gains all [All Turns] effects on all level 6
+#     [Bagra Army] trait Digimon cards in its digivolution cards.
+#   DigiXros -3: [Bagramon] × [DarkKnightmon]
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_059.cs
+#
+# Modeling notes:
+# - [OP][WD] sentence 1 — blind opponent-hand pick placed under an
+#   OPPONENT permanent: ***OMITTED — PARTIAL.*** Needs (a) an unrevealed /
+#   blind pick from the opponent's hand and (b) placing the picked card
+#   under an opponent-controlled stack (`place_as_bottom_source` resolves
+#   own-side destinations via `select_own_permanent`; there is no
+#   cross-player tuck flow). Logged as G-DSL-BLIND-OPP-HAND-PLACE in
+#   qa/dsl-vocab-gaps.md. NOT stubbed.
+# - [OP][WD] sentence 2 — "by placing 3 [Bagra Army] Digimon cards from
+#   your trash as this Digimon's TOP digivolution cards, delete 1 of their
+#   Digimon or Tamers with cards under it": ***OMITTED — PARTIAL.*** The
+#   cost needs the place-as-TOP-source verb — the pre-existing
+#   G-DSL-PLACE-AS-TOP-SOURCE gap (BT13-088); `place_as_bottom_source` is
+#   the wrong end of the stack and would corrupt Q29-style ordering
+#   semantics. NOT approximated.
+# - [All Turns] effect mirroring ("gains all [All Turns] effects on all
+#   level 6 [Bagra Army] cards in its digivolution cards"): ***OMITTED —
+#   PARTIAL.*** No DSL/engine machinery grants a permanent the text-box
+#   effects of its digivolution source CARDS (DCGO: source-card effect
+#   adoption). Logged as G-DSL-GAIN-ALL-TURNS-FROM-SOURCES. NOT stubbed.
+# - DigiXros -3 [Bagramon]×[DarkKnightmon]: two named slots, hand-zone
+#   materials, each used material reducing the play cost by 3 — the
+#   judge-quiz Q29 line (16 −3 −3 = 10 before Yuu Amano's −2s).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+# | Card-text element                                        | Status         |
+# |-----------------------------------------------------------|---------------|
+# | Std digivolve Lv.6 Purple/6 + DigiXros -3 alt paths       | IMPLEMENTED   |
+# | [OP][WD] blind hand pick → tuck under opponent stack      | OMITTED (G-DSL-BLIND-OPP-HAND-PLACE) |
+# | [OP][WD] place-3-as-top-sources cost → delete-with-under  | OMITTED (G-DSL-PLACE-AS-TOP-SOURCE) |
+# | [All Turns] gain sources' [All Turns] effects             | OMITTED (G-DSL-GAIN-ALL-TURNS-FROM-SOURCES) |
+# Verdict: PARTIAL (Q29-relevant identity + DigiXros paths are faithful;
+# both text clauses blocked on missing vocabulary).
+
+card: EX10-059
+name: "DarknessBagramon"
+kind: digimon
+level: 7
+color: [purple, black]
+cost: 16
+dp: 16000
+traits: [Composite, Bagra Army]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 6
+  - kind: digixros
+    materials:
+      - filter: { name_is: "Bagramon" }
+        zones: [hand]
+        cost_delta: -3
+      - filter: { name_is: "DarkKnightmon" }
+        zones: [hand]
+        cost_delta: -3
+    cost: 16
+
+effects: []

@@ -1,0 +1,139 @@
+# EX10-020 Puppetmon — Digimon, Lv.6, Green, DP 11000, Cost 11.
+# Traits: Puppet / Dark Masters. Attribute: Virus.
+# Standard digivolve (card image): Lv.5 Green / Cost 3 — authored as an
+# alt_path below because cards.json's EX10-020 entry is MISSING evo_costs
+# (the printed route would otherwise not exist for DSL-loaded fixtures).
+#
+# Printed card text (card image, judge-quiz PDF p.5 + cards.json — agree):
+#
+#   [Hand] [Main] If you don't have any Digimon other than Digimon with
+#     [Dark Masters] in their texts, you may play this card with the play
+#     cost reduced by 5. At turn end, delete the Digimon this effect played.
+#   [On Play] [When Attacking] Return 1 of your opponent's suspended Digimon
+#     to the bottom of the deck.
+#   [All Turns] This Digimon can only digivolve into [Apocalymon].
+#   [On Deletion] If you have no green face-up security cards, place this
+#     Digimon face up as the bottom security card.
+#
+#   Inherited (Security Effect): [Security] If this card was face-up, you may
+#     play 1 level 5 or lower card with [Dark Masters] in its text from your
+#     hand or trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Green/EX10_020.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Clause 1 — [Hand][Main] (OnDeclaration ActivateClass): ***OMITTED — PARTIAL.***
+#   DCGO: CanUse = in hand + zero own battle-area Digimon WITHOUT "Dark
+#   Masters" in their text + CanPlayAsNewPermanent. Body: temp ChangeCostClass
+#   −5, PlayPermanentCards(self, payCost: true), then attach an
+#   UntilOwnerTurnEnd "[End of Your Turn] Delete this Digimon" to the played
+#   permanent. The DSL has NO "play THIS CARD from hand at a reduced cost"
+#   verb (every play verb plays a SELECTED card and none threads the
+#   pay-with-delta + delete-at-EoT rider). Logged as
+#   G-DSL-HAND-MAIN-SELF-PLAY-REDUCED in qa/dsl-vocab-gaps.md — the Q29 EX10
+#   Bagra cards (EX10-031/-056/-059) share the idiom, so the verb should land
+#   with that cluster. NOT stubbed (no-approximations).
+#
+# Clause 2 — [On Play][When Attacking] (shared ActivateClass): mandatory
+#   select 1 OPPONENT battle-area SUSPENDED Digimon → Mode.PutLibraryBottom.
+#   No-op when no suspended target exists (HasMatchConditionPermanent gate).
+#
+# Clause 3 — [All Turns] (EffectTiming.None, CanNotDigivolveStaticSelfEffect,
+#   cardCondition `!EqualsCardName("Apocalymon")`, Condition
+#   `IsExistOnBattleArea(card)`): SELF digivolve-target restriction → self-aura
+#   installing `CanOnlyDigivolveInto` with Name payload "Apocalymon"
+#   (`modifier_name` — judge-quiz Q3 DSL install of
+#   G-DIGIVOLVE-TARGET-RESTRICTION). Declarative auras tick from the BATTLE
+#   AREA only, so the restriction is automatically INACTIVE in the breeding
+#   area — the Q3 ruling falls out for free (DCGO Condition agrees).
+#
+# Clause 4 — [On Deletion] (OnDestroyedAnyone): body gates on
+#   !HasMatchConditionOwnersSecurity(FaceUpGreen) then
+#   AddSecurityCard(card, bottom, face up). The "no green face-up security"
+#   gate is expressed as the clause condition via the (widened)
+#   `no_face_up_security_named { color_is: green }` leaf — outcome-equivalent
+#   to DCGO's in-body gate. Source: `event_card` (the deleted carrier's top
+#   card in trash — the Q19/Q21 deleted-self binding) → place_on_security
+#   bottom, face_up.
+#
+# Clause 5 — [Security] (SecuritySkill, isOptional: true): ***OMITTED —
+#   PARTIAL.*** "If this card was face-up" = DCGO
+#   `!GetFaceDownFromHashtable(hashtable)` — fires only when the security
+#   card was ALREADY face-up when checked (e.g. placed face-up by Clause 4).
+#   The DSL `on_security` trigger has no "was checked face-up" condition
+#   leaf, and authoring the clause WITHOUT the gate would over-fire on every
+#   normal (face-down) security check — unfaithful. Logged as
+#   G-DSL-SECURITY-WAS-FACE-UP-GATE in qa/dsl-vocab-gaps.md. Body once
+#   unblocked: `select_union_zone` (hand, trash) over
+#   `{ kind: digimon, level_lte: 5, effect_text_contains: "Dark Masters" }`
+#   + `play_union_bound_free` (BT25-094 idiom).
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                          | Status        |
+# |------------------------------------------------------------|---------------|
+# | Standard digivolve Lv.5 Green / Cost 3 (as alt_path)       | IMPLEMENTED   |
+# | [Hand][Main] reduced-cost self-play + EoT delete           | OMITTED (G-DSL-HAND-MAIN-SELF-PLAY-REDUCED) |
+# | [On Play][When Attacking] bottom-deck a suspended opp      | IMPLEMENTED   |
+# | [All Turns] can only digivolve into [Apocalymon]           | IMPLEMENTED   |
+# | [On Deletion] no-green-face-up ⇒ self to bottom security   | IMPLEMENTED   |
+# | [Security] play Lv≤5 [Dark Masters]-text from hand/trash   | OMITTED (G-DSL-SECURITY-WAS-FACE-UP-GATE) |
+#
+# Verdict: PARTIAL (clauses 1 + 5 blocked on missing DSL vocabulary; the
+# Q3-relevant clauses are complete).
+
+card: EX10-020
+name: "Puppetmon"
+kind: digimon
+level: 6
+color: [green]
+cost: 11
+dp: 11000
+traits: [Puppet, Dark Masters]
+attribute: Virus
+
+# Standard printed digivolve route (cards.json evo_costs MISSING for this
+# card — authored here so the route exists; card image: Lv.5 / 3).
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 3
+
+effects:
+  # ─── Clause 2 — [On Play][When Attacking] bottom-deck a suspended opp ──────
+  - when: [on_play, when_attacking]
+    summary: "[On Play][When Attacking] Return 1 of your opponent's suspended Digimon to the bottom of the deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: ret_target
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck"
+      - return_to_deck:
+          target: ret_target
+          position: bottom
+
+  # ─── Clause 3 — [All Turns] can only digivolve into [Apocalymon] ───────────
+  # Self-aura installing the digivolve-target restriction with a Name payload
+  # (judge-quiz Q3). Battle-area-sourced declarative aura ⇒ inactive in the
+  # breeding area for free.
+  - kind: aura
+    target: {}
+    modifier: CanOnlyDigivolveInto
+    modifier_name: "Apocalymon"
+    summary: "[All Turns] This Digimon can only digivolve into [Apocalymon]"
+
+  # ─── Clause 4 — [On Deletion] self to bottom security (no green face-up) ──
+  - when: on_deletion
+    summary: "[On Deletion] If you have no green face-up security cards, place this Digimon face up as the bottom security card"
+    condition:
+      no_face_up_security_named: { color_is: green }
+    process:
+      - place_on_security:
+          of: you
+          source: event_card
+          position: bottom
+          face_up: true

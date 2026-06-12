@@ -492,6 +492,9 @@ fn compile_formula(
         FormulaSpec::SourceMaterialCount {
             source_material_count: _,
         } => CompiledFormula::SourceMaterialCount,
+        FormulaSpec::EventTargetLevel {
+            event_target_level: _,
+        } => CompiledFormula::EventTargetLevel,
         FormulaSpec::SourceColorCount {
             source_color_count: _,
         } => CompiledFormula::SourceColorCount,
@@ -715,6 +718,12 @@ fn compile_predicate(
             .memory_gte
             .as_ref()
             .map(|d| compile_dp_constraint(d, &format!("{prefix}.memory_gte"), card_id, errors)),
+        own_memory_lte: p.own_memory_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.own_memory_lte"), card_id, errors)
+        }),
+        own_memory_gte: p.own_memory_gte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.own_memory_gte"), card_id, errors)
+        }),
         security_count_lte: p.security_count_lte.as_ref().map(|d| {
             compile_dp_constraint(d, &format!("{prefix}.security_count_lte"), card_id, errors)
         }),
@@ -754,17 +763,27 @@ fn compile_predicate(
             )
         }),
         no_face_up_security_named: p.no_face_up_security_named.as_ref().map(|f| {
-            if f.card_number_is.is_some() == f.name_is.is_some() {
+            let set_count = [
+                f.card_number_is.is_some(),
+                f.name_is.is_some(),
+                f.color_is.is_some(),
+            ]
+            .iter()
+            .filter(|b| **b)
+            .count();
+            if set_count != 1 {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.no_face_up_security_named"),
-                    message: "exactly one of `card_number_is` / `name_is` must be set".to_string(),
+                    message: "exactly one of `card_number_is` / `name_is` / `color_is` must be set"
+                        .to_string(),
                 });
             }
             CompiledFaceUpSecurityNamed {
                 of: compile_player_ref(f.of),
                 card_number_is: f.card_number_is.clone(),
                 name_is: f.name_is.clone(),
+                color_is: f.color_is.map(compile_color),
             }
         }),
         binding_count_eq: p
@@ -1475,11 +1494,16 @@ fn compile_declarative(
             }),
             modifier: a.modifier,
             modifier_value: a.modifier_value,
+            modifier_name: a.modifier_name,
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
             applies_to_opponent_security_dp: a.applies_to_opponent_security_dp.unwrap_or(false),
             applies_to_own_security_dp: a.applies_to_own_security_dp.unwrap_or(false),
+            effect_immunity: a.effect_immunity.map(|imm| CompiledAuraEffectImmunity {
+                source_kind: imm.source_kind.map(compile_effect_source_kind),
+                source_controller: compile_effect_controller(imm.source_controller),
+            }),
             summary,
             summary_key,
         },
@@ -2123,6 +2147,7 @@ fn compile_step(
             of: compile_player_ref(a.of),
             trash_index: compile_binding_ref(&a.hand_index),
             suppress_on_play: a.suppress_on_play,
+            suspended: a.suspended,
         },
         S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
             binding: a.binding.clone(),
@@ -2408,12 +2433,41 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
                 .collect(),
         },
-        S::GrantEffectImmunity(a) => CompiledStep::GrantEffectImmunity {
-            target: compile_binding_ref(&a.target),
-            source_kind: compile_effect_source_kind(a.source_kind),
-            source_controller: compile_effect_controller(a.source_controller),
-            expiry: a.expiry.clone(),
-        },
+        S::GrantEffectImmunity(a) => {
+            // Continuous form requires `targets` and no `target`; the
+            // per-permanent form requires `target` (Q28 / BT20-059).
+            if a.continuous {
+                if a.targets.is_none() || a.target.is_some() {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.grant_effect_immunity"),
+                        message: "continuous: true requires `targets` and no `target`"
+                            .to_string(),
+                    });
+                }
+            } else if a.target.is_none() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.grant_effect_immunity"),
+                    message: "`target` is required unless `continuous: true`".to_string(),
+                });
+            }
+            CompiledStep::GrantEffectImmunity {
+                target: a.target.as_ref().map(compile_binding_ref),
+                source_kind: compile_effect_source_kind(a.source_kind),
+                source_controller: compile_effect_controller(a.source_controller),
+                expiry: a.expiry.clone(),
+                continuous: a.continuous,
+                targets: a.targets.as_ref().map(|p| {
+                    compile_predicate(
+                        p,
+                        &format!("{prefix}.grant_effect_immunity.targets"),
+                        card_id,
+                        errors,
+                    )
+                }),
+            }
+        }
         S::GrantNarrowOpponentEffectProtection(a) => {
             CompiledStep::GrantNarrowOpponentEffectProtection {
                 target: compile_binding_ref(&a.target),

@@ -201,12 +201,24 @@ impl Game {
     /// Relocated from `EffectContext::de_digivolve` so the rules machinery
     /// lives in Tier 2 (placement rule §engine-effect-context-layering). The
     /// facade `de_digivolve` is now a thin `can_affect_permanent` guard that
-    /// delegates here. Behavior is byte-identical to the pre-refactor method.
+    /// delegates here.
+    ///
+    /// `immunity_recheck` — De-Digivolve trashes one card at a time, and a
+    /// newly-exposed top card's continuous text applies IMMEDIATELY between
+    /// trashes (judge-quiz Q15: LordKnightmon (X Antibody)'s repeated
+    /// `<De-Digivolve 1>` is halted once Gallantmon (X Antibody) EX8-073
+    /// becomes the top card and its [All Turns] opponent-Digimon-effect
+    /// immunity turns on). When `Some((effect_controller, source_kind))`,
+    /// each pop is followed by a declarative re-tick (so the new top card's
+    /// continuous effects materialize) and the next pop is gated on
+    /// `permanent_is_unaffected_by_effect`. The `WhenWouldBeDeDigivolved`
+    /// replacement window still fires once at entry (Phase 7 Task 4).
     pub(crate) fn de_digivolve_core(
         &mut self,
         target: PermanentHandle,
         stop_at_level: Option<u8>,
         amount: Option<u8>,
+        immunity_recheck: Option<(crate::enums::PlayerId, crate::enums::EffectSourceKind)>,
     ) -> u8 {
         use crate::enums::EffectTiming;
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
@@ -300,6 +312,28 @@ impl Game {
             if exposed {
                 self.delete_permanent_with_effects(target);
                 break;
+            }
+
+            // De-Digivolve trashes ONE card at a time: the newly-exposed top
+            // card's continuous text is live before the next trash.
+            // Re-materialize declarative effects and re-check effect
+            // immunity — if the exposed card is now unaffected by this
+            // effect (e.g. EX8-073's [All Turns] opponent-Digimon-effect
+            // immunity, judge-quiz Q15), the remaining pops are halted. The
+            // re-tick also keeps the registry fresh for any FOLLOW-UP
+            // `de_digivolve` call in the same resolving process (repeated
+            // `<De-Digivolve 1>` instances, BT19-073).
+            if let Some((effect_controller, source_kind)) = immunity_recheck {
+                self.tick_declarative_effects();
+                if popped < max
+                    && self.permanent_is_unaffected_by_effect(
+                        target,
+                        effect_controller,
+                        source_kind,
+                    )
+                {
+                    break;
+                }
             }
         }
 

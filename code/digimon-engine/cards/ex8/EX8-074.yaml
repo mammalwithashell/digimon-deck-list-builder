@@ -26,13 +26,19 @@ alt_paths:
 effects:
   # ─── Clause 1: BeforePayCost — suspend 2 Digimon → -4 play cost ─────────────
   #
+  # DCGO `EX8_074.cs` CanSelectPermanentCondition checks
+  # `IsPermanentExistsOnBattleAreaDigimon` — ANY player's battle area, not
+  # only the controller's (judge-quiz Q30 suspends the OPPONENT's
+  # Imperialdramon: Dragon Mode with this clause). The earlier own-side
+  # restriction was unfaithful.
   - kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
+    optional: true
     condition:
       count_gte:
         filter:
-          owner: you
+          owner: any
           zone: [battle_area]
           kind: digimon
           is_unsuspended: true
@@ -40,7 +46,7 @@ effects:
     amount: 4
     summary: "Suspend 2 Digimon, -4 play cost"
     pay_cost:
-      - select_own_permanent:
+      - select_any_permanent:
           bind_as: suspend_1
           filter:
             all_of:
@@ -48,7 +54,7 @@ effects:
               - is_unsuspended: true
           prompt: "Suspend 1 Digimon (cost 1/2)"
       - suspend: { target: suspend_1 }
-      - select_own_permanent:
+      - select_any_permanent:
           bind_as: suspend_2
           filter:
             all_of:

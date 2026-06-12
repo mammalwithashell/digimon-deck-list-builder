@@ -1,0 +1,103 @@
+# BT16-077 Dinobeemon — Digimon, Lv.5, Purple/Red, DP 8000, Cost 8.
+# Traits: Mutant. Form: Ultimate. Attribute: Free.
+# Digivolve (cards.json): Lv.4 purple / 4.
+# DNA Digivolution (DCGO jogress condition): purple Lv.4 + red Lv.4 / 0.
+#
+# Printed text (cards.json + DCGO BT16_077.cs descriptions; image low-res):
+#   <Raid> (When this Digimon attacks, you may switch the target of attack
+#     to 1 of your opponent's unsuspended Digimon with the highest DP.)
+#   <Partition (Purple Lv.4 & Red Lv.4)> (When this Digimon with each of
+#     the specified digivolution cards would leave the battle area other
+#     than by your own effects or by battle, you may play 1 each of the
+#     specified cards without paying the costs.)  — on BOTH the main text
+#     and the inherited box (judge-quiz Q30 uses the inherited copy under
+#     Imperialdramon: Dragon Mode).
+#   [When Digivolving] If DNA digivolving, you may play 1 level 5 or lower
+#     Digimon with the [Free] trait from your trash without paying the
+#     cost. Then, 1 of your Digimon may gain <Rush> for the turn and attack
+#     the player.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT16/Purple/BT16_077.cs
+#
+# Modeling notes:
+# - "[Free] trait" is the printed ATTRIBUTE on these cards (cards.json
+#   attribute_eng) — `attribute_is: Free`.
+# - Per-slot Partition source specs are accepted by the DSL but slot
+#   enforcement is engine-deferred (see lower_partition.rs); the keyword's
+#   generic source picks govern.
+# Verdict: IMPLEMENTED.
+
+card: BT16-077
+name: "Dinobeemon"
+kind: digimon
+level: 5
+color: [purple, red]
+cost: 8
+dp: 8000
+traits: [Mutant]
+form: Ultimate
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 4, color_is: purple }
+      - { level_eq: 4, color_is: red }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  # ─── <Raid> ─────────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+
+  # ─── <Partition (Purple Lv.4 & Red Lv.4)> — main text ──────────────────────
+  - kind: partition
+    summary: "<Partition (Purple Lv.4 & Red Lv.4)>"
+    sources:
+      - { level_eq: 4, color_is: purple }
+      - { level_eq: 4, color_is: red }
+    exclude_cause: [own_effect, battle]
+
+  # ─── <Partition (Purple Lv.4 & Red Lv.4)> — inherited ──────────────────────
+  - kind: partition
+    scope: inherited
+    summary: "Inherited: <Partition (Purple Lv.4 & Red Lv.4)>"
+    sources:
+      - { level_eq: 4, color_is: purple }
+      - { level_eq: 4, color_is: red }
+    exclude_cause: [own_effect, battle]
+
+  # ─── [When Digivolving] (DNA only) trash play + Rush window ────────────────
+  - when: when_digivolving
+    optional: true
+    condition: { dna_origin: true }
+    summary: "[When Digivolving] If DNA digivolving, you may play 1 level 5 or lower Digimon with the [Free] trait from your trash without paying the cost. Then, 1 of your Digimon may gain Rush for the turn and attack the player"
+    process:
+      - select_trash:
+          of: you
+          bind_as: free_play
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - attribute_is: Free
+          prompt: "Play 1 level 5 or lower Digimon with the [Free] trait from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: free_play }
+      - select_own_permanent:
+          bind_as: rusher
+          optional: true
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon may gain Rush for the turn and attack the player"
+      - grant_keyword:
+          target: rusher
+          keyword: Rush
+          expiry: end_of_turn
+      - may_attack_now:
+          attacker: rusher
+          targets: player
+          windowed: true

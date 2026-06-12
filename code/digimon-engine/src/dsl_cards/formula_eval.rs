@@ -158,6 +158,19 @@ pub fn evaluate_with_bindings(
             .and_then(|handle| target_permanent(ctx, handle))
             .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
             .unwrap_or(0),
+        // Level of the trigger's event card (the just-played Digimon for
+        // on_any_digimon_played). 0 when no trigger context / no level —
+        // comparisons against it then match nothing.
+        // G-EVENT-PLAYED-LEVEL-FORMULA (EX5-060, Q28).
+        CompiledFormula::EventTargetLevel => ctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_card)
+            .and_then(|h| ctx.game.card_data_for_handle(h))
+            .and_then(|cd| cd.level)
+            .map(|l| l as i32)
+            .unwrap_or(0),
         CompiledFormula::SourceColorCount => ctx
             .source_permanent
             .and_then(|handle| target_permanent(ctx, handle))
@@ -316,6 +329,16 @@ fn evaluate_read_with_raw_and_bindings(
             .source_permanent
             .and_then(|handle| target_permanent_read(ctx, handle))
             .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
+            .unwrap_or(0),
+        // See the mutable-ctx arm — G-EVENT-PLAYED-LEVEL-FORMULA.
+        CompiledFormula::EventTargetLevel => ctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_card)
+            .and_then(|h| ctx.game.card_data_for_handle(h))
+            .and_then(|cd| cd.level)
+            .map(|l| l as i32)
             .unwrap_or(0),
         CompiledFormula::SourceColorCount => ctx
             .source_permanent

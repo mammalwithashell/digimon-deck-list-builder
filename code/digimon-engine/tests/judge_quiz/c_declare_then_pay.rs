@@ -328,10 +328,246 @@ fn q27_dorbickmon_pays_zero_memory_when_returned_to_hand() {
     );
 }
 
-/// Q30 (also cluster E) — MedievalGallantmon (EX8-074) `<Partition>` is
-/// interruptive; cost-reduction lets it suspend Imperialdramon: Dragon Mode
-/// (EX3-063) + Chaosmon: Valdur Arm (BT20-037) (BanchoLeomon BT20-036 not yet in
-/// play). Judge: suspend both with cost reduction.
+/// Q30 (also cluster E) — interruptive `<Partition>` + MedievalGallantmon's
+/// would-play cost reduction.
+///
+/// Board (quiz PDF p67): Player A has an UNSUSPENDED Chaosmon: Valdur Arm
+/// (BT20-037) with BanchoLeomon (BT20-036) and MedievalGallantmon (EX8-074)
+/// in its digivolution cards, plus 1 random SUSPENDED Digimon. Player B has
+/// two Dinobeemon (BT16-077); one carries Flamedramon (EX3-008). B ends
+/// their turn → Flamedramon's inherited [End of Your Turn] DNA digivolves
+/// both Dinobeemon into EX3-063 Imperialdramon: Dragon Mode. Its [When
+/// Digivolving] (DNA): A chooses 1 of their Digimon (the random one) — the
+/// rest (Chaosmon) get deleted, triggering <Partition>, which A activates.
+///
+/// Judge feedback (PDF p69): <Partition> is INTERRUPTIVE — it activates
+/// BEFORE Chaosmon is deleted (and before <Blitz> is declared). Both
+/// BanchoLeomon and MedievalGallantmon are played out simultaneously;
+/// Medieval's interruptive "When this card would be played, by suspending 2
+/// Digimon, reduce the play cost by 4" is usable even on a free play.
+/// BanchoLeomon isn't in the battle area yet, and Chaosmon IS still in the
+/// battle area — so the only legal suspend targets are **Imperialdramon:
+/// Dragon Mode & Chaosmon: Valdur Arm** (the suspended random Digimon is
+/// not a legal target). Answer: YES — suspend those two.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT20-037 (Chaosmon: Valdur Arm), BT20-036 (BanchoLeomon), EX3-063 (Imperialdramon: Dragon Mode), BT16-077 (Dinobeemon), EX3-008 (Flamedramon). EX8-074 implemented."]
-fn q30_partition_interruptive_suspends_both_with_cost_reduction() {}
+fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
+    use digimon_engine::action::space::encode_attack;
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT20-037")
+        .expect("BT20-037 Chaosmon: Valdur Arm loads")
+        .dsl_card("BT20-036")
+        .expect("BT20-036 BanchoLeomon loads")
+        .dsl_card("EX8-074")
+        .expect("EX8-074 MedievalGallantmon loads")
+        .dsl_card("EX3-063")
+        .expect("EX3-063 Imperialdramon: Dragon Mode loads")
+        .dsl_card("BT16-077")
+        .expect("BT16-077 Dinobeemon loads")
+        .dsl_card("EX3-008")
+        .expect("EX3-008 Flamedramon loads")
+        .add_card({
+            let mut c = make_test_card("Q30-RND", "Random Digimon");
+            c.card_kind = CardKind::Digimon;
+            c.level = Some(4);
+            c.dp = Some(4000);
+            c
+        })
+        .add_card({
+            let mut c = make_test_card("Q30-FILL", "Filler");
+            c.card_kind = CardKind::Digimon;
+            c
+        })
+        .deck(0, &["Q30-FILL"; 5])
+        .deck(1, &["Q30-FILL"; 5])
+        .hand(1, &["EX3-063"])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    // Player B's turn (their end-of-turn fires Flamedramon's inherited DNA).
+    r.set_first_player(1);
+
+    // Player A: Chaosmon stack (bottom→top: BanchoLeomon / Medieval / top),
+    // unsuspended, + 1 random suspended Digimon.
+    let chaosmon = r.place_stack(0, &["BT20-036", "EX8-074", "BT20-037"]);
+    let random = r.place_on_field(0, "Q30-RND", Some(0));
+    r.game.players[0].battle_area[random.index as usize].is_suspended = true;
+
+    // Player B: two Dinobeemon; the first carries Flamedramon.
+    let dino_a = r.place_on_field(1, "BT16-077", Some(0));
+    r.push_source(dino_a, "EX3-008");
+    let _dino_b = r.place_on_field(1, "BT16-077", Some(0));
+
+    // ── B ends their turn → Flamedramon inherited [EoT] DNA digivolve ──────
+    r.end_turn();
+
+    // Drive: Flamedramon's optional [EoT] accept → partner pick (the other
+    // Dinobeemon) → hand pick (EX3-063). Generic non-PASS walk until the
+    // keep-pick surfaces for Player A.
+    let pass = digimon_engine::action::space::PASS;
+    for _ in 0..6 {
+        let Some(view) = r.pending_selection_view() else { break };
+        if view.selecting_player == 0 {
+            break; // Imperialdramon's [WD] keep-pick (A chooses)
+        }
+        let action = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != pass)
+            .unwrap_or(pass);
+        r.execute_action(view.selecting_player, action)
+            .expect("drive Flamedramon EoT DNA digivolve");
+    }
+
+    // Imperialdramon: Dragon Mode must be on B's field (DNA digivolved).
+    let imperial = r
+        .game
+        .players[1]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "EX3-063")
+        .map(|i| digimon_engine::permanent::PermanentHandle { player: 1, index: i as u8 })
+        .expect("Imperialdramon: Dragon Mode DNA digivolved onto B's field");
+    assert!(
+        !r.game.players[1].battle_area[imperial.index as usize].is_suspended,
+        "DNA digivolution enters unsuspended"
+    );
+
+    // ── A's keep-pick: choose the random Digimon (Chaosmon gets deleted) ───
+    let view = r
+        .pending_selection_view()
+        .expect("Imperialdramon [WD]: A's keep-pick must surface");
+    assert_eq!(view.selecting_player, 0, "the OPPONENT (A) makes the keep-pick");
+    let keep_random = encode_attack(random.player as u16, random.index as u16);
+    assert!(
+        view.valid_action_ids.contains(&keep_random),
+        "the random Digimon must be a keep candidate"
+    );
+    r.execute_action(0, keep_random).expect("A keeps the random Digimon");
+
+    // ── <Partition> interrupts Chaosmon's deletion (carrier still on field) ─
+    let view = r
+        .pending_selection_view()
+        .expect("Partition accept dialog must surface");
+    assert_eq!(view.selecting_player, 0);
+    assert!(view.is_optional, "Partition activation is the player's choice");
+    assert!(
+        r.game
+            .players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "BT20-037"),
+        "judge Q30: <Partition> is interruptive — Chaosmon is STILL in the \
+         battle area when it activates"
+    );
+    let accept = view.valid_action_ids[0];
+    r.execute_action(0, accept).expect("A activates Partition");
+
+    // 2-pick from the live stack: pick MedievalGallantmon (source index 1,
+    // the higher action id) FIRST so its would-play interrupt is the next
+    // flow, then BanchoLeomon.
+    for want_max in [true, false] {
+        let view = r
+            .pending_selection_view()
+            .expect("Partition source pick must surface");
+        let mut acts: Vec<u16> = view.valid_action_ids.clone();
+        acts.sort_unstable();
+        let pick = if want_max { *acts.last().unwrap() } else { acts[0] };
+        r.execute_action(0, pick).expect("pick a Partition source");
+    }
+
+    // ── MedievalGallantmon's interruptive suspend-2 cost reduction ─────────
+    // Accept dialog for the would-play cost reduction.
+    let view = r
+        .pending_selection_view()
+        .expect("Medieval's would-play cost-reduction dialog must surface");
+    assert_eq!(view.selecting_player, 0);
+    r.execute_action(0, view.valid_action_ids[0])
+        .expect("A uses Medieval's cost reduction");
+
+    // THE JUDGE PIN: the legal suspend set is EXACTLY {Imperialdramon:
+    // Dragon Mode, Chaosmon: Valdur Arm} — BanchoLeomon is not in the
+    // battle area yet, and the random Digimon is already suspended.
+    let want_imperial = encode_attack(imperial.player as u16, imperial.index as u16);
+    let want_chaosmon = encode_attack(chaosmon.player as u16, chaosmon.index as u16);
+    for pick_no in 1..=2 {
+        let view = r
+            .pending_selection_view()
+            .expect("suspend pick must surface");
+        let mut got: Vec<u16> = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&a| a != pass)
+            .collect();
+        got.sort_unstable();
+        let mut want: Vec<u16> = if pick_no == 1 {
+            vec![want_imperial, want_chaosmon]
+        } else {
+            // After the first suspend, only the other remains.
+            got.clone()
+        };
+        want.sort_unstable();
+        if pick_no == 1 {
+            assert_eq!(
+                got, want,
+                "judge Q30: the legal suspend targets are EXACTLY \
+                 Imperialdramon: Dragon Mode and Chaosmon: Valdur Arm \
+                 (BanchoLeomon not yet in play; the random Digimon already \
+                 suspended)"
+            );
+        } else {
+            assert_eq!(got.len(), 1, "exactly one suspend target remains");
+        }
+        r.execute_action(0, got[0]).expect("suspend a target");
+    }
+    // Drain anything residual (BanchoLeomon's play, deletion finalize,
+    // Blitz), DECLINING trailing optional prompts — accepting them would
+    // cascade into Medieval's [All Turns] re-activation (delete
+    // Imperialdramon → its inherited <Partition> → a nested replacement
+    // park, the engine's single-park boundary; see
+    // G-NESTED-PARKED-REPLACEMENT). The judge line ends here.
+    for _ in 0..10 {
+        let Some(view) = r.pending_selection_view() else { break };
+        let action = if view.is_optional {
+            pass
+        } else {
+            view.valid_action_ids[0]
+        };
+        let player = view.selecting_player;
+        if r.execute_action(player, action).is_err() {
+            break;
+        }
+    }
+
+    // ── End state ───────────────────────────────────────────────────────────
+    // Imperialdramon: Dragon Mode is suspended (the cost reduction's pick).
+    assert!(
+        r.game.players[1].battle_area[imperial.index as usize].is_suspended,
+        "judge Q30: Imperialdramon: Dragon Mode ends suspended"
+    );
+    // Chaosmon was suspended DURING the interrupt, then its deletion
+    // completed — it is in A's trash.
+    assert!(
+        r.game
+            .players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "BT20-037"),
+        "Chaosmon: Valdur Arm's deletion proceeded after the interrupt"
+    );
+    // Both partition plays are on A's field; the kept random Digimon too.
+    let a_ids: Vec<&str> = r
+        .game
+        .players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&r.game.card_data))
+        .collect();
+    assert!(
+        a_ids.contains(&"BT20-036") && a_ids.contains(&"EX8-074"),
+        "both partition sources were played; got {a_ids:?}"
+    );
+    assert!(a_ids.contains(&"Q30-RND"), "the kept Digimon survived");
+}

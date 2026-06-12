@@ -61,9 +61,45 @@ impl Game {
             *count = 0;
         }
 
-        // Unsuspend phase
+        // Unsuspend phase. The bulk turn-start unsuspend honors the
+        // `CannotUnsuspend` modifier ("[All Turns] … don't unsuspend" —
+        // BT12-057 Quartzmon; surfaced by judge-quiz Q3 authoring): a locked
+        // permanent stays suspended. Like `Player::unsuspend_all`, this
+        // directly mutates `is_suspended` without firing `OnUnsuspend`
+        // observers (phase-start unsuspension is not a trigger-carrying
+        // event per the rules).
         self.current_phase = GamePhase::Unsuspend;
-        self.player_mut(tp).unsuspend_all();
+        {
+            let n = self.player(tp).battle_area.len();
+            let mut unlocked: Vec<u8> = Vec::with_capacity(n);
+            for i in 0..n {
+                let h = PermanentHandle {
+                    player: tp,
+                    index: i as u8,
+                };
+                if !self.modifiers.has(h, ModifierType::CannotUnsuspend) {
+                    unlocked.push(i as u8);
+                }
+            }
+            let breeding_handle = PermanentHandle {
+                player: tp,
+                index: crate::action::space::BREEDING_TARGET as u8,
+            };
+            let breeding_unlocked = !self
+                .modifiers
+                .has(breeding_handle, ModifierType::CannotUnsuspend);
+            let player = self.player_mut(tp);
+            for i in unlocked {
+                if let Some(perm) = player.battle_area.get_mut(i as usize) {
+                    perm.is_suspended = false;
+                }
+            }
+            if breeding_unlocked {
+                if let Some(ref mut perm) = player.breeding_area {
+                    perm.is_suspended = false;
+                }
+            }
+        }
         self.mark_until_condition_dirty();
 
         // Phase 9 Task 7: <Reboot> consumer. "At the start of your

@@ -1764,6 +1764,14 @@ pub struct PlayFromHandArgs {
     /// unaffected. `false` (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "is_false")]
     pub suppress_on_play: bool,
+    /// G-PLAY-ENTERS-SUSPENDED (judge-quiz Q28 / EX5-060 Dragomon: "Your
+    /// opponent plays 1 level 4 or lower Digimon card from their trash
+    /// SUSPENDED without paying the cost"). When `true`, the played
+    /// permanent enters the battle area suspended. Only honored by
+    /// `play_from_trash_free`. `false` (the default) preserves prior
+    /// behavior.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suspended: bool,
 }
 
 /// Free-play-from-hand args. Adds `bind_as` so the just-played permanent
@@ -2150,11 +2158,28 @@ impl Default for EffectControllerSpec {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GrantEffectImmunityArgs {
-    pub target: BindingRef,
+    /// Per-permanent grant target. Required unless `continuous: true`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<BindingRef>,
     pub source_kind: EffectSourceKindSpec,
     #[serde(default)]
     pub source_controller: EffectControllerSpec,
     pub expiry: String,
+    /// G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA (judge-quiz Q28 /
+    /// BT20-059 Gankoomon (X Antibody)): when `true`, the immunity is a
+    /// source-independent CONTINUOUS field effect over `targets` — every
+    /// declarative tick re-scans the live candidate set, so a Digimon
+    /// played AFTER the grant (Sistermon Ciel played from trash by
+    /// Dragomon during the protected window) is covered too, matching
+    /// DCGO's `CanNotAffectedClass` re-evaluated CardCondition. Requires
+    /// `targets`; `target` must be omitted.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub continuous: bool,
+    /// Predicate over battle-area permanents for the `continuous` form
+    /// (e.g. `{ of: you, kind: digimon }`), evaluated relative to the
+    /// effect controller every tick.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub targets: Option<PredicateSpec>,
 }
 
 /// PUPPETS-G024 — arguments for `grant_narrow_opponent_effect_protection`.

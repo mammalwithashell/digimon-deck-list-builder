@@ -347,6 +347,12 @@ pub struct CompiledPredicate {
     pub rules_text_contains: Option<String>,
     pub memory_lte: Option<CompiledDpConstraint>,
     pub memory_gte: Option<CompiledDpConstraint>,
+    /// Controller-relative memory bound ("while you have N or less memory").
+    /// G-DSL-OWN-MEMORY-PREDICATE.
+    #[serde(default)]
+    pub own_memory_lte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub own_memory_gte: Option<CompiledDpConstraint>,
     pub security_count_lte: Option<CompiledDpConstraint>,
     pub security_count_gte: Option<CompiledDpConstraint>,
     pub opponent_security_count_lte: Option<CompiledDpConstraint>,
@@ -531,12 +537,14 @@ pub struct CompiledExistential {
 }
 
 /// Compiled form of `no_face_up_security_named`. Exactly one of
-/// `card_number_is` / `name_is` is populated. G-PRED-NO-FACE-UP-SECURITY-NAMED.
+/// `card_number_is` / `name_is` / `color_is` is populated.
+/// G-PRED-NO-FACE-UP-SECURITY-NAMED (+ color arm for EX10-020 / Q3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompiledFaceUpSecurityNamed {
     pub of: CompiledPlayerRef,
     pub card_number_is: Option<String>,
     pub name_is: Option<String>,
+    pub color_is: Option<CompiledColor>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -581,6 +589,10 @@ pub enum CompiledFormula {
     /// [On Play][When Digivolving] bounce-by-digivolution-card-count.
     /// G-FORMULA-SOURCE-MATERIAL-COUNT.
     SourceMaterialCount,
+    /// Level of the current trigger's EVENT card (e.g. the just-played
+    /// Digimon for an `on_any_digimon_played` observer). 0 when no trigger
+    /// context / no level. G-EVENT-PLAYED-LEVEL-FORMULA (EX5-060, Q28).
+    EventTargetLevel,
     /// Distinct colors represented by source cards beneath the effect carrier's top card.
     SourceColorCount,
     SourceStackCount {
@@ -724,6 +736,10 @@ pub enum CompiledDeclarativeClause {
         /// Scalar `value` for the named `modifier` grant (e.g. `ChangeLinkMax`
         /// "Link +N"). `None` ⇒ `0`. Fixes G-ENGINE-AURA-GRANT-LINK-MAX.
         modifier_value: Option<i32>,
+        /// Name payload for the named `modifier` grant — installed as
+        /// `ModifierPayload::Name { value, base: false }`. Used by
+        /// `CanOnlyDigivolveInto` (judge-quiz Q3, EX10-020).
+        modifier_name: Option<String>,
         /// Track H §4 — install-once continuous gate. When present, the
         /// lowered `Effect` installs its modifier(s) with
         /// `Expiry::UntilCondition` carrying this predicate. Eviction is
@@ -735,6 +751,11 @@ pub enum CompiledDeclarativeClause {
         /// during the security battle (rather than as a battle-area aura).
         applies_to_opponent_security_dp: bool,
         applies_to_own_security_dp: bool,
+        /// Continuous filtered `CannotBeAffected` grant — "this Digimon
+        /// isn't affected by [your opponent's] [<kind>] effects" as a
+        /// per-tick aura. Self-aura only. G-DSL-AURA-EFFECT-IMMUNITY.
+        #[serde(default)]
+        effect_immunity: Option<CompiledAuraEffectImmunity>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -954,6 +975,16 @@ pub enum CompiledEffectController {
     Any,
     Opponent,
     Own,
+}
+
+/// Compiled form of `AuraEffectImmunity` — the continuous filtered
+/// `CannotBeAffected` slot on `CompiledDeclarativeClause::Aura`.
+/// `source_kind: None` ⇒ immune to effects from ANY source kind.
+/// G-DSL-AURA-EFFECT-IMMUNITY.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompiledAuraEffectImmunity {
+    pub source_kind: Option<CompiledEffectSourceKind>,
+    pub source_controller: CompiledEffectController,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -1237,7 +1268,12 @@ pub enum CompiledStep {
         trash_index: CompiledBindingRef,
         /// PUPPETS-G030 — when `true`, the played Digimon's own `[On Play]`
         /// effects are skipped for this play event only (BT5-106 [Security]).
+        /// The skip is consult-gated on the played permanent NOT being
+        /// protected from the suppressing effect (judge-quiz Q28).
         suppress_on_play: bool,
+        /// G-PLAY-ENTERS-SUSPENDED — the played permanent enters the battle
+        /// area suspended (EX5-060 "plays ... suspended", Q28).
+        suspended: bool,
     },
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
     /// true origin zone (hand, trash, or material). `binding` names a `select_union_zone`
@@ -1452,10 +1488,18 @@ pub enum CompiledStep {
         zone: Option<CompiledZone>,
     },
     GrantEffectImmunity {
-        target: CompiledBindingRef,
+        /// Per-permanent grant target (`None` for the continuous form).
+        target: Option<CompiledBindingRef>,
         source_kind: CompiledEffectSourceKind,
         source_controller: CompiledEffectController,
         expiry: String,
+        /// G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA (Q28 / BT20-059): a
+        /// source-independent continuous immunity over `targets`, re-scanned
+        /// every declarative tick — covers permanents played later in the
+        /// window (DCGO `CanNotAffectedClass` re-evaluated CardCondition).
+        continuous: bool,
+        /// Battle-area predicate for the continuous form.
+        targets: Option<CompiledPredicate>,
     },
     /// PUPPETS-G024 — install the narrow opponent-effect protection
     /// bundle (opponent-scoped ImmuneFromDPMinus + opponent-scoped

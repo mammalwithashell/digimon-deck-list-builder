@@ -127,6 +127,35 @@ impl<'a> EffectContext<'a> {
         self.game.mark_until_condition_dirty();
     }
 
+    /// Materialized-declarative install carrying an effect-immunity filter
+    /// (continuous controlled immunity - Q28 / BT20-059). Tick-ephemeral
+    /// like every materialized declarative; the floating descriptor owns
+    /// the lifetime.
+    pub fn add_declarative_modifier_with_immunity(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        immunity: crate::modifiers::EffectImmunityFilter,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::materialized_declarative(
+                modifier,
+                value,
+                expiry,
+                self.source_permanent,
+                self.player,
+            )
+            .with_effect_immunity_filter(immunity),
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
     pub fn add_declarative_modifier_with_payload(
         &mut self,
         target: PermanentHandle,
@@ -258,6 +287,36 @@ impl<'a> EffectContext<'a> {
                 body: body_arc,
             },
         );
+    }
+
+    /// Declarative-tick variant of `add_effect_immunity_modifier` — installs
+    /// a MATERIALIZED filtered `CannotBeAffected` entry that
+    /// `tick_declarative_effects` clears and re-installs each tick. Used by
+    /// the aura `effect_immunity` slot (G-DSL-AURA-EFFECT-IMMUNITY) for
+    /// continuous printed immunities like EX8-073's "[All Turns] While you
+    /// have 0 or less memory, this Digimon isn't affected by the effects of
+    /// your opponent's Digimon". `source_kind: None` ⇒ any source kind.
+    pub fn add_declarative_effect_immunity_modifier(
+        &mut self,
+        target: PermanentHandle,
+        source_kind: Option<EffectSourceKind>,
+        controller: EffectControllerFilter,
+    ) {
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::materialized_declarative(
+                ModifierType::CannotBeAffected,
+                0,
+                Expiry::Permanent,
+                self.source_permanent,
+                self.player,
+            )
+            .with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind,
+                controller,
+            }),
+        );
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn add_effect_immunity_modifier(

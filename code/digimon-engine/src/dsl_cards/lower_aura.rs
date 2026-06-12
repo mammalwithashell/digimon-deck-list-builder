@@ -26,7 +26,8 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef, CompiledPredicate, CompiledScope,
+    CompiledAuraEffectImmunity, CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef,
+    CompiledPredicate, CompiledScope,
 };
 
 use crate::card_source::CardHandle;
@@ -62,9 +63,11 @@ pub fn lower_all(
     grant_keyword: Option<CompiledGrantKeywordValue>,
     modifier: Option<String>,
     modifier_value: Option<i32>,
+    modifier_name: Option<String>,
     while_condition: Option<CompiledPredicate>,
     applies_to_opponent_security_dp: bool,
     applies_to_own_security_dp: bool,
+    effect_immunity: Option<CompiledAuraEffectImmunity>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Vec<Effect> {
     if applies_to_opponent_security_dp || applies_to_own_security_dp {
@@ -130,6 +133,8 @@ pub fn lower_all(
         grant_keyword,
         modifier,
         modifier_value,
+        modifier_name,
+        effect_immunity,
         raw,
     ) {
         vec![effect]
@@ -256,6 +261,8 @@ pub fn lower(
     grant_keyword: Option<CompiledGrantKeywordValue>,
     modifier: Option<String>,
     modifier_value: Option<i32>,
+    modifier_name: Option<String>,
+    effect_immunity: Option<CompiledAuraEffectImmunity>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
     // Scalar `value` for the named `modifier` grant (e.g. ChangeLinkMax
@@ -280,7 +287,12 @@ pub fn lower(
         builder = builder.condition(move |rctx| eval_active_when(&aw, rctx, is_self_aura));
     }
 
-    if is_self_aura && target_player.is_none() && modifier.is_none() && security_attack.is_none() {
+    if is_self_aura
+        && target_player.is_none()
+        && modifier.is_none()
+        && security_attack.is_none()
+        && effect_immunity.is_none()
+    {
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);
         }
@@ -319,8 +331,11 @@ pub fn lower(
     let sa_flat = security_attack;
     let gk = grant_keyword.and_then(|g| lookup_keyword(&g.keyword, g.value));
     let modifier = modifier.as_deref().and_then(lookup_modifier_type);
+    // Name payload for name-carrying modifiers (CanOnlyDigivolveInto — Q3).
+    let modifier_name = modifier_name.map(Arc::new);
 
     if is_self_aura && target_player.is_none() {
+        let self_modifier_name = modifier_name.clone();
         builder = builder
             .materializes_declarative_state()
             .process(move |ctx| {
@@ -342,7 +357,39 @@ pub fn lower(
                     ctx.grant_declarative_keyword(handle, kw, Expiry::Permanent);
                 }
                 if let Some(modifier) = modifier {
-                    ctx.add_declarative_modifier(handle, modifier, modifier_value, Expiry::Permanent);
+                    if let Some(name) = &self_modifier_name {
+                        // Name-payload modifier (CanOnlyDigivolveInto — Q3).
+                        ctx.add_declarative_modifier_with_payload(
+                            handle,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                            crate::modifiers::ModifierPayload::Name {
+                                value: name.as_ref().clone(),
+                                base: false,
+                            },
+                        );
+                    } else {
+                        ctx.add_declarative_modifier(
+                            handle,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                        );
+                    }
+                }
+                if let Some(imm) = effect_immunity {
+                    // Continuous filtered CannotBeAffected — "this Digimon
+                    // isn't affected by [your opponent's] [<kind>] effects"
+                    // (EX8-073 / BT17-016). G-DSL-AURA-EFFECT-IMMUNITY.
+                    ctx.add_declarative_effect_immunity_modifier(
+                        handle,
+                        imm.source_kind
+                            .map(crate::dsl_cards::step::modifiers::lower_effect_source_kind),
+                        crate::dsl_cards::step::modifiers::lower_effect_controller(
+                            imm.source_controller,
+                        ),
+                    );
                 }
             });
         return Some(builder.build());
@@ -415,7 +462,21 @@ pub fn lower(
                     ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);
                 }
                 if let Some(modifier) = modifier {
-                    ctx.add_declarative_modifier(h, modifier, modifier_value, Expiry::Permanent);
+                    if let Some(name) = &modifier_name {
+                        // Name-payload modifier (CanOnlyDigivolveInto — Q3).
+                        ctx.add_declarative_modifier_with_payload(
+                            h,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                            crate::modifiers::ModifierPayload::Name {
+                                value: name.as_ref().clone(),
+                                base: false,
+                            },
+                        );
+                    } else {
+                        ctx.add_declarative_modifier(h, modifier, modifier_value, Expiry::Permanent);
+                    }
                 }
             }
         });

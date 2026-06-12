@@ -353,6 +353,14 @@ pub struct AuraBody {
     /// path previously installed every named modifier with a hardcoded `0`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier_value: Option<i32>,
+    /// Name payload for the named `modifier` grant — installs the modifier
+    /// with `ModifierPayload::Name { value, base: false }`. Required by
+    /// name-carrying modifiers like `CanOnlyDigivolveInto` (EX10-020
+    /// "[All Turns] This Digimon can only digivolve into [Apocalymon]" —
+    /// judge-quiz Q3 / G-DIGIVOLVE-TARGET-RESTRICTION DSL install). Ignored
+    /// by scalar/flag modifiers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modifier_name: Option<String>,
     /// Track H §4 — install-once continuous gate. When set, the aura's
     /// modifier installs with `Expiry::UntilCondition` carrying this
     /// predicate. The UntilCondition controller (PR #458) evicts the
@@ -382,6 +390,34 @@ pub struct AuraBody {
     pub applies_to_opponent_security_dp: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub applies_to_own_security_dp: Option<bool>,
+
+    /// Continuous effect-immunity grant — printed text like "[All Turns]
+    /// While you have 0 or less memory, this Digimon isn't affected by the
+    /// effects of your opponent's Digimon" (EX8-073) or "[Your Turn] While
+    /// you have 0 or less memory, this Digimon isn't affected by your
+    /// opponent's effects" (BT17-016). Installs a filtered
+    /// `CannotBeAffected` modifier on each declarative tick while
+    /// `active_when` holds. Omit `source_kind` for immunity to ALL source
+    /// kinds (Digimon, Tamer, Option, rules effects); set it to narrow the
+    /// immunity ("effects of your opponent's Digimon" ⇒ `digimon`).
+    /// Self-aura only (leave `target` / `target_player` unset).
+    /// G-DSL-AURA-EFFECT-IMMUNITY.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effect_immunity: Option<AuraEffectImmunity>,
+}
+
+/// Inline continuous effect-immunity grant used inside [`AuraBody`].
+/// Mirrors the `grant_effect_immunity` step's source filters, minus
+/// `target`/`expiry` (the aura's tick lifecycle owns both).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AuraEffectImmunity {
+    /// `None` ⇒ immune to effects from ANY source kind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_kind: Option<crate::step::EffectSourceKindSpec>,
+    /// Defaults to `opponent` (the overwhelmingly common printed shape).
+    #[serde(default)]
+    pub source_controller: crate::step::EffectControllerSpec,
 }
 
 /// Inline keyword grant used inside [`AuraBody`].

@@ -30,7 +30,10 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return;
         }
-        self.game.suspend(target);
+        // Effect-context suspends are effect-initiated by definition —
+        // tags the OnSuspend event for `event_is_effect_initiated`
+        // ("when an EFFECT suspends…", G-SUSPEND-EFFECT-INITIATED).
+        self.game.suspend_with_cause(target, true);
     }
 
     /// Pay the source permanent's suspend-self activation cost.
@@ -69,6 +72,7 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return;
         }
-        self.game.unsuspend(target);
+        // See `suspend` — the effect-initiated tag's unsuspend twin.
+        self.game.unsuspend_with_cause(target, true);
     }
 }

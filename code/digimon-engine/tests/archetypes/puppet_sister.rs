@@ -80,6 +80,36 @@ fn drive_first_valid(runner: &mut DebugRunner, max_steps: usize) {
     panic!("drive_first_valid exhausted {max_steps} steps without draining the selection queue");
 }
 
+/// Like `drive_first_valid`, but DECLINES every optional "may" prompt
+/// (PASS) instead of accepting it. Use when a combo pins a specific
+/// mandatory chain and faithful optional side-offers (e.g. Nyabootmon's
+/// `[On Any Deletion]` re-activation) would otherwise change the board.
+fn drive_first_valid_declining_optionals(runner: &mut DebugRunner, max_steps: usize) {
+    for _ in 0..max_steps {
+        let Some(view) = runner.pending_selection_view() else {
+            return;
+        };
+        let player = view.selecting_player;
+        let is_optional = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .is_some_and(|s| s.is_optional);
+        let action = if is_optional {
+            PASS
+        } else {
+            view.valid_action_ids.first().copied().unwrap_or(PASS)
+        };
+        if runner.execute_action(player, action).is_err() {
+            return;
+        }
+    }
+    panic!(
+        "drive_first_valid_declining_optionals exhausted {max_steps} steps without draining \
+         the selection queue"
+    );
+}
+
 fn field_ids(runner: &DebugRunner, player: usize) -> Vec<String> {
     runner.game.players[player]
         .battle_area
@@ -930,9 +960,14 @@ fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
     runner
         .execute_action(sac_view.selecting_player, encode_perm(fodder))
         .expect("sacrifice the Puppet fodder for Overclock");
-    // Resolve the death fan-out (Kaguyamon removal pick, Kyaromon draw, then the
-    // unsuspended attack onto the opponent).
-    drive_first_valid(&mut runner, 40);
+    // Resolve the death fan-out (Kaguyamon removal pick, Kyaromon draw),
+    // DECLINING the faithful side-offers: Nyabootmon's optional
+    // `[On Any Deletion]` re-activation would −9000 an opponent Digimon and
+    // (since the rules check now runs between trigger activations —
+    // judge-quiz Q24) remove it BEFORE Kaguyamon's lowest-level pick,
+    // shifting which Digimon the fan-out deletes. This combo pins the
+    // fan-out itself, so the recursion is declined.
+    drive_first_valid_declining_optionals(&mut runner, 40);
     let after = snapshot(&runner);
 
     // Own field −1: the sacrificed fodder is gone.

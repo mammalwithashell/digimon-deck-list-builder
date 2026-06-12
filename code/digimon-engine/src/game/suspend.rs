@@ -24,6 +24,15 @@ impl Game {
     /// bypasses this path — `StartOfYourTurn` is the canonical timing for
     /// turn-start effects.
     pub fn suspend(&mut self, handle: PermanentHandle) {
+        self.suspend_with_cause(handle, false);
+    }
+
+    /// `suspend` with an explicit effect-initiated tag on the `OnSuspend`
+    /// event. `EffectContext::suspend` passes `true`; game-rule suspends
+    /// (attack/blocker declaration, costs paid outside an effect context)
+    /// use the plain `suspend` (`false`). Feeds `event_is_effect_initiated`
+    /// ("when an EFFECT suspends…", G-SUSPEND-EFFECT-INITIATED).
+    pub fn suspend_with_cause(&mut self, handle: PermanentHandle, effect_initiated: bool) {
         let is_breeding = handle.index == crate::action::space::BREEDING_TARGET as u8;
         let event_card = if is_breeding {
             self.players
@@ -64,6 +73,11 @@ impl Game {
         if let Some(perm) = perm {
             perm.is_suspended = true;
         }
+        // Re-materialize declarative auras keyed on suspension state (e.g.
+        // BT16-101's "opponent's SUSPENDED Digimon get -4000") so observers
+        // and the rules check see the post-suspension DP immediately (DCGO
+        // recomputes DP at read time — judge-quiz Q24).
+        self.tick_declarative_effects();
         self.mark_until_condition_dirty();
         if let Some(card) = event_card {
             self.enqueue_triggered(
@@ -72,10 +86,14 @@ impl Game {
                     player: handle.player,
                     permanent: handle,
                     card,
+                    effect_initiated,
                 },
             );
         }
-        self.drain_effect_queue();
+        // `maybe_` — inside a deferred-drain scope (e.g. the <Alliance>
+        // resolution callback) the OnSuspend observers park until the
+        // enclosing effect finishes (official trigger timing; judge Q24).
+        self.maybe_drain_effect_queue();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
@@ -84,6 +102,11 @@ impl Game {
     ///
     /// See `suspend` for the bulk-unsuspend caveat.
     pub fn unsuspend(&mut self, handle: PermanentHandle) {
+        self.unsuspend_with_cause(handle, false);
+    }
+
+    /// See [`Self::suspend_with_cause`] — the unsuspend twin.
+    pub fn unsuspend_with_cause(&mut self, handle: PermanentHandle, effect_initiated: bool) {
         let event_card = self
             .players
             .get(handle.player as usize)
@@ -105,6 +128,8 @@ impl Game {
         {
             perm.is_suspended = false;
         }
+        // See `suspend_with_cause` — suspension-keyed auras re-materialize.
+        self.tick_declarative_effects();
         self.mark_until_condition_dirty();
         if let Some(card) = event_card {
             self.enqueue_triggered(
@@ -113,10 +138,12 @@ impl Game {
                     player: handle.player,
                     permanent: handle,
                     card,
+                    effect_initiated,
                 },
             );
         }
-        self.drain_effect_queue();
+        // See `suspend_with_cause` — observers park inside a deferred scope.
+        self.maybe_drain_effect_queue();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 

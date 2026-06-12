@@ -518,8 +518,9 @@ fn bt16_101_gains_2_memory_on_opp_zero_dp_deletion() {
     }
     assert_eq!(
         runner.game.effective_dp(opp),
-        Some(-1000),
-        "precondition: opp Digimon at -1000 DP"
+        Some(0),
+        "precondition: opp Digimon at 0 DP (5000 − 6000, floored at 0 per \
+         rules 17-1-3-1 / DCGO Permanent.DP — still the deletable state)"
     );
 
     // Resolution boundary: the state-based rules-check deletes the <=0 DP Digimon
