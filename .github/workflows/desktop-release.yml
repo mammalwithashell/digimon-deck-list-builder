@@ -3,10 +3,16 @@ name: desktop-release
 on:
   push:
     tags:
+      # Real releases — build + publish to the alpha updater channel.
       - 'desktop-v*'
+      # CI-only builds — build the matrix but NOT publish (the publish job is
+      # gated to desktop-v* below). Lets us benchmark the build by pushing a
+      # tag like `desktop-ci-1` without shipping anything to users.
+      - 'desktop-ci-*'
   # Manual trigger for CI testing: runs the build job only (the publish job is
   # gated to tag pushes), so we can exercise/benchmark the build without
-  # shipping a release to the alpha updater channel.
+  # shipping a release to the alpha updater channel. Usable from the Actions
+  # tab once this trigger lands on the default branch.
   workflow_dispatch:
 
 permissions:
