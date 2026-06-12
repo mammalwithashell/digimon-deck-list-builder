@@ -1,23 +1,24 @@
 """Snapshot parity test for the tested-cards allowlist.
 
-Ensures ``data/tested_cards.json`` is in sync with the per-card
-behavioral test files under ``tests/behavioral/``. If a new test file
-is added without refreshing the snapshot this test fails and tells the
-developer to run ``python tools/build_tested_cards.py``.
+Ensures ``data/tested_cards.json`` is in sync with the Rust engine's
+``CardEffectRegistry`` (queried via ``digimon-engine-cli pool``). If a
+card is implemented without refreshing the snapshot this test fails and
+tells the developer to run ``python code/tools/build_tested_cards.py``.
 """
 
 from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 
 from data_paths import TESTED_CARDS as OUTPUT_JSON
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-BUILD_TOOL = REPO_ROOT / "tools" / "build_tested_cards.py"
+REPO_ROOT = Path(__file__).resolve().parents[4]
+BUILD_TOOL = REPO_ROOT / "code" / "tools" / "build_tested_cards.py"
 
 
 def _load_build_tool():
@@ -30,24 +31,25 @@ def _load_build_tool():
 
 def test_snapshot_exists():
     assert OUTPUT_JSON.exists(), (
-        f"{OUTPUT_JSON} is missing. Run `python tools/build_tested_cards.py`."
+        f"{OUTPUT_JSON} is missing. Run `python code/tools/build_tested_cards.py`."
     )
 
 
 def test_snapshot_is_fresh():
-    """Regenerate in-memory and diff against the committed file."""
-    build_tool = _load_build_tool()
-    card_ids, warnings = build_tool.collect_tested_card_ids()
+    """Regenerate in-memory (via the engine registry) and diff against
+    the committed file. Needs a Rust toolchain; skipped when absent."""
+    if shutil.which("cargo") is None:
+        pytest.skip("cargo not available; cannot query the engine registry")
 
-    assert not warnings, (
-        "Unresolved behavioral test files:\n  " + "\n  ".join(warnings)
-    )
-    assert card_ids, "No tested cards found"
+    build_tool = _load_build_tool()
+    card_ids = build_tool.collect_implemented_card_ids(None)
+
+    assert card_ids, "No implemented cards found"
 
     existing = json.loads(OUTPUT_JSON.read_text())
     assert existing["card_ids"] == card_ids, (
         "tested_cards.json is stale. Run "
-        "`python tools/build_tested_cards.py` to refresh."
+        "`python code/tools/build_tested_cards.py` to refresh."
     )
     assert existing["card_count"] == len(card_ids)
 

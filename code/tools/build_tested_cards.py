@@ -1,23 +1,29 @@
-"""Build the tested-cards allowlist snapshot for the alpha release.
+"""Build the implemented-cards allowlist snapshot for the deck builder.
 
-Scans ``tests/behavioral/**/test_*.py`` for per-card behavioral test files
-and writes the canonical card IDs to ``data/tested_cards.json``.
+Asks the Rust engine which cards have a registered ``CardEffect`` (DSL
+YAML pack + raw-rust escape hatch) via the ``digimon-engine-cli pool``
+subcommand, and writes the canonical card IDs to ``data/tested_cards.json``.
+
+Historical note: this tool used to scan the legacy Python behavioral test
+tree (``tests/behavioral/**``). That tree was retired with the Rust pivot,
+which froze the snapshot at the pre-pivot card set — the engine's
+``CardEffectRegistry`` is the source of truth now.
 
 The snapshot is committed to the repo and consumed by:
-- the hosted API via ``digimon_gym/engine/tested_cards.py``
+- the hosted API via ``engine_py_legacy/engine/data/tested_cards.py``
 - the desktop app, where ``digimon-engine`` bakes it into the binary via
   ``include_str!`` in ``digimon-engine/src/deck_tools.rs``
 
-The alpha deck builder uses it to restrict players to cards that have
-been tested end-to-end.
+The deck builder uses it to restrict players to implemented cards.
 
 Run from the repo root:
 
-    python tools/build_tested_cards.py
+    python code/tools/build_tested_cards.py
 
-Exits non-zero if any test filename cannot be resolved to a real card ID.
 By default the tool rewrites the snapshot; pass ``--check`` to instead
-fail if the generated snapshot differs from the committed file.
+fail if the generated snapshot differs from the committed file. Pass
+``--pool-json <path>`` to skip the cargo invocation and read a pre-dumped
+``[card_id, ...]`` array instead.
 """
 
 from __future__ import annotations
@@ -25,92 +31,62 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
-import re
+import subprocess
 import sys
-from collections import defaultdict
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT / "code") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "code"))
 
 from data_paths import CARDS_JSON, TESTED_CARDS as OUTPUT_JSON  # noqa: E402
 
-BEHAVIORAL_DIR = REPO_ROOT / "tests" / "behavioral"
 
-TEST_FILE_RE = re.compile(r"^test_([a-z]+\d*)_(\d+)\.py$")
+def collect_implemented_card_ids(pool_json: Path | None) -> list[str]:
+    """Return the sorted implemented-card pool from the engine registry.
 
-
-def _load_cards_by_prefix() -> dict[str, dict[int, str]]:
-    """Return ``{PREFIX: {numeric_suffix: canonical_card_id}}``.
-
-    Card IDs use varying zero-padding across sets (``ST1-01`` vs
-    ``BT22-002`` vs ``LM-001``), so we key by the integer value of the
-    suffix and let the caller look up by ``int(num)``.
+    With ``pool_json`` set, reads a pre-dumped JSON array. Otherwise runs
+    ``cargo run -p digimon-engine-cli -- pool``, which prints the registry
+    pool intersected with ``cards.json`` (test fixtures and token IDs are
+    excluded by that intersection).
     """
-    with CARDS_JSON.open() as f:
-        cards: dict[str, dict] = json.load(f)
-
-    by_prefix: dict[str, dict[int, str]] = defaultdict(dict)
-    for card_id in cards:
-        if "-" not in card_id:
-            continue
-        prefix, suffix = card_id.split("-", 1)
-        try:
-            num = int(suffix)
-        except ValueError:
-            continue
-        by_prefix[prefix.upper()][num] = card_id
-    return by_prefix
-
-
-def collect_tested_card_ids() -> tuple[list[str], list[str]]:
-    """Scan behavioral test files and resolve to canonical card IDs.
-
-    Returns ``(sorted_card_ids, warnings)``. Warnings contains filenames
-    that could not be resolved (e.g. generic helper tests or stale files).
-    """
-    cards_by_prefix = _load_cards_by_prefix()
-
-    found: set[str] = set()
-    warnings: list[str] = []
-
-    for test_file in sorted(BEHAVIORAL_DIR.rglob("test_*.py")):
-        match = TEST_FILE_RE.match(test_file.name)
-        if not match:
-            # Tests like ``test_helpers.py`` or ``test_smoke.py`` are fine.
-            continue
-        prefix = match.group(1).upper()
-        try:
-            num = int(match.group(2))
-        except ValueError:
-            warnings.append(f"Non-numeric suffix: {test_file.relative_to(REPO_ROOT)}")
-            continue
-
-        set_cards = cards_by_prefix.get(prefix)
-        if not set_cards:
-            warnings.append(
-                f"Unknown set '{prefix}' from {test_file.relative_to(REPO_ROOT)}"
+    if pool_json is not None:
+        ids = json.loads(pool_json.read_text())
+    else:
+        result = subprocess.run(
+            [
+                "cargo",
+                "run",
+                "-q",
+                "-p",
+                "digimon-engine-cli",
+                "--",
+                "--cards-json",
+                str(CARDS_JSON),
+                "pool",
+            ],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print(result.stderr, file=sys.stderr)
+            raise RuntimeError(
+                f"digimon-engine-cli pool failed with exit code {result.returncode}"
             )
-            continue
+        ids = json.loads(result.stdout)
 
-        canonical = set_cards.get(num)
-        if canonical is None:
-            warnings.append(
-                f"No card {prefix}-{num} in cards.json "
-                f"(from {test_file.relative_to(REPO_ROOT)})"
-            )
-            continue
-
-        found.add(canonical)
-
-    return sorted(found), warnings
+    if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
+        raise RuntimeError("pool output is not a JSON array of card-id strings")
+    # TEST-* are engine test fixtures (they have cards.json entries so the
+    # DebugRunner can build them) — never player-facing deck-builder cards.
+    return sorted(i for i in set(ids) if not i.upper().startswith("TEST-"))
 
 
 def build_snapshot(card_ids: list[str]) -> dict:
     return {
         "version": 1,
-        "generated_at": dt.datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "card_count": len(card_ids),
         "card_ids": card_ids,
     }
@@ -128,22 +104,23 @@ def main() -> int:
         action="store_true",
         help="Fail if the generated snapshot differs from the committed file.",
     )
+    parser.add_argument(
+        "--pool-json",
+        type=Path,
+        default=None,
+        help="Read the implemented pool from this JSON array instead of "
+        "running digimon-engine-cli.",
+    )
     args = parser.parse_args()
 
-    if not BEHAVIORAL_DIR.exists():
-        print(f"error: {BEHAVIORAL_DIR} does not exist", file=sys.stderr)
-        return 2
     if not CARDS_JSON.exists():
         print(f"error: {CARDS_JSON} does not exist", file=sys.stderr)
         return 2
 
-    card_ids, warnings = collect_tested_card_ids()
-
-    for w in warnings:
-        print(f"warning: {w}", file=sys.stderr)
+    card_ids = collect_implemented_card_ids(args.pool_json)
 
     if not card_ids:
-        print("error: no tested cards found", file=sys.stderr)
+        print("error: no implemented cards found", file=sys.stderr)
         return 2
 
     new_payload = build_snapshot(card_ids)
@@ -159,24 +136,24 @@ def main() -> int:
         if _normalize_for_diff(existing) != _normalize_for_diff(new_payload):
             print(
                 f"error: {OUTPUT_JSON} is stale; run "
-                "`python tools/build_tested_cards.py` to refresh",
+                "`python code/tools/build_tested_cards.py` to refresh",
                 file=sys.stderr,
             )
             return 1
-        print(f"ok: {len(card_ids)} tested cards (snapshot up to date)")
+        print(f"ok: {len(card_ids)} implemented cards (snapshot up to date)")
         return 0
 
     # Idempotent write: only touch the file if content changed.
     if OUTPUT_JSON.exists():
         existing = json.loads(OUTPUT_JSON.read_text())
         if _normalize_for_diff(existing) == _normalize_for_diff(new_payload):
-            print(f"ok: {len(card_ids)} tested cards (no changes)")
+            print(f"ok: {len(card_ids)} implemented cards (no changes)")
             return 0
 
     OUTPUT_JSON.write_text(json.dumps(new_payload, indent=2) + "\n")
     print(
         f"wrote {OUTPUT_JSON.relative_to(REPO_ROOT)} "
-        f"({len(card_ids)} tested cards)"
+        f"({len(card_ids)} implemented cards)"
     )
     return 0
 
