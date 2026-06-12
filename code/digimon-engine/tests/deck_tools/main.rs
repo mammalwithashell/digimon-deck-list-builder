@@ -174,6 +174,31 @@ fn tested_cards_allowlist_is_consistent_with_membership_helper() {
 }
 
 #[test]
+fn tested_card_metadata_covers_allowlist_with_display_fields() {
+    let metas = digimon_engine::deck_tools::tested_card_metadata();
+    let allowlist = tested_cards_sorted();
+    // One metadata entry per allowlisted card (every allowlisted card has
+    // a cards.json entry by construction — build_tested_cards.py
+    // intersects with cards.json), sorted by card ID.
+    assert_eq!(metas.len(), allowlist.len());
+    for (meta, card_id) in metas.iter().zip(allowlist.iter()) {
+        assert_eq!(&meta.card_id, card_id);
+        assert!(!meta.name.is_empty(), "{card_id} has no name");
+        assert!(!meta.card_type.is_empty(), "{card_id} has no card_type");
+        assert!(!meta.colors.is_empty(), "{card_id} has no colors");
+    }
+    // Spot-check a known card: BT12-050 Stingmon, Green Digimon Lv.4.
+    let stingmon = metas
+        .iter()
+        .find(|m| m.card_id == "BT12-050")
+        .expect("BT12-050 should be implemented");
+    assert_eq!(stingmon.name, "Stingmon");
+    assert_eq!(stingmon.card_type, "Digimon");
+    assert_eq!(stingmon.colors, vec!["Green".to_string()]);
+    assert_eq!(stingmon.level, Some(4));
+}
+
+#[test]
 fn st3_starter_deck_fixture_has_canonical_counts() {
     let fixture = starter_decks_fixture();
     let st3 = fixture

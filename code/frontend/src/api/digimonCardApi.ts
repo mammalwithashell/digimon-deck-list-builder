@@ -2,7 +2,9 @@ import axios from 'axios';
 import type { DigimonCardData } from '@/types/cards';
 import { getCardImageUrl } from '@/utils/cardImages';
 
-const DIGIMON_API = 'https://digimoncard.io/index.php/api-public/search';
+// No `index.php/` prefix: digimoncard.io 301-redirects that form, and the
+// redirect response carries no CORS headers, so webview requests die there.
+const DIGIMON_API = 'https://digimoncard.io/api-public/search';
 
 /**
  * The digimoncard.io API derives alt-art entries from TCGPlayer SKU

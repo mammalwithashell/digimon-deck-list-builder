@@ -15,7 +15,7 @@ CLI utilities for the card pipeline, training, scenarios, ingest, and ops. Detai
 - `ingest_cards.py` — refresh `data/cards.json` from upstream API
 - `build_card_meta.py` — derive card-meta artifacts
 - `build_registry.py` — build the card-script registry
-- `build_tested_cards.py` — regenerate `data/tested_cards.json`
+- `build_tested_cards.py` — regenerate `data/tested_cards.json` from the Rust engine's implemented-card registry (`digimon-engine-cli pool`)
 - `xros_req_parser.py` — parse the Xros / requirement clauses
 - `transpile_dcgo.py` — generate Python script stubs from DCGO C# (sunset alongside the Python engine)
 - `promote_script.py` / `check_frozen_integrity.py` — frozen-script promotion + integrity gate

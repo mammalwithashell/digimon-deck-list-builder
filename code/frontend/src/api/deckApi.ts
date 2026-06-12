@@ -1,5 +1,6 @@
 import client from './client';
 import { isInTauriRuntime } from './engineRuntime';
+import type { DigimonCardData } from '@/types/cards';
 import type { DeckFolder, DeckResponse, DeckSummary } from '@/types/deck';
 
 // Mirrors `gameApi.ts` — when running inside Tauri, dispatch parse /
@@ -135,6 +136,67 @@ export async function listTestedCards(): Promise<string[]> {
   }
   const { data } = await client.get<TestedCardsResponse>('/decks/tested-cards');
   return data.card_ids;
+}
+
+/** Shape served by `rust_card_database` (Tauri) and `/decks/card-database`
+ *  (hosted API) — `digimon_engine::deck_tools::CardMeta`. */
+interface CardMetaDto {
+  card_id: string;
+  name: string;
+  card_type: string;
+  colors: string[];
+  level: number | null;
+  play_cost: number | null;
+  evolution_cost: number | null;
+  rarity: string;
+  dp: number | null;
+  stage: string;
+  digi_type: string;
+  attribute: string;
+  main_effect: string;
+  inherited_effect: string;
+  security_effect: string;
+}
+
+function cardMetaToCardData(meta: CardMetaDto): DigimonCardData {
+  // The digimoncard.io API folds [Security] text into the main effect;
+  // cards.json keeps it separate. Re-fold so both sources render alike.
+  const securityLine =
+    meta.security_effect && !meta.main_effect.includes(meta.security_effect)
+      ? `${meta.main_effect ? '\n' : ''}[Security] ${meta.security_effect}`
+      : '';
+  return {
+    name: meta.name,
+    type: meta.card_type,
+    color: meta.colors[0] ?? '',
+    color2: meta.colors[1],
+    stage: meta.stage,
+    digi_type: meta.digi_type,
+    attribute: meta.attribute,
+    level: meta.level != null ? String(meta.level) : '',
+    play_cost: meta.play_cost != null ? String(meta.play_cost) : '',
+    evolution_cost: meta.evolution_cost != null ? String(meta.evolution_cost) : '',
+    cardrarity: meta.rarity,
+    artist: '',
+    dp: meta.dp != null ? String(meta.dp) : '',
+    cardnumber: meta.card_id,
+    maineffect: `${meta.main_effect}${securityLine}`,
+    soureeffect: meta.inherited_effect,
+    set_name: meta.card_id.split('-')[0] ?? '',
+    card_sets: [],
+    image_url: '',
+    isAltArt: false,
+  };
+}
+
+/** Full metadata for every implemented (allowlisted) card. Local data —
+ *  embedded cards.json on desktop, the hosted API's copy in browser —
+ *  so the deck builder can browse the whole implemented pool offline. */
+export async function listCardDatabase(): Promise<DigimonCardData[]> {
+  const dtos = useTauriBackend()
+    ? await invokeTauri<CardMetaDto[]>('rust_card_database')
+    : (await client.get<CardMetaDto[]>('/decks/card-database')).data;
+  return dtos.map(cardMetaToCardData);
 }
 
 export async function validateDeckRaw(
