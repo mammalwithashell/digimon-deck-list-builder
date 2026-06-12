@@ -44,6 +44,7 @@ interface ActionCommandResponse {
   events: GameEvent[];
   action_context: Record<string, unknown>;
   action_traces?: ActionTraceDto[];
+  agent_pending?: boolean;
 }
 
 interface StepCommandResponse {
@@ -54,6 +55,7 @@ interface StepCommandResponse {
   is_human_turn: boolean;
   is_game_over: boolean;
   action_traces?: ActionTraceDto[];
+  agent_pending?: boolean;
 }
 
 interface SurrenderCommandResponse {
@@ -118,6 +120,11 @@ interface CreateGameParams {
   agent_action_delay_ms?: number;
   player_kinds?: PlayerKind[];
   player_model_ids?: (string | null)[];
+  /** Paced agent stepping (add-bot-action-pacing): cap agent autoplay at
+   *  one action per request so each bot action renders as a beat. Only
+   *  meaningful on the browser wire's create (which runs an opening agent
+   *  prelude); the desktop create runs no prelude. */
+  paced?: boolean;
 }
 
 interface CreateGameResponse {
@@ -126,6 +133,9 @@ interface CreateGameResponse {
   action_mask: number[];
   recording_metadata?: Record<string, unknown>;
   player_labels?: Record<number, string>;
+  /** True when an agent action remains after a paced create's prelude
+   *  (browser wire only — desktop create runs no prelude). */
+  agent_pending?: boolean;
 }
 
 interface ActionResponse {
@@ -136,6 +146,9 @@ interface ActionResponse {
   events?: GameEvent[];
   action_context?: Record<string, unknown>;
   action_traces?: ActionTrace[];
+  /** True while a non-human agent still has actions to take (paced mode).
+   *  The pacing driver should call `stepGame(gameId, { paced: true })`. */
+  agent_pending?: boolean;
 }
 
 interface StepResponse {
@@ -146,6 +159,8 @@ interface StepResponse {
   is_human_turn: boolean;
   is_game_over: boolean;
   action_traces?: ActionTrace[];
+  /** See ActionResponse.agent_pending. */
+  agent_pending?: boolean;
 }
 
 interface SurrenderResponse {
@@ -350,7 +365,13 @@ export function dtoToGameState(dto: GameStateDto): GameState {
     turnCount: dto.turn_count,
     currentPhase: mapPhase(dto.current_phase),
     currentPlayer: dto.turn_player,
-    memoryGauge: dto.memory,
+    // Engine `memory` is from the TURN PLAYER's perspective; the UI contract
+    // (MemoryGauge, and the browser wire's `to_ui_json` memoryGauge) is
+    // player-1's perspective. Without this flip, the opponent's memory
+    // renders on the local player's side of the gauge during the
+    // opponent's turn — visible since paced bot turns exposed mid-turn
+    // states (add-bot-action-pacing).
+    memoryGauge: memory0,
     isGameOver: dto.game_over,
     // Convert the engine's raw player id (0/1) to the UI's 1-indexed
     // convention (1/2), matching `localPlayer={1}` + `playerLabels{1,2}` in
@@ -474,16 +495,19 @@ export async function createGame(
       player2_type: p2Human ? 'human' : 'agent',
       player1_policy: 'greedy',
       player2_policy: 'greedy',
+      paced: params.paced ?? false,
     };
     const httpResp = await httpJson<{
       game_id: string;
       state: GameState;
       action_mask: number[];
+      agent_pending?: boolean;
     }>('/games', { method: 'POST', body });
     return {
       game_id: httpResp.game_id,
       state: httpResp.state,
       action_mask: httpResp.action_mask,
+      agent_pending: httpResp.agent_pending,
     };
   }
 
@@ -538,7 +562,9 @@ function toKind(type: string | undefined, policy: string | undefined): PlayerKin
 export async function sendAction(
   gameId: string,
   action: number,
+  opts?: { paced?: boolean },
 ): Promise<ActionResponse> {
+  const paced = opts?.paced ?? false;
   if (!isInTauriRuntime()) {
     const httpResp = await httpJson<{
       state: GameState;
@@ -547,7 +573,8 @@ export async function sendAction(
       logs: string[];
       events: GameEvent[];
       action_context?: Record<string, unknown>;
-    }>(`/games/${gameId}/actions`, { method: 'POST', body: { action } });
+      agent_pending?: boolean;
+    }>(`/games/${gameId}/actions`, { method: 'POST', body: { action, paced } });
     return {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
@@ -560,10 +587,12 @@ export async function sendAction(
       // call. Acceptable trade-off; the ticker stays empty in browser
       // mode but the game itself works.
       action_traces: [],
+      agent_pending: httpResp.agent_pending,
     };
   }
   const resp = await invoke<ActionCommandResponse>('rust_submit_action', {
     action,
+    paced,
   });
   return {
     state: dtoToGameState(resp.state),
@@ -573,11 +602,19 @@ export async function sendAction(
     events: resp.events,
     action_context: resp.action_context,
     action_traces: toActionTraces(resp.action_traces),
+    agent_pending: resp.agent_pending,
   };
 }
 
-export async function stepGame(gameId: string): Promise<StepResponse> {
+export async function stepGame(
+  gameId: string,
+  opts?: { paced?: boolean },
+): Promise<StepResponse> {
+  const paced = opts?.paced ?? false;
   if (!isInTauriRuntime()) {
+    // Paced beats go through the dedicated one-action route; unpaced keeps
+    // the legacy drain-to-human `/steps`.
+    const route = paced ? `/games/${gameId}/agent-step` : `/games/${gameId}/steps`;
     const httpResp = await httpJson<{
       state: GameState;
       action_mask: number[];
@@ -585,7 +622,8 @@ export async function stepGame(gameId: string): Promise<StepResponse> {
       logs: string[];
       events: GameEvent[];
       is_human_turn: boolean;
-    }>(`/games/${gameId}/steps`, { method: 'POST' });
+      agent_pending?: boolean;
+    }>(route, { method: 'POST' });
     return {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
@@ -594,9 +632,10 @@ export async function stepGame(gameId: string): Promise<StepResponse> {
       is_human_turn: httpResp.is_human_turn,
       is_game_over: httpResp.is_game_over,
       action_traces: [],
+      agent_pending: httpResp.agent_pending,
     };
   }
-  const resp = await invoke<StepCommandResponse>('rust_step_game');
+  const resp = await invoke<StepCommandResponse>('rust_step_game', { paced });
   return {
     state: dtoToGameState(resp.state),
     action_mask: resp.action_mask,
@@ -605,6 +644,7 @@ export async function stepGame(gameId: string): Promise<StepResponse> {
     is_human_turn: resp.is_human_turn,
     is_game_over: resp.is_game_over,
     action_traces: toActionTraces(resp.action_traces),
+    agent_pending: resp.agent_pending,
   };
 }
 

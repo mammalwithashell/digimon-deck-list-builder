@@ -46,10 +46,21 @@ class CreateGameRequest(BaseModel):
     # capture *your* decisions.
     seed: Optional[int] = Field(None, ge=0)
     action_script: Optional[list[int]] = None
+    # Paced agent stepping (add-bot-action-pacing): when true, the opening
+    # agent prelude advances at most one action; the client then drives
+    # subsequent beats via POST /games/{id}/agent-step while the response's
+    # `agent_pending` is true, so each bot action renders as a perceivable
+    # beat. Ignored when `action_script` is set (staging is not
+    # presentation). Distinct from the vestigial `agent_action_delay_ms`
+    # (legacy server-side sleep — unused by the Rust-backed router).
+    paced: bool = False
 
 
 class GameActionRequest(BaseModel):
     action: int
+    # See CreateGameRequest.paced — caps the post-action agent autoplay at
+    # one action so the client can pace the bot's response.
+    paced: bool = False
 
 
 class SurrenderRequest(BaseModel):

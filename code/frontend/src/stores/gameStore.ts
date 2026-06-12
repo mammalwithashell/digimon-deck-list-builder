@@ -29,6 +29,10 @@ interface GameStore {
 
   // UI state
   actionMask: number[];
+  /** True while a non-human agent still has actions to take in paced mode
+   *  (add-bot-action-pacing). GamePage's pacing driver requests the next
+   *  beat while set; human action submission is locked for the duration. */
+  agentPending: boolean;
   selectedAttacker: number | null;
   hoveredCard: string | null;
   logs: string[];
@@ -43,6 +47,7 @@ interface GameStore {
   setGameId: (id: string | null) => void;
   setGameState: (state: GameState) => void;
   setActionMask: (mask: number[]) => void;
+  setAgentPending: (pending: boolean) => void;
   setPlayerLabels: (labels: Record<number, string>) => void;
   selectAttacker: (slot: number | null) => void;
   setHoveredCard: (cardId: string | null) => void;
@@ -71,6 +76,7 @@ const initialState = {
   pendingSelection: null,
   pendingAttack: null,
   actionMask: [],
+  agentPending: false,
   selectedAttacker: null,
   hoveredCard: null,
   logs: [],
@@ -103,6 +109,7 @@ export const useGameStore = create<GameStore>((set) => ({
     }),
 
   setActionMask: (mask) => set({ actionMask: mask }),
+  setAgentPending: (pending) => set({ agentPending: pending }),
   setPlayerLabels: (labels) => set({ playerLabels: labels }),
   selectAttacker: (slot) => set({ selectedAttacker: slot }),
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
