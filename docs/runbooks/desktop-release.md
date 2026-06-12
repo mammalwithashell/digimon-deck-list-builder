@@ -13,7 +13,7 @@ Consolidated inventory of everything the release flow touches. Each row is a sta
 | Tag prefix | Triggers | Workflow |
 |---|---|---|
 | `desktop-vX.Y.Z[-suffix]` | `.github/workflows/desktop-release.yml` | Build Windows + Linux installers, sign, upload to Spaces, publish manifest |
-| `api-vX.Y.Z` | _(reserved; not yet wired)_ | API server deploys. In practice the API image ships via the manually-dispatched `.github/workflows/build-api-image.yml` (run with `deploy=true` to also pull+restart the droplet) because `deploy-api.yml`'s fast-tests gate is still red pending the engine-wheel CI fix |
+| `api-vX.Y.Z` | _(reserved; not yet wired)_ | API server deploys. In practice the API image ships via the manually-dispatched `.github/workflows/build-api-image.yml` (run with `deploy=true` to also pull+restart the droplet) |
 | `engine-vX.Y.Z` | _(reserved; not yet wired)_ | Engine-only releases |
 
 Suffixes follow SemVer prerelease rules (`-alpha.N`, `-beta.N`). The updater's "is this newer?" check uses the `semver` crate, which correctly orders `0.2.0-alpha.2 < 0.2.0-alpha.3 < 0.2.0`.
@@ -236,7 +236,7 @@ gh secret set CI_ADMIN_TOKEN                             # interactive paste
 
 The Spaces URL in `plugins.updater.endpoints` must match where the server writes the manifest (see `code/server/storage/spaces.py:public_url()` — which prefers `SPACES_CDN_URL` on the server, else `SPACES_ENDPOINT/<bucket>/`). The default configured is `https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com/updates/alpha/latest.json` — adjust if your bucket host differs.
 
-The hosted API itself must be running the release-admin code before the publish job can succeed. The API image is published via the manually-dispatched [`build-api-image.yml`](../../.github/workflows/build-api-image.yml) workflow — `gh workflow run build-api-image.yml -f deploy=true` builds, pushes to GHCR, and pulls+restarts the droplet (the tag-driven `deploy-api.yml` is parked while its fast-tests gate is red pending the engine-wheel CI fix).
+The hosted API itself must be running the release-admin code before the publish job can succeed. The API image is published via the manually-dispatched [`build-api-image.yml`](../../.github/workflows/build-api-image.yml) workflow — `gh workflow run build-api-image.yml -f deploy=true` builds, pushes to GHCR, and pulls+restarts the droplet.
 
 ---
 
@@ -339,7 +339,7 @@ Rotation invalidates every already-installed tester's auto-update path — Tauri
 | Build job can't find the installer (`Collect artifact paths` globs match nothing) | Looking under `code/src-tauri/target/` — but `src-tauri` is a root-workspace member, so bundles land in the **workspace-root** `target/release/bundle/...` | Use the workspace-root paths (the workflow matrix `bundle_glob`s already do) |
 | `beforeBuildCommand` fails with `npm` unable to find `package.json` | Hook written as a plain string — plain-string hooks run with cwd = the `frontendDist` dir, not the frontend package root | Use the structured form in `tauri.conf.json`: `{"script": "npm run build:desktop", "cwd": "../frontend"}` |
 | Publish job fails on missing `.sig` files | `bundle.createUpdaterArtifacts` absent or false — the build emits installers but no updater signatures | Set `"createUpdaterArtifacts": true` under `bundle` in `tauri.conf.json` |
-| Publish step 404s on `/admin/releases` | Droplet running a stale API image without the release-admin router | Dispatch `build-api-image.yml` with `deploy=true` to build + deploy the current image (tag-driven `deploy-api.yml` is parked while fast-tests are red) |
+| Publish step 404s on `/admin/releases` | Droplet running a stale API image without the release-admin router | Dispatch `build-api-image.yml` with `deploy=true` to build + deploy the current image |
 | Tauri build signing fails "bad password" | GHA secret mismatch with key file | Re-set `TAURI_UPDATER_KEY_PASSWORD` from 1Password |
 | Testers don't see the new release | Spaces CDN cache (60s) | Wait one minute. If persistent: `curl -X POST -H "Authorization: Bearer $CI_ADMIN_TOKEN" "$HOSTED_API_URL/admin/releases/regenerate-manifest?channel=alpha"` and `curl` the manifest URL to confirm the rewrite landed |
 | Windows SmartScreen blocks installer | Self-signed installer (expected for alpha) | Tester clicks "More info → Run anyway". Documented UX cost until an OV/EV cert is purchased |
