@@ -1245,7 +1245,8 @@
     "EX8-074": {
       "status": "IMPLEMENTED",
       "date": "2026-05-04",
-      "notes": "Cost-reduction clause now carries the count_gte gate for 2 unsuspended Digimon, and the targeted structural regression passes. Existing raw_rust formula ex8_074_suspended_dp_cap remains registered for the dynamic DP cap. Remaining ignored tests track older dynamic DP/all-turn/OPT behavioral coverage, not the count_gte authoring gap."
+      "notes": "Cost-reduction clause now carries the count_gte gate for 2 unsuspended Digimon, and the targeted structural regression passes. Existing raw_rust formula ex8_074_suspended_dp_cap remains registered for the dynamic DP cap. Remaining ignored tests track older dynamic DP/all-turn/OPT behavioral coverage, not the count_gte authoring gap. RE-AUDIT 2026-06-11 (judge-quiz Q30): the would-play suspend-2 cost reduction now targets ANY battle-area Digimon (DCGO IsPermanentExistsOnBattleAreaDigimon; the judge suspends the OPPONENT's Imperialdramon) and is optional; the prior own-side restriction was unfaithful.",
+      "validated_date": "2026-06-11"
     },
     "BT21-026": {
       "status": "IMPLEMENTED",
@@ -8726,6 +8727,50 @@
       "yaml_path": "code/digimon-engine/cards/ex10/EX10-059.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_059.rs",
       "notes": "DigiXros -3 [Bagramon]x[DarkKnightmon] + std digivolve faithful (16-3-3=10 pinned; Q29 pins the Yuu Amano cost/order interaction); [OP][WD] blind-hand tuck OMITTED (G-DSL-BLIND-OPP-HAND-PLACE), place-3-as-TOP-sources cost OMITTED (G-DSL-PLACE-AS-TOP-SOURCE), [All Turns] gain-sources-effects OMITTED (G-DSL-GAIN-ALL-TURNS-FROM-SOURCES)."
+    },
+    "BT20-036": {
+      "card_name": "BanchoLeomon",
+      "validated_date": "2026-06-11",
+      "report": "judge-quiz Q30",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Valdur Arm (judge-quiz Q30)",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_036.rs",
+      "notes": "Mandatory ACCEL would-play -5; [OP][WD] De-Digivolve 2 + -5000 until end of their turn; [EoT] DNA into [Chaosmon]-named hand card + windowed may-attack; inherited redirect. Q30 pin exercises it as an interruptive-Partition play."
+    },
+    "EX3-063": {
+      "card_name": "Imperialdramon: Dragon Mode",
+      "validated_date": "2026-06-11",
+      "report": "judge-quiz Q30",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Valdur Arm (judge-quiz Q30)",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_063.rs",
+      "notes": "DNA Digivolution 0 (purple Lv5 + red Lv5, unsuspended); [WD] if DNA: opponent keeps 1, rest deleted (as_selecting_player + for_each not_in_binding, all in-body per the if-body-park pitfall), then Blitz for the turn; [WA][OPT] +2000 + Fighter Mode digivolve. Q30 pin drives it end-to-end."
+    },
+    "BT16-077": {
+      "card_name": "Dinobeemon",
+      "validated_date": "2026-06-11",
+      "report": "judge-quiz Q30",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Valdur Arm (judge-quiz Q30)",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-077.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_077.rs",
+      "notes": "Raid + main & inherited Partition (purple Lv4 & red Lv4) + DNA path + [WD] if-DNA trash play (attribute_is Free) + Rush window."
+    },
+    "EX3-008": {
+      "card_name": "Flamedramon",
+      "validated_date": "2026-06-11",
+      "report": "judge-quiz Q30",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Valdur Arm (judge-quiz Q30)",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-008.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_008.rs",
+      "notes": "[WD] two-effect choice (trash digivolve / DNA into hand card, cost printed); inherited [EoT] DNA digivolve into hand card — the Q30 driver clause."
     }
   }
 }

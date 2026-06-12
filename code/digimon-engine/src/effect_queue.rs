@@ -745,6 +745,52 @@ impl Game {
         }
     }
 
+    /// Run `hook` once the CURRENT pending-selection chain fully drains.
+    ///
+    /// If no selection is pending, the hook runs immediately. Otherwise the
+    /// pending selection's `callback` / `on_decline` are composed so that,
+    /// after the original resolution, the hook RE-ARMS on whatever selection
+    /// the resolution installed next — it fires exactly once, after the last
+    /// selection in the chain resolves.
+    ///
+    /// Introduced for interruptive `<Partition>` (judge-quiz Q30): the second
+    /// partition source must be played only after the FIRST play's would-play
+    /// interrupt chain (e.g. MedievalGallantmon's "suspend 2 Digimon" cost
+    /// reduction) completes, so the second card is not yet in the battle area
+    /// while the first's interrupts resolve ("played out simultaneously").
+    pub(crate) fn run_after_selections_drain(
+        &mut self,
+        hook: Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>,
+    ) {
+        use std::sync::{Arc, Mutex};
+        let Some(mut pending) = self.pending_selection.take() else {
+            hook(self);
+            return;
+        };
+        let original = pending.callback;
+        // One-shot shared slot so the accept and decline paths can both
+        // re-arm without ever double-firing the hook.
+        type Hook = Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>;
+        let slot: Arc<Mutex<Option<Hook>>> = Arc::new(Mutex::new(Some(hook)));
+        let slot_cb = Arc::clone(&slot);
+        pending.callback = Box::new(move |game, action| {
+            original(game, action);
+            if let Some(h) = slot_cb.lock().unwrap().take() {
+                game.run_after_selections_drain(h);
+            }
+        });
+        if let Some(orig_decline) = pending.on_decline.take() {
+            let slot_dec = Arc::clone(&slot);
+            pending.on_decline = Some(Box::new(move |game| {
+                orig_decline(game);
+                if let Some(h) = slot_dec.lock().unwrap().take() {
+                    game.run_after_selections_drain(h);
+                }
+            }));
+        }
+        self.pending_selection = Some(pending);
+    }
+
     /// Drain the effect queue. Fires each queued effect in order, pausing
     /// when an effect installs a `pending_selection` or when the queue
     /// contains multiple triggers for a single chooser (installs a

@@ -76,7 +76,7 @@
 ## 5. Cluster C — declare-then-pay cost window (Q5, Q26, Q27, Q30)
 
 - [ ] 5.1 Author the missing cards: (Omnimon AD1-025 already implemented), Dorbickmon, MedievalGallantmon, Imperialdramon: Dragon Mode, Chaosmon: Valdur Arm, BanchoLeomon (Miraculous Mega Knight already implemented)
-- [ ] 5.2 Write Q5, Q26, Q27 scenario tests; write Q30 (shared with cluster E) for the interruptive-`<Partition>` + cost-reduction outcome
+- [x] 5.2 Q5/Q26/Q27 done in prior waves. **Q30 DONE 2026-06-11**: `c::q30_partition_interruptive_suspends_both_with_cost_reduction` PASSES — full board from Flamedramon's inherited [EoT] DNA digivolve; legal suspend set EXACTLY {Imperialdramon: Dragon Mode, Chaosmon: Valdur Arm}. Wave: BT20-036, EX3-063, BT16-077, EX3-008 authored (IMPLEMENTED); EX8-074 suspend-2 re-audited to ANY battle-area Digimon. Engine: `<Partition>` re-timed to an interruptive (optional, non-cancelling) WhenWouldLeaveBattleArea replacement + `run_after_selections_drain` sequencing + `granted_keyword` on partition granters. New OPEN gap: G-NESTED-PARKED-REPLACEMENT (engine-gaps.md).
 - [ ] 5.3 Fix any surfaced gap: declare-a-play-whose-cost-becomes-payable-after-declaration window (Q5); cost recomputed unpayable after a mid-resolution DNA-evolution ⇒ return to hand, 0 memory (Q26/Q27) — TDD
 - [ ] 5.4 Confirm cluster C tests green; archive closed gaps
 

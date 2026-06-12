@@ -1258,3 +1258,13 @@ G-code below until fixed.
   event_target_kind: token]` (matching BT22-040 / EX11-060). No engine change.
   Flip `s3_kaguyamon_recursion_fires_on_familiar_token_deletion` to un-ignored
   on fix.
+
+### §`<Partition>` re-timed to the interruptive would-leave window (2026-06-11, judge-quiz Q30) — RESOLVED
+
+- The printed reminder ("...WOULD LEAVE the battle area...") and the quiz Q30 judge feedback ("<Partition> is an interruptive effect which activates before Chaosmon: Valdur Arm is deleted") both place Partition in the would-leave window with the carrier still on field; the engine's post-trash `OnDeletion` model (copied from DCGO `Partition.cs`) was unfaithful. Now an OPTIONAL, NON-CANCELLING `WhenWouldLeaveBattleArea` replacement (`src/cards/keyword_effects.rs`): cause filter unchanged; mandatory 2-pick from the LIVE stack; both picks extracted silently (played, not trashed — no on-trash event) BEFORE either plays; second play chained via the new `Game::run_after_selections_drain` so the first play's would-play interrupt chain settles first (the judge's "played out simultaneously"). DSL: `kind: partition` granters now carry `granted_keyword` so the replacement candidate walk synthesizes the keyword auto-effect (`lower_partition.rs`).
+- **Pinned by:** `judge_quiz::c::q30_partition_interruptive_suspends_both_with_cost_reduction` (full board) + `keyword_phase_d::partition::*` (re-pinned to the new contract).
+
+### §Nested parked replacement (single-park boundary) (G-NESTED-PARKED-REPLACEMENT) — OPEN 2026-06-11
+
+- **Repro:** during Q30 pin development — while one replacement's outcome is parked (interruptive Partition's 2-pick on Chaosmon), a cascading second would-leave replacement that also parks (Medieval's [All Turns] re-activation deleting Imperialdramon, whose inherited <Partition> then fires) trips the `debug_assert` at `replacement.rs` run_candidate_inner ("nested replacement park; outer outcome would be lost ... extend ParkedReplacement into a Vec-stack").
+- **Shape of fix:** per the assert's own note — make `Game::parked_replacement` a stack. Real-cards trigger: chained Partitions / leave-replacements interleaved with would-play interrupts. The Q30 pin sidesteps it by declining the trailing optional re-activation (the judge line ends there).

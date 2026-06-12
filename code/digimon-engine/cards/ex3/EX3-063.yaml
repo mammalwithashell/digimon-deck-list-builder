@@ -1,0 +1,106 @@
+# EX3-063 Imperialdramon: Dragon Mode — Digimon, Lv.6, Purple/Red, DP 12000,
+# Cost 12. Traits: Ancient Dragon. Form: Mega. Attribute: Virus.
+# Digivolve (card image): Lv.5 purple / 4 and Lv.5 red / 4.
+# DNA Digivolution: 0 from purple Lv.5 + red Lv.5 ("Digivolve unsuspended
+# with the 2 specified Digimon stacked on top of each other").
+#
+# Printed text (card image — verified):
+#   [When Digivolving] If DNA digivolving, your opponent chooses 1 of their
+#     Digimon. Delete all of their other Digimon. Then, <Blitz> (If your
+#     opponent has 1 or more memory, this Digimon may attack.).
+#   [When Attacking] [Once Per Turn] This Digimon gets +2000 DP for the
+#     turn. Then, you may digivolve this Digimon into an [Imperialdramon:
+#     Fighter Mode] in your hand for its digivolution cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX3/Purple/EX3_063.cs
+#
+# Modeling notes (judge-quiz Q30 board card):
+# - "your opponent chooses 1 of THEIR Digimon" — the pick is made BY the
+#   opponent over the opponent's own battle area (`as_selecting_player`),
+#   then every OTHER opponent Digimon is deleted (`for_each` +
+#   `not_in_binding` exclusion).
+# - "Then, <Blitz>" — grant the Blitz keyword for the turn (the keyword's
+#   own machinery gates the attack on opponent memory >= 1).
+# Verdict: IMPLEMENTED.
+
+card: EX3-063
+name: "Imperialdramon: Dragon Mode"
+kind: digimon
+level: 6
+color: [purple, red]
+cost: 12
+dp: 12000
+traits: [Ancient Dragon]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, color_is: purple }
+      - { level_eq: 5, color_is: red }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  # ─── [When Digivolving] (DNA only) opponent keeps 1, rest deleted, Blitz ────
+  - when: when_digivolving
+    condition: { dna_origin: true }
+    summary: "[When Digivolving] If DNA digivolving, your opponent chooses 1 of their Digimon. Delete all of their other Digimon. Then, Blitz"
+    process:
+      # The delete + Blitz steps live INSIDE the as_selecting_player body so
+      # they run in the keep-pick's resolution tail where the `kept` binding
+      # is visible (a binding made by a parked select inside a nested body is
+      # not visible to steps after the wrapper — the
+      # G-DSL-IF-BODY-PARK-RESULT-LOG pitfall family). Neither step selects,
+      # so the selecting-player override is inert for them.
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_opponent_permanent:
+                bind_as: kept
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to keep"
+            - for_each:
+                over:
+                  all_of:
+                    - of: opponent
+                    - zone: [battle_area]
+                    - kind: digimon
+                    - not_in_binding: kept
+                bind_as: victim
+                body:
+                  - delete_permanent: { target: victim }
+            - grant_keyword:
+                target: source
+                keyword: Blitz
+                expiry: end_of_turn
+
+  # ─── [When Attacking][OPT] +2000 DP, then may digivolve into Fighter Mode ──
+  - when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][Once Per Turn] This Digimon gets +2000 DP for the turn. Then, you may digivolve this Digimon into an [Imperialdramon: Fighter Mode] in your hand for its digivolution cost"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 2000
+          expiry: end_of_turn
+      - select_hand:
+          of: you
+          bind_as: fighter_mode
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Imperialdramon: Fighter Mode"
+          prompt: "You may digivolve this Digimon into an [Imperialdramon: Fighter Mode] in your hand for its digivolution cost"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: fighter_mode
+          cost: printed

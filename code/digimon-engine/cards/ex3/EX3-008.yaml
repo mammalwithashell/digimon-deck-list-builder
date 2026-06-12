@@ -1,0 +1,118 @@
+# EX3-008 Flamedramon — Digimon, Lv.4, Red, DP 5000, Cost 5.
+# Traits: Dragonkin. Form: Armor Form. Attribute: Free.
+# Digivolve (cards.json): Lv.3 red / 2.
+#
+# Printed text (cards.json + DCGO EX3_008.cs descriptions):
+#   [When Digivolving] Activate 1 of the effects below.
+#     - 1 of your other Digimon may digivolve into a level 4 purple Digimon
+#       card with the [Free] trait from your trash for the cost.
+#     - This Digimon and another of your Digimon may DNA digivolve into a
+#       Digimon card in the hand (paying the DNA digivolve cost).
+#   Inherited: [End of Your Turn] This Digimon and one of your other
+#     Digimon may DNA digivolve into a Digimon card in your hand by paying
+#     its DNA digivolve cost.  (The judge-quiz Q30 driver clause.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX3/Red/EX3_008.cs
+#
+# Modeling notes:
+# - "[Free] trait" = printed attribute (`attribute_is: Free`).
+# - Both DNA clauses pay the printed DNA digivolve cost (`cost: printed`).
+# Verdict: IMPLEMENTED.
+
+card: EX3-008
+name: "Flamedramon"
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Dragonkin]
+form: Armor Form
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+effects:
+  # ─── [When Digivolving] choose 1 of two effects ─────────────────────────────
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] Activate 1: trash-digivolve another Digimon into a Lv.4 purple [Free] card for the cost, OR DNA digivolve this + another of your Digimon into a hand card for the cost"
+    process:
+      - select_effect_choice:
+          labels:
+            - "Digivolve 1 of your other Digimon from your trash"
+            - "DNA digivolve this Digimon and another into a hand card"
+          bind_as: wd_choice
+          prompt: "Activate 1 of the effects below"
+      - if:
+          condition: { equals: [wd_choice, 0] }
+          then:
+            - select_own_permanent:
+                bind_as: evo_base
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - other: true
+                prompt: "1 of your other Digimon may digivolve from your trash"
+            - select_trash:
+                of: you
+                bind_as: evo_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 4
+                    - color_is: purple
+                    - attribute_is: Free
+                prompt: "Digivolve into a level 4 purple Digimon card with the [Free] trait from your trash for the cost"
+            - effect_initiated_digivolve:
+                target: evo_base
+                from_hand: evo_card
+                cost: printed
+          else:
+            - select_own_permanent:
+                bind_as: dna_partner
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - other: true
+                prompt: "Select your other DNA digivolution material"
+            - select_hand:
+                of: you
+                bind_as: dna_result
+                filter: { kind: digimon }
+                prompt: "DNA digivolve into a Digimon card in your hand for its DNA digivolve cost"
+            - effect_initiated_dna_digivolve:
+                target_a: source
+                target_b: dna_partner
+                from_hand: dna_result
+                cost: printed
+
+  # ─── Inherited — [End of Your Turn] DNA digivolve into a hand card ─────────
+  - scope: inherited
+    when: end_of_your_turn
+    optional: true
+    summary: "Inherited: [End of Your Turn] This Digimon and one of your other Digimon may DNA digivolve into a Digimon card in your hand by paying its DNA digivolve cost"
+    process:
+      - select_own_permanent:
+          bind_as: dna_partner
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "Select your other DNA digivolution material"
+      - select_hand:
+          of: you
+          bind_as: dna_result
+          filter: { kind: digimon }
+          prompt: "DNA digivolve into a Digimon card in your hand for its DNA digivolve cost"
+      - effect_initiated_dna_digivolve:
+          target_a: source
+          target_b: dna_partner
+          from_hand: dna_result
+          cost: printed
