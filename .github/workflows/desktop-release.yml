@@ -99,6 +99,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Fetch annotated tag object
+        shell: bash
+        run: |
+          # actions/checkout fetches the tag as a lightweight ref pointing at
+          # the commit, so `git tag -l --format='%(contents)'` returns the
+          # MERGE COMMIT message instead of the curated tag body (the 0.1.0
+          # manifest shipped "Merge pull request #614..." as its notes).
+          # Force-fetch the real annotated tag object, then verify we got one.
+          git fetch origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}" --force
+          echo "tag object type: $(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")"
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -113,7 +124,12 @@ jobs:
           # Prefer the tag annotation (`git tag -a -m "..."`); fall back to
           # the templated .github/RELEASE_NOTES.md (with {{VERSION}} replaced)
           # which is the pre-existing convention from the prior workflow.
-          NOTES=$(git tag -l --format='%(contents)' "$TAG")
+          # Only trust %(contents) when the ref is a real annotated tag object
+          # (type "tag") — on a lightweight tag it returns the commit message.
+          NOTES=""
+          if [ "$(git cat-file -t "refs/tags/$TAG")" = "tag" ]; then
+            NOTES=$(git tag -l --format='%(contents)' "$TAG")
+          fi
           if [ -z "$NOTES" ] && [ -f .github/RELEASE_NOTES.md ]; then
             NOTES=$(sed "s/{{VERSION}}/$VERSION/g" .github/RELEASE_NOTES.md)
           fi
