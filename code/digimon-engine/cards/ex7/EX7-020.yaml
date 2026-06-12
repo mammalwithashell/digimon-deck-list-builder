@@ -1,0 +1,162 @@
+# EX7-020 Paledramon — Digimon, Lv.4, Blue, DP 5000, Cost 5, Champion / Data /
+# Dragon.
+# Rule box (card image): "Trait: Has [Ice-Snow] Type." — the card permanently
+# has the [Ice-Snow] trait in addition to its printed type line, so it is
+# encoded directly in `traits:` below. NOTE: data/cards.json `type_eng` carries
+# only ["Dragon"] (the API ingest drops the rule box), so production card_data
+# built from cards.json is missing Ice-Snow until an override lands (same gap
+# as sibling EX7-016).
+# Standard digivolution: Lv.3 Blue / cost 2 (cards.json evo_costs; the card
+# image shows a single digivolve circle — no alt evo box printed).
+#
+# Printed card text (card image EX7-020.webp, authoritative; cards.json agrees):
+#
+#   [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your
+#   opponent's Digimon. Then, if your opponent has no Digimon with digivolution
+#   cards, this Digimon gains <Jamming> (This Digimon can't be deleted in
+#   battles against Security Digimon.) and <Blocker> (This Digimon can block
+#   in the blocker timing.) until the end of your opponent's turn.
+#
+#   Inherited: [When Attacking] [Once Per Turn] Trash the top digivolution
+#   card of 1 of your opponent's Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Blue/EX7_020.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# When Digivolving (OnEnterFieldAnyone, ActivateClass):
+#   - CanActivateCondition = IsExistOnBattleAreaDigimon(card) ONLY — the clause
+#     fires even when the opponent has NO Digimon at all.
+#   - SelectPermanentEffect over ANY opponent battle-area Digimon
+#     (IsPermanentExistsOnOpponentBattleAreaDigimon), maxCount =
+#     min(1, matching count), canNoSelect: FALSE — MANDATORY pick, no PASS.
+#     With zero candidates the select no-ops.
+#   - Per selected permanent: TrashDigivolutionCardsFromTopOrBottom(
+#     trashCount: 2, isFromTop: false) → trash the BOTTOM 2 digivolution
+#     cards, "up to" semantics (a 1-source target loses its only source).
+#   - THEN, unconditionally AFTER the select loop (i.e. also when no selection
+#     happened): if !HasMatchConditionOpponentsPermanent(p => p.IsDigimon &&
+#     !p.HasNoDigivolutionCards) — "your opponent has no Digimon with
+#     digivolution cards" — GainJamming + GainBlocker on
+#     card.PermanentOfThisCard(), EffectDuration.UntilOpponentTurnEnd.
+#   - Faithfulness note (target set): DCGO lets the player pick ANY opponent
+#     Digimon, even one with no digivolution cards (the trash then no-ops and
+#     the grant outcome is unchanged — it depends only on the post-trash
+#     board). The printed instruction is to trash digivolution cards, which
+#     only a stacked Digimon can satisfy, so this spec restricts the target
+#     set to (and gates the select step on) opponent Digimon with
+#     stack_size >= 2 — no dominated no-op choice is exposed to the action
+#     space (EX7-016 inherited-clause idiom). End-state behavior is identical.
+#   - Structure note: the grant check is per-step (`if no_permanent ...`)
+#     rather than a clause-level `condition:` precisely because DCGO runs it
+#     even when the trash half had no target — and it must observe the board
+#     AFTER the trash resolves ("Then, if ...").
+#   - "No digivolution cards" = stack_size <= 1: `card_sources` includes the
+#     top card, so a Digimon WITH >= 1 digivolution card has stack size >= 2
+#     (BT17-077 / EX11-002 stack-size idiom).
+#
+# When Attacking ESS (OnAllyAttack, SetHashString "Attacking_EX7_020",
+#   maxUsableCount 1 = [Once Per Turn], SetIsInheritedEffect(true)):
+#   - If any opponent battle-area Digimon exists, SelectPermanentEffect over
+#     opponent Digimon (canNoSelect: FALSE — mandatory pick, no PASS), then
+#     TrashDigivolutionCardsFromTopOrBottom(trashCount: 1, isFromTop: true)
+#     → trash the TOP digivolution card (the source immediately beneath the
+#     active top card) = `trash_top_stacked_sources` count 1.
+#   - Same EX7-016 faithfulness note: DCGO allows picking a sourceless Digimon
+#     (no-op); this spec gates the clause on (and restricts the target set to)
+#     opponent Digimon with stack_size >= 2 so the OPT is not consumed by an
+#     attack with no satisfiable target. Identical clause to EX7-016's
+#     inherited effect — copied verbatim.
+#
+# ─── Clause layout ───────────────────────────────────────────────────────────
+#
+# Clause 1 — [When Digivolving] bottom-2 source trash + conditional self grant:
+#   IMPLEMENTED: if any_permanent(opponent digimon stack_size_gte 2) →
+#   select_opponent_permanent (mandatory, filter stack_size_gte 2) →
+#   trash_bottom_sources count 2; then if no_permanent(opponent digimon
+#   stack_size_gte 2) → grant_keyword Jamming + Blocker on self,
+#   expiry end_of_opponents_turn.
+#
+# Clause 2 — Inherited [When Attacking][Once Per Turn] source peel:
+#   IMPLEMENTED: condition any_permanent(opponent digimon stack_size_gte 2);
+#   select_opponent_permanent (mandatory) filtered to stack_size_gte 2;
+#   trash_top_stacked_sources count 1. (EX7-016 idiom.)
+
+card: EX7-020
+name: Paledramon
+kind: digimon
+level: 4
+color: [blue]
+cost: 5
+dp: 5000
+traits: [Dragon, Ice-Snow]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+
+effects:
+  - when: when_digivolving
+    summary: "[WD] Trash the bottom 2 digivolution cards of 1 opp Digimon; then if opp has no Digimon with digivolution cards, this Digimon gains <Jamming> and <Blocker> until end of opp's turn"
+    process:
+      # Trash half — gated per-step (NOT at clause level): the grant half
+      # below must still run when there is nothing to trash (DCGO
+      # CanActivateCondition only checks self-on-field).
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              stack_size_gte: 2
+          then:
+            - select_opponent_permanent:
+                bind_as: peel_target
+                filter:
+                  kind: digimon
+                  stack_size_gte: 2
+                prompt: "Select 1 Digimon that will trash its bottom 2 digivolution cards"
+            - trash_bottom_sources:
+                target: peel_target
+                count: 2
+      # Grant half — evaluated AFTER the trash resolves ("Then, if your
+      # opponent has no Digimon with digivolution cards").
+      - if:
+          condition:
+            no_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              stack_size_gte: 2
+          then:
+            - grant_keyword:
+                target: self
+                keyword: Jamming
+                expiry: end_of_opponents_turn
+            - grant_keyword:
+                target: self
+                keyword: Blocker
+                expiry: end_of_opponents_turn
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        stack_size_gte: 2
+    summary: "[Inherited][When Attacking][OPT] Trash the top digivolution card of 1 opponent Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: peel_target
+          filter:
+            kind: digimon
+            stack_size_gte: 2
+          prompt: "Select 1 Digimon that will trash its top digivolution card"
+      - trash_top_stacked_sources:
+          target: peel_target
+          count: 1

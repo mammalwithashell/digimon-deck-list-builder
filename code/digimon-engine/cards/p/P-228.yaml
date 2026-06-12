@@ -1,0 +1,140 @@
+card: P-228
+name: "Unique Emblem: Frozen Crown"
+kind: option
+color: [blue]
+cost: 2
+traits: [LIBERATOR]
+
+# Printed text (verified against the card image):
+# [Main] Reveal the top 3 cards of your deck. Add 1 [Ice-Snow] trait Digimon
+# card and 1 [LIBERATOR] trait card among them to the hand. Return the rest to
+# the bottom of the deck. Then, place this card in the battle area.
+#
+# [Your Turn] When any of your [Suzune Kazuki]s are played, <Delay> (By
+# trashing this card after the placing turn, activate the effect below.)
+# ・1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait
+#   card in the hand with the digivolution cost reduced by 3.
+#
+# Security Effect [Security] Activate this card's [Main] effects.
+#
+# Clause analysis (sibling of P-229 "Unique Emblem: Narrative Ronde" — same
+# template card with Ice-Snow / [Suzune Kazuki] / blue):
+# - [Main] top-3 dual-bucket reveal search, `no_duplicate_cards` so one revealed
+#   Ice-Snow+LIBERATOR card cannot satisfy both printed additions.
+# - "Then, place this card in the battle area": the `kind: delay` clause makes
+#   the Option pipeline classify P-228 as a Delay Option and seat it in the
+#   battle area automatically once the [Main] body resolves.
+# - [Your Turn] event-gated <Delay>: `trigger: on_ally_played` parks the placed
+#   Option indefinitely (OnEvent → compute_delay_trash_turn = u16::MAX) until
+#   one of YOUR [Suzune Kazuki]s is played after the placing turn; the Delay
+#   activation trashes P-228 as its cost, then exposes the printed optional
+#   ("may") digivolve: 1 of your Digimon into a level <= 6 [LIBERATOR] trait
+#   Digimon card from hand, digivolution cost reduced by 3.
+# - [Security] mirrors the [Main] search body, then places this card in the
+#   battle area via `place_self_as_delay_option` (the security pipeline does
+#   not auto-place Delay Options).
+#
+# DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/P/Blue/P_228.cs):
+# - Main: SimplifiedRevealDeckTopCardsAndSelect(3, [Ice-Snow bucket, LIBERATOR
+#   bucket], DeckBottom) then PlaceDelayOptionCards. NOTE: DCGO's first bucket
+#   checks only EqualsTraits("Ice-Snow") without IsDigimon (same simplification
+#   in its P_229 sibling), but both the printed text and DCGO's own effect
+#   description say "[Ice-Snow] trait Digimon card" — the printed text governs,
+#   so the first bucket here requires Digimon + Ice-Snow.
+# - Delay: OnEnterFieldAnyone gated on owner turn + own battle area +
+#   permanent.TopCard.EqualsCardName("Suzune Kazuki") + CanDeclareOptionDelay
+#   (after the placing turn); trashes self, then optional select of 1 own
+#   Digimon (canNoSelect: true) and DigivolveIntoHandOrTrashCard with
+#   cardCondition IsDigimon && Level <= 6 && HasLiberatorTraits, payCost: true,
+#   reduceCost: 3.
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 3; add 1 Ice-Snow Digimon and 1 LIBERATOR; bottom the rest; pipeline then places self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: ice_snow_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: Ice-Snow
+            - bind_as: liberator_pick
+              min: 1
+              max: 1
+              filter: { trait_has: LIBERATOR }
+          prompt: "Select 1 [Ice-Snow] Digimon and 1 [LIBERATOR] card"
+      - add_to_hand_from_reveal: { of: you, card: ice_snow_pick }
+      - add_to_hand_from_reveal: { of: you, card: liberator_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Activate [Main] search effects, then place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: ice_snow_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: Ice-Snow
+            - bind_as: liberator_pick
+              min: 1
+              max: 1
+              filter: { trait_has: LIBERATOR }
+          prompt: "Select 1 [Ice-Snow] Digimon and 1 [LIBERATOR] card"
+      - add_to_hand_from_reveal: { of: you, card: ice_snow_pick }
+      - add_to_hand_from_reveal: { of: you, card: liberator_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  # [Your Turn] event-gated <Delay> — activates when any of your [Suzune
+  # Kazuki] are played after the placing turn. `your_turn` enforces the
+  # [Your Turn] tag; `event_target_owner: you` + `event_card_name_contains`
+  # gate on the played card being one of YOUR Suzune Kazuki. The placed Option
+  # is trashed as the <Delay> activation cost; the digivolve body is the
+  # printed optional "may".
+  - kind: delay
+    trigger: on_ally_played
+    active_when:
+      your_turn: true
+      event_target_owner: you
+      event_card_name_contains: "Suzune Kazuki"
+    summary: "[Your Turn] When your Suzune Kazuki is played, Delay: 1 of your Digimon may digivolve into a level <=6 LIBERATOR card in hand, cost -3"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: LIBERATOR
+              - level_lte: 6
+          prompt: "Choose a level 6 or lower [LIBERATOR] card to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false

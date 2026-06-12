@@ -1,0 +1,137 @@
+# EX11-014 Penguinmon — Digimon, Lv.3, Blue/Yellow, DP 2000, Cost 3.
+# Traits: Avian, LIBERATOR (+ rule-box [Ice-Snow]). Attribute: Vaccine.
+# Form: Rookie. Rarity: C.
+#
+# Printed card text (card image EX11-014.webp, authoritative; cards.json
+# agrees):
+#
+#   Evo box: Lv.2 from blue: Cost 1
+#     (JSON evo_costs [{card_color:1, level:2, memory_cost:1}])
+#   Evo box: "Digivolve [Hiyarimon]: Cost 0"  (JSON xros_req)
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 [Suzune Kazuki] and
+#   1 [Ice-Snow] trait Digimon card among them to the hand. Return the rest
+#   to the bottom of the deck.
+#
+#   Rule: Trait: Has [Ice-Snow] Type.
+#
+#   Inherited Effect: <Jamming> (This Digimon can't be deleted in battles
+#   against Security Digimon.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Blue/EX11_014.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alternate Digivolution Requirement (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#   targetPermanent.TopCard.EqualsCardName("Hiyarimon"), digivolutionCost: 0,
+#   ignoreDigivolutionRequirement: false) — EXACT-name gate, no level/color
+#   restriction → `from: { name_is: "Hiyarimon" }`. (Sibling EX8-019's DCGO
+#   used ContainsCardName; EX11_014.cs uses EqualsCardName — exact.)
+#
+# On Play (OnEnterFieldAnyone): SimplifiedRevealDeckTopCardsAndSelect(
+#   revealCount: 3,
+#   conditions[0]: EqualsCardName("Suzune Kazuki"), AddHand, maxCount 1;
+#   conditions[1]: EqualsTraits("Ice-Snow") && IsDigimon, AddHand, maxCount 1;
+#   remainingCardsPlace: DeckBottom).
+#   - "[Suzune Kazuki]" is a card NAME (the Tamer), matched exactly
+#     (EqualsCardName) → `name_is`, not `name_contains`.
+#   - Bucket 1 requires an [Ice-Snow] trait DIGIMON card (printed "Digimon
+#     card"; DCGO checks IsDigimon) → `all_of: [kind: digimon, trait_has]`.
+#   - canNoSelect defaults to FALSE: each add is MANDATORY whenever a matching
+#     card was revealed — no PASS is exposed (no printed "you may"). The
+#     buckets carry min: 1 (the RevealBucket lowering skips a bucket with
+#     zero candidates, matching DCGO's behavior).
+#   - Selections run sequentially and a picked card is removed from the
+#     reveal pool before the second selection → one revealed card can satisfy
+#     only one of the two adds. `no_duplicate_cards: true` encodes this.
+#
+# Inherited <Jamming> (EffectTiming.None): JammingSelfStaticEffect(
+#   isInheritedEffect: true, condition: null) — unconditional inherited
+#   keyword grant → `scope: inherited / kind: grant_keyword` (AD1-010 /
+#   BT25-022 idiom).
+#
+# ─── Clause layout ───────────────────────────────────────────────────────────
+#
+# Clause 1 — [On Play] reveal 3 / add up-to-2 filtered / rest to bottom:
+#   IMPLEMENTED: reveal_top_deck(3) → select_reveal_buckets (bucket 0:
+#   name_is "Suzune Kazuki", min/max 1; bucket 1: [Ice-Snow] Digimon,
+#   min/max 1; no_duplicate_cards) → add_to_hand_from_reveal x2 →
+#   place_remainder_on_deck bottom. (EX7-016 / P-228 / BT25-022 idiom.)
+#
+# Clause 2 — Inherited <Jamming>:
+#   IMPLEMENTED: scope: inherited, kind: grant_keyword, keyword: Jamming.
+#
+# Rule box "Trait: Has [Ice-Snow] Type." — the card permanently has the
+#   [Ice-Snow] trait in addition to its printed type line; encoded directly
+#   in `traits:`. NOTE: data/cards.json `type_eng` carries only
+#   ["Avian", "LIBERATOR"] (the API ingest drops the rule box) — the card
+#   image is authoritative.
+
+card: EX11-014
+name: Penguinmon
+kind: digimon
+level: 3
+color: [blue, yellow]
+cost: 3
+dp: 2000
+traits: [Avian, LIBERATOR, Ice-Snow]
+attribute: Vaccine
+form: Rookie
+
+alt_paths:
+  # Printed standard evo box: Lv.2 from blue, cost 1 (encoded explicitly like
+  # sibling EX8-019 so DSL-only loads carry the printed cost table).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 1
+  # Printed alt evo box: "Digivolve [Hiyarimon]: Cost 0". DCGO gates on
+  # EqualsCardName("Hiyarimon") only — exact name, no level/color restriction.
+  - kind: digivolve
+    from: { name_is: "Hiyarimon" }
+    cost: 0
+
+effects:
+  # ─── Clause 1: [On Play] reveal 3, add 1 [Suzune Kazuki] + 1 [Ice-Snow]
+  #     Digimon, rest to bottom ──────────────────────────────────────────────
+  #
+  # "Reveal the top 3 cards of your deck. Add 1 [Suzune Kazuki] and 1
+  #  [Ice-Snow] trait Digimon card among them to the hand. Return the rest to
+  #  the bottom of the deck."
+  #
+  # Both adds are mandatory when candidates exist (DCGO canNoSelect = false;
+  # no printed "you may") — min: 1, no `optional:`. A picked card cannot
+  # satisfy both buckets (no_duplicate_cards).
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Suzune Kazuki] and 1 [Ice-Snow] trait Digimon; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: suzune_pick
+              min: 1
+              max: 1
+              filter: { name_is: "Suzune Kazuki" }
+            - bind_as: ice_snow_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: Ice-Snow
+          prompt: "Select 1 [Suzune Kazuki] and 1 [Ice-Snow] trait Digimon card"
+      - add_to_hand_from_reveal: { of: you, card: suzune_pick }
+      - add_to_hand_from_reveal: { of: you, card: ice_snow_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 2: Inherited <Jamming> ──────────────────────────────────────────
+  #
+  # "<Jamming> (This Digimon can't be deleted in battles against Security
+  #  Digimon.)"
+  # DCGO: JammingSelfStaticEffect(isInheritedEffect: true) — unconditional.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "[Inherited] <Jamming>"

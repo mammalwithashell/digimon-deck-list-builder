@@ -2199,6 +2199,7 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "Collision",
     "Progress",
     "Evade",
+    "Iceclad",
     "MaterialSave",
     "DigiBurst",
     "Decode",
