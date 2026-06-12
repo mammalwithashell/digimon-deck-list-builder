@@ -154,6 +154,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectPlayOrder;
         self.pending_selection = Some(crate::selection::PendingSelection {
+            zone_owner: None,
             kind: crate::selection::SelectionKind::PlayOrder,
             selecting_player: loser_id,
             previous_phase,

@@ -198,6 +198,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: chooser,
             previous_phase,
@@ -3394,6 +3395,7 @@ impl Game {
         self.current_phase = GamePhase::EffectChoice;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::Replacement,
             selecting_player: chooser,
             previous_phase,
@@ -3484,6 +3486,7 @@ impl Game {
         self.current_phase = GamePhase::EffectChoice;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::TriggerOrder,
             selecting_player: chooser,
             previous_phase,

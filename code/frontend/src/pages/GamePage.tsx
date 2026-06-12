@@ -1207,6 +1207,7 @@ export function GamePage() {
         actionMask={store.actionMask}
         handIds={store.player1?.handIds ?? []}
         trashIds={store.player1?.trashIds ?? []}
+        opponentTrashIds={store.player2?.trashIds ?? []}
         securityIds={store.player1?.securityIds ?? []}
         battleArea={store.player1?.battleArea ?? []}
         onAction={handleAction}

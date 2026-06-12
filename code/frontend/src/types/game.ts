@@ -129,6 +129,14 @@ export interface PendingSelection {
    * both sides in the same id range. See `utils/selectionTargets.ts`.
    */
   kind?: string;
+  /**
+   * For `Hand`/`Trash` kinds, the player whose zone `validIndices` index
+   * into (UI convention: 1 = you, 2 = opponent). Effects like EX11-012
+   * Medusamon prompt YOU to pick from the OPPONENT's trash — without this
+   * the panel zips the action ids against the wrong card list. Absent =
+   * the selecting player's own zone.
+   */
+  zoneOwner?: number;
   effectChoices?: EffectChoice[];
   keywordPrompt?: KeywordPrompt;
 }

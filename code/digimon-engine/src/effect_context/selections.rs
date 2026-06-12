@@ -230,6 +230,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectHand;
         self.game.pending_selection = Some(PendingSelection {
+            zone_owner: Some(of_player),
             kind: SelectionKind::Hand,
             selecting_player,
             previous_phase,
@@ -296,6 +297,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectTrash;
         self.game.pending_selection = Some(PendingSelection {
+            zone_owner: Some(of_player),
             kind: SelectionKind::Trash,
             selecting_player,
             previous_phase,
@@ -378,6 +380,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectMaterial;
         self.game.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::Material,
             selecting_player,
             previous_phase,
@@ -759,6 +762,7 @@ impl<'a> EffectContext<'a> {
 
         self.game.current_phase = GamePhase::SelectBreedingPermanent;
         self.game.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::BreedingPermanent,
             selecting_player,
             previous_phase,
@@ -829,6 +833,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::EffectChoice;
         self.game.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player,
             previous_phase,
@@ -899,6 +904,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectReveal;
         self.game.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::Reveal,
             selecting_player,
             previous_phase,
@@ -1029,6 +1035,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectSecurity;
         self.game.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::Security,
             selecting_player,
             previous_phase,
@@ -1206,6 +1213,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = crate::enums::GamePhase::SelectUnion;
         self.game.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::UnionZone { zones },
             selecting_player,
             previous_phase,
@@ -1775,6 +1783,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = phase;
         self.game.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind,
             selecting_player,
             previous_phase,
@@ -2155,6 +2164,7 @@ fn install_reveal_bucket_step(
 
     game.current_phase = GamePhase::SelectReveal;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::RevealBucket {
             bucket_index: bucket_index as u8,
             min: callback_bucket.min,
@@ -2280,6 +2290,7 @@ fn install_permutation_step(
 
     game.current_phase = GamePhase::SelectPermutation;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::OrderedPermutation { remaining: n },
         selecting_player,
         previous_phase,
@@ -2508,6 +2519,7 @@ fn install_partition_source_selection(
 
     game.current_phase = GamePhase::SelectSource;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::SourceMulti {
             min: requirements.len() as u8,
             max: requirements.len() as u8,
@@ -2656,6 +2668,7 @@ fn install_source_multi_selection(
 
     game.current_phase = GamePhase::SelectSource;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::SourceMulti {
             min,
             max,
@@ -2830,6 +2843,7 @@ fn install_dp_budget_selection(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::DpBudget {
             remaining_dp,
             picked: picked.len() as u8,
@@ -3044,6 +3058,7 @@ fn install_play_cost_budget_selection(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::PlayCostBudget {
             remaining_play_cost,
             picked: picked.len() as u8,
@@ -3193,6 +3208,7 @@ fn install_count_capped_step(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::CountCappedMultiSelect { max, picked },
         selecting_player,
         previous_phase,

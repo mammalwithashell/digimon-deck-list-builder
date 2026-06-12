@@ -51,6 +51,7 @@ fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_play
 
     ctx.game.current_phase = GamePhase::SelectSecurity;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Security,
         selecting_player,
         previous_phase,

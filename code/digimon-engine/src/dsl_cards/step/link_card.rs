@@ -94,6 +94,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
 
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Target,
         selecting_player,
         previous_phase,
@@ -200,6 +201,7 @@ fn install_host_selection(
     let previous_phase = game.current_phase;
     game.current_phase = GamePhase::SelectTarget;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Target,
         selecting_player,
         previous_phase,

@@ -1106,6 +1106,7 @@ fn install_delay_hand_digivolve_selection(
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::EffectChoice,
         selecting_player: player,
         previous_phase,
@@ -1386,6 +1387,7 @@ fn install_delay_dna_card_selection(
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::EffectChoice,
         selecting_player: player,
         previous_phase,

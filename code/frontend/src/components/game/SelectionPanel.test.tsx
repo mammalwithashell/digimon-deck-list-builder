@@ -51,6 +51,56 @@ function renderPanel(overrides: Partial<Parameters<typeof SelectionPanel>[0]> = 
   );
 }
 
+function makeTrashSelection(zoneOwner?: number): PendingSelection {
+  return {
+    phase: GamePhase.SelectTrash,
+    selectingPlayer: 1,
+    validIndices: [130, 131],
+    isOptional: false,
+    prompt: "Return 1 card from your opponent's trash to the bottom of the deck",
+    kind: 'Trash',
+    zoneOwner,
+  } as PendingSelection;
+}
+
+describe('SelectionPanel trash selection zone owner', () => {
+  function renderTrashPanel(zoneOwner: number | undefined, onAction = vi.fn()) {
+    const mask = new Array(2192).fill(0);
+    mask[130] = 1;
+    mask[131] = 1;
+    render(
+      <SelectionPanel
+        currentPhase={GamePhase.SelectTrash}
+        pendingSelection={makeTrashSelection(zoneOwner)}
+        actionMask={mask}
+        handIds={[]}
+        trashIds={['ST1-02', 'ST1-03']}
+        opponentTrashIds={['EX11-012', 'BT21-029']}
+        securityIds={[]}
+        battleArea={[]}
+        onAction={onAction}
+        localPlayer={1}
+      />,
+    );
+    return onAction;
+  }
+
+  it("renders the OPPONENT's trash when zoneOwner is the opponent (EX11-012 Medusamon)", () => {
+    const onAction = renderTrashPanel(2);
+    expect(screen.getByTitle('EX11-012')).toBeInTheDocument();
+    expect(screen.getByTitle('BT21-029')).toBeInTheDocument();
+    expect(screen.queryByTitle('ST1-02')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('EX11-012'));
+    expect(onAction).toHaveBeenCalledWith(130);
+  });
+
+  it('renders the own trash when zoneOwner is absent (legacy) or self', () => {
+    renderTrashPanel(undefined);
+    expect(screen.getByTitle('ST1-02')).toBeInTheDocument();
+    expect(screen.queryByTitle('EX11-012')).not.toBeInTheDocument();
+  });
+});
+
 describe('SelectionPanel effect choice (trigger-order chooser)', () => {
   it('renders the real source card for each effect choice', () => {
     renderPanel();

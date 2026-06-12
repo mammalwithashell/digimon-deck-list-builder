@@ -401,6 +401,13 @@ export function dtoToGameState(dto: GameStateDto): GameState {
           // signal of which side. Drop it and "delete an opponent's Digimon"
           // prompts become unclickable. See `utils/selectionTargets.ts`.
           kind: dto.pending_selection.kind,
+          // Same 0-based -> 1-based shift as selectingPlayer. Hand/Trash
+          // selections can index the OPPONENT's zone (EX11-012 Medusamon);
+          // SelectionPanel picks the card list by this.
+          zoneOwner:
+            dto.pending_selection.zone_owner == null
+              ? undefined
+              : dto.pending_selection.zone_owner + 1,
           // EffectChoice branches need to thread through with their actual
           // engine `action_id`s; the frontend's broken `EFFECT_CHOICE_START`
           // range scan can't find them otherwise.
