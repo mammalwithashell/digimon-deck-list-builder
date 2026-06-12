@@ -88,6 +88,7 @@ fn main() {
             deck_commands::rust_parse_deck,
             deck_commands::rust_validate_deck_raw,
             deck_commands::rust_list_tested_cards,
+            deck_commands::rust_card_database,
             deck_storage::decks_list,
             deck_storage::decks_get,
             deck_storage::decks_put,

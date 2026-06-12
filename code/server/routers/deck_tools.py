@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import json
+from functools import lru_cache
+
 from fastapi import APIRouter, HTTPException
 
+from data_paths import CARDS_JSON
 from digimon_engine import (
     CardDatabase,
     CardKind,
@@ -102,10 +106,76 @@ def deck_validate(request: DeckValidateRequest):
 def list_tested_cards():
     """Return the allowlist of card IDs available in the alpha deck builder.
 
-    The list is derived from per-card behavioral tests under
-    ``tests/behavioral/`` at build time and committed as
+    The list is derived from the Rust engine's implemented-card registry
+    (``code/tools/build_tested_cards.py``) and committed as
     ``data/tested_cards.json``.
     """
     card_ids = sorted(load_tested_cards())
     return {"card_ids": card_ids, "card_count": len(card_ids)}
+
+
+_COLOR_NAMES = ["Red", "Blue", "Yellow", "Green", "White", "Black", "Purple"]
+_KIND_NAMES = ["Digimon", "Tamer", "Option", "Digi-Egg"]
+_RARITY_NAMES = ["C", "U", "R", "SR", "SEC", "P"]
+
+
+def _name_at(names: list[str], index) -> str:
+    if isinstance(index, int) and 0 <= index < len(names):
+        return names[index]
+    return ""
+
+
+@lru_cache(maxsize=1)
+def _card_database_payload() -> list[dict]:
+    """Display metadata for every allowlisted card, sorted by card ID.
+
+    Mirrors the desktop's ``rust_card_database`` Tauri command
+    (``digimon_engine::deck_tools::tested_card_metadata``) — keep the
+    field set and value mappings in sync with that DTO.
+    """
+    with CARDS_JSON.open(encoding="utf-8") as f:
+        cards: dict[str, dict] = json.load(f)
+    tested = load_tested_cards()
+
+    out = []
+    for card_id in sorted(tested):
+        entry = cards.get(card_id)
+        if entry is None:
+            continue
+        evo_costs = entry.get("evo_costs") or []
+        out.append(
+            {
+                "card_id": card_id,
+                "name": entry.get("card_name_eng") or "",
+                "card_type": _name_at(_KIND_NAMES, entry.get("card_kind")),
+                "colors": [
+                    name
+                    for c in (entry.get("card_colors") or [])
+                    if (name := _name_at(_COLOR_NAMES, c))
+                ],
+                "level": entry.get("level"),
+                "play_cost": entry.get("play_cost"),
+                "evolution_cost": (evo_costs[0].get("memory_cost") if evo_costs else None),
+                "rarity": _name_at(_RARITY_NAMES, entry.get("rarity")),
+                "dp": entry.get("dp"),
+                "stage": (entry.get("form_eng") or [""])[0],
+                "digi_type": "/".join(entry.get("type_eng") or []),
+                "attribute": "/".join(entry.get("attribute_eng") or []),
+                "main_effect": entry.get("effect_description_eng") or "",
+                "inherited_effect": entry.get("inherited_effect_description_eng") or "",
+                "security_effect": entry.get("security_effect_description_eng") or "",
+            }
+        )
+    return out
+
+
+@router.get("/decks/card-database")
+def card_database_endpoint():
+    """Full display metadata for every implemented (allowlisted) card.
+
+    The deck builder seeds its browse pool from this so the whole
+    implemented pool is visible without depending on the external
+    digimoncard.io search API.
+    """
+    return _card_database_payload()
 

@@ -16,7 +16,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::OnceLock;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::enums::{GameMode, Rarity};
 use crate::rules::CardRestriction;
@@ -658,6 +658,151 @@ pub fn expand_deck_dict(counts: &HashMap<String, u32>) -> Vec<String> {
         }
     }
     out
+}
+
+// ─── Rich card metadata for UI browsing ───────────────────────────────
+
+/// Display-oriented card metadata for the deck-builder card pool.
+/// Unlike `CardSummary` (validation-only fields) this carries everything
+/// the browser grid + preview panel render: effect text, colors, level,
+/// costs, DP, traits. Serialized verbatim over the Tauri `invoke()`
+/// boundary and mirrored by the hosted API's `/decks/card-database`.
+#[derive(Debug, Clone, Serialize)]
+pub struct CardMeta {
+    pub card_id: String,
+    pub name: String,
+    /// "Digimon" | "Tamer" | "Option" | "Digi-Egg"
+    pub card_type: String,
+    /// Color names in printed order (1-2 entries), e.g. ["Green"].
+    pub colors: Vec<String>,
+    pub level: Option<i64>,
+    pub play_cost: Option<i64>,
+    /// Memory cost of the first printed digivolution requirement.
+    pub evolution_cost: Option<i64>,
+    /// "C" | "U" | "R" | "SR" | "SEC" | "P" | "" (unknown).
+    pub rarity: String,
+    pub dp: Option<i64>,
+    /// Form, e.g. "Rookie" (first `form_eng` entry).
+    pub stage: String,
+    /// Digimon types joined with "/", e.g. "Larva".
+    pub digi_type: String,
+    pub attribute: String,
+    pub main_effect: String,
+    pub inherited_effect: String,
+    pub security_effect: String,
+}
+
+#[derive(Deserialize)]
+struct EvoCostRaw {
+    #[serde(default)]
+    memory_cost: Option<i64>,
+}
+
+#[derive(Deserialize)]
+struct CardMetaRaw {
+    card_id: String,
+    #[serde(default)]
+    card_name_eng: String,
+    card_kind: u8,
+    #[serde(default = "default_rarity")]
+    rarity: u8,
+    #[serde(default)]
+    card_colors: Vec<u8>,
+    #[serde(default)]
+    level: Option<i64>,
+    #[serde(default)]
+    play_cost: Option<i64>,
+    #[serde(default)]
+    dp: Option<i64>,
+    #[serde(default)]
+    type_eng: Vec<String>,
+    #[serde(default)]
+    form_eng: Vec<String>,
+    #[serde(default)]
+    attribute_eng: Vec<String>,
+    #[serde(default)]
+    effect_description_eng: String,
+    #[serde(default)]
+    inherited_effect_description_eng: String,
+    #[serde(default)]
+    security_effect_description_eng: String,
+    #[serde(default)]
+    evo_costs: Vec<EvoCostRaw>,
+}
+
+fn color_name(raw: u8) -> &'static str {
+    // Matches `enums::CardColor` (Red=0 .. Purple=6).
+    match raw {
+        0 => "Red",
+        1 => "Blue",
+        2 => "Yellow",
+        3 => "Green",
+        4 => "White",
+        5 => "Black",
+        6 => "Purple",
+        _ => "",
+    }
+}
+
+fn kind_name(raw: u8) -> &'static str {
+    match raw {
+        0 => "Digimon",
+        1 => "Tamer",
+        2 => "Option",
+        3 => "Digi-Egg",
+        _ => "",
+    }
+}
+
+fn rarity_name(raw: u8) -> &'static str {
+    match raw {
+        0 => "C",
+        1 => "U",
+        2 => "R",
+        3 => "SR",
+        4 => "SEC",
+        5 => "P",
+        _ => "",
+    }
+}
+
+/// Display metadata for every card on the tested (implemented) allowlist,
+/// sorted by card ID. Parsed once and cached for the process lifetime.
+pub fn tested_card_metadata() -> &'static [CardMeta] {
+    static CELL: OnceLock<Vec<CardMeta>> = OnceLock::new();
+    CELL.get_or_init(|| {
+        let raw: HashMap<String, CardMetaRaw> = serde_json::from_str(CARDS_JSON)
+            .expect("cards.json is malformed (compiled-in resource)");
+        let tested = tested_cards_set();
+        let mut out: Vec<CardMeta> = raw
+            .into_values()
+            .filter(|entry| tested.contains(&entry.card_id))
+            .map(|entry| CardMeta {
+                name: entry.card_name_eng,
+                card_type: kind_name(entry.card_kind).to_string(),
+                colors: entry
+                    .card_colors
+                    .iter()
+                    .map(|c| color_name(*c).to_string())
+                    .filter(|n| !n.is_empty())
+                    .collect(),
+                level: entry.level,
+                play_cost: entry.play_cost,
+                evolution_cost: entry.evo_costs.first().and_then(|c| c.memory_cost),
+                rarity: rarity_name(entry.rarity).to_string(),
+                dp: entry.dp,
+                stage: entry.form_eng.first().cloned().unwrap_or_default(),
+                digi_type: entry.type_eng.join("/"),
+                attribute: entry.attribute_eng.join("/"),
+                main_effect: entry.effect_description_eng,
+                inherited_effect: entry.inherited_effect_description_eng,
+                security_effect: entry.security_effect_description_eng,
+                card_id: entry.card_id,
+            })
+            .collect();
+        out.sort_by(|a, b| a.card_id.cmp(&b.card_id));
+        out
+    })
 }
 
 /// Resolve the ONNX models directory. Honors the `ONNX_MODELS_DIR` env
