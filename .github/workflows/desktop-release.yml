@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'desktop-v*'
+  # Manual trigger for CI testing: runs the build job only (the publish job is
+  # gated to tag pushes), so we can exercise/benchmark the build without
+  # shipping a release to the alpha updater channel.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -105,6 +109,9 @@ jobs:
 
   publish:
     needs: build
+    # Only publish a real release on a desktop-v* tag push. Manual
+    # workflow_dispatch runs build the matrix above but skip publishing.
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
