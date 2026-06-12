@@ -1,0 +1,226 @@
+# EX7-021 CrysPaledramon — Digimon, Lv.5, Blue, DP 7000, Cost 7, Ultimate /
+# Data / Dragonkin.
+# Rule box (card image): "Rule: Trait: Has [Ice-Snow] Type." — the card
+# permanently has the [Ice-Snow] trait in addition to its printed type line,
+# so it is encoded directly in `traits:` below. NOTE: data/cards.json
+# `type_eng` carries only ["Dragonkin"] (the API ingest drops the rule box),
+# so production card_data built from cards.json is missing Ice-Snow until an
+# override lands (same gap as siblings EX7-016 / EX7-020).
+# Standard digivolution: Lv.4 Blue / cost 3 (cards.json evo_costs; the card
+# image shows a single digivolve circle — no alt evo box printed).
+#
+# Printed card text (card image EX7-021.webp, authoritative; cards.json agrees):
+#
+#   <Iceclad> (Other than against Security Digimon, compare the number of
+#   digivolution cards instead of DP in this Digimon's battles.)
+#
+#   [When Digivolving] Trash any 2 digivolution cards under your opponent's
+#   Digimon. Then, if your opponent has no Digimon with digivolution cards,
+#   this Digimon unsuspends.
+#
+#   Inherited: [Your Turn] While your opponent has no Digimon with
+#   digivolution cards, this Digimon with the [Ice-Snow] trait gains
+#   <Piercing> and <Security A. +1>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Blue/EX7_021.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Iceclad (None): IcecladSelfStaticEffect(isInheritedEffect: false) →
+#   face-up `grant_keyword: Iceclad` (engine Keyword::Iceclad is consumed
+#   directly at Game::resolve_battle — stack-size compare instead of DP;
+#   security battles unaffected). EX8-022 idiom.
+#
+# When Digivolving (OnEnterFieldAnyone, ActivateClass):
+#   - CanActivateCondition = IsExistOnBattleAreaDigimon(card) ONLY — the
+#     clause fires even when the opponent has NO sourced Digimon at all.
+#   - CardEffectCommons.SelectTrashDigivolutionCards(permanentCondition:
+#     opponent battle-area Digimon, maxCount: 2, canNoTrash: FALSE,
+#     isFromOnly1Permanent: FALSE): cross-permanent, MANDATORY (no PASS),
+#     and capped at maxDigivolutionDiscardCount = min(total selectable
+#     digivolution cards, 2) — "up to" semantics. With 2+ cards available
+#     the player must pick exactly 2 (any split across stacks); with exactly
+#     1 they must pick that 1; with 0 the helper exits without a prompt.
+#   - THEN, unconditionally AFTER the trash loop (i.e. also when no
+#     selection happened): if !HasMatchConditionOpponentsPermanent(p =>
+#     p.IsDigimon && !p.HasNoDigivolutionCards) — "your opponent has no
+#     Digimon with digivolution cards" — IUnsuspendPermanents on
+#     card.PermanentOfThisCard().
+#   - Structure note: the unsuspend check is per-step (`if no_permanent ...`)
+#     rather than a clause-level `condition:` precisely because DCGO runs it
+#     even when the trash half had no candidates — and it must observe the
+#     board AFTER the trash resolves ("Then, if ..."). EX7-020 idiom.
+#   - Availability-split note: the DSL's `select_opponent_sources` carries a
+#     STATIC `min` — if min exceeded the live candidate count the picker
+#     would drop its continuation (and the trash + unsuspend tail with it).
+#     DCGO's min(total, 2) cap is therefore encoded as an explicit if/else
+#     split: total >= 2 → exact-2 pick; exactly 1 → exact-1 pick; 0 → no
+#     prompt. "Total opponent digivolution cards >= 2" decomposes exactly as
+#     (some stack has >= 2 sources) OR (>= 2 stacks have >= 1 source), since
+#     total = sum(stack_size - 1).
+#   - "No digivolution cards" = stack_size <= 1: `card_sources` includes the
+#     top card, so a Digimon WITH >= 1 digivolution card has stack size >= 2
+#     (BT17-077 / EX11-002 stack-size idiom).
+#
+# Inherited (None + OnDetermineDoSecurityCheck, SetIsInheritedEffect(true)):
+#   - ChangeSelfSAttackStaticEffect(changeValue: +1) and PierceSelfEffect,
+#     BOTH gated on the same Condition(): IsExistOnBattleArea(card) &&
+#     IsOwnerTurn(card) && opponent has no Digimon with DigivolutionCards &&
+#     card.PermanentOfThisCard().TopCard.EqualsTraits("Ice-Snow").
+#   - DSL: one inherited conditional self-aura (EX11-002 idiom — the subject
+#     of an inherited self-aura's active_when is the CARRIER permanent, so
+#     `trait_has: Ice-Snow` is the printed "this Digimon with the [Ice-Snow]
+#     trait" carrier gate) carrying both the flat `security_attack: 1` and
+#     `grant_keyword: Piercing` (BT12-031 combined-grant shape).
+#
+# ─── Clause layout ───────────────────────────────────────────────────────────
+#
+# Clause 1 — <Iceclad>: IMPLEMENTED (face-up grant_keyword).
+# Clause 2 — [When Digivolving] trash any 2 opp digivolution cards, then
+#   conditional self-unsuspend: IMPLEMENTED (availability-split
+#   select_opponent_sources + trash_selected_sources; per-step post-trash
+#   no_permanent check + unsuspend target source).
+# Clause 3 — Inherited [Your Turn] conditional Piercing + Security A. +1:
+#   IMPLEMENTED (inherited self-aura, active_when your_turn + carrier
+#   trait_has Ice-Snow + opponent-sourceless existential).
+
+card: EX7-021
+name: CrysPaledramon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+traits: [Dragonkin, Ice-Snow]
+attribute: Data
+form: Ultimate
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+
+effects:
+  # ─── Clause 1: <Iceclad> ─────────────────────────────────────────────────────
+  #
+  # "(Other than against Security Digimon, compare the number of digivolution
+  #  cards instead of DP in this Digimon's battles.)"
+  #
+  # Engine Keyword::Iceclad is consumed at the combat resolver
+  # (Game::resolve_battle): when either combatant has it, the battle compares
+  # `card_sources.len()` instead of effective DP. Security battles route
+  # through resolve_player_security_loop and are unaffected.
+  - kind: grant_keyword
+    keyword: Iceclad
+    summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
+
+  # ─── Clause 2: [When Digivolving] trash any 2 + conditional unsuspend ───────
+  #
+  # "Trash any 2 digivolution cards under your opponent's Digimon. Then, if
+  #  your opponent has no Digimon with digivolution cards, this Digimon
+  #  unsuspends."
+  #
+  # Cross-permanent, MANDATORY (DCGO canNoTrash: false; no printed "you may"
+  # — no `optional:`/`optional_zero:` per the optional-on-mandatory-selection
+  # pitfall), capped at min(total available, 2) per DCGO's
+  # SelectTrashDigivolutionCards. The unsuspend check runs AFTER the trash
+  # resolves and ALSO when nothing could be trashed (per-step gates, not a
+  # clause-level condition — EX7-020 idiom).
+  - when: when_digivolving
+    summary: "[WD] Trash any 2 digivolution cards under opp Digimon; then if opp has no Digimon with digivolution cards, this Digimon unsuspends"
+    process:
+      # Trash half — availability split encoding DCGO's min(total, 2) cap.
+      # "Total opponent digivolution cards >= 2" ⟺ some opponent stack has
+      # >= 2 sources (stack_size >= 3) OR >= 2 opponent stacks each have
+      # >= 1 source (stack_size >= 2).
+      - if:
+          condition:
+            any_of:
+              - any_permanent:
+                  of: opponent
+                  zone: [battle_area]
+                  kind: digimon
+                  stack_size_gte: 3
+              - count_gte:
+                  filter:
+                    of: opponent
+                    zone: [battle_area]
+                    kind: digimon
+                    stack_size_gte: 2
+                  n: 2
+          then:
+            # 2+ digivolution cards exist → the player must trash exactly 2,
+            # picked freely across the opponent's stacks (no `target:` —
+            # cross-permanent candidate set; DCGO isFromOnly1Permanent: false).
+            - select_opponent_sources:
+                min: 2
+                max: 2
+                bind_as: trashed
+                prompt: "Trash any 2 digivolution cards under your opponent's Digimon"
+                then:
+                  - trash_selected_sources: { source_refs: trashed }
+          else:
+            - if:
+                condition:
+                  any_permanent:
+                    of: opponent
+                    zone: [battle_area]
+                    kind: digimon
+                    stack_size_gte: 2
+                then:
+                  # Exactly 1 digivolution card exists in total → DCGO trashes
+                  # min(1, 2) = 1, still mandatorily (canNoTrash: false).
+                  - select_opponent_sources:
+                      min: 1
+                      max: 1
+                      bind_as: trashed
+                      prompt: "Trash the digivolution card under your opponent's Digimon"
+                      then:
+                        - trash_selected_sources: { source_refs: trashed }
+      # Unsuspend half — evaluated AFTER the trash resolves ("Then, if your
+      # opponent has no Digimon with digivolution cards"), and ALSO when the
+      # trash half had no candidates (DCGO runs the check unconditionally).
+      - if:
+          condition:
+            no_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              stack_size_gte: 2
+          then:
+            - unsuspend: { target: source }
+
+  # ─── Clause 3: Inherited [Your Turn] Piercing + Security A. +1 ──────────────
+  #
+  # "[Your Turn] While your opponent has no Digimon with digivolution cards,
+  #  this Digimon with the [Ice-Snow] trait gains <Piercing> and
+  #  <Security A. +1>."
+  #
+  # Inherited conditional self-aura on the carrier; all three gates live in
+  # active_when (EX11-002 idiom):
+  #   1. your_turn — printed [Your Turn] timing header (DCGO IsOwnerTurn).
+  #   2. trait_has Ice-Snow — "this Digimon with the [Ice-Snow] trait"
+  #      (subject = the carrier permanent for an inherited self-aura; DCGO
+  #      TopCard.EqualsTraits("Ice-Snow")).
+  #   3. no_permanent(opponent, battle_area, digimon, stack >= 2) — "your
+  #      opponent has no Digimon with digivolution cards".
+  # Both grants ride one aura body (BT12-031 combined-grant shape): the flat
+  # `security_attack: 1` lowers to ModifierType::SecurityAttackChange +1 and
+  # `grant_keyword: Piercing` to a declarative keyword grant; the per-tick
+  # declarative rebuild keeps the active_when gate symmetric (on/off).
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - trait_has: Ice-Snow
+        - no_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            stack_size_gte: 2
+    security_attack: 1
+    grant_keyword:
+      keyword: Piercing
+    summary: "[Your Turn] While opp has no Digimon w/ digivolution cards, this [Ice-Snow] Digimon gains <Piercing> and <Security A. +1>"

@@ -209,6 +209,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                 }
                                 if b.dp_modifier.is_none()
                                     && b.dp_modifier_fn.is_none()
+                                    && b.security_attack.is_none()
                                     && b.security_attack_fn.is_none()
                                     && b.grant_keyword.is_none()
                                     && b.modifier.is_none()
@@ -217,7 +218,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
                                         path: prefix.clone(),
-                                        message: "aura requires a payload: dp_modifier, dp_modifier_fn, security_attack_fn, grant_keyword, modifier, or effect_immunity"
+                                        message: "aura requires a payload: dp_modifier, dp_modifier_fn, security_attack, security_attack_fn, grant_keyword, modifier, or effect_immunity"
                                             .to_string(),
                                     });
                                 }
