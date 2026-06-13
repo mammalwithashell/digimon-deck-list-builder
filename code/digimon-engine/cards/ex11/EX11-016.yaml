@@ -1,0 +1,269 @@
+# EX11-016 PolarBearmon — Digimon, Lv.5, Blue/Yellow, DP 7000, Cost 7.
+# Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Rarity: U.
+#
+# Printed card text (card image EX11-016 — authoritative; cards.json agrees):
+#   Evo box: Lv.4 from blue: Cost 4   (JSON evo_costs [{card_color:1, level:4, memory_cost:4}])
+#   Evo box: "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3"   (JSON xros_req)
+#   <Iceclad> (Other than against Security Digimon, compare the number of
+#     digivolution cards instead of DP in this Digimon's battles.)
+#   [On Play] [When Digivolving] Trash any 2 digivolution cards from your
+#     opponent's Digimon. Then, you may place 1 of their Digimon with no
+#     digivolution cards as the top or bottom security card.
+#   Inherited Effect:
+#   [Your Turn] While your opponent has no Digimon with digivolution cards,
+#     this [Ice-Snow] trait Digimon gains <Piercing> (...) and
+#     <Security A. +1> (This Digimon checks 1 additional security card.)
+#
+# DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/EX11/Blue/EX11_016.cs):
+#   Alternate Digivolution Requirement (None):
+#     AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#     EqualsTraits("Ice-Snow") && IsLevel4, digivolutionCost: 3,
+#     ignoreDigivolutionRequirement: false) → `from: { level_eq: 4,
+#     trait_has: Ice-Snow }`, cost 3.
+#   Iceclad (None): IcecladSelfStaticEffect(isInheritedEffect: false) →
+#     face-up `grant_keyword: Iceclad` (engine Keyword::Iceclad consumed at
+#     Game::resolve_battle — stack-size compare instead of DP; security
+#     battles unaffected). EX8-022 / EX8-023 idiom.
+#   On Play + When Digivolving (OnEnterFieldAnyone, two ActivateClass bodies
+#     sharing ONE coroutine):
+#     - Coroutine outer gate: ≥1 opponent battle-area Digimon (ANY — sources
+#       not required) → clause-level `condition:`.
+#     - SelectTrashDigivolutionCards(permanentCondition: opponent battle-area
+#       Digimon, maxCount: 2, canNoTrash: false, isFromOnly1Permanent: false):
+#       a MANDATORY cross-permanent pick of EXACTLY
+#       maxDigivolutionDiscardCount = min(total selectable opponent
+#       digivolution cards, 2). With 1 available card the player must trash
+#       that 1; with 0 the sub-flow no-ops.
+#     - THEN (gated on HasMatchConditionPermanent(opponent battle-area Digimon
+#       with DigivolutionCards.Count == 0) && card.Owner.CanAddSecurity — NOT
+#       on the trash having trashed anything): an OPTIONAL
+#       SelectPermanentEffect(maxCount: 1, canNoSelect: TRUE — the printed
+#       "you may") over sourceless opponent Digimon. If one was picked, a
+#       UserSelectionManager.SetBoolSelection ("Security Top" / "Security
+#       Bottom", selectPlayer: card.Owner) feeds
+#       IPutSecurityPermanent(selectedPermanent, toTop: position) —
+#       PutSecurity moves the permanent's TOP CARD into topCard.Owner's
+#       (= the OPPONENT's own) security stack, FACE-DOWN (isFaceup defaults
+#       false), routing through the WhenRemoveField / leave-field windows,
+#       and trashes any remaining digivolution cards (none, by the filter).
+#   Your Turn (None + OnDetermineDoSecurityCheck, isInheritedEffect: true):
+#     ChangeSelfSAttackStaticEffect(+1) and PierceSelfEffect, both gated on
+#     IsExistOnBattleArea + IsOwnerTurn + carrier EqualsTraits("Ice-Snow") +
+#     NO opponent battle-area Digimon with DigivolutionCards.
+#
+# ─── Authoring notes ──────────────────────────────────────────────────────────
+#
+# Sibling card: EX8-023 PolarBearmon — identical Iceclad grant, identical
+# "trash any 2" cross-permanent mandatory clamp ladder, identical inherited
+# aura. Only the "Then" half differs: EX8-023 mandatorily locks a sourceless
+# Digimon; EX11-016 OPTIONALLY places one into ITS OWNER'S security at a
+# player-chosen top/bottom position.
+#
+# "Trash any 2" mandatory clamp: same if/else count ladder as EX8-023
+# mirroring DCGO's maxDigivolutionDiscardCount clamp:
+#   - total opponent digivolution cards >= 2 → mandatory exact-2 pick
+#     (one stack with >= 2 sources [stack_size_gte: 3] OR two stacks with
+#      >= 1 source each [count_gte n: 2 of stack_size_gte: 2]);
+#   - exactly 1 → mandatory exact-1 pick;
+#   - zero → no pick.
+# The place half sits AFTER the ladder as sibling steps: the dispatcher parks
+# the outer tail across the in-branch selection, so it runs in every arm.
+#
+# "Then, you may place …": `select_opponent_permanent` with `optional: true`
+# (printed "you may" — the optional-on-mandatory-selection pitfall does not
+# apply; this select genuinely IS declinable). Decline (PASS) drops the rest
+# of the clause (default continue_on_decline: false) — nothing is placed.
+# With NO sourceless opponent Digimon the select silently skips but sibling
+# steps still run, so the position choice + placement are gated behind
+# `binding_exists: place_target` to keep the top/bottom prompt from
+# surfacing with no target (DCGO's HasMatchConditionPermanent guard).
+#
+# Top/bottom is a REAL player choice (DCGO SetBoolSelection): exposed via
+# `select_effect_choice` with two labels (BT17-015 / RUST_DSL_TEST_API §12
+# idiom) feeding two `place_permanent_on_security` branches. `of: opponent`
+# — DCGO PutSecurity adds the card to topCard.Owner's security, i.e. the
+# opponent's own stack ("their … security card"). Face-down (DCGO isFaceup
+# defaults false → omit face_up). `place_permanent_on_security` initiates a
+# normal leave-field move (WhenWouldLeaveBattleArea window), matching
+# PutSecurity's WhenRemoveField routing (EX9-021 note).
+#
+# Known minor divergences:
+# - (shared with EX8-023 / BT25-028) `select_opponent_sources` enumerates
+#   sources under EVERY opponent battle-area permanent — no DSL filter for
+#   "host permanent is a Digimon" on source picks. Only divergent on the
+#   exotic board "opponent TAMER carrying digivolution cards".
+# - DCGO gates the whole place region on card.Owner.CanAddSecurity BEFORE the
+#   select; the engine checks CannotAddSecurityByEffect inside
+#   `place_permanent_on_security` instead, so under that (rare) modifier the
+#   select/choice still surface but the placement no-ops. End state matches.
+#
+# Inherited aura: BT12-050 (inherited self-aura grant_keyword Piercing) +
+# EX11-002 (active_when: your_turn + carrier trait_has + no_permanent
+# stack_size_gte: 2) idioms, with the flat `security_attack: 1`. Identical
+# to EX8-023's clause.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.4 blue / Cost 4                          | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Alt digivolve Lv.4 w/[Ice-Snow] / Cost 3                  | IMPLEMENTED (alt_paths trait_has)        |
+# | <Iceclad>                                                 | IMPLEMENTED (grant_keyword)              |
+# | [OP][WD] trash any 2 sources of opp Digimon (cross-perm)  | IMPLEMENTED (select_opponent_sources + clamp ladder) |
+# | [OP][WD] then MAY place 1 sourceless opp Digimon          | IMPLEMENTED (optional select_opponent_permanent)     |
+# | ... as the top or bottom security card (player's choice)  | IMPLEMENTED (select_effect_choice + place_permanent_on_security of: opponent, face-down) |
+# | Inherited [Your Turn] Piercing + Security A. +1           | IMPLEMENTED (inherited conditional self-aura) |
+
+card: EX11-016
+name: PolarBearmon
+kind: digimon
+level: 5
+color: [blue, yellow]
+cost: 7
+dp: 7000
+traits: [Ice-Snow, LIBERATOR]
+attribute: Vaccine
+form: Ultimate
+alt_paths:
+  # Printed standard evo box: Lv.4 from blue, cost 4 (encoded explicitly like
+  # sibling EX8-023 so DSL-only loads carry the printed cost table).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  # Printed alt evo box: "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3". DCGO
+  # gates on EqualsTraits("Ice-Snow") && IsLevel4.
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Ice-Snow }
+    cost: 3
+
+effects:
+  # ─── Clause 1: <Iceclad> ─────────────────────────────────────────────────────
+  #
+  # "(Other than against Security Digimon, compare the number of digivolution
+  #  cards instead of DP in this Digimon's battles.)"
+  #
+  # Engine Keyword::Iceclad is consumed at the combat resolver
+  # (Game::resolve_battle): when either combatant has it, the battle compares
+  # `card_sources.len()` instead of effective DP. Security battles route
+  # through resolve_player_security_loop and are unaffected. EX8-022 idiom.
+  - kind: grant_keyword
+    keyword: Iceclad
+    summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
+
+  # ─── Clause 2: [On Play][When Digivolving] trash any 2 + optional place ──────
+  #
+  # "Trash any 2 digivolution cards from your opponent's Digimon. Then, you
+  #  may place 1 of their Digimon with no digivolution cards as the top or
+  #  bottom security card."
+  #
+  # The trash is mandatory (DCGO canNoTrash: false); the place is optional
+  # (DCGO canNoSelect: true — printed "you may"). Clause condition = DCGO's
+  # coroutine outer gate (≥1 opponent battle-area Digimon). The trash is a
+  # cross-permanent player pick clamped to min(2, available) — see the
+  # authoring note. The place select is gated only by its own candidate
+  # filter (sourceless opponent Digimon): with no candidate it silently
+  # skips, and a Digimon stripped bare by the trash IS a legal target.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash any 2 digivolution cards from the opponent's Digimon; then you may place 1 sourceless opponent Digimon as the top or bottom security card"
+    condition:
+      any_field_permanent: { of: opponent, kind: digimon }
+    process:
+      # DCGO maxDigivolutionDiscardCount = min(total, 2) clamp ladder.
+      - if:
+          condition:
+            any_of:
+              # one opponent stack alone carries >= 2 digivolution cards…
+              - any_field_permanent: { of: opponent, stack_size_gte: 3 }
+              # …or >= 2 opponent stacks carry >= 1 digivolution card each.
+              - count_gte:
+                  filter:
+                    of: opponent
+                    zone: [battle_area]
+                    stack_size_gte: 2
+                  n: 2
+          then:
+            - select_opponent_sources:
+                min: 2
+                max: 2
+                bind_as: picks
+                prompt: "Trash any 2 digivolution cards from your opponent's Digimon"
+                then:
+                  - trash_selected_sources: { source_refs: picks }
+          else:
+            - if:
+                condition:
+                  any_field_permanent: { of: opponent, stack_size_gte: 2 }
+                then:
+                  - select_opponent_sources:
+                      min: 1
+                      max: 1
+                      bind_as: picks
+                      prompt: "Trash any 2 digivolution cards from your opponent's Digimon (only 1 available)"
+                      then:
+                        - trash_selected_sources: { source_refs: picks }
+      # "Then, you may place 1 of their Digimon with no digivolution cards…"
+      # (sibling steps — the dispatcher parks this outer tail across the
+      # in-branch source selection, so it runs in every ladder arm).
+      # PASS/decline drops the rest of the clause; a silent zero-candidate
+      # skip leaves `place_target` unbound, so the binding_exists gate keeps
+      # the position choice from surfacing without a target.
+      - select_opponent_permanent:
+          bind_as: place_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "You may place 1 opponent Digimon with no digivolution cards as the top or bottom security card"
+      - if:
+          condition: { binding_exists: place_target }
+          then:
+            # "…as the top or bottom security card" — a real player choice
+            # (DCGO SetBoolSelection: "Security Top" / "Security Bottom").
+            - select_effect_choice:
+                bind_as: sec_pos
+                labels:
+                  - "Place it as the top security card"
+                  - "Place it as the bottom security card"
+                prompt: "Choose security position"
+            # DCGO PutSecurity adds the card to topCard.Owner's security —
+            # the OPPONENT's own stack — face-down (isFaceup defaults false).
+            - if:
+                condition: { equals: [sec_pos, 0] }
+                then:
+                  - place_permanent_on_security:
+                      of: opponent
+                      target: place_target
+                      position: top
+            - if:
+                condition: { equals: [sec_pos, 1] }
+                then:
+                  - place_permanent_on_security:
+                      of: opponent
+                      target: place_target
+                      position: bottom
+
+  # ─── Clause 3: Inherited [Your Turn] Piercing + Security A. +1 ───────────────
+  #
+  # "[Your Turn] While your opponent has no Digimon with digivolution cards,
+  #  this [Ice-Snow] trait Digimon gains <Piercing> and <Security A. +1>."
+  #
+  # Inherited conditional self-aura (BT12-050 / EX11-002 / EX8-023 idiom).
+  # All three gates live in active_when (subject = the carrier permanent):
+  #   1. your_turn — printed [Your Turn] timing header (DCGO IsOwnerTurn).
+  #   2. trait_has Ice-Snow — "this [Ice-Snow] trait Digimon".
+  #   3. no_permanent(opponent, battle_area, digimon, stack >= 2) — "your
+  #      opponent has no Digimon with digivolution cards" (stack size
+  #      includes the top card, so >= 1 digivolution card ⇔ stack >= 2).
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - trait_has: Ice-Snow
+        - no_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            stack_size_gte: 2
+    grant_keyword: { keyword: Piercing }
+    security_attack: 1
+    summary: "[Inherited][Your Turn] While opp has no Digimon w/ digivolution cards, this [Ice-Snow] Digimon gains <Piercing> and <Security A. +1>"

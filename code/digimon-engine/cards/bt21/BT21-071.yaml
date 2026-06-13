@@ -1,0 +1,178 @@
+card: BT21-071
+name: Scopemon
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 4000
+traits: ["Sup.", Appmon, Tool, Monitoring]
+attribute: Tool
+
+# ─── Digivolve paths ──────────────────────────────────────────────────────────
+#
+# 1. Standard: Lv.3 / Cost 2 (cards.json evo_costs, purple Lv.3 source).
+#    This is the default evo_costs path; modelled as alt_path.
+# 2. Stnd. alt-path: DCGO `EqualsTraits("Stnd.")` — predecessor has "Stnd."
+#    form trait, Lv.3 implied, Cost 2.
+# 3. "[Three Musketeers] in text: Cost 2" — DCGO `HasText("Three Musketeers")
+#    && Level == 3`. Text-presence predicate on predecessor card text.
+#    Uses `effect_text_contains` (G-DSL-PREDICATE-TEXT-CONTAINS, RESOLVED).
+#    BT21-072 exemplar: `effect_text_contains: "＜Save＞"` in alt_path from:.
+
+alt_paths:
+  # Standard: Lv.3 / Cost 2 (default evo_costs path).
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 2
+
+  # Alt-path: Stnd. (Lv.3 w/ "Stnd." form trait) / Cost 2.
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Stnd."), 2, ...).
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "Stnd." }
+    cost: 2
+
+  # Alt-path: Lv.3 w/ [Three Musketeers] in text / Cost 2.
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(HasText("Three Musketeers") && Level == 3, 2, ...).
+  - kind: digivolve
+    from: { level_eq: 3, effect_text_contains: "Three Musketeers" }
+    cost: 2
+
+# ─── Effects ─────────────────────────────────────────────────────────────────
+#
+# Clause 1: [On Play] / [When Digivolving] — place-as-bottom-source cost → gain 1 memory.
+#
+# By placing 1 card with the [Appmon] or [Three Musketeers] trait from your
+# hand or trash as 1 of your Digimon's bottom digivolution card, gain 1 memory.
+#
+# DCGO BT21_071.cs:
+#   CanActivateConditionShared: IsExistOnBattleAreaDigimon(card) AND
+#     (hand has eligible OR trash has eligible) AND at least 1 non-token own Digimon.
+#   CanTuckCondition: card.EqualsTraits("Appmon") || card.HasThreeMusketeersTraits.
+#   CanTuckUnderCondition: non-token battle-area Digimon.
+#   Coroutine: present zone choice (or auto-pick if only one zone has candidates);
+#     select 1 card (canNoSelect: true → optional); if selectedCards >= 1, pick
+#     a Digimon (canNoSelect: true → optional); if selectedPermanent != null,
+#     place as bottom source, then gain 1 memory.
+#   The whole clause fires as optional (ActivateClass is the optional wrapper —
+#   the CanActivateCondition ensures at least 1 eligible candidate exists before
+#   offering the choice).
+#
+# DSL modelling:
+#   `select_union_zone` (zones: [hand, trash], optional: true, cost: true) unifies
+#   the "from which zone?" choice. The `then:` branch fires only if a card is
+#   selected, providing the cost-gates the placement + memory sequence.
+#   `select_own_permanent` (optional: true, filter: kind: digimon) picks the host.
+#   `if condition: { binding_present: host_digi }` guards the place + gain.
+#   Note: DCGO also excludes tokens via `!permanent.IsToken`; the DSL has no
+#   `not_token` predicate (minor gap; tokens are rare sources for this step).
+#
+# Clause 2: Self link-condition — [Appmon] host / Cost 2.
+#   DCGO: AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost: 2).
+#   → kind: link_condition, cost: 2, filter: { trait_has: Appmon }.
+#
+# Clause 3: [When Linking] ＜Draw 2＞ and trash 2 cards from hand.
+#   DCGO: WhenLinked (SetIsLinkedEffect(true)); DrawClass(card.Owner, 2);
+#     SelectHandEffect mode: Discard, maxCount: Math.Min(2, HandCards.Count),
+#     canNoSelect: false.
+#   DSL: scope: linked, when: when_linked; draw: { of: you, count: 2 };
+#     two sequential mandatory select_hand + trash_from_hand_by_index
+#     (BT7-069 pattern — each select degrades to no-op if hand is empty;
+#     mirrors Math.Min(2, count)).
+
+effects:
+  # ─── Clause 1a — [On Play] place Appmon/Three Musketeers as bottom source → +1 mem ─
+  - when: on_play
+    summary: "[On Play] By placing 1 [Appmon] or [Three Musketeers] card from hand or trash as a Digimon's bottom source, gain 1 memory"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: tuck_card
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: Appmon
+              - trait_has: "Three Musketeers"
+          prompt: "Place 1 [Appmon] or [Three Musketeers] card from hand or trash as a Digimon's bottom digivolution card"
+          then:
+            - select_own_permanent:
+                bind_as: host_digi
+                optional: true
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to receive the bottom digivolution card"
+            - if:
+                condition: { binding_present: host_digi }
+                then:
+                  - place_as_bottom_source:
+                      source: tuck_card
+                      target: host_digi
+                  - gain_memory: 1
+
+  # ─── Clause 1b — [When Digivolving] same effect ──────────────────────────────
+  - when: when_digivolving
+    summary: "[When Digivolving] By placing 1 [Appmon] or [Three Musketeers] card from hand or trash as a Digimon's bottom source, gain 1 memory"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: tuck_card
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: Appmon
+              - trait_has: "Three Musketeers"
+          prompt: "Place 1 [Appmon] or [Three Musketeers] card from hand or trash as a Digimon's bottom digivolution card"
+          then:
+            - select_own_permanent:
+                bind_as: host_digi
+                optional: true
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to receive the bottom digivolution card"
+            - if:
+                condition: { binding_present: host_digi }
+                then:
+                  - place_as_bottom_source:
+                      source: tuck_card
+                      target: host_digi
+                  - gain_memory: 1
+
+  # ─── Clause 2 — Self link-condition: [Appmon] host, Cost 2 ───────────────────
+  # DCGO: AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost: 2).
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+
+  # ─── [Link] +3000 DP (applies to the host while linked) ─────────────────────
+  # Printed in the link box (card image, right edge): +3000 DP. Data-driven LinkDP
+  # in DCGO (Permanent.cs), not a CardEffect — absent from BT21_071.cs by design.
+  # Briefing §1.2: model as a scope:linked self-aura.
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] +3000 DP"
+
+  # ─── Clause 3 — [When Linking] ＜Draw 2＞ and trash 2 from hand ───────────────
+  # scope: linked → fires when Scopemon links onto a host (Scopemon-side effect).
+  # when: when_linked → DCGO SetIsLinkedEffect(true).
+  # Draw 2 then mandatory trash 2 (or however many remain in hand — Math.Min(2,N)).
+  # BT7-069 idiom: two sequential select_hand + trash_from_hand_by_index.
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] ＜Draw 2＞ then trash 2 cards from your hand"
+    process:
+      - draw: { of: you, count: 2 }
+      - select_hand:
+          of: you
+          bind_as: trash_a
+          filter: {}
+          prompt: "Trash 1 of 2 cards from your hand (When Linking)"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_a }
+      - select_hand:
+          of: you
+          bind_as: trash_b
+          filter: {}
+          prompt: "Trash 2 of 2 cards from your hand (When Linking)"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_b }

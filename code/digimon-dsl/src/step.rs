@@ -286,6 +286,8 @@ pub enum StepSpec {
     /// NOTE (2026-06-07): superseded by the more general `LinkCards` below;
     /// retained until the 5 cards using it migrate. See dsl-vocab-gaps.md.
     LinkCardToSelf(LinkCardToSelfArgs),
+    /// `app_fuse:` — effect-initiated App Fuse (see [`AppFuseArgs`]).
+    AppFuse(AppFuseArgs),
     /// Gap 5 — reduce the cost of the link about to resolve in the active
     /// `WhenWouldLink` window by `amount`. Authoring verb over the engine's
     /// `reduce_pending_link_cost` primitive; the body of a host-side
@@ -560,6 +562,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
             StepSpec::LinkCardToSelf(v) => kv!(s, "link_card_to_self", v),
+            StepSpec::AppFuse(v) => kv!(s, "app_fuse", v),
             StepSpec::ReduceLinkCost(v) => kv!(s, "reduce_link_cost", v),
             StepSpec::LinkCards(v) => kv!(s, "link_cards", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
@@ -815,6 +818,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
             "link_card_to_self" => StepSpec::LinkCardToSelf(map.next_value()?),
+            "app_fuse" => StepSpec::AppFuse(map.next_value()?),
             "reduce_link_cost" => StepSpec::ReduceLinkCost(map.next_value()?),
             "link_cards" => StepSpec::LinkCards(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
@@ -908,6 +912,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
                         "effect_initiated_dna_digivolve_hand_partner",
+                        "app_fuse",
                         "trash_top_security",
                         "trash_bottom_security",
                         "add_bottom_security_to_hand",
@@ -1935,6 +1940,40 @@ pub struct EffectDigivolveArgs {
     pub ignore_requirements: bool,
 }
 
+/// Source zone for the result (fusing-in) card in an `app_fuse` step.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum AppFuseZone {
+    #[default]
+    Hand,
+    Trash,
+}
+
+/// `app_fuse:` — effect-initiated App Fuse. Plays an App-Fusion-capable Digimon
+/// card from `from` ONTO one of your field Digimon that already has the named
+/// App-Fusion materials linked. Two engine-driven selections (own permanent,
+/// then result card); no explicit target binding (both are fresh picks). The
+/// result card's App-Fusion materials live on its own `app_fusion` alt-path, so
+/// this step only carries the source zone + an optional result-card filter. See
+/// `docs/superpowers/specs/2026-06-13-effect-initiated-app-fuse-design.md`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AppFuseArgs {
+    /// Zone holding the result card (`hand` default, or `trash`).
+    #[serde(default)]
+    pub from: AppFuseZone,
+    /// Optional predicate on the result card (e.g. BT24-087's System/Life/
+    /// Transmutation trait gate). `None` = any App-Fusion-capable Digimon card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_filter: Option<PredicateSpec>,
+    /// "may" — PASS is legal at each selection. The shipped riders set this
+    /// true; defaults false to match every other step's convention.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EffectDnaDigivolveArgs {
@@ -2395,6 +2434,11 @@ pub struct SelectOwnSourcesArgs {
 /// and stable cross-permanent source refs. `target:` restricts the picker to a
 /// single opponent permanent binding (e.g. the opponent Digimon picked just
 /// before). G-SELECT-OPPONENT-SOURCES — driver BT16-085 DNA branch.
+///
+/// `min`/`max` accept either a literal `u8` or a `{ formula: ... }` block
+/// resolved once at execution time (G-DSL-SELECT-SOURCES-FORMULA-COUNT —
+/// driver EX11-057 "For each of your [Ice-Snow] trait Digimon, trash any 1
+/// digivolution card from your opponent's Digimon").
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOpponentSourcesArgs {
@@ -2402,8 +2446,22 @@ pub struct SelectOpponentSourcesArgs {
     pub target: Option<BindingRef>,
     #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
     pub filter: PredicateSpec,
-    pub min: u8,
-    pub max: u8,
+    pub min: CountBound,
+    pub max: CountBound,
+    /// DCGO `TrashDigivolutionCards.cs` parity
+    /// (`maxDigivolutionDiscardCount = Math.Min(digivolutionCardsSum,
+    /// maxCount)`): when `true`, the resolved `min`/`max` clamp to the live
+    /// candidate count at execution time — the pick affects
+    /// `min(N, available)` and never aborts for "fewer than N available"
+    /// (zero candidates silently skip the pick and continue the clause).
+    ///
+    /// Default `false` preserves the historical unpayable-cost semantics:
+    /// a `min` above the live candidate count drops the continuation —
+    /// committed cards (EX7-021 / EX7-023 / EX11-017 / EX8-066) build
+    /// explicit availability LADDERS on that exact behavior. Do NOT flip
+    /// this default.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub clamp_to_available: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     #[serde(default = "default_select_sources_prompt")]
@@ -2799,11 +2857,20 @@ pub enum LinkCardsTo {
 ///
 /// - `{ exactly: N }`: mandatory until N picks or no candidates remain.
 /// - `{ up_to: N }`: each pick is declinable; the player may stop early.
+///
+/// NOTE: `#[serde(untagged)]` is required so that `serde_yml::from_value`
+/// (used in `typed_body()` for `kind: delay` declarative bodies) can
+/// deserialize these correctly. Externally-tagged tuple variants serialize as
+/// `Value::Tagged` (`!variant value`) in serde_yml's internal Value
+/// representation, incompatible with the `Value::Mapping` path in `typed_body()`.
+/// Untagged struct variants serialize as plain maps `{ exactly: N }` / `{ up_to:
+/// N }`, which work for both the streaming YAML deserializer and the
+/// `serde_yml::from_value(Value::Mapping)` path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
+#[serde(untagged)]
 pub enum LinkCardsCount {
-    Exactly(u8),
-    UpTo(u8),
+    Exactly { exactly: u8 },
+    UpTo { up_to: u8 },
 }
 
 /// The link cost the controller pays.

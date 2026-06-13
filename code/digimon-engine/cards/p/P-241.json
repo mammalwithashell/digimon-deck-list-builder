@@ -1,0 +1,28 @@
+{
+  "index": null,
+  "norm_id": null,
+  "card_id": "P-241",
+  "card_index": 241,
+  "card_name_eng": "Yujin Ozora",
+  "card_name_jpn": "大空勇仁",
+  "card_effect_class_name": "P_241",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "App Driver",
+    "Appmon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When any of your Digimon get linked, by suspending this Tamer, 1 of your Digimon with the [Appmon] trait gains <Vortex> (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.) and +3000 DP for the turn. Then, 1 of your Digimon may app fuse into a Digimon card in the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

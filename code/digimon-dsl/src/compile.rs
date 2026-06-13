@@ -271,6 +271,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::WhenLinked => CompiledTiming::WhenLinked,
         S::WhenCardLinkedToThis => CompiledTiming::WhenCardLinkedToThis,
         S::WhenWouldLinkToThis => CompiledTiming::WhenWouldLinkToThis,
+        S::OnAnyLink => CompiledTiming::OnAnyLink,
     }
 }
 
@@ -2196,6 +2197,16 @@ fn compile_step(
             cost: compile_cost_delta(&a.cost, prefix, card_id, errors),
             ignore_requirements: a.ignore_requirements,
         },
+        S::AppFuse(a) => CompiledStep::AppFuse {
+            from_zone: match a.from {
+                crate::step::AppFuseZone::Hand => crate::compiled::CompiledAppFuseZone::Hand,
+                crate::step::AppFuseZone::Trash => crate::compiled::CompiledAppFuseZone::Trash,
+            },
+            result_filter: a.result_filter.as_ref().map(|p| {
+                compile_predicate(p, &format!("{prefix}.app_fuse.result_filter"), card_id, errors)
+            }),
+            optional: a.optional,
+        },
         S::EffectInitiatedDnaDigivolve(a) => CompiledStep::EffectInitiatedDnaDigivolve {
             target_a: compile_binding_ref(&a.target_a),
             target_b: compile_binding_ref(&a.target_b),
@@ -2609,8 +2620,9 @@ fn compile_step(
         S::SelectOpponentSources(a) => CompiledStep::SelectOpponentSources {
             target: a.target.as_ref().map(compile_binding_ref),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
-            min: a.min,
-            max: a.max,
+            min: compile_count_bound(&a.min, &format!("{prefix}.min"), card_id, errors),
+            max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
+            clamp_to_available: a.clamp_to_available,
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             then: a
@@ -2905,8 +2917,8 @@ fn compile_step(
             };
 
             let count = match a.count {
-                LinkCardsCount::Exactly(n) => CompiledLinkCount::Exactly(n),
-                LinkCardsCount::UpTo(n) => CompiledLinkCount::UpTo(n),
+                LinkCardsCount::Exactly { exactly } => CompiledLinkCount::Exactly(exactly),
+                LinkCardsCount::UpTo { up_to } => CompiledLinkCount::UpTo(up_to),
             };
 
             // `free` pays 0; `reduce: N` pays max(0, base - N). The cards this

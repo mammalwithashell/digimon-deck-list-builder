@@ -2,6 +2,26 @@
 
 Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `assess-rust-engine-archetype`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
 
+> **Permanent-scoped `CannotSuspend` / `CannotUnsuspend` enforcement — RESOLVED 2026-06-13**
+> (Iceclad Liberator pool authoring: EX7-023, EX8-023, EX11-017). The
+> permanent-scoped `ModifierType::CannotSuspend` / `CannotUnsuspend` modifiers
+> were installable and expired correctly but had **no consult site** — a locked
+> Digimon could still declare attacks, block, and be suspended by costs/effects
+> (`tests/flood_gates/mask_gates.rs` even noted "no mask bit exists"). The
+> engine now enforces them at: basic-attack declaration (`combat/mod.rs`
+> `can_attack*` + `action/mask.rs` `can_basic_attack`, kept in lockstep so the
+> RL mask and the API agree), block / Alliance / Counter candidate walks,
+> suspend-as-cost helpers (`effect_context/action/suspend.rs`,
+> `game_actions/mod.rs`), and the universal `game/suspend.rs` chokepoint
+> (effect-driven suspend/unsuspend no-op on locked permanents; turn-start
+> unsuspend skips `CannotUnsuspend`). Covered by
+> `tests/combat/cannot_suspend_enforcement.rs` (10 tests) plus the now-un-ignored
+> EX7-023 / EX11-017 enforcement assertions. **Still open:** the *player-scope
+> mass* `CannotSuspend` / `CannotUnsuspend` auras below (lines for "none of your
+> opponent's Digimon can suspend") — those need the player-scoped registry +
+> future-play tracking, NOT just per-permanent enforcement; this closure is the
+> foundation they build on, not a replacement.
+
 > **Xros Heart DigiXros closure — 2026-05-24:** The
 > `close-xros-heart-digixros-gaps` change closed the reusable Xros Heart
 > DigiXros transaction substrate: recipe material prompts from hand,
@@ -1301,7 +1321,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 ### `App Fuse` keyword/primitive (a Digimon "app fuses" into a Digimon card in the hand)
 - **Severity:** 🔴 BLOCKED — net-new keyword primitive. No `app_fuse` / "app fuse" anywhere in `code/digimon-engine/src/`, `code/digimon-dsl/`, or the DSL process/trigger vocabulary (all `fuse` source hits are `confuse`/`refuse`). Not composable from existing DSL verbs.
 - **Discovered in:** BT25 Kazuki & Itsuki / Appmon slice (2026-06-06), by `/archetype-interaction-test-author`.
-- **Card(s):** **BT25-089 Kazuki & Itsuki** (Tamer): `[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse into a Digimon card in the hand.` **BT25-060 Rebootmon** (Digimon, link-finish-aura slice, re-adjudicated 2026-06-07): registers `AddAppfuseMethodByName(Bootmon, Shutmon)` — an App-Fusion alt-play path. All of Rebootmon's *other* clauses are now expressible (Security+1, Reboot, Link+1 self-aura via modifier_value, link-from-hand/digivolution-sources-to-self via the `link_cards` step, the when_linked/on_unsuspend OPT Piercing/Blocker/effect-immunity grant), so App Fuse is its sole remaining blocker. This is the Appmon "App Fuse" mechanic shared across the BT25 Appmon package (and prior Appmon sets), so the primitive unblocks more than one card.
+- **Card(s):** **BT25-089 Kazuki & Itsuki** (Tamer): `[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse into a Digimon card in the hand.` **BT25-060 Rebootmon** (Digimon, link-finish-aura slice, re-adjudicated 2026-06-07): registers `AddAppfuseMethodByName(Bootmon, Shutmon)` — an App-Fusion alt-play path. All of Rebootmon's *other* clauses are now expressible (Security+1, Reboot, Link+1 self-aura via modifier_value, link-from-hand/digivolution-sources-to-self via the `link_cards` step, the when_linked/on_unsuspend OPT Piercing/Blocker/effect-immunity grant), so App Fuse is its sole remaining blocker. This is the Appmon "App Fuse" mechanic shared across the BT25 Appmon package (and prior Appmon sets), so the primitive unblocks more than one card. **Updated 2026-06-12 (Appmon BT21 wave):** add **BT21-084 Haru Shinkai** (Tamer) — `[Your Turn] When your Digimon get linked, by suspending this Tamer, <Draw 1>. Then, 1 of your Digimon may app fuse into a Digimon card in the hand.` Its memory ramp, the suspend-cost `on_any_link` Draw 1, and the security play-free clause all ship; only the effect-initiated app-fuse rider is omitted → BT21-084 verdict PARTIAL (same gap as BT25-089). Also the **P-241 Yujin Ozora** promo (Tamer) carries the same effect-initiated app-fuse tail.
 - **What's missing:** A keyword/effect that lets one of your battle-area Digimon "app fuse" into a Digimon card in hand — i.e. swap/merge the field Digimon with a hand Digimon card, carrying the appropriate state (digivolution sources / linked cards / placement) across the swap, with a pending-selection for *which* field Digimon and *which* hand card (no auto-pick, no-approximations CLAUDE.md §17). The exact carry-over semantics must be sourced from `general_rule.pdf` §16 (App Fuse) and DCGO's App Fuse keyword effect before authoring.
 - **Source priority to consult before building:** `general_rule.pdf` §16 (App Fuse keyword semantics); DCGO C# `$BASE_DCGO/Assets/Scripts/CardEffect/.../KeyWordEffects` App Fuse effect + `BT25_089.cs` (if present) for the resolve order; card image for printed text. This skill run did not pull the DCGO source because the carrier card (BT25-089) is itself unimplemented — pull it when scheduling the primitive.
 - **Workaround:** None faithful. BT25-089's end-of-turn clause depends on this; stubbing or auto-selecting violates §17. The card's other two clauses (Start-of-Main memory ramp; suspend-cost Appmon Link at cost −2 — Link is already supported) ARE expressible, so BT25-089 can be authored with the App Fuse clause explicitly marked BLOCKED (not stubbed) until this lands.
@@ -1618,3 +1638,12 @@ Digivolving] trims "both players' security stacks so they have 3 cards left" —
   context-classifier proved robust enough (0 genuine regressions in the pool audit) that this
   re-architecture is not required now; revisit only if a future card layout defeats the
   context rule.
+
+### App Fusion alt-play — RE-ADJUDICATION (2026-06-12, Appmon BT21/BT25 wave)
+- **Status: ✅ NOT a gap (stale block cleared).** The App Fusion *alt-play digivolve method* (`AddAppfuseMethodByName`, DSL `kind: app_fusion`) is fully implemented and behaviorally green: `app_fusion_digivolve_route_for_card` (`code/digimon-engine/src/dna_digivolve.rs`) + `tests/cards_behavioral/bt25/app_fusion.rs` (`gap4_app_fusion_stacks_and_consumes_links`). **BT25-060 Rebootmon was re-adjudicated BLOCKED→IMPLEMENTED** on this basis (its sole prior blocker was the now-false "AltPathKind::AppFusion resolves to nothing"). Cards using the app_fusion alt-play path this wave: BT21-018, BT21-023, BT21-059, BT21-073, AD1-005, BT21-101, BT25-060 — all green.
+- **Still a gap:** the *effect-initiated App Fuse* ("1 of your Digimon **may app fuse** into a Digimon card in the hand/trash") — see the "App Fuse keyword/primitive" entry above. Distinct operation (field↔hand/trash Digimon swap initiated by an effect), no `EffectContext::effect_initiated_app_fuse`. Blocks the *riders* of BT21-084, BT24-087, BT23-079, P-241, BT25-089 (those cards ship PARTIAL with the rider omitted).
+
+### Effect-initiated App Fuse — RESOLVED 2026-06-13
+- **Status: ✅ RESOLVED.** The effect-initiated App Fuse primitive shipped: DSL `app_fuse` step (`from: hand|trash`, optional `result_filter`, `optional`) → `EffectContext::initiate_effect_app_fuse` (two engine-driven selections: own field permanent that has the named App-Fusion materials, then the result Digimon card in the source zone) → `Game::commit_effect_app_fuse` (zone-parameterized; stacks the result on the host and folds the consumed link cards under the new top, reusing the alt-play app-fusion commit). Eligibility reuses `Game::can_app_fuse_onto` (the alt-play route). No auto-pick — both selections surface to the action space (CLAUDE.md §17).
+- **Cards closed:** BT21-084, BT23-079, P-241, BT24-087 (trash + System/Life/Transmutation filter) — all PARTIAL→IMPLEMENTED. **BT25-089** had its app-fuse rider shipped too, but remains PARTIAL on the *separate* `G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES` DSL gap (the [Main] link source "from your Digimon's digivolution cards"), which is unrelated to App Fuse.
+- **Tests:** `tests/cards_behavioral/app_fuse_primitive.rs` (8 primitive tests) + `tests/app_fuse_commit.rs` (zone-parameterized commit) + per-card app-fuse tests on the 5 cards. Spec: `docs/superpowers/specs/2026-06-13-effect-initiated-app-fuse-design.md`; plan: `docs/superpowers/plans/2026-06-13-effect-initiated-app-fuse.md`.

@@ -1,0 +1,110 @@
+# BT23-079 Eri Karan — Tamer, Blue, Cost 3.
+# Traits: App Driver / Appmon
+#
+# Printed card text (card image — authoritative):
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [Your Turn] When any of your Digimon get linked, by suspending this Tamer,
+#     those Digimon get +3000 DP until your opponent's turn ends.
+#     Then, 1 of your Digimon may app fuse into a Digimon card in the hand.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT23/Blue/BT23_079.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartMainPhase`:
+#   `CardEffectFactory.Gain1MemoryTamerOpponentDigimonEffect(card)` — the
+#   canonical "if opponent has a Digimon, gain 1 memory" idiom. Same factory
+#   pattern as BT24-087 Clause 1. Maps to `when: start_of_your_main_phase` +
+#   `condition: count_gte(opponent battle_area digimon >= 1)` + `gain_memory: 1`.
+#
+# Clause 2 — `EffectTiming.WhenLinked`:
+#   ActivateClass with `canNoSelect: true` (optional) and no maxUsableCount cap.
+#   CanUseCondition checks:
+#     1. IsExistOnBattleArea(card)
+#     2. CanTriggerWhenLinked(hashtable, IsOwnerPermament, null)
+#        where IsOwnerPermament = IsPermanentExistsOnOwnerBattleAreaDigimon
+#        → "linked HOST is one of OUR Digimons" = event_target_owner: you
+#   CanActivateCondition checks:
+#     1. IsExistOnBattleArea(card)
+#     2. CanActivateSuspendCostEffect(card) → source_is_unsuspended: true
+#     3. IsOwnerTurn(card) → your_turn: true
+#   ActivateCoroutine (in order):
+#     a. SuspendPermanentsClass([self]) → activation_cost: { suspend_self: true }
+#     b. foreach LinkedPermaments: ChangeDigimonDP(+3000, UntilOpponentTurnEnd)
+#        → add_dp_modifier { target: event_target, value: 3000, expiry: end_of_opponents_turn }
+#        NOTE: DCGO loops over `LinkedPermaments` (the accumulated list of all
+#        linked hosts that fired this trigger). In the DSL, `on_any_link` fires
+#        once per link event and `event_target` = the one host that got linked
+#        in this trigger — semantically equivalent for a single-link event.
+#     c. App fuse rider → `app_fuse { from: hand, optional: true }`.
+#
+# ─── IMPLEMENTED (2026-06-13) ─────────────────────────────────────────────────
+#
+# The tail of Clause 2 — "Then, 1 of your Digimon may app fuse into a Digimon
+# card in the hand." — now ships via the effect-initiated `app_fuse` step
+# (`EffectContext::initiate_effect_app_fuse`, from: hand).
+#
+# The "+3000 DP until your opponent's turn ends" portion IS implemented via
+# `add_dp_modifier { target: event_target, value: 3000, expiry: end_of_opponents_turn }`.
+# `CompiledBindingRef::EventTarget` resolves to the `event_permanent` (link host)
+# in the `OnLink` trigger context — confirmed in `dsl_cards/binding_ref.rs`
+# and the `AddDpModifier` step executor in `dsl_cards/step/modifiers.rs`.
+
+card: BT23-079
+name: "Eri Karan"
+kind: tamer
+color: [blue]
+cost: 3
+traits: ["App Driver", Appmon]
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] if opp has a Digimon, gain 1 memory
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter: { of: opponent, zone: [battle_area], kind: digimon }
+        n: 1
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── Clause 2: [Your Turn] When any of your Digimon get linked →
+  #     suspend self, linked Digimon gets +3000 DP until opponent's turn ends,
+  #     then 1 of your Digimon may app fuse into a hand card.
+  #
+  # active_when.all_of:
+  #   - your_turn: true            — [Your Turn] scope (DCGO: IsOwnerTurn)
+  #   - event_target_owner: you    — the link HOST must be our Digimon
+  #                                  (DCGO: IsOwnerPermament =
+  #                                   IsPermanentExistsOnOwnerBattleAreaDigimon)
+  # optional: true — DCGO ActivateClass(canNoSelect: true); player may decline.
+  # condition: { source_is_unsuspended: true } — DCGO: CanActivateSuspendCostEffect
+  #   checks Eri is unsuspended before offering the prompt.
+  # activation_cost: { suspend_self: true } — DCGO: SuspendPermanentsClass([self]);
+  #   must be first body step (compile-validated).
+  # add_dp_modifier target: event_target — DCGO: ChangeDigimonDP(permanent, +3000,
+  #   UntilOpponentTurnEnd). `event_target` resolves to the OnLink trigger's
+  #   `event_permanent` (the link host). expiry: end_of_opponents_turn.
+  - when: on_any_link
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+    condition: { source_is_unsuspended: true }
+    summary: "[Your Turn] When any of your Digimon get linked, suspend self → those Digimon get +3000 DP until opponent's turn ends"
+    process:
+      - activation_cost: { suspend_self: true }
+      - add_dp_modifier:
+          target: event_target
+          value: 3000
+          expiry: end_of_opponents_turn
+      # Then, 1 of your Digimon may app fuse into a Digimon card in the hand.
+      - app_fuse: { from: hand, optional: true }
+
+  # ─── Clause 3: [Security] play this card without paying the cost ──────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -8,6 +8,7 @@
 //! companion tests covering the positive and negative branch of any
 //! conditional effect).
 
+mod app_fuse_primitive;
 mod de_digivolve;
 #[path = "../support/dsl_card_data.rs"]
 mod dsl_card_data;

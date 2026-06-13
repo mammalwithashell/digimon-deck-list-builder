@@ -664,6 +664,14 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::AppFuse {
+            from_zone,
+            result_filter,
+            optional,
+        } => {
+            ctx.initiate_effect_app_fuse(*from_zone, result_filter.as_ref(), *optional);
+            true
+        }
         CompiledStep::EffectInitiatedDnaDigivolve {
             target_a,
             target_b,

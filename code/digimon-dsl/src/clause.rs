@@ -177,6 +177,16 @@ pub enum Timing {
     /// (Gap 5 — BT25-004 Tapmon / BT25-045 Onmon). Filter the would-link card's
     /// traits via `active_when: { would_link_card_trait_any_of: [...] }`.
     WhenWouldLinkToThis,
+    /// DigiLink board-wide observer: "[Your Turn] When your Digimon get
+    /// linked, …" (`when: on_any_link`). Fires for EVERY link event the
+    /// engine dispatches — no forced self/host filter (unlike `when_linked` /
+    /// `when_card_linked_to_this`). Gate the scope with `active_when:`
+    /// predicates: `event_target_owner: you` (the link HOST's controller),
+    /// `event_card_trait_has:` (the just-linked card's traits), and
+    /// `your_turn: true`. Mirrors DCGO `CanTriggerWhenLinked` with a
+    /// board-wide `PermanentCondition` (BT21-084 / BT21-101 / P-217 / P-241).
+    /// G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED.
+    OnAnyLink,
 }
 
 #[derive(

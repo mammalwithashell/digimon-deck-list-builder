@@ -954,6 +954,11 @@ pub enum CompiledTiming {
     /// with a host self-filter (`pending_link_host() == source_permanent`).
     /// Pair with `optional` + a `reduce_link_cost` step (Gap 5).
     WhenWouldLinkToThis,
+    /// DigiLink board-wide observer: fires on every `OnLink` dispatch with NO
+    /// forced self/host filter. Authored as `when: on_any_link`; scope-gate via
+    /// `active_when:` (`event_target_owner`, `event_card_trait_has`,
+    /// `your_turn`). G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED.
+    OnAnyLink,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1008,6 +1013,13 @@ pub enum CompiledFieldSelector {
 pub struct CompiledAttackCostUpgrade {
     pub dp: i32,
     pub security_attack: i32,
+}
+
+/// Compiled source zone for the result card in a `CompiledStep::AppFuse`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledAppFuseZone {
+    Hand,
+    Trash,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum_macros::EnumDiscriminants)]
@@ -1308,6 +1320,15 @@ pub enum CompiledStep {
         from_hand: CompiledBindingRef,
         cost: CompiledCostDelta,
         ignore_requirements: bool,
+    },
+    /// Effect-initiated App Fuse: two engine-driven selections (own permanent,
+    /// then result card from `from_zone`) routed through the app-fusion commit.
+    /// Compiled form of `StepSpec::AppFuse`; the engine lowering calls
+    /// `EffectContext::initiate_effect_app_fuse`.
+    AppFuse {
+        from_zone: CompiledAppFuseZone,
+        result_filter: Option<CompiledPredicate>,
+        optional: bool,
     },
     EffectInitiatedDnaDigivolve {
         target_a: CompiledBindingRef,
@@ -1618,11 +1639,21 @@ pub enum CompiledStep {
     /// Opponent-side mirror of `SelectOwnSources`. Candidate set drawn from the
     /// OPPONENT's battle-area digivolution-source stacks.
     /// G-SELECT-OPPONENT-SOURCES.
+    ///
+    /// `min`/`max` are literal-or-formula bounds resolved once at execution
+    /// time (G-DSL-SELECT-SOURCES-FORMULA-COUNT — driver EX11-057).
     SelectOpponentSources {
         target: Option<CompiledBindingRef>,
         filter: CompiledPredicate,
-        min: u8,
-        max: u8,
+        min: CompiledCountBound,
+        max: CompiledCountBound,
+        /// DCGO `TrashDigivolutionCards.cs` min(N, available) parity: clamp
+        /// the resolved `min`/`max` to the live candidate count; zero
+        /// candidates silently skip the pick. Default `false` keeps the
+        /// historical drop-continuation semantics committed availability
+        /// ladders (EX7-021 / EX7-023 / EX11-017 / EX8-066) rely on.
+        #[serde(default)]
+        clamp_to_available: bool,
         bind_as: Option<String>,
         prompt: String,
         then: Vec<CompiledStep>,

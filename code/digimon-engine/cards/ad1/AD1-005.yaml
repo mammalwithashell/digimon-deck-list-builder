@@ -1,0 +1,172 @@
+# AD1-005 Gaiamon ACE — Digimon, Lv.6, Red, DP 12000, Play Cost 7.
+# Traits: [God, Appmon, Creation] — image: form "God/Appmon", attribute "God",
+#   type "Creation".
+#
+# Corrected printed card text (card image, authoritative):
+#
+# [Hand] [Counter] <Blast Digivolve>
+#   (Your Digimon may digivolve into this card without paying the cost.)
+# <Security A. +1>  <Blocker>  <Link +1>
+#   (Add 1 to this Digimon's maximum links.)
+# [On Play] [When Digivolving] [When Attacking] [Once Per Turn]
+#   You may link up to 2 [Social], [Navi] or [Tool] trait cards from your hand
+#   or this Digimon's digivolution cards to this Digimon without paying the
+#   cost. Then, you may delete 1 of your opponent's Digimon with as much or
+#   less DP as this Digimon.
+#
+# ACE box: Ace Overflow <-4>.
+#
+# DCGO C# reference (READ-ONLY):
+# DCGO/Assets/Scripts/CardEffect/AD1/Red/AD1_005.cs
+#
+# ─── Alt-path analysis ────────────────────────────────────────────────────────
+# Standard digivolve: from cards.json evo_costs (Lv.5 Red / Cost 4).
+# Ult. digivolve: DCGO `AddSelfDigivolutionRequirementStaticEffect` with
+#   condition `targetPermanent.TopCard.EqualsTraits("Ult.")`, cost 4 — a second
+#   alt-path for Appmon-grade Ult. Digimon.
+# App Fusion: DCGO `AddAppfuseMethodByName(["Globemon", "Charismon"])`, cost 0.
+# Blast Digivolve: DCGO `BlastDigivolveEffect` at OnCounterTiming — fires a
+#   counter-window digivolve from hand onto any own Digimon without paying cost.
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+# Clause 1: grant_keyword BlastDigivolve (hand counter marker)
+# Clause 2: grant_keyword SecurityAttackPlus +1 (face-up declarative)
+# Clause 3: grant_keyword Blocker (face-up declarative)
+# Clause 4: kind: aura / modifier: ChangeLinkMax / modifier_value: 1
+#           — first YAML card to use ChangeLinkMax; confirmed by gap1_self_link_max_aura_grants_nonzero_delta
+# Clause 5: [On Play][When Digivolving][When Attacking][Once Per Turn]
+#   - link_cards step: from [hand, self_sources], filter trait Social/Navi/Tool,
+#     to: self, up_to 2, cost: free
+#   - optional delete: select opponent Digimon with DP <= source_dp → delete
+#   DCGO notes:
+#   - IsProperTraitCard checks traits only (Social / Navi / Tool), NOT kind:
+#     digimon; any card type with those traits is linkable.
+#   - canNoSelect: true on the delete SelectPermanentEffect → optional.
+#   - SharedCanActivateCondition checks: (a) card on field, AND either
+#     (b) hand/sources have a linkable card OR (c) opp has DP-eligible Digimon.
+#   - SetHashString(SharedHashString) with count 1 → OPT shared across all
+#     three timings (once any one fires, all are locked).
+#
+# ─── Inherited: Ace Overflow <-4> ─────────────────────────────────────────────
+
+card: AD1-005
+name: Gaiamon ACE
+kind: digimon
+level: 6
+color: [red]
+cost: 7
+dp: 12000
+traits: [God, Appmon, Creation]
+attribute: God
+
+ace_overflow: -4
+
+alt_paths:
+  # ─── Standard digivolve: Lv.5 / Cost 4 ──────────────────────────────────────
+  # Per cards.json evo_costs: card_color=red, level=5, memory_cost=4.
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 4
+
+  # ─── Ult. digivolve: any Digimon with [Ult.] trait / Cost 4 ──────────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(
+  #   permanentCondition: p.TopCard.EqualsTraits("Ult."), cost 4,
+  #   ignoreDigivolutionRequirement: false).
+  - kind: digivolve
+    from: { trait_has: "Ult." }
+    cost: 4
+
+  # ─── App Fusion: [Globemon] & [Charismon] / Cost 0 ───────────────────────────
+  # DCGO: AddAppfuseMethodByName(["Globemon", "Charismon"], card).
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Globemon, Charismon]
+    cost: 0
+
+  # ─── Blast Digivolve: [Hand][Counter], cost 0 ─────────────────────────────────
+  # DCGO: CardEffectFactory.BlastDigivolveEffect at EffectTiming.OnCounterTiming.
+  # No material requirements; any own Digimon on field is valid host.
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
+
+effects:
+  # ─── Clause 1 — [Hand][Counter] <Blast Digivolve> marker ────────────────────
+  # DCGO: BlastDigivolveEffect at OnCounterTiming, isInheritedEffect: false.
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+    summary: "<Blast Digivolve>"
+
+  # ─── Clause 2 — <Security A. +1> ─────────────────────────────────────────────
+  # DCGO: ChangeSelfSAttackStaticEffect(changeValue: 1, isInheritedEffect: false).
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  # ─── Clause 3 — <Blocker> ────────────────────────────────────────────────────
+  # DCGO: BlockerSelfStaticEffect(isInheritedEffect: false).
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── Clause 4 — <Link +1> ────────────────────────────────────────────────────
+  # "Add 1 to this Digimon's maximum links."
+  # DCGO: ChangeSelfLinkMaxStaticEffect(1, false, card, null) at EffectTiming.None.
+  # Models as a self-aura with modifier: ChangeLinkMax, modifier_value: 1.
+  # This is the first YAML card using ChangeLinkMax (precedent from
+  # link_flow.rs gap1_self_link_max_aura_grants_nonzero_delta).
+  - kind: aura
+    target: {}
+    modifier: ChangeLinkMax
+    modifier_value: 1
+    summary: "<Link +1>"
+
+  # ─── Clause 5 — [On Play][When Digivolving][When Attacking][Once Per Turn] ───
+  # "You may link up to 2 [Social], [Navi] or [Tool] trait cards from your hand
+  #  or this Digimon's digivolution cards to this Digimon without paying the
+  #  cost. Then, you may delete 1 of your opponent's Digimon with as much or
+  #  less DP as this Digimon."
+  #
+  # DCGO SharedHashString + count:1 → shared OPT across all three timings.
+  #
+  # FAITHFULNESS NOTES:
+  # 1. IsProperTraitCard checks traits only (Social / Navi / Tool) — NOT
+  #    kind: digimon. Any card with Social/Navi/Tool is eligible, including
+  #    Option cards and Tamers. Do NOT add kind: digimon restriction.
+  # 2. Also checks canLinkToTargetPermanent, which is expressed by the engine
+  #    link mechanics (link_requirement on cards); the link_cards step handles
+  #    this naturally via the host selection.
+  # 3. Delete is optional (DCGO canNoSelect: true).
+  # 4. OPT fires and is consumed even when 0 cards are linked (loop exits at
+  #    first pick when no candidates remain in either zone).
+  # 5. from: [hand, self_sources] — self_sources = this Digimon's digivolution
+  #    cards (DCGO thisPermanent.DigivolutionCards).
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][OPT] Link up to 2 Social/Navi/Tool from hand/sources, then may delete 1 opp Digimon with DP <= self"
+    process:
+      - link_cards:
+          from: [hand, self_sources]
+          filter:
+            any_of:
+              - trait_has: Social
+              - trait_has: Navi
+              - trait_has: Tool
+          to: self
+          count: { up_to: 2 }
+          cost: free
+          prompt: "Link up to 2 [Social], [Navi] or [Tool] trait cards from your hand or digivolution cards"
+      - select_opponent_permanent:
+          bind_as: del_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "You may delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
+      - if:
+          condition: { binding_present: del_target }
+          then:
+            - delete_permanent: { target: del_target }

@@ -1,0 +1,116 @@
+# BT21-018 DoGatchmon — Digimon, Lv.4, Red/Green, DP 6000, Cost 6.
+# Trait line (card image): Sup./Appmon | Social | Super Search/Hero
+#
+# DCGO BT21_018.cs (authoritative):
+#   - AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, cost 3)
+#       → alt_paths digivolve from { level_eq: 3, trait_has: "Stnd." } cost 3.
+#         (HasStandardAppTraits == trait "Stnd."; DCGO imposes NO level gate.)
+#   - RaidSelfEffect → grant_keyword Raid (non-inherited, FaceUp).
+#   - RushSelfStaticEffect → grant_keyword Rush (non-inherited, FaceUp).
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2)
+#       → kind: link_condition, cost 2, filter trait_has Appmon.
+#   - AddAppfuseMethodByName([Gatchmon, Navimon, Tweetmon])
+#       → alt_paths app_fusion, materials name_in [Gatchmon, Navimon, Tweetmon], cost 0.
+#   - [Your Turn][OPT] When this Digimon gets linked (host-side WhenLinked, NOT SetIsLinkedEffect):
+#       when: when_card_linked_to_this, once_per_turn, active_when: your_turn, optional.
+#       Process: may_attack_now { attacker: source, targets: any, optional: true }.
+#       (source_permanent = host permanent = DoGatchmon itself.)
+#   - [When Linking] (linked-card-side WhenLinked, SetIsLinkedEffect(true)):
+#       scope: linked, when: when_linked. Process: may_attack_now { attacker: source, ... }.
+#       (source_permanent for scope:linked = the HOST permanent, per effect_queue.rs L1964.)
+#   - Link DP bonus: +3000 DP (printed in link box; scope:linked aura, briefing §1.2).
+#       (Note: the nine already-shipped BT25 link cards omit this clause — known drift.
+#        BT21-018 correctly includes it per briefing §1.2.)
+#
+# ─── Traits note ─────────────────────────────────────────────────────────────
+# Card image trait line: "Sup./Appmon | Social | Super Search/Hero"
+# Per briefing §2: put the FULL trait line into traits:, including form segment.
+# "Sup." = superior/super form. "Super Search" and "Hero" are type traits.
+# attribute: Social (app-attribute used by trait_has predicates).
+
+card: BT21-018
+name: DoGatchmon
+kind: digimon
+level: 4
+color: [red, green]
+cost: 6
+dp: 6000
+traits: ["Sup.", Appmon, Social, "Super Search", Hero]
+attribute: Social
+
+alt_paths:
+  # ─── [Digivolve] Lv.3 w/[Stnd.] trait: Cost 3 ──────────────────────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, 3)
+  # HasStandardAppTraits → "Stnd." trait. No level gate in DCGO.
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
+    cost: 3
+  # ─── [App Fusion] Gatchmon & Navimon & Tweetmon: Cost 0 ─────────────────────
+  # DCGO: AddAppfuseMethodByName(["Gatchmon", "Navimon", "Tweetmon"])
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Gatchmon, Navimon, Tweetmon]
+    cost: 0
+
+effects:
+  # ─── <Rush> (non-inherited, printed keyword on main card text) ───────────────
+  # DCGO: RushSelfStaticEffect(isInheritedEffect: false, card: card, condition: null)
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+
+  # ─── <Raid> (non-inherited, printed keyword on main card text) ───────────────
+  # DCGO: RaidSelfEffect(isInheritedEffect: false, card: card, condition: null)
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  # ─── Self link-condition: link onto an [Appmon] host for cost 2 ─────────────
+  # DCGO: AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost: 2)
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+
+  # ─── [Link] +3000 DP aura while DoGatchmon is linked to a host ──────────────
+  # Printed in link box: "+3000 DP" icon. While this card is linked, the host gets +3000 DP.
+  # Modeled as a scope:linked self-aura (target: {} = the host permanent, per §1.2 pattern).
+  # Game::static_dp_aura_bonus scans permanent.linked_cards for .linked() declarative dp auras
+  # (DigiLink Shape-B, G-LINK-INHERITED-ESS).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] +3000 DP to the linked Digimon (host)"
+
+  # ─── [Your Turn][OPT] When this Digimon gets linked, it may attack ──────────
+  # Host-side trigger: fires when another card gets linked TO DoGatchmon.
+  # DCGO: WhenLinked (NOT SetIsLinkedEffect), CanActivateCondition: IsOwnerTurn,
+  #   SetHashString("WhenLinked_BT21_018"), SetUpActivateClass(count: 1, skippable: true).
+  # source_permanent = DoGatchmon (the host). may_attack_now { attacker: source } = DoGatchmon attacks.
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[Your Turn][OPT] When this Digimon gets linked, it may attack"
+    process:
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true
+
+  # ─── [When Linking] This Digimon may attack (linked-card side) ──────────────
+  # Fires when DoGatchmon gets linked to a host (DoGatchmon IS the link card).
+  # DCGO: WhenLinked, SetIsLinkedEffect(true). ActivateCoroutine attacks:
+  #   card.PermanentOfThisCard().TopCard.PermanentOfThisCard() = the HOST.
+  # scope: linked → effect_queue.rs L1964: source_permanent = host permanent.
+  # may_attack_now { attacker: source } = host attacks (source_permanent = host).
+  - scope: linked
+    when: when_linked
+    optional: true
+    summary: "[When Linking] This Digimon (the host) may attack"
+    process:
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true

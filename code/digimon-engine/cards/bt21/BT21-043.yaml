@@ -1,0 +1,163 @@
+# BT21-043 Sociamon — Digimon, Lv.4, Yellow, DP 4000, Play Cost 4.
+# Traits (from card image — authoritative): Sup./Appmon | Social | SNS
+# Attribute: Social
+#
+# Corrected printed card text (from card image):
+#
+#   [Digivolve] Standard Lv.3 yellow path (JSON evo_costs)
+#            + Alt: [Stnd.] trait: Cost 2
+#   [Link] [Appmon] trait: Cost 2
+#
+#   [Security] At the end of the battle, play this card without paying the cost.
+#
+#   [On Play] [When Digivolving] 1 of your opponent's Digimon gets -2000 DP
+#   until their turn ends.
+#
+#   Link box:
+#   - Link [Appmon] trait: Cost 2
+#   - +3000 DP (host receives +3000 DP while this card is linked)
+#   - [When Linking] 1 of your opponent's Digimon gets -2000 DP until
+#     their turn ends.
+#
+# DCGO C# reference (READ-ONLY, absolute base-repo path):
+#   DCGO/Assets/Scripts/CardEffect/BT21/Yellow/BT21_043.cs
+#
+# ─── Source-priority cross-check ────────────────────────────────────────────────
+#
+# DCGO BT21_043.cs confirms:
+#   - canNoSelect: false in ALL three -2000 DP effect blocks.
+#     → select_opponent_permanent is MANDATORY when a target exists.
+#   - EffectDuration.UntilOpponentTurnEnd in ALL three blocks.
+#     → expiry: end_of_opponents_turn (= "until their turn ends" for an effect
+#       applied by US to the OPPONENT's Digimon).
+#   - Alt-digivolve: AddSelfDigivolutionRequirementStaticEffect with
+#     permanentCondition: EqualsTraits("Stnd."). NO level gate in DCGO.
+#     → from: { trait_has: "Stnd." } only (no level_eq).
+#   - Link condition: AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost: 2).
+#     → kind: link_condition, cost: 2, filter: trait_has: Appmon.
+#   - When Linked: WhenLinked timing, SetIsLinkedEffect(true). Same -2000 DP body.
+#     → scope: linked, when: when_linked.
+#   - No link DP aura block in DCGO C# (the +3000 is encoded as a separate
+#     printed icon in the link box — DigiLink Shape-B per the engine's
+#     static_dp_aura_bonus / G-LINK-INHERITED-ESS scan of linked_cards).
+#
+# ─── Implementation notes ────────────────────────────────────────────────────────
+#
+# Clause 1 — [Security] play_from_security: {}
+#   Same shape as BT21-015 and BT25-036.
+#   when: on_security → play_from_security: {}
+#
+# Clause 2 — [On Play][When Digivolving] -2000 DP until opponent's turn ends
+#   when: [on_play, when_digivolving]
+#   select_opponent_permanent (mandatory, filter kind: digimon) + add_dp_modifier
+#   value: -2000, expiry: end_of_opponents_turn.
+#   "until their turn ends" when applied to opponent's Digimon = end_of_opponents_turn.
+#   Note: -2000 DP to a ≤2000 DP Digimon → ≤0 → deleted (rule 17-1-3-1;
+#   project memory: dp_zero_deletion). Engine handles this automatically via
+#   add_dp_modifier (which deletes mid-effect when DP reaches ≤0).
+#
+# Clause 3 — Link condition: kind: link_condition, cost: 2, filter: trait_has: Appmon
+#
+# Clause 4 — Link DP aura: scope: linked, kind: aura, dp_modifier: 3000
+#   While this card is linked to a host, the host gains +3000 DP.
+#   Modeled per DigiLink Shape-B (G-LINK-INHERITED-ESS):
+#   Game::static_dp_aura_bonus scans permanent.linked_cards for .linked()
+#   declarative dp auras and folds them into the host's effective DP.
+#   BT25-007..BT25-072 omit this clause (known drift); BT21-043 includes it.
+#
+# Clause 5 — [When Linking]: scope: linked, when: when_linked, same -2000 DP body
+#   Fires when THIS CARD gets linked to a host. SetIsLinkedEffect(true) in DCGO.
+#   Mandatory selection when target exists (canNoSelect: false in DCGO).
+#
+# Alt-path — [Stnd.] trait: Cost 2
+#   DCGO: EqualsTraits("Stnd.") with no level gate → from: { trait_has: "Stnd." } cost: 2.
+#   BT25-036 is the canonical precedent (HasStandardAppTraits == "Stnd.").
+
+card: BT21-043
+name: Sociamon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+traits: ["Sup.", Appmon, Social, SNS]
+attribute: Social
+
+# ─── Alt-path: [Stnd.] trait: Cost 2 ───────────────────────────────────────────
+# DCGO EqualsTraits("Stnd.") — no level gate.
+alt_paths:
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
+    cost: 2
+
+effects:
+  # ─── Clause 1 — [Security] At the end of the battle, play this card for free ─
+  #
+  # DCGO timing: SecuritySkill; body: PlaySelfDigimonAfterBattleSecurityEffect.
+  # play_from_security: {} places the Digimon on the controller's battle area
+  # at the end of the security battle (after-battle play, not during).
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # ─── Clause 2 — [On Play][When Digivolving] opponent Digimon -2000 DP ────────
+  #
+  # DCGO OnEnterFieldAnyone, two separate ActivateClass blocks (one for OnPlay,
+  # one for WhenDigivolving) — both identical bodies. DSL collapses them into one
+  # clause with when: [on_play, when_digivolving].
+  # canNoSelect: false → NOT optional (mandatory when target exists).
+  # EffectDuration.UntilOpponentTurnEnd → expiry: end_of_opponents_turn.
+  # No opponent Digimon → select_opponent_permanent finds no targets → no-op.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 opponent Digimon gets -2000 DP until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -2000 DP until their turn ends"
+      - add_dp_modifier:
+          target: tgt
+          value: -2000
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 3 — Self link-condition: link onto an [Appmon] host for cost 2 ───
+  #
+  # DCGO: AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost: 2).
+  # filter.trait_has: Appmon matches the host's top-card traits.
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+    summary: "[Link] Link this card onto an [Appmon] Digimon: Cost 2"
+
+  # ─── Clause 4 — Link DP aura: +3000 DP to host while linked ─────────────────
+  #
+  # DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's declarative
+  # `scope: linked, kind: aura` applies to its host while the card is linked.
+  # The engine's static_dp_aura_bonus() / queries.rs scans permanent.linked_cards
+  # for linked-flagged dp aura effects and adds them to the host's effective DP.
+  # This is the correct and verified pattern (2026-06-12, appmon-run-briefing §1).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] +3000 DP to the linked Digimon"
+
+  # ─── Clause 5 — [When Linking] opponent Digimon -2000 DP (linked ESS) ────────
+  #
+  # DCGO: WhenLinked timing, SetIsLinkedEffect(true), identical -2000 DP body.
+  # scope: linked, when: when_linked → fires when THIS CARD gets linked to a host.
+  # canNoSelect: false → mandatory selection when target exists.
+  # EffectDuration.UntilOpponentTurnEnd → expiry: end_of_opponents_turn.
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] 1 opponent Digimon gets -2000 DP until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: link_tgt
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -2000 DP until their turn ends"
+      - add_dp_modifier:
+          target: link_tgt
+          value: -2000
+          expiry: end_of_opponents_turn

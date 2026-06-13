@@ -24,10 +24,13 @@ effects:
     summary: "[Main] Reveal top 3; add 1 Appmon to hand; trash the rest; place self in battle area"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      # Printed "Add 1 [Appmon] card among them" — MANDATORY when an Appmon is
+      # revealed (no "may"; DCGO has no canNoSelect). When none is revealed the
+      # select finds no candidates and auto-skips. (Audit drift fix 2026-06-12.)
       - select_reveal:
           of: you
           bind_as: picked
-          optional: true
+          optional: false
           filter: { trait_has: Appmon }
           prompt: "Add 1 [Appmon] trait card to your hand"
       - add_to_hand_from_reveal: { of: you, card: picked }
