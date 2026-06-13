@@ -2799,11 +2799,20 @@ pub enum LinkCardsTo {
 ///
 /// - `{ exactly: N }`: mandatory until N picks or no candidates remain.
 /// - `{ up_to: N }`: each pick is declinable; the player may stop early.
+///
+/// NOTE: `#[serde(untagged)]` is required so that `serde_yml::from_value`
+/// (used in `typed_body()` for `kind: delay` declarative bodies) can
+/// deserialize these correctly. Externally-tagged tuple variants serialize as
+/// `Value::Tagged` (`!variant value`) in serde_yml's internal Value
+/// representation, incompatible with the `Value::Mapping` path in `typed_body()`.
+/// Untagged struct variants serialize as plain maps `{ exactly: N }` / `{ up_to:
+/// N }`, which work for both the streaming YAML deserializer and the
+/// `serde_yml::from_value(Value::Mapping)` path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case", deny_unknown_fields)]
+#[serde(untagged)]
 pub enum LinkCardsCount {
-    Exactly(u8),
-    UpTo(u8),
+    Exactly { exactly: u8 },
+    UpTo { up_to: u8 },
 }
 
 /// The link cost the controller pays.

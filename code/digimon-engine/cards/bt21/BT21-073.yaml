@@ -1,0 +1,198 @@
+# BT21-073 Charismon — Digimon, Lv.5, Purple/Black, DP 8000, Cost 8.
+# Trait line (card image): Ult./Appmon | Social | Mind Control
+#   → traits: ["Ult.", Appmon, Social, "Mind Control"], attribute: Social
+# Colors: Purple + Black (JSON card_colors [6,5])
+#
+# CORRECTED printed card text (card image — authoritative):
+#
+#   Digivolve: Lv.4 Purple / Cost 4 (standard, JSON evo_costs).
+#              "Sup.": Cost 4 (alt-digivolve, DCGO AddSelfDigivolutionRequirementStaticEffect
+#              EqualsTraits("Sup."), cost 4).
+#
+#   App Fusion [Sociamon] & [Gossipmon]: Cost 0.
+#
+#   ＜Blocker＞
+#   [On Play][When Digivolving] You may link 1 level 4 or lower Digimon card
+#     from your trash or this Digimon's digivolution cards to this Digimon
+#     without paying the cost.
+#   [Your Turn][Once Per Turn] When this Digimon gets linked, give 1 of your
+#     opponent's Digimon "[Start of Your Main Phase] This Digimon attacks."
+#     until their turn ends.
+#
+#   Link box:
+#   - Link [Appmon] trait: Cost 3
+#   - Link DP bonus: +4000 DP
+#   - [All Turns][Once Per Turn] When this Digimon would leave the battle area,
+#       by trashing 1 of this Digimon's link cards, it doesn't leave.
+#
+# DCGO C# reference (READ-ONLY):
+#   C:/Users/james/Documents/digimon-deck-list-builder-1/DCGO/Assets/Scripts/CardEffect/BT21/Purple/BT21_073.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+#   Region "Alternative Digivolution Condition" (None):
+#     AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Sup."), cost 4, ignoreReqs: false).
+#     → alt_paths: digivolve from { trait_has: "Sup." } cost 4 (no level gate).
+#
+#   Region "App Fusion" (None):
+#     AddAppfuseMethodByName([Sociamon, Gossipmon]).
+#     → alt_paths: kind: app_fusion, materials name_in [Sociamon, Gossipmon], cost 0.
+#
+#   Region "Blocker" (None):
+#     BlockerSelfStaticEffect(isInheritedEffect: false).
+#     → kind: grant_keyword, keyword: Blocker.
+#
+#   Region "Linking" (None):
+#     AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 3).
+#     → kind: link_condition, cost: 3, filter: { trait_has: Appmon }.
+#
+#   Region "On Play" / "When Digivolving" (OnEnterFieldAnyone):
+#     CanLinkCondition: level <= 4 && CanLinkToTargetPermanent.
+#     CanActivateConditionShared: trash has matching OR digivolution sources have matching.
+#     If both available: SetBoolSelection (From trash / From sources). If only one: SetBool.
+#     Then SelectCardEffect (from Trash or DigivolutionCards, canNoSelect: true → optional).
+#     On select: AddLinkCard (no cost).
+#     → when: [on_play, when_digivolving], optional link_card_to_self from [trash, digivolution_sources],
+#       filter: all_of [kind: digimon, level_lte: 4], cost: 0, optional: true.
+#
+#   Region "Your Turn" (WhenLinked):
+#     OPT maxCount 1, SetHashString("BT21_073_tauntOnLink"), CanUseCondition: IsOwnerTurn &&
+#     CanTriggerWhenLinked(linked perm == card.PermanentOfThisCard()).
+#     CanActivateCondition: isExistOnField. HasMatchConditionPermanent(opp Digimon, canNoSelect: false).
+#     → when: when_card_linked_to_this, once_per_turn, active_when: { your_turn: true }.
+#     Body: select 1 opponent Digimon (mandatory if any), then grant_triggered_effect to it:
+#       timing: start_of_your_main_phase, expiry: end_of_opponents_turn,
+#       body: [force_attack { attacker: carrier, targets: any }].
+#     (BT25-054 GreatGrizzlymon idiom — confirmed identical.)
+#
+#   Region "Link effect" (WhenRemoveField, SetIsLinkedEffect(true)):
+#     OPT (once per turn), all-turns, when this Digimon would leave battle area:
+#     SelectCardEffect from linked cards (SelectCardEffect.Root.Custom = linked cards, canNoSelect: true).
+#     If trashed 1 link card: willBeRemoveField = false → Charismon stays.
+#     → scope: linked, kind: replacement, trigger: when_would_leave_battle_area,
+#       optional: true, cost: { trash_own_link_card: true }, outcome: prevent.
+#     (BT25-101 precedent. SetIsLinkedEffect(true) → scope: linked.)
+#
+#   Link box +4000 DP bonus (continuous, while linked):
+#     → scope: linked, kind: aura, target: {}, dp_modifier: 4000.
+#
+# ─── Implementation status ─────────────────────────────────────────────────
+#
+# | Card-text element                                              | Status       |
+# |----------------------------------------------------------------|--------------|
+# | Std digivolve Lv.4 Purple / Cost 4                            | IMPLEMENTED (printed evo_costs) |
+# | Alt-digivolve from "Sup." form / Cost 4                       | IMPLEMENTED (alt_paths digivolve trait_has "Sup.") |
+# | App Fusion [Sociamon] & [Gossipmon]: Cost 0                   | IMPLEMENTED (alt_paths app_fusion) |
+# | <Blocker>                                                      | IMPLEMENTED (grant_keyword Blocker) |
+# | [OP][WD] may link Lv.4- Digimon from trash/digi-sources free  | IMPLEMENTED (link_card_to_self optional) |
+# | [Your Turn][OPT] when_card_linked_to_this taunt 1 opp Digimon | IMPLEMENTED (BT25-054 idiom) |
+# | Link box [Appmon]: Cost 3                                      | IMPLEMENTED (link_condition) |
+# | Link box +4000 DP aura                                         | IMPLEMENTED (scope: linked aura dp_modifier 4000) |
+# | Link box leave-replacement (trash 1 link card → stay)         | IMPLEMENTED (scope: linked replacement) |
+
+card: BT21-073
+name: Charismon
+kind: digimon
+level: 5
+color: [purple, black]
+cost: 8
+dp: 8000
+traits: ["Ult.", Appmon, Social, "Mind Control"]
+attribute: Social
+
+alt_paths:
+  # ─── Standard digivolve: Lv.4 Purple / Cost 4 (printed evo_costs) ──────────
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+
+  # ─── Alt-digivolve: from a "Sup." form Digimon / Cost 4 ─────────────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Sup."), cost 4).
+  # "Sup." is the Appmon Grade: Superior form trait.
+  - kind: digivolve
+    from: { trait_has: "Sup." }
+    cost: 4
+
+  # ─── [App Fusion] [Sociamon] & [Gossipmon]: Cost 0 ──────────────────────────
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Sociamon, Gossipmon]
+    cost: 0
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 3 ─────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+    summary: "[Link] [Appmon] trait: Cost 3"
+
+  # ─── <Blocker> ─────────────────────────────────────────────────────────────
+  # DCGO: BlockerSelfStaticEffect(isInheritedEffect: false).
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── Link box: +4000 DP aura (applied to the host while Charismon is linked) ─
+  # DCGO: LinkEffect on OnDeclaration side + continuous; GameLink-B shape.
+  # Briefing §1.2: scope:linked aura dp_modifier is the canonical link DP bonus.
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 4000
+    summary: "[Link] This Digimon's host gets +4000 DP while Charismon is linked"
+
+  # ─── Link box leave-replacement: trash 1 link card → Charismon doesn't leave ─
+  # DCGO: Region "Link effect" (WhenRemoveField, SetIsLinkedEffect(true)).
+  # SetIsLinkedEffect(true) → scope: linked. Modeling per BT25-101.
+  - scope: linked
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { trash_own_link_card: true }
+    outcome: prevent
+    summary: "[Link][All Turns] When this Digimon would leave the battle area, by trashing 1 of this Digimon's link cards, it doesn't leave"
+
+  # ─── [On Play][When Digivolving] may link Lv.4- Digimon from trash/sources ──
+  # DCGO: Region "On Play"/"When Digivolving" (OnEnterFieldAnyone).
+  # CanLinkCondition: level <= 4 && CanLinkToTargetPermanent.
+  # Source choices: trash OR digivolution_sources. Optional (canNoSelect: true).
+  # BT25-070 precedent: from [trash, digivolution_sources], filter all_of [kind:digimon, level_lte:4].
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost"
+    process:
+      - link_card_to_self:
+          from: [trash, digivolution_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          cost: 0
+          optional: true
+
+  # ─── [Your Turn][Once Per Turn] when_card_linked_to_this: taunt 1 opp Digimon ─
+  # DCGO: Region "Your Turn" (WhenLinked), OPT maxCount 1.
+  # CanUseCondition: IsOwnerTurn && CanTriggerWhenLinked(perm == this).
+  # Selects 1 opp Digimon (canNoSelect: false — mandatory if any exist).
+  # Grants: "[Start of Your Main Phase] This Digimon attacks." until opp turn ends.
+  # BT25-054 GreatGrizzlymon idiom: select_opponent_permanent → grant_triggered_effect
+  #   timing: start_of_your_main_phase, expiry: end_of_opponents_turn,
+  #   body: [force_attack { attacker: carrier, targets: any }].
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, give 1 of your opponent's Digimon '[Start of Your Main Phase] This Digimon attacks.' until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: taunt_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to gain '[Start of Your Main Phase] This Digimon attacks.'"
+      - grant_triggered_effect:
+          target: taunt_target
+          timing: start_of_your_main_phase
+          expiry: end_of_opponents_turn
+          body:
+            - force_attack:
+                attacker: carrier
+                targets: any
+                prompt: "This Digimon attacks"

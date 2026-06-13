@@ -1618,3 +1618,7 @@ Digivolving] trims "both players' security stacks so they have 3 cards left" —
   context-classifier proved robust enough (0 genuine regressions in the pool audit) that this
   re-architecture is not required now; revisit only if a future card layout defeats the
   context rule.
+
+### App Fusion alt-play — RE-ADJUDICATION (2026-06-12, Appmon BT21/BT25 wave)
+- **Status: ✅ NOT a gap (stale block cleared).** The App Fusion *alt-play digivolve method* (`AddAppfuseMethodByName`, DSL `kind: app_fusion`) is fully implemented and behaviorally green: `app_fusion_digivolve_route_for_card` (`code/digimon-engine/src/dna_digivolve.rs`) + `tests/cards_behavioral/bt25/app_fusion.rs` (`gap4_app_fusion_stacks_and_consumes_links`). **BT25-060 Rebootmon was re-adjudicated BLOCKED→IMPLEMENTED** on this basis (its sole prior blocker was the now-false "AltPathKind::AppFusion resolves to nothing"). Cards using the app_fusion alt-play path this wave: BT21-018, BT21-023, BT21-059, BT21-073, AD1-005, BT21-101, BT25-060 — all green.
+- **Still a gap:** the *effect-initiated App Fuse* ("1 of your Digimon **may app fuse** into a Digimon card in the hand/trash") — see the "App Fuse keyword/primitive" entry above. Distinct operation (field↔hand/trash Digimon swap initiated by an effect), no `EffectContext::effect_initiated_app_fuse`. Blocks the *riders* of BT21-084, BT24-087, BT23-079, P-241, BT25-089 (those cards ship PARTIAL with the rider omitted).

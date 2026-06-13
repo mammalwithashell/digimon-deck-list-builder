@@ -6634,19 +6634,20 @@
     },
     "BT25-060": {
       "card_name": "Rebootmon",
-      "validated_date": "2026-06-07",
+      "validated_date": "2026-06-12",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "BT25 link-finish-aura slice",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT23/BT25 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_060.rs",
+      "test_count": 18,
       "patterns": [
-        "G4",
-        "E2"
+        "H4",
+        "H5",
+        "G2"
       ],
-      "notes": "Re-adjudicated 2026-06-07. G-ENGINE-AURA-GRANT-LINK-MAX RESOLVED (Link+1 self-aura now expressible via modifier_value). Link-from-hand/digivolution-sources-to-self now expressible via the new link_cards step (to: self). when_linked + on_unsuspend tokens both exist. Security+1 (security_attack), Reboot, Piercing/Blocker grants, grant_effect_immunity all exist. RESIDUAL blocker: App Fuse (DCGO AddAppfuseMethodByName Bootmon/Shutmon) has NO engine primitive (AltPathKind::AppFusion parses but resolves to nothing) \u2014 same engine gap that blocks BT25-036/089. App Fuse is a printed alt-play path; omitting it silently drops a player option. BLOCKED gap_kind=engine (App Fuse), tracked in docs/RUST_ENGINE_GAPS.md App Fuse entry."
+      "notes": "RE-ADJUDICATED BLOCKED->IMPLEMENTED: App Fusion alt-play resolves now (stale 2026-06-07 block cleared). SecA+1/Reboot/Link+1; App Fusion Bootmon&Shutmon (stacks+consumes link); [WD][WA][OPT] link Appmon free -> unsuspend ally (gated on link); [All Turns][OPT] dual-timing (when_card_linked_to_this+on_unsuspend) grant Piercing+Blocker+effect-immunity until EoT; Ult. alt digivolve. Review APPROVED."
     },
     "BT25-085": {
       "card_name": "BeelStarmon",
@@ -9041,6 +9042,55 @@
         "C1"
       ],
       "notes": "Security end-of-battle play; On Play/WhenDigivolving -2000 DP until opp turn ends (deletes <=2000 DP) + linked when_linked same; link box link_condition c2 + linked +3000 DP aura; Stnd. alt digivolve. Review APPROVED."
+    },
+    "BT21-073": {
+      "card_name": "Charismon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT23/BT25 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-073.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_073.rs",
+      "test_count": 19,
+      "patterns": [
+        "H5",
+        "F1",
+        "C1"
+      ],
+      "notes": "Blocker; OnPlay/WhenDigivolving free-link lv<=4 from trash/sources; when_card_linked_to_this grant opponent Digimon forced-attack (grant_triggered_effect+force_attack, BT25-054 precedent) until opp turn ends; link box link_condition c3 + linked +4000 DP aura + scope:linked leave-replacement (trash link card); App Fusion Sociamon&Gossipmon; Sup. alt digivolve. Review APPROVED."
+    },
+    "BT21-097": {
+      "card_name": "App Link",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT23/BT25 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-097.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_097.rs",
+      "test_count": 11,
+      "patterns": [
+        "A1",
+        "D3"
+      ],
+      "notes": "OPTION (JSON mislabels Tamer). Color-ignore use-req gated on board Appmon; [Main] reveal-3 add Appmon/AppDriver trash-rest place-self; [EoT] Delay trash-self -> link 1 hand card to own Digimon free; [Security] place self. DSL fix: LinkCardsCount untagged struct variants (link_cards in kind:delay bodies). Review APPROVED."
+    },
+    "BT23-079": {
+      "card_name": "Eri Karan",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Appmon (BT21/BT23/BT25 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-079.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_079.rs",
+      "test_count": 11,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "Start-of-main conditional memory; on_any_link suspend-cost observer -> +3000 DP to linked host (event_target) until opp turn ends (engine fix: binding_ref EventTarget host-liveness fallback). OMITTED: effect-initiated app-fuse rider (engine gap). Security play-free. Review APPROVED as PARTIAL."
     }
   }
 }

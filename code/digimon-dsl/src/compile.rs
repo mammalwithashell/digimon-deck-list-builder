@@ -2906,8 +2906,8 @@ fn compile_step(
             };
 
             let count = match a.count {
-                LinkCardsCount::Exactly(n) => CompiledLinkCount::Exactly(n),
-                LinkCardsCount::UpTo(n) => CompiledLinkCount::UpTo(n),
+                LinkCardsCount::Exactly { exactly } => CompiledLinkCount::Exactly(exactly),
+                LinkCardsCount::UpTo { up_to } => CompiledLinkCount::UpTo(up_to),
             };
 
             // `free` pays 0; `reduce: N` pays max(0, base - N). The cards this
