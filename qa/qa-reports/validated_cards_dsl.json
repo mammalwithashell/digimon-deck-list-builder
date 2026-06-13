@@ -6323,32 +6323,35 @@
     },
     "BT25-098": {
       "card_name": "Cyber Engage",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-12",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-MISSING-TESTS",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "appmon",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-098.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_098.rs",
-      "test_count": 10,
+      "test_count": 15,
       "patterns": [
-        "D3",
-        "E2"
+        "A1",
+        "D3"
       ],
-      "notes": "AUDIT: YAML faithful (reveal-3/add-Appmon/trash-rest/place-self + standard <Delay> play Appmon -3 + [Security] place + IgnoreColorRequirement use-req). Added 10 behavioral tests (placeholder was empty). One non-fixed drift: reveal add-pick is optional:true in YAML but printed add is mandatory when an Appmon is revealed (v1 audit-only, YAML untouched)."
+      "notes": "AUDIT: reveal-3/add-Appmon(now mandatory, drift fixed optional:true->false)/trash-rest/place-self + Delay play Appmon -3 + Security place + IgnoreColorRequirement use-req. 15 tests. Review APPROVED."
     },
     "BT25-089": {
       "card_name": "Kazuki & Itsuki",
-      "validated_date": "2026-06-07",
-      "report": "link_card_to_self facet#9 step (G-DSL-LINK-CARD-FROM-ZONE LANDED)",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
       "status": "PARTIAL",
       "gap_kind": "dsl",
       "archetype": "BT25 link-ts slice",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "PARTIAL — Start-of-Main memory ramp + [Main] suspend-self link 1 Appmon from hand to chosen own Digimon (link_card_to_self to: chosen_own_digimon) + inherited [Security] play-free. OMITTED: link \"from your Digimon digivolution cards\" (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES). BLOCKED clause: [End of Turn] App Fuse (no App Fuse primitive). | RE-CHECKED link-finish-appmon slice: remains PARTIAL. The [Main] link + memory ramp + inherited [Security] play-free are shipped (BT25-089.yaml). Two residual gaps still OPEN: (1) [End of Your Turn][OPT] effect-INITIATED app-fuse of a field Digimon INTO a hand card has no DSL step/engine primitive (distinct from the alt-path App Fusion which IS implemented); (2) [Main] link source from \"your Digimon's digivolution cards\" (Tamer-anchored multi-Digimon source scan) still omitted. No improvement possible this run."
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-089.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_089.rs",
+      "test_count": 7,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "App-fuse [EoT][OPT] rider now SHIPPED (app_fuse from: hand). Residual PARTIAL: the [Main] link source \"from your Digimon digivolution cards\" (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES) is still omitted — unrelated to App Fuse."
     },
     "BT25-052": {
       "card_name": "Logimon",
@@ -6634,19 +6637,20 @@
     },
     "BT25-060": {
       "card_name": "Rebootmon",
-      "validated_date": "2026-06-07",
+      "validated_date": "2026-06-12",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "BT25 link-finish-aura slice",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT23/BT25 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_060.rs",
+      "test_count": 18,
       "patterns": [
-        "G4",
-        "E2"
+        "H4",
+        "H5",
+        "G2"
       ],
-      "notes": "Re-adjudicated 2026-06-07. G-ENGINE-AURA-GRANT-LINK-MAX RESOLVED (Link+1 self-aura now expressible via modifier_value). Link-from-hand/digivolution-sources-to-self now expressible via the new link_cards step (to: self). when_linked + on_unsuspend tokens both exist. Security+1 (security_attack), Reboot, Piercing/Blocker grants, grant_effect_immunity all exist. RESIDUAL blocker: App Fuse (DCGO AddAppfuseMethodByName Bootmon/Shutmon) has NO engine primitive (AltPathKind::AppFusion parses but resolves to nothing) — same engine gap that blocks BT25-036/089. App Fuse is a printed alt-play path; omitting it silently drops a player option. BLOCKED gap_kind=engine (App Fuse), tracked in docs/RUST_ENGINE_GAPS.md App Fuse entry."
+      "notes": "RE-ADJUDICATED BLOCKED->IMPLEMENTED: App Fusion alt-play resolves now (stale 2026-06-07 block cleared). SecA+1/Reboot/Link+1; App Fusion Bootmon&Shutmon (stacks+consumes link); [WD][WA][OPT] link Appmon free -> unsuspend ally (gated on link); [All Turns][OPT] dual-timing (when_card_linked_to_this+on_unsuspend) grant Piercing+Blocker+effect-immunity until EoT; Ult. alt digivolve. Review APPROVED."
     },
     "BT25-085": {
       "card_name": "BeelStarmon",
@@ -8771,6 +8775,341 @@
       "yaml_path": "code/digimon-engine/cards/ex3/EX3-008.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_008.rs",
       "notes": "[WD] two-effect choice (trash digivolve / DNA into hand card, cost printed); inherited [EoT] DNA digivolve into hand card — the Q30 driver clause."
+    },
+    "BT21-009": {
+      "card_name": "Gatchmon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_009.rs",
+      "test_count": 18,
+      "patterns": [
+        "B3",
+        "C1",
+        "E2"
+      ],
+      "notes": "when_card_linked_to_this OPT + tamer count_lte gate + play Haru Shinkai free; full link box (link_condition c1, +2000 linked dp aura, linked Raid grant). Review APPROVED."
+    },
+    "BT21-018": {
+      "card_name": "DoGatchmon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_018.rs",
+      "test_count": 19,
+      "patterns": [
+        "H1",
+        "H9",
+        "C1",
+        "E2"
+      ],
+      "notes": "Rush+Raid, when-linked may_attack_now (host OPT) + [When Linking] host attack (scope:linked), App Fusion Gatchmon/Navimon/Tweetmon, Stnd. alt digivolve (review fix: no level gate), +3000 linked dp aura. Review NEEDS-FIX applied."
+    },
+    "ST22-12": {
+      "card_name": "DoGatchmon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/st22/ST22-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st22/st22_12.rs",
+      "test_count": 16,
+      "patterns": [
+        "H9",
+        "E2",
+        "C3"
+      ],
+      "notes": "WhenAttacking OPT link_card_to_self union-zone Social/Navi/Tool (link cost reduced by 2 -> cost 0 per fixture precedent), [When Linking] return opp <=5000 DP to deck bottom, +3000 linked dp aura. Engine fix: LinkCardToSelf declinable-first-step. Review APPROVED."
+    },
+    "BT21-023": {
+      "card_name": "Globemon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_023.rs",
+      "test_count": 22,
+      "patterns": [
+        "H4",
+        "E2",
+        "C3"
+      ],
+      "notes": "SecA+1, OnPlay/WhenDigivolving free link lv<=4, when-linked OPT delete dp_lte source_dp, [When Linking] host-DP-ceiling delete, +4000 linked dp aura. Engine fix: static_dp_aura_bonus .linked self-application guard. Review APPROVED."
+    },
+    "AD1-005": {
+      "card_name": "Gaiamon ACE",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_005.rs",
+      "test_count": 25,
+      "patterns": [
+        "H12",
+        "H13",
+        "H5",
+        "H4",
+        "E2"
+      ],
+      "notes": "ACE Overflow -4; Blast Digivolve; SecA+1/Blocker/Link+1 (ChangeLinkMax aura, first YAML use of modifier_value); 3-timing shared-OPT link up to 2 Social/Navi/Tool (no kind:digimon restriction) + dp_lte source_dp delete; App Fusion Globemon&Charismon; Ult. alt digivolve. Review APPROVED."
+    },
+    "BT21-101": {
+      "card_name": "Gaiamon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-101.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_101.rs",
+      "test_count": 24,
+      "patterns": [
+        "H5",
+        "C1",
+        "E2"
+      ],
+      "notes": "Blocker/Link+1; [WD][WA] link 1 Appmon to chosen_own_digimon free; on_any_link board-wide observer (unsuspend-self cost, gate source_is_unsuspended:false) -> trash opp top security; App Fusion; Ult. alt digivolve. First on_any_link production user. Review APPROVED."
+    },
+    "BT21-084": {
+      "card_name": "Haru Shinkai",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_084.rs",
+      "test_count": 12,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "App-fuse rider now shipped (app_fuse from: hand after Draw 1). Memory ramp + on_any_link suspend-cost + security play. Full card implemented."
+    },
+    "P-217": {
+      "card_name": "Haru Shinkai",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/p/P-217.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_217.rs",
+      "test_count": 19,
+      "patterns": [
+        "A1",
+        "A2",
+        "B3"
+      ],
+      "notes": "On Play reveal-3 two-bucket (Social + Creation/Navi/Tool) add+bottom; on_any_link observer with event_card_trait_has 4-trait filter (Creation included per printed text; DCGO drops it - DCGO bug) + suspend-self cost -> gain 1 memory; security play-free. Review APPROVED."
+    },
+    "BT21-005": {
+      "card_name": "Swipemon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT24 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_005.rs",
+      "test_count": 8,
+      "patterns": [
+        "G4",
+        "B3",
+        "E2"
+      ],
+      "notes": "Digi-Egg inherited [Your Turn][OPT] when_card_linked_to_this -> Draw 1. Review APPROVED."
+    },
+    "BT21-047": {
+      "card_name": "Navimon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT24 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_047.rs",
+      "test_count": 12,
+      "patterns": [
+        "A1",
+        "A2",
+        "H3"
+      ],
+      "notes": "On Play reveal-3 two-bucket (Appmon + App Driver) add+bottom; link box: link_condition c1 + linked +2000 DP aura + linked Piercing grant; Lv.2 Appmon alt digivolve. Review APPROVED."
+    },
+    "BT24-067": {
+      "card_name": "Hackmon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT24 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_067.rs",
+      "test_count": 18,
+      "patterns": [
+        "B3",
+        "E2",
+        "F-Retaliation"
+      ],
+      "notes": "Twin of BT21-009: when_card_linked_to_this OPT + count_lte tamer -> play Rei Katsura free; link box: link_condition c1 + linked +2000 DP aura (review fix: was omitted) + linked Retaliation grant; Lv.2 Appmon alt digivolve. Review NEEDS-FIX applied."
+    },
+    "BT24-087": {
+      "card_name": "Rei Katsura",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT24 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-087.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_087.rs",
+      "test_count": 11,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "App-fuse-into-trash rider now shipped (app_fuse from: trash + System/Life/Transmutation filter). Start-of-main memory + on_any_link suspend-cost Draw1+trash1 + app_fuse + security play. Full card implemented."
+    },
+    "BT21-059": {
+      "card_name": "Timemon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_059.rs",
+      "test_count": 18,
+      "patterns": [
+        "H5",
+        "C1",
+        "F-DeDigivolve"
+      ],
+      "notes": "Blocker; host when_card_linked_to_this De-Digivolve 1 (mandatory, OPT/your-turn) + linked when_linked De-Digivolve 1; link box link_condition c2 + linked +3000 DP aura; App Fusion Watchmon/Savemon/Calendamon; Stnd. alt digivolve. Review APPROVED."
+    },
+    "BT21-070": {
+      "card_name": "Gossipmon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-070.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_070.rs",
+      "test_count": 18,
+      "patterns": [
+        "A4",
+        "C1"
+      ],
+      "notes": "Security end-of-battle play; On Play/WhenDigivolving optional return Appmon Digimon from trash + linked when_linked same; link box link_condition c2 + linked +3000 DP aura (review-added); Stnd. alt digivolve. Review APPROVED."
+    },
+    "BT21-071": {
+      "card_name": "Scopemon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-071.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_071.rs",
+      "test_count": 16,
+      "patterns": [
+        "A6",
+        "C1"
+      ],
+      "notes": "On Play/WhenDigivolving place Appmon/3Musketeers as bottom source -> gain memory; link box link_condition c2 + linked +3000 DP aura (review-added) + linked when_linked Draw2+trash2; alt digivolve std + Stnd. + 3Musketeers-in-text (effect_text_contains). Review APPROVED."
+    },
+    "BT21-043": {
+      "card_name": "Sociamon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-043.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_043.rs",
+      "test_count": 20,
+      "patterns": [
+        "D1",
+        "C1"
+      ],
+      "notes": "Security end-of-battle play; On Play/WhenDigivolving -2000 DP until opp turn ends (deletes <=2000 DP) + linked when_linked same; link box link_condition c2 + linked +3000 DP aura; Stnd. alt digivolve. Review APPROVED."
+    },
+    "BT21-073": {
+      "card_name": "Charismon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT23/BT25 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-073.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_073.rs",
+      "test_count": 19,
+      "patterns": [
+        "H5",
+        "F1",
+        "C1"
+      ],
+      "notes": "Blocker; OnPlay/WhenDigivolving free-link lv<=4 from trash/sources; when_card_linked_to_this grant opponent Digimon forced-attack (grant_triggered_effect+force_attack, BT25-054 precedent) until opp turn ends; link box link_condition c3 + linked +4000 DP aura + scope:linked leave-replacement (trash link card); App Fusion Sociamon&Gossipmon; Sup. alt digivolve. Review APPROVED."
+    },
+    "BT21-097": {
+      "card_name": "App Link",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT23/BT25 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-097.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_097.rs",
+      "test_count": 11,
+      "patterns": [
+        "A1",
+        "D3"
+      ],
+      "notes": "OPTION (JSON mislabels Tamer). Color-ignore use-req gated on board Appmon; [Main] reveal-3 add Appmon/AppDriver trash-rest place-self; [EoT] Delay trash-self -> link 1 hand card to own Digimon free; [Security] place self. DSL fix: LinkCardsCount untagged struct variants (link_cards in kind:delay bodies). Review APPROVED."
+    },
+    "BT23-079": {
+      "card_name": "Eri Karan",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT23/BT25 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-079.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_079.rs",
+      "test_count": 11,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "App-fuse rider now shipped (app_fuse from: hand after +3000 DP to event-host). Full card implemented."
+    },
+    "P-241": {
+      "card_name": "Yujin Ozora",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (promo)",
+      "yaml_path": "code/digimon-engine/cards/p/P-241.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_241.rs",
+      "test_count": 13,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "App-fuse rider now shipped (app_fuse from: hand after Vortex+3000 DP grant to a chosen Appmon Digimon). Full card implemented."
     },
     "EX11-002": {
       "card_name": "Hiyarimon",

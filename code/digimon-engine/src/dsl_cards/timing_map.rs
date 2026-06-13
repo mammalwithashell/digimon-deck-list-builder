@@ -72,6 +72,10 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         // forces a host self-filter (`pending_link_host() == source_permanent`)
         // and routes the body through `replacement_process` (Gap 5).
         CompiledTiming::WhenWouldLinkToThis => EffectTiming::WhenWouldLink,
+        // DigiLink board-wide observer: `when: on_any_link` lowers to `OnLink`
+        // with NO forced self/host filter — scope is gated entirely by
+        // `active_when:` predicates (G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED).
+        CompiledTiming::OnAnyLink => EffectTiming::OnLink,
         // Phase 2a non-targets — skip emission.
         CompiledTiming::Delayed => return None,
     })

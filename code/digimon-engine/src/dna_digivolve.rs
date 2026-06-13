@@ -449,6 +449,30 @@ impl Game {
         }
     }
 
+    /// Whether `result` (a Digimon card in hand/trash) can App-Fuse onto `host`
+    /// — i.e. `host` carries the named App-Fusion materials of `result`'s
+    /// `app_fusion` alt-path (top matches one name, a linked card matches a
+    /// distinct name). Public entry for the effect-initiated App Fuse
+    /// (`EffectContext::initiate_effect_app_fuse`); the alt-play path uses the
+    /// private route fn directly. Returns false when the feature that holds the
+    /// alt-path registry is disabled.
+    pub(crate) fn can_app_fuse_onto(
+        &self,
+        result: &CardSource,
+        host: PermanentHandle,
+    ) -> bool {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            self.app_fusion_digivolve_route_for_card(result, host)
+                .is_some()
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (result, host);
+            false
+        }
+    }
+
     /// DCGO `GetAppFusion.digimonCondition` parity: the host has 2 distinct
     /// named cards linked together — its TOP card matches one named
     /// condition and one of its LINKED cards matches a *different* named

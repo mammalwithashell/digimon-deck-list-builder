@@ -1,0 +1,157 @@
+# BT21-101 Gaiamon — Digimon, Lv.6, White, DP 13000, Play Cost 13.
+# Traits: God, Appmon, Creation. Attribute: God.
+#
+# ─── DCGO C# reference (authoritative): BT21/White/BT21_101.cs ──────────────
+#
+# ─── Printed text (card image — authoritative) ───────────────────────────────
+#
+# Digivolve boxes:
+#   Standard: printed evo_costs (Lv.5, white, cost 5) — represented in cards.json.
+#   Alt (Ult.): "Ult." trait on the host permanent → cost 5.
+#     DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Ult."), 5,
+#           ignoreDigivolutionRequirement: false). No level gate — only trait gate.
+#
+# App Fusion: [Globemon] & [Charismon]: Cost 0.
+#   DCGO: AddAppfuseMethodByName(["Globemon","Charismon"]).
+#
+# ─── Clause (a): <Blocker> ───────────────────────────────────────────────────
+# Static keyword grant. DCGO: BlockerSelfStaticEffect(isInheritedEffect:false).
+#
+# ─── Clause (b): <Link +1> ───────────────────────────────────────────────────
+# Raises the permanent's max-link cap by 1. Engine path:
+# game_actions reads 5 + link_max_delta (modifiers.rs ChangeLinkMax).
+# DCGO: ChangeSelfLinkMaxStaticEffect(1, false, card, null).
+# YAML: kind: aura, target: {}, modifier: ChangeLinkMax, modifier_value: 1.
+#
+# ─── Clause (c): [When Digivolving][When Attacking] optional link ─────────────
+# "You may link 1 Digimon card with the [Appmon] trait from your hand or this
+#  Digimon's digivolution cards to 1 of your Digimon without paying the cost."
+#
+# DCGO (shared coroutine):
+#   - OnEnterFieldAnyone (WD) and OnAllyAttack (WA) fire the same coroutine.
+#   - canNoSelect:true → optional: true.
+#   - From: hand (hasInHand check) OR DigivolutionCards (hasInSources check).
+#     Both are presented when both are available; if only one, that zone is used.
+#     `link_card_to_self` with from: [hand, digivolution_sources] handles the
+#     zone availability automatically (engine shows only eligible candidates).
+#   - Host: SelectPermanentEffect over owner's battle-area Digimon (canNoSelect:true)
+#     → to: chosen_own_digimon. Cost: 0 (free).
+#   - CanSelectLinkCard: IsDigimon && HasAppmonTraits.
+#
+# Timing note: DCGO WA fires on EffectTiming.OnAllyAttack; the DSL exposes
+# `when_attacking` (= WhenAttacking) which also fires in the attacker-controller
+# PlayerBattleArea fan-out. For a Digimon source (Gaiamon), WhenAttacking fires
+# when Gaiamon itself attacks (and also for observer permanents of the attacker's
+# player). OnAllyAttack fires only for OTHER Digimon on the attacker's player.
+# DCGO CanTriggerOnAttack checks card.PermanentOfThisCard() == attacker permanent,
+# so the WA clause fires for Gaiamon attacking (self-trigger). This matches
+# `when_attacking` (fires for the attacker = Gaiamon).
+#
+# ─── Clause (d): [Your Turn][Once Per Turn] on_any_link observer ─────────────
+# "[Your Turn][Once Per Turn] When your Digimon get linked, by unsuspending this
+#  Digimon, trash your opponent's top security card."
+#
+# DCGO (WhenLinked observer, EffectTiming.WhenLinked):
+#   CanUseCondition:
+#     - IsExistOnBattleAreaDigimon(card)            → implicit (field-scoped effect)
+#     - IsOwnerTurn(card)                            → active_when: { your_turn: true }
+#     - CanTriggerWhenLinked(hashtable,
+#         PermanentCondition=IsPermanentExistsOnOwnerBattleAreaDigimon(perm, card),
+#         cardSource => true)
+#       → event_target_owner: you (host's controller == Gaiamon's controller)
+#         AND the linked card filter is "any" (no card-trait gate here).
+#     - card.PermanentOfThisCard().IsSuspended      → condition: { source_is_unsuspended: false }
+#   ActivateCoroutine:
+#     - UnsuspendPermanents([this permanent])        → unsuspend: { target: source }
+#     - IDestroySecurity(opponent, 1, fromTop:true)  → trash_top_security: { of: opponent }
+#   canNoSelect: true (4th param of SetUpActivateClass) → optional: true.
+#
+# Timing: `on_any_link` — board-wide OnLink observer with NO implicit self/host
+# filter; all scoping is done via active_when + condition.
+# DSL vocab note: `on_any_link` lowers to EffectTiming::OnLink in timing_map.rs
+# without any self/host filter (unlike `when_linked` / `when_card_linked_to_this`).
+#
+# OPT semantics: declining the outer prompt (not paying the unsuspend cost)
+# does NOT consume the once-per-turn — G-OPT-REFUND-ON-DECLINE. Since the body's
+# first step (unsuspend) is not a declinable selection, the engine correctly
+# installs an outer-optional prompt automatically (lower_triggered
+# G-OUTER-OPTIONAL-NOT-INSTALLED logic). No `outer_prompt: true` is needed.
+
+card: BT21-101
+name: Gaiamon
+kind: digimon
+level: 6
+color: [white]
+cost: 13
+dp: 13000
+traits: [God, Appmon, Creation]
+attribute: God
+
+alt_paths:
+  # ─── Alt digivolve: host's top card has [Ult.] trait → cost 5 ───────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Ult."), cost:5,
+  #       ignoreDigivolutionRequirement:false). No level gate in DCGO.
+  - kind: digivolve
+    from: { trait_has: "Ult." }
+    cost: 5
+  # ─── App Fusion: [Globemon] & [Charismon]: Cost 0 ────────────────────────────
+  # DCGO: AddAppfuseMethodByName(["Globemon","Charismon"]).
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Globemon, Charismon]
+    cost: 0
+
+effects:
+  # ─── Clause (a): <Blocker> ────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── Clause (b): <Link +1> ────────────────────────────────────────────────────
+  # Raises Gaiamon's max-link cap by 1 (default 5 → 6 while on field).
+  - kind: aura
+    target: {}
+    modifier: ChangeLinkMax
+    modifier_value: 1
+    summary: "<Link +1> Gaiamon's maximum links raised by 1"
+
+  # ─── Clause (c): [WD][WA] optional link 1 Appmon from hand/digivolve-sources ─
+  # Fires on [When Digivolving] AND [When Attacking]. The two timings share one
+  # OPT-group key (via shared_opt_group in lower_triggered multi-timing logic).
+  # optional: true — "you may" (canNoSelect:true in DCGO).
+  # from: [hand, digivolution_sources] — mirrors DCGO's hasInHand + hasInSources.
+  # to: chosen_own_digimon — DCGO SelectPermanentEffect over own battle-area Digimon.
+  # cost: 0 — free link.
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: false
+    optional: true
+    summary: "[WD][WA] You may link 1 [Appmon] Digimon from hand or digivolution cards to 1 of your Digimon free"
+    process:
+      - link_card_to_self:
+          from: [hand, digivolution_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          to: chosen_own_digimon
+          cost: 0
+          optional: true
+
+  # ─── Clause (d): [Your Turn][OPT] on_any_link observer ───────────────────────
+  # Board-wide OnLink observer (no self/host filter). Fires when ANY link attaches
+  # while it is your turn and the host belongs to YOU (event_target_owner: you)
+  # AND Gaiamon is currently suspended (source_is_unsuspended: false).
+  # If the outer prompt is accepted the body unsuspends Gaiamon then trashes the
+  # opponent's top security card.
+  - when: on_any_link
+    once_per_turn: true
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+    condition: { source_is_unsuspended: false }
+    summary: "[Your Turn][OPT] When your Digimon gets linked, unsuspend Gaiamon → trash opponent's top security"
+    process:
+      - unsuspend: { target: source }
+      - trash_top_security: { of: opponent }

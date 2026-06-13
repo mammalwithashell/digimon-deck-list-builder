@@ -954,6 +954,11 @@ pub enum CompiledTiming {
     /// with a host self-filter (`pending_link_host() == source_permanent`).
     /// Pair with `optional` + a `reduce_link_cost` step (Gap 5).
     WhenWouldLinkToThis,
+    /// DigiLink board-wide observer: fires on every `OnLink` dispatch with NO
+    /// forced self/host filter. Authored as `when: on_any_link`; scope-gate via
+    /// `active_when:` (`event_target_owner`, `event_card_trait_has`,
+    /// `your_turn`). G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED.
+    OnAnyLink,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1008,6 +1013,13 @@ pub enum CompiledFieldSelector {
 pub struct CompiledAttackCostUpgrade {
     pub dp: i32,
     pub security_attack: i32,
+}
+
+/// Compiled source zone for the result card in a `CompiledStep::AppFuse`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledAppFuseZone {
+    Hand,
+    Trash,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum_macros::EnumDiscriminants)]
@@ -1308,6 +1320,15 @@ pub enum CompiledStep {
         from_hand: CompiledBindingRef,
         cost: CompiledCostDelta,
         ignore_requirements: bool,
+    },
+    /// Effect-initiated App Fuse: two engine-driven selections (own permanent,
+    /// then result card from `from_zone`) routed through the app-fusion commit.
+    /// Compiled form of `StepSpec::AppFuse`; the engine lowering calls
+    /// `EffectContext::initiate_effect_app_fuse`.
+    AppFuse {
+        from_zone: CompiledAppFuseZone,
+        result_filter: Option<CompiledPredicate>,
+        optional: bool,
     },
     EffectInitiatedDnaDigivolve {
         target_a: CompiledBindingRef,

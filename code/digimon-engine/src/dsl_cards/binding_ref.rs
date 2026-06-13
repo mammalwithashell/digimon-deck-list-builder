@@ -59,7 +59,19 @@ pub fn resolve_binding_ref(
                     return Some(ResolvedBinding::Card(snapshot.top_card));
                 }
                 if let Some(handle) = t.event_permanent {
-                    if live_event_permanent(ctx, handle, t.event_card).is_some() {
+                    // Primary liveness check: top card of the event permanent
+                    // must match `event_card` (the digivolving card, played card,
+                    // etc.).  For `on_any_link` the trigger sets
+                    // `event_permanent = host` but `event_card = linked_card`
+                    // (the card that was just attached), so the host's own top
+                    // card will not equal `event_card`.  Fall back to
+                    // `event_host_card` (the host's top card identity) so that
+                    // `target: event_target` still resolves to a `Permanent`
+                    // handle rather than falling through to a bare `Card`.
+                    if live_event_permanent(ctx, handle, t.event_card)
+                        .or_else(|| live_event_permanent(ctx, handle, t.event_host_card))
+                        .is_some()
+                    {
                         return Some(ResolvedBinding::Permanent(handle));
                     }
                     return t.event_card.map(ResolvedBinding::Card);

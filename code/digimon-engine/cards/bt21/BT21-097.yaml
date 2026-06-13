@@ -1,0 +1,155 @@
+card: BT21-097
+name: "App Link"
+kind: option
+color: [green]
+cost: 3
+traits: [Appmon]
+
+# ─── Card text (from card image — authoritative) ──────────────────────────────
+# NOTE: cards.json mislabels this as card_kind 2 / Tamer. The card image
+# shows "OPTION" with "Use 3". It is an OPTION card.
+#
+# <Use Req. ([Appmon] trait)>
+#   While you have a Digimon or Tamer with the [Appmon] trait on the field,
+#   you can ignore this card's color requirements.
+# [Main] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon]
+#   or [App Driver] trait among them to the hand. Trash the rest. Then,
+#   place this card in the battle area.
+# [End of Your Turn] ＜Delay＞ (By trashing this card after the placing turn,
+#   activate the effect below.)
+#   ・You may link 1 card from your hand with 1 of your Digimon without
+#     paying the cost.
+# Inherited: [Security] Place this card in the battle area.
+#
+# DCGO C# reference (READ-ONLY):
+#   BT21_097.cs — EffectTiming.None (IgnoreColorConditionClass gated on
+#     HasAppmonTrait: owner Digimon or Tamer with "Appmon" trait),
+#   EffectTiming.OptionSkill (SimplifiedRevealDeckTopCardsAndSelect: 3 cards,
+#     canSelectCardCondition: EqualsTraits("Appmon")||EqualsTraits("App Driver"),
+#     maxCount 1, mode AddHand, remainingCardsPlace Trash;
+#     then PlaceDelayOptionCards),
+#   EffectTiming.OnEndTurn (standard Delay: DeletePermanentAndProcessAccordingToResult
+#     → trash-self cost; then SelectHandEffect for a linkable card; then
+#     SelectPermanentEffect for own Digimon; then AddLinkCard),
+#   EffectTiming.SecuritySkill (PlaceSelfDelayOptionSecurityEffect).
+
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: Appmon
+    any_of:
+      - kind: digimon
+      - kind: tamer
+
+effects:
+  # ─── Clause 0: IgnoreColorRequirement flood gate ──────────────────────────
+  #
+  # "While you have a Digimon or Tamer with the [Appmon] trait on the field,
+  # you can ignore this card's color requirements."
+  #
+  # DCGO: IgnoreColorConditionClass (timing=None), CanUseCondition gated on
+  #   HasMatchConditionPermanent(HasAppmonTrait) — own Digimon or Tamer with
+  #   "Appmon" trait; CardCondition: cardSource == card (targets only this card).
+  #
+  # DSL: same shape as BT25-098 Cyber Engage.
+  - kind: flood_gate
+    active_when:
+      any_of:
+        - any_permanent: { of: you, kind: digimon, trait_has: Appmon }
+        - any_permanent: { of: you, kind: tamer, trait_has: Appmon }
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT21-097" }
+    summary: "While you have an Appmon Digimon or Tamer, ignore color requirements for this card"
+
+  # ─── Clause 1: [Main] Reveal 3, add 1 [Appmon]/[App Driver], trash rest ───
+  #
+  # "Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] or
+  # [App Driver] trait among them to the hand. Trash the rest. Then, place
+  # this card in the battle area."
+  #
+  # DCGO: SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3,
+  #   canSelectCardCondition: EqualsTraits("Appmon")||EqualsTraits("App Driver"),
+  #   maxCount: 1, mode AddHand, remainingCardsPlace Trash),
+  #   then PlaceDelayOptionCards (places the option card as a Delay permanent).
+  #
+  # DSL: reveal_top_deck 3, select_reveal (optional: true, filter trait_has Appmon
+  #   or trait_has "App Driver"), add_to_hand_from_reveal, trash remainder via
+  #   per_selected + trash_from_reveal, then place_self_as_delay_option.
+  #
+  # NOTE: optional: true on select_reveal matches BT25-098's drift note — the
+  # printed text has no "may" but the DSL uses optional to allow the fizzle
+  # case when no eligible card is among the revealed three.
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add 1 [Appmon]/[App Driver] to hand; trash the rest; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Appmon
+              - trait_has: "App Driver"
+          prompt: "Add 1 [Appmon] or [App Driver] trait card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 2: [End of Your Turn] <Delay> — link 1 hand card free ─────────
+  #
+  # "[End of Your Turn] ＜Delay＞ (By trashing this card after the placing turn,
+  # activate the effect below.)
+  # ・You may link 1 card from your hand with 1 of your Digimon without
+  #   paying the cost."
+  #
+  # DCGO: EffectTiming.OnEndTurn, CanUseCondition: IsOwnerTurn &&
+  #   CanDeclareOptionDelayEffect(card). ActivateCoroutine:
+  #     1. DeletePermanentAndProcessAccordingToResult(card.PermanentOfThisCard())
+  #        → trash-self Delay activation cost.
+  #     2. If successful: SelectHandEffect (CanLink, canNoSelect: false, maxCount 1),
+  #        then SelectPermanentEffect (own Digimon, CanLinkToTargetPermanent),
+  #        then AddLinkCard.
+  #
+  # DSL: kind: delay, trigger: delayed (standard end-of-your-turn / main-phase-
+  #   activated standard Delay). The process is optional (you may) — "you may
+  #   link" makes PASS legal. The link_cards step covers:
+  #   - from: [hand] — link from own hand
+  #   - to: own_digimon — attach to a chosen own Digimon
+  #   - count: { up_to: 1 } — optional pick (you may stop early / PASS)
+  #   - cost: free — "without paying the cost"
+  #
+  # NOTE: The Delay activation cost (trash-self) is the standard <Delay>
+  # mechanic: placing the Option card in the battle area via
+  # place_self_as_delay_option above, then the standard delay body fires at
+  # end-of-turn (MainPhaseActivated trigger). The engine's standard Delay
+  # machinery trashes the Delay option card as the activation cost, so no
+  # explicit `activation_cost: { trash_self: true }` step is needed here —
+  # it's handled by the engine's Delay activation path.
+  - kind: delay
+    trigger: delayed
+    summary: "[End of Your Turn]<Delay> You may link 1 card from your hand with 1 of your Digimon free"
+    process:
+      - link_cards:
+          from: [hand]
+          to: own_digimon
+          count: { up_to: 1 }
+          cost: free
+          prompt: "Link 1 card from your hand with 1 of your Digimon without paying the cost"
+
+  # ─── Clause 3: [Security] Place this card in the battle area ──────────────
+  #
+  # "Inherited: [Security] Place this card in the battle area."
+  #
+  # DCGO: EffectTiming.SecuritySkill — PlaceSelfDelayOptionSecurityEffect(card).
+  #
+  # DSL: scope: inherited, when: on_security — mirrors BT25-098.
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

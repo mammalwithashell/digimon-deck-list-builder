@@ -559,6 +559,130 @@ impl Game {
         true
     }
 
+    /// Commit an effect-initiated App Fuse: stack `result_card` (pulled from
+    /// `zone`) on top of `host`, then fold `host`'s existing linked cards under
+    /// the new top as digivolution sources (consumed) — exactly like the
+    /// alt-play app-fusion commit. App Fusion is printed Cost 0 and bypasses the
+    /// normal evo-cost / level / colour requirement check (it is gated only by
+    /// the host having the named materials, validated by the caller). Fires
+    /// WhenDigivolving + OnDigivolve with `effect_initiated: true`. Returns true
+    /// on success.
+    ///
+    /// Mirrors DCGO `PlayCardClass(result, …, host).SetAppFusion(…)` (see
+    /// `BT23_079.cs`) and reuses the linked-card-consume step from
+    /// `commit_digivolve_from_hand_no_replace`'s `is_app_fusion` branch.
+    pub fn commit_effect_app_fuse(
+        &mut self,
+        player_id: PlayerId,
+        host: PermanentHandle,
+        result_card: crate::card_source::CardHandle,
+        zone: crate::game_actions::AppFuseSourceZone,
+    ) -> bool {
+        let field_index = host.index as usize;
+        if host.player != player_id {
+            return false;
+        }
+        if self.player(player_id).battle_area.get(field_index).is_none() {
+            self.logger
+                .log("[Rejected] app_fuse: host index out of range");
+            return false;
+        }
+        if self.modifiers.has(host, ModifierType::CannotDigivolve) {
+            return false;
+        }
+
+        // Resolve the result card to a zone-tagged CardSourceRef.
+        let source_ref = match zone {
+            crate::game_actions::AppFuseSourceZone::Hand => {
+                let Some(i) = self
+                    .player(player_id)
+                    .hand
+                    .iter()
+                    .position(|c| c.handle() == result_card)
+                else {
+                    self.logger
+                        .log("[Rejected] app_fuse: result card not in hand");
+                    return false;
+                };
+                crate::enums::CardSourceRef::Hand(player_id, i)
+            }
+            crate::game_actions::AppFuseSourceZone::Trash => {
+                let Some(i) = self
+                    .player(player_id)
+                    .trash
+                    .iter()
+                    .position(|c| c.handle() == result_card)
+                else {
+                    self.logger
+                        .log("[Rejected] app_fuse: result card not in trash");
+                    return false;
+                };
+                crate::enums::CardSourceRef::Trash(player_id, i)
+            }
+        };
+
+        let from_stack_top = self.player(host.player).battle_area[field_index]
+            .top_card()
+            .card_id(&self.card_data)
+            .to_string();
+
+        // App Fusion is Cost 0 — no memory payment, no evo-requirement check.
+        let Some(taken) = self.take_card_source_ref(source_ref) else {
+            self.logger
+                .log("[Rejected] app_fuse: result card ref changed before take");
+            return false;
+        };
+        let top_card_id = taken.card.card_id(&self.card_data).to_string();
+
+        let turn = self.turn_count;
+        self.player_mut(host.player).battle_area[field_index].digivolve(taken.card, turn);
+
+        // Consume the host's linked cards under the new top as digivolution
+        // sources (drained in reverse so the first linked card lands deepest),
+        // identical to `commit_digivolve_from_hand_no_replace`'s app-fusion step.
+        let linked: Vec<crate::card_source::CardSource> =
+            std::mem::take(&mut self.player_mut(host.player).battle_area[field_index].linked_cards);
+        for card in linked.into_iter().rev() {
+            self.player_mut(host.player).battle_area[field_index].push_under(card);
+        }
+
+        let event_card = self
+            .player(host.player)
+            .battle_area
+            .get(field_index)
+            .map(|perm| perm.top_card().handle())
+            .expect("app-fuse host remains in battle area after stack mutation");
+
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Digivolve {
+            seq,
+            player: player_id,
+            top_card_id,
+            field_index: field_index as u8,
+            from_stack_top,
+            was_dna: false,
+            was_blast_dna: false,
+            memory_paid: 0,
+        });
+
+        self.enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(host));
+        self.drain_effect_queue();
+
+        self.enqueue_triggered(
+            EffectTiming::OnDigivolve,
+            TriggerSource::Digivolved {
+                player: player_id,
+                permanent: host,
+                card: event_card,
+                effect_initiated: true,
+                dna_origin: false,
+            },
+        );
+        self.drain_effect_queue();
+
+        true
+    }
+
     /// Install a `SelectMaterial` pending selection for DNA digivolve.
     /// Drives a two-stage resolution: stage 1 picks the first material;
     /// stage 2 (installed by the stage-1 callback) picks the second

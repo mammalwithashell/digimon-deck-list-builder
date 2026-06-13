@@ -84,3 +84,4 @@ mod bt25_089;
 mod app_fusion;
 mod bt25_066;
 mod bt25_101;
+mod bt25_060;

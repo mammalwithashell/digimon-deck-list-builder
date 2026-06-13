@@ -1,0 +1,111 @@
+# BT24-087 Rei Katsura — Tamer, Purple, Cost 3.
+# Traits: App Driver / Appmon
+#
+# Printed card text (card image — authoritative):
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [Your Turn] When any of your Digimon get linked, by suspending this Tamer,
+#     <Draw 1> (Draw 1 card from your deck.) and trash 1 card in your hand.
+#     Then, 1 of your Digimon may app fuse into a Digimon card with the [System],
+#     [Life] or [Transmutation (App Name)] trait in the trash.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_087.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartMainPhase`:
+#   `CardEffectFactory.Gain1MemoryTamerOpponentDigimonEffect(card)` — the
+#   canonical "if opponent has a Digimon, gain 1 memory" idiom. Same factory
+#   pattern as BT25-089 Clause 1. Maps to `when: start_of_your_main_phase` +
+#   `condition: count_gte(opponent battle_area digimon >= 1)` + `gain_memory: 1`.
+#
+# Clause 2 — `EffectTiming.WhenLinked`:
+#   ActivateClass with `canNoSelect: true` (optional) and `maxUsableCount: -1`
+#   (no per-turn cap). CanUseCondition checks:
+#     1. IsExistOnBattleArea(card)
+#     2. CanTriggerWhenLinked(hashtable, LinkPermanentCondition, null)
+#        where LinkPermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon(permanent, card)
+#        → "linked HOST is one of OUR Digimons" = event_target_owner: you
+#     3. IsOwnerTurn(card) → your_turn: true
+#   CanActivateCondition checks:
+#     1. IsExistOnBattleArea(card)
+#     2. CanActivateSuspendCostEffect(card) → source_is_unsuspended: true
+#   ActivateCoroutine (in order):
+#     a. SuspendPermanentsClass([self]) → activation_cost: { suspend_self: true }
+#     b. (if suspended check passes) DrawClass(card.Owner, 1, ...) → draw: 1
+#     c. SelectHandEffect(canNoSelect: false, maxCount: 1, Mode.Discard) → mandatory trash 1
+#     d. App fuse into System/Life/Transmutation from trash → `app_fuse`
+#        (from: trash, result_filter: System/Life/Transmutation, optional).
+#
+# ─── IMPLEMENTED (2026-06-13) ─────────────────────────────────────────────────
+#
+# The tail of Clause 2 — "Then, 1 of your Digimon may app fuse into a Digimon
+# card with the [System], [Life] or [Transmutation (App Name)] trait in the
+# trash." — now ships via the effect-initiated `app_fuse` step
+# (`EffectContext::initiate_effect_app_fuse`, from: trash + result-trait filter).
+
+card: BT24-087
+name: "Rei Katsura"
+kind: tamer
+color: [purple]
+cost: 3
+traits: ["App Driver", Appmon]
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] if opp has a Digimon, gain 1 memory
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter: { of: opponent, zone: [battle_area], kind: digimon }
+        n: 1
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── Clause 2: [Your Turn] When any of your Digimon get linked →
+  #     suspend self, <Draw 1>, trash 1 from hand, then app fuse from trash.
+  #
+  # active_when.all_of:
+  #   - your_turn: true            — [Your Turn] scope (DCGO: IsOwnerTurn)
+  #   - event_target_owner: you    — the link HOST must be our Digimon
+  #                                  (DCGO: LinkPermanentCondition =
+  #                                   IsPermanentExistsOnOwnerBattleAreaDigimon)
+  # optional: true — DCGO ActivateClass(canNoSelect: true); player may decline.
+  # condition: { source_is_unsuspended: true } — DCGO: CanActivateSuspendCostEffect
+  #   checks Rei is unsuspended before offering the prompt.
+  # activation_cost: { suspend_self: true } — DCGO: SuspendPermanentsClass([self]);
+  #   must be first body step (compile-validated).
+  # select_hand (mandatory, no optional) — DCGO: canNoSelect: false, maxCount: 1.
+  - when: on_any_link
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+    condition: { source_is_unsuspended: true }
+    summary: "[Your Turn] When any of your Digimon get linked, suspend self → <Draw 1> and trash 1 from hand"
+    process:
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      # Then, 1 of your Digimon may app fuse into a Digimon card with the
+      # [System]/[Life]/[Transmutation] trait in the trash.
+      - app_fuse:
+          from: trash
+          optional: true
+          result_filter:
+            any_of:
+              - trait_has: System
+              - trait_has: Life
+              - trait_has: Transmutation
+
+  # ─── Clause 3: [Security] play this card without paying the cost ──────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

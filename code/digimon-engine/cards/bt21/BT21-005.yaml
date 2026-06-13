@@ -1,0 +1,50 @@
+# BT21-005 Swipemon — Digi-Egg (In-Training), Lv.2, Green, Cost 0, no DP.
+# Traits: Appmon, Social, Swipe. Attribute: Social.
+#
+# Printed card text (card image — authoritative; cards.json matches):
+#   Inherited Effect [Your Turn] [Once Per Turn]
+#   When this Digimon gets linked, ＜Draw 1＞ (Draw 1 card from your deck.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Green/BT21_005.cs
+#   - EffectTiming.WhenLinked, SetIsInheritedEffect(true), maxUsableCount: 1.
+#   - CanUseCondition: CanTriggerWhenLinked(PermanentCondition: this host,
+#       CardCondition: host is on battle area) — host self-filter.
+#   - CanActivateCondition: IsExistOnBattleAreaDigimon && IsOwnerTurn.
+#   - ActivateCoroutine: DrawClass(card.Owner, 1).
+#   - isOptional: false (mandatory draw — no "may").
+#
+# DSL modelling:
+#   - scope: inherited  → fires while the egg is a digivolution source under a host.
+#   - when: when_card_linked_to_this  → EffectTiming::OnLink, host self-filter
+#       (event_permanent == source_permanent, i.e. the link attached to THIS host).
+#   - once_per_turn: true  → [Once Per Turn] OPT lockout.
+#   - active_when: { your_turn: true }  → DCGO's IsOwnerTurn gate.
+#   - process: [draw: { of: you, count: 1 }]  → DrawClass(1), mandatory.
+#
+# No main effect, no link box (a Digi-Egg cannot be a link card), no security
+# effect. kind: digi_egg (card_kind 3 in cards.json).
+#
+# Structural family: G4 (inherited DigiEgg) + B3 (event observer) + E2 (OPT).
+# Exemplar: BT15-003.yaml (inherited OPT egg, different timing); BT21-004.yaml
+# (inherited OPT egg with on_suspend, same structural family); BT25-052.yaml
+# (face-up when_card_linked_to_this on a Digimon).
+
+card: BT21-005
+name: Swipemon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Appmon, Social, Swipe]
+attribute: Social
+form: In-Training
+
+effects:
+  # ─── Inherited [Your Turn][OPT] When this Digimon gets linked, Draw 1 ───────
+  - scope: inherited
+    when: when_card_linked_to_this
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

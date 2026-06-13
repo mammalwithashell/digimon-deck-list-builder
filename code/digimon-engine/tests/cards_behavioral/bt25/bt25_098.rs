@@ -23,13 +23,12 @@
 //!   optional "you may play 1 [Appmon] ... cost reduced by 3"
 //! - Inherited [Security] places self in battle area
 //!
-//! AUDIT note (batch-implement-cards-rust-dsl): the existing YAML models the
-//! reveal "Add 1 [Appmon] ... among them" pick with `optional: true`. The
-//! printed text has no "may" on the add — it is mandatory when an [Appmon] is
-//! among the revealed three (DCGO uses `maxCount: 1` with no `canNoSelect`).
-//! Per v1 audit policy this is an `optional`-on-mandatory drift; it is NOT
-//! fixed here (audit-only, YAML untouched) but is exercised so the behavior is
-//! pinned and the drift is visible.
+//! AUDIT note (batch-implement-cards-rust-dsl, drift FIXED 2026-06-12): the
+//! reveal "Add 1 [Appmon] ... among them" pick is MANDATORY when an [Appmon] is
+//! among the revealed three (printed text has no "may"; DCGO `maxCount: 1` with
+//! no `canNoSelect`). The YAML's `optional: true` was corrected to
+//! `optional: false`. When no [Appmon] is revealed the select finds no
+//! candidates and auto-skips.
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledCostDelta, CompiledDeclarativeClause, CompiledScope,
@@ -544,5 +543,263 @@ fn bt25_098_use_requirement_is_present_and_targets_appmon() {
     assert!(
         has_gate,
         "IgnoreColorRequirement flood gate is conditioned on an Appmon Digimon/Tamer"
+    );
+}
+
+// ── Section 5: Use Req. gating — negative and positive behavioral ────────────
+
+/// Negative: without any Appmon Digimon or Tamer on the field, attempting to
+/// play BT25-098 from hand must return OptionPlayResult::Invalid (use_requirement
+/// not satisfied, color-bypass inactive, and the card is yellow requiring a
+/// yellow source).
+#[test]
+fn bt25_098_play_blocked_without_appmon_on_field() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-098")
+        .expect("BT25-098 YAML loads")
+        .add_card(plain_digimon("PLAIN-A", 3))
+        .add_card(plain_digimon("FILLER", 3))
+        .hand(0, &["BT25-098"])
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(10)
+        .start();
+    runner.game.enter_main_phase();
+
+    // No [Appmon] permanent on field → use_requirement fails and the non-yellow
+    // color bypass is inactive → play must be rejected.
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert_eq!(
+        result,
+        OptionPlayResult::Invalid,
+        "playing BT25-098 without an Appmon on field must be Invalid (use_req not met, color lock active)"
+    );
+    // BT25-098 must still be in hand, not consumed.
+    assert!(
+        hand_ids(&runner, 0).contains(&"BT25-098".to_string()),
+        "BT25-098 stays in hand after a failed play attempt"
+    );
+}
+
+/// Positive: with an Appmon Digimon on field, the play is accepted.
+#[test]
+fn bt25_098_play_allowed_with_appmon_digimon_on_field() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-098")
+        .expect("BT25-098 YAML loads")
+        .add_card(appmon_digimon("APP-D", 4))
+        .add_card(plain_digimon("FILLER", 3))
+        .hand(0, &["BT25-098"])
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "APP-D", Some(0));
+    runner.game.enter_main_phase();
+    // Stack 3 fillers so the reveal doesn't underflow.
+    stack_deck_top(&mut runner, &["FILLER", "FILLER", "FILLER"]);
+
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        result != OptionPlayResult::Invalid,
+        "playing BT25-098 with an Appmon Digimon on field must NOT be Invalid; got {:?}",
+        result
+    );
+}
+
+// ── Section 6: <Delay> filter — non-Appmon in hand not selectable ────────────
+
+/// When the <Delay> activates and the owner's hand contains only non-Appmon
+/// cards, the filter must produce zero non-PASS actions (or go straight to
+/// settlement without a selection prompt, depending on the engine's empty-
+/// candidate behaviour for optional selects).
+#[test]
+fn bt25_098_delay_with_no_appmon_in_hand_offers_only_pass_or_skips() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-098")
+        .expect("BT25-098 YAML loads")
+        .add_card(plain_digimon("PLAIN-HAND", 3)) // non-Appmon
+        .add_card(plain_digimon("FILL", 3))
+        .hand(0, &["PLAIN-HAND"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+
+    let handle = seat_and_advance_to_activatable_delay(&mut runner);
+    runner.game.set_memory(10);
+
+    assert!(
+        runner
+            .game
+            .activate_field_main(0, handle.index as usize),
+        "the <Delay> must be activatable (placing-turn gate has passed)"
+    );
+
+    // Either: the engine skips the empty selection and auto-settles (no
+    // pending_selection) OR the selection is optional with zero non-PASS
+    // actions (only PASS available).
+    let view_opt = runner.pending_selection_view();
+    match view_opt {
+        None => {
+            // Engine auto-settled — the self-trash cost was paid.
+            assert!(
+                trash_ids(&runner, 0).contains(&"BT25-098".to_string()),
+                "BT25-098 must be trashed as the <Delay> cost even when no play is made: {:?}",
+                trash_ids(&runner, 0)
+            );
+        }
+        Some(view) => {
+            // Selection surfaced — must be optional and have no concrete play
+            // action (only PASS is legal).
+            assert!(
+                runner.pending_is_optional(),
+                "the selection must be optional when no [Appmon] is in hand"
+            );
+            assert!(
+                view.valid_action_ids.iter().all(|&a| a == PASS),
+                "only PASS should be legal when hand contains no [Appmon]: {:?}",
+                view.valid_action_ids
+            );
+            // Pass the selection and confirm the cost was paid.
+            runner
+                .execute_action(view.selecting_player, PASS)
+                .expect("pass the empty delay selection");
+            runner.auto_resolve().expect("settle the delay after pass");
+            assert!(
+                trash_ids(&runner, 0).contains(&"BT25-098".to_string()),
+                "BT25-098 must be trashed after <Delay> even when play is declined: {:?}",
+                trash_ids(&runner, 0)
+            );
+        }
+    }
+    // In both paths PLAIN-HAND must NOT have been played.
+    assert!(
+        !field_contains(&runner, 0, "PLAIN-HAND"),
+        "the non-Appmon PLAIN-HAND must never reach the field via the <Delay>"
+    );
+}
+
+// ── Section 7: Security behavioral ───────────────────────────────────────────
+
+/// When BT25-098 is revealed as a security card (P1's security), the
+/// [Security] effect places it in P1's battle area as a <Delay> Option.
+/// Drive by having P0 attack P1's player so the security check fires.
+#[test]
+fn bt25_098_security_places_self_in_battle_area_when_revealed() {
+    let mut attacker_card = make_test_card("ATTACKER", "Attacker");
+    attacker_card.card_kind = CardKind::Digimon;
+    attacker_card.colors = vec![CardColor::Yellow];
+    attacker_card.level = Some(5);
+    attacker_card.dp = Some(9000);
+    attacker_card.play_cost = 0;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-098")
+        .expect("BT25-098 YAML loads")
+        .add_card(attacker_card)
+        // Seed BT25-098 into P1's security so the security-check fires its
+        // SecuritySkill ([Security] effect).
+        .security(1, &["BT25-098"])
+        .memory(10)
+        .start();
+
+    let atk = runner.place_on_field(0, "ATTACKER", Some(0));
+    let p1_field_before = runner.battle_area_size(1);
+
+    // P0 attacks P1's player — the security check fires BT25-098's
+    // [Security] effect: "Place this card in the battle area."
+    let _ = runner.attack_player(atk, 1, false);
+    // auto_resolve handles the security effect chain.
+    let _ = runner.auto_resolve();
+
+    // BT25-098 should now be in P1's battle area as a Delayed Option.
+    let placed = runner
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "BT25-098");
+    assert!(
+        placed.is_some(),
+        "BT25-098 must be placed in P1's battle area after the [Security] effect fires; \
+         field had {} permanents before, now has {}",
+        p1_field_before,
+        runner.battle_area_size(1)
+    );
+    if let Some(perm) = placed {
+        assert!(
+            matches!(perm.option_state, OptionState::Delayed { .. }),
+            "BT25-098 placed via [Security] must be in a Delayed state (standard <Delay>)"
+        );
+    }
+}
+
+// ── Section 8: Event-log ──────────────────────────────────────────────────────
+
+/// When the [Main] body runs, BT25-098 is placed in the battle area via
+/// place_self_as_delay_option. Confirm via the event log that at least one
+/// event fires during the pipeline (reveal + hand-add + trash steps all emit
+/// events), and that BT25-098 ends up on the battle area (not in hand).
+#[test]
+fn bt25_098_main_pipeline_emits_events_and_places_self() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-098")
+        .expect("BT25-098 YAML loads")
+        .add_card(appmon_digimon("APP-A", 4))
+        .add_card(plain_digimon("PLAIN-E", 3))
+        .add_card(appmon_tamer("APP-TAMER"))
+        .hand(0, &["BT25-098"])
+        .deck(0, &["PLAIN-E", "PLAIN-E", "APP-A"])
+        .deck(1, &["PLAIN-E"; 5])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "APP-TAMER", Some(0));
+    runner.game.enter_main_phase();
+
+    // Capture the event log baseline before the Option fires.
+    let cp = runner.event_checkpoint();
+
+    // Play BT25-098 — use_req is satisfied by the APP-TAMER on field.
+    // Stack the deck so APP-A is on top (last pushed = top).
+    stack_deck_top(&mut runner, &["PLAIN-E", "PLAIN-E", "APP-A"]);
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        result != OptionPlayResult::Invalid,
+        "play must be accepted when an Appmon Tamer is on field; got {:?}",
+        result
+    );
+
+    // Drive the reveal selection (pick APP-A to add) and settle.
+    if let Some(view) = runner.pending_selection_view() {
+        let action = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .unwrap_or(PASS);
+        let _ = runner.execute_action(view.selecting_player, action);
+    }
+    let _ = runner.auto_resolve();
+
+    // BT25-098 must be on the battle area (placed as a <Delay> Option).
+    assert!(
+        field_contains(&runner, 0, "BT25-098"),
+        "BT25-098 must be placed in the battle area after [Main] resolves"
+    );
+
+    // BT25-098 must NOT be in hand any longer.
+    assert!(
+        !hand_ids(&runner, 0).contains(&"BT25-098".to_string()),
+        "BT25-098 must leave the hand zone after play: {:?}",
+        hand_ids(&runner, 0)
+    );
+
+    // At least one event must have been emitted during the pipeline (the
+    // reveal / hand-add / trash-rest steps are observable via the event log).
+    let events = runner.events_since(cp);
+    assert!(
+        !events.is_empty(),
+        "playing BT25-098 must emit at least one engine event; got 0 events after checkpoint {cp}"
     );
 }
