@@ -4,7 +4,7 @@ redacting opponent hand/security. Guards the `add-permanent-stack-inspector`
 serialization surface against accidental redaction.
 """
 
-from engine_py_legacy.engine.state_filter import (
+from server.state_filter import (
     filter_state_for_player,
     filter_state_for_spectator,
 )

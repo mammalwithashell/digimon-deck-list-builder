@@ -13,5 +13,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: false,
     setupFiles: ['./src/testSetup.ts'],
+    // Unit tests only — Playwright specs under e2e/ run via `npx playwright
+    // test`, and vitest's default include would otherwise collect them.
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 });
