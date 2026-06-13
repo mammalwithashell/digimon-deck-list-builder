@@ -271,6 +271,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::WhenLinked => CompiledTiming::WhenLinked,
         S::WhenCardLinkedToThis => CompiledTiming::WhenCardLinkedToThis,
         S::WhenWouldLinkToThis => CompiledTiming::WhenWouldLinkToThis,
+        S::OnAnyLink => CompiledTiming::OnAnyLink,
     }
 }
 

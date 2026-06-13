@@ -954,6 +954,11 @@ pub enum CompiledTiming {
     /// with a host self-filter (`pending_link_host() == source_permanent`).
     /// Pair with `optional` + a `reduce_link_cost` step (Gap 5).
     WhenWouldLinkToThis,
+    /// DigiLink board-wide observer: fires on every `OnLink` dispatch with NO
+    /// forced self/host filter. Authored as `when: on_any_link`; scope-gate via
+    /// `active_when:` (`event_target_owner`, `event_card_trait_has`,
+    /// `your_turn`). G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED.
+    OnAnyLink,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
