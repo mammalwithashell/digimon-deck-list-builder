@@ -34,18 +34,15 @@
 #     a. SuspendPermanentsClass([self]) → activation_cost: { suspend_self: true }
 #     b. (if suspended check passes) DrawClass(card.Owner, 1, ...) → draw: 1
 #     c. SelectHandEffect(canNoSelect: false, maxCount: 1, Mode.Discard) → mandatory trash 1
-#     d. App fuse into System/Life/Transmutation from trash — BLOCKED (no engine primitive)
+#     d. App fuse into System/Life/Transmutation from trash → `app_fuse`
+#        (from: trash, result_filter: System/Life/Transmutation, optional).
 #
-# ─── PARTIAL ──────────────────────────────────────────────────────────────────
+# ─── IMPLEMENTED (2026-06-13) ─────────────────────────────────────────────────
 #
 # The tail of Clause 2 — "Then, 1 of your Digimon may app fuse into a Digimon
 # card with the [System], [Life] or [Transmutation (App Name)] trait in the
-# trash." — is OMITTED because there is no engine primitive for effect-initiated
-# App Fusion from trash (no `EffectContext::effect_initiated_app_fuse` / DSL step).
-# Gap: effect-initiated app fuse — see docs/RUST_ENGINE_GAPS.md (App Fuse entry).
-# Same gap keeps BT21-084 and BT25-089 PARTIAL.
-#
-# The "<Draw 1> and trash 1 card in your hand" portion IS implemented.
+# trash." — now ships via the effect-initiated `app_fuse` step
+# (`EffectContext::initiate_effect_app_fuse`, from: trash + result-trait filter).
 
 card: BT24-087
 name: "Rei Katsura"
@@ -65,10 +62,8 @@ effects:
     process:
       - gain_memory: 1
 
-  # ─── Clause 2 (partial): [Your Turn] When any of your Digimon get linked →
-  #     suspend self, <Draw 1>, trash 1 from hand.
-  # App-fuse rider OMITTED (engine gap: effect-initiated app fuse from trash,
-  # docs/RUST_ENGINE_GAPS.md). Same gap as BT21-084 and BT25-089.
+  # ─── Clause 2: [Your Turn] When any of your Digimon get linked →
+  #     suspend self, <Draw 1>, trash 1 from hand, then app fuse from trash.
   #
   # active_when.all_of:
   #   - your_turn: true            — [Your Turn] scope (DCGO: IsOwnerTurn)
@@ -98,6 +93,16 @@ effects:
           filter: {}
           prompt: "Trash 1 card from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
+      # Then, 1 of your Digimon may app fuse into a Digimon card with the
+      # [System]/[Life]/[Transmutation] trait in the trash.
+      - app_fuse:
+          from: trash
+          optional: true
+          result_filter:
+            any_of:
+              - trait_has: System
+              - trait_has: Life
+              - trait_has: Transmutation
 
   # ─── Clause 3: [Security] play this card without paying the cost ──────────────
   - when: on_security

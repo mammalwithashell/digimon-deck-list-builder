@@ -399,3 +399,192 @@ fn bt24_087_opponent_digimon_linked_no_prompt() {
 
 // Structural test: the on_security clause compiles with PlayFromSecurity.
 // (Already covered by bt24_087_security_clause_has_play_from_security_step above.)
+
+// ─── Clause 2 tail: App Fuse from trash with [System]/[Life]/[Transmutation] ──
+// (effect-initiated App Fuse, 2026-06-13)
+
+/// App-Fusion result with the [System] trait + materials Kabemon & Gomimon.
+const APP_FUSE_RESULT_SYSTEM: &str = r#"
+card: TEST-APPFUSE-SYS
+name: Test App Fusion System
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 9000
+traits: [Appmon, System]
+alt_paths:
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Kabemon, Gomimon]
+    cost: 0
+"#;
+
+fn named_material(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 4;
+    c.traits = vec!["Appmon".to_string()];
+    c
+}
+
+fn seed_trash(runner: &mut DebugRunner, player: usize, card_id: &str) {
+    let idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap();
+    let iid = runner.game.next_card_index();
+    runner.game.players[player]
+        .trash
+        .push(CardSource::new(idx, player as u8, iid));
+}
+
+/// Full chain: link onto a materialed host → accept → suspend + draw → trash 1
+/// → app fuse the [System] result from trash onto the host.
+#[test]
+fn bt24_087_app_fuse_from_trash_filtered_by_trait() {
+    use digimon_engine::action::space::encode_attack;
+
+    let mut r = base()
+        .from_dsl_yaml(APP_FUSE_RESULT_SYSTEM)
+        .expect("APP_FUSE_RESULT_SYSTEM compiles")
+        .add_card(named_material("TEST-KABEMON", "Kabemon"))
+        .add_card(named_material("TEST-GOMIMON", "Gomimon"))
+        .deck(0, &["DECK-PAD"; 12])
+        .hand(0, &["HAND-CARD"])
+        .memory(5)
+        .start();
+    let rei = r.place_on_field(0, CARD_ID, Some(0));
+    // Host: top = Kabemon. The link event below links Gomimon → 2 distinct
+    // named materials (app-fuse eligible) AND fires the on_any_link observer.
+    let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
+    seed_trash(&mut r, 0, "TEST-APPFUSE-SYS");
+    r.game.enter_main_phase();
+
+    let host_handle = r.perm_handle(0, host.index as usize);
+    fire_link_event(&mut r, 0, host_handle, "TEST-GOMIMON");
+
+    // 1. Accept the outer optional prompt.
+    {
+        let sel = r.game.pending_selection.as_ref().expect("optional prompt");
+        let action = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(0, action);
+        r.game.drain_effect_queue();
+    }
+    // 2. Mandatory trash-1-hand: pick the hand card.
+    {
+        let sel = r.game.pending_selection.as_ref().expect("trash prompt");
+        let action = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(0, action);
+        r.game.drain_effect_queue();
+    }
+    // 3. App-fuse selection #1: the host permanent.
+    let host_action = encode_attack(0, host.index as u16);
+    {
+        let view = r
+            .pending_selection_view()
+            .expect("app-fuse perm selection installs after trash");
+        assert!(
+            view.valid_action_ids.contains(&host_action),
+            "host with Kabemon+Gomimon is an eligible app-fuse target"
+        );
+        r.execute_action(0, host_action).expect("pick host");
+    }
+    // 4. App-fuse selection #2: the [System] result in trash.
+    {
+        let trash_pos = r.game.players[0]
+            .trash
+            .iter()
+            .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE-SYS")
+            .expect("System result still in trash");
+        let action = digimon_engine::action::space::TRASH_EFFECT_START + trash_pos as u16;
+        r.execute_action(0, action).expect("pick System result");
+    }
+
+    assert_eq!(
+        r.game.players[0].battle_area[host.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TEST-APPFUSE-SYS",
+        "the [System] result app-fused from trash onto the host"
+    );
+}
+
+/// A result card lacking System/Life/Transmutation is NOT offered by the
+/// filtered app-fuse selection.
+#[test]
+fn bt24_087_app_fuse_filters_out_nonmatching_trait() {
+    use digimon_engine::action::space::{encode_attack, TRASH_EFFECT_START};
+
+    // A second result with NO System/Life/Transmutation trait (same materials).
+    const APP_FUSE_RESULT_PLAIN: &str = r#"
+card: TEST-APPFUSE-PLAIN
+name: Test App Fusion Plain
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 9000
+traits: [Appmon]
+alt_paths:
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Kabemon, Gomimon]
+    cost: 0
+"#;
+
+    let mut r = base()
+        .from_dsl_yaml(APP_FUSE_RESULT_SYSTEM)
+        .expect("system result compiles")
+        .from_dsl_yaml(APP_FUSE_RESULT_PLAIN)
+        .expect("plain result compiles")
+        .add_card(named_material("TEST-KABEMON", "Kabemon"))
+        .add_card(named_material("TEST-GOMIMON", "Gomimon"))
+        .deck(0, &["DECK-PAD"; 12])
+        .hand(0, &["HAND-CARD"])
+        .memory(5)
+        .start();
+    let _rei = r.place_on_field(0, CARD_ID, Some(0));
+    let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
+    seed_trash(&mut r, 0, "TEST-APPFUSE-SYS");
+    seed_trash(&mut r, 0, "TEST-APPFUSE-PLAIN");
+    r.game.enter_main_phase();
+
+    let host_handle = r.perm_handle(0, host.index as usize);
+    fire_link_event(&mut r, 0, host_handle, "TEST-GOMIMON");
+    // accept → trash → reach app-fuse perm selection.
+    for _ in 0..2 {
+        let sel = r.game.pending_selection.as_ref().expect("prompt");
+        let action = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(0, action);
+        r.game.drain_effect_queue();
+    }
+    r.execute_action(0, encode_attack(0, host.index as u16))
+        .expect("pick host");
+
+    let view = r.pending_selection_view().expect("result selection");
+    let sys_pos = r.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE-SYS")
+        .unwrap();
+    let plain_pos = r.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE-PLAIN")
+        .unwrap();
+    assert!(
+        view.valid_action_ids.contains(&(TRASH_EFFECT_START + sys_pos as u16)),
+        "the [System] result is offered"
+    );
+    assert!(
+        !view.valid_action_ids.contains(&(TRASH_EFFECT_START + plain_pos as u16)),
+        "the no-trait result is filtered out"
+    );
+}
