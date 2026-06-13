@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import * as library from '@/api/deckLibraryAdapter';
+import { normalizeSeedInput } from '@/api/gameApi';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
 import { canUseDeckForFormat, getPlayFormat } from '@/features/play/formatCatalog';
 import { createBotGame } from '@/features/play/playApi';
@@ -10,11 +11,13 @@ import './DeckSelectPage.css';
 
 export function DeckSelectPage() {
   const navigate = useNavigate();
-  const { formatId, opponentMode, deckId, selectDeck } = usePlayFlowStore();
+  const { formatId, opponentMode, deckId, selectDeck, setQueue } = usePlayFlowStore();
   const [decks, setDecks] = useState<DeckSummary[]>([]);
   const [search, setSearch] = useState('');
   const [showAllFormats, setShowAllFormats] = useState(false);
   const [launching, setLaunching] = useState(false);
+  const [seedInput, setSeedInput] = useState('');
+  const [seedError, setSeedError] = useState('');
   const format = getPlayFormat(formatId);
 
   // Decks visible in this queue: by default only those built for the current
@@ -61,8 +64,22 @@ export function DeckSelectPage() {
     }
     setLaunching(true);
     try {
+      let normalizedSeed: string | null = null;
+      try {
+        normalizedSeed = normalizeSeedInput(seedInput);
+        setSeedError('');
+      } catch (err) {
+        setSeedError((err as Error).message);
+        setLaunching(false);
+        return;
+      }
       const deck = await library.getDeck(selected.id);
-      const response = await createBotGame({ deck, opponentDeck: deck });
+      const response = await createBotGame({
+        deck,
+        opponentDeck: deck,
+        seed: normalizedSeed,
+      });
+      setQueue({ gameId: response.game_id, seed: response.seed ?? normalizedSeed });
       navigate(`/game/${response.game_id}`);
     } finally {
       setLaunching(false);
@@ -161,7 +178,24 @@ export function DeckSelectPage() {
         </section>
 
         <div className="deck-confirm-bar">
-          <span>{selected ? selected.name : 'NO DECK SELECTED'}</span>
+          <div className="deck-confirm-info">
+            <span>{selected ? selected.name : 'NO DECK SELECTED'}</span>
+            {opponentMode === 'bot' && (
+              <label className="deck-seed-control">
+                <span>SHUFFLE SEED</span>
+                <input
+                  value={seedInput}
+                  onChange={(event) => {
+                    setSeedInput(event.target.value);
+                    setSeedError('');
+                  }}
+                  placeholder="Random"
+                  inputMode="numeric"
+                />
+                {seedError && <em>{seedError}</em>}
+              </label>
+            )}
+          </div>
           <button
             type="button"
             disabled={!selected || !selectedLegality?.ok || launching}

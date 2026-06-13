@@ -124,6 +124,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
             "current_player_id": runner.current_player_id,
             "is_game_over": runner.is_game_over,
             "engine_version": settings.engine_version,
+            "seed": manager.get_settings(game_id).seed,
         })
         await _spectator_loop(websocket, game_id)
         return
@@ -151,6 +152,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
         "is_game_over": runner.is_game_over,
         "your_player_id": player_id,
         "engine_version": settings.engine_version,
+        "seed": manager.get_settings(game_id).seed,
     })
 
     # Send spectator count

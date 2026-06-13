@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   DndContext,
   PointerSensor,
@@ -77,6 +77,7 @@ const decks = IS_DESKTOP ? deckStore : deckApiMod;
 
 export function GamePage() {
   const { id: urlGameId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode');
   const isPvpMode = mode === 'pvp';
@@ -88,7 +89,7 @@ export function GamePage() {
 
 
   const store = useGameStore();
-  const { opponentMode } = usePlayFlowStore();
+  const { opponentMode, seed: flowSeed, clearLaunchState } = usePlayFlowStore();
   useEffectHighlight();
   // Bot action pacing (add-bot-action-pacing): non-instant speeds advance
   // local bot games one agent action per request, paced by the driver
@@ -109,6 +110,9 @@ export function GamePage() {
       onStateUpdate: (payload) => {
         store.setGameState(payload.state);
         store.setActionMask(payload.action_mask ?? []);
+        if (payload.seed !== undefined) {
+          store.setGameSeed(payload.seed ?? null);
+        }
         if (payload.events) store.appendEvents(payload.events);
         if (payload.your_player_id != null) {
           store.setPlayerLabels({
@@ -142,9 +146,13 @@ export function GamePage() {
       logs?: string[];
       events?: GameEvent[];
       agent_pending?: boolean;
+      seed?: string;
     } & ActionTraceResponse) => {
       store.setGameState(res.state);
       store.setActionMask(res.action_mask);
+      if (res.seed !== undefined) {
+        store.setGameSeed(res.seed ?? null);
+      }
       if (res.events) store.appendEvents(res.events);
       appendResponseActionTraces(res);
       store.setAgentPending(res.agent_pending ?? false);
@@ -209,6 +217,8 @@ export function GamePage() {
   const [opponentDeckId, setOpponentDeckId] = useState<string>('');
   const [agentType, setAgentType] = useState<string>('greedy');
   const [starting, setStarting] = useState(false);
+  const [startSeedInput, setStartSeedInput] = useState('');
+  const [startSeedError, setStartSeedError] = useState('');
   const [localModels, setLocalModels] = useState<LocalModelMeta[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string>('');
 
@@ -246,9 +256,11 @@ export function GamePage() {
               gameApi.getState(urlGameId),
               gameApi.getMask(urlGameId),
             ]);
+            const stateSeed = (state as GameState & { seed?: string }).seed;
             store.setGameId(urlGameId);
             store.setGameState(state);
             store.setActionMask(maskData);
+            store.setGameSeed(stateSeed ?? flowSeed ?? null);
             store.clearActionTraces();
             store.setPlayerLabels({
               1: 'YOU',
@@ -347,6 +359,15 @@ export function GamePage() {
     if (agentType === 'trained' && !selectedModelId) return;
     setStarting(true);
     try {
+      let normalizedSeed: string | null = null;
+      try {
+        normalizedSeed = gameApi.normalizeSeedInput(startSeedInput);
+        setStartSeedError('');
+      } catch (err) {
+        setStartSeedError((err as Error).message);
+        setStarting(false);
+        return;
+      }
       const [deck, oppDeck] = await Promise.all([
         decks.getDeck(selectedDeckId),
         decks.getDeck(opponentDeckId),
@@ -379,11 +400,13 @@ export function GamePage() {
         // prelude — cap it at one beat so the opening bot turn is paced
         // too. (Desktop create runs no prelude; the flag is inert there.)
         paced,
+        seed: normalizedSeed,
       });
 
       // Set game state before gameId so the board has player data when it first renders
       store.setGameState(result.state);
       store.setActionMask(result.action_mask);
+      store.setGameSeed(result.seed ?? normalizedSeed);
       if (result.player_labels) {
         store.setPlayerLabels(result.player_labels);
       } else {
@@ -453,6 +476,12 @@ export function GamePage() {
       // Ignore errors (e.g. game already over)
     }
   }, [appendResponseActionTraces, store]);
+
+  const handleReturnToLauncher = useCallback(() => {
+    store.reset();
+    clearLaunchState();
+    navigate('/');
+  }, [clearLaunchState, navigate, store]);
 
   const gameLogLines = useMemo(() => {
     if (!store.player1 || !store.player2) return [];
@@ -864,6 +893,23 @@ export function GamePage() {
             </div>
           )}
 
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Shuffle Seed</label>
+            <input
+              value={startSeedInput}
+              onChange={(e) => {
+                setStartSeedInput(e.target.value);
+                setStartSeedError('');
+              }}
+              placeholder="Random"
+              inputMode="numeric"
+              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+            />
+            {startSeedError && (
+              <p className="mt-1 max-w-[220px] text-xs text-yellow-300">{startSeedError}</p>
+            )}
+          </div>
+
           <button
             onClick={handleStartGame}
             disabled={
@@ -1192,6 +1238,22 @@ export function GamePage() {
             <BotSpeedControl />
           </div>
         )}
+        {(store.gameSeed ?? flowSeed) && (
+          <div className="flex items-center justify-end gap-2 px-3 py-1 text-xs text-gray-300">
+            <span className="uppercase tracking-widest text-gray-500">Seed</span>
+            <code className="max-w-[260px] truncate rounded border border-white/10 bg-black/30 px-2 py-1">
+              {store.gameSeed ?? flowSeed}
+            </code>
+            <button
+              type="button"
+              aria-label="Copy seed"
+              onClick={() => void navigator.clipboard?.writeText((store.gameSeed ?? flowSeed) ?? '')}
+              className="rounded border border-white/15 px-2 py-1 text-gray-100 hover:bg-white/10"
+            >
+              Copy
+            </button>
+          </div>
+        )}
         <ActionBar
           phase={store.currentPhase}
           actionMask={store.agentPending ? EMPTY_MASK : store.actionMask}
@@ -1209,7 +1271,8 @@ export function GamePage() {
         localPlayer={1}
         playerLabels={store.playerLabels}
         surrenderedBy={surrenderedBy}
-        onReturnToMenu={() => store.reset()}
+        gameSeed={store.gameSeed ?? flowSeed}
+        onReturnToMenu={handleReturnToLauncher}
       />
 
       {/* Trash viewer modal */}

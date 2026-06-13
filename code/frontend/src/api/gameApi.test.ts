@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActionTrace, TensorSummary } from '@/types/game';
-import { createGame, dtoToGameState, toTensorSummary } from './gameApi';
+import {
+  createGame,
+  dtoToGameState,
+  normalizeSeedInput,
+  toTensorSummary,
+} from './gameApi';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -241,5 +246,66 @@ describe('createGame', () => {
     });
 
     expect(response.events?.map((e) => e.type)).toEqual(['memory_change']);
+  });
+
+  it('forwards and returns the effective seed as a lossless string', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        seed: '18446744073709551615',
+      });
+      return {
+        ok: true,
+        json: async () => ({
+          game_id: 'game-1',
+          seed: '18446744073709551615',
+          state: {
+            turnCount: 1,
+            currentPhase: 3,
+            currentPlayer: 1,
+            memoryGauge: 0,
+            isGameOver: false,
+            winner: null,
+            player1: {},
+            player2: {},
+            revealedCards: [],
+            pendingSelection: null,
+            pendingAttack: null,
+          },
+          action_mask: [1, 0],
+          logs: [],
+          events: [],
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await createGame({
+      deck1: ['BT1-001'],
+      deck2: ['BT1-001'],
+      player1_type: 'human',
+      player2_type: 'agent',
+      seed: '18446744073709551615',
+    });
+
+    expect(response.seed).toBe('18446744073709551615');
+  });
+});
+
+describe('normalizeSeedInput', () => {
+  it('accepts blank input as generated-seed mode', () => {
+    expect(normalizeSeedInput('')).toBeNull();
+    expect(normalizeSeedInput('   ')).toBeNull();
+  });
+
+  it('preserves large u64 decimal strings exactly', () => {
+    expect(normalizeSeedInput('18446744073709551615')).toBe(
+      '18446744073709551615',
+    );
+  });
+
+  it('rejects invalid decimal seed input', () => {
+    expect(() => normalizeSeedInput('-1')).toThrow(/base-10/);
+    expect(() => normalizeSeedInput('1.5')).toThrow(/base-10/);
+    expect(() => normalizeSeedInput('18446744073709551616')).toThrow(/u64/);
   });
 });

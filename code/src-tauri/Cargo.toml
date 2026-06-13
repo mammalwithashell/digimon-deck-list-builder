@@ -26,6 +26,7 @@ thiserror = "1"
 dirs = "5"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
 # Dev-only debug bridge (feature `debug-bridge`). Optional so release
 # bundles link no HTTP server.
 axum = { version = "0.7", optional = true }

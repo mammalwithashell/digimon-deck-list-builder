@@ -26,7 +26,7 @@ from typing import Literal, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from digimon_engine import RustHeadlessGame, parse_deck
@@ -35,6 +35,7 @@ from server.db.auth import get_current_user
 from server.db.database import get_db
 from server.db.models import User
 from server.routers.state import active_games
+from server.routers.seed_utils import parse_optional_seed, seed_to_wire
 from server.routers.ws_manager import GameSettings, manager
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,8 @@ class PendingGame(BaseModel):
     joiner_deck: list[str] = Field(default_factory=list)
     joiner_deck_raw: Optional[str] = None
     first_player: FirstPlayerChoice = "random"
+    explicit_seed: Optional[int] = None
+    effective_seed: Optional[int] = None
     started: bool = False
     created_at: datetime
     is_public: bool = True
@@ -115,15 +118,23 @@ def _seed_for_first_player(choice: FirstPlayerChoice) -> int:
     return seed
 
 
+def seed_for_pvp_game(
+    first_player: FirstPlayerChoice = "random",
+    explicit_seed: Optional[int] = None,
+) -> int:
+    return explicit_seed if explicit_seed is not None else _seed_for_first_player(first_player)
+
+
 def create_pvp_game(
     host_deck: list[str],
     joiner_deck: list[str],
     first_player: FirstPlayerChoice = "random",
+    seed: Optional[int] = None,
 ) -> RustHeadlessGame:
     """Construct a two-human Rust game. Shared with matchmaking so quick
     match and room match go through the same construction path."""
-    seed = _seed_for_first_player(first_player)
-    return RustHeadlessGame(host_deck, joiner_deck, False, False, False, seed)
+    effective_seed = seed_for_pvp_game(first_player, seed)
+    return RustHeadlessGame(host_deck, joiner_deck, False, False, False, effective_seed)
 
 
 # ── Request / Response Schemas ───────────────────────────────────────────
@@ -145,6 +156,15 @@ class SetFirstPlayerRequest(BaseModel):
     first_player: FirstPlayerChoice
 
 
+class SetSeedRequest(BaseModel):
+    seed: Optional[int | str] = None
+
+    @field_validator("seed", mode="before")
+    @classmethod
+    def _validate_seed(cls, value):
+        return parse_optional_seed(value)
+
+
 def _seat_of(pending: PendingGame, user_id: str) -> Optional[int]:
     if pending.host_user_id == user_id:
         return 1
@@ -154,6 +174,8 @@ def _seat_of(pending: PendingGame, user_id: str) -> Optional[int]:
 
 
 def _pending_game_state(pending: PendingGame, user_id: Optional[str] = None) -> dict:
+    visible_seed = pending.effective_seed if pending.started else pending.explicit_seed
+    seed_mode = "explicit" if pending.explicit_seed is not None else "generated"
     return {
         "game_id": pending.game_id,
         "join_code": pending.join_code,
@@ -162,6 +184,9 @@ def _pending_game_state(pending: PendingGame, user_id: Optional[str] = None) -> 
         "host_deck_ready": bool(pending.host_deck),
         "joiner_deck_ready": bool(pending.joiner_deck),
         "first_player": pending.first_player,
+        "seed": seed_to_wire(visible_seed) if visible_seed is not None else None,
+        "seed_mode": seed_mode,
+        "first_player_seed_locked": pending.explicit_seed is not None and not pending.started,
         "started": pending.started,
         "your_seat": _seat_of(pending, user_id) if user_id else None,
         "allow_spectators": pending.allow_spectators,
@@ -351,6 +376,25 @@ async def set_first_player(
     return _pending_game_state(pending, user.id)
 
 
+@router.put("/{game_id}/seed")
+async def set_room_seed(
+    game_id: str,
+    request: SetSeedRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Host sets or clears the explicit room seed before start."""
+    pending = _require_pending(game_id)
+    if pending.host_user_id != user.id:
+        raise HTTPException(status_code=403, detail="Only the host can set the game seed")
+    if pending.started:
+        raise HTTPException(status_code=409, detail="Game already started")
+
+    pending.explicit_seed = request.seed if isinstance(request.seed, int) else None
+    pending.effective_seed = None
+    return _pending_game_state(pending, user.id)
+
+
 @router.post("/{game_id}/leave")
 async def leave_lobby_game(
     game_id: str,
@@ -389,8 +433,14 @@ async def start_lobby_game(
     if not pending.host_deck or not pending.joiner_deck:
         raise HTTPException(status_code=409, detail="Both decks must be locked")
 
+    effective_seed = seed_for_pvp_game(pending.first_player, pending.explicit_seed)
     try:
-        runner = create_pvp_game(pending.host_deck, pending.joiner_deck, pending.first_player)
+        runner = create_pvp_game(
+            pending.host_deck,
+            pending.joiner_deck,
+            pending.first_player,
+            effective_seed,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"Game creation failed: {exc}") from exc
 
@@ -399,11 +449,13 @@ async def start_lobby_game(
     # Record the joiner's user_id so WebSocket slot validation works
     settings = manager.get_settings(game_id)
     settings.joiner_user_id = pending.joiner_user_id
+    settings.seed = seed_to_wire(effective_seed)
 
     # Free the code; keep the (started) pending entry as the seat map for
     # `/state` polling until the TTL sweeps it.
     code_to_game.pop(pending.join_code, None)
     pending.started = True
+    pending.effective_seed = effective_seed
 
     logger.info(
         "Room %s started: host=%s joiner=%s first_player=%s",
