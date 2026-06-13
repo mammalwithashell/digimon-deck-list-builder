@@ -153,7 +153,21 @@ pub enum SelectionKind {
     /// Pick up to `max` cards from a zone; `picked` tracks how many have been
     /// chosen so far. The callback fires on each pick; the effect decides when
     /// to stop (or the player passes once `picked >= 1`). Full decoder in Task 4.
-    CountCappedMultiSelect { max: u8, picked: u8 },
+    ///
+    /// `min` is the EFFECTIVE floor (`min.max(is_optional_zero ? 0 : 1)`) — the
+    /// UI uses it to gate a confirm/Done control for deferred-toggle selection,
+    /// since the per-step `is_optional` only reveals the floor after the engine
+    /// has advanced. `distinct` is true when a distinct-by constraint removes
+    /// remaining candidates between picks; the UI cannot safely precompute a
+    /// pick batch in that case and falls back to immediate per-click commit.
+    /// Both ride the serialized kind string (`format!("{:?}", kind)`) on both
+    /// the browser and desktop pending-selection wires — no DTO struct change.
+    CountCappedMultiSelect {
+        min: u8,
+        max: u8,
+        picked: u8,
+        distinct: bool,
+    },
 
     /// Player may accept or decline an optional replacement effect. Backed by
     /// EffectChoice action range (accept) + PASS (decline). `valid_action_ids`

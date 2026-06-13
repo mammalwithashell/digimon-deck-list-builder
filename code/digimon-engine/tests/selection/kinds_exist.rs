@@ -7,10 +7,29 @@ fn new_selection_kinds_exist() {
         zones: UnionZoneSet::HAND | UnionZoneSet::TRASH,
     };
     let _ = SelectionKind::OrderedPermutation { remaining: 3 };
-    let _ = SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 };
+    let _ = SelectionKind::CountCappedMultiSelect { min: 1, max: 2, picked: 0, distinct: false };
     let _ = GamePhase::SelectUnion;
     let _ = GamePhase::SelectPermutation;
     let _ = GamePhase::SelectBudgeted;
+}
+
+#[test]
+fn count_capped_kind_str_carries_ui_fields() {
+    // The browser + desktop pending-selection wires serialize the kind via
+    // `format!("{:?}", kind)`, and the front-end `parseCountCappedKind` reads
+    // `min`/`max`/`picked`/`distinct` out of that string. Guard the shape so a
+    // variant rename can't silently break the trash multi-select UI.
+    let kind = SelectionKind::CountCappedMultiSelect {
+        min: 1,
+        max: 3,
+        picked: 2,
+        distinct: true,
+    };
+    let s = format!("{kind:?}");
+    assert!(s.starts_with("CountCappedMultiSelect"), "got {s}");
+    for field in ["min: 1", "max: 3", "picked: 2", "distinct: true"] {
+        assert!(s.contains(field), "kind string {s:?} must contain {field:?}");
+    }
 }
 
 #[test]

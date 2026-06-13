@@ -108,9 +108,8 @@ fn auto_commits_at_max() {
             .pending_selection
             .as_ref()
             .expect("step 1 must park selection");
-        assert_eq!(
-            sel.kind,
-            SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 },
+        assert!(
+            matches!(sel.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 0, .. }),
             "step 1: kind must be CountCappedMultiSelect {{ max: 2, picked: 0 }}"
         );
         assert_eq!(r.game.current_phase, GamePhase::SelectBudgeted);
@@ -139,9 +138,8 @@ fn auto_commits_at_max() {
             .pending_selection
             .as_ref()
             .expect("step 2 must park selection");
-        assert_eq!(
-            sel.kind,
-            SelectionKind::CountCappedMultiSelect { max: 2, picked: 1 },
+        assert!(
+            matches!(sel.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 1, .. }),
             "step 2: kind must be CountCappedMultiSelect {{ max: 2, picked: 1 }}"
         );
         assert_eq!(r.game.current_phase, GamePhase::SelectBudgeted);
@@ -234,10 +232,10 @@ fn pass_commits_early_when_picked_ge_1() {
             .pending_selection
             .as_ref()
             .expect("step 2 must park selection");
-        assert_eq!(
+        assert!(matches!(
             sel.kind,
-            SelectionKind::CountCappedMultiSelect { max: 3, picked: 1 }
-        );
+            SelectionKind::CountCappedMultiSelect { max: 3, picked: 1, .. }
+        ));
         assert!(
             sel.is_optional,
             "is_optional must be true at picked=1 (PASS available)"
@@ -374,10 +372,10 @@ fn optional_zero_allows_pass_at_start() {
             sel.is_optional,
             "is_optional must be true at picked=0 when is_optional_zero=true"
         );
-        assert_eq!(
+        assert!(matches!(
             sel.kind,
-            SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 }
-        );
+            SelectionKind::CountCappedMultiSelect { max: 2, picked: 0, .. }
+        ));
     }
 
     // Resolve PASS → callback delivered empty Vec
@@ -498,9 +496,8 @@ fn kind_reflects_picked_counter() {
     // Step 1: picked=0
     {
         let sel = r.game.pending_selection.as_ref().expect("step 1");
-        assert_eq!(
-            sel.kind,
-            SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 },
+        assert!(
+            matches!(sel.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 0, .. }),
             "step 1: kind must have picked=0"
         );
     }
@@ -511,9 +508,8 @@ fn kind_reflects_picked_counter() {
     // Step 2: picked=1
     {
         let sel = r.game.pending_selection.as_ref().expect("step 2");
-        assert_eq!(
-            sel.kind,
-            SelectionKind::CountCappedMultiSelect { max: 2, picked: 1 },
+        assert!(
+            matches!(sel.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 1, .. }),
             "step 2: kind must have picked=1"
         );
     }

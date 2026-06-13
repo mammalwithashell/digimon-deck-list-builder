@@ -18,6 +18,7 @@ import { ActionBar } from '@/components/game/ActionBar';
 import { PhaseIndicator } from '@/components/game/PhaseIndicator';
 import { PromptBar } from '@/components/game/PromptBar';
 import { SelectionPanel } from '@/components/game/SelectionPanel';
+import { TrashSelectModal } from '@/components/game/TrashSelectModal';
 import { TrashViewer } from '@/components/game/TrashViewer';
 import { ResultOverlay } from '@/components/game/ResultOverlay';
 import { AttackArrow } from '@/components/game/AttackArrow';
@@ -1291,19 +1292,29 @@ export function GamePage() {
         }
       />
 
-      {/* Selection panel modal for hand/trash/security/effect-choice selections */}
+      {/* Selection panel modal for hand/security/effect-choice selections */}
       <SelectionPanel
         currentPhase={store.currentPhase}
         pendingSelection={store.pendingSelection}
         actionMask={store.actionMask}
         handIds={store.player1?.handIds ?? []}
-        trashIds={store.player1?.trashIds ?? []}
-        opponentTrashIds={store.player2?.trashIds ?? []}
         securityCount={store.player1?.securityCount ?? 0}
         opponentSecurityCount={store.player2?.securityCount ?? 0}
         battleArea={store.player1?.battleArea ?? []}
         onAction={handleAction}
         localPlayer={1}
+        onInspectCard={setInspectedCardId}
+      />
+
+      {/* Interactive trash-selection modal — single + capped multi-select,
+          either player's trash (replaces the old SelectionPanel trash path). */}
+      <TrashSelectModal
+        pendingSelection={store.pendingSelection}
+        actionMask={store.actionMask}
+        ownTrashIds={store.player1?.trashIds ?? []}
+        opponentTrashIds={store.player2?.trashIds ?? []}
+        localPlayer={1}
+        onAction={handleAction}
         onInspectCard={setInspectedCardId}
       />
 

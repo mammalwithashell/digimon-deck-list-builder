@@ -3215,7 +3215,12 @@ fn install_count_capped_step(
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
         zone_owner: None,
-        kind: SelectionKind::CountCappedMultiSelect { max, picked },
+        kind: SelectionKind::CountCappedMultiSelect {
+            min: effective_min,
+            max,
+            picked,
+            distinct: distinct_by.is_some(),
+        },
         selecting_player,
         previous_phase,
         valid_action_ids,
