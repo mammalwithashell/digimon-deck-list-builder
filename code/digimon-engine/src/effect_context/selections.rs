@@ -1035,7 +1035,13 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectSecurity;
         self.game.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            // Disambiguate whose security stack is being indexed: own security
+            // uses action ids 40-49, opponent's 50-59. The frontend reads
+            // `zone_owner` to pick the correct base offset and the correct
+            // (face-down) security stack to render. Without it, an
+            // opponent-security prompt (e.g. BT24-018 Styracomon) renders
+            // against the local player's stack and is unselectable.
+            zone_owner: Some(of_player),
             kind: SelectionKind::Security,
             selecting_player,
             previous_phase,

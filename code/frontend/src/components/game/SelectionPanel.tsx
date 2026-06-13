@@ -16,8 +16,14 @@ interface SelectionPanelProps {
    *  from your opponent's trash") — `pendingSelection.zoneOwner` says
    *  which side the action ids index into. */
   opponentTrashIds?: string[];
-  /** The local player's security card IDs (may be empty if face-down) */
-  securityIds: string[];
+  /** Number of cards in the local player's security stack. Security is
+   *  face-down, so selection is positional (by count), not by card id. */
+  securityCount: number;
+  /** Number of cards in the opponent's security stack. Security selections can
+   *  target the OPPONENT's security (e.g. BT24-018 Styracomon "trash 1 of your
+   *  opponent's security") — `pendingSelection.zoneOwner` says which side the
+   *  action ids index into. */
+  opponentSecurityCount: number;
   /** The local player's battle-area permanents (for source-card picks). */
   battleArea: PermanentInfo[];
   onAction: (actionId: number) => void;
@@ -39,6 +45,8 @@ interface CardEntry {
   actionId: number;
   isValid: boolean;
   label?: string;
+  /** Render a face-down card back (used for hidden security positions). */
+  faceDown?: boolean;
 }
 
 export function SelectionPanel({
@@ -48,7 +56,8 @@ export function SelectionPanel({
   handIds,
   trashIds,
   opponentTrashIds = [],
-  securityIds,
+  securityCount,
+  opponentSecurityCount,
   battleArea,
   onAction,
   localPlayer,
@@ -96,10 +105,24 @@ export function SelectionPanel({
       isValid: actionMask[SELECTION.TRASH_START + i] === 1,
     }));
   } else if (currentPhase === GamePhase.SelectSecurity) {
-    cards = securityIds.map((cardId, i) => ({
-      cardId,
-      actionId: SELECTION.OWN_SECURITY_START + i,
-      isValid: actionMask[SELECTION.OWN_SECURITY_START + i] === 1,
+    // Security is face-down, so we render positional placeholders (one per
+    // card in the targeted stack) rather than card faces. The engine encodes
+    // own-security selections as action ids 40-49 and opponent-security as
+    // 50-59 (disambiguated by `zoneOwner`). Picking the wrong base/stack made
+    // opponent-security prompts (e.g. Styracomon) show an empty, unselectable
+    // modal.
+    const targetingOpponent =
+      pendingSelection.zoneOwner != null && pendingSelection.zoneOwner !== localPlayer;
+    const base = targetingOpponent
+      ? SELECTION.ENEMY_SECURITY_START
+      : SELECTION.OWN_SECURITY_START;
+    const count = targetingOpponent ? opponentSecurityCount : securityCount;
+    cards = Array.from({ length: count }, (_, i) => ({
+      cardId: '',
+      actionId: base + i,
+      isValid: actionMask[base + i] === 1,
+      faceDown: true,
+      label: `Security ${i + 1}`,
     }));
   } else if (isEffectChoice) {
     // Engine uses HAND_EFFECT_START (30+) for effect-choice action IDs,
@@ -225,10 +248,13 @@ export function SelectionPanel({
                   <Card
                     cardId={entry.cardId}
                     size="md"
+                    faceDown={entry.faceDown}
                     highlighted={entry.isValid}
                     dimmed={!entry.isValid}
                     onClick={entry.isValid ? () => onAction(entry.actionId) : undefined}
-                    onContextMenu={inspectOnRightClick(entry.cardId)}
+                    onContextMenu={
+                      entry.faceDown ? undefined : inspectOnRightClick(entry.cardId)
+                    }
                   />
                 </div>
               ))}

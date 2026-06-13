@@ -1236,7 +1236,8 @@ export function GamePage() {
         handIds={store.player1?.handIds ?? []}
         trashIds={store.player1?.trashIds ?? []}
         opponentTrashIds={store.player2?.trashIds ?? []}
-        securityIds={store.player1?.securityIds ?? []}
+        securityCount={store.player1?.securityCount ?? 0}
+        opponentSecurityCount={store.player2?.securityCount ?? 0}
         battleArea={store.player1?.battleArea ?? []}
         onAction={handleAction}
         localPlayer={1}
