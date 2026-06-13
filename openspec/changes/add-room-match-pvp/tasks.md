@@ -40,5 +40,5 @@
 ## 5. End-to-end verification & deploy
 
 - [x] 5.1 Two-context Playwright e2e (`code/frontend/e2e/room-match.spec.ts`) against a real local stack (uvicorn :8000 + vite :5174 with new ws-proxy support): two distinct guests complete create→code→join→decks→first-player→start→both auto-enter the live Rust game over WS; unknown-code error path covered. (Engine-level play-through + concede covered by `code/tests/api/test_ws_pvp_rust.py`.)
-- [ ] 5.2 Deploy hosted API to the DO droplet; re-verify the curl flow (guest mint → create → join → start) and a live two-client game against production — **pending merge + user go-ahead (production deploy)**
-- [ ] 5.3 Cut a desktop build and verify the previously poisoned install recovers (guest re-mint) and completes a room match against a second client — **pending 5.2**
+- [x] 5.2 Deployed to the DO droplet via `build-api-image.yml --deploy` (PR #623 + #624 merged to main). Production curl-verified: guest mint → create (5-digit code) → deck-less join → both decks → first_player=2 → start → both seats see `started: true` + `your_seat` — Rust game constructed live on the droplet.
+- [ ] 5.3 Desktop build: `desktop-v0.3.0` tagged (version bump PR #625); CI building/publishing to the alpha updater channel. Poisoned-install recovery + a real two-client match to be confirmed on the installed build.
