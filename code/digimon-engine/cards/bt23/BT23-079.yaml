@@ -37,15 +37,13 @@
 #        linked hosts that fired this trigger). In the DSL, `on_any_link` fires
 #        once per link event and `event_target` = the one host that got linked
 #        in this trigger — semantically equivalent for a single-link event.
-#     c. App fuse rider — BLOCKED (see PARTIAL note below).
+#     c. App fuse rider → `app_fuse { from: hand, optional: true }`.
 #
-# ─── PARTIAL ──────────────────────────────────────────────────────────────────
+# ─── IMPLEMENTED (2026-06-13) ─────────────────────────────────────────────────
 #
 # The tail of Clause 2 — "Then, 1 of your Digimon may app fuse into a Digimon
-# card in the hand." — is OMITTED because there is no engine primitive for
-# effect-initiated App Fusion (no `EffectContext::effect_initiated_app_fuse`,
-# no DSL step). Gap: effect-initiated app fuse — see docs/RUST_ENGINE_GAPS.md
-# (App Fuse entry). Same gap keeps BT21-084, BT24-087, and BT25-089 PARTIAL.
+# card in the hand." — now ships via the effect-initiated `app_fuse` step
+# (`EffectContext::initiate_effect_app_fuse`, from: hand).
 #
 # The "+3000 DP until your opponent's turn ends" portion IS implemented via
 # `add_dp_modifier { target: event_target, value: 3000, expiry: end_of_opponents_turn }`.
@@ -71,10 +69,9 @@ effects:
     process:
       - gain_memory: 1
 
-  # ─── Clause 2 (partial): [Your Turn] When any of your Digimon get linked →
-  #     suspend self, linked Digimon gets +3000 DP until opponent's turn ends.
-  # App-fuse rider OMITTED (engine gap: effect-initiated app fuse from hand,
-  # docs/RUST_ENGINE_GAPS.md). Same gap as BT21-084, BT24-087, and BT25-089.
+  # ─── Clause 2: [Your Turn] When any of your Digimon get linked →
+  #     suspend self, linked Digimon gets +3000 DP until opponent's turn ends,
+  #     then 1 of your Digimon may app fuse into a hand card.
   #
   # active_when.all_of:
   #   - your_turn: true            — [Your Turn] scope (DCGO: IsOwnerTurn)
@@ -103,6 +100,8 @@ effects:
           target: event_target
           value: 3000
           expiry: end_of_opponents_turn
+      # Then, 1 of your Digimon may app fuse into a Digimon card in the hand.
+      - app_fuse: { from: hand, optional: true }
 
   # ─── Clause 3: [Security] play this card without paying the cost ──────────────
   - when: on_security

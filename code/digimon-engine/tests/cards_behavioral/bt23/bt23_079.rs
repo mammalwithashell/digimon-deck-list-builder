@@ -352,3 +352,104 @@ fn bt23_079_opponent_digimon_linked_no_prompt() {
 
 // Structural test: the on_security clause compiles with PlayFromSecurity.
 // (Already covered by bt23_079_security_clause_has_play_from_security_step above.)
+
+// ─── Clause 2 tail: App Fuse from hand (effect-initiated, 2026-06-13) ─────────
+
+const APP_FUSE_RESULT: &str = r#"
+card: TEST-APPFUSE
+name: Test App Fusion Digimon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 9000
+traits: [Appmon]
+alt_paths:
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Kabemon, Gomimon]
+    cost: 0
+"#;
+
+fn named_material(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 4;
+    c.traits = vec!["Appmon".to_string()];
+    c
+}
+
+/// Full chain: link Gomimon onto a Kabemon host → accept → suspend + the host
+/// gets +3000 DP → app fuse a hand card onto that host.
+#[test]
+fn bt23_079_app_fuse_from_hand_after_dp_buff() {
+    use digimon_engine::action::space::{encode_attack, HAND_EFFECT_START};
+
+    let mut r = base()
+        .from_dsl_yaml(APP_FUSE_RESULT)
+        .expect("APP_FUSE_RESULT compiles")
+        .add_card(named_material("TEST-KABEMON", "Kabemon"))
+        .add_card(named_material("TEST-GOMIMON", "Gomimon"))
+        .deck(0, &["DECK-PAD"; 12])
+        .hand(0, &["TEST-APPFUSE"])
+        .memory(5)
+        .start();
+    let _eri = r.place_on_field(0, CARD_ID, Some(0));
+    let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
+    r.game.enter_main_phase();
+    let dp_before = r.effective_dp(host).expect("host on field");
+
+    let host_handle = r.perm_handle(0, host.index as usize);
+    // Links Gomimon onto the host → fires the observer AND completes the
+    // 2-distinct-materials app-fuse condition.
+    fire_link_event(&mut r, 0, host_handle, "TEST-GOMIMON");
+
+    // 1. Accept the outer optional prompt.
+    {
+        let sel = r.game.pending_selection.as_ref().expect("optional prompt");
+        let action = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(0, action);
+        r.game.drain_effect_queue();
+    }
+
+    // The linked host got +3000 DP.
+    assert_eq!(
+        r.effective_dp(host),
+        Some(dp_before + 3000),
+        "linked host gains +3000 DP"
+    );
+
+    // 2. App-fuse selection #1: pick the host.
+    let host_action = encode_attack(0, host.index as u16);
+    {
+        let view = r
+            .pending_selection_view()
+            .expect("app-fuse perm selection installs after the DP buff");
+        assert!(
+            view.valid_action_ids.contains(&host_action),
+            "host with Kabemon+Gomimon is an eligible app-fuse target"
+        );
+        r.execute_action(0, host_action).expect("pick host");
+    }
+    // 3. App-fuse selection #2: the hand result.
+    {
+        let card_pos = r.game.players[0]
+            .hand
+            .iter()
+            .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE")
+            .expect("result still in hand");
+        r.execute_action(0, HAND_EFFECT_START + card_pos as u16)
+            .expect("pick hand result");
+    }
+
+    assert_eq!(
+        r.game.players[0].battle_area[host.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TEST-APPFUSE",
+        "hand result app-fused onto the host after the DP buff"
+    );
+}
