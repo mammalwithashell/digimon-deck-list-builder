@@ -97,6 +97,13 @@ pub enum StepSpec {
     /// `select_security` step). G-TRASH-SELECTED-SECURITY. Used by BT24-018
     /// ("You may trash any 1 of your opponent's security cards").
     TrashSelectedSecurity(HandleMoveArgs),
+    /// Move a specific bound card FROM a player's security stack to that
+    /// player's deck (top or bottom; Digi-Eggs route to the digitama deck).
+    /// The `card` binding is a `CardHandle` (typically from a prior
+    /// `select_security` step). G-DSL-RETURN-SELECTED-SECURITY-TO-DECK. Used by
+    /// LM-020 Quantumon ("place 1 card among them on top of your opponent's
+    /// deck"). YAML: `return_selected_security_to_deck: { of, card, position }`.
+    ReturnSelectedSecurityToDeck(ReturnToDeckArgs),
     AddTopSecurityToHand(PlayerArg),
     MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
@@ -270,6 +277,28 @@ pub enum StepSpec {
     ScheduleDeletePlayedAtTurnEnd(ScheduleDeletePlayedAtTurnEndArgs),
     PlaceSelfAsDelayOption(EmptyArgs),
     LinkToOwnDigimon(LinkToOwnDigimonArgs),
+    /// Facet #9 authoring verb (G-DSL-LINK-CARD-FROM-ZONE) — the effect's own
+    /// permanent links 1 chosen card matching `filter` out of one of the
+    /// `from` zones (hand / trash / this Digimon's digivolution sources) onto
+    /// itself, paying the printed link cost reduced by any `ChangeLinkCost`.
+    /// Distinct from `LinkToOwnDigimon` (the Plug-In Option self-link tied to
+    /// `pending_option`). Mirrors DCGO `ILinkCard.LinkCard` with `root != None`.
+    /// NOTE (2026-06-07): superseded by the more general `LinkCards` below;
+    /// retained until the 5 cards using it migrate. See dsl-vocab-gaps.md.
+    LinkCardToSelf(LinkCardToSelfArgs),
+    /// Gap 5 — reduce the cost of the link about to resolve in the active
+    /// `WhenWouldLink` window by `amount`. Authoring verb over the engine's
+    /// `reduce_pending_link_cost` primitive; the body of a host-side
+    /// `when: when_would_link_to_this` reducer clause (BT25-004 / BT25-045).
+    ReduceLinkCost(ReduceLinkCostArgs),
+    /// Gap 2 — link 1..N chosen cards from a set of source zones onto a
+    /// Digimon host, without paying a link cost. Drives BT25-060 Rebootmon /
+    /// BT25-075 Vulcanusmon / BT25-089 Kazuki & Itsuki. The authoring verb over
+    /// the engine's `link_chosen_card_into_host` primitive: per pick it presents
+    /// a zone-choice prompt (when ≥2 source zones have candidates — DCGO ST22_12
+    /// parity), a single-zone card select, then (for `to: own_digimon`) a host
+    /// select, then attaches the card and fires `OnLink`.
+    LinkCards(LinkCardsArgs),
     Optional(OptionalStep),
 
     // Combat / replacement process outcomes
@@ -279,6 +308,13 @@ pub enum StepSpec {
     RedirectAttackTarget(RedirectAttackTargetArgs),
     CancelAttack(EmptyArgs),
     OpenCounterWindow(EmptyArgs),
+    /// Refund this clause's once-per-turn use (DCGO `ActivateClass.RemoveUse()`
+    /// — "if nothing executed, the per-turn use is not consumed"). Place it
+    /// under a final `if:` whose condition detects the nothing-executed case
+    /// (typically `binding_absent` over every pick the body could make).
+    /// Only meaningful inside a `once_per_turn`/`max_per_turn` triggered
+    /// clause; a no-op elsewhere. G-OPT-REFUND-ON-DECLINE.
+    RefundOpt(EmptyArgs),
     RefireEffect(RefireEffectArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
@@ -345,6 +381,9 @@ impl Serialize for StepSpec {
             StepSpec::AddToHandFromSecurity(v) => kv!(s, "add_to_hand_from_security", v),
             StepSpec::PlaySecurityCard(v) => kv!(s, "play_security_card", v),
             StepSpec::TrashSelectedSecurity(v) => kv!(s, "trash_selected_security", v),
+            StepSpec::ReturnSelectedSecurityToDeck(v) => {
+                kv!(s, "return_selected_security_to_deck", v)
+            }
             StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
             StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
@@ -520,6 +559,9 @@ impl Serialize for StepSpec {
             }
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
+            StepSpec::LinkCardToSelf(v) => kv!(s, "link_card_to_self", v),
+            StepSpec::ReduceLinkCost(v) => kv!(s, "reduce_link_cost", v),
+            StepSpec::LinkCards(v) => kv!(s, "link_cards", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
             StepSpec::Battle(v) => kv!(s, "battle", v),
@@ -528,6 +570,7 @@ impl Serialize for StepSpec {
             StepSpec::RedirectAttackTarget(v) => kv!(s, "redirect_attack_target", v),
             StepSpec::CancelAttack(v) => kv!(s, "cancel_attack", v),
             StepSpec::OpenCounterWindow(v) => kv!(s, "open_counter_window", v),
+            StepSpec::RefundOpt(v) => kv!(s, "refund_opt", v),
             StepSpec::RefireEffect(v) => kv!(s, "refire_effect", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
@@ -593,6 +636,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_to_hand_from_security" => StepSpec::AddToHandFromSecurity(map.next_value()?),
             "play_security_card" => StepSpec::PlaySecurityCard(map.next_value()?),
             "trash_selected_security" => StepSpec::TrashSelectedSecurity(map.next_value()?),
+            "return_selected_security_to_deck" => {
+                StepSpec::ReturnSelectedSecurityToDeck(map.next_value()?)
+            }
             "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
             "may_add_top_security_to_hand" => StepSpec::MayAddTopSecurityToHand(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
@@ -768,6 +814,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
+            "link_card_to_self" => StepSpec::LinkCardToSelf(map.next_value()?),
+            "reduce_link_cost" => StepSpec::ReduceLinkCost(map.next_value()?),
+            "link_cards" => StepSpec::LinkCards(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
 
             // Combat / replacement process outcomes
@@ -777,6 +826,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "redirect_attack_target" => StepSpec::RedirectAttackTarget(map.next_value()?),
             "cancel_attack" => StepSpec::CancelAttack(map.next_value()?),
             "open_counter_window" => StepSpec::OpenCounterWindow(map.next_value()?),
+            "refund_opt" => StepSpec::RefundOpt(map.next_value()?),
             "refire_effect" => StepSpec::RefireEffect(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
@@ -812,6 +862,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_to_hand_from_security",
                         "play_security_card",
                         "trash_selected_security",
+                        "return_selected_security_to_deck",
                         "add_top_security_to_hand",
                         "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",
@@ -912,6 +963,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "schedule_delayed",
                         "place_self_as_delay_option",
                         "link_to_own_digimon",
+                        "link_card_to_self",
+                        "reduce_link_cost",
+                        "link_cards",
                         "optional",
                         "battle",
                         "may_attack_now",
@@ -956,6 +1010,16 @@ pub enum BindingRef {
 #[serde(deny_unknown_fields)]
 pub struct DeleteBoundPermanentsArgs {
     pub binding: String,
+}
+
+/// Args for `reduce_link_cost` — reduce the cost of the link about to resolve
+/// in the active `WhenWouldLink` window by `amount` (saturating at 0). Only
+/// meaningful inside a `when: when_would_link_to_this` clause's `process`
+/// (Gap 5 — BT25-004 / BT25-045: "you may reduce the cost by 1").
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReduceLinkCostArgs {
+    pub amount: u16,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1219,6 +1283,8 @@ pub struct MayAttackNowArgs {
     pub ignore_summoning_sickness: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub windowed: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1698,6 +1764,14 @@ pub struct PlayFromHandArgs {
     /// unaffected. `false` (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "is_false")]
     pub suppress_on_play: bool,
+    /// G-PLAY-ENTERS-SUSPENDED (judge-quiz Q28 / EX5-060 Dragomon: "Your
+    /// opponent plays 1 level 4 or lower Digimon card from their trash
+    /// SUSPENDED without paying the cost"). When `true`, the played
+    /// permanent enters the battle area suspended. Only honored by
+    /// `play_from_trash_free`. `false` (the default) preserves prior
+    /// behavior.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suspended: bool,
 }
 
 /// Free-play-from-hand args. Adds `bind_as` so the just-played permanent
@@ -1729,6 +1803,13 @@ pub struct PlayFromRevealedFreeArgs {
     /// same body. None (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+    /// G-DSL-PLAY-FROM-REVEALED-COST-REDUCED — optional cost adjustment for the
+    /// reveal-pool play. `None` (the default) plays for free, preserving prior
+    /// behavior; `{ reduce: N }` makes the controller pay the printed cost minus
+    /// N (clamped at 0). Mirrors `play_from_hand`'s `cost_delta`. BT25-074 shape:
+    /// "play 1 ... among them with the cost reduced by 5."
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1914,6 +1995,16 @@ pub struct AddModifierArgs {
     /// is live; lowers to `ModifierPayload::SynthIdentity`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub synth_identity: Option<SynthIdentitySpec>,
+    /// CONTINUOUS mass modifier: instead of a one-time scan over the CURRENT
+    /// matches, install a source-independent floating effect re-applied to the
+    /// live candidate set every tick — so Digimon that ENTER during the window
+    /// also receive it ("Until [turn], all of your opponent's Digimon get ±X").
+    /// Only meaningful with a `target:` FILTER (a single-permanent `bind:` target
+    /// is one-shot). The `expiry` governs the window; the effect survives the
+    /// source leaving the field (e.g. an `[On Deletion]` install).
+    /// G-CONTINUOUS-MASS-DP-DEBUFF.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub continuous: bool,
 }
 
 /// The synthetic Digimon identity a permanent is "treated as" while a
@@ -2067,11 +2158,28 @@ impl Default for EffectControllerSpec {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GrantEffectImmunityArgs {
-    pub target: BindingRef,
+    /// Per-permanent grant target. Required unless `continuous: true`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<BindingRef>,
     pub source_kind: EffectSourceKindSpec,
     #[serde(default)]
     pub source_controller: EffectControllerSpec,
     pub expiry: String,
+    /// G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA (judge-quiz Q28 /
+    /// BT20-059 Gankoomon (X Antibody)): when `true`, the immunity is a
+    /// source-independent CONTINUOUS field effect over `targets` — every
+    /// declarative tick re-scans the live candidate set, so a Digimon
+    /// played AFTER the grant (Sistermon Ciel played from trash by
+    /// Dragomon during the protected window) is covered too, matching
+    /// DCGO's `CanNotAffectedClass` re-evaluated CardCondition. Requires
+    /// `targets`; `target` must be omitted.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub continuous: bool,
+    /// Predicate over battle-area permanents for the `continuous` form
+    /// (e.g. `{ of: you, kind: digimon }`), evaluated relative to the
+    /// effect controller every tick.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub targets: Option<PredicateSpec>,
 }
 
 /// PUPPETS-G024 — arguments for `grant_narrow_opponent_effect_protection`.
@@ -2119,6 +2227,16 @@ pub struct SelectFieldArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// PASSing this optional pick CONTINUES the clause with the binding
+    /// unresolved (DCGO: a declined `SelectPermanentEffect` resolves with an
+    /// empty list and the coroutine continues), so binding-gated follow-ups
+    /// (`binding_exists` / `binding_absent`) and independent legs still run.
+    /// Default `false` keeps the historical permanent-select semantic —
+    /// decline drops the rest of the clause — which many existing cards use
+    /// as their accept/decline cost gate (e.g. P-169's "by suspending this
+    /// Tamer"). G-OPT-REFUND-ON-DECLINE.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub continue_on_decline: bool,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2434,6 +2552,15 @@ pub struct SelectCountCappedArgs {
     /// cost is unpayable). G-SELECT-MULTI-MIN.
     #[serde(default, skip_serializing_if = "is_zero_u8")]
     pub min: u8,
+    /// MP-30/31 (General Rules/FAQ): when true the required pick-count clamps to
+    /// the number of available candidates — the player MUST affect
+    /// `min(max, available)` targets and the step never no-ops for "fewer than N
+    /// in play" (a mandatory "N of your opponent's Digimon" effect affects as
+    /// many as are present, but cannot stop early when N are available). Use for
+    /// EFFECT-TARGET selections; leave false for unpayable-cost selections.
+    /// Orthogonal to `min` (the cost floor).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub clamp_to_available: bool,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
@@ -2575,6 +2702,152 @@ pub struct LinkToOwnDigimonArgs {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub free: bool,
     pub filter: PredicateSpec,
+}
+
+/// Source zone a `link_card_to_self` candidate may be lifted from. Lowers to
+/// `crate::enums::LinkCardSource` at resolution: `Hand` → `Hand(owner)`,
+/// `Trash` → `Trash(owner)`, `DigivolutionSources` → `DigivolutionSource(self)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkFromZone {
+    Hand,
+    Trash,
+    DigivolutionSources,
+}
+
+/// Host the chosen card is linked onto. `SelfPermanent` (default) links onto
+/// the effect's own permanent ("to this Digimon"). `ChosenOwnDigimon` installs
+/// a second RL-visible selection over the controller's standing Digimon
+/// ("to 1 of your Digimon"). Mirrors DCGO `ILinkCard.LinkCard` /
+/// `selectedPermanent.AddLinkCard` with a `SelectPermanentEffect` for the host.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkToHost {
+    SelfPermanent,
+    ChosenOwnDigimon,
+}
+
+fn default_link_to_host() -> LinkToHost {
+    LinkToHost::SelfPermanent
+}
+
+/// Args for the `link_card_to_self` step (facet #9). Links 1 chosen card
+/// matching `filter` out of one of `from` (defaults to all three zones) onto a
+/// host (`to`, defaulting to the effect's own permanent), paying `cost` reduced
+/// by any `ChangeLinkCost`. `optional` adds an RL-visible decline.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct LinkCardToSelfArgs {
+    /// Zones the chosen card may come from. Defaults to all three.
+    #[serde(default = "default_link_from_zones")]
+    pub from: Vec<LinkFromZone>,
+    /// Card predicate the candidate must satisfy.
+    pub filter: PredicateSpec,
+    /// Host the card is linked onto. Defaults to the effect's own permanent.
+    #[serde(default = "default_link_to_host")]
+    pub to: LinkToHost,
+    /// Printed link cost N (memory). Defaults to 0 (free link).
+    #[serde(default)]
+    pub cost: u16,
+    /// Whether the player may decline ("you may link").
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+fn default_link_from_zones() -> Vec<LinkFromZone> {
+    vec![
+        LinkFromZone::Hand,
+        LinkFromZone::Trash,
+        LinkFromZone::DigivolutionSources,
+    ]
+}
+
+/// A source zone the `link_cards` step may draw a card from.
+///
+/// - `hand` / `trash`: the controller's hand / trash.
+/// - `self_sources`: the effect's own permanent's digivolution cards.
+/// - `own_digimon_sources`: any of the controller's Digimon's digivolution
+///   cards (cross-permanent).
+/// - `self_option`: Gap 3b — the Option card currently being played links
+///   ITSELF onto the host (BT25-101 "you may link this card …"). Only valid in
+///   an Option's `[Main]` body; the card is lifted out of `pending_option` so
+///   the Standard dispose does not also trash it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkCardSourceZone {
+    Hand,
+    Trash,
+    SelfSources,
+    OwnDigimonSources,
+    SelfOption,
+}
+
+/// Where the linked card is attached.
+///
+/// - `self`: the effect's own permanent (BT25-060 Rebootmon).
+/// - `own_digimon`: a player-selected own Digimon, chosen per pick
+///   (BT25-075 Vulcanusmon, BT25-089 Kazuki & Itsuki).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkCardsTo {
+    #[serde(rename = "self")]
+    SelfPermanent,
+    OwnDigimon,
+}
+
+/// How many cards to link.
+///
+/// - `{ exactly: N }`: mandatory until N picks or no candidates remain.
+/// - `{ up_to: N }`: each pick is declinable; the player may stop early.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum LinkCardsCount {
+    Exactly(u8),
+    UpTo(u8),
+}
+
+/// The link cost the controller pays.
+///
+/// - `free`: pay nothing (BT25-060, BT25-075 "without paying the cost").
+/// - `{ reduce: N }`: the printed link cost reduced by N (BT25-089 "the cost
+///   reduced by 2"). The cards this step serves carry no base link cost in
+///   this context, so both branches currently pay 0; the field is threaded so
+///   a future card with a non-zero base cost can extend the lowering without a
+///   schema change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum LinkCardsCost {
+    Free,
+    Reduce(u8),
+}
+
+impl Default for LinkCardsCost {
+    fn default() -> Self {
+        LinkCardsCost::Free
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct LinkCardsArgs {
+    /// Source zones, in author-declared order. When ≥2 of them currently hold
+    /// a filter-matching candidate, the player is first prompted to choose a
+    /// zone (DCGO ST22_12 bool-select parity); when exactly 1 does, it is used
+    /// directly with no extra prompt.
+    pub from: Vec<LinkCardSourceZone>,
+    /// Card-level filter applied to every candidate. Empty = match all.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    /// Where the chosen card(s) attach.
+    pub to: LinkCardsTo,
+    /// How many cards to link.
+    pub count: LinkCardsCount,
+    /// Link cost paid (defaults to `free`).
+    #[serde(default)]
+    pub cost: LinkCardsCost,
+    /// Optional prompt override for the card-select step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

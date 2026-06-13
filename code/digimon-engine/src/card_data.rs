@@ -502,15 +502,30 @@ fn decoy_color_mask_from_paren(inside: &str) -> u8 {
     mask
 }
 
-/// Extract printed keywords from a card's text fields.
+/// Strip a leading ingest header (`Inherited Effect` / `Security Effect` /
+/// `Rule Effect`) from a card text field so the keyword line that may follow
+/// it is reachable. Strips at most one header.
+fn strip_leading_keyword_headers(text: &str) -> &str {
+    let s = text.trim_start();
+    for header in ["Inherited Effect", "Security Effect", "Rule Effect"] {
+        if let Some(rest) = s.strip_prefix(header) {
+            return rest.trim_start();
+        }
+    }
+    s
+}
+
+/// Extract printed (INNATE) keywords from a card's text fields.
 ///
-/// Keywords appear in card text as `＜Keyword＞` (full-width angle
-/// brackets) optionally followed by a parenthetical English
-/// description. Parametric keywords (`Security A. +N`,
-/// `De-Digivolve N`, `Draw N`) are parsed into their typed variants.
+/// Innate keywords appear as a `＜Keyword＞` keyword LINE at the START of a
+/// field (each optionally followed by a `(reminder)`), before any `[Timing]`
+/// bracket or prose. Only that leading line is scanned — keyword tokens that
+/// appear later are granted / conditional / formula units / target filters
+/// and are modeled as DSL effects, not innate attributes. Parametric keywords
+/// (`Security A. +N`, `De-Digivolve N`, `Draw N`, …) are parsed into their
+/// typed variants.
 ///
-/// Returns a deduplicated Vec in document order across the three
-/// input fields.
+/// Returns a deduplicated Vec in document order across the three input fields.
 pub fn parse_printed_keywords(
     effect_text: &str,
     inherited_text: &str,
@@ -527,14 +542,42 @@ pub fn parse_printed_keywords(
     };
 
     for text in [effect_text, inherited_text, security_text] {
-        let mut remaining = text;
-        while let Some(start) = remaining.find('＜') {
-            let after_open = &remaining[start + '＜'.len_utf8()..];
+        // Innate keywords are printed-ATTRIBUTE tokens, classified by each
+        // token's LEFT CONTEXT (not merely its position). A `＜kw＞` is innate
+        // when it is at the field start, or directly attached to a
+        // `[Timing/Location]` label (`[Hand] [Counter] ＜Blast Digivolve＞`,
+        // `[Main] ＜Digi-Burst 2＞`), or chained after a prior keyword / its
+        // reminder. A `＜kw＞` introduced by PROSE — a grant verb
+        // (`gains ＜Security A. +1＞`), a filter (`with ＜Blocker＞`), or a
+        // DP-and-keyword clause (`+3000 DP, ＜Security A. +1＞`) — is GRANTED /
+        // CONDITIONAL / a target filter, modeled as a DSL effect, NOT innate.
+        // The old behavior scanned the whole blob and conflated the two, making
+        // parametric keywords double-count and apply unconditionally. See the
+        // `fix-innate-keyword-overextraction` change.
+        let field = strip_leading_keyword_headers(text);
+        let mut from = 0usize;
+        while let Some(rel) = field[from..].find('＜') {
+            let open = from + rel;
+            let after_open = &field[open + '＜'.len_utf8()..];
             let Some(end) = after_open.find('＞') else {
                 break;
             };
             let inside = &after_open[..end];
-            remaining = &after_open[end + '＞'.len_utf8()..];
+            from = open + '＜'.len_utf8() + end + '＞'.len_utf8();
+
+            // Innate iff the left context — after trimming trailing whitespace —
+            // is empty (field start) or ends with `]` (a `[Timing/Location]`
+            // label), `)` (a prior keyword's reminder), or `＞` (a chained
+            // keyword). Anything else is prose (a grant verb, a `with`/`has`
+            // filter, or a `, `/`and` DP-and-keyword clause) → not innate.
+            let left = field[..open].trim_end();
+            let innate = left.is_empty()
+                || left.ends_with(']')
+                || left.ends_with(')')
+                || left.ends_with('＞');
+            if !innate {
+                continue;
+            }
 
             let trimmed = inside.trim();
 
@@ -578,6 +621,7 @@ pub fn parse_printed_keywords(
                 ("Execute", Keyword::Execute),
                 ("Training", Keyword::Training),
                 ("Arts Digivolve", Keyword::ArtsDigivolve),
+                ("Ascension", Keyword::Ascension),
             ] {
                 if trimmed.starts_with(prefix) {
                     push_unique(kw, &mut found);
@@ -870,5 +914,164 @@ mod tests {
         use crate::enums::Keyword;
         let kws = parse_printed_keywords("＜Arts Digivolve＞", "", "");
         assert!(kws.contains(&Keyword::ArtsDigivolve));
+    }
+
+    // ── Innate-vs-granted separation (fix-innate-keyword-overextraction) ──
+    // Innate keywords come ONLY from the leading keyword line; granted /
+    // conditional / formula / filter tokens later in the prose do not.
+
+    #[test]
+    fn innate_leading_keyword_with_reminder_is_parsed() {
+        use crate::enums::Keyword;
+        // Monmon BT1-031: a bare leading <Blocker> with reminder text.
+        let kws = parse_printed_keywords(
+            "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+            "",
+            "",
+        );
+        assert_eq!(kws, vec![Keyword::Blocker]);
+    }
+
+    #[test]
+    fn granted_keyword_after_timing_is_not_innate() {
+        // WarGreymon ST1-11: the <Security A. +1> is the unit of a formula,
+        // introduced after a [Your Turn] timing label — NOT innate.
+        let kws = parse_printed_keywords(
+            "[Your Turn] For every 2 digivolution cards this Digimon has, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+            "",
+            "",
+        );
+        assert!(kws.is_empty(), "formula/grant token must not be innate, got {kws:?}");
+    }
+
+    #[test]
+    fn target_filter_keyword_is_not_innate() {
+        // SkullGreymon BT1-023: <Blocker> describes the DELETION TARGET,
+        // after [On Play] — this card does not innately have Blocker.
+        let kws = parse_printed_keywords(
+            "[On Play] Delete 1 of your opponent's Digimon with ＜Blocker＞.",
+            "",
+            "",
+        );
+        assert!(kws.is_empty(), "target-filter token must not be innate, got {kws:?}");
+    }
+
+    #[test]
+    fn conditional_grant_keyword_is_not_innate() {
+        // Flarerizamon BT1-018: conditional grant after [Your Turn].
+        let kws = parse_printed_keywords(
+            "[Your Turn] While you have 3 or more memory, this Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+            "",
+            "",
+        );
+        assert!(kws.is_empty(), "conditional grant must not be innate, got {kws:?}");
+    }
+
+    #[test]
+    fn reminder_inner_bracket_does_not_end_keyword_line() {
+        use crate::enums::Keyword;
+        // A <Decoy> whose reminder parens contain a [trait] bracket, followed
+        // by a second innate keyword. The inner [..] must not terminate the
+        // line; both keywords parse.
+        let kws = parse_printed_keywords(
+            "＜Decoy＞ (Suspend this Digimon to negate [Bagra Army] effects.) ＜Blocker＞",
+            "",
+            "",
+        );
+        assert!(kws.contains(&Keyword::Decoy(0)), "Decoy innate, got {kws:?}");
+        assert!(kws.contains(&Keyword::Blocker), "second leading keyword innate, got {kws:?}");
+    }
+
+    #[test]
+    fn leading_keyword_then_timed_effect() {
+        use crate::enums::Keyword;
+        // Innate keyword line followed by a timed effect that mentions another
+        // keyword — only the leading one is innate.
+        let kws = parse_printed_keywords(
+            "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.) [Your Turn] This Digimon gains ＜Security A. +1＞",
+            "",
+            "",
+        );
+        assert_eq!(kws, vec![Keyword::Reboot]);
+    }
+
+    #[test]
+    fn inherited_header_prefix_is_skipped() {
+        use crate::enums::Keyword;
+        // An ingest "Inherited Effect" header preceding the keyword line must
+        // not hide the keyword; a header preceding a [Timing] yields none.
+        let with_kw = parse_printed_keywords("", "Inherited Effect ＜Raid＞ (reminder)", "");
+        assert_eq!(with_kw, vec![Keyword::Raid]);
+        let granted = parse_printed_keywords(
+            "",
+            "Inherited Effect [Your Turn] While this Digimon has ＜Reboot＞, it gains ＜Security A. +1＞",
+            "",
+        );
+        assert!(granted.is_empty(), "header + timed grant yields no innate, got {granted:?}");
+    }
+
+    #[test]
+    fn bracket_attached_keyword_is_innate() {
+        use crate::enums::Keyword;
+        // [Hand] [Counter] ＜Blast Digivolve＞ — an innate alt-play ability gated
+        // by a timing/location label (AD1-005, BT14-014). The label must NOT
+        // strip the keyword.
+        let kws = parse_printed_keywords(
+            "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)",
+            "",
+            "",
+        );
+        assert_eq!(kws, vec![Keyword::BlastDigivolve]);
+    }
+
+    #[test]
+    fn timing_attached_digiburst_is_innate() {
+        use crate::enums::Keyword;
+        // [Main] ＜Digi-Burst 2＞ — an innate activated ability (BT4-012).
+        let kws = parse_printed_keywords(
+            "[Main] ＜Digi-Burst 2＞ (You may trash 2 of this Digimon's digivolution cards to activate the effect below.)",
+            "",
+            "",
+        );
+        assert_eq!(kws, vec![Keyword::DigiBurst(2)]);
+    }
+
+    #[test]
+    fn digiburst_as_condition_reference_is_not_innate() {
+        // "While this Digimon has ＜Digi-Burst＞" is a CONDITION, not innate
+        // (BT4-004 inherited).
+        let kws = parse_printed_keywords(
+            "Inherited Effect [Your Turn] While this Digimon has ＜Digi-Burst＞, it gets +1000 DP.",
+            "",
+            "",
+        );
+        assert!(kws.is_empty(), "condition reference must not be innate, got {kws:?}");
+    }
+
+    #[test]
+    fn dp_and_keyword_grant_is_not_innate() {
+        // "gets +3000 DP, ＜Security A. +1＞" — a granted clause after a comma
+        // (BT4-098 head), not innate.
+        let kws = parse_printed_keywords(
+            "[Main] 1 of your Digimon gets +3000 DP, ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+            "",
+            "",
+        );
+        assert!(kws.is_empty(), "DP-and-keyword grant must not be innate, got {kws:?}");
+    }
+
+    #[test]
+    fn multiple_innate_keywords_across_lines() {
+        use crate::enums::Keyword;
+        // AD1-005-style: a bracket-attached ability then chained innate keywords
+        // on following lines — all innate.
+        let kws = parse_printed_keywords(
+            "[Hand] [Counter] ＜Blast Digivolve＞ (reminder)\r\n＜Security A. +1＞ (reminder)\r\n＜Blocker＞ (reminder)",
+            "",
+            "",
+        );
+        assert!(kws.contains(&Keyword::BlastDigivolve), "got {kws:?}");
+        assert!(kws.contains(&Keyword::SecurityAttackPlus(1)), "got {kws:?}");
+        assert!(kws.contains(&Keyword::Blocker), "got {kws:?}");
     }
 }

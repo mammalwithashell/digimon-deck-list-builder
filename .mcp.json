@@ -22,6 +22,11 @@
       "type": "stdio",
       "command": "python",
       "args": ["-m", "digimon_training_mcp", "--runs-dir", "./runs", "--models-dir", "./models"]
+    },
+    "digimon-scenario-mcp": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "digimon_scenario_mcp", "--browser-url", "http://127.0.0.1:8000"]
     }
   }
 }

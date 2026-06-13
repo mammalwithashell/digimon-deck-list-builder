@@ -91,6 +91,14 @@ pub fn lower_with_raw(
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }
+    // A `scope: linked` replacement is a link card's Link-ESS — it applies to
+    // the HOST while the card is attached as a link card. `.linked()` marks it
+    // so the host-side `enqueue_from_permanent` linked-card scan consults it
+    // (BT25-101 Divine Arms Version Ω: the leave-replacement is a linked
+    // effect, DCGO `SetIsLinkedEffect(true)`).
+    if matches!(scope, CompiledScope::Linked) {
+        builder = builder.linked();
+    }
     if optional {
         builder = builder.optional();
     }
@@ -490,6 +498,19 @@ fn required_selection_step_has_candidate(
         CompiledStep::SelectOrderedPermutation { items, .. } => {
             resolve_card_list_binding(items, bindings).is_some_and(|items| !items.is_empty())
         }
+        // Gap 3a — the trash-own-link-card cost is payable only when the
+        // leaving permanent (the `replacement_subject` binding) has ≥1 link
+        // card. Gates the optional accept prompt so it is not offered with 0
+        // link cards.
+        CompiledStep::TrashOwnLinkCardAndCancelLeave => bindings
+            .get_permanent("replacement_subject")
+            .and_then(|h| {
+                ctx.game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+            })
+            .is_some_and(|perm| !perm.linked_cards.is_empty()),
         // Non-selection first steps may mutate state before a later selection,
         // so this read-only preflight deliberately does not speculate.
         _ => true,
@@ -786,8 +807,13 @@ fn source_permanent_is_still_active(ctx: &EffectReadContext<'_>) -> bool {
     };
 
     permanent.is_some_and(|perm| {
+        // The source card may live in the digivolution stack (normal /
+        // inherited effects) OR in `linked_cards` (a `.linked()` Link-ESS whose
+        // host is this permanent — BT25-101 Divine Arms Version Ω leave-
+        // replacement). Accept either zone.
         perm.card_sources
             .iter()
+            .chain(perm.linked_cards.iter())
             .any(|source| source.handle() == ctx.source_card)
     })
 }
@@ -1033,6 +1059,12 @@ fn matching_hand_candidates(
         .take(limit)
         .filter_map(|source| {
             let card = source.handle();
+            // A card reserved by an in-flight DigiXros play (the host being
+            // played, or a hand card already selected as a material) is committed
+            // to that play and not a free hand card for intervening effects.
+            if ctx.game.card_reserved_by_pending_digixros(card) {
+                return None;
+            }
             eval_predicate(filter, &read_ctx, PredicateSubject::Card(card)).then_some(card)
         })
         .collect()
@@ -1074,6 +1106,7 @@ fn install_delay_hand_digivolve_selection(
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::EffectChoice,
         selecting_player: player,
         previous_phase,
@@ -1354,6 +1387,7 @@ fn install_delay_dna_card_selection(
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::EffectChoice,
         selecting_player: player,
         previous_phase,

@@ -1,0 +1,111 @@
+# BT25-062 Kokuwamon — Digimon, Lv.3, Black, DP 1000, Cost 3.
+# Traits: Machine, Iliad, TS. Attribute: Data.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [Start of Your Main Phase] If you have 4 or less memory, this Digimon may
+#   digivolve into a [Machine], [Cyborg] or [TS] trait Digimon card in the hand
+#   without paying the cost.
+#
+# Inherited Effect:
+#   [All Turns] This Digimon gets +1000 DP.
+#
+# Digivolve: printed evo_costs list a Lv.2 Black cost-0 alternate path, and
+# DCGO adds a self digivolution requirement gated on `TopCard.HasTSTraits`
+# (the base being digivolved from has the [TS] trait) at level 2 for cost 0.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_062.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "Alternate Digivolution Requirement" — `EffectTiming.None`,
+#   `AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#   TopCard.HasTSTraits, digivolutionCost: 0, ignoreDigivolutionRequirement:
+#   false, level: 2)`. → `alt_paths: kind: digivolve, from: { level_eq: 2,
+#   trait_has: TS }, cost: 0`. `ignoreDigivolutionRequirement: false` means the
+#   standard color requirement still applies; we author with no
+#   `ignore_requirements`.
+#
+# Clause "Start Of Your Main Phase" — `EffectTiming.OnStartMainPhase`
+#   ActivateClass. `CanActivateCondition`: IsExistOnBattleAreaDigimon(card) &&
+#   IsOwnerTurn(card) && Owner.MemoryForPlayer <= 4. `SetUpActivateClass(...,
+#   -1, true, ...)` → `isOptional: true` ("may"). Body:
+#   DigivolveIntoHandOrTrashCard(card.PermanentOfThisCard(), condition: Digimon
+#   && (Machine || Cyborg || HasTSTraits), payCost: false, isHand: true). The
+#   base being digivolved is THIS Digimon (target: self); the evolution card is
+#   chosen from the hand and played without paying the digivolution cost.
+#   → `when: start_of_your_main_phase`, `active_when: your_turn + memory_lte: 4`,
+#     `optional: true`, select_hand (Machine/Cyborg/TS Digimon) →
+#     effect_initiated_digivolve { target: self, from_hand: evo, cost: 0,
+#     ignore_requirements: true }. `ignore_requirements: true` mirrors DCGO's
+#     `payCost: false` free-digivolve which skips the printed evo-cost color
+#     check (AD1-010 idiom).
+#
+# Clause "All Turns - Inherited Effect" — `ChangeSelfDPStaticEffect(1000,
+#   isInheritedEffect: true)`. → `kind: aura, scope: inherited, target: self,
+#   dp_modifier: 1000`.
+
+card: BT25-062
+name: Kokuwamon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Machine, Iliad, TS]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: TS }
+    cost: 0
+
+effects:
+  # ─── Clause 0: [Start of Your Main Phase] free-digivolve self from hand ──────
+  #
+  # "[Start of Your Main Phase] If you have 4 or less memory, this Digimon may
+  # digivolve into a [Machine], [Cyborg] or [TS] trait Digimon card in the hand
+  # without paying the cost."
+  #
+  # `optional: true` → outer accept/decline for the printed "may". The inner
+  # `select_hand` picker is the evolution-card choice; `effect_initiated_digivolve`
+  # with `target: source` digivolves THIS Digimon (the source permanent) onto it
+  # for free. NOTE: `target: source` (resolves the source *permanent*), NOT
+  # `target: self` — `self`/`SelfRef` lowers to a Card handle, but the EID step
+  # requires a Permanent target (binding_ref.rs), so `self` would silently no-op.
+  - when: start_of_your_main_phase
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - memory_lte: 4
+    summary: "[SOMP] If <=4 memory, this Digimon may free-digivolve into a [Machine]/[Cyborg]/[TS] Digimon from hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
+                  - trait_has: TS
+          prompt: "Digivolve into a [Machine], [Cyborg] or [TS] Digimon from your hand without paying the cost"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 1: Inherited [All Turns] +1000 DP ───────────────────────────────
+  #
+  # `target: {}` + `scope: inherited` is the carrier-self DP aura idiom
+  # (BT19-026, BT18-064): the empty filter resolves to the Digimon carrying
+  # this inherited effect.
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

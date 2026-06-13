@@ -1,0 +1,187 @@
+# BT25-018 Apollomon — Digimon, Lv.6, Red/Yellow, DP 12000, Cost 12.
+# Traits: Shaman, Olympos XII, Iliad, TS.
+# Standard digivolution: Lv.5 Red / cost 4 (printed evo_costs).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   When this card would be played, if your opponent has a Digimon with 12000 DP
+#   or more, reduce the cost by 5.
+#   [On Play] [When Digivolving] For the turn, all of your opponent's Digimon get
+#   -2000 DP for each of your Digimon. Then, delete 1 of their Digimon with as
+#   much DP as this Digimon or less.
+#   [End of Your Turn] 2 of your Digimon may DNA digivolve into [GraceNovamon] in
+#   the hand. Then, 1 of your Digimon may attack.
+#
+#   Inherited: [When Attacking] [Once Per Turn] Delete 1 of your opponent's
+#   Digimon with as much DP as this Digimon or less.
+#   Security: (none)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_018.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alt Digivolution" (None) — AddSelfDigivolutionRequirementStaticEffect(
+#   TopCard.HasTSTraits, 3, ignoreDigivolutionRequirement: true, level: 5). A
+#   TS-narrowed cost-3 alt-source (ignore reqs) on Lv.5 ANY colour. Printed evo
+#   box (cards.json) is Lv.5 Red / cost 4. Authored: printed standard alt-path
+#   (Lv.5 Red / cost 4) PLUS the printed-implied TS alt-source. The card's
+#   printed xros_req shows the [TS]-trait alt-digivolve, so we DO author it:
+#   `from: { level_eq: 5, trait_has: TS }, cost: 3, ignore_requirements: true`.
+#
+# Region "Reduce Play Cost" (None) — MandatorySelfPlayCostReduction(5, cond:
+#   opp has a Digimon with DP >= 12000). → cost_reduction declarative, amount 5,
+#   condition any opp Digimon dp_gte 12000.
+#
+# Region "Shared OP / WD" (onPlay + whenDigivolving, optional: false) —
+#   (a) reduction = -2000 * (count of YOUR Digimon); apply to ALL opp Digimon
+#   (ChangeDigimonDPPlayerEffect) UntilEachTurnEnd. (b) DeleteWeakerDigimon:
+#   MANDATORY pick 1 opp Digimon with DP < THIS permanent's DP (mode Destroy,
+#   canNoSelect: false). NOTE printed text says "as much DP as this Digimon or
+#   less" (<=), DCGO uses strict `< card.PermanentOfThisCard().DP`. Printed text
+#   governs (source priority) → `dp_lte: { formula: { source_dp: {} } }`.
+#   The -2000-per-own-Digimon to ALL opp Digimon is a per-target add_dp_modifier
+#   via for_each over opp Digimon, value formula per: own-digimon-count delta
+#   -2000.
+#
+# Region "End of your Turn" (OnEndTurn) — optional DNA digivolve 2 own Digimon
+#   into a [GraceNovamon] in HAND without paying (DNADigivolvePermanentsIntoHand,
+#   payCost: true means it pays the DNA cost as printed; "in the hand" = the
+#   result card is pulled from hand). Then OPTIONAL "1 of your Digimon may
+#   attack" (SelectAttackEffect, canNoSelect: true).
+#   → `may_dna_digivolve_now` (anchor: own Digimon, partner: own Digimon, target:
+#   GraceNovamon-named from hand) then `may_attack_now` over any own Digimon.
+#
+# Region "When Attacking ESS" (OnAllyAttack, inherited, OPT) — DeleteWeakerDigimon
+#   same shape: MANDATORY delete 1 opp Digimon with DP <= this. → scope:
+#   inherited, when: when_attacking, once_per_turn, select opp Digimon dp_lte
+#   source_dp → delete.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Std digivolve Lv.5 Red / Cost 4                              | IMPLEMENTED (printed evo_costs) |
+# | Alt-source Lv.5 [TS] / Cost 3 ignore reqs                   | IMPLEMENTED (alt_paths) |
+# | Cost -5 if opp has Digimon DP>=12000                        | IMPLEMENTED (cost_reduction) |
+# | [OP][WD] all opp -2000/own Digimon; delete 1 opp DP<=this   | IMPLEMENTED (for_each add_dp_modifier formula + delete dp_lte source_dp) |
+# | [EOT] 2 own may DNA into [GraceNovamon] in hand; 1 may attack | IMPLEMENTED (may_dna_digivolve_now + may_attack_now) |
+# | Inherited [WA][OPT] delete 1 opp DP<=this                   | IMPLEMENTED (when_attacking once_per_turn) |
+
+card: BT25-018
+name: Apollomon
+kind: digimon
+level: 6
+color: [red, yellow]
+cost: 12
+dp: 12000
+traits: [Shaman, Olympos XII, Iliad, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  # ─── Cost reduction: -5 if opp has a Digimon with DP >= 12000 ─────────────
+  - kind: cost_reduction
+    amount: 5
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        all_of:
+          - kind: digimon
+          - dp_gte: 12000
+    summary: "When played, if opp has a Digimon with 12000 DP or more, reduce cost by 5"
+
+  # ─── [On Play][When Digivolving] all opp -2000/own Digimon; delete ≤self ──
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] All opp Digimon -2000 DP per your Digimon for the turn; then delete 1 opp Digimon with DP <= this"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+          bind_as: opp_digi
+          body:
+            - add_dp_modifier:
+                target: opp_digi
+                value:
+                  formula:
+                    base: 0
+                    per:
+                      card_count_in_zone:
+                        of: you
+                        zone: battle_area
+                        filter: { kind: digimon }
+                    delta: -2000
+                expiry: end_of_turn
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 opponent Digimon with as much DP as this Digimon or less"
+      - delete_permanent: { target: victim }
+
+  # ─── [End of Your Turn] DNA into [GraceNovamon]; then 1 may attack ────────
+  - when: end_of_your_turn
+    optional: true
+    summary: "[EOT] 2 of your Digimon may DNA digivolve into [GraceNovamon] in hand; then 1 of your Digimon may attack"
+    process:
+      - select_own_permanent:
+          bind_as: dna_anchor
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose the first of 2 of your Digimon to DNA digivolve into [GraceNovamon]"
+      - may_dna_digivolve_now:
+          anchor: { binding: dna_anchor }
+          partner_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          target_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+              - name_contains: "GraceNovamon"
+      # "Then, 1 of your Digimon may attack" — a player choice of attacker
+      # (DCGO SelectAttackEffect canNoSelect: true). Optional select_own_permanent
+      # binds the attacker; declining (PASS) skips the attack (BT25-016 idiom).
+      - select_own_permanent:
+          bind_as: eot_attacker
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "1 of your Digimon may attack"
+      - may_attack_now:
+          attacker: eot_attacker
+          targets: any
+          optional: true
+
+  # ─── Inherited [When Attacking][OPT] delete 1 opp Digimon DP ≤ this ───────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][OPT] Delete 1 opp Digimon with as much DP as this Digimon or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: ess_victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 opponent Digimon with as much DP as this Digimon or less"
+      - delete_permanent: { target: ess_victim }

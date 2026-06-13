@@ -1,0 +1,96 @@
+# BT25-036 Craftmon — Digimon, Lv.4, Yellow, DP 5000, Cost 5.
+# Trait line: Design (App Name) — Appmon; Appmon Grade "Sup.".
+#
+# Card image (authoritative printed text) + DCGO BT25_036.cs:
+#   [App Fusion] [Kabemon] & [Gomimon] & [Ecomon] & [Puzzlemon]: Cost 0.
+#     If 2 such cards are linked together, stack the link card on top and
+#     digivolve.
+#       → alt_paths app_fusion, materials name_in [Kabemon,Gomimon,Ecomon,
+#         Puzzlemon], cost 0. (DCGO AddAppfuseMethodByName.)
+#   [Digivolve] Lv.2 w/[Stnd.] trait: Cost 2
+#       → alt_paths digivolve from { level_eq: 2, trait_has: "Stnd." } cost 2.
+#         (DCGO AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits,
+#         level 2, cost 2). HasStandardAppTraits == trait "Stnd.".)
+#   [Link] [Appmon] trait: Cost 2
+#       → kind: link_condition, cost 2, host filter trait_has Appmon.
+#   [Security] At the end of the battle, play this card without paying the cost.
+#       → when: on_security, play_from_security (Digimon after-battle play —
+#         same pattern as BT21-015, identical printed text).
+#   [On Play] [When Digivolving] Add your top security card to the hand. Then,
+#     <Recovery +1>.  (mandatory shared OP/WD effect.)
+#       → when: [on_play, when_digivolving]; add_top_security_to_hand + recover 1.
+#   [When Linking] By trashing 1 [Appmon] trait card from your hand, <Draw 2>.
+#       → scope: linked, when: when_linked; optional cost (trash 1 Appmon) gated
+#         payoff draw 2. (DCGO WhenLinked, SetIsLinkedEffect(true), skippable.)
+#   Inherited: By trashing 1 [Appmon] trait card from your hand, Draw 2.
+#       → scope: inherited; same optional-cost trash → draw 2.
+#
+# ─── Re-adjudication 2026-06-07 (prior verdict: BLOCKED engine / App Fuse) ────
+# App Fusion is now implemented end-to-end (alt_paths app_fusion →
+# app_fusion_digivolve_route_for_card → digivolve route that stacks the card on
+# top and drains the host's linked cards under it). The prior
+# G-DSL-WHEN-LINKED-TIMING block was already resolved (when: when_linked). So
+# every printed clause is now faithful — the card is UNBLOCKED.
+
+card: BT25-036
+name: Craftmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+traits: [Design, Appmon]
+attribute: Tool
+
+alt_paths:
+  # ─── [Digivolve] Lv.2 w/[Stnd.] trait: Cost 2 ──────────────────────────────
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "Stnd." }
+    cost: 2
+  # ─── [App Fusion] Kabemon & Gomimon & Ecomon & Puzzlemon: Cost 0 ───────────
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Kabemon, Gomimon, Ecomon, Puzzlemon]
+    cost: 0
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 2 ────────────
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+
+  # ─── [Security] play self for free at end of battle ────────────────────────
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # ─── [On Play][When Digivolving] add top security to hand, then Recovery +1 ─
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Add your top security card to the hand; then <Recovery +1>"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - recover: { of: you, count: 1 }
+
+  # ─── [When Linking] trash 1 [Appmon] from hand → Draw 2 ────────────────────
+  # NOTE: the card prints exactly ONE "By trashing 1 [Appmon]... Draw 2" box,
+  # prefixed [When Linking] (the linked effect; DCGO `WhenLinked`,
+  # `SetIsLinkedEffect(true)`). cards.json's `inherited_effect_description_eng`
+  # is a mis-slot of THIS same clause (same pattern as BT25-045) — there is NO
+  # separate inherited clause in DCGO, so none is authored here.
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] By trashing 1 [Appmon] card from your hand, draw 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: trash_pick
+          optional: true
+          filter: { trait_has: Appmon }
+          prompt: "Trash 1 [Appmon] card from your hand to draw 2"
+      - if:
+          condition: { binding_present: trash_pick }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: trash_pick }
+            - draw: { of: you, count: 2 }

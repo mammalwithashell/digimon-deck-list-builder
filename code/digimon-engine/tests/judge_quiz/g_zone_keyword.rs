@@ -12,15 +12,267 @@
 
 #![allow(unused_imports)]
 
-/// Q3 — Puppetmon (EX10-020) [All Turns] doesn't function in the breeding area, so
-/// it can digivolve into Quartzmon (BT12-057). Judge: YES.
+use digimon_engine::action::space::PASS;
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind, ModifierType, PlayerId};
+
+/// A plain L4 Red Digimon used as security filler (3000 DP, no effect). Mirrors
+/// the `filler` helper in `mid_attack_security_attack_recompute.rs`.
+fn sec_filler(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(3000);
+    c.colors = vec![CardColor::Red];
+    c
+}
+
+/// Drive every pending selection by declining (PASS when offered, else the first
+/// valid action). Used to clear Aldamon's optional `[End of Attack]` trigger,
+/// which fires after the security checks are already counted and so cannot affect
+/// the assertion.
+fn drive_declining(runner: &mut DebugRunner) {
+    let mut steps = 0;
+    while runner.pending_selection().is_some() && steps < 100 {
+        steps += 1;
+        let (player, action) = {
+            let sel = runner.pending_selection().unwrap();
+            let id = if sel.valid_action_ids.contains(&PASS) {
+                PASS
+            } else {
+                sel.valid_action_ids.first().copied().unwrap_or(PASS)
+            };
+            (sel.selecting_player, id)
+        };
+        runner
+            .execute_action(player, action)
+            .unwrap_or_else(|e| panic!("drive_declining failed at step {steps}: {e:?}"));
+    }
+    assert!(steps < 100, "selection loop exceeded 100 steps");
+}
+
+/// Q3 — Puppetmon (EX10-020) in the BREEDING AREA can digivolve into
+/// Quartzmon (BT12-057). **Judge: YES.**
+///
+/// Board (card-resolution.md Q3 / PDF p.5): Player A has EX10 Puppetmon in
+/// the breeding area. Can Puppetmon digivolve into BT12 Quartzmon?
+///
+/// Judge rationale (quiz feedback): "Unless specified otherwise, no effect
+/// can work in the breeding area. Since Puppetmon's [All Turns] effect
+/// doesn't specify it can work in the breeding area, Puppetmon is able to
+/// digivolve into Quartzmon."
+///
+/// Engine: the restriction is a battle-area-sourced declarative aura
+/// installing `CanOnlyDigivolveInto("Apocalymon")` — declarative ticks
+/// enumerate battle-area sources only, so a breeding Puppetmon installs
+/// nothing (DCGO `Condition: IsExistOnBattleArea`). The battle-area CONTROL
+/// (restriction live → a non-Apocalymon digivolve blocked) lives in
+/// `cards_behavioral/ex10/ex10_020.rs::ex10_020_battle_area_restriction_…`
+/// — jointly they prove this is not a no-op false-pass.
+///
+/// DCGO: `EX10_020.cs` `CanNotDigivolveStaticSelfEffect`; rules: the quiz
+/// feedback's breeding-area-inactivity rule.
 #[test]
-#[ignore = "BLOCKED-CARD: needs EX10-020 (Puppetmon), BT12-057 (Quartzmon)."]
-fn q3_breeding_area_effect_inactive_allows_digivolve() {}
+fn q3_breeding_area_effect_inactive_allows_digivolve() {
+    use digimon_engine::card_data::EvoCost;
+    use digimon_engine::enums::{GamePhase, PlaySource};
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX10-020")
+        .expect("EX10-020 Puppetmon loads")
+        .dsl_card("BT12-057")
+        .expect("BT12-057 Quartzmon loads")
+        .hand(0, &["BT12-057"])
+        .memory(20)
+        .start();
+    r.skip_mulligan();
+
+    // The embedded DSL pack carries no printed evo_costs
+    // (G-DSL-FIXTURE-EVO-COSTS) — mirror Quartzmon's REAL printed route
+    // (cards.json BT12-057 evo_costs: green Lv.6 / memory 6) onto the
+    // fixture CardData, per the bg_imperial.rs Combo-6 convention.
+    {
+        let idx = r.game.players[0].hand[0].card_index as usize;
+        r.game.card_data[idx].evo_costs = vec![EvoCost {
+            card_color: 3, // green
+            level: 6,
+            memory_cost: 6,
+        }];
+    }
+
+    // Puppetmon raised in the breeding area.
+    let _breeding = r.place_in_breeding(0, "EX10-020");
+    r.game.tick_declarative_effects();
+    r.set_phase(GamePhase::Main);
+
+    // Judge: YES — the [All Turns] "can only digivolve into [Apocalymon]"
+    // does not function in the breeding area, so the Quartzmon digivolve
+    // is legal.
+    let ok = r
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
+    assert!(
+        ok,
+        "Puppetmon in the BREEDING AREA must be able to digivolve into \
+         Quartzmon — its [All Turns] restriction does not function there"
+    );
+    assert_eq!(
+        r.game.players[0]
+            .breeding_area
+            .as_ref()
+            .expect("breeding permanent remains")
+            .top_card()
+            .card_id(&r.game.card_data),
+        "BT12-057",
+        "the breeding permanent's top card is now Quartzmon"
+    );
+}
 
 /// Q4 — Aldamon (AD1-002) given `<Security A. +1>` by Atomic Inferno (BT4-098) and
 /// `<Security A. −1>` by Holy Flame (ST3-15): base 1 + 1 − 1 = 1 check; one done ⇒
-/// no more. Judge: NO another check. (Extends mid_attack_security_attack_recompute.rs.)
+/// no more. Judge: **NO another check.**
+///
+/// REALIZATION — this is the live-card form of the *reduction* case that
+/// `mid_attack_security_attack_recompute.rs` Test 3 deferred (it needed "a
+/// security-card effect that reduces SecurityAttackChange from inside an
+/// OnLoseSecurity callback" — exactly Holy Flame's `[Security]` effect).
+///
+/// Board: P0's Aldamon (Hybrid Lv5) is granted `<Security A. +1>` by Atomic
+/// Inferno's `[Main]` (net strike would be base 1 + 1 = 2). P1's security stack is
+/// `[filler, Holy Flame]` with Holy Flame on TOP (last element). Aldamon attacks
+/// the player:
+///   • Check 1 flips Holy Flame (an Option → no battle). Its `[Security]` effect
+///     gives "all of your opponent's Digimon" (= Aldamon) `<Security A. −1>`.
+///   • The engine re-reads the attacker's live Security Attack (DCGO parity, see
+///     `current_security_strike`): net is now 1, and 1 card is already checked ⇒
+///     the loop STOPS. No second check.
+/// Judge-correct outcome: exactly 1 security card removed (1 of 2 remains).
 #[test]
-#[ignore = "BLOCKED-CARD: needs AD1-002 (Aldamon), BT4-098 (Atomic Inferno), ST3-15 (Holy Flame)."]
-fn q4_security_attack_net_modifiers_one_check() {}
+fn q4_security_attack_net_modifiers_one_check() {
+    let p0: PlayerId = 0;
+    let p1: PlayerId = 1;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-002")
+        .expect("AD1-002 (Aldamon) in embedded DSL pack")
+        .dsl_card("BT4-098")
+        .expect("BT4-098 (Atomic Inferno) in embedded DSL pack")
+        .dsl_card("ST3-15")
+        .expect("ST3-15 (Holy Flame) in embedded DSL pack")
+        .add_card(sec_filler("SEC-FILLER"))
+        .add_card(sec_filler("DECK-FILLER"))
+        .hand(0, &["BT4-098"])
+        // Top of security = last element ⇒ Holy Flame is checked first.
+        .security(1, &["SEC-FILLER", "ST3-15"])
+        .deck(0, &["DECK-FILLER"; 10])
+        .deck(1, &["DECK-FILLER"; 10])
+        .memory(10)
+        .start();
+    runner.skip_mulligan();
+
+    // Aldamon is P0's attacker.
+    let aldamon = runner.place_on_field(p0, "AD1-002", Some(0));
+
+    // Play Atomic Inferno's [Main]; Aldamon is the only Hybrid Digimon, so the
+    // (mandatory) target selection has exactly one legal pick.
+    runner.play(p0, 0);
+    let pick = runner
+        .pending_selection()
+        .expect("Atomic Inferno [Main] surfaces a Hybrid-Digimon selection")
+        .valid_action_ids
+        .first()
+        .copied()
+        .expect("Aldamon is a legal Hybrid target");
+    runner.execute_action(p0, pick).expect("select Aldamon");
+    runner.auto_resolve().expect("resolve Atomic Inferno grants");
+
+    // Pre-attack: Aldamon carries the +1 from Atomic Inferno (would check 2).
+    assert_eq!(
+        runner
+            .game
+            .modifiers
+            .sum(aldamon, ModifierType::SecurityAttackChange),
+        1,
+        "Atomic Inferno's [Main] granted Aldamon <Security A. +1>"
+    );
+    assert_eq!(runner.security_count(p1), 2, "P1 security starts at 2");
+
+    let _ = runner.game.attack_player(aldamon, p1, false);
+    drive_declining(&mut runner);
+
+    // Diagnostic: Holy Flame's [Security] −1 must have landed on Aldamon, netting
+    // the live Security Attack back to 0 (= base-1 strike). If this is still +1 the
+    // failure is "Holy Flame didn't target the attacker", not the recompute.
+    assert_eq!(
+        runner
+            .game
+            .modifiers
+            .sum(aldamon, ModifierType::SecurityAttackChange),
+        0,
+        "Holy Flame's [Security] <Security A. −1> must apply to the attacker (net 0)"
+    );
+
+    // Judge ruling: exactly ONE security card checked — the −1 is observed on the
+    // mid-attack recompute, so no second check happens (1 of 2 remains).
+    assert_eq!(
+        runner.security_count(p1),
+        1,
+        "net +1−1 = 1 check; the mid-attack recompute must NOT check a second card \
+         (judge: NO another check)"
+    );
+}
+
+/// Q4 CONTROL — proves the pin above is not a false pass. With Atomic Inferno's
+/// `<Security A. +1>` on Aldamon but NO Holy Flame in security, the attacker's
+/// strike is 2 and it checks BOTH security cards. If the granted +1 were silently
+/// ignored by the attack loop, this control would check only 1 (leaving 1) and so
+/// would fail — guaranteeing that Q4's "1 remaining" is genuinely caused by Holy
+/// Flame's mid-attack reduction, not by the +1 never registering.
+#[test]
+fn q4_control_atomic_inferno_plus_one_alone_checks_two() {
+    let p0: PlayerId = 0;
+    let p1: PlayerId = 1;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-002")
+        .expect("AD1-002 (Aldamon) in embedded DSL pack")
+        .dsl_card("BT4-098")
+        .expect("BT4-098 (Atomic Inferno) in embedded DSL pack")
+        .add_card(sec_filler("SEC-FILLER"))
+        .add_card(sec_filler("DECK-FILLER"))
+        .hand(0, &["BT4-098"])
+        // Two plain fillers, no Holy Flame: nothing reduces the strike mid-attack.
+        .security(1, &["SEC-FILLER", "SEC-FILLER"])
+        .deck(0, &["DECK-FILLER"; 10])
+        .deck(1, &["DECK-FILLER"; 10])
+        .memory(10)
+        .start();
+    runner.skip_mulligan();
+
+    let aldamon = runner.place_on_field(p0, "AD1-002", Some(0));
+
+    runner.play(p0, 0);
+    let pick = runner
+        .pending_selection()
+        .expect("Atomic Inferno [Main] surfaces a Hybrid-Digimon selection")
+        .valid_action_ids
+        .first()
+        .copied()
+        .expect("Aldamon is a legal Hybrid target");
+    runner.execute_action(p0, pick).expect("select Aldamon");
+    runner.auto_resolve().expect("resolve Atomic Inferno grants");
+
+    assert_eq!(runner.security_count(p1), 2, "P1 security starts at 2");
+
+    let _ = runner.game.attack_player(aldamon, p1, false);
+    drive_declining(&mut runner);
+
+    // Strike 2 against a 2-card stack with no reduction ⇒ both checked ⇒ 0 remain.
+    assert_eq!(
+        runner.security_count(p1),
+        0,
+        "Atomic Inferno's granted <Security A. +1> must extend the loop to 2 checks \
+         (control for q4_security_attack_net_modifiers_one_check)"
+    );
+}

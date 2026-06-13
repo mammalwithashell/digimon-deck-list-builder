@@ -55,6 +55,13 @@ pub fn lower_with_raw(
     let mut builder = Effect::declarative(card)
         .name("Partition")
         .materializes_declarative_state()
+        // Mark the grant so `effects_for_card`'s keyword-auto-effect
+        // synthesis materializes the Partition WhenWouldLeaveBattleArea
+        // replacement for this card (judge-quiz Q30 — interruptive
+        // Partition is a replacement-window effect, and the replacement
+        // candidate walk reads card-level effects, not the modifier
+        // registry).
+        .granted_keyword(Keyword::Partition)
         .process(move |ctx| {
             let Some(handle) = ctx.source_permanent else {
                 return;
@@ -104,6 +111,7 @@ fn cause_is_excluded(
         crate::replacement::ReplacementCause::SecurityCheck => "security_check",
         crate::replacement::ReplacementCause::Cost => "cost",
         crate::replacement::ReplacementCause::Overclock => "overclock",
+        crate::replacement::ReplacementCause::DigiXros => "digixros",
     };
     exclude.iter().any(|s| s == normalized)
 }

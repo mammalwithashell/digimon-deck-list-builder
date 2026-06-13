@@ -1,134 +1,96 @@
-import { useEffect, useState } from 'react';
-import { listen } from '@tauri-apps/api/event';
-import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
-import type { ForceUpdatePayload } from './types';
+import { useState } from 'react';
+import { useUpdater } from './useUpdater';
+import { describeUpdateStatus } from './updaterView';
+import type { UpdaterStatus } from './types';
+import './updater.css';
 
-const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
-
-/** Desktop build can still be loaded in a plain browser (dev workflow:
- *  `npm run dev:desktop` + Playwright/Chrome). In that case the Tauri
- *  runtime is NOT injected, so `listen()` / `check()` throw at first
- *  call. Detect via the Tauri-injected `__TAURI_INTERNALS__` global
- *  and bail out of the bridge cleanly when it's missing. */
-function inTauriRuntime(): boolean {
-  if (typeof window === 'undefined') return false;
-  return Boolean(
-    (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__,
-  );
-}
-
-type AvailableUpdate = {
-  version: string;
-  date: string | null;
-  body: string | null;
-};
-
+/** Auto-surfaced update UI, mounted once at the app root.
+ *
+ *  Detection is pull-based ([`useUpdater`] → `updater_check_info`), which
+ *  fixes the historical emit-before-listener race that silently dropped
+ *  the forced-update modal. A *required* update shows a blocking modal; a
+ *  merely *available* update shows a dismissible toast → modal. In-app
+ *  install failures are shown in-place, always alongside the manual
+ *  "download" fallback. Detection errors with no version info are left to
+ *  the launcher's UpdaterStatusCard so we don't pop an empty modal. */
 export function UpdaterBridge() {
-  const [forced, setForced] = useState<ForceUpdatePayload | null>(null);
-  const [available, setAvailable] = useState<AvailableUpdate | null>(null);
-  const [installing, setInstalling] = useState(false);
+  const u = useUpdater();
+  const [dismissed, setDismissed] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (!IS_DESKTOP) return;
-    // Running the desktop bundle in a plain browser (dev workflow) —
-    // Tauri's IPC hooks aren't injected, so any plugin call would throw.
-    if (!inTauriRuntime()) return;
+  if (!u.active) return null;
 
-      // 1. Listen for desktop-side force-update signal (min_version guard).
-    const unlistenForce = listen<ForceUpdatePayload>('updater:force-update', (e) => {
-      setForced(e.payload);
-      setModalOpen(true);
-    });
+  const required = u.info?.update_required === true;
+  const available = u.info?.update_available === true;
+  const isError = u.status === 'error';
 
-    // 2. Normal background check on mount.
-    (async () => {
-      try {
-        const update = await check();
-        if (update) {
-          setAvailable({
-            version: update.version,
-            date: update.date ?? null,
-            body: update.body ?? null,
-          });
-        }
-      } catch (err) {
-        console.warn('updater check failed:', err);
-      }
-    })();
+  // Nothing actionable to surface (idle/checking/up-to-date, or a bare
+  // detection error the launcher card already owns).
+  if (!required && !available) return null;
 
-    return () => {
-      unlistenForce.then((fn) => fn());
-    };
-  }, []);
+  const displayStatus: UpdaterStatus = isError ? 'error' : required ? 'forced' : 'available';
+  const display = describeUpdateStatus(displayStatus, u.info, u.error);
 
-  async function applyUpdate() {
-    setInstalling(true);
-    try {
-      const update = await check();
-      if (!update) {
-        setInstalling(false);
-        return;
-      }
-      await update.downloadAndInstall();
-      await relaunch();
-    } catch (err) {
-      console.error('update install failed:', err);
-      setInstalling(false);
-      alert(`Update failed: ${err}. You can download the latest installer manually.`);
-    }
-  }
-
-  if (!IS_DESKTOP) return null;
-
-  if (forced) {
-    return (
-      <div role="dialog" aria-modal="true" className="updater-force-modal">
-        <div className="updater-modal-card">
-          <h2>Update required</h2>
-          <p>
-            This version is no longer supported (floor: {forced.min_version}). Please
-            update to {forced.version} to continue.
-          </p>
-          <button disabled={installing} onClick={applyUpdate}>
-            {installing ? 'Updating…' : 'Update now'}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (available && !modalOpen) {
+  // Collapsed toast for a non-forced available update.
+  if (available && !required && !modalOpen && !dismissed && !isError) {
     return (
       <button
         className="updater-toast"
         onClick={() => setModalOpen(true)}
         aria-label="Update available"
       >
-        Update available: {available.version}
+        Update available: v{u.info?.latest_version}
       </button>
     );
   }
+  if (available && !required && !modalOpen && (dismissed || isError)) return null;
 
-  if (available && modalOpen) {
-    return (
-      <div role="dialog" aria-modal="true" className="updater-modal">
-        <div className="updater-modal-card">
-          <h2>Update to {available.version}</h2>
-          {available.body ? <pre className="updater-notes">{available.body}</pre> : null}
-          <div className="updater-modal-actions">
-            <button disabled={installing} onClick={applyUpdate}>
-              {installing ? 'Installing…' : 'Install and restart'}
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className={`updater-modal${required ? ' updater-modal--forced' : ''}`}
+    >
+      <div className="updater-modal-card">
+        <h2>{display.headline}</h2>
+        <p>{display.detail}</p>
+        {u.info?.notes && !required && !isError ? (
+          <pre className="updater-notes">{u.info.notes}</pre>
+        ) : null}
+        {u.error ? (
+          <p className="updater-error" role="alert">
+            {u.error}
+          </p>
+        ) : null}
+        <div className="updater-modal-actions">
+          {display.showInstall ? (
+            <button disabled={u.installing} onClick={() => void u.installInApp()}>
+              {u.installing ? 'Installing…' : 'Install & restart'}
             </button>
-            <button disabled={installing} onClick={() => setModalOpen(false)}>
+          ) : null}
+          {display.showDownload ? (
+            <button
+              className="updater-secondary"
+              disabled={u.installing}
+              onClick={() => void u.openDownloadPage()}
+            >
+              Download manually
+            </button>
+          ) : null}
+          {!required ? (
+            <button
+              className="updater-tertiary"
+              disabled={u.installing}
+              onClick={() => {
+                setModalOpen(false);
+                setDismissed(true);
+              }}
+            >
               Later
             </button>
-          </div>
+          ) : null}
         </div>
       </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }

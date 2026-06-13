@@ -56,6 +56,8 @@ interface BattleAreaProps {
   targetedSlots?: Set<number>;
   onSlotClick?: (slotIndex: number) => void;
   onSlotHover?: (slotIndex: number | null) => void;
+  /** Right-click (context-menu) on a filled slot opens the stack inspector. */
+  onSlotInspect?: (slotIndex: number) => void;
   /** Field slots where dragged hand card can digivolve */
   dragValidDropSlots?: Set<number>;
   /** Whether a hand card is being dragged */
@@ -71,6 +73,7 @@ export function BattleArea({
   targetedSlots,
   onSlotClick,
   onSlotHover,
+  onSlotInspect,
   dragValidDropSlots,
   isDraggingHandCard = false,
   canPlayDragged = false,
@@ -178,6 +181,10 @@ export function BattleArea({
                   // DNA material pick. Hover handlers stay local.
                   onMouseEnter={() => onSlotHover?.(i)}
                   onMouseLeave={() => onSlotHover?.(null)}
+                  // Right-click inspects this permanent. Bound here (not on the
+                  // wrapper) so it only fires over the actual card, and
+                  // stopPropagation avoids the wrapper's drop/click handlers.
+                  onInspect={onSlotInspect ? () => onSlotInspect(i) : undefined}
                 />
               </div>
             )}

@@ -1,0 +1,66 @@
+card: P-104
+name: "Mental Training"
+kind: option
+color: [blue]
+cost: 2
+
+# Sibling of P-103 (red, Offense Training) and P-105 (yellow, Physical Training).
+# DCGO: P/Blue/P_104.cs — identical structure with CardColor.Blue.
+effects:
+  # ─── Clause 0: [Main] ─────────────────────────────────────────────────────
+  # Reveal top 2, add 1 blue card to hand, place rest at bottom, place self in
+  # battle area as a Delay-Option permanent.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 2; add 1 blue card to hand; place rest bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            color_is: blue
+          prompt: "Add 1 blue card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # "Then, place this card in the battle area" — DCGO: PlaceDelayOptionCards.
+      # Seats P-104 in the battle area as an OptionState::Delayed permanent so the
+      # <Delay> body can be reached from a normal hand-play (mirrors P-103/P-105).
+      - place_self_as_delay_option: {}
+
+  # [Main] <Delay> — player-visible [Main]-phase activation (PUPPETS-G009).
+  # `trigger: delayed` parks the Option until its controller chooses to trash
+  # it on a later main phase; the body never auto-fires (RULES_CONTEXT 16-16).
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> 1 of your Digimon may digivolve into a blue Digimon in hand, cost -2"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            kind: digimon
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: false
+          filter:
+            kind: digimon
+            color_is: blue
+          prompt: "Choose a blue Digimon card in your hand to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

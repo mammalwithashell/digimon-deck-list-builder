@@ -13,12 +13,20 @@ Consolidated inventory of everything the release flow touches. Each row is a sta
 | Tag prefix | Triggers | Workflow |
 |---|---|---|
 | `desktop-vX.Y.Z[-suffix]` | `.github/workflows/desktop-release.yml` | Build Windows + Linux installers, sign, upload to Spaces, publish manifest |
-| `api-vX.Y.Z` | _(reserved; not yet wired)_ | API server deploys |
+| `api-vX.Y.Z` | _(reserved; not yet wired)_ | API server deploys. In practice the API image ships via the manually-dispatched `.github/workflows/build-api-image.yml` (run with `deploy=true` to also pull+restart the droplet) |
 | `engine-vX.Y.Z` | _(reserved; not yet wired)_ | Engine-only releases |
 
 Suffixes follow SemVer prerelease rules (`-alpha.N`, `-beta.N`). The updater's "is this newer?" check uses the `semver` crate, which correctly orders `0.2.0-alpha.2 < 0.2.0-alpha.3 < 0.2.0`.
 
-Tag body = release notes. Testers see it verbatim in the update modal — keep it plain text, one fact per line, no markdown (Tauri v2 doesn't render markdown in update notes).
+Tag body = release notes. The tag **must be annotated** (`git tag -a`) — the publish job re-fetches the tag object explicitly (`git fetch origin "refs/tags/$TAG:refs/tags/$TAG" --force`) because `actions/checkout` only fetches it as a lightweight ref, which would make `%(contents)` return the merge-commit message instead of your notes (this is exactly what shipped in the 0.1.0 manifest). A lightweight tag falls back to the `.github/RELEASE_NOTES.md` template. Testers see the notes verbatim in the update modal — keep it plain text, one fact per line, no markdown (Tauri v2 doesn't render markdown in update notes).
+
+### Build outputs + bundle config
+
+Contracts that bit us during the pipeline revival — each looks like a config tweak but breaks the release if regressed:
+
+- **Bundles land in the workspace-root `target/`**, not `code/src-tauri/target/`. `src-tauri` is a member of the root Cargo workspace, so `cargo tauri build` writes installers to `target/release/bundle/nsis/*-setup.exe` (Windows) and `target/release/bundle/appimage/*.AppImage` (Linux), resolved relative to the repo root. The workflow's `bundle_glob` matrix values encode this.
+- **`tauri.conf.json` hooks must use the structured `{script, cwd}` form.** A plain-string `beforeBuildCommand`/`beforeDevCommand` runs with cwd = the `frontendDist` directory (`code/frontend/dist`), not the frontend package root, so `npm run ...` can't find `package.json`. The committed config uses `{"script": "npm run build:desktop", "cwd": "../frontend"}` (cwd relative to `code/src-tauri/`).
+- **`bundle.createUpdaterArtifacts: true` is required** for `cargo tauri build` to emit the `.sig` files next to the installers. Without it the build succeeds but the publish job fails collecting `${INSTALLER}.sig`, and the manifest can't carry the Ed25519 signatures the updater verifies.
 
 ### Release channels
 
@@ -88,7 +96,7 @@ No runtime env vars consumed by the updater itself — the manifest URL + pubkey
 | `TAURI_UPDATER_PRIVATE_KEY` | `cargo tauri build` (bundle signing) | `Get-Content -Raw $HOME\.tauri\digimon-updater.key \| gh secret set TAURI_UPDATER_PRIVATE_KEY` |
 | `TAURI_UPDATER_KEY_PASSWORD` | `cargo tauri build` (decrypts the key) | `gh secret set TAURI_UPDATER_KEY_PASSWORD` (interactive paste) |
 | `HOSTED_API_URL` | `.github/workflows/desktop-release.yml` publish job | `gh secret set HOSTED_API_URL --body "https://..."` |
-| `CI_ADMIN_TOKEN` | same | `python tools/provision_ci_release_user.py --password "$P" \| gh secret set CI_ADMIN_TOKEN` |
+| `CI_ADMIN_TOKEN` | same | Provisioned **inside the API container** on the droplet (the tool needs the prod DB): `docker compose exec -T api python tools/provision_ci_release_user.py --password "$P"`, then pipe/paste the printed JWT into `gh secret set CI_ADMIN_TOKEN` |
 | `GITHUB_TOKEN` | `gh release create` at workflow end | Auto-provisioned by GitHub Actions |
 
 **Secrets explicitly NOT in CI** (by design — least-privilege):
@@ -125,7 +133,7 @@ Invariants:
 
 ### Manifest contract (what Tauri reads from Spaces)
 
-Canonical shape at `https://<spaces-cdn-host>/updates/<channel>/latest.json`. Served public-read with `Cache-Control: public, max-age=60`.
+Canonical shape at `https://<spaces-cdn-host>/updates/<channel>/latest.json`. Served public-read with `Cache-Control: public, max-age=60`. A verified live example (the shipped 0.1.0 manifest) is at <https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com/updates/alpha/latest.json>.
 
 ```json
 {
@@ -217,13 +225,18 @@ gh secret set HOSTED_API_URL --body "https://api.digimon-tcg.example.com"
 # 4. Paste the printed public key into code/src-tauri/tauri.conf.json
 #    plugins.updater.pubkey — commit that change
 
-# 5. Provision the CI admin user + long-lived token
-$PASS = -join ((33..126) | Get-Random -Count 32 | ForEach-Object {[char]$_})
-python tools/provision_ci_release_user.py --password $PASS | gh secret set CI_ADMIN_TOKEN
-Remove-Variable PASS
+# 5. Provision the CI admin user + long-lived token.
+#    The provisioning tool needs the production DB, so run it INSIDE the API
+#    container on the droplet (not on your machine):
+ssh <droplet> 'cd /opt/digimon && docker compose -f docker-compose.prod.yml exec -T api \
+  python tools/provision_ci_release_user.py --password "$(openssl rand -base64 32)"'
+# Copy the printed JWT into the GHA secret:
+gh secret set CI_ADMIN_TOKEN                             # interactive paste
 ```
 
 The Spaces URL in `plugins.updater.endpoints` must match where the server writes the manifest (see `code/server/storage/spaces.py:public_url()` — which prefers `SPACES_CDN_URL` on the server, else `SPACES_ENDPOINT/<bucket>/`). The default configured is `https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com/updates/alpha/latest.json` — adjust if your bucket host differs.
+
+The hosted API itself must be running the release-admin code before the publish job can succeed. The API image is published via the manually-dispatched [`build-api-image.yml`](../../.github/workflows/build-api-image.yml) workflow — `gh workflow run build-api-image.yml -f deploy=true` builds, pushes to GHCR, and pulls+restarts the droplet.
 
 ---
 
@@ -321,7 +334,12 @@ Rotation invalidates every already-installed tester's auto-update path — Tauri
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| CI publish step 401s | `CI_ADMIN_TOKEN` expired (annual) or user revoked | Re-run `python tools/provision_ci_release_user.py --password "$(openssl rand -base64 32)" \| gh secret set CI_ADMIN_TOKEN` |
+| CI publish step 401s | `CI_ADMIN_TOKEN` expired (annual) or user revoked | Re-provision in-container on the droplet: `docker compose -f docker-compose.prod.yml exec -T api python tools/provision_ci_release_user.py --password "$(openssl rand -base64 32)"`, then `gh secret set CI_ADMIN_TOKEN` with the printed JWT |
+| Manifest `notes` show a merge-commit message ("Merge pull request #...") instead of your release notes | Tag pushed as lightweight, or the publish job didn't fetch the annotated tag object (`actions/checkout` fetches tags as lightweight refs; the workflow's "Fetch annotated tag object" step exists to fix this) | Ensure the tag was created with `git tag -a -m "..."`. Verify the object type: `git cat-file -t desktop-vX.Y.Z` must print `tag`, not `commit`. To repair a shipped release: `PATCH /admin/releases/{id} {"release_notes": "..."}` then regenerate the manifest |
+| Build job can't find the installer (`Collect artifact paths` globs match nothing) | Looking under `code/src-tauri/target/` — but `src-tauri` is a root-workspace member, so bundles land in the **workspace-root** `target/release/bundle/...` | Use the workspace-root paths (the workflow matrix `bundle_glob`s already do) |
+| `beforeBuildCommand` fails with `npm` unable to find `package.json` | Hook written as a plain string — plain-string hooks run with cwd = the `frontendDist` dir, not the frontend package root | Use the structured form in `tauri.conf.json`: `{"script": "npm run build:desktop", "cwd": "../frontend"}` |
+| Publish job fails on missing `.sig` files | `bundle.createUpdaterArtifacts` absent or false — the build emits installers but no updater signatures | Set `"createUpdaterArtifacts": true` under `bundle` in `tauri.conf.json` |
+| Publish step 404s on `/admin/releases` | Droplet running a stale API image without the release-admin router | Dispatch `build-api-image.yml` with `deploy=true` to build + deploy the current image |
 | Tauri build signing fails "bad password" | GHA secret mismatch with key file | Re-set `TAURI_UPDATER_KEY_PASSWORD` from 1Password |
 | Testers don't see the new release | Spaces CDN cache (60s) | Wait one minute. If persistent: `curl -X POST -H "Authorization: Bearer $CI_ADMIN_TOKEN" "$HOSTED_API_URL/admin/releases/regenerate-manifest?channel=alpha"` and `curl` the manifest URL to confirm the rewrite landed |
 | Windows SmartScreen blocks installer | Self-signed installer (expected for alpha) | Tester clicks "More info → Run anyway". Documented UX cost until an OV/EV cert is purchased |

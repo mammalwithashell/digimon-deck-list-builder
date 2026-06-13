@@ -12,6 +12,8 @@ pub mod draw;
 pub mod effects;
 pub mod grant_triggered;
 pub mod iteration;
+pub mod link_card;
+pub mod link_cards;
 pub mod memory;
 pub mod modifiers;
 pub mod permanent_mutations;
@@ -76,6 +78,11 @@ pub enum RunOutcome {
 pub struct StepRuntime {
     raw: Arc<EngineRawRustRegistry>,
     dna_origin: Option<bool>,
+    /// The clause's once-per-turn counter key (`Effect::shared_opt_group`),
+    /// captured statically by the lowering so the `refund_opt` step can
+    /// un-record the activation — DCGO `RemoveUse` (G-OPT-REFUND-ON-DECLINE).
+    /// Cloned into parked tails, so it survives mid-process selections.
+    opt_key: Option<u8>,
 }
 
 impl Default for StepRuntime {
@@ -89,6 +96,7 @@ impl StepRuntime {
         Self {
             raw,
             dna_origin: None,
+            opt_key: None,
         }
     }
 
@@ -99,6 +107,15 @@ impl StepRuntime {
     pub fn with_dna_origin(mut self, dna_origin: Option<bool>) -> Self {
         self.dna_origin = dna_origin;
         self
+    }
+
+    pub fn with_opt_key(mut self, opt_key: Option<u8>) -> Self {
+        self.opt_key = opt_key;
+        self
+    }
+
+    pub fn opt_key(&self) -> Option<u8> {
+        self.opt_key
     }
 }
 
@@ -164,6 +181,7 @@ pub(crate) fn drain_or_rewrap_pending_tail(
     outer_tail: Vec<CompiledStep>,
     mut bindings: Bindings,
     runtime: StepRuntime,
+    tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
 ) {
     if game.pending_selection.is_some() {
         wrap_pending_selection_with_tail(
@@ -174,6 +192,7 @@ pub(crate) fn drain_or_rewrap_pending_tail(
             outer_tail,
             bindings,
             runtime,
+            tail_trigger_context,
         );
         return;
     }
@@ -182,10 +201,22 @@ pub(crate) fn drain_or_rewrap_pending_tail(
         return;
     }
 
+    // Re-assert the trigger context the tail was AUTHORED under (captured at
+    // wrap/park time). A synchronous mid-tail step can fire an interrupt that
+    // replaces `current_trigger_context` before this deferred tail finally
+    // runs — e.g. an [On Deletion] tail's free play raising a BeforePayCost
+    // cost-reduction dialog (Yuu Amano BT10-093 over Damemon EX10-044's
+    // "Then, <Save>") — and event bindings (`event_card`, the deleted-object
+    // snapshot) would silently fail to resolve.
+    // G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT.
+    let previous = game.current_trigger_context.clone();
+    game.current_trigger_context = tail_trigger_context;
     let mut ctx = EffectContext::new(game, source_card, source_permanent, player);
     run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
+    game.current_trigger_context = previous;
 }
 
+#[allow(clippy::too_many_arguments)]
 fn wrap_pending_selection_with_tail(
     game: &mut Game,
     source_card: crate::card_source::CardHandle,
@@ -194,6 +225,7 @@ fn wrap_pending_selection_with_tail(
     outer_tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
+    tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
 ) {
     let Some(mut pending) = game.pending_selection.take() else {
         return;
@@ -203,16 +235,27 @@ fn wrap_pending_selection_with_tail(
     let accept_tail = outer_tail.clone();
     let accept_bindings = bindings.clone();
     let accept_runtime = runtime.clone();
+    let accept_trigger_context = tail_trigger_context.clone();
     pending.callback = Box::new(move |game: &mut Game, action_id: u16| {
+        // Binding-freshness channel: clear before, take after — whatever the
+        // inner resolution published reflects picks made AFTER our wrap-time
+        // snapshot, and must be visible to binding-gated outer-tail steps
+        // (G-OPT-REFUND-ON-DECLINE).
+        game.dsl_resolved_tail_bindings = None;
         original_callback(game, action_id);
+        let mut merged = accept_bindings;
+        if let Some(fresh) = game.dsl_resolved_tail_bindings.take() {
+            merged.merge_slots_from(&fresh);
+        }
         drain_or_rewrap_pending_tail(
             game,
             source_card,
             source_permanent,
             player,
             accept_tail,
-            accept_bindings,
+            merged,
             accept_runtime,
+            accept_trigger_context,
         );
     });
 
@@ -220,16 +263,23 @@ fn wrap_pending_selection_with_tail(
         let decline_tail = outer_tail;
         let decline_bindings = bindings;
         let decline_runtime = runtime;
+        let decline_trigger_context = tail_trigger_context;
         pending.on_decline = Some(Box::new(move |game: &mut Game| {
+            game.dsl_resolved_tail_bindings = None;
             original_decline(game);
+            let mut merged = decline_bindings;
+            if let Some(fresh) = game.dsl_resolved_tail_bindings.take() {
+                merged.merge_slots_from(&fresh);
+            }
             drain_or_rewrap_pending_tail(
                 game,
                 source_card,
                 source_permanent,
                 player,
                 decline_tail,
-                decline_bindings,
+                merged,
                 decline_runtime,
+                decline_trigger_context,
             );
         }));
     }
@@ -245,6 +295,11 @@ fn park_pending_selection_tail(
     runtime: &StepRuntime,
 ) {
     let outer_tail = steps[i + 1..].to_vec();
+    // Capture the LIVE trigger context: the wrapped tail must run under the
+    // context its clause was authored against, even if the interloping
+    // selection's resolution replaces it (G-TRIGGER-CONTEXT-CLOBBERED-BY-
+    // COST-REDUCTION-INTERRUPT).
+    let tail_trigger_context = ctx.game.current_trigger_context.clone();
     wrap_pending_selection_with_tail(
         ctx.game,
         ctx.source_card,
@@ -253,6 +308,7 @@ fn park_pending_selection_tail(
         outer_tail,
         bindings.clone(),
         runtime.clone(),
+        tail_trigger_context,
     );
 }
 
@@ -273,9 +329,24 @@ fn park_pending_selection_tail(
 /// running the outer tail; the inner body's chained selects already saw
 /// the override via the parked-callback's reconstructed ctx (Task 1).
 pub(crate) fn drain_dsl_outer_tail(cb_ctx: &mut EffectContext<'_>) {
+    drain_dsl_outer_tail_with_bindings(cb_ctx, None)
+}
+
+/// Variant of [`drain_dsl_outer_tail`] that overlays the inner resolution's
+/// bindings onto the park-time snapshot before the outer tail runs, so
+/// binding-gated sibling steps (`binding_exists` / `binding_absent`) see the
+/// picks a nested selection made after the park. G-OPT-REFUND-ON-DECLINE.
+pub(crate) fn drain_dsl_outer_tail_with_bindings(
+    cb_ctx: &mut EffectContext<'_>,
+    inner_bindings: Option<&Bindings>,
+) {
     if let Some((outer_tail, mut outer_b, runtime)) = cb_ctx.game.dsl_outer_tail.take() {
+        if let Some(inner) = inner_bindings {
+            outer_b.merge_slots_from(inner);
+        }
         cb_ctx.set_override_selecting_player(None);
         if cb_ctx.game.pending_selection.is_some() {
+            let tail_trigger_context = cb_ctx.game.current_trigger_context.clone();
             wrap_pending_selection_with_tail(
                 cb_ctx.game,
                 cb_ctx.source_card,
@@ -284,6 +355,7 @@ pub(crate) fn drain_dsl_outer_tail(cb_ctx: &mut EffectContext<'_>) {
                 outer_tail,
                 outer_b,
                 runtime,
+                tail_trigger_context,
             );
         } else {
             // Wrap the outer-tail run in a deferred-drain scope so any
@@ -384,6 +456,18 @@ fn run_steps_with_runtime_inner(
             continue;
         }
 
+        // `link_cards` (Gap 2) captures the remaining slice itself and drives a
+        // pick loop of chained selections. It always either parks on a pending
+        // selection or runs the captured tail synchronously — in both cases the
+        // outer loop must stop (the tail was consumed inside the step).
+        if link_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
+            return if ctx.game.pending_selection.is_some() {
+                RunOutcome::Parked
+            } else {
+                RunOutcome::Synchronous
+            };
+        }
+
         // Selection steps either install the remainder as their callback, no-op
         // and continue, or complete their captured tail synchronously.
         match selections::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
@@ -463,6 +547,17 @@ pub fn run_step_with_runtime(
         ctx.place_self_as_delay_option_permanent();
         return;
     }
+    // G-OPT-REFUND-ON-DECLINE — DCGO `ActivateClass.RemoveUse()`. Refund the
+    // running clause's once-per-turn use; the key was captured statically by
+    // the lowering into the StepRuntime (and survives parked tails).
+    if matches!(step, CompiledStep::RefundOpt) {
+        if let (Some(opt_key), Some(perm)) = (runtime.opt_key(), ctx.source_permanent) {
+            let source_card = ctx.source_card;
+            ctx.game
+                .unrecord_source_permanent_activation(perm, source_card, opt_key);
+        }
+        return;
+    }
     // Phase 2 Track B — `CompiledStep::ActivationCost` is normally lifted
     // out of the body by `lower_triggered::lower_with_raw...` and bound to
     // `Effect::activation_cost(...)`. The compile-side validator rejects
@@ -474,6 +569,9 @@ pub fn run_step_with_runtime(
         return;
     }
     if try_run_link_step(step, ctx) {
+        return;
+    }
+    if link_card::try_run(step, ctx) {
         return;
     }
     if combat::try_run(step, ctx, bindings) {

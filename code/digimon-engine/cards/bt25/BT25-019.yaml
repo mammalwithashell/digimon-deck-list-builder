@@ -1,0 +1,118 @@
+# BT25-019 UltimateBrachiomon — Digimon, Lv.6, (Colorless/Black) DP 13000, Cost 13.
+# Traits: Cyborg, X Antibody, Titan, TS.
+# Standard digivolution: Lv.5 colorless / cost 5 (printed evo_costs).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   <Reboot> (This Digimon also unsuspends in your opponent's unsuspend phase.)
+#   <Blocker> (This Digimon can block in the blocker timing.)
+#   [On Play] [When Digivolving] Delete 1 of your opponent's highest DP Digimon.
+#   [End of Your Turn] [Once Per Turn] If your opponent has 5 or more memory,
+#   their Digimon effects don't affect this Digimon until their turn ends. Then,
+#   if they have 5 or less, their Option effects don't affect this Digimon until
+#   their turn ends.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_019.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Reboot / Blocker — RebootSelfStaticEffect / BlockerSelfStaticEffect →
+#   grant_keyword Reboot / Blocker.
+# OP/WD delete — isOptional: false (mandatory). SelectPermanent Destroy on an
+#   opponent Digimon with `IsMaxDP` (highest DP), canNoSelect: false.
+#   → mandatory select_opponent_permanent over highest-DP opp Digimon →
+#     delete_permanent.
+# EoT immunity — OnEndTurn ActivateClass, OPT (maxCountPerTurn: 1), isOptional:
+#   false, CanUseCondition IsOwnerTurn. Body: if opponent memory >= 5 → add
+#   DigimonEffectImmunity until opponent turn ends; if opponent memory <= 5 →
+#   add OptionEffectImmunity until opponent turn ends. Both checks can fire at
+#   exactly 5.
+#   → end_of_your_turn, once_per_turn. Two sequential `if` blocks over the
+#     signed memory gauge: opponent>=5 ⇔ game.memory <= -5 (memory_lte: -5);
+#     opponent<=5 ⇔ game.memory >= -5 (memory_gte: -5). grant_effect_immunity
+#     with source_controller: opponent, expiry: end_of_opponents_turn.
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 5, TopCard
+#   TS or Dinosaur, cost 4).
+
+card: BT25-019
+name: UltimateBrachiomon
+kind: digimon
+level: 6
+color: [white, black]
+cost: 13
+dp: 13000
+traits: [Cyborg, X Antibody, Titan, TS]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: TS
+            - trait_has: Dinosaur
+    cost: 4
+
+effects:
+  # ─── <Reboot> ──────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  # ─── <Blocker> ─────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── [On Play][When Digivolving] delete 1 highest-DP opp Digimon ────────────
+  #
+  # Mandatory (no printed "may"). Highest-DP target gate via the dp_gte
+  # aggregate idiom (EX4-065). Outer condition gates on the opponent having any
+  # Digimon so the mandatory select never installs an empty prompt.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 of your opponent's highest DP Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_gte:
+                  aggregate:
+                    selector: highest_dp
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's Digimon with the highest DP"
+      - delete_permanent: { target: victim }
+
+  # ─── [End of Your Turn][OPT] memory-conditional effect immunity ─────────────
+  #
+  # One OPT clause with two sequential conditional grants. "Opponent has 5 or
+  # more memory" ⇔ signed gauge at -5 or lower (memory_lte: -5) on your own
+  # turn; "they have 5 or less" ⇔ gauge at -5 or higher (memory_gte: -5). At
+  # exactly 5 (gauge = -5) both fire, granting immunity to BOTH Digimon and
+  # Option effects. Immunity lasts until the opponent's turn ends.
+  - when: end_of_your_turn
+    once_per_turn: true
+    summary: "[End of Your Turn][OPT] If opp >=5 memory ignore their Digimon effects; then if opp <=5 memory ignore their Option effects, until their turn ends"
+    process:
+      - if:
+          condition: { memory_lte: -5 }
+          then:
+            - grant_effect_immunity:
+                target: self
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+      - if:
+          condition: { memory_gte: -5 }
+          then:
+            - grant_effect_immunity:
+                target: self
+                source_kind: option
+                source_controller: opponent
+                expiry: end_of_opponents_turn

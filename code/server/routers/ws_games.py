@@ -1,4 +1,11 @@
-"""WebSocket endpoint for real-time multiplayer games and spectating."""
+"""WebSocket endpoint for real-time multiplayer games and spectating.
+
+Games run on the Rust engine (``digimon_engine.RustHeadlessGame``); this
+module imports nothing from ``engine_py_legacy`` (rule 22). Action routing
+follows the runner's *decision player* (``current_player_id``), which is
+correct for mid-turn selections owned by the non-turn player; mulligan
+keep/redraw are ordinary actions (ids 0/1) through the same mask/step path.
+"""
 
 from __future__ import annotations
 
@@ -8,12 +15,13 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
+from digimon_engine import RustHeadlessGame
+
 from server.config import settings
 from server.db.auth import decode_access_token
-from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
-from engine_py_legacy.engine.state_filter import filter_state_for_player
 from server.routers.state import active_games
 from server.routers.ws_manager import manager
+from server.state_filter import filter_state_for_player, filter_state_for_spectator
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -73,7 +81,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
         await websocket.close(code=4004, reason="Game not found")
         return
 
-    if not isinstance(runner, InteractiveGame):
+    if not isinstance(runner, RustHeadlessGame):
         await websocket.close(code=4004, reason="Game does not support WebSocket")
         return
 
@@ -106,16 +114,14 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
     if role == "spectator":
         await manager.connect_spectator(game_id, websocket)
         # Send current state
-        full_state = runner.game.to_ui_json()
-        from engine_py_legacy.engine.state_filter import filter_state_for_spectator
-
+        full_state = runner.to_ui_json()
         spec_state = filter_state_for_spectator(
             full_state, manager.get_settings(game_id).spectator_mode
         )
         await websocket.send_json({
             "type": "state_update",
             "state": spec_state,
-            "current_player_id": runner.game.current_player_id,
+            "current_player_id": runner.current_player_id,
             "is_game_over": runner.is_game_over,
             "engine_version": settings.engine_version,
         })
@@ -133,17 +139,14 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
     })
 
     # Send current state to the joining player
-    full_state = runner.game.to_ui_json()
+    full_state = runner.to_ui_json()
     filtered = filter_state_for_player(full_state, player_id)
     mask = runner.get_action_mask().tolist()
-    current_pid = runner.game.current_player_id
+    current_pid = runner.current_player_id
     await websocket.send_json({
         "type": "state_update",
         "state": filtered,
         "action_mask": mask if current_pid == player_id else [],
-        "action_descriptions": (
-            runner.game.describe_actions(current_pid) if current_pid == player_id else {}
-        ),
         "current_player_id": current_pid,
         "is_game_over": runner.is_game_over,
         "your_player_id": player_id,
@@ -196,7 +199,7 @@ async def _handle_action(
     game_id: str,
     player_id: int,
     data: Dict[str, Any],
-    runner: InteractiveGame,
+    runner: RustHeadlessGame,
 ) -> None:
     """Process an action message from a player."""
     action_id = data.get("action_id")
@@ -204,8 +207,9 @@ async def _handle_action(
         await ws.send_json({"type": "error", "message": "Missing action_id"})
         return
 
-    # Validate turn
-    if runner.game.current_player_id != player_id:
+    # Validate it is this player's decision (decision player, not turn
+    # player — covers defender-owned selections mid-attack).
+    if runner.current_player_id != player_id:
         await ws.send_json({"type": "error", "message": "Not your turn"})
         return
 
@@ -218,11 +222,9 @@ async def _handle_action(
     # Execute action
     runner.step(action_id)
 
-    # Collect logs and events
-    logs = runner.get_last_log()
-    events = runner.get_last_events()
-    runner.clear_log()
-    runner.clear_events()
+    # Collect logs and events (drained once, fanned out by broadcast_state)
+    logs = list(runner.get_last_log())
+    events = list(runner.get_events_since_last_step())
 
     # Broadcast updated state to all
     await manager.broadcast_state(game_id, runner, logs=logs, events=events)
@@ -231,7 +233,7 @@ async def _handle_action(
     if runner.is_game_over:
         await manager.broadcast_event(game_id, {
             "type": "game_over",
-            "winner_id": runner.game.winner.player_id if runner.game.winner else None,
+            "winner_id": runner.winner_id,
         })
         manager.cleanup_game(game_id)
 
@@ -240,24 +242,25 @@ async def _handle_surrender(
     ws: WebSocket,
     game_id: str,
     player_id: int,
-    runner: InteractiveGame,
+    runner: RustHeadlessGame,
 ) -> None:
-    """Process a surrender message from a player."""
-    if runner.game.game_over:
+    """Process a surrender message from a player (Rust: concede)."""
+    if runner.is_game_over:
         await ws.send_json({"type": "error", "message": "Game is already over"})
         return
 
-    runner.surrender(player_id)
+    runner.concede(player_id)
 
-    logs = runner.get_last_log()
-    events = runner.get_last_events()
-    runner.clear_log()
-    runner.clear_events()
+    logs = list(runner.get_last_log())
+    events = list(runner.get_events_since_last_step())
 
     await manager.broadcast_state(game_id, runner, logs=logs, events=events)
+    # The WS-level game_over message (not an engine event) is what the
+    # frontend consumes — emitted after the final state, carrying who
+    # conceded (legacy `surrender` contract, rule 16 parity at the wire).
     await manager.broadcast_event(game_id, {
         "type": "game_over",
-        "winner_id": runner.game.winner.player_id if runner.game.winner else None,
+        "winner_id": runner.winner_id,
         "surrendered_by": player_id,
     })
     manager.cleanup_game(game_id)

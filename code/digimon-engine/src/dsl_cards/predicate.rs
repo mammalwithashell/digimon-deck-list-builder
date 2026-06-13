@@ -160,6 +160,28 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // Controller-relative memory ("while YOU have N or less memory").
+    // `game.memory` is stored from the turn player's perspective, so the
+    // controller's signed memory is the gauge when it is their turn and the
+    // negated gauge otherwise. G-DSL-OWN-MEMORY-PREDICATE (EX8-073 /
+    // BT17-016 "while you have 0 or less memory" immunity gates).
+    if pred.own_memory_lte.is_some() || pred.own_memory_gte.is_some() {
+        let own_memory = if rctx.game.turn_player() == rctx.player {
+            rctx.game.memory as i32
+        } else {
+            -(rctx.game.memory as i32)
+        };
+        if let Some(cap) = &pred.own_memory_lte {
+            if own_memory > eval_int_constraint_read(cap, rctx, None, bindings) {
+                return false;
+            }
+        }
+        if let Some(floor) = &pred.own_memory_gte {
+            if own_memory < eval_int_constraint_read(floor, rctx, None, bindings) {
+                return false;
+            }
+        }
+    }
     if let Some(cap) = &pred.security_count_lte {
         if (rctx.security_count(rctx.player) as i32)
             > eval_int_constraint_read(cap, rctx, None, bindings)
@@ -220,6 +242,11 @@ pub fn eval_predicate_with_bindings(
                     card.card_id(card_data).eq_ignore_ascii_case(card_number)
                 } else if let Some(name) = &spec.name_is {
                     card.card_name(card_data).eq_ignore_ascii_case(name)
+                } else if let Some(want) = spec.color_is {
+                    // Color arm (EX10-020 "no GREEN face-up security" — Q3).
+                    card.colors(card_data)
+                        .iter()
+                        .any(|&got| color_matches(want, got))
                 } else {
                     false
                 }
@@ -555,6 +582,21 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(binding_kind) = &pred.binding_card_kind {
+        // Resolve the named card binding and compare its printed category.
+        // Used by LM-020 to test the revealed opponent deck-top against the
+        // declared category. Fails closed when the binding is unset or the
+        // card data can't be resolved.
+        let Some(handle) = bindings.and_then(|b| b.get_card(&binding_kind.binding)) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(handle) else {
+            return false;
+        };
+        if !kind_matches_field(binding_kind.kind, data.card_kind) {
+            return false;
+        }
+    }
 
     // Existentials — scan battle areas.
     if let Some(ex) = &pred.any_permanent {
@@ -648,6 +690,24 @@ fn eval_replacement_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_
         };
         let is_mine = controller == rctx.player();
         if is_mine != want {
+            return false;
+        }
+    }
+    if let Some(traits) = pred.would_link_card_trait_any_of.as_ref() {
+        // Read the card about to link in the active standing-Digimon
+        // `WhenWouldLink` window and check it carries one of the listed traits
+        // (Gap 5 — BT25-004 / BT25-045 host-side reducer trait gate).
+        let Some(card) = rctx.would_link_subject_card() else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !data
+            .traits
+            .iter()
+            .any(|t| traits.iter().any(|want| want == t))
+        {
             return false;
         }
     }
@@ -1055,6 +1115,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.color_matches_any_field_digimon.is_none()
         && pred.color_matches_binding.is_none()
         && pred.trait_has.is_none()
+        && pred.trait_contains.is_none()
         && pred.form_is.is_none()
         && pred.attribute_is.is_none()
         && pred.name_is.is_none()
@@ -1345,6 +1406,22 @@ fn eval_event_fields(
             return false;
         };
         if !player_ref_matches(want, owner, rctx) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_add_to_hand_player {
+        // OnAddToHand observer: the gaining player is carried in
+        // `affected_player`. Compare it to the requested ref (you/opponent),
+        // resolved relative to the observer. See G-ON-ADD-TO-HAND-OBSERVER.
+        let Some(gaining_player) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.affected_player)
+        else {
+            return false;
+        };
+        if !player_ref_matches(want, gaining_player, rctx) {
             return false;
         }
     }
@@ -1950,6 +2027,16 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(ref t) = pred.trait_contains {
+        let needle = t.to_lowercase();
+        if !data
+            .traits
+            .iter()
+            .any(|x| x.to_lowercase().contains(&needle))
+        {
+            return false;
+        }
+    }
     if let Some(floor) = pred.self_color_count_gte {
         if distinct_color_count(&data.colors) < usize::from(floor) {
             return false;
@@ -2324,6 +2411,11 @@ fn eval_permanent_fields(
     if pred.other == Some(true) && rctx.source_permanent == Some(handle) {
         return false;
     }
+    // Mirror of `other` — `is_source: true` requires the subject to BE the
+    // effect's source permanent ("this Digimon" as a select filter).
+    if pred.is_source == Some(true) && rctx.source_permanent != Some(handle) {
+        return false;
+    }
 
     let in_breeding = handle.index == crate::action::space::BREEDING_TARGET as u8;
     let perm = if in_breeding {
@@ -2364,6 +2456,13 @@ fn eval_permanent_fields(
             .iter()
             .any(|x| x.eq_ignore_ascii_case(t))
     });
+    let trait_contains_overlay_match = pred.trait_contains.as_ref().is_some_and(|t| {
+        let needle = t.to_lowercase();
+        synth_identity
+            .traits
+            .iter()
+            .any(|x| x.to_lowercase().contains(&needle))
+    });
     let name_is_overlay_match = pred
         .name_is
         .as_ref()
@@ -2394,8 +2493,20 @@ fn eval_permanent_fields(
     });
     let has_dp_constraint =
         pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some();
+    // `kind` for a field permanent is authoritatively checked below against
+    // `synth_identity.kind` via `kind_matches_field` (which treats a battle-area
+    // `CardKind::Token` as a Digimon — G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT). The
+    // delegated `eval_card_fields` pass uses the printed-data card-search matcher
+    // (`kind_matches_card_search`, no Token→Digimon coalescing — correct for
+    // deck/hand/trash search, where tokens never appear). So we strip `kind` from
+    // the delegated predicate to avoid the card-search matcher wrongly rejecting a
+    // token field permanent; the line-`kind_matches_field` check remains the sole
+    // kind authority for permanent subjects.
+    let has_kind_constraint = pred.kind.is_some();
     let delegated_pred_storage;
-    let delegated_pred = if trait_overlay_match
+    let delegated_pred = if has_kind_constraint
+        || trait_overlay_match
+        || trait_contains_overlay_match
         || name_is_overlay_match
         || name_contains_overlay_match
         || name_in_overlay_match
@@ -2404,8 +2515,16 @@ fn eval_permanent_fields(
         || has_dp_constraint
     {
         let mut p = pred.clone();
+        if has_kind_constraint {
+            // Authoritative permanent-kind check is `kind_matches_field`
+            // (token-aware) below — don't let the card-search matcher re-reject.
+            p.kind = None;
+        }
         if trait_overlay_match {
             p.trait_has = None;
+        }
+        if trait_contains_overlay_match {
+            p.trait_contains = None;
         }
         if name_is_overlay_match {
             p.name_is = None;
@@ -2826,9 +2945,14 @@ fn kind_matches_card_search(want: CompiledCardKind, data: &crate::card_data::Car
 fn kind_matches_field(want: CompiledCardKind, got: CardKind) -> bool {
     matches!(
         (want, got),
+        // A battle-area `CardKind::Token` permanent IS a Digimon (rules manual /
+        // glossary: a Digimon token is a Digimon on the field; DCGO
+        // `Permanent.IsDigimon` is true for token entities). So `kind: digimon`
+        // field selectors/predicates must accept tokens
+        // (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT, judge-quiz Q12).
         (
             CompiledCardKind::Digimon,
-            CardKind::Digimon | CardKind::Dual
+            CardKind::Digimon | CardKind::Dual | CardKind::Token
         ) | (CompiledCardKind::Tamer, CardKind::Tamer)
             | (CompiledCardKind::Option, CardKind::Option)
             | (CompiledCardKind::DigiEgg, CardKind::DigiEgg)

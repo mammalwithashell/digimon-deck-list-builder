@@ -151,9 +151,12 @@ impl CardEffect for DslCardEffect {
                         security_attack_fn,
                         grant_keyword,
                         modifier,
+                        modifier_value,
+                        modifier_name,
                         while_condition,
                         applies_to_opponent_security_dp,
                         applies_to_own_security_dp,
+                        effect_immunity,
                         ..
                     } => {
                         for e in lower_aura::lower_all(
@@ -168,9 +171,12 @@ impl CardEffect for DslCardEffect {
                             security_attack_fn.clone(),
                             grant_keyword.clone(),
                             modifier.clone(),
+                            *modifier_value,
+                            modifier_name.clone(),
                             while_condition.clone(),
                             *applies_to_opponent_security_dp,
                             *applies_to_own_security_dp,
+                            *effect_immunity,
                             self.raw.clone(),
                         ) {
                             out.push(e);
@@ -321,6 +327,25 @@ impl CardEffect for DslCardEffect {
                         let mut builder = Effect::on_play(card).link(*cost, move |ctx, host| {
                             eval_predicate(&filter, ctx, PredicateSubject::Permanent(host))
                         });
+                        if let Some(summary) = summary {
+                            builder = builder.name(summary);
+                        }
+                        out.push(builder.build());
+                    }
+                    CompiledDeclarativeClause::LinkCondition {
+                        cost,
+                        filter,
+                        summary,
+                        ..
+                    } => {
+                        // Shape-B Digimon self link-condition: static metadata at
+                        // `EffectTiming::LinkCondition` carrying cost + host
+                        // filter, read by `digimon_link_condition_targets`.
+                        let filter = filter.clone();
+                        let mut builder =
+                            Effect::link_condition(card).link_host(*cost, move |ctx, host| {
+                                eval_predicate(&filter, ctx, PredicateSubject::Permanent(host))
+                            });
                         if let Some(summary) = summary {
                             builder = builder.name(summary);
                         }

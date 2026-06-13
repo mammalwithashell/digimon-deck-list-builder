@@ -20,6 +20,17 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             set_outcome(ctx, ReplacementOutcome::Cancelled);
             true
         }
+        CompiledStep::TrashOwnLinkCardAndCancelLeave => {
+            // Gap 3a — the leaving permanent is the replacement subject, bound
+            // as `replacement_subject` by lower_replacement. Install the
+            // link-card-trash selection; its callback trashes the chosen card
+            // and cancels the leave. With no subject (shouldn't happen for a
+            // leave replacement) this no-ops and the leave proceeds.
+            if let Some(host) = bindings.get_permanent("replacement_subject") {
+                ctx.trash_own_link_card_and_cancel_leave(host);
+            }
+            true
+        }
         CompiledStep::TrashTopSecurityAndCancelReplacement { of } => {
             let player = crate::dsl_cards::step::resolve_player(ctx, *of);
             if ctx.trash_top_security_and_cancel_current_replacement(player) {
@@ -73,6 +84,14 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(subject) = resolve_replacement_subject(subject, ctx, bindings) {
                 set_outcome(ctx, ReplacementOutcome::Substituted(subject));
             }
+            true
+        }
+        CompiledStep::ReduceLinkCost { amount } => {
+            // Gap 5 — reduce the in-flight `WhenWouldLink` link cost. This does
+            // NOT set a replacement outcome: the link still resolves (the
+            // replacement stays `None`), but `commit_digimon_link` then pays the
+            // reduced cost. One-shot mutation of `pending_digimon_link.cost`.
+            ctx.reduce_pending_link_cost(*amount);
             true
         }
         _ => false,

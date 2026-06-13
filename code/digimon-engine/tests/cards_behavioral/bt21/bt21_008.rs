@@ -338,8 +338,11 @@ fn bt21_008_inherited_negative_does_not_fire_on_opponents_turn() {
     // P0 has Elizamon as source under CARRIER.
     let _carrier_perm = place_elizamon_as_source(&mut runner, &[]);
 
-    // Advance to P1's turn.
-    runner.end_turn();
+    // Advance to P1's turn. Use `pass_turn` (memory → +3 for P1), not a raw
+    // `end_turn` (which would flip to -5, an impossible real-game state): an
+    // attack now correctly ends a turn whose memory sits on the opponent's
+    // side, so P1 must start their turn with valid non-negative memory.
+    runner.pass_turn();
 
     // P1 places its own attacker and attacks P0's security.
     let attacker_p1 = runner.place_on_field(1, "ATTACKER-P1", Some(0));

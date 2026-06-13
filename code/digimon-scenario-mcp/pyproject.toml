@@ -1,0 +1,31 @@
+[project]
+name = "digimon-scenario-mcp"
+version = "0.1.0"
+description = "Dev/test-only WRITE-capable MCP for staging, snapshotting, and test-authoring Digimon TCG game states (browser /debug + desktop Tauri bridge)."
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.scripts]
+digimon-scenario-mcp = "digimon_scenario_mcp.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["digimon_scenario_mcp*"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.package-data]
+"digimon_scenario_mcp" = ["py.typed"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"

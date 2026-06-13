@@ -1,0 +1,111 @@
+# BT25-012 Grizzlymon — Digimon, Lv.4, Red/Green, DP 6000, Cost 5.
+# Traits: Beast, Iliad, TS. Attribute: Vaccine.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [On Play] [When Digivolving] 1 of your Digimon with [Beast], [Animal] or
+#   [Sovereign], other than [Sea Animal], in any of its traits or the [Shaman]
+#   or [TS] trait gains ＜Raid＞ (When this Digimon attacks, you may switch the
+#   target of attack to 1 of your opponent's unsuspended Digimon with the
+#   highest DP.) and +3000 DP for the turn.
+#
+# Inherited Effect:
+#   [All Turns] This Digimon gets +1000 DP.
+#
+# Digivolve: printed evo_costs list a Lv.3 Red cost-3 alternate path; DCGO adds
+# a self digivolution requirement gated on `TopCard.EqualsTraits("TS")` at level
+# 3 for cost 2 WITH ignoreDigivolutionRequirement: true.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_012.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "Alt Digivolution" — EffectTiming.None,
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.EqualsTraits("TS"), 2,
+#   true, level: 3). The `true` = ignoreDigivolutionRequirement (skip the
+#   printed colour requirement). → alt_paths digivolve from { level_eq: 3,
+#   trait_has: TS } cost 2 ignore_requirements: true.
+#
+# Clause "OP/WD Shared" — ActivateClassesForSharedEffects(onPlay: true,
+#   whenDigivolving: true, optional: false, maxCountPerTurn: -1). Mandatory
+#   (no "may"): if any eligible own Digimon exists, you MUST pick one (canNoSelect:
+#   false). canTargetCondition = own battle-area Digimon with (HasBeastTraits ||
+#   Shaman || HasTSTraits). HasBeastTraits is the engine [Beast]/[Animal]/
+#   [Sovereign] (non-[Sea Animal]) family helper. After select: GainRaid
+#   (UntilEachTurnEnd) + ChangeDigimonDP(+3000, UntilEachTurnEnd).
+#   → when: [on_play, when_digivolving], condition any_permanent (eligible own
+#     Digimon exists) so the mandatory select only installs when payable;
+#     select_own_permanent (Beast/Animal/Sovereign not Sea Animal OR Shaman/TS)
+#     → grant_keyword Raid end_of_turn + add_dp_modifier 3000 end_of_turn.
+#
+# Clause "Inherit" — ChangeSelfDPStaticEffect(1000, isInheritedEffect: true).
+#   → kind: aura, scope: inherited, target: {}, dp_modifier: 1000.
+
+card: BT25-012
+name: Grizzlymon
+kind: digimon
+level: 4
+color: [red, green]
+cost: 5
+dp: 6000
+traits: [Beast, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 0: [On Play][When Digivolving] grant Raid + 3000 DP for turn ─────
+  - when: [on_play, when_digivolving]
+    summary: "[OnPlay/WhenDigivolving] 1 of your [Beast]/[Animal]/[Sovereign] (not [Sea Animal]) or [Shaman]/[TS] Digimon gains Raid and +3000 DP for the turn"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        any_of:
+          - all_of:
+              - any_of:
+                  - trait_has: Beast
+                  - trait_has: Animal
+                  - trait_has: Sovereign
+              - none_of:
+                  - trait_has: Sea Animal
+          - trait_has: Shaman
+          - trait_has: TS
+    process:
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - all_of:
+                      - any_of:
+                          - trait_has: Beast
+                          - trait_has: Animal
+                          - trait_has: Sovereign
+                      - none_of:
+                          - trait_has: Sea Animal
+                  - trait_has: Shaman
+                  - trait_has: TS
+          prompt: "Select 1 of your Digimon to gain Raid and +3000 DP for the turn"
+      - grant_keyword:
+          target: tgt
+          keyword: Raid
+          expiry: end_of_turn
+      - add_dp_modifier:
+          target: tgt
+          value: 3000
+          expiry: end_of_turn
+
+  # ─── Clause 1: Inherited [All Turns] +1000 DP ───────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

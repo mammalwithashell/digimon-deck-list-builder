@@ -301,10 +301,12 @@ fn armor_purge_with_no_source_does_not_protect() {
 
 /// When a NEIGHBORING permanent is deleted, the ArmorPurge carrier MUST NOT
 /// mutate any state — the carrier and its sources stay intact and the
-/// neighbor is deleted normally. ArmorPurge is now optional, so the
-/// candidate-walk MAY install an outer accept dialog for the carrier when a
-/// neighbor's deletion fires the timing; the body's self-scope guard then
-/// no-ops on accept (no outcome set → original neighbor deletion proceeds).
+/// neighbor is deleted normally. Since the judge-quiz Q24 wave (2026-06-10),
+/// the replacement's `replacement_condition` is SUBJECT-SCOPED: the carrier
+/// is not a candidate for a neighbor's deletion at all, so NO outer accept
+/// dialog installs (the earlier behavior — a phantom accept dialog whose
+/// body self-scope-no-op'd — was the bug the subject-scope gate removed; see
+/// `judge_quiz::b::q24_*` and the Q24 ledger row in qa/qa-reports/judge-quiz.md).
 #[test]
 fn armor_purge_does_not_fire_on_neighbor_deletion() {
     let mut r = DebugRunner::builder()
@@ -333,19 +335,14 @@ fn armor_purge_does_not_fire_on_neighbor_deletion() {
     // Delete the neighbor.
     r.game.delete_permanent_with_effects(neighbor);
 
-    // ArmorPurge is optional → an outer accept dialog MAY install for the
-    // carrier even when the subject is the neighbor. If so, drain it by
-    // accepting: the body's self-scope guard no-ops and the original neighbor
-    // deletion proceeds. (`drain_outer_accept_dialog` asserts the dialog's
-    // valid_action_ids are exactly {REPLACEMENT_ACCEPT, PASS}.)
-    drain_outer_accept_dialog(&mut r, REPLACEMENT_ACCEPT);
-
-    // After draining: no further selection should be pending. The body's
-    // self-scope guard MUST have prevented any state mutation.
+    // Subject-scope gate (Q24): the carrier is NOT a replacement candidate
+    // for a neighbor's deletion — no accept dialog may install. The earlier
+    // phantom prompt (accept → self-scope no-op) is the exact bug the gate
+    // removed.
     assert!(
         r.game.pending_selection.is_none(),
-        "ArmorPurge body must self-scope-no-op on accept for a neighbor's \
-         deletion; got {:?}",
+        "ArmorPurge must not surface ANY prompt for a neighbor's deletion \
+         (subject-scope gate, judge-quiz Q24); got {:?}",
         r.game.pending_selection.as_ref().map(|s| &s.kind),
     );
 

@@ -1,0 +1,93 @@
+# BT25-052 Logimon — Digimon, Lv.4, Green/Red, DP 6000, Cost 5.
+# Trait line: Login (App Name) — Social. Form: Sup.
+#
+# DCGO BT25_052.cs (authoritative):
+#   - AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, cost 2) — alt-digivolve.
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2) — self link-condition.
+#   - App Fusion (Onmon & Gatchmon) — BLOCKED (no App Fuse primitive). OMITTED.
+#   - [Main][OPT][Once Per Turn]: you may link 1 [Social]/[Tool]/[Game] Digimon
+#     card from your hand or this Digimon's digivolution cards to THIS Digimon,
+#     cost reduced by 1. → main_on_field once_per_turn + link_card_to_self.
+#   - [Your Turn][OPT][Once Per Turn] When this Digimon gets linked: if you have
+#     1 or fewer Tamers, you may play 1 [Kazuki & Itsuki] from hand free.
+#   - [When Linking] (link-source / inherited): Suspend 1 opp Digimon or Tamer.
+#     (cards.json mis-labels this as the card's inherited text.)
+#
+# Cost-modeling note: "cost reduced by 1" is a reduction on the linked card's
+# own link cost; DSL fixtures carry no engine link cost, so we use cost: 0
+# (see BT25-072/056 notes). The flat ChangeLinkCost path covers nonzero residual.
+
+card: BT25-052
+name: Logimon
+kind: digimon
+level: 4
+color: [green, red]
+cost: 5
+dp: 6000
+traits: [Login, Social]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Standard App }
+    cost: 2
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 2 ─────────────
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+
+  # ─── [Main][OPT][Once Per Turn] link from hand/sources to this (-1) ─────────
+  - when: main_on_field
+    once_per_turn: true
+    summary: "[Main][OPT] You may link 1 [Social]/[Tool]/[Game] Digimon card from hand or digivolution cards to this Digimon (-1)"
+    process:
+      - link_card_to_self:
+          from: [hand, digivolution_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Social
+                  - trait_has: Tool
+                  - trait_has: Game
+          cost: 0
+          optional: true
+
+  # ─── [Your Turn][OPT] When linked: if <=1 Tamers, play 1 Kazuki & Itsuki free ──
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    active_when:
+      count_lte:
+        filter:
+          owner: you
+          zone: [battle_area]
+          kind: tamer
+        n: 1
+    summary: "[Your Turn][OPT] When this Digimon gets linked, if <=1 Tamers, may play 1 [Kazuki & Itsuki] from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: kazuki
+          optional: true
+          filter:
+            name_is: "Kazuki & Itsuki"
+          prompt: "Play 1 [Kazuki & Itsuki] from your hand without paying the cost"
+      - if:
+          condition: { binding_present: kazuki }
+          then:
+            - play_from_hand_free: { of: you, hand_index: kazuki }
+
+  # ─── [When Linking] (link-source): suspend 1 opp Digimon or Tamer ───────────
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Suspend 1 of your opponent's Digimon or Tamers"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Suspend 1 of your opponent's Digimon or Tamers"
+      - suspend: { target: suspend_target }

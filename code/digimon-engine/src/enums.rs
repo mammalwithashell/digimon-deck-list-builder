@@ -348,6 +348,16 @@ pub enum EffectTiming {
     /// `OnLinkCardDiscarded` + explicit zone checks.
     OnUnlink,
 
+    /// Static self link-condition carried by a Shape-B Appmon Link *Digimon*
+    /// (e.g. BT21-009 Gatchmon). The effect at this timing never fires as a
+    /// triggered effect — it is metadata: its `link_cost` + `link_filter`
+    /// describe what host this Digimon may link onto and at what cost, read
+    /// by the link-activate legality / mask path. Mirrors DCGO
+    /// `CardEffectFactory.AddSelfLinkConditionStaticEffect` (a `timing ==
+    /// None` static effect carrying `card.linkCondition`). Distinct from the
+    /// Option-scoped `link_requirement` (which lowers to `OptionMain`).
+    LinkCondition,
+
     /// Observer: fires when a Training Option is trashed from the field.
     /// Rust-engine-specific timing — DCGO expresses the same hook via a
     /// generic on-trash predicate gated on `Training` state rather than a
@@ -505,6 +515,14 @@ pub enum Keyword {
     /// Arts Digivolve — DUAL Option-use keyword that offers an optional
     /// digivolution of the used Option card onto a legal Digimon target.
     ArtsDigivolve,
+
+    /// DCGO `Ascension` (`CardEffectCommons/KeyWordEffects/Ascension.cs`).
+    /// Printed: "When this Digimon is deleted, you may place this card as the
+    /// top security card." OnDeletion trigger (`CanTriggerOnDeletion`, no cause
+    /// filter); on fire, an optional Yes/No surfaces — on Yes the carrier is
+    /// rescued from trash to the TOP of the owner's security stack
+    /// (`AddSecurityCard(card, toTop: true)`). BT25-034, BT25-040.
+    Ascension,
 }
 
 /// Zone where a card can exist.
@@ -929,6 +947,25 @@ pub enum CardSourceRef {
     Security(PlayerId, usize),
     Material(crate::permanent::PermanentHandle, usize),
     Reveal(CardHandle),
+}
+
+/// Facet #9 — the source zone a chosen card is lifted from when an effect
+/// links it onto a host Digimon (DCGO `ILinkCard.LinkCard` roots Hand /
+/// Trash / DigivolutionCards). Carries the card's owner (Hand/Trash) or the
+/// donor permanent (DigivolutionSource) so `link_chosen_card_into_host` can
+/// locate and remove it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LinkCardSource {
+    Hand(PlayerId),
+    Trash(PlayerId),
+    DigivolutionSource(crate::permanent::PermanentHandle),
+    /// Gap 3b — the Option currently being played (held in `Game.pending_option`)
+    /// links ITSELF onto a host instead of going to trash on dispose. Used by
+    /// BT25-101 Divine Arms Version Ω "you may link this card … to 1 of your
+    /// Digimon". `link_chosen_card_into_host` lifts the card out of
+    /// `pending_option` (so the Standard dispose has nothing left to trash) and
+    /// attaches it; `pending_option` is left consumed.
+    OptionInPlay(PlayerId),
 }
 
 #[cfg(test)]

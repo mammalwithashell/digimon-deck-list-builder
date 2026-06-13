@@ -350,6 +350,14 @@ Converts the two-player game into a single-agent MDP:
 - Discards dense rewards from opponent auto-steps.
 - Only terminal rewards from opponent sequences pass through.
 
+Every accepted opponent mode (`greedy`, `random`, `pool`, `agent`) routes
+Player 2 through this wrapper with a concrete `opponent_fn`. The old
+`self-play` mode (which skipped the wrapper) is retired and fails at startup:
+observations are built from Player 1's perspective only, so the learner was
+selecting Player 2's actions against wrong-perspective input
+(`harden-training-pipeline`). Use `opponent="pool"` over frozen champions
+instead.
+
 ### DeckPoolWrapper
 
 Location: `code/digimon_gym/agents/deck_pool.py`.
@@ -576,7 +584,11 @@ pip install -e .
 # Pilot training
 DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --tensor-profile standard_lite_v2 --timesteps 500000
 DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --lstm --tensor-profile standard_lite_v2 --timesteps 500000
-DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --self-play --tensor-profile standard_lite_v2 --timesteps 1000000
+# Pool-based fictitious self-play (the `--self-play` flag is RETIRED — fails at
+# startup; observations are P1-perspective only, so the old mode corrupted the
+# policy. Emit the pool from the champion registry first.)
+python code/tools/champion_admin.py emit-pool --out pool.json
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --opponent pool --opponent-pool-manifest pool.json --tensor-profile standard_lite_v2 --timesteps 1000000
 DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --gauntlet --tensor-profile standard_lite_v2 --timesteps 500000
 
 # Architect training

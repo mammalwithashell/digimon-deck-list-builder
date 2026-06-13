@@ -233,6 +233,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnLeaveField => CompiledTiming::OnLeaveField,
         S::OnSuspend => CompiledTiming::OnSuspend,
         S::OnUnsuspend => CompiledTiming::OnUnsuspend,
+        S::OnAddToHand => CompiledTiming::OnAddToHand,
         S::OnHatch => CompiledTiming::OnHatch,
         S::OnMove => CompiledTiming::OnMove,
         S::OnDigivolve => CompiledTiming::OnDigivolve,
@@ -267,6 +268,9 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::BeforePayCost => CompiledTiming::BeforePayCost,
         S::BeforePayCostObserve => CompiledTiming::BeforePayCostObserve,
         S::Delayed => CompiledTiming::Delayed,
+        S::WhenLinked => CompiledTiming::WhenLinked,
+        S::WhenCardLinkedToThis => CompiledTiming::WhenCardLinkedToThis,
+        S::WhenWouldLinkToThis => CompiledTiming::WhenWouldLinkToThis,
     }
 }
 
@@ -360,6 +364,16 @@ fn compile_per_selector(
         S::DistinctColorsCount(spec) => CompiledPerSelector::DistinctColorsCountScoped {
             zone: compile_zone(spec.zone),
             of: compile_player_ref(spec.of),
+            filter: spec.filter.as_ref().map(|filter| {
+                Box::new(compile_predicate(
+                    filter,
+                    &format!("{prefix}.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
+        },
+        S::SourceStackCount(spec) => CompiledPerSelector::SourceStackCountFiltered {
             filter: spec.filter.as_ref().map(|filter| {
                 Box::new(compile_predicate(
                     filter,
@@ -478,6 +492,9 @@ fn compile_formula(
         FormulaSpec::SourceMaterialCount {
             source_material_count: _,
         } => CompiledFormula::SourceMaterialCount,
+        FormulaSpec::EventTargetLevel {
+            event_target_level: _,
+        } => CompiledFormula::EventTargetLevel,
         FormulaSpec::SourceColorCount {
             source_color_count: _,
         } => CompiledFormula::SourceColorCount,
@@ -599,6 +616,7 @@ fn compile_predicate(
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
         trait_has: p.trait_has.clone(),
+        trait_contains: p.trait_contains.clone(),
         form_is: p.form_is.clone(),
         attribute_is: p.attribute_is.clone(),
         name_is: p.name_is.clone(),
@@ -665,6 +683,7 @@ fn compile_predicate(
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
         other: p.other,
+        is_source: p.is_source,
         of_permanent: p.of_permanent.clone(),
         not_in_binding: p.not_in_binding.clone(),
         binding_owner: p
@@ -674,6 +693,12 @@ fn compile_predicate(
                 binding: b.binding.clone(),
                 of: compile_player_ref(b.of),
             }),
+        binding_card_kind: p.binding_card_kind.as_ref().map(|b| {
+            crate::compiled::CompiledBindingCardKindPredicate {
+                binding: b.binding.clone(),
+                kind: compile_card_kind(b.kind),
+            }
+        }),
         source_is_tamer: p.source_is_tamer,
         source_is_unsuspended: p.source_is_unsuspended,
         source_name_contains: p.source_name_contains.clone(),
@@ -693,6 +718,12 @@ fn compile_predicate(
             .memory_gte
             .as_ref()
             .map(|d| compile_dp_constraint(d, &format!("{prefix}.memory_gte"), card_id, errors)),
+        own_memory_lte: p.own_memory_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.own_memory_lte"), card_id, errors)
+        }),
+        own_memory_gte: p.own_memory_gte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.own_memory_gte"), card_id, errors)
+        }),
         security_count_lte: p.security_count_lte.as_ref().map(|d| {
             compile_dp_constraint(d, &format!("{prefix}.security_count_lte"), card_id, errors)
         }),
@@ -732,17 +763,27 @@ fn compile_predicate(
             )
         }),
         no_face_up_security_named: p.no_face_up_security_named.as_ref().map(|f| {
-            if f.card_number_is.is_some() == f.name_is.is_some() {
+            let set_count = [
+                f.card_number_is.is_some(),
+                f.name_is.is_some(),
+                f.color_is.is_some(),
+            ]
+            .iter()
+            .filter(|b| **b)
+            .count();
+            if set_count != 1 {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.no_face_up_security_named"),
-                    message: "exactly one of `card_number_is` / `name_is` must be set".to_string(),
+                    message: "exactly one of `card_number_is` / `name_is` / `color_is` must be set"
+                        .to_string(),
                 });
             }
             CompiledFaceUpSecurityNamed {
                 of: compile_player_ref(f.of),
                 card_number_is: f.card_number_is.clone(),
                 name_is: f.name_is.clone(),
+                color_is: f.color_is.map(compile_color),
             }
         }),
         binding_count_eq: p
@@ -792,6 +833,7 @@ fn compile_predicate(
         attack_target_change_reason: p.attack_target_change_reason.clone(),
         attacker_trait_has: p.attacker_trait_has.clone(),
         event_target_owner: p.event_target_owner.map(compile_player_ref),
+        event_add_to_hand_player: p.event_add_to_hand_player.map(compile_player_ref),
         event_target_color_any_of: p
             .event_target_color_any_of
             .as_ref()
@@ -828,6 +870,7 @@ fn compile_predicate(
         replacement_cause: p.replacement_cause.map(compile_replacement_cause),
         replacement_source_is_opponent: p.replacement_source_is_opponent,
         replacement_subject_is_mine: p.replacement_subject_is_mine,
+        would_link_card_trait_any_of: p.would_link_card_trait_any_of.clone(),
         equals: p
             .equals
             .as_ref()
@@ -1244,6 +1287,7 @@ fn compile_triggered(
             .as_ref()
             .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
         optional: t.optional,
+        outer_prompt: t.outer_prompt,
         once_per_turn: t.once_per_turn,
         max_per_turn: t.max_per_turn,
         process: t
@@ -1273,6 +1317,26 @@ fn compile_replacement_process(
     }
 
     let mut process = Vec::new();
+
+    // Gap 3a — `cost: { trash_own_link_card: true }` synthesizes a single
+    // self-contained step that trashes a chosen link card AND cancels the
+    // leave. It owns the `outcome: prevent`, so we emit only this step (and
+    // suppress the trailing `CancelReplacement` below).
+    let trash_own_link_card = r
+        .cost
+        .as_ref()
+        .is_some_and(|cost| cost.trash_own_link_card);
+    if trash_own_link_card {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { trash_own_link_card } requires outcome: prevent".into(),
+            });
+        }
+        process.push(CompiledStep::TrashOwnLinkCardAndCancelLeave);
+        return process;
+    }
 
     if r.cost.as_ref().is_some_and(|cost| cost.delay_self) {
         process.push(CompiledStep::DeletePermanent {
@@ -1429,11 +1493,17 @@ fn compile_declarative(
                 value: gk.value,
             }),
             modifier: a.modifier,
+            modifier_value: a.modifier_value,
+            modifier_name: a.modifier_name,
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
             applies_to_opponent_security_dp: a.applies_to_opponent_security_dp.unwrap_or(false),
             applies_to_own_security_dp: a.applies_to_own_security_dp.unwrap_or(false),
+            effect_immunity: a.effect_immunity.map(|imm| CompiledAuraEffectImmunity {
+                source_kind: imm.source_kind.map(compile_effect_source_kind),
+                source_controller: compile_effect_controller(imm.source_controller),
+            }),
             summary,
             summary_key,
         },
@@ -1568,6 +1638,13 @@ fn compile_declarative(
             }
         }
         B::LinkRequirement(link) => CompiledDeclarativeClause::LinkRequirement {
+            scope,
+            cost: link.cost,
+            filter: compile_predicate(&link.filter, &format!("{prefix}.filter"), card_id, errors),
+            summary,
+            summary_key,
+        },
+        B::LinkCondition(link) => CompiledDeclarativeClause::LinkCondition {
             scope,
             cost: link.cost,
             filter: compile_predicate(&link.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -1803,6 +1880,11 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::ReturnSelectedSecurityToDeck(a) => CompiledStep::ReturnSelectedSecurityToDeck {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+            position: compile_stack_position(a.position),
+        },
         S::AddTopSecurityToHand(a) => CompiledStep::AddTopSecurityToHand {
             of: compile_player_ref(a.of),
         },
@@ -2037,6 +2119,10 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
             bind_as: a.bind_as.clone(),
+            cost_delta: a
+                .cost_delta
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
         },
         // PlayFromTrash reuses PlayFromHandArgs but the compiled form uses `trash_index`
         S::PlayFromTrash(a) => {
@@ -2061,6 +2147,7 @@ fn compile_step(
             of: compile_player_ref(a.of),
             trash_index: compile_binding_ref(&a.hand_index),
             suppress_on_play: a.suppress_on_play,
+            suspended: a.suspended,
         },
         S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
             binding: a.binding.clone(),
@@ -2283,6 +2370,7 @@ fn compile_step(
             value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
             synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
+            continuous: a.continuous,
         },
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
             target_player: compile_player_ref(a.target_player),
@@ -2345,12 +2433,41 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
                 .collect(),
         },
-        S::GrantEffectImmunity(a) => CompiledStep::GrantEffectImmunity {
-            target: compile_binding_ref(&a.target),
-            source_kind: compile_effect_source_kind(a.source_kind),
-            source_controller: compile_effect_controller(a.source_controller),
-            expiry: a.expiry.clone(),
-        },
+        S::GrantEffectImmunity(a) => {
+            // Continuous form requires `targets` and no `target`; the
+            // per-permanent form requires `target` (Q28 / BT20-059).
+            if a.continuous {
+                if a.targets.is_none() || a.target.is_some() {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.grant_effect_immunity"),
+                        message: "continuous: true requires `targets` and no `target`"
+                            .to_string(),
+                    });
+                }
+            } else if a.target.is_none() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.grant_effect_immunity"),
+                    message: "`target` is required unless `continuous: true`".to_string(),
+                });
+            }
+            CompiledStep::GrantEffectImmunity {
+                target: a.target.as_ref().map(compile_binding_ref),
+                source_kind: compile_effect_source_kind(a.source_kind),
+                source_controller: compile_effect_controller(a.source_controller),
+                expiry: a.expiry.clone(),
+                continuous: a.continuous,
+                targets: a.targets.as_ref().map(|p| {
+                    compile_predicate(
+                        p,
+                        &format!("{prefix}.grant_effect_immunity.targets"),
+                        card_id,
+                        errors,
+                    )
+                }),
+            }
+        }
         S::GrantNarrowOpponentEffectProtection(a) => {
             CompiledStep::GrantNarrowOpponentEffectProtection {
                 target: compile_binding_ref(&a.target),
@@ -2365,6 +2482,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            continue_on_decline: a.continue_on_decline,
         },
         S::SelectOpponentPermanent(a) => CompiledStep::SelectOpponentPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2373,6 +2491,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            continue_on_decline: a.continue_on_decline,
         },
         S::SelectAnyPermanent(a) => CompiledStep::SelectAnyPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2636,6 +2755,7 @@ fn compile_step(
             zone: compile_zone(a.zone),
             max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
             min: a.min,
+            clamp_to_available: a.clamp_to_available,
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
@@ -2734,6 +2854,79 @@ fn compile_step(
                 filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             }
         }
+        S::LinkCardToSelf(a) => {
+            if a.from.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.link_card_to_self.from"),
+                    message: "link_card_to_self requires at least one source zone".to_string(),
+                });
+            }
+            CompiledStep::LinkCardToSelf {
+                from: a.from.clone(),
+                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+                to: a.to,
+                cost: a.cost,
+                optional: a.optional,
+            }
+        }
+        S::ReduceLinkCost(a) => CompiledStep::ReduceLinkCost { amount: a.amount },
+        S::LinkCards(a) => {
+            use crate::compiled::{
+                CompiledLinkCount, CompiledLinkSourceZone, CompiledLinkTo,
+            };
+            use crate::step::{LinkCardSourceZone, LinkCardsCost, LinkCardsCount, LinkCardsTo};
+
+            if a.from.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.link_cards.from"),
+                    message: "link_cards requires at least one source zone".to_string(),
+                });
+            }
+
+            let from = a
+                .from
+                .iter()
+                .map(|z| match z {
+                    LinkCardSourceZone::Hand => CompiledLinkSourceZone::Hand,
+                    LinkCardSourceZone::Trash => CompiledLinkSourceZone::Trash,
+                    LinkCardSourceZone::SelfSources => CompiledLinkSourceZone::SelfSources,
+                    LinkCardSourceZone::OwnDigimonSources => {
+                        CompiledLinkSourceZone::OwnDigimonSources
+                    }
+                    LinkCardSourceZone::SelfOption => CompiledLinkSourceZone::SelfOption,
+                })
+                .collect();
+
+            let to = match a.to {
+                LinkCardsTo::SelfPermanent => CompiledLinkTo::SelfPermanent,
+                LinkCardsTo::OwnDigimon => CompiledLinkTo::OwnDigimon,
+            };
+
+            let count = match a.count {
+                LinkCardsCount::Exactly(n) => CompiledLinkCount::Exactly(n),
+                LinkCardsCount::UpTo(n) => CompiledLinkCount::UpTo(n),
+            };
+
+            // `free` pays 0; `reduce: N` pays max(0, base - N). The cards this
+            // step serves have a base link cost of 0 in this context, so both
+            // resolve to 0. Threaded faithfully so a non-zero base cost extends
+            // here later without a schema change.
+            let cost = match a.cost {
+                LinkCardsCost::Free => 0u8,
+                LinkCardsCost::Reduce(n) => 0u8.saturating_sub(n),
+            };
+
+            CompiledStep::LinkCards {
+                from,
+                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+                to,
+                count,
+                cost,
+                prompt: a.prompt.clone(),
+            }
+        }
         // OptionalStep is a newtype wrapping Vec<StepSpec> — access via .0
         S::Optional(o) => CompiledStep::Optional(
             o.0.iter()
@@ -2751,6 +2944,7 @@ fn compile_step(
             without_suspending: a.without_suspending,
             ignore_summoning_sickness: a.ignore_summoning_sickness,
             optional: a.optional,
+            windowed: a.windowed,
             prompt: a.prompt.clone(),
             cost_upgrade: a.cost_upgrade.map(|u| CompiledAttackCostUpgrade {
                 dp: u.dp.unwrap_or(0),
@@ -2794,6 +2988,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
         },
         S::CancelAttack(_) => CompiledStep::CancelAttack,
+        S::RefundOpt(_) => CompiledStep::RefundOpt,
         S::OpenCounterWindow(_) => CompiledStep::OpenCounterWindow,
         S::RefireEffect(a) => {
             if a.timing == "on_play_or_when_digivolving" && a.optional {

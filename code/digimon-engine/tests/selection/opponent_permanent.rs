@@ -15,9 +15,9 @@
 //! - Tensor writes valid_count + selecting_player slots.
 
 use digimon_engine::action::build_action_mask;
-use digimon_engine::action::space::{encode_attack, ACTION_SPACE_SIZE, PASS};
-use digimon_engine::build_tensor;
+use digimon_engine::action::space::{encode_attack, ACTION_SPACE_SIZE, CONCEDE_GAME, PASS};
 use digimon_engine::card_registry::CardRegistry;
+use digimon_engine::tensor_v1::build_tensor_standard_compact_v1;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::GamePhase;
 use digimon_engine::selection::{SelectionError, SelectionKind};
@@ -75,8 +75,12 @@ fn mask_emits_only_valid_targets_plus_pass() {
         legal.contains(&(PASS as usize)),
         "optional selection must expose PASS"
     );
-    // Exactly those three.
-    assert_eq!(legal.len(), 3, "got legal bits: {:?}", legal);
+    assert!(
+        legal.contains(&(CONCEDE_GAME as usize)),
+        "concede is legal at every agent decision point"
+    );
+    // Exactly those four (2 targets + PASS + CONCEDE).
+    assert_eq!(legal.len(), 4, "got legal bits: {:?}", legal);
 }
 
 #[test]
@@ -209,10 +213,14 @@ fn tensor_reports_valid_count_and_selecting_player() {
         .map(|c| (c.card_id.clone(), c.clone()))
         .collect();
     let registry = CardRegistry::from_cards(&db);
-    let tensor = build_tensor(&r.game, 0, &registry);
+    // The crate-root `build_tensor` follows the default profile
+    // (standard_lite_deck_v2); this test asserts the compact-v1 layout's
+    // selection slots, so build that profile explicitly.
+    let tensor = build_tensor_standard_compact_v1(&r.game, 0, &registry);
     // Tensor offsets: OFF_SELECTION=1370 (phase), +1=valid_count/ACTION_SPACE_SIZE,
     //                 +2=selecting_player.
-    let valid_count_slot = tensor[1371];
+    use digimon_engine::tensor_profiles::standard::v1::OFF_SELECTION;
+    let valid_count_slot = tensor[OFF_SELECTION + 1];
     let expected = 2.0f32 / ACTION_SPACE_SIZE as f32;
     assert!(
         (valid_count_slot - expected).abs() < 1e-6,
@@ -220,5 +228,5 @@ fn tensor_reports_valid_count_and_selecting_player() {
         valid_count_slot,
         expected
     );
-    assert_eq!(tensor[1372], 0.0, "selecting_player = P0");
+    assert_eq!(tensor[OFF_SELECTION + 2], 0.0, "selecting_player = P0");
 }

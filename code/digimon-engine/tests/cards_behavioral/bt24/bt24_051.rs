@@ -117,13 +117,13 @@ fn bt24_051_suspends_two_then_boosted_digimon_attacks_opponent_digimon() {
     fire_on_play(&mut runner, meruki);
     assert!(matches!(
         runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { .. })
+        Some(SelectionKind::OppField)
     ));
     runner
-        .execute_action(0, encode_attack(1, opp_a.index as u16))
+        .execute_action(0, encode_attack(0, opp_a.index as u16))
         .expect("select first suspend target");
     runner
-        .execute_action(0, encode_attack(1, opp_tamer.index as u16))
+        .execute_action(0, encode_attack(0, opp_tamer.index as u16))
         .expect("select second suspend target");
     assert!(runner.game.players[1].battle_area[opp_a.index as usize].is_suspended);
     assert!(runner.game.players[1].battle_area[opp_tamer.index as usize].is_suspended);

@@ -49,6 +49,18 @@ pub struct PredicateSpec {
         alias = "subject_trait"
     )]
     pub trait_has: Option<String>,
+    /// Substring sibling of `trait_has`. Matches when ANY of the subject's
+    /// traits CONTAINS this token (case-insensitive substring), mirroring
+    /// DCGO `CardSource.ContainsTraits`. `trait_has` is an EXACT
+    /// case-insensitive match; `trait_contains` is the substring reading
+    /// demanded by printed text of the form "[Dragon], [saur] or
+    /// [Ceratopsian] in any of its traits" — where e.g. `saur` only ever
+    /// appears inside `Dinosaur` / `Plesiosaur` and `Dragon` mostly inside
+    /// `Dragonkin` / `Dark Dragon`. Threaded identically to `trait_has`,
+    /// including synth-identity / `ChangeTraits` overlay visibility.
+    /// G-DSL-TRAIT-CONTAINS-SUBSTRING. Driver: EX3-014 Dorbickmon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trait_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -153,12 +165,25 @@ pub struct PredicateSpec {
     pub owner: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other: Option<bool>,
+    /// `is_source: true` — the subject permanent must BE the effect's source
+    /// permanent (the mirror of `other: true`). Use it to filter a select
+    /// down to "this Digimon" — e.g. DCGO's standalone "Will you unsuspend
+    /// this card?" prompt becomes an optional `select_own_permanent` with
+    /// `is_source: true`, exposing the Yes/No to the RL action space.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub of_permanent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_in_binding: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub binding_owner: Option<BindingOwnerPredicate>,
+    /// True when the card bound to `binding` has the given card category.
+    /// Resolves the named card binding (e.g. from `reveal_top_deck { bind_as }`)
+    /// and compares its printed kind. Used by LM-020 Quantumon to test whether
+    /// the revealed opponent deck-top matches the declared category.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_card_kind: Option<BindingCardKindPredicate>,
 
     // Leaf — source-relative
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -219,6 +244,17 @@ pub struct PredicateSpec {
     pub memory_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memory_gte: Option<DpConstraint>,
+    /// Memory from the perspective of the predicate's CONTROLLER (the
+    /// effect's owner), unlike `memory_lte`/`memory_gte` which compare the
+    /// raw turn-player-perspective gauge. "While you have 0 or less memory"
+    /// (EX8-073 / BT17-016 immunity) is `own_memory_lte: 0` — true when the
+    /// controller's signed memory (the gauge when it is their turn, the
+    /// negated gauge otherwise) is at or below the bound.
+    /// G-DSL-OWN-MEMORY-PREDICATE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub own_memory_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub own_memory_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security_count_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -321,6 +357,11 @@ pub struct PredicateSpec {
     pub event_host_permanent_is_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
+    /// For `OnAddToHand` observers: the player whose hand gained cards
+    /// (`TriggerContext.affected_player`) must match this player-ref, resolved
+    /// relative to the observer (`you` / `opponent`). See G-ON-ADD-TO-HAND-OBSERVER.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_add_to_hand_player: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_is_player: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -374,6 +415,14 @@ pub struct PredicateSpec {
     pub replacement_source_is_opponent: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replacement_subject_is_mine: Option<bool>,
+    /// True when the card about to link in the active `WhenWouldLink` window
+    /// (the standing-Digimon link subject) carries AT LEAST ONE of the listed
+    /// traits. Used by a host-side `when_would_link_to_this` reducer to gate on
+    /// the linking card's traits — "when a [Social]/[Tool]/[Game] trait card
+    /// would link to this Digimon" (Gap 5 — BT25-004 / BT25-045). `None`
+    /// outside a standing-link `WhenWouldLink` window.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub would_link_card_trait_any_of: Option<Vec<String>>,
 
     // Binding comparisons
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -511,6 +560,13 @@ pub struct BindingOwnerPredicate {
     pub of: PlayerRef,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindingCardKindPredicate {
+    pub binding: String,
+    pub kind: CardKind,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum DpConstraint {
@@ -600,8 +656,9 @@ pub struct MaterialCountAggregatePredicate {
 }
 
 /// Identity filter for the `no_face_up_security_named` predicate leaf.
-/// Exactly one of `card_number_is` / `name_is` is required — the leaf
-/// counts face-up security cards of `of`'s player matching that filter.
+/// Exactly one of `card_number_is` / `name_is` / `color_is` is required —
+/// the leaf counts face-up security cards of `of`'s player matching that
+/// filter.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FaceUpSecurityNamedPredicate {
@@ -613,6 +670,11 @@ pub struct FaceUpSecurityNamedPredicate {
     /// Match a face-up security card by exact (case-insensitive) name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name_is: Option<String>,
+    /// Match a face-up security card by printed color (EX10-020 Puppetmon
+    /// "[On Deletion] If you have no GREEN face-up security cards, …" —
+    /// judge-quiz Q3 authoring).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color_is: Option<ColorSpec>,
 }
 
 fn default_face_up_security_of() -> PlayerRef {

@@ -2,6 +2,37 @@
 
 // ─── DTO types ────────────────────────────────────────────────────────
 
+export interface EvoCostDto {
+  color: number;
+  level: number;
+  cost: number;
+}
+
+export interface KeywordBreakdownDto {
+  innate: string[];
+  gained: string[];
+}
+
+export interface InheritedEffectDto {
+  source_index: number;
+  card_id: string;
+  card_name: string;
+  text: string;
+}
+
+export interface PermanentModifierDto {
+  type: string;
+  value: number;
+  expiry: string;
+  source_card_id: string | null;
+}
+
+export interface DpBreakdownDto {
+  base: number | null;
+  temporary: number;
+  total: number | null;
+}
+
 export interface CardDto {
   card_id: string;
   card_name: string;
@@ -10,6 +41,18 @@ export interface CardDto {
   dp: number | null;
   play_cost: number;
   colors: string[];
+  /** Printed digivolution costs. Absent on older engine builds. */
+  evo_costs?: EvoCostDto[];
+}
+
+export interface SourceCardDto {
+  card_id: string;
+  card_name: string;
+  colors: string[];
+  /** This source's printed main effect text. Absent on older engine builds. */
+  main_effect_text?: string;
+  /** This source's printed inherited effect text. */
+  inherited_effect_text?: string;
 }
 
 export interface PermanentDto {
@@ -19,6 +62,17 @@ export interface PermanentDto {
   is_suspended: boolean;
   stack_size: number;
   turn_played: number;
+  /** Non-top digivolution sources, bottom→top (matches encode_source_select). */
+  sources?: SourceCardDto[];
+  /** Active keyword display names. Absent on older engine builds. */
+  keywords?: string[];
+  keyword_breakdown?: KeywordBreakdownDto;
+  security_attack_modifier?: number;
+  linked_card_ids?: string[];
+  main_effect_text?: string;
+  inherited_effects?: InheritedEffectDto[];
+  modifiers?: PermanentModifierDto[];
+  dp_breakdown?: DpBreakdownDto;
 }
 
 export interface PlayerDto {
@@ -27,7 +81,11 @@ export interface PlayerDto {
   battle_area: PermanentDto[];
   breeding: PermanentDto | null;
   deck_count: number;
+  /** Cards remaining in the digitama (egg) deck. Absent on older engine builds. */
+  egg_deck_count?: number;
   trash_count: number;
+  /** Full trash contents (public zone). Empty/absent on older engine builds. */
+  trash?: CardDto[];
   security_count: number;
   is_eliminated: boolean;
 }
@@ -36,6 +94,9 @@ export interface EffectChoiceDto {
   index: number;
   label: string;
   action_id: number;
+  /** Card whose effect this branch resolves — the chooser renders its image. */
+  card_id?: string | null;
+  card_name?: string | null;
 }
 
 export interface PendingSelectionDto {
@@ -44,8 +105,11 @@ export interface PendingSelectionDto {
   valid_action_ids: number[];
   is_optional: boolean;
   prompt: string;
-  /** SelectionKind variant string (e.g. "OwnField"/"OppField"). */
+  /** Engine `SelectionKind` discriminant (e.g. "OwnField" / "OppField"). */
   kind?: string;
+  /** Whose zone Hand/Trash action ids index into (engine 0/1). Absent =
+   *  the selecting player's own zone. */
+  zone_owner?: number | null;
   effect_choices?: EffectChoiceDto[];
 }
 

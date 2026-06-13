@@ -5,6 +5,8 @@
 /// duplication, just module visibility plumbing.
 pub mod deck_commands;
 pub mod deck_storage;
+#[cfg(feature = "debug-bridge")]
+pub mod debug_bridge;
 pub mod engine_commands;
 pub mod format_commands;
 pub mod inference_state;

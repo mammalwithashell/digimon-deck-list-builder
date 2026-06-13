@@ -165,24 +165,45 @@ fn partition_plays_two_picked_sources_on_opponent_effect_deletion() {
 
     r.game.delete_permanent_with_effects(carrier);
 
-    // Mid-deletion under the batched flow (2026-05-23): the carrier is
-    // already trashed. Partition reads `snap.digisources_just_before`
-    // (now in trash) and parks a 2-pick.
+    // INTERRUPTIVE re-timing (judge-quiz Q30, 2026-06-11): Partition now
+    // fires in the WhenWouldLeaveBattleArea window — the carrier is STILL
+    // in the battle area with its full stack while the optional accept
+    // dialog parks ("you may play..." / the quiz's "chooses to activate
+    // <Partition>").
     {
         assert_eq!(
             r.game.players[0].battle_area.len(),
-            0,
-            "carrier already trashed (batched flow); battle area is empty"
+            1,
+            "interruptive Partition: the carrier is still on the field at park time"
+        );
+        assert_eq!(
+            r.game.players[0].battle_area[0].card_sources.len(),
+            4,
+            "the carrier's stack is intact in the would-leave window"
         );
         let pending = r
             .game
             .pending_selection
             .as_ref()
-            .expect("Partition source-pick must be parked");
+            .expect("Partition accept dialog must be parked");
         assert_eq!(pending.selecting_player, 0);
         assert!(
+            pending.is_optional,
+            "the printed 'you may' surfaces as an optional accept dialog"
+        );
+    }
+    // Accept the optional <Partition> activation.
+    let accept = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    r.game.resolve_selection(0, accept).expect("accept Partition");
+    {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Partition source-pick must be parked after accept");
+        assert!(
             !pending.is_optional,
-            "DCGO `canNoSelect: () => false` — the 2-pick is mandatory once gate passes"
+            "DCGO `canNoSelect: () => false` — the 2-pick is mandatory once accepted"
         );
     }
 

@@ -59,6 +59,16 @@ pub struct TriggeredClause {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
 
+    /// Force the explicit outer accept/decline confirm for an `optional: true`
+    /// clause even when its first body step is itself declinable (where the
+    /// lowering would normally let the inner PASS double as the decline).
+    /// Use for DCGO's always-shown initial Yes/No (`SetIsSkippable` bool
+    /// prompt) — declining the outer confirm drops the queued effect before
+    /// its body runs, so a `once_per_turn` use is NOT consumed (DCGO
+    /// `RemoveUse` semantics). G-OPT-REFUND-ON-DECLINE.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub outer_prompt: bool,
+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub once_per_turn: bool,
 
@@ -98,6 +108,12 @@ pub enum Timing {
     OnLeaveField,
     OnSuspend,
     OnUnsuspend,
+    /// `[All Turns]`-style observer: an EFFECT added one or more cards to a
+    /// player's hand (return-to-hand, security/trash/deck/reveal-to-hand, …).
+    /// Gate the gaining player with `event_add_to_hand_player:` and effect-vs-draw
+    /// with `event_is_effect_initiated:` inside `active_when:`. See
+    /// G-ON-ADD-TO-HAND-OBSERVER.
+    OnAddToHand,
     OnHatch,
     OnMove,
     OnDigivolve,
@@ -141,6 +157,26 @@ pub enum Timing {
     /// G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
     BeforePayCostObserve,
     Delayed,
+    /// DigiLink Shape-B: "when this Digimon gets linked" (`when: when_linked`).
+    /// Use on a `scope: linked` effect; lowers to `OnLink` + a self-filter.
+    WhenLinked,
+    /// DigiLink host-side: "[When Linked] when a card gets linked **to this
+    /// Digimon**" (`when: when_card_linked_to_this`). The effect lives on the
+    /// HOST (a face-up `scope`), not on the linked card. Lowers to `OnLink`
+    /// + a host self-filter (`event_permanent == source_permanent`) so it
+    /// fires once for the host the card actually attached to and not for a
+    /// sibling host. Mirrors DCGO `CardEffectCommons.CanTriggerWhenLinked`.
+    WhenCardLinkedToThis,
+    /// DigiLink host-side pre-link **replacement**: "when a card **would** link
+    /// **to this Digimon**" (`when: when_would_link_to_this`). The effect lives
+    /// on the HOST (a face-up `scope`). Lowers to a `WhenWouldLink` REPLACEMENT
+    /// effect (not a triggered observer) + a host self-filter
+    /// (`pending_link_host() == source_permanent`) so it fires only while the
+    /// linking card is attaching to THIS permanent. Pair with an `optional`
+    /// clause + a `reduce_link_cost` step to express "you may reduce the cost"
+    /// (Gap 5 — BT25-004 Tapmon / BT25-045 Onmon). Filter the would-link card's
+    /// traits via `active_when: { would_link_card_trait_any_of: [...] }`.
+    WhenWouldLinkToThis,
 }
 
 #[derive(
@@ -201,6 +237,7 @@ pub enum DeclarativeKind {
     GrantKeyword,
     Delay,
     LinkRequirement,
+    LinkCondition,
     FloodGate,
     AltPathRegistration,
     RawRust,
@@ -222,6 +259,7 @@ pub enum TypedDeclarativeBody {
     GrantKeyword(GrantKeywordBody),
     Delay(DelayBody),
     LinkRequirement(LinkRequirementBody),
+    LinkCondition(LinkRequirementBody),
     FloodGate(FloodGateBody),
     AltPathRegistration(AltPathRegistrationBody),
     RawRust(RawRustClauseBody),
@@ -260,6 +298,9 @@ impl DeclarativeClause {
             DeclarativeKind::Delay => TypedDeclarativeBody::Delay(serde_yml::from_value(value)?),
             DeclarativeKind::LinkRequirement => {
                 TypedDeclarativeBody::LinkRequirement(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::LinkCondition => {
+                TypedDeclarativeBody::LinkCondition(serde_yml::from_value(value)?)
             }
             DeclarativeKind::FloodGate => {
                 TypedDeclarativeBody::FloodGate(serde_yml::from_value(value)?)
@@ -305,6 +346,21 @@ pub struct AuraBody {
     pub grant_keyword: Option<GrantKeywordValue>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier: Option<String>,
+    /// Scalar value for the named `modifier` grant (the modifier's `value`
+    /// field). Required for scalar modifiers like `ChangeLinkMax` ("Link +N")
+    /// and `ChangeLinkCost`; defaults to `0` when omitted (boolean / flag
+    /// modifiers ignore it). Fixes G-ENGINE-AURA-GRANT-LINK-MAX — the aura
+    /// path previously installed every named modifier with a hardcoded `0`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modifier_value: Option<i32>,
+    /// Name payload for the named `modifier` grant — installs the modifier
+    /// with `ModifierPayload::Name { value, base: false }`. Required by
+    /// name-carrying modifiers like `CanOnlyDigivolveInto` (EX10-020
+    /// "[All Turns] This Digimon can only digivolve into [Apocalymon]" —
+    /// judge-quiz Q3 / G-DIGIVOLVE-TARGET-RESTRICTION DSL install). Ignored
+    /// by scalar/flag modifiers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modifier_name: Option<String>,
     /// Track H §4 — install-once continuous gate. When set, the aura's
     /// modifier installs with `Expiry::UntilCondition` carrying this
     /// predicate. The UntilCondition controller (PR #458) evicts the
@@ -334,6 +390,34 @@ pub struct AuraBody {
     pub applies_to_opponent_security_dp: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub applies_to_own_security_dp: Option<bool>,
+
+    /// Continuous effect-immunity grant — printed text like "[All Turns]
+    /// While you have 0 or less memory, this Digimon isn't affected by the
+    /// effects of your opponent's Digimon" (EX8-073) or "[Your Turn] While
+    /// you have 0 or less memory, this Digimon isn't affected by your
+    /// opponent's effects" (BT17-016). Installs a filtered
+    /// `CannotBeAffected` modifier on each declarative tick while
+    /// `active_when` holds. Omit `source_kind` for immunity to ALL source
+    /// kinds (Digimon, Tamer, Option, rules effects); set it to narrow the
+    /// immunity ("effects of your opponent's Digimon" ⇒ `digimon`).
+    /// Self-aura only (leave `target` / `target_player` unset).
+    /// G-DSL-AURA-EFFECT-IMMUNITY.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effect_immunity: Option<AuraEffectImmunity>,
+}
+
+/// Inline continuous effect-immunity grant used inside [`AuraBody`].
+/// Mirrors the `grant_effect_immunity` step's source filters, minus
+/// `target`/`expiry` (the aura's tick lifecycle owns both).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AuraEffectImmunity {
+    /// `None` ⇒ immune to effects from ANY source kind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_kind: Option<crate::step::EffectSourceKindSpec>,
+    /// Defaults to `opponent` (the overwhelmingly common printed shape).
+    #[serde(default)]
+    pub source_controller: crate::step::EffectControllerSpec,
 }
 
 /// Inline keyword grant used inside [`AuraBody`].
@@ -414,6 +498,20 @@ pub struct ReplacementBody {
 pub struct ReplacementCostBody {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub delay_self: bool,
+
+    /// Gap 3a — pay the replacement by trashing 1 of the LEAVING permanent's
+    /// own link cards ("by trashing 1 of its link cards, it doesn't leave",
+    /// BT25-066 / BT25-073 inherited / BT25-101). Only valid on a
+    /// `when_would_leave_battle_area` replacement. The player chooses WHICH
+    /// link card to trash (exposed to the RL action space); the chosen card
+    /// goes to its owner's trash, fires `OnLinkedCardTrashed`, and the leave is
+    /// cancelled. The clause must be `optional: true` (the "by trashing … it
+    /// doesn't leave" is a may-pay). Gated so it is not offered with 0 link
+    /// cards. Lowers to a single `TrashOwnLinkCardAndCancelLeave` step (it owns
+    /// both the cost and the `outcome: prevent`, so no separate
+    /// `cancel_replacement` is emitted).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub trash_own_link_card: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

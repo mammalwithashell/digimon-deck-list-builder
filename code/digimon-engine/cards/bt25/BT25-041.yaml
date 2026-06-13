@@ -1,0 +1,77 @@
+# BT25-041 Murasamemon — Digimon, Lv.5, Yellow, DP 7000, Cost 7.
+# Traits: Beastkin, Glowing Dawn, BEATBREAK. Standard digivolution: Lv.4 yellow / cost 3.
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO):
+#   ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other
+#     Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#     ＜Security A. +1＞ for the attack.)
+#   [When Digivolving] [When Attacking] [Once Per Turn] If it's your turn, by
+#     adding your top security card to the hand or trashing the bottom face-down
+#     card under any of your Tamers, you may play or use 1 card with the [Glowing
+#     Dawn] trait from your hand with the cost reduced by 3.   <-- BLOCKED, omitted
+#   Inherited: [End of Attack] [Once Per Turn] By trashing the bottom face-down
+#     card from under any of your Tamers, this Digimon with the [Glowing Dawn]
+#     trait unsuspends.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_041.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 4, TopCard
+#   HasGlowingDawnTraits, cost 3) → alt_paths digivolve from level 4 + Glowing
+#   Dawn trait, cost 3.
+# Alliance — AllianceSelfEffect (OnAllyAttack) → kind: grant_keyword Alliance.
+# Main WD/WA clause — BLOCKED (hybrid):
+#   "[WD][WA][OPT] If your turn, by adding your top security card to hand OR
+#   trashing the bottom face-down card under any Tamer, you may play or use 1
+#   [Glowing Dawn] card from hand with cost reduced by 3." This needs (a) a
+#   3-way pay-cost CHOICE (add-top-security-to-hand | trash-FD-under-Tamer |
+#   don't pay) and (b) play-OR-use a hand card at a -3 cost reduction. The
+#   trash-FD half is interactive (parks) and the resulting cost-reduced
+#   play/use is the same family as G-COST-REDUCTION-INTERACTIVE-PAY-COST plus a
+#   "pay one of two alternative costs to unlock a reduced play/use" composite
+#   the DSL has no verb for. Omitted; verdict PARTIAL.
+# Inherited [End of Attack][OPT]: trash bottom FD under a Tamer (process
+#   activation cost — works as a tail-bearing step) → if this Digimon has
+#   [Glowing Dawn], unsuspend self. → scope: inherited, when: end_of_attack,
+#   once_per_turn, optional, active_when source_permanent_trait_has "Glowing
+#   Dawn"; process: trash_bottom_face_down_source_under_tamer + unsuspend self.
+
+card: BT25-041
+name: "Murasamemon"
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Beastkin, Glowing Dawn, BEATBREAK]
+
+# Alt-digivolve: Lv.4 with the [Glowing Dawn] trait / cost 3.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: "Glowing Dawn"
+    cost: 3
+
+effects:
+  # ─── <Alliance> ────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance>"
+
+  # ─── [WD][WA][OPT] pay-cost → play/use Glowing Dawn -3 — BLOCKED, omitted
+  #     (G-COST-REDUCTION-INTERACTIVE-PAY-COST + composite pay-one-of-two cost).
+
+  # ─── Inherited [End of Attack][OPT] trash FD under Tamer → unsuspend self ──
+  - scope: inherited
+    when: end_of_attack
+    once_per_turn: true
+    optional: true
+    active_when:
+      source_permanent_trait_has: "Glowing Dawn"
+    summary: "[Inherited][End of Attack][OPT] By trashing a bottom face-down card under a Tamer, this [Glowing Dawn] Digimon unsuspends"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - unsuspend: { target: source }

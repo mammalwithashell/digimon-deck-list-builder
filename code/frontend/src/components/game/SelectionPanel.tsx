@@ -1,6 +1,7 @@
 import { Card } from '@/components/shared/Card';
-import { GamePhase, type PendingSelection } from '@/types/game';
+import { GamePhase, type PendingSelection, type PermanentInfo } from '@/types/game';
 import { SELECTION } from '@/utils/constants';
+import { isSourceSelectAction, sourceSelectionCards } from '@/utils/sourceSelection';
 
 interface SelectionPanelProps {
   currentPhase: GamePhase;
@@ -10,10 +11,19 @@ interface SelectionPanelProps {
   handIds: string[];
   /** The local player's trash card IDs */
   trashIds: string[];
+  /** The opponent's trash card IDs (public zone). Trash selections can
+   *  target the opponent's trash (e.g. EX11-012 Medusamon "return 1 card
+   *  from your opponent's trash") — `pendingSelection.zoneOwner` says
+   *  which side the action ids index into. */
+  opponentTrashIds?: string[];
   /** The local player's security card IDs (may be empty if face-down) */
   securityIds: string[];
+  /** The local player's battle-area permanents (for source-card picks). */
+  battleArea: PermanentInfo[];
   onAction: (actionId: number) => void;
   localPlayer: number;
+  /** Right-click a card in the panel to open the enlarged card detail. */
+  onInspectCard?: (cardId: string) => void;
 }
 
 /** Phases where this panel should auto-open */
@@ -37,17 +47,27 @@ export function SelectionPanel({
   actionMask,
   handIds,
   trashIds,
+  opponentTrashIds = [],
   securityIds,
+  battleArea,
   onAction,
   localPlayer,
+  onInspectCard,
 }: SelectionPanelProps) {
   // Only show for specific selection phases where the local player is selecting
   if (!pendingSelection) return null;
   if (pendingSelection.selectingPlayer !== localPlayer) return null;
-  if (!PANEL_PHASES.has(currentPhase)) return null;
 
   // Keyword prompt is handled by KeywordPromptDialog instead
   if (pendingSelection.keywordPrompt) return null;
+
+  // Source-card (digivolution material) picks are identified by their
+  // SOURCE_SELECT-range action ids, NOT a dedicated phase: `select_material`
+  // runs in SelectMaterial (shared with the board-driven DNA pick) and
+  // SelectSource. Gate the modal on the id range so it opens for source picks
+  // but stays out of the DNA flow (which is board-clicked by raw field index).
+  const isSourceSelect = pendingSelection.validIndices.some(isSourceSelectAction);
+  if (!PANEL_PHASES.has(currentPhase) && !isSourceSelect) return null;
 
   const isEffectChoice = currentPhase === GamePhase.SelectEffectChoice;
   let title = pendingSelection.prompt || (isEffectChoice
@@ -62,7 +82,15 @@ export function SelectionPanel({
       isValid: actionMask[SELECTION.HAND_START + i] === 1,
     }));
   } else if (currentPhase === GamePhase.SelectTrash) {
-    cards = trashIds.map((cardId, i) => ({
+    // The engine's trash action ids are indices into `zoneOwner`'s trash —
+    // which can be the OPPONENT's (EX11-012 Medusamon). Zip against the
+    // owning side's list or the cards (and the clickable mask bits)
+    // misalign and the prompt is unfulfillable.
+    const ownerIds =
+      pendingSelection.zoneOwner != null && pendingSelection.zoneOwner !== localPlayer
+        ? opponentTrashIds
+        : trashIds;
+    cards = ownerIds.map((cardId, i) => ({
       cardId,
       actionId: SELECTION.TRASH_START + i,
       isValid: actionMask[SELECTION.TRASH_START + i] === 1,
@@ -98,10 +126,26 @@ export function SelectionPanel({
         label: `Effect ${i + 1}`,
       }));
     }
+  } else if (isSourceSelect) {
+    // Pick a specific digivolution card from under one of your Digimon
+    // (`select_material`). Each SOURCE_SELECT id resolves to the non-top
+    // source card the engine would act on.
+    cards = sourceSelectionCards(pendingSelection.validIndices, battleArea).map((t) => ({
+      cardId: t.cardId,
+      actionId: t.actionId,
+      isValid: actionMask[t.actionId] === 1,
+    }));
   }
 
   const canDecline = actionMask[SELECTION.DECLINE] === 1;
   const validCount = cards.filter((c) => c.isValid).length;
+
+  // Right-click a card to open the enlarged detail (DCGO parity). Synthetic
+  // ids (`effect-N` fallbacks with no resolved source card) have no image.
+  const inspectOnRightClick = (cardId: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!cardId.startsWith('effect-')) onInspectCard?.(cardId);
+  };
 
   if (cards.length === 0 && !canDecline) return null;
 
@@ -156,6 +200,7 @@ export function SelectionPanel({
                   <Card
                     cardId={entry.cardId}
                     size="md"
+                    onContextMenu={inspectOnRightClick(entry.cardId)}
                   />
                   {entry.label && (
                     <span className="text-xs text-slate-200 text-center max-w-[120px] leading-tight">
@@ -183,6 +228,7 @@ export function SelectionPanel({
                     highlighted={entry.isValid}
                     dimmed={!entry.isValid}
                     onClick={entry.isValid ? () => onAction(entry.actionId) : undefined}
+                    onContextMenu={inspectOnRightClick(entry.cardId)}
                   />
                 </div>
               ))}

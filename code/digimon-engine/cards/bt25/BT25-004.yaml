@@ -1,0 +1,51 @@
+# BT25-004 Tapmon — Digimon, Lv.2, Green, Cost 0.
+# Trait line: Tap (App Name) — an Appmon Lv.2 source card.
+#
+# DCGO BT25_004.cs (authoritative). The whole card is a single INHERITED
+# (source) effect — Tapmon's printed body is its inherited ability:
+#
+#   Inherited [Your Turn] [Once Per Turn] When a [Social], [Tool] or [Game]
+#     trait card would link to this Digimon, you may reduce the cost by 1.
+#
+# DCGO models it as a `WhenWouldLink` ActivateClass, `SetIsInheritedEffect(true)`,
+# whose accept installs `GrantedReduceLinkCostClass(reducedCost: 1,
+#   cardSourceCondition: Social|Tool|Game, permanentCondition: this host,
+#   rootCondition: _ => true)`.
+#
+# ─── Re-adjudication 2026-06-07 (prior verdict: BLOCKED engine / facet #10) ───
+# The host-side predicated `WhenWouldLink` cost reducer (Gap 5) has LANDED:
+#   - timing  `when: when_would_link_to_this` (host self-filter:
+#     pending_link_host == this permanent)
+#   - trait gate `active_when: { would_link_card_trait_any_of: [...] }`
+#     (reads the card about to link)
+#   - body `reduce_link_cost: { amount: N }` → EffectContext::reduce_pending_link_cost
+#     (one-shot mutation of the in-flight link cost; no persistent modifier leak)
+#   - optional ("you may") + once_per_turn ([Once Per Turn])
+# So this card is now fully expressible (no clauses omitted).
+#
+# Cost-scope note: DCGO's `permanentCondition == this` host filter is exactly the
+# `when_would_link_to_this` host self-filter; `cardSourceCondition`
+# Social|Tool|Game is the `would_link_card_trait_any_of` gate; `rootCondition`
+# `_ => true` adds no extra constraint.
+
+card: BT25-004
+name: Tapmon
+kind: digimon
+level: 2
+color: [green]
+cost: 0
+traits: [Tap, Appmon]
+attribute: Free
+
+effects:
+  # ─── Inherited [Your Turn][OPT] host-side link-cost reducer ────────────────
+  - scope: inherited
+    when: when_would_link_to_this
+    optional: true
+    once_per_turn: true
+    active_when:
+      your_turn: true
+      would_link_card_trait_any_of: [Social, Tool, Game]
+    summary: "[Your Turn][OPT] When a [Social]/[Tool]/[Game] card would link to this Digimon, you may reduce the cost by 1"
+    process:
+      - reduce_link_cost: { amount: 1 }

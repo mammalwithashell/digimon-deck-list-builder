@@ -1,0 +1,70 @@
+# BT25-081 Fangmon — Digimon, Lv.4, Purple, DP 5000, Cost 5.
+# Traits: Dark Animal, BEATBREAK. Standard digivolution: Lv.3 purple / cost 2.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [On Play] [When Digivolving] Suspend 1 non-purple Tamer.
+#   [All Turns] [Once Per Turn] When any of your opponent's Tamers suspend,
+#     gain 1 memory.
+#   Inherited: ＜Retaliation＞ (When only this Digimon is deleted in battle,
+#     delete the Digimon it battled.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_081.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 (OP/WD shared, optional: false): SelectPermanentEffect Mode.Tap over
+#   CanSelectPermanentCondition = on battle area && IsTamer && TopCard NOT
+#   HasCardColor(Purple). → select_any_permanent (both players' fields) filtered
+#   { kind: tamer, not: { color_is: purple } } + suspend. Mandatory: no
+#   canNoSelect → optional: false. When no eligible Tamer exists the select
+#   simply does not fire (HasMatchConditionPermanent guard).
+# Clause 2 (OnTappedAnyone, OPT): gain 1 memory when an OPPONENT'S Tamer
+#   suspends. CanTriggerWhenPermanentSuspends gated on
+#   IsPermanentExistsOnOpponentBattleAreaTamer. → when: on_suspend +
+#   active_when { all_turns, event_target_kind: tamer, event_target_owner:
+#   opponent } + once_per_turn + gain_memory: 1.
+# Inherited (OnDestroyedAnyone): RetaliationSelfEffect(isInheritedEffect) →
+#   scope: inherited + grant_keyword Retaliation. (BT25-078 idiom.)
+
+card: BT25-081
+name: "Fangmon"
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 5000
+traits: [Dark Animal, BEATBREAK]
+
+effects:
+  # ─── [On Play][When Digivolving] Suspend 1 non-purple Tamer ────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Suspend 1 non-purple Tamer"
+    process:
+      - select_any_permanent:
+          bind_as: tamer_target
+          filter:
+            all_of:
+              - kind: tamer
+              - zone: [battle_area]
+              - is_suspended: false
+              - not: { color_is: purple }
+          prompt: "Suspend 1 non-purple Tamer"
+      - suspend: { target: tamer_target }
+
+  # ─── [All Turns][OPT] When an opponent's Tamer suspends → gain 1 memory ────
+  - when: on_suspend
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_kind: tamer
+        - event_target_owner: opponent
+    summary: "[All Turns][OPT] When any of your opponent's Tamers suspend, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── Inherited <Retaliation> ───────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation
+    summary: "Inherited <Retaliation>"

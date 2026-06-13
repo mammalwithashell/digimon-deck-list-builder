@@ -48,21 +48,15 @@
 #      `grant_effect_immunity` idiom, here with an unconditional `for_each`
 #      (no count cap) since the immunity is unconditional for every ally.
 #
-#      DIVERGENCE NOTE (snapshot vs continuous): DCGO's CanNotAffectedClass is a
-#      continuous UntilOpponentTurnEnd effect whose CardCondition re-evaluates
-#      each fire-time, so a Digimon played LATER this opponent's turn would also
-#      be covered. The DSL/engine `grant_effect_immunity` is a per-permanent
-#      modifier applied at fire-time (a snapshot of the current board). All your
-#      Digimon present when the [When Digivolving] resolves are protected; one
-#      played afterward this turn would not be. There is no continuous
-#      controlled-immunity-aura verb in the DSL today, so this snapshot is the
-#      faithful expression of the substrate. It is correct for judge-quiz Q28
-#      (the protected ally — Sistermon Ciel — is already on the board when
-#      Gankoomon X digivolves). The residual "future-played ally" edge is logged
-#      under qa/dsl-vocab-gaps.md G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA;
-#      every ally on the board at fire-time IS protected, so the protection is
-#      not auto-selected away — the no-approximations bar is met for the present
-#      board.
+#      DIVERGENCE NOTE — RESOLVED 2026-06-11 (judge-quiz Q28): the grant is
+#      now the CONTINUOUS `grant_effect_immunity` form
+#      (G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA) — a source-independent
+#      floating descriptor re-scanned every declarative tick, matching DCGO's
+#      CanNotAffectedClass re-evaluated CardCondition. A Digimon played LATER
+#      in the window (Q28: Sistermon Ciel, in the TRASH at grant time, played
+#      by Dragomon on the opponent's turn) IS covered. The earlier note here
+#      claimed the snapshot was "correct for Q28 (Ciel already on the board)"
+#      — that misread the quiz board.
 #
 #      `can_affect_permanent` interaction (Q28): a protected ally carries
 #      `CannotBeAffected` (opponent / Digimon). When the opponent plays Dragomon
@@ -142,25 +136,32 @@ effects:
       # G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY) so only genuine
       # digivolution sources qualify — matching DCGO's
       # `DigivolutionCards.Count(...)` (sources only, excludes the face card).
+      # CONTINUOUS form (G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA, resolved
+      # 2026-06-11 / judge-quiz Q28): "none of your Digimon are affected …"
+      # is a PERSISTENT field effect (DCGO CanNotAffectedClass with a
+      # re-evaluated CardCondition) — a Digimon played AFTER this resolves
+      # (Sistermon Ciel played from trash by Dragomon during the protected
+      # window) is covered too. The prior per-permanent for_each snapshot
+      # missed later entrants — and the Q28 board has Ciel in the TRASH at
+      # grant time, so the snapshot form was wrong for the quiz's own
+      # scenario (the earlier header note claiming Ciel was on board
+      # misread the board).
       - if:
           condition:
             any_of:
               - self_digivolution_sources_contain_name: "Gankoomon"
               - self_digivolution_sources_contain_name: "X Antibody"
           then:
-            - for_each:
-                over:
+            - grant_effect_immunity:
+                continuous: true
+                targets:
                   all_of:
                     - of: you
                     - zone: [battle_area]
                     - kind: digimon
-                bind_as: ally
-                body:
-                  - grant_effect_immunity:
-                      target: ally
-                      source_kind: digimon
-                      source_controller: opponent
-                      expiry: end_of_opponents_turn
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
 
   # ─── Clause 2 — [Opponent's Turn] grant Reboot to matching allies ────────────
   - kind: aura

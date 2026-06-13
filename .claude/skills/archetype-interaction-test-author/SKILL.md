@@ -26,6 +26,12 @@ trackers.
   another card's digivolve, a cost-reduction loop, a security-trigger chain).
 - You want a durable, reviewable model of how an archetype works as a system.
 
+Two saved workflows fan this skill out across archetypes — pick by intent:
+`author-archetype-combo-tests` (greenfield: author suites for archetypes that
+have none) and `audit-archetype-faithfulness` (audit: re-verify existing suites
+against card text / `general_rule.pdf` / DCGO, gap-fill untested top combos,
+and emit per-archetype faithfulness verdicts + a dated report).
+
 If cards are still missing/red, run `/assess-archetype-rust` then
 `/batch-implement-cards-rust-dsl` first — this skill will *report* what's missing
 (precondition gating, Phase 4) but won't author tests that can't pass.
@@ -150,8 +156,13 @@ For each surviving top-ranked combo, write a DebugRunner interaction test in
 (`dsl_builder`, `snapshot` / `BoardSnapshot`, `run_actions`) — see
 `tests/archetypes/rocks.rs` for the exemplar pattern. Each test:
 
-- exercises the **real cards** named in the model combo (load via `dsl_builder`;
-  synthetic `make_test_card` only for neutral targets/fillers a combo needs),
+- exercises **real implemented DSL cards for EVERY role** — not only the named
+  combo pieces but also fillers, neutral targets, opponents, and stack bases —
+  loaded by real card ID via `dsl_builder` / `dsl_card`. Synthetic
+  `make_test_card` is a **last resort**, allowed only when NO real implemented
+  DSL card can fill a role; when unavoidable, add a one-line comment naming the
+  role and why no real card fit. Prefer effectless / vanilla real DSL Digimon
+  for filler/target roles so their own effects don't perturb the assertion,
 - asserts the combo's **claimed mechanical outcome** (a before/after
   `BoardSnapshot` diff: cards deleted/drawn/milled, memory swing, DP window),
 - includes the **unhappy path** where useful (the combo breaks if an enabler is
@@ -219,6 +230,12 @@ when the MCP is absent.
 
 ## Guardrails
 
+- Real DSL cards for every role: load all bodies (combo pieces, fillers,
+  targets, opponents, stack bases) by real card ID via `dsl_builder`/`dsl_card`.
+  Synthetic `make_test_card` is a last resort only when no real implemented DSL
+  card fits — comment the role + reason when you must. A real card pulled in as
+  filler must be effectless/vanilla (or its effect accounted for) so it can't
+  silently change the asserted outcome.
 - Capstone only: assume cards implemented; never re-implement a card or author a
   per-card test here.
 - Model before tests; cite sources inline so review is concrete.

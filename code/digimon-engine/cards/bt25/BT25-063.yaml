@@ -1,0 +1,54 @@
+# BT25-063 Commandramon — Digimon, Lv.3, Black/Purple, DP 2000, Cost 3.
+# Traits: Cyborg, D-Brigade, ACCEL. Attribute: Virus.
+# [When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with
+# [Chaosmon] in its name or the [D-Brigade] or [ACCEL] trait among them to the
+# hand. Return the rest to the top or bottom of the deck.
+# Inherited [All Turns] This Digimon gets +1000 DP.
+# Alt-digivolve: [Missimon] (any level) / Cost 0; Lv.2 w/[ACCEL] trait / Cost 0.
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_063.cs
+card: BT25-063
+name: Commandramon
+kind: digimon
+level: 3
+color: [black, purple]
+cost: 3
+dp: 2000
+traits: [Cyborg, D-Brigade, ACCEL]
+attribute: Virus
+alt_paths:
+  # [Missimon] — any level material whose top card is named Missimon.
+  - kind: digivolve
+    from: { name_contains: Missimon }
+    cost: 0
+  # Lv.2 with [ACCEL] trait.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: ACCEL
+    cost: 0
+effects:
+  - when: [on_move, on_play]
+    summary: "[When Moving][On Play] Reveal 3; add 1 [Chaosmon]-name or [D-Brigade]/[ACCEL] card to hand; rest to top or bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - choose_from_reveal:
+          of: you
+          filter:
+            any_of:
+              - name_contains: Chaosmon
+              - trait_has: D-Brigade
+              - trait_has: ACCEL
+          destination: hand
+          bind_as: picked
+          prompt: "Add 1 card with [Chaosmon] in name or the [D-Brigade]/[ACCEL] trait to your hand"
+      - order_remainder:
+          of: you
+          destinations: [deck_top, deck_bottom]
+  # Inherited [All Turns] This Digimon gets +1000 DP.
+  - kind: aura
+    scope: inherited
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

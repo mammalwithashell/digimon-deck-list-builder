@@ -42,6 +42,52 @@ fn lv4_digimon(id: &str, dp: i32) -> CardData {
     c
 }
 
+/// A Lv.2 Digi-Egg (no DP) — used to exercise §17-1-3-2 (a DP-less card exposed
+/// as the live top of a battle-area permanent can't remain → trashed).
+fn digi_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = None;
+    c
+}
+
+/// §17-1-3-2 PROBE — a Digi-Egg exposed as the live top of a battle-area
+/// permanent (e.g. a Digimon stack de-digivolved/peeled down to its egg) cannot
+/// remain in the battle area and is TRASHED by the state-based rules-check —
+/// the whole permanent, not a deletion. This is the Q8 final step (Koromon
+/// Digi-Egg left exposed under a fully-peeled Greymon line). Independent of card
+/// authoring (synthetic egg).
+#[test]
+fn dp_less_digi_egg_top_trashed_by_rules_check() {
+    let mut r = DebugRunner::builder()
+        .add_card(digi_egg("EGG"))
+        .add_card(make_test_card("DECK", "Deck"))
+        .deck(0, &["DECK"; 5])
+        .memory(10)
+        .start();
+
+    // A lone Digi-Egg exposed as a battle-area permanent — the Q8 end state
+    // (Koromon left after the Greymon line above it is peeled away).
+    let _perm = r.place_field_stack(0, &["EGG"], false, r.game.turn_count);
+    assert_eq!(r.battle_area_size(0), 1, "precondition: the egg is staged");
+    let trash_before = r.game.player(0).trash.len();
+
+    // The post-effect rule-check boundary: the DP-less top can't remain.
+    r.game.drain_effect_queue();
+
+    assert_eq!(
+        r.battle_area_size(0),
+        0,
+        "§17-1-3-2: a Digi-Egg exposed as the live top can't remain → permanent trashed"
+    );
+    assert_eq!(
+        r.game.player(0).trash.len(),
+        trash_before + 1,
+        "the trashed Digi-Egg goes to trash"
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Cluster-B CORE RULE PROBE — ≤0-DP deletion via state-based rules-check
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,15 +134,16 @@ fn zero_dp_probe_reduced_digimon_deleted_after_effect_resolves() {
     let src = r.place_on_field(1, "SRC", None);
     let src_card = r.game.player(1).battle_area[0].top_card().handle();
 
-    // Simulate an opponent effect reducing VICTIM to -1000 DP, then resolving.
+    // Simulate an opponent effect reducing VICTIM to ≤0 DP, then resolving.
     {
         let mut ctx = EffectContext::new(&mut r.game, src_card, Some(src), 1);
         ctx.add_dp_modifier(victim, -4000, Expiry::Permanent);
     }
     assert_eq!(
         r.game.effective_dp(victim),
-        Some(-1000),
-        "precondition: VICTIM is at -1000 effective DP"
+        Some(0),
+        "precondition: VICTIM is at 0 effective DP (3000 − 4000, floored at 0 \
+         per rules 17-1-3-1 / DCGO Permanent.DP — judge-quiz Q24 floor)"
     );
 
     // The effect has resolved — drain the queue (the post-effect boundary).
@@ -667,8 +714,105 @@ fn q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play() {
 /// "all opponent Digimon -5000 until end of opp's next turn" effect. Logged as
 /// G-CONTINUOUS-MASS-DP-DEBUFF. The body below is the ready-to-unblock pin (it
 /// correctly FAILS today rather than false-passing on a healthy ShoeShoemon).
+/// Focused substrate pin for G-CONTINUOUS-MASS-DP-DEBUFF (isolated from Q14's
+/// rules-check chain): EX4-074's "[When Digivolving] all opponent Digimon -5000
+/// until end of opp's next turn" is CONTINUOUS — it debuffs both the opponent
+/// Digimon present at install AND one that ENTERS during the window, leaves the
+/// source's OWN Digimon untouched, and lifts at the right turn-end.
 #[test]
-#[ignore = "BLOCKED-PRIMITIVE: G-CONTINUOUS-MASS-DP-DEBUFF — EX4-074 mass -5000 is a one-time snapshot, not continuous; doesn't catch a later-played Digimon. Un-ignore when EX4-074 is re-authored continuous."]
+fn q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant() {
+    // High-DP synthetic Digimon so the -5000 keeps them positive (isolating the
+    // modifier application from the ≤0-DP deletion rule).
+    fn big_digimon(id: &str) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.colors = vec![digimon_engine::enums::CardColor::Red];
+        c.level = Some(6);
+        c.dp = Some(12000);
+        c
+    }
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX4-074")
+        .expect("EX4-074 ShineGreymon: Ruin Mode loads")
+        .add_card(big_digimon("OPP-EARLY")) // opponent Digimon present at install
+        .add_card(big_digimon("OPP-LATE")) // opponent Digimon that enters later
+        .add_card(big_digimon("OWN-CTRL")) // source-side Digimon (must stay 12000)
+        .add_card(make_test_card("FILLER", "Filler"))
+        // Decks so the turn rotation across two end_turns does not deck-out.
+        .deck(0, &["FILLER"; 20])
+        .deck(1, &["FILLER"; 20])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    // Player 0 (the start turn player) controls Ruin Mode (the debuff source) +
+    // an OWN control Digimon — matching the real scenario, where Ruin Mode
+    // digivolves on its controller's turn.
+    let ruin = r.place_on_field(0, "EX4-074", Some(0));
+    let own = r.place_on_field(0, "OWN-CTRL", Some(0));
+    // Player 1 (the OPPONENT of the source) has one Digimon up front.
+    let early = r.place_on_field(1, "OPP-EARLY", Some(0));
+    assert_eq!(r.turn_player(), 0, "Ruin Mode installs during its controller's turn");
+
+    // Fire Ruin Mode's [When Digivolving] → install the continuous mass debuff.
+    r.game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(ruin));
+    r.game.drain_effect_queue();
+    r.game.tick_declarative_effects();
+
+    assert_eq!(
+        r.game.effective_dp(early),
+        Some(7000),
+        "the opponent Digimon present at install gets -5000 (12000 → 7000)"
+    );
+    assert_eq!(
+        r.game.effective_dp(own),
+        Some(12000),
+        "the SOURCE's own Digimon is untouched ('your opponent's Digimon')"
+    );
+
+    // A NEW opponent Digimon ENTERS during the window → continuous effect catches it.
+    let late = r.place_on_field(1, "OPP-LATE", Some(0));
+    r.game.tick_declarative_effects();
+    assert_eq!(
+        r.game.effective_dp(late),
+        Some(7000),
+        "a later-entering opponent Digimon ALSO gets -5000 (continuous, not a \
+         one-time snapshot) — G-CONTINUOUS-MASS-DP-DEBUFF"
+    );
+
+    // Expiry: installed on the source's own turn (player 0), so "until the end of
+    // your opponent's next turn" = the end of player 1's upcoming turn. It must
+    // SURVIVE player 0's own turn-end and lift at player 1's turn-end.
+    r.end_turn(); // → player 0's turn ends → player 1's turn begins
+    r.game.tick_declarative_effects();
+    assert_eq!(
+        r.game.effective_dp(early),
+        Some(7000),
+        "the debuff survives the source's OWN turn-end (it expires at the end of \
+         the opponent's next turn, not the source's)"
+    );
+    r.end_turn(); // → end of player 1's (opponent's next) turn → debuff expires
+    r.game.tick_declarative_effects();
+    assert_eq!(
+        r.game.effective_dp(early),
+        Some(12000),
+        "the debuff lifts at the end of the opponent's next turn (back to 12000)"
+    );
+    assert!(
+        r.game.floating_mass_modifiers.is_empty(),
+        "the floating descriptor is pruned once expired"
+    );
+}
+
+/// RESOLVED 2026-06-02 (G-CONTINUOUS-MASS-DP-DEBUFF): EX4-074's mass debuff is
+/// now authored `continuous: true`, installing a source-independent floating
+/// mass modifier (`crate::floating_modifier`) re-applied to the live candidate
+/// set each tick — so the ShoeShoemon (P-165) Nyabootmon plays AFTER Ruin Mode
+/// resolved IS caught by the -5000 and sits at ≤0 DP when Nyabootmon's debuff
+/// counts it.
+#[test]
 fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {
     use digimon_engine::action::space::PASS;
 
@@ -702,14 +846,24 @@ fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {
     r.game
         .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(nya));
     r.game.drain_effect_queue();
+    // Drive the SINGLE judge-scenario resolution: accept the play-Puppet choice
+    // and the debuff-target pick, but DECLINE every optional re-activation
+    // (`SelectionKind::Replacement`). Nyabootmon's [On Any Deletion] clause "you
+    // MAY activate this Digimon's When Digivolving effect" re-offers the whole
+    // effect when the ≤0-DP ShoeShoemon is deleted; a player matching the judge
+    // ruling declines it (the ruling is about the FIRST debuff's count, not the
+    // recursion). Accepting it would double the debuff (−12000).
     let mut guard = 0;
     while let Some(view) = r.pending_selection_view() {
-        let pick = view
-            .valid_action_ids
-            .iter()
-            .copied()
-            .find(|&id| id != PASS)
-            .unwrap_or(PASS);
+        let pick = if view.kind == digimon_engine::selection::SelectionKind::Replacement {
+            PASS // decline the optional [On Any Deletion] re-activation
+        } else {
+            view.valid_action_ids
+                .iter()
+                .copied()
+                .find(|&id| id != PASS)
+                .unwrap_or(PASS)
+        };
         r.game.decode_action(pick, view.selecting_player);
         guard += 1;
         if guard > 12 {
@@ -734,28 +888,195 @@ fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {
         );
     }
 
-    r.auto_resolve().ok();
+    let _ = ruin_dp_before;
 
-    // Judge: -6000 — ShoeShoemon was counted despite being at ≤0 DP (not deleted
-    // until Nyabootmon resolved). Re-resolve Ruin Mode (it took the debuff but
-    // survives: 15000 - 6000 = 9000, minus its own already-applied state).
-    let ruin = r.game.players[1]
-        .battle_area
+    // Judge: −6000 — ShoeShoemon was counted despite being at ≤0 DP (it is not
+    // deleted until Nyabootmon's effect resolves). The ruling is about the
+    // DEBUFF'S COUNT, so we assert on the modifier Nyabootmon installed on Ruin
+    // Mode (each `ChangeDp` entry = −3000 × the Digimon counted): it must be
+    // −6000, i.e. count = 2 (Nyabootmon + the ≤0 ShoeShoemon).
+    //
+    // (The NET Ruin DP additionally reflects Nyabootmon's faithful, OPTIONAL
+    // `[On Any Deletion]` clause — "when any of your other Digimon are deleted,
+    // you may activate this Digimon's When Digivolving effect" — which re-offers
+    // the debuff once the ≤0 ShoeShoemon is deleted. The blanket selection
+    // driver above ACCEPTS that re-offer, so a SECOND application of
+    // −3000 × 1 (only Nyabootmon remains after ShoeShoemon's rules-check
+    // deletion) may follow the pinned first one. The ruling's pin is the
+    // FIRST application: −6000 = −3000 × 2.)
+    let ruin_dp_mods: Vec<i32> = r
+        .game
+        .modifiers
+        .get(ruin, digimon_engine::enums::ModifierType::ChangeDp)
         .iter()
-        .position(|p| p.top_card().card_id(&r.game.card_data) == "EX4-074")
-        .map(|i| PermanentHandle { player: 1, index: i as u8 })
-        .expect("Ruin Mode still on field");
+        .map(|e| e.value)
+        .collect();
     assert_eq!(
-        ruin_dp_before - r.game.effective_dp(ruin).expect("ruin DP after"),
-        6000,
-        "Nyabootmon's debuff must be -6000 — ShoeShoemon (at ≤0 DP) is still counted \
-         because it is not deleted until Nyabootmon's effect resolves"
+        ruin_dp_mods.first(),
+        Some(&-6000),
+        "Nyabootmon's debuff must be −6000 on its first application — count = 2 \
+         (Nyabootmon + the ≤0 ShoeShoemon, still counted because it is not \
+         deleted until the effect resolves). Got ChangeDp mods {ruin_dp_mods:?}"
     );
+    assert!(
+        ruin_dp_mods[1..].iter().all(|&v| v == -3000),
+        "any later application is the faithful [On Any Deletion] recursion \
+         after ShoeShoemon's deletion — count = 1 → −3000. Got {ruin_dp_mods:?}"
+    );
+
+    r.auto_resolve().ok();
 }
 
-/// Q24 — Hudiemon (BT23-101) <Alliance> Tentomon (BT23-037); Tentomon suspended →
-/// −4000 from Rapidmon X (BT16-101) → deleted by rules check before Kokomon
-/// (EX6-004) [Your Turn] contributes. Judge: Hudiemon DP 3000.
+/// Q24 — Hudiemon (BT23-101) `<Alliance>` Tentomon (BT23-037, carrying Kokomon
+/// EX6-004 inherited) vs Rapidmon (X Antibody) (BT16-101 over ST17-07).
+/// **Judge: Hudiemon's DP during the security check is 3000.**
+///
+/// Board (card-resolution.md Q24 / PDF p.54-55): Player A has Hudiemon (7000)
+/// and Tentomon (1000, EX6-004 in its digivolution cards). Player B has
+/// Rapidmon (X Antibody) with ST17-07 Rapidmon in its digivolution cards —
+/// its `[All Turns]` gives ALL of the opponent's SUSPENDED Digimon −4000 DP.
+/// Player A declares an attack at Player B with Hudiemon, declaring
+/// `<Alliance>` targeting Tentomon.
+///
+/// Judge rationale (quiz feedback):
+///   - Hudiemon suspends on declaration → −4000 → 7000−4000 = **3000**.
+///   - Tentomon suspends for Alliance → instantly −4000 → 1000−4000 ≤ 0 —
+///     DP floors at 0 (DCGO `Permanent.DP`), so Alliance adds **no DP**.
+///   - Kokomon's `[Your Turn][OPT]` "when an EFFECT suspends one of your
+///     Digimon" DOES trigger (an Alliance suspension is effect-initiated),
+///     but Tentomon is deleted by the rules check BEFORE the inherited
+///     effect has a chance to activate → no +2000.
+///   - Bonus tip: Hudiemon still gets the `<Security A. +1>` (2 checks).
+///
+/// DCGO: `CardEffectCommons/KeyWordEffects/Alliance.cs` (`AllianceProcess` —
+/// Tap THEN read `tapPermanent.DP`), `Permanent.cs` `DP` getter (floor 0),
+/// `EX6_004.cs` (`IsByEffect` gate).
 #[test]
-#[ignore = "BLOCKED-PRIMITIVE: needs EX6-004 (Kokomon), which is itself BLOCKED on G-SUSPEND-EFFECT-INITIATED (the suspend event carries no by_effect bit, so Kokomon's 'when an EFFECT suspends' clause is un-gatable). Other cards (BT23-101, BT23-037, BT16-101, ST17-07) implemented."]
-fn q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger() {}
+fn q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger() {
+    use digimon_engine::action::space::encode_attack;
+    use digimon_engine::enums::ModifierType;
+
+    fn security_filler(id: &str) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(3);
+        c.dp = Some(1000); // weaker than Hudiemon's 3000 → checks resolve through
+        c
+    }
+
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT23-101")
+        .expect("BT23-101 Hudiemon loads")
+        .dsl_card("BT23-037")
+        .expect("BT23-037 Tentomon loads")
+        .dsl_card("EX6-004")
+        .expect("EX6-004 Kokomon loads")
+        .dsl_card("BT16-101")
+        .expect("BT16-101 Rapidmon (X Antibody) loads")
+        .dsl_card("ST17-07")
+        .expect("ST17-07 Rapidmon loads")
+        .add_card(security_filler("SEC"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(0, &["FILLER"; 10])
+        .deck(1, &["FILLER"; 10])
+        .security(1, &["SEC", "SEC", "SEC"])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    assert_eq!(r.turn_player(), 0, "Player A's turn");
+
+    // Player A: Hudiemon + Tentomon (Kokomon as its digivolution source).
+    let hudiemon = r.place_on_field(0, "BT23-101", Some(0));
+    let tentomon = r.place_stack(0, &["EX6-004", "BT23-037"]);
+    // Player B: Rapidmon (X Antibody) over ST17-07 Rapidmon (the [Rapidmon]
+    // digivolution source gates the −4000 suspended-Digimon aura ON).
+    let rapidmon_x = r.place_stack(1, &["ST17-07", "BT16-101"]);
+    r.game.tick_declarative_effects();
+
+    // Pre-attack sanity: nobody suspended yet → no −4000 applied.
+    assert_eq!(r.effective_dp(hudiemon), Some(7000));
+    assert_eq!(r.effective_dp(tentomon), Some(1000));
+    assert_eq!(r.effective_dp(rapidmon_x), Some(11000));
+
+    // Player A declares the attack at Player B → Hudiemon suspends (game
+    // rule, NOT an effect) → −4000 catches it. The Alliance window opens.
+    r.attack_player(hudiemon, 1, false);
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("<Alliance> window installs a selection for the attacker");
+    assert_eq!(sel.selecting_player, 0);
+    let ally_action = encode_attack(0, tentomon.index as u16);
+    assert!(
+        sel.valid_action_ids.contains(&ally_action),
+        "Tentomon must be a declarable Alliance ally (got {:?})",
+        sel.valid_action_ids
+    );
+
+    // Declare Alliance on Tentomon.
+    r.game
+        .resolve_selection(0, ally_action)
+        .expect("declare Alliance on Tentomon");
+
+    // ── Judge assertions ────────────────────────────────────────────────
+    // Tentomon was suspended by the Alliance EFFECT → −4000 → ≤0 DP →
+    // deleted by the rules check. Kokomon's trigger fired but its carrier
+    // left the battle area before the inherited effect could activate.
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "Tentomon (≤0 DP once suspended) is deleted by the rules check"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area[hudiemon.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "BT23-101",
+        "Hudiemon survives"
+    );
+    assert!(
+        r.game.pending_selection.is_none()
+            || r.game.pending_selection.as_ref().is_some_and(|s| {
+                !s.prompt.contains("+2000")
+            }),
+        "Kokomon's +2000 selection must NOT surface (its carrier was deleted \
+         by the rules check before the inherited effect activated)"
+    );
+
+    // Alliance added NO DP (Tentomon's DP floored at 0 / carrier deleted) and
+    // Kokomon's +2000 never landed → Hudiemon carries no POSITIVE DP delta;
+    // its only delta is the −4000 suspended-Digimon aura (materialized as a
+    // ticked ChangeDp modifier): 7000 − 4000 = 3000.
+    let positive_dp: Vec<i32> = r
+        .game
+        .modifiers
+        .get(hudiemon, ModifierType::ChangeDp)
+        .iter()
+        .map(|e| e.value)
+        .filter(|v| *v > 0)
+        .collect();
+    assert!(
+        positive_dp.is_empty(),
+        "Alliance grants +0 DP (ally floored to 0) and Kokomon's +2000 never \
+         lands — no positive ChangeDp entry may exist (got {positive_dp:?})"
+    );
+    assert_eq!(
+        r.effective_dp(hudiemon),
+        Some(3000),
+        "judge answer: Hudiemon is at 3000 DP during the security check"
+    );
+
+    // Bonus tip: the <Security A. +1> from Alliance was retained even though
+    // no DP was added — the attack ran to completion inside the Alliance
+    // resolution (no counter/block candidates), performing TWO security
+    // checks (base 1 + Alliance +1), each vs a 1000-DP security Digimon
+    // that 3000-DP Hudiemon beats. (The EndOfAttack modifiers themselves
+    // are already expired by now, so the security count is the pin.)
+    let _ = r.auto_resolve();
+    assert_eq!(
+        r.security_count(1),
+        1,
+        "two security checks performed (Sec.A. base 1 + Alliance +1) → 3 − 2 = 1"
+    );
+}

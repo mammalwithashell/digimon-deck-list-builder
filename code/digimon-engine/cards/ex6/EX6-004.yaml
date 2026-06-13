@@ -1,0 +1,56 @@
+# EX6-004 Kokomon — Digi-Egg (In-Training), Lv.2, Green, Cost 0, no DP.
+# Traits: Lesser.
+#
+# Printed card text (card image — verified) — INHERITED ONLY:
+#   Inherited: [Your Turn] [Once Per Turn] When an effect suspends one of
+#   your Digimon, 1 of your Digimon gets +2000 DP for the turn.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX6/EX6_004.cs
+#   - OnTappedAnyone, IsInheritedEffect, IsOwnerTurn, maxUsableCount: 1,
+#     gated `CardEffectCommons.IsByEffect(hashtable, null)` — the suspension
+#     must come from an EFFECT (attack-declaration / cost suspends do not
+#     qualify). Body: SelectPermanentEffect over own battle-area Digimon,
+#     canNoSelect: false (MANDATORY pick), → ChangeDigimonDP +2000
+#     UntilEachTurnEnd. isOptional: false (no "may").
+#
+# The "by an effect" gate is `event_is_effect_initiated: true`, fed by the
+# suspend event's `effect_initiated` bit (G-SUSPEND-EFFECT-INITIATED):
+# `EffectContext::suspend` (incl. keyword effects like <Alliance>) tags
+# `true`; attack/blocker declarations and digivolve-cost suspends tag `false`.
+#
+# Judge-quiz consumer: Q24 — Hudiemon <Alliance> suspends Tentomon carrying
+# this egg; the trigger fires but Tentomon dies to the 0-DP rules check
+# before the inherited effect activates.
+#
+# Single inherited clause; no main-deck effect; egg has no DP. Sibling of
+# BT21-004 (same [Your Turn][OPT] on_suspend digi-egg shape).
+
+card: EX6-004
+name: Kokomon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true
+    summary: "[Your Turn][Once Per Turn] When an effect suspends one of your Digimon, 1 of your Digimon gets +2000 DP for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: buff_target
+          filter: { kind: digimon }
+          prompt: "Select 1 Digimon that will get DP +2000."
+      - add_dp_modifier:
+          target: buff_target
+          value: 2000
+          expiry: end_of_turn

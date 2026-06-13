@@ -1,0 +1,66 @@
+# BT25-045 Onmon — Digimon, Lv.3, Green, DP 2000, Cost 3.
+# Trait line: Online (App Name) — Appmon.
+#
+# Card image (authoritative printed text) + DCGO BT25_045.cs:
+#   [Digivolve] Lv.2 w/[Appmon] trait: Cost 0
+#       → alt_paths digivolve from { level_eq: 2, trait_has: Appmon } cost 0.
+#   [Your Turn][Once Per Turn] When a [Social],[Tool] or [Game] trait card would
+#     link to this Digimon, you may reduce the cost by 1.
+#       → face-up when_would_link_to_this reducer (Gap 5), optional + OPT,
+#         trait gate Social/Tool/Game, your-turn gate.
+#   [Link] [Appmon] trait: Cost 1
+#       → kind: link_condition, cost 1, host filter trait_has Appmon.
+#   [When Linking] Suspend 1 of your opponent's Digimon.
+#       → scope: linked, when: when_linked, select_opponent_permanent (Digimon)
+#         + suspend. (DCGO `WhenLinked`, SetIsLinkedEffect(true). cards.json
+#         slots this lower-box clause as "inherited"; it is the linked effect.)
+#
+# ─── Re-adjudication 2026-06-07 (prior verdict: BLOCKED engine / facet #10) ───
+# The face-up host-filtered optional WhenWouldLink reducer (Gap 5) has LANDED —
+# `when: when_would_link_to_this` + `active_when.would_link_card_trait_any_of` +
+# `reduce_link_cost`. Combined with the already-shipped Shape-B link-condition /
+# when_linked vocabulary, every printed clause is now faithful (no omissions),
+# so the card is UNBLOCKED.
+
+card: BT25-045
+name: Onmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Online, Appmon]
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 1 ─────────────
+  - kind: link_condition
+    cost: 1
+    filter: { trait_has: Appmon }
+
+  # ─── [Your Turn][OPT] face-up host-side link-cost reducer ──────────────────
+  - when: when_would_link_to_this
+    optional: true
+    once_per_turn: true
+    active_when:
+      your_turn: true
+      would_link_card_trait_any_of: [Social, Tool, Game]
+    summary: "[Your Turn][OPT] When a [Social]/[Tool]/[Game] card would link to this Digimon, you may reduce the cost by 1"
+    process:
+      - reduce_link_cost: { amount: 1 }
+
+  # ─── [When Linking] suspend 1 opp Digimon ──────────────────────────────────
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Suspend 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          filter: { kind: digimon }
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: suspend_target }

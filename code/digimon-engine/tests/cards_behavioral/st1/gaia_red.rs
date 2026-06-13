@@ -109,6 +109,38 @@ fn st1_06_has_blocker_and_when_attacking_loses_two_memory() {
 }
 
 #[test]
+fn st1_06_when_attacking_into_negative_memory_ends_the_turn() {
+    // [When Attacking] Lose 2 memory. With only 1 memory, the loss pushes the
+    // counter to -1 — i.e. onto the opponent's side. With no further pending
+    // effects, crossing memory below zero must end the active player's turn and
+    // pass the turn to the opponent (the seesaw flips: -1 for P0 → +1 for P1).
+    // Give P1 a security card so the direct attack resolves (trashes security)
+    // rather than ending the game, and a deck so P1's start-of-turn draw does
+    // not deck them out — we want to observe the turn passing.
+    let mut runner = st1_builder()
+        .memory(1)
+        .security(1, &["ST1-02"])
+        .deck(1, &["ST1-02", "ST1-02", "ST1-02"])
+        .start();
+    let coredramon = runner.place_on_field(0, "ST1-06", Some(0));
+    assert_eq!(runner.turn_player(), 0, "player 0 starts as the active player");
+
+    runner.attack_player(coredramon, 1, false);
+
+    assert!(!runner.game_over(), "P1 still has security, so the game continues");
+    assert_eq!(
+        runner.turn_player(),
+        1,
+        "memory crossed below 0 with no pending effects, so the turn passes to P1"
+    );
+    assert_eq!(
+        runner.memory(),
+        1,
+        "the -1 memory seesaws to +1 from the new active player's perspective"
+    );
+}
+
+#[test]
 fn st1_09_inherited_on_block_gains_three_memory_for_blocked_carrier() {
     let mut runner = st1_builder().memory(0).start();
     let attacker = runner.place_stack(0, &["ST1-09", "ST1-11"]);

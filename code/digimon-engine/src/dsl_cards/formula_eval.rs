@@ -158,6 +158,19 @@ pub fn evaluate_with_bindings(
             .and_then(|handle| target_permanent(ctx, handle))
             .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
             .unwrap_or(0),
+        // Level of the trigger's event card (the just-played Digimon for
+        // on_any_digimon_played). 0 when no trigger context / no level —
+        // comparisons against it then match nothing.
+        // G-EVENT-PLAYED-LEVEL-FORMULA (EX5-060, Q28).
+        CompiledFormula::EventTargetLevel => ctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_card)
+            .and_then(|h| ctx.game.card_data_for_handle(h))
+            .and_then(|cd| cd.level)
+            .map(|l| l as i32)
+            .unwrap_or(0),
         CompiledFormula::SourceColorCount => ctx
             .source_permanent
             .and_then(|handle| target_permanent(ctx, handle))
@@ -317,6 +330,16 @@ fn evaluate_read_with_raw_and_bindings(
             .and_then(|handle| target_permanent_read(ctx, handle))
             .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
             .unwrap_or(0),
+        // See the mutable-ctx arm — G-EVENT-PLAYED-LEVEL-FORMULA.
+        CompiledFormula::EventTargetLevel => ctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_card)
+            .and_then(|h| ctx.game.card_data_for_handle(h))
+            .and_then(|cd| cd.level)
+            .map(|l| l as i32)
+            .unwrap_or(0),
         CompiledFormula::SourceColorCount => ctx
             .source_permanent
             .and_then(|handle| target_permanent_read(ctx, handle))
@@ -440,6 +463,10 @@ fn evaluate_per(
                 .collect::<HashSet<_>>()
                 .len() as i32
         }
+        CompiledPerSelector::SourceStackCountFiltered { filter } => {
+            let read = ctx.as_read();
+            source_stack_count_filtered(filter.as_deref(), &read, bindings)
+        }
     }
 }
 
@@ -523,7 +550,42 @@ fn evaluate_per_read(
                 .collect::<HashSet<_>>()
                 .len() as i32
         }
+        CompiledPerSelector::SourceStackCountFiltered { filter } => {
+            source_stack_count_filtered(filter.as_deref(), ctx, bindings)
+        }
     }
+}
+
+/// Count the effect carrier's own digivolution sources (the cards beneath its
+/// top card) that match `filter`. Mirrors the top-level `source_stack_count`
+/// FormulaSpec but resolves the carrier (`ctx.source_permanent`) directly and
+/// is usable as a `per` selector inside `BasePerDelta`.
+fn source_stack_count_filtered(
+    filter: Option<&CompiledPredicate>,
+    ctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    let Some(handle) = ctx.source_permanent else {
+        return 0;
+    };
+    let Some(perm) = target_permanent_read(ctx, handle) else {
+        return 0;
+    };
+    perm.card_sources
+        .iter()
+        .rev()
+        .skip(1)
+        .filter(|source| {
+            filter.is_none_or(|filter| {
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::Card(source.handle()),
+                    bindings,
+                )
+            })
+        })
+        .count() as i32
 }
 
 fn target_permanent<'a>(

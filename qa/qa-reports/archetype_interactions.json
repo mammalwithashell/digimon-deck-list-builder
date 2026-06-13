@@ -1,34 +1,593 @@
 {
   "archetypes": {
+    "BEATBREAK / Glowing Dawn (BT25)": {
+      "cards": [
+        "BT25-003",
+        "BT25-032",
+        "BT25-046",
+        "BT25-079",
+        "BT25-035",
+        "BT25-049",
+        "BT25-081",
+        "BT25-041",
+        "BT25-057",
+        "BT25-088",
+        "BT25-090"
+      ],
+      "combos_blocked_on_engine_bug": [
+        {
+          "blocked_on": "GAP-BT25-003-HAND-COND",
+          "combo": "B1: Frimon -> Liollmon security-trash tempo digivolve (and Liollmon [On Play] reveal does NOT fire on a digivolve)",
+          "reason": "Frimon inherited [When Attacking] clause is dead: any_permanent{zone:[hand]} can never match; test authored + #[ignore]d as the correct-behavior assertion; regression sentinel + egg control are green"
+        },
+        {
+          "blocked_on": "GAP-BT25-003-HAND-COND",
+          "combo": "B2: Frimon trait-only picker over-offers colour-illegal green Gekkomon; digivolve substrate rejects on evo colour",
+          "reason": "unreachable while Frimon clause is dead (picker never opens); #[ignore]d, re-enable with B1"
+        }
+      ],
+      "combos_dropped_blocked_on_unimplemented": [
+        {
+          "blocked_on": "BT25-035",
+          "combo": "Frimon/Liollmon -> Cougarmon free-digivolve -3000 DP"
+        },
+        {
+          "blocked_on": "BT25-041",
+          "combo": "Murasamemon <Alliance> + play a Glowing Dawn at -3"
+        },
+        {
+          "blocked_on": "BT25-049/057/090",
+          "combo": "Tomoro Tenma banks face-downs -> Armalizamon/Monarchlizamon spend them"
+        },
+        {
+          "blocked_on": "BT25-081",
+          "combo": "Fangmon punishes opp-Tamer suspends for memory under Hyemon floodgate"
+        },
+        {
+          "blocked_on": "BT25-088",
+          "combo": "Kyo Sawashiro [Security] free-play tempo"
+        },
+        {
+          "blocked_on": "no implemented slice Tamer with a memory-gain effect",
+          "combo": "Hyemon floodgate vs a Tamer-SOURCED gain (allowed half of B3)"
+        }
+      ],
+      "combos_tested": [
+        "B3 (live): Hyemon floodgate blocks a non-Tamer effect memory gain for both players (control: gain succeeds without Hyemon)"
+      ],
+      "cross_set_partner_used": [
+        "TEST-001 (engine worked-example +1 memory probe; not a real card)",
+        "BT10-003 Pickmons (already implemented; egg inherited-WA control, not pulled)"
+      ],
+      "cross_set_pulled": [],
+      "findings": [
+        {
+          "card": "BT25-003",
+          "id": "GAP-BT25-003-HAND-COND",
+          "kind": "card_faithfulness",
+          "routed_to": "qa/archetype-qa/engine-gaps.md",
+          "summary": "Frimon inherited clause never fires: any_permanent{zone:[hand]} scans battle-area only (existential_any); fix to count_gte{zone:[hand]} idiom (cf BT24-035)."
+        }
+      ],
+      "implemented_cards": [
+        "BT25-003",
+        "BT25-032",
+        "BT25-046",
+        "BT25-079"
+      ],
+      "model_doc": "qa/archetype-qa/beatbreak-model.md",
+      "slice": "BT25 beatbreak / Glowing Dawn slice (--cards list)",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "combos_total": 3,
+            "piece_blocked": 0
+          },
+          "detail": "all 3 ranked combos (B1/B2/B3) name only implemented cards; B1/B2 then blocked at runtime by GAP-BT25-003-HAND-COND (engine bug, not a missing card)",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "blocked": [
+              "BT25-035",
+              "BT25-041",
+              "BT25-049",
+              "BT25-057",
+              "BT25-081",
+              "BT25-088",
+              "BT25-090"
+            ],
+            "implemented": 4,
+            "total": 11
+          },
+          "detail": "slice coverage 4/11 implemented (BT25-003/032/046/079); 7 BLOCKED (no YAML, empty per-card test stubs): BT25-035/041/049/057/081/088/090",
+          "passed": false
+        },
+        "deck_legality": {
+          "detail": "not_applicable: beatbreak is a --cards slice, not a deck_library archetype (archetype-static-tests CLI errors: archetype not in deck_library.json)",
+          "passed": null
+        },
+        "smoke_games": {
+          "detail": "not_applicable: same reason as deck_legality",
+          "passed": null
+        }
+      },
+      "test_count_ignored": 2,
+      "test_count_live": 4,
+      "test_file": "code/digimon-engine/tests/archetypes/beatbreak_bt25.rs"
+    },
+    "BG Imperial": {
+      "audit_report": "qa/qa-reports/2026-06-10-archetype-faithfulness-audit.md",
+      "combos_tested": [
+        {
+          "combo": "DNA Bounce (ST9-05)",
+          "note": "Real DNA digivolve (EX1-014 + ST9-09) installs OppField selection; opp_field -1, opp_deck up; regular-digivolve control fires nothing. Matches DCGO ST9_05.cs (IsJogress gate, PutLibraryBottom, DP<=6000) + YAML on_dna_digivolve/return_to_deck bottom + general_rule.pdf §8-2. Minor: deck delta asserted > not ==+1; bounce target synthetic.",
+          "status": "PASS",
+          "tests": [
+            "dna_bounce_real_exveemon_stingmon_returns_low_dp_opponent",
+            "regular_digivolve_into_paildramon_does_not_fire_dna_bounce"
+          ]
+        },
+        {
+          "combo": "DNA Lockdown (BT16-025)",
+          "note": "DNA path: suspend + ModifierType::CannotUnsuspend; regular path: suspend without lock. Matches DCGO BT16_025.cs (DigivolutionCards.Count <= source count; IsJogress -> GainCanNotUnsuspend, UntilOpponentTurnEnd) + YAML materials_count_lte. Minor gap: count-gate negative case (opp with MORE sources NOT suspended) untested.",
+          "status": "PASS",
+          "tests": [
+            "dna_lockdown_suspends_and_locks_opponent",
+            "regular_digivolve_into_meta_paildramon_suspends_but_does_not_lock"
+          ]
+        },
+        {
+          "combo": "Colour-Gated Source Replay (ST9-06)",
+          "note": "Real place_stack (EX1-014 + ST9-09 + ST9-05 + ST9-06); optional accepted, two colour picks; field +2 both colours / +1 without green — stacked sources are the only legal Blue/Green Lv<=4 candidates. Matches DCGO ST9_06.cs (two SelectCardEffect passes, PlayPermanentCards payCost:false) + YAML dual select_own_sources + play_selected_sources_free.",
+          "status": "PASS",
+          "tests": [
+            "colour_source_replay_with_blue_and_green_sources_replays_both",
+            "colour_source_replay_without_green_source_replays_only_blue"
+          ]
+        },
+        {
+          "combo": "Evolution-cost & colour gate (alt-paths)",
+          "note": "Pins compiled alt_paths: ST9-05 DNA = exactly {Blue Lv.4}+{Green Lv.4} at cost 0 (standard 4); ST9-06 standard from Blue Lv.5 at cost 4. Matches YAML alt_paths + DCGO JogressCondition(elements, 0) + cards.json evo_costs; general_rule.pdf §8-2-1/§8-1-3-2. Minor: ST9-05 standard-path from-colour not asserted (cost is).",
+          "status": "PASS",
+          "tests": [
+            "paildramon_st9_05_dna_alt_path_requires_blue_lv4_and_green_lv4_at_cost_0",
+            "imperialdramon_dm_st9_06_standard_digivolve_is_blue_lv5_cost_4"
+          ]
+        },
+        {
+          "combo": "Digivolution colour gate (rookie/champion legs)",
+          "note": "Exercises real Game::can_digivolve colour/level gate (rejection + acceptance + dual-colour evo requirements) per general_rule.pdf §8-1-3-1/§2-3-6. Synthetic cards encode REAL printed evo_costs (DSL-loaded CardData has empty evo_costs — documented harness limitation, not an engine bug).",
+          "status": "PASS",
+          "tests": [
+            "veemon_digivolves_over_blue_egg",
+            "wormmon_cannot_digivolve_over_blue_egg",
+            "wormmon_digivolves_over_green_egg",
+            "single_colour_exveemon_takes_blue_lv3_not_green",
+            "single_colour_stingmon_takes_green_lv3_not_blue",
+            "dual_colour_exveemon_and_stingmon_accept_the_off_colour_lv3"
+          ]
+        },
+        {
+          "combo": "Effect descriptions bubble to the UI (ST9-05 / ST9-06)",
+          "note": "Combo 1 unconditionally asserts the DNA-bounce prompt contains '6000' + 'bottom' (rule 17, matches YAML prompts / DCGO SetUpCustomMessage). Minor: Combo 3's blue/green prompt assert is wrapped in `if let Some(view)` and can pass vacuously — should be unconditional.",
+          "status": "PASS",
+          "tests": [
+            "dna_bounce_real_exveemon_stingmon_returns_low_dp_opponent",
+            "colour_source_replay_with_blue_and_green_sources_replays_both"
+          ]
+        }
+      ],
+      "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/bg_imperial.rs",
+      "model_doc": "qa/archetype-qa/bg-imperial-model.md",
+      "result": "Faithfulness audit 2026-06-10: 6/6 combos faithful vs card text + general_rule.pdf + DCGO; suite 14/14 pass; 0 findings; 4 minor test-quality issues noted in the audit report (assertion tightening, synthetic neutral targets).",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 6
+          },
+          "detail": "all 6 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "BT23-047"
+            ],
+            "implemented": 34,
+            "ratio": 0.40476190476190477,
+            "threshold": 0.85,
+            "total": 84,
+            "unknown_cards": [
+              "BT8-053",
+              "BT16-021",
+              "EX7-023",
+              "LM-036",
+              "BT8-099",
+              "LM-028",
+              "BT16-092",
+              "BT16-002",
+              "BT21-032",
+              "ST17-13",
+              "BT12-055",
+              "BT16-102",
+              "P-118",
+              "BT12-030",
+              "BT17-084",
+              "BT8-088",
+              "ST9-14",
+              "BT3-021",
+              "EX7-015",
+              "AD1-011",
+              "AD1-024",
+              "LM-056",
+              "BT12-024",
+              "ST9-04",
+              "BT16-017",
+              "BT5-086",
+              "BT16-004",
+              "EX2-072",
+              "BT16-018",
+              "EX1-019",
+              "EX2-068",
+              "P-109",
+              "BT5-088",
+              "BT14-026",
+              "BT16-077",
+              "BT16-046",
+              "BT8-084",
+              "BT16-041",
+              "ST17-01",
+              "P-110",
+              "EX1-066",
+              "P-036",
+              "ST8-01",
+              "P-124",
+              "BT3-104",
+              "BT12-057",
+              "BT12-090",
+              "BT14-002",
+              "BT21-036"
+            ]
+          },
+          "detail": "coverage 34/84 = 40% (threshold 85%); 1 failing, 49 unknown",
+          "passed": false
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 5,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "test_count": 14,
+      "updated": "2026-06-10",
+      "verdict": "FAITHFUL"
+    },
+    "Callismon / Dark Animal (BT25)": {
+      "cards": [
+        "BT25-082",
+        "BT25-058",
+        "BT25-095"
+      ],
+      "combos_dropped": [
+        {
+          "blocked_on": null,
+          "combo": "BlackGatomon -> Callismon digivolve line",
+          "reason": "no legal in-slice line: Callismon is TS (not Three Musketeers) and Lv.6; BlackGatomon is Lv.4 — neither into-path nor Lv.5-TS alt-source connects them"
+        },
+        {
+          "blocked_on": null,
+          "combo": "PC inherited [Security] free-play -> Callismon observer",
+          "reason": "redundant with C2: the security-effect play is also effect-initiated and would fire the same observer; C2 already pins the effect-init path + normal-play control"
+        },
+        {
+          "blocked_on": null,
+          "combo": "Callismon OP/WD/WA suspend-lock interactions",
+          "reason": "single-card behavior fully covered by per-card test bt25_058.rs Section 3; no second slice card feeds it"
+        }
+      ],
+      "combos_tested": [
+        "C1 Paradise Colosseum security aura buffs the real Callismon (+2000 DP & self-gated Rush)",
+        "C2 Paradise Colosseum [Main] effect-play fires Callismon [All Turns] De-Digivolve observer (+ normal-play control)",
+        "C3 BlackGatomon [On Play] Tamer-anchor unlocks its own [All Turns] TM-trait into-path (+ no-Tamer control)"
+      ],
+      "cross_set_partner_used": [
+        "none — all cross-set / neutral pieces (TM-text Tamer, TM-trait Digimon, red/green TS Digimon, opponent stack) are synthetic fixtures; no cross-set card implementation pulled (lazy closure)"
+      ],
+      "cross_set_pulled": [],
+      "findings": [],
+      "model_doc": "qa/archetype-qa/callismon-dark-animal-model.md",
+      "result": "all 6 interaction tests pass; no findings filed (engine faithful for the slice)",
+      "slice": "BT25 Callismon / Dark Animal slice (author-set)",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 3
+          },
+          "detail": "all 3 authored combos have every named slice piece implemented; cross-card pieces are synthetic fixtures",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "blocked": [],
+            "implemented": 3,
+            "total": 3
+          },
+          "detail": "slice coverage 3/3 implemented (BT25-082, BT25-058, BT25-095) — all load into the embedded DSL pack and per-card behavioral suites pass",
+          "passed": true
+        },
+        "deck_legality": {
+          "detail": "not_applicable: BT25 Callismon/Dark Animal slice is a --cards list, not a deck_library archetype; archetype-static-tests CLI errors (archetype not in deck_library.json)",
+          "passed": null
+        },
+        "smoke_games": {
+          "detail": "not_applicable: same reason as deck_legality",
+          "passed": null
+        }
+      },
+      "test_count": 6,
+      "test_file": "code/digimon-engine/tests/archetypes/callismon_dark_animal_bt25.rs"
+    },
+    "DNA Omnimon": {
+      "combos_tested": [
+        "DNA Omnimon Alter-S blowout (Blue6 + Red6 -> EX9-021)",
+        "Miraculous Mega Knight Delay -> reactive DNA Omnimon (Option)",
+        "Blast DNA Omnimon off opponent's turn (BT17-078 Counter)",
+        "Free cross-tribe Lv.6 assembly (both DNA materials in one turn)",
+        "Nokia accel into cheap Lv.6 (BT22-013 cost-6 jump)"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "AD1-004"
+            ],
+            "implemented": 66,
+            "ratio": 0.673469387755102,
+            "threshold": 0.85,
+            "total": 98,
+            "unknown_cards": [
+              "ST20-14",
+              "LM-033",
+              "LM-049",
+              "EX4-051",
+              "EX1-066",
+              "LM-053",
+              "BT13-065",
+              "ST20-01",
+              "ST20-07",
+              "AD1-022",
+              "ST20-02",
+              "ST21-07",
+              "BT17-012",
+              "EX5-018",
+              "EX9-020",
+              "BT9-024",
+              "BT9-020",
+              "BT17-028",
+              "BT15-083",
+              "BT11-002",
+              "P-104",
+              "LM-028",
+              "P-036",
+              "BT15-024",
+              "EX9-014",
+              "BT14-014",
+              "P-073",
+              "ST21-08",
+              "ST20-13",
+              "ST20-03",
+              "ST21-01"
+            ]
+          },
+          "detail": "coverage 66/98 = 67% (threshold 85%); 1 failing, 31 unknown",
+          "passed": false
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-03"
+    },
+    "Gaogamon / Beast (BT25)": {
+      "cards": [
+        "BT25-008",
+        "BT25-009",
+        "BT25-021",
+        "BT25-048",
+        "BT25-012",
+        "BT25-013",
+        "BT25-023",
+        "BT25-051"
+      ],
+      "combos_dropped": [
+        {
+          "blocked_on": null,
+          "combo": "C8 Gaomon (BT25-021) reveal-3 two-bucket dig (Thomas/DATA SQUAD + Gaogamon-named)",
+          "reason": "fully covered by per-card bt25_021 tests; no cross-card surface beyond feeding C9, which is authored directly"
+        },
+        {
+          "blocked_on": null,
+          "combo": "BT25-021/023 inherited both-players-draw on attack",
+          "reason": "single-clause inherited, per-card-covered (bt25_021/bt25_023); no cross-card interaction"
+        },
+        {
+          "blocked_on": null,
+          "combo": "BT25-008 Coronamon trash-up-to-2 [Iliad]/[TS] -> draw-per",
+          "reason": "single-card hand-trash-for-draw, per-card-covered (bt25_008); no cross-card surface"
+        }
+      ],
+      "combos_tested": [
+        "C1 Bearmon (BT25-009) SOMP free-digivolve INTO the real Grizzlymon (BT25-012) payoff -> the payoff’s [When Digivolving] Raid+3000 grant chains off the SOMP digivolve event (engine->payoff bridge)",
+        "C2 Bearmon SOMP negative gating: >4 memory closes the bridge even with the payoff in hand (unhappy path)",
+        "C3 BT25-048 Bearmon [Your Turn] -1 cost is base-scoped: a [TS] result off BT25-048 costs printed-1, the SAME result off a different base (BT25-048 idle) pays full cost",
+        "C4 BT25-012 Grizzlymon grant: chosen beast ally gains <Raid> + exactly +3000 DP, expiring at end of turn",
+        "C5 BT25-051 Grizzlymon grant: +3000 DP PERSISTS into the opponent’s turn (cross-turn expiry, distinguishing the two printings); 051 self-grants <Blocker>",
+        "C6 BT25-013 Firamon [Your Turn] blue-entry observer arms a free(-1) digivolve into [Flaremon]; a red (non-blue) entry does NOT arm it (colour gate, happy+unhappy)",
+        "C7 BT25-013 Firamon [On Play] trash-1 recovers a red [Iliad] from trash; a green [Iliad] is not a legal recovery target (colour gate, happy+unhappy)",
+        "C9 BT25-023 Gaogamon free-plays a Thomas H. Norstein when <=1 Tamers (no memory paid); with >=2 Tamers down the ramp does NOT offer (Tamer-count gate, happy+unhappy)"
+      ],
+      "cross_set_partner_used": [
+        "Thomas H. Norstein (C9): synthetic NAME-ONLY Tamer; BT25-023 only matches the name and plays it free, Thomas’s printed effect never fires -> real card (BT25-087/BT4-093) NOT pulled (lazy closure)",
+        "Flaremon (C6): synthetic NAME-ONLY Lv.5 digivolve target; BT25-013 only needs to OFFER the digivolve into a hand card named Flaremon, the target’s printed effect never fires -> BT25-017 NOT pulled (lazy closure)"
+      ],
+      "cross_set_pulled": [],
+      "findings": [],
+      "interaction_tests": {
+        "detail": "cargo test --test archetypes gaogamon_beast_bt25: 13 passed, 0 failed (11 combo tests across C1-C9 + 2 structural anchors); full archetypes binary 49 passed, 0 failed, 3 ignored",
+        "passed": true
+      },
+      "model_doc": "qa/archetype-qa/gaogamon-beast-bt25-model.md",
+      "slice": "BT25 Gaogamon / Beast slice (author-set)",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 8
+          },
+          "detail": "all 8 authored combos (C1-C7,C9) have every named piece implemented; 0 blocked",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "implemented": 8,
+            "ratio": 1.0,
+            "total": 8
+          },
+          "detail": "slice coverage 8/8 implemented (BT25-008/009/012/013/021/023/048/051); each has a YAML spec in code/digimon-engine/cards/bt25/ and a per-card behavioral test in cards_behavioral/bt25/. NOTE: the cards_behavioral binary currently fails to COMPILE due to pre-existing API drift in UNRELATED files (bt25_003, bt25_079, bt25_100, ad1_014, bt21_017, ex4_038) - none of the 8 slice cards - flagged as a separate task",
+          "passed": true
+        },
+        "deck_legality": {
+          "detail": "not_applicable: BT25 Gaogamon/Beast slice is a --cards list, not a deck_library archetype; archetype-static-tests CLI requires a deck_library archetype",
+          "passed": null
+        },
+        "smoke_games": {
+          "detail": "not_applicable: same reason as deck_legality",
+          "passed": null
+        }
+      },
+      "test_count": 13,
+      "test_file": "code/digimon-engine/tests/archetypes/gaogamon_beast_bt25.rs"
+    },
+    "Kazuki & Itsuki / Appmon (BT25)": {
+      "combos_tested": [],
+      "findings": [
+        "BLOCKED Combo A (Logimon free-Tamer, BT25-052+BT25-089): both cards unimplemented; routed to /batch-implement-cards-rust-dsl (BT25).",
+        "BLOCKED Combo B (Cyber Engage search -> Kazuki link, BT25-098+BT25-089): BT25-089 unimplemented; BT25-098 per-card behavioral test is an empty placeholder.",
+        "BLOCKED Combo C (Kazuki app-fuse, BT25-089): BT25-089 unimplemented AND App Fuse engine primitive missing -> logged to docs/RUST_ENGINE_GAPS.md."
+      ],
+      "notes": "Capstone gating run (no deck_library entry; fixed 3-card BT25 slice). Model doc: qa/archetype-qa/kazuki-itsuki-appmon-model.md. No interaction tests authored (all combos blocked); no tests/archetypes/<slug>.rs file created. App Fuse gap logged to docs/RUST_ENGINE_GAPS.md. Deck-legality and smoke-games not run (3-card slice is not a constructible deck and the archetype is not in deck_library.json).",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [
+              "logimon-free-tamer",
+              "appmon-search-link",
+              "kazuki-app-fuse"
+            ],
+            "combos_total": 3,
+            "missing_primitives": [
+              "App Fuse"
+            ],
+            "unimplemented_cards": [
+              "BT25-052",
+              "BT25-089"
+            ]
+          },
+          "detail": "all 3 candidate combos blocked: BT25-052 and BT25-089 unimplemented; App Fuse primitive missing",
+          "passed": false
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 1,
+            "total": 3,
+            "unimplemented_cards": [
+              "BT25-052",
+              "BT25-089"
+            ]
+          },
+          "detail": "slice coverage 1/3 (only BT25-098 has YAML; its per-card test is an empty placeholder)",
+          "passed": false
+        }
+      },
+      "updated": "2026-06-06"
+    },
     "Machine Black": {
       "combos_tested": [
         {
           "combo": "Blocker + Tai untap loop (+ unhappy path)",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "tai_untap_loop_re_readies_a_blocker_for_a_second_block",
             "blocker_stays_suspended_without_an_available_tai"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Kapurimon Blocker-DP synergy",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "kapurimon_buffs_a_blocker_only_on_your_turn_and_only_with_blocker"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Machinedramon Reboot wall",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "machinedramon_reboot_re_readies_two_digimon_on_the_opponents_turn"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st5_machine_black.rs",
+      "model_doc": "qa/archetype-qa/st5-machine-black-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -71,9 +630,590 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st5_machine_black.rs",
-      "model_doc": "qa/archetype-qa/st5-machine-black-model.md"
+      "updated": "2026-05-30"
+    },
+    "Magneticdra": {
+      "combos_tested": [
+        "Zofr Kabus source-trash fan-out removal",
+        "Gravel Hearts free-play recur Sunarizamon search",
+        "Black Scramble cost-reduced digivolve into payoff",
+        "Defense Training Delay cost-reduced digivolve",
+        "Magneticdramon source-trash double removal"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "BT23-058"
+            ],
+            "implemented": 35,
+            "ratio": 0.875,
+            "threshold": 0.85,
+            "total": 40,
+            "unknown_cards": [
+              "EX1-071",
+              "BT10-062",
+              "LM-025",
+              "LM-033"
+            ]
+          },
+          "detail": "coverage 35/40 = 88% (threshold 85%); 1 failing, 4 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Medusamon": {
+      "combos_tested": [
+        {
+          "combo": "Petrification security-trash loop (signature)",
+          "note": "Deleting an opp-controlled Petrification token trashes opp top security (auto-fires opp-security-removed observers) and chains into BT24-018 Styracomon removal.",
+          "status": "PASS",
+          "tests": [
+            "petrification_token_deletion_trashes_opponent_security",
+            "petrification_token_deletion_chains_into_styracomon_removal",
+            "petrification_token_deletion_no_security_does_not_chain"
+          ]
+        },
+        {
+          "combo": "Owen digivolve buff + extra attack",
+          "note": "Real BT24-082 Owen + real BT24-011 Cyclonemon (Dragonkin) -> suspend+ +3000 + attack; gated on trait (real BT21-024 Cyberdramon non-trait control).",
+          "status": "PASS",
+          "tests": [
+            "owen_digivolve_buffs_dragonkin_ally_and_grants_attack",
+            "owen_digivolve_does_not_buff_non_trait_ally"
+          ]
+        },
+        {
+          "combo": "Raid target-change -> Lamiamon security trash",
+          "note": "Real BT24-011 Cyclonemon Raid + real BT21-025 Lamiamon -> trash opp security; gated on a Reptile/Dragonkin permanent (real Cyberdramon control).",
+          "status": "PASS",
+          "tests": [
+            "raid_target_change_with_lamiamon_trashes_opp_security",
+            "raid_target_change_without_trait_permanent_trashes_nothing"
+          ]
+        },
+        {
+          "combo": "Security-removal memory snowball",
+          "note": "Real digivolution stack [BT24-008 Elizamon, BT24-012 Dimetromon, BT21-025 Lamiamon]: one security removal pays out both buried inherited -> +2 memory. Token-deletion variant -> +1.",
+          "status": "PASS",
+          "tests": [
+            "real_stack_snowballs_two_memory_on_one_security_removal",
+            "petrification_token_deletion_feeds_inherited_memory"
+          ]
+        },
+        {
+          "combo": "Lamiamon inherited free-play (<=5000)",
+          "note": "Real BT21-025 Lamiamon buried inherited free-plays real BT24-011 Cyclonemon (5000); real BT24-018 Styracomon (14000) filtered out. Exercises the dispatch the per-card clause3 test leaves #[ignore]d.",
+          "status": "PASS",
+          "tests": [
+            "lamiamon_inherited_free_plays_small_dragonkin_on_security_removal",
+            "lamiamon_inherited_does_not_free_play_oversized_dragonkin"
+          ]
+        },
+        {
+          "combo": "BT24-016 cheat-in: chains swap AND nets +2 memory",
+          "note": "Real BT24-082 Owen + real BT24-008 Elizamon + real BT24-012 Dimetromon: cheat-in digivolve auto-fires the [When Digivolving] swap; the security trash pays out BOTH buried inherited -> +2 memory (net -1 = -3 digivolve cost +2). Gated on Owen.",
+          "status": "PASS (incl. user-reported +2 memory)",
+          "tests": [
+            "cheat_in_chains_swap_and_nets_two_memory_from_real_inherits",
+            "cheat_in_blocked_without_owen_silences_the_chain"
+          ]
+        },
+        {
+          "combo": "Lamiamon security swap feeds memory engine",
+          "note": "Real [BT24-008 Elizamon, BT24-016 Lamiamon] stack: the swap top-security trash pays out the buried Elizamon inherited (+1 memory).",
+          "status": "PASS",
+          "tests": [
+            "lamiamon_security_swap_feeds_inherited_memory"
+          ]
+        },
+        {
+          "combo": "EX11-012 token-shield (faithfulness gap)",
+          "note": "FIXED: would-leave shield selector changed select_own_permanent -> select_any_permanent in EX11-012.yaml (DCGO permanent.IsToken, any owner). EX11-012 now survives by deleting the opponent Petrification token, which also trashes their security. Gap G-EX11-012-TOKEN-SHIELD-OWN-ONLY RESOLVED.",
+          "status": "PASS (gap fixed)",
+          "tests": [
+            "ex11_012_survives_by_deleting_opponents_petrification_token"
+          ]
+        }
+      ],
+      "findings": [
+        {
+          "detail": "First pass used synthetic make_test_card stand-ins for our own effect-bearing cards (Elizamon/Dimetromon/Owen/Reptile allies), which hid the +2 memory payoff. Whole suite re-authored to load every Medusamon card via real dsl_card; synthetic fixtures now only for generic opponent-side fillers (security/bodies/hand). Audit: 10 archetype cards all real.",
+          "kind": "process-correction"
+        },
+        {
+          "detail": "RESOLVED: cards/ex11/EX11-012.yaml would-leave cost selector own->any (select_any_permanent scans both battle areas, controller picks; faithful to DCGO). One-word YAML fix; DSL verb pre-existed. Archetype test un-ignored and passing; per-card ex11_012 green.",
+          "id": "G-EX11-012-TOKEN-SHIELD-OWN-ONLY",
+          "kind": "resolved-faithfulness-gap"
+        },
+        {
+          "detail": "User-reported: BT24-016 cheat-in with a real Elizamon + Dimetromon nets +2 memory from the two buried inherited firing off the chained security swap. Confirmed faithful (net -1 absolute = -3 cost +2 gain).",
+          "kind": "verified-behavior"
+        },
+        {
+          "detail": "Coverage gate 56/63 (89%): 7 unknown freq-1 fringe cards (ST12-03, LM-051, LM-033, BT19-011, BT14-017, LM-045, BT21-083); none in any combo.",
+          "kind": "coverage-gap"
+        }
+      ],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/medusamon.rs",
+      "model_doc": "qa/archetype-qa/medusamon-model.md",
+      "result": "15/15 active interaction tests PASS (all real DSL cards; EX11-012 gap fixed). Full archetypes binary: 45 passed, 0 ignored.",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 56,
+            "ratio": 0.8888888888888888,
+            "threshold": 1.0,
+            "total": 63,
+            "unknown_cards": [
+              "ST12-03",
+              "LM-051",
+              "LM-033",
+              "BT19-011",
+              "BT14-017",
+              "LM-045",
+              "BT21-083"
+            ]
+          },
+          "detail": "coverage 56/63 = 89% (threshold 100%); 0 failing, 7 unknown",
+          "passed": false
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-30"
+    },
+    "Nokia AlterS": {
+      "combos_tested": [
+        "Miraculous Mega Knight free-play recursion (Option)",
+        "Mega Knight Delay second-life hand-DNA Omnimon (Option)",
+        "Digital Gate Open dig + Delay Tamer cheat (Option)",
+        "Tai & Matt double-memory off the cross-evolve sequence",
+        "Omnimon Alter-S DNA board wipe"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 28,
+            "ratio": 1.0,
+            "threshold": 0.85,
+            "total": 28,
+            "unknown_cards": []
+          },
+          "detail": "coverage 28/28 = 100% (threshold 85%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Omni Nokia": {
+      "combos_tested": [
+        "Miraculous Mega Knight — recur an Agumon/Gabumon from trash",
+        "Mega Knight Delay — off-stack Omnimon when a Lv6 leaves outside battle",
+        "Nokia free-play into Tai & Matt memory ramp",
+        "Nokia +1000 aura + DNA Omnimon swing",
+        "WarGreymon/MetalGarurumon branch — free cross-line digivolve"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 46,
+            "ratio": 0.9387755102040816,
+            "threshold": 0.85,
+            "total": 49,
+            "unknown_cards": [
+              "EX1-066",
+              "BT1-010",
+              "ST21-10"
+            ]
+          },
+          "detail": "coverage 46/49 = 94% (threshold 85%); 0 failing, 3 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Omnimon ACE": {
+      "combos_tested": [
+        "Miraculous Mega Knight — free Agumon/Gabumon from trash (Option recursion)",
+        "Miraculous Mega Knight Delay — leave-trigger → Omnimon DNA from hand",
+        "Miraculous Mega Knight security — off-turn Tamer free-play, Option to hand",
+        "Omnimon (BT17-078) DNA digivolve — board-level wipe of one level",
+        "BT20-102 X-Antibody — single-target mass deletion + bottom"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 20,
+            "ratio": 0.9090909090909092,
+            "threshold": 0.85,
+            "total": 22,
+            "unknown_cards": [
+              "BT14-101",
+              "ST15-14"
+            ]
+          },
+          "detail": "coverage 20/22 = 91% (threshold 85%); 0 failing, 2 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Puppet-Sister": {
+      "combos_tested": [
+        "Fable Waltz [Main] free-plays Shoemon, self-arms as Delay",
+        "Narrative Ronde dual-search then Mirai play arms the digivolve Delay",
+        "Physical Training [Main] dig then Delay discount digivolve",
+        "Cendrillmon free-play Puppet plus Familiar Tokens per opponent Digimon",
+        "Overclock self-sacrifice fans out into Kaguyamon opponent removal"
+      ],
+      "findings": [],
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 5
+          },
+          "detail": "all 5 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [
+              "ST12-12"
+            ],
+            "implemented": 23,
+            "ratio": 0.92,
+            "threshold": 0.85,
+            "total": 25,
+            "unknown_cards": [
+              "BT7-082"
+            ]
+          },
+          "detail": "coverage 23/25 = 92% (threshold 85%); 1 failing, 1 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-06-02"
+    },
+    "Puppets": {
+      "combos_tested": [
+        {
+          "combo": "C1 Overclock value loop (ST19-12 + EX11-060 + Familiar Token)",
+          "note": "End-of-turn Overclock deletes a Familiar Token -> Arisa suspends to Draw 1 AND the Familiar On-Deletion -3000 DP hits the opponent. Unhappy: a pre-suspended Arisa yields no draw but the -3000 still fires.",
+          "status": "PASS",
+          "tests": [
+            "c1_overclock_token_sacrifice_draws_for_arisa_and_reduces_opponent_dp",
+            "c1_value_loop_yields_no_draw_when_arisa_cannot_pay_the_suspend_cost"
+          ]
+        },
+        {
+          "combo": "C2 Self-sustaining token refill (ST19-12 Overclock deleter + BT22-040 refire)",
+          "note": "Overclock deletes a Familiar -> BT22-040 refire replays a fresh Familiar, board count restored. Unhappy: declining the refire leaves the board one token short. Cross-card finding surfaced: the Familiar On-Deletion target pick interleaves with the refire (order not assumable) — test made order-independent.",
+          "status": "PASS",
+          "tests": [
+            "c2_overclock_deletion_refires_bt22_040_to_replace_the_token",
+            "c2_declined_refire_leaves_the_board_one_token_short"
+          ]
+        },
+        {
+          "combo": "C3 Nyabootmon mass-removal payoff (board-width-gated)",
+          "note": "BT22-042 When-Dig -3000 DP per own Digimon: a wide board (4 Digimon) deletes a 12000-DP target via 0-DP rule 17-1-3-1; a narrow board (1 Digimon) leaves it alive at -3000.",
+          "status": "PASS",
+          "tests": [
+            "c3_nyabootmon_deletes_a_12000_target_over_a_wide_board",
+            "c3_nyabootmon_spares_the_same_target_over_a_narrow_board"
+          ]
+        },
+        {
+          "combo": "C4 Arisa replay & Shoemon recursion (BT22-088)",
+          "note": "Start-of-main returns Arisa to deck bottom, replays a hand Arisa free; boardless -> recurs Shoemon from trash. With a Digimon present the Shoemon clause is gated off (tamer-return still fires).",
+          "status": "PASS",
+          "tests": [
+            "c4_boardless_arisa_replays_itself_and_recurs_shoemon_from_trash",
+            "c4_with_a_digimon_in_play_arisa_replays_but_leaves_shoemon_in_trash"
+          ]
+        },
+        {
+          "combo": "S2 Karakurumon temp-Puppet self-deletion feeds Arisa draw",
+          "note": "EX11-022 plays a temp [Puppet] free; its self-deletion is a Puppet-Digimon deletion -> EX11-060 Arisa Draw 1. Turns the printed drawback into card advantage.",
+          "status": "PASS",
+          "tests": [
+            "s2_karakurumon_temp_puppet_self_deletion_feeds_arisa_draw_at_turn_end"
+          ]
+        },
+        {
+          "combo": "S4 ST19-14 grants Rush to an effect-played token",
+          "note": "ST19-12 plays 2 Familiar Tokens by effect; ST19-14 suspends to grant Rush to exactly one (suspend cost gates the second). Tempo seam.",
+          "status": "PASS",
+          "tests": [
+            "s4_st19_14_grants_rush_to_one_effect_played_familiar_token"
+          ]
+        },
+        {
+          "combo": "S5 BT22-088 play-side draw engine",
+          "note": "ST19-12 plays 2 Familiar Tokens; BT22-088 suspends to Draw 1 (exactly once — suspend cost gates repeats). The play-side mirror of C1 deletion-side draw.",
+          "status": "PASS",
+          "tests": [
+            "s5_bt22_088_draws_exactly_once_when_two_tokens_are_played"
+          ]
+        },
+        {
+          "combo": "S1 Pillomon flood-gate blocks effect token plays (was finding, now fixed)",
+          "note": "G-PLAY-TOKEN-FLOODGATE fixed: play_token honors CannotPlayDigimonByEffect. s1 (blocked) + s1b (control: spawns without Pillomon).",
+          "status": "PASS",
+          "tests": [
+            "s1_pillomon_floodgate_blocks_effect_token_plays",
+            "s1b_without_pillomon_the_same_token_play_succeeds"
+          ]
+        },
+        {
+          "combo": "S3 Kaguyamon recursion on Familiar Token deletion (was finding, now fixed)",
+          "note": "G-EX11-023-TOKEN-DELETION fixed: condition now matches token kind. s3 interaction + ex11_023 per-card token-deletion test.",
+          "status": "PASS",
+          "tests": [
+            "s3_kaguyamon_recursion_fires_on_familiar_token_deletion"
+          ]
+        }
+      ],
+      "dropped_combos": [
+        {
+          "combo": "C5 Leave-prevention by token sacrifice (EX7-027 Chaperomon inherit + Familiar)",
+          "reason": "Dropped by rank (lowest-ranked stretch). The per-card suite cards_behavioral/ex7/ex7_027.rs already covers leave-prevention exhaustively (happy, decline, OPT-lock, token-cost-to-trash, own-effect-no-trigger); the cross-card delta is marginal."
+        }
+      ],
+      "findings": [
+        {
+          "combo": "S1 Pillomon flood-gate vs Familiar Token plays",
+          "id": "G-PLAY-TOKEN-FLOODGATE",
+          "resolution": "play_token now consults CannotPlayDigimonByEffect (effect_context/mod.rs). Pins: s1 + s1b interaction tests; play_token_blocked/allowed lib unit tests. Test un-ignored.",
+          "status": "RESOLVED",
+          "summary": "EffectContext::play_token bypasses CannotPlayDigimonByEffect; under Pillomon (BT9-033), effect-played Familiar Tokens still spawn (engine spawned 2, faithful=0). DCGO blocks via CanPlayAsNewPermanent -> CanNotPutFieldClass (IsDigimon). Engine-primitive gap.",
+          "test": "s1_pillomon_floodgate_blocks_effect_token_plays (#[ignore])",
+          "tracker": "docs/RUST_ENGINE_GAPS.md"
+        },
+        {
+          "combo": "S3 Kaguyamon recursion on Familiar Token deletion",
+          "id": "G-EX11-023-TOKEN-DELETION",
+          "resolution": "EX11-023.yaml condition now any_of:[digimon,token]. Pins: s3 interaction test; ex11_023 per-card token-deletion + strengthened structural test. Test un-ignored.",
+          "status": "RESOLVED",
+          "summary": "EX11-023 recursion condition is event_target_kind: digimon only; Familiar Tokens are CardKind::Token, so a token deletion does not fire the trash-recursion. DCGO gates on IsDigimon (true for tokens). One-line DSL fix: add token to the any_of (sibling cards BT22-040/EX11-060 already do).",
+          "test": "s3_kaguyamon_recursion_fires_on_familiar_token_deletion (#[ignore])",
+          "tracker": "qa/archetype-qa/engine-gaps.md"
+        }
+      ],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/puppets.rs",
+      "model_doc": "qa/archetype-qa/Puppets-model.md",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 4
+          },
+          "detail": "all 4 combo(s) have every piece implemented",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "failing_cards": [],
+            "implemented": 62,
+            "ratio": 1.0,
+            "threshold": 1.0,
+            "total": 62,
+            "unknown_cards": []
+          },
+          "detail": "coverage 62/62 = 100% (threshold 100%); 0 failing, 0 unknown",
+          "passed": true
+        },
+        "deck_legality": {
+          "data": {
+            "constructs": true,
+            "egg_count": 4,
+            "main_count": 50,
+            "over_copy_limit": [],
+            "unknown_cards": [],
+            "violations": []
+          },
+          "detail": "deck is rules-legal and constructs a game",
+          "passed": true
+        },
+        "smoke_games": {
+          "data": {
+            "completed": 5,
+            "games": 5
+          },
+          "detail": "5/5 smoke games completed cleanly",
+          "passed": true
+        }
+      },
+      "updated": "2026-05-31"
     },
     "Rocks": {
       "combos_tested": [
@@ -137,49 +1277,51 @@
       "combos_tested": [
         {
           "combo": "Tall-stack security rush",
+          "note": "WarGreymon base-inclusive formula FIXED at card layer (ST1-11 base:2); Greymon-free stack checks 3; full WarGreymon+Greymon line checks 4 (inherited keyword counted via tick-fresh strike)",
+          "status": "PASS",
           "tests": [
             "tall_stack_security_rush_aura_adds_to_base_one_check",
             "tall_stack_security_rush_full_line_checks_four_security"
-          ],
-          "status": "PASS",
-          "note": "WarGreymon base-inclusive formula FIXED at card layer (ST1-11 base:2); Greymon-free stack checks 3; full WarGreymon+Greymon line checks 4 (inherited keyword counted via tick-fresh strike)"
+          ]
         },
         {
           "combo": "Tai anthem additive stack",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "tai_anthem_additive_stack_layers_on_one_body_and_spares_opponent"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Garudamon buff survives removal",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "garudamon_buff_survives_gaia_force_removal"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [
         {
+          "desc": "WarGreymon <Security A.> formula under-counted: ST1-11 authored its security_attack_fn as a bare delta (base:0 -> floor(n/2)) but the engine's formula contract is base-inclusive, so the base-1 was dropped. Fixed at card layer (base:2 -> 1+floor(n/2)); the earlier engine base-fold was the wrong layer and double-counted correctly-authored formulas.",
+          "resolved": "2026-05-30",
           "severity": "card-bug",
           "status": "RESOLVED",
-          "desc": "WarGreymon <Security A.> formula under-counted: ST1-11 authored its security_attack_fn as a bare delta (base:0 -> floor(n/2)) but the engine's formula contract is base-inclusive, so the base-1 was dropped. Fixed at card layer (base:2 -> 1+floor(n/2)); the earlier engine base-fold was the wrong layer and double-counted correctly-authored formulas.",
-          "tracker": "docs/RUST_ENGINE_GAPS.md",
           "test": "st1_gaia_red::tall_stack_security_rush_aura_adds_to_base_one_check",
-          "resolved": "2026-05-30"
+          "tracker": "docs/RUST_ENGINE_GAPS.md"
         },
         {
+          "desc": "declarative inherited <Security A. +/-N> grants (DSL grant_keyword) not summed by the security strike — WarGreymon+Greymon checked 3, should be 4",
+          "note": "real fix: current_security_strike ticks declarative effects before reading the keyword term (tick-fresh strike), and tick_declarative_effects skips materializing a face-printed own grant (de-overlap) so all five <Security A.> representations single-count",
+          "resolved": "2026-05-30",
           "severity": "engine-bug",
           "status": "RESOLVED",
-          "desc": "declarative inherited <Security A. +/-N> grants (DSL grant_keyword) not summed by the security strike — WarGreymon+Greymon checked 3, should be 4",
-          "tracker": "docs/RUST_ENGINE_GAPS.md",
           "test": "st1_gaia_red::tall_stack_security_rush_full_line_checks_four_security",
-          "note": "real fix: current_security_strike ticks declarative effects before reading the keyword term (tick-fresh strike), and tick_declarative_effects skips materializing a face-printed own grant (de-overlap) so all five <Security A.> representations single-count",
-          "resolved": "2026-05-30"
+          "tracker": "docs/RUST_ENGINE_GAPS.md"
         }
       ],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st1_gaia_red.rs",
+      "model_doc": "qa/archetype-qa/st1-gaia-red-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -222,38 +1364,38 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st1_gaia_red.rs",
-      "model_doc": "qa/archetype-qa/st1-gaia-red-model.md"
+      "updated": "2026-05-30"
     },
     "ST-2 Cocytus Blue": {
       "combos_tested": [
         {
           "combo": "Strip → triple no-source payoff",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "strip_flips_all_three_no_source_payoffs_on_together"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "<Sec.A+1> reads the board not the target",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "weregarurumon_security_plus_keys_off_any_opponent_no_source_digimon"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "MetalGarurumon OPT = exactly two attacks",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "metalgarurumon_unsuspends_once_strip_fires_each_attack"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st2_cocytus_blue.rs",
+      "model_doc": "qa/archetype-qa/st2-cocytus-blue-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -296,51 +1438,51 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st2_cocytus_blue.rs",
-      "model_doc": "qa/archetype-qa/st2-cocytus-blue-model.md"
+      "updated": "2026-05-30"
     },
     "ST-3 Heaven's Yellow": {
       "combos_tested": [
         {
           "combo": "Seven Heavens → 0-DP deletion → Tokomon",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "seven_heavens_zero_dp_deletion_buffs_tokomon_carrier",
             "tokomon_carrier_unbuffed_when_no_zero_dp_deletion_occurs"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Stacked -DP → 0-DP delete → Patamon memory",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "stacked_minus_dp_attack_zero_dp_deletion_gains_patamon_memory"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Angewomon recover gate + T.K. security aura",
+          "note": "T.K. security-DP aura active_when gate FIXED; own-turn-inactive case now passes",
+          "status": "PASS",
           "tests": [
             "angewomon_recovers_when_three_or_fewer_security",
             "angewomon_does_not_recover_at_four_security",
             "tk_takaishi_buffs_own_security_digimon_only_on_opponents_turn",
             "tk_takaishi_aura_is_inactive_on_controllers_own_turn"
-          ],
-          "status": "PASS",
-          "note": "T.K. security-DP aura active_when gate FIXED; own-turn-inactive case now passes"
+          ]
         }
       ],
       "findings": [
         {
+          "desc": "security-DP auras ignored active_when/condition (defender_security_dp_adjustment + mirror) — T.K. +2000 leaked to controller own turn",
+          "resolved": "2026-05-30",
           "severity": "engine-bug",
           "status": "RESOLVED",
-          "desc": "security-DP auras ignored active_when/condition (defender_security_dp_adjustment + mirror) — T.K. +2000 leaked to controller own turn",
-          "tracker": "docs/RUST_ENGINE_GAPS.md",
           "test": "st3_heavens_yellow::tk_takaishi_aura_is_inactive_on_controllers_own_turn",
-          "resolved": "2026-05-30"
+          "tracker": "docs/RUST_ENGINE_GAPS.md"
         }
       ],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st3_heavens_yellow.rs",
+      "model_doc": "qa/archetype-qa/st3-heavens-yellow-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -383,40 +1525,40 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st3_heavens_yellow.rs",
-      "model_doc": "qa/archetype-qa/st3-heavens-yellow-model.md"
+      "updated": "2026-05-30"
     },
     "ST-4 Giga Green": {
       "combos_tested": [
         {
           "combo": "Needle Spray → Izzy memory (+ negatives)",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "needle_spray_suspend_triggers_izzy_for_one_memory",
             "izzy_self_suspend_does_not_retrigger_izzy",
             "re_suspending_an_already_suspended_target_does_not_refire_izzy"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "HercKabu Digi-Burst suspend → Izzy",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "herckabu_digiburst_suspend_triggers_izzy_for_one_memory"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Suspend-gated Electro Shocker bounce",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "electro_shocker_bounce_is_gated_on_a_prior_suspend"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st4_giga_green.rs",
+      "model_doc": "qa/archetype-qa/st4-giga-green-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -459,39 +1601,39 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st4_giga_green.rs",
-      "model_doc": "qa/archetype-qa/st4-giga-green-model.md"
+      "updated": "2026-05-30"
     },
     "Starter Deck Venomous Violet": {
       "combos_tested": [
         {
           "combo": "Trash-threshold beatdown (WereGarurumon)",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "weregarurumon_trash_threshold_grants_plus_2000_only_on_your_turn_at_five_trash"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Death Claw → Matt memory loop (+ unhappy)",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "death_claw_self_sacrifice_feeds_matt_then_deletes_opponent",
             "declining_death_claw_self_delete_spares_the_opponent_and_silences_matt"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         },
         {
           "combo": "Nail Bone double-recur, On-Play suppressed",
+          "note": "",
+          "status": "PASS",
           "tests": [
             "nail_bone_recurs_lv3_and_lv4_from_trash_with_on_play_suppressed"
-          ],
-          "status": "PASS",
-          "note": ""
+          ]
         }
       ],
       "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st6_venomous_violet.rs",
+      "model_doc": "qa/archetype-qa/st6-venomous-violet-model.md",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -534,11 +1676,443 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30",
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st6_venomous_violet.rs",
-      "model_doc": "qa/archetype-qa/st6-venomous-violet-model.md"
+      "updated": "2026-05-30"
+    },
+    "Thomas DATA SQUAD (BT25)": {
+      "all_passing": true,
+      "blocked_combos": [
+        {
+          "blocked_on": [
+            "BT25-087"
+          ],
+          "gap": "OnAddToHand trigger inert + BeforePayCost selection-bearing pay_cost Parked-drop (docs/RUST_ENGINE_GAPS.md)",
+          "name": "Thomas stash-build -> Mach/Mirage stash-spend chain"
+        },
+        {
+          "blocked_on": [
+            "BT25-029",
+            "BT25-087"
+          ],
+          "gap": "OnAddToHand half of unsuspend clause inert",
+          "name": "MirageGaogamon double-bounce + add-to-hand unsuspend loop"
+        },
+        {
+          "blocked_on": [
+            "BT25-096",
+            "BT25-029"
+          ],
+          "gap": "use-cost -2 trash-FD hits BeforePayCost Parked-drop",
+          "name": "Mirage Beast Knight shortcut into MirageGaogamon"
+        },
+        {
+          "blocked_on": [
+            "BT25-104"
+          ],
+          "gap": "cross-side Option-Main activation + treated-as-Digimon name-overlay aura",
+          "name": "ShineGreymon: Burst Mode Option-Main activation + Marcus aura"
+        }
+      ],
+      "combos_tested": [
+        {
+          "cards": [
+            "BT25-027"
+          ],
+          "id": "C1",
+          "name": "MachGaogamon WA bounce + trash face-down stash to self-unsuspend",
+          "result": "pass"
+        },
+        {
+          "cards": [
+            "BT25-027"
+          ],
+          "id": "C2",
+          "name": "MachGaogamon WA without stash: bounce resolves, self-unsuspend unpaid (gate)",
+          "result": "pass"
+        },
+        {
+          "cards": [
+            "BT25-002",
+            "BT25-027"
+          ],
+          "id": "C3",
+          "name": "Wanyamon inherited both-players draw from under a real MachGaogamon stack on DATA SQUAD Tamer play (+opponent-turn negative)",
+          "result": "pass"
+        },
+        {
+          "cards": [
+            "BT25-027"
+          ],
+          "id": "C4",
+          "name": "MachGaogamon stash contention: WA self-unsuspend consumes the only face-down source, later leave-prevention cannot pay",
+          "result": "pass"
+        }
+      ],
+      "findings": [],
+      "interaction_tests_added": 5,
+      "model": "qa/archetype-qa/thomas-data-squad-model.md",
+      "report": "archetype-interaction-test-author",
+      "scope": "explicit card list: BT25-087, BT25-096, BT25-002, BT25-027, BT25-029, BT25-104",
+      "slug": "thomas-data-squad",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": 4,
+            "combos_total": 4
+          },
+          "detail": "all 4 authored combos have every piece IMPLEMENTED; 4 combos dropped because they name BLOCKED cards (see blocked_combos)",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "blocked": [
+              "BT25-087",
+              "BT25-096",
+              "BT25-029",
+              "BT25-104"
+            ],
+            "implemented": [
+              "BT25-002",
+              "BT25-027"
+            ]
+          },
+          "detail": "2/6 named cards IMPLEMENTED (BT25-002, BT25-027); 4 BLOCKED on engine gaps already tracked",
+          "passed": true
+        },
+        "note": "Static harness (archetype-static-tests) is deck_library-name-based; this slice was authored from an explicit card list with no deck_library decklist, so the four static invariants were not run via the CLI. Precondition gate applied manually from qa/qa-reports/validated_cards_dsl.json (2026-06-06): only BT25-002 and BT25-027 IMPLEMENTED; the other four BLOCKED."
+      },
+      "test_file": "code/digimon-engine/tests/archetypes/thomas_data_squad_bt25.rs",
+      "validated_date": "2026-06-06"
+    },
+    "appmon": {
+      "blocked_combos": [
+        {
+          "blocked_on": [
+            "BT25-052",
+            "BT25-089"
+          ],
+          "cards": [
+            "BT25-052",
+            "BT25-089"
+          ],
+          "name": "Logimon WhenLinked -> play Kazuki & Itsuki free",
+          "reason": "[Link] facet-9 link-of-chosen-card primitive missing (engine) + WhenLinked host self-effect (facet 11); both pieces BLOCKED. Logged in docs/RUST_ENGINE_GAPS.md."
+        },
+        {
+          "blocked_on": [
+            "BT25-089"
+          ],
+          "cards": [
+            "BT25-089"
+          ],
+          "name": "Kazuki & Itsuki suspend-link Appmon (cost -2) + End-of-turn App Fuse",
+          "reason": "link-of-chosen-card primitive (facet 9) + App Fuse net-new keyword both missing (engine). Logged in docs/RUST_ENGINE_GAPS.md."
+        }
+      ],
+      "combos_tested": [],
+      "findings": [],
+      "note": "appmon BT25 slice = {BT25-052, BT25-089, BT25-098}. Only BT25-098 Cyber Engage is implemented; its self-contained reveal->Delay->replay sequence is fully covered by per-card tests (cards_behavioral/bt25/bt25_098.rs) and is not a multi-card interaction. Every cross-card combo names a BLOCKED piece (BT25-052 and/or BT25-089), so 0 interaction tests were authored. Gaps already tracked in docs/RUST_ENGINE_GAPS.md ([Link] facet 9/11 + App Fuse).",
+      "run_by": "archetype-interaction-test-author",
+      "run_date": "2026-06-06",
+      "static_tests": {}
+    },
+    "beatbreak (BT25)": {
+      "blocked_combos": [
+        "Any combo naming BT25-057 Monarchlizamon (De-Digivolve loop / green extra-battle line) — BLOCKED: 0-byte per-card test stub, no YAML (unimplemented).",
+        "The BEATBREAK cost-engine payoff of every PARTIAL card (Cougarmon free-digivolve by trashing 2 face-downs; Armalizamon/Tomoro/Kyo Option/play cost -N by trashing a face-down; Murasamemon play/use a Glowing Dawn at -3) — BLOCKED on G-COST-REDUCTION-INTERACTIVE-PAY-COST / G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.",
+        "Kyo Sawashiro (BT25-088) banker -> Murasamemon unsuspend variant — dropped as a near-duplicate of BB-IT2 (Tomoro is the on-curve banker; BB-IT2 already pins any-Tamer face-down as a legal cost)."
+      ],
+      "cards": [
+        "BT25-088",
+        "BT25-090",
+        "BT25-035",
+        "BT25-049",
+        "BT25-081",
+        "BT25-041",
+        "BT25-057"
+      ],
+      "combos_tested": [
+        "BB-IT1: Armalizamon (BT25-049) suspend feeds Tomoro Tenma (BT25-090) face-down banker (cross-card trigger)",
+        "BB-IT2: Tomoro Tenma (BT25-090) banks the face-down that Murasamemon (BT25-041) inherited [End of Attack] trashes to unsuspend (producer != consumer)",
+        "BB-IT3: Cougarmon (BT25-035) -3000 DP + Armalizamon (BT25-049) suspend coexist on one opponent Digimon; the turn-scoped DP expires at end of turn"
+      ],
+      "findings": [],
+      "notes": "Both initial test failures were test-authoring errors, not engine bugs: BB-IT1 had a premature auto_resolve that consumed the optional trigger before observation; BB-IT3 wrongly expected the opponent suspend to persist past P0 end-of-turn (it correctly unsuspends at the start of P1 turn per general_rule.pdf unsuspend phase). No engine/DSL gaps filed. The six implemented slice cards are all PARTIAL (cost-engine BLOCKED) but their board-affecting clauses are faithful.",
+      "result": "all pass (5/5 in archetypes binary; full binary 55/55, 1 ignored, 0 fail)",
+      "slice": "BT25 beatbreak slice (Glowing Dawn Lv.4/5 payoffs + Tamers; archetype-interaction-test-author pass 2)",
+      "test_file": "code/digimon-engine/tests/archetypes/beatbreak_bt25.rs",
+      "tests_added": 5,
+      "updated": "2026-06-06"
+    },
+    "flaremon (BT25)": {
+      "cards": [
+        "BT25-024",
+        "BT25-016",
+        "BT25-017",
+        "BT25-054"
+      ],
+      "combos_dropped": [],
+      "combos_tested": [
+        "F1 GrapLeomon [On Play] +3000 pump arms the [All Turns] 13000-DP free-digivolve observer",
+        "F2 playing blue Lekismon arms Flaremon's [Your Turn] blue-gated digivolve into [Apollomon]",
+        "F3 GreatGrizzlymon taunt -> battle win -> top-card free digivolve + buried inherited trash-top-security"
+      ],
+      "cross_set_partner_used": [
+        "Apollomon / Crescemon / Marsmon / Callismon modelled as SYNTHETIC evolution targets (no printed effect fired -> none pulled, lazy closure)"
+      ],
+      "cross_set_pulled": [],
+      "findings": [],
+      "model_doc": "qa/archetype-qa/flaremon-beastkin-model.md",
+      "notes": "F2 gate colour corrected red->blue against the card image during authoring (Flaremon watches blue, Lekismon watches red). F3 split into top-card win (free digivolve) + buried-source win (inherited trash-security) because inherited effects fire only from beneath a stack. No engine/DSL gaps found; no findings filed.",
+      "slice": "BT25 Flaremon / Beastkin slice (author-set; explicit --cards list)",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 3
+          },
+          "detail": "all 3 authored combos have every piece implemented (no blocked combos)",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "blocked": [],
+            "implemented": 4,
+            "total": 4
+          },
+          "detail": "4/4 slice cards implemented + per-card green (37 cards_behavioral tests pass)",
+          "passed": true
+        },
+        "deck_legality": {
+          "detail": "not_applicable: explicit --cards slice, not a deck_library archetype; archetype-static-tests CLI errors (archetype 'Flaremon' not in deck_library.json)",
+          "passed": null
+        },
+        "smoke_games": {
+          "detail": "not_applicable: same reason as deck_legality",
+          "passed": null
+        }
+      },
+      "test_count": 8,
+      "test_file": "code/digimon-engine/tests/archetypes/flaremon_beastkin.rs",
+      "test_result": "8 passed; 0 failed",
+      "updated": "2026-06-06"
+    },
+    "machine (BT25)": {
+      "cards": [
+        "BT25-062",
+        "BT25-066",
+        "BT25-074"
+      ],
+      "combos_dropped": [
+        {
+          "blocked_on": "BT25-066",
+          "combo": "Kokuwamon -> Guardromon (wall)",
+          "reason": "BLOCKED dsl gap: would-leave replacement by trashing own link card not expressible"
+        },
+        {
+          "blocked_on": "BT25-074",
+          "combo": "Kokuwamon -> Tankdramon (D-Brigade ramp payoff)",
+          "reason": "BLOCKED dsl gap: reveal-pool play with non-zero reduced cost not expressible"
+        }
+      ],
+      "combos_tested": [
+        "Kokuwamon -> Gatomon: free-digivolve fires [When Digivolving] -3000 DP debuff"
+      ],
+      "cross_set_partner_used": [
+        "BT24-035 Gatomon (already implemented; not pulled)"
+      ],
+      "cross_set_pulled": [],
+      "date": "2026-06-05",
+      "findings": [],
+      "model_doc": "qa/archetype-qa/machine-bt25-model.md",
+      "result": "PASS (3/3 interaction tests green); 2 combos blocked on unimplemented slice cards",
+      "slice": "BT25 machine slice (author-set)",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked_combos": 2,
+            "combos_total": 1
+          },
+          "detail": "the 1 authored combo (Kokuwamon->Gatomon) has every piece implemented; 2 candidate combos blocked on missing slice cards and were not authored",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "blocked": [
+              "BT25-066",
+              "BT25-074"
+            ],
+            "implemented": 1,
+            "total": 3
+          },
+          "detail": "slice coverage 1/3 implemented (BT25-062); BT25-066 + BT25-074 BLOCKED (dsl gap)",
+          "passed": false
+        },
+        "deck_legality": {
+          "detail": "not_applicable: BT25 machine slice is a --cards list, not a deck_library archetype; archetype-static-tests CLI errors (archetype not in deck_library.json)",
+          "passed": null
+        },
+        "smoke_games": {
+          "detail": "not_applicable: same reason as deck_legality",
+          "passed": null
+        }
+      },
+      "test_count": 3,
+      "test_file": "code/digimon-engine/tests/archetypes/machine_bt25.rs"
+    },
+    "mammal (BT25)": {
+      "cards": [
+        "BT25-022",
+        "BT25-030",
+        "BT25-031",
+        "BT25-078"
+      ],
+      "combos_dropped": [
+        {
+          "blocked_on": null,
+          "combo": "MA4 Elecmon start-of-main security->memory ramp",
+          "reason": "single-card effect, fully covered by per-card bt25_030 tests (no cross-card surface); logged in model, not re-authored"
+        },
+        {
+          "blocked_on": null,
+          "combo": "Patamon Angel-bucket / Gazimon text-vs-trait routing",
+          "reason": "single-card filter nuances already pinned per-card (bt25_031, bt25_078)"
+        },
+        {
+          "blocked_on": null,
+          "combo": "Elecmon inherited When-Attacking Recovery",
+          "reason": "single-card, per-card-covered"
+        }
+      ],
+      "combos_tested": [
+        "MA1 Lunamon search adds a second mammal (self-feeding engine) + no_duplicate unhappy path",
+        "MA2 off-color TS Lv.2 free-digivolves into a mammal for cost 0 + non-TS base rejected unhappy path",
+        "MA3 Gazimon [When Moving]/[On Play] tucks a [Three Musketeers] source under an existing stack + optional-decline unhappy path"
+      ],
+      "cross_set_partner_used": [],
+      "cross_set_pulled": [],
+      "findings": [],
+      "last_run": "2026-06-06",
+      "model_doc": "qa/archetype-qa/mammal-bt25-model.md",
+      "note": "archetypes test binary build was transiently blocked by an unrelated broken sibling (flaremon_beastkin.rs, undefined helper) — flagged as a separate task; mammal_bt25 validated with that module temporarily disabled then restored",
+      "result": "all 6 interaction tests pass; no engine bugs found (2 initial failures were test-side deck-delta arithmetic underflow, fixed; engine behavior matched every combo claim)",
+      "slice": "BT25 mammal slice (author-set)",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked": [],
+            "combos_total": 3
+          },
+          "detail": "all 3 authored combos have every named piece implemented; 0 blocked",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "implemented": 4,
+            "ratio": 1.0,
+            "total": 4
+          },
+          "detail": "slice coverage 4/4 implemented (BT25-022/030/031/078), all per-card behavioral tests green (28/28)",
+          "passed": true
+        },
+        "deck_legality": {
+          "detail": "not_applicable: BT25 mammal slice is a --cards list, not a deck_library archetype; archetype-static-tests CLI requires a deck_library archetype",
+          "passed": null
+        },
+        "smoke_games": {
+          "detail": "not_applicable: same reason as deck_legality",
+          "passed": null
+        }
+      },
+      "test_count": 6,
+      "test_file": "code/digimon-engine/tests/archetypes/mammal_bt25.rs"
+    },
+    "titan (BT25)": {
+      "cards": [
+        "BT25-006",
+        "BT25-068",
+        "BT25-071",
+        "BT25-019",
+        "BT25-069",
+        "BT25-080",
+        "BT25-073",
+        "BT25-083"
+      ],
+      "combos_dropped": [
+        {
+          "blocked_on": "BT25-080",
+          "combo": "Witchmon inherited hand-trash removal loop (with Dorimon's trash-1 cost)",
+          "reason": "BLOCKED engine gap: OnDiscardHand trigger + played_by_effect condition missing (docs/RUST_ENGINE_GAPS.md)"
+        },
+        {
+          "blocked_on": "BT25-069, BT25-073",
+          "combo": "Raremon/Dragomon trash->link recursion",
+          "reason": "BLOCKED dsl/hybrid: trash-card link verb + link-trash-as-cost replacement missing (qa/dsl-vocab-gaps.md, docs/RUST_ENGINE_GAPS.md)"
+        },
+        {
+          "blocked_on": "BT25-083",
+          "combo": "LadyDevimon Three-Musketeers bottom-source Draw",
+          "reason": "BLOCKED hybrid: bottom-source-from-hand/trash picker + trash-digivolution-option-as-cost missing; also off the Titan suspend-engine theme"
+        }
+      ],
+      "combos_tested": [
+        "T1 Dorimon unsuspends a Titan payoff (cross-card [Titan] trait gate)",
+        "T2 Deltamon [All Turns][OPT] De-Digivolve cross-turn re-arm (reproducer, ignored)",
+        "T3 Orochimon on-suspend reveal-play is a free-play trigger platform",
+        "T4 UltimateBrachiomon highest-DP removal composes with De-Digivolve tempo"
+      ],
+      "cross_set_partner_used": [],
+      "cross_set_pulled": [],
+      "date": "2026-06-06",
+      "findings": [
+        {
+          "combo": "T2",
+          "id": "G-ALL-TURNS-FILTER (OPT-counter sub-case)",
+          "routed_to": "qa/archetype-qa/engine-gaps.md [G-ALL-TURNS-FILTER]",
+          "severity": "confirmed-engine-bug",
+          "source_consulted": "general_rule.pdf 15-14-1-1/2; DCGO BT25_068.cs; game_phases.rs:59; permanent.rs:454",
+          "summary": "Per-turn activation counters reset only for the turn player at turn-start (game_phases.rs continue_begin_turn_after_start_delays -> new_turn() on tp only); a non-turn-player Digimon's [All Turns][OPT] effect stays locked out on the opponent's turn after firing on its controller's turn. Contradicts general_rule.pdf 15-14-1-1 ([X Per Turn] resets each turn). DCGO resets maxCountPerTurn every turn.",
+          "test": "titan_bt25::t2_deltamon_de_digivolve_re_arms_on_opponent_turn"
+        }
+      ],
+      "model_doc": "qa/archetype-qa/titan-bt25-model.md",
+      "result": "PASS-WITH-FINDING (6/7 interaction tests green; T2 is an #[ignore]'d reproducer for a CONFIRMED engine bug routed to G-ALL-TURNS-FILTER); 3 combos blocked on unimplemented slice cards",
+      "slice": "BT25 titan / [TS] slice (author-set)",
+      "static_tests": {
+        "combo_presence": {
+          "data": {
+            "blocked_combos": 3,
+            "combos_total": 4
+          },
+          "detail": "the 4 authored combos name only IMPLEMENTED cards; 3 candidate combos blocked on missing slice cards were not authored",
+          "passed": true
+        },
+        "coverage_gate": {
+          "data": {
+            "blocked": [
+              "BT25-069",
+              "BT25-080",
+              "BT25-073",
+              "BT25-083"
+            ],
+            "implemented": 4,
+            "total": 8
+          },
+          "detail": "slice coverage 4/8 implemented (BT25-006/068/071/019); BT25-069/080/073/083 BLOCKED (dsl/engine/hybrid gaps)",
+          "passed": false
+        },
+        "deck_legality": {
+          "detail": "not_applicable: BT25 titan slice is a --cards list, not a deck_library archetype; archetype-static-tests CLI errors ('archetype titan not in deck_library.json')",
+          "passed": null
+        },
+        "smoke_games": {
+          "detail": "not_applicable: same reason as deck_legality",
+          "passed": null
+        }
+      },
+      "test_count": 7,
+      "test_file": "code/digimon-engine/tests/archetypes/titan_bt25.rs"
     }
   },
-  "last_updated": "2026-05-30",
+  "last_updated": "2026-06-11",
   "version": 1
 }

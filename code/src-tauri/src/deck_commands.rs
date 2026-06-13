@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 
 use digimon_engine::deck_tools::{
-    classify_parsed, out_of_set_cards, parse_deck, summarize_deck, tested_cards_sorted,
-    validate_deck_for_game_mode,
+    classify_parsed, out_of_set_cards, parse_deck, summarize_deck, tested_card_metadata,
+    tested_cards_sorted, validate_deck_for_game_mode, CardMeta,
 };
 use serde::{Deserialize, Serialize};
 
@@ -101,4 +101,13 @@ pub fn rust_list_tested_cards() -> Result<TestedCardsDto, String> {
         card_ids: ids,
         card_count: count,
     })
+}
+
+/// Full display metadata for every implemented (allowlisted) card, sorted
+/// by card ID — mirrors `GET /decks/card-database`. The deck builder seeds
+/// its browse pool from this so the whole implemented pool is visible
+/// offline, instead of whatever a remote search happened to return.
+#[tauri::command]
+pub fn rust_card_database() -> Result<Vec<CardMeta>, String> {
+    Ok(tested_card_metadata().to_vec())
 }

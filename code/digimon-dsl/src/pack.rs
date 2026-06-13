@@ -223,6 +223,9 @@ fn collect_declarative_raw_rust_fns(
         CompiledDeclarativeClause::LinkRequirement { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
+        CompiledDeclarativeClause::LinkCondition { filter, .. } => {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
         CompiledDeclarativeClause::FloodGate {
             active_when,
             target,
@@ -429,6 +432,7 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
         CompiledFormula::Literal(_)
         | CompiledFormula::SourceDp
         | CompiledFormula::SourceMaterialCount
+        | CompiledFormula::EventTargetLevel
         | CompiledFormula::SourceColorCount
         | CompiledFormula::Aggregate(_)
         | CompiledFormula::AggregateScoped { .. }
@@ -446,6 +450,11 @@ fn collect_per_selector_raw_rust_fns(sel: &CompiledPerSelector, names: &mut BTre
         CompiledPerSelector::DistinctColorsCountScoped {
             filter: Some(filter),
             ..
+        } => {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
+        CompiledPerSelector::SourceStackCountFiltered {
+            filter: Some(filter),
         } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
@@ -566,6 +575,7 @@ mod tests {
                     active_when: None,
                     condition: None,
                     optional: false,
+                    outer_prompt: false,
                     once_per_turn: false,
                     max_per_turn: None,
                     process: vec![CompiledStep::RawRust {

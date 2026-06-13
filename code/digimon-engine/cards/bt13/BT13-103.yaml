@@ -1,0 +1,153 @@
+# BT13-103 Akihiro Kurata — Tamer, Purple, Cost 3 (no DP / no level).
+# Traits: none printed (type_eng empty in cards.json).
+#
+# Printed card text (data/cards.json `effect_description_eng`):
+#
+#   [Your Turn] When you would play a card with [Belphemon] in its name, by
+#     deleting 1 of your Digimon with [Gizmon] in its name, reduce the play
+#     cost by the play cost of the deleted Digimon.
+#   [End of Opponent's Turn] [Once Per Turn] <Draw 1> (Draw 1 card from your
+#     deck.) and trash 1 card in your hand. Then, by placing this Tamer under 1
+#     of your Digimon with [Belphemon] in its name as its bottom digivolution
+#     card, delete 1 of your opponent's level 6 Digimon.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Purple/BT13_103.cs
+#
+# Color note: card_colors [6] == Purple. This card is PURPLE, not black.
+#
+# ─── IMPLEMENTATION STATUS ───────────────────────────────────────────────────
+#
+# | Clause                                                       | Status      |
+# |--------------------------------------------------------------|-------------|
+# | 1. [Your Turn] BeforePayCost reduce-by-deleted-Gizmon-cost   | BLOCKED     |
+# | 2. [End of Opp Turn][OPT] draw1+trash1, place self, delete   | IMPLEMENTED |
+# | 3. [Security] play this card free                            | IMPLEMENTED |
+#
+# ─── Clause 1 — BLOCKED (gap_kind: engine-primitive + dsl-vocab) ─────────────
+#
+# Printed: "[Your Turn] When you would play a card with [Belphemon] in its
+# name, by deleting 1 of your Digimon with [Gizmon] in its name, reduce the
+# play cost by the play cost of the deleted Digimon."
+#
+# DCGO (EffectTiming.BeforePayCost): the controller MAY (isOptional/canNoSelect)
+# select 1 of their own [Gizmon]-name Digimon, delete it, and the play cost is
+# then reduced by THAT deleted Digimon's printed cost
+# (permanent.CostJustBeforeRemoveField). The reduction amount is determined by
+# an INTERACTIVE selection made DURING the cost.
+#
+# The DSL `kind: cost_reduction` declarative clause cannot express this:
+#   (a) `amount_fn` is evaluated in `cost_reduction_fn` (read context) BEFORE
+#       the `pay_cost_fn` runs — `apply_cost_reduction_candidate`
+#       (game_actions.rs:5848 → inspect amount, THEN run pay_cost). The two
+#       callbacks build SEPARATE `Bindings` (lower_cost_reduction.rs:194), so a
+#       Gizmon bound inside `pay_cost` is invisible to `amount_fn`. No
+#       `FormulaSpec` reads "the play cost of the permanent deleted as the
+#       cost" (`formula.rs` `BindingPlayCost` reads a *prior* `bind_as`
+#       binding only, which is unreachable from the isolated pay_cost scope).
+#   (b) `pay_cost_fn` is gated to `RunOutcome::Synchronous`
+#       (lower_cost_reduction.rs:195); an interactive `select_own_permanent`
+#       parks (non-synchronous) → the cost reads as failed → the reduction is
+#       skipped. Auto-selecting a Gizmon to keep it synchronous would violate
+#       the no-approximations policy (rule 17 / 28).
+#
+# Both gaps are logged: `qa/dsl-vocab-gaps.md` (a cost_reduction whose amount is
+# driven by the permanent chosen+deleted during an interactive pay_cost) and
+# `docs/RUST_ENGINE_GAPS.md` (BeforePayCost reduction needs an interactive,
+# selection-amount-coupled pay_cost). When the substrate is widened, add the
+# Clause-1 declarative here and un-`#[ignore]` the Clause-1 test.
+
+card: BT13-103
+name: Akihiro Kurata
+kind: tamer
+color: [purple]
+cost: 3
+
+effects:
+  # ─── Clause 2: [End of Opponent's Turn] [Once Per Turn] ──────────────────
+  #
+  # Printed: "<Draw 1> and trash 1 card in your hand. Then, by placing this
+  # Tamer under 1 of your Digimon with [Belphemon] in its name as its bottom
+  # digivolution card, delete 1 of your opponent's level 6 Digimon."
+  #
+  # DCGO (EffectTiming.OnEndTurn, IsOpponentTurn,
+  # SetUpActivateClass(..., 1, false, ...) → max-per-turn 1, NOT optional):
+  #   1. DrawClass(card.Owner, 1)                                  [mandatory]
+  #   2. if HandCards.Count >= 1: SelectHandEffect Mode.Discard
+  #      maxCount 1, canNoSelect false                             [mandatory]
+  #   3. if !IsToken and HasMatchConditionPermanent(own non-token
+  #      [Belphemon]-name Digimon != self): SelectPermanentEffect
+  #      canNoSelect true → IPlacePermanentToDigivolutionCards
+  #      (place THIS Tamer's whole permanent under the chosen Belphemon as a
+  #      digivolution source). `digivolutionCardAdded` flips true on success.
+  #                                                                [optional cost]
+  #   4. if digivolutionCardAdded: SelectPermanentEffect over opponent
+  #      level-6 Digimon, canNoSelect false, Mode.Destroy.         [mandatory if 3]
+  #
+  # The whole clause is NOT optional (the draw + trash are forced); only the
+  # "by placing" is the opt-in cost. `once_per_turn: true` = [Once Per Turn].
+  - when: end_of_opponents_turn
+    once_per_turn: true
+    summary: "[End of Opp Turn][OPT] <Draw 1>, trash 1; by placing self under a [Belphemon] Digimon, delete 1 opp level-6 Digimon"
+    process:
+      # 1. <Draw 1> — mandatory.
+      - draw: { of: you, count: 1 }
+
+      # 2. Trash 1 card in hand — mandatory (DCGO canNoSelect false). Only
+      #    prompts when the hand is non-empty (the draw guarantees >= 1 unless
+      #    the deck was empty; a `select_hand` over an empty hand simply
+      #    resolves with no pick).
+      - select_hand:
+          of: you
+          bind_as: trash_card
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_card }
+
+      # 3. "by placing this Tamer under 1 of your [Belphemon]-name Digimon as
+      #    its bottom digivolution card" — optional cost. The target is one of
+      #    the controller's own Digimon (not this Tamer, not a token) whose top
+      #    card has [Belphemon] in its name. `optional: true` surfaces the
+      #    decline (DCGO canNoSelect true). When a target is chosen, place THIS
+      #    Tamer's carrier permanent (`source: source`) under it as a bottom
+      #    digivolution source — `place_as_bottom_source` resolves a Permanent
+      #    `source` to `place_permanent_as_bottom_sources` (the carrier tuck).
+      - select_own_permanent:
+          bind_as: belphemon_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Belphemon
+          prompt: "Place this Tamer under 1 of your [Belphemon] Digimon (or decline)"
+
+      # 4. Only when the placement target was chosen: tuck self, then delete 1
+      #    opponent level-6 Digimon (mandatory once the placement happened —
+      #    DCGO gates the delete on `digivolutionCardAdded`).
+      - if:
+          condition: { binding_exists: belphemon_target }
+          then:
+            - place_as_bottom_source:
+                source: source
+                target: belphemon_target
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 6
+                prompt: "Delete 1 of your opponent's level 6 Digimon"
+            - delete_permanent: { target: delete_target }
+
+  # ─── Clause 3: [Security] play this card without paying the cost ──────────
+  #
+  # Printed: "Security Effect [Security] Play this card without paying the
+  # cost." Standard play_from_security pattern (cf. BT22-094, BT17-093,
+  # BT21-015). Mandatory ([Security] effects are not opt-out per the rules
+  # manual §16). DCGO `EffectTiming.SecuritySkill` → PlaySelfTamerSecurityEffect.
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

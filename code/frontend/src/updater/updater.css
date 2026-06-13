@@ -1,0 +1,140 @@
+/* Auto-surfaced updater UI (toast + modal). Mounted at the app root,
+ * outside `.launcher-screen`, so colors are self-contained rather than
+ * inherited from the launcher's scoped CSS variables. Palette mirrors the
+ * launcher (dark slate + neon-orange accent). */
+
+.updater-toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9000;
+  padding: 10px 16px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #07080b;
+  background: #ff7a18;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(255, 122, 24, 0.4);
+}
+
+.updater-toast:hover {
+  background: #ffb05a;
+}
+
+.updater-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 5, 8, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.updater-modal-card {
+  width: min(440px, calc(100vw - 48px));
+  padding: 24px 26px;
+  background: #11141b;
+  border: 1px solid #2a3040;
+  border-radius: 10px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  color: #c4c9d4;
+  font-family: 'Geist', system-ui, sans-serif;
+}
+
+.updater-modal--forced .updater-modal-card {
+  border-color: rgba(255, 122, 24, 0.55);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 122, 24, 0.25);
+}
+
+.updater-modal-card h2 {
+  margin: 0 0 8px;
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  font-size: 26px;
+  letter-spacing: 0.02em;
+  color: #f1f3f7;
+}
+
+.updater-modal-card p {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.updater-notes {
+  max-height: 160px;
+  overflow: auto;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: #0c0e13;
+  border: 1px solid #1f2330;
+  border-radius: 6px;
+  color: #858c9d;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.updater-error {
+  margin: 0 0 14px !important;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255, 90, 90, 0.1);
+  border: 1px solid rgba(255, 90, 90, 0.4);
+  color: #ff9b9b;
+  font-size: 13px;
+}
+
+.updater-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.updater-modal-actions button {
+  padding: 9px 16px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: #ff7a18;
+  color: #07080b;
+}
+
+.updater-modal-actions button:hover:not(:disabled) {
+  background: #ffb05a;
+}
+
+.updater-modal-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.updater-modal-actions .updater-secondary {
+  background: transparent;
+  border-color: #353c50;
+  color: #f1f3f7;
+}
+
+.updater-modal-actions .updater-secondary:hover:not(:disabled) {
+  background: #181c25;
+  border-color: #ff7a18;
+}
+
+.updater-modal-actions .updater-tertiary {
+  background: transparent;
+  border-color: transparent;
+  color: #858c9d;
+}
+
+.updater-modal-actions .updater-tertiary:hover:not(:disabled) {
+  color: #c4c9d4;
+}

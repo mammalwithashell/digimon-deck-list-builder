@@ -1,0 +1,68 @@
+# BT25-061 Offmon — Digimon, Lv.3, Purple, DP 2000, Cost 3.
+# Trait line: Offline (App Name) — Appmon.
+#
+# DCGO BT25_061.cs (authoritative — cards.json mis-slots the WhenLinked clause
+# as the card's "inherited" text):
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 1)
+#       → kind: link_condition, cost 1, host filter trait_has Appmon.
+#   - AddSelfDigivolutionRequirementStaticEffect(HasAppmonTraits, 0, lvl 2)
+#       → alt_paths digivolve from { level_eq: 2, trait_has: Appmon } cost 0.
+#   - OnStartMainPhase: by trashing 1 [Appmon] from hand, AddMemory(1) + Draw(1).
+#       Optional (DCGO canNoSelect: true; payoff gated on a card being trashed).
+#   - WhenLinked (SetIsLinkedEffect true): 1 opp Digimon can't unsuspend until
+#       their turn ends (CanNotUnsuspendClass, UntilOwnerTurnEnd expiry).
+#       → scope: linked, when: when_linked, add_modifier CannotUnsuspend with
+#         expiry end_of_opponents_turn on the chosen opp Digimon.
+
+card: BT25-061
+name: Offmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+traits: [Offline, Appmon]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 1 ─────────────
+  - kind: link_condition
+    cost: 1
+    filter: { trait_has: Appmon }
+
+  # ─── [Start of Your Main Phase] trash 1 [Appmon] from hand → draw + memory ─
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] By trashing 1 [Appmon] card from hand, draw 1 and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: trash_pick
+          optional: true
+          filter: { trait_has: Appmon }
+          prompt: "Trash 1 [Appmon] card from your hand to draw 1 and gain 1 memory"
+      - if:
+          condition: { binding_present: trash_pick }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: trash_pick }
+            - gain_memory: 1
+            - draw: { of: you, count: 1 }
+
+  # ─── [When Linking] 1 opp Digimon can't unsuspend until their turn ends ────
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] 1 of your opponent's Digimon can't unsuspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter: { kind: digimon }
+          prompt: "1 opponent Digimon can't unsuspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn

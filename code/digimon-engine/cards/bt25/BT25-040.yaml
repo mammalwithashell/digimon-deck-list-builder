@@ -1,0 +1,160 @@
+# BT25-040 MagnaAngemon — Digimon, Lv.5, Yellow, DP 7000, Cost 7.
+# Traits: Archangel, Iliad, TS.  Attribute: Vaccine.
+# Evo: Lv.4 Yellow / cost 3 (printed evo_costs).
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   When effects trash this card from the security stack, you may play 1 level 4
+#   or lower [Angel] or [Iliad] trait card from your hand without paying the cost.
+#   ＜Ascension＞ (When this Digimon is deleted, you may place this card as the
+#   top security card.)
+#   [On Play] [When Digivolving] By trashing your top or bottom security card, 1
+#   of your opponent's Digimon gets -8000 DP until their turn ends.
+#
+# Inherited:
+#   [All Turns] [Once Per Turn] When your security stack is removed from, 1 of
+#   your opponent's Digimon gets -4000 DP for the turn.
+#
+# Printed evo box (alt-digivolution): "[Digivolve] Lv.4 w/[TS] trait: Cost 3".
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_040.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Digivolution Condition" (None): AddSelfDigivolutionRequirementStatic
+#   Effect(level 4, HasTSTraits, cost 3). → alt_path Lv.4 [TS] cost 3. Standard
+#   Lv.4 Yellow / cost 3 (cards.json evo_costs) also encoded.
+#
+# Region "When Trashed" (OnDiscardSecurity, CanTriggerOnTrashSelfSecurity,
+#   skippable): optional SelectHand PlayForFree over HasPlayCost && HasLevel &&
+#   Level<=4 && (Angel||Iliad). → scope: security, when: on_discard_security,
+#   optional select_hand (Lv<=4 Angel/Iliad Digimon) → play_from_hand_free.
+#   (BT25-034 Angemon idiom — identical clause.)
+#
+# Region "Ascension" (OnDestroyedAnyone): AscensionSelfEffect. →
+#   `kind: grant_keyword` Ascension.
+#
+# Region "Shared OP/WD" (onPlay+whenDigivolving, skippable): player chooses Top
+#   / Bottom (or Don't trash); on trash, then select 1 opp Digimon →
+#   ChangeDigimonDP(-8000, UntilOpponentTurnEnd). → when: [on_play,
+#   when_digivolving], optional:true (the "By trashing" cost — declining = no
+#   trash), select_effect_choice Top/Bottom, branch trash_top/bottom_security,
+#   then select_opponent_permanent → add_dp_modifier -8000 / end_of_opponents_turn.
+#   Gated on security_count_gte 1 (DCGO: SecurityCards.Any()).
+#
+# Region "All Turns" (OnLoseSecurity, inherited, OPT): when own security removed,
+#   1 opp Digimon gets -4000 DP for the turn. → scope: inherited, when:
+#   on_own_security_removed, once_per_turn, active_when all_turns,
+#   select_opponent_permanent → add_dp_modifier -4000 / end_of_turn.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Std digivolve Lv.4 Yellow / Cost 3                            | IMPLEMENTED (printed evo_costs) |
+# | Alt-source Lv.4 [TS] / Cost 3                                | IMPLEMENTED (alt_paths) |
+# | Security-trash self → may play Lv<=4 Angel/Iliad free        | IMPLEMENTED (scope:security on_discard_security) |
+# | <Ascension>                                                   | IMPLEMENTED (grant_keyword) |
+# | [OP][WD] By trashing top/bottom sec → 1 opp -8000 DP till their turn | IMPLEMENTED (optional top/bottom branch + DP-minus) |
+# | Inherited [All Turns][OPT] own sec removed → 1 opp -4000 DP   | IMPLEMENTED (on_own_security_removed) |
+
+card: BT25-040
+name: MagnaAngemon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Archangel, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  # Standard digivolution: Lv.4 Yellow / cost 3 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+  # Alt-digivolution: Lv.4 with [TS] trait / cost 3.
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── Clause A — [Security-trash] play 1 Lv.4-or-lower Angel/Iliad free ───────
+  #
+  # "When effects trash this card from the security stack" → scope: security
+  # clause on on_discard_security (engine fires OnDiscardSecurity for the
+  # effect-trashed card). Optional ("you may"). BT25-034 idiom (identical).
+  - when: on_discard_security
+    scope: security
+    optional: true
+    summary: "[Security-trash] When effects trash this card from security, you may play 1 Lv.4-or-lower [Angel]/[Iliad] card from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Angel
+                  - trait_has: Iliad
+          prompt: "You may play 1 Lv.4-or-lower [Angel] or [Iliad] card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  # ─── <Ascension> ────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Ascension
+    summary: "<Ascension> (When deleted, you may place this card as top security)"
+
+  # ─── Clause B — [On Play][When Digivolving] trash top/bottom sec → -8000 DP ──
+  #
+  # "By trashing your top or bottom security card" is the optional cost: the
+  # player chooses Top or Bottom (or declines the whole clause via PASS). On
+  # trash, 1 opp Digimon gets -8000 DP until THEIR (opponent's) turn ends.
+  # Gated on having at least 1 security card.
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OP][WD] By trashing your top or bottom security card, 1 opp Digimon gets -8000 DP until their turn ends"
+    condition:
+      security_count_gte: 1
+    process:
+      - select_effect_choice:
+          bind_as: where
+          labels:
+            - "Trash top security"
+            - "Trash bottom security"
+          prompt: "Trash your top or bottom security card"
+      - if:
+          condition: { equals: [where, 0] }
+          then:
+            - trash_top_security: { of: you }
+      - if:
+          condition: { equals: [where, 1] }
+          then:
+            - trash_bottom_security: { of: you }
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -8000 DP until their turn ends"
+      - add_dp_modifier:
+          target: dp_target
+          value: -8000
+          expiry: end_of_opponents_turn
+
+  # ─── Clause C — Inherited [All Turns][OPT] own sec removed → -4000 DP ────────
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[Inherited][All Turns][OPT] When your security stack is removed from, 1 opp Digimon gets -4000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: inh_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -4000 DP for the turn"
+      - add_dp_modifier:
+          target: inh_target
+          value: -4000
+          expiry: end_of_turn

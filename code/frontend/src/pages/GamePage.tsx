@@ -25,6 +25,7 @@ import { PhaseBanner } from '@/components/game/PhaseBanner';
 import { DigivolveBanner } from '@/components/game/DigivolveBanner';
 import { BattleEffect } from '@/components/game/BattleEffect';
 import { CardOverlay } from '@/components/game/CardOverlay';
+import { CardDetailOverlay } from '@/components/game/CardDetailOverlay';
 import { GameLogDrawer } from '@/components/game/GameLogDrawer';
 import { SecurityRevealOverlay } from '@/components/board/SecurityRevealOverlay';
 import { EffectPopup } from '@/components/game/EffectPopup';
@@ -51,10 +52,23 @@ import {
   fieldSelectionHighlights,
   isFieldSelectionKind,
 } from '@/utils/selectionTargets';
-import { GamePhase, type ActionTrace, type PermanentInfo } from '@/types/game';
+import {
+  GamePhase,
+  type ActionTrace,
+  type GameEvent,
+  type GameState,
+  type PermanentInfo,
+} from '@/types/game';
+import { useUiStore } from '@/stores/uiStore';
+import { BotSpeedControl } from '@/components/game/BotSpeedControl';
+import { usePacedAgentDriver } from '@/hooks/usePacedAgentDriver';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 type ActionTraceResponse = { action_traces?: ActionTrace[] };
+// Stable empty mask used to lock all mask-derived affordances while a paced
+// agent sequence is draining (the response mask belongs to the AGENT during
+// those beats — rendering it would light up wrong affordances).
+const EMPTY_MASK: number[] = [];
 // Desktop builds have no server-side Deck rows, so deck list/load must go
 // through the Tauri-backed deckStore. parseDeck / validateDeckRaw already
 // branch internally, so those stay on deckApiMod.
@@ -75,7 +89,14 @@ export function GamePage() {
   const store = useGameStore();
   const { opponentMode } = usePlayFlowStore();
   useEffectHighlight();
-  const parsedMask = useActionMask(store.actionMask, store.currentPhase);
+  // Bot action pacing (add-bot-action-pacing): non-instant speeds advance
+  // local bot games one agent action per request, paced by the driver
+  // effect below. WebSocket games are server-paced and never use this.
+  const botSpeed = useUiStore((s) => s.botSpeed);
+  const paced = !useWebSocket && botSpeed !== 'instant';
+  // While the bot's beats are draining, all mask-derived affordances are
+  // locked — the in-flight mask belongs to the agent, not the human.
+  const parsedMask = useActionMask(store.agentPending ? EMPTY_MASK : store.actionMask);
   const actionPendingRef = useRef(false);
 
   // WebSocket connection (active for PvP, vs-AI-online, and spectator modes)
@@ -112,6 +133,26 @@ export function GamePage() {
     [store],
   );
 
+  // Apply any step/action-shaped response to the store, including the
+  // paced-mode `agent_pending` flag the pacing driver keys off.
+  const applyGameResponse = useCallback(
+    (res: {
+      state: GameState;
+      action_mask: number[];
+      logs?: string[];
+      events?: GameEvent[];
+      agent_pending?: boolean;
+    } & ActionTraceResponse) => {
+      store.setGameState(res.state);
+      store.setActionMask(res.action_mask);
+      if (res.logs) store.appendLogs(res.logs);
+      if (res.events) store.appendEvents(res.events);
+      appendResponseActionTraces(res);
+      store.setAgentPending(res.agent_pending ?? false);
+    },
+    [appendResponseActionTraces, store],
+  );
+
   // Use WebSocket sendAction for PvP / vs-AI-online / spectator; HTTP for local games.
   const sendAction = useCallback(
     async (actionId: number) => {
@@ -120,15 +161,17 @@ export function GamePage() {
         return;
       }
       if (!store.gameId || actionPendingRef.current) return;
+      // Paced bot sequence draining — the human has no legal input until
+      // the beats finish (mask is locked too; this is a belt-and-braces
+      // guard against queued clicks).
+      if (store.agentPending) return;
       actionPendingRef.current = true;
 
       try {
-        const actionResult = await gameApi.sendAction(store.gameId, actionId);
-        store.setGameState(actionResult.state);
-        store.setActionMask(actionResult.action_mask);
-        if (actionResult.logs) store.appendLogs(actionResult.logs);
-        if (actionResult.events) store.appendEvents(actionResult.events);
-        appendResponseActionTraces(actionResult);
+        const actionResult = await gameApi.sendAction(store.gameId, actionId, {
+          paced,
+        });
+        applyGameResponse(actionResult);
 
         // If the human is still mid-decision — a multi-stage selection like
         // DNA digivolve's two material picks leaves a pending_selection
@@ -139,20 +182,27 @@ export function GamePage() {
         const humanStillDeciding =
           actionResult.state.pendingSelection?.selectingPlayer === 1;
 
-        if (!actionResult.is_game_over && !humanStillDeciding) {
+        // Paced mode: the response already executed at most one agent beat;
+        // the pacing driver effect advances the rest on a timer. Only the
+        // legacy instant path drains agents inline here.
+        if (!paced && !actionResult.is_game_over && !humanStillDeciding) {
           const stepResult = await gameApi.stepGame(store.gameId);
-          store.setGameState(stepResult.state);
-          store.setActionMask(stepResult.action_mask);
-          if (stepResult.logs) store.appendLogs(stepResult.logs);
-          if (stepResult.events) store.appendEvents(stepResult.events);
-          appendResponseActionTraces(stepResult);
+          applyGameResponse(stepResult);
         }
       } finally {
         actionPendingRef.current = false;
       }
     },
-    [appendResponseActionTraces, store, useWebSocket, ws],
+    [applyGameResponse, paced, store, useWebSocket, ws],
   );
+
+  // Pacing driver: while the bot has actions left, request the next beat
+  // after the configured delay; retry-once + stall-with-Continue on
+  // failure. Inert for WebSocket games (server-paced).
+  const { pacingStalled, resumePacing } = usePacedAgentDriver({
+    active: !useWebSocket,
+    applyGameResponse,
+  });
   const { savedDecks, setSavedDecks } = useDeckBuilderStore();
   const { getDropAction } = useDropZone(parsedMask);
 
@@ -214,7 +264,53 @@ export function GamePage() {
       }
     }
   }, [urlGameId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Dev-only: the desktop debug bridge (Tauri feature `debug-bridge`) can
+  // stage / mutate the game out of band (driven by the scenario MCP). It
+  // emits `debug:state-changed` after each external mutation; refetch so
+  // the board reflects the staged state without a manual reload. Inert
+  // outside the Tauri runtime (browser-dev / web) — the event API is
+  // imported lazily and only when Tauri's IPC hooks are present.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hasTauri = Boolean(
+      (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__,
+    );
+    if (!hasTauri) return;
+    let cancelled = false;
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        const un = await listen('debug:state-changed', async () => {
+          try {
+            const gid = useGameStore.getState().gameId ?? 'rust-local';
+            const [state, maskData] = await Promise.all([
+              gameApi.getState(gid),
+              gameApi.getMask(gid),
+            ]);
+            store.setGameState(state);
+            store.setActionMask(maskData);
+          } catch (err) {
+            console.error('debug bridge refresh failed:', err);
+          }
+        });
+        if (cancelled) un();
+        else unlisten = un;
+      } catch {
+        // Tauri event API unavailable (browser-dev) — no bridge here.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [inspectedPerm, setInspectedPerm] = useState<PermanentInfo | null>(null);
+  // Right-click card inspect (DCGO CardDetail) — enlarged single-card view,
+  // opened from the hand or from a card image in the stack inspector.
+  const [inspectedCardId, setInspectedCardId] = useState<string | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [draggedHandIndex, setDraggedHandIndex] = useState<number | null>(null);
   const [isOverValid, setIsOverValid] = useState(false);
@@ -282,6 +378,10 @@ export function GamePage() {
           null,
           agentType === 'trained' ? selectedModelId : null,
         ],
+        // Paced mode: the browser wire's create runs an opening agent
+        // prelude — cap it at one beat so the opening bot turn is paced
+        // too. (Desktop create runs no prelude; the flag is inert there.)
+        paced,
       });
 
       // Set game state before gameId so the board has player data when it first renders
@@ -298,15 +398,13 @@ export function GamePage() {
       store.clearLogs();
       store.clearEvents();
       store.clearActionTraces();
+      store.setAgentPending(result.agent_pending ?? false);
       store.setGameId(result.game_id);
 
-      // Step once to handle initial agent turn if agent goes first
-      const stepResult = await gameApi.stepGame(result.game_id);
-      store.setGameState(stepResult.state);
-      store.setActionMask(stepResult.action_mask);
-      if (stepResult.logs) store.appendLogs(stepResult.logs);
-      if (stepResult.events) store.appendEvents(stepResult.events);
-      appendResponseActionTraces(stepResult);
+      // Step once to handle initial agent turn if agent goes first. Paced
+      // mode advances a single beat; the pacing driver takes it from there.
+      const stepResult = await gameApi.stepGame(result.game_id, { paced });
+      applyGameResponse(stepResult);
     } catch (err) {
       console.error('Failed to create game:', err);
       // If gameId was set but step failed, reset to avoid blank board
@@ -337,6 +435,7 @@ export function GamePage() {
       if (res.events) store.appendEvents(res.events);
       // Clear any in-flight UI selection state so we land on the
       // replayed snapshot with a clean slate.
+      store.setAgentPending(res.agent_pending ?? false);
       setActionChoice(null);
       setDigivolvingHandIndex(null);
       setSurrenderedBy(null);
@@ -354,6 +453,7 @@ export function GamePage() {
       if (res.logs) store.appendLogs(res.logs);
       if (res.events) store.appendEvents(res.events);
       appendResponseActionTraces(res as typeof res & ActionTraceResponse);
+      store.setAgentPending(false);
       setSurrenderedBy(1);
     } catch {
       // Ignore errors (e.g. game already over)
@@ -493,38 +593,28 @@ export function GamePage() {
         return;
       }
 
-      // During selection phases, map a board-slot click to a field-target
-      // selection. The engine encodes BOTH own- and opponent-field targets
-      // as `OWN_FIELD_START + slot` (=100+slot); `pendingSelection.kind`
-      // ("OwnField"/"OppField") is the only signal for which field. Routing
-      // off `kind` is what makes opponent-field targets clickable — the old
-      // code computed a `114+slot` enemy id that never matched the engine's
-      // valid set, so every opponent-field selection (e.g. Cocytus Breath's
-      // "Return 1 of your opponent's Digimon") was silently swallowed.
-      if (phase >= GamePhase.SelectTarget && phase <= GamePhase.SelectSecurity) {
-        const fieldActionId = fieldSelectionActionId(
+      // Map a board click to a field-target selection. The engine encodes
+      // own- and opponent-field targets in the same `OWN_FIELD_START + slot`
+      // range and disambiguates by `pendingSelection.kind`;
+      // `fieldSelectionActionId` honours that (the old `isOpponent ?
+      // ENEMY_FIELD_START` branch never matched the engine's ids, so "delete
+      // an opponent's Digimon" prompts swallowed every click).
+      //
+      // Gate on the selection KIND, NOT a phase range: single-target field
+      // prompts run in `SelectTarget`, but capped-multi-select field prompts
+      // ("delete up to 2 of your opponent's Digimon") run in `SelectBudgeted`,
+      // which a `SelectTarget..SelectSecurity` range excluded — leaving those
+      // multi-select prompts unclickable.
+      if (isFieldSelectionKind(store.pendingSelection?.kind)) {
+        const selIdx = fieldSelectionActionId(
           store.pendingSelection?.kind,
           isOpponent,
           slotIndex,
           parsedMask.validSelections,
         );
-        if (fieldActionId !== null) {
-          handleAction(fieldActionId);
+        if (selIdx !== null) {
+          handleAction(selIdx);
           return;
-        }
-        // For NON-field selection kinds (e.g. block/counter blocker picks
-        // that aren't tagged OwnField/OppField) keep the legacy own-field
-        // mapping. We must NOT run this for field kinds: an OppField
-        // selection's valid ids are 100+oppSlot, which would spuriously
-        // match an own-slot click of the same index and bounce the wrong
-        // permanent. The old enemy-range branch was dead (engine never
-        // emits 114+slot), so dropping it loses nothing.
-        if (!isFieldSelectionKind(store.pendingSelection?.kind) && !isOpponent) {
-          const ownIdx = SELECTION.OWN_FIELD_START + slotIndex;
-          if (parsedMask.validSelections.has(ownIdx)) {
-            handleAction(ownIdx);
-            return;
-          }
         }
       }
 
@@ -566,6 +656,27 @@ export function GamePage() {
       }
     },
     [store, parsedMask, handleAction, digivolvingHandIndex],
+  );
+
+  // Right-click inspect: open the stack inspector for ANY permanent (own,
+  // opponent, or breeding), at any time. Read-only — submits no action and is
+  // independent of pendingSelection / attack state.
+  const handleSlotInspect = useCallback(
+    (isOpponent: boolean, slotIndex: number) => {
+      const player = isOpponent ? store.player2 : store.player1;
+      const perm = player?.battleArea[slotIndex];
+      if (perm) setInspectedPerm(perm);
+    },
+    [store],
+  );
+
+  const handleBreedingInspect = useCallback(
+    (isOpponent: boolean) => {
+      const player = isOpponent ? store.player2 : store.player1;
+      const perm = player?.breedingArea;
+      if (perm) setInspectedPerm(perm);
+    },
+    [store],
   );
 
   const handleRevealedClick = useCallback(
@@ -765,18 +876,19 @@ export function GamePage() {
   // banner but leave the board un-affordanced — the user sees no hint
   // that opponent (or own) slots are clickable. `handleSlotClick` already
   // routes the dispatch; this purely surfaces *which* slots are valid.
-  // Field-target valid ids are 100+slot for EITHER field; route them to the
-  // own/enemy half off `pendingSelection.kind` (see selectionTargets.ts).
-  // The old range-split (own=100-113, enemy=114-127) mis-highlighted every
-  // opponent-field target on the player's own slots, since the engine never
-  // emits 114+slot.
+  //
+  // The engine encodes own- and opponent-field targets in the SAME
+  // `OWN_FIELD_START + slot` id range and disambiguates by
+  // `pendingSelection.kind`, so we must route by `kind`, not by id range
+  // (the old `ENEMY_FIELD_START` branch never matched and left
+  // opponent-target prompts un-highlighted). See `utils/selectionTargets.ts`.
   {
-    const fieldHl = fieldSelectionHighlights(
+    const fieldHighlights = fieldSelectionHighlights(
       store.pendingSelection?.kind,
-      [...parsedMask.validSelections],
+      parsedMask.validSelections,
     );
-    for (const slot of fieldHl.own) highlightedOwnSlots.add(slot);
-    for (const slot of fieldHl.enemy) highlightedEnemySlots.add(slot);
+    for (const slot of fieldHighlights.own) highlightedOwnSlots.add(slot);
+    for (const slot of fieldHighlights.enemy) highlightedEnemySlots.add(slot);
   }
 
   // DNA material selection highlights its own-field candidates by RAW
@@ -904,7 +1016,22 @@ export function GamePage() {
           pendingSelection={store.pendingSelection}
           localPlayer={1}
           isGameOver={store.isGameOver}
+          agentActing={store.agentPending}
         />
+        {pacingStalled && (
+          <div className="flex items-center justify-center gap-3 px-4 py-2 bg-red-900/50 border-b border-red-700/60">
+            <span className="text-sm text-red-200">
+              The bot&apos;s turn could not advance (connection problem?).
+            </span>
+            <button
+              type="button"
+              className="px-3 py-0.5 text-sm rounded border border-red-400 text-red-100 hover:bg-red-800/60"
+              onClick={resumePacing}
+            >
+              Continue
+            </button>
+          </div>
+        )}
 
         <PhaseBanner phase={store.currentPhase} isGameOver={store.isGameOver} />
         <DigivolveBanner />
@@ -914,6 +1041,11 @@ export function GamePage() {
           <CardOverlay
             permanent={inspectedPerm}
             onClose={() => setInspectedPerm(null)}
+            onInspectCard={setInspectedCardId}
+          />
+          <CardDetailOverlay
+            cardId={inspectedCardId}
+            onClose={() => setInspectedCardId(null)}
           />
           <SecurityRevealOverlay />
           <EffectPopup />
@@ -932,6 +1064,8 @@ export function GamePage() {
             <GameBoard
               onPlayCard={handlePlayCard}
               onSlotClick={handleSlotClick}
+              onSlotInspect={handleSlotInspect}
+              onBreedingInspect={handleBreedingInspect}
               onHatch={() => handleAction(ACTION.HATCH)}
               onMove={() => handleAction(ACTION.MOVE)}
               onBreedingClick={
@@ -964,6 +1098,7 @@ export function GamePage() {
               canPlayDragged={draggedHandIndex !== null && parsedMask.canPlayFromHand.has(draggedHandIndex)}
               previewCost={previewCost}
               onHandCardHoverIndex={setHoveredHandIndex}
+              onHandCardInspect={setInspectedCardId}
               actionTraces={store.actionTraces}
               latestTensorSummary={store.latestTensorSummary}
             />
@@ -1022,9 +1157,16 @@ export function GamePage() {
           </div>
         )}
 
+        {/* Bot speed selector — only meaningful for locally-paced bot
+            games; hidden for server-paced WebSocket games. */}
+        {!useWebSocket && (
+          <div className="flex justify-end px-3 py-1">
+            <BotSpeedControl />
+          </div>
+        )}
         <ActionBar
           phase={store.currentPhase}
-          actionMask={store.actionMask}
+          actionMask={store.agentPending ? EMPTY_MASK : store.actionMask}
           onAction={handleAction}
           onSurrender={handleSurrender}
           isGameOver={store.isGameOver}
@@ -1065,9 +1207,12 @@ export function GamePage() {
         actionMask={store.actionMask}
         handIds={store.player1?.handIds ?? []}
         trashIds={store.player1?.trashIds ?? []}
+        opponentTrashIds={store.player2?.trashIds ?? []}
         securityIds={store.player1?.securityIds ?? []}
+        battleArea={store.player1?.battleArea ?? []}
         onAction={handleAction}
         localPlayer={1}
+        onInspectCard={setInspectedCardId}
       />
 
       {/* Keyword prompt dialog for optional keyword activations */}

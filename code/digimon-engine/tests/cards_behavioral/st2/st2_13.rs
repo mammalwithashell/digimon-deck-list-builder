@@ -535,7 +535,6 @@ fn st2_13_security_reveal_gains_2_memory() {
         .start();
 
     let attacker = runner.place_on_field(0, "ATK", Some(0));
-    let mem_before = runner.memory();
     let sec_before = runner.security_count(1);
 
     let result = runner.attack_player(attacker, 1, false);
@@ -558,14 +557,22 @@ fn st2_13_security_reveal_gains_2_memory() {
         "ATK must survive the security check (no defender, no attack-cancel)"
     );
 
-    // The memory delta is -2 from P0's turn-player perspective because the
-    // security effect's controller is the defender, P1.
+    // P1's [Security] effect gives the defender (P1) 2 memory, pushing the
+    // gauge to -2 from P0's perspective — i.e. onto P1's side. With the attack
+    // fully resolved and no pending effects, P0's turn now ends and passes to
+    // P1 (parity with Python combat.py's post-attack `check_turn_end`). From
+    // the new active player's perspective the gauge seesaws to +2, which is
+    // exactly the 2 memory the defender gained.
     assert_eq!(
-        runner.memory() - mem_before,
-        -2,
-        "[Security] gain_memory: 2 must give exactly 2 memory to the defender; \
-         before={mem_before}, after={}",
-        runner.memory()
+        runner.turn_player(),
+        1,
+        "memory crossed to the defender's side, so P0's turn ends and passes to P1"
+    );
+    assert_eq!(
+        runner.memory(),
+        2,
+        "the -2 gauge seesaws to +2 for P1 — [Security] gain_memory: 2 gave the \
+         defender exactly 2 memory"
     );
 }
 

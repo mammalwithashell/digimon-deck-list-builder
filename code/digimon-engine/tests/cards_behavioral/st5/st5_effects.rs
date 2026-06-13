@@ -78,7 +78,7 @@ fn st5_12_when_digivolving_grants_reboot_to_up_to_two_own_digimon() {
 
     assert_eq!(
         runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 })
+        Some(SelectionKind::OwnField)
     );
     let first = runner.pending_selection_view().unwrap().valid_action_ids[1];
     runner
@@ -86,7 +86,7 @@ fn st5_12_when_digivolving_grants_reboot_to_up_to_two_own_digimon() {
         .expect("pick first Reboot target");
     assert_eq!(
         runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 1 })
+        Some(SelectionKind::OwnField)
     );
     let second = runner.pending_selection_view().unwrap().valid_action_ids[1];
     runner
@@ -205,7 +205,7 @@ fn st5_12_reboot_grant_can_be_declined_without_targets() {
 
     assert_eq!(
         runner.pending_kind(),
-        Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 })
+        Some(SelectionKind::OwnField)
     );
     assert!(
         runner

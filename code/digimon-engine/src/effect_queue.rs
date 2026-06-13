@@ -198,6 +198,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: chooser,
             previous_phase,
@@ -224,6 +225,23 @@ impl Game {
     /// **Does not drive execution.** Call `drain_effect_queue()` afterward
     /// to resolve the collected effects, or call `enqueue_triggered` for
     /// multiple sources first and drain once at the end.
+    /// Enqueue the `OnAddToHand` observer for an EFFECT-driven hand gain by
+    /// `player`. Call this from every effect-initiated "add to hand" sink
+    /// (return-to-hand, security/trash/deck/reveal-to-hand, effect-draw, …) — NOT
+    /// from the normal turn/mulligan draw. The observer is enqueued (drained by
+    /// the surrounding effect-resolution loop, like `OnPlay`/`OnEnterField`); the
+    /// gaining player is carried in `affected_player` so a controller's observer
+    /// can gate on "the opponent's hand gained cards." See G-ON-ADD-TO-HAND-OBSERVER.
+    pub(crate) fn fire_on_add_to_hand_by_effect(&mut self, player: PlayerId) {
+        self.enqueue_triggered(
+            EffectTiming::OnAddToHand,
+            TriggerSource::HandGained {
+                player,
+                effect_initiated: true,
+            },
+        );
+    }
+
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
         match source {
             TriggerSource::Permanent(handle) => {
@@ -234,6 +252,23 @@ impl Game {
             TriggerSource::PlayerBattleArea(player) => {
                 // Snapshot indices up-front. Firing an effect via the drainer
                 // can mutate the battle_area, but enqueueing itself is pure.
+                let count = self.player(player).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player,
+                        index: i as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+            }
+            TriggerSource::Linked { player, .. } => {
+                // Same battle-area scan as `PlayerBattleArea`, but the trigger
+                // context carries the just-linked card so a `WhenLinked`
+                // self-filter (`event_card == source_card`) is possible. The
+                // `.linked()` OnLink effect on the just-linked card is reached
+                // through `enqueue_from_permanent`'s linked-card scan.
                 let count = self.player(player).battle_area.len();
                 for i in 0..count {
                     let handle = PermanentHandle {
@@ -323,6 +358,25 @@ impl Game {
                 }
             }
             TriggerSource::Digivolved { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
+            TriggerSource::HandGained { .. } => {
+                // Fan out to EVERY player's battle area so a controller's
+                // observer (e.g. BT11-033 watching the opponent's hand) sees a
+                // hand-gain on any player. The gaining player is carried in
+                // `affected_player` (set in `trigger_context_for_source`).
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
                     let count = self.player(player).battle_area.len();
@@ -692,6 +746,52 @@ impl Game {
         }
     }
 
+    /// Run `hook` once the CURRENT pending-selection chain fully drains.
+    ///
+    /// If no selection is pending, the hook runs immediately. Otherwise the
+    /// pending selection's `callback` / `on_decline` are composed so that,
+    /// after the original resolution, the hook RE-ARMS on whatever selection
+    /// the resolution installed next — it fires exactly once, after the last
+    /// selection in the chain resolves.
+    ///
+    /// Introduced for interruptive `<Partition>` (judge-quiz Q30): the second
+    /// partition source must be played only after the FIRST play's would-play
+    /// interrupt chain (e.g. MedievalGallantmon's "suspend 2 Digimon" cost
+    /// reduction) completes, so the second card is not yet in the battle area
+    /// while the first's interrupts resolve ("played out simultaneously").
+    pub(crate) fn run_after_selections_drain(
+        &mut self,
+        hook: Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>,
+    ) {
+        use std::sync::{Arc, Mutex};
+        let Some(mut pending) = self.pending_selection.take() else {
+            hook(self);
+            return;
+        };
+        let original = pending.callback;
+        // One-shot shared slot so the accept and decline paths can both
+        // re-arm without ever double-firing the hook.
+        type Hook = Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>;
+        let slot: Arc<Mutex<Option<Hook>>> = Arc::new(Mutex::new(Some(hook)));
+        let slot_cb = Arc::clone(&slot);
+        pending.callback = Box::new(move |game, action| {
+            original(game, action);
+            if let Some(h) = slot_cb.lock().unwrap().take() {
+                game.run_after_selections_drain(h);
+            }
+        });
+        if let Some(orig_decline) = pending.on_decline.take() {
+            let slot_dec = Arc::clone(&slot);
+            pending.on_decline = Some(Box::new(move |game| {
+                orig_decline(game);
+                if let Some(h) = slot_dec.lock().unwrap().take() {
+                    game.run_after_selections_drain(h);
+                }
+            }));
+        }
+        self.pending_selection = Some(pending);
+    }
+
     /// Drain the effect queue. Fires each queued effect in order, pausing
     /// when an effect installs a `pending_selection` or when the queue
     /// contains multiple triggers for a single chooser (installs a
@@ -717,6 +817,14 @@ impl Game {
     /// the selection resolves.
     pub fn drain_effect_queue(&mut self) {
         self.effect_drain_depth = self.effect_drain_depth.saturating_add(1);
+        // Official timing: complete rule processing BEFORE activating queued
+        // triggered effects (judge-quiz Q24 — a Digimon driven to ≤0 DP
+        // while its trigger was parked is deleted by the rules check first,
+        // so the trigger's source is gone when activation is attempted).
+        // Outermost entries only; nested drains are mid-effect (Q6/Q13/Q14).
+        if self.effect_drain_depth == 1 && self.pending_selection.is_none() {
+            self.run_state_based_rules_check();
+        }
         self.drain_effect_queue_inner();
         if self.effect_drain_depth == 1 {
             let mut guard: u16 = 0;
@@ -1141,6 +1249,19 @@ impl Game {
                 dna_origin,
                 ..TriggerContext::default()
             },
+            TriggerSource::HandGained {
+                player,
+                effect_initiated,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The player whose hand gained cards. `event_add_to_hand_player`
+                // predicates compare this against the observer's controller.
+                affected_player: Some(player),
+                source_player: Some(player),
+                effect_initiated,
+                ..TriggerContext::default()
+            },
             TriggerSource::EnteredField {
                 player,
                 permanent,
@@ -1153,6 +1274,17 @@ impl Game {
                 event_card: Some(card),
                 source_player: Some(player),
                 effect_initiated,
+                ..TriggerContext::default()
+            },
+            TriggerSource::Linked { player, host, card } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(host),
+                event_card: Some(card),
+                event_source_card: Some(card),
+                event_host_card: self.top_card_handle(host),
+                event_host_permanent: Some(host),
+                source_player: Some(player),
                 ..TriggerContext::default()
             },
             TriggerSource::OptionPlaced {
@@ -1199,12 +1331,14 @@ impl Game {
                 player,
                 permanent,
                 card,
+                effect_initiated,
             } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 event_permanent: Some(permanent),
                 event_card: Some(card),
                 source_player: Some(player),
+                effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::AttackTargetChanged {
@@ -2346,6 +2480,32 @@ impl Game {
             return;
         }
 
+        // DCGO `CardEffectCommons.CanActivateOnDeletion` (OnDeletion.cs): the
+        // [On Deletion] bundle activates only while the deleted carrier's
+        // top-most card is still in its former controller's trash. This is a
+        // CanActivate check — re-evaluated at activation, not at queue time —
+        // so if an earlier effect (the deleting effect's own body, or an
+        // earlier OnDeletion clause) moves the top card out of trash before
+        // this clause resolves, the clause is suppressed. Tokens leave no card
+        // in trash but always activate (`if (card.IsToken) return true;`).
+        if qe.timing == EffectTiming::OnDeletion {
+            if let Some(snap) = qe
+                .trigger_context
+                .as_ref()
+                .and_then(|t| t.deleted_object.as_ref())
+            {
+                if !snap.is_token {
+                    let top = snap.top_card;
+                    let owner = snap.former_controller;
+                    let in_trash =
+                        self.player(owner).trash.iter().any(|c| c.handle() == top);
+                    if !in_trash {
+                        return; // suppressed: top card no longer in trash
+                    }
+                }
+            }
+        }
+
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
@@ -2829,6 +2989,34 @@ impl Game {
         }
     }
 
+    /// Refund one recorded activation — DCGO `ActivateClass.RemoveUse()`.
+    /// Driven by the DSL `refund_opt` step when an optional once-per-turn
+    /// body executed nothing (G-OPT-REFUND-ON-DECLINE).
+    pub(crate) fn unrecord_source_permanent_activation(
+        &mut self,
+        handle: PermanentHandle,
+        source_card: CardHandle,
+        effect_slot: u8,
+    ) {
+        if handle.index == BREEDING_TARGET as u8 {
+            if let Some(perm) = self
+                .players
+                .get_mut(handle.player as usize)
+                .and_then(|p| p.breeding_area.as_mut())
+            {
+                perm.unrecord_activation(source_card, effect_slot);
+            }
+            return;
+        }
+        if let Some(perm) = self
+            .players
+            .get_mut(handle.player as usize)
+            .and_then(|p| p.battle_area.get_mut(handle.index as usize))
+        {
+            perm.unrecord_activation(source_card, effect_slot);
+        }
+    }
+
     fn resume_queued_effect_process_tail(&mut self, qe: QueuedEffect) {
         let prev_effect_source = self.effect_source_player;
         let prev_effect_source_card = self.effect_source_card;
@@ -2907,6 +3095,24 @@ impl Game {
                     }
                     SecurityRemovalDestination::Hand(owner) => {
                         self.player_mut(owner).hand.push(security.card);
+                    }
+                    SecurityRemovalDestination::Deck { owner, to_bottom } => {
+                        // Route to the owner's deck. Digi-Eggs go to the
+                        // digitama deck. Deck top = Vec end (drawn first);
+                        // deck bottom = index 0 — matching `move_card_to_deck`.
+                        let is_egg = security.card.card_kind(&self.card_data)
+                            == crate::enums::CardKind::DigiEgg;
+                        let player = self.player_mut(owner);
+                        let deck = if is_egg {
+                            &mut player.digitama_deck
+                        } else {
+                            &mut player.deck
+                        };
+                        if to_bottom {
+                            deck.insert(0, security.card);
+                        } else {
+                            deck.push(security.card);
+                        }
                     }
                     SecurityRemovalDestination::BottomSource(target) => {
                         if target.index == crate::action::space::BREEDING_TARGET as u8 {
@@ -3189,6 +3395,7 @@ impl Game {
         self.current_phase = GamePhase::EffectChoice;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::Replacement,
             selecting_player: chooser,
             previous_phase,
@@ -3279,6 +3486,7 @@ impl Game {
         self.current_phase = GamePhase::EffectChoice;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::TriggerOrder,
             selecting_player: chooser,
             previous_phase,

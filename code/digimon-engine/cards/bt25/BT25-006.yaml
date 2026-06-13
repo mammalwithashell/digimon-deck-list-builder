@@ -1,0 +1,74 @@
+# BT25-006 Dorimon — Digimon, Lv.2, Purple, Cost 0.
+# Traits: Lesser, X Antibody, Titan, TS.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   Inherited Effect [Opponent's Turn] [Once Per Turn] When one of your
+#   opponent's Digimon attacks, by trashing 1 card in your hand, 1 of your
+#   [Titan] trait Digimon unsuspends.
+#
+# (The whole card is a single inherited effect — Dorimon's `effect_text` is the
+# inherited clause; there is no face-up main effect.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_006.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# `EffectTiming.OnAllyAttack` ActivateClass, `SetIsInheritedEffect(true)`,
+#   maxCountPerTurn: 1 (OPT), isOptional: true (the `1, true` SetUpActivateClass
+#   args). CanUseCondition gates on `CanTriggerOnPermanentAttack(opponent
+#   Digimon)` AND `IsOpponentTurn` → the attacker must be an opponent Digimon
+#   and it must be the opponent's turn. CanActivateCondition requires
+#   `HandCards.Count >= 1` (you must be able to pay the trash-1 cost).
+#   Body: SelectHand Discard (canNoSelect: true → the printed "by trashing 1
+#   card" cost is opt-in); if a card was discarded, SelectPermanent UnTap on an
+#   own [Titan] Digimon (canNoSelect: false → mandatory once paid).
+#
+#   → DSL: inherited triggered clause on `on_opponent_attack`, `optional: true`,
+#     `once_per_turn: true`, `active_when: opponents_turn`. The trash-1-hand
+#     cost is modelled as an optional `select_hand` (the printed "by trashing")
+#     gated by an `activation_cost`-style hand pick; once paid, a mandatory
+#     `select_own_permanent` over own [Titan] Digimon → `unsuspend`.
+
+card: BT25-006
+name: Dorimon
+kind: digimon
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser, X Antibody, Titan, TS]
+
+effects:
+  # ─── Inherited [Opponent's Turn][OPT] trash-1 → unsuspend a Titan ───────────
+  #
+  # The printed "by trashing 1 card in your hand" is a cost: the player picks 1
+  # hand card to trash. DCGO's `canNoSelect: true` on the discard means the
+  # whole clause is opt-in at the cost step; we wrap that in `optional: true`
+  # (the outer accept/decline) so declining the trigger costs nothing. Once the
+  # card is trashed, the unsuspend target is a mandatory pick over own [Titan]
+  # Digimon (DCGO `canNoSelect: false`).
+  - scope: inherited
+    when: on_opponent_attack
+    optional: true
+    once_per_turn: true
+    active_when: { opponents_turn: true }
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[Inherited][Opp Turn][OPT] When opp Digimon attacks, trash 1 hand card to unsuspend 1 of your [Titan] Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - select_own_permanent:
+          bind_as: titan
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Titan
+          prompt: "Unsuspend 1 of your [Titan] trait Digimon"
+      - unsuspend: { target: titan }

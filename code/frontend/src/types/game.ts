@@ -63,6 +63,21 @@ export interface DpBreakdown {
   total: number | null;
 }
 
+/** A single active modifier on a permanent (immunity, restriction, stat
+ * change, etc.), emitted structurally by the engine's `to_ui_json`. The
+ * human label and grouping are derived frontend-side from `type` via
+ * `MODIFIER_DISPLAY`. */
+export interface PermanentModifier {
+  /** Stable modifier-type string (e.g. "CannotBeDestroyed", "ChangeDp"). */
+  type: string;
+  /** Signed magnitude for stat-change modifiers; 0 for flag-style ones. */
+  value: number;
+  /** When the modifier wears off (e.g. "Permanent", "EndOfTurn"). */
+  expiry: string;
+  /** Top-card id of the permanent that applied this modifier, if known. */
+  sourceCardId: string | null;
+}
+
 export interface PermanentInfo {
   topCardId: string | null;
   topCardName: string | null;
@@ -77,6 +92,7 @@ export interface PermanentInfo {
   sources: SourceInfo[];
   mainEffectText: string;
   inheritedEffects: InheritedEffectInfo[];
+  modifiers: PermanentModifier[];
   dpBreakdown: DpBreakdown;
   turnPlayed: number;
   colors: number[];
@@ -107,13 +123,20 @@ export interface PendingSelection {
   prompt: string;
   selectingPlayer: number;
   /**
-   * SelectionKind variant string from the engine (e.g. "OwnField",
-   * "OppField", "Hand", "Security"). For field-target selections this is the
-   * ONLY signal distinguishing own-field from opponent-field targets — both
-   * encode their valid ids as `OWN_FIELD_START + slot`. See
-   * `utils/selectionTargets.ts`.
+   * Engine `SelectionKind` (e.g. `OwnField`, `OppField`, `Hand`, `Trash`).
+   * For field selections it is the ONLY signal of which player's field the
+   * `validIndices` (`OWN_FIELD_START + slot`) refer to — the engine encodes
+   * both sides in the same id range. See `utils/selectionTargets.ts`.
    */
   kind?: string;
+  /**
+   * For `Hand`/`Trash` kinds, the player whose zone `validIndices` index
+   * into (UI convention: 1 = you, 2 = opponent). Effects like EX11-012
+   * Medusamon prompt YOU to pick from the OPPONENT's trash — without this
+   * the panel zips the action ids against the wrong card list. Absent =
+   * the selecting player's own zone.
+   */
+  zoneOwner?: number;
   effectChoices?: EffectChoice[];
   keywordPrompt?: KeywordPrompt;
 }

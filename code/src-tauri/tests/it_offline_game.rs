@@ -73,7 +73,7 @@ fn test_offline_game_vs_greedy_null_agent_completes_legally() {
     // `run_agent_steps` drives until game_over (both seats are non-human) or
     // MAX_AGENT_STEPS is hit (returns Err in that case — we treat it as a
     // test failure below).
-    let result = run_agent_steps(&mut game, &session, &inference);
+    let result = run_agent_steps(&mut game, &session, &inference, None);
 
     assert!(
         result.is_ok(),
@@ -110,7 +110,7 @@ fn test_offline_human_game_does_not_auto_advance() {
     let turn_before = game.turn_count;
     let phase_before = game.current_phase;
 
-    run_agent_steps(&mut game, &session, &inference)
+    run_agent_steps(&mut game, &session, &inference, None)
         .expect("run_agent_steps must not error for a human session");
 
     assert_eq!(

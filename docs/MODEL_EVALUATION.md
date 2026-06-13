@@ -132,8 +132,11 @@ the forward-only exploiter is the practical robustness signal.
 
 ## 7. Recommended workflow
 
-1. Train (prefer a stationary opponent: `opponent="pool"` over frozen champions,
-   not `opponent="self-play"`).
+1. Train against a stationary opponent: `opponent="pool"` over frozen champions
+   (`champion_admin.py emit-pool` derives the manifest from the registry).
+   `opponent="self-play"` is **retired** and fails at startup — the mode was
+   structurally unsound (P1-perspective observations with no OpponentWrapper;
+   see `harden-training-pipeline`).
 2. During/after the run, point `anchored_eval_cli` at the run's checkpoints
    (greedy + champions, `--deck-pool-snapshot`, adequate `--n`).
 3. Build the learning curve with `elo_ladder_cli --run <dir>`; watch for upset

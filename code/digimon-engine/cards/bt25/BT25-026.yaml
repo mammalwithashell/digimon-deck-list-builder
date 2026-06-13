@@ -1,0 +1,148 @@
+# BT25-026 Crescemon — Digimon, Lv.5, Blue, DP 7000, Cost 6.
+# Traits: Wizard, Iliad, TS.  Attribute: Data.
+# Evo: Lv.4 Blue / cost 3 (printed evo_costs).
+#
+# Printed card text (card image BT25-026 — authoritative for printed text):
+#
+#   [On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of
+#   your opponent's Digimon. Then, 1 of their Digimon with no digivolution cards
+#   can't suspend until their turn ends.
+#   [Your Turn] When your Digimon are played or digivolve, if any of them are
+#   red, this Digimon may digivolve into [Dianamon] in the trash with the cost
+#   reduced by 2.
+#
+# Inherited:
+#   [Your Turn] This Digimon's attack target can't change.
+#
+# ─── SOURCE PRIORITY NOTE — inherited effect ─────────────────────────────────
+#
+# cards.json inherited_effect_description_eng = "<Security A. +1>". The printed
+# card FACE (image BT25-026.webp) and DCGO C# BOTH say "[Your Turn] This
+# Digimon's attack target can't change" (CanNotSwitchAttackTargetClass with
+# PermanentCondition == this permanent). Per CLAUDE.md source priority the card
+# image + DCGO win over API-ingested cards.json: we implement
+# CanNotSwitchAttackTarget, NOT Security A.+1.
+#
+# Printed evo box (alt-digivolution): "[Digivolve] Lv.4 w/[TS] trait: Cost 3".
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Blue/BT25_026.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alt Digivolution Condition" (None): AddSelfDigivolutionRequirement
+#   StaticEffect(level 4, HasTSTraits, cost 3). → alt_path Lv.4 [TS] cost 3.
+#   Standard Lv.4 Blue / cost 3 (cards.json evo_costs) also encoded.
+#
+# Region "Shared OP/WD" (onPlay+whenDigivolving, optional:false):
+#   (1) SelectPermanentEffect over opp Digimon (canNoSelect:false) →
+#       TrashDigivolutionCardsFromTopOrBottom(trashCount 3, isFromTop:false).
+#   (2) If an opp Digimon with 0 digivolution cards exists: SelectPermanentEffect
+#       (canNoSelect:false) → GainCanNotSuspendPlayerEffect(UntilOpponentTurnEnd).
+#   → mandatory select_opponent_permanent (kind digimon) → trash_bottom_sources
+#     count 3; then mandatory select_opponent_permanent (kind digimon AND no
+#     sources) → add_modifier CannotSuspend / end_of_opponents_turn ("their turn").
+#
+# Region "Your Turn" (OnEnterFieldAnyone): CanUseCondition gates on an own
+#   played-OR-digivolved permanent that is RED, AND a [Dianamon] in TRASH.
+#   Body: DigivolveIntoHandOrTrashCard(this, name "Dianamon", reduceCost 2,
+#   isHand:false). Skippable. → when: [on_enter_field_anyone, on_digivolve],
+#   active_when your_turn, optional, condition event_target_owner you AND
+#   event_card_color_has [red]; select_trash Dianamon → effect_initiated_digivolve
+#   { target: source, source: evo, cost: { reduce: 2 } } (BT25-024 idiom).
+#
+# Region "Inherited" (None): CanNotSwitchAttackTargetClass (self,
+#   isInheritedEffect:true, IsOwnerTurn gate). → inherited self-aura
+#   modifier: CanNotSwitchAttackTarget, active_when your_turn (AD1-012 idiom).
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Std digivolve Lv.4 Blue / Cost 3                              | IMPLEMENTED (printed evo_costs) |
+# | Alt-source Lv.4 [TS] / Cost 3                                | IMPLEMENTED (alt_paths) |
+# | [OP][WD] Trash bottom 3 sources of 1 opp Digimon            | IMPLEMENTED (trash_bottom_sources count 3) |
+# | [OP][WD] Then 1 opp Digimon w/ no sources can't suspend     | IMPLEMENTED (mandatory CannotSuspend, end_of_opponents_turn) |
+# | [Your Turn] red played/digivolve → Dianamon-in-trash -2     | IMPLEMENTED (on_enter_field_anyone + on_digivolve, color gate) |
+# | Inherited [Your Turn] attack target can't change            | IMPLEMENTED (CanNotSwitchAttackTarget self-aura; image-authoritative over cards.json) |
+
+card: BT25-026
+name: Crescemon
+kind: digimon
+level: 5
+color: [blue]
+cost: 6
+dp: 7000
+traits: [Wizard, Iliad, TS]
+attribute: Data
+
+alt_paths:
+  # Standard digivolution: Lv.4 Blue / cost 3 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+  # Alt-digivolution: Lv.4 with [TS] trait / cost 3.
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── Clause A — [On Play][When Digivolving] trash bottom 3 sources + lock ────
+  #
+  # Both picks are mandatory (DCGO canNoSelect:false), each silently no-ops when
+  # no eligible target exists. The lock targets an opp Digimon with NO
+  # digivolution cards (materials_count_lte: 0); the CannotSuspend expires at the
+  # end of the target's (opponent's) turn ("until their turn ends").
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Trash bottom 3 sources of 1 opp Digimon; then 1 opp Digimon with no sources can't suspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: src_target
+          filter: { kind: digimon }
+          prompt: "Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon"
+      - trash_bottom_sources:
+          target: src_target
+          count: 3
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "Choose 1 opponent Digimon with no digivolution cards — can't suspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Clause B — [Your Turn] red played/digivolve → digivolve into Dianamon (trash), cost -2 ─
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When your Digimon are played/digivolve and any are red, this Digimon may digivolve into [Dianamon] in the trash with cost -2"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_card_color_has: [red]
+    process:
+      - select_trash:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Dianamon"
+          prompt: "Digivolve into [Dianamon] from your trash (cost reduced by 2)"
+      - effect_initiated_digivolve:
+          target: source
+          source: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  # ─── Inherited [Your Turn] attack target can't change ────────────────────────
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    modifier: CanNotSwitchAttackTarget
+    summary: "[Inherited][Your Turn] This Digimon's attack target can't change"

@@ -1,0 +1,114 @@
+# EX3-057 Growlmon — Digimon, Lv.4, Purple, DP 5000, Cost 5.
+# Traits: Dark Dragon. Form: Champion. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.3 Purple / Cost 3.
+#
+# Printed card text (card image — verbatim):
+#
+#   Digivolve: 2 if name contains [Guilmon]
+#   [When Digivolving] Delete 1 of your opponent's Digimon with 3000 DP or
+#     less. If no Digimon was deleted by this effect, both players trash the
+#     top 2 cards of their decks.
+#   Inherited [When Attacking] [Once Per Turn] You may delete 1 of your other
+#     Digimon to have this Digimon gain <Security Attack +1> for the turn.
+#     (This Digimon checks 1 additional security card.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX3/Purple/EX3_057.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect:
+#   PermanentCondition `TopCard.ContainsCardName("Guilmon")`, cost 2.
+#   → alt_path from { name_contains: Guilmon }, cost 2.
+#
+# Clause 1 — [When Digivolving] (OnEnterFieldAnyone): mandatory select 1 opp
+#   Digimon with DP <= MaxDP_DeleteEffect(3000) when one exists; then
+#   DeletePermanentAndProcessAccordingToResult — FailureProcess (nothing
+#   deleted) mills 2 from EACH player's deck (IAddTrashCardsFromLibraryTop,
+#   turn-player order). → select+delete guarded by an if-any-candidate block,
+#   then `effect_deleted_any_opponent_digimon: false` → trash_from_top you /
+#   opponent.
+#
+# Clause 2 — inherited [When Attacking][Once Per Turn] (OnAllyAttack,
+#   isOptional: true, canNoSelect: true): optional select 1 of YOUR OTHER
+#   battle-area Digimon → delete it; only on a SUCCESSFUL deletion (DCGO
+#   successProcess) the carrier gains Security Attack +1 until end of turn
+#   (UntilEachTurnEnd). → optional clause; optional select_own_permanent
+#   (other: true); delete; `effect_deleted_any_own_digimon: true` gate on the
+#   +1 (a Scapegoat-style save means no SA bonus).
+
+card: EX3-057
+name: Growlmon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 5000
+traits: [Dark Dragon]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { name_contains: "Guilmon" }
+    cost: 2
+  # Standard printed route (cards.json evo_costs: Lv.3 Purple / 3) — also
+  # authored as an alt_path so the route exists for DSL-loaded fixtures
+  # (G-DSL-FIXTURE-EVO-COSTS: compiled cards carry no printed evo_costs).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+
+effects:
+  # ─── [When Digivolving] delete <=3000 DP; else both players mill 2 ────────
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 opp Digimon with 3000 DP or less; if none was deleted, both players trash the top 2 cards of their decks"
+    process:
+      # Top-level select+delete (BT25-014 idiom): an empty mandatory select
+      # is skipped, and the result-log stays visible to the trailing
+      # `effect_deleted_*` check (G-DSL-IF-BODY-PARK-RESULT-LOG).
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 3000
+          prompt: "Delete 1 of your opponent's Digimon with 3000 DP or less"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - trash_from_top: { of: you, count: 2 }
+            - trash_from_top: { of: opponent, count: 2 }
+
+  # ─── Inherited [When Attacking][OPT] by deleting 1 other Digimon: SA +1 ───
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "Inherited [When Attacking][OPT] You may delete 1 of your other Digimon to gain <Security A. +1> for the turn"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        all_of:
+          - kind: digimon
+          - other: true
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "Delete 1 of your other Digimon to gain <Security A. +1> for the turn"
+      - delete_permanent: { target: sacrifice }
+      # DCGO only grants the +1 in the deletion successProcess — a prevented
+      # deletion grants nothing.
+      - if:
+          condition: { effect_deleted_any_own_digimon: true }
+          then:
+            - add_modifier:
+                target: source
+                modifier: SecurityAttackChange
+                value: 1
+                expiry: end_of_turn

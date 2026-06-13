@@ -117,6 +117,34 @@ pub enum CompiledZone {
     Material,
 }
 
+/// Compiled source zone for the `LinkCards` step. Mirrors
+/// `step::LinkCardSourceZone`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledLinkSourceZone {
+    Hand,
+    Trash,
+    SelfSources,
+    OwnDigimonSources,
+    /// Gap 3b — the in-play Option links itself onto the host.
+    SelfOption,
+}
+
+/// Compiled attach target for the `LinkCards` step. Mirrors
+/// `step::LinkCardsTo`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledLinkTo {
+    SelfPermanent,
+    OwnDigimon,
+}
+
+/// Compiled count bound for the `LinkCards` step. `UpTo` makes every pick
+/// declinable; `Exactly` keeps picking until N picks or no candidates remain.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledLinkCount {
+    Exactly(u8),
+    UpTo(u8),
+}
+
 // ── Alt-paths ───────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -243,6 +271,10 @@ pub struct CompiledPredicate {
     pub color_matches_any_field_digimon: Option<CompiledPlayerRef>,
     pub color_matches_binding: Option<String>,
     pub trait_has: Option<String>,
+    /// Substring sibling of `trait_has` — matches when any subject trait
+    /// CONTAINS this token (case-insensitive). Mirrors DCGO
+    /// `ContainsTraits`. G-DSL-TRAIT-CONTAINS-SUBSTRING.
+    pub trait_contains: Option<String>,
     pub form_is: Option<String>,
     pub attribute_is: Option<String>,
     pub name_is: Option<String>,
@@ -295,9 +327,13 @@ pub struct CompiledPredicate {
     pub zone: Vec<CompiledZone>,
     pub owner: Option<CompiledPlayerRef>,
     pub other: Option<bool>,
+    /// Mirror of `other` — subject must BE the source permanent. G-OPT-REFUND-ON-DECLINE.
+    #[serde(default)]
+    pub is_source: Option<bool>,
     pub of_permanent: Option<String>,
     pub not_in_binding: Option<String>,
     pub binding_owner: Option<CompiledBindingOwnerPredicate>,
+    pub binding_card_kind: Option<CompiledBindingCardKindPredicate>,
     pub source_is_tamer: Option<bool>,
     pub source_is_unsuspended: Option<bool>,
     pub source_name_contains: Option<String>,
@@ -311,6 +347,12 @@ pub struct CompiledPredicate {
     pub rules_text_contains: Option<String>,
     pub memory_lte: Option<CompiledDpConstraint>,
     pub memory_gte: Option<CompiledDpConstraint>,
+    /// Controller-relative memory bound ("while you have N or less memory").
+    /// G-DSL-OWN-MEMORY-PREDICATE.
+    #[serde(default)]
+    pub own_memory_lte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub own_memory_gte: Option<CompiledDpConstraint>,
     pub security_count_lte: Option<CompiledDpConstraint>,
     pub security_count_gte: Option<CompiledDpConstraint>,
     pub opponent_security_count_lte: Option<CompiledDpConstraint>,
@@ -367,6 +409,7 @@ pub struct CompiledPredicate {
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,
     pub replacement_subject_is_mine: Option<bool>,
+    pub would_link_card_trait_any_of: Option<Vec<String>>,
     pub equals: Option<Vec<CompiledBindingCompare>>,
     pub not_equals: Option<Vec<CompiledBindingCompare>>,
     pub binding_exists: Option<String>,
@@ -406,6 +449,8 @@ pub struct CompiledPredicate {
     pub self_digivolution_sources_contain_name: Option<String>,
     pub self_digivolution_sources_trait_has: Option<String>,
     pub event_target_owner: Option<CompiledPlayerRef>,
+    /// `OnAddToHand` observer: the gaining player must match this ref.
+    pub event_add_to_hand_player: Option<CompiledPlayerRef>,
     /// Event-target permanent color-set intersection test.
     /// G-EVENT-TARGET-COLOR.
     pub event_target_color_any_of: Option<Vec<CompiledColor>>,
@@ -474,6 +519,12 @@ pub struct CompiledBindingOwnerPredicate {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledBindingCardKindPredicate {
+    pub binding: String,
+    pub kind: CompiledCardKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledCountAggregate {
     pub filter: Box<CompiledPredicate>,
     pub n: CompiledDpConstraint,
@@ -486,12 +537,14 @@ pub struct CompiledExistential {
 }
 
 /// Compiled form of `no_face_up_security_named`. Exactly one of
-/// `card_number_is` / `name_is` is populated. G-PRED-NO-FACE-UP-SECURITY-NAMED.
+/// `card_number_is` / `name_is` / `color_is` is populated.
+/// G-PRED-NO-FACE-UP-SECURITY-NAMED (+ color arm for EX10-020 / Q3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompiledFaceUpSecurityNamed {
     pub of: CompiledPlayerRef,
     pub card_number_is: Option<String>,
     pub name_is: Option<String>,
+    pub color_is: Option<CompiledColor>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -536,6 +589,10 @@ pub enum CompiledFormula {
     /// [On Play][When Digivolving] bounce-by-digivolution-card-count.
     /// G-FORMULA-SOURCE-MATERIAL-COUNT.
     SourceMaterialCount,
+    /// Level of the current trigger's EVENT card (e.g. the just-played
+    /// Digimon for an `on_any_digimon_played` observer). 0 when no trigger
+    /// context / no level. G-EVENT-PLAYED-LEVEL-FORMULA (EX5-060, Q28).
+    EventTargetLevel,
     /// Distinct colors represented by source cards beneath the effect carrier's top card.
     SourceColorCount,
     SourceStackCount {
@@ -579,6 +636,13 @@ pub enum CompiledPerSelector {
     DistinctColorsCountScoped {
         zone: CompiledZone,
         of: CompiledPlayerRef,
+        filter: Option<Box<CompiledPredicate>>,
+    },
+    /// Count of the effect carrier's own digivolution sources (beneath its top
+    /// card) matching `filter`. Composes in `BasePerDelta` to scale a numeric
+    /// by source count. Drives EX3-014's scaling DP cap.
+    /// G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
+    SourceStackCountFiltered {
         filter: Option<Box<CompiledPredicate>>,
     },
 }
@@ -639,6 +703,12 @@ pub struct CompiledTriggeredClause {
     pub active_when: Option<CompiledPredicate>,
     pub condition: Option<CompiledPredicate>,
     pub optional: bool,
+    /// Force the explicit outer accept/decline confirm even when the first
+    /// body step is declinable (DCGO's always-shown initial Yes/No). Declining
+    /// the confirm drops the queued effect before the OPT is recorded — DCGO
+    /// `RemoveUse` semantics. G-OPT-REFUND-ON-DECLINE.
+    #[serde(default)]
+    pub outer_prompt: bool,
     pub once_per_turn: bool,
     pub max_per_turn: Option<u8>,
     pub process: Vec<CompiledStep>,
@@ -663,6 +733,13 @@ pub enum CompiledDeclarativeClause {
         security_attack_fn: Option<CompiledFormula>,
         grant_keyword: Option<CompiledGrantKeywordValue>,
         modifier: Option<String>,
+        /// Scalar `value` for the named `modifier` grant (e.g. `ChangeLinkMax`
+        /// "Link +N"). `None` ⇒ `0`. Fixes G-ENGINE-AURA-GRANT-LINK-MAX.
+        modifier_value: Option<i32>,
+        /// Name payload for the named `modifier` grant — installed as
+        /// `ModifierPayload::Name { value, base: false }`. Used by
+        /// `CanOnlyDigivolveInto` (judge-quiz Q3, EX10-020).
+        modifier_name: Option<String>,
         /// Track H §4 — install-once continuous gate. When present, the
         /// lowered `Effect` installs its modifier(s) with
         /// `Expiry::UntilCondition` carrying this predicate. Eviction is
@@ -674,6 +751,11 @@ pub enum CompiledDeclarativeClause {
         /// during the security battle (rather than as a battle-area aura).
         applies_to_opponent_security_dp: bool,
         applies_to_own_security_dp: bool,
+        /// Continuous filtered `CannotBeAffected` grant — "this Digimon
+        /// isn't affected by [your opponent's] [<kind>] effects" as a
+        /// per-tick aura. Self-aura only. G-DSL-AURA-EFFECT-IMMUNITY.
+        #[serde(default)]
+        effect_immunity: Option<CompiledAuraEffectImmunity>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -744,6 +826,17 @@ pub enum CompiledDeclarativeClause {
         summary: Option<String>,
         summary_key: Option<String>,
     },
+    /// A Shape-B Appmon Link *Digimon*'s static self link-condition
+    /// (`kind: link_condition`): a link cost + host filter. Lowers to an
+    /// `EffectTiming::LinkCondition` effect read by the link-activate path,
+    /// distinct from the Option-scoped `LinkRequirement`.
+    LinkCondition {
+        scope: CompiledScope,
+        cost: u16,
+        filter: CompiledPredicate,
+        summary: Option<String>,
+        summary_key: Option<String>,
+    },
     FloodGate {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
@@ -803,6 +896,7 @@ pub enum CompiledTiming {
     OnLeaveField,
     OnSuspend,
     OnUnsuspend,
+    OnAddToHand,
     OnHatch,
     OnMove,
     OnDigivolve,
@@ -843,6 +937,23 @@ pub enum CompiledTiming {
     /// fields. G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
     BeforePayCostObserve,
     Delayed,
+    /// DigiLink Shape-B: "when this Digimon gets linked". Authored as
+    /// `when: when_linked` on a `scope: linked` effect; lowers to
+    /// `EffectTiming::OnLink` with `.linked()` and a self-filter so it fires
+    /// only when THIS card is the just-linked card (design D6).
+    WhenLinked,
+    /// DigiLink host-side: "[When Linked] a card gets linked to this Digimon".
+    /// Authored as `when: when_card_linked_to_this` on a face-up `scope`;
+    /// lowers to `EffectTiming::OnLink` with a host self-filter
+    /// (`event_permanent == source_permanent`) — fires once for the receiving
+    /// host only. Mirrors DCGO `CanTriggerWhenLinked`.
+    WhenCardLinkedToThis,
+    /// DigiLink host-side pre-link replacement: "a card WOULD link to this
+    /// Digimon". Authored as `when: when_would_link_to_this` on a face-up
+    /// `scope`; lowers to a `EffectTiming::WhenWouldLink` REPLACEMENT effect
+    /// with a host self-filter (`pending_link_host() == source_permanent`).
+    /// Pair with `optional` + a `reduce_link_cost` step (Gap 5).
+    WhenWouldLinkToThis,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -864,6 +975,16 @@ pub enum CompiledEffectController {
     Any,
     Opponent,
     Own,
+}
+
+/// Compiled form of `AuraEffectImmunity` — the continuous filtered
+/// `CannotBeAffected` slot on `CompiledDeclarativeClause::Aura`.
+/// `source_kind: None` ⇒ immune to effects from ANY source kind.
+/// G-DSL-AURA-EFFECT-IMMUNITY.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompiledAuraEffectImmunity {
+    pub source_kind: Option<CompiledEffectSourceKind>,
+    pub source_controller: CompiledEffectController,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -937,6 +1058,13 @@ pub enum CompiledStep {
     TrashSelectedSecurity {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
+    },
+    /// Move a bound card from a player's security stack to that player's deck.
+    /// G-DSL-RETURN-SELECTED-SECURITY-TO-DECK.
+    ReturnSelectedSecurityToDeck {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        position: CompiledStackPosition,
     },
     AddTopSecurityToHand {
         of: CompiledPlayerRef,
@@ -1126,6 +1254,9 @@ pub enum CompiledStep {
         card: CompiledBindingRef,
         /// Bind the just-played permanent handle for use in later steps.
         bind_as: Option<String>,
+        /// Optional reduced (non-free) cost. `None` = free (prior behavior);
+        /// `Reduce(N)` pays the printed cost minus N. G-DSL-PLAY-FROM-REVEALED-COST-REDUCED.
+        cost_delta: Option<CompiledCostDelta>,
     },
     PlayFromTrash {
         of: CompiledPlayerRef,
@@ -1137,7 +1268,12 @@ pub enum CompiledStep {
         trash_index: CompiledBindingRef,
         /// PUPPETS-G030 — when `true`, the played Digimon's own `[On Play]`
         /// effects are skipped for this play event only (BT5-106 [Security]).
+        /// The skip is consult-gated on the played permanent NOT being
+        /// protected from the suppressing effect (judge-quiz Q28).
         suppress_on_play: bool,
+        /// G-PLAY-ENTERS-SUSPENDED — the played permanent enters the battle
+        /// area suspended (EX5-060 "plays ... suspended", Q28).
+        suspended: bool,
     },
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
     /// true origin zone (hand, trash, or material). `binding` names a `select_union_zone`
@@ -1313,6 +1449,12 @@ pub enum CompiledStep {
         /// the field must always be written or the byte stream desyncs.
         #[serde(default)]
         synth_identity: Option<CompiledSynthIdentity>,
+        /// CONTINUOUS mass modifier (G-CONTINUOUS-MASS-DP-DEBUFF): with a FILTER
+        /// target, register a source-independent floating effect re-applied each
+        /// tick instead of a one-time scan. No `skip_serializing_if` for the
+        /// same bincode round-trip reason as `synth_identity`.
+        #[serde(default)]
+        continuous: bool,
     },
     AddPlayerModifier {
         target_player: CompiledPlayerRef,
@@ -1346,10 +1488,18 @@ pub enum CompiledStep {
         zone: Option<CompiledZone>,
     },
     GrantEffectImmunity {
-        target: CompiledBindingRef,
+        /// Per-permanent grant target (`None` for the continuous form).
+        target: Option<CompiledBindingRef>,
         source_kind: CompiledEffectSourceKind,
         source_controller: CompiledEffectController,
         expiry: String,
+        /// G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA (Q28 / BT20-059): a
+        /// source-independent continuous immunity over `targets`, re-scanned
+        /// every declarative tick — covers permanents played later in the
+        /// window (DCGO `CanNotAffectedClass` re-evaluated CardCondition).
+        continuous: bool,
+        /// Battle-area predicate for the continuous form.
+        targets: Option<CompiledPredicate>,
     },
     /// PUPPETS-G024 — install the narrow opponent-effect protection
     /// bundle (opponent-scoped ImmuneFromDPMinus + opponent-scoped
@@ -1374,6 +1524,10 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// Decline continues the clause tail (binding unresolved) instead of
+        /// dropping it. G-OPT-REFUND-ON-DECLINE.
+        #[serde(default)]
+        continue_on_decline: bool,
     },
     SelectOpponentPermanent {
         filter: CompiledPredicate,
@@ -1382,6 +1536,10 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// Decline continues the clause tail (binding unresolved) instead of
+        /// dropping it. G-OPT-REFUND-ON-DECLINE.
+        #[serde(default)]
+        continue_on_decline: bool,
     },
     SelectAnyPermanent {
         filter: CompiledPredicate,
@@ -1564,6 +1722,10 @@ pub enum CompiledStep {
         max: CompiledCountBound,
         /// Minimum required picks. G-SELECT-MULTI-MIN.
         min: u8,
+        /// MP-30/31: clamp the required pick-count to available candidates
+        /// (`min(max, available)`); never no-op for fewer-than-N. Effect-target
+        /// selections only. See `SelectCountCappedArgs::clamp_to_available`.
+        clamp_to_available: bool,
         filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,
@@ -1616,6 +1778,39 @@ pub enum CompiledStep {
         free: bool,
         filter: CompiledPredicate,
     },
+    /// Facet #9 — link 1 chosen card from `from` zones onto the effect's own
+    /// permanent (G-DSL-LINK-CARD-FROM-ZONE).
+    LinkCardToSelf {
+        from: Vec<crate::step::LinkFromZone>,
+        filter: CompiledPredicate,
+        to: crate::step::LinkToHost,
+        cost: u16,
+        optional: bool,
+    },
+    /// Gap 5 — reduce the in-flight `WhenWouldLink` link cost by `amount`.
+    /// Compiled form of `StepSpec::ReduceLinkCost`; the engine lowering calls
+    /// `EffectContext::reduce_pending_link_cost(amount)`.
+    ReduceLinkCost {
+        amount: u16,
+    },
+    /// Gap 2 — link 1..N chosen cards from a set of source zones onto a
+    /// Digimon host. Compiled form of `StepSpec::LinkCards`. The engine
+    /// lowering loops `count` picks: per pick it resolves which `from` zones
+    /// hold a filter-matching candidate, installs a zone-choice prompt when
+    /// ≥2 do, then a single-zone card select, then (for `to: OwnDigimon`) a
+    /// host select, then attaches via `link_chosen_card_into_host`.
+    LinkCards {
+        from: Vec<CompiledLinkSourceZone>,
+        filter: CompiledPredicate,
+        to: CompiledLinkTo,
+        count: CompiledLinkCount,
+        /// Memory cost to pay per linked card. Currently always 0 (the cards
+        /// this step serves all link "without paying the cost" / from a base
+        /// cost of 0). Threaded so a future non-zero base cost extends the
+        /// lowering without a schema change.
+        cost: u8,
+        prompt: Option<String>,
+    },
     Optional(Vec<CompiledStep>),
     Battle {
         attacker: CompiledBindingRef,
@@ -1627,6 +1822,7 @@ pub enum CompiledStep {
         without_suspending: bool,
         ignore_summoning_sickness: bool,
         optional: bool,
+        windowed: bool,
         prompt: Option<String>,
         cost_upgrade: Option<CompiledAttackCostUpgrade>,
     },
@@ -1646,6 +1842,10 @@ pub enum CompiledStep {
     },
     CancelAttack,
     OpenCounterWindow,
+    /// Refund the running clause's once-per-turn use (DCGO `RemoveUse`).
+    /// The engine resolves the OPT key from the step runtime (the lowering
+    /// captures it statically per clause). G-OPT-REFUND-ON-DECLINE.
+    RefundOpt,
     RefireEffect {
         source: CompiledBindingRef,
         timing: String,
@@ -1655,6 +1855,12 @@ pub enum CompiledStep {
         enabled: bool,
     },
     CancelReplacement,
+    /// Gap 3a — trash 1 of the leaving permanent's own link cards as the cost
+    /// of a `when_would_leave_battle_area` replacement, then cancel the leave.
+    /// Synthesized from `cost: { trash_own_link_card: true }` + `outcome:
+    /// prevent`; it owns both the cost-payment (player-chosen which link card)
+    /// and the cancel, so no separate `CancelReplacement` follows it.
+    TrashOwnLinkCardAndCancelLeave,
     HandleReplacement,
     RedirectReplacement {
         zone: CompiledZone,
@@ -1844,6 +2050,7 @@ mod tests {
                 active_when: None,
                 condition: None,
                 optional: false,
+                outer_prompt: false,
                 once_per_turn: false,
                 max_per_turn: None,
                 process: vec![CompiledStep::GainMemory(1)],
@@ -1902,6 +2109,7 @@ mod tests {
                 active_when: None,
                 condition: Some(pred),
                 optional: false,
+                outer_prompt: false,
                 once_per_turn: false,
                 max_per_turn: None,
                 process: vec![],

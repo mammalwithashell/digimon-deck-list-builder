@@ -38,21 +38,23 @@ effects:
 
   # ─── Clause 2: <Rush>
   # DCGO: RushSelfStaticEffect(isInheritedEffect: false, card: card, condition: null)
-  # GAP G-DECLARATIVE-KEYWORD: grant_keyword declaratives compile to
-  # EffectTiming::Declarative which is not yet enqueued by the engine.
-  # Rush is compiled correctly but not installed at runtime.
+  # G-DECLARATIVE-KEYWORD RESOLVED (2026-06-03): an unconditional FaceUp
+  # grant_keyword declarative is surfaced as a native top-card keyword
+  # (card_data_from_compiled), so `has_keyword` detects <Rush> on the field.
+  # Verified: rules_faq::keyword_identity::mp26_* + bt21_026_rush_installed_on_field.
   - kind: grant_keyword
     keyword: Rush
 
   # ─── Clause 3: <Raid>
   # DCGO: RaidSelfEffect(isInheritedEffect: false, card: card, condition: null)
-  # Same G-DECLARATIVE-KEYWORD gap.
+  # G-DECLARATIVE-KEYWORD RESOLVED — surfaced as a native keyword (see Clause 2).
   - kind: grant_keyword
     keyword: Raid
 
   # ─── Clause 4: <Blocker>
   # DCGO: BlockerSelfStaticEffect(isInheritedEffect: false, card: card, condition: null)
-  # Same G-DECLARATIVE-KEYWORD gap.
+  # G-DECLARATIVE-KEYWORD RESOLVED — surfaced as a native keyword (see Clause 2).
+  # Verified: bt21_026_blocker_installed_on_field.
   - kind: grant_keyword
     keyword: Blocker
 

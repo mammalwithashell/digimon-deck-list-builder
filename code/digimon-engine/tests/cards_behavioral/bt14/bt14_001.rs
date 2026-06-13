@@ -240,8 +240,11 @@ fn bt14_001_inherited_does_not_fire_on_opponents_turn() {
 
     let _carrier = place_koromon_as_source(&mut runner);
 
-    // Advance to P1's turn.
-    runner.end_turn();
+    // Advance to P1's turn. Use `pass_turn` (memory → +3 for P1), not a raw
+    // `end_turn` (which would flip to -5, an impossible real-game state): an
+    // attack now correctly ends a turn whose memory sits on the opponent's
+    // side, so P1 must start their turn with valid non-negative memory.
+    runner.pass_turn();
 
     let attacker_p1 = runner.place_on_field(1, "ATTACKER-P1", Some(0));
     let hand_before = runner.hand_size(0);

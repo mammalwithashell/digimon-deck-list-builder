@@ -116,4 +116,74 @@ describe('dtoToGameState', () => {
 
     expect(state.player1.handCards[0]?.cardKind).toBe(2);
   });
+
+  // The engine reports `winner` as a raw Rust player id (0/1), but the UI
+  // (ResultOverlay/PhaseIndicator `localPlayer={1}`, playerLabels `{1,2}`) is
+  // 1-indexed. Without the +1 conversion, the local human (engine 0) winning
+  // compares `0 === 1` → false → "Defeat" shown on a win. Map it like
+  // `selectingPlayer`.
+  it('maps the engine winner (0/1) to the UI 1-indexed convention', () => {
+    const player = (id: number) => ({
+      id,
+      hand: [],
+      battle_area: [],
+      breeding: null,
+      deck_count: 50,
+      trash_count: 0,
+      security_count: 5,
+      is_eliminated: false,
+    });
+    const dto = (winner: number | null) => ({
+      turn_count: 1,
+      turn_player: 0,
+      current_phase: 'Main',
+      memory: 0,
+      game_over: winner !== null,
+      winner,
+      mulligan_current_player: null,
+      mulligan_used: [false, false],
+      players: [player(0), player(1)],
+    });
+
+    expect(dtoToGameState(dto(0)).winner).toBe(1); // engine 0 (human) → UI 1
+    expect(dtoToGameState(dto(1)).winner).toBe(2); // engine 1 (opponent) → UI 2
+    expect(dtoToGameState(dto(null)).winner).toBeNull();
+  });
+
+  // Engine `memory` is from the TURN PLAYER's perspective; `memoryGauge` (like
+  // the browser wire's to_ui_json) must be from PLAYER 1's perspective. Without
+  // the flip, the opponent's memory renders on the local player's side of the
+  // gauge during paced bot turns (regression caught playtesting
+  // add-bot-action-pacing).
+  it('orients memoryGauge to player 1 regardless of whose turn it is', () => {
+    const player = (id: number) => ({
+      id,
+      hand: [],
+      battle_area: [],
+      breeding: null,
+      deck_count: 50,
+      trash_count: 0,
+      security_count: 5,
+      is_eliminated: false,
+    });
+    const dto = (turnPlayer: number, memory: number) => ({
+      turn_count: 2,
+      turn_player: turnPlayer,
+      current_phase: 'Main',
+      memory,
+      game_over: false,
+      winner: null,
+      mulligan_current_player: null,
+      mulligan_used: [false, false],
+      players: [player(0), player(1)],
+    });
+
+    // My turn, I hold 6 memory → my side of the gauge (positive).
+    expect(dtoToGameState(dto(0, 6)).memoryGauge).toBe(6);
+    // Opponent's turn, THEY hold 6 memory → their side (negative for p1).
+    expect(dtoToGameState(dto(1, 6)).memoryGauge).toBe(-6);
+    // Player states stay consistent with the gauge.
+    expect(dtoToGameState(dto(1, 6)).player1.memory).toBe(-6);
+    expect(dtoToGameState(dto(1, 6)).player2.memory).toBe(6);
+  });
 });

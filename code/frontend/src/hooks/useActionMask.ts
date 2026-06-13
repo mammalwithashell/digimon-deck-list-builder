@@ -8,23 +8,6 @@ import {
   SELECTION,
   MAX_BATTLE_AREA_SLOTS,
 } from '@/utils/constants';
-import { GamePhase } from '@/types/game';
-
-/**
- * Phases in which the engine has a `pending_selection` installed and the
- * `100+slot` action ids mean FIELD-SELECTION targets, not attack
- * declarations. During these phases the attack-range parse must be skipped:
- * otherwise the selection's `100+slot` ids spuriously populate `canAttack`,
- * highlighting own battle slot 0 and letting a click set `selectedAttacker`
- * (which submits nothing). Attacks are only declared from Main.
- */
-function isSelectionPhase(phase: GamePhase | undefined): boolean {
-  if (phase === undefined) return false;
-  return (
-    (phase >= GamePhase.SelectTarget && phase <= GamePhase.SelectSecurity) ||
-    (phase >= GamePhase.SelectPermutation && phase <= GamePhase.SelectPlayOrder)
-  );
-}
 
 export interface ParsedMask {
   canPlayFromHand: Set<number>;
@@ -47,7 +30,7 @@ export interface ParsedMask {
   canAttackSecurity: Map<number, boolean>;
 }
 
-export function useActionMask(mask: number[], currentPhase?: GamePhase): ParsedMask {
+export function useActionMask(mask: number[]): ParsedMask {
   return useMemo(() => {
     const canPlayFromHand = new Set<number>();
     const canTrashFromHand = new Set<number>();
@@ -91,10 +74,8 @@ export function useActionMask(mask: number[], currentPhase?: GamePhase): ParsedM
       if (mask[i] === 1) canDnaDigivolve.add(i - ACTION.DNA_START);
     }
 
-    // Attack (100-399) — but ONLY when not in a selection phase. During
-    // selection phases the same 100-399 ids encode field-selection targets,
-    // not attacks; parsing them as attacks spuriously fills `canAttack`.
-    for (let i = ACTION.ATTACK_START; !isSelectionPhase(currentPhase) && i <= ACTION.ATTACK_END; i++) {
+    // Attack (100-399)
+    for (let i = ACTION.ATTACK_START; i <= ACTION.ATTACK_END; i++) {
       if (mask[i] !== 1) continue;
       const offset = i - ACTION.ATTACK_START;
       const attacker = Math.floor(offset / ATTACK_TARGETS_PER_SLOT);
@@ -179,5 +160,5 @@ export function useActionMask(mask: number[], currentPhase?: GamePhase): ParsedM
       validSelections,
       canAttackSecurity,
     };
-  }, [mask, currentPhase]);
+  }, [mask]);
 }

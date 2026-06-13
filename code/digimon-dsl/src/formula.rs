@@ -45,6 +45,18 @@ pub enum FormulaSpec {
     SourceMaterialCount {
         source_material_count: SourceDpSpec,
     },
+    /// Level of the current trigger's EVENT card (the card that caused the
+    /// observed event — e.g. the just-played Digimon for an
+    /// `on_any_digimon_played` observer). YAML form:
+    /// `{ event_target_level: {} }`. Card text shape: "you may play 1
+    /// purple Digimon card with a level LESS THAN OR EQUAL TO IT from your
+    /// trash" (EX5-060 Dragomon clause 2 — DCGO reads
+    /// `permanent.LevelJustAfterPlayed`). Evaluates to 0 when there is no
+    /// trigger context or the event card has no level (filters comparing
+    /// against it then match nothing). G-EVENT-PLAYED-LEVEL-FORMULA.
+    EventTargetLevel {
+        event_target_level: SourceDpSpec,
+    },
     /// Number of distinct colors represented by source cards beneath the effect
     /// carrier's top card. YAML form: `{ source_color_count: {} }`.
     /// This is source-relative, unlike `digivolution_color_count`, whose target
@@ -193,6 +205,24 @@ pub enum PerSelector {
     },
     CardCountInZone(CardCountInZoneSpec),
     DistinctColorsCount(CardCountInZoneSpec),
+    /// Count of the effect carrier's *own* digivolution sources (the cards
+    /// beneath its top card) that match `filter`. YAML form:
+    /// `source_stack_count: { filter: { any_of: [...] } }`. Composes inside a
+    /// `base_per_delta` so a card can scale a numeric (e.g. a DP cap) by the
+    /// number of its sources matching a trait — EX3-014 Dorbickmon's "for each
+    /// card with [Dragon]/[saur]/[Ceratopsian] in this Digimon's digivolution
+    /// cards, add 2000 to the maximum DP". Unlike the top-level `source_stack_count`
+    /// FormulaSpec (which yields a raw count and cannot be offset/scaled), this
+    /// is a `per` selector. Sources are always those of `ctx.source_permanent`.
+    /// G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
+    SourceStackCount(SourceStackCountSpec),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SourceStackCountSpec {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<Box<crate::predicate::PredicateSpec>>,
 }
 
 impl Serialize for PerSelector {
@@ -247,6 +277,11 @@ impl Serialize for PerSelector {
             Self::DistinctColorsCount(spec) => {
                 let mut outer = serializer.serialize_map(Some(1))?;
                 outer.serialize_entry("distinct_colors_count", spec)?;
+                outer.end()
+            }
+            Self::SourceStackCount(spec) => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                outer.serialize_entry("source_stack_count", spec)?;
                 outer.end()
             }
         }

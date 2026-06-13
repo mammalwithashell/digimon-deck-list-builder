@@ -41,10 +41,21 @@ const STEP_MOD_SRC: &str = include_str!("../src/dsl_cards/step/mod.rs");
 const STEP_AS_SELECTING: &str = include_str!("../src/dsl_cards/step/as_selecting_player.rs");
 const STEP_COMBAT: &str = include_str!("../src/dsl_cards/step/combat.rs");
 const STEP_CONTROL_FLOW: &str = include_str!("../src/dsl_cards/step/control_flow.rs");
+// 2026-06-11 (judge-quiz Q29): the BT25-era DigiXros transaction + DNA
+// step families were missing from this scan list, producing FALSE-POSITIVE
+// "missing arm" failures for AllowDigixrosMaterialZone / AddDigixrosCostDelta /
+// PreattachDigixrosMaterial / RegisterDigixrosWildcardForTurn /
+// AddDigixrosWildcardToPendingTransaction / MayDnaDigivolveNow — all of
+// which have real arms in digixros_transaction.rs / dna_digivolve.rs.
+const STEP_DIGIXROS_TRANSACTION: &str =
+    include_str!("../src/dsl_cards/step/digixros_transaction.rs");
+const STEP_DNA_DIGIVOLVE: &str = include_str!("../src/dsl_cards/step/dna_digivolve.rs");
 const STEP_DRAW: &str = include_str!("../src/dsl_cards/step/draw.rs");
 const STEP_EFFECTS: &str = include_str!("../src/dsl_cards/step/effects.rs");
 const STEP_GRANT_TRIGGERED: &str = include_str!("../src/dsl_cards/step/grant_triggered.rs");
 const STEP_ITERATION: &str = include_str!("../src/dsl_cards/step/iteration.rs");
+const STEP_LINK_CARD: &str = include_str!("../src/dsl_cards/step/link_card.rs");
+const STEP_LINK_CARDS: &str = include_str!("../src/dsl_cards/step/link_cards.rs");
 const STEP_MEMORY: &str = include_str!("../src/dsl_cards/step/memory.rs");
 const STEP_MODIFIERS: &str = include_str!("../src/dsl_cards/step/modifiers.rs");
 const STEP_PERMANENT_MUTATIONS: &str = include_str!("../src/dsl_cards/step/permanent_mutations.rs");
@@ -62,10 +73,14 @@ fn step_corpus() -> String {
         STEP_AS_SELECTING,
         STEP_COMBAT,
         STEP_CONTROL_FLOW,
+        STEP_DIGIXROS_TRANSACTION,
+        STEP_DNA_DIGIVOLVE,
         STEP_DRAW,
         STEP_EFFECTS,
         STEP_GRANT_TRIGGERED,
         STEP_ITERATION,
+        STEP_LINK_CARD,
+        STEP_LINK_CARDS,
         STEP_MEMORY,
         STEP_MODIFIERS,
         STEP_PERMANENT_MUTATIONS,

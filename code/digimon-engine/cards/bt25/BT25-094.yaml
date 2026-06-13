@@ -1,0 +1,176 @@
+# BT25-094 Cosmic Area — Option, Red/Blue, Cost 3.
+# Traits: Iliad, TS.
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   While you have no face-up security cards, you can ignore this card's color
+#   requirements.
+#   [Security] [Your Turn] All of your red or blue [TS] trait Digimon gain
+#   ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other
+#   Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#   ＜Security A. +1＞ for the attack.). While you have [Apollomon] or [Dianamon],
+#   they also gain ＜Rush＞ (This Digimon can attack the turn it comes into play.)
+#   [Main] Add your bottom security card to the hand and place this card face up
+#   as the bottom security card. Then, you may play 1 red or blue [TS] trait
+#   Digimon card from your hand with the cost reduced by 3.
+#
+# Inherited (Security) effect (inherited_effect_description_eng):
+#   [Security] You may play 1 level 4 or lower red or blue [TS] trait Digimon
+#   card from your hand or trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_094.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# This card is a sister of BT25-095 (Paradise Colosseum). Structure is
+# identical; the differences are: target colours (red/blue vs red/green), the
+# security aura grants <Alliance> (vs +2000 DP), the conditional security
+# keyword is <Rush> gated on Apollomon / Dianamon (vs Marsmon / Callismon), and
+# the security aura is [Your Turn] (vs [All Turns]) — though Alliance only fires
+# on the controller's own attack regardless, so the gameplay outcome matches.
+#
+# Region "Ignore Color Requirement" (None): IgnoreColorConditionClass gated on
+#   `owner.SecurityCards.Count(!IsFlipped) == 0`. → `kind: flood_gate`,
+#   `modifier: IgnoreColorRequirement`, `target: { card_number_is: BT25-094 }`,
+#   `active_when: { face_up_security_count_lte: 0 }`. Mirrored on `use_requirement`
+#   so the option can be played ignoring colour while no face-up security exists.
+#
+# Region "Alliance" (OnAllyAttack): AllianceStaticEffect over owner battle-area
+#   Digimon that are (Red || Blue) && HasTSTraits, gated on `IsExistInSecurity(
+#   card, false)` (this card is in the security stack, face-up). → `kind: aura`,
+#   `scope: security`, `grant_keyword: Alliance`, target red/blue TS own
+#   battle-area Digimon. (Alliance is a `has_keyword`-gated combat keyword — the
+#   aura grant suffices; no installed replacement effect is needed.)
+#
+# Region "Rush" (None): RushStaticEffect over the same target set, gated on
+#   in-security AND owner has a permanent named "Apollomon" OR "Dianamon". →
+#   `kind: aura`, `scope: security`, `grant_keyword: Rush`, same target, plus an
+#   `active_when` existential for an Apollomon/Dianamon-named own permanent.
+#
+# Region "Main Effect" (OptionSkill): ReplaceBottomSecurityWithFaceUpOption-
+#   Effect(card) then SelectHandEffect over red/blue TS Digimon, PlayForCost
+#   with reduced cost (3, null), canNoSelect: true. → `when: main_from_hand`,
+#   `add_bottom_security_to_hand` + `place_self_option_at_security` (bottom,
+#   face up) + optional `select_hand` (red/blue TS Digimon) + `play_from_hand`
+#   with `cost_delta: { reduce: 3 }`. (BT25-095 idiom.)
+#
+# Region "Security Effect" (SecuritySkill): SelectHand/SelectCard over level 4-
+#   red/blue TS Digimon from hand OR trash, PlayForFree, canNoSelect: true. →
+#   `scope: inherited`, `when: on_security`, `optional: true`,
+#   `select_union_zone` (hand, trash) + `play_union_bound_free`. (BT25-095 idiom.)
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                  | Status |
+# |--------------------------------------------------------------------|--------|
+# | Ignore colour requirements while no face-up security               | IMPLEMENTED (use_requirement + flood_gate) |
+# | [Security][Your Turn] red/blue TS gain <Alliance>                  | IMPLEMENTED (security aura grant_keyword Alliance) |
+# | [Security][Your Turn] + <Rush> while Apollomon/Dianamon            | IMPLEMENTED (security aura grant_keyword Rush, conditional) |
+# | [Main] add bottom sec to hand + place self face-up + play red/blue TS -3 | IMPLEMENTED (add_bottom_security_to_hand + place_self_option_at_security + play_from_hand reduce 3) |
+# | [Security][Inherited] play lvl4- red/blue TS from hand/trash free  | IMPLEMENTED (select_union_zone + play_union_bound_free) |
+
+card: BT25-094
+name: "Cosmic Area"
+kind: option
+color: [red, blue]
+cost: 3
+traits: [Iliad, TS]
+
+use_requirement:
+  face_up_security_count_lte: 0
+
+effects:
+  # ─── Color-ignore floodgate (no face-up security) ──────────────────────────
+  - kind: flood_gate
+    active_when:
+      face_up_security_count_lte: 0
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT25-094" }
+    summary: "While you have no face-up security cards, ignore color requirements for this card"
+
+  # ─── [Security][Your Turn] red/blue TS gain <Alliance> ─────────────────────
+  - kind: aura
+    scope: security
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: red
+        - color_is: blue
+    grant_keyword: { keyword: Alliance }
+    summary: "[Security][Your Turn] Your red/blue [TS] Digimon gain <Alliance>"
+
+  # ─── [Security][Your Turn] + <Rush> while Apollomon or Dianamon ────────────
+  - kind: aura
+    scope: security
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - name_is: "Apollomon"
+              - name_is: "Dianamon"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: red
+        - color_is: blue
+    grant_keyword: { keyword: Rush }
+    summary: "[Security][Your Turn] With Apollomon or Dianamon, your red/blue [TS] Digimon gain <Rush>"
+
+  # ─── [Main] replace bottom security with self + play red/blue TS -3 ────────
+  - when: main_from_hand
+    summary: "[Main] Add bottom security to hand, place this face-up as bottom security, then may play a red/blue TS Digimon for -3"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_self_option_at_security:
+          position: bottom
+          face: up
+      - select_hand:
+          of: you
+          bind_as: picked_digimon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+              - any_of:
+                  - color_is: red
+                  - color_is: blue
+          prompt: "You may play 1 red or blue [TS] Digimon card from hand with the play cost reduced by 3"
+      - play_from_hand:
+          of: you
+          hand_index: picked_digimon
+          cost_delta: { reduce: 3 }
+
+  # ─── [Security][Inherited] play lvl4- red/blue TS from hand/trash free ──────
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 level 4 or lower red/blue TS Digimon from hand or trash free"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: TS
+              - any_of:
+                  - color_is: red
+                  - color_is: blue
+          prompt: "You may play 1 level 4 or lower red or blue [TS] Digimon from hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked

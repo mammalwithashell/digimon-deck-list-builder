@@ -1,0 +1,145 @@
+# BT25-101 Divine Arms Version Ω — Option, Black, Cost 3, [TS].
+#
+# DCGO BT25_101.cs (authoritative):
+#   <Use Req. ([TS] trait)> — ignore color requirements for this card while you
+#     control a [TS] Digimon or Tamer. (UseRequirements + IgnoreColorRequirement
+#     flood gate, gated on a TS Digimon/Tamer in your battle area.)
+#   [Main] By trashing 1 [TS] trait card from your hand, <Draw 2>. After, you may
+#     link THIS CARD or 1 [TS] trait card from your trash to 1 of your Digimon
+#     without paying the cost.
+#     - Cost (SelectHand TS, canNoSelect ⇒ optional): trash 1 TS from hand. The
+#       trash gates the Draw 2 + link (DCGO TrashHandAndProcessAccordingToResult
+#       successProcess).
+#     - After: Draw 2, then a SetIntSelection 3-way (This Card / [TS] from trash /
+#       None) → AddLinkCard onto a chosen own Digimon.
+#       → link_cards { from: [self_option, trash], filter trait_has TS,
+#         to: own_digimon, count { up_to: 1 }, cost: free }.
+#   [Security] Activate this card's [Main] effects. → scope: inherited,
+#     when: on_security, same body.
+#   Inherited link ESS (SetIsLinkedEffect(true)): <Security A. +1>; <Reboot>.
+#     → scope: inherited security_attack +1 ; scope: inherited grant_keyword Reboot.
+#   Inherited link ESS leave-replacement: [All Turns] when this would leave, by
+#     trashing 1 of its link cards, it doesn't leave.
+#     → scope: inherited kind: replacement, trigger when_would_leave_battle_area,
+#       optional: true, cost { trash_own_link_card: true }, outcome: prevent.
+#   Self link-condition (AddSelfLinkConditionStaticEffect onto Vulcanusmon, link
+#     cost 3) → kind: link_requirement (host filter, cost 3). Printed text does
+#     not name Vulcanusmon; modeled as a Digimon-host link requirement.
+
+card: BT25-101
+name: "Divine Arms Version Ω"
+kind: option
+color: [black]
+cost: 3
+traits: [TS]
+
+# <Use Req. ([TS] trait)> — ignore color requirements while you have a [TS]
+# Digimon or Tamer in the battle area.
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: TS
+      - all_of:
+          - kind: tamer
+          - trait_has: TS
+
+effects:
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - all_of:
+              - kind: digimon
+              - trait_has: TS
+          - all_of:
+              - kind: tamer
+              - trait_has: TS
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT25-101" }
+    summary: "While you have a TS Digimon or Tamer, ignore color requirements for this card"
+
+  # ─── [Main] trash 1 TS from hand → Draw 2 → may link self / TS-from-trash ───
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] By trashing 1 [TS] card from hand, Draw 2; after, you may link this card or 1 [TS] card from your trash to 1 of your Digimon free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: { trait_has: TS }
+          prompt: "Trash 1 [TS] trait card from your hand"
+      - if:
+          condition: { binding_present: cost_card }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+            - draw: { of: you, count: 2 }
+            - link_cards:
+                from: [self_option, trash]
+                filter: { trait_has: TS }
+                to: own_digimon
+                count: { up_to: 1 }
+                cost: free
+                prompt: "Link this card or 1 [TS] trait card from your trash to 1 of your Digimon"
+
+  # ─── [Security] Activate this card's [Main] effects ─────────────────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate [Main]: trash 1 [TS] from hand → Draw 2 → may link self/TS-from-trash"
+    process:
+      - select_hand:
+          of: you
+          bind_as: sec_cost_card
+          optional: true
+          cost: true
+          filter: { trait_has: TS }
+          prompt: "Trash 1 [TS] trait card from your hand"
+      - if:
+          condition: { binding_present: sec_cost_card }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: sec_cost_card }
+            - draw: { of: you, count: 2 }
+            - link_cards:
+                from: [self_option, trash]
+                filter: { trait_has: TS }
+                to: own_digimon
+                count: { up_to: 1 }
+                cost: free
+                prompt: "Link this card or 1 [TS] trait card from your trash to 1 of your Digimon"
+
+  # ─── Link ESS: <Security A. +1> (applies to the host while linked) ──────────
+  - scope: linked
+    kind: aura
+    target: {}
+    security_attack: 1
+    summary: "[Link] <Security A. +1>"
+
+  # ─── Link ESS: <Reboot> (applies to the host while linked) ──────────────────
+  - kind: grant_keyword
+    scope: linked
+    keyword: Reboot
+    summary: "[Link] <Reboot>"
+
+  # ─── Link ESS: leave-replacement by trashing 1 link card ───────────────────
+  - scope: linked
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { trash_own_link_card: true }
+    outcome: prevent
+    summary: "[Link][All Turns] When this would leave the battle area, by trashing 1 of its link cards, it doesn't leave"
+
+  # ─── [Link] [TS] Digimon host: Cost 3 ──────────────────────────────────────
+  - kind: link_requirement
+    scope: inherited
+    cost: 3
+    filter:
+      kind: digimon
+    summary: "[Link] this card may be linked onto 1 of your Digimon: Cost 3"

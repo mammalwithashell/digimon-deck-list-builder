@@ -1,0 +1,95 @@
+# BT25-008 Coronamon — Digimon, Lv.3, Red, DP 1000, Cost 3.
+# Traits: Beast, Iliad, TS. Attribute: Vaccine.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [When Moving] [On Play] By trashing up to 2 [Iliad] or [TS] trait cards
+#   from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) for each card
+#   trashed.
+#
+# Inherited Effect:
+#   [Your Turn] This Digimon gets +2000 DP.
+#
+# Digivolve: printed evo_costs list a Lv.2 Red cost-1 alternate path; DCGO adds
+# a self digivolution requirement gated on `TopCard.HasTSTraits` at level 2 for
+# cost 0.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_008.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "Alternative Digivolve Condition" — EffectTiming.None,
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.HasTSTraits, 0, false,
+#   level: 2). → alt_paths digivolve from { level_eq: 2, trait_has: TS } cost 0.
+#
+# Clause "Shared OP/WD" — ActivateClassesForSharedEffects(onPlay: true,
+#   whenMoving: true, optional: false, isSkippable: true). Body: SelectHandEffect
+#   Mode.Discard, canTargetCondition = HasIliadTraits || HasTSTraits, maxCount =
+#   min(2, eligible-in-hand), canNoSelect: true, canEndNotMax: true. After
+#   select: Draw(drawCount = cardSources.Count). We model the variable "draw 1
+#   per trashed" as two independent optional "may trash 1 [Iliad]/[TS] → draw 1"
+#   steps (max is 2), avoiding hand-index churn inside a loop; behaviorally
+#   identical: trash 0/1/2 → draw 0/1/2.
+#   → when: [on_play, on_move], two optional select_hand → trash_from_hand_by_index
+#     → draw 1.
+#
+# Clause "Inherit" — ChangeSelfDPStaticEffect(2000, isInheritedEffect: true,
+#   condition: IsOwnerTurn). → kind: aura, scope: inherited, target: {},
+#   active_when: { your_turn: true }, dp_modifier: 2000.
+
+card: BT25-008
+name: Coronamon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Beast, Iliad, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: TS }
+    cost: 0
+
+effects:
+  # ─── Clause 0: [When Moving][On Play] trash up to 2 [Iliad]/[TS] → draw per ──
+  - when: [on_play, on_move]
+    summary: "[OnPlay/WhenMoving] By trashing up to 2 [Iliad]/[TS] cards from hand, draw 1 per trashed"
+    process:
+      - select_hand:
+          of: you
+          bind_as: trash_a
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Iliad
+              - trait_has: TS
+          prompt: "Trash an [Iliad] or [TS] card from your hand (1st of up to 2)"
+      - if:
+          condition: { binding_present: trash_a }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: trash_a }
+            - draw: { of: you, count: 1 }
+            - select_hand:
+                of: you
+                bind_as: trash_b
+                optional: true
+                filter:
+                  any_of:
+                    - trait_has: Iliad
+                    - trait_has: TS
+                prompt: "Trash another [Iliad] or [TS] card from your hand (2nd of up to 2)"
+            - if:
+                condition: { binding_present: trash_b }
+                then:
+                  - trash_from_hand_by_index: { of: you, hand_index: trash_b }
+                  - draw: { of: you, count: 1 }
+
+  # ─── Clause 1: Inherited [Your Turn] +2000 DP ───────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

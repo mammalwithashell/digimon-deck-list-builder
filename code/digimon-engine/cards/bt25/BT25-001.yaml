@@ -1,0 +1,44 @@
+# BT25-001 Tokomon — Digi-Egg, Lv.2, Red.
+# Traits: Lesser, Iliad, TS.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   Inherited Effect [When Attacking] [Once Per Turn] If this Digimon has the
+#   [TS] trait, <Draw 1> (Draw 1 card from your deck.)
+#
+# Tokomon is a Digi-Egg with no face-up effect; only the inherited When
+# Attacking draw.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_001.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "Inherited When Attacking" — `EffectTiming.OnAllyAttack`,
+#   `SetIsInheritedEffect(true)`, `SetUpActivateClass(..., max_count: 1, ...)`
+#   (→ [Once Per Turn]), `SetHashString("BT25_001_Inherited")`. The body draws
+#   1 only when `card.PermanentOfThisCard().TopCard.EqualsTraits("TS")` — i.e.
+#   the carrier the egg sits under has the [TS] trait; otherwise `RemoveUse()`
+#   (the OPT is not consumed). We model the [TS] gate as a `condition:
+#   source_permanent_trait_has: TS` (the carrier/top-card trait check) so the
+#   draw is gated, not auto-fired. The draw is non-optional once the gate is
+#   satisfied (DCGO has no player-facing decline — it always draws when the
+#   carrier has [TS]), so no `optional:` here.
+
+card: BT25-001
+name: Tokomon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Lesser, Iliad, TS]
+
+effects:
+  # ─── Inherited [When Attacking][OPT] If carrier has [TS], Draw 1 ────────────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      source_permanent_trait_has: "TS"
+    summary: "[Inherited][When Attacking][OPT] If carrier has [TS] trait, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

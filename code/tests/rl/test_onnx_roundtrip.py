@@ -41,6 +41,13 @@ def test_mlp_onnx_roundtrip(tmp_path):
             str(sb3_path),
             "--output",
             str(onnx_path),
+            # Pin to the profile the checkpoint trained with (DigimonEnv's
+            # default). Without it, export_onnx falls back to the ENGINE
+            # default profile (standard_lite_deck_v2, 8850 floats since the
+            # 2026-05-25 flip) and the size validation correctly rejects
+            # the 8410-float checkpoint.
+            "--tensor-profile",
+            "standard_lite_v2",
         ],
         capture_output=True,
         text=True,
@@ -90,6 +97,9 @@ def test_lstm_onnx_roundtrip(tmp_path):
             str(sb3_path),
             "--output",
             str(onnx_path),
+            # Same profile pin as the MLP test above.
+            "--tensor-profile",
+            "standard_lite_v2",
         ],
         capture_output=True,
         text=True,

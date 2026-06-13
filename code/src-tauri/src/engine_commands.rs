@@ -9,7 +9,7 @@
 //! `play_card` / `attack_digimon` / `attack_player` / `end_turn` to drive it.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::explain::{explain_action, ActionExplanation};
@@ -39,10 +39,16 @@ pub struct GameSession {
 }
 
 /// Shared mutable Rust-engine state, held by Tauri.
-#[derive(Default)]
+///
+/// `game` / `session` are wrapped in `Arc` so the optional dev-only debug
+/// bridge (`debug_bridge.rs`, feature `debug-bridge`) can hold a second
+/// handle to the same game and drive staging from its localhost server.
+/// `.lock()` derefs through the `Arc`, so existing command code is
+/// unchanged; only construction/sharing differs.
+#[derive(Default, Clone)]
 pub struct RustEngineState {
-    pub game: Mutex<Option<Game>>,
-    pub session: Mutex<GameSession>,
+    pub game: Arc<Mutex<Option<Game>>>,
+    pub session: Arc<Mutex<GameSession>>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -78,6 +84,10 @@ pub struct CardDto {
     /// without DigiXros aliases. Frontend uses these for material-match hints.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub digixros_aliases: Vec<String>,
+    /// Printed digivolution costs (color/level/cost rows). The desktop UI
+    /// previously had no digivolve-cost data; the browser path exposes these.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evo_costs: Vec<EvoCostDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,6 +98,105 @@ pub struct PermanentDto {
     pub is_suspended: bool,
     pub stack_size: usize,
     pub turn_played: u16,
+    /// The digivolution-source cards UNDER the active top card, ordered
+    /// bottom→top (the top/active card is excluded). Index `i` here lines up
+    /// with the engine's `source_index` in `encode_source_select(field, i)`
+    /// (= `SOURCE_SELECT_START + field*SOURCES_PER_FIELD + i`), so the
+    /// frontend's source picker can map a `SOURCE_SELECT`-range action id back
+    /// to the card it removes/plays. Empty when the permanent has no sources.
+    #[serde(default)]
+    pub sources: Vec<SourceCardDto>,
+    /// Active keyword display names (mirrors `serialization::perm_data`'s
+    /// `keywords`). Empty for the breeding-area construction (no live handle).
+    #[serde(default)]
+    pub keywords: Vec<String>,
+    /// Innate vs modifier-gained keyword split.
+    #[serde(default)]
+    pub keyword_breakdown: KeywordBreakdownDto,
+    /// Security-attack modifier (delta from the default of 1).
+    #[serde(default)]
+    pub security_attack_modifier: i32,
+    /// Linked-card ids (e.g. for cards with a linked-Digimon mechanic).
+    #[serde(default)]
+    pub linked_card_ids: Vec<String>,
+    /// The top card's printed main effect text.
+    #[serde(default)]
+    pub main_effect_text: String,
+    /// Inherited effects conferred by non-top digivolution sources.
+    #[serde(default)]
+    pub inherited_effects: Vec<InheritedEffectDto>,
+    /// Active modifiers on this permanent (DCGO PermanentDetail parity).
+    #[serde(default)]
+    pub modifiers: Vec<PermanentModifierDto>,
+    /// Printed (base) vs effective DP split.
+    #[serde(default)]
+    pub dp_breakdown: DpBreakdownDto,
+}
+
+/// A single digivolution-source card under a permanent. Minimal shape for the
+/// source picker (and stack inspector); richer per-source detail for the
+/// inspector lives in the engine's own serialization.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SourceCardDto {
+    pub card_id: String,
+    pub card_name: String,
+    pub colors: Vec<String>,
+    /// This source card's printed main effect text (for the stack inspector).
+    #[serde(default)]
+    pub main_effect_text: String,
+    /// This source card's printed inherited effect text.
+    #[serde(default)]
+    pub inherited_effect_text: String,
+}
+
+/// A single digivolution cost entry (one color/level/cost row from
+/// `CardData.evo_costs`). Mirrors `EvoCost` (`card_data.rs`) with the
+/// frontend's field names (`color`/`level`/`cost`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvoCostDto {
+    pub color: u8,
+    pub level: u8,
+    pub cost: u16,
+}
+
+/// Innate vs modifier-gained keyword split (mirrors `serialization::perm_data`'s
+/// `keywordBreakdown`). "innate" = printed/inherited on the cards; "gained" =
+/// present via a runtime grant modifier.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct KeywordBreakdownDto {
+    pub innate: Vec<String>,
+    pub gained: Vec<String>,
+}
+
+/// One inherited effect conferred by a non-top digivolution source (mirrors
+/// `serialization::perm_data`'s `inheritedEffects`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InheritedEffectDto {
+    pub source_index: usize,
+    pub card_id: String,
+    pub card_name: String,
+    pub text: String,
+}
+
+/// One active modifier on a permanent (mirrors `serialization::perm_data`'s
+/// `modifiers` — DCGO PermanentDetail parity). `type_` is the stable wire
+/// string from `serialization::modifier_type_str`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermanentModifierDto {
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub value: i32,
+    pub expiry: String,
+    pub source_card_id: Option<String>,
+}
+
+/// Printed (base) vs effective DP split (mirrors `serialization::perm_data`'s
+/// `dpBreakdown`). `temporary` is the delta contributed by modifiers.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DpBreakdownDto {
+    pub base: Option<i32>,
+    pub temporary: i32,
+    pub total: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,7 +206,16 @@ pub struct PlayerDto {
     pub battle_area: Vec<PermanentDto>,
     pub breeding: Option<PermanentDto>,
     pub deck_count: usize,
+    /// Number of cards remaining in the digitama (egg) deck. The desktop UI
+    /// previously had no egg-deck count.
+    #[serde(default)]
+    pub egg_deck_count: usize,
     pub trash_count: usize,
+    /// Full trash contents (top-of-pile last). The trash is a PUBLIC zone in
+    /// the Digimon TCG — both players see both trashes — so the cards are sent
+    /// for every player. The desktop UI previously got only `trash_count`, so
+    /// the trash always rendered empty even as deletions piled up.
+    pub trash: Vec<CardDto>,
     pub security_count: usize,
     pub is_eliminated: bool,
 }
@@ -116,6 +234,19 @@ pub struct PendingSelectionDto {
     pub valid_action_ids: Vec<u16>,
     pub is_optional: bool,
     pub prompt: String,
+    /// Engine `SelectionKind` discriminant as a stable string (e.g.
+    /// `"OwnField"` / `"OppField"` / `"Hand"`, via `PendingSelection::
+    /// kind_str()`). The frontend's board-click router keys off this to map a
+    /// slot click to a field-target action — WITHOUT it (the prior desktop DTO
+    /// omitted it) every own- AND opponent-field selection is unclickable in
+    /// the Tauri app, because `isFieldSelectionKind(undefined)` is false.
+    pub kind: String,
+    /// For `Hand`/`Trash` kinds, the player whose zone `valid_action_ids`
+    /// index into — effects like EX11-012 Medusamon prompt the selecting
+    /// player to pick from the OPPONENT's trash. `None` = the selecting
+    /// player's own zone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone_owner: Option<PlayerId>,
     /// For `SelectionKind::EffectChoice` prompts (`select_effect_choice`),
     /// the branches the player picks among. Each entry's `action_id` is one
     /// of the `valid_action_ids` above; the engine uses the
@@ -136,6 +267,13 @@ pub struct EffectChoiceDto {
     pub label: String,
     /// Concrete action ID the engine accepts for this branch.
     pub action_id: u16,
+    /// Card whose effect this branch resolves (e.g. the digivolution source
+    /// granting an inherited trigger). The trigger-order chooser renders this
+    /// card's image; without it the UI shows a blank placeholder.
+    #[serde(default)]
+    pub card_id: Option<String>,
+    #[serde(default)]
+    pub card_name: Option<String>,
 }
 
 /// One card from `game.revealed_cards`. Effects like "reveal X cards" push
@@ -261,7 +399,7 @@ fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -
         play_cost,
         colors,
         traits: _,
-        evo_costs: _,
+        evo_costs,
         dna_costs: _,
         effect_text: _,
         inherited_text: _,
@@ -285,22 +423,154 @@ fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -
         colors: colors.iter().map(|&c| color_str(c).to_string()).collect(),
         ace_overflow: *ace_overflow,
         digixros_aliases: digixros_aliases.clone(),
+        evo_costs: evo_costs
+            .iter()
+            .map(|e| EvoCostDto {
+                color: e.card_color,
+                level: e.level,
+                cost: e.memory_cost,
+            })
+            .collect(),
     }
 }
 
+/// Non-top digivolution-source cards of a permanent, ordered bottom→top so
+/// index `i` matches the engine's `source_index` in `encode_source_select`
+/// (`SOURCE_SELECT_START + field*SOURCES_PER_FIELD + i`). The active top card
+/// (last in `card_sources`) is excluded — it is never a `select_material`
+/// candidate. The frontend source picker maps a `SOURCE_SELECT` action id back
+/// to the card here.
+fn perm_sources_dto(
+    perm: &digimon_engine::permanent::Permanent,
+    data: &[CardData],
+) -> Vec<SourceCardDto> {
+    let stack = &perm.card_sources;
+    let non_top = stack.len().saturating_sub(1);
+    stack[..non_top]
+        .iter()
+        .map(|cs| {
+            let cd = &data[cs.data_index];
+            SourceCardDto {
+                card_id: cd.card_id.clone(),
+                card_name: cd.card_name.clone(),
+                colors: cd.colors.iter().map(|&c| color_str(c).to_string()).collect(),
+                main_effect_text: cd.effect_text.clone(),
+                inherited_effect_text: cd.inherited_text.clone(),
+            }
+        })
+        .collect()
+}
+
 fn perm_dto(game: &Game, player: PlayerId, index: usize) -> PermanentDto {
+    use digimon_engine::serialization::{
+        modifier_type_str, expiry_str, DISPLAY_KEYWORDS,
+    };
+
     let perm = &game.player(player).battle_area[index];
+    let data = &game.card_data;
     let handle = PermanentHandle {
         player,
         index: index as u8,
     };
+    let stack_size = perm.stack_size();
+    let top = perm.top_card();
+    let top_data = &data[top.data_index];
+    let base_dp = top_data.dp.unwrap_or(0);
+
+    // ── Active keywords + innate/gained breakdown (mirrors perm_data) ──
+    let mut keywords: Vec<String> = Vec::new();
+    let mut innate: Vec<String> = Vec::new();
+    let mut gained: Vec<String> = Vec::new();
+    for (kw, name) in DISPLAY_KEYWORDS {
+        if game.has_keyword(handle, *kw) {
+            keywords.push((*name).to_string());
+            if game.modifiers.has_keyword(handle, *kw) {
+                gained.push((*name).to_string());
+            } else {
+                innate.push((*name).to_string());
+            }
+        }
+    }
+
+    // ── Security-attack modifier (delta from the default of 1) ──
+    // Mirror combat's effective strike (`Game::effective_security_strike`),
+    // which is BASE-INCLUSIVE of the `security_attack_fn` formula aura (e.g.
+    // WarGreymon's `1 + floor(materials/2)`). Summing only the flat keyword +
+    // modifier deltas dropped the formula, so a WarGreymon that actually
+    // checks 4 security rendered as "Security Attack: 2" in the desktop UI.
+    let security_attack_modifier = game.effective_security_strike(handle) - 1;
+
+    // ── DP: base (printed) vs effective (with modifiers) ──
+    let total_dp = game.effective_dp(handle).unwrap_or(base_dp);
+    let temporary_dp = total_dp - base_dp;
+
+    // ── Inherited effects conferred by non-top digivolution sources ──
+    let inherited_effects: Vec<InheritedEffectDto> = perm
+        .card_sources
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| i + 1 < stack_size) // exclude the top card
+        .filter_map(|(i, cs)| {
+            let cd = &data[cs.data_index];
+            if cd.inherited_text.trim().is_empty() {
+                return None;
+            }
+            Some(InheritedEffectDto {
+                source_index: i,
+                card_id: cs.card_id(data).to_string(),
+                card_name: cd.card_name.clone(),
+                text: cd.inherited_text.clone(),
+            })
+        })
+        .collect();
+
+    // ── Active modifier list (DCGO PermanentDetail parity) ──
+    let modifiers: Vec<PermanentModifierDto> = game
+        .modifiers
+        .permanent_modifiers_iter(handle)
+        .filter_map(|entry| {
+            let type_str = modifier_type_str(entry.modifier)?;
+            let source_card_id = entry.source_permanent.and_then(|sh| {
+                game.players
+                    .get(sh.player as usize)
+                    .and_then(|pl| pl.battle_area.get(sh.index as usize))
+                    .map(|p| p.top_card().card_id(data).to_string())
+            });
+            Some(PermanentModifierDto {
+                type_: type_str.to_string(),
+                value: entry.value,
+                expiry: expiry_str(entry.expiry).to_string(),
+                source_card_id,
+            })
+        })
+        .collect();
+
+    let linked_card_ids: Vec<String> = perm
+        .linked_cards
+        .iter()
+        .map(|c| c.card_id(data).to_string())
+        .collect();
+
     PermanentDto {
         field_index: index as u8,
-        top_card: card_dto(perm.top_card(), &game.card_data),
+        top_card: card_dto(top, data),
         effective_dp: game.effective_dp(handle),
         is_suspended: perm.is_suspended,
-        stack_size: perm.stack_size(),
+        stack_size,
         turn_played: perm.turn_played,
+        sources: perm_sources_dto(perm, data),
+        keywords,
+        keyword_breakdown: KeywordBreakdownDto { innate, gained },
+        security_attack_modifier,
+        linked_card_ids,
+        main_effect_text: top_data.effect_text.clone(),
+        inherited_effects,
+        modifiers,
+        dp_breakdown: DpBreakdownDto {
+            base: Some(base_dp),
+            temporary: temporary_dp,
+            total: Some(total_dp),
+        },
     }
 }
 
@@ -314,13 +584,35 @@ fn player_dto(game: &Game, id: PlayerId) -> PlayerDto {
         .iter()
         .map(|c| card_dto(c, &game.card_data))
         .collect();
-    let breeding = p.breeding_area.as_ref().map(|perm| PermanentDto {
-        field_index: 255, // breeding indicator
-        top_card: card_dto(perm.top_card(), &game.card_data),
-        effective_dp: perm.base_dp(&game.card_data),
-        is_suspended: perm.is_suspended,
-        stack_size: perm.stack_size(),
-        turn_played: perm.turn_played,
+    let breeding = p.breeding_area.as_ref().map(|perm| {
+        // Breeding permanents are not battle-area-addressable, so the live
+        // keyword / modifier / effective-DP queries (which take a
+        // PermanentHandle) don't apply — fall back to printed/neutral values,
+        // mirroring `serialization::perm_data`'s `handle == None` branch.
+        let base_dp = perm.base_dp(&game.card_data);
+        PermanentDto {
+            field_index: 255, // breeding indicator
+            top_card: card_dto(perm.top_card(), &game.card_data),
+            effective_dp: base_dp,
+            is_suspended: perm.is_suspended,
+            stack_size: perm.stack_size(),
+            turn_played: perm.turn_played,
+            sources: perm_sources_dto(perm, &game.card_data),
+            keywords: Vec::new(),
+            keyword_breakdown: KeywordBreakdownDto::default(),
+            security_attack_modifier: 0,
+            linked_card_ids: Vec::new(),
+            main_effect_text: game.card_data[perm.top_card().data_index]
+                .effect_text
+                .clone(),
+            inherited_effects: Vec::new(),
+            modifiers: Vec::new(),
+            dp_breakdown: DpBreakdownDto {
+                base: base_dp,
+                temporary: 0,
+                total: base_dp,
+            },
+        }
     });
     PlayerDto {
         id,
@@ -328,7 +620,13 @@ fn player_dto(game: &Game, id: PlayerId) -> PlayerDto {
         battle_area,
         breeding,
         deck_count: p.deck.len(),
+        egg_deck_count: p.digitama_deck.len(),
         trash_count: p.trash.len(),
+        trash: p
+            .trash
+            .iter()
+            .map(|c| card_dto(c, &game.card_data))
+            .collect(),
         security_count: p.security.len(),
         is_eliminated: p.is_eliminated,
     }
@@ -343,10 +641,15 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
             choices
                 .iter()
                 .enumerate()
-                .map(|(i, entry)| EffectChoiceDto {
-                    index: i as u8,
-                    label: entry.label.clone(),
-                    action_id: entry.action_id,
+                .map(|(i, entry)| {
+                    let card = entry.source_card.map(|h| game.card(h));
+                    EffectChoiceDto {
+                        index: i as u8,
+                        label: entry.label.clone(),
+                        action_id: entry.action_id,
+                        card_id: card.map(|c| c.card_id.clone()),
+                        card_name: card.map(|c| c.card_name.clone()),
+                    }
                 })
                 .collect()
         })
@@ -357,6 +660,10 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
         valid_action_ids: sel.valid_action_ids.clone(),
         is_optional: sel.is_optional,
         prompt: sel.prompt.clone(),
+        // Same stable discriminant string the engine's own serialization
+        // emits (`PendingSelectionView::kind_str()` == `format!("{:?}", kind)`).
+        kind: format!("{:?}", sel.kind),
+        zone_owner: sel.zone_owner,
         effect_choices,
     })
 }
@@ -371,7 +678,7 @@ fn revealed_cards_dto(game: &Game) -> Vec<RevealedCardDto> {
         .collect()
 }
 
-fn game_state_dto(game: &Game) -> GameStateDto {
+pub fn game_state_dto(game: &Game) -> GameStateDto {
     let players: Vec<PlayerDto> = (0..game.rules.player_count)
         .map(|i| player_dto(game, i))
         .collect();
@@ -674,6 +981,12 @@ pub struct ActionResponseDto {
     pub events: Vec<GameEventDto>,
     pub action_context: serde_json::Value,
     pub action_traces: Vec<ActionTraceDto>,
+    /// True when a non-human agent still has actions to take — a paced
+    /// caller should invoke `rust_step_game { paced: true }` to advance the
+    /// next beat. Always `false` for unpaced calls (they drain agents to the
+    /// next human decision point). Field name must stay aligned with the
+    /// browser wire's `agent_pending` (cross-wire parity).
+    pub agent_pending: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -692,6 +1005,9 @@ pub struct StepResponseDto {
     pub is_human_turn: bool,
     pub is_game_over: bool,
     pub action_traces: Vec<ActionTraceDto>,
+    /// See `ActionResponseDto::agent_pending` — same semantics and same
+    /// cross-wire field-name contract.
+    pub agent_pending: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -706,7 +1022,7 @@ pub struct SurrenderResponseDto {
 
 /// Mirror of HeadlessRunner::current_decision_player — who is expected to
 /// submit the next action.
-fn current_decision_player(game: &Game) -> PlayerId {
+pub fn current_decision_player(game: &Game) -> PlayerId {
     if let Some(p) = game.mulligan_current_player() {
         return p;
     }
@@ -718,7 +1034,7 @@ fn current_decision_player(game: &Game) -> PlayerId {
 
 /// Build a `u8` action mask for the current decider. The frontend stores
 /// `number[]`; `0`/`1` bytes round-trip transparently through Tauri/serde.
-fn action_mask_bytes(game: &Game) -> Vec<u8> {
+pub fn action_mask_bytes(game: &Game) -> Vec<u8> {
     let pid = current_decision_player(game);
     build_action_mask(game, pid)
         .into_iter()
@@ -898,6 +1214,7 @@ pub fn rust_submit_action(
     state: tauri::State<'_, RustEngineState>,
     inference: tauri::State<'_, InferenceState>,
     action: u32,
+    paced: Option<bool>,
 ) -> Result<ActionResponseDto, String> {
     let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
     let session_guard = state.session.lock().map_err(|e| e.to_string())?;
@@ -914,11 +1231,22 @@ pub fn rust_submit_action(
         optional_tensor_summary_for(game, pid, session_guard.registry.as_ref(), &mask_before),
     );
     game.decode_action(action_u16, pid);
+    // Paced mode: the human's action lands, then at most ONE agent action
+    // executes per request so the frontend can render each beat (the
+    // pacing driver keeps calling `rust_step_game { paced: true }` while
+    // `agent_pending`).
+    let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
     let mut action_traces = vec![human_trace];
-    action_traces.extend(run_agent_steps(game, &session_guard, &inference)?);
+    action_traces.extend(run_agent_steps(
+        game,
+        &session_guard,
+        &inference,
+        max_agent_actions,
+    )?);
     let events = drain_events(game);
     let mask = action_mask_bytes(game);
     let is_over = game.game_over;
+    let pending = agent_pending(game, &session_guard);
     Ok(ActionResponseDto {
         state: game_state_dto(game),
         action_mask: mask,
@@ -927,6 +1255,7 @@ pub fn rust_submit_action(
         events,
         action_context: serde_json::json!({}),
         action_traces,
+        agent_pending: pending,
     })
 }
 
@@ -945,16 +1274,22 @@ pub fn rust_submit_action(
 pub fn rust_step_game(
     state: tauri::State<'_, RustEngineState>,
     inference: tauri::State<'_, InferenceState>,
+    paced: Option<bool>,
 ) -> Result<StepResponseDto, String> {
     let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
     let session_guard = state.session.lock().map_err(|e| e.to_string())?;
     let game = ensure_game(&mut game_guard)?;
-    let action_traces = run_agent_steps(game, &session_guard, &inference)?;
+    // Paced mode executes exactly one agent action per invoke; this command
+    // doubles as the "advance one beat" call the frontend pacing driver
+    // repeats while `agent_pending` is true.
+    let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
+    let action_traces = run_agent_steps(game, &session_guard, &inference, max_agent_actions)?;
     let mask = action_mask_bytes(game);
     let pid = current_decision_player(game);
     let is_human_turn =
         matches!(decider_kind(&session_guard, pid), PlayerKind::Human) || game.game_over;
     let is_over = game.game_over;
+    let pending = agent_pending(game, &session_guard);
     Ok(StepResponseDto {
         state: game_state_dto(game),
         action_mask: mask,
@@ -963,6 +1298,7 @@ pub fn rust_step_game(
         is_human_turn,
         is_game_over: is_over,
         action_traces,
+        agent_pending: pending,
     })
 }
 
@@ -974,10 +1310,29 @@ fn decider_kind(session: &GameSession, pid: PlayerId) -> PlayerKind {
         .unwrap_or(PlayerKind::Human)
 }
 
+/// True when the next decision belongs to a non-human agent and the game is
+/// still live — i.e. a paced caller should request another agent advance.
+/// Unpaced calls always land on a human decision point or game end, so this
+/// reports `false` for them by construction.
+pub fn agent_pending(game: &Game, session: &GameSession) -> bool {
+    !game.game_over
+        && !matches!(
+            decider_kind(session, current_decision_player(game)),
+            PlayerKind::Human
+        )
+}
+
 /// Step the game forward while the current decider is a non-human agent.
 /// Bail out as soon as the game ends or a human seat is up — matches the
 /// hosted API's `InteractiveGame.run_step` contract so the frontend
 /// state machine doesn't care which backend is driving.
+///
+/// `max_actions` caps how many agent actions execute in this call: `None`
+/// runs to the next human decision point / game end (legacy behavior);
+/// `Some(n)` returns after at most `n` actions so the frontend can pace
+/// the agent's turn into human-perceivable beats (see the
+/// `add-bot-action-pacing` change). Whether agent actions *remain* after
+/// a capped return is reported separately by [`agent_pending`].
 ///
 /// `pub` so integration tests under `tests/` can drive the game loop
 /// directly without going through the Tauri IPC layer.
@@ -985,6 +1340,7 @@ pub fn run_agent_steps(
     game: &mut Game,
     session: &GameSession,
     inference: &InferenceState,
+    max_actions: Option<usize>,
 ) -> Result<Vec<ActionTraceDto>, String> {
     // Cap iterations defensively so a bug in mask generation can't turn this
     // into an infinite spin. Normal games resolve in far fewer than this.
@@ -992,6 +1348,9 @@ pub fn run_agent_steps(
     let mut traces = Vec::new();
     for _ in 0..MAX_AGENT_STEPS {
         if game.game_over {
+            return Ok(traces);
+        }
+        if matches!(max_actions, Some(cap) if traces.len() >= cap) {
             return Ok(traces);
         }
         let pid = current_decision_player(game);
@@ -1226,6 +1585,182 @@ mod tests {
         assert_eq!(parsed.players.len(), 2);
     }
 
+    /// Regression: the desktop DTO previously omitted `kind`, so EVERY own- and
+    /// opponent-field selection was unclickable in the Tauri app (the frontend
+    /// routes board clicks via `isFieldSelectionKind(pendingSelection.kind)`,
+    /// and `isFieldSelectionKind(undefined)` is false). Drive a real
+    /// opponent-field selection (ST1-15 Giga Destroyer) and assert the
+    /// engine's `SelectionKind` reaches the DTO as the string `"OppField"`.
+    #[test]
+    fn pending_selection_dto_threads_field_selection_kind() {
+        use digimon_engine::card_data::CardData;
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+        fn opp_digimon(id: &str, dp: i32) -> CardData {
+            let mut c = make_test_card(id, id);
+            c.card_kind = CardKind::Digimon;
+            c.colors = vec![CardColor::Red];
+            c.level = Some(3);
+            c.dp = Some(dp);
+            c.play_cost = 3;
+            c
+        }
+
+        let mut runner = DebugRunner::builder()
+            .dsl_card("ST1-15")
+            .expect("ST1-15 in embedded DSL pack")
+            .add_card(opp_digimon("OPP-SMALL", 2000))
+            .hand(0, &["ST1-15"])
+            .memory(10)
+            .start();
+        runner.place_on_field(1, "OPP-SMALL", Some(0));
+        runner.play(0, 0).expect("play Giga Destroyer from hand");
+
+        let dto = pending_selection_dto(&runner.game)
+            .expect("Giga Destroyer installs an opponent-field selection");
+        assert_eq!(
+            dto.kind, "OppField",
+            "field-selection kind must reach the desktop DTO so the frontend can route board clicks"
+        );
+    }
+
+    /// The source picker needs each permanent's non-top digivolution cards (in
+    /// `encode_source_select` order) — the desktop DTO previously exposed only
+    /// `stack_size`, so the frontend had no card to render for a
+    /// `select_material` pick (ST2-15 Kaiser Nail "play 1 source from under 1
+    /// of your Digimon").
+    #[test]
+    fn perm_dto_exposes_non_top_sources_in_encode_order() {
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("SRC-A", "Source A"))
+            .add_card(make_test_card("SRC-B", "Source B"))
+            .add_card(make_test_card("TOP-C", "Top C"))
+            .start();
+        // place_stack is bottom→top: [SRC-A, SRC-B] are sources, TOP-C is the
+        // active top card (must be excluded).
+        runner.place_stack(0, &["SRC-A", "SRC-B", "TOP-C"]);
+
+        let dto = perm_dto(&runner.game, 0, 0);
+        let ids: Vec<&str> = dto.sources.iter().map(|s| s.card_id.as_str()).collect();
+        assert_eq!(
+            ids,
+            vec!["SRC-A", "SRC-B"],
+            "non-top sources, bottom→top order matching encode_source_select; top card excluded"
+        );
+    }
+
+    /// The desktop DTO previously omitted per-permanent runtime data (keyword
+    /// badges, security-attack value, modifiers, dp breakdown) that the browser
+    /// `serialization::perm_data` already exposes, so the Tauri UI rendered
+    /// empty keyword badges and an empty stack inspector. Assert the keyword
+    /// reaches the typed DTO (mirrors `perm_data`'s `keywords` / breakdown).
+    #[test]
+    fn perm_dto_exposes_keywords() {
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+        use digimon_engine::enums::Keyword;
+
+        let mut blocker = make_test_card("BLK-A", "Blocker A");
+        blocker.keywords = vec![Keyword::Blocker];
+
+        let mut runner = DebugRunner::builder().add_card(blocker).start();
+        runner.place_on_field(0, "BLK-A", Some(0));
+
+        let dto = perm_dto(&runner.game, 0, 0);
+        assert!(
+            dto.keywords.iter().any(|k| k == "blocker"),
+            "innate Blocker must surface in the desktop DTO keywords: {:?}",
+            dto.keywords
+        );
+        assert!(
+            dto.keyword_breakdown.innate.iter().any(|k| k == "blocker"),
+            "an innate (printed) keyword belongs in the innate breakdown, not gained"
+        );
+        assert!(
+            !dto.keyword_breakdown.gained.iter().any(|k| k == "blocker"),
+            "printed keyword is not a modifier-granted (gained) keyword"
+        );
+    }
+
+    /// The egg-deck count and per-card digivolution costs are exposed by the
+    /// browser path but were dropped on desktop (empty egg-deck count, missing
+    /// digivolve costs in hand). Assert both reach the typed DTO.
+    #[test]
+    fn player_and_card_dto_expose_egg_deck_and_evo_costs() {
+        use digimon_engine::card_data::EvoCost;
+        use digimon_engine::card_source::CardSource;
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+        let mut evo_card = make_test_card("EVO-A", "Evo A");
+        evo_card.evo_costs = vec![EvoCost {
+            card_color: 1,
+            level: 3,
+            memory_cost: 2,
+        }];
+
+        let mut runner = DebugRunner::builder().add_card(evo_card).start();
+        // Seed the digitama (egg) deck so the count is non-zero.
+        let next = runner.game.next_card_index();
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "EVO-A")
+            .unwrap();
+        runner.game.players[0]
+            .digitama_deck
+            .push(CardSource::new(idx, 0, next));
+
+        let dto = player_dto(&runner.game, 0);
+        assert_eq!(
+            dto.egg_deck_count, 1,
+            "egg-deck count must mirror digitama_deck.len()"
+        );
+
+        let source = CardSource::new(idx, 0, 0);
+        let cdto = card_dto(&source, &runner.game.card_data);
+        assert_eq!(cdto.evo_costs.len(), 1);
+        assert_eq!(cdto.evo_costs[0].color, 1);
+        assert_eq!(cdto.evo_costs[0].level, 3);
+        assert_eq!(cdto.evo_costs[0].cost, 2);
+    }
+
+    /// The trash is a PUBLIC zone — the desktop DTO previously exposed only
+    /// `trash_count`, so the trash always rendered empty even as deletions
+    /// piled cards in. Assert the cards themselves reach the DTO.
+    #[test]
+    fn player_dto_exposes_trash_cards_not_just_count() {
+        use digimon_engine::card_source::CardSource;
+        use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TRASHED-A", "Trashed A"))
+            .add_card(make_test_card("TRASHED-B", "Trashed B"))
+            .start();
+        let next_a = runner.game.next_card_index();
+        let idx_a = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TRASHED-A")
+            .unwrap();
+        runner.game.players[0].trash.push(CardSource::new(idx_a, 0, next_a));
+        let next_b = runner.game.next_card_index();
+        let idx_b = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TRASHED-B")
+            .unwrap();
+        runner.game.players[0].trash.push(CardSource::new(idx_b, 0, next_b));
+
+        let dto = player_dto(&runner.game, 0);
+        let ids: Vec<&str> = dto.trash.iter().map(|c| c.card_id.as_str()).collect();
+        assert_eq!(ids, vec!["TRASHED-A", "TRASHED-B"]);
+        assert_eq!(dto.trash_count, 2, "count stays consistent with the cards");
+    }
+
     /// Track C synth-profile fields (`ace_overflow`, `digixros_aliases`) must
     /// propagate from `CardData` into `CardDto`. Regression for the drift PR
     /// #457 flagged: the engine grew the fields, the Tauri builder didn't,
@@ -1305,6 +1840,7 @@ mod tests {
             events: Vec::<GameEventDto>::new(),
             action_context: serde_json::json!({}),
             action_traces: Vec::new(),
+            agent_pending: false,
         };
 
         assert_eq!(
@@ -1317,6 +1853,9 @@ mod tests {
         assert!(json.contains("\"action_mask\""));
         assert!(json.contains("\"events\""));
         assert!(json.contains("\"is_game_over\":false"));
+        // Cross-wire contract: the pacing flag serializes under the same
+        // snake_case key the browser wire emits.
+        assert!(json.contains("\"agent_pending\":false"));
     }
 
     // ─── agent step loop ───────────────────────────────────────────────
@@ -1465,6 +2004,7 @@ mod tests {
             events: Vec::<GameEventDto>::new(),
             action_context: serde_json::json!({}),
             action_traces: vec![human_trace],
+            agent_pending: false,
         };
 
         assert_eq!(resp.action_traces.len(), 1);
@@ -1495,6 +2035,7 @@ mod tests {
             events: Vec::<GameEventDto>::new(),
             action_context: serde_json::json!({}),
             action_traces: vec![human_trace],
+            agent_pending: false,
         };
 
         assert_eq!(resp.action_traces.len(), 1);
@@ -1513,7 +2054,7 @@ mod tests {
         };
         let inference = InferenceState::default();
         let before = (game.turn_count, game.current_phase);
-        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference, None).unwrap();
         let after = (game.turn_count, game.current_phase);
         assert!(traces.is_empty());
         assert_eq!(before, after, "human seat should not advance state");
@@ -1531,7 +2072,7 @@ mod tests {
             player_model_ids: vec![None, None],
         };
         let inference = InferenceState::default();
-        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference, None).unwrap();
         assert!(!traces.is_empty());
         assert!(traces.iter().all(|trace| trace.actor.starts_with("agent_")));
         assert!(
@@ -1549,7 +2090,7 @@ mod tests {
             player_model_ids: vec![None, None],
         };
         let inference = InferenceState::default();
-        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference, None).unwrap();
 
         assert!(!traces.is_empty());
         assert!(traces.iter().all(|trace| trace.actor == "agent_greedy"));
@@ -1557,6 +2098,104 @@ mod tests {
         assert!(
             game.game_over,
             "two greedy agents should still play to completion without registry"
+        );
+    }
+
+    // ─── paced agent stepping (add-bot-action-pacing) ───────────────────
+
+    #[test]
+    fn run_agent_steps_paced_caps_at_one_action_and_reports_pending() {
+        let (mut game, registry) = build_playable_game();
+        let session = GameSession {
+            registry: Some(registry),
+            player_kinds: vec![PlayerKind::Greedy, PlayerKind::Greedy],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+
+        let traces = run_agent_steps(&mut game, &session, &inference, Some(1)).unwrap();
+        assert_eq!(
+            traces.len(),
+            1,
+            "paced advance must execute exactly one agent action"
+        );
+        assert!(
+            agent_pending(&game, &session),
+            "with both seats greedy and the game live, another agent action must be pending"
+        );
+    }
+
+    #[test]
+    fn paced_advances_replay_the_exact_unpaced_action_sequence() {
+        // Same seed + deterministic greedy policy → the paced one-beat-at-a-
+        // time path must reproduce the unpaced run's action sequence exactly,
+        // and `agent_pending` must flip false only at game end.
+        let session_for = |registry| GameSession {
+            registry: Some(registry),
+            player_kinds: vec![PlayerKind::Greedy, PlayerKind::Greedy],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+
+        let (mut unpaced_game, registry_a) = build_playable_game();
+        let session_a = session_for(registry_a);
+        let unpaced = run_agent_steps(&mut unpaced_game, &session_a, &inference, None).unwrap();
+        assert!(unpaced_game.game_over);
+
+        let (mut paced_game, registry_b) = build_playable_game();
+        let session_b = session_for(registry_b);
+        let mut paced: Vec<ActionTraceDto> = Vec::new();
+        // Generous safety bound — every iteration must advance one action.
+        for _ in 0..20_000 {
+            let step = run_agent_steps(&mut paced_game, &session_b, &inference, Some(1)).unwrap();
+            assert!(
+                step.len() <= 1,
+                "a paced advance must never execute more than one action"
+            );
+            paced.extend(step);
+            if !agent_pending(&paced_game, &session_b) {
+                break;
+            }
+        }
+        assert!(
+            paced_game.game_over,
+            "paced advances must drive a two-greedy game to completion"
+        );
+        assert!(!agent_pending(&paced_game, &session_b));
+
+        let ids = |ts: &[ActionTraceDto]| ts.iter().map(|t| t.action_id).collect::<Vec<_>>();
+        assert_eq!(
+            ids(&paced),
+            ids(&unpaced),
+            "paced and unpaced runs must produce identical action sequences"
+        );
+    }
+
+    #[test]
+    fn agent_pending_is_false_for_human_decider_and_finished_games() {
+        let (game, registry) = build_playable_game();
+        let human_session = GameSession {
+            registry: Some(registry),
+            player_kinds: vec![PlayerKind::Human, PlayerKind::Human],
+            player_model_ids: vec![None, None],
+        };
+        assert!(
+            !agent_pending(&game, &human_session),
+            "a human decision point must not report a pending agent"
+        );
+
+        let (mut over_game, registry2) = build_playable_game();
+        let greedy_session = GameSession {
+            registry: Some(registry2),
+            player_kinds: vec![PlayerKind::Greedy, PlayerKind::Greedy],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+        run_agent_steps(&mut over_game, &greedy_session, &inference, None).unwrap();
+        assert!(over_game.game_over);
+        assert!(
+            !agent_pending(&over_game, &greedy_session),
+            "a finished game must not report a pending agent"
         );
     }
 
@@ -1591,7 +2230,7 @@ mod tests {
         };
 
         let before_pid = current_decision_player(&game);
-        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference, None).unwrap();
         assert!(!traces.is_empty());
         assert!(traces.iter().all(|trace| trace.actor.starts_with("agent_")));
         // After the trained seat's turn the loop should have left us on a
@@ -1622,7 +2261,7 @@ mod tests {
             player_model_ids: model_ids,
         };
         let inference = InferenceState::default();
-        let err = run_agent_steps(&mut game, &session, &inference)
+        let err = run_agent_steps(&mut game, &session, &inference, None)
             .expect_err("missing model should error");
         assert!(
             err.contains("not loaded") || err.contains("nope"),

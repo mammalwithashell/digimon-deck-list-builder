@@ -1,0 +1,139 @@
+# BT25-071 Orochimon — Digimon, Lv.5, Black, DP 6000, Cost 7.
+# Traits: Dark Dragon, Titan, TS.
+# Standard digivolution: Lv.4 Black / cost 3 (printed evo_costs).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't
+#   attack until their turn ends.
+#   [All Turns] [Once Per Turn] When this Digimon suspends, reveal the top 3
+#   cards of your deck. You may play 1 play cost 4 or lower [TS] trait Digimon
+#   card among them without paying the cost. Return the rest to the bottom of
+#   the deck.
+#
+# Inherited Effect:
+#   [All Turns] [Once Per Turn] When this Digimon suspends, reveal the top 3
+#   cards of your deck. You may play 1 play cost 4 or lower [TS] trait Digimon
+#   card among them without paying the cost. Return the rest to the bottom of
+#   the deck.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_071.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 (OP/WD shared) — isOptional: false (mandatory). SelectPermanent
+#   Custom over an opponent Digimon OR Tamer (canNoSelect: false → mandatory if
+#   a target exists), GainCanNotAttack UntilOpponentTurnEnd.
+#   → on_play/when_digivolving, mandatory select_opponent_permanent over
+#     digimon|tamer → add_modifier CannotAttack, expiry end_of_opponents_turn.
+# Clause 2 (AT) + Clause 3 (AT inherited) — both `OnTappedAnyone`, OPT, gated by
+#   CanTriggerWhenSelfPermanentSuspends. SimplifiedRevealDeckTopCardsAndSelect
+#   revealCount 3, single bucket (Digimon, HasPlayCost, cost<=4, TS),
+#   canNoSelect: true ("you may play"), play payCost: false, remainder to
+#   DeckBottom.
+#   → reveal_top_deck 3 + select_reveal_buckets min:0 max:1 +
+#     play_from_revealed_free + place_remainder_on_deck bottom; authored once as
+#     a face-up clause and once as scope: inherited (DCGO duplicates the body).
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 4, TopCard
+#   TS, cost 3). Matches printed Lv.4 / cost 3 gated on a [TS] base.
+
+card: BT25-071
+name: Orochimon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 6000
+traits: [Dark Dragon, Titan, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── Clause 1: [On Play][When Digivolving] lock 1 opp Digimon/Tamer ─────────
+  #
+  # Mandatory (no printed "may"). Target is an opponent Digimon OR Tamer; the
+  # `CannotAttack` modifier expires at the end of the opponent's turn ("until
+  # their turn ends").
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 opp Digimon or Tamer can't attack until their turn ends"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        any_of:
+          - kind: digimon
+          - kind: tamer
+    process:
+      - select_opponent_permanent:
+          bind_as: locked
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "1 of your opponent's Digimon or Tamers can't attack until their turn ends"
+      - add_modifier:
+          target: locked
+          modifier: CannotAttack
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 2: [All Turns][OPT] on self-suspend reveal-3 play-1 ─────────────
+  #
+  # `event_permanent_is_source: true` restricts to THIS Digimon suspending.
+  # The reveal + remainder-to-bottom are mandatory; only the play is optional
+  # ("you may play") — modelled via a min:0/max:1 reveal bucket. The
+  # `select_reveal_buckets` tail always runs so the remainder is bottomed even
+  # when the player declines to play.
+  - when: on_suspend
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns][OPT] On suspend: reveal 3, may play 1 cost<=4 [TS] Digimon free, bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: TS
+                  - play_cost_lte: 4
+          prompt: "Play 1 play cost 4 or lower [TS] Digimon without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 3: Inherited [All Turns][OPT] on self-suspend reveal-3 play-1 ───
+  #
+  # Identical body to Clause 2 but as the inherited effect (DCGO duplicates the
+  # ActivateClass with SetIsInheritedEffect(true)).
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[Inherited][All Turns][OPT] On suspend: reveal 3, may play 1 cost<=4 [TS] Digimon free, bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: TS
+                  - play_cost_lte: 4
+          prompt: "Play 1 play cost 4 or lower [TS] Digimon without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }

@@ -1,0 +1,83 @@
+# BT25-014 Meramon — Digimon, Lv.4, Red, DP 5000, Cost 4. Traits: Flame, Iliad, TS.
+# Printed: [Main][Once Per Turn] By trashing 1 [Flame] or [TS] trait card from your
+#   hand, delete 1 of your opponent's Digimon with 4000 DP or less. If this effect
+#   didn't delete, <Draw 2>.
+# Inherited: [When Attacking] Delete 1 of your opponent's Digimon with 4000 DP or less.
+# Evo (cards.json): Lv.3 Red / cost 2. DCGO digivolve boxes: Lv.3 [Flame] /2, Lv.3 [TS] /2.
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_014.cs
+#   Main (OnDeclaration, maxPerTurn 1): MANDATORY trash 1 Flame/TS hand card (cost),
+#     then if opp Digimon DP<=4000 exists delete it; if failedToDelete Draw 2.
+#   ESS WhenAttacking (OnAllyAttack, inherited, maxPerTurn 1): delete opp Digimon DP<=4000.
+# main_on_field = on-field activated [Main] (same surface as BT23-008). "if didn't
+#   delete, Draw 2" via effect_deleted_any_opponent_digimon: false.
+card: BT25-014
+name: Meramon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 5000
+traits: [Flame, Iliad, TS]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Flame }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+effects:
+  - when: main_on_field
+    once_per_turn: true
+    summary: "[Main][OPT] By trashing 1 [Flame]/[TS] card, delete 1 opp Digimon with <=4000 DP; if it didn't delete, Draw 2"
+    # The trash is the activation COST. Gate activation on having a payable cost
+    # (a [Flame] or [TS] card in hand) so the mandatory select_hand always has a
+    # candidate — otherwise the engine's empty-mandatory-select would skip the
+    # cost yet still run the delete (an unfaithful free delete). DCGO enforces
+    # this via the cost SelectHandEffect; we surface it as a `count_gte` gate.
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - trait_has: Flame
+            - trait_has: TS
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          filter:
+            any_of:
+              - trait_has: Flame
+              - trait_has: TS
+          prompt: "Trash 1 [Flame] or [TS] trait card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - draw: { of: you, count: 2 }
+  - when: when_attacking
+    scope: inherited
+    once_per_turn: true
+    summary: "Inherited [When Attacking] Delete 1 opp Digimon with <=4000 DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: wa_victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+      - delete_permanent: { target: wa_victim }

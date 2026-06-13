@@ -1,0 +1,33 @@
+card: BT25-002
+name: Wanyamon
+kind: digimon
+level: 2
+color: [blue]
+cost: 0
+traits: [Lesser, DATA SQUAD]
+attribute: Vaccine
+
+# Printed text:
+#   Inherited Effect:
+#   [Your Turn] [Once Per Turn] When any of your [DATA SQUAD] trait Tamers are
+#   played, both players <Draw 1>.
+#
+# DCGO BT25_002.cs: OnEnterFieldAnyone, inherited, OPT (maxCountPerTurn 1),
+#   owner-turn gated; played permanent must be an owner battle-area Tamer with
+#   the DATA SQUAD trait; draw loops over Players_ForTurnPlayer (turn player
+#   first) — gated [Your Turn], so the turn player is always the controller.
+
+effects:
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_trait_has: DATA SQUAD
+    summary: "[Your Turn][OPT] When a DATA SQUAD Tamer is played, both players draw 1"
+    process:
+      - draw: { of: you, count: 1 }
+      - draw: { of: opponent, count: 1 }

@@ -1,0 +1,92 @@
+# BT25-021 Gaomon — Digimon, Lv.3, Blue, DP 2000, Cost 3.
+# Traits: Beast, DATA SQUAD. Attribute: Data.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 [Thomas H. Norstein]
+#   trait or card with the [DATA SQUAD] trait and 1 card with [Gaogamon] in its
+#   name among them to the hand. Return the rest to the bottom of the deck.
+#
+# Inherited Effect:
+#   [When Attacking] [Once Per Turn] Both players ＜Draw 1＞ (Draw 1 card from
+#   your deck.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Blue/BT25_021.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "On Play" — EffectTiming.OnEnterFieldAnyone ActivateClass, optional:
+#   false. SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3,
+#   conditions: [ {Thomas H. Norstein name || DATA SQUAD trait, AddHand, max 1},
+#   {ContainsCardName("Gaogamon"), AddHand, max 1} ],
+#   remainingCardsPlace: DeckBottom, mutualConditions: true).
+#   → reveal_top_deck count 3 → select_reveal_buckets (two buckets, max 1 each,
+#     no_duplicate_cards) → add_to_hand_from_reveal ×2 → place_remainder_on_deck
+#     position: bottom.
+#
+# Clause "Inherited" — EffectTiming.OnAllyAttack, maxCountPerTurn: 1 (OPT),
+#   isInheritedEffect: true. Both players (turn-player order) Draw 1 if they
+#   have >=1 card. → scope: inherited, when: when_attacking, once_per_turn: true;
+#   draw you then opponent. (Draw on an empty deck is a no-op, matching DCGO's
+#   `LibraryCards.Count >= 1` guard.)
+#
+# Digivolve: printed evo_costs list a Lv.2 Blue cost-0 alternate path; DCGO adds
+# self digivolution requirements at level 3 on TopCard.EqualsCardName("Wanyamon")
+# (cost 0) and at level 2 on TopCard.EqualsTraits("DATA SQUAD") (cost 0).
+
+card: BT25-021
+name: Gaomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+traits: [Beast, DATA SQUAD]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, name_is: "Wanyamon" }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    cost: 0
+
+effects:
+  # ─── Clause 0: [On Play] reveal 3, add 2 by filters, bottom the rest ─────────
+  - when: on_play
+    summary: "[On Play] Reveal top 3; add 1 [Thomas H. Norstein]/[DATA SQUAD] and 1 [Gaogamon]-named; bottom the rest"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 3
+          bind_as: revealed
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: pick_squad
+              min: 0
+              max: 1
+              filter:
+                any_of:
+                  - name_is: "Thomas H. Norstein"
+                  - trait_has: "DATA SQUAD"
+            - bind_as: pick_gaoga
+              min: 0
+              max: 1
+              filter:
+                name_contains: "Gaogamon"
+          no_duplicate_cards: true
+          prompt: "Add 1 [Thomas H. Norstein]/[DATA SQUAD] card and 1 [Gaogamon]-named card to hand"
+      - add_to_hand_from_reveal: { of: you, card: pick_squad }
+      - add_to_hand_from_reveal: { of: you, card: pick_gaoga }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 1: Inherited [When Attacking][OPT] both players draw 1 ───────────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][OPT] Both players draw 1"
+    process:
+      - draw: { of: you, count: 1 }
+      - draw: { of: opponent, count: 1 }

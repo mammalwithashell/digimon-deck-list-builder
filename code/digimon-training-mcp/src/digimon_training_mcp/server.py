@@ -23,6 +23,7 @@ import mcp.types as mcp_types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
+from .anchored import run_anchored_evals as _run_anchored_evals
 from .checkpoints import run_checkpoints as _run_checkpoints
 from .deck_pool import run_deck_pool as _run_deck_pool
 from .eval_artifacts import (
@@ -175,6 +176,24 @@ TOOL_DEFINITIONS: list[mcp_types.Tool] = [
         },
     ),
     mcp_types.Tool(
+        name="run_anchored_evals",
+        description=(
+            "Return in-training anchored panel rows (anchored_evals.jsonl) for a run, "
+            "most recent first — per-anchor seat-balanced win rates vs greedy + frozen "
+            "champions. The trustworthy in-run progress signal (CLAUDE.md rule 30); "
+            "written by AnchoredEvalCallback when anchored_eval_freq > 0."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Run name (directory under --runs-dir)."},
+                "limit": {"type": "integer", "minimum": 1},
+            },
+            "required": ["name"],
+            "additionalProperties": False,
+        },
+    ),
+    mcp_types.Tool(
         name="champion_standings",
         description=(
             "List the registered evaluation champions (frozen model snapshots used "
@@ -300,6 +319,16 @@ async def _h_run_per_game_evals(ctx: ServerContext, args: Dict[str, Any]) -> Dic
     return _run_per_game_evals(ctx.models_dir, name, filt, limit_int)
 
 
+async def _h_run_anchored_evals(ctx: ServerContext, args: Dict[str, Any]) -> Dict[str, Any]:
+    name = args.get("name")
+    if not isinstance(name, str) or not name:
+        return {"ok": False, "error": "missing or invalid 'name' argument"}
+    run_dir = _resolve_run_dir(ctx, name)
+    limit = args.get("limit")
+    limit_int = int(limit) if limit is not None else None
+    return _run_anchored_evals(run_dir, name, limit_int)
+
+
 async def _h_champion_standings(ctx: ServerContext, args: Dict[str, Any]) -> Dict[str, Any]:
     return _champion_standings(ctx.models_dir)
 
@@ -327,6 +356,7 @@ TOOL_HANDLERS: Dict[str, ToolHandler] = {
     "run_checkpoints": _h_run_checkpoints,
     "run_deck_pool": _h_run_deck_pool,
     "run_per_game_evals": _h_run_per_game_evals,
+    "run_anchored_evals": _h_run_anchored_evals,
     "champion_standings": _h_champion_standings,
     "run_elo_ladder": _h_run_elo_ladder,
     "run_exploitability": _h_run_exploitability,

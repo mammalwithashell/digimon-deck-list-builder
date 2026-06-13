@@ -63,6 +63,7 @@ fn per_selected_drives_body_once_per_pick() {
 
     let steps = vec![
         CompiledStep::SelectCountCappedMulti {
+            clamp_to_available: false,
             of: CompiledPlayerRef::Opponent,
             zone: CompiledZone::Trash,
             min: 0,

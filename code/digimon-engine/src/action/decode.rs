@@ -12,8 +12,9 @@
 use crate::action::space::{
     decode_digivolve, ACTION_SPACE_SIZE, ATTACK_START, BREEDING_TARGET, DIGIVOLVE_END,
     DIGIVOLVE_START, DNA_DIGIVOLVE_END, DNA_DIGIVOLVE_START, EFFECTS_PER_PERMANENT,
-    FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_SLOT_FOR_OVERCLOCK,
-    FIELD_EFFECT_START, HAND_EFFECT_END, HAND_EFFECT_START, HATCH, MOVE_FROM_BREEDING, PASS,
+    FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_SLOT_FOR_MAIN,
+    FIELD_EFFECT_SLOT_FOR_OVERCLOCK, FIELD_EFFECT_START, HAND_EFFECT_END, HAND_EFFECT_START, HATCH,
+    MOVE_FROM_BREEDING, PASS,
     PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, TARGETS_PER_ATTACKER, TRASH_EFFECT_END,
     TRASH_EFFECT_START,
 };
@@ -178,13 +179,15 @@ impl Game {
             return;
         }
 
-        // [1000..1150) — Field [Main] effects (effect slot 2 only)
+        // [1000..1150) — Field [Main] effects (slot 2) + DigiLink (slot 3)
         if (FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id) {
             let offset = action_id - FIELD_EFFECT_START;
             let perm_idx = (offset / EFFECTS_PER_PERMANENT) as usize;
             let effect_slot = offset % EFFECTS_PER_PERMANENT;
             if effect_slot == FIELD_EFFECT_SLOT_FOR_MAIN {
                 let _ = self.activate_field_main(tp, perm_idx);
+            } else if effect_slot == FIELD_EFFECT_SLOT_FOR_LINK {
+                self.activate_field_link(tp, perm_idx);
             }
             return;
         }

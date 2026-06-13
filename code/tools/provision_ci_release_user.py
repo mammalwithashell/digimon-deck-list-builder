@@ -19,7 +19,7 @@ import asyncio
 import sys
 from datetime import datetime, timedelta, timezone
 
-import jwt
+from jose import jwt
 from sqlalchemy import select
 
 from server.db.auth import (
@@ -29,7 +29,7 @@ from server.db.auth import (
     assign_role_to_user,
     hash_password,
 )
-from server.db.database import async_session_maker
+from server.db.database import async_session
 from server.db.models import User
 
 CI_USERNAME = "ci-desktop-release"
@@ -53,7 +53,7 @@ def _mint_long_lived_token(user_id: str, username: str) -> str:
 
 
 async def run(password: str) -> str:
-    async with async_session_maker() as db:
+    async with async_session() as db:
         user = await db.scalar(select(User).where(User.username == CI_USERNAME))
         if user is None:
             user = User(

@@ -199,7 +199,15 @@ fn run_tail_preserving_trigger_context(
     let previous = cb_ctx.game.current_trigger_context.clone();
     cb_ctx.game.current_trigger_context = trigger_context;
     run_steps_with_runtime(tail, cb_ctx, bindings, runtime);
-    drain_dsl_outer_tail(cb_ctx);
+    // Overlay this resolution's bindings onto the parked outer tail so
+    // binding-gated siblings after a nested select see the pick.
+    crate::dsl_cards::step::drain_dsl_outer_tail_with_bindings(cb_ctx, Some(bindings));
+    // Publish the freshest bindings of this resolution for any WRAPPED outer
+    // tail (`wrap_pending_selection_with_tail` composed around this callback)
+    // — its wrap-time snapshot predates the pick this resolution just made.
+    // The wrapper clears the channel before invoking us and takes it right
+    // after, so the value never leaks across resolutions.
+    cb_ctx.game.dsl_resolved_tail_bindings = Some(bindings.clone());
     cb_ctx.game.current_trigger_context = previous;
 }
 
@@ -305,6 +313,7 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            continue_on_decline,
             ..
         } => {
             install_select_own_permanent(
@@ -314,6 +323,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                *continue_on_decline,
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
@@ -357,6 +367,7 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            continue_on_decline,
             ..
         } => {
             install_select_opponent_permanent(
@@ -366,6 +377,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                *continue_on_decline,
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
@@ -422,6 +434,7 @@ pub fn try_install(
             zone,
             max,
             min,
+            clamp_to_available,
             bind_as,
             prompt,
             optional_zero,
@@ -438,8 +451,10 @@ pub fn try_install(
             };
             // When fewer candidates exist than the required minimum, the step
             // installs nothing AND does not run the captured tail — the
-            // required cost is unpayable. G-SELECT-MULTI-MIN.
-            let min_unpayable = *min > 0 && candidate_count < *min as usize;
+            // required cost is unpayable. G-SELECT-MULTI-MIN. A
+            // `clamp_to_available` (MP-30/31 effect-target) selection is never
+            // unpayable: it affects `min(max, available)` instead.
+            let min_unpayable = !*clamp_to_available && *min > 0 && candidate_count < *min as usize;
             let completes_synchronously =
                 !min_unpayable && (candidate_count == 0 || max_value == 0);
             install_select_count_capped_multi(
@@ -448,6 +463,7 @@ pub fn try_install(
                 *zone,
                 *min,
                 max_value,
+                *clamp_to_available,
                 filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
@@ -1304,6 +1320,7 @@ fn install_use_option_from_hand(
             if matches!(result, crate::selection::OptionPlayResult::Invalid) {
                 return;
             }
+            let tail_context = trigger_for_accept.clone();
             drain_or_rewrap_pending_tail(
                 cb_ctx.game,
                 source_card,
@@ -1312,6 +1329,7 @@ fn install_use_option_from_hand(
                 tail_for_accept,
                 bindings_for_accept,
                 runtime_for_accept,
+                tail_context,
             );
         },
     );
@@ -1321,6 +1339,7 @@ fn install_use_option_from_hand(
             pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
                 let previous = game.current_trigger_context.clone();
                 game.current_trigger_context = trigger_for_decline.clone();
+                let tail_context = trigger_for_decline.clone();
                 drain_or_rewrap_pending_tail(
                     game,
                     source_card,
@@ -1329,6 +1348,7 @@ fn install_use_option_from_hand(
                     tail_for_decline,
                     bindings_for_decline,
                     runtime_for_decline,
+                    tail_context,
                 );
                 game.current_trigger_context = previous;
             }));
@@ -1468,6 +1488,7 @@ fn install_select_own_permanent(
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
+    continue_on_decline: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -1489,6 +1510,10 @@ fn install_select_own_permanent(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    let tail_for_decline = tail.clone();
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     ctx.select_own_permanent(
         &prompt,
         optional,
@@ -1515,6 +1540,33 @@ fn install_select_own_permanent(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // `continue_on_decline: true` — PASS leaves the binding unresolved and the
+    // clause CONTINUES (DCGO's declined SelectPermanentEffect resolves with an
+    // empty list and the coroutine carries on), so binding-gated follow-ups
+    // run. The default keeps the historical permanent-select semantic (decline
+    // drops the tail) which existing cards use as a cost/accept gate.
+    // G-OPT-REFUND-ON-DECLINE.
+    if optional && continue_on_decline {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }));
+        }
+    }
 }
 
 /// Install the Tamer pick for `trash_bottom_face_down_source_under_tamer`.
@@ -1601,6 +1653,7 @@ fn install_select_opponent_permanent(
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
+    continue_on_decline: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -1624,6 +1677,10 @@ fn install_select_opponent_permanent(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    let tail_for_decline = tail.clone();
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     ctx.select_opponent_permanent(
         &prompt,
         optional,
@@ -1652,6 +1709,34 @@ fn install_select_opponent_permanent(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // `continue_on_decline: true` — PASS leaves the binding unresolved and
+    // CONTINUES the clause (same semantic the hand/trash selects carry; DCGO's
+    // declined SelectPermanentEffect resolves with an empty list and the
+    // coroutine continues), so binding-gated follow-ups (`binding_exists` /
+    // `binding_absent`) and independent legs still execute. The default keeps
+    // the historical drop-the-tail semantic existing cards rely on as their
+    // accept/decline cost gate. G-OPT-REFUND-ON-DECLINE.
+    if optional && continue_on_decline {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }));
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1699,6 +1784,7 @@ fn install_select_any_permanent(
     let previous_phase = ctx.game.current_phase;
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Target,
         selecting_player,
         previous_phase,
@@ -1790,6 +1876,7 @@ fn install_select_dna_pair(
 
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Target,
         selecting_player,
         previous_phase,
@@ -1844,6 +1931,7 @@ fn install_select_count_capped_multi(
     zone: CompiledZone,
     min: u8,
     max: u8,
+    clamp_to_available: bool,
     filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
@@ -1877,6 +1965,7 @@ fn install_select_count_capped_multi(
             target_player,
             min,
             max,
+            clamp_to_available,
             filter,
             bind_as,
             prompt,
@@ -1941,6 +2030,7 @@ fn install_select_count_capped_permanents(
     target_player: u8,
     min: u8,
     max: u8,
+    clamp_to_available: bool,
     filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
@@ -1955,16 +2045,32 @@ fn install_select_count_capped_permanents(
         collect_matching_permanents(ctx, target_player, &filter, Some(&bindings))
             .into_iter()
             .map(|handle| {
-                (
-                    encode_attack(handle.player as u16, handle.index as u16),
-                    handle,
-                )
+                // Encode opponent- AND own-field targets identically as
+                // `encode_attack(0, slot)` = ATTACK_START + slot — the SAME
+                // encoding the single-target `install_field_selection` path
+                // uses. The frontend's field-click router disambiguates which
+                // player's field by the `OppField`/`OwnField` selection kind
+                // (set in `install_count_capped_permanent_step`), never by id
+                // range. Passing the target's player id as the attacker pushed
+                // opponent targets out of the field-click range and left
+                // "delete an opponent's Digimon" prompts unclickable.
+                (encode_attack(0, handle.index as u16), handle)
             })
             .collect();
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    // MP-30/31 (General Rules/FAQ): a mandatory "N of your opponent's Digimon"
+    // effect-target selection affects `min(max, available)` — it is never
+    // unpayable for "fewer than N in play", but it MUST NOT stop early when N
+    // are available. Raise the required floor to `min(max, candidates)`.
+    let min = if clamp_to_available {
+        max.min(candidates.len() as u8)
+    } else {
+        min
+    };
     // Fewer candidates than the required minimum → unpayable required cost;
-    // silently no-op without running the tail. G-SELECT-MULTI-MIN.
+    // silently no-op without running the tail. G-SELECT-MULTI-MIN. (Unreachable
+    // when `clamp_to_available`, since the floor was clamped to `candidates`.)
     if min > 0 && candidates.len() < min as usize {
         return;
     }
@@ -1978,6 +2084,10 @@ fn install_select_count_capped_permanents(
     }
 
     let selecting_player = ctx.override_selecting_player().unwrap_or(ctx.player);
+    // Targets on a player OTHER than the one making the choice render on the
+    // selecting player's opponent half; drives the OppField/OwnField kind so
+    // the frontend's field-click router can map board clicks to these picks.
+    let target_is_opponent = target_player != selecting_player;
     let controller = ctx.player;
     let override_pin = ctx.override_selecting_player();
     let source_card = ctx.source_card;
@@ -2014,6 +2124,7 @@ fn install_select_count_capped_permanents(
         source_permanent,
         source_kind,
         selecting_player,
+        target_is_opponent,
         previous_phase,
         final_callback,
     );
@@ -2033,6 +2144,7 @@ fn install_count_capped_permanent_step(
     source_permanent: Option<PermanentHandle>,
     source_kind: crate::enums::EffectSourceKind,
     selecting_player: u8,
+    target_is_opponent: bool,
     previous_phase: GamePhase,
     final_callback: Box<dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync>,
 ) {
@@ -2052,7 +2164,17 @@ fn install_count_capped_permanent_step(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
-        kind: SelectionKind::CountCappedMultiSelect { max, picked },
+        zone_owner: None,
+        // Reuse the single-target field-selection kind so the frontend's
+        // field-click router (which keys off `OppField`/`OwnField`, not the
+        // phase or id range) can map board clicks to these picks. The
+        // multi-select / accumulate-and-commit semantics are carried by the
+        // re-installed step + `is_optional` PASS gating, not by the kind tag.
+        kind: if target_is_opponent {
+            SelectionKind::OppField
+        } else {
+            SelectionKind::OwnField
+        },
         selecting_player,
         previous_phase,
         valid_action_ids,
@@ -2110,6 +2232,7 @@ fn install_count_capped_permanent_step(
                 source_permanent,
                 source_kind,
                 selecting_player,
+                target_is_opponent,
                 previous_phase,
                 next_cb,
             );

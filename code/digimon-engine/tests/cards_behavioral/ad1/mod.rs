@@ -1,4 +1,5 @@
 mod ad1_001;
+mod ad1_002;
 mod ad1_004;
 mod ad1_006;
 mod ad1_009;
@@ -9,5 +10,6 @@ mod ad1_014;
 mod ad1_017;
 mod ad1_018;
 mod ad1_019;
+mod ad1_024;
 mod ad1_025;
 mod ad1_016;

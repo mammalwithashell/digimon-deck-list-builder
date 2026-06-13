@@ -28,6 +28,11 @@ pub enum ReplacementCause {
     SecurityCheck,
     Cost,
     Overclock,
+    /// A battle-area Digimon is leaving because it is being consumed as a
+    /// [DigiXros] material. Distinct from `Battle` so leave-the-battle-area
+    /// observers gated on "outside of a battle" (e.g. BT17-095's `[All Turns]`,
+    /// `none_of: [replacement_cause: battle]`) fire on a DigiXros departure.
+    DigiXros,
 }
 
 /// What's about to happen — a permanent leaving the field, a card being
@@ -442,9 +447,87 @@ fn collect_candidates(
         }
     };
 
+    // Collect from a permanent's LINK cards: a `.linked()` replacement effect
+    // on a link card is a host-side Link-ESS — it fires for the host the card
+    // is attached to (BT25-101 Divine Arms Version Ω: "[All Turns] when this
+    // would leave, by trashing 1 of its link cards, it doesn't leave"; DCGO
+    // `SetIsLinkedEffect(true)`). The host `h` is the subject/source-permanent;
+    // the linked card is the effect source. Mirrors the `enqueue_from_permanent`
+    // linked-card scan for triggered effects.
+    let push_linked_from_perm = |out: &mut Vec<Candidate>, h: PermanentHandle| {
+        let Some(player) = game.players.get(h.player as usize) else {
+            return;
+        };
+        let Some(perm) = player.battle_area.get(h.index as usize) else {
+            return;
+        };
+        for linked in perm.linked_cards.iter() {
+            let card_id = linked.card_id(&game.card_data).to_string();
+            let source_card = linked.handle();
+            let Some(effects) = game.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for (slot, effect) in effects.iter().enumerate() {
+                if !effect.linked {
+                    continue;
+                }
+                if effect.timing != timing {
+                    continue;
+                }
+                if effect.replacement_process.is_none() {
+                    continue;
+                }
+                if effect.max_per_turn > 0 {
+                    let Some(activation_count) =
+                        source_permanent_activation_count(game, h, source_card, slot as u8)
+                    else {
+                        continue;
+                    };
+                    if activation_count >= effect.max_per_turn {
+                        continue;
+                    }
+                }
+                if let Some(cond) = &effect.condition {
+                    let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                        .with_replacement_context(
+                            cause,
+                            replacement_source_controller,
+                            replacement_subject_controller,
+                        );
+                    if !cond(&ctx) {
+                        continue;
+                    }
+                }
+                if let Some(rcond) = &effect.replacement_condition {
+                    let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                        .with_replacement_context(
+                            cause,
+                            replacement_source_controller,
+                            replacement_subject_controller,
+                        );
+                    if !rcond(&ctx, &subject) {
+                        continue;
+                    }
+                }
+                out.push(Candidate {
+                    source_card,
+                    source_permanent: Some(h),
+                    source_controller: h.player,
+                    is_mandatory: !effect.optional,
+                    effect_name: effect.name.clone(),
+                    kind: CandidateKind::EffectClosure {
+                        card_id: card_id.clone(),
+                        effect_slot: slot as u8,
+                    },
+                });
+            }
+        }
+    };
+
     // (1) Subject's own effects first (for Permanent subjects).
     if let Some(h) = subject_perm {
         push_from_perm(&mut out, h);
+        push_linked_from_perm(&mut out, h);
     }
 
     // (2) Other battle-area permanents' effects.
@@ -683,6 +766,54 @@ fn run_candidate_inner(
         return ReplacementOutcome::None;
     };
 
+    // If the subject was a permanent that has since moved to the DigiXros
+    // leaving/limbo slot, its index-only handle is now stale (it aliases a
+    // shifted-down permanent). Re-point it to the limbo-encoded handle so the
+    // parked process reads the right card (G-DIGIXROS-REDIRECT-EXTRACTION).
+    let subject = game.remap_digixros_limbo_subject(subject);
+
+    // The source permanent's `battle_area` index may have shifted between when
+    // this optional replacement's accept gate was installed and when the player
+    // resolves it (the stale index is captured by value in the accept callback).
+    // One way this happens: a DigiXros material is moved to the leaving/limbo
+    // slot (G-DIGIXROS-REDIRECT-EXTRACTION), shifting every later permanent down
+    // by one — so the source (e.g. BT17-095's Delay-Option carrier) ends up at a
+    // different index. Re-resolve by the identity-stable `source_card`, but ONLY
+    // when the stored index no longer points at the source card, so the common
+    // (unshifted) path is unchanged.
+    let source_permanent = source_permanent.map(|h| {
+        let still_points_at_source = game
+            .players
+            .get(h.player as usize)
+            .and_then(|p| p.battle_area.get(h.index as usize))
+            .is_some_and(|perm| {
+                perm.card_sources
+                    .iter()
+                    .chain(perm.linked_cards.iter())
+                    .any(|s| s.handle() == source_card)
+            });
+        if still_points_at_source {
+            return h;
+        }
+        game.players
+            .get(h.player as usize)
+            .and_then(|p| {
+                p.battle_area
+                    .iter()
+                    .position(|perm| {
+                        perm.card_sources
+                            .iter()
+                            .chain(perm.linked_cards.iter())
+                            .any(|s| s.handle() == source_card)
+                    })
+                    .map(|idx| PermanentHandle {
+                        player: h.player,
+                        index: idx as u8,
+                    })
+            })
+            .unwrap_or(h)
+    });
+
     if effect.max_per_turn > 0 {
         let Some(source_permanent) = source_permanent else {
             return ReplacementOutcome::None;
@@ -875,6 +1006,7 @@ fn install_optional_selection(
         make_decline_callback(subject, cause, event_cause_override, original_destination);
 
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Replacement,
         selecting_player: subject_controller,
         previous_phase,
@@ -1163,6 +1295,16 @@ fn commit_deferred_outcome(
                     .is_some_and(|resume| resume.card == card) =>
             {
                 game.commit_pending_would_link(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
+            ReplacementSubject::Card(card, Zone::BattleArea)
+                if game
+                    .pending_digimon_link
+                    .as_ref()
+                    .is_some_and(|resume| resume.card == card) =>
+            {
+                game.commit_digimon_link(outcome);
                 game.replacement_pending_outcome = None;
                 return;
             }

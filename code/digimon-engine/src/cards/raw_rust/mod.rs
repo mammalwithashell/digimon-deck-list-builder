@@ -276,6 +276,7 @@ fn bt13_040_may_play_veemon_from_hand_or_source(
     let override_pin = ctx.override_selecting_player;
     ctx.game.current_phase = GamePhase::SelectUnion;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::UnionZone {
             zones: UnionZoneSet::HAND | UnionZoneSet::MATERIAL,
         },

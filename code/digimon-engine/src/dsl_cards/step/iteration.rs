@@ -105,7 +105,25 @@ pub fn try_run(
             let bref = CompiledBindingRef::Named(selection.clone());
             match resolve_binding_ref(&bref, ctx, bindings) {
                 Some(ResolvedBinding::PermanentList(v)) => {
-                    for h in v {
+                    // Positional `PermanentHandle`s are invalidated the moment a
+                    // body step removes a permanent (e.g. `per_selected {
+                    // delete_permanent }` from `select_count_capped_multi`):
+                    // every higher-indexed permanent shifts down by one, so a
+                    // later handle in `v` points at the wrong permanent (or out
+                    // of bounds). Snapshot each selected permanent's STABLE
+                    // identity (its top card's `CardHandle`) up front, then
+                    // re-resolve the positional handle at the START of each
+                    // iteration, skipping any that already left play. Mirrors
+                    // the `ForEach` machinery above. See
+                    // G-PER-SELECTED-DELETE-INDEX-SHIFT.
+                    let snapshot: Vec<CardHandle> =
+                        v.iter().filter_map(|h| top_card_handle(ctx, *h)).collect();
+                    for stable_id in snapshot {
+                        let Some(h) = resolve_by_top_card(ctx, stable_id) else {
+                            // Permanent left the field (e.g. an earlier
+                            // iteration's body deleted it). Skip it.
+                            continue;
+                        };
                         let mut iter_bindings = bindings.clone();
                         let cursor = iter_bindings.result_log_cursor();
                         iter_bindings.insert_permanent(bind_as, h);

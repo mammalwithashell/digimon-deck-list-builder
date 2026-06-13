@@ -1,0 +1,103 @@
+# BT25-024 Lekismon — Digimon, Lv.4, Blue, DP 5000, Cost 4.
+# Traits: Beastkin, Iliad, TS.  Attribute: Data.
+# Evo: Lv.3 Blue / cost 2 (printed evo_costs).
+#
+# Printed card text (card image BT25-024 — authoritative for printed text):
+#
+#   [On Play] [When Digivolving] <Draw 1> (Draw 1 card from your deck.)
+#   [Your Turn] When your Digimon are played or digivolve, if any of them are
+#   red, this Digimon may digivolve into [Crescemon] in the TRASH with the cost
+#   reduced by 1.
+#
+# Inherited:
+#   <Jamming> (This Digimon can't be deleted in battles against Security Digimon.)
+#
+# ─── SOURCE PRIORITY NOTE — hand vs trash ────────────────────────────────────
+#
+# cards.json effect_description_eng says "[Crescemon] in the HAND". The printed
+# card FACE (DCGO_Application image BT25-024.webp) and DCGO C# both say "in the
+# TRASH" (DCGO: DigivolveIntoHandOrTrashCard(..., isHand:false) + the in-trash
+# match-condition guard). Per CLAUDE.md source priority the card image wins over
+# the API-ingested cards.json: we implement TRASH.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Blue/BT25_024.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+#   (1) EffectTiming.None — AddSelfDigivolutionRequirementStaticEffect(level 3,
+#       HasTSTraits, cost 2). Printed "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
+#       (card image). Standard Lv.3 Blue / cost 2 evo block also encoded.
+#   (2) Shared OnPlay/WhenDigivolving: DrawClass(1).
+#   (3) OnEnterFieldAnyone (Your Turn): CanActivate gates on
+#         - a played/digivolved OWN permanent that is RED, AND
+#         - a [Crescemon] existing in the owner's TRASH.
+#       Body: DigivolveIntoHandOrTrashCard(this, cardCondition: name "Crescemon",
+#       payCost:true, reduceCost 1, isHand:false). Skippable (optional).
+#   (4) JammingSelfStaticEffect(isInheritedEffect:true).
+#
+# ─── DSL modelling notes ─────────────────────────────────────────────────────
+#
+# Clause 2 ([Your Turn] red played/digivolve → digivolve into Crescemon-in-trash -1):
+#   - when: [on_enter_field_anyone, on_digivolve], active_when your_turn.
+#   - condition: event_target_owner: you AND event_card_color_has: [red].
+#   - optional: true ("may digivolve").
+#   - The digivolve-result card is pulled from the TRASH: select_trash
+#     { bind_as: evo, filter name Crescemon } then effect_initiated_digivolve
+#     { target: source, source: evo, cost: { reduce: 1 } }. The `source:` field
+#     (NOT from_hand) feeds the trash-bound card as the evolution top card — the
+#     same in-trash digivolve idiom proven by BT16-040 Wormmon.
+
+card: BT25-024
+name: Lekismon
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 5000
+traits: [Beastkin, Iliad, TS]
+
+alt_paths:
+  # Standard digivolution: Lv.3 Blue / cost 2 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+  # Alt-digivolution: Lv.3 with [TS] trait / cost 2 (printed digivolve box).
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+
+effects:
+  # ─── Clause 1 — [On Play][When Digivolving] <Draw 1> ───────────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  # ─── Clause 2 — [Your Turn] red played/digivolve → digivolve into Crescemon (trash), cost -1 ─
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When your Digimon are played/digivolve and any are red, this Digimon may digivolve into [Crescemon] in the trash with cost -1"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_card_color_has: [red]
+    process:
+      - select_trash:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Crescemon"
+          prompt: "Digivolve into [Crescemon] from your trash (cost reduced by 1)"
+      - effect_initiated_digivolve:
+          target: source
+          source: evo
+          cost: { reduce: 1 }
+          ignore_requirements: false
+
+  # ─── Inherited <Jamming> ───────────────────────────────────────────────────
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Jamming

@@ -321,6 +321,19 @@ pub struct Effect {
     /// prompt" (used when the first step's actionability cannot be
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
+
+    /// `BeforePayCost` cost reducers only: when `true`, this reducer's
+    /// `pay_cost_fn` begins with a declinable (PASS-able) selection, so
+    /// running it surfaces the player's own opt-in/opt-out rather than
+    /// silently committing an un-opted cost. Such a reducer is auto-applied
+    /// (its inner optional select IS the acceptance prompt) instead of being
+    /// parked behind the redundant "Use X to reduce play cost?" confirmation
+    /// gate that a mandatory-cost reducer (e.g. "by suspending this Tamer",
+    /// "trash 2 cards") needs. Set by the DSL cost-reduction lowering from
+    /// `body_first_step_is_declinable(pay_cost)`. The self-suspend idiom and
+    /// mandatory leading steps leave this `false`. See `game_actions::cost`
+    /// `continue_play_from_hand_cost_reduction_chain` and BT12-112.
+    pub pay_cost_self_gated: bool,
 }
 
 impl std::fmt::Debug for Effect {
@@ -632,6 +645,13 @@ impl Effect {
     pub fn when_would_link(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::WhenWouldLink)
     }
+    /// Builder constructor for a Shape-B Digimon's static self link-condition.
+    /// Pair with `.link(cost, host_filter)` to describe what this Digimon may
+    /// link onto. The effect never fires; it is read as metadata by the
+    /// link-activate legality path. See `EffectTiming::LinkCondition`.
+    pub fn link_condition(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::LinkCondition)
+    }
 }
 
 /// Builder for constructing effects ergonomically.
@@ -693,6 +713,7 @@ impl EffectBuilder {
                 when_playing_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                pay_cost_self_gated: false,
             },
         }
     }
@@ -833,6 +854,15 @@ impl EffectBuilder {
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
         self.inner.outer_optional_guard = Some(Box::new(f));
+        self
+    }
+
+    /// Mark a `BeforePayCost` cost reducer whose `pay_cost_fn` begins with a
+    /// declinable selection so it auto-applies (the inner optional select is
+    /// the acceptance prompt) instead of being parked behind the redundant
+    /// confirmation gate. See `Effect::pay_cost_self_gated`.
+    pub fn pay_cost_self_gated(mut self, v: bool) -> Self {
+        self.inner.pay_cost_self_gated = v;
         self
     }
 
@@ -1092,18 +1122,32 @@ impl EffectBuilder {
         self
     }
 
-    /// Mark this effect as a Link Option — attaches to a host Digimon for
-    /// `cost` memory. `digimon_filter` selects legal hosts at mask time.
-    /// Sets timing to `OptionMain` so the effect fires as the Option's
-    /// body. Dispatch lands in Task 4.
-    pub fn link<F>(mut self, cost: u16, digimon_filter: F) -> Self
+    /// Record a link cost + host filter on this effect WITHOUT changing its
+    /// timing. Used by a Shape-B Digimon's `link_condition` static effect
+    /// (`Effect::link_condition(card).link_host(cost, filter)`), where the
+    /// link metadata must coexist with `EffectTiming::LinkCondition` rather
+    /// than the Option `OptionMain` body timing.
+    pub fn link_host<F>(mut self, cost: u16, digimon_filter: F) -> Self
     where
         F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,
     {
-        self.inner.timing = EffectTiming::OptionMain;
         self.inner.link_cost = Some(cost);
         self.inner.link_filter = Some(Box::new(digimon_filter));
         self
+    }
+
+    /// Mark this effect as a Link Option — attaches to a host Digimon for
+    /// `cost` memory. `digimon_filter` selects legal hosts at mask time.
+    /// Sets timing to `OptionMain` so the effect fires as the Option's
+    /// body (Shape-A Plug-In Options). For a Shape-B Digimon self
+    /// link-condition use `link_host` on a `link_condition` builder instead.
+    pub fn link<F>(self, cost: u16, digimon_filter: F) -> Self
+    where
+        F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,
+    {
+        let mut builder = self.link_host(cost, digimon_filter);
+        builder.inner.timing = EffectTiming::OptionMain;
+        builder
     }
 
     /// Mark this effect as a Training Option body. Sets timing to

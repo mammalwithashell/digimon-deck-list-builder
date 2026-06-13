@@ -7,6 +7,9 @@ interface PromptBarProps {
   /** 1 = player 1 (you), 2 = player 2 (opponent) */
   localPlayer: number;
   isGameOver: boolean;
+  /** Paced bot mode (add-bot-action-pacing): a non-human agent is taking
+   *  its actions beat by beat; human input is locked while true. */
+  agentActing?: boolean;
 }
 
 /** Phase-based default prompts when no pendingSelection prompt is available. */
@@ -62,8 +65,23 @@ export function PromptBar({
   pendingSelection,
   localPlayer,
   isGameOver,
+  agentActing = false,
 }: PromptBarProps) {
   if (isGameOver) return null;
+
+  // Paced bot sequence in progress — the strongest signal: the player
+  // can't act regardless of phase/selection until the beats drain.
+  if (agentActing) {
+    return (
+      <div
+        data-testid="prompt-bar"
+        className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-900/40 border-b border-amber-700/50"
+      >
+        <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+        <span className="text-sm text-amber-200">Opponent is acting…</span>
+      </div>
+    );
+  }
 
   // Determine if opponent is the one selecting
   const isOpponentSelecting =

@@ -191,6 +191,84 @@ export const KEYWORD_DISPLAY: Record<string, string> = {
   cannot_unsuspend: 'Cannot Unsuspend',
 };
 
+// ─── Active-modifier display (stack inspector) ─────────────────────
+//
+// Maps the engine's stable modifier-type strings (from `to_ui_json`'s
+// permanent `modifiers` array) to a human label + a display group. The
+// group drives ordering and color in the inspector's "Active Modifiers"
+// section. Stat-change labels with a magnitude use the entry's `value`
+// (see `formatModifierLabel`). Types not listed here fall back to the
+// "Other" group with a humanized label — the panel never breaks on an
+// unmapped type.
+
+export type ModifierGroup = 'Immunity' | 'Restriction' | 'StatChange' | 'Other';
+
+export interface ModifierDisplay {
+  label: string;
+  group: ModifierGroup;
+}
+
+export const MODIFIER_GROUP_ORDER: readonly ModifierGroup[] = [
+  'StatChange',
+  'Immunity',
+  'Restriction',
+  'Other',
+];
+
+export const MODIFIER_GROUP_COLORS: Record<ModifierGroup, string> = {
+  StatChange: '#f59e0b', // amber
+  Immunity: '#22c55e', // green
+  Restriction: '#ef4444', // red
+  Other: '#9ca3af', // gray
+};
+
+export const MODIFIER_DISPLAY: Record<string, ModifierDisplay> = {
+  // Stat changes (label magnitude filled in from `value`)
+  ChangeDp: { label: 'DP', group: 'StatChange' },
+  ChangeBaseDp: { label: 'Base DP', group: 'StatChange' },
+  DpFloor: { label: 'DP floor', group: 'StatChange' },
+  DontHaveDp: { label: "Doesn't have DP", group: 'StatChange' },
+  SecurityAttackChange: { label: 'Security Attack', group: 'StatChange' },
+  ChangeLevel: { label: 'Level', group: 'StatChange' },
+  ChangeColor: { label: 'Color changed', group: 'StatChange' },
+  AddColor: { label: 'Color added', group: 'StatChange' },
+  // Immunities / protection
+  CannotBeDestroyed: { label: 'Cannot be deleted', group: 'Immunity' },
+  CannotBeDestroyedByBattle: { label: 'Cannot be deleted in battle', group: 'Immunity' },
+  CannotBeDestroyedByEffect: { label: 'Cannot be deleted by effects', group: 'Immunity' },
+  CannotBeRemoved: { label: 'Cannot be removed', group: 'Immunity' },
+  CannotBeReturnedToDeck: { label: 'Cannot be returned to deck', group: 'Immunity' },
+  CannotBeReturnedToHand: { label: 'Cannot be returned to hand', group: 'Immunity' },
+  CannotBeTrashedByEffect: { label: 'Cannot be trashed by effects', group: 'Immunity' },
+  CannotBeDeDigivolved: { label: 'Cannot be de-digivolved', group: 'Immunity' },
+  CannotBeSelectedByEffect: { label: 'Cannot be chosen by effects', group: 'Immunity' },
+  CannotBeAffected: { label: "Unaffected by opponent's effects", group: 'Immunity' },
+  ImmunityToOpponentEffects: { label: "Unaffected by opponent's effects", group: 'Immunity' },
+  ImmuneFromDPMinus: { label: 'Immune to DP reduction', group: 'Immunity' },
+  // Restrictions
+  CannotAttack: { label: "Can't attack", group: 'Restriction' },
+  CannotAttackPlayer: { label: "Can't attack players", group: 'Restriction' },
+  CannotBlock: { label: "Can't block", group: 'Restriction' },
+  CannotCounter: { label: "Can't counter", group: 'Restriction' },
+  CannotSuspend: { label: "Can't suspend", group: 'Restriction' },
+  CannotUnsuspend: { label: "Can't unsuspend", group: 'Restriction' },
+  CannotDigivolve: { label: "Can't digivolve", group: 'Restriction' },
+  CannotActivateOnPlayEffects: { label: "Can't activate [On Play] effects", group: 'Restriction' },
+  CannotActivateMainEffects: { label: "Can't activate [Main] effects", group: 'Restriction' },
+  CannotActivateWhenDigivolvingEffects: {
+    label: "Can't activate [When Digivolving] effects",
+    group: 'Restriction',
+  },
+  CannotActivateWhenAttackingEffects: {
+    label: "Can't activate [When Attacking] effects",
+    group: 'Restriction',
+  },
+  CannotActivateSecurityEffects: { label: "Can't activate security effects", group: 'Restriction' },
+  // Attack grants / mandates
+  MayAttack: { label: 'May attack', group: 'Other' },
+  ForceAttack: { label: 'Must attack', group: 'Restriction' },
+};
+
 // ─── Board Layout ──────────────────────────────────────────────────
 
 export const MAX_BATTLE_AREA_SLOTS = FIELD_SLOTS;  // 14

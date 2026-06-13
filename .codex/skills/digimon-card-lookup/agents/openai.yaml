@@ -1,0 +1,4 @@
+interface:
+  display_name: "Digimon Card Lookup"
+  short_description: "Resolve Digimon cards to local images and printed text."
+  default_prompt: "Look up a Digimon card, all printings of a card name, or an archetype card pool."

@@ -1,0 +1,131 @@
+# BT25-054 GreatGrizzlymon — Digimon, Lv.5, Green, DP 7000, Cost 8.
+# Traits: Beastkin, Iliad, TS.  Attribute: Vaccine.
+# Evo: Lv.4 Green / cost 4 (printed evo_costs).
+#
+# Printed card text (data/cards.json; confirmed against card image BT25-054):
+#
+#   <Blocker> (This Digimon can block in the blocker timing.)
+#   [On Play] [When Digivolving] Give 1 of your opponent's Digimon "[Start of
+#   Your Main Phase] This Digimon attacks." until their turn ends.
+#   [All Turns] When this Digimon wins a battle, it may digivolve into
+#   [Callismon] or [Marsmon] in the hand without paying the cost.
+#
+# Inherited:
+#   [All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon
+#   in battle, trash their top security card.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_054.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+#   (1) EffectTiming.None — AddSelfDigivolutionRequirementStaticEffect(level 4,
+#       HasTSTraits, cost 3). Printed "[Digivolve] Lv.4 w/[TS] trait: Cost 3"
+#       (card image). Standard Lv.4 Green / cost 4 evo block also encoded.
+#       + BlockerSelfStaticEffect.
+#   (2) Shared OnPlay/WhenDigivolving: SelectPermanentEffect over opp Digimon
+#       (canNoSelect:false) → grant the selected opp Digimon a synthetic
+#       "[Start of Your Main Phase] This Digimon attacks." effect that lives
+#       UntilOwnerTurnEnd (until the opponent's turn ends). This is a TAUNT —
+#       identical to EX10-034 Blastmon Clause A.
+#   (3) OnEndBattle: CanTriggerWhenWinBattle(winner contains card) — when this
+#       Digimon wins a battle, may digivolve into [Callismon]/[Marsmon] from
+#       hand, payCost:false. Skippable.
+#   (4) OnEndBattle inherited OPT: CanTriggerWhenDeleteOpponentDigimonByBattle
+#       (winner = self) → IDestroySecurity(enemy, 1, fromTop:true). "trash their
+#       top security card."
+#
+# ─── DSL modelling notes ─────────────────────────────────────────────────────
+#
+# Clause A — taunt (EX10-034 idiom):
+#   select_opponent_permanent (mandatory) → grant_triggered_effect with
+#   timing: start_of_your_main_phase, expiry: end_of_opponents_turn, body:
+#   force_attack { attacker: carrier }. "carrier" resolves to the granted
+#   permanent (the opponent Digimon being forced to attack).
+#
+# Clause B — win-battle free digivolve:
+#   "When this Digimon wins a battle" = this Digimon deletes its direct battle
+#   opponent and survives. Modelled with `when: on_any_deletion` +
+#   `condition: { source_deleted_battle_opponent: true }` (the resolved
+#   G-DSL-SOURCE-DELETED-BATTLE-OPPONENT predicate, driver ST4-11). optional:
+#   true ("it may digivolve"). select_hand to [Callismon]/[Marsmon]; self
+#   effect_initiated_digivolve { target: source } cost 0 (without paying).
+#
+# Clause C — inherited win-battle trash-security (ST4-11 idiom):
+#   scope: inherited, when: on_any_deletion, once_per_turn,
+#   condition: { source_deleted_battle_opponent: true }, active_when all_turns.
+#   process: trash_top_security { of: opponent }.
+
+card: BT25-054
+name: GreatGrizzlymon
+kind: digimon
+level: 5
+color: [green]
+cost: 8
+dp: 7000
+traits: [Beastkin, Iliad, TS]
+
+alt_paths:
+  # Standard digivolution: Lv.4 Green / cost 4 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 4
+  # Alt-digivolution: Lv.4 with [TS] trait / cost 3 (printed digivolve box).
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── <Blocker> ─────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── Clause A — [On Play][When Digivolving] taunt 1 opponent Digimon ───────
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Give 1 opponent Digimon '[Start of Your Main Phase] This Digimon attacks.' until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: taunt_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to gain '[Start of Your Main Phase] This Digimon attacks.'"
+      - grant_triggered_effect:
+          target: taunt_target
+          timing: start_of_your_main_phase
+          expiry: end_of_opponents_turn
+          body:
+            - force_attack:
+                attacker: carrier
+                targets: any
+                prompt: "This Digimon attacks"
+
+  # ─── Clause B — [All Turns] win battle → free digivolve into Callismon/Marsmon ─
+  - when: [on_any_deletion]
+    optional: true
+    active_when: { all_turns: true }
+    condition: { source_deleted_battle_opponent: true }
+    summary: "[All Turns] When this Digimon wins a battle, it may digivolve into [Callismon]/[Marsmon] in hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: "Callismon"
+                  - name_contains: "Marsmon"
+          prompt: "Digivolve into [Callismon] or [Marsmon] (without paying the cost)"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause C — Inherited [All Turns][OPT] win battle → trash top security ──
+  - scope: inherited
+    when: [on_any_deletion]
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition: { source_deleted_battle_opponent: true }
+    summary: "[Inherited][All Turns][OPT] When this Digimon deletes an opponent Digimon in battle, trash their top security card"
+    process:
+      - trash_top_security: { of: opponent }

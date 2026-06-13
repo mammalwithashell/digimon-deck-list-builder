@@ -229,6 +229,88 @@ fn selected_security_card_moves_to_owners_hand() {
 }
 
 #[test]
+fn return_security_card_to_deck_top_places_at_deck_end_and_fires_observer() {
+    // G-DSL-RETURN-SELECTED-SECURITY-TO-DECK engine primitive. Player 1 owns a
+    // security card; an effect (controlled by player 0) returns it to the TOP of
+    // player 1's deck (Vec end = drawn-first). The OnOpponentSecurityRemoved
+    // observer on player 0 fires.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("OBS", "Observer"))
+        .add_card(make_test_card("SEC", "Security"))
+        .security(1, &["SEC"])
+        .memory(0)
+        .start();
+    runner.register_effect("OBS", Arc::new(OppSecurityRemovedGainOne));
+    runner.place_on_field(0, "OBS", Some(0));
+
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+    let sec = runner.game.players[1].security[0].handle();
+    let deck_before = runner.game.players[1].deck.len();
+    let before_mem = runner.game.memory;
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        assert!(ctx.return_security_card_to_deck(1, sec, false));
+    }
+
+    assert_eq!(runner.game.players[1].security.len(), 0, "security emptied");
+    assert_eq!(
+        runner.game.players[1].deck.len(),
+        deck_before + 1,
+        "card moved into deck"
+    );
+    assert_eq!(
+        runner.game.players[1].deck.last().map(|c| c.handle()),
+        Some(sec),
+        "top of deck (Vec end) is the returned security card"
+    );
+    assert_eq!(
+        runner.game.memory,
+        before_mem + 1,
+        "OnOpponentSecurityRemoved observer fires exactly once"
+    );
+}
+
+#[test]
+fn return_security_card_to_deck_bottom_places_at_index_zero() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SEC", "Security"))
+        .security(1, &["SEC"])
+        .start();
+    let sec = runner.game.players[1].security[0].handle();
+    let deck_before = runner.game.players[1].deck.len();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, sec, None, 0);
+        assert!(ctx.return_security_card_to_deck(1, sec, true));
+    }
+
+    assert_eq!(runner.game.players[1].security.len(), 0);
+    assert_eq!(runner.game.players[1].deck.len(), deck_before + 1);
+    assert_eq!(
+        runner.game.players[1].deck.first().map(|c| c.handle()),
+        Some(sec),
+        "bottom of deck (index 0) is the returned security card"
+    );
+}
+
+#[test]
+fn return_security_card_to_deck_unknown_card_is_noop() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SEC", "Security"))
+        .security(1, &["SEC"])
+        .start();
+    let bogus = CardHandle(9999);
+    let deck_before = runner.game.players[1].deck.len();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, bogus, None, 0);
+        assert!(!ctx.return_security_card_to_deck(1, bogus, false));
+    }
+    assert_eq!(runner.game.players[1].security.len(), 1, "security untouched");
+    assert_eq!(runner.game.players[1].deck.len(), deck_before, "deck untouched");
+}
+
+#[test]
 fn trash_top_security_fires_opponent_security_removed_once() {
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("OBS", "Observer"))

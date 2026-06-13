@@ -105,7 +105,7 @@ def test_tools_list_returns_all_tools(server_proc):
     assert names == {
         "list_runs", "run_summary", "run_metric", "run_tags",
         "run_recordings", "run_checkpoints", "run_deck_pool",
-        "run_per_game_evals",
+        "run_per_game_evals", "run_anchored_evals",
         "champion_standings", "run_elo_ladder", "run_exploitability",
     }
 

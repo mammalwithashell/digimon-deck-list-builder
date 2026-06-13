@@ -1,0 +1,181 @@
+# BT25-058 Callismon — Digimon, Lv.6, Green/Black, DP 13000, Cost 13.
+# Traits: Dark Animal, Iliad, TS. Attribute: Virus.
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   ＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)
+#   ＜Blocker＞ (This Digimon can block in the blocker timing.)
+#   ＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this
+#   card without paying the cost.)
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may suspend
+#   1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers
+#   can't unsuspend until their turn ends.
+#   [All Turns] [Once Per Turn] When effects play or digivolve any Digimon,
+#   ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You
+#   can't trash past level 3 cards.) Then, this Digimon may battle 1 of your
+#   opponent's Digimon.
+#
+# Printed evo box (xros_req): "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+# Standard evo_costs: Lv.5 Green / Cost 5.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_058.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alt Digivolution" (None): AddSelfDigivolutionRequirementStaticEffect(
+#   permanentCondition: TopCard.HasTSTraits, digivolutionCost: 4,
+#   ignoreDigivolutionRequirement: true, level: 5). → `kind: digivolve`,
+#   `from: { level_eq: 5, trait_has: TS }`, cost 4, ignore_requirements.
+#
+# Region "Reboot"/"Blocker" (None): Reboot/BlockerSelfStaticEffect (own static
+#   keywords). → `kind: grant_keyword` Reboot / Blocker (BT25-019 idiom).
+#
+# Region "Fortitude" (OnDestroyedAnyone): FortitudeSelfEffect. → `kind:
+#   grant_keyword` Fortitude (lowers to Keyword::Fortitude OnDeletion replay,
+#   modifier_map.rs:390).
+#
+# Region "Shared OP/WD/WA" (onPlay+whenDigivolving+whenAttacking,
+#   maxCountPerTurn: 1): the body does TWO picks over opp Digimon-or-Tamer:
+#   (a) an OPTIONAL suspend (`canNoSelect: true`), then (b) a MANDATORY pick
+#   (`canNoSelect: false`) that gains CannotUnsuspend until end of THEIR turn
+#   (`GainCantUnsuspendUntilOpponentTurnEnd`). The target permanents live on the
+#   opponent's battle area, so "their turn" = opponent's turn →
+#   `expiry: end_of_opponents_turn` (EX9-019 / BT16-025 idiom).
+#   → `when: [on_play, when_digivolving, when_attacking]`, `once_per_turn: true`.
+#     Step 1: optional `select_opponent_permanent` (Digimon OR Tamer) → suspend.
+#     Step 2: mandatory `select_opponent_permanent` (Digimon OR Tamer) →
+#     add_modifier CannotUnsuspend / end_of_opponents_turn.
+#
+# Region "All Turns" (OnEnterFieldAnyone, oncePerTurn 1): CanUseCondition gates
+#   on ((play OR digivolve of a battle-area Digimon) && IsByEffect). Body:
+#   De-Digivolve 1 a MANDATORY opp Digimon (canNoSelect: false), then OPTIONAL
+#   battle (canNoSelect: true) where this Digimon battles 1 opp Digimon (only
+#   opp Digimon with DP — `HasDP`). → `when: [on_enter_field_anyone,
+#   on_digivolve]`, `active_when: event_is_effect_initiated: true` (DCGO
+#   IsByEffect; BT16-028 idiom — the observer fires on any play/digivolve and the
+#   gate distinguishes effect-initiated), `once_per_turn: true`. select_opponent_
+#   permanent (Digimon) → de_digivolve amount 1 stop_at_level 3; then optional
+#   select_opponent_permanent (Digimon) → battle { attacker: this }.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | <Reboot> / <Blocker> / <Fortitude>                             | IMPLEMENTED (grant_keyword ×3) |
+# | Std digivolve Lv.5 Green / Cost 5                              | IMPLEMENTED (printed evo_costs) |
+# | Alt-source Lv.5 [TS] / Cost 4 ignore reqs                     | IMPLEMENTED (alt_paths) |
+# | [OP][WD][WA][OPT] may suspend opp; then 1 opp can't unsuspend  | IMPLEMENTED (optional suspend + mandatory CannotUnsuspend) |
+# | [All Turns][OPT] on effect play/digivolve: DeDigi opp + may battle | IMPLEMENTED (effect-init gate + de_digivolve + optional battle) |
+
+card: BT25-058
+name: Callismon
+kind: digimon
+level: 6
+color: [green, black]
+cost: 13
+dp: 13000
+traits: [Dark Animal, Iliad, TS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 4
+    ignore_requirements: true
+
+effects:
+  # ─── <Reboot> ──────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  # ─── <Blocker> ─────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── <Fortitude> ───────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Fortitude
+    summary: "<Fortitude>"
+
+  # ─── Clause: [On Play][When Digivolving][When Attacking][OPT] suspend + lock ─
+  #
+  # "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their
+  # Digimon or Tamers can't unsuspend until their turn ends."
+  #
+  # The first pick (suspend) is OPTIONAL (printed "you may"): `optional: true`
+  # on the select surfaces PASS. The second pick (lock) is MANDATORY once any
+  # opp Digimon/Tamer exists (DCGO canNoSelect: false). Both target opp Digimon
+  # OR Tamer. The lock expires at end of the opponent's turn (the target's
+  # owner's turn).
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[OP][WD][WA][OPT] May suspend 1 opp Digimon/Tamer; then 1 opp Digimon/Tamer can't unsuspend until end of their turn"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        any_of:
+          - kind: digimon
+          - kind: tamer
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          optional: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "You may suspend 1 of your opponent's Digimon or Tamers"
+      - suspend: { target: suspend_target }
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 opponent Digimon or Tamer that can't unsuspend until end of their turn"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Clause: [All Turns][OPT] on effect play/digivolve → DeDigi + may battle ─
+  #
+  # "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your
+  # opponent's Digimon. Then, this Digimon may battle 1 of your opponent's
+  # Digimon."
+  #
+  # `event_is_effect_initiated: true` is the DCGO IsByEffect gate (BT16-028
+  # idiom): the observer fires on any play/digivolve and this gate restricts it
+  # to effect-initiated events. The De-Digivolve is mandatory (DCGO canNoSelect:
+  # false) over an opp Digimon. The battle is optional (DCGO canNoSelect: true)
+  # — `battle: { attacker: this, defender: <pick> }` is an effect battle, not an
+  # attack (EX11-074 idiom: no Piercing/security continuation).
+  - when: [on_enter_field_anyone, on_digivolve]
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true
+    summary: "[All Turns][OPT] When effects play/digivolve any Digimon: <De-Digivolve 1> 1 opp Digimon, then this Digimon may battle 1 opp Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dd_target
+          amount: 1
+          stop_at_level: 3
+      - select_opponent_permanent:
+          bind_as: battle_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "This Digimon may battle 1 of your opponent's Digimon"
+      - battle:
+          attacker: this
+          defender: battle_target

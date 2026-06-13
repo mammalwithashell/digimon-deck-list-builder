@@ -17,6 +17,8 @@ interface PlayerHalfProps {
   highlightBreeding?: boolean;
   onSlotClick?: (slotIndex: number) => void;
   onSlotHover?: (slotIndex: number | null) => void;
+  onSlotInspect?: (slotIndex: number) => void;
+  onBreedingInspect?: () => void;
   onHatch?: () => void;
   onMove?: () => void;
   onBreedingClick?: () => void;
@@ -37,6 +39,8 @@ export function PlayerHalf({
   highlightBreeding = false,
   onSlotClick,
   onSlotHover,
+  onSlotInspect,
+  onBreedingInspect,
   onHatch,
   onMove,
   onBreedingClick,
@@ -64,6 +68,7 @@ export function PlayerHalf({
           highlighted={highlightBreeding && !isOpponent}
           dropId={isOpponent ? 'breeding-slot-opponent' : 'breeding-slot'}
           onClick={breedingClick}
+          onInspect={onBreedingInspect}
         />
       </div>
 
@@ -75,6 +80,7 @@ export function PlayerHalf({
           targetedSlots={targetedSlots}
           onSlotClick={onSlotClick}
           onSlotHover={onSlotHover}
+          onSlotInspect={onSlotInspect}
           dragValidDropSlots={dragValidDropSlots}
           isDraggingHandCard={isDraggingHandCard}
           canPlayDragged={canPlayDragged}

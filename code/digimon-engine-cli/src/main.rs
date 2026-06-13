@@ -87,6 +87,14 @@ enum Command {
         verify: bool,
     },
 
+    /// Print the card pool as a sorted JSON array of card IDs and exit.
+    /// With the default `--pool implemented`, this is the set of cards the
+    /// engine has a registered `CardEffect` for, intersected with
+    /// `cards.json` (so test fixtures and token IDs are excluded).
+    /// `tools/build_tested_cards.py` consumes this to regenerate the
+    /// deck-builder allowlist snapshot.
+    Pool,
+
     /// Run a YAML scenario file (or a directory of them). v1 deliberately
     /// stubs this — the Python `ScenarioRunner` shape is rich enough that
     /// porting it is out of v1 scope; the stub exits with a clear message
@@ -130,6 +138,27 @@ fn main() -> ExitCode {
                 }
             };
             replay_view::run(recording, step, &view, &show, player, verify, card_data)
+        }
+        Command::Pool => {
+            let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
+                Ok(cd) => cd,
+                Err(e) => {
+                    eprintln!("error loading card data: {}", e);
+                    return ExitCode::from(2);
+                }
+            };
+            let mut ids: Vec<&String> = card_data.keys().collect();
+            ids.sort();
+            match serde_json::to_string_pretty(&ids) {
+                Ok(json) => {
+                    println!("{}", json);
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("error serializing pool: {}", e);
+                    ExitCode::from(2)
+                }
+            }
         }
         Command::Scenario { path, pattern } => {
             let _ = (path, pattern);

@@ -24,6 +24,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::EffectTiming;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::TriggerSource;
 use std::sync::Arc;
 
@@ -185,26 +186,357 @@ fn q23_inherited_trash_memory_gated_on_remaining_in_trash() {
 
 /// Q9 — Mastemon (BT23-102) trashes Gatomon (BT15-037) from security; Gatomon
 /// plays out only after Mastemon resolves and is NOT in the battle area during
-/// security removal. Judge: after both trashed, NO memory from Gatomon [All Turns].
+/// security removal. Judge: NO memory from Gatomon's [All Turns].
+///
+/// ACTIVATION-SITE RULING: Gatomon's "[All Turns][OPT] when a card is removed
+/// from your security stack, gain 1 memory" is gated (DCGO BT15_037.cs) on
+/// `IsExistOnBattleArea(card)` — it only fires while Gatomon is a battle-area
+/// permanent. Here Gatomon sits in P1's SECURITY stack and is trashed by
+/// Mastemon's [When Digivolving] trim, so it is never a battle-area trigger
+/// source during the removal → P1 gains 0 memory.
+///
+/// Board: P0 controls a Mastemon stack with 2 same-level (Lv.5) sources so the
+/// trim fires. P0's own security sits at exactly 3 (no controller-side trim, so
+/// the G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER controller gap is not
+/// exercised). P1's security is 6 cards with GATOMON ON TOP; the trim removes 3
+/// from the top (Gatomon + 2) down to 3.
+///
+/// Control: the same Gatomon on the FIELD *does* gain its owner +1 memory on a
+/// security removal — pinned by
+/// `cards_behavioral::bt15::bt15_037::bt15_037_on_field_gains_memory_when_own_security_removed`.
+/// So the 0-memory result here is the activation-site rule, not Gatomon being a
+/// no-op.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT23-102 (Mastemon), BT15-037 (Gatomon)."]
-fn q9_gatomon_not_in_battle_area_during_removal_no_memory() {}
+fn q9_gatomon_not_in_battle_area_during_removal_no_memory() {
+    use digimon_engine::card_data::CardData;
+    use digimon_engine::enums::{CardColor, CardKind};
+
+    fn lv5(id: &str, color: CardColor) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.level = Some(5);
+        c.dp = Some(9000);
+        c.colors = vec![color];
+        c.card_kind = CardKind::Digimon;
+        c
+    }
+    fn filler(id: &str) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(4);
+        c.dp = Some(3000);
+        c.colors = vec![CardColor::Red];
+        c
+    }
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-102")
+        .expect("BT23-102 (Mastemon) in embedded DSL pack")
+        .dsl_card("BT15-037")
+        .expect("BT15-037 (Gatomon) in embedded DSL pack")
+        .add_card(lv5("MAST-Y5", CardColor::Yellow))
+        .add_card(lv5("MAST-P5", CardColor::Purple))
+        .add_card(filler("F"))
+        .add_card(filler("DECK"))
+        .security(0, &["F", "F", "F"]) // controller at 3 → no controller trim
+        // Top of security = last element ⇒ Gatomon is among the trashed top cards.
+        .security(1, &["F", "F", "F", "F", "F", "BT15-037"])
+        .deck(0, &["DECK"])
+        .deck(1, &["DECK"])
+        .memory(0)
+        .start();
+    runner.skip_mulligan();
+
+    let mastemon = runner.place_field_stack(
+        0,
+        &["MAST-Y5", "MAST-P5", "BT23-102"],
+        false,
+        runner.game.turn_count,
+    );
+
+    assert_eq!(runner.security_count(1), 6, "P1 security starts at 6");
+    let mem_before = runner.memory();
+
+    // Fire Mastemon's [When Digivolving]: trims P1's security to 3, trashing
+    // Gatomon (on top) from the security stack.
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(mastemon));
+    runner.game.drain_effect_queue();
+    // Decline Mastemon's optional free-play / place-security; never accept anything.
+    let mut steps = 0;
+    while runner.game.pending_selection.is_some() && steps < 50 {
+        let (player, action) = {
+            let sel = runner.game.pending_selection.as_ref().unwrap();
+            let id = if sel.valid_action_ids.contains(&digimon_engine::action::space::PASS) {
+                digimon_engine::action::space::PASS
+            } else {
+                sel.valid_action_ids[0]
+            };
+            (sel.selecting_player, id)
+        };
+        let _ = runner.game.resolve_selection(player, action);
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    // Gatomon was actually trashed from security (P1 trimmed 6 → 3).
+    assert_eq!(
+        runner.security_count(1),
+        3,
+        "Mastemon's trim removed 3 of P1's security (incl. Gatomon on top)"
+    );
+    // Judge ruling: Gatomon's [All Turns] memory does NOT fire — it was in
+    // security, not the battle area, during the removal → no memory change.
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "Gatomon trashed FROM SECURITY must not gain memory (not a battle-area trigger source)"
+    );
+}
 
 /// Q19 — Eyesmon: Scatter Mode (BT7-069) returned to hand by Calling From the
 /// Darkness (BT7-107) ⇒ no [On Deletion]. Judge: 0 draws.
+///
+/// # Board (read off the PDF, "ZXavier's Digi Rulings", PDF pp.39–41)
+/// Player A has a Digimon in the battle area:
+///   top  Eyesmon: Scatter Mode (BT7-069) — own [On Deletion] <Draw 3>+trash 2
+///   src  Gabumon (BT2-069) — inherited [On Deletion] <Draw 2>+trash 1
+///   src  DemiMeramon (BT3-006) — inherited [On Deletion] <Draw 1>+trash 1
+/// Trash: 0 cards.
+///
+/// # Action
+/// Player A uses Calling From the Darkness (BT7-107) targeting Eyesmon: Scatter
+/// Mode. CFtD deletes the Digimon (the whole stack goes to trash), THEN returns
+/// up to 2 purple Digimon cards from trash to hand — here Eyesmon: Scatter Mode
+/// & Gabumon.
+///
+/// # Judge rationale (PDF p.41)
+/// "[On Deletion] effects are tied to the top-most card of the Digimon, not tied
+/// to the digivolution cards. Additionally, [On Deletion] effects can only
+/// activate if they're in the trash. Since Calling From the Darkness returned
+/// Eyesmon: Scatter Mode to the hand, no [On Deletion] effects are able to
+/// activate." ⇒ the WHOLE [On Deletion] bundle (the topmost card's own + EVERY
+/// inherited source's) is gated on the TOP-MOST card (Eyesmon) still being in
+/// trash at resolution. Eyesmon returned ⇒ all suppressed ⇒ 0 draws.
+///
+/// # PASS (2026-06-05) — G-ON-DELETION-RESOLVES-MID-EFFECT resolved
+/// Driving the REAL BT7-107 option (`activate_hand_main`) over the real stack now
+/// draws **0**. The fix is two-part (DCGO `CanActivateOnDeletion` + the outer
+/// `TriggeredSkillProcess` drain model):
+///  - **Part A** (`run_queued_effect_inner`): an [On Deletion] queued effect
+///    activates only while its snapshot's TOP-MOST card is still in the former
+///    controller's trash (tokens always activate). Re-checked at activation, so a
+///    returned carrier suppresses the whole bundle (own + every inherited source,
+///    which all share the carrier's top-card snapshot).
+///  - **Part B** (`drain_batch_on_any_deletion`): the batch's post-deletion
+///    trigger drain is gated on `maybe_drain_effect_queue` (only at
+///    `draining_deferred == 0`). Inside CFtD's resolution window the OnDeletion /
+///    OnAnyDeletion / OnLeaveField entries stay queued until the causing effect's
+///    later steps (the return-to-hand) finish, then resolve under Part A's gate.
+///
+/// CFtD returns Eyesmon: Scatter Mode (the top-most card) to hand among its 2
+/// purple returns, so the whole bundle is suppressed ⇒ 0 draws. (Contrast Q20,
+/// where Eyesmon stays in trash ⇒ all 8 fire — the discriminator both halves of
+/// the fix preserve.)
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT7-069 (Eyesmon: Scatter Mode), BT2-069 (Gabumon), BT3-006 (DemiMeramon). BT7-107 implemented."]
-fn q19_on_deletion_suppressed_when_returned_to_hand() {}
+fn q19_on_deletion_suppressed_when_returned_to_hand() {
+    let pad: Vec<&str> = vec!["PAD"; 30];
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT7-069")
+        .expect("BT7-069 Eyesmon: Scatter Mode loads")
+        .dsl_card("BT2-069")
+        .expect("BT2-069 Gabumon loads")
+        .dsl_card("BT3-006")
+        .expect("BT3-006 DemiMeramon loads")
+        .dsl_card("BT7-107")
+        .expect("BT7-107 Calling From the Darkness loads")
+        .add_card(make_test_card("PAD", "PAD"))
+        .deck(0, &pad)
+        .hand(0, &["BT7-107"])
+        .memory(5)
+        .start();
+    // Stack bottom→top: DemiMeramon (egg), Gabumon, Eyesmon (top). 0 in trash.
+    let _host = r.place_stack(0, &["BT3-006", "BT2-069", "BT7-069"]);
+    let deck_before = r.deck_size(0);
+
+    // Drive the REAL Calling From the Darkness: it deletes the Eyesmon stack and
+    // (per the PDF) returns Eyesmon + Gabumon from trash to hand.
+    let fired = r.game.activate_hand_main(0, 0);
+    assert!(fired, "BT7-107 main effect must fire");
+    let _ = r.auto_resolve();
+
+    // Judge: Eyesmon (top-most) returned to hand ⇒ NO [On Deletion] resolves.
+    assert_eq!(
+        deck_before - r.deck_size(0),
+        0,
+        "Q19: Eyesmon returned to hand ⇒ no [On Deletion] resolves (judge: 0 draws)"
+    );
+}
 
 /// Q20 — Eyesmon stays in trash (+Pumpkinmon BT2-076) ⇒ all [On Deletion] fire.
-/// Judge: 8 draws.
+/// Judge: 8 draws.  **PASS (2026-06-03).**
+///
+/// # Board (read off the PDF, "ZXavier's Digi Rulings", PDF pp.42–44)
+/// Player A has a Digimon in the battle area:
+///   top  Eyesmon: Scatter Mode (BT7-069) — own [On Deletion] <Draw 3>+trash 2
+///   src  Gabumon (BT2-069)      — inherited [On Deletion] <Draw 2>+trash 1
+///   src  DemiMeramon (BT3-006)  — inherited [On Deletion] <Draw 1>+trash 1
+///   src  Pumpkinmon (BT2-076)   — inherited [On Deletion] <Draw 2>+trash 1
+/// Trash: 0 cards.
+///
+/// # Action
+/// Player A uses Calling From the Darkness (BT7-107) targeting Eyesmon: Scatter
+/// Mode. CFtD deletes the Digimon (the whole 4-card stack goes to trash), THEN
+/// returns up to 2 purple Digimon cards from trash to hand — here Gabumon &
+/// Pumpkinmon (NOT Eyesmon).
+///
+/// # Judge rationale (PDF p.44)
+/// "[On Deletion] effects are tied to the top-most card of the Digimon ... Since
+/// Calling From the Darkness didn't return Eyesmon: Scatter Mode to the hand, all
+/// [On Deletion] effects are able to activate." ⇒ the top-most card stays in
+/// trash, so the WHOLE bundle fires:
+///   Eyesmon 3 + Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2 = **8 draws**.
+///
+/// # Load-bearing assertion
+/// Net cards drawn (deck-size delta) == 8. The scenario is genuinely staged: the
+/// real BT7-107 option deletes the real 4-card Eyesmon stack via
+/// `activate_hand_main` (battle area empties), and every [On Deletion] in the
+/// stack resolves. The deck must be deep enough that all 8 draws land (30 PADs).
+/// Note: the colour data bug (sources declared black, are purple — see Q19) means
+/// CFtD's purple-only return surfaces no selection, but that is NOT load-bearing
+/// here: the judge keeps Eyesmon in trash either way, so the answer is 8
+/// regardless of whether Gabumon/Pumpkinmon get returned. What this test pins is
+/// the activation-site rule: the deleted carrier remaining in trash ⇒ all
+/// [On Deletion] (own + every inherited) fire.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT7-069, BT2-069, BT3-006, BT2-076 (Pumpkinmon). BT7-107 implemented."]
-fn q20_all_on_deletion_fire_when_eyesmon_stays_in_trash() {}
+fn q20_all_on_deletion_fire_when_eyesmon_stays_in_trash() {
+    let pad: Vec<&str> = vec!["PAD"; 30];
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT7-069")
+        .expect("BT7-069 Eyesmon: Scatter Mode loads")
+        .dsl_card("BT2-069")
+        .expect("BT2-069 Gabumon loads")
+        .dsl_card("BT3-006")
+        .expect("BT3-006 DemiMeramon loads")
+        .dsl_card("BT2-076")
+        .expect("BT2-076 Pumpkinmon loads")
+        .dsl_card("BT7-107")
+        .expect("BT7-107 Calling From the Darkness loads")
+        .add_card(make_test_card("PAD", "PAD"))
+        .deck(0, &pad)
+        .hand(0, &["BT7-107"])
+        .memory(5)
+        .start();
+    // Stack bottom→top: DemiMeramon (egg), Gabumon, Pumpkinmon, Eyesmon (top).
+    let host = r.place_stack(0, &["BT3-006", "BT2-069", "BT2-076", "BT7-069"]);
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "precondition: the 4-card Eyesmon stack is staged on the field"
+    );
+    let deck_before = r.deck_size(0);
+
+    // Drive the REAL Calling From the Darkness: it deletes the Eyesmon stack.
+    let fired = r.game.activate_hand_main(0, 0);
+    assert!(fired, "BT7-107 main effect must fire");
+    let _ = r.auto_resolve();
+
+    // Precondition the scenario was genuinely staged: Eyesmon really got deleted.
+    assert!(
+        r.game
+            .player(0)
+            .battle_area
+            .get(host.index as usize)
+            .is_none(),
+        "precondition: Eyesmon: Scatter Mode was deleted by Calling From the Darkness"
+    );
+
+    // Judge: Eyesmon stayed in trash ⇒ every [On Deletion] (own 3 + Gabumon 2 +
+    // DemiMeramon 1 + Pumpkinmon 2) resolves ⇒ 8 cards drawn (deck shrinks by 8).
+    assert_eq!(
+        deck_before - r.deck_size(0),
+        8,
+        "Q20: all [On Deletion] fire when Eyesmon stays in trash \
+         (3+2+1+2 = 8 draws)"
+    );
+}
 
 /// Q21 — Eyesmon played from trash by Back for Revenge! (BT3-109) ⇒ remaining
 /// [On Deletion] can't fire. Judge: 0 draws.
+///
+/// # Board (read off the PDF, "ZXavier's Digi Rulings"; same family as Q19/Q20)
+/// (Q20 board) + Back for Revenge! (BT3-109) — Eyesmon: Scatter Mode is *played
+/// from trash* mid-resolution, so it leaves the trash before the remaining
+/// [On Deletion] can resolve ⇒ Judge: 0 draws.
+///
+/// # PASS (2026-06-05) — BT3-109 authored, G-DSL-DELETED-SELF-TRASH-BINDING closed
+/// Back for Revenge! grants a chosen own Digimon "[On Deletion] play this card
+/// from trash for free" via `grant_triggered_effect`. The granted body addresses
+/// the just-deleted carrier through the `event_card` binding (which, on an
+/// [On Deletion] trigger context, resolves to `DeletedObjectSnapshot.top_card` —
+/// the carrier's top card now in trash); `play_from_trash_free` now accepts that
+/// card-handle binding (the narrow DSL gap that was the only real blocker — the
+/// `event_card`/`event_target` bindings already resolved the deleted self). When
+/// the deletion fires the bundle (own <Draw 3> + the 3 inherited draws + the
+/// granted replay), resolving the granted replay returns Eyesmon to the field, so
+/// the carrier leaves the trash and the remaining [On Deletion] are suppressed by
+/// the Q19 top-most-card-in-trash gate ⇒ 0 draws.
 #[test]
-#[ignore = "BLOCKED-CARD: needs BT7-069, BT2-069, BT3-006, BT2-076, BT3-109 (Back for Revenge!). BT7-107 implemented."]
-fn q21_remaining_on_deletion_suppressed_when_played_from_trash() {}
+fn q21_remaining_on_deletion_suppressed_when_played_from_trash() {
+    let pad: Vec<&str> = vec!["PAD"; 30];
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT7-069")
+        .expect("BT7-069 Eyesmon: Scatter Mode loads")
+        .dsl_card("BT2-069")
+        .expect("BT2-069 Gabumon loads")
+        .dsl_card("BT3-006")
+        .expect("BT3-006 DemiMeramon loads")
+        .dsl_card("BT2-076")
+        .expect("BT2-076 Pumpkinmon loads")
+        .dsl_card("BT3-109")
+        .expect("BT3-109 Back for Revenge! loads")
+        .add_card(make_test_card("PAD", "PAD"))
+        .deck(0, &pad)
+        .hand(0, &["BT3-109"])
+        .memory(5)
+        .start();
+    // Stack bottom→top: DemiMeramon (egg), Gabumon, Pumpkinmon, Eyesmon (top).
+    let host = r.place_stack(0, &["BT3-006", "BT2-069", "BT2-076", "BT7-069"]);
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "precondition: the 4-card Eyesmon stack is staged on the field"
+    );
+
+    // [Main] Back for Revenge! → grant Eyesmon the [On Deletion] self-replay.
+    let fired = r.game.activate_hand_main(0, 0);
+    assert!(fired, "BT3-109 [Main] must fire");
+    let _ = r.auto_resolve();
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "granting does not move the Eyesmon stack off the field"
+    );
+
+    let deck_before = r.deck_size(0);
+
+    // Delete the Eyesmon stack → [On Deletion] bundle fires: own <Draw 3> +
+    // inherited (Gabumon 2 + DemiMeramon 1 + Pumpkinmon 2) + the granted replay.
+    r.game
+        .delete_permanent_with_cause(host, ReplacementCause::OwnEffect);
+    let _ = r.auto_resolve();
+
+    // The granted replay returns Eyesmon: Scatter Mode to the field from trash.
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "Eyesmon: Scatter Mode is replayed from trash by the granted [On Deletion]"
+    );
+    // Judge: Eyesmon (top-most) left the trash ⇒ NO remaining [On Deletion] resolves.
+    assert_eq!(
+        deck_before - r.deck_size(0),
+        0,
+        "Q21: carrier played from trash ⇒ remaining [On Deletion] suppressed (judge: 0 draws)"
+    );
+}
 

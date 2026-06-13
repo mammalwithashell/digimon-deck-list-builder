@@ -1,0 +1,108 @@
+# EX10-031 DarkKnightmon — Digimon, Lv.5, Black/Purple, DP 7000, Cost 7.
+# Traits: Dark Knight / Bagra Army / Twilight. Form: Ultimate. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.4 Black / Cost 4 (alt_path) +
+# "[Digivolve] Lv.4 w/[Knightmon] in text: Cost 3" (xros_req).
+#
+# Printed card text (card image — verified):
+#   [On Play] [When Digivolving] Until your opponent's turn ends, their
+#     <De-Digivolve> effects don't affect 1 of your Digimon, and it gets
+#     +3000 DP.
+#   [All Turns] [Once Per Turn] When this Digimon would leave the battle
+#     area, you may play 1 play cost 4 or lower card from its digivolution
+#     cards without paying the cost.
+#   DigiXros -1: [SkullKnightmon] × [DeadlyAxemon]
+#   Inherited: [Opponent's Turn] [Once Per Turn] When one of your
+#     opponent's Digimon attacks, you may change the attack target to this
+#     Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Black/EX10_031.cs
+#
+# Modeling notes:
+# - [OP][WD]: pick 1 own Digimon → opponent-scoped De-Digivolve protection
+#   (CannotBeDeDigivolved with the opponent cause-filter, the
+#   `grant_narrow_opponent_effect_protection` family is broader — use
+#   `add_modifier CannotBeDeDigivolved` which lowers with the default
+#   OpponentEffect cause filter on the replacement fire-site) + +3000 DP,
+#   both until end of opponent's turn.
+# - [All Turns][OPT] would-leave self-replay: ***OMITTED — PARTIAL.*** The
+#   clause fires in the WOULD-LEAVE window (DCGO plays the card from the
+#   still-intact digivolution stack BEFORE the leave commits) but does NOT
+#   cancel the leave — a non-replacement would-leave TRIGGER. The DSL has
+#   `when_would_leave`-style REPLACEMENT lowering only (cancel/substitute
+#   bodies); a triggered observer in that window with stack access has no
+#   vocabulary. Logged as G-DSL-WOULD-LEAVE-TRIGGERED-OBSERVER in
+#   qa/dsl-vocab-gaps.md. NOT stubbed (an after-leave approximation would
+#   read the cards from TRASH — wrong zone + wrong timing).
+# - Inherited attack-redirect: `when: on_opponent_attack` +
+#   `redirect_attack_target: { new_target: self }` (the BT19-072 step with
+#   the carrier itself as the new target).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+# | Card-text element                                        | Status         |
+# |-----------------------------------------------------------|---------------|
+# | Std digivolve Lv.4 Black/4 + [Knightmon]-text/3 alt paths | IMPLEMENTED   |
+# | [OP][WD] De-Digivolve protection + 3000 on 1 Digimon      | IMPLEMENTED   |
+# | [All Turns][OPT] would-leave replay from sources          | OMITTED (G-DSL-WOULD-LEAVE-TRIGGERED-OBSERVER) |
+# | DigiXros -1 [SkullKnightmon]×[DeadlyAxemon]               | IMPLEMENTED (alt_path) |
+# | Inherited [Opp Turn][OPT] attack redirect                 | IMPLEMENTED   |
+# Verdict: PARTIAL (would-leave replay blocked on missing trigger shape).
+
+card: EX10-031
+name: "DarkKnightmon"
+kind: digimon
+level: 5
+color: [black, purple]
+cost: 7
+dp: 7000
+traits: [Dark Knight, Bagra Army, Twilight]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - effect_text_contains: "Knightmon"
+    cost: 3
+  - kind: digixros
+    materials:
+      - filter: { name_is: "SkullKnightmon" }
+        zones: [hand]
+        cost_delta: -1
+      - filter: { name_is: "DeadlyAxemon" }
+        zones: [hand]
+        cost_delta: -1
+    cost: 7
+
+effects:
+  # ─── [On Play][When Digivolving] De-Digivolve shield + 3000 ────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Until your opponent's turn ends, their <De-Digivolve> effects don't affect 1 of your Digimon, and it gets +3000 DP"
+    process:
+      - select_own_permanent:
+          bind_as: shielded
+          filter: { kind: digimon }
+          prompt: "Until your opponent's turn ends, their <De-Digivolve> effects don't affect 1 of your Digimon, and it gets +3000 DP"
+      - add_modifier:
+          target: shielded
+          modifier: CannotBeDeDigivolved
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_dp_modifier:
+          target: shielded
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  # ─── Inherited — [Opp Turn][OPT] attack redirect ───────────────────────────
+  - scope: inherited
+    when: on_opponent_attack
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "Inherited: [Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon"
+    process:
+      - redirect_attack_target: { new_target: self }

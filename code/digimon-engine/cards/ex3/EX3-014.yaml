@@ -1,0 +1,73 @@
+card: EX3-014
+name: Dorbickmon
+kind: digimon
+level: 6
+color: [red]
+cost: 13
+dp: 12000
+traits: [Dragonkin, Big Death-Stars]
+attribute: Virus
+
+# ＜Rush＞
+# [On Play] Delete 1 of your opponent's Digimon with 3000 DP or less. For each
+# card with [Dragon], [saur] or [Ceratopsian] in any of its traits in this
+# Digimon's digivolution cards, add 2000 to the maximum DP you can choose with
+# this effect.
+#
+# DigiXros Requirements [DigiXros -2] 5 Digimon cards w/different names and
+# [Dragon], [saur] or [Ceratopsian] in one of their traits.
+#
+# DCGO: EX3/Red/EX3_014.cs — RushSelfStaticEffect; OnEnterFieldAnyone delete
+# with maxDP = 3000 + 2000 * (digivolution cards with HasDragonTraits), maxCount
+# = min(1, matches), canNoSelect: false (mandatory when a valid target exists).
+
+alt_paths:
+  # Standard digivolve from a Lv.5 Red (memory cost 4 lives in cards.json).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+
+  # DigiXros -2: 5 Digimon cards w/different names, each with [Dragon], [saur]
+  # or [Ceratopsian] in one of its traits. Each placed card reduces play cost
+  # by 2.
+  - kind: digixros
+    cost: 13
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - any_of:
+                - trait_contains: Dragon
+                - trait_contains: saur
+                - trait_contains: Ceratopsian
+        repeat: { min: 5, max: 5 }
+        distinct_by: name
+        zones: [hand, battle_area]
+        cost_delta: -2
+
+effects:
+  # ＜Rush＞ — static self keyword.
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+
+  - when: on_play
+    summary: "[On Play] Delete 1 opp Digimon with DP <= 3000 + 2000 per Dragon/saur/Ceratopsian digivolution source"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  formula:
+                    base: 3000
+                    per:
+                      source_stack_count:
+                        filter:
+                          any_of:
+                            - trait_contains: Dragon
+                            - trait_contains: saur
+                            - trait_contains: Ceratopsian
+                    delta: 2000
+          prompt: "Delete 1 opponent Digimon within the DP cap"
+      - delete_permanent: { target: target }

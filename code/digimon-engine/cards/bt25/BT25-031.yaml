@@ -1,0 +1,57 @@
+# BT25-031 Patamon — Digimon, Lv.3, Yellow, DP 2000, Cost 3.
+# Traits: Mammal, Iliad, ADAMAS, TS. Attribute: Data.
+# [On Play] Reveal top 3; add 1 [Angel]/[Archangel]/[Three Great Angels]/
+# [Four Great Dragons] and 1 [TS] to hand; rest to bottom. Inherited <Barrier>.
+# Alt-digivolve Lv.2 Yellow or Lv.2 [TS] / Cost 0.
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_031.cs
+card: BT25-031
+name: Patamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Mammal, Iliad, ADAMAS, TS]
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: yellow
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: TS
+    cost: 0
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add one Angel-group and one [TS] card; rest to bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: angel_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_has: Angel
+                  - trait_has: Archangel
+                  - trait_has: "Three Great Angels"
+                  - trait_has: "Four Great Dragons"
+            - bind_as: ts_pick
+              min: 1
+              max: 1
+              filter: { trait_has: TS }
+          no_duplicate_cards: true
+          prompt: "Add 1 [Angel]/[Archangel]/[Three Great Angels]/[Four Great Dragons] and 1 [TS] trait card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: angel_pick }
+      - add_to_hand_from_reveal: { of: you, card: ts_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier

@@ -131,6 +131,7 @@ fn enqueue_attack_target_change_for_attacker(runner: &mut DebugRunner, attacker:
             player: attacker.player,
             permanent: attacker,
             card,
+            effect_initiated: false,
         },
     );
     runner.game.drain_effect_queue();

@@ -11,6 +11,10 @@ import type { ActionTrace, TensorSummary } from '@/types/game';
 interface GameBoardProps {
   onPlayCard?: (handIndex: number) => void;
   onSlotClick?: (isOpponent: boolean, slotIndex: number) => void;
+  /** Right-click (context-menu) a permanent to open the stack inspector. */
+  onSlotInspect?: (isOpponent: boolean, slotIndex: number) => void;
+  /** Right-click a breeding-area permanent to inspect it. */
+  onBreedingInspect?: (isOpponent: boolean) => void;
   onHatch?: () => void;
   onMove?: () => void;
   onBreedingClick?: () => void;
@@ -36,6 +40,8 @@ interface GameBoardProps {
   previewCost?: number | null;
   /** Callback when hovering a hand card by index */
   onHandCardHoverIndex?: (index: number | null) => void;
+  /** Right-click (context-menu) a hand card to open the enlarged card detail. */
+  onHandCardInspect?: (cardId: string) => void;
   actionTraces?: ActionTrace[];
   latestTensorSummary?: TensorSummary | null;
 }
@@ -43,6 +49,8 @@ interface GameBoardProps {
 export function GameBoard({
   onPlayCard,
   onSlotClick,
+  onSlotInspect,
+  onBreedingInspect,
   onHatch,
   onMove,
   onBreedingClick,
@@ -63,6 +71,7 @@ export function GameBoard({
   onOpponentTrashClick,
   previewCost,
   onHandCardHoverIndex,
+  onHandCardInspect,
   actionTraces = [],
   latestTensorSummary = null,
 }: GameBoardProps) {
@@ -86,17 +95,19 @@ export function GameBoard({
     );
   }
 
-  // During selection phases, highlight valid field targets. Field-target
-  // valid ids are 100+slot for EITHER field; `pendingSelection.kind` routes
-  // them to the own or enemy half (see utils/selectionTargets.ts). The old
-  // own-only range scan lit up opponent-field targets on the player's own
-  // slots.
-  const fieldHl = pendingSelection
-    ? fieldSelectionHighlights(pendingSelection.kind, pendingSelection.validIndices)
-    : { own: new Set<number>(), enemy: new Set<number>() };
+  // During selection phases, highlight valid field targets. The engine
+  // encodes own- and opponent-field targets in the same
+  // `OWN_FIELD_START + slot` range and disambiguates by
+  // `pendingSelection.kind`, so route by `kind` (not id range) — otherwise an
+  // opponent-target prompt lights up the player's own slots. See
+  // `utils/selectionTargets.ts`.
+  const fieldHighlights = fieldSelectionHighlights(
+    pendingSelection?.kind,
+    pendingSelection?.validIndices ?? [],
+  );
 
-  const ownSlots = new Set([...(highlightedOwnSlots ?? []), ...fieldHl.own]);
-  const enemySlots = new Set([...(highlightedEnemySlots ?? []), ...fieldHl.enemy]);
+  const ownSlots = new Set([...(highlightedOwnSlots ?? []), ...fieldHighlights.own]);
+  const enemySlots = new Set([...(highlightedEnemySlots ?? []), ...fieldHighlights.enemy]);
   const latestActionLabel = (actionTraces as unknown as { at(index: number): ActionTrace | undefined }).at(-1)?.decoded.label ?? null;
 
   return (
@@ -139,6 +150,8 @@ export function GameBoard({
           onTrashClick={onOpponentTrashClick}
           targetedSlots={targetedSlots}
           onSlotClick={(i) => onSlotClick?.(true, i)}
+          onSlotInspect={(i) => onSlotInspect?.(true, i)}
+          onBreedingInspect={() => onBreedingInspect?.(true)}
         />
       </div>
 
@@ -172,6 +185,8 @@ export function GameBoard({
           canDigivolveBreeding={canDigivolveBreeding}
           highlightBreeding={highlightBreeding}
           onSlotClick={(i) => onSlotClick?.(false, i)}
+          onSlotInspect={(i) => onSlotInspect?.(false, i)}
+          onBreedingInspect={() => onBreedingInspect?.(false)}
           onHatch={onHatch}
           onMove={onMove}
           onBreedingClick={onBreedingClick}
@@ -190,6 +205,7 @@ export function GameBoard({
           handCards={player1.handCards}
           onCardClick={onPlayCard}
           onCardHoverIndex={onHandCardHoverIndex}
+          onCardInspect={onHandCardInspect}
         />
       </div>
 

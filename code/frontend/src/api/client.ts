@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { isGuestToken, remintGuestSession } from '@/bootstrap/guest';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 
@@ -36,6 +37,28 @@ client.interceptors.response.use(
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           window.location.href = '/login';
+        }
+      } else if (isGuestToken(localStorage.getItem('access_token'))) {
+        // Guest identities own nothing server-side, so a stale/poisoned
+        // guest token is recovered by minting a fresh guest and retrying
+        // once. `_retry` guarantees a second 401 surfaces to the caller
+        // instead of looping on mints.
+        try {
+          const session = await remintGuestSession();
+          localStorage.setItem('access_token', session.token);
+          original.headers.Authorization = `Bearer ${session.token}`;
+          // Keep the visible identity (UserMenu) in sync with the new
+          // guest. Dynamic import avoids a static client→store→client cycle.
+          void import('@/stores/authStore').then(({ useAuthStore }) => {
+            useAuthStore.setState({
+              accessToken: session.token,
+              isAuthenticated: true,
+              user: { id: session.userId, username: session.displayName, email: '', roles: [] },
+            });
+          });
+          return client(original);
+        } catch {
+          // Mint failed (offline) — fall through to the original 401.
         }
       }
     }

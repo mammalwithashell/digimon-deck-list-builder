@@ -1,0 +1,173 @@
+card: AD1-002
+name: Aldamon
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 8000
+traits: [Hybrid, Variable, Wizard]
+
+# ─── Printed text (card face, authoritative) ─────────────────────────────────
+#
+# ＜Rush＞ (This Digimon can attack the turn it comes into play.)
+# [When Digivolving] Delete 1 of your opponent's Digimon with as much or less
+#   DP as this Digimon.
+# [End of Attack] [On Deletion] You may trash 1 [Hybrid] or [Ten Warriors]
+#   trait card from your hand. If this effect trashed, ＜Draw 2＞ (Draw 2 cards
+#   from your deck.) Then, you may play 1 red, blue or green Tamer card with
+#   inherited effects from your hand or trash without paying the cost.
+# Inherited: [Your Turn] This Digimon gets +4000 DP.
+#
+# Alt-digivolve (xros_req): [Takuya Kanbara] w/ 2 or more [Hybrid] trait cards
+#   under, Cost 3. Standard digivolution: Lv4 Red Cost 3 (printed evo_costs).
+#
+# ─── DCGO crosscheck (AD1/Red/AD1_002.cs) ────────────────────────────────────
+#
+#   - Rush: RushSelfStaticEffect (face-up, not inherited).
+#   - Alt-digi: AddSelfDigivolutionRequirementStaticEffect — top card
+#     "Takuya Kanbara" AND ≥2 Hybrid digivolution sources, cost 3,
+#     ignoreDigivolutionRequirement: false.
+#   - When Digivolving (OnEnterFieldAnyone, CanTriggerWhenDigivolving):
+#     mandatory SelectPermanentEffect Mode.Destroy (canNoSelect: false) over
+#     opponent Digimon with HasDP && DP <= card.PermanentOfThisCard().DP. The
+#     coroutine is gated on a matching permanent existing.
+#   - Shared EoA/OD (ActivateClassesForSharedEffects, endOfAttack: true,
+#     onDeletion: true, optional: false):
+#       1. SelectHandEffect Mode.Discard, max 1, canNoSelect: true, over
+#          (Hybrid || Ten Warriors). `discarded` = a card was chosen.
+#       2. if (discarded) DrawClass(owner, 2).
+#       3. CanSelectPlayCondition = IsTamer && (Red||Blue||Green) &&
+#          HasInheritedEffect && CanPlayAsNewPermanent(payCost: false). 3-way
+#          hand/trash/don't-play int prompt, then free play from chosen zone.
+#          Runs regardless of whether the trash/draw happened.
+#   - Inherited: ChangeSelfDPStaticEffect(+4000, isInherited) gated IsOwnerTurn.
+#
+# ─── Per-clause status ───────────────────────────────────────────────────────
+#
+#   | Clause                                            | Status |
+#   |---------------------------------------------------|--------|
+#   | ＜Rush＞                                          | PASS   |
+#   | Alt-digi (Takuya Kanbara + 2 Hybrid / cost 3)     | PASS   |
+#   | [When Digivolving] delete opp DP <= self          | PASS   |
+#   | [EoA][OD] may trash Hybrid/Ten Warriors           | PASS   |
+#   | [EoA][OD] if trashed, ＜Draw 2＞                  | PASS   |
+#   | [EoA][OD] may free-play R/U/G Tamer w/ inherited  | PASS   |
+#   | Inherited [Your Turn] +4000 DP                    | PASS   |
+
+# Standard digivolution: Lv4 Red / Cost 3 (printed evo_costs).
+# Alt-digivolve (xros_req): "[Takuya Kanbara] w/ 2 or more [Hybrid] trait cards
+#   under" / Cost 3.
+#
+# PARTIAL — DSL-vocab GAP `G-DSL-DIGISOURCE-TRAIT-COUNT-GTE`: there is no
+# predicate for "≥N digivolution sources carrying trait T" (the closest,
+# `self_digivolution_sources_trait_has`, is a ≥1 presence check and is a
+# carrier/permanent-subject predicate, not an alt-path `from`-base predicate;
+# the alt-path `from` filter constrains the BASE being digivolved from, not the
+# resulting stack's sources). The "2 or more [Hybrid] trait cards under"
+# COUNT sub-requirement is therefore NOT expressible here. The Takuya-Kanbara
+# base name is enforced faithfully; the ≥2-Hybrid-sources gate is the gap.
+# (DCGO AD1_002.cs PermanentCondition: TopCard "Takuya Kanbara" AND
+# DigivolutionCards.Count(Hybrid) >= 2.)
+alt_paths:
+  - kind: digivolve
+    from:
+      name_contains: "Takuya Kanbara"
+    cost: 3
+    ignore_requirements: false
+
+effects:
+  # ─── ＜Rush＞ (face-up) ───────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+
+  # ─── [When Digivolving] delete 1 opp Digimon with DP <= this Digimon ──────
+  #
+  # DCGO: mandatory select (canNoSelect: false), gated on a match existing.
+  # `dp_lte: { formula: { source_dp: {} } }` = "with as much or less DP as this
+  # Digimon" (AD1-006 / AD1-016 idiom — reads the acting permanent's live DP).
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 opponent Digimon with DP <= this Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        dp_lte: { formula: { source_dp: {} } }
+    process:
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 opponent Digimon with DP equal to or less than this Digimon's DP"
+      - delete_permanent: { target: del_target }
+
+  # ─── [End of Attack] [On Deletion] trash → Draw 2 → free-play Tamer ────────
+  #
+  # Two timings on ONE clause (DCGO ActivateClassesForSharedEffects with
+  # endOfAttack: true, onDeletion: true). The outer clause is NOT optional —
+  # each sub-step carries its own "you may".
+  #
+  #   1. Optional trash of a [Hybrid] OR [Ten Warriors] card from hand. `cost:
+  #      true` + `trash_from_hand_by_index` (EX9-024 idiom). Declining leaves
+  #      `discard` unbound.
+  #   2. ＜Draw 2＞ gated on the trash actually happening — `if binding_present:
+  #      discard`. Matches DCGO `if (discarded) DrawClass(owner, 2)`.
+  #   3. Separate optional free-play of a red/blue/green Tamer "with inherited
+  #      effects" from hand OR trash (`select_union_zone` [hand, trash] +
+  #      `play_union_bound_free`, the AD1-016 idiom). Runs regardless of the
+  #      trash/draw. `has_inherited: {}` = "with inherited effects" (BT17-009
+  #      idiom). Color is red/blue/green via an `any_of` of `color_is`.
+  - when: [end_of_attack, on_deletion]
+    summary: "[EoA][OD] may trash Hybrid/Ten Warriors (if so Draw 2), then may free-play a R/U/G Tamer with inherited effects from hand/trash"
+    process:
+      # Step 1: optional trash.
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: "Hybrid"
+              - trait_has: "Ten Warriors"
+          prompt: "You may trash 1 [Hybrid] or [Ten Warriors] card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      # Step 2: conditional ＜Draw 2＞ — only when the trash actually happened.
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - draw: { of: you, count: 2 }
+      # Step 3: separate optional free-play of a R/U/G Tamer w/ inherited
+      # effects from hand OR trash. Declining the union pick leaves
+      # `tamer_pick` unbound and `play_union_bound_free` is a silent no-op.
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - has_inherited: {}
+              - any_of:
+                  - color_is: red
+                  - color_is: blue
+                  - color_is: green
+          prompt: "You may play 1 red/blue/green Tamer with inherited effects from hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: tamer_pick
+
+  # ─── Inherited: [Your Turn] this Digimon gets +4000 DP ────────────────────
+  #
+  # DCGO: ChangeSelfDPStaticEffect(+4000, isInherited) gated IsOwnerTurn.
+  # Self-aura (target: {}), flat `dp_modifier_fn: 4000` (BT16-055 literal idiom),
+  # gated `active_when: your_turn` (BT12-022 inherited your-turn idiom).
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier_fn: 4000
+    summary: "[Inherited][Your Turn] Carrier gets +4000 DP"

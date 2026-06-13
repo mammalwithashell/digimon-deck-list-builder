@@ -1,6 +1,6 @@
 [package]
 name = "digimon-tcg"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 
 [dependencies]
@@ -8,6 +8,11 @@ tauri = { version = "2", features = [] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-window-state = "2"
+# File-backed logging so updater (and other) failures are diagnosable
+# instead of vanishing into a null logger.
+tauri-plugin-log = "2"
+# Open the manual-update download page in the user's default browser.
+opener = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["time", "fs", "io-util", "rt-multi-thread"] }
@@ -21,6 +26,9 @@ thiserror = "1"
 dirs = "5"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
+# Dev-only debug bridge (feature `debug-bridge`). Optional so release
+# bundles link no HTTP server.
+axum = { version = "0.7", optional = true }
 
 [lib]
 name = "digimon_tcg"
@@ -37,3 +45,6 @@ tauri-build = { version = "2", features = [] }
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+# Dev-only localhost staging bridge into the live desktop game. NEVER enable
+# for release/production bundles. Pulls in axum + tokio's net stack.
+debug-bridge = ["dep:axum", "tokio/net"]

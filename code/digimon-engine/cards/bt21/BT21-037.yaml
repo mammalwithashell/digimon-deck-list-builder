@@ -57,20 +57,29 @@ effects:
   #   - Step 2: suspend { target: tgt }.
   #   - Step 3: add_dp_modifier (target: source, +2000, expiry: end_of_opponents_turn).
   #
-  # Note on mandatory vs. no-target: DCGO HasMatchConditionPermanent gates the selection
-  # block — if there are zero suspendable opp Digimon, the select is skipped entirely and
-  # only the DP buff fires. We model this with optional: true on the select (so the engine
-  # skips gracefully when there are no valid targets), matching DCGO behavior.
-  # The DP buff fires unconditionally regardless of whether a target was selected.
+  # Mandatory vs. no-target (FAQ MP-29 / DCGO isOptional=false, gated by
+  # HasMatchConditionPermanent): when the opponent HAS a suspendable Digimon the suspend is
+  # MANDATORY — the controller may NOT decline. When there are none, the select is skipped
+  # and only the DP buff fires. Modeled by guarding select+suspend behind an
+  # `if opponent-has-a-Digimon` condition (so the mandatory select is only reached when a
+  # target exists), with the DP buff running unconditionally afterward.
+  # (Previously authored with step-level `optional: true`, which wrongly exposed a decline
+  # when a target existed — caught by rules_faq::effect_resolution::mp29_*.)
   - when: when_digivolving
     summary: "[When Digivolving] Suspend 1 opp Digimon; this Digimon gets +2000 DP until opp turn ends"
     process:
-      - select_opponent_permanent:
-          bind_as: tgt
-          optional: true
-          filter: { kind: digimon }
-          prompt: "Suspend 1 of your opponent's Digimon"
-      - suspend: { target: tgt }
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: tgt
+                filter: { kind: digimon }
+                prompt: "Suspend 1 of your opponent's Digimon"
+            - suspend: { target: tgt }
       - add_dp_modifier:
           target: source
           value: 2000

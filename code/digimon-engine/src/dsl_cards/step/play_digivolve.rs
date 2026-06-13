@@ -242,11 +242,22 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::PlayFromRevealedFree { of, card, bind_as } => {
+        CompiledStep::PlayFromRevealedFree {
+            of,
+            card,
+            bind_as,
+            cost_delta,
+        } => {
             let owner = resolve_player(ctx, *of);
+            // None => FREE (prior behavior — unlike play_from_trash, whose None
+            // means "pay full"); Some => pay the reduced cost.
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
+            };
             match resolve_binding_ref(card, ctx, bindings) {
                 Some(ResolvedBinding::Card(handle)) => {
-                    if let Some(played) = ctx.play_from_revealed_free(owner, handle) {
+                    if let Some(played) = ctx.play_from_revealed_with_cost(owner, handle, delta) {
                         bindings.record_played(played);
                         if let Some(name) = bind_as {
                             bind_played_with_provenance(bindings, ctx, name, played);
@@ -256,7 +267,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 Some(ResolvedBinding::CardList(handles)) => {
                     let mut last_played = None;
                     for handle in handles {
-                        if let Some(played) = ctx.play_from_revealed_free(owner, handle) {
+                        if let Some(played) =
+                            ctx.play_from_revealed_with_cost(owner, handle, delta.clone())
+                        {
                             bindings.record_played(played);
                             last_played = Some(played);
                         }
@@ -290,30 +303,66 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             of: _,
             trash_index,
             suppress_on_play,
+            suspended,
         } => {
-            // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
-            // IR addresses by trash index so we must look up the handle.
-            if let Some(ResolvedBinding::TrashIndex(owner, i)) =
-                resolve_binding_ref(trash_index, ctx, bindings)
-            {
-                let handle: Option<CardHandle> = ctx
-                    .game
-                    .player(owner)
-                    .trash
-                    .get(i as usize)
-                    .map(|cs| cs.handle());
-                if let Some(h) = handle {
-                    // PUPPETS-G030 — when `suppress_on_play` is set, the
-                    // played Digimon's own `[On Play]` effects do not fire
-                    // for this play event (BT5-106 [Security]).
-                    let played = if *suppress_on_play {
-                        ctx.play_from_trash_free_unsuspended_suppress_on_play(h)
-                    } else {
-                        ctx.play_from_trash_free_unsuspended(h)
-                    };
-                    if let Some(played) = played {
-                        bindings.record_played(played);
+            // `play_from_trash_free_unsuspended` takes a `CardHandle`. The
+            // binding may address the card either by trash index
+            // (`ResolvedBinding::TrashIndex`) or directly by card handle
+            // (`ResolvedBinding::Card`) — the latter lets a card-identity
+            // binding such as `event_card` / `event_target` (which, inside an
+            // [On Deletion] body, resolves to the just-deleted carrier's
+            // top card now in trash) feed a free replay. This is what BT3-109
+            // "Back for Revenge!" needs to "Play this card" from trash. The
+            // engine call self-guards: it returns `None` if the handle is not
+            // actually in the controller's trash.
+            // The playing CONTROLLER follows the card's trash owner — for
+            // `of: opponent` ("YOUR OPPONENT plays 1 ... from THEIR trash",
+            // EX5-060 / Q28) the binding's owner IS the opponent; the card
+            // enters THEIR battle area. A card-handle binding locates its
+            // owner by trash scan; fallback: the effect controller.
+            let resolved: Option<(crate::enums::PlayerId, CardHandle)> =
+                match resolve_binding_ref(trash_index, ctx, bindings) {
+                    Some(ResolvedBinding::TrashIndex(owner, i)) => ctx
+                        .game
+                        .player(owner)
+                        .trash
+                        .get(i as usize)
+                        .map(|cs| (owner, cs.handle())),
+                    Some(ResolvedBinding::Card(h)) => {
+                        let owner = (0..ctx.game.players.len() as crate::enums::PlayerId)
+                            .find(|&p| {
+                                ctx.game.player(p).trash.iter().any(|c| c.handle() == h)
+                            })
+                            .unwrap_or(ctx.player);
+                        Some((owner, h))
                     }
+                    _ => None,
+                };
+            if let Some((controller, h)) = resolved {
+                // G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060): a flagged play
+                // enters suspended — the commit site consumes the slot.
+                if *suspended {
+                    ctx.game.play_enters_suspended = true;
+                }
+                // PUPPETS-G030 — when `suppress_on_play` is set, the
+                // played Digimon's own `[On Play]` effects do not fire
+                // for this play event (BT5-106 [Security]). The skip is an
+                // EFFECT of this card on the played Digimon, so record the
+                // suppressor identity — `fire_play_event_triggers` consults
+                // `permanent_is_unaffected_by_effect` against it before
+                // honoring the skip (judge-quiz Q28).
+                let played = if *suppress_on_play {
+                    ctx.game.on_play_suppressor = Some((ctx.player, ctx.source_kind));
+                    ctx.play_from_trash_free_unsuspended_for(controller, h, true)
+                } else {
+                    ctx.play_from_trash_free_unsuspended_for(controller, h, false)
+                };
+                // The play may have been rejected (full field, lock) — clear
+                // any unconsumed slots so they cannot leak to a later play.
+                ctx.game.play_enters_suspended = false;
+                ctx.game.on_play_suppressor = None;
+                if let Some(played) = played {
+                    bindings.record_played(played);
                 }
             }
             true
@@ -454,6 +503,21 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let owner = resolve_player(ctx, *of);
             if let Some(ResolvedBinding::Card(handle)) = resolve_binding_ref(card, ctx, bindings) {
                 let _ = ctx.trash_security_card(owner, handle);
+            }
+            true
+        }
+        CompiledStep::ReturnSelectedSecurityToDeck { of, card, position } => {
+            // G-DSL-RETURN-SELECTED-SECURITY-TO-DECK: `card` is a CardHandle
+            // binding (typically from a prior `select_security`). Move exactly
+            // that security card to its owner's deck (top or bottom). No-op
+            // when the binding is unset (declined optional select).
+            let owner = resolve_player(ctx, *of);
+            let to_bottom = matches!(
+                super::map_stack_position(*position),
+                crate::enums::StackPosition::Bottom
+            );
+            if let Some(ResolvedBinding::Card(handle)) = resolve_binding_ref(card, ctx, bindings) {
+                let _ = ctx.return_security_card_to_deck(owner, handle, to_bottom);
             }
             true
         }

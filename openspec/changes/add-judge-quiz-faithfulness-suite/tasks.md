@@ -61,38 +61,38 @@
 
 ## 3. Cluster A — immunity scope (Q1, Q2, Q17, Q18, Q28)
 
-- [ ] 3.1 Author the missing cards: Belphemon: Sleep Mode, Magnamon (X Antibody), Quantumon, (Imperialdramon: PM ACE if 1.2 unblocks), Gankoomon (X Antibody), Dragomon — full text, per-card TDD tests via the batch pipeline
-- [ ] 3.2 Write Q1, Q2, Q17, Q18, Q28 scenario tests asserting the judge answers
-- [ ] 3.3 Fix any surfaced gap: "affects me vs affects the battle" immunity scope (Q1/Q2), granted-effect ownership removal under immunity (Q17), self-immunity blocking own effect (Q18), protection beating "[On Play] don't activate" (Q28) — TDD, minimal primitive each
-- [ ] 3.4 Confirm cluster A tests green; archive closed gaps
+- [x] 3.1 Author the missing cards — ALL DONE: BT13-088 Belphemon: Sleep Mode + BT16-102 Magnamon (X Antibody) + BT20-059 Gankoomon (X Antibody) (prior waves), LM-020 Quantumon (2026-06-05), **EX5-060 Dragomon (IMPLEMENTED — 2026-06-11)**; BT17-077 Imperialdramon: PM ACE unblocked by 1.2.
+- [x] 3.2 Write Q1, Q2, Q17, Q18, Q28 scenario tests — **all five PASS** (Q28 done 2026-06-11 with a no-protection control).
+- [x] 3.3 Gaps fixed: Q1/Q2/Q17 (grant-triggered-effect waves), Q18 (immunity + security-return verbs), **Q28 (2026-06-11): protection-gated [On Play] suppression (`fire_play_event_triggers` consults `permanent_is_unaffected_by_effect` vs the recorded suppressor), opponent-side trash play, suspended entry (`G-PLAY-ENTERS-SUSPENDED`), `event_target_level` formula, and the CONTINUOUS `grant_effect_immunity` form (`G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA` — floating immunity covering later entrants; BT20-059 re-authored)**.
+- [x] 3.4 Cluster A green — Q1/Q2/Q17/Q18/Q28 all PASS (judge_quiz 39/0/3 as of 2026-06-11).
 
 ## 4. Cluster B — deferred rules-check (Q6, Q7, Q8, Q13, Q14, Q24)
 
-- [ ] 4.1 Author the missing cards: Flame Hellscythe, Pillomon, Eye of the Gorgon, Agumon (Burst Digivolve), Koromon, Rapidmon (X Antibody), Hudiemon, Tentomon, Kokomon (Nyabootmon/ShoeShoemon/ShineGreymon: Ruin Mode already implemented)
-- [ ] 4.2 Write Q6, Q7, Q8, Q13, Q14, Q24 scenario tests asserting the judge answers
-- [ ] 4.3 Fix any surfaced gap: rules-check deferred until the ongoing effect fully resolves; DP measured at the right moment; sequential sub-effect ordering (delete-then-play); DP-less / Burst-Digivolve trash chain — TDD
-- [ ] 4.4 Confirm cluster B tests green; archive closed gaps
+- [~] 4.1 Author the missing cards: **Kokomon EX6-004 (IMPLEMENTED — done 2026-06-10, with G-SUSPEND-EFFECT-INITIATED)**; Flame Hellscythe, Pillomon, Eye of the Gorgon, Rapidmon (X Antibody), Hudiemon, Tentomon done in prior waves. Still TODO for Q8: the Burst stack is implemented but blocked on `add-burst-digivolve` (G-BURST-ON-TURN-END-NOT-EXECUTED — greenfield burst resolution path, see `.claude/plans/rust-engine-gaps-burst-digivolve.md`).
+- [~] 4.2 Write Q6, Q7, Q8, Q13, Q14, Q24 scenario tests asserting the judge answers — **Q6/Q7/Q13/Q14/Q24 PASS** (Q24 done 2026-06-10: `b::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger`); Q8 `#[ignore]` on the burst gap.
+- [~] 4.3 Fix any surfaced gap — Q24 (2026-06-10) closed `G-SUSPEND-EFFECT-INITIATED` and surfaced+fixed four more: `<Alliance>` keyword was modeled on the ALLY (now attacker-side per DCGO `AllianceSelfEffect`); Alliance resolution order (suspend via chokepoint in a deferred-drain scope, read ally DP AFTER suspension); `effective_dp` floors at 0 (rules 17-1-3-1 / DCGO); outermost drain runs the state-based rules check BEFORE activating parked triggers. Incidental: `<Armor Purge>` accept dialog subject-scoped (was offered on neighbors' deletions); suspend chokepoint re-ticks declarative auras. Q8's burst gap remains (own change).
+- [ ] 4.4 Confirm cluster B tests green; archive closed gaps (Q6/Q7/Q13/Q14/Q24 green; Q8 pending `add-burst-digivolve`)
 
 ## 5. Cluster C — declare-then-pay cost window (Q5, Q26, Q27, Q30)
 
 - [ ] 5.1 Author the missing cards: (Omnimon AD1-025 already implemented), Dorbickmon, MedievalGallantmon, Imperialdramon: Dragon Mode, Chaosmon: Valdur Arm, BanchoLeomon (Miraculous Mega Knight already implemented)
-- [ ] 5.2 Write Q5, Q26, Q27 scenario tests; write Q30 (shared with cluster E) for the interruptive-`<Partition>` + cost-reduction outcome
+- [x] 5.2 Q5/Q26/Q27 done in prior waves. **Q30 DONE 2026-06-11**: `c::q30_partition_interruptive_suspends_both_with_cost_reduction` PASSES — full board from Flamedramon's inherited [EoT] DNA digivolve; legal suspend set EXACTLY {Imperialdramon: Dragon Mode, Chaosmon: Valdur Arm}. Wave: BT20-036, EX3-063, BT16-077, EX3-008 authored (IMPLEMENTED); EX8-074 suspend-2 re-audited to ANY battle-area Digimon. Engine: `<Partition>` re-timed to an interruptive (optional, non-cancelling) WhenWouldLeaveBattleArea replacement + `run_after_selections_drain` sequencing + `granted_keyword` on partition granters. New OPEN gap: G-NESTED-PARKED-REPLACEMENT (engine-gaps.md).
 - [ ] 5.3 Fix any surfaced gap: declare-a-play-whose-cost-becomes-payable-after-declaration window (Q5); cost recomputed unpayable after a mid-resolution DNA-evolution ⇒ return to hand, 0 memory (Q26/Q27) — TDD
 - [ ] 5.4 Confirm cluster C tests green; archive closed gaps
 
 ## 6. Cluster D — trigger activation site (Q9, Q19, Q20, Q21, Q23)
 
-- [ ] 6.1 Author the missing cards: Gatomon, Mastemon, Eyesmon: Scatter Mode, Back for Revenge!, plus the On-Deletion/return-to-hand cards Q19/Q23 resolve to in the spike
-- [ ] 6.2 Write Q9, Q19, Q20, Q21, Q23 scenario tests asserting the judge answers (draw counts / memory)
-- [ ] 6.3 Fix any surfaced gap: [On Deletion] activates only from trash (return-to-hand suppresses it, Q19); remaining-in-trash gates inherited [On Deletion] (Q23); play-from-trash mid-resolution suppresses remaining effects (Q21); not-in-battle-area suppresses [All Turns] (Q9) — TDD. Cross-check CLAUDE.md §25 (OnDeletion post-trash contract)
-- [ ] 6.4 Confirm cluster D tests green; archive closed gaps
+- [x] 6.1 Author the missing cards: **Gatomon BT15-037 (PARTIAL — done 2026-06-06; G-DSL-ON-DISCARD-SECURITY-TRIGGER), Mastemon BT23-102 (PARTIAL — done 2026-06-06; G-TRASH-SECURITY-BATCH-INTERRUPTED-BY-OBSERVER)**; Eyesmon: Scatter Mode / Back for Revenge! / Q19-Q23 cards done in prior waves.
+- [x] 6.2 Write Q9, Q19, Q20, Q21, Q23 scenario tests asserting the judge answers — **all PASS** (Q9 done 2026-06-06: `d::q9_gatomon_not_in_battle_area_during_removal_no_memory`).
+- [x] 6.3 Fix any surfaced gap: Q19/Q21/Q23 resolved in prior waves; **Q9 needed no engine change** — the not-in-battle-area suppression of `[All Turns]` falls out of the existing trigger-dispatch (only battle-area permanents' triggers fire). Two incidental gaps logged (controller-trim batch-abort; on-discard-security DSL trigger), neither blocks Q9.
+- [x] 6.4 Confirm cluster D tests green; archive closed gaps — Q9/Q19/Q20/Q21/Q23 all PASS.
 
 ## 7. Cluster E — `<Partition>` / DigiXros departure / de-digivolve (Q15, Q16, Q25, Q29; Q30 shared)
 
-- [ ] 7.1 Author the missing cards: Lilithmon, Paildramon, Gallantmon (X Antibody), DarknessBagramon, Damemon, ChuuChuumon, Bagramon, DarkKnightmon, Yuu Amano (LordKnightmon (X Ant.) and Miraculous Mega Knight already implemented)
-- [ ] 7.2 Write Q15 (sequential de-digivolve halted by mid-sequence X-Antibody immunity), Q16 (`<Partition>` not triggering on leave-by-own-effect), Q25 (`[All Turns]` fires on DigiXros departure), Q29 (legal DigiXros stack orderings) scenario tests
-- [ ] 7.3 Fix any surfaced gap: `<Partition>` departure-cause discrimination (battle vs own-effect vs DigiXros); sequential de-digivolve respecting newly-acquired immunity on the new top card; DigiXros placement-order legality — TDD
-- [ ] 7.4 Confirm cluster E tests green; archive closed gaps
+- [x] 7.1 Author the missing cards: Lilithmon EX6-057 done (grant wave); Q15 wave done 2026-06-11 (BT19-073, BT17-016, BT12-016, EX3-057 + EX8-073 re-authored with a real `effect_immunity` aura); **Q29 wave done 2026-06-11: BT10-093 Yuu Amano (PARTIAL — clause 1 needs `G-DSL-ON-CARD-PLACED-UNDER-TRIGGER`), EX10-039 ChuuChuumon (IMPLEMENTED), EX10-044 Damemon (IMPLEMENTED), EX10-031 DarkKnightmon (PARTIAL — `G-DSL-WOULD-LEAVE-TRIGGERED-OBSERVER`), EX10-056 Bagramon (PARTIAL ×2), EX10-059 DarknessBagramon (PARTIAL ×3; DigiXros path faithful).** (The earlier "three need G-DSL-HAND-MAIN-SELF-PLAY-REDUCED" note was wrong — none of these cards carry that clause; verified against card images.) Paildramon BT16-025 already implemented.
+- [x] 7.2 **Q15 DONE 2026-06-11** (`e::q15_sequential_de_digivolve_halted_by_x_antibody_immunity`); Q16 + Q25 done in prior waves. **Q29 DONE 2026-06-11**: `e::q29_legal_digixros_stack_orderings_with_yuu_amano` + `e::q29_single_under_tamer_card_yields_third_legal_stack` PASS — real `r.play()` DigiXros transaction; Yuu's hook BEFORE materials; placed cards on top in pick order; recipe materials at bottom in spec order; cost 16 −3 −3 −2×N.
+- [x] 7.3 Sequential de-digivolve respecting newly-acquired immunity: pinned (Q15). DigiXros placement-order legality (Q29): pinned; engine widening — `preattach_digixros_material` no longer recipe-validates (slot-independent `pre_attach_extra_material` fallback, DCGO `AddDigivolutionCardInfos` parity).
+- [x] 7.4 Cluster E tests green (Q15/Q16/Q25/Q29). New OPEN gaps logged: `G-DSL-ON-CARD-PLACED-UNDER-TRIGGER`, `G-DSL-WOULD-LEAVE-TRIGGERED-OBSERVER`, `G-DSL-PLACE-PERMANENT-AS-SOURCE`, `G-DSL-BLIND-OPP-HAND-PLACE`, `G-DSL-GAIN-ALL-TURNS-FROM-SOURCES` (qa/dsl-vocab-gaps.md) + `G-TRIGGER-CONTEXT-CLOBBERED-BY-COST-REDUCTION-INTERRUPT` (engine-gaps.md).
 
 ## 8. Cluster F — token lifecycle & memory arithmetic (Q10, Q11, Q12, Q22)
 
@@ -103,10 +103,10 @@
 
 ## 9. Cluster G — zone/keyword scoping (Q3, Q4)
 
-- [ ] 9.1 Author the missing cards: Puppetmon, Quartzmon (BT12), Aldamon (if 1.3 shows the needed printing is unimplemented)
-- [ ] 9.2 Write Q3 (breeding-area effect inactivity) and Q4 (Security Attack count net +1/−1 ⇒ one check) scenario tests; Q4 reuses/extends the `mid_attack_security_attack_recompute.rs` rule coverage
-- [ ] 9.3 Fix any surfaced gap: effects don't function in breeding area unless specified (Q3); security-check count read from live net Security Attack value (Q4, partially covered) — TDD
-- [ ] 9.4 Confirm cluster G tests green; archive closed gaps
+- [x] 9.1 Author the missing cards: **Aldamon AD1-002 (PARTIAL — done 2026-06-05; alt-path gap G-DSL-DIGISOURCE-TRAIT-COUNT-GTE), Atomic Inferno BT4-098 (IMPLEMENTED — done 2026-06-05)**; Holy Flame ST3-15 already impl. **Puppetmon EX10-020 (PARTIAL — done 2026-06-10; G-DSL-HAND-MAIN-SELF-PLAY-REDUCED + G-DSL-SECURITY-WAS-FACE-UP-GATE, both incidental to Q3) + Quartzmon BT12-057 (IMPLEMENTED — done 2026-06-10)**.
+- [x] 9.2 **Q4 DONE 2026-06-05** (`g::q4_security_attack_net_modifiers_one_check` + control). **Q3 DONE 2026-06-10** — `g::q3_breeding_area_effect_inactive_allows_digivolve` PASSES: the `[All Turns]` restriction is the new `modifier_name` aura install of `CanOnlyDigivolveInto` (DSL slice of G-DIGIVOLVE-TARGET-RESTRICTION landed), battle-area-sourced ⇒ breeding-inactive for free; battle-area control in `ex10/ex10_020.rs` proves no false-pass.
+- [~] 9.3 **Q3 (2026-06-10)** landed the `modifier_name` aura widening (Name-payload modifier installs — closes the deferred DSL slice of G-DIGIVOLVE-TARGET-RESTRICTION), a `color_is` arm on `no_face_up_security_named`, and surfaced+fixed a real engine gap: the turn-start bulk unsuspend ignored `CannotUnsuspend` (Quartzmon "[All Turns] don't unsuspend" TDD) — now honored at the phase site (game_phases.rs). Two new DSL vocab gaps logged (hand-main self-play; security was-face-up gate). Q4 surfaced no NEW engine gap on the modifier recompute path (it already reads live net Security Attack value, judge-correct). NOTE: discovered + **FIXED (test-only) 2026-06-05** a RED in `mid_attack_security_attack_recompute`. Root cause (bisected to #582 `G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT`): the recompute is correct (loop checks exactly 2); the test's blanket driver auto-activated Medusamon's optional `[End of Attack]` delete on a now-targetable Petrification token, whose `[On Deletion]` trashes the defender's top security (a faithful but unrelated cascade). Driver now scoped to the security loop (`drive_security_loop_to_completion`); no engine change. Q3's breeding-area-inactivity gap still pending its cards.
+- [ ] 9.4 Confirm cluster G tests green; archive closed gaps (Q4 green; Q3 pending)
 
 ## 10. Reconcile and verify
 

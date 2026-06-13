@@ -271,11 +271,15 @@ fn ex9_021_when_digivolving_dna_immunity_clause_shape() {
                 source_kind,
                 source_controller,
                 expiry,
+                continuous,
+                targets,
             } => {
-                assert_eq!(target, &CompiledBindingRef::SelfRef);
+                assert_eq!(target.as_ref(), Some(&CompiledBindingRef::SelfRef));
                 assert_eq!(source_kind, &expected_kind);
                 assert_eq!(source_controller, &CompiledEffectController::Opponent);
                 assert_eq!(expiry, "end_of_turn");
+                assert!(!continuous, "per-permanent grant (not continuous)");
+                assert!(targets.is_none());
             }
             other => panic!("expected grant_effect_immunity step, got {other:?}"),
         }

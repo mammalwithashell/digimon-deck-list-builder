@@ -180,6 +180,18 @@ pub fn lower_with_formula(
             .unwrap_or(0)
     });
     if !pay_cost.is_empty() {
+        // When the `pay_cost` begins with a declinable (PASS-able) selection
+        // — e.g. BT12-112's optional "place 1 [Shoutmon]" — running it
+        // surfaces the player's own opt-in/opt-out, so the cost-reduction
+        // dispatch can auto-apply it (the inner optional select IS the
+        // acceptance prompt) instead of wrapping it in the redundant
+        // "Use X to reduce play cost?" confirmation gate. Mandatory-cost
+        // reducers (the self-suspend idiom below, "trash 2 cards", ...) leave
+        // this `false` and keep their gate. Reuses the same first-step probe
+        // as the triggered-effect outer-optional lowering for consistency.
+        builder = builder.pay_cost_self_gated(
+            crate::dsl_cards::lower_triggered::body_first_step_is_declinable(pay_cost.as_ref()),
+        );
         // Special-case the "by suspending this Tamer" idiom: a `pay_cost` of
         // a single self-targeted `suspend` must FAIL when the source is
         // already suspended (the cost is unpayable → reduction does not

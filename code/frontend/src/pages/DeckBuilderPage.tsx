@@ -5,7 +5,7 @@ import {
   getBuilderDeck,
   saveBuilderDeck,
 } from '@/features/deck-builder/deckBuilderAdapter';
-import { useCardImage } from '@/hooks/useCardImage';
+import { getCardImageUrl } from '@/utils/cardImages';
 import {
   builderCardColorClass,
   deckEntriesToSlotArrays,
@@ -64,13 +64,23 @@ function BuilderCardImage({
   card: DigimonCardData;
   className?: string;
 }) {
-  const { src, isLoading, hasError } = useCardImage(card.cardnumber, card.isAltArt ?? false);
+  // No useCardImage here: its eager `new Image()` preload would fetch art
+  // for the entire pool (~600 cards) on mount. `loading="lazy"` lets the
+  // browser fetch only what scrolls into view.
+  const [hasError, setHasError] = useState(false);
+  const src = getCardImageUrl(card.cardnumber, card.isAltArt ?? false);
   return (
     <div className={`bld-card-image ${className}`}>
-      {!isLoading && !hasError && src ? (
-        <img src={src} alt={card.name} draggable={false} />
+      {!hasError ? (
+        <img
+          src={src}
+          alt={card.name}
+          draggable={false}
+          loading="lazy"
+          onError={() => setHasError(true)}
+        />
       ) : (
-        <span>{isLoading ? 'LOADING ART' : card.name}</span>
+        <span>{card.name}</span>
       )}
     </div>
   );
@@ -200,6 +210,29 @@ export function DeckBuilderPage() {
     };
   }, [routeDeckId, loadDeck, clearDeck]);
 
+  // Seed the browse pool with the FULL implemented card pool from local
+  // data (embedded cards.json on desktop, hosted API copy in browser).
+  // This is what guarantees every implemented card is browsable — the
+  // remote-search effect below only enriches entries (alt arts,
+  // set names) and must never be the only source.
+  useEffect(() => {
+    let cancelled = false;
+    deckApi
+      .listCardDatabase()
+      .then((cards) => {
+        if (cancelled) return;
+        // Append after current so richer remote-search entries win dedupe.
+        setCardPool((current) => uniqueCards([...current, ...cards]));
+        setPreviewCard((current) => current ?? cards[0] ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setNotice('Local card database unavailable');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const search = builderFilters.search.trim();
@@ -213,11 +246,12 @@ export function DeckBuilderPage() {
         const allowed = testedCardIds && testedCardIds.size > 0
           ? results.filter((card) => testedCardIds.has(card.cardnumber))
           : results;
-        setCardPool((current) => uniqueCards([...allowed.slice(0, 96), ...current]).slice(0, 160));
+        setCardPool((current) => uniqueCards([...allowed, ...current]));
         setPreviewCard((current) => current ?? allowed[0] ?? null);
       })
       .catch(() => {
-        if (!cancelled) setNotice('Card search unavailable');
+        // Remote enrichment (alt arts, set names) is best-effort; the
+        // local database seed above keeps the builder fully usable.
       });
 
     return () => {
@@ -227,7 +261,7 @@ export function DeckBuilderPage() {
 
   const counts = useMemo(() => getBuilderCounts(mainDeck, eggDeck), [mainDeck, eggDeck]);
   const visibleCards = useMemo(
-    () => filterBuilderCards(cardPool, builderFilters).slice(0, 120),
+    () => filterBuilderCards(cardPool, builderFilters),
     [builderFilters, cardPool],
   );
   const activeCards = activeSection === 'egg' ? eggDeck : mainDeck;
