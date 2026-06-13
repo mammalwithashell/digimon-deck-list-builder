@@ -20,6 +20,11 @@ import './RoomLobbyPage.css';
 
 const POLL_INTERVAL_MS = 2000;
 
+// Desktop renders inside a fixed, non-scrolling 1080px canvas; the lobby
+// must fit within it so the action bar never clips off-screen. Web scrolls
+// normally, so it keeps the default flow layout.
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+
 const FIRST_PLAYER_OPTIONS: Array<{ value: FirstPlayerChoice; label: string }> = [
   { value: '1', label: '1' },
   { value: 'random', label: 'RANDOM' },
@@ -279,7 +284,7 @@ export function RoomLobbyPage() {
       crumbs={[{ label: 'PLAY', href: '/play' }, { label: 'ROOM MATCH' }, { label: 'LOBBY' }]}
       rightSlot={<span>{format.name}</span>}
     >
-      <main className="room-main">
+      <main className={`room-main${IS_DESKTOP ? ' room-main--canvas' : ''}`}>
         <header className="room-header">
           <div>
             <span>
@@ -323,6 +328,21 @@ export function RoomLobbyPage() {
           </section>
         )}
 
+        <div className="room-actions">
+          {isHost ? (
+            <button type="button" disabled={!bothReady || starting} onClick={handleStart}>
+              {starting ? 'STARTING' : 'START GAME'}
+            </button>
+          ) : (
+            <span className={`ready ${myDeckReady ? 'on' : 'waiting'}`}>
+              {myDeckReady ? 'READY - WAITING FOR HOST TO START' : 'LOCK A DECK TO READY UP'}
+            </span>
+          )}
+          <button type="button" onClick={handleBack}>
+            {isHost ? 'CANCEL ROOM' : 'LEAVE ROOM'}
+          </button>
+        </div>
+
         <section className="room-deck-picker" aria-label="Room deck selection">
           <div className="room-deck-picker-head">
             <div>
@@ -353,21 +373,6 @@ export function RoomLobbyPage() {
             {decks.length === 0 && <div className="room-empty">NO SAVED DECKS</div>}
           </div>
         </section>
-
-        <div className="room-actions">
-          {isHost ? (
-            <button type="button" disabled={!bothReady || starting} onClick={handleStart}>
-              {starting ? 'STARTING' : 'START GAME'}
-            </button>
-          ) : (
-            <span className={`ready ${myDeckReady ? 'on' : 'waiting'}`}>
-              {myDeckReady ? 'READY - WAITING FOR HOST TO START' : 'LOCK A DECK TO READY UP'}
-            </span>
-          )}
-          <button type="button" onClick={handleBack}>
-            {isHost ? 'CANCEL ROOM' : 'LEAVE ROOM'}
-          </button>
-        </div>
       </main>
     </InBetweenShell>
   );
