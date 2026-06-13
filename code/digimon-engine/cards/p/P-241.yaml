@@ -32,20 +32,16 @@
 #     your Digimon with the [Appmon] trait", distinct from the linked host).
 #     grant_keyword Vortex to that Digimon, expiry end_of_your_turn.
 #     add_dp_modifier +3000 to that Digimon, expiry end_of_your_turn.
-#   App-fuse rider — BLOCKED (see PARTIAL note below).
+#   App-fuse rider → `app_fuse { from: hand, optional: true }`.
 #
 # Clause 3 — `[Security] Play this card without paying the cost`:
 #   Canonical Tamer security idiom. `when: on_security`, `play_from_security: {}`.
 #
-# ─── PARTIAL ──────────────────────────────────────────────────────────────────
+# ─── IMPLEMENTED (2026-06-13) ─────────────────────────────────────────────────
 #
 # The tail of Clause 2 — "Then, 1 of your Digimon may app fuse into a Digimon
-# card in the hand." — is OMITTED because there is no engine primitive for
-# effect-initiated App Fusion (no `EffectContext::effect_initiated_app_fuse`,
-# no DSL step). Gap: effect-initiated app fuse — see docs/RUST_ENGINE_GAPS.md
-# (App Fuse entry). Same gap keeps BT21-084, BT23-079, BT24-087, BT25-089 PARTIAL.
-#
-# The "<Vortex> + +3000 DP for the turn" portion IS implemented.
+# card in the hand." — now ships via the effect-initiated `app_fuse` step
+# (`EffectContext::initiate_effect_app_fuse`, from: hand).
 
 card: P-241
 name: "Yujin Ozora"
@@ -62,10 +58,9 @@ effects:
     process:
       - set_memory: 3
 
-  # ─── Clause 2 (partial): [Your Turn] When any of your Digimon get linked →
-  #     suspend self, 1 Appmon Digimon gains <Vortex> + +3000 DP for the turn.
-  # App-fuse rider OMITTED (engine gap: effect-initiated app fuse from hand,
-  # docs/RUST_ENGINE_GAPS.md). Same gap as BT21-084, BT23-079, BT24-087, BT25-089.
+  # ─── Clause 2: [Your Turn] When any of your Digimon get linked →
+  #     suspend self, 1 Appmon Digimon gains <Vortex> + +3000 DP for the turn,
+  #     then 1 of your Digimon may app fuse into a hand card.
   #
   # active_when.all_of:
   #   - your_turn: true            — [Your Turn] scope
@@ -103,6 +98,8 @@ effects:
           target: tgt
           value: 3000
           expiry: end_of_your_turn
+      # Then, 1 of your Digimon may app fuse into a Digimon card in the hand.
+      - app_fuse: { from: hand, optional: true }
 
   # ─── Clause 3: [Security] play this card without paying the cost ──────────────
   - when: on_security

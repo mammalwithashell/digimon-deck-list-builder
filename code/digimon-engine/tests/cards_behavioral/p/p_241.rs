@@ -438,3 +438,105 @@ fn p_241_opponent_digimon_linked_no_prompt() {
 
 // Covered by p_241_security_clause_has_play_from_security_step above.
 // Behavioral security-play runtime is well-established (BT21-084, BT23-079).
+
+// ─── Clause 2 tail: App Fuse from hand (effect-initiated, 2026-06-13) ─────────
+
+const APP_FUSE_RESULT: &str = r#"
+card: TEST-APPFUSE
+name: Test App Fusion Digimon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 9000
+traits: [Appmon]
+alt_paths:
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Kabemon, Gomimon]
+    cost: 0
+"#;
+
+fn named_material(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 4;
+    c.traits = vec!["Appmon".to_string()];
+    c
+}
+
+/// Full chain: link Gomimon onto a Kabemon (Appmon) host → accept → suspend →
+/// pick the host as the <Vortex>/+3000 target → app fuse a hand card onto it.
+#[test]
+fn p_241_app_fuse_from_hand_after_vortex_grant() {
+    use digimon_engine::action::space::{encode_attack, HAND_EFFECT_START};
+
+    let mut r = base()
+        .from_dsl_yaml(APP_FUSE_RESULT)
+        .expect("APP_FUSE_RESULT compiles")
+        .add_card(named_material("TEST-KABEMON", "Kabemon"))
+        .add_card(named_material("TEST-GOMIMON", "Gomimon"))
+        .deck(0, &["DECK-PAD"; 12])
+        .hand(0, &["TEST-APPFUSE"])
+        .memory(5)
+        .start();
+    let _yujin = r.place_on_field(0, CARD_ID, Some(0));
+    // Host is an [Appmon] Kabemon — eligible both as the Vortex target and (once
+    // Gomimon is linked) as the app-fuse target.
+    let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
+    r.game.enter_main_phase();
+
+    let host_handle = r.perm_handle(0, host.index as usize);
+    let host_action = encode_attack(0, host.index as u16);
+    fire_link_event(&mut r, 0, host_handle, "TEST-GOMIMON");
+
+    // 1. Accept the outer optional prompt → suspend + Vortex-target selection.
+    {
+        let sel = r.game.pending_selection.as_ref().expect("optional prompt");
+        let action = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(0, action);
+        r.game.drain_effect_queue();
+    }
+    // 2. Vortex/+3000 target selection: pick the host (the only [Appmon] Digimon).
+    {
+        let _sel = r.pending_selection_view().expect("Vortex target selection");
+        r.execute_action(0, host_action).expect("pick Vortex target");
+    }
+    assert!(
+        r.game.has_keyword(host_handle, Keyword::Vortex),
+        "host gains <Vortex> for the turn"
+    );
+
+    // 3. App-fuse selection #1: pick the host.
+    {
+        let view = r
+            .pending_selection_view()
+            .expect("app-fuse perm selection installs after the Vortex grant");
+        assert!(
+            view.valid_action_ids.contains(&host_action),
+            "host with Kabemon+Gomimon is an eligible app-fuse target"
+        );
+        r.execute_action(0, host_action).expect("pick host");
+    }
+    // 4. App-fuse selection #2: the hand result.
+    {
+        let card_pos = r.game.players[0]
+            .hand
+            .iter()
+            .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE")
+            .expect("result still in hand");
+        r.execute_action(0, HAND_EFFECT_START + card_pos as u16)
+            .expect("pick hand result");
+    }
+
+    assert_eq!(
+        r.game.players[0].battle_area[host.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TEST-APPFUSE",
+        "hand result app-fused onto the host after the Vortex/DP grant"
+    );
+}
