@@ -34,6 +34,7 @@ from server.routers.schemas import (
     GameActionRequest,
     SurrenderRequest,
 )
+from server.routers.seed_utils import seed_to_wire
 from server.routers.state import active_games
 
 router = APIRouter(tags=["games"])
@@ -152,6 +153,7 @@ def _build_state_payload(
         # `agent_pending` (cross-wire parity, add-bot-action-pacing).
         "agent_pending": not game.is_game_over and not _is_human_turn(game, meta),
         "player_labels": meta.player_labels,
+        "seed": seed_to_wire(meta.seed),
     }
 
 
@@ -383,7 +385,10 @@ def game_agent_step(game_id: str):
 def game_state(game_id: str):
     """Return the current `to_ui_json` snapshot."""
     game = _require_game(game_id)
-    return game.to_ui_json()
+    meta = _require_meta(game_id)
+    state = dict(game.to_ui_json())
+    state["seed"] = seed_to_wire(meta.seed)
+    return state
 
 
 @router.post("/games/{game_id}/export-scenario")

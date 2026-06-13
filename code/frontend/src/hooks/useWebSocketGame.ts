@@ -14,6 +14,7 @@ interface StateUpdatePayload {
   logs?: string[];
   events?: GameEvent[];
   your_player_id?: number;
+  seed?: string | null;
 }
 
 interface PlayerJoinedPayload {

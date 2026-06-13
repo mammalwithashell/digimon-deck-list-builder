@@ -4,6 +4,7 @@ interface ResultOverlayProps {
   localPlayer: number;
   playerLabels: Record<number, string>;
   surrenderedBy?: number | null;
+  gameSeed?: string | null;
   onReturnToMenu: () => void;
 }
 
@@ -13,6 +14,7 @@ export function ResultOverlay({
   localPlayer,
   playerLabels,
   surrenderedBy,
+  gameSeed,
   onReturnToMenu,
 }: ResultOverlayProps) {
   if (!isGameOver) return null;
@@ -71,12 +73,29 @@ export function ResultOverlay({
 
         <p className="text-lg text-gray-300">{subText}</p>
 
+        {gameSeed && (
+          <div className="grid gap-2 text-center">
+            <span className="text-xs uppercase tracking-widest text-white/55">Shuffle seed</span>
+            <code className="select-all rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white">
+              {gameSeed}
+            </code>
+            <button
+              type="button"
+              aria-label="Copy seed"
+              onClick={() => void navigator.clipboard?.writeText(gameSeed)}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold text-sm rounded-lg transition-colors"
+            >
+              Copy Seed
+            </button>
+          </div>
+        )}
+
         <button
           data-testid="result-return"
           onClick={onReturnToMenu}
           className="mt-4 px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-lg rounded-lg transition-colors"
         >
-          Return to Menu
+          Return to Launcher
         </button>
       </div>
     </div>

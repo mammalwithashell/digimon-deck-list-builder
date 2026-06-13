@@ -121,6 +121,32 @@
   border: 1px solid rgba(255, 122, 24, 0.4);
 }
 
+.deck-confirm-info {
+  display: grid;
+  gap: 10px;
+}
+
+.deck-seed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(245, 241, 232, 0.7);
+  font-size: 11px;
+}
+
+.deck-seed-control input {
+  width: 220px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f5f1e8;
+  padding: 8px 10px;
+}
+
+.deck-seed-control em {
+  color: #ffcc4a;
+  font-style: normal;
+}
+
 .deck-confirm-bar button {
   background: #ff7a18;
   border: 0;

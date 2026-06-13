@@ -11,9 +11,11 @@ import {
   leaveRoom,
   setRoomDeck,
   setRoomFirstPlayer,
+  setRoomSeed,
   startRoom,
 } from '@/features/play/playApi';
 import { usePlayFlowStore } from '@/features/play/playFlowStore';
+import { normalizeSeedInput } from '@/api/gameApi';
 import type { FirstPlayerChoice, LobbyState } from '@/api/lobbyApi';
 import type { DeckResponse, DeckSummary } from '@/types/deck';
 import './RoomLobbyPage.css';
@@ -42,6 +44,9 @@ export function RoomLobbyPage() {
   const [lockingDeck, setLockingDeck] = useState(false);
   const [lockedDeckId, setLockedDeckId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [seedInput, setSeedInput] = useState('');
+  const [seedDirty, setSeedDirty] = useState(false);
+  const [savingSeed, setSavingSeed] = useState(false);
   const [notice, setNotice] = useState('');
   const createRequest = useRef<Promise<{ game_id: string; join_code: string }> | null>(null);
   const navigatedRef = useRef(false);
@@ -152,10 +157,14 @@ export function RoomLobbyPage() {
         .then((state) => {
           if (cancelled) return;
           setRoomState(state);
+          if (!seedDirty) {
+            setSeedInput(state.seed ?? '');
+          }
           setQueue({
             gameId: state.game_id,
             roomCode: state.join_code ?? undefined,
             seat: state.your_seat ?? undefined,
+            seed: state.seed ?? undefined,
           });
         })
         .catch((err: unknown) => {
@@ -177,7 +186,7 @@ export function RoomLobbyPage() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [navigate, routeGameId, setQueue]);
+  }, [navigate, routeGameId, seedDirty, setQueue]);
 
   // Auto-enter the game for both seats once started.
   useEffect(() => {
@@ -211,10 +220,48 @@ export function RoomLobbyPage() {
   }, [canLockDeck, deck, deckId, lockedDeckId, visibleGameId]);
 
   const handleFirstPlayer = (choice: FirstPlayerChoice) => {
-    if (!visibleGameId || !isHost || roomState?.started) return;
+    if (!visibleGameId || !isHost || roomState?.started || roomState?.first_player_seed_locked) return;
     setRoomFirstPlayer({ gameId: visibleGameId, firstPlayer: choice })
       .then(setRoomState)
       .catch(() => setNotice('Unable to set first player'));
+  };
+
+  const handleSeedSave = () => {
+    if (!visibleGameId || !isHost || roomState?.started || savingSeed) return;
+    let normalized: string | null;
+    try {
+      normalized = normalizeSeedInput(seedInput);
+    } catch (err) {
+      setNotice((err as Error).message);
+      return;
+    }
+    setSavingSeed(true);
+    setRoomSeed({ gameId: visibleGameId, seed: normalized })
+      .then((state) => {
+        setRoomState(state);
+        setSeedInput(state.seed ?? '');
+        setSeedDirty(false);
+        setQueue({ seed: state.seed ?? null });
+        setNotice(normalized ? 'Seed locked for this room' : 'Room seed cleared');
+      })
+      .catch(() => setNotice('Unable to set game seed'))
+      .finally(() => setSavingSeed(false));
+  };
+
+  const handleSeedClear = () => {
+    setSeedInput('');
+    setSeedDirty(true);
+    if (!visibleGameId || !isHost || roomState?.started) return;
+    setSavingSeed(true);
+    setRoomSeed({ gameId: visibleGameId, seed: null })
+      .then((state) => {
+        setRoomState(state);
+        setSeedDirty(false);
+        setQueue({ seed: null });
+        setNotice('Room seed cleared');
+      })
+      .catch(() => setNotice('Unable to clear game seed'))
+      .finally(() => setSavingSeed(false));
   };
 
   const handleStart = () => {
@@ -223,6 +270,7 @@ export function RoomLobbyPage() {
     startRoom(visibleGameId)
       .then((state) => {
         setRoomState(state);
+        setQueue({ seed: state.seed ?? null });
       })
       .catch(() => {
         setNotice('Unable to start — both decks must be locked');
@@ -312,20 +360,44 @@ export function RoomLobbyPage() {
         </section>
 
         {isHost && (
-          <section className="room-first-player" aria-label="First player">
-            <span className="room-first-player-label">// FIRST PLAYER</span>
-            {FIRST_PLAYER_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={(roomState?.first_player ?? 'random') === option.value ? 'on' : ''}
+          <div className="room-setup-row">
+            <section className="room-first-player" aria-label="First player">
+              <span className="room-first-player-label">// FIRST PLAYER</span>
+              {FIRST_PLAYER_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={(roomState?.first_player ?? 'random') === option.value ? 'on' : ''}
+                  disabled={roomState?.started || roomState?.first_player_seed_locked}
+                  onClick={() => handleFirstPlayer(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+              {roomState?.first_player_seed_locked && (
+                <em>Seed decides first player</em>
+              )}
+            </section>
+            <section className="room-seed-panel" aria-label="Room game seed">
+              <span className="room-first-player-label">// SHUFFLE SEED</span>
+              <input
+                value={seedInput}
+                onChange={(event) => {
+                  setSeedInput(event.target.value);
+                  setSeedDirty(true);
+                }}
+                placeholder="Random"
+                inputMode="numeric"
                 disabled={roomState?.started}
-                onClick={() => handleFirstPlayer(option.value)}
-              >
-                {option.label}
+              />
+              <button type="button" disabled={roomState?.started || savingSeed} onClick={handleSeedSave}>
+                {savingSeed ? 'SAVING' : 'SET'}
               </button>
-            ))}
-          </section>
+              <button type="button" disabled={roomState?.started || savingSeed} onClick={handleSeedClear}>
+                CLEAR
+              </button>
+            </section>
+          </div>
         )}
 
         <div className="room-actions">

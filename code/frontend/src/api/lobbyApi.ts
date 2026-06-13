@@ -23,6 +23,9 @@ export interface LobbyState {
   host_deck_ready: boolean;
   joiner_deck_ready: boolean;
   first_player: FirstPlayerChoice | null;
+  seed: string | null;
+  seed_mode: 'generated' | 'explicit';
+  first_player_seed_locked: boolean;
   started: boolean;
   your_seat: 1 | 2 | null;
   allow_spectators?: boolean;
@@ -68,6 +71,11 @@ export async function setFirstPlayer(
   const { data } = await client.put<LobbyState>(`/lobby/${gameId}/first-player`, {
     first_player: firstPlayer,
   });
+  return data;
+}
+
+export async function setSeed(gameId: string, seed: string | null): Promise<LobbyState> {
+  const { data } = await client.put<LobbyState>(`/lobby/${gameId}/seed`, { seed });
   return data;
 }
 

@@ -21,11 +21,22 @@ describe('playFlowStore', () => {
 
   it('resets transient queue and room fields without clearing the selected format', () => {
     usePlayFlowStore.getState().selectFormat('standard');
-    usePlayFlowStore.getState().setQueue({ ticketId: 'ticket-1', roomCode: 'ABC123' });
+    usePlayFlowStore.getState().setQueue({
+      ticketId: 'ticket-1',
+      roomCode: 'ABC123',
+      seed: '777',
+    });
     usePlayFlowStore.getState().clearLaunchState();
 
     expect(usePlayFlowStore.getState().formatId).toBe('standard');
     expect(usePlayFlowStore.getState().ticketId).toBeNull();
     expect(usePlayFlowStore.getState().roomCode).toBeNull();
+    expect(usePlayFlowStore.getState().seed).toBeNull();
+  });
+
+  it('stores the effective game seed as a string', () => {
+    usePlayFlowStore.getState().setQueue({ gameId: 'game-1', seed: '18446744073709551615' });
+
+    expect(usePlayFlowStore.getState().seed).toBe('18446744073709551615');
   });
 });

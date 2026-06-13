@@ -993,6 +993,7 @@ pub struct ActionResponseDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateGameResponseDto {
     pub game_id: String,
+    pub seed: String,
     pub state: GameStateDto,
     pub action_mask: Vec<u8>,
 }
@@ -1172,6 +1173,23 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
     dto
 }
 
+fn parse_optional_seed(seed: Option<String>) -> Result<Option<u64>, String> {
+    let Some(raw) = seed else {
+        return Ok(None);
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    if !trimmed.chars().all(|c| c.is_ascii_digit()) {
+        return Err("seed must be a base-10 integer in the u64 range".to_string());
+    }
+    trimmed
+        .parse::<u64>()
+        .map(Some)
+        .map_err(|_| "seed must be in the u64 range".to_string())
+}
+
 /// Drain structured gameplay events emitted by the engine during the last
 /// action. The DTO mirrors the browser/PyO3 `GameEvent.to_dict` shape so the
 /// shared frontend can consume desktop and browser responses identically.
@@ -1216,6 +1234,7 @@ pub fn rust_create_game(
     deck2: Option<Vec<String>>,
     player_kinds: Option<Vec<PlayerKind>>,
     player_model_ids: Option<Vec<Option<String>>>,
+    seed: Option<String>,
 ) -> Result<CreateGameResponseDto, String> {
     // When the caller provided real decks, use the production card pool so
     // BT/EX/AD/P/ST card IDs resolve. Without this, `Game::new` would fail
@@ -1232,7 +1251,8 @@ pub fn rust_create_game(
         deck2.unwrap_or_else(test_deck),
     ];
     let player_count = decks.len();
-    let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
+    let effective_seed = parse_optional_seed(seed)?.unwrap_or_else(rand::random::<u64>);
+    let mut game = Game::new(&decks, &db, Rules::standard(), Some(effective_seed))
         .map_err(|e| format!("Game::new failed: {}", e))?;
     game.start_game();
 
@@ -1263,6 +1283,7 @@ pub fn rust_create_game(
 
     Ok(CreateGameResponseDto {
         game_id: "rust-local".to_string(),
+        seed: effective_seed.to_string(),
         state: dto,
         action_mask: mask,
     })
@@ -2461,6 +2482,27 @@ mod tests {
         let err = normalize_player_model_ids(Some(vec![None, None]), 2, &kinds).unwrap_err();
         assert!(err.contains("player 0"));
         assert!(err.contains("model_id"));
+    }
+
+    #[test]
+    fn parse_optional_seed_accepts_blank_and_max_u64() {
+        assert_eq!(parse_optional_seed(None).unwrap(), None);
+        assert_eq!(parse_optional_seed(Some("   ".to_string())).unwrap(), None);
+        assert_eq!(
+            parse_optional_seed(Some("18446744073709551615".to_string())).unwrap(),
+            Some(u64::MAX)
+        );
+    }
+
+    #[test]
+    fn parse_optional_seed_rejects_invalid_values() {
+        for value in ["-1", "1.5", "seed", "18446744073709551616"] {
+            let err = parse_optional_seed(Some(value.to_string())).unwrap_err();
+            assert!(
+                err.contains("base-10") || err.contains("u64"),
+                "unexpected error for {value}: {err}"
+            );
+        }
     }
 
     #[test]

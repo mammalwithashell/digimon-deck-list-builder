@@ -33,6 +33,7 @@ import { normalizeGameEvents } from '@/utils/gameEvents';
 
 interface CreateGameCommandResponse {
   game_id: string;
+  seed: string;
   state: GameStateDto;
   action_mask: number[];
 }
@@ -121,6 +122,7 @@ interface CreateGameParams {
   agent_action_delay_ms?: number;
   player_kinds?: PlayerKind[];
   player_model_ids?: (string | null)[];
+  seed?: string | null;
   /** Paced agent stepping (add-bot-action-pacing): cap agent autoplay at
    *  one action per request so each bot action renders as a beat. Only
    *  meaningful on the browser wire's create (which runs an opening agent
@@ -130,6 +132,7 @@ interface CreateGameParams {
 
 interface CreateGameResponse {
   game_id: string;
+  seed?: string;
   state: GameState;
   action_mask: number[];
   logs?: string[];
@@ -141,10 +144,26 @@ interface CreateGameResponse {
   agent_pending?: boolean;
 }
 
+const MAX_U64 = 18_446_744_073_709_551_615n;
+
+export function normalizeSeedInput(seed: string | null | undefined): string | null {
+  const trimmed = seed?.trim() ?? '';
+  if (!trimmed) return null;
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error('Seed must be a base-10 integer in the u64 range.');
+  }
+  const parsed = BigInt(trimmed);
+  if (parsed > MAX_U64) {
+    throw new Error('Seed must be in the u64 range.');
+  }
+  return parsed.toString();
+}
+
 interface ActionResponse {
   state: GameState;
   action_mask: number[];
   is_game_over: boolean;
+  seed?: string;
   logs?: string[];
   events?: GameEvent[];
   action_context?: Record<string, unknown>;
@@ -157,6 +176,7 @@ interface ActionResponse {
 interface StepResponse {
   state: GameState;
   action_mask: number[];
+  seed?: string;
   logs: string[];
   events?: GameEvent[];
   is_human_turn: boolean;
@@ -169,6 +189,7 @@ interface StepResponse {
 interface SurrenderResponse {
   state: GameState;
   action_mask: number[];
+  seed?: string;
   logs: string[];
   events?: GameEvent[];
   is_game_over: boolean;
@@ -506,6 +527,7 @@ export async function createGame(
       player1_policy: 'greedy',
       player2_policy: 'greedy',
       paced: params.paced ?? false,
+      seed: normalizeSeedInput(params.seed),
     };
     const httpResp = await httpJson<{
       game_id: string;
@@ -515,9 +537,11 @@ export async function createGame(
       events?: GameEvent[];
       player_labels?: Record<number, string>;
       agent_pending?: boolean;
+      seed?: string;
     }>('/games', { method: 'POST', body });
     return {
       game_id: httpResp.game_id,
+      seed: httpResp.seed,
       state: httpResp.state,
       action_mask: httpResp.action_mask,
       logs: httpResp.logs ?? [],
@@ -539,9 +563,11 @@ export async function createGame(
     deck2: params.deck2 ?? null,
     playerKinds: kinds ?? null,
     playerModelIds: modelIds,
+    seed: normalizeSeedInput(params.seed),
   });
   return {
     game_id: resp.game_id,
+    seed: resp.seed,
     state: dtoToGameState(resp.state),
     action_mask: resp.action_mask,
     logs: [],
@@ -592,11 +618,13 @@ export async function sendAction(
       events: GameEvent[];
       action_context?: Record<string, unknown>;
       agent_pending?: boolean;
+      seed?: string;
     }>(`/games/${gameId}/actions`, { method: 'POST', body: { action, paced } });
     return {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
       is_game_over: httpResp.is_game_over,
+      seed: httpResp.seed,
       logs: httpResp.logs,
       events: normalizeGameEvents(httpResp.events),
       action_context: httpResp.action_context,
@@ -641,10 +669,12 @@ export async function stepGame(
       events: GameEvent[];
       is_human_turn: boolean;
       agent_pending?: boolean;
+      seed?: string;
     }>(route, { method: 'POST' });
     return {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
+      seed: httpResp.seed,
       logs: httpResp.logs,
       events: normalizeGameEvents(httpResp.events),
       is_human_turn: httpResp.is_human_turn,
@@ -724,6 +754,7 @@ export async function surrenderGame(
       events: GameEvent[];
       is_game_over: boolean;
       surrendered_by: number;
+      seed?: string;
     }>(`/games/${gameId}/surrender`, {
       method: 'POST',
       body: { player_id: playerId },
@@ -731,6 +762,7 @@ export async function surrenderGame(
     return {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
+      seed: httpResp.seed,
       logs: httpResp.logs,
       events: normalizeGameEvents(httpResp.events),
       is_game_over: httpResp.is_game_over,

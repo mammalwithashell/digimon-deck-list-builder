@@ -208,6 +208,66 @@ class TestRoomLifecycle:
         state = (await client.get(f"/lobby/{game_id}/state", headers=h_join)).json()
         assert state["first_player"] == "2"
 
+    async def test_room_seed_is_host_only_visible_and_clearable(self, client: AsyncClient):
+        _, h_host = await _guest(client)
+        _, h_join = await _guest(client)
+        game_id, code = await _create_room(client, h_host)
+        await client.post(f"/lobby/join/{code}", headers=h_join)
+
+        joiner_seed = await client.put(
+            f"/lobby/{game_id}/seed", json={"seed": "12345"}, headers=h_join
+        )
+        assert joiner_seed.status_code == 403
+
+        set_seed = await client.put(
+            f"/lobby/{game_id}/seed", json={"seed": "18446744073709551615"}, headers=h_host
+        )
+        assert set_seed.status_code == 200
+        state = set_seed.json()
+        assert state["seed"] == "18446744073709551615"
+        assert state["seed_mode"] == "explicit"
+        assert state["first_player_seed_locked"] is True
+
+        visible_to_joiner = (await client.get(f"/lobby/{game_id}/state", headers=h_join)).json()
+        assert visible_to_joiner["seed"] == "18446744073709551615"
+
+        cleared = await client.put(f"/lobby/{game_id}/seed", json={"seed": ""}, headers=h_host)
+        assert cleared.status_code == 200
+        assert cleared.json()["seed"] is None
+        assert cleared.json()["seed_mode"] == "generated"
+        assert cleared.json()["first_player_seed_locked"] is False
+
+    async def test_invalid_room_seed_is_rejected(self, client: AsyncClient):
+        _, h_host = await _guest(client)
+        game_id, _ = await _create_room(client, h_host)
+
+        for seed in ["-1", "1.5", "oops", "18446744073709551616"]:
+            resp = await client.put(f"/lobby/{game_id}/seed", json={"seed": seed}, headers=h_host)
+            assert resp.status_code == 422
+            assert "base-10" in resp.text or "u64" in resp.text
+
+    async def test_explicit_room_seed_starts_unchanged_and_controls_first_player(
+        self, client: AsyncClient
+    ):
+        from server.routers.state import active_games
+
+        _, h_host = await _guest(client)
+        _, h_join = await _guest(client)
+        game_id, code = await _create_room(client, h_host)
+        await client.post(f"/lobby/join/{code}", headers=h_join)
+        await client.put(f"/lobby/{game_id}/deck", json={"deck": _legal_deck()}, headers=h_host)
+        await client.put(f"/lobby/{game_id}/deck", json={"deck": _legal_deck()}, headers=h_join)
+        await client.put(
+            f"/lobby/{game_id}/first-player", json={"first_player": "2"}, headers=h_host
+        )
+        await client.put(f"/lobby/{game_id}/seed", json={"seed": "4242"}, headers=h_host)
+
+        started = await client.post(f"/lobby/{game_id}/start", headers=h_host)
+        assert started.status_code == 200
+        assert started.json()["seed"] == "4242"
+        assert started.json()["seed_mode"] == "explicit"
+        assert active_games[game_id].current_player_id == 1
+
     @pytest.mark.parametrize("choice,expected_pid", [("1", 1), ("2", 2)])
     async def test_first_player_choice_maps_to_created_game(
         self, client: AsyncClient, choice: str, expected_pid: int
@@ -232,6 +292,9 @@ class TestRoomLifecycle:
         # The first decision of a fresh game (mulligan) belongs to the
         # first player; current_player_id is the Python 1/2 decision player.
         assert runner.current_player_id == expected_pid
+        state = (await client.get(f"/lobby/{game_id}/state", headers=h_host)).json()
+        assert state["seed"] is not None
+        assert int(state["seed"]) % 2 == (0 if choice == "1" else 1)
 
     async def test_leave_and_cancel(self, client: AsyncClient):
         _, h_host = await _guest(client)

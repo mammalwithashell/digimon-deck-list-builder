@@ -14,6 +14,7 @@ import { normalizeGameEvents } from '@/utils/gameEvents';
 interface GameStore {
   // Game session
   gameId: string | null;
+  gameSeed: string | null;
 
   // Game state
   turnCount: number;
@@ -45,6 +46,7 @@ interface GameStore {
 
   // Actions
   setGameId: (id: string | null) => void;
+  setGameSeed: (seed: string | null) => void;
   setGameState: (state: GameState) => void;
   setActionMask: (mask: number[]) => void;
   setAgentPending: (pending: boolean) => void;
@@ -62,6 +64,7 @@ interface GameStore {
 
 const initialState = {
   gameId: null,
+  gameSeed: null,
   turnCount: 0,
   currentPhase: 0 as GamePhase,
   currentPlayer: 0,
@@ -89,6 +92,7 @@ export const useGameStore = create<GameStore>((set) => ({
   ...initialState,
 
   setGameId: (id) => set({ gameId: id }),
+  setGameSeed: (seed) => set({ gameSeed: seed }),
 
   setGameState: (state) =>
     set({

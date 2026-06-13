@@ -31,6 +31,7 @@ class GameSettings:
     spectator_mode: str = "hidden"  # "hidden" or "open"
     host_user_id: Optional[str] = None
     joiner_user_id: Optional[str] = None  # Set when player 2 joins via lobby
+    seed: Optional[str] = None
 
 
 @dataclass
@@ -196,6 +197,8 @@ class ConnectionManager:
                 "is_game_over": is_game_over,
                 "your_player_id": pid,
             }
+            if conn.settings.seed is not None:
+                payload["seed"] = conn.settings.seed
             if logs:
                 payload["logs"] = logs
             if events:
@@ -213,6 +216,8 @@ class ConnectionManager:
                 "current_player_id": current_pid,
                 "is_game_over": is_game_over,
             }
+            if conn.settings.seed is not None:
+                spec_payload["seed"] = conn.settings.seed
             if logs:
                 spec_payload["logs"] = logs
             if events:
