@@ -1,0 +1,111 @@
+# P-241 Yujin Ozora — Tamer, Green, Cost 4.
+# Traits: App Driver / Appmon
+#
+# Printed card text (card image — authoritative):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [Your Turn] When any of your Digimon get linked, by suspending this Tamer,
+#     1 of your Digimon with the [Appmon] trait gains <Vortex> (At the end of
+#     your turn, this Digimon may attack an opponent's Digimon. With this
+#     effect, it can attack the turn it was played.) and +3000 DP for the turn.
+#     Then, 1 of your Digimon may app fuse into a Digimon card in the hand.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: ABSENT — P-241 is a promo with no DCGO file.
+# Ground truth: printed card text + on_any_link sibling cards (BT21-084, BT23-079, BT24-087).
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# No DCGO C# for this card. Modeled from printed text and sibling patterns:
+#
+# Clause 1 — `[Start of Your Turn] if memory <= 2, set it to 3`:
+#   Canonical ramp idiom — same as BT21-084.cs `SetMemoryTo3TamerEffect`.
+#   Maps to `when: start_of_your_turn` + `condition: { memory_lte: 2 }` + `set_memory: 3`.
+#
+# Clause 2 — `[Your Turn] When any of your Digimon get linked`:
+#   Same on_any_link sibling shape as BT21-084/BT23-079/BT24-087:
+#     active_when.all_of: [your_turn: true, event_target_owner: you]
+#     optional: true (canNoSelect: true in DCGO siblings)
+#     condition: { source_is_unsuspended: true } (CanActivateSuspendCostEffect)
+#     activation_cost: { suspend_self: true }
+#   Then — P-241-specific:
+#     Select 1 of YOUR Digimon with [Appmon] trait (NOT event_target — "1 of
+#     your Digimon with the [Appmon] trait", distinct from the linked host).
+#     grant_keyword Vortex to that Digimon, expiry end_of_your_turn.
+#     add_dp_modifier +3000 to that Digimon, expiry end_of_your_turn.
+#   App-fuse rider — BLOCKED (see PARTIAL note below).
+#
+# Clause 3 — `[Security] Play this card without paying the cost`:
+#   Canonical Tamer security idiom. `when: on_security`, `play_from_security: {}`.
+#
+# ─── PARTIAL ──────────────────────────────────────────────────────────────────
+#
+# The tail of Clause 2 — "Then, 1 of your Digimon may app fuse into a Digimon
+# card in the hand." — is OMITTED because there is no engine primitive for
+# effect-initiated App Fusion (no `EffectContext::effect_initiated_app_fuse`,
+# no DSL step). Gap: effect-initiated app fuse — see docs/RUST_ENGINE_GAPS.md
+# (App Fuse entry). Same gap keeps BT21-084, BT23-079, BT24-087, BT25-089 PARTIAL.
+#
+# The "<Vortex> + +3000 DP for the turn" portion IS implemented.
+
+card: P-241
+name: "Yujin Ozora"
+kind: tamer
+color: [green]
+cost: 4
+traits: ["App Driver", Appmon]
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] if memory <= 2, set it to 3 ──────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2 (partial): [Your Turn] When any of your Digimon get linked →
+  #     suspend self, 1 Appmon Digimon gains <Vortex> + +3000 DP for the turn.
+  # App-fuse rider OMITTED (engine gap: effect-initiated app fuse from hand,
+  # docs/RUST_ENGINE_GAPS.md). Same gap as BT21-084, BT23-079, BT24-087, BT25-089.
+  #
+  # active_when.all_of:
+  #   - your_turn: true            — [Your Turn] scope
+  #   - event_target_owner: you    — the link HOST must be our Digimon
+  # optional: true — player may decline (canNoSelect: true in siblings).
+  # condition: { source_is_unsuspended: true } — Yujin must be unsuspended to pay.
+  # activation_cost: { suspend_self: true } — must be first body step.
+  # select_own_permanent bind_as: tgt — choose 1 of our Digimon with [Appmon] trait.
+  #   NOTE: this is NOT event_target (the linked host) — the printed text says
+  #   "1 of your Digimon with the [Appmon] trait", which is a free selection.
+  # grant_keyword Vortex to tgt, expiry end_of_your_turn.
+  # add_dp_modifier +3000 to tgt, expiry end_of_your_turn.
+  - when: on_any_link
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+    condition: { source_is_unsuspended: true }
+    summary: "[Your Turn] When any of your Digimon get linked, suspend self → 1 [Appmon] Digimon gains <Vortex> and +3000 DP for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          prompt: "Choose 1 of your Digimon with the [Appmon] trait to gain <Vortex> and +3000 DP"
+      - grant_keyword:
+          target: tgt
+          keyword: Vortex
+          expiry: end_of_your_turn
+      - add_dp_modifier:
+          target: tgt
+          value: 3000
+          expiry: end_of_your_turn
+
+  # ─── Clause 3: [Security] play this card without paying the cost ──────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
