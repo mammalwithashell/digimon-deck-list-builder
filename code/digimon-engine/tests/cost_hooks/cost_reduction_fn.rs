@@ -445,6 +445,64 @@ fn digivolve_onto_breeding_applies_before_pay_cost_reduction() {
 }
 
 #[test]
+fn breeding_area_card_own_cost_reduction_does_not_apply() {
+    // Regression for the Elizamon (BT23-005) bug: a non-[Breeding] effect on a
+    // card sitting in the breeding area must NOT activate (general_rule.pdf
+    // 3-4-6-4: "Effects on cards can't trigger or activate unless the effect
+    // explicitly specifies/references breeding areas"; 3-4-6-7). Elizamon's
+    // "[Your Turn] reduce digivolution cost by 1" is a continuous effect — it
+    // applies only while Elizamon is in the BATTLE area, never while it raises
+    // in breeding.
+    //
+    // Setup mirrors `digivolve_onto_breeding_applies_before_pay_cost_reduction`,
+    // except the cost-reduction effect lives on the BREEDING card itself (not a
+    // battle-area permanent), and there is NO battle-area reducer.
+    //   - BASE-EGG (Lv3) in breeding, carrying StaticReductionOne.
+    //   - DIGI-B (Lv4, evo_cost 3 onto Lv3 Red) in hand; memory = 10.
+    // Expected: full cost 3 applies (no reduction) → memory = 10 - 3 = 7.
+    let base_egg = lv3_digimon("BASE-EGG");
+    let digi_b = lv4_digimon("DIGI-B", 3);
+
+    let mut r = DebugRunner::builder()
+        .add_card(base_egg)
+        .add_card(digi_b)
+        .hand(0, &["DIGI-B"])
+        .memory(10)
+        .start();
+
+    // The breeding card's own effect is a BeforePayCost cost reduction.
+    r.register_effect("BASE-EGG", Arc::new(StaticReductionOne));
+
+    // Manually place BASE-EGG into P0's breeding area (bypass hatch machinery).
+    {
+        let game = r.game_mut();
+        let data_idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BASE-EGG")
+            .unwrap();
+        let ci = game.next_card_index();
+        let card = CardSource::new(data_idx, 0, ci);
+        let turn = game.turn_count;
+        game.players[0].breeding_area = Some(Permanent::new(card, turn));
+    }
+
+    r.game_mut().enter_main_phase();
+
+    let memory_before = r.memory(); // 10
+    let ok = r
+        .game_mut()
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByDigivolve);
+    assert!(ok, "digivolve onto breeding should succeed");
+
+    assert_eq!(
+        r.memory(),
+        memory_before - 3,
+        "breeding-area card's own cost reduction must NOT apply (general_rule.pdf 3-4-6-4/3-4-6-7); effective cost = full 3"
+    );
+}
+
+#[test]
 fn effect_initiated_digivolve_stacks_cost_delta_with_reduction() {
     // Setup:
     //   - P0 has a Lv3 Digimon (TARGET-EID) on the field.
