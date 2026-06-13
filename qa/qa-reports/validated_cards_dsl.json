@@ -8840,6 +8840,75 @@
         "C3"
       ],
       "notes": "SecA+1, OnPlay/WhenDigivolving free link lv<=4, when-linked OPT delete dp_lte source_dp, [When Linking] host-DP-ceiling delete, +4000 linked dp aura. Engine fix: static_dp_aura_bonus .linked self-application guard. Review APPROVED."
+    },
+    "AD1-005": {
+      "card_name": "Gaiamon ACE",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_005.rs",
+      "test_count": 25,
+      "patterns": [
+        "H12",
+        "H13",
+        "H5",
+        "H4",
+        "E2"
+      ],
+      "notes": "ACE Overflow -4; Blast Digivolve; SecA+1/Blocker/Link+1 (ChangeLinkMax aura, first YAML use of modifier_value); 3-timing shared-OPT link up to 2 Social/Navi/Tool (no kind:digimon restriction) + dp_lte source_dp delete; App Fusion Globemon&Charismon; Ult. alt digivolve. Review APPROVED."
+    },
+    "BT21-101": {
+      "card_name": "Gaiamon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-101.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_101.rs",
+      "test_count": 24,
+      "patterns": [
+        "H5",
+        "C1",
+        "E2"
+      ],
+      "notes": "Blocker/Link+1; [WD][WA] link 1 Appmon to chosen_own_digimon free; on_any_link board-wide observer (unsuspend-self cost, gate source_is_unsuspended:false) -> trash opp top security; App Fusion; Ult. alt digivolve. First on_any_link production user. Review APPROVED."
+    },
+    "BT21-084": {
+      "card_name": "Haru Shinkai",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_084.rs",
+      "test_count": 12,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "Memory ramp <=2->3; on_any_link observer (suspend-self cost) -> Draw 1. OMITTED: effect-initiated app-fuse rider (engine gap, see docs/RUST_ENGINE_GAPS.md App Fuse; same gap blocks BT25-089). Security play-free. Review APPROVED as PARTIAL."
+    },
+    "P-217": {
+      "card_name": "Haru Shinkai",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/p/P-217.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_217.rs",
+      "test_count": 19,
+      "patterns": [
+        "A1",
+        "A2",
+        "B3"
+      ],
+      "notes": "On Play reveal-3 two-bucket (Social + Creation/Navi/Tool) add+bottom; on_any_link observer with event_card_trait_has 4-trait filter (Creation included per printed text; DCGO drops it - DCGO bug) + suspend-self cost -> gain 1 memory; security play-free. Review APPROVED."
     }
   }
 }
