@@ -44,6 +44,9 @@ export async function saveBuilderDeck(
     egg_deck: params.egg_deck,
     main_deck_alt_arts: params.main_deck_alt_arts,
     egg_deck_alt_arts: params.egg_deck_alt_arts,
+    // Thread the selected format through updates too — previously dropped here,
+    // so editing a non-standard deck silently reverted its mode.
+    ...(params.game_mode ? { game_mode: params.game_mode } : {}),
   };
 
   if (usesDesktopStorage()) {

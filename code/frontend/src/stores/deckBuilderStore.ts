@@ -15,6 +15,7 @@ interface DeckBuilderStore {
   // Current deck
   deckId: string | null;
   deckName: string;
+  gameMode: string;
   mainDeck: DeckEntry[];
   eggDeck: DeckEntry[];
   isDirty: boolean;
@@ -41,7 +42,14 @@ interface DeckBuilderStore {
   removeCardFromDeck: (cardId: string, isAltArt?: boolean) => void;
   setDeckName: (name: string) => void;
   setDeckId: (id: string | null) => void;
-  loadDeck: (id: string | null, name: string, main: DeckEntry[], egg: DeckEntry[]) => void;
+  setGameMode: (mode: string) => void;
+  loadDeck: (
+    id: string | null,
+    name: string,
+    main: DeckEntry[],
+    egg: DeckEntry[],
+    gameMode?: string,
+  ) => void;
   clearDeck: () => void;
   setValidationResult: (result: DeckValidationResult | null) => void;
   setSavedDecks: (decks: DeckSummary[]) => void;
@@ -58,6 +66,7 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
 
   deckId: null,
   deckName: 'New Deck',
+  gameMode: 'standard',
   mainDeck: [],
   eggDeck: [],
   isDirty: false,
@@ -135,10 +144,18 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
 
   setDeckName: (name) => set({ deckName: name, isDirty: true }),
   setDeckId: (id) => set({ deckId: id }),
-  loadDeck: (id, name, main, egg) =>
-    set({ deckId: id, deckName: name, mainDeck: main, eggDeck: egg, isDirty: false }),
+  setGameMode: (mode) => set({ gameMode: mode, isDirty: true }),
+  loadDeck: (id, name, main, egg, gameMode) =>
+    set((s) => ({
+      deckId: id,
+      deckName: name,
+      mainDeck: main,
+      eggDeck: egg,
+      gameMode: gameMode ?? s.gameMode,
+      isDirty: false,
+    })),
   clearDeck: () =>
-    set({ deckId: null, deckName: 'New Deck', mainDeck: [], eggDeck: [], isDirty: false, validationResult: null }),
+    set({ deckId: null, deckName: 'New Deck', gameMode: 'standard', mainDeck: [], eggDeck: [], isDirty: false, validationResult: null }),
   setValidationResult: (result) => set({ validationResult: result }),
   setSavedDecks: (decks) => set({ savedDecks: decks }),
   setIsDirty: (dirty) => set({ isDirty: dirty }),

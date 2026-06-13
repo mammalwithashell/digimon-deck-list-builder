@@ -72,6 +72,29 @@ export interface DeckResponse {
   updated_at: string;
 }
 
+/** One deck format from the engine registry (`GET /decks/formats` /
+ *  `rust_list_formats`). The frontend never hardcodes this list. */
+export interface DeckFormat {
+  id: string;
+  name: string;
+  description: string;
+  deck_size: number;
+  egg_max: number;
+  /** "all" | "common_uncommon" | "eden_anomaly" */
+  rarity_policy: string;
+  singleton: boolean;
+  default_max_copies: number;
+  playable: boolean;
+}
+
+/** Per-card legality under a format (`GET /decks/card-legality` /
+ *  `rust_card_legality`). */
+export interface CardLegality {
+  legal: boolean;
+  max_copies: number;
+  reason: string | null;
+}
+
 export interface DeckValidationError {
   field: string;
   message: string;

@@ -1,5 +1,5 @@
 import type { DigimonCardData } from '@/types/cards';
-import type { DeckEntry } from '@/types/deck';
+import type { CardLegality, DeckEntry } from '@/types/deck';
 
 export interface BuilderCardFilters {
   search: string;
@@ -9,6 +9,9 @@ export interface BuilderCardFilters {
   rarity: string;
   inheritedOnly: boolean;
   securityOnly: boolean;
+  /** When true, hide cards illegal in the selected format (uses the
+   *  engine-provided legality map; no rules are re-implemented here). */
+  legalOnly: boolean;
 }
 
 export interface BuilderCounts {
@@ -127,7 +130,11 @@ export function hasSecurityEffect(card: DigimonCardData): boolean {
   return /security/i.test(card.maineffect) || /security/i.test(card.soureeffect);
 }
 
-export function filterBuilderCards(cards: DigimonCardData[], filters: BuilderCardFilters): DigimonCardData[] {
+export function filterBuilderCards(
+  cards: DigimonCardData[],
+  filters: BuilderCardFilters,
+  legality?: Record<string, CardLegality>,
+): DigimonCardData[] {
   const search = normalize(filters.search);
   const colorSet = new Set(filters.colors.map(normalize));
   const type = normalize(filters.type);
@@ -135,6 +142,13 @@ export function filterBuilderCards(cards: DigimonCardData[], filters: BuilderCar
   const rarity = normalize(filters.rarity);
 
   return cards.filter((card) => {
+    if (filters.legalOnly && legality) {
+      // Absent from the map → treat as legal (unknown/untested cards aren't
+      // gated by format legality, matching the engine's "warn, don't reject").
+      const leg = legality[card.cardnumber];
+      if (leg && !leg.legal) return false;
+    }
+
     if (search) {
       const searchable = [
         card.name,

@@ -1,7 +1,7 @@
 import client from './client';
 import { isInTauriRuntime } from './engineRuntime';
 import type { DigimonCardData } from '@/types/cards';
-import type { DeckFolder, DeckResponse, DeckSummary } from '@/types/deck';
+import type { CardLegality, DeckFolder, DeckFormat, DeckResponse, DeckSummary } from '@/types/deck';
 
 // Mirrors `gameApi.ts` — when running inside Tauri, dispatch parse /
 // validate / tested-cards through `invoke()` into the embedded
@@ -197,6 +197,44 @@ export async function listCardDatabase(): Promise<DigimonCardData[]> {
     ? await invokeTauri<CardMetaDto[]>('rust_card_database')
     : (await client.get<CardMetaDto[]>('/decks/card-database')).data;
   return dtos.map(cardMetaToCardData);
+}
+
+/** All deck formats from the engine registry. Drives the deck-builder format
+ *  selector and the play/format catalog — never hardcode the list. */
+export async function listFormats(): Promise<DeckFormat[]> {
+  if (useTauriBackend()) {
+    return invokeTauri<DeckFormat[]>('rust_list_formats');
+  }
+  const { data } = await client.get<DeckFormat[]>('/decks/formats');
+  return data;
+}
+
+/** Per-card legality under a format — powers the pool legality filter and
+ *  per-card ban/limit/anomaly badges. */
+export async function cardLegality(cardId: string, gameMode = 'standard'): Promise<CardLegality> {
+  if (useTauriBackend()) {
+    return invokeTauri<CardLegality>('rust_card_legality', { cardId, gameMode });
+  }
+  const { data } = await client.get<CardLegality & { card_id: string; game_mode: string }>(
+    '/decks/card-legality',
+    { params: { card_id: cardId, game_mode: gameMode } },
+  );
+  return { legal: data.legal, max_copies: data.max_copies, reason: data.reason };
+}
+
+/** Legality for the whole tested pool under a format, keyed by card id — one
+ *  round-trip to drive the pool "format-legal only" filter and badges. */
+export async function cardLegalityBulk(
+  gameMode = 'standard',
+): Promise<Record<string, CardLegality>> {
+  if (useTauriBackend()) {
+    return invokeTauri<Record<string, CardLegality>>('rust_card_legality_bulk', { gameMode });
+  }
+  const { data } = await client.get<{ legality: Record<string, CardLegality> }>(
+    '/decks/card-legality-bulk',
+    { params: { game_mode: gameMode } },
+  );
+  return data.legality;
 }
 
 export async function validateDeckRaw(

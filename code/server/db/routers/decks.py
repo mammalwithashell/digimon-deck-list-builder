@@ -24,16 +24,22 @@ from server.db.schemas import (
     UpdateDeckFolderRequest,
     UpdateDeckLibraryRequest,
 )
-# validate_deck + CardRestriction stay on Python: the no_restriction game-mode
-# path passes an empty CardRestriction() to bypass restricted-list checks,
-# and the Rust binding only exposes the official-ENG list path. Tracked in
-# RUST_PYTHON_PARITY.md.
-from engine_py_legacy.engine.data.deck_loader import validate_deck, RESTRICTED_LIST, CardRestriction
+# Registry-backed formats (standard / no_restriction / pauper / eden /
+# eden_singleton) defer to the Rust engine — the single source of truth for
+# banlists, rarity gates, the EDEN anomaly protocol, and singleton. Only the
+# legacy EDH / Titan paths still use the Python `validate_deck`.
+from engine_py_legacy.engine.data.deck_loader import validate_deck
 from digimon_engine import out_of_set_cards, validate_deck_for_game_mode
 
 router = APIRouter(prefix="/decks", tags=["decks"])
 
 DEFAULT_FOLDER_NAMES = ("Tournament", "Experimental", "Casual")
+
+# Formats whose deck legality is owned by the Rust engine registry. EDH /
+# Titan keep their Python paths (player-count/size rules the binding doesn't
+# expose yet).
+_ENGINE_FORMATS = {"standard", "no_restriction", "pauper", "eden", "eden_singleton"}
+_GAME_MODE_PATTERN = r"^(standard|eden|eden_singleton|pauper|edh_commander|titan|no_restriction)$"
 
 
 def _reject_untested_cards(main_deck: list[str], egg_deck: list[str]) -> None:
@@ -61,14 +67,11 @@ def _validate_for_mode(card_ids: list[str], game_mode: str, titan_role: str | No
 
     Returns (is_valid, error_list).
     """
-    if game_mode == "no_restriction":
-        # Only check deck size and card existence — no restricted list
-        result = validate_deck(card_ids, restricted_list=CardRestriction())
-        return result.is_valid, result.errors
-
-    if game_mode == "eden":
-        result = validate_deck_for_game_mode(card_ids, "eden")
-        return result.is_valid, result.errors
+    # Registry-backed formats: defer entirely to the Rust engine (single
+    # source of truth for rarity gate / banlist / anomaly protocol / singleton).
+    if game_mode in _ENGINE_FORMATS:
+        result = validate_deck_for_game_mode(card_ids, game_mode)
+        return result.is_valid, list(result.errors)
 
     if game_mode == "titan":
         expected_main = 80 if titan_role == "titan" else 50
@@ -259,7 +262,7 @@ async def create_deck(
 
 @router.get("", response_model=List[DeckSummary])
 async def list_my_decks(
-    game_mode: Optional[str] = Query(None, pattern=r"^(standard|eden|edh_commander|titan|no_restriction)$"),
+    game_mode: Optional[str] = Query(None, pattern=_GAME_MODE_PATTERN),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -275,7 +278,7 @@ async def list_my_decks(
 
 @router.get("/public", response_model=List[DeckSummary])
 async def list_public_decks(
-    game_mode: Optional[str] = Query(None, pattern=r"^(standard|eden|edh_commander|titan|no_restriction)$"),
+    game_mode: Optional[str] = Query(None, pattern=_GAME_MODE_PATTERN),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(Deck).where(Deck.is_public == 1)

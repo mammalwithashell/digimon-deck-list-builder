@@ -3,9 +3,9 @@
 //! desktop and hosted API can't diverge on deck validation.
 
 use digimon_engine::deck_tools::{
-    card_database, classify_parsed, is_card_tested, out_of_set_cards, parse_deck, parse_text,
-    parse_tts, summarize_deck, tested_cards_sorted, validate_deck, validate_deck_for_game_mode,
-    validate_deck_for_mode,
+    card_database, card_legality, classify_parsed, is_card_tested, out_of_set_cards, parse_deck,
+    parse_text, parse_tts, summarize_deck, tested_cards_sorted, validate_deck,
+    validate_deck_for_game_mode, validate_deck_for_mode,
 };
 use digimon_engine::{build_registry, CardData, GameMode, HeadlessRunner, Rarity};
 use serde::Deserialize;
@@ -651,6 +651,89 @@ fn validate_eden_uses_custom_banlist_and_pair() {
         .errors
         .iter()
         .any(|e| e.contains("Choice restriction violated")));
+}
+
+#[test]
+fn validate_eden_singleton_rejects_multiple_copies() {
+    // make_eden_legal_deck() runs 4-ofs, which EDEN Singleton forbids.
+    let deck = make_eden_legal_deck();
+    let result = validate_deck_for_game_mode(&deck, "eden_singleton").unwrap();
+    assert!(!result.is_valid);
+    assert!(
+        result.errors.iter().any(|e| e.contains("singleton")),
+        "expected a singleton violation, got: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn validate_eden_singleton_accepts_a_50_distinct_card_deck() {
+    // 50 distinct EDEN-legal Digimon, one copy each — singleton-legal.
+    let db = card_database();
+    let mut candidates: Vec<&str> = db
+        .values()
+        .filter(|c| {
+            c.card_kind == 0
+                && matches!(c.rarity, Rarity::C | Rarity::U)
+                && !is_eden_restricted_or_choice_member(&c.card_id)
+        })
+        .map(|c| c.card_id.as_str())
+        .collect();
+    candidates.sort_unstable();
+    let deck: Vec<String> = candidates.into_iter().take(50).map(String::from).collect();
+    assert_eq!(deck.len(), 50, "need 50 distinct EDEN-legal C/U Digimon");
+    let result = validate_deck_for_game_mode(&deck, "eden_singleton").unwrap();
+    assert!(
+        result.is_valid,
+        "expected singleton deck to be legal, got errors: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn validate_eden_singleton_applies_eden_banlist() {
+    let mut deck = make_eden_legal_deck();
+    deck[0] = "BT3-097".to_string(); // EDEN-banned.
+    let result = validate_deck_for_game_mode(&deck, "eden_singleton").unwrap();
+    assert!(!result.is_valid);
+    assert!(result
+        .errors
+        .iter()
+        .any(|e| e.contains("BT3-097") && e.contains("banned")));
+}
+
+#[test]
+fn card_legality_reports_banned_card() {
+    let leg = card_legality("BT2-090", "standard").unwrap(); // Matt Ishida, banned.
+    assert!(!leg.legal);
+    assert_eq!(leg.max_copies, 0);
+    assert!(leg.reason.unwrap_or_default().to_lowercase().contains("banned"));
+}
+
+#[test]
+fn card_legality_pauper_rejects_rare() {
+    let leg = card_legality("AD1-001", "pauper").unwrap(); // Greymon, rarity R.
+    assert!(!leg.legal);
+    assert_eq!(leg.max_copies, 0);
+}
+
+#[test]
+fn card_legality_eden_anomaly_card_is_legal_but_flagged() {
+    let leg = card_legality("P-103", "eden").unwrap(); // Promo Training option (anomaly).
+    assert!(leg.legal, "anomaly card should be legal: {leg:?}");
+    assert!(leg
+        .reason
+        .unwrap_or_default()
+        .to_lowercase()
+        .contains("anomaly"));
+}
+
+#[test]
+fn card_legality_eden_singleton_caps_at_one() {
+    // Any otherwise-legal card is capped at a single copy under singleton.
+    let leg = card_legality("P-103", "eden_singleton").unwrap();
+    assert!(leg.legal);
+    assert_eq!(leg.max_copies, 1);
 }
 
 #[test]

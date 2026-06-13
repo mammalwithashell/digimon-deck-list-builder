@@ -870,6 +870,7 @@ pub enum GameMode {
     Pauper,
     NoRestriction,
     Eden,
+    EdenSingleton,
     EdhCommander,
     Titan,
 }

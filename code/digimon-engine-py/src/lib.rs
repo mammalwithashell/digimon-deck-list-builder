@@ -388,6 +388,98 @@ fn eden_restricted_list() -> PyCardRestriction {
     CardRestriction::eden().into()
 }
 
+/// Display + deck-construction metadata for one format (from the registry).
+#[pyclass(module = "digimon_engine", name = "FormatDescriptor")]
+#[derive(Clone)]
+pub struct PyFormatDescriptor {
+    #[pyo3(get)]
+    pub id: String,
+    #[pyo3(get)]
+    pub name: String,
+    #[pyo3(get)]
+    pub description: String,
+    #[pyo3(get)]
+    pub deck_size: u16,
+    #[pyo3(get)]
+    pub egg_max: u8,
+    /// "all" | "common_uncommon" | "eden_anomaly".
+    #[pyo3(get)]
+    pub rarity_policy: String,
+    #[pyo3(get)]
+    pub singleton: bool,
+    #[pyo3(get)]
+    pub default_max_copies: u8,
+    #[pyo3(get)]
+    pub playable: bool,
+}
+
+/// All formats from the registry, in declaration order.
+#[pyfunction]
+fn list_formats() -> Vec<PyFormatDescriptor> {
+    use ::digimon_engine::format::RarityPolicy;
+    ::digimon_engine::format::list_formats()
+        .iter()
+        .map(|f| PyFormatDescriptor {
+            id: f.id.clone(),
+            name: f.name.clone(),
+            description: f.description.clone(),
+            deck_size: f.deck_size,
+            egg_max: f.egg_max,
+            rarity_policy: match f.rarity_policy {
+                RarityPolicy::All => "all",
+                RarityPolicy::CommonUncommon => "common_uncommon",
+                RarityPolicy::EdenAnomaly => "eden_anomaly",
+            }
+            .to_string(),
+            singleton: f.singleton,
+            default_max_copies: f.default_max_copies,
+            playable: f.playable,
+        })
+        .collect()
+}
+
+/// Per-card legality under a format.
+#[pyclass(module = "digimon_engine", name = "CardLegality")]
+#[derive(Clone)]
+pub struct PyCardLegality {
+    #[pyo3(get)]
+    pub legal: bool,
+    #[pyo3(get)]
+    pub max_copies: u32,
+    #[pyo3(get)]
+    pub reason: Option<String>,
+}
+
+#[pyfunction]
+fn card_legality(card_id: &str, game_mode: &str) -> PyResult<PyCardLegality> {
+    let leg = deck_tools::card_legality(card_id, game_mode).map_err(PyValueError::new_err)?;
+    Ok(PyCardLegality {
+        legal: leg.legal,
+        max_copies: leg.max_copies,
+        reason: leg.reason,
+    })
+}
+
+/// Legality for every tested-allowlist card under a game mode, keyed by card
+/// id — lets the deck builder filter/badge the whole pool in one call.
+#[pyfunction]
+fn card_legality_bulk(game_mode: &str) -> PyResult<HashMap<String, PyCardLegality>> {
+    let map = deck_tools::card_legality_bulk(game_mode).map_err(PyValueError::new_err)?;
+    Ok(map
+        .into_iter()
+        .map(|(k, leg)| {
+            (
+                k,
+                PyCardLegality {
+                    legal: leg.legal,
+                    max_copies: leg.max_copies,
+                    reason: leg.reason,
+                },
+            )
+        })
+        .collect())
+}
+
 #[pyfunction]
 fn expand_deck_dict(counts: HashMap<String, u32>) -> Vec<String> {
     deck_tools::expand_deck_dict(&counts)
@@ -1457,6 +1549,11 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<PyCardRestriction>()?;
     m.add_function(wrap_pyfunction!(restricted_list, m)?)?;
     m.add_function(wrap_pyfunction!(eden_restricted_list, m)?)?;
+    m.add_class::<PyFormatDescriptor>()?;
+    m.add_function(wrap_pyfunction!(list_formats, m)?)?;
+    m.add_class::<PyCardLegality>()?;
+    m.add_function(wrap_pyfunction!(card_legality, m)?)?;
+    m.add_function(wrap_pyfunction!(card_legality_bulk, m)?)?;
     m.add_function(wrap_pyfunction!(expand_deck_dict, m)?)?;
     m.add_class::<CardKind>()?;
     m.add_class::<GamePhase>()?;
