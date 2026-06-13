@@ -971,6 +971,28 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::SelectOpponentSources(args) => {
+            // G-DSL-SELECT-SOURCES-FORMULA-COUNT: formula-valued counts
+            // validate like `select_count_capped_multi`'s `max`.
+            if let crate::step::CountBound::Formula { formula } = &args.min {
+                validate_formula(
+                    formula,
+                    &format!("{prefix}.min.formula"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+            if let crate::step::CountBound::Formula { formula } = &args.max {
+                validate_formula(
+                    formula,
+                    &format!("{prefix}.max.formula"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+        }
         StepSpec::If(i) => {
             if let Ok(condition) =
                 serde_yml::from_value::<crate::predicate::PredicateSpec>(i.condition.clone())
@@ -1201,6 +1223,27 @@ fn validate_step_binding_scope(
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::SelectOpponentSources(args) => {
+            // G-DSL-SELECT-SOURCES-FORMULA-COUNT: binding refs inside the
+            // formula bounds must resolve in the current scope (mirrors
+            // `SelectCountCappedMulti`'s `max`).
+            if let crate::step::CountBound::Formula { formula } = &args.min {
+                validate_formula_binding_scope(
+                    formula,
+                    &format!("{prefix}.min.formula"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+            if let crate::step::CountBound::Formula { formula } = &args.max {
+                validate_formula_binding_scope(
+                    formula,
+                    &format!("{prefix}.max.formula"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
             validate_predicate_binding_scope(
                 &args.filter,
                 &format!("{prefix}.filter"),

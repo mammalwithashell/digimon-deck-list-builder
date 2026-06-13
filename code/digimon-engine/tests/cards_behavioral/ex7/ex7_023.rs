@@ -906,12 +906,10 @@ fn ex7_023_opp_turn_aura_compares_live_own_source_count() {
     );
 }
 
-/// ENFORCEMENT-DEPENDENT (pre-existing engine gap, shared with BT25-026/028,
-/// EX9-019, BT20-084, EX8-023): a CannotSuspend-locked Digimon must be unable
-/// to declare an attack (attacking suspends). The modifier installs correctly
-/// (asserted above); the engine consult site does not exist yet.
+/// ENFORCEMENT (shared with BT25-026/028, EX9-019, BT20-084, EX8-023): a
+/// CannotSuspend-locked Digimon must be unable to declare an attack
+/// (general_rule.pdf 11-2-5; consult site in `Game::can_attack*`).
 #[test]
-#[ignore = "pending CannotSuspend enforcement — see docs/RUST_ENGINE_GAPS.md"]
 fn ex7_023_locked_opponent_digimon_cannot_declare_attack() {
     let (mut runner, owner, tp, _hexe) = aura_runner(1);
 

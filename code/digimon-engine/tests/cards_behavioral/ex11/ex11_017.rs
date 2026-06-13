@@ -1264,12 +1264,10 @@ fn ex11_017_lock_expires_at_end_of_opponents_turn() {
     );
 }
 
-/// ENFORCEMENT-DEPENDENT (pre-existing engine gap, shared with BT25-026/028,
-/// EX9-019, BT20-084, EX8-023, EX7-023): a CannotSuspend-locked Digimon must
-/// be unable to declare an attack (attacking suspends). The modifier installs
-/// correctly (asserted above); the engine consult site does not exist yet.
+/// ENFORCEMENT (shared with BT25-026/028, EX9-019, BT20-084, EX8-023,
+/// EX7-023): a CannotSuspend-locked Digimon must be unable to declare an
+/// attack (general_rule.pdf 11-2-5; consult site in `Game::can_attack*`).
 #[test]
-#[ignore = "pending CannotSuspend enforcement — see docs/RUST_ENGINE_GAPS.md"]
 fn ex11_017_locked_digimon_cannot_declare_attack() {
     let mut runner = base_builder().start();
     runner.game.turn_count = 1;

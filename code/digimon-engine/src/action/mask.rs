@@ -903,6 +903,12 @@ fn can_basic_attack(
     if !perm.is_digimon(card_data) {
         return false;
     }
+    // 11-2-5: "An attack declaration can't be made using a Digimon that
+    // can't suspend." Mask-side mirror of the `Game::can_attack*` consult
+    // (mask and engine API must agree).
+    if game.modifiers.has(handle, ModifierType::CannotSuspend) {
+        return false;
+    }
     // Summoning sickness: can't attack the turn it was played unless Rush
     // is present (native printed OR modifier-granted) — §2.1b.
     let is_fresh = perm.turn_played == turn && perm.turn_digivolved != turn;

@@ -1,0 +1,216 @@
+# EX11-057 Suzune Kazuki — Tamer, Blue/Yellow, Cost 4. Trait: LIBERATOR. Rarity: R.
+#
+# Printed card text (card image EX11-057 — authoritative; cards.json agrees):
+#
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [On Play] For each of your [Ice-Snow] trait Digimon, trash any 1
+#   digivolution card from your opponent's Digimon.
+#   [All Turns] When effects trash digivolution cards from your opponent's
+#   Digimon, by suspending this Tamer, gain 1 memory.
+#
+# Security (inherited_text):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Blue/EX11_057.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartMainPhase` → stock
+#   `CardEffectFactory.Gain1MemoryTamerOpponentDigimonEffect(card)`. MANDATORY.
+#   DSL: identical shape to EX8-066 clause 1 ("If your opponent has a Digimon,
+#   gain 1 memory" sibling-Tamer idiom — AD1-019 / EX7-063).
+#
+# Clause 2 — `EffectTiming.OnEnterFieldAnyone` + CanTriggerOnPlay (= [On
+#   Play]). MANDATORY — SetUpActivateClass(..., isOptional: false).
+#   CanActivateCondition: IsExistOnBattleArea(card) &&
+#   HasMatchConditionPermanent(opponent battle-area Digimon). Body:
+#   `iceSnowCount` = MatchConditionPermanentCount(own battle-area Digimon with
+#   TopCard.EqualsTraits("Ice-Snow")) — snapshotted ONCE at resolution; if
+#   > 0, ONE cross-permanent `SelectTrashDigivolutionCards(permanentCondition:
+#   opponent battle-area Digimon, maxCount: iceSnowCount, canNoTrash: false,
+#   isFromOnly1Permanent: false)`. TrashDigivolutionCards.cs clamps the
+#   required count to `Math.Min(digivolutionCardsSum, maxCount)` and no-ops at
+#   `maxCount <= 0`.
+#
+#   DSL mapping (G-DSL-SELECT-SOURCES-FORMULA-COUNT substrate):
+#   - clause `condition: any_permanent { of: opponent, zone: battle_area,
+#     kind: digimon }` — DCGO's CanActivateCondition gate. This also covers
+#     the exotic "opponent TAMER carrying digivolution cards" board: DCGO
+#     restricts hosts to Digimon, and with no opponent Digimon the whole
+#     clause is gated off before the (host-kind-agnostic) source enumerator
+#     runs.
+#   - `select_opponent_sources` with `min`/`max` as the SAME formula (count of
+#     own battle-area [Ice-Snow] Digimon, resolved once at execution time) and
+#     `clamp_to_available: true` — the DCGO min(N, available) clamp; N = 0 or
+#     zero candidates silently skip the pick. Mandatory: no PASS below the
+#     clamped min, matching canNoTrash: false.
+#   - `trash_selected_sources` consumes the cross-permanent refs.
+#
+#   Known minor divergence (shared with EX8-023 / EX8-066 / EX11-017 /
+#   BT25-028): `select_opponent_sources` enumerates sources under EVERY
+#   opponent battle-area permanent — there is no DSL host-kind filter on
+#   source picks; DCGO restricts hosts to Digimon. Only divergent on the
+#   exotic board "opponent TAMER carrying digivolution cards WHILE the
+#   opponent also has a Digimon" (the clause gate covers the no-Digimon
+#   case). The clamp's availability count deliberately matches the
+#   enumerator for internal consistency.
+#
+# Clause 3 — `EffectTiming.OnDigivolutionCardDiscarded`. OPTIONAL —
+#   SetUpActivateClass(..., isOptional: true); no [Once Per Turn] (the Tamer
+#   suspension is the natural limiter; it can re-trigger after an unsuspend).
+#   CanUseCondition: IsExistOnBattleArea(card) &&
+#   CanTriggerOnTrashDigivolutionCard(hashtable, host is OPPONENT battle-area
+#   Digimon, cardEffect != null, any card). CanActivateCondition:
+#   IsExistOnBattleArea && CanActivateSuspendCostEffect. Body:
+#   SuspendPermanentsClass(self) → AddMemory(1).
+#
+#   DSL mapping:
+#   - `when: on_digivolution_card_trashed` — the engine's per-source-trash
+#     observer timing.
+#   - `event_target_owner: opponent` — the trashed-from HOST permanent's
+#     owner is the opponent ("from your opponent's Digimon"). For this
+#     timing the event subject resolves through `event_host_permanent`
+#     (BT21-055 / EX8-051 / P-167 use the `you` side of the same gate).
+#   - `any_of: [event_cause: own_effect, event_cause: opponent_effect,
+#     event_cause: cost]` — DCGO's `cardEffect != null` filter ("when
+#     EFFECTS trash"). The engine attributes rule-driven source trashes
+#     (a bounced/returned stack's sources, the under-tamer drain) as
+#     `return` / `deck_bottom`, which this gate excludes; effect trashes
+#     infer own_effect/opponent_effect, and cost rituals (Digi-Burst,
+#     armor purge) carry `cost` — DCGO fires for those (the trash runs
+#     under an ActivateClass), so `cost` is included.
+#   - `optional: true` + `activation_cost: { suspend_self: true }` +
+#     `source_is_unsuspended: true` — the AD1-019 / EX8-066 / EX11-054
+#     suspend-cost idiom: prompt only while the Tamer can pay, cost paid
+#     on accept.
+#   - It DOES trigger off this card's own clause 2 (and any other own
+#     effect trashing opponent digivolution cards).
+#
+#   KNOWN DIVERGENCE (documented, not fixed here): the engine fires
+#   `OnDigivolutionCardTrashed` once PER SOURCE CARD trashed; DCGO fires
+#   `OnDigivolutionCardDiscarded` once per per-permanent batch
+#   (`ITrashDigivolutionCards`). Consequence: when several cards are trashed
+#   by one effect, the engine offers the suspend once per card — on ACCEPT
+#   the outcomes converge (the suspended Tamer fails the gate for the rest of
+#   the batch, so exactly 1 memory is gained either way); on DECLINE the
+#   engine RE-PROMPTS for later cards of the same batch where DCGO would not
+#   (a strictly-more-permissive decline window, no extra memory available).
+#
+# Clause 4 — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`. Standard mandatory
+#   tamer security self-play (AD1-019 / EX8-066 idiom).
+#
+# Implementation status (faithfulness diff):
+# | [SoMP] opp has Digimon → gain 1 memory (mandatory)            | IMPLEMENTED |
+# | [On Play] per-own-Ice-Snow cross-permanent source trash,      | IMPLEMENTED |
+# |   N snapshotted once, clamped to min(N, available), mandatory |             |
+# | [All Turns] effect-trash observer (opponent hosts only)       | IMPLEMENTED |
+# | ... by suspending this Tamer (optional activation cost)       | IMPLEMENTED |
+# | ... gain 1 memory                                             | IMPLEMENTED |
+# | [Security] play without paying the cost                       | IMPLEMENTED |
+
+card: EX11-057
+name: Suzune Kazuki
+kind: tamer
+color: [blue, yellow]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] gain 1 memory if opp has Digimon ──
+  #
+  # Printed: "[Start of Your Main Phase] If your opponent has a Digimon, gain
+  # 1 memory." Mandatory — no "you may" (DCGO isOptional: false).
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  # ─── Clause 2: [On Play] per-Ice-Snow opponent source trash ─────────────────
+  #
+  # Printed: "[On Play] For each of your [Ice-Snow] trait Digimon, trash any 1
+  # digivolution card from your opponent's Digimon." Mandatory. N = own
+  # battle-area [Ice-Snow] Digimon count, snapshotted once at resolution; ONE
+  # cross-permanent pick of exactly min(N, available) sources (DCGO
+  # SelectTrashDigivolutionCards maxCount: N, canNoTrash: false,
+  # isFromOnly1Permanent: false). Skipped entirely at N = 0 or with no
+  # opponent Digimon (clause gate, DCGO CanActivateCondition).
+  - when: on_play
+    summary: "[On Play] For each of your [Ice-Snow] trait Digimon, trash any 1 digivolution card from your opponent's Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_sources:
+          min:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  zone: battle_area
+                  of: you
+                  filter: { kind: digimon, trait_has: Ice-Snow }
+              delta: 1
+          max:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  zone: battle_area
+                  of: you
+                  filter: { kind: digimon, trait_has: Ice-Snow }
+              delta: 1
+          clamp_to_available: true
+          bind_as: picks
+          prompt: "Trash any 1 digivolution card from your opponent's Digimon per your Ice-Snow Digimon"
+          then:
+            - trash_selected_sources: { source_refs: picks }
+
+  # ─── Clause 3: [All Turns] effect-trash observer → suspend → gain 1 memory ──
+  #
+  # Printed: "[All Turns] When effects trash digivolution cards from your
+  # opponent's Digimon, by suspending this Tamer, gain 1 memory."
+  #
+  # No `active_when: { your_turn: true }` — [All Turns]. No [Once Per Turn] —
+  # the suspension is the natural limiter. Triggers off this card's own
+  # clause 2 too. See the header for the per-card vs per-batch firing
+  # divergence note.
+  - when: on_digivolution_card_trashed
+    optional: true
+    summary: "[All Turns] When effects trash digivolution cards from your opponent's Digimon, by suspending this Tamer, gain 1 memory"
+    condition:
+      all_of:
+        # "from your opponent's Digimon" — the trashed-from host belongs to
+        # the opponent (DCGO PermanentCondition).
+        - event_target_owner: opponent
+        # "When EFFECTS trash" — DCGO `cardEffect != null`: exclude
+        # rule-driven trashes (bounce/return stack drains: `return` /
+        # `deck_bottom`). Cost rituals run under an ActivateClass in DCGO,
+        # so `cost` qualifies.
+        - any_of:
+            - event_cause: own_effect
+            - event_cause: opponent_effect
+            - event_cause: cost
+        # Suspend-cost payability gate (DCGO CanActivateSuspendCostEffect).
+        - source_is_unsuspended: true
+    process:
+      # Cost: suspend this Tamer (paid on accepting the optional prompt).
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  # ─── Clause 4: [Security] play this card without paying the cost ────────────
+  #
+  # Printed (inherited_text): "Security Effect [Security] Play this card
+  # without paying the cost." Standard mandatory tamer security-play pattern
+  # (AD1-019, EX8-066, BT16-085).
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

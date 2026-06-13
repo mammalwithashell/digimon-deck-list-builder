@@ -2609,8 +2609,9 @@ fn compile_step(
         S::SelectOpponentSources(a) => CompiledStep::SelectOpponentSources {
             target: a.target.as_ref().map(compile_binding_ref),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
-            min: a.min,
-            max: a.max,
+            min: compile_count_bound(&a.min, &format!("{prefix}.min"), card_id, errors),
+            max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
+            clamp_to_available: a.clamp_to_available,
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             then: a

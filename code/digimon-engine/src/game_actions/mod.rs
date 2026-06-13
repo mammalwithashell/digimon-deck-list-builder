@@ -1578,7 +1578,21 @@ impl Game {
             .battle_area
             .iter()
             .enumerate()
-            .filter(|(_, perm)| !perm.is_suspended && perm.is_digimon(&self.card_data))
+            .filter(|(i, perm)| {
+                // Suspend-cost candidacy requires the permanent to actually
+                // be suspendable: a `CannotSuspend` permanent can't pay the
+                // cost (DCGO `CanActivatePermanentSuspendCostEffect` →
+                // `CanSuspend`; prohibition precedence 15-1-3).
+                !perm.is_suspended
+                    && perm.is_digimon(&self.card_data)
+                    && !self.modifiers.has(
+                        PermanentHandle {
+                            player,
+                            index: *i as u8,
+                        },
+                        ModifierType::CannotSuspend,
+                    )
+            })
             .map(|(i, _)| i)
             .collect()
     }
