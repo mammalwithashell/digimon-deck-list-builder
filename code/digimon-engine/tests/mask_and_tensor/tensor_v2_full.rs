@@ -99,6 +99,7 @@ fn v2_full_marks_prompt_selection_flag_for_optional_pass_action() {
         source_card,
         source_permanent: None,
         source_kind: EffectSourceKind::Digimon,
+        zone_owner: None,
         callback: Box::new(|_, _| {}),
         on_decline: Some(Box::new(|_| {})),
     });
