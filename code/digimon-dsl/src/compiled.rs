@@ -1015,6 +1015,13 @@ pub struct CompiledAttackCostUpgrade {
     pub security_attack: i32,
 }
 
+/// Compiled source zone for the result card in a `CompiledStep::AppFuse`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledAppFuseZone {
+    Hand,
+    Trash,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum_macros::EnumDiscriminants)]
 #[strum_discriminants(derive(strum_macros::EnumIter, Hash))]
 #[strum_discriminants(name(CompiledStepDiscriminant))]
@@ -1313,6 +1320,15 @@ pub enum CompiledStep {
         from_hand: CompiledBindingRef,
         cost: CompiledCostDelta,
         ignore_requirements: bool,
+    },
+    /// Effect-initiated App Fuse: two engine-driven selections (own permanent,
+    /// then result card from `from_zone`) routed through the app-fusion commit.
+    /// Compiled form of `StepSpec::AppFuse`; the engine lowering calls
+    /// `EffectContext::initiate_effect_app_fuse`.
+    AppFuse {
+        from_zone: CompiledAppFuseZone,
+        result_filter: Option<CompiledPredicate>,
+        optional: bool,
     },
     EffectInitiatedDnaDigivolve {
         target_a: CompiledBindingRef,

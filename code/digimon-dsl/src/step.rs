@@ -286,6 +286,8 @@ pub enum StepSpec {
     /// NOTE (2026-06-07): superseded by the more general `LinkCards` below;
     /// retained until the 5 cards using it migrate. See dsl-vocab-gaps.md.
     LinkCardToSelf(LinkCardToSelfArgs),
+    /// `app_fuse:` — effect-initiated App Fuse (see [`AppFuseArgs`]).
+    AppFuse(AppFuseArgs),
     /// Gap 5 — reduce the cost of the link about to resolve in the active
     /// `WhenWouldLink` window by `amount`. Authoring verb over the engine's
     /// `reduce_pending_link_cost` primitive; the body of a host-side
@@ -560,6 +562,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
             StepSpec::LinkCardToSelf(v) => kv!(s, "link_card_to_self", v),
+            StepSpec::AppFuse(v) => kv!(s, "app_fuse", v),
             StepSpec::ReduceLinkCost(v) => kv!(s, "reduce_link_cost", v),
             StepSpec::LinkCards(v) => kv!(s, "link_cards", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
@@ -815,6 +818,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
             "link_card_to_self" => StepSpec::LinkCardToSelf(map.next_value()?),
+            "app_fuse" => StepSpec::AppFuse(map.next_value()?),
             "reduce_link_cost" => StepSpec::ReduceLinkCost(map.next_value()?),
             "link_cards" => StepSpec::LinkCards(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
@@ -908,6 +912,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
                         "effect_initiated_dna_digivolve_hand_partner",
+                        "app_fuse",
                         "trash_top_security",
                         "trash_bottom_security",
                         "add_bottom_security_to_hand",
@@ -1933,6 +1938,40 @@ pub struct EffectDigivolveArgs {
     pub cost: CostDelta,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
+}
+
+/// Source zone for the result (fusing-in) card in an `app_fuse` step.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum AppFuseZone {
+    #[default]
+    Hand,
+    Trash,
+}
+
+/// `app_fuse:` — effect-initiated App Fuse. Plays an App-Fusion-capable Digimon
+/// card from `from` ONTO one of your field Digimon that already has the named
+/// App-Fusion materials linked. Two engine-driven selections (own permanent,
+/// then result card); no explicit target binding (both are fresh picks). The
+/// result card's App-Fusion materials live on its own `app_fusion` alt-path, so
+/// this step only carries the source zone + an optional result-card filter. See
+/// `docs/superpowers/specs/2026-06-13-effect-initiated-app-fuse-design.md`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AppFuseArgs {
+    /// Zone holding the result card (`hand` default, or `trash`).
+    #[serde(default)]
+    pub from: AppFuseZone,
+    /// Optional predicate on the result card (e.g. BT24-087's System/Life/
+    /// Transmutation trait gate). `None` = any App-Fusion-capable Digimon card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_filter: Option<PredicateSpec>,
+    /// "may" — PASS is legal at each selection. The shipped riders set this
+    /// true; defaults false to match every other step's convention.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
