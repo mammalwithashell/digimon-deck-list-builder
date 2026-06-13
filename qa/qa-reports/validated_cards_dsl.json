@@ -6323,32 +6323,35 @@
     },
     "BT25-098": {
       "card_name": "Cyber Engage",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-12",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-MISSING-TESTS",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "appmon",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-098.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_098.rs",
-      "test_count": 10,
+      "test_count": 15,
       "patterns": [
-        "D3",
-        "E2"
+        "A1",
+        "D3"
       ],
-      "notes": "AUDIT: YAML faithful (reveal-3/add-Appmon/trash-rest/place-self + standard <Delay> play Appmon -3 + [Security] place + IgnoreColorRequirement use-req). Added 10 behavioral tests (placeholder was empty). One non-fixed drift: reveal add-pick is optional:true in YAML but printed add is mandatory when an Appmon is revealed (v1 audit-only, YAML untouched)."
+      "notes": "AUDIT: reveal-3/add-Appmon(now mandatory, drift fixed optional:true->false)/trash-rest/place-self + Delay play Appmon -3 + Security place + IgnoreColorRequirement use-req. 15 tests. Review APPROVED."
     },
     "BT25-089": {
       "card_name": "Kazuki & Itsuki",
-      "validated_date": "2026-06-07",
-      "report": "link_card_to_self facet#9 step (G-DSL-LINK-CARD-FROM-ZONE LANDED)",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
       "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "gap_kind": "hybrid",
       "archetype": "BT25 link-ts slice",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "PARTIAL \u2014 Start-of-Main memory ramp + [Main] suspend-self link 1 Appmon from hand to chosen own Digimon (link_card_to_self to: chosen_own_digimon) + inherited [Security] play-free. OMITTED: link \"from your Digimon digivolution cards\" (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES). BLOCKED clause: [End of Turn] App Fuse (no App Fuse primitive). | RE-CHECKED link-finish-appmon slice: remains PARTIAL. The [Main] link + memory ramp + inherited [Security] play-free are shipped (BT25-089.yaml). Two residual gaps still OPEN: (1) [End of Your Turn][OPT] effect-INITIATED app-fuse of a field Digimon INTO a hand card has no DSL step/engine primitive (distinct from the alt-path App Fusion which IS implemented); (2) [Main] link source from \"your Digimon's digivolution cards\" (Tamer-anchored multi-Digimon source scan) still omitted. No improvement possible this run."
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-089.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_089.rs",
+      "test_count": 7,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "AUDIT: shipped clauses faithful (start-of-main memory; [Main] suspend-self link Appmon from hand to chosen own Digimon; security play-free). Color drift fixed (purple->green). RESIDUAL OPEN gaps: (1) effect-initiated app-fuse (engine); (2) link-from-digivolution-cards multi-source [G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES] (dsl). Review APPROVED as PARTIAL."
     },
     "BT25-052": {
       "card_name": "Logimon",
@@ -9091,6 +9094,22 @@
         "B3"
       ],
       "notes": "Start-of-main conditional memory; on_any_link suspend-cost observer -> +3000 DP to linked host (event_target) until opp turn ends (engine fix: binding_ref EventTarget host-liveness fallback). OMITTED: effect-initiated app-fuse rider (engine gap). Security play-free. Review APPROVED as PARTIAL."
+    },
+    "P-241": {
+      "card_name": "Yujin Ozora",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Appmon (promo)",
+      "yaml_path": "code/digimon-engine/cards/p/P-241.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_241.rs",
+      "test_count": 13,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "Start-of-turn memory ramp <=2->3; on_any_link suspend-cost observer -> select own [Appmon] Digimon gains Vortex + +3000 DP until end of your turn. OMITTED: effect-initiated app-fuse rider (engine gap). Security play-free. Review APPROVED as PARTIAL."
     }
   }
 }

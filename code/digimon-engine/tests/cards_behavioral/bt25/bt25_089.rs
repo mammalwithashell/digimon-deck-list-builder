@@ -1,24 +1,34 @@
-//! BT25-089 Kazuki & Itsuki — Tamer, Purple, Cost 4.
+//! BT25-089 Kazuki & Itsuki — Tamer, GREEN, Cost 4.
 //!
-//! # Card text (DCGO BT25_089.cs + cards.json — authoritative)
+//! # Card text (card image + DCGO BT25_089.cs — authoritative)
 //! [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
 //! [Main] By suspending this Tamer, you may link 1 [Appmon] trait Digimon card
 //!   from your hand or your Digimon's digivolution cards to 1 of your Digimon
 //!   with the cost reduced by 2.
-//! [End of Your Turn][OPT] App Fuse — BLOCKED (no primitive). OMITTED.
+//! [End of Your Turn][Once Per Turn] 1 of your Digimon may app fuse into a
+//!   Digimon card in the hand. — BLOCKED (no App Fuse primitive). OMITTED.
 //! Inherited [Security]: Play this card without paying the cost.
 //!
-//! PARTIAL: the [Main] link's "your Digimon's digivolution cards" source is
-//! omitted (residual gap — the link_card_to_self sources zone anchors to the
-//! effect's own permanent, but the source here is a Tamer). The hand source +
-//! chosen-host link is authored and tested. App Fuse BLOCKED.
+//! # PARTIAL verdict — residual gaps
+//! (1) App Fuse clause BLOCKED: no engine App Fuse primitive.
+//! (2) [Main] link source "from your Digimon's digivolution cards" OMITTED:
+//!     `link_card_to_self` anchors its digivolution_sources to its own
+//!     permanent, but the Tamer has no Digimon under it. Residual gap
+//!     G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES.
+//! The hand-source path and chosen-host link are authored and tested.
+//!
+//! # COLOR DRIFT (AUDITED)
+//! The YAML declares `color: [purple]` but the card image (green border) and
+//! cards.json (`card_colors: [3]` = Green) and DCGO path (BT25/Green/) all
+//! confirm the card is **Green**. The YAML metadata must be corrected. A
+//! dedicated ignored test documents this drift.
 //!
 //! # DCGO C# reference
-//! DCGO/Assets/Scripts/CardEffect/BT25/.../BT25_089.cs
+//! DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_089.cs
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
-use digimon_dsl::compiled::CompiledCardKind;
+use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledColor, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
@@ -148,5 +158,107 @@ fn bt25_089_main_links_appmon_from_hand_to_chosen_digimon() {
             .len(),
         1,
         "the Appmon card from hand linked onto the chosen Digimon"
+    );
+}
+
+// ─── [Start of Your Main Phase] negative ─────────────────────────────────────
+
+/// No opponent Digimon → memory is NOT gained.
+#[test]
+fn bt25_089_start_of_main_no_opp_digimon_does_not_gain_memory() {
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(3).start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    // Opponent has no Digimon on the field (none placed).
+    let mem_before = r.game.memory;
+
+    let handle = r.perm_handle(0, kazuki.index as usize);
+    r.game.enqueue_triggered(
+        EffectTiming::StartOfYourMainPhase,
+        TriggerSource::Permanent(handle),
+    );
+    r.game.drain_effect_queue();
+
+    assert_eq!(
+        r.game.memory,
+        mem_before,
+        "memory must not change when opponent has no Digimon"
+    );
+}
+
+// ─── [Main] activation_cost: suspend_self — negative (already suspended) ─────
+
+/// If Kazuki & Itsuki is already suspended, the [Main] clause's activation_cost
+/// (`suspend_self`) cannot be paid; the link process must not run (no link).
+#[test]
+fn bt25_089_main_does_not_link_when_tamer_already_suspended() {
+    let mut r = base()
+        .hand(0, &["APPMON-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    let my_host = r.place_on_field(0, "MY-HOST", Some(0));
+    advance_to_main(&mut r);
+
+    // Manually suspend Kazuki so the activation_cost `suspend_self` can't fire.
+    r.game.players[0].battle_area[kazuki.index as usize].is_suspended = true;
+
+    // fire_main enqueues and drains; with the cost blocked the process is
+    // skipped. The optional pre-cost prompt might or might not appear, but
+    // the link itself must never materialise.
+    fire_main(&mut r, 0, kazuki.index as usize);
+
+    // Exhaust any lingering optional accept/decline prompts by declining them all.
+    for _ in 0..4 {
+        let Some(sel) = r.game.pending_selection.as_ref() else {
+            break;
+        };
+        // Accept any prompt (PASS-style decline is last in valid_action_ids).
+        let action = *sel.valid_action_ids.last().unwrap();
+        let _ = r.game.resolve_selection(0, action);
+    }
+
+    assert_eq!(
+        r.game.player(0).battle_area[my_host.index as usize]
+            .linked_cards
+            .len(),
+        0,
+        "no link when Kazuki is already suspended (activation_cost guard)"
+    );
+}
+
+// ─── [Security] structural ────────────────────────────────────────────────────
+
+/// The compiled effect list must include an `OnSecurity` triggered clause that
+/// fires `play_from_security` — this is the inherited [Security] play-free effect.
+#[test]
+fn bt25_089_has_on_security_play_free_clause() {
+    let runner = base().deck(0, &["DECK-PAD"; 12]).start();
+    let card = runner.compiled_card(CARD_ID).expect("present in pack");
+    let has_on_sec = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity)
+        )
+    });
+    assert!(
+        has_on_sec,
+        "[Security] play-free clause (OnSecurity timing) must be compiled for BT25-089"
+    );
+}
+
+// ─── Color metadata drift (AUDITED-DRIFT) ────────────────────────────────────
+
+/// BT25-089 is a GREEN card (card image: green border; cards.json: `card_colors:
+/// [3]`; DCGO: BT25/Green/BT25_089.cs). The YAML drift (`color: [purple]`) was
+/// corrected to `[green]` on 2026-06-12 (audit drift fix).
+#[test]
+fn bt25_089_color_is_green_not_purple() {
+    let runner = base().deck(0, &["DECK-PAD"; 12]).start();
+    let card = runner.compiled_card(CARD_ID).expect("present in pack");
+    assert_eq!(
+        card.color,
+        vec![CompiledColor::Green],
+        "BT25-089 is Green; YAML color field must be corrected from [purple] to [green]"
     );
 }
