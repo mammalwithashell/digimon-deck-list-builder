@@ -175,14 +175,22 @@ jobs:
         env:
           HOSTED_API_URL: ${{ secrets.HOSTED_API_URL }}
           CI_ADMIN_TOKEN: ${{ secrets.CI_ADMIN_TOKEN }}
+          # Step outputs must reach the script via env, never inline ${{ }}
+          # inside run: — the notes contain backticks (e.g. `...msi` in
+          # RELEASE_NOTES.md) that bash executes as command substitution,
+          # which broke the desktop-v0.3.0 publish.
+          VERSION: ${{ steps.meta.outputs.version }}
+          ENGINE_COMMIT: ${{ steps.meta.outputs.engine_commit }}
+          MIN_VERSION: ${{ steps.meta.outputs.min_version }}
+          NOTES: ${{ steps.meta.outputs.notes }}
         shell: bash
         run: |
           set -euo pipefail
           BODY=$(jq -n \
-            --arg version "${{ steps.meta.outputs.version }}" \
-            --arg engine_commit "${{ steps.meta.outputs.engine_commit }}" \
-            --arg min_version "${{ steps.meta.outputs.min_version }}" \
-            --arg notes "${{ steps.meta.outputs.notes }}" \
+            --arg version "$VERSION" \
+            --arg engine_commit "$ENGINE_COMMIT" \
+            --arg min_version "$MIN_VERSION" \
+            --arg notes "$NOTES" \
             '{
                version: $version,
                channel: "alpha",
@@ -245,10 +253,13 @@ jobs:
       - name: Create GitHub release entry
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Via env, not inline ${{ }} — see "Create release on hosted API".
+          VERSION: ${{ steps.meta.outputs.version }}
+          NOTES: ${{ steps.meta.outputs.notes }}
         shell: bash
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            --title "Desktop ${{ steps.meta.outputs.version }}" \
-            --notes "${{ steps.meta.outputs.notes }}" \
+            --title "Desktop $VERSION" \
+            --notes "$NOTES" \
             artifacts/desktop-windows-x86_64/* \
             artifacts/desktop-linux-x86_64/*
