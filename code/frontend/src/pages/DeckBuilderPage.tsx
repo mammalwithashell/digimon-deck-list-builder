@@ -19,7 +19,7 @@ import { getCardById, searchCards } from '@/api/digimonCardApi';
 import * as deckApi from '@/api/deckApi';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import type { DigimonCardData } from '@/types/cards';
-import type { DeckEntry, DeckValidationResult } from '@/types/deck';
+import type { CardLegality, DeckEntry, DeckFormat, DeckValidationResult } from '@/types/deck';
 import './DeckBuilderPage.css';
 
 const COLORS = ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Black', 'White'];
@@ -35,6 +35,7 @@ const DEFAULT_FILTERS: BuilderCardFilters = {
   rarity: 'all',
   inheritedOnly: false,
   securityOnly: false,
+  legalOnly: false,
 };
 
 function cardButtonName(card: DigimonCardData): string {
@@ -131,6 +132,8 @@ export function DeckBuilderPage() {
     setDeckName,
     deckId,
     setDeckId,
+    gameMode,
+    setGameMode,
     loadDeck,
     clearDeck,
     mainDeck,
@@ -144,6 +147,9 @@ export function DeckBuilderPage() {
     addCardToDeck,
     removeCardFromDeck,
   } = useDeckBuilderStore();
+
+  const [formats, setFormats] = useState<DeckFormat[]>([]);
+  const [legality, setLegality] = useState<Record<string, CardLegality>>({});
 
   const [showImport, setShowImport] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -159,10 +165,47 @@ export function DeckBuilderPage() {
       clearDeck();
       setPreviewCard(null);
       setShowImport(nextParams.get('import') === '1');
+      // Honor a format passed in (e.g. "New Deck" from an Eden queue) so the
+      // builder opens already set to that format instead of Standard.
+      const requestedFormat = nextParams.get('format');
+      if (requestedFormat) setGameMode(requestedFormat);
     } else if (nextParams.get('import') === '1') {
       setShowImport(true);
     }
-  }, [location.pathname, location.search, clearDeck]);
+  }, [location.pathname, location.search, clearDeck, setGameMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    deckApi
+      .listFormats()
+      .then((list) => {
+        if (!cancelled) setFormats(list);
+      })
+      .catch(() => {
+        // Non-fatal: fall back to a Standard-only selector.
+        if (!cancelled) setFormats([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    deckApi
+      .cardLegalityBulk(gameMode)
+      .then((map) => {
+        if (!cancelled) setLegality(map);
+      })
+      .catch(() => {
+        // Non-fatal: without legality data the "format-legal only" filter and
+        // badges simply no-op (the filter falls back to showing everything).
+        if (!cancelled) setLegality({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gameMode]);
 
   useEffect(() => {
     if (testedCardIds !== null) return;
@@ -191,7 +234,7 @@ export function DeckBuilderPage() {
         );
         const eggEntries = slotArraysToDeckEntries(deck.egg_deck, deck.egg_deck_alt_arts, cardMap);
         if (!cancelled) {
-          loadDeck(deck.id, deck.name, mainEntries, eggEntries);
+          loadDeck(deck.id, deck.name, mainEntries, eggEntries, deck.game_mode);
           const loadedCards = Array.from(cardMap.values());
           setCardPool((current) => uniqueCards([...loadedCards, ...current]));
           setPreviewCard(loadedCards[0] ?? null);
@@ -261,8 +304,8 @@ export function DeckBuilderPage() {
 
   const counts = useMemo(() => getBuilderCounts(mainDeck, eggDeck), [mainDeck, eggDeck]);
   const visibleCards = useMemo(
-    () => filterBuilderCards(cardPool, builderFilters),
-    [builderFilters, cardPool],
+    () => filterBuilderCards(cardPool, builderFilters, legality),
+    [builderFilters, cardPool, legality],
   );
   const activeCards = activeSection === 'egg' ? eggDeck : mainDeck;
   const visibleSections = useMemo(() => groupDeckEntriesForBuilder(activeCards), [activeCards]);
@@ -281,7 +324,7 @@ export function DeckBuilderPage() {
         egg_deck: eggSlots.ids,
         main_deck_alt_arts: mainSlots.altArts,
         egg_deck_alt_arts: eggSlots.altArts,
-        game_mode: 'standard',
+        game_mode: gameMode,
       });
       setDeckId(saved.id);
       setIsDirty(false);
@@ -302,7 +345,7 @@ export function DeckBuilderPage() {
     const mainSlots = deckEntriesToSlotArrays(mainDeck);
     const eggSlots = deckEntriesToSlotArrays(eggDeck);
     try {
-      const result = await deckApi.validateDeckRaw(mainSlots.ids, eggSlots.ids);
+      const result = await deckApi.validateDeckRaw(mainSlots.ids, eggSlots.ids, gameMode);
       setValidationResult(result);
       setNotice(result.valid ? 'Deck valid' : 'Deck has issues');
     } catch {
@@ -339,6 +382,23 @@ export function DeckBuilderPage() {
                 value={deckName}
                 onChange={(event) => setDeckName(event.target.value)}
               />
+              <select
+                className="deck-format-select"
+                aria-label="Format"
+                value={gameMode}
+                onChange={(event) => setGameMode(event.target.value)}
+                title="Deck format — controls legality and validation"
+              >
+                {formats.length > 0 ? (
+                  formats.map((format) => (
+                    <option key={format.id} value={format.id}>
+                      {format.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="standard">Standard</option>
+                )}
+              </select>
               <span className="pill"><span className="v">{counts.main}</span>/50</span>
               <span className="pill">EGG <span className="v">{counts.egg}</span>/5</span>
               <span className="pill disabled">SIDE <span className="v">0</span>/15</span>
@@ -447,6 +507,14 @@ export function DeckBuilderPage() {
               />
               SECURITY ONLY
             </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={builderFilters.legalOnly}
+                onChange={(event) => setBuilderFilters((current) => ({ ...current, legalOnly: event.target.checked }))}
+              />
+              FORMAT-LEGAL ONLY
+            </label>
           </section>
 
           <main className="bld-main">
@@ -484,14 +552,20 @@ export function DeckBuilderPage() {
               <div className="bld-pool-grid">
                 {visibleCards.map((card) => {
                   const count = cardCount([...mainDeck, ...eggDeck], card.cardnumber);
-                  const atCap = count >= 4;
+                  const leg = legality[card.cardnumber];
+                  // Cap per the format's legality when known (banned = 0,
+                  // singleton/restricted = 1, …); fall back to the 4-copy rule.
+                  const maxCopies = leg ? leg.max_copies : 4;
+                  const atCap = count >= maxCopies;
+                  const banned = leg ? !leg.legal : false;
                   return (
                     <button
                       type="button"
                       key={`${card.cardnumber}-${card.isAltArt ? 'alt' : 'base'}`}
                       aria-label={cardButtonName(card)}
                       aria-disabled={atCap}
-                      className={`bld-card ${builderCardColorClass(card)} ${count > 0 ? 'in-deck' : ''} ${atCap ? 'cap-reached' : ''} ${previewCard?.cardnumber === card.cardnumber ? 'preview' : ''}`}
+                      className={`bld-card ${builderCardColorClass(card)} ${count > 0 ? 'in-deck' : ''} ${atCap ? 'cap-reached' : ''} ${banned ? 'illegal' : ''} ${previewCard?.cardnumber === card.cardnumber ? 'preview' : ''}`}
+                      title={leg?.reason ?? undefined}
                       onMouseEnter={() => setPreviewCard(card)}
                       onFocus={() => setPreviewCard(card)}
                       onClick={() => {
@@ -508,6 +582,10 @@ export function DeckBuilderPage() {
                       <span className="nm">{card.name}</span>
                       <span className="id">{card.cardnumber}</span>
                       {count > 0 && <span className="ct">{atCap ? 'MAX' : `x${count}`}</span>}
+                      {banned && <span className="bld-legal banned">BANNED</span>}
+                      {!banned && leg && leg.max_copies === 1 && (
+                        <span className="bld-legal limit">×1</span>
+                      )}
                     </button>
                   );
                 })}

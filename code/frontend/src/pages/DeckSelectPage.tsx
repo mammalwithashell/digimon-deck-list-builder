@@ -13,9 +13,19 @@ export function DeckSelectPage() {
   const { formatId, opponentMode, deckId, selectDeck } = usePlayFlowStore();
   const [decks, setDecks] = useState<DeckSummary[]>([]);
   const [search, setSearch] = useState('');
+  const [showAllFormats, setShowAllFormats] = useState(false);
   const [launching, setLaunching] = useState(false);
   const format = getPlayFormat(formatId);
-  const selected = decks.find((deck) => deck.id === deckId) ?? decks[0] ?? null;
+
+  // Decks visible in this queue: by default only those built for the current
+  // format (a deck belongs to one format), with an opt-in to see the rest.
+  const formatDecks = useMemo(
+    () => (showAllFormats ? decks : decks.filter((deck) => deck.game_mode === formatId)),
+    [decks, formatId, showAllFormats],
+  );
+  const otherFormatCount = decks.length - decks.filter((deck) => deck.game_mode === formatId).length;
+
+  const selected = formatDecks.find((deck) => deck.id === deckId) ?? formatDecks[0] ?? null;
   const selectedLegality = selected ? canUseDeckForFormat(selected, formatId) : null;
 
   useEffect(() => {
@@ -23,19 +33,21 @@ export function DeckSelectPage() {
       .listDecks()
       .then((items) => {
         setDecks(items);
-        const firstLegal = items.find((deck) => canUseDeckForFormat(deck, formatId).ok);
-        selectDeck(firstLegal?.id ?? items[0]?.id ?? null);
+        // Prefer a legal deck for THIS format; fall back to any deck for it.
+        const forFormat = items.filter((deck) => deck.game_mode === formatId);
+        const firstLegal = forFormat.find((deck) => canUseDeckForFormat(deck, formatId).ok);
+        selectDeck(firstLegal?.id ?? forFormat[0]?.id ?? null);
       })
       .catch(() => setDecks([]));
   }, [formatId, selectDeck]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return decks;
-    return decks.filter((deck) =>
+    if (!needle) return formatDecks;
+    return formatDecks.filter((deck) =>
       `${deck.name} ${deck.meta_archetype ?? ''} ${deck.tags.join(' ')}`.toLowerCase().includes(needle),
     );
-  }, [decks, search]);
+  }, [formatDecks, search]);
 
   const handleConfirm = async () => {
     if (!selected || !selectedLegality?.ok) return;
@@ -84,10 +96,41 @@ export function DeckSelectPage() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Decks, archetypes, tags"
           />
-          <Link to="/deckbuilder/new?returnTo=play">NEW DECK</Link>
+          {otherFormatCount > 0 && (
+            <button
+              type="button"
+              className="deck-select-toggle"
+              aria-pressed={showAllFormats}
+              onClick={() => setShowAllFormats((value) => !value)}
+            >
+              {showAllFormats
+                ? `SHOW ONLY ${format.name}`
+                : `SHOW ALL FORMATS (+${otherFormatCount})`}
+            </button>
+          )}
+          <Link to={`/deckbuilder/new?returnTo=play&format=${formatId}`}>NEW DECK</Link>
         </section>
 
         <section className="deck-select-grid">
+          {filtered.length === 0 && (
+            <div className="deck-select-empty">
+              {search.trim() ? (
+                <p>No decks match “{search.trim()}”.</p>
+              ) : (
+                <>
+                  <p>No {format.name} decks yet.</p>
+                  <Link to={`/deckbuilder/new?returnTo=play&format=${formatId}`}>
+                    Build a {format.name} deck
+                  </Link>
+                  {otherFormatCount > 0 && !showAllFormats && (
+                    <button type="button" onClick={() => setShowAllFormats(true)}>
+                      or show your other decks
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           {filtered.map((deck) => {
             const legality = canUseDeckForFormat(deck, formatId);
             return (

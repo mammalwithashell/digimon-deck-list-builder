@@ -44,6 +44,7 @@ function filters(overrides: Partial<BuilderCardFilters> = {}): BuilderCardFilter
     rarity: '',
     inheritedOnly: false,
     securityOnly: false,
+    legalOnly: false,
     ...overrides,
   };
 }
@@ -119,6 +120,24 @@ describe('deck builder view helpers', () => {
     expect(filterBuilderCards([target], filters({ search: 'vaccine' }))).toEqual([target]);
     expect(filterBuilderCards([target], filters({ search: 'BT11-028' }))).toEqual([target]);
     expect(filterBuilderCards([target], filters({ type: 'all', level: 'all', rarity: 'all' }))).toEqual([target]);
+  });
+
+  it('hides format-illegal cards only when legalOnly is set and a legality map is given', () => {
+    const legal = card({ cardnumber: 'BT1-010', name: 'Legal Mon' });
+    const banned = card({ cardnumber: 'BT1-011', name: 'Banned Mon' });
+    const unknown = card({ cardnumber: 'ZZZ-999', name: 'Untested Mon' });
+    const legality = {
+      'BT1-010': { legal: true, max_copies: 4, reason: null },
+      'BT1-011': { legal: false, max_copies: 0, reason: 'Banned in EDEN' },
+      // ZZZ-999 intentionally absent → treated as legal (engine warns, not rejects).
+    };
+    const pool = [legal, banned, unknown];
+    // legalOnly off → no filtering even with a map.
+    expect(filterBuilderCards(pool, filters({ legalOnly: false }), legality)).toEqual(pool);
+    // legalOnly on, no map → no-op (can't gate without data).
+    expect(filterBuilderCards(pool, filters({ legalOnly: true }))).toEqual(pool);
+    // legalOnly on with map → drops the banned card, keeps legal + unknown.
+    expect(filterBuilderCards(pool, filters({ legalOnly: true }), legality)).toEqual([legal, unknown]);
   });
 
   it('computes main, egg, total, type, and level counts from deck entries', () => {

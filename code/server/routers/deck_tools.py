@@ -11,6 +11,9 @@ from data_paths import CARDS_JSON
 from digimon_engine import (
     CardDatabase,
     CardKind,
+    card_legality,
+    card_legality_bulk,
+    list_formats,
     load_tested_cards,
     out_of_set_cards,
     parse_deck,
@@ -21,6 +24,13 @@ from digimon_engine import (
 from server.routers.schemas import DeckParseRequest, DeckValidateRequest
 
 router = APIRouter(tags=["deck-tools"])
+
+# Formats whose deck legality is owned by the Rust engine registry. EDH /
+# Titan keep their Python paths (player-count/size rules the binding doesn't
+# expose yet).
+ENGINE_FORMATS = frozenset(
+    {"standard", "no_restriction", "pauper", "eden", "eden_singleton"}
+)
 
 
 def _alpha_pool_error(card_id: str) -> str:
@@ -78,10 +88,12 @@ def deck_validate(request: DeckValidateRequest):
         if not card_ids:
             raise HTTPException(status_code=400, detail="Provide deck or main_deck/egg_deck")
 
-    if request.game_mode in {"standard", "edh_commander", "titan"}:
-        result = validate_deck(card_ids)
+    game_mode = request.game_mode or "standard"
+    if game_mode in ENGINE_FORMATS:
+        result = validate_deck_for_game_mode(card_ids, game_mode)
     else:
-        result = validate_deck_for_game_mode(card_ids, request.game_mode)
+        # edh_commander / titan — legacy Python path.
+        result = validate_deck(card_ids)
     summary = summarize_deck(card_ids)
 
     # Alpha gate: reject decks with any card that lacks behavioral test
@@ -112,6 +124,67 @@ def list_tested_cards():
     """
     card_ids = sorted(load_tested_cards())
     return {"card_ids": card_ids, "card_count": len(card_ids)}
+
+
+@router.get("/decks/formats")
+def list_deck_formats():
+    """All deck formats from the engine registry (single source of truth).
+
+    The deck-builder format selector and the play/format catalog are built
+    from this so the frontend never hardcodes a drifting format list.
+    """
+    return [
+        {
+            "id": f.id,
+            "name": f.name,
+            "description": f.description,
+            "deck_size": f.deck_size,
+            "egg_max": f.egg_max,
+            "rarity_policy": f.rarity_policy,
+            "singleton": f.singleton,
+            "default_max_copies": f.default_max_copies,
+            "playable": f.playable,
+        }
+        for f in list_formats()
+    ]
+
+
+@router.get("/decks/card-legality")
+def get_card_legality(card_id: str, game_mode: str = "standard"):
+    """Per-card legality under a format — drives the deck-builder pool filter
+    and per-card ban/limit/anomaly badges."""
+    try:
+        leg = card_legality(card_id, game_mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {
+        "card_id": card_id,
+        "game_mode": game_mode,
+        "legal": leg.legal,
+        "max_copies": leg.max_copies,
+        "reason": leg.reason,
+    }
+
+
+@router.get("/decks/card-legality-bulk")
+def get_card_legality_bulk(game_mode: str = "standard"):
+    """Legality for every tested-allowlist card under a format, keyed by card
+    id — one call drives the deck-builder pool legality filter + badges."""
+    try:
+        result = card_legality_bulk(game_mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {
+        "game_mode": game_mode,
+        "legality": {
+            card_id: {
+                "legal": leg.legal,
+                "max_copies": leg.max_copies,
+                "reason": leg.reason,
+            }
+            for card_id, leg in result.items()
+        },
+    }
 
 
 _COLOR_NAMES = ["Red", "Blue", "Yellow", "Green", "White", "Black", "Purple"]

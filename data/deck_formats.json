@@ -1,0 +1,113 @@
+{
+  "_comment": "Source of truth for deck-legality formats. Baked into the Rust engine via include_str! (compile-time) and read at runtime by the hosted API. Edit this file to change banlists, the EDEN anomaly protocol, or to add a format -- no Rust/Python code change required. See docs/EDEN_FORMAT_RULES.md and the add-deck-format-registry change. card_kind: digimon|tamer|option|digi-egg. rarities use printed codes: C U R SR SEC P.",
+  "restrictions": {
+    "official_eng": {
+      "_source": "https://digimoncard.io/restricted-list (matches DCGO DataBase.ENGBanList)",
+      "banned": ["BT2-090", "BT5-109", "EX5-065"],
+      "limited": [
+        "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110", "BT14-002",
+        "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069", "BT19-040", "BT2-047",
+        "BT2-069", "BT3-054", "BT3-103", "BT4-104", "BT4-111", "BT6-100", "BT6-104", "BT7-038",
+        "BT7-064", "BT7-069", "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068",
+        "EX2-039", "EX2-070", "EX3-057", "EX4-006", "EX4-019", "EX4-030", "EX5-015", "EX5-018",
+        "EX5-062", "P-008", "P-025", "P-029", "P-030", "P-123", "P-130", "ST2-13", "ST9-09"
+      ],
+      "limited_to": {},
+      "choice_groups": [
+        [["EX2-007"], ["EX7-064"]],
+        [["BT20-037"], ["BT17-035", "EX8-037"]]
+      ]
+    },
+    "eden": {
+      "_source": "Digimon Card Game EDEN Format Rules & Guidance, version 1.1.1, 18/01/2025. EX02-007 normalized to EX2-007.",
+      "banned": ["BT3-097", "BT9-103", "BT16-011", "EX4-008", "EX6-042", "BT12-092", "EX2-007", "BT15-082"],
+      "limited": [
+        "BT1-107", "BT1-112", "BT2-039", "BT2-047", "BT2-069", "BT3-054", "BT3-058", "BT3-103",
+        "BT4-098", "BT4-109", "BT5-062", "BT6-079", "BT6-100", "BT7-014", "BT7-025", "BT7-021",
+        "BT7-038", "BT7-064", "BT7-072", "BT7-075", "BT7-107", "BT8-095", "BT8-097", "BT9-109",
+        "BT11-064", "BT13-012", "BT14-002", "BT14-060", "BT14-093", "BT16-024", "BT17-023",
+        "BT17-065", "BT17-067", "BT17-075", "BT17-092", "BT18-087", "BT19-070", "EX3-067",
+        "EX5-048", "ST1-09"
+      ],
+      "limited_to": {
+        "BT6-085": 4
+      },
+      "choice_groups": [
+        [["EX4-015"], ["EX5-065"]]
+      ]
+    }
+  },
+  "anomaly_protocol": {
+    "_comment": "EDEN Anomaly Protocol: rare-or-higher cards are illegal in EDEN UNLESS they match a category below or appear in extra_card_ids, and the deck holds at most max_total such cards. Expand by adding a category or appending card IDs to extra_card_ids.",
+    "max_total": 4,
+    "categories": [
+      { "card_kind": "tamer", "rarities": ["R", "P"] },
+      { "card_kind": "option", "name_contains": "memory boost", "rarities": ["R", "SR", "P"] },
+      { "card_kind": "option", "name_contains": "training", "rarities": ["P"] },
+      { "card_kind": "option", "name_contains": "scramble", "rarities": ["P"] }
+    ],
+    "extra_card_ids": []
+  },
+  "formats": [
+    {
+      "id": "standard",
+      "name": "Standard",
+      "description": "The official ruleset: 50-card decks and the current ENG banlist.",
+      "deck_size": 50,
+      "egg_max": 5,
+      "rarity_policy": "all",
+      "banlist": "official_eng",
+      "singleton": false,
+      "default_max_copies": 4,
+      "playable": true
+    },
+    {
+      "id": "no_restriction",
+      "name": "No Banlist",
+      "description": "Standard shape with every card legal -- no banned or restricted list.",
+      "deck_size": 50,
+      "egg_max": 5,
+      "rarity_policy": "all",
+      "banlist": null,
+      "singleton": false,
+      "default_max_copies": 4,
+      "playable": true
+    },
+    {
+      "id": "pauper",
+      "name": "Pauper",
+      "description": "Common and uncommon cards only, on the standard ENG banlist.",
+      "deck_size": 50,
+      "egg_max": 5,
+      "rarity_policy": "common_uncommon",
+      "banlist": "official_eng",
+      "singleton": false,
+      "default_max_copies": 4,
+      "playable": true
+    },
+    {
+      "id": "eden",
+      "name": "EDEN",
+      "description": "Common/uncommon plus the EDEN Anomaly Protocol (up to 4 rare/promo Tamers, Memory Boosts, Training, and Scramble options), on EDEN's custom banlist.",
+      "deck_size": 50,
+      "egg_max": 5,
+      "rarity_policy": "eden_anomaly",
+      "banlist": "eden",
+      "singleton": false,
+      "default_max_copies": 4,
+      "playable": true
+    },
+    {
+      "id": "eden_singleton",
+      "name": "EDEN Singleton",
+      "description": "EDEN's card pool and banlist, played highlander: at most one copy of any card.",
+      "deck_size": 50,
+      "egg_max": 5,
+      "rarity_policy": "eden_anomaly",
+      "banlist": "eden",
+      "singleton": true,
+      "default_max_copies": 1,
+      "playable": true
+    }
+  ]
+}

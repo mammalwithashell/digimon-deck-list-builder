@@ -25,19 +25,35 @@ const deck = (overrides: Partial<DeckSummary>): DeckSummary => ({
 });
 
 describe('formatCatalog', () => {
-  it('exposes standard as the only engine-launchable format', () => {
+  it('enables every engine-registry format and keeps concept formats disabled', () => {
     expect(PLAY_FORMATS.find((f) => f.id === 'standard')?.enabled).toBe(true);
-    expect(PLAY_FORMATS.filter((f) => f.enabled).map((f) => f.id)).toEqual(['standard']);
+    expect(PLAY_FORMATS.filter((f) => f.enabled).map((f) => f.id)).toEqual([
+      'standard',
+      'no_restriction',
+      'pauper',
+      'eden',
+      'eden_singleton',
+    ]);
+    expect(PLAY_FORMATS.find((f) => f.id === 'titan')?.enabled).toBe(false);
+    expect(PLAY_FORMATS.find((f) => f.id === 'edh_commander')?.enabled).toBe(false);
   });
 
-  it('accepts a 50 plus 4 standard deck for standard', () => {
+  it('accepts a 50 plus 4 deck for an enabled format', () => {
     expect(canUseDeckForFormat(deck({}), 'standard')).toEqual({ ok: true });
+    expect(canUseDeckForFormat(deck({ game_mode: 'eden' }), 'eden')).toEqual({ ok: true });
   });
 
-  it('rejects incomplete and invalid standard decks', () => {
+  it('rejects a deck built for a different format', () => {
+    // A Standard deck is not selectable in the Eden queue, even if its shape
+    // fits — its validity was computed under Standard rules.
+    const result = canUseDeckForFormat(deck({ game_mode: 'standard' }), 'eden');
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects incomplete and invalid decks', () => {
     expect(canUseDeckForFormat(deck({ main_count: 43, card_count: 47 }), 'standard')).toEqual({
       ok: false,
-      reason: 'Standard requires 50 main cards and 0-5 eggs.',
+      reason: 'Requires 50 main cards and 0-5 eggs.',
     });
     expect(canUseDeckForFormat(deck({ is_valid: false }), 'standard')).toEqual({
       ok: false,
@@ -45,7 +61,12 @@ describe('formatCatalog', () => {
     });
   });
 
-  it('maps standard quick match to casual queue', () => {
+  it('rejects decks for disabled concept formats', () => {
+    expect(canUseDeckForFormat(deck({}), 'titan').ok).toBe(false);
+  });
+
+  it('maps quick match to casual queue', () => {
     expect(formatToQueueType('standard')).toBe('casual');
+    expect(formatToQueueType('eden_singleton')).toBe('casual');
   });
 });
