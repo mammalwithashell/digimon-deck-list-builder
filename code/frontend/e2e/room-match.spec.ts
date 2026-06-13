@@ -28,11 +28,15 @@ function legalDeck(): string[] {
   return deck;
 }
 
+// Direct API origin (page.request is Node-side — no CORS). Same pattern as
+// try-online-vs-ai.spec.ts so the spec works with or without the vite proxy.
+const API_BASE = process.env.API_BASE ?? 'http://localhost:8000';
+
 /** Mint a real guest on the local server and install its token before any
  * page load (web-mode hydrate doesn't mint guests; AuthGuard would bounce
  * to /login). Same pattern as try-online-vs-ai.spec.ts. */
 async function installGuestSession(page: Page) {
-  const resp = await page.request.post('/api/auth/guest');
+  const resp = await page.request.post(`${API_BASE}/auth/guest`);
   if (!resp.ok()) throw new Error(`POST /auth/guest failed (${resp.status()})`);
   const guest = (await resp.json()) as { access_token: string };
   await page.addInitScript((token: string) => {
