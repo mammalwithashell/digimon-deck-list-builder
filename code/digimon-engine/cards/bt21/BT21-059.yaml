@@ -1,0 +1,104 @@
+# BT21-059 Timemon — Digimon, Lv.4, Black, DP 5000, Play Cost 5.
+# Trait line (card image — authoritative): Sup./Appmon | Tool | Time Slip
+#   → traits: ["Sup.", Appmon, Tool, "Time Slip"], attribute: Tool.
+#
+# DCGO BT21_059.cs (authoritative — cards.json silently drops the link box):
+#   - BlockerSelfStaticEffect → kind: grant_keyword, keyword: Blocker
+#   - AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Stnd."), cost 2)
+#       → alt_paths digivolve from { trait_has: "Stnd." } cost 2.
+#       NOTE: DCGO passes NO level parameter — DO NOT add level_eq.
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2)
+#       → kind: link_condition, cost 2, filter { trait_has: Appmon }
+#   - AddAppfuseMethodByName(["Watchmon","Savemon","Calendamon"])
+#       → alt_paths app_fusion, materials name_in [Watchmon,Savemon,Calendamon], cost 0
+#   - ActivateClass priority 1 (host-side WhenLinked, NOT SetIsLinkedEffect):
+#       CanUseCondition checks IsOwnerTurn + CanTriggerWhenLinked(permanentCondition self)
+#       → when: when_card_linked_to_this, once_per_turn: true, active_when: { your_turn: true }
+#       canNoSelect: false → mandatory (no optional: true)
+#       body: select opp Digimon → de_digivolve { amount: 1, stop_at_level: 3 }
+#   - ActivateClass priority -1 + SetIsLinkedEffect(true) (linked-side WhenLinked):
+#       → scope: linked, when: when_linked
+#       canNoSelect: false → mandatory
+#       body: select opp Digimon → de_digivolve { amount: 1, stop_at_level: 3 }
+#   - Link box: +3000 DP while linked (not in cards.json — authored per briefing §1.2)
+#       → scope: linked, kind: aura, dp_modifier: 3000
+
+card: BT21-059
+name: Timemon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+traits: ["Sup.", Appmon, Tool, "Time Slip"]
+attribute: Tool
+
+alt_paths:
+  # ─── [Digivolve] from a Digimon with [Stnd.] trait: Cost 2 ───────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Stnd."), cost 2)
+  # NO level_eq — DCGO does not pass a level argument for this requirement.
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
+    cost: 2
+
+  # ─── [App Fusion] [Watchmon] & [Savemon] & [Calendamon]: Cost 0 ──────────
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Watchmon, Savemon, Calendamon]
+    cost: 0
+
+effects:
+  # ─── <Blocker> ───────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── Self link-condition: link onto an [Appmon] host for cost 2 ──────────
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+
+  # ─── Linked DP aura: +3000 DP to the host while this card is linked ──────
+  # Briefing §1.2: link-box DP icon. Not in cards.json (API drop); authored
+  # per verified G-LINK-INHERITED-ESS contract (DigiLink Shape-B).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] +3000 DP to the linked Digimon"
+
+  # ─── [Your Turn][OPT] When this Digimon gets linked: De-Digivolve 1 ──────
+  # Host-side trigger (DCGO ActivateClass priority 1, NOT SetIsLinkedEffect).
+  # CanUseCondition gates on IsOwnerTurn → active_when: { your_turn: true }.
+  # canNoSelect: false → mandatory selection when eligible opponent Digimon exists.
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedi_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1>"
+      - de_digivolve:
+          target: dedi_target
+          amount: 1
+          stop_at_level: 3
+
+  # ─── [When Linking] (linked-scope): De-Digivolve 1 opp Digimon ──────────
+  # DCGO ActivateClass priority -1 + SetIsLinkedEffect(true).
+  # Fires when THIS CARD (Timemon) gets linked to a host.
+  # canNoSelect: false → mandatory selection.
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: link_dedi_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1>"
+      - de_digivolve:
+          target: link_dedi_target
+          amount: 1
+          stop_at_level: 3

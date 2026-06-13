@@ -8976,6 +8976,71 @@
         "B3"
       ],
       "notes": "Start-of-main conditional memory (opp has Digimon); on_any_link suspend-cost observer -> Draw 1 + mandatory trash 1 hand. OMITTED: effect-initiated app-fuse-into-trash-card rider (engine gap, App Fuse). Security play-free. Review APPROVED as PARTIAL."
+    },
+    "BT21-059": {
+      "card_name": "Timemon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_059.rs",
+      "test_count": 18,
+      "patterns": [
+        "H5",
+        "C1",
+        "F-DeDigivolve"
+      ],
+      "notes": "Blocker; host when_card_linked_to_this De-Digivolve 1 (mandatory, OPT/your-turn) + linked when_linked De-Digivolve 1; link box link_condition c2 + linked +3000 DP aura; App Fusion Watchmon/Savemon/Calendamon; Stnd. alt digivolve. Review APPROVED."
+    },
+    "BT21-070": {
+      "card_name": "Gossipmon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-070.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_070.rs",
+      "test_count": 18,
+      "patterns": [
+        "A4",
+        "C1"
+      ],
+      "notes": "Security end-of-battle play; On Play/WhenDigivolving optional return Appmon Digimon from trash + linked when_linked same; link box link_condition c2 + linked +3000 DP aura (review-added); Stnd. alt digivolve. Review APPROVED."
+    },
+    "BT21-071": {
+      "card_name": "Scopemon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-071.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_071.rs",
+      "test_count": 16,
+      "patterns": [
+        "A6",
+        "C1"
+      ],
+      "notes": "On Play/WhenDigivolving place Appmon/3Musketeers as bottom source -> gain memory; link box link_condition c2 + linked +3000 DP aura (review-added) + linked when_linked Draw2+trash2; alt digivolve std + Stnd. + 3Musketeers-in-text (effect_text_contains). Review APPROVED."
+    },
+    "BT21-043": {
+      "card_name": "Sociamon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-043.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_043.rs",
+      "test_count": 20,
+      "patterns": [
+        "D1",
+        "C1"
+      ],
+      "notes": "Security end-of-battle play; On Play/WhenDigivolving -2000 DP until opp turn ends (deletes <=2000 DP) + linked when_linked same; link box link_condition c2 + linked +3000 DP aura; Stnd. alt digivolve. Review APPROVED."
     }
   }
 }

@@ -1,0 +1,105 @@
+card: BT21-070
+name: Gossipmon
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 4000
+traits: ["Sup.", Appmon, Social, Gossip]
+attribute: Social
+
+# ─── Alternate Digivolution Paths ─────────────────────────────────────────────
+#
+# Standard Lv.3 purple evo from cards.json (evo_costs): Lv.3 purple / Cost 2.
+# (The standard digivolve box is encoded in cards.json evo_costs and does not
+#  need an alt_paths entry — the engine reads it from evo_costs directly.)
+#
+# Alt path: DCGO BT21_070.cs EffectTiming.None / AddSelfDigivolutionRequirementStaticEffect:
+#   PermanentCondition: targetPermanent.TopCard.EqualsTraits("Stnd.")
+#   digivolutionCost: 2, ignoreDigivolutionRequirement: false.
+#   No level parameter → no level_eq gate. Filter: trait_has "Stnd." only.
+alt_paths:
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
+    cost: 2
+
+effects:
+  # ─── [Security] At the end of the battle, play this card without paying the cost ──
+  #
+  # DCGO: PlaySelfDigimonAfterBattleSecurityEffect.
+  # Same pattern as BT21-015 (Cyclonemon) and BT25-036 (Craftmon):
+  #   when: on_security → play_from_security: {}
+  - when: on_security
+    summary: "[Security] Play this card for free at end of battle"
+    process:
+      - play_from_security: {}
+
+  # ─── [On Play] [When Digivolving] Optional return Appmon Digimon from trash ──
+  #
+  # DCGO BT21_070.cs — two ActivateClass blocks both under EffectTiming.OnEnterFieldAnyone:
+  #   One gated CanTriggerOnPlay, one gated CanTriggerWhenDigivolving.
+  #   Body: SelectCardEffect Mode.AddHand from Trash,
+  #     canTargetCondition: card.EqualsTraits("Appmon") && card.IsDigimon,
+  #     maxCount: 1, canNoSelect: true (optional).
+  #   CanActivateConditionShared requires HasMatchConditionOwnersCardInTrash → the
+  #   engine skips activation automatically when trash has no eligible card, so
+  #   the effect resolves silently if there is nothing to return. We map both
+  #   CanTriggerOnPlay and CanTriggerWhenDigivolving to when: [on_play, when_digivolving]
+  #   with optional: true.
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          prompt: "Return 1 Digimon card with the [Appmon] trait from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  # ─── Self link-condition: link onto an [Appmon]-trait Digimon for Cost 2 ─────
+  #
+  # DCGO: AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2).
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+
+  # ─── [Link] +3000 DP (applies to the host while linked) ─────────────────────
+  #
+  # Printed in the link box (card image, right edge): +3000 DP. The Appmon link
+  # DP bonus is data-driven in DCGO (Permanent.cs: LinkedDP += addedLinkCard.LinkDP),
+  # never a CardEffect — so its absence from BT21_070.cs is expected, NOT evidence
+  # it doesn't exist. Model as a scope:linked self-aura (briefing §1.2).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] +3000 DP"
+
+  # ─── [When Linking] Optional return Appmon Digimon from trash (link-side ESS) ─
+  #
+  # DCGO: WhenLinked EffectTiming.WhenLinked, SetIsLinkedEffect(true).
+  #   Body: identical to the On Play body — select 1 Appmon Digimon from trash
+  #   (canNoSelect: true) → Mode.AddHand.
+  #   CanActivateCondition: isExistOnField(card) &&
+  #     HasMatchConditionOwnersCardInTrash(card, CanSelectReturn).
+  #   Mapped to scope: linked, when: when_linked, optional: true.
+  - scope: linked
+    when: when_linked
+    optional: true
+    summary: "[When Linking] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: link_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          prompt: "Return 1 Digimon card with the [Appmon] trait from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: link_pick }
