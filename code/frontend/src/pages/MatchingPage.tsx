@@ -57,8 +57,9 @@ export function MatchingPage() {
 
   useEffect(() => {
     if (matchmaking.status !== 'matched' || !matchmaking.match) return;
-    setQueue({ roomCode: matchmaking.match.join_code, gameId: matchmaking.match.game_id });
-    navigate(`/game/${matchmaking.match.game_id}?mode=pvp&player=1`);
+    const { game_id, your_seat } = matchmaking.match;
+    setQueue({ gameId: game_id, seat: your_seat });
+    navigate(`/game/${game_id}?mode=pvp&player=${your_seat}`);
   }, [matchmaking.match, matchmaking.status, navigate, setQueue]);
 
   const elapsed = Math.max(localWait, Math.floor(matchmaking.waitedSeconds));

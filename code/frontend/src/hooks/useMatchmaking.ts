@@ -10,8 +10,8 @@ export type MatchmakingStatus =
   | 'error';
 
 export interface MatchFoundPayload {
-  join_code: string;
   game_id: string;
+  your_seat: 1 | 2;
   opponent: { user_id: string | null; display_name: string | null };
 }
 
@@ -23,8 +23,8 @@ interface WaitingMessage {
 
 interface MatchFoundMessage {
   type: 'match_found';
-  join_code: string;
   game_id: string;
+  your_seat: 1 | 2;
   opponent: { user_id: string | null; display_name: string | null };
 }
 
@@ -115,8 +115,8 @@ export function useMatchmaking(): UseMatchmakingResult {
       } else if (msg.type === 'match_found') {
         setStatus('matched');
         setMatch({
-          join_code: msg.join_code,
           game_id: msg.game_id,
+          your_seat: msg.your_seat,
           opponent: msg.opponent,
         });
       } else if (msg.type === 'cancelled') {
@@ -155,8 +155,8 @@ export function useMatchmaking(): UseMatchmakingResult {
           // Backend paired us immediately — skip the WS round-trip.
           setStatus('matched');
           setMatch({
-            join_code: resp.join_code,
             game_id: resp.game_id,
+            your_seat: resp.your_seat,
             opponent: { user_id: null, display_name: null },
           });
           return;

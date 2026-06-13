@@ -15,6 +15,9 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        // PvP/spectator game traffic upgrades to WebSocket on the same
+        // /api prefix (useWebSocketGame builds ws://host/api/ws/...).
+        ws: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
