@@ -423,7 +423,10 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
         // card-pick selection on its own — the inner PASS is the decline
         // path, so no outer accept/decline prompt is needed.
         // `G-OUTER-OPTIONAL-NOT-INSTALLED`
-        | CompiledStep::LinkCardToSelf { optional, .. } => *optional,
+        | CompiledStep::LinkCardToSelf { optional, .. }
+        // `app_fuse` with `optional: true` likewise installs PASS-able
+        // permanent/card selections itself (effect-initiated App Fuse).
+        | CompiledStep::AppFuse { optional, .. } => *optional,
         // Multi-pick selections are declinable when their minimum is zero
         // (the player may pick nothing — PASS at `picked >= min`).
         CompiledStep::SelectCountCappedMulti {
