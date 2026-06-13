@@ -48,6 +48,15 @@ enum OptionSource {
     Trash(usize),
 }
 
+/// Source zone for the result (fusing-in) card in an effect-initiated App Fuse
+/// (`Game::commit_effect_app_fuse`). The shipped riders fuse from hand
+/// (BT21-084 / BT23-079 / P-241 / BT25-089) or trash (BT24-087).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AppFuseSourceZone {
+    Hand,
+    Trash,
+}
+
 struct TakenCardSource {
     card: CardSource,
     restore_face_up_security_for: Option<PlayerId>,
