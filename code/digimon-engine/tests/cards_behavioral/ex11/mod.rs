@@ -1,5 +1,10 @@
+mod ex11_002;
 mod ex11_008;
 mod ex11_012;
+mod ex11_014;
+mod ex11_015;
+mod ex11_016;
+mod ex11_017;
 mod ex11_019;
 mod ex11_020;
 mod ex11_021;
@@ -10,6 +15,7 @@ mod ex11_038;
 mod ex11_044;
 mod ex11_053;
 mod ex11_054;
+mod ex11_057;
 mod ex11_060;
 mod ex11_061;
 mod ex11_065;

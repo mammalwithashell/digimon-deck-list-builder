@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-11",
+  "last_updated": "2026-06-13",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -8771,6 +8771,246 @@
       "yaml_path": "code/digimon-engine/cards/ex3/EX3-008.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_008.rs",
       "notes": "[WD] two-effect choice (trash digivolve / DNA into hand card, cost printed); inherited [EoT] DNA digivolve into hand card — the Q30 driver clause."
+    },
+    "EX11-002": {
+      "card_name": "Hiyarimon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_002.rs",
+      "test_count": 6,
+      "tests_ignored": 0,
+      "patterns": [],
+      "notes": "Digi-egg; inherited conditional aura: CanAttackUnsuspended while opp has no sourced Digimon, gated your_turn + carrier Ice-Snow."
+    },
+    "EX7-016": {
+      "card_name": "Bulucomon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-016.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_016.rs",
+      "test_count": 11,
+      "tests_ignored": 0,
+      "patterns": [],
+      "notes": "[OnPlay] reveal-3 two mandatory buckets (Paledramon/Hexeblaumon-name + Ice-Snow) rest to bottom; inherited [WA][OPT] trash_top_stacked_sources."
+    },
+    "EX11-014": {
+      "card_name": "Penguinmon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_014.rs",
+      "test_count": 12,
+      "tests_ignored": 0,
+      "patterns": [],
+      "notes": "[OnPlay] reveal-3 buckets (Suzune Kazuki + Ice-Snow Digimon); inherited Jamming. Rule-box Ice-Snow added to traits."
+    },
+    "EX8-019": {
+      "card_name": "Penguinmon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-019.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_019.rs",
+      "test_count": 9,
+      "tests_ignored": 0,
+      "patterns": [],
+      "notes": "[Your Turn] before_pay_cost -1 digivolve into Ice-Snow; inherited [WA] SecurityAttackChange -1 EoOT. Hiyarimon alt-evo + rule-box Ice-Snow."
+    },
+    "EX7-020": {
+      "card_name": "Paledramon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_020.rs",
+      "test_count": 11,
+      "tests_ignored": 0,
+      "patterns": [],
+      "notes": "[WD] trash_bottom_sources 2; if opp sourceless self gains Jamming+Blocker EoOT; inherited [WA][OPT] trash top source. Rule-box Ice-Snow."
+    },
+    "EX11-015": {
+      "card_name": "Frigimon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-015.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_015.rs",
+      "test_count": 14,
+      "tests_ignored": 0,
+      "patterns": [],
+      "notes": "[WD] if <=1 Tamer may play Suzune Kazuki from hand free; inherited Jamming. Ice-Snow alt-evo."
+    },
+    "EX8-022": {
+      "card_name": "Frigimon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_022.rs",
+      "test_count": 15,
+      "tests_ignored": 0,
+      "patterns": [
+        "ICECLAD"
+      ],
+      "notes": "Iceclad; [OP][WD] trash_bottom_sources 2 then if opp sourceless gain 1 memory; inherited [WA] SecurityAttackChange -1. Closed Iceclad DSL keyword mapping."
+    },
+    "EX7-021": {
+      "card_name": "CrysPaledramon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_021.rs",
+      "test_count": 17,
+      "tests_ignored": 0,
+      "patterns": [
+        "ICECLAD"
+      ],
+      "notes": "Iceclad; [WD] trash any 2 cross-permanent (min-clamp ladder) then if opp sourceless unsuspend self; inherited [Your Turn] Piercing + S.A.+1."
+    },
+    "EX11-016": {
+      "card_name": "PolarBearmon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-016.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_016.rs",
+      "test_count": 15,
+      "tests_ignored": 0,
+      "patterns": [
+        "ICECLAD"
+      ],
+      "notes": "Iceclad; [OP][WD] trash any 2 cross-permanent then may place a sourceless opp Digimon top/bottom of opp security (select_effect_choice); inherited [Your Turn] Piercing + S.A.+1."
+    },
+    "EX8-023": {
+      "card_name": "PolarBearmon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_023.rs",
+      "test_count": 19,
+      "tests_ignored": 0,
+      "patterns": [
+        "ICECLAD"
+      ],
+      "notes": "Iceclad; [OP][WD] trash any 2 cross-permanent then lock 1 sourceless opp Digimon (CannotSuspend + CannotActivateWhenDigivolvingEffects) EoOT; inherited [Your Turn] Piercing + S.A.+1. CannotSuspend now engine-enforced."
+    },
+    "EX7-023": {
+      "card_name": "Hexeblaumon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_023.rs",
+      "test_count": 18,
+      "tests_ignored": 0,
+      "patterns": [
+        "ICECLAD"
+      ],
+      "notes": "S.A.+1 + Iceclad face-up; [WD] trash any 4 cross-permanent then if opp sourceless return 1 opp Tamer to deck bottom; [Opp Turn] aura: opp Digimon with <= source count can't suspend. CannotSuspend enforcement landed (ignored test un-ignored)."
+    },
+    "EX11-017": {
+      "card_name": "Skadimon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_017.rs",
+      "test_count": 24,
+      "tests_ignored": 0,
+      "patterns": [
+        "ICECLAD"
+      ],
+      "notes": "Iceclad + Barrier; [OP][WD][WA][OPT shared] play Suzune Kazuki or <=Lv4 Ice-Snow free; [All Turns][OPT] on other play/digivolve trash any 3 then lock sourceless opp Digimon. CannotSuspend enforcement landed (ignored test un-ignored)."
+    },
+    "EX8-028": {
+      "card_name": "Skadimon",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-028.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_028.rs",
+      "test_count": 19,
+      "tests_ignored": 0,
+      "patterns": [
+        "ICECLAD"
+      ],
+      "notes": "Iceclad + Barrier; [WD] play <=Lv(4+X) Ice-Snow free (formula level cap, X=opp sourceless count); [WD][WA][OPT] by placing a sourceless Digimon bottom security unsuspend self."
+    },
+    "P-228": {
+      "card_name": "Unique Emblem: Frozen Crown",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/p/P-228.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_228.rs",
+      "test_count": 14,
+      "tests_ignored": 0,
+      "patterns": [],
+      "notes": "[Main]/[Security] reveal-3 buckets (Ice-Snow Digimon + LIBERATOR) place self as Delay option; trigger-gated Delay on Suzune Kazuki play -> digivolve into <=Lv6 LIBERATOR from hand cost -3."
+    },
+    "EX8-066": {
+      "card_name": "Suzune Kazuki",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-066.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_066.rs",
+      "test_count": 19,
+      "tests_ignored": 0,
+      "patterns": [],
+      "notes": "[SoMP] +1 memory if opp has Digimon; [All Turns] on own Ice-Snow Digimon play/digivolve, by suspending trash any 1 opp source; [Security] self-play."
+    },
+    "EX11-057": {
+      "card_name": "Suzune Kazuki",
+      "validated_date": "2026-06-13",
+      "report": "iceclad-liberator-pool-2026-06-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Iceclad Liberator",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-057.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_057.rs",
+      "test_count": 20,
+      "tests_ignored": 0,
+      "patterns": [
+        "FORMULA-COUNT-SOURCE-SELECT"
+      ],
+      "notes": "[SoMP] +1 memory if opp has Digimon; [OnPlay] per own Ice-Snow Digimon trash any 1 opp source (formula-count source select); [All Turns] on effects trashing opp sources, by suspending gain 1 memory; [Security] self-play. Closed G-DSL-SELECT-SOURCES-FORMULA-COUNT."
     }
   }
 }

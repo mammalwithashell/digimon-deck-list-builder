@@ -1,0 +1,356 @@
+# EX7-023 Hexeblaumon — Digimon, Lv.6, Blue, DP 12000, Cost 12, Mega /
+# Data / Magic Knight / Witchelny.
+# Rule box (card image): "Rule: Trait: Has [Ice-Snow] Type." — the card
+# permanently has the [Ice-Snow] trait in addition to its printed type line,
+# so it is encoded directly in `traits:` below. NOTE: data/cards.json
+# `type_eng` carries only ["Magic Knight", "Witchelny"] (the API ingest drops
+# the rule box), so production card_data built from cards.json is missing
+# Ice-Snow until an override lands (same gap as siblings EX7-016 / EX7-020 /
+# EX7-021).
+# Standard digivolution: Lv.5 Blue / cost 4 (cards.json evo_costs; the card
+# image shows a single digivolve circle — no alt evo box printed).
+#
+# Printed card text (card image EX7-023.webp, authoritative; cards.json agrees):
+#
+#   <Security A. +1> (This Digimon checks 1 additional security card.)
+#
+#   <Iceclad> (Other than against Security Digimon, compare the number of
+#   digivolution cards instead of DP in this Digimon's battles.)
+#
+#   [When Digivolving] Trash any 4 digivolution cards of your opponent's
+#   Digimon. Then, if your opponent has no Digimon with digivolution cards,
+#   return 1 of your opponent's Tamers to the bottom of the deck.
+#
+#   [Opponent's Turn] None of your opponent's Digimon with as many or fewer
+#   digivolution cards as this Digimon can suspend.
+#
+#   (No inherited effect.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Blue/EX7_023.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Security A. +1 (None): ChangeSelfSAttackStaticEffect(changeValue: 1,
+#   isInheritedEffect: false, condition: null) → face-up UNCONDITIONAL
+#   self-aura `security_attack: 1` (BT10-013 idiom; lowers to
+#   ModifierType::SecurityAttackChange +1, consulted at
+#   combat raw_security_strike).
+#
+# Iceclad (None): IcecladSelfStaticEffect(isInheritedEffect: false) →
+#   face-up `grant_keyword: Iceclad` (engine Keyword::Iceclad consumed at
+#   Game::resolve_battle — stack-size compare instead of DP; security battles
+#   unaffected). EX8-022 / EX7-021 idiom.
+#
+# When Digivolving (OnEnterFieldAnyone, ActivateClass):
+#   - CanActivateCondition = IsExistOnBattleAreaDigimon(card) ONLY → no
+#     clause-level condition; the "Then" half runs even with an empty
+#     opponent board.
+#   - Trash half gated on HasMatchConditionPermanent(opponent battle-area
+#     Digimon), then CardEffectCommons.SelectTrashDigivolutionCards(
+#     permanentCondition: opponent battle-area Digimon, maxCount: 4,
+#     canNoTrash: FALSE, isFromOnly1Permanent: FALSE): cross-permanent,
+#     MANDATORY (no PASS), capped at min(total selectable digivolution
+#     cards, 4) — with 0 available the helper exits without a prompt.
+#   - THEN, unconditionally AFTER the trash loop: if
+#     !HasMatchConditionOpponentsPermanent(p => p.IsDigimon &&
+#     !p.HasNoDigivolutionCards) — "your opponent has no Digimon with
+#     digivolution cards", observed POST-trash — AND
+#     HasMatchConditionPermanent(opponent Tamer): MANDATORY
+#     SelectPermanentEffect(maxCount: min(1, count), canNoSelect: false,
+#     canEndNotMax: false, mode: PutLibraryBottom). With no opponent Tamer
+#     the select is skipped entirely.
+#   - Structure note: the Tamer check is per-step (`if no_permanent ...`)
+#     rather than a clause-level `condition:` because DCGO runs it even when
+#     the trash half had no candidates AND it must observe the board after
+#     the trash resolves ("Then, if ..."). EX7-020 / EX7-021 idiom.
+#   - Availability-split note: the DSL's `select_opponent_sources` carries a
+#     STATIC `min` — if min exceeded the live candidate count the picker
+#     would drop its continuation (and the trash + Tamer tail with it).
+#     DCGO's min(total, 4) cap is therefore encoded as an explicit if/else
+#     ladder: total >= 4 → exact-4; == 3 → exact-3; == 2 → exact-2; == 1 →
+#     exact-1; 0 → no prompt. Each arm's "total >= N" decomposes over
+#     per-permanent stack sizes (total = Σ(stack_size − 1); stack_size
+#     INCLUDES the top card):
+#       total >= 4 ⟺ (a stack has >= 4 sources [ss >= 5])
+#                  ∨ (a stack has >= 3 sources [ss >= 4] ∧ >= 2 stacks have
+#                     >= 1 source [count(ss >= 2) >= 2])           — 3+1
+#                  ∨ (>= 2 stacks have >= 2 sources [count(ss>=3) >= 2]) — 2+2
+#                  ∨ (a stack has >= 2 sources [ss >= 3] ∧ >= 3 stacks have
+#                     >= 1 source [count(ss >= 2) >= 3])           — 2+1+1
+#                  ∨ (>= 4 stacks have >= 1 source [count(ss>=2) >= 4]) — 1×4
+#       total >= 3 ⟺ (ss >= 4) ∨ (ss >= 3 ∧ count(ss >= 2) >= 2)
+#                  ∨ (count(ss >= 2) >= 3)
+#       total >= 2 ⟺ (ss >= 3) ∨ (count(ss >= 2) >= 2)       — EX7-021 idiom
+#       total >= 1 ⟺ (ss >= 2)
+#     Soundness/completeness of each decomposition is proven by the
+#     partition-sweep test ex7_023_wd_min_clamp_ladder_demands_min_of_total_
+#     and_four (configs [4],[5],[3,1],[2,2],[2,1,1],[1,1,1,1] → 4;
+#     [3],[2,1],[1,1,1] → 3; [2],[1,1] → 2; [1] → 1).
+#   - Known minor divergence (shared with EX8-023 / BT25-028's
+#     cross-permanent pick): `select_opponent_sources` enumerates sources
+#     under EVERY opponent battle-area permanent — there is no DSL filter
+#     for "host permanent is a Digimon" on source picks. DCGO restricts
+#     hosts to Digimon. The ladder conditions deliberately match the
+#     enumerator (no kind gate) for internal consistency. Only divergent on
+#     the exotic board "opponent TAMER carrying digivolution cards".
+#
+# Opponent's Turn (None, CanNotSuspendClass):
+#   - CanUseCondition = IsExistOnBattleAreaDigimon(card) && IsOpponentTurn →
+#     face-up declarative aura, `active_when: { opponents_turn: true }`
+#     (declarative effects only run while the source is on the field).
+#   - CantSuspendCondition = opponent battle-area permanent && IsDigimon &&
+#     permanent.DigivolutionCards.Count <=
+#     card.PermanentOfThisCard().DigivolutionCards.Count — a LIVE compare
+#     against THIS card's own current source count. Both DCGO counts exclude
+#     the top card, so sources(opp) <= sources(self) ⟺ stack_size(opp) <=
+#     sources(self) + 1. Encoded as a formula-valued `stack_size_lte` whose
+#     threshold is 1 + source_stack_count (the per-selector resolves against
+#     ctx.source_permanent = the aura carrier; the subject side
+#     `perm.card_sources.len()` includes the top card).
+#   - The aura installs ModifierType::CannotSuspend per matching opponent
+#     Digimon on each declarative tick (cleared + refreshed via
+#     materializes_declarative_state, so the set tracks live source counts
+#     and the turn gate symmetrically).
+#   - KNOWN ENGINE GAP (pre-existing, do not fix here — shared with
+#     BT25-026/028, EX9-019, BT20-084, EX8-023): CannotSuspend has no engine
+#     consult site yet — it installs/expires but does not block
+#     attack/suspend actions. The aura is authored faithfully anyway;
+#     enforcement-dependent test assertions are #[ignore]d.
+#
+# ─── Clause layout ───────────────────────────────────────────────────────────
+#
+# Clause 1 — <Security A. +1>: IMPLEMENTED (face-up unconditional self-aura
+#   security_attack: 1).
+# Clause 2 — <Iceclad>: IMPLEMENTED (face-up grant_keyword).
+# Clause 3 — [When Digivolving] trash any 4 opp digivolution cards, then
+#   conditional opponent-Tamer bottom-deck return: IMPLEMENTED
+#   (availability-ladder select_opponent_sources + trash_selected_sources;
+#   per-step post-trash no_permanent gate + mandatory select_opponent_
+#   permanent(kind: tamer) + return_to_deck position: bottom).
+# Clause 4 — [Opponent's Turn] suspend lock on opponent Digimon with as many
+#   or fewer digivolution cards: IMPLEMENTED as a faithful continuous aura
+#   installing CannotSuspend (modifier installation set is exact; engine-wide
+#   suspend/attack enforcement of CannotSuspend is a pre-existing engine gap).
+
+card: EX7-023
+name: Hexeblaumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+traits: [Magic Knight, Witchelny, Ice-Snow]
+attribute: Data
+form: Mega
+
+alt_paths:
+  # Printed standard evo box: Lv.5 from blue, cost 4 (encoded explicitly like
+  # neighbor EX7 specs so DSL-only loads carry the printed cost table).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+
+effects:
+  # ─── Clause 1: <Security A. +1> ──────────────────────────────────────────────
+  #
+  # "(This Digimon checks 1 additional security card.)"
+  #
+  # Face-up UNCONDITIONAL self-aura (BT10-013 idiom). Lowers to a
+  # per-declarative-tick ModifierType::SecurityAttackChange +1 on the carrier,
+  # summed into the security strike at combat raw_security_strike.
+  - kind: aura
+    target: {}
+    security_attack: 1
+    summary: "<Security A. +1> (This Digimon checks 1 additional security card)"
+
+  # ─── Clause 2: <Iceclad> ─────────────────────────────────────────────────────
+  #
+  # "(Other than against Security Digimon, compare the number of digivolution
+  #  cards instead of DP in this Digimon's battles.)"
+  #
+  # Engine Keyword::Iceclad is consumed at the combat resolver
+  # (Game::resolve_battle): when either combatant has it, the battle compares
+  # `card_sources.len()` instead of effective DP. Security battles route
+  # through resolve_player_security_loop and are unaffected. EX8-022 idiom.
+  - kind: grant_keyword
+    keyword: Iceclad
+    summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
+
+  # ─── Clause 3: [When Digivolving] trash any 4 + conditional Tamer return ────
+  #
+  # "Trash any 4 digivolution cards of your opponent's Digimon. Then, if your
+  #  opponent has no Digimon with digivolution cards, return 1 of your
+  #  opponent's Tamers to the bottom of the deck."
+  #
+  # Mandatory throughout (DCGO canNoTrash: false / canNoSelect: false; no
+  # printed "you may" — no `optional:`/`optional_zero:` per the
+  # optional-on-mandatory-selection pitfall). The trash is a cross-permanent
+  # player pick clamped to min(4, available) — see the availability-split
+  # note in the header. The "Then" Tamer select is gated on the POST-trash
+  # board (sibling steps; the dispatcher parks the outer tail across the
+  # in-branch selections) and silently skips when the opponent has no Tamer.
+  - when: when_digivolving
+    summary: "[WD] Trash any 4 digivolution cards of opp Digimon; then if opp has no Digimon with digivolution cards, return 1 opp Tamer to the bottom of the deck"
+    process:
+      # Trash half — availability ladder encoding DCGO's min(total, 4) cap.
+      - if:
+          # total opponent digivolution cards >= 4 (partitions 4 / 3+1 / 2+2
+          # / 2+1+1 / 1+1+1+1 — see header decomposition).
+          condition:
+            any_of:
+              - any_field_permanent: { of: opponent, stack_size_gte: 5 }
+              - all_of:
+                  - any_field_permanent: { of: opponent, stack_size_gte: 4 }
+                  - count_gte:
+                      filter:
+                        of: opponent
+                        zone: [battle_area]
+                        stack_size_gte: 2
+                      n: 2
+              - count_gte:
+                  filter:
+                    of: opponent
+                    zone: [battle_area]
+                    stack_size_gte: 3
+                  n: 2
+              - all_of:
+                  - any_field_permanent: { of: opponent, stack_size_gte: 3 }
+                  - count_gte:
+                      filter:
+                        of: opponent
+                        zone: [battle_area]
+                        stack_size_gte: 2
+                      n: 3
+              - count_gte:
+                  filter:
+                    of: opponent
+                    zone: [battle_area]
+                    stack_size_gte: 2
+                  n: 4
+          then:
+            - select_opponent_sources:
+                min: 4
+                max: 4
+                bind_as: trashed
+                prompt: "Trash any 4 digivolution cards of your opponent's Digimon"
+                then:
+                  - trash_selected_sources: { source_refs: trashed }
+          else:
+            - if:
+                # total == 3 (>= 3 given the >= 4 arm failed): partitions
+                # 3 / 2+1 / 1+1+1.
+                condition:
+                  any_of:
+                    - any_field_permanent: { of: opponent, stack_size_gte: 4 }
+                    - all_of:
+                        - any_field_permanent: { of: opponent, stack_size_gte: 3 }
+                        - count_gte:
+                            filter:
+                              of: opponent
+                              zone: [battle_area]
+                              stack_size_gte: 2
+                            n: 2
+                    - count_gte:
+                        filter:
+                          of: opponent
+                          zone: [battle_area]
+                          stack_size_gte: 2
+                        n: 3
+                then:
+                  - select_opponent_sources:
+                      min: 3
+                      max: 3
+                      bind_as: trashed
+                      prompt: "Trash any 4 digivolution cards of your opponent's Digimon (only 3 available)"
+                      then:
+                        - trash_selected_sources: { source_refs: trashed }
+                else:
+                  - if:
+                      # total == 2: partitions 2 / 1+1 (EX7-021 idiom).
+                      condition:
+                        any_of:
+                          - any_field_permanent: { of: opponent, stack_size_gte: 3 }
+                          - count_gte:
+                              filter:
+                                of: opponent
+                                zone: [battle_area]
+                                stack_size_gte: 2
+                              n: 2
+                      then:
+                        - select_opponent_sources:
+                            min: 2
+                            max: 2
+                            bind_as: trashed
+                            prompt: "Trash any 4 digivolution cards of your opponent's Digimon (only 2 available)"
+                            then:
+                              - trash_selected_sources: { source_refs: trashed }
+                      else:
+                        - if:
+                            # total == 1.
+                            condition:
+                              any_field_permanent: { of: opponent, stack_size_gte: 2 }
+                            then:
+                              - select_opponent_sources:
+                                  min: 1
+                                  max: 1
+                                  bind_as: trashed
+                                  prompt: "Trash any 4 digivolution cards of your opponent's Digimon (only 1 available)"
+                                  then:
+                                    - trash_selected_sources: { source_refs: trashed }
+      # "Then, if your opponent has no Digimon with digivolution cards,
+      #  return 1 of your opponent's Tamers to the bottom of the deck."
+      # Evaluated AFTER the trash resolves (sibling step — the dispatcher
+      # parks this outer tail across the in-branch source selections), and
+      # ALSO when the trash half had no candidates (DCGO runs the check
+      # unconditionally). "No digivolution cards" = stack_size <= 1 (stack
+      # size includes the top card). The mandatory Tamer select silently
+      # skips when no opponent Tamer exists (DCGO HasMatchConditionPermanent
+      # guard); return_to_deck then no-ops on the unbound ref.
+      - if:
+          condition:
+            no_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              stack_size_gte: 2
+          then:
+            - select_opponent_permanent:
+                bind_as: tamer_target
+                filter: { kind: tamer }
+                prompt: "Return 1 of your opponent's Tamers to the bottom of the deck"
+            - return_to_deck:
+                target: tamer_target
+                position: bottom
+
+  # ─── Clause 4: [Opponent's Turn] suspend lock ────────────────────────────────
+  #
+  # "None of your opponent's Digimon with as many or fewer digivolution cards
+  #  as this Digimon can suspend."
+  #
+  # Continuous face-up aura, active only during the opponent's turn (DCGO
+  # CanUseCondition: IsOpponentTurn). Target = opponent battle-area Digimon
+  # whose digivolution-card count <= THIS Digimon's LIVE count (DCGO
+  # CantSuspendCondition compares DigivolutionCards.Count on both sides —
+  # top card excluded on both, so sources(opp) <= sources(self) ⟺
+  # stack_size(opp) <= 1 + sources(self)). The threshold formula's
+  # `source_stack_count` per-selector resolves against the aura carrier
+  # (ctx.source_permanent), making the compare dynamic: digivolving /
+  # de-digivolving / source-trashing either side retargets the lock set on
+  # the next declarative tick.
+  #
+  # NOTE: CannotSuspend currently installs/expires correctly but has no
+  # engine consult site (pre-existing gap shared with BT25-026/028, EX9-019,
+  # BT20-084, EX8-023) — enforcement assertions are #[ignore]d in the tests.
+  - kind: aura
+    active_when: { opponents_turn: true }
+    target:
+      of: opponent
+      kind: digimon
+      stack_size_lte:
+        formula:
+          base: 1
+          per: { source_stack_count: {} }
+          delta: 1
+    modifier: CannotSuspend
+    modifier_value: 1
+    summary: "[Opponent's Turn] None of your opponent's Digimon with as many or fewer digivolution cards as this Digimon can suspend"

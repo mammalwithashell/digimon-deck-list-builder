@@ -1,0 +1,79 @@
+# EX11-002 Hiyarimon — Digi-Egg (Digitama), Lv.2, Blue.
+# Traits: Lesser, LIBERATOR. Form: In-Training.
+#
+# Printed card text (data/cards.json, verified against the card image):
+#
+# Inherited Effect [Your Turn]
+#   While your opponent has no Digimon with digivolution cards, this
+#   [Ice-Snow] trait Digimon can also attack your opponent's unsuspended
+#   Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Blue/EX11_002.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# DCGO models this as a CanAttackTargetDefendingPermanentClass static at
+# EffectTiming.None with SetIsInheritedEffect(true):
+#   * CanUseCondition: IsExistOnBattleArea(card) AND opponent has ZERO
+#     battle-area Digimon with DigivolutionCards.Count >= 1.
+#   * AttackerCondition: permanent == card.PermanentOfThisCard() (the carrier).
+#   * DefenderCondition: opponent battle-area Digimon AND !IsSuspended.
+#
+# DCGO DIVERGENCE (printed text wins, per no-approximations):
+#   * DCGO does NOT gate on [Your Turn]; the printed text does. (Near-vacuous
+#     for attack legality — attacks only happen on your turn — but the
+#     modifier is gated faithfully here.)
+#   * DCGO does NOT check the carrier's [Ice-Snow] trait; the printed text
+#     says "this [Ice-Snow] trait Digimon", a self-trait gate on the
+#     inheriting Digimon. Modelled via `trait_has` in the inherited
+#     `active_when` (the subject of an inherited self-aura's active_when is
+#     the carrier permanent).
+#
+# Clause 1 — Inherited [Your Turn] conditional CanAttackUnsuspended
+#   IMPLEMENTED as an inherited conditional self-aura (AD1-012 idiom:
+#   `scope: inherited`, `kind: aura`, `target: {}`, named `modifier:` grant).
+#
+#   "No Digimon with digivolution cards" = no opponent battle-area Digimon
+#   with stack_size_gte: 2, via the `no_permanent` existential.
+#   (perm.card_sources.len() is the total stack including the top card; a
+#    Digimon with >= 1 digivolution card has stack size >= 2 — BT17-077
+#    stack-size idiom.)
+#
+#   `CanAttackUnsuspended` is the §4.4 mask modifier: the carrier may declare
+#   attacks on ANY unsuspended opponent Digimon ("can also attack your
+#   opponent's unsuspended Digimon" — suspended targeting is unchanged).
+#
+card: EX11-002
+name: Hiyarimon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Lesser, LIBERATOR]
+form: In-Training
+
+effects:
+  # ─── Clause 1 — Inherited [Your Turn] conditional unsuspended-attack grant ──
+  # "While your opponent has no Digimon with digivolution cards, this
+  #  [Ice-Snow] trait Digimon can also attack your opponent's unsuspended
+  #  Digimon."
+  # Self-aura on the carrier; all three gates live in active_when:
+  #   1. your_turn — printed [Your Turn] timing header.
+  #   2. trait_has Ice-Snow — "this [Ice-Snow] trait Digimon" (subject = the
+  #      carrier permanent for an inherited self-aura).
+  #   3. no_permanent(opponent, battle_area, digimon, stack >= 2) — "your
+  #      opponent has no Digimon with digivolution cards".
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - trait_has: Ice-Snow
+        - no_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            stack_size_gte: 2
+    modifier: CanAttackUnsuspended
+    summary: "[Your Turn] While opp has no Digimon w/ digivolution cards, this [Ice-Snow] Digimon can also attack unsuspended Digimon"

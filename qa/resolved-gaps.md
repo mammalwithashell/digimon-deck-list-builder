@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-30
+Last updated: 2026-06-13
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,28 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## Formula-valued count on cross-permanent source selections (G-DSL-SELECT-SOURCES-FORMULA-COUNT) — RESOLVED 2026-06-13
+
+- **Surfaced:** Iceclad Liberator pool authoring (EX11-057 Suzune Kazuki). "[On Play] For each of
+  your [Ice-Snow] trait Digimon, trash any 1 digivolution card from your opponent's Digimon" needs a
+  cross-permanent opponent-source pick whose count is `min(N, available)` where N is a runtime count
+  (own Ice-Snow Digimon). `select_opponent_sources` (and `select_own_sources`) had `min`/`max` as
+  literal `u8` end-to-end, so the count couldn't be a formula; `for_each` can't host a per-iteration
+  interactive pick (parked iteration aborts the rest), and `select_count_capped_multi` (which has the
+  formula `max`) has no cross-permanent opponent-source zone.
+- **Resolution:** widened `SelectOpponentSourcesArgs.min`/`max` from `u8` to the existing `CountBound`
+  (literal | formula) and added an opt-in `clamp_to_available: bool` (default `false`) mirroring DCGO
+  `TrashDigivolutionCards` `min(N, available)`. Plain YAML ints still deserialize via the untagged
+  `CountBound::Literal` arm, and default-false preserves the historical drop-continuation semantics the
+  committed availability ladders (EX7-021 / EX7-023 / EX11-017 / EX8-066) depend on. Threaded through
+  `step.rs` → `compile.rs` → `compiled.rs` → `validator.rs` (formula validation like
+  `select_count_capped_multi`) → executor `dsl_cards/step/selections.rs` (bounds resolved once, then
+  clamped to `count_opponent_source_candidates`, which matches the install filter). `SelectOwnSourcesArgs`
+  was deliberately NOT widened (its compiled bounds feed DigiBurst lowering's literal min/max checks —
+  cascades; left as a follow-up if a card proves it). Schema is stdout-only (not checked in).
+- **Driver card:** EX11-057 ([On Play] clause); tests `tests/cards_behavioral/ex11/ex11_057.rs` +
+  `tests/dsl/phase2g_select_sources.rs` + `code/digimon-dsl/tests/parse_source_selection_steps.rs`.
 
 ## On-trash inherited observer "remain-in-trash" gating (Q23) — WITHDRAWN as mischaracterized — 2026-05-30
 

@@ -72,3 +72,6 @@ code/tests/api/fixtures/*.onnx
 # Playwright e2e artifacts
 code/frontend/test-results/
 code/frontend/playwright-report/
+
+# Per-worktree isolated cargo target scratch dirs (build contention workaround)
+.cargo-target-*/

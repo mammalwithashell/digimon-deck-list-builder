@@ -403,6 +403,10 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         "Vortex" => Keyword::Vortex,
         "Collision" => Keyword::Collision,
         "Evade" => Keyword::Evade,
+        // Iceclad — binary keyword consumed at the combat resolver
+        // (`Game::resolve_battle` swaps the DP comparator for stack-size
+        // when either combatant has it). First DSL carrier: EX8-022.
+        "Iceclad" => Keyword::Iceclad,
         "Decode" => Keyword::Decode,
         "ArmorPurge" => Keyword::ArmorPurge,
         "SecurityAttackPlus" => Keyword::SecurityAttackPlus(value.unwrap_or(1) as i8),

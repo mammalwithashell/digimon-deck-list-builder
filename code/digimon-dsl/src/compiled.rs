@@ -1618,11 +1618,21 @@ pub enum CompiledStep {
     /// Opponent-side mirror of `SelectOwnSources`. Candidate set drawn from the
     /// OPPONENT's battle-area digivolution-source stacks.
     /// G-SELECT-OPPONENT-SOURCES.
+    ///
+    /// `min`/`max` are literal-or-formula bounds resolved once at execution
+    /// time (G-DSL-SELECT-SOURCES-FORMULA-COUNT — driver EX11-057).
     SelectOpponentSources {
         target: Option<CompiledBindingRef>,
         filter: CompiledPredicate,
-        min: u8,
-        max: u8,
+        min: CompiledCountBound,
+        max: CompiledCountBound,
+        /// DCGO `TrashDigivolutionCards.cs` min(N, available) parity: clamp
+        /// the resolved `min`/`max` to the live candidate count; zero
+        /// candidates silently skip the pick. Default `false` keeps the
+        /// historical drop-continuation semantics committed availability
+        /// ladders (EX7-021 / EX7-023 / EX11-017 / EX8-066) rely on.
+        #[serde(default)]
+        clamp_to_available: bool,
         bind_as: Option<String>,
         prompt: String,
         then: Vec<CompiledStep>,
