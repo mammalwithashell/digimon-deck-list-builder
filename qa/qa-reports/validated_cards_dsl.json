@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-12",
+  "last_updated": "2026-06-13",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -6339,10 +6339,10 @@
     },
     "BT25-089": {
       "card_name": "Kazuki & Itsuki",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
       "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "gap_kind": "dsl",
       "archetype": "BT25 link-ts slice",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-089.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_089.rs",
@@ -6351,7 +6351,7 @@
         "B1",
         "B3"
       ],
-      "notes": "AUDIT: shipped clauses faithful (start-of-main memory; [Main] suspend-self link Appmon from hand to chosen own Digimon; security play-free). Color drift fixed (purple->green). RESIDUAL OPEN gaps: (1) effect-initiated app-fuse (engine); (2) link-from-digivolution-cards multi-source [G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES] (dsl). Review APPROVED as PARTIAL."
+      "notes": "App-fuse [EoT][OPT] rider now SHIPPED (app_fuse from: hand). Residual PARTIAL: the [Main] link source \"from your Digimon digivolution cards\" (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES) is still omitted \u2014 unrelated to App Fuse."
     },
     "BT25-052": {
       "card_name": "Logimon",
@@ -8883,10 +8883,10 @@
     },
     "BT21-084": {
       "card_name": "Haru Shinkai",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-084.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_084.rs",
@@ -8895,7 +8895,7 @@
         "B1",
         "B3"
       ],
-      "notes": "Memory ramp <=2->3; on_any_link observer (suspend-self cost) -> Draw 1. OMITTED: effect-initiated app-fuse rider (engine gap, see docs/RUST_ENGINE_GAPS.md App Fuse; same gap blocks BT25-089). Security play-free. Review APPROVED as PARTIAL."
+      "notes": "App-fuse rider now shipped (app_fuse from: hand after Draw 1). Memory ramp + on_any_link suspend-cost + security play. Full card implemented."
     },
     "P-217": {
       "card_name": "Haru Shinkai",
@@ -8967,10 +8967,10 @@
     },
     "BT24-087": {
       "card_name": "Rei Katsura",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Appmon (BT21/BT24 wave)",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-087.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_087.rs",
@@ -8979,7 +8979,7 @@
         "B1",
         "B3"
       ],
-      "notes": "Start-of-main conditional memory (opp has Digimon); on_any_link suspend-cost observer -> Draw 1 + mandatory trash 1 hand. OMITTED: effect-initiated app-fuse-into-trash-card rider (engine gap, App Fuse). Security play-free. Review APPROVED as PARTIAL."
+      "notes": "App-fuse-into-trash rider now shipped (app_fuse from: trash + System/Life/Transmutation filter). Start-of-main memory + on_any_link suspend-cost Draw1+trash1 + app_fuse + security play. Full card implemented."
     },
     "BT21-059": {
       "card_name": "Timemon",
@@ -9081,10 +9081,10 @@
     },
     "BT23-079": {
       "card_name": "Eri Karan",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Appmon (BT21/BT23/BT25 wave)",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-079.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_079.rs",
@@ -9093,14 +9093,14 @@
         "B1",
         "B3"
       ],
-      "notes": "Start-of-main conditional memory; on_any_link suspend-cost observer -> +3000 DP to linked host (event_target) until opp turn ends (engine fix: binding_ref EventTarget host-liveness fallback). OMITTED: effect-initiated app-fuse rider (engine gap). Security play-free. Review APPROVED as PARTIAL."
+      "notes": "App-fuse rider now shipped (app_fuse from: hand after +3000 DP to event-host). Full card implemented."
     },
     "P-241": {
       "card_name": "Yujin Ozora",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-06-13",
+      "report": "effect-initiated-app-fuse plan",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Appmon (promo)",
       "yaml_path": "code/digimon-engine/cards/p/P-241.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_241.rs",
@@ -9109,7 +9109,7 @@
         "B1",
         "B3"
       ],
-      "notes": "Start-of-turn memory ramp <=2->3; on_any_link suspend-cost observer -> select own [Appmon] Digimon gains Vortex + +3000 DP until end of your turn. OMITTED: effect-initiated app-fuse rider (engine gap). Security play-free. Review APPROVED as PARTIAL."
+      "notes": "App-fuse rider now shipped (app_fuse from: hand after Vortex+3000 DP grant to a chosen Appmon Digimon). Full card implemented."
     }
   }
 }

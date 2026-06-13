@@ -3648,3 +3648,6 @@ lowers to `OnLink` with NO forced self/host filter — scope is gated entirely b
 cost. First production users (all green): BT21-084, BT21-101, P-217 (and BT21-009
 family via the host-side timing). Same timing unblocks P-241, BT23-079, BT24-087,
 BT25-075's observer sub-clause.
+
+## RESOLVED 2026-06-13 — `app_fuse` step (effect-initiated App Fuse)  [G-DSL-APP-FUSE]
+**Status: RESOLVED 2026-06-13.** New DSL step `app_fuse: { from: hand|trash, result_filter?, optional }` for the printed "1 of your Digimon may app fuse into a Digimon card in the hand/trash" rider. Lowers to `CompiledStep::AppFuse` → `EffectContext::initiate_effect_app_fuse`. Added to `body_first_step_is_declinable` (installs its own PASS-able selections). First users: BT21-084, BT23-079, P-241, BT24-087, BT25-089. See `docs/RUST_ENGINE_GAPS.md` "Effect-initiated App Fuse — RESOLVED 2026-06-13".
