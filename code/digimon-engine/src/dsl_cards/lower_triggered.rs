@@ -418,7 +418,12 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
         | CompiledStep::LinkToOwnDigimon { optional, .. }
         | CompiledStep::MayAttackNow { optional, .. }
         | CompiledStep::RedirectAttackTarget { optional, .. }
-        | CompiledStep::RefireEffect { optional, .. } => *optional,
+        | CompiledStep::RefireEffect { optional, .. }
+        // `link_card_to_self` with `optional: true` installs a PASS-able
+        // card-pick selection on its own — the inner PASS is the decline
+        // path, so no outer accept/decline prompt is needed.
+        // `G-OUTER-OPTIONAL-NOT-INSTALLED`
+        | CompiledStep::LinkCardToSelf { optional, .. } => *optional,
         // Multi-pick selections are declinable when their minimum is zero
         // (the player may pick nothing — PASS at `picked >= min`).
         CompiledStep::SelectCountCappedMulti {

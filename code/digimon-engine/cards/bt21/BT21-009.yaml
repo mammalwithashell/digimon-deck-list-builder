@@ -1,0 +1,95 @@
+# BT21-009 Gatchmon — Digimon, Lv.3, Red, DP 2000, Cost 3.
+# Trait line (image): Stnd./Appmon | Social | Search/Hero
+#
+# DCGO BT21_009.cs (authoritative):
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 1)
+#       → kind: link_condition, cost 1, filter: { trait_has: Appmon }
+#   - AddSelfDigivolutionRequirementStaticEffect(
+#       permanentCondition: IsLevel2 && (HasAppmonTrait || HasHeroTrait),
+#       digivolutionCost: 0, ignoreDigivolutionRequirement: false)
+#       → alt_paths digivolve from { level_eq: 2, any_of: [Appmon, Hero] } cost 0
+#   - [WhenLinked] ActivateClass (IsOwnerTurn + <= 1 tamers + Haru Shinkai in hand):
+#       play 1 [Haru Shinkai] from hand free (optional, once per turn)
+#       → when: when_card_linked_to_this, once_per_turn, active_when: all_of[your_turn,
+#         count_lte(tamers <= 1)], select_hand name_is "Haru Shinkai" + play_from_hand_free
+#   - Link ESS: RaidSelfEffect(isLinkedEffect: true)
+#       → scope: linked, kind: grant_keyword, keyword: Raid
+#   - Link box DP: +2000 DP
+#       → scope: linked, kind: aura, dp_modifier: 2000
+#
+# Exemplars: BT25-007 (link_condition + alt-digivolve), BT25-052 (when_card_linked_to_this
+#   + tamer count gate + select_hand + play_from_hand_free), BT25-101 (linked grant_keyword)
+#
+# Notes:
+#   - The JSON `evo_costs` has a red Lv.2 entry with cost 0. However, the printed
+#     card text says "Lv.2 w/[Appmon]/[Hero] trait: Cost 0" — this is a trait-gated
+#     digivolve, not a simple color digivolve. Model it as an alt_path with trait filter.
+#   - `attribute: Social` is kept for attribute_is predicates (separate from traits).
+#   - Traits include all segments from the image: Stnd., Appmon, Social, Search, Hero.
+
+card: BT21-009
+name: Gatchmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: ["Stnd.", Appmon, Social, Search, Hero]
+attribute: Social
+
+alt_paths:
+  # Digivolve from Lv.2 with [Appmon] or [Hero] trait for cost 0
+  - kind: digivolve
+    from:
+      level_eq: 2
+      any_of:
+        - trait_has: Appmon
+        - trait_has: Hero
+    cost: 0
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 1 ──────────
+  - kind: link_condition
+    cost: 1
+    filter: { trait_has: Appmon }
+
+  # ─── [Link] +2000 DP to the host while linked ────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon"
+
+  # ─── [Link] <Raid> — host gains Raid while this card is linked ───────────
+  - kind: grant_keyword
+    scope: linked
+    keyword: Raid
+    summary: "[Link] <Raid> (host gains Raid while this card is linked)"
+
+  # ─── [Your Turn][OPT] When this Digimon gets linked: if ≤1 Tamers, play
+  #     1 [Haru Shinkai] from hand free ─────────────────────────────────────
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - count_lte:
+            filter:
+              owner: you
+              zone: [battle_area]
+              kind: tamer
+            n: 1
+    summary: "[Your Turn][OPT] When this Digimon gets linked, if ≤1 Tamers, may play 1 [Haru Shinkai] from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: haru
+          optional: true
+          filter:
+            name_is: "Haru Shinkai"
+          prompt: "Play 1 [Haru Shinkai] from your hand without paying the cost"
+      - if:
+          condition: { binding_present: haru }
+          then:
+            - play_from_hand_free: { of: you, hand_index: haru }

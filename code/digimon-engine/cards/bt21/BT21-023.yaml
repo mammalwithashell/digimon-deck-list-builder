@@ -1,0 +1,195 @@
+# BT21-023 Globemon — Digimon, Lv.5, Red/Yellow, DP 10000, Cost 9.
+# Trait line: Global (App Name) — Hero. Form: Ult. Attribute: Social.
+#
+# CORRECTED printed card text (transcribed from card image — authoritative):
+#
+#   Digivolve: Lv.4: Cost 4 (red), plus form-gated "Sup.": Cost 4
+#     (digivolve from a "Sup." form Appmon — DCGO EqualsTraits("Sup.")).
+#
+#   App Fusion box: "App Fusion [DoGatchmon] & [Timemon]: Cost 0 —
+#     If 2 such cards are linked together, stack the link card on top and
+#     digivolve."
+#
+#   ＜Security A. +1＞
+#   [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon
+#     card from your hand or this Digimon's digivolution cards to this
+#     Digimon without paying the cost.
+#   [Your Turn] [Once Per Turn] When this Digimon gets linked, delete 1 of
+#     your opponent's Digimon with as much or less DP as this Digimon.
+#
+#   Link box (bottom of card):
+#   - Link [Appmon] trait: Cost 3
+#   - Link DP bonus: +4000 DP
+#   - [When Linking] Delete 1 of your opponent's Digimon with as much or
+#     less DP as this Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Red/BT21_023.cs
+#
+# DCGO crosscheck (per clause):
+#   Region "Alternative Digivolution Condition" (None):
+#     AddSelfDigivolutionRequirementStaticEffect(
+#       EqualsTraits("Sup."), cost 4, ignoreReqs: false).
+#     → alt_paths digivolve from { trait_has: "Sup." } cost 4.
+#
+#   Region "Link Condition" (None):
+#     AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 3).
+#     → kind: link_condition, cost 3, filter: { trait_has: Appmon }.
+#
+#   Region "App Fusion" (None):
+#     AddAppfuseMethodByName([DoGatchmon, Timemon]).
+#     → alt_paths kind: app_fusion, materials name_in [DoGatchmon, Timemon], cost 0.
+#
+#   Region "Sec +1" (None):
+#     ChangeSelfSAttackStaticEffect(changeValue: 1, isInherited: false).
+#     → kind: grant_keyword, keyword: SecurityAttackPlus, value: 1.
+#
+#   Region "On Play" / "When Digivolving" (OnEnterFieldAnyone):
+#     Shared CanSelectCardConditionShared: IsDigimon && Level <= 4 &&
+#     CanLinkToTargetPermanent. Checks hand and DigivolutionCards; if
+#     candidates exist, installs a From Hand/From Sources selector, then
+#     picks 1 card and calls AddLinkCard (cost 0, optional canNoSelect: true).
+#     → when: [on_play, when_digivolving], optional: true,
+#       link_card_to_self: { from: [hand, digivolution_sources],
+#         filter: all_of [kind: digimon, level_lte: 4], cost: 0, optional: true }.
+#     (DCGO outer ActivateClass optional — skippable if no candidates exist.)
+#     DSL note: the outer body-first-step is `link_card_to_self` which is itself
+#     declinable (optional: true), so no outer_prompt: true needed.
+#
+#   Region "Your Turn" (WhenLinked):
+#     OPT (maxCount 1) SetHashString("Delete_BT21_023"), CanUseCondition:
+#     CanTriggerWhenLinked(permanent == card.PermanentOfThisCard()) AND
+#     CanActivateCondition: IsOwnerTurn. SharedLinkedActivateCoroutine:
+#     select opp Digimon with DP <= this.DP (canNoSelect: false).
+#     → when: when_card_linked_to_this, once_per_turn: true,
+#       active_when: { your_turn: true }, mandatory delete dp_lte source_dp.
+#     DP ceiling = card.PermanentOfThisCard().DP = the host's effective_dp
+#     (which already includes the +4000 linked aura).
+#
+#   Region "ESS - When Linked" (WhenLinked, SetIsLinkedEffect(true)):
+#     Same SharedLinkedActivateCoroutine (same CanSelectPermanentCondition,
+#     same DP ceiling: permanent.DP <= card.PermanentOfThisCard().DP).
+#     → scope: linked, when: when_linked, delete 1 opp dp_lte source_dp.
+#
+#   Link box +4000 DP bonus (continuous, while linked):
+#     → scope: linked, kind: aura, target: {}, dp_modifier: 4000.
+#     Applies to the host while Globemon is linked. effective_dp then
+#     includes +4000, so `source_dp` in both delete clauses sees host DP +4000.
+#
+# ─── Implementation status ─────────────────────────────────────────────────
+#
+# | Card-text element                                            | Status       |
+# |--------------------------------------------------------------|--------------|
+# | Std digivolve Lv.4 Red / Cost 4                             | IMPLEMENTED (printed evo_costs) |
+# | Alt-digivolve Lv. from "Sup." form / Cost 4                 | IMPLEMENTED (alt_paths digivolve trait_has Sup.) |
+# | App Fusion [DoGatchmon] & [Timemon]: Cost 0                  | IMPLEMENTED (alt_paths app_fusion) |
+# | <Security A. +1>                                            | IMPLEMENTED (grant_keyword SecurityAttackPlus 1) |
+# | [OP][WD] may link Lv.4- Digimon from hand/digi-sources free | IMPLEMENTED (link_card_to_self optional) |
+# | [Your Turn][OPT] when_card_linked_to_this delete DP<=self   | IMPLEMENTED (when_card_linked_to_this, once_per_turn) |
+# | [When Linking] delete DP<=host (ESS)                        | IMPLEMENTED (scope: linked, when: when_linked) |
+# | Link box +4000 DP aura                                      | IMPLEMENTED (scope: linked aura dp_modifier 4000) |
+
+card: BT21-023
+name: Globemon
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 9
+dp: 10000
+traits: ["Ult.", Appmon, Social, Global, Hero]
+attribute: Social
+
+alt_paths:
+  # ─── Standard digivolve: Lv.4 Red / Cost 4 (printed evo_costs) ─────────────
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+
+  # ─── Alt-digivolve: from a "Sup." form Digimon / Cost 4 ─────────────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Sup."), cost 4).
+  # "Sup." is the Appmon Grade: Superior form trait. Both the standard and alt paths
+  # have the same cost (4) per the card's printed digivolve boxes.
+  - kind: digivolve
+    from: { trait_has: "Sup." }
+    cost: 4
+
+  # ─── [App Fusion] [DoGatchmon] & [Timemon]: Cost 0 ──────────────────────────
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [DoGatchmon, Timemon]
+    cost: 0
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 3 ─────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+    summary: "[Link] [Appmon] trait: Cost 3"
+
+  # ─── ＜Security A. +1＞ ────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  # ─── Link box: +4000 DP aura (applied to the host while Globemon is linked) ──
+  # scope: linked marks this as a link-ESS; the host's effective_dp includes this
+  # bonus, so both delete clauses see the correct DP ceiling.
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 4000
+    summary: "[Link] This Digimon's host gets +4000 DP while Globemon is linked"
+
+  # ─── [On Play][When Digivolving] may link Lv.4- Digimon from hand/sources ───
+  # Optional: if no level ≤4 Digimon exists in hand or digivolution sources,
+  # the link_card_to_self body has no candidates → prompt does not install
+  # (DCGO CanActivateCondition gate). DSL `optional: true` on link_card_to_self
+  # is the inner decline path (no outer_prompt needed).
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost"
+    process:
+      - link_card_to_self:
+          from: [hand, digivolution_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          cost: 0
+          optional: true
+
+  # ─── [Your Turn][Once Per Turn] when_card_linked_to_this: delete ≤self DP ───
+  # DCGO WhenLinked (maxCount 1 = OPT), CanActivateCondition: IsOwnerTurn.
+  # SharedLinkedActivateCoroutine: select opp Digimon DP<=this.DP (mandatory).
+  # DP ceiling = host's effective_dp (includes the +4000 linked aura above).
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
+      - delete_permanent: { target: del_target }
+
+  # ─── [When Linking] (link-source ESS): delete 1 opp ≤host DP ───────────────
+  # scope: linked + when: when_linked = DCGO WhenLinked SetIsLinkedEffect(true).
+  # Same SharedLinkedActivateCoroutine: DP <= card.PermanentOfThisCard().DP.
+  # source_dp resolves to the HOST's effective_dp (including +4000 from the
+  # linked aura above, which has already been applied before this fires).
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: ess_del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
+      - delete_permanent: { target: ess_del_target }
