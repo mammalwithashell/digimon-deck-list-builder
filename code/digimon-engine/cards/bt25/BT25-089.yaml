@@ -6,7 +6,7 @@
 #     from your hand or your Digimon's digivolution cards to 1 of your Digimon
 #     with the cost reduced by 2.
 #   [End of Your Turn][OPT] 1 of your Digimon may app fuse into a Digimon card
-#     in hand. — BLOCKED (no App Fuse primitive). OMITTED.
+#     in hand. — now shipped via the `app_fuse` step (effect-initiated App Fuse).
 #   Inherited [Security]: Play this card without paying the cost.
 #
 # PARTIAL — the [Main] link's "from your Digimon's digivolution cards" source is
@@ -14,7 +14,8 @@
 # effect's own permanent, but the effect source here is a Tamer (no Digimon
 # under-sources). The hand source is authored; the all-your-Digimon source scan
 # is a residual gap (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES). The App Fuse
-# clause is BLOCKED (no App Fuse primitive).
+# clause is now IMPLEMENTED (2026-06-13); the link-source scan is the only
+# remaining PARTIAL gap.
 #
 # Cost-modeling note: "-2" reduces the linked card's own link cost; fixtures
 # carry no engine link cost so we model paid cost as cost: 0.
@@ -52,6 +53,13 @@ effects:
           to: chosen_own_digimon
           cost: 0
           optional: true
+
+  # ─── [End of Your Turn][OPT] 1 of your Digimon may app fuse into a hand card ─
+  - when: end_of_your_turn
+    once_per_turn: true
+    summary: "[End of Your Turn][OPT] 1 of your Digimon may app fuse into a Digimon card in the hand"
+    process:
+      - app_fuse: { from: hand, optional: true }
 
   # ─── Inherited [Security] play this card free ──────────────────────────────
   - when: on_security

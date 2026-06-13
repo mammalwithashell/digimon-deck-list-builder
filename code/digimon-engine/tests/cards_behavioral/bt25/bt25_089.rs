@@ -247,6 +247,139 @@ fn bt25_089_has_on_security_play_free_clause() {
     );
 }
 
+// ─── [End of Your Turn][OPT] App Fuse (effect-initiated, 2026-06-13) ─────────
+
+/// App-Fusion result card (materials Kabemon & Gomimon) for the EoT app-fuse
+/// clause. Mirrors the synthetic fixtures in `app_fuse_primitive.rs`.
+const APP_FUSE_RESULT: &str = r#"
+card: TEST-APPFUSE
+name: Test App Fusion Digimon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 9000
+traits: [Appmon]
+alt_paths:
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Kabemon, Gomimon]
+    cost: 0
+"#;
+
+/// Material card whose printed NAME (not id) must match the App-Fusion
+/// `name_in` condition (Kabemon / Gomimon).
+fn named_fuse_material(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 4;
+    c.traits = vec!["Appmon".to_string()];
+    c
+}
+
+fn app_fuse_base() -> DebugRunnerBuilder {
+    base()
+        .from_dsl_yaml(APP_FUSE_RESULT)
+        .expect("APP_FUSE_RESULT compiles")
+        .add_card(named_fuse_material("TEST-KABEMON", "Kabemon"))
+        .add_card(named_fuse_material("TEST-GOMIMON", "Gomimon"))
+}
+
+fn fire_eot(runner: &mut DebugRunner, player: PlayerId, field_index: usize) {
+    let handle = runner.perm_handle(player, field_index);
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(handle));
+    runner.game.drain_effect_queue();
+}
+
+/// [End of Your Turn] one of your Digimon app-fuses a hand card: pick the host,
+/// then the result card; the result stacks and the materials are consumed.
+#[test]
+fn bt25_089_eot_app_fuse_stacks_hand_result() {
+    use digimon_engine::action::space::{encode_attack, HAND_EFFECT_START};
+
+    let mut r = app_fuse_base()
+        .hand(0, &["TEST-APPFUSE"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(5)
+        .start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
+    r.push_linked_owned(host, "TEST-GOMIMON", 0);
+
+    fire_eot(&mut r, 0, kazuki.index as usize);
+
+    // Selection #1: the host permanent.
+    let host_action = encode_attack(0, host.index as u16);
+    assert!(
+        r.pending_selection_view()
+            .expect("app-fuse perm selection installs")
+            .valid_action_ids
+            .contains(&host_action),
+        "host with two materials is an eligible app-fuse target"
+    );
+    r.execute_action(0, host_action).expect("pick host");
+
+    // Selection #2: the result card in hand.
+    let card_pos = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE")
+        .unwrap();
+    r.execute_action(0, HAND_EFFECT_START + card_pos as u16)
+        .expect("pick result card");
+
+    assert_eq!(
+        r.game.players[0].battle_area[host.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TEST-APPFUSE",
+        "result card app-fused onto the host"
+    );
+    assert!(
+        r.game.players[0].battle_area[host.index as usize]
+            .linked_cards
+            .is_empty(),
+        "materials consumed into digivolution sources"
+    );
+}
+
+/// OPT lockout: the EoT app-fuse fires once per turn. A second EoT trigger the
+/// same turn installs no selection; after the turn cycles, it can fire again.
+#[test]
+fn bt25_089_eot_app_fuse_once_per_turn() {
+    use digimon_engine::action::space::encode_attack;
+
+    let mut r = app_fuse_base()
+        .hand(0, &["TEST-APPFUSE"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(5)
+        .start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
+    r.push_linked_owned(host, "TEST-GOMIMON", 0);
+
+    // First fire → selection installs; decline it (PASS) but the OPT use is recorded.
+    fire_eot(&mut r, 0, kazuki.index as usize);
+    assert!(
+        r.pending_selection_view().is_some(),
+        "first EoT app-fuse installs a selection"
+    );
+    r.execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline");
+
+    // Second fire same turn → OPT lockout, no selection.
+    fire_eot(&mut r, 0, kazuki.index as usize);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "second EoT app-fuse same turn is locked out by once_per_turn"
+    );
+}
+
 // ─── Color metadata drift (AUDITED-DRIFT) ────────────────────────────────────
 
 /// BT25-089 is a GREEN card (card image: green border; cards.json: `card_colors:
