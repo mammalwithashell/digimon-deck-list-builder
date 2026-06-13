@@ -445,7 +445,7 @@ fn bt20_083_inherited_breeding_security_removed_suspends_carrier_and_plays_omeka
     assert!(
         matches!(
             runner.pending_kind(),
-            Some(SelectionKind::CountCappedMultiSelect { max: 1, picked: 0 })
+            Some(SelectionKind::CountCappedMultiSelect { max: 1, picked: 0, .. })
         ),
         "select_materials should expose a one-pick source selection"
     );
