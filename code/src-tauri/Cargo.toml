@@ -8,6 +8,11 @@ tauri = { version = "2", features = [] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-window-state = "2"
+# File-backed logging so updater (and other) failures are diagnosable
+# instead of vanishing into a null logger.
+tauri-plugin-log = "2"
+# Open the manual-update download page in the user's default browser.
+opener = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["time", "fs", "io-util", "rt-multi-thread"] }

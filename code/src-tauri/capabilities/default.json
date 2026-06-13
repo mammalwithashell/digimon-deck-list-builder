@@ -4,6 +4,7 @@
   "permissions": [
     "core:default",
     "updater:default",
+    "log:default",
     "process:default",
     "process:allow-restart",
     "core:window:allow-set-size",
