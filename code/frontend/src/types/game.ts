@@ -106,6 +106,14 @@ export interface PendingSelection {
   isOptional: boolean;
   prompt: string;
   selectingPlayer: number;
+  /**
+   * SelectionKind variant string from the engine (e.g. "OwnField",
+   * "OppField", "Hand", "Security"). For field-target selections this is the
+   * ONLY signal distinguishing own-field from opponent-field targets — both
+   * encode their valid ids as `OWN_FIELD_START + slot`. See
+   * `utils/selectionTargets.ts`.
+   */
+  kind?: string;
   effectChoices?: EffectChoice[];
   keywordPrompt?: KeywordPrompt;
 }

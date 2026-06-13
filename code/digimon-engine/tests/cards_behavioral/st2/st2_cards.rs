@@ -507,6 +507,83 @@ fn st2_15_kaiser_nail_plays_selected_digimon_source_for_free() {
     assert_eq!(runner.memory(), 0, "source play is free");
 }
 
+/// Real-path coverage: drive ST2-16 through `play_option_from_hand` — the
+/// exact entry the action decoder uses for an Option play (decode.rs routes
+/// `CardKind::Option` here). This pays the use cost, enforces the Option
+/// color requirement (rule 4-19-2), resolves the `OptionMain` body, and
+/// disposes the Option — none of which the body-only `activate_hand_main`
+/// audit test below exercises. With a matching-color Digimon in play and an
+/// opponent Digimon to target, the bounce resolves end-to-end.
+#[test]
+fn st2_16_play_option_from_hand_bounces_opponent_digimon() {
+    use digimon_engine::enums::{CardColor, GamePhase};
+
+    // P0 controls a BLUE Digimon so the Option color requirement (4-19-2)
+    // is satisfied — the realistic case in a mono-Blue deck.
+    let mut blue = digimon("BLUEMON", 4, 4000);
+    blue.colors = vec![CardColor::Blue];
+
+    let mut runner = st2_builder()
+        .add_card(blue)
+        .hand(0, &["ST2-16"])
+        .memory(9)
+        .start();
+    runner.set_phase(GamePhase::Main);
+    runner.place_on_field(0, "BLUEMON", Some(0));
+    runner.place_stack(1, &["ST2-02", "ST2-05"]);
+
+    assert_eq!(
+        runner.game.player(1).battle_area.len(),
+        1,
+        "precondition: opponent has 1 Digimon"
+    );
+
+    // Real play path returns Pending — an opponent-Digimon selection surfaces.
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        matches!(result, digimon_engine::selection::OptionPlayResult::Pending),
+        "play_option_from_hand must surface a target selection; got {result:?}"
+    );
+    assert!(
+        runner.pending_selection().is_some(),
+        "an opponent-Digimon target selection must be pending"
+    );
+    choose_first_pending(&mut runner);
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.player(1).battle_area.is_empty(),
+        "opponent Digimon must be returned to hand via the real play path"
+    );
+    assert!(hand_ids(&runner, 1).contains(&"ST2-05".to_string()));
+}
+
+/// Real-path guard for the Option color requirement (rule 4-19-2): with NO
+/// matching-color permanent in play, the Option play is rejected outright —
+/// it never reaches the body. (From security the requirement is ignored,
+/// 4-19-5, but that is the OnSecurity path, not this one.)
+#[test]
+fn st2_16_play_from_hand_rejected_without_matching_color_in_play() {
+    use digimon_engine::enums::GamePhase;
+    use digimon_engine::selection::OptionPlayResult;
+
+    let mut runner = st2_builder().hand(0, &["ST2-16"]).memory(9).start();
+    runner.set_phase(GamePhase::Main);
+    runner.place_stack(1, &["ST2-02", "ST2-05"]);
+
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        matches!(result, OptionPlayResult::Invalid),
+        "no Blue Digimon/Tamer in play → Option play is illegal (4-19-2); got {result:?}"
+    );
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(
+        runner.game.player(1).battle_area.len(),
+        1,
+        "rejected play must not bounce anything"
+    );
+}
+
 #[test]
 fn st2_16_cocytus_breath_returns_opponent_digimon_to_hand() {
     let mut runner = st2_builder().hand(0, &["ST2-16"]).start();

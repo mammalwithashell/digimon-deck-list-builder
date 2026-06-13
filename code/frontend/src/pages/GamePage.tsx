@@ -46,6 +46,11 @@ import {
   FIELD_SLOTS,
   SELECTION,
 } from '@/utils/constants';
+import {
+  fieldSelectionActionId,
+  fieldSelectionHighlights,
+  isFieldSelectionKind,
+} from '@/utils/selectionTargets';
 import { GamePhase, type ActionTrace, type PermanentInfo } from '@/types/game';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
@@ -70,7 +75,7 @@ export function GamePage() {
   const store = useGameStore();
   const { opponentMode } = usePlayFlowStore();
   useEffectHighlight();
-  const parsedMask = useActionMask(store.actionMask);
+  const parsedMask = useActionMask(store.actionMask, store.currentPhase);
   const actionPendingRef = useRef(false);
 
   // WebSocket connection (active for PvP, vs-AI-online, and spectator modes)
@@ -488,14 +493,38 @@ export function GamePage() {
         return;
       }
 
-      // During selection phases, map to selection actions
+      // During selection phases, map a board-slot click to a field-target
+      // selection. The engine encodes BOTH own- and opponent-field targets
+      // as `OWN_FIELD_START + slot` (=100+slot); `pendingSelection.kind`
+      // ("OwnField"/"OppField") is the only signal for which field. Routing
+      // off `kind` is what makes opponent-field targets clickable — the old
+      // code computed a `114+slot` enemy id that never matched the engine's
+      // valid set, so every opponent-field selection (e.g. Cocytus Breath's
+      // "Return 1 of your opponent's Digimon") was silently swallowed.
       if (phase >= GamePhase.SelectTarget && phase <= GamePhase.SelectSecurity) {
-        const selIdx = isOpponent
-          ? SELECTION.ENEMY_FIELD_START + slotIndex
-          : SELECTION.OWN_FIELD_START + slotIndex;
-        if (parsedMask.validSelections.has(selIdx)) {
-          handleAction(selIdx);
+        const fieldActionId = fieldSelectionActionId(
+          store.pendingSelection?.kind,
+          isOpponent,
+          slotIndex,
+          parsedMask.validSelections,
+        );
+        if (fieldActionId !== null) {
+          handleAction(fieldActionId);
           return;
+        }
+        // For NON-field selection kinds (e.g. block/counter blocker picks
+        // that aren't tagged OwnField/OppField) keep the legacy own-field
+        // mapping. We must NOT run this for field kinds: an OppField
+        // selection's valid ids are 100+oppSlot, which would spuriously
+        // match an own-slot click of the same index and bounce the wrong
+        // permanent. The old enemy-range branch was dead (engine never
+        // emits 114+slot), so dropping it loses nothing.
+        if (!isFieldSelectionKind(store.pendingSelection?.kind) && !isOpponent) {
+          const ownIdx = SELECTION.OWN_FIELD_START + slotIndex;
+          if (parsedMask.validSelections.has(ownIdx)) {
+            handleAction(ownIdx);
+            return;
+          }
         }
       }
 
@@ -736,12 +765,18 @@ export function GamePage() {
   // banner but leave the board un-affordanced — the user sees no hint
   // that opponent (or own) slots are clickable. `handleSlotClick` already
   // routes the dispatch; this purely surfaces *which* slots are valid.
-  for (const idx of parsedMask.validSelections) {
-    if (idx >= SELECTION.OWN_FIELD_START && idx <= SELECTION.OWN_FIELD_END) {
-      highlightedOwnSlots.add(idx - SELECTION.OWN_FIELD_START);
-    } else if (idx >= SELECTION.ENEMY_FIELD_START && idx <= SELECTION.ENEMY_FIELD_END) {
-      highlightedEnemySlots.add(idx - SELECTION.ENEMY_FIELD_START);
-    }
+  // Field-target valid ids are 100+slot for EITHER field; route them to the
+  // own/enemy half off `pendingSelection.kind` (see selectionTargets.ts).
+  // The old range-split (own=100-113, enemy=114-127) mis-highlighted every
+  // opponent-field target on the player's own slots, since the engine never
+  // emits 114+slot.
+  {
+    const fieldHl = fieldSelectionHighlights(
+      store.pendingSelection?.kind,
+      [...parsedMask.validSelections],
+    );
+    for (const slot of fieldHl.own) highlightedOwnSlots.add(slot);
+    for (const slot of fieldHl.enemy) highlightedEnemySlots.add(slot);
   }
 
   // DNA material selection highlights its own-field candidates by RAW

@@ -5,7 +5,7 @@ import { MemoryGauge } from './MemoryGauge';
 import { RevealedCardsZone } from './RevealedCardsZone';
 import { ActionTraceTicker } from './ActionTraceTicker';
 import { TensorDebugBadge } from './TensorDebugBadge';
-import { SELECTION } from '@/utils/constants';
+import { fieldSelectionHighlights } from '@/utils/selectionTargets';
 import type { ActionTrace, TensorSummary } from '@/types/game';
 
 interface GameBoardProps {
@@ -86,17 +86,17 @@ export function GameBoard({
     );
   }
 
-  // During selection phases, highlight valid targets
-  const selectionHighlights = new Set<number>();
-  if (pendingSelection) {
-    for (const idx of pendingSelection.validIndices) {
-      if (idx >= SELECTION.OWN_FIELD_START && idx <= SELECTION.OWN_FIELD_END) {
-        selectionHighlights.add(idx - SELECTION.OWN_FIELD_START);
-      }
-    }
-  }
+  // During selection phases, highlight valid field targets. Field-target
+  // valid ids are 100+slot for EITHER field; `pendingSelection.kind` routes
+  // them to the own or enemy half (see utils/selectionTargets.ts). The old
+  // own-only range scan lit up opponent-field targets on the player's own
+  // slots.
+  const fieldHl = pendingSelection
+    ? fieldSelectionHighlights(pendingSelection.kind, pendingSelection.validIndices)
+    : { own: new Set<number>(), enemy: new Set<number>() };
 
-  const ownSlots = new Set([...(highlightedOwnSlots ?? []), ...selectionHighlights]);
+  const ownSlots = new Set([...(highlightedOwnSlots ?? []), ...fieldHl.own]);
+  const enemySlots = new Set([...(highlightedEnemySlots ?? []), ...fieldHl.enemy]);
   const latestActionLabel = (actionTraces as unknown as { at(index: number): ActionTrace | undefined }).at(-1)?.decoded.label ?? null;
 
   return (
@@ -135,7 +135,7 @@ export function GameBoard({
         <PlayerHalf
           player={player2}
           isOpponent
-          highlightedSlots={highlightedEnemySlots}
+          highlightedSlots={enemySlots}
           onTrashClick={onOpponentTrashClick}
           targetedSlots={targetedSlots}
           onSlotClick={(i) => onSlotClick?.(true, i)}

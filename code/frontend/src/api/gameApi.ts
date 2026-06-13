@@ -334,6 +334,9 @@ export function dtoToGameState(dto: GameStateDto): GameState {
           validIndices: dto.pending_selection.valid_action_ids,
           isOptional: dto.pending_selection.is_optional,
           prompt: dto.pending_selection.prompt,
+          // Engine-additive: distinguishes own-field vs opp-field targets
+          // (both encode as 100+slot). See utils/selectionTargets.ts.
+          kind: dto.pending_selection.kind,
           // Engine is 0-based (player_id 0/1); frontend convention is
           // 1-based (1 = "you", 2 = "opponent"), and PromptBar's
           // `localPlayer` is hardcoded to 1. Without this +1, every
