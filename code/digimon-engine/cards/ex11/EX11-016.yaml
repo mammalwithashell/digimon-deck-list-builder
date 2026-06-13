@@ -120,6 +120,7 @@ cost: 7
 dp: 7000
 traits: [Ice-Snow, LIBERATOR]
 attribute: Vaccine
+form: Ultimate
 alt_paths:
   # Printed standard evo box: Lv.4 from blue, cost 4 (encoded explicitly like
   # sibling EX8-023 so DSL-only loads carry the printed cost table).
