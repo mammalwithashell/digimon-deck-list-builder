@@ -9,6 +9,7 @@ import type {
   PendingAttack,
   TensorSummary,
 } from '@/types/game';
+import { normalizeGameEvents } from '@/utils/gameEvents';
 
 interface GameStore {
   // Game session
@@ -35,7 +36,6 @@ interface GameStore {
   agentPending: boolean;
   selectedAttacker: number | null;
   hoveredCard: string | null;
-  logs: string[];
   events: GameEvent[];
   actionTraces: ActionTrace[];
   latestTensorSummary: TensorSummary | null;
@@ -51,8 +51,6 @@ interface GameStore {
   setPlayerLabels: (labels: Record<number, string>) => void;
   selectAttacker: (slot: number | null) => void;
   setHoveredCard: (cardId: string | null) => void;
-  appendLogs: (newLogs: string[]) => void;
-  clearLogs: () => void;
   appendEvents: (newEvents: GameEvent[]) => void;
   clearEvents: () => void;
   appendActionTraces: (traces: ActionTrace[]) => void;
@@ -79,7 +77,6 @@ const initialState = {
   agentPending: false,
   selectedAttacker: null,
   hoveredCard: null,
-  logs: [],
   events: [],
   actionTraces: [],
   latestTensorSummary: null,
@@ -113,11 +110,8 @@ export const useGameStore = create<GameStore>((set) => ({
   setPlayerLabels: (labels) => set({ playerLabels: labels }),
   selectAttacker: (slot) => set({ selectedAttacker: slot }),
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
-  appendLogs: (newLogs) =>
-    set((s) => ({ logs: [...s.logs, ...newLogs] })),
-  clearLogs: () => set({ logs: [] }),
   appendEvents: (newEvents) =>
-    set((s) => ({ events: [...s.events, ...newEvents] })),
+    set((s) => ({ events: [...s.events, ...normalizeGameEvents(newEvents)] })),
   clearEvents: () => set({ events: [] }),
   appendActionTraces: (traces) =>
     set((s) => {
