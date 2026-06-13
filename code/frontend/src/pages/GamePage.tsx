@@ -62,6 +62,7 @@ import {
 import { useUiStore } from '@/stores/uiStore';
 import { BotSpeedControl } from '@/components/game/BotSpeedControl';
 import { usePacedAgentDriver } from '@/hooks/usePacedAgentDriver';
+import { formatEvents } from '@/utils/gameLogFormat';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 type ActionTraceResponse = { action_traces?: ActionTrace[] };
@@ -108,7 +109,6 @@ export function GamePage() {
       onStateUpdate: (payload) => {
         store.setGameState(payload.state);
         store.setActionMask(payload.action_mask ?? []);
-        if (payload.logs) store.appendLogs(payload.logs);
         if (payload.events) store.appendEvents(payload.events);
         if (payload.your_player_id != null) {
           store.setPlayerLabels({
@@ -145,7 +145,6 @@ export function GamePage() {
     } & ActionTraceResponse) => {
       store.setGameState(res.state);
       store.setActionMask(res.action_mask);
-      if (res.logs) store.appendLogs(res.logs);
       if (res.events) store.appendEvents(res.events);
       appendResponseActionTraces(res);
       store.setAgentPending(res.agent_pending ?? false);
@@ -238,7 +237,6 @@ export function GamePage() {
       if (useWebSocket) {
         // PvP / vs-AI-online / spectator: WebSocket hook will send initial state
         store.setGameId(urlGameId);
-        store.clearLogs();
         store.clearActionTraces();
       } else {
         // Local mode: fetch state via HTTP
@@ -251,7 +249,6 @@ export function GamePage() {
             store.setGameId(urlGameId);
             store.setGameState(state);
             store.setActionMask(maskData);
-            store.clearLogs();
             store.clearActionTraces();
             store.setPlayerLabels({
               1: 'YOU',
@@ -395,9 +392,9 @@ export function GamePage() {
           2: agentType === 'greedy' ? 'GREEDY BOT' : 'OPPONENT',
         });
       }
-      store.clearLogs();
       store.clearEvents();
       store.clearActionTraces();
+      if (result.events) store.appendEvents(result.events);
       store.setAgentPending(result.agent_pending ?? false);
       store.setGameId(result.game_id);
 
@@ -428,10 +425,8 @@ export function GamePage() {
       if (!res) return; // Tauri path returns null — undo disabled there
       store.setGameState(res.state);
       store.setActionMask(res.action_mask);
-      store.clearLogs();
       store.clearEvents();
       store.clearActionTraces();
-      if (res.logs) store.appendLogs(res.logs);
       if (res.events) store.appendEvents(res.events);
       // Clear any in-flight UI selection state so we land on the
       // replayed snapshot with a clean slate.
@@ -450,7 +445,6 @@ export function GamePage() {
       const res = await gameApi.surrenderGame(store.gameId, 1);
       store.setGameState(res.state);
       store.setActionMask(res.action_mask);
-      if (res.logs) store.appendLogs(res.logs);
       if (res.events) store.appendEvents(res.events);
       appendResponseActionTraces(res as typeof res & ActionTraceResponse);
       store.setAgentPending(false);
@@ -459,6 +453,40 @@ export function GamePage() {
       // Ignore errors (e.g. game already over)
     }
   }, [appendResponseActionTraces, store]);
+
+  const gameLogLines = useMemo(() => {
+    if (!store.player1 || !store.player2) return [];
+    return formatEvents(store.events, {
+      state: {
+        turnCount: store.turnCount,
+        currentPhase: store.currentPhase,
+        currentPlayer: store.currentPlayer,
+        memoryGauge: store.memoryGauge,
+        isGameOver: store.isGameOver,
+        winner: store.winner,
+        player1: store.player1,
+        player2: store.player2,
+        revealedCards: store.revealedCards,
+        pendingSelection: store.pendingSelection,
+        pendingAttack: store.pendingAttack,
+      },
+      playerLabels: store.playerLabels,
+    });
+  }, [
+    store.currentPhase,
+    store.currentPlayer,
+    store.events,
+    store.isGameOver,
+    store.memoryGauge,
+    store.pendingAttack,
+    store.pendingSelection,
+    store.player1,
+    store.player2,
+    store.playerLabels,
+    store.revealedCards,
+    store.turnCount,
+    store.winner,
+  ]);
 
   const handlePlayCard = useCallback(
     (handIndex: number) => {
@@ -1049,7 +1077,7 @@ export function GamePage() {
           />
           <SecurityRevealOverlay />
           <EffectPopup />
-          <GameLogDrawer logs={store.logs} />
+          <GameLogDrawer logs={gameLogLines} />
           <AttackArrow
             pendingAttack={store.pendingAttack}
             selectedAttacker={store.selectedAttacker}
@@ -1207,7 +1235,9 @@ export function GamePage() {
         actionMask={store.actionMask}
         handIds={store.player1?.handIds ?? []}
         trashIds={store.player1?.trashIds ?? []}
-        securityIds={store.player1?.securityIds ?? []}
+        opponentTrashIds={store.player2?.trashIds ?? []}
+        securityCount={store.player1?.securityCount ?? 0}
+        opponentSecurityCount={store.player2?.securityCount ?? 0}
         battleArea={store.player1?.battleArea ?? []}
         onAction={handleAction}
         localPlayer={1}

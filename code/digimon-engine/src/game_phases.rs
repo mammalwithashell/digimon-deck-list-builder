@@ -702,6 +702,7 @@ impl Game {
         self.current_phase = GamePhase::SelectTarget;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::OwnField,
             selecting_player: player,
             previous_phase,

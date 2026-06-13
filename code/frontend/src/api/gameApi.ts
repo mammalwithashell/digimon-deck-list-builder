@@ -27,6 +27,7 @@ import type {
   PermanentDto,
   PlayerDto,
 } from './engineDtos';
+import { normalizeGameEvents } from '@/utils/gameEvents';
 
 // ─── Engine response envelopes ────────────────────────────────────────
 
@@ -131,6 +132,8 @@ interface CreateGameResponse {
   game_id: string;
   state: GameState;
   action_mask: number[];
+  logs?: string[];
+  events?: GameEvent[];
   recording_metadata?: Record<string, unknown>;
   player_labels?: Record<number, string>;
   /** True when an agent action remains after a paced create's prelude
@@ -401,6 +404,13 @@ export function dtoToGameState(dto: GameStateDto): GameState {
           // signal of which side. Drop it and "delete an opponent's Digimon"
           // prompts become unclickable. See `utils/selectionTargets.ts`.
           kind: dto.pending_selection.kind,
+          // Same 0-based -> 1-based shift as selectingPlayer. Hand/Trash
+          // selections can index the OPPONENT's zone (EX11-012 Medusamon);
+          // SelectionPanel picks the card list by this.
+          zoneOwner:
+            dto.pending_selection.zone_owner == null
+              ? undefined
+              : dto.pending_selection.zone_owner + 1,
           // EffectChoice branches need to thread through with their actual
           // engine `action_id`s; the frontend's broken `EFFECT_CHOICE_START`
           // range scan can't find them otherwise.
@@ -501,12 +511,18 @@ export async function createGame(
       game_id: string;
       state: GameState;
       action_mask: number[];
+      logs?: string[];
+      events?: GameEvent[];
+      player_labels?: Record<number, string>;
       agent_pending?: boolean;
     }>('/games', { method: 'POST', body });
     return {
       game_id: httpResp.game_id,
       state: httpResp.state,
       action_mask: httpResp.action_mask,
+      logs: httpResp.logs ?? [],
+      events: normalizeGameEvents(httpResp.events),
+      player_labels: httpResp.player_labels,
       agent_pending: httpResp.agent_pending,
     };
   }
@@ -528,6 +544,8 @@ export async function createGame(
     game_id: resp.game_id,
     state: dtoToGameState(resp.state),
     action_mask: resp.action_mask,
+    logs: [],
+    events: [],
   };
 }
 
@@ -580,7 +598,7 @@ export async function sendAction(
       action_mask: httpResp.action_mask,
       is_game_over: httpResp.is_game_over,
       logs: httpResp.logs,
-      events: httpResp.events,
+      events: normalizeGameEvents(httpResp.events),
       action_context: httpResp.action_context,
       // Browser-dev path doesn't currently surface action_traces — those
       // are produced by the Tauri command's per-step `explain_action`
@@ -599,7 +617,7 @@ export async function sendAction(
     action_mask: resp.action_mask,
     is_game_over: resp.is_game_over,
     logs: resp.logs,
-    events: resp.events,
+    events: normalizeGameEvents(resp.events),
     action_context: resp.action_context,
     action_traces: toActionTraces(resp.action_traces),
     agent_pending: resp.agent_pending,
@@ -628,7 +646,7 @@ export async function stepGame(
       state: httpResp.state,
       action_mask: httpResp.action_mask,
       logs: httpResp.logs,
-      events: httpResp.events,
+      events: normalizeGameEvents(httpResp.events),
       is_human_turn: httpResp.is_human_turn,
       is_game_over: httpResp.is_game_over,
       action_traces: [],
@@ -640,7 +658,7 @@ export async function stepGame(
     state: dtoToGameState(resp.state),
     action_mask: resp.action_mask,
     logs: resp.logs,
-    events: resp.events,
+    events: normalizeGameEvents(resp.events),
     is_human_turn: resp.is_human_turn,
     is_game_over: resp.is_game_over,
     action_traces: toActionTraces(resp.action_traces),
@@ -714,7 +732,7 @@ export async function surrenderGame(
       state: httpResp.state,
       action_mask: httpResp.action_mask,
       logs: httpResp.logs,
-      events: httpResp.events,
+      events: normalizeGameEvents(httpResp.events),
       is_game_over: httpResp.is_game_over,
       surrendered_by: httpResp.surrendered_by,
     };
@@ -726,7 +744,7 @@ export async function surrenderGame(
     state: dtoToGameState(resp.state),
     action_mask: resp.action_mask,
     logs: resp.logs,
-    events: resp.events,
+    events: normalizeGameEvents(resp.events),
     is_game_over: resp.is_game_over,
     surrendered_by: resp.surrendered_by,
   };
@@ -753,7 +771,7 @@ export async function undoGame(gameId: string): Promise<StepResponse | null> {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
       logs: httpResp.logs,
-      events: httpResp.events,
+      events: normalizeGameEvents(httpResp.events),
       is_human_turn: httpResp.is_human_turn,
       is_game_over: httpResp.is_game_over,
       action_traces: [],

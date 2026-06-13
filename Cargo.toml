@@ -13,3 +13,12 @@ members = [
     "code/tools/archetype-static-tests",
 ]
 resolver = "2"
+
+# Release builds strip debug symbols from every workspace binary. The shipped
+# desktop bundle (digimon-tcg) is the main beneficiary — stripping shaves tens
+# of MB of symbol tables off the release binary at negligible build cost.
+# `strip` is not per-package overridable, so it lives at the workspace root.
+# More aggressive size knobs (lto, opt-level = "z", panic = "abort",
+# codegen-units = 1) trade build time for size and are left off by default.
+[profile.release]
+strip = true

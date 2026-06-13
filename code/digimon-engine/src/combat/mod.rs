@@ -226,6 +226,12 @@ impl Game {
         if perm.is_suspended {
             return false;
         }
+        // 11-2-5: "An attack declaration can't be made using a Digimon that
+        // can't suspend." (DCGO `Permanent.CanAttackTargetDigimon` →
+        // `!CanSuspend`, Permanent.cs:2230.)
+        if self.modifiers.has(handle, ModifierType::CannotSuspend) {
+            return false;
+        }
         // Summoning sickness: can't attack on the turn it was played unless
         // Rush is present (native printed OR modifier-granted) or this is a
         // Vortex end-of-turn attack (§2.1b parity fix).
@@ -275,6 +281,10 @@ impl Game {
         if perm.is_suspended {
             return false;
         }
+        // 11-2-5 — see `can_attack`.
+        if self.modifiers.has(handle, ModifierType::CannotSuspend) {
+            return false;
+        }
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
         if is_fresh
             && !ignore_summoning_sickness
@@ -301,6 +311,15 @@ impl Game {
             None => return false,
         };
         if !perm.is_digimon_for_rules(&self.card_data, &self.modifiers, handle) {
+            return false;
+        }
+        // 11-2-5 is UNQUALIFIED: "An attack declaration can't be made using
+        // a Digimon that can't suspend" — it applies even to granted
+        // "without suspending" attacks. NOTE: DCGO diverges here
+        // (`CanAttackTargetDigimon` skips the `CanSuspend` consult when
+        // `withoutTap == true`); per source priority the rules manual
+        // governs over DCGO for pure rules questions.
+        if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
         // "Without suspending" bypasses only the suspend cost/unsuspended
@@ -1171,6 +1190,12 @@ impl Game {
             if !self.permanent_is_digimon_for_rules(h) {
                 continue;
             }
+            // The ally's suspension is a COST — a CannotSuspend ally can't
+            // pay it (DCGO `Alliance.cs:18` `CanActivateSuspendCostEffect`
+            // → `CanSuspend`; prohibition precedence 15-1-3).
+            if self.modifiers.has(h, ModifierType::CannotSuspend) {
+                continue;
+            }
             candidates.push(i as u8);
         }
 
@@ -1190,6 +1215,7 @@ impl Game {
         self.current_phase = GamePhase::AllianceTiming;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::OwnField,
             selecting_player: attacker_player,
             previous_phase,
@@ -1480,6 +1506,7 @@ impl Game {
         self.current_phase = GamePhase::CounterTiming;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             // SelectionKind::Hand is a defensible umbrella — the primary
             // resource is the defender's hand, and the mask renderer is
             // phase-gated (`CounterTiming`) and reads `valid_action_ids`
@@ -1644,6 +1671,7 @@ impl Game {
         let source_card = self.player(defender).hand[result_hand_index].handle();
         self.current_phase = GamePhase::SelectMaterial;
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::Material,
             selecting_player: defender,
             previous_phase,
@@ -1669,6 +1697,7 @@ impl Game {
                 }
                 game.current_phase = GamePhase::SelectHand;
                 game.pending_selection = Some(PendingSelection {
+                    zone_owner: None,
                     kind: SelectionKind::Hand,
                     selecting_player: defender,
                     previous_phase,
@@ -1839,6 +1868,12 @@ impl Game {
             if self.modifiers.has(h, ModifierType::CannotBlock) {
                 continue;
             }
+            // 12-1-4: "A block can't be performed using a Digimon that
+            // can't suspend" — blocking suspends the blocker. (DCGO
+            // `Permanent.CanBlock` → `!CanSuspend`, Permanent.cs:2140.)
+            if self.modifiers.has(h, ModifierType::CannotSuspend) {
+                continue;
+            }
             // Track C: `CannotBeRedirectedAsAttackTarget` on a candidate
             // blocker prevents it from becoming the new attack target via
             // the Block redirect path. Distinct from `CannotBlock`
@@ -1894,6 +1929,7 @@ impl Game {
         self.current_phase = GamePhase::BlockTiming;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             // The selecting player is picking from their *own* field; kind
             // reflects that. Block is the *window*, signalled by the phase.
             kind: SelectionKind::OwnField,
@@ -2076,6 +2112,7 @@ impl Game {
         self.current_phase = GamePhase::SelectTarget;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::OppField,
             selecting_player: attacker_player,
             previous_phase,
@@ -2296,6 +2333,7 @@ impl Game {
         let previous_phase = self.current_phase;
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::OppField,
             selecting_player: attacker_player,
             previous_phase,

@@ -562,6 +562,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectMaterial;
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::Material,
             selecting_player: player_id,
             previous_phase,

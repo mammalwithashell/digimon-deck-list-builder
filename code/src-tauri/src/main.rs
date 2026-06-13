@@ -30,6 +30,23 @@ fn models_cache_root() -> std::path::PathBuf {
 
 fn main() {
     tauri::Builder::default()
+        // File + stdout logging. Without this, `log::warn!`/`log::info!`
+        // (e.g. from the updater) route to a null logger and updater
+        // failures are completely silent. Logs land in the OS log dir
+        // (e.g. %APPDATA%\com.digimon-tcg.desktop\logs on Windows).
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("digimon-tcg".into()),
+                    },
+                ))
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Stdout,
+                ))
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         // Restores window position (NOT size — preset selection is the
@@ -99,6 +116,8 @@ fn main() {
             deck_storage::deck_folders_update,
             deck_storage::deck_folders_delete,
             format_commands::formats_list,
+            updater::updater_check_info,
+            updater::updater_open_download_page,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

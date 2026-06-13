@@ -32,7 +32,7 @@ export interface MatchedResponse {
   ticket_id: string;
   opponent_ticket_id: string;
   game_id: string;
-  join_code: string;
+  your_seat: 1 | 2;
 }
 
 export type QueueResponse = WaitingResponse | MatchedResponse;
@@ -43,8 +43,8 @@ export interface TicketInfo {
   queue_type: QueueType;
   waited_seconds: number;
   rating_window: number | null;
-  join_code: string | null;
   game_id: string | null;
+  your_seat: 1 | 2 | null;
 }
 
 export async function queue(req: QueueRequest): Promise<QueueResponse> {

@@ -104,6 +104,52 @@
 .ready.on { color: #4cd497; }
 .ready.waiting { color: #ffcc4a; }
 
+.room-first-player {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 12px 16px;
+}
+
+.room-first-player-label {
+  color: rgba(245, 241, 232, 0.48);
+  font-family: var(--ib-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  margin-right: 6px;
+}
+
+.room-first-player button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f5f1e8;
+  font-family: var(--ib-font-mono);
+  padding: 8px 18px;
+  cursor: pointer;
+}
+
+.room-first-player button.on {
+  border-color: rgba(255, 122, 24, 0.72);
+  background: rgba(255, 122, 24, 0.12);
+  color: #ff9a3d;
+}
+
+.room-first-player button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.room-actions .ready {
+  align-self: center;
+  padding: 10px 12px;
+  font-family: var(--ib-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
 .room-deck-picker {
   margin-top: 22px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -200,6 +246,51 @@
   margin-top: 22px;
   display: flex;
   gap: 12px;
+}
+
+.room-actions button:first-child {
+  flex: 1;
+}
+
+/*
+ * Desktop fixed-canvas layout.
+ *
+ * The desktop build renders the whole app into a non-scrolling 1920x1080
+ * canvas (see CanvasScaler) clipped by `overflow: hidden` — there is no
+ * document scroll. If the lobby is taller than the canvas, its bottom
+ * (the START GAME / CANCEL action bar) is clipped off and unreachable.
+ *
+ * So on desktop we fill the canvas height exactly, let the deck picker
+ * absorb the slack and scroll *internally*, and keep the action bar as a
+ * non-shrinking footer that is always on-canvas. The web build keeps the
+ * default `min-height` flow layout (the page scrolls normally there).
+ */
+.room-main--canvas {
+  height: calc(var(--app-vh100, 100vh) - 46px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.room-main--canvas .room-header,
+.room-main--canvas .room-grid,
+.room-main--canvas .room-first-player,
+.room-main--canvas .room-actions {
+  flex: 0 0 auto;
+}
+
+.room-main--canvas .room-deck-picker {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.room-main--canvas .room-deck-list {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 60px;
 }
 
 @media (max-width: 780px) {

@@ -1,0 +1,129 @@
+# EX7-016 Bulucomon — Digimon, Lv.3, Blue, DP 1000, Cost 3, Rookie / Data /
+# Mini Dragon.
+# Rule box (card image): "Trait: Has [Ice-Snow] Type." — the card permanently
+# has the [Ice-Snow] trait in addition to its printed type line, so it is
+# encoded directly in `traits:` below. NOTE: data/cards.json `type_eng` carries
+# only ["Mini Dragon"] (the API ingest drops the rule box), so production
+# card_data built from cards.json is missing Ice-Snow until an override lands.
+# Standard digivolution: Lv.2 Blue / cost 0 (cards.json evo_costs).
+#
+# Printed card text (card image EX7-016.webp, authoritative; cards.json agrees):
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Paledramon]
+#   or [Hexeblaumon] in its name and 1 card with the [Ice-Snow] trait among
+#   them to the hand. Return the rest to the bottom of the deck.
+#
+#   Inherited: [When Attacking] [Once Per Turn] Trash the top digivolution
+#   card of 1 of your opponent's Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Blue/EX7_016.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# On Play (OnEnterFieldAnyone): SimplifiedRevealDeckTopCardsAndSelect(
+#   revealCount: 3,
+#   conditions[0]: IsDigimon && (ContainsCardName "Paledramon" || "Hexeblaumon"),
+#     AddHand, maxCount 1;
+#   conditions[1]: ContainsTraits("Ice-Snow"), AddHand, maxCount 1;
+#   remainingCardsPlace: DeckBottom).
+#   - canNoSelect defaults to FALSE: each add is MANDATORY whenever a matching
+#     card was revealed — no PASS/decline is exposed (the printed text has no
+#     "you may"; "Add 1 card ... and 1 card ..." is a mandatory instruction).
+#     The buckets below therefore carry min: 1 (the RevealBucket lowering
+#     skips a bucket with zero candidates, matching DCGO's maxCount>=1 guard).
+#   - Selections run sequentially and a picked card is removed from the reveal
+#     pool before the second selection → one revealed card can satisfy only
+#     one of the two adds. `no_duplicate_cards: true` encodes this.
+#   - DCGO's name condition additionally checks IsDigimon; the printed text
+#     says only "1 card with [Paledramon] or [Hexeblaumon] in its name". Every
+#     printing with those names is a Digimon card, so the readings are
+#     behaviorally identical; this spec follows the printed text (name-only).
+#
+# When Attacking ESS (OnAllyAttack, SetHashString "WhenAttacking_EX7-016",
+#   maxUsableCount 1 = [Once Per Turn], SetIsInheritedEffect(true)):
+#   - If any opponent battle-area Digimon exists, SelectPermanentEffect over
+#     opponent Digimon (canNoSelect: FALSE — mandatory pick, no PASS), then
+#     TrashDigivolutionCardsFromTopOrBottom(trashCount: 1, isFromTop: true)
+#     → trash the TOP digivolution card (the source immediately beneath the
+#     active top card) = `trash_top_stacked_sources` count 1.
+#   - Faithfulness note: DCGO lets the player pick ANY opponent Digimon, even
+#     one with no digivolution cards (the trash then no-ops). The printed
+#     instruction is to trash a top digivolution card, which only a stacked
+#     Digimon can satisfy, so this spec gates the clause on (and restricts the
+#     target set to) opponent Digimon with stack_size >= 2 — no wasted no-op
+#     choice is exposed to the action space, and the OPT is not consumed by an
+#     attack with no satisfiable target.
+#
+# ─── Clause layout ───────────────────────────────────────────────────────────
+#
+# Clause 1 — [On Play] reveal 3 / add up-to-2 filtered / rest to bottom:
+#   IMPLEMENTED: reveal_top_deck(3) → select_reveal_buckets (bucket 0: name
+#   contains Paledramon|Hexeblaumon, min/max 1; bucket 1: trait_has Ice-Snow,
+#   min/max 1; no_duplicate_cards) → add_to_hand_from_reveal x2 →
+#   place_remainder_on_deck bottom.
+#
+# Clause 2 — Inherited [When Attacking][Once Per Turn] source peel:
+#   IMPLEMENTED: condition any_permanent(opponent digimon stack_size_gte 2);
+#   select_opponent_permanent (mandatory) filtered to stack_size_gte 2;
+#   trash_top_stacked_sources count 1.
+
+card: EX7-016
+name: Bulucomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Mini Dragon, Ice-Snow]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Paledramon]/[Hexeblaumon]-named card and 1 [Ice-Snow] trait card; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: name_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - name_contains: "Paledramon"
+                  - name_contains: "Hexeblaumon"
+            - bind_as: ice_snow_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Ice-Snow }
+          prompt: "Select 1 card with [Paledramon] or [Hexeblaumon] in its name and 1 card with the [Ice-Snow] trait"
+      - add_to_hand_from_reveal: { of: you, card: name_pick }
+      - add_to_hand_from_reveal: { of: you, card: ice_snow_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        stack_size_gte: 2
+    summary: "[Inherited][When Attacking][OPT] Trash the top digivolution card of 1 opponent Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: peel_target
+          filter:
+            kind: digimon
+            stack_size_gte: 2
+          prompt: "Select 1 Digimon that will trash its top digivolution card"
+      - trash_top_stacked_sources:
+          target: peel_target
+          count: 1

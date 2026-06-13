@@ -1,0 +1,125 @@
+# EX8-019 Penguinmon — Digimon, Lv.3, Blue/Yellow, DP 1000, Cost 3.
+# Traits: Avian, LIBERATOR (+ rule-box [Ice-Snow]). Attribute: Vaccine. Rarity: C.
+#
+# Printed card text (card image EX8-019 — authoritative; cards.json agrees):
+#   Evo box: Lv.2 from blue: Cost 1   (JSON evo_costs [{card_color:1, level:2, memory_cost:1}])
+#   Evo box: "Digivolve [Hiyarimon]: Cost 0"   (JSON xros_req)
+#   [Your Turn] When this Digimon would digivolve into a Digimon card with the
+#     [Ice-Snow] trait, reduce the digivolution cost by 1.
+#   Rule: Trait: Has [Ice-Snow] Type.
+#   Inherited Effect:
+#   [When Attacking] Give 1 of your opponent's Digimon <Security A. -1> (This
+#     Digimon checks 1 fewer security card.) until the end of their turn.
+#
+# DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/EX8/Blue/EX8_019.cs):
+#   Alternate Digivolution Requirement (None):
+#     AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#     TopCard.ContainsCardName("Hiyarimon"), digivolutionCost: 0,
+#     ignoreDigivolutionRequirement: false) — name-gated only, no level/color
+#     restriction → `from: { name_contains: Hiyarimon }`.
+#   Your Turn (None): ChangeDigivolutionCostStaticEffect(changeValue: -1,
+#     permanentCondition: targetPermanent == card.PermanentOfThisCard(),
+#     cardCondition: cardSource.EqualsTraits("Ice-Snow"),
+#     rootCondition: true,
+#     condition: IsOwnerTurn(card) && IsExistOnBattleArea(card),
+#     setFixedCost: false) — no max-count, so NOT once_per_turn.
+#   When Attacking - ESS (OnAllyAttack, isInheritedEffect: true):
+#     CanActivateCondition: IsExistOnBattleAreaDigimon(card) &&
+#       HasMatchConditionPermanent(opponent battle-area Digimon) — gate on an
+#       opponent Digimon existing (the DSL's empty mandatory select is
+#       silently skipped, same contract).
+#     SelectPermanentEffect(maxCount: 1, canNoSelect: false, canEndNotMax:
+#       false) — MANDATORY single pick, no PASS (no printed "you may").
+#     ChangeDigimonSAttack(changeValue: -1,
+#       effectDuration: EffectDuration.UntilOpponentTurnEnd) →
+#       `SecurityAttackChange -1, expiry: end_of_opponents_turn` ("until the
+#       end of THEIR turn": installed during the controller's turn, survives
+#       the controller's turn end, expires at the opponent's turn end).
+#
+# Clause analysis:
+#   Rule box "Trait: Has [Ice-Snow] Type." — the card has the [Ice-Snow] type
+#     everywhere, in addition to printed Avian/LIBERATOR; encoded directly in
+#     `traits:`. (cards.json type_eng omits it — image is authoritative.)
+#   Clause 1 (face-up): `cost_reduction` at `before_pay_cost`, gated
+#     [Your Turn] + `source_is_cost_target_permanent` (THIS Digimon is the one
+#     digivolving) + `cost_target` Digimon with [Ice-Snow] (the card being
+#     digivolved into). Same shape as EX7-024 Shoemon ([Puppet] variant).
+#   Clause 2 (inherited): [When Attacking] mandatory select 1 opponent
+#     Digimon → SecurityAttackChange -1 until end of opponent's turn. Same
+#     shape as P-134's on_play clause, scoped inherited + when_attacking.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.2 blue / Cost 1                       | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Alt digivolve [Hiyarimon] / Cost 0                     | IMPLEMENTED (alt_paths name_contains)    |
+# | Rule: Trait: Has [Ice-Snow] Type                       | IMPLEMENTED (traits:)                    |
+# | [Your Turn] digivolve-into-Ice-Snow cost -1            | IMPLEMENTED (cost_reduction)             |
+# | Inherited [When Attacking] Security A. -1 to 1 opp     | IMPLEMENTED (triggered inherited)        |
+
+card: EX8-019
+name: Penguinmon
+kind: digimon
+level: 3
+color: [blue, yellow]
+cost: 3
+dp: 1000
+traits: [Avian, LIBERATOR, Ice-Snow]
+attribute: Vaccine
+alt_paths:
+  # Printed standard evo box: Lv.2 from blue, cost 1 (encoded explicitly like
+  # neighbor EX8 specs so DSL-only loads carry the printed cost table).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 1
+  # Printed alt evo box: "Digivolve [Hiyarimon]: Cost 0". DCGO gates on
+  # ContainsCardName("Hiyarimon") only — no level/color restriction.
+  - kind: digivolve
+    from: { name_contains: "Hiyarimon" }
+    cost: 0
+
+effects:
+  # ─── Clause 1: [Your Turn] digivolve-into-[Ice-Snow] cost reduction ─────────
+  #
+  # "[Your Turn] When this Digimon would digivolve into a Digimon card with
+  #  the [Ice-Snow] trait, reduce the digivolution cost by 1."
+  #
+  # - reduction_timing: before_pay_cost — fires during the BeforePayCost
+  #   digivolution cost-calc.
+  # - source_is_cost_target_permanent — DCGO permanentCondition
+  #   (targetPermanent == card.PermanentOfThisCard()): only when THIS
+  #   permanent is the one being digivolved.
+  # - cost_target — DCGO cardCondition (EqualsTraits "Ice-Snow"): the card
+  #   being digivolved into must be an [Ice-Snow] Digimon.
+  # - No [Once Per Turn] printed; DCGO's static effect has no max-count.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { kind: digimon, trait_has: Ice-Snow }
+    amount: 1
+    summary: "[Your Turn] When digivolving into an [Ice-Snow] Digimon, reduce the digivolution cost by 1"
+
+  # ─── Clause 2: Inherited [When Attacking] Security A. -1 ────────────────────
+  #
+  # "[When Attacking] Give 1 of your opponent's Digimon <Security A. -1>
+  #  until the end of their turn."
+  #
+  # Mandatory selection (DCGO canNoSelect: false; no printed "you may" —
+  # no `optional:` per the optional-on-mandatory-selection pitfall). With no
+  # opponent Digimon the empty mandatory select is silently skipped (DCGO
+  # CanActivateCondition gate). "Until the end of their turn" = DCGO
+  # EffectDuration.UntilOpponentTurnEnd = expiry: end_of_opponents_turn.
+  - scope: inherited
+    when: when_attacking
+    summary: "[Inherited][When Attacking] Give 1 opponent Digimon Security A. -1 until the end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to gain Security Attack -1"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn

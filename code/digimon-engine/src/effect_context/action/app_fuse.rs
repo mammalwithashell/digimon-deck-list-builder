@@ -125,6 +125,7 @@ impl EffectContext<'_> {
             source_card,
             source_permanent,
             source_kind,
+            zone_owner: None,
             callback: Box::new(move |game, action_id| {
                 let Some((_, host, results)) = per_perm
                     .iter()
@@ -187,6 +188,7 @@ fn install_result_selection(
         source_card,
         source_permanent,
         source_kind,
+        zone_owner: None,
         callback: Box::new(move |game, action_id| {
             let Some((_, card)) = results.iter().find(|(a, _)| *a == action_id).copied() else {
                 return;

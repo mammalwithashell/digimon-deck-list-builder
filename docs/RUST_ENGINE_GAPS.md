@@ -2,6 +2,26 @@
 
 Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `assess-rust-engine-archetype`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
 
+> **Permanent-scoped `CannotSuspend` / `CannotUnsuspend` enforcement — RESOLVED 2026-06-13**
+> (Iceclad Liberator pool authoring: EX7-023, EX8-023, EX11-017). The
+> permanent-scoped `ModifierType::CannotSuspend` / `CannotUnsuspend` modifiers
+> were installable and expired correctly but had **no consult site** — a locked
+> Digimon could still declare attacks, block, and be suspended by costs/effects
+> (`tests/flood_gates/mask_gates.rs` even noted "no mask bit exists"). The
+> engine now enforces them at: basic-attack declaration (`combat/mod.rs`
+> `can_attack*` + `action/mask.rs` `can_basic_attack`, kept in lockstep so the
+> RL mask and the API agree), block / Alliance / Counter candidate walks,
+> suspend-as-cost helpers (`effect_context/action/suspend.rs`,
+> `game_actions/mod.rs`), and the universal `game/suspend.rs` chokepoint
+> (effect-driven suspend/unsuspend no-op on locked permanents; turn-start
+> unsuspend skips `CannotUnsuspend`). Covered by
+> `tests/combat/cannot_suspend_enforcement.rs` (10 tests) plus the now-un-ignored
+> EX7-023 / EX11-017 enforcement assertions. **Still open:** the *player-scope
+> mass* `CannotSuspend` / `CannotUnsuspend` auras below (lines for "none of your
+> opponent's Digimon can suspend") — those need the player-scoped registry +
+> future-play tracking, NOT just per-permanent enforcement; this closure is the
+> foundation they build on, not a replacement.
+
 > **Xros Heart DigiXros closure — 2026-05-24:** The
 > `close-xros-heart-digixros-gaps` change closed the reusable Xros Heart
 > DigiXros transaction substrate: recipe material prompts from hand,

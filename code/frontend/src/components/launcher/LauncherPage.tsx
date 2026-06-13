@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { fetchPatchNotes, type PatchNotesResponse } from '@/api/patchNotesApi';
 import { listTestedCards } from '@/api/deckApi';
 import { isServerHealthy } from '@/api/systemApi';
+import { useAppVersion } from '@/hooks/useAppVersion';
 import { useAuthStore } from '@/stores/authStore';
 import * as deckStore from '@/storage/deckStore';
 import type { DeckSummary } from '@/types/deck';
@@ -9,6 +10,7 @@ import { LauncherActions } from './LauncherActions';
 import { LauncherDeckPanel } from './LauncherDeckPanel';
 import { LauncherNewsPanel } from './LauncherNewsPanel';
 import { LauncherShell } from './LauncherShell';
+import { UpdaterStatusCard } from './UpdaterStatusCard';
 import {
   buildDeckRows,
   countDraftDecks,
@@ -35,6 +37,7 @@ const initialState: LauncherState = {
 
 export function LauncherPage() {
   const user = useAuthStore((state) => state.user);
+  const appVersion = useAppVersion();
   const [state, setState] = useState<LauncherState>(initialState);
 
   useEffect(() => {
@@ -69,7 +72,7 @@ export function LauncherPage() {
 
   return (
     <LauncherShell
-      buildVersion={import.meta.env.VITE_APP_VERSION ?? '0.1.0'}
+      buildVersion={appVersion}
       cardCountLabel={formatCardCount(state.testedCardCount)}
       deckCount={state.decks.length}
       draftCount={countDraftDecks(state.decks)}
@@ -86,6 +89,7 @@ export function LauncherPage() {
       </section>
       <aside className="launcher-right-column" aria-label="Launcher details">
         <LauncherDeckPanel decks={deckRows} loaded={state.loaded} />
+        <UpdaterStatusCard />
         <LauncherNewsPanel release={releaseSummary} />
       </aside>
     </LauncherShell>

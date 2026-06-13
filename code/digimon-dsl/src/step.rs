@@ -2434,6 +2434,11 @@ pub struct SelectOwnSourcesArgs {
 /// and stable cross-permanent source refs. `target:` restricts the picker to a
 /// single opponent permanent binding (e.g. the opponent Digimon picked just
 /// before). G-SELECT-OPPONENT-SOURCES — driver BT16-085 DNA branch.
+///
+/// `min`/`max` accept either a literal `u8` or a `{ formula: ... }` block
+/// resolved once at execution time (G-DSL-SELECT-SOURCES-FORMULA-COUNT —
+/// driver EX11-057 "For each of your [Ice-Snow] trait Digimon, trash any 1
+/// digivolution card from your opponent's Digimon").
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOpponentSourcesArgs {
@@ -2441,8 +2446,22 @@ pub struct SelectOpponentSourcesArgs {
     pub target: Option<BindingRef>,
     #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
     pub filter: PredicateSpec,
-    pub min: u8,
-    pub max: u8,
+    pub min: CountBound,
+    pub max: CountBound,
+    /// DCGO `TrashDigivolutionCards.cs` parity
+    /// (`maxDigivolutionDiscardCount = Math.Min(digivolutionCardsSum,
+    /// maxCount)`): when `true`, the resolved `min`/`max` clamp to the live
+    /// candidate count at execution time — the pick affects
+    /// `min(N, available)` and never aborts for "fewer than N available"
+    /// (zero candidates silently skip the pick and continue the clause).
+    ///
+    /// Default `false` preserves the historical unpayable-cost semantics:
+    /// a `min` above the live candidate count drops the continuation —
+    /// committed cards (EX7-021 / EX7-023 / EX11-017 / EX8-066) build
+    /// explicit availability LADDERS on that exact behavior. Do NOT flip
+    /// this default.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub clamp_to_available: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     #[serde(default = "default_select_sources_prompt")]

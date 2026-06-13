@@ -94,6 +94,31 @@ export async function getRoomState(gameId: string): Promise<lobbyApi.LobbyState>
   return lobbyApi.getLobbyState(gameId);
 }
 
+/** Reserve the joiner seat in a room by its 5-digit code. */
+export async function joinRoom(code: string): Promise<{ game_id: string; your_seat: 2 }> {
+  const { game_id, your_seat } = await lobbyApi.joinLobby(code);
+  return { game_id, your_seat };
+}
+
+export async function setRoomFirstPlayer(params: {
+  gameId: string;
+  firstPlayer: lobbyApi.FirstPlayerChoice;
+}): Promise<lobbyApi.LobbyState> {
+  return lobbyApi.setFirstPlayer(params.gameId, params.firstPlayer);
+}
+
+export async function startRoom(gameId: string): Promise<lobbyApi.LobbyState> {
+  return lobbyApi.startLobby(gameId);
+}
+
+export async function leaveRoom(gameId: string): Promise<lobbyApi.LobbyState> {
+  return lobbyApi.leaveLobby(gameId);
+}
+
+export async function cancelRoom(gameId: string): Promise<void> {
+  return lobbyApi.cancelLobby(gameId);
+}
+
 export async function createBotGame(params: {
   deck: DeckResponse;
   opponentDeck: DeckResponse;

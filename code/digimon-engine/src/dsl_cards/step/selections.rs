@@ -700,17 +700,35 @@ pub fn try_install(
             filter,
             min,
             max,
+            clamp_to_available,
             bind_as,
             prompt,
             then,
         } => {
-            if min > max || *max == 0 {
+            // G-DSL-SELECT-SOURCES-FORMULA-COUNT: literal-or-formula bounds
+            // resolve ONCE here (both against the same board snapshot).
+            let mut min_value = resolve_count_bound(ctx, min, &bindings);
+            let mut max_value = resolve_count_bound(ctx, max, &bindings);
+            if *clamp_to_available {
+                // DCGO TrashDigivolutionCards.cs parity:
+                // `maxDigivolutionDiscardCount = Math.Min(digivolutionCardsSum,
+                // maxCount)` — the pick affects min(N, available) and never
+                // becomes an unpayable-cost abort. Zero candidates (or a
+                // formula resolving to 0) fall through to the `max_value == 0`
+                // skip below (`if maxCount <= 0 yield break`), letting the
+                // rest of the clause run.
+                let available = count_opponent_source_candidates(ctx, target, filter, &bindings);
+                max_value = max_value.min(available);
+                min_value = min_value.min(available);
+            }
+            if min_value > max_value || max_value == 0 {
                 return InstallResult::Continue;
             }
             // Mirror of SelectOwnSources early-abort logic: when no opponent
             // sources exist and min > 0, the cost cannot be paid — abort.
+            // (Unreachable with `clamp_to_available` — min already clamped.)
             if !has_opponent_source_candidates(ctx) {
-                return if *min > 0 {
+                return if min_value > 0 {
                     InstallResult::TailAlreadyRan
                 } else {
                     InstallResult::Continue
@@ -721,8 +739,8 @@ pub fn try_install(
             install_select_opponent_sources(
                 ctx,
                 filter.clone(),
-                *min,
-                *max,
+                min_value,
+                max_value,
                 target.clone(),
                 bind_as.clone(),
                 prompt.clone(),
@@ -963,6 +981,59 @@ fn has_opponent_source_candidates(ctx: &EffectContext<'_>) -> bool {
         .battle_area
         .iter()
         .any(|perm| perm.card_sources.len() > 1)
+}
+
+/// Count of legal `select_opponent_sources` candidates at execution time:
+/// every card below the top card of each opponent battle-area permanent,
+/// restricted by the optional `target:` binding and the card `filter:` —
+/// the same shape `install_select_opponent_sources`'s per-pick filter
+/// closure enforces. Drives the `clamp_to_available` min(N, available)
+/// clamp (DCGO TrashDigivolutionCards.cs `digivolutionCardsSum`).
+/// G-DSL-SELECT-SOURCES-FORMULA-COUNT.
+fn count_opponent_source_candidates(
+    ctx: &EffectContext<'_>,
+    target: &Option<CompiledBindingRef>,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+) -> u8 {
+    let target_permanent =
+        target
+            .as_ref()
+            .and_then(|target| match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(handle)) => Some(handle),
+                _ => None,
+            });
+    if target.is_some() && target_permanent.is_none() {
+        // Target binding failed to resolve: the install-time filter rejects
+        // every candidate, so the clamped count is 0.
+        return 0;
+    }
+    let opponent = ctx.game.next_clockwise(ctx.player);
+    let read = ctx.as_read();
+    let mut count: usize = 0;
+    for (index, perm) in ctx.game.player(opponent).battle_area.iter().enumerate() {
+        let handle = PermanentHandle {
+            player: opponent,
+            index: index as u8,
+        };
+        if target_permanent.is_some_and(|target| target != handle) {
+            continue;
+        }
+        count += perm
+            .card_sources
+            .iter()
+            .take(perm.card_sources.len().saturating_sub(1))
+            .filter(|card| {
+                eval_predicate_with_bindings(
+                    filter,
+                    &read,
+                    PredicateSubject::Card(card.handle()),
+                    Some(bindings),
+                )
+            })
+            .count();
+    }
+    count.min(usize::from(u8::MAX)) as u8
 }
 
 fn has_material_candidates(
@@ -1784,6 +1855,7 @@ fn install_select_any_permanent(
     let previous_phase = ctx.game.current_phase;
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Target,
         selecting_player,
         previous_phase,
@@ -1875,6 +1947,7 @@ fn install_select_dna_pair(
 
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Target,
         selecting_player,
         previous_phase,
@@ -2162,6 +2235,7 @@ fn install_count_capped_permanent_step(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         // Reuse the single-target field-selection kind so the frontend's
         // field-click router (which keys off `OppField`/`OwnField`, not the
         // phase or id range) can map board clicks to these picks. The

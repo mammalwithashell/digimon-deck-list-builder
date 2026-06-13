@@ -6,7 +6,7 @@ import { RevealedCardsZone } from './RevealedCardsZone';
 import { ActionTraceTicker } from './ActionTraceTicker';
 import { TensorDebugBadge } from './TensorDebugBadge';
 import { fieldSelectionHighlights } from '@/utils/selectionTargets';
-import type { ActionTrace, TensorSummary } from '@/types/game';
+import { GamePhase, type ActionTrace, type TensorSummary } from '@/types/game';
 
 interface GameBoardProps {
   onPlayCard?: (handIndex: number) => void;
@@ -171,6 +171,11 @@ export function GameBoard({
             cards={revealedCards}
             validIndices={validRevealedIndices}
             onCardClick={onRevealedClick}
+            title={
+              currentPhase === GamePhase.SelectReveal && pendingSelection?.prompt
+                ? pendingSelection.prompt
+                : 'Revealed Cards'
+            }
           />
         </div>
       )}

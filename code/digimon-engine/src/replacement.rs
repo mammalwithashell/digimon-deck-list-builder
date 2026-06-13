@@ -1006,6 +1006,7 @@ fn install_optional_selection(
         make_decline_callback(subject, cause, event_cause_override, original_destination);
 
     game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
         kind: SelectionKind::Replacement,
         selecting_player: subject_controller,
         previous_phase,

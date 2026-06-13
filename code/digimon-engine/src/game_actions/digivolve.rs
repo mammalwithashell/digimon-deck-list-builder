@@ -287,6 +287,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: acting_player,
             previous_phase,
@@ -360,6 +361,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::OwnField,
             selecting_player: acting_player,
             previous_phase,
@@ -728,6 +730,7 @@ impl Game {
         let source_card = card.handle();
 
         self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
             kind: SelectionKind::Material,
             selecting_player,
             previous_phase,
@@ -787,6 +790,7 @@ impl Game {
                 // stage-1 was installed; we preserve it through the chain
                 // so the final resolution returns to Main.
                 game.pending_selection = Some(PendingSelection {
+                    zone_owner: None,
                     kind: SelectionKind::Material,
                     selecting_player: first_player,
                     previous_phase,

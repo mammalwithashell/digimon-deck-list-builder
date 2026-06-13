@@ -1,0 +1,236 @@
+# EX8-028 Skadimon — Digimon, Lv.6, Blue/Yellow, DP 12000, Cost 12.
+# Traits: Ice-Snow, LIBERATOR. Form: Mega. Attribute: Vaccine. Rarity: SR.
+#
+# Printed card text (card image EX8-028.webp — authoritative; cards.json
+# agrees):
+#   Evo box: Lv.5 from blue: Cost 4   (JSON evo_costs [{card_color:1, level:5, memory_cost:4}])
+#   Evo box: "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3"   (JSON xros_req)
+#   <Iceclad> (Other than against Security Digimon, compare the number of
+#     digivolution cards instead of DP in this Digimon's battles.)
+#   <Barrier> (When this Digimon would be deleted in battle, by trashing the
+#     top card of your security stack, prevent that deletion.)
+#   [When Digivolving] You may play 1 level 4 or lower [Ice-Snow] trait
+#     Digimon card from your hand without paying the cost. For each of your
+#     opponent's Digimon with no digivolution cards, add 1 to this effect's
+#     level maximum.
+#   [When Digivolving] [When Attacking] [Once Per Turn] By placing 1 Digimon
+#     with no digivolution cards as the bottom security card, this Digimon
+#     unsuspends.
+#   Inherited Effect: (none)
+#
+# DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/EX8/Blue/EX8_028.cs):
+#   Alternate Digivolution Requirement (None):
+#     AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#     EqualsTraits("Ice-Snow") && HasLevel && Level == 5, digivolutionCost: 3,
+#     ignoreDigivolutionRequirement: false) → `from: { level_eq: 5,
+#     trait_has: Ice-Snow }`, cost 3 (EX8-022/EX8-023 idiom).
+#   Iceclad (None): IcecladSelfStaticEffect(isInheritedEffect: false) →
+#     face-up `grant_keyword: Iceclad` (engine Keyword::Iceclad consumed at
+#     Game::resolve_battle — stack-size compare instead of DP).
+#   Barrier (WhenPermanentWouldBeDeleted): BarrierSelfEffect(false) →
+#     face-up `grant_keyword: Barrier` (engine auto-installs the optional
+#     battle-deletion replacement: trash own top security to prevent;
+#     BT23-102 / BT20-056 idiom).
+#   When Digivolving — free play (OnEnterFieldAnyone, ActivateClass,
+#     maxCount -1, optional):
+#     - MaxLevel() = 4 + card.Owner.Enemy.GetBattleAreaDigimons()
+#       .Count(p => p.DigivolutionCards.Count == 0) — computed LIVE inside
+#       CanSelectCardCondition, i.e. at candidate-filter time.
+#     - CanSelectCardCondition: IsDigimon && CanPlayAsNewPermanent(payCost:
+#       false) && EqualsTraits("Ice-Snow") && HasLevel && Level <= MaxLevel().
+#     - SelectHandEffect(maxCount: 1, canNoSelect: TRUE — printed "you may")
+#       → PlayPermanentCards(payCost: false, isTapped: false, activateETB:
+#       true) → `play_from_hand_free` (EX11-015 idiom).
+#   When Digivolving — OPT + When Attacking — OPT (two ActivateClass bodies,
+#     maxCount 1, optional, BOTH SetHashString("Unsuspend_EX8_028") → ONE
+#     shared once-per-turn counter across the two timings):
+#     - CanActivateCondition: HasMatchConditionPermanent(battle-area Digimon
+#       with DigivolutionCards.Count == 0) — scans BOTH players' battle
+#       areas (GameContextDeterminarion.HasMatchConditionPermanent maps over
+#       gameContext.Players), so OWN and OPPONENT Digimon (including this
+#       one, if sourceless) are all legal targets.
+#     - SelectPermanentEffect(maxCount: 1, canNoSelect: FALSE — mandatory
+#       once the optional clause is accepted).
+#     - IPutSecurityPermanent(selectedCard, …, toTop: false, isFaceup:
+#       false): the placed permanent's TOP CARD lands at the BOTTOM of
+#       topCard.OWNER's security stack, face down (CardController.cs
+#       `topCard.Owner.SecurityCards`); sources are discarded en route.
+#     - Then, if the placed top card actually left the battle area
+#       (`!IsExistOnBattleArea(_topCard)`), IUnsuspendPermanents([this]).
+#
+# Clause analysis:
+#   Clause 1 (face-up): <Iceclad> — `grant_keyword: Iceclad` (EX8-022 idiom).
+#   Clause 2 (face-up): <Barrier> — `grant_keyword: Barrier` (BT23-102 idiom).
+#   Clause 3 (face-up): [When Digivolving] optional free play. The dynamic
+#     level cap is a formula-valued `level_lte` (PR #470 DpConstraint
+#     formula): base 4 + 1 per opponent battle-area Digimon with no
+#     digivolution cards (`card_count_in_zone` with a `kind: digimon,
+#     materials_count_lte: 0` permanent filter — the filter evaluates each
+#     opponent permanent, matching DCGO's GetBattleAreaDigimons().Count).
+#     The formula re-evaluates when the selection's candidates are built —
+#     same observation point as DCGO's MaxLevel() inside the filter.
+#     Optional select (printed "you may"; DCGO canNoSelect: true) — decline
+#     legal, EX11-015 / DSL optional-on-mandatory pitfall respected.
+#   Clause 4 (face-up): [When Digivolving][When Attacking][Once Per Turn]
+#     by-cost optional (BT17-077 grammar): ONE clause registered at both
+#     timings — the DSL's per-(card, clause) OPT bookkeeping then matches
+#     DCGO's shared "Unsuspend_EX8_028" hash exactly (and decline does not
+#     consume the OPT: the engine records the activation only when the body
+#     runs). Outer accept/decline prompt (mandatory first select) →
+#     `select_any_permanent` over BOTH battle areas, `kind: digimon` +
+#     `materials_count_lte: 0` → `place_permanent_on_security` bottom,
+#     face-down, routed to the TARGET's controller's stack via a
+#     `binding_owner` branch (DCGO: topCard.Owner's security) →
+#     `unsuspend: { target: source }`.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 blue / Cost 4                          | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Alt digivolve Lv.5 w/[Ice-Snow] / Cost 3                  | IMPLEMENTED (alt_paths trait_has)        |
+# | <Iceclad>                                                 | IMPLEMENTED (grant_keyword)              |
+# | <Barrier>                                                 | IMPLEMENTED (grant_keyword)              |
+# | [WD] may play 1 Lv.(4+X) [Ice-Snow] Digimon from hand free| IMPLEMENTED (formula level_lte + play_from_hand_free) |
+# | [WD][WA][OPT] place 1 sourceless Digimon bottom security  | IMPLEMENTED (select_any_permanent + place_permanent_on_security bottom, owner-routed) |
+# | …this Digimon unsuspends                                  | IMPLEMENTED (unsuspend source)           |
+#
+# Known minor divergences (documented, not approximations):
+#   1. DCGO gates the final unsuspend on the placed top card actually having
+#      left the battle area (`!IsExistOnBattleArea(_topCard)`) — relevant only
+#      when a would-leave replacement on the TARGET prevents the placement.
+#      The DSL has no "previous step's zone-move succeeded" predicate, so the
+#      unsuspend runs unconditionally after the placement step — identical
+#      behavior in every non-replacement line. Same accepted shape as
+#      BT17-077 clause 2 ("By returning … unsuspend" with an unguarded
+#      `unsuspend` tail).
+#   2. Destination routing branches on the bound permanent's CONTROLLER
+#      (`binding_owner` reads handle.player); DCGO routes on the top card's
+#      OWNER. Identical except under control-change effects.
+
+card: EX8-028
+name: Skadimon
+kind: digimon
+level: 6
+color: [blue, yellow]
+cost: 12
+dp: 12000
+traits: [Ice-Snow, LIBERATOR]
+attribute: Vaccine
+form: Mega
+
+alt_paths:
+  # Printed standard evo box: Lv.5 from blue, cost 4 (encoded explicitly like
+  # neighbor EX8 specs so DSL-only loads carry the printed cost table).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  # Printed alt evo box: "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3". DCGO
+  # gates on EqualsTraits("Ice-Snow") && Level == 5 — no color restriction.
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Ice-Snow }
+    cost: 3
+
+effects:
+  # ─── Clause 1: <Iceclad> ─────────────────────────────────────────────────────
+  #
+  # "(Other than against Security Digimon, compare the number of digivolution
+  #  cards instead of DP in this Digimon's battles.)"
+  # Engine Keyword::Iceclad is consumed at Game::resolve_battle. EX8-022 idiom.
+  - kind: grant_keyword
+    keyword: Iceclad
+    summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
+
+  # ─── Clause 2: <Barrier> ─────────────────────────────────────────────────────
+  #
+  # "(When this Digimon would be deleted in battle, by trashing the top card
+  #  of your security stack, prevent that deletion.)"
+  # DCGO BarrierSelfEffect at WhenPermanentWouldBeDeleted; the engine
+  # auto-installs the optional battle-deletion replacement. BT23-102 idiom.
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier> (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion)"
+
+  # ─── Clause 3: [When Digivolving] dynamic-cap free play ─────────────────────
+  #
+  # "You may play 1 level 4 or lower [Ice-Snow] trait Digimon card from your
+  #  hand without paying the cost. For each of your opponent's Digimon with no
+  #  digivolution cards, add 1 to this effect's level maximum."
+  #
+  # The cap is evaluated when the hand selection's candidates are built —
+  # the same observation point as DCGO's MaxLevel() call inside
+  # CanSelectCardCondition. `materials_count_lte: 0` = "no digivolution
+  # cards" (EX8-023 idiom); the zone-count filter evaluates each opponent
+  # battle-area PERMANENT, so only Digimon (not Tamers) raise the cap.
+  # optional select — printed "you may" (DCGO canNoSelect: true).
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] You may play 1 level 4(+1 per sourceless opp Digimon) or lower [Ice-Snow] Digimon from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Ice-Snow
+              - level_lte:
+                  formula:
+                    base: 4
+                    per:
+                      card_count_in_zone:
+                        zone: battle_area
+                        of: opponent
+                        filter:
+                          all_of:
+                            - kind: digimon
+                            - materials_count_lte: 0
+                    delta: 1
+          prompt: "Play 1 [Ice-Snow] trait Digimon card from your hand without paying the cost (level max 4, +1 per opponent Digimon with no digivolution cards)"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  # ─── Clause 4: [WD][WA][Once Per Turn] pay-unsuspend ────────────────────────
+  #
+  # "By placing 1 Digimon with no digivolution cards as the bottom security
+  #  card, this Digimon unsuspends."
+  #
+  # ONE clause registered at BOTH timings: the engine's per-(card, clause)
+  # OPT bookkeeping then equals DCGO's shared "Unsuspend_EX8_028" hash — a
+  # WD activation locks the WA window for the turn and vice versa. `optional:
+  # true` (by-cost idiom, BT17-077 grammar) + a MANDATORY inner select →
+  # the lowering installs the outer accept/decline prompt, suppressed when
+  # no candidate exists (DCGO CanActivateCondition gate); declining does not
+  # consume the OPT (the activation is recorded only when the body runs).
+  # `select_any_permanent` scans BOTH battle areas (DCGO
+  # HasMatchConditionPermanent) — own, opponent, and this Digimon itself
+  # (when sourceless) are all legal. The chosen permanent's card goes to the
+  # BOTTOM of ITS controller's security stack face down (DCGO
+  # IPutSecurityPermanent toTop: false → topCard.Owner.SecurityCards);
+  # the binding_owner branch routes the destination. Then this Digimon
+  # unsuspends (see header divergence note 1 for the replacement corner).
+  - when: [when_digivolving, when_attacking]
+    optional: true
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][Once Per Turn] By placing 1 sourceless Digimon as the bottom security card, this Digimon unsuspends"
+    process:
+      - select_any_permanent:
+          bind_as: pay
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "Place 1 Digimon with no digivolution cards as the bottom security card"
+      - if:
+          condition:
+            binding_owner: { binding: pay, of: you }
+          then:
+            - place_permanent_on_security:
+                of: you
+                target: pay
+                position: bottom
+                face_up: false
+          else:
+            - place_permanent_on_security:
+                of: opponent
+                target: pay
+                position: bottom
+                face_up: false
+      - unsuspend: { target: source }

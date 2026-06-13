@@ -181,20 +181,27 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // time so the outer accept dialog is suppressed when the cost cannot
         // be paid; the body re-checks belt-and-suspenders.
         //
-        // Note: we do not consult `ModifierType::CannotSuspend` here. That
-        // modifier blocks orientation flips (e.g. an opponent prevents the
-        // unsuspend phase from un-tapping); paying the Evade cost is a
-        // self-suspend by the carrier's own effect, which DCGO permits even
-        // under most "can't be suspended" effects. If a future rule narrows
-        // this, add the consult here.
+        // `ModifierType::CannotSuspend` IS consulted here: DCGO's gate
+        // (`Evade.cs:28` `CanActivatePermanentSuspendCostEffect` →
+        // `Permanent.CanSuspend`) requires the carrier to be suspendABLE,
+        // not just unsuspended — a locked carrier cannot pay the cost and
+        // the outer accept dialog is suppressed (prohibition precedence
+        // 15-1-3).
         Keyword::Evade => vec![Effect::when_would_be_deleted(card)
             .name("<Evade>")
             .optional()
             .condition(|ctx| {
+                let Some(handle) = ctx.source_permanent else {
+                    return false;
+                };
                 let Some(perm) = ctx.source_permanent() else {
                     return false;
                 };
                 !perm.is_suspended
+                    && !ctx
+                        .game
+                        .modifiers
+                        .has(handle, crate::enums::ModifierType::CannotSuspend)
             })
             .replacement_process(|rctx| {
                 // Self-scope guard: only fire on the carrier's own deletion.
@@ -218,6 +225,17 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     .map(|p| p.is_suspended)
                     .unwrap_or(true);
                 if already_suspended {
+                    return;
+                }
+                // Re-check the suspend-cost prohibition too (see the
+                // condition gate above): a same-chain effect could have
+                // installed `CannotSuspend` between collection and process.
+                if rctx
+                    .effect
+                    .game
+                    .modifiers
+                    .has(subject, crate::enums::ModifierType::CannotSuspend)
+                {
                     return;
                 }
                 // Pay the cost: suspend the carrier (fires OnSuspend).
@@ -1589,10 +1607,22 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             .name("<Training>")
             .timing(EffectTiming::MainOnField)
             .condition(|ctx| {
+                let Some(handle) = ctx.source_permanent else {
+                    return false;
+                };
                 let Some(perm) = ctx.source_permanent() else {
                     return false;
                 };
+                // Training's self-suspend is a cost — a `CannotSuspend`
+                // carrier can't pay it (DCGO `Training.cs:23` checks
+                // `thisPermanent.CanSuspend`). Battle-area path only: the
+                // breeding dispatcher skips `condition` (see
+                // `activate_breeding_main_training`).
                 !perm.is_suspended
+                    && !ctx
+                        .game
+                        .modifiers
+                        .has(handle, crate::enums::ModifierType::CannotSuspend)
             })
             .process(|ctx| {
                 let Some(me) = ctx.source_permanent else {
