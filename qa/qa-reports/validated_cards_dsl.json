@@ -8909,6 +8909,73 @@
         "B3"
       ],
       "notes": "On Play reveal-3 two-bucket (Social + Creation/Navi/Tool) add+bottom; on_any_link observer with event_card_trait_has 4-trait filter (Creation included per printed text; DCGO drops it - DCGO bug) + suspend-self cost -> gain 1 memory; security play-free. Review APPROVED."
+    },
+    "BT21-005": {
+      "card_name": "Swipemon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT24 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_005.rs",
+      "test_count": 8,
+      "patterns": [
+        "G4",
+        "B3",
+        "E2"
+      ],
+      "notes": "Digi-Egg inherited [Your Turn][OPT] when_card_linked_to_this -> Draw 1. Review APPROVED."
+    },
+    "BT21-047": {
+      "card_name": "Navimon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT24 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_047.rs",
+      "test_count": 12,
+      "patterns": [
+        "A1",
+        "A2",
+        "H3"
+      ],
+      "notes": "On Play reveal-3 two-bucket (Appmon + App Driver) add+bottom; link box: link_condition c1 + linked +2000 DP aura + linked Piercing grant; Lv.2 Appmon alt digivolve. Review APPROVED."
+    },
+    "BT24-067": {
+      "card_name": "Hackmon",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Appmon (BT21/BT24 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_067.rs",
+      "test_count": 18,
+      "patterns": [
+        "B3",
+        "E2",
+        "F-Retaliation"
+      ],
+      "notes": "Twin of BT21-009: when_card_linked_to_this OPT + count_lte tamer -> play Rei Katsura free; link box: link_condition c1 + linked +2000 DP aura (review fix: was omitted) + linked Retaliation grant; Lv.2 Appmon alt digivolve. Review NEEDS-FIX applied."
+    },
+    "BT24-087": {
+      "card_name": "Rei Katsura",
+      "validated_date": "2026-06-12",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Appmon (BT21/BT24 wave)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-087.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_087.rs",
+      "test_count": 11,
+      "patterns": [
+        "B1",
+        "B3"
+      ],
+      "notes": "Start-of-main conditional memory (opp has Digimon); on_any_link suspend-cost observer -> Draw 1 + mandatory trash 1 hand. OMITTED: effect-initiated app-fuse-into-trash-card rider (engine gap, App Fuse). Security play-free. Review APPROVED as PARTIAL."
     }
   }
 }
