@@ -510,12 +510,19 @@ impl Game {
             .get(field_index)
             .map(|perm| perm.top_card().handle())
             .expect("digivolve target remains in battle area after stack mutation");
+        let top_card_name = self
+            .player(resume.player)
+            .battle_area
+            .get(field_index)
+            .map(|perm| perm.top_card().card_name(&self.card_data).to_string())
+            .unwrap_or_default();
 
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Digivolve {
             seq,
             player: resume.player,
             top_card_id,
+            card_name: top_card_name,
             field_index: field_index as u8,
             from_stack_top,
             // Regular evo-cost path from hand — not DNA, not Blast DNA.
@@ -652,12 +659,19 @@ impl Game {
             .get(field_index)
             .map(|perm| perm.top_card().handle())
             .expect("app-fuse host remains in battle area after stack mutation");
+        let top_card_name = self
+            .player(host.player)
+            .battle_area
+            .get(field_index)
+            .map(|perm| perm.top_card().card_name(&self.card_data).to_string())
+            .unwrap_or_default();
 
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Digivolve {
             seq,
             player: player_id,
             top_card_id,
+            card_name: top_card_name,
             field_index: field_index as u8,
             from_stack_top,
             was_dna: false,

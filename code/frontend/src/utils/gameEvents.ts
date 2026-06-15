@@ -10,6 +10,8 @@ const TYPE_ALIASES: Record<string, string> = {
   Trash: 'trash',
   Mill: 'mill',
   SecurityReveal: 'security_reveal',
+  EffectTarget: 'effect_target',
+  Reveal: 'reveal',
   GameOver: 'game_over',
   Concede: 'concede',
   EffectFizzled: 'effect_fizzled',
