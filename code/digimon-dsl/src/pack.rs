@@ -531,6 +531,7 @@ mod tests {
                     traits: vec![],
                     effect_text: String::new(),
                     inherited_text: String::new(),
+                    effects: vec![],
                 },
                 option: CompiledDualOption {
                     use_cost: 3,
@@ -552,6 +553,7 @@ mod tests {
                         })),
                         ..Default::default()
                     })),
+                    effects: vec![],
                 },
             }),
             use_requirement: Some(CompiledPredicate {

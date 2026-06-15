@@ -3037,7 +3037,45 @@ controlling engine gap for the cost-reduction clauses is
   trash) plus an effect-driven free-digivolve-into-a-hand-card. Omitted; the
   -3000 DP, inherited Barrier, and Glowing Dawn alt-digivolve ship (PARTIAL).
 
-### BT25-057 Monarchlizamon / "Final Judgment" — DUAL card — BLOCKED (hybrid)  [G-DSL-DUAL-PER-FACE-EFFECTS + G-DSL-ARTS-DIGIVOLVE]
+### BT25-057 Monarchlizamon / "Final Judgment" — DUAL card — RESOLVED 2026-06-15  [G-DSL-DUAL-PER-FACE-EFFECTS + G-DSL-ARTS-DIGIVOLVE]
+
+> **RESOLVED 2026-06-15 (`gap/dual-per-face-arts`).** Both gaps closed. The DUAL
+> faces now carry their own `effects:` and the Option face an `arts_digivolve:`
+> shorthand:
+> - **Per-face effects sink (G-DSL-DUAL-PER-FACE-EFFECTS):** `DualDigimonSpec`
+>   and `DualOptionSpec` gained an `effects: Vec<ClauseSpec>` field (`spec.rs`),
+>   compiled onto `CompiledDualDigimon.effects` / `CompiledDualOption.effects`
+>   (`compiled.rs` + `compile.rs`), validated per-face (`validator.rs`), and
+>   lowered by `DslCardEffect::effects()` (`dsl_cards/mod.rs`): Digimon-face
+>   clauses lower with the Digimon identity (natural timings), Option-face
+>   clauses with the Dual identity so `when: main` → `EffectTiming::OptionMain`
+>   and the `dual.option.use_requirement` color bypass applies. `clause_index`
+>   is offset per face so multi-timing OPT keys never collide. Digimon-face
+>   `grant_keyword` declaratives are also scanned into the top-card native
+>   `keywords` (`card_data_from_compiled`) so static keywords (Security A.+1 /
+>   Reboot / Blocker) are live on field.
+> - **Arts Digivolve (G-DSL-ARTS-DIGIVOLVE):** `dual.option.arts_digivolve: true`
+>   compiles into the `ArtsDigivolve` option-face keyword, which the existing
+>   engine path (`pending_option_can_arts_digivolve` →
+>   `install_arts_digivolve_selection`) reads — no engine change needed. The
+>   Digimon-face evo table is backfilled from the alt-digivolve box
+>   (`compiled_dual_to_engine` now threads the computed `evo_costs`) so the Arts
+>   `can_digivolve` gate works for DSL-loaded dual cards.
+> - **Cards shipped:** ST23-09 Atratusmon (IMPLEMENTED), BT25-057 Monarchlizamon
+>   (IMPLEMENTED — cards.json mislabel corrected via the DUAL YAML), BT25-043
+>   Habakirimon (upgraded PARTIAL → IMPLEMENTED, Option side now ships). Tests:
+>   `tests/cards_behavioral/{st23/st23_09,bt25/bt25_057,bt25/bt25_043}.rs` (26
+>   tests, all green).
+> - **Residual (separate pre-existing limitation, NOT this gap):** the engine
+>   `can_digivolve` / `can_basic_digivolve` gate is color+level only — a
+>   trait-gated digivolution box ("Lv.N w/ [Glowing Dawn]: Cost C") is not
+>   enforceable as a static `EvoCost` row. These cards author BOTH a color-form
+>   alt-digivolve (the cards.json evo table — backfills the static evo_cost) and
+>   the printed trait-form alt-path, matching every other DSL card's
+>   digivolution authoring. A faithful trait-gated `can_digivolve` is a
+>   standalone engine gap.
+
+### Original entry (history)
 - **Note:** `data/cards.json` mislabels this as a plain Digimon (`card_kind: 0`).
   The card IMAGE + DCGO `BT25_057.cs` confirm it is a **DUAL** card: a Lv.5
   Cyborg/Glowing Dawn/BEATBREAK Digimon face AND an Option face "Final
@@ -3166,7 +3204,24 @@ controlling engine gap for the cost-reduction clauses is
   ```
 - **Verdict:** contributes to BT25-039 BLOCKED (gap_kind: dsl).
 
-## G-DSL-BEATBREAK-ARTS-OPTION — no dual Digimon+Option (BEATBREAK / Arts Digivolve) identity
+## G-DSL-BEATBREAK-ARTS-OPTION — no dual Digimon+Option (BEATBREAK / Arts Digivolve) identity — RESOLVED 2026-06-15
+
+> **RESOLVED 2026-06-15 (`gap/dual-per-face-arts`).** Folded into the
+> per-face-effects + Arts-digivolve close (see the BT25-057 entry above).
+> A BEATBREAK card is authored as `kind: dual` with the Digimon clauses on
+> `dual.digimon.effects` and the Option `[Main]` body on `dual.option.effects`
+> (`when: main` → `OptionMain`); `dual.option.arts_digivolve: true` arms the
+> engine arts-digivolve selection. The old "Option side OMITTED per the BT25-041
+> precedent" workaround is retired. BT25-043 Habakirimon is upgraded from
+> PARTIAL to IMPLEMENTED (Option side ships): `[Main]` -8000 single target →
+> by-trashing-top-security (player Yes/No) → all opp -5000 for the turn, plus
+> Arts Digivolve. NOTE: BT25-041 Murasamemon remains Digimon-side-only for an
+> UNRELATED reason (its [WD/WA] pay-one-of-two-costs → cost-reduced play/use is
+> a different open gap, G-COST-REDUCTION-INTERACTIVE-PAY-COST); its Option side
+> (if any) can now be authored with this substrate.
+> Tests: `tests/cards_behavioral/bt25/bt25_043.rs` (11, green).
+
+### Original entry (history)
 - **Discovered by:** BT25-043 Habakirimon (aegiomon-2 slice), 2026-06-06. (Same family blocks the Option side of every BEATBREAK card; cf. BT25-041 Murasamemon, which shipped Digimon-side-only.)
 - **Clause (Option side):** "Use Req: [Glowing Dawn] trait. [Main] 1 of your opponent's Digimon gets -8000 DP for the turn. Then, by trashing your top security card, all of your opponent's Digimon get -5000 DP for the turn. Arts Digivolve."
 - **DCGO (BT25_043.cs):** the card is BOTH a Digimon and an Option — `EffectTiming.OptionSkill` (the [Main] play body) plus `CardEffectFactory.ArtsDigivolveEffect` and `UseRequirements`. A BEATBREAK card can be played as a Digimon OR used as an Option (Arts Digivolve).

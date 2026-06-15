@@ -71,6 +71,10 @@ pub struct CompiledDualDigimon {
     pub traits: Vec<String>,
     pub effect_text: String,
     pub inherited_text: String,
+    /// Digimon-face behavioral clauses (`G-DSL-DUAL-PER-FACE-EFFECTS`).
+    /// Lowered with the Digimon identity — natural timings.
+    #[serde(default)]
+    pub effects: Vec<CompiledClause>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -79,8 +83,16 @@ pub struct CompiledDualOption {
     pub colors: Vec<CompiledColor>,
     pub effect_text: String,
     pub security_text: String,
+    /// Option-face keywords. `arts_digivolve: true` on the spec compiles into
+    /// an `ArtsDigivolve` entry here, so the engine's existing keyword check
+    /// (`pending_option_can_arts_digivolve`) needs no extra wiring.
     pub keywords: Vec<String>,
     pub use_requirement: Option<Box<CompiledPredicate>>,
+    /// Option-face behavioral clauses — the BEATBREAK `[Main]` body. Lowered
+    /// with the Dual identity so `when: main` → `OptionMain`
+    /// (`G-DSL-DUAL-PER-FACE-EFFECTS`).
+    #[serde(default)]
+    pub effects: Vec<CompiledClause>,
 }
 
 // ── Identity ────────────────────────────────────────────────────────

@@ -1143,7 +1143,20 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
     // without needing the declarative process to run at placement. Inherited
     // grants are stack text and must stay out of native top-card keywords.
     let mut keywords: Vec<Keyword> = Vec::new();
-    for clause in &card.effects {
+    // For a DUAL card the printed keywords live on the Digimon face, which is
+    // the top card while the card is in play as a Digimon. `face_keywords`
+    // reads `CardData.keywords` for a DSL-loaded card (empty text), so the
+    // Digimon-face `grant_keyword` declaratives must be scanned into the SAME
+    // top-level `keywords` field (G-DSL-DUAL-PER-FACE-EFFECTS). Non-dual cards
+    // contribute only their top-level `effects`.
+    let face_up_keyword_clauses = card.effects.iter().chain(
+        card.dual
+            .as_ref()
+            .map(|d| d.digimon.effects.iter())
+            .into_iter()
+            .flatten(),
+    );
+    for clause in face_up_keyword_clauses {
         if let CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
             keyword,
             value,
@@ -1209,6 +1222,13 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         }
     }
 
+    // Build the dual face data before `evo_costs` is moved into the struct —
+    // the Digimon face borrows the same backfilled table.
+    let dual = card
+        .dual
+        .as_ref()
+        .map(|d| compiled_dual_to_engine(d, &evo_costs));
+
     CardData {
         card_id: card.card.clone(),
         card_name: card.name.clone(),
@@ -1240,7 +1260,14 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         norm_id: 0.0,
         keywords,
         ace_overflow: card.ace_overflow,
-        dual: card.dual.as_ref().map(compiled_dual_to_engine),
+        // For a DUAL card the digivolution table lives on the Digimon face
+        // (`digivolution_costs()` reads `dual.digimon.evo_costs`). The
+        // alt-digivolve box ("Lv.N w/ [trait]: Cost C") is authored as a
+        // top-level `alt_paths` digivolve, so the `evo_costs` computed above
+        // IS the Digimon-face table — thread it onto the face so digivolving
+        // as a Digimon AND the Arts-digivolve `can_digivolve` check both work
+        // for DSL-loaded dual cards (G-DSL-FIXTURE-EVO-COSTS for the dual face).
+        dual,
         digixros_aliases: card.digixros_aliases.clone(),
         also_treated_as: card.also_treated_as.clone(),
     }
@@ -1311,7 +1338,10 @@ pub fn make_test_card(card_id: &str, card_name: &str) -> CardData {
 }
 
 #[cfg(feature = "dsl-yaml-loader")]
-fn compiled_dual_to_engine(dual: &digimon_dsl::compiled::CompiledDual) -> DualCardData {
+fn compiled_dual_to_engine(
+    dual: &digimon_dsl::compiled::CompiledDual,
+    digimon_evo_costs: &[EvoCost],
+) -> DualCardData {
     DualCardData {
         digimon: DualDigimonFace {
             level: dual.digimon.level,
@@ -1324,7 +1354,7 @@ fn compiled_dual_to_engine(dual: &digimon_dsl::compiled::CompiledDual) -> DualCa
                 .map(compiled_color_to_engine)
                 .collect(),
             traits: dual.digimon.traits.clone(),
-            evo_costs: Vec::new(),
+            evo_costs: digimon_evo_costs.to_vec(),
             effect_text: dual.digimon.effect_text.clone(),
             inherited_text: dual.digimon.inherited_text.clone(),
             keywords: Vec::new(),

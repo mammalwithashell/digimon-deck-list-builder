@@ -1,0 +1,142 @@
+# BT25-057 Monarchlizamon / "Final Judgment" — DUAL card (Digimon + Option).
+# Lv.5 Green, Cyborg / Glowing Dawn / BEATBREAK. DP 8000.
+#
+# NOTE: data/cards.json MISLABELS this as a plain Digimon (card_kind 0,
+# dual: None) and stores the Option-face text in the *inherited* slot. The
+# card IMAGE (DIGIMON / OPTION, "DUAL" spine) and DCGO BT25_057.cs are
+# authoritative — this is a DUAL card with a Digimon face AND an Option face
+# "Final Judgment" (Use 4). First card to exercise G-DSL-DUAL-PER-FACE-EFFECTS
+# + G-DSL-ARTS-DIGIVOLVE / G-DSL-BEATBREAK-ARTS-OPTION.
+#
+# Printed text (card image + DCGO, verbatim):
+#   DIGIMON FACE
+#   ＜Digivolve＞ Lv.4 w/ [Glowing Dawn] trait: Cost 3.
+#   [When Digivolving] [When Attacking] [Once Per Turn] By trashing the bottom
+#     face-down card under any of your Tamers, ＜De-Digivolve 1＞ 1 of your
+#     opponent's Digimon.
+#   [When Digivolving] This Digimon may battle 1 of your opponent's Digimon.
+#   OPTION FACE — "Final Judgment", Use 4
+#   Use Req. [Glowing Dawn] trait (ignore color requirements).
+#   [Main] 1 of your Digimon gains ＜Rush＞, ＜Security A. +1＞ and +5000 DP for
+#     the turn. Then, it may attack.
+#   ＜Arts Digivolve＞ (instead of trashing after use, your cards may digivolve
+#     into this card without paying the cost).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_057.cs
+#
+# ── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level 4,
+#   HasGlowingDawnTraits, cost 3) → alt_paths digivolve from level 4 + Glowing
+#   Dawn, cost 3.
+# Digimon WD/WA OPT — ActivateClassesForSharedEffects (WD + WA, OPT, hash
+#   "BT25_WD_WA"): trash the bottom flipped (face-down) source under a chosen
+#   Tamer (the activation cost — RemoveUse if no cost paid), then mode
+#   Degenerate (<De-Digivolve 1>) on a chosen opponent Digimon.
+# Digimon WD-only — OnEnterFieldAnyone, skippable: optional battle vs 1
+#   opponent Digimon (IBattle isAttack:true → battle, NOT an attack — no
+#   security continuation).
+# Option [Main] (OptionSkill) — select 1 of YOUR Digimon → GainRush +
+#   ChangeDigimonSAttack(+1) + ChangeDigimonDP(+5000) UntilEachTurnEnd → then
+#   may attack (SelectAttackEffect).
+# Arts Digivolve — CardEffectFactory.ArtsDigivolveEffect(card).
+
+card: BT25-057
+name: "Monarchlizamon"
+kind: dual
+
+# Top-level metadata mirrors the Digimon face (so deck-legality / search see a
+# Lv.5 Green Cyborg). The engine reads face-specific stats from `dual`.
+level: 5
+color: [green, black]
+cost: 4
+dp: 8000
+traits: [Cyborg, Glowing Dawn, BEATBREAK]
+
+# Digimon-face digivolution box. The printed box is trait-gated
+# ("Lv.4 w/ [Glowing Dawn]: Cost 3"); the engine's basic-digivolve gate
+# (`can_digivolve` / `can_basic_digivolve`) is color+level only (the
+# "Full validation (alt-digi) deferred" TODO — trait-gated `can_digivolve`
+# is a SEPARATE pre-existing engine limitation, not this gap). We author BOTH:
+#   1. the color form that matches the printed card's color (green Lv.4) — this
+#      backfills the static evo_cost so digivolve-as-Digimon AND the Arts
+#      `can_digivolve` gate work (this is the table cards.json would carry); and
+#   2. the trait form, which expresses the printed [Glowing Dawn] restriction
+#      for the fuller alt-path validation lane.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: "Glowing Dawn"
+    cost: 3
+
+dual:
+  digimon:
+    level: 5
+    dp: 8000
+    colors: [green, black]
+    traits: [Cyborg, Glowing Dawn, BEATBREAK]
+    effect_text: |
+      [When Digivolving] [When Attacking] [Once Per Turn] By trashing the bottom face-down card under any of your Tamers, <De-Digivolve 1> 1 of your opponent's Digimon.
+      [When Digivolving] This Digimon may battle 1 of your opponent's Digimon.
+    effects:
+      # [WD][WA][OPT] trash bottom FD under a Tamer → <De-Digivolve 1> 1 opp Digimon.
+      - when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        summary: "[WD][WA][OPT] By trashing the bottom face-down card under a Tamer, <De-Digivolve 1> 1 opponent Digimon"
+        process:
+          - trash_bottom_face_down_source_under_tamer: { of: you }
+          - select_opponent_permanent:
+              bind_as: degen_target
+              filter: { kind: digimon }
+              prompt: "Choose 1 opponent Digimon to <De-Digivolve 1>"
+          - de_digivolve: { target: degen_target, amount: 1 }
+
+      # [WD] this Digimon may battle 1 opponent Digimon (optional; a battle, not an attack).
+      - when: when_digivolving
+        optional: true
+        summary: "[WD] This Digimon may battle 1 opponent Digimon"
+        process:
+          - select_opponent_permanent:
+              bind_as: battle_target
+              filter: { kind: digimon }
+              prompt: "Choose 1 opponent Digimon to battle"
+          - battle:
+              attacker: this
+              defender: battle_target
+  option:
+    use_cost: 4
+    colors: [green, black]
+    effect_text: |
+      [Main] 1 of your Digimon gains <Rush>, <Security A. +1> and +5000 DP for the turn. Then, it may attack.
+    # Use Req. [Glowing Dawn] trait — a Glowing Dawn Digimon on the field
+    # satisfies the Option's color requirement (ignore color).
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: "Glowing Dawn"
+    arts_digivolve: true
+    effects:
+      - when: main
+        summary: "[Main] 1 of your Digimon gains <Rush> + <Security A. +1> + 5000 DP for the turn, then may attack"
+        process:
+          - select_own_permanent:
+              bind_as: buffed
+              filter: { kind: digimon }
+              prompt: "Choose 1 of your Digimon to gain <Rush>, <Security A. +1> and +5000 DP"
+          - grant_keyword: { target: buffed, keyword: Rush, expiry: end_of_turn }
+          - grant_keyword:
+              target: buffed
+              keyword: SecurityAttackPlus
+              value: 1
+              expiry: end_of_turn
+          - add_dp_modifier: { target: buffed, value: 5000, expiry: end_of_turn }
+          - may_attack_now:
+              attacker: buffed
+              targets: any
+              optional: true
+              windowed: true
+              prompt: "Have the buffed Digimon attack now?"

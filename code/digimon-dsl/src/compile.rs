@@ -91,6 +91,32 @@ fn compile_dual(
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> CompiledDual {
+    let digimon_effects = dual
+        .digimon
+        .effects
+        .iter()
+        .enumerate()
+        .map(|(i, c)| compile_clause(c, &format!("dual.digimon.effects[{i}]"), card_id, errors))
+        .collect();
+    let option_effects = dual
+        .option
+        .effects
+        .iter()
+        .enumerate()
+        .map(|(i, c)| compile_clause(c, &format!("dual.option.effects[{i}]"), card_id, errors))
+        .collect();
+    // Fold the `arts_digivolve: true` shorthand into the option-face keyword
+    // list — `pending_option_can_arts_digivolve` reads `ArtsDigivolve` from
+    // `dual.option.keywords`, so the shorthand and the explicit keyword form
+    // are equivalent at the engine boundary (`G-DSL-ARTS-DIGIVOLVE`).
+    let mut option_keywords = dual.option.keywords.clone();
+    if dual.option.arts_digivolve
+        && !option_keywords.iter().any(|k| {
+            matches!(k.as_str(), "ArtsDigivolve" | "Arts Digivolve" | "arts_digivolve")
+        })
+    {
+        option_keywords.push("ArtsDigivolve".to_string());
+    }
     CompiledDual {
         digimon: CompiledDualDigimon {
             level: dual.digimon.level,
@@ -104,6 +130,7 @@ fn compile_dual(
             traits: dual.digimon.traits.clone(),
             effect_text: dual.digimon.effect_text.clone(),
             inherited_text: dual.digimon.inherited_text.clone(),
+            effects: digimon_effects,
         },
         option: CompiledDualOption {
             use_cost: dual.option.use_cost,
@@ -115,7 +142,7 @@ fn compile_dual(
                 .collect(),
             effect_text: dual.option.effect_text.clone(),
             security_text: dual.option.security_text.clone(),
-            keywords: dual.option.keywords.clone(),
+            keywords: option_keywords,
             use_requirement: dual.option.use_requirement.as_ref().map(|p| {
                 Box::new(compile_predicate(
                     p,
@@ -124,6 +151,7 @@ fn compile_dual(
                     errors,
                 ))
             }),
+            effects: option_effects,
         },
     }
 }

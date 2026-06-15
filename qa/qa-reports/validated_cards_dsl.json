@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-13",
+  "last_updated": "2026-06-15",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -9350,6 +9350,69 @@
         "FORMULA-COUNT-SOURCE-SELECT"
       ],
       "notes": "[SoMP] +1 memory if opp has Digimon; [OnPlay] per own Ice-Snow Digimon trash any 1 opp source (formula-count source select); [All Turns] on effects trashing opp sources, by suspending gain 1 memory; [Security] self-play. Closed G-DSL-SELECT-SOURCES-FORMULA-COUNT."
+    },
+    "BT25-003": {
+      "card_name": "Frimon",
+      "validated_date": "2026-06-15",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "beatbreak (Glowing Dawn)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-003.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_003.rs",
+      "test_count": 7,
+      "patterns": [
+        "G"
+      ],
+      "notes": "Yellow Digi-Egg, blank face. Single inherited [When Attacking][OPT]: by trashing top security, may digivolve into a [Glowing Dawn] hand card with the cost reduced by 1 (cost:{reduce:1}, requirements honored, target:source). Clause gated on security_count_gte:1 AND a [Glowing Dawn] card in hand (BT25-014 idiom); inner optional select_hand carries the may; trash+digivolve wrapped in if binding_present so the cost is never paid for nothing. Not in DCGO (no BT25_003.cs); modeled per printed text + BT12-016/BT15-003 analogues. 7/7 tests pass, 0 ignored."
+    },
+    "BT25-032": {
+      "card_name": "Liollmon",
+      "validated_date": "2026-06-15",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "beatbreak (Glowing Dawn)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_032.rs",
+      "test_count": 8,
+      "patterns": [
+        "E",
+        "G"
+      ],
+      "notes": "[On Play] reveal-3 two-bucket (Glowing Dawn + yellow BEATBREAK) no_duplicate_cards (DCGO mutualConditions); rest to deck bottom; inherited <Barrier>; alt-digivolve Lv.2 [Glowing Dawn] cost 0. DCGO BT25_032.cs. 8/8 tests pass, 0 ignored."
+    },
+    "BT25-046": {
+      "card_name": "Gekkomon",
+      "validated_date": "2026-06-15",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "beatbreak (Glowing Dawn)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_046.rs",
+      "test_count": 8,
+      "patterns": [
+        "E",
+        "G"
+      ],
+      "notes": "[On Play] reveal-3 two-bucket (Glowing Dawn + green BEATBREAK) no_duplicate_cards (DCGO mutualConditions); rest to deck bottom; inherited <Piercing>; alt-digivolve Lv.2 [Glowing Dawn] cost 0. DCGO BT25_046.cs. 8/8 tests pass, 0 ignored."
+    },
+    "P-236": {
+      "card_name": "Glowing Dawn",
+      "validated_date": "2026-06-15",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "beatbreak (Glowing Dawn)",
+      "yaml_path": "code/digimon-engine/cards/p/P-236.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_236.rs",
+      "test_count": 9,
+      "patterns": [
+        "D3",
+        "E"
+      ],
+      "notes": "Green Option. <Use Req. ([Glowing Dawn] trait)> self-satisfied -> unconditional from-hand color bypass via use_requirement:{all_turns:true} (P-206 idiom; flood_gate retained for battle-area scope). [Main] reveal-3, add 1 [Glowing Dawn], rest to deck bottom, place self in battle area; [Main]<Delay> (trigger:delayed, MainPhaseActivated) gain 2 memory; inherited [Security] place self. DCGO P_236.cs (== BT24-100 shape). 9/9 tests pass, 0 ignored."
     }
   }
 }
