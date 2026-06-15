@@ -273,10 +273,26 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         | CompiledStep::SelectMaterial { filter, .. }
         | CompiledStep::SelectReveal { filter, .. }
         | CompiledStep::SelectSecurity { filter, .. }
-        | CompiledStep::SelectUnionZone { filter, .. }
         | CompiledStep::SelectCountCappedMulti { filter, .. }
         | CompiledStep::LinkToOwnDigimon { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
+        }
+        CompiledStep::SelectUnionZone {
+            filter,
+            zone_filters,
+            ..
+        } => {
+            collect_predicate_raw_rust_fns(filter, names);
+            for pred in [
+                &zone_filters.hand,
+                &zone_filters.trash,
+                &zone_filters.material,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                collect_predicate_raw_rust_fns(pred, names);
+            }
         }
         CompiledStep::SelectRevealBuckets { buckets, .. } => {
             for bucket in buckets {

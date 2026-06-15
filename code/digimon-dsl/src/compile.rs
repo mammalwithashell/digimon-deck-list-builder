@@ -1749,6 +1749,7 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             binding,
             of_permanent,
             deck_top,
+            own_breeding,
             ..
         }) => {
             if let Some(p) = permanent {
@@ -1759,6 +1760,8 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
                 CompiledBindingRef::OfPermanent(o.clone())
             } else if let Some(p) = deck_top {
                 CompiledBindingRef::DeckTop(compile_player_ref(*p))
+            } else if matches!(own_breeding, Some(true)) {
+                CompiledBindingRef::OwnBreeding
             } else {
                 CompiledBindingRef::Named(String::new())
             }
@@ -2761,6 +2764,31 @@ fn compile_step(
             zones: a.zones.iter().map(|z| compile_zone(*z)).collect(),
             material_of: a.material_of.as_ref().map(compile_binding_ref),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            zone_filters: a
+                .zone_filters
+                .as_ref()
+                .map(|zf| crate::compiled::CompiledUnionZoneFilters {
+                    hand: zf.hand.as_ref().map(|p| {
+                        compile_predicate(p, &format!("{prefix}.zone_filters.hand"), card_id, errors)
+                    }),
+                    trash: zf.trash.as_ref().map(|p| {
+                        compile_predicate(
+                            p,
+                            &format!("{prefix}.zone_filters.trash"),
+                            card_id,
+                            errors,
+                        )
+                    }),
+                    material: zf.material.as_ref().map(|p| {
+                        compile_predicate(
+                            p,
+                            &format!("{prefix}.zone_filters.material"),
+                            card_id,
+                            errors,
+                        )
+                    }),
+                })
+                .unwrap_or_default(),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),

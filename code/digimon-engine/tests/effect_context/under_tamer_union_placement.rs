@@ -86,7 +86,9 @@ fn place_union_hand_or_trash_card_under_source_tamer_uses_origin() {
             None,
             "Choose a matching card from hand or trash to place under this Tamer",
             false,
-            move |_game, card| card.handle() == hand_handle || card.handle() == trash_handle,
+            move |_game, card, _zone| {
+                card.handle() == hand_handle || card.handle() == trash_handle
+            },
             move |ctx, card, origin| {
                 *moved.lock().unwrap() =
                     ctx.place_union_card_under_source_tamer(card, origin, false);
@@ -143,7 +145,7 @@ fn place_union_card_under_chosen_tamer_handles_hand_origin() {
             None,
             "Choose a matching card from hand or trash to place under a Tamer",
             false,
-            move |_game, card| card.handle() == hand_handle,
+            move |_game, card, _zone| card.handle() == hand_handle,
             move |ctx, card, origin| {
                 *moved.lock().unwrap() =
                     ctx.place_union_card_under_tamer(card, origin, dest_tamer, false);

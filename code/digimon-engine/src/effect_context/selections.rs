@@ -1213,6 +1213,13 @@ impl<'a> EffectContext<'a> {
     /// came from, so a downstream consumer can act on the card's true origin
     /// (e.g. play it back from hand, trash, or source materials). The origin is
     /// recovered from the encoded `action_id` range.
+    /// **Filter signature (per-zone aware):** the filter receives the
+    /// candidate's origin zone as a single-bit [`UnionZoneSet`]
+    /// (`UnionZoneSet::HAND` / `TRASH` / `MATERIAL`) so a consumer can apply a
+    /// *different* predicate per zone — e.g. "1 [Sistermon] from trash OR 1
+    /// [Royal Knight] from breeding sources" in one prompt
+    /// (G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY). A uniform filter simply
+    /// ignores the third argument.
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
@@ -1223,7 +1230,7 @@ impl<'a> EffectContext<'a> {
         filter: F,
         callback: C,
     ) where
-        F: Fn(&Game, &CardSource) -> bool,
+        F: Fn(&Game, &CardSource, crate::selection::UnionZoneSet) -> bool,
         C: FnOnce(
                 &mut EffectContext<'_>,
                 crate::card_source::CardHandle,
@@ -1251,7 +1258,7 @@ impl<'a> EffectContext<'a> {
                 // Clone the CardSource so we can release the borrow on
                 // `self.game` before passing `&Game` to the filter.
                 let card_clone = self.game.player(of_player).hand[i].clone();
-                if filter(self.game, &card_clone) {
+                if filter(self.game, &card_clone, UnionZoneSet::HAND) {
                     valid_action_ids.push(PLAY_HAND_START + i as u16);
                 }
             }
@@ -1263,7 +1270,7 @@ impl<'a> EffectContext<'a> {
             let cap = trash_len.min(TRASH_MAIN_LIMIT);
             for i in 0..cap {
                 let card_clone = self.game.player(of_player).trash[i].clone();
-                if filter(self.game, &card_clone) {
+                if filter(self.game, &card_clone, UnionZoneSet::TRASH) {
                     valid_action_ids.push(TRASH_EFFECT_START + i as u16);
                 }
             }
@@ -1302,7 +1309,7 @@ impl<'a> EffectContext<'a> {
                         })
                         .unwrap_or_default();
                 for (source_index, card_clone) in candidates {
-                    if !filter(self.game, &card_clone) {
+                    if !filter(self.game, &card_clone, UnionZoneSet::MATERIAL) {
                         continue;
                     }
                     let action = if carrier.index == crate::action::space::BREEDING_TARGET as u8 {
@@ -2134,7 +2141,11 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
         filter: F,
         callback: C,
     ) where
-        F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool,
+        F: Fn(
+            &crate::game::Game,
+            &crate::card_source::CardSource,
+            crate::selection::UnionZoneSet,
+        ) -> bool,
         C: FnOnce(
                 &mut EffectContext<'_>,
                 crate::card_source::CardHandle,

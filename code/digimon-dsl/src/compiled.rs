@@ -1747,6 +1747,14 @@ pub enum CompiledStep {
         zones: Vec<CompiledZone>,
         material_of: Option<CompiledBindingRef>,
         filter: CompiledPredicate,
+        /// Per-zone filter overrides (hand / trash / material). When a zone's
+        /// override is `Some`, it replaces `filter` for candidates from that
+        /// origin zone; `None` falls back to `filter`.
+        /// G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY. NOTE: no
+        /// `skip_serializing_if` — the embedded pack round-trips through
+        /// bincode, which is not self-describing and cannot skip fields.
+        #[serde(default)]
+        zone_filters: CompiledUnionZoneFilters,
         bind_as: Option<String>,
         prompt: String,
         prompt_key: Option<String>,
@@ -1976,6 +1984,29 @@ pub enum CompiledStep {
     },
 }
 
+/// Compiled per-zone filter overrides for `select_union_zone`. Each `Some`
+/// predicate replaces the step's shared `filter` for candidates from that
+/// origin zone. G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CompiledUnionZoneFilters {
+    // NOTE: no `skip_serializing_if` — the embedded pack round-trips through
+    // bincode (non-self-describing), so every field must always be encoded.
+    #[serde(default)]
+    pub hand: Option<CompiledPredicate>,
+    #[serde(default)]
+    pub trash: Option<CompiledPredicate>,
+    #[serde(default)]
+    pub material: Option<CompiledPredicate>,
+}
+
+impl CompiledUnionZoneFilters {
+    /// True when no per-zone override is present (the shared `filter` applies
+    /// uniformly). Lets serialization skip the field for legacy union steps.
+    pub fn is_empty(&self) -> bool {
+        self.hand.is_none() && self.trash.is_none() && self.material.is_none()
+    }
+}
+
 /// Concrete activation-cost shapes recognized by the DSL. Extensible —
 /// new printed cost shapes (return-self-to-trash, return-self-to-hand)
 /// can be added without changing the queue-side dispatch.
@@ -2025,6 +2056,10 @@ pub enum CompiledBindingRef {
     /// Top card of a player's deck — resolves to `CardSourceRef::DeckTop`.
     /// Card-source binding only (never a permanent/card handle).
     DeckTop(CompiledPlayerRef),
+    /// The controller's own breeding-area permanent (the single breeding
+    /// carrier), resolved directly with no selection prompt.
+    /// G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
+    OwnBreeding,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

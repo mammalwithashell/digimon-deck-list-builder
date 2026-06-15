@@ -1137,6 +1137,14 @@ pub struct StructuredBindingRef {
     /// the deck top under a Tamer. YAML: `{ deck_top: you }`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deck_top: Option<PlayerRef>,
+    /// The controller's own breeding-area permanent, resolved directly to the
+    /// breeding carrier handle (`index = BREEDING_TARGET`) with NO selection
+    /// prompt — the breeding area holds at most one Digimon. Used by
+    /// `select_union_zone`'s `material_of` to scan breeding-area digivolution
+    /// sources without a degenerate carrier pick. YAML: `{ own_breeding: true }`.
+    /// G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub own_breeding: Option<bool>,
 }
 
 // ── Argument structs (one per verb family) ──────────────────────────
@@ -2575,6 +2583,21 @@ pub struct SelectOwnBreedingPermanentArgs {
     pub then: Vec<StepSpec>,
 }
 
+/// Per-zone predicate overrides for `select_union_zone`. Each field, when
+/// present, supplies the predicate applied to candidates from that origin
+/// zone, **overriding** the step's shared `filter`. Absent fields fall back
+/// to `filter`. G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UnionZoneFilters {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hand: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trash: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub material: Option<PredicateSpec>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectUnionArgs {
@@ -2585,6 +2608,15 @@ pub struct SelectUnionArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub material_of: Option<BindingRef>,
     pub filter: PredicateSpec,
+    /// Per-zone filter overrides. When present, the predicate for a given
+    /// origin zone (hand / trash / material) **replaces** the shared `filter`
+    /// for candidates from that zone; zones without an override fall back to
+    /// `filter`. This lets one union prompt offer "1 X from trash OR 1 Y from
+    /// breeding sources" where X and Y carry different predicates
+    /// (G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY, BT13-019). Omitted → the
+    /// shared `filter` applies uniformly to every zone (legacy behavior).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone_filters: Option<UnionZoneFilters>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,

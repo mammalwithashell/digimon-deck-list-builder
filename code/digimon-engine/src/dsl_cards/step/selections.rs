@@ -841,6 +841,7 @@ pub fn try_install(
             zones,
             material_of,
             filter,
+            zone_filters,
             bind_as,
             prompt,
             optional,
@@ -872,6 +873,7 @@ pub fn try_install(
                 zoneset,
                 material_of.clone(),
                 filter.clone(),
+                zone_filters.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -3022,6 +3024,7 @@ fn install_select_union_zone(
     zoneset: crate::selection::UnionZoneSet,
     material_of: Option<CompiledBindingRef>,
     filter: CompiledPredicate,
+    zone_filters: digimon_dsl::compiled::CompiledUnionZoneFilters,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -3064,7 +3067,22 @@ fn install_select_union_zone(
         // PUPPETS-G021: evaluate the compiled predicate against the card's
         // CardData (via PredicateSubject::Card) so that DP constraints such
         // as `dp_lte: 4000` work for hidden-zone (hand/trash) candidates.
-        move |game, card| {
+        //
+        // G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY: select the predicate by the
+        // candidate's origin zone. A per-zone override (`zone_filters.{hand,
+        // trash,material}`) replaces the shared `filter` for that zone; zones
+        // without an override fall back to `filter`. This lets one prompt offer
+        // "1 X from trash OR 1 Y from breeding sources" with different filters.
+        move |game, card, zone| {
+            use crate::selection::UnionZoneSet;
+            let active = if zone == UnionZoneSet::HAND {
+                zone_filters.hand.as_ref()
+            } else if zone == UnionZoneSet::TRASH {
+                zone_filters.trash.as_ref()
+            } else {
+                zone_filters.material.as_ref()
+            }
+            .unwrap_or(&filter);
             let handle = card.handle();
             let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
                 game,
@@ -3074,7 +3092,7 @@ fn install_select_union_zone(
                 player,
             );
             eval_predicate_with_bindings(
-                &filter,
+                active,
                 &read_ctx,
                 PredicateSubject::Card(handle),
                 Some(&filter_bindings),

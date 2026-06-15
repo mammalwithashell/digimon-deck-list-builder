@@ -76,7 +76,7 @@ fn install_sets_phase_and_kind() {
             None,
             "pick one",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -119,7 +119,7 @@ fn valid_action_ids_covers_both_zones() {
             None,
             "pick",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -175,7 +175,7 @@ fn filter_restricts_valid_action_ids() {
             None,
             "trash only",
             false,
-            |game, card| game.card_data[card.data_index].card_id.starts_with('T'),
+            |game, card, _zone| game.card_data[card.data_index].card_id.starts_with('T'),
             |_, _, _| {},
         );
     }
@@ -213,7 +213,7 @@ fn empty_filter_is_noop() {
             None,
             "none eligible",
             true,
-            |_, _| false,
+            |_, _, _| false,
             |_, _, _| {},
         );
     }
@@ -248,7 +248,7 @@ fn hand_only_zone_excludes_trash() {
             None,
             "hand only",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -276,7 +276,7 @@ fn trash_only_zone_excludes_hand() {
             None,
             "trash only",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -316,7 +316,7 @@ fn callback_receives_correct_handle_for_trash_pick() {
             None,
             "pick",
             false,
-            |_, _| true,
+            |_, _, _| true,
             move |_, handle, origin| {
                 *slot.lock().unwrap() = Some((handle, origin));
             },
@@ -365,7 +365,7 @@ fn callback_receives_correct_handle_for_hand_pick() {
             None,
             "pick",
             false,
-            |_, _| true,
+            |_, _, _| true,
             move |_, handle, origin| {
                 *slot.lock().unwrap() = Some((handle, origin));
             },
@@ -401,7 +401,7 @@ fn mandatory_rejects_pass() {
             None,
             "must pick",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -430,7 +430,7 @@ fn optional_accepts_pass() {
             None,
             "optional",
             true,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {
                 panic!("callback must NOT fire on decline");
             },
