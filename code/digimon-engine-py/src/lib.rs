@@ -1396,8 +1396,10 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
     d.set_item("meta", PyDict::new_bound(py))?;
     // defaults
     d.set_item("source_card_id", py.None())?;
+    d.set_item("source_card_name", py.None())?;
     d.set_item("source_slot", py.None())?;
     d.set_item("target_card_id", py.None())?;
+    d.set_item("target_card_name", py.None())?;
     d.set_item("target_slot", py.None())?;
     d.set_item("player", 0)?;
 
@@ -1408,9 +1410,17 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             player,
             delta,
             total,
+            source_card_id,
+            source_card_name,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
+            if let Some(id) = source_card_id {
+                d.set_item("source_card_id", id.as_str())?;
+            }
+            if let Some(name) = source_card_name {
+                d.set_item("source_card_name", name.as_str())?;
+            }
             let meta = PyDict::new_bound(py);
             meta.set_item("delta", *delta)?;
             meta.set_item("total", *total)?;
@@ -1433,6 +1443,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         GameEvent::Play {
             player,
             card_id,
+            card_name,
             field_index,
             cost_paid,
             cost_printed,
@@ -1441,6 +1452,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
             d.set_item("source_slot", *field_index)?;
             // New per-play payload from the `add-reward-profiles` change
             // (capability `engine-event-emission`). Surfaces in meta so
@@ -1461,6 +1473,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         GameEvent::Digivolve {
             player,
             top_card_id,
+            card_name,
             field_index,
             from_stack_top,
             was_dna,
@@ -1470,6 +1483,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", top_card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
             d.set_item("source_slot", *field_index)?;
             // New payload from the `add-reward-profiles` change
             // (capability `engine-event-emission`). Surfaces in `meta`
@@ -1488,34 +1502,97 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             attacker_field_index,
             target_field_index,
             target_player,
+            attacker_card_id,
+            attacker_card_name,
+            target_card_id,
+            target_card_name,
+            attacker_dp,
+            target_dp,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", attacker_card_id.as_str())?;
+            d.set_item("source_card_name", attacker_card_name.as_str())?;
             d.set_item("source_slot", *attacker_field_index)?;
             if let Some(t) = target_field_index {
                 d.set_item("target_slot", *t)?;
             }
+            if let Some(id) = target_card_id {
+                d.set_item("target_card_id", id.as_str())?;
+            }
+            if let Some(name) = target_card_name {
+                d.set_item("target_card_name", name.as_str())?;
+            }
             let meta = PyDict::new_bound(py);
             meta.set_item("target_player", target_player.map(|p| py_pid(p)))?;
+            meta.set_item("attacker_dp", *attacker_dp)?;
+            meta.set_item("target_dp", *target_dp)?;
             d.set_item("meta", meta)?;
         }
         GameEvent::Trash {
-            player, card_id, ..
+            player,
+            card_id,
+            card_name,
+            ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
         }
         GameEvent::Mill {
-            player, card_id, ..
+            player,
+            card_id,
+            card_name,
+            ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
         }
         GameEvent::SecurityReveal {
-            defender, card_id, ..
+            defender,
+            card_id,
+            card_name,
+            ..
         } => {
             d.set_item("player", py_pid(*defender))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+        }
+        GameEvent::EffectTarget {
+            player,
+            source_card_id,
+            source_card_name,
+            targets,
+            ..
+        } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", source_card_id.as_str())?;
+            d.set_item("source_card_name", source_card_name.as_str())?;
+            let targets_list = pyo3::types::PyList::empty_bound(py);
+            for t in targets {
+                let entry = PyDict::new_bound(py);
+                entry.set_item("card_id", t.card_id.as_str())?;
+                entry.set_item("card_name", t.card_name.as_str())?;
+                targets_list.append(entry)?;
+            }
+            let meta = PyDict::new_bound(py);
+            meta.set_item("targets", targets_list)?;
+            d.set_item("meta", meta)?;
+        }
+        GameEvent::Reveal {
+            player,
+            card_id,
+            card_name,
+            source_zone,
+            ..
+        } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+            let meta = PyDict::new_bound(py);
+            meta.set_item("source_zone", format!("{:?}", source_zone))?;
+            d.set_item("meta", meta)?;
         }
         GameEvent::GameOver { winner, reason, .. } => {
             let meta = PyDict::new_bound(py);

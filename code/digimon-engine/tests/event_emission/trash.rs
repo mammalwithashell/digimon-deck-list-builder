@@ -43,10 +43,17 @@ fn deleting_a_single_card_permanent_emits_one_trash_event() {
         "single-card permanent SHALL emit exactly one Trash event; got {trashes:?}"
     );
 
-    let GameEvent::Trash { player, card_id, .. } = trashes[0].clone() else {
+    let GameEvent::Trash {
+        player,
+        card_id,
+        card_name,
+        ..
+    } = trashes[0].clone()
+    else {
         unreachable!()
     };
 
     assert_eq!(player, 0, "owner is P1 (Rust 0)");
     assert_eq!(card_id, "VICTIM", "card_id matches the trashed card");
+    assert_eq!(card_name, "VICTIM", "card_name is carried on the Trash event");
 }

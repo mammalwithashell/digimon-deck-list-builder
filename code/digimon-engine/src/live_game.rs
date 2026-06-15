@@ -1916,6 +1916,8 @@ mod tests {
             player: 0,
             delta: -3,
             total: -3,
+            source_card_id: None,
+            source_card_name: None,
         };
         let v = serde_json::to_value(&ev).unwrap();
         assert_eq!(v["type"], "MemoryChange");
@@ -1928,6 +1930,7 @@ mod tests {
             seq: 8,
             player: 0,
             card_id: "BT24-008".into(),
+            card_name: "Test".into(),
             field_index: 0,
             cost_paid: 3,
             cost_printed: 4,

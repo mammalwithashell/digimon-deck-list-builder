@@ -94,12 +94,14 @@ impl<'a> EffectContext<'a> {
             .handle();
         let top_card = self.game.players[controller as usize].battle_area[idx].top_card();
         let emitted_card_id = top_card.card_id(&self.game.card_data).to_string();
+        let emitted_card_name = top_card.card_name(&self.game.card_data).to_string();
         let cost_printed = self.game.card_data[top_card.data_index].play_cost as i16;
         let seq = self.game.next_event_seq();
         self.game.events.push(crate::events::GameEvent::Play {
             seq,
             player: controller,
             card_id: emitted_card_id,
+            card_name: emitted_card_name,
             field_index: idx as u8,
             // Token spawn — no memory paid; tokens have play_cost=0
             // in CardData typically but read it explicitly to handle
