@@ -32,7 +32,7 @@ The project is migrating to a **Rust engine as the source of truth** (`code/digi
 ## Tech Stack
 
 - **Engine (target)**: Rust — `code/digimon-engine/` library crate, `code/digimon-engine-py/` PyO3 bindings
-- **Engine (sunset)**: Python 3.11+, `code/engine_py_legacy/engine/` — reference material only; not importable from production code
+- **Engine (removed)**: the Python engine (`code/engine_py_legacy/`) was deleted (2026-06-15) — all gameplay (RL training, hosted-API PvP, desktop, tools) now runs on the Rust engine
 - **Backend**: FastAPI + Uvicorn, SQLAlchemy + PostgreSQL (hosted API only); binds to Rust engine via PyO3
 - **Frontend**: React 18 + TypeScript + Vite, Zustand state management
 - **Desktop**: Tauri v2 (Rust shell) — Python-free; gameplay + inference + deck tools run entirely in the embedded `digimon-engine` crate, and AI models are fetched at runtime from the hosted API's manifest
@@ -51,7 +51,7 @@ The codebase is split into three deployable services:
 Underlying surfaces:
 
 1. **Rust engine** (`code/digimon-engine/`) — rules implementation (target source of truth); exposed to Python via `code/digimon-engine-py/` (PyO3) as `RustHeadlessGame`. Swapped into `DigimonEnv` behind `DIGIMON_BACKEND=rust`.
-2. Python legacy engine (`code/engine_py_legacy/engine/`) — sunset reference; not importable from production code, retired once Rust card-script migration completes
+2. _(removed 2026-06-15)_ the Python legacy engine was deleted; every surface runs on the Rust engine (excise-legacy-engine-from-hosted-api)
 3. RL environment and pilot training (`code/digimon_gym/digimon_gym.py`, `code/digimon_gym/agents/`)
 4. React frontend (`code/frontend/src/`) — desktop build excludes admin/training UI via `VITE_BUILD_TARGET`
 5. Tauri v2 desktop shell (`code/src-tauri/`) — depends on `digimon-engine` directly (no Python) for gameplay, ONNX inference, deck tools, and the model cache/downloader
@@ -125,10 +125,6 @@ agent config, runtime data, and project-level configs.
     │   ├── pyproject.toml         # maturin build backend, module name "digimon_engine"
     │   └── src/lib.rs             # RustHeadlessGame class; Python player-ID convention (1/2 ↔ 0/1)
     ├── digimon-dsl/               # Card-scripting DSL crate (lowering to Effect/CardEffect)
-    ├── engine_py_legacy/          # Sunset Python engine — reference material only
-    │   ├── engine/                # Headless engine: game/, core/, data/, runners/, validation/, ...
-    │   │   └── data/scripts/      # Frozen Python card scripts (one-direction migration to Rust)
-    │   └── tests/                 # Legacy Python tests (excluded from default pytest collection)
     ├── digimon_gym/               # RL only — no FastAPI, no DB
     │   ├── digimon_gym.py         # DigimonEnv (Gymnasium)
     │   ├── agents/                # RL training modules
@@ -296,8 +292,9 @@ python -m digimon_training_mcp --runs-dir ./runs --models-dir ./models
 # PyO3 bindings (build + install into active Python env)
 cd code/digimon-engine-py && maturin develop
 
-# Python-side Rust-backend parity test (uses Rust engine via env var)
-DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v
+# (The Python-vs-Rust backend parity test was removed with the Python engine;
+#  Rust engine/binding coverage lives in code/tests/test_rust_bindings_surface.py
+#  and code/digimon-engine/tests/.)
 ```
 
 ## Working Rules
@@ -323,7 +320,7 @@ DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_ru
 19. Before editing engine code in either language, check `docs/RUST_PYTHON_PARITY.md` for known divergences in the area — it's the authoritative cross-engine state.
 20. `code/digimon-engine-py/src/lib.rs` must preserve the Python player-ID convention (Python 1/2 ↔ Rust 0/1 translation at the binding boundary); callers on both sides depend on it.
 21. Do not author new Python-side card scripts for cards already implemented in Rust — cards migrate one direction only (Python → Rust) and are then owned by Rust.
-22. `code/engine_py_legacy/` is sunset reference material. Production code (`code/server/`, `code/digimon_gym/`, `code/digimon-engine/`, `code/digimon-engine-py/`) must not import from `engine_py_legacy.*`. Tests in `code/engine_py_legacy/tests/` are excluded from default pytest collection.
+22. **The Python legacy engine has been removed (2026-06-15).** `code/engine_py_legacy/` was deleted (`excise-legacy-engine-from-hosted-api`); all gameplay — RL training, hosted-API PvP, desktop, and tools — runs on the Rust engine. No code imports `engine_py_legacy.*`; the guardrail `code/tests/api/test_legacy_free_support_surfaces.py` (plus the training guardrail) enforces it. If you need the old Python card scripts or engine for reference, read them from git history.
 23. Trained model artifacts go to `<repo_root>/models/<run_id>/`. Training entrypoints (`pilot_training`, `architect_training`) default to this location. The hosted API's `/models/manifest.json` scans this directory.
 24. All source lives under `code/`. The repo root holds docs, infra (`Dockerfile*`, CI workflows), agent config (`.claude/`), runtime data (`data/`, `qa/`, `DCGO/`), and project-level configs (`Cargo.toml`, `pyproject.toml`, `requirements*.txt`). Do not add new top-level source dirs — extend `code/` instead.
 25. **OnDeletion handlers fire post-trash (2026-05-23).** Permanent deletion runs through the batched flow at `Game::delete_permanents_batch` — `OnDeletion` handlers execute AFTER the carrier has moved to trash. Read pre-removal state via `ctx.deleted_self_dp()` / `_level()` / `_cost()` / `_names()` / `_traits()` / `_source_count()` / `_digisources()` (or `ctx.deleted_object_snapshot()`), NOT via live `ctx.game.player(handle.player).battle_area.get(handle.index)`. New keywords needing post-trash work must do it inline in the OnDeletion handler — do not reintroduce side-channel slots like the retired `pending_post_deletion_replays`. See `docs/RUST_ENGINE_API.md` §"Deletion lifecycle — batched flow" for the contract.

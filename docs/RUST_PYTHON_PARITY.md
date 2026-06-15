@@ -1,4 +1,13 @@
-# Rust ↔ Python Engine Parity Tracker
+# Rust ↔ Python Engine Parity Tracker — RETIRED (2026-06-15)
+
+> **RETIRED.** The Python legacy engine (`code/engine_py_legacy/`) has been
+> **deleted** — every surface (RL training, hosted-API PvP, desktop, tools) now
+> runs on the Rust engine. There is no longer a second engine to be in parity
+> with, so this cross-engine tracker is closed. It is kept only as a historical
+> record of the migration; do **not** treat its "open divergence" / "pending"
+> entries as live work. Rust-engine faithfulness is now tracked by the DCGO
+> recording parity harness, the per-card behavioral tests, the judge-quiz suite,
+> and the archetype interaction tests. The original tracker text follows.
 
 **Role:** Rust is the target engine; Python is retained only until card-script migration completes. This tracker exists to catalog divergences during the transition and will be retired when the Python engine is. Always consult this file before editing engine code in either language — it is the authoritative source for known behavioral differences and per-phase progress.
 
