@@ -66,6 +66,10 @@ pub struct DeckSummary {
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
+    pub commander_id: Option<String>,
+    #[serde(default)]
+    pub deck_icon_card_id: Option<String>,
+    #[serde(default)]
     pub meta_tier: Option<String>,
     #[serde(default)]
     pub meta_archetype: Option<String>,
@@ -160,6 +164,7 @@ fn ensure_default_folders(path: &Path) -> Result<LibraryMetadata, String> {
 }
 
 fn deck_summary(deck: Deck) -> DeckSummary {
+    let deck_icon_card_id = summary_icon_card_id(&deck.main_deck, &deck.egg_deck, deck.commander_id.as_deref());
     DeckSummary {
         id: deck.id,
         name: deck.name,
@@ -173,6 +178,8 @@ fn deck_summary(deck: Deck) -> DeckSummary {
         main_count: deck.main_deck.len(),
         egg_count: deck.egg_deck.len(),
         tags: deck.tags,
+        commander_id: deck.commander_id,
+        deck_icon_card_id,
         meta_tier: deck.meta_tier,
         meta_archetype: deck.meta_archetype,
         colors: vec![],
@@ -180,6 +187,22 @@ fn deck_summary(deck: Deck) -> DeckSummary {
         created_at: deck.created_at,
         updated_at: deck.updated_at,
     }
+}
+
+fn summary_icon_card_id(
+    main_deck: &[String],
+    egg_deck: &[String],
+    commander_id: Option<&str>,
+) -> Option<String> {
+    if let Some(commander_id) = commander_id {
+        if main_deck.iter().any(|id| id == commander_id) || egg_deck.iter().any(|id| id == commander_id) {
+            return Some(commander_id.to_string());
+        }
+    }
+    if let Some(id) = main_deck.iter().min() {
+        return Some(id.clone());
+    }
+    egg_deck.iter().min().cloned()
 }
 
 #[tauri::command]
@@ -484,6 +507,24 @@ mod tests {
         assert_eq!(summary.main_count, 50);
         assert_eq!(summary.egg_count, 5);
         assert_eq!(summary.tags, vec!["meta"]);
+    }
+
+    #[test]
+    fn deck_summary_includes_explicit_or_fallback_icon_card() {
+        let mut deck = sample_deck("d1");
+        deck.main_deck = vec!["BT1-003".into(), "BT1-001".into(), "BT1-002".into()];
+        deck.egg_deck = vec!["BT1-004".into()];
+        deck.commander_id = Some("BT1-002".into());
+
+        let summary = deck_summary(deck.clone());
+
+        assert_eq!(summary.commander_id.as_deref(), Some("BT1-002"));
+        assert_eq!(summary.deck_icon_card_id.as_deref(), Some("BT1-002"));
+
+        deck.commander_id = Some("BT9-999".into());
+        let summary = deck_summary(deck);
+        assert_eq!(summary.commander_id.as_deref(), Some("BT9-999"));
+        assert_eq!(summary.deck_icon_card_id.as_deref(), Some("BT1-001"));
     }
 
     #[test]

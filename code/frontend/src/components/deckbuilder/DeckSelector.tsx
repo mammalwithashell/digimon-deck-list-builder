@@ -64,7 +64,7 @@ export function DeckSelector() {
         if (data) entry.cardData = data;
       }
 
-      loadDeck(deck.id, deck.name, mainEntries, eggEntries);
+      loadDeck(deck.id, deck.name, mainEntries, eggEntries, deck.game_mode, deck.commander_id);
     } catch {
       // Ignore
     }

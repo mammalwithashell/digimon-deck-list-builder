@@ -9,6 +9,7 @@ export interface LauncherDeckRow {
   statusLabel: string;
   statusKind: 'legal' | 'draft';
   levelLabel: string;
+  deckIconCardId: string | null;
   metaLabel: string;
   editedLabel: string;
 }
@@ -56,6 +57,7 @@ export function buildDeckRows(decks: DeckSummary[], now = new Date()): LauncherD
         statusLabel: legal ? 'BO3 LEGAL' : 'DRAFT',
         statusKind: legal ? 'legal' : 'draft',
         levelLabel: deck.meta_tier?.toUpperCase() ?? 'L?',
+        deckIconCardId: deck.deck_icon_card_id ?? deck.commander_id ?? null,
         metaLabel: deck.meta_archetype?.toUpperCase() ?? 'UNCLASSIFIED',
         editedLabel: formatRelativeEdit(deck.updated_at, now),
       };
