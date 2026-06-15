@@ -616,6 +616,7 @@ fn compile_predicate(
             .color_matches_any_field_digimon
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
+        color_matches_returned_card: p.color_matches_returned_card,
         trait_has: p.trait_has.clone(),
         trait_contains: p.trait_contains.clone(),
         form_is: p.form_is.clone(),

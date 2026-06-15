@@ -43,6 +43,15 @@ pub struct PredicateSpec {
     pub color_matches_any_field_digimon: Option<PlayerRefSelector>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_matches_binding: Option<String>,
+    /// True when the candidate card shares ≥1 color with ANY card recorded in
+    /// this effect's `returned_to_deck` result log (the cards a preceding
+    /// `return_trash_list_to_deck_bottom` / `return_all_trash_to_deck_bottom`
+    /// moved). The returned card never becomes a permanent, so it cannot be a
+    /// permanent binding — this leaf reads the result log directly rather than a
+    /// binding name. Candidate side is kind-aware exactly like
+    /// `color_matches_binding`. G-RETURNED-CARD-COLOR-BINDING (driver EX10-068).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_matches_returned_card: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         alias = "trait",

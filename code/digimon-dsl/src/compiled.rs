@@ -270,6 +270,9 @@ pub struct CompiledPredicate {
     pub color_only: Option<Vec<CompiledColor>>,
     pub color_matches_any_field_digimon: Option<CompiledPlayerRef>,
     pub color_matches_binding: Option<String>,
+    /// G-RETURNED-CARD-COLOR-BINDING — true when the candidate shares a color
+    /// with a card this effect returned to deck (`returned_to_deck` log).
+    pub color_matches_returned_card: Option<bool>,
     pub trait_has: Option<String>,
     /// Substring sibling of `trait_has` — matches when any subject trait
     /// CONTAINS this token (case-insensitive). Mirrors DCGO

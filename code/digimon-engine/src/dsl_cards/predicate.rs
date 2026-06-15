@@ -1114,6 +1114,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.color_only.is_none()
         && pred.color_matches_any_field_digimon.is_none()
         && pred.color_matches_binding.is_none()
+        && pred.color_matches_returned_card.is_none()
         && pred.trait_has.is_none()
         && pred.trait_contains.is_none()
         && pred.form_is.is_none()
@@ -2027,6 +2028,11 @@ fn eval_card_fields(
             return false;
         }
     }
+    if pred.color_matches_returned_card == Some(true)
+        && !card_shares_color_with_returned_card(rctx, bindings, data)
+    {
+        return false;
+    }
     if let Some(ref t) = pred.trait_has {
         if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(t)) {
             return false;
@@ -2405,6 +2411,48 @@ fn card_shares_color_with_bound_permanent(
     candidate_colors
         .iter()
         .any(|candidate| bound_colors.iter().any(|bound| candidate == bound))
+}
+
+/// G-RETURNED-CARD-COLOR-BINDING — true when the candidate card `data` shares
+/// ≥1 color with ANY card recorded in this effect's `returned_to_deck` result
+/// log. Unlike `color_matches_binding`, the returned card is never a permanent
+/// (it moved trash → deck bottom), so the comparison set is sourced from the
+/// result log's stable `CardHandle`s resolved via `card_data_for_handle`, not a
+/// permanent binding. The candidate side is kind-aware exactly like
+/// `color_matches_binding`. Driver: EX10-068 Digimon Emperor On Play tail.
+fn card_shares_color_with_returned_card(
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+    data: &crate::card_data::CardData,
+) -> bool {
+    let Some(bindings) = bindings else {
+        return false;
+    };
+    let returned = &bindings.result_log().returned_to_deck;
+    if returned.is_empty() {
+        return false;
+    }
+
+    let candidate_colors = if kind_matches_card_search(CompiledCardKind::Digimon, data) {
+        data.digimon_colors()
+    } else if kind_matches_card_search(CompiledCardKind::Option, data) {
+        data.option_colors()
+    } else {
+        data.colors.as_slice()
+    };
+    if candidate_colors.is_empty() {
+        return false;
+    }
+
+    returned.iter().any(|&handle| {
+        let Some(returned_data) = rctx.game.card_data_for_handle(handle) else {
+            return false;
+        };
+        returned_data
+            .colors
+            .iter()
+            .any(|returned_color| candidate_colors.iter().any(|c| c == returned_color))
+    })
 }
 
 fn eval_permanent_fields(
