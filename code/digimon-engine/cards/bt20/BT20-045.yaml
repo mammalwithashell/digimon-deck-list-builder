@@ -13,6 +13,14 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: green }
     cost: 5
+  # Standard DNA Digivolve: Green Lv.6 + Blue Lv.6, cost 0 (card face DNA box;
+  # cards.json dna_costs; DCGO BT20_045.cs #region DNA Digivolution).
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: green }
+      - { level_eq: 6, color_is: blue }
+    cost: 0
+    stacks_unsuspended: true
   - kind: blast_dna_digivolve
     materials:
       - { kind: digimon, name_is: "Breakdramon" }

@@ -62,10 +62,19 @@ fn bt20_060_has_printed_metadata_ace_overflow_and_routes() {
                 from.level_eq == Some(6) && from.color_is == Some(CompiledColor::Black)
             })
     }));
+    // Regular DNA Digivolve route: Black Lv.6 + (Yellow|Red) Lv.6, cost 0 — NOT
+    // name-gated (only the separate Blast DNA route below is Alphamon+Ouryumon).
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::DnaDigivolve
             && path.cost == Some(CompiledCost::Literal(0))
-    }));
+            && path.materials.iter().any(|mat| {
+                mat.filter.level_eq == Some(6)
+                    && mat.filter.color_is == Some(CompiledColor::Black)
+            })
+            && !path.materials.iter().any(|mat| {
+                mat.filter.name_is.is_some() || mat.filter.name_contains.is_some()
+            })
+    }), "BT20-060 regular DNA route must be Black Lv.6 + Yellow/Red Lv.6 (level/color), not name-restricted");
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::BlastDnaDigivolve
             && path.cost == Some(CompiledCost::Literal(0))

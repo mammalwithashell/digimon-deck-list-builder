@@ -7,9 +7,28 @@
 //! - [Security] At end of battle, play this card free.
 //! - Link Requirements text.
 
-use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
+use digimon_dsl::compiled::{CompiledAltPathKind, CompiledClause, CompiledCost, CompiledTiming};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+#[test]
+fn bt22_009_has_stnd_trait_digivolve_path() {
+    let runner = runner();
+    let card = runner.compiled_card("BT22-009").expect("compiled");
+    // Second digivolve circle on the card face ("Stnd. 2"): digivolve onto a
+    // Digimon with the [Stnd.] form-trait for cost 2 (DCGO EqualsTraits("Stnd.")).
+    assert!(
+        card.alt_paths.iter().any(|path| {
+            path.kind == CompiledAltPathKind::Digivolve
+                && path.cost == Some(CompiledCost::Literal(2))
+                && path
+                    .from
+                    .as_ref()
+                    .is_some_and(|f| f.trait_has.as_deref() == Some("Stnd."))
+        }),
+        "BT22-009 must have a [Stnd.]-trait digivolve path at cost 2"
+    );
+}
 
 fn runner() -> DebugRunner {
     DebugRunner::builder()

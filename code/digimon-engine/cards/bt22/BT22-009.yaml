@@ -12,6 +12,13 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 3, color_is: red }
     cost: 2
+  # Second digivolve circle on the card face: "Stnd. 2" — digivolve onto a
+  # Digimon with the [Stnd.] form-trait for cost 2 (DCGO BT22_009.cs
+  # AddSelfDigivolutionRequirementStaticEffect EqualsTraits("Stnd.")). Sibling
+  # ST22-12 models the same "Stnd." circle this way.
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
+    cost: 2
 
 effects:
   - when: on_security

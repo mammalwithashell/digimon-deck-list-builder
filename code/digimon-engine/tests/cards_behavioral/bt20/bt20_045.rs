@@ -1,6 +1,6 @@
 //! BT20-045 Examon
 
-use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCost};
+use digimon_dsl::compiled::{CompiledAltPathKind, CompiledColor, CompiledCost};
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{DNA_DIGIVOLVE_START, PLAY_HAND_START};
 use digimon_engine::debug_runner::{make_test_card_with_level, DebugRunner};
@@ -34,6 +34,32 @@ fn bt20_045_has_blast_dna_digivolve_path() {
                 .iter()
                 .any(|mat| mat.filter.name_is.as_deref() == Some("Slayerdramon"))
     }));
+}
+
+#[test]
+fn bt20_045_has_standard_dna_digivolve_green_blue() {
+    let runner = DebugRunner::builder()
+        .dsl_card("BT20-045")
+        .expect("BT20-045 must load from embedded DSL pack")
+        .start();
+    let card = runner.compiled_card("BT20-045").expect("compiled card");
+
+    // Standard DNA Digivolve: Green Lv.6 + Blue Lv.6, cost 0 (card-face DNA box).
+    assert!(
+        card.alt_paths.iter().any(|path| {
+            path.kind == CompiledAltPathKind::DnaDigivolve
+                && path.cost == Some(CompiledCost::Literal(0))
+                && path.materials.iter().any(|m| {
+                    m.filter.level_eq == Some(6)
+                        && m.filter.color_is == Some(CompiledColor::Green)
+                })
+                && path.materials.iter().any(|m| {
+                    m.filter.level_eq == Some(6)
+                        && m.filter.color_is == Some(CompiledColor::Blue)
+                })
+        }),
+        "BT20-045 must have a standard Green Lv.6 + Blue Lv.6 DNA digivolve (cost 0)"
+    );
 }
 
 #[test]

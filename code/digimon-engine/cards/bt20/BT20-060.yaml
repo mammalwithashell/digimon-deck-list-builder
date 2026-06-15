@@ -13,10 +13,16 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: black }
     cost: 6
+  # Regular DNA Digivolve: Black Lv.6 + (Yellow or Red) Lv.6, cost 0 — NO name
+  # restriction (card face DNA bar; cards.json dna_costs; DCGO BT20_060.cs
+  # GetJogress Black Lv6 + Yellow/Red Lv6). Only the separate Blast DNA route
+  # below is name-gated to Alphamon + Ouryumon.
   - kind: dna_digivolve
     materials:
-      - { name_contains: "Alphamon" }
-      - { name_contains: "Ouryumon" }
+      - { level_eq: 6, color_is: black }
+      - any_of:
+          - { level_eq: 6, color_is: yellow }
+          - { level_eq: 6, color_is: red }
     cost: 0
     stacks_unsuspended: true
   - kind: blast_dna_digivolve
