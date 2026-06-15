@@ -5162,10 +5162,10 @@
     },
     "EX11-053": {
       "card_name": "Omekamon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-engine-gaps-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-053.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_053.rs",
@@ -5176,8 +5176,8 @@
         "ROYAL-KNIGHTS-POOL-STUB",
         "GAP-STUB"
       ],
-      "notes": "On Play place RK-from-hand under fielded King Drasil done; On Deletion Omnimon-X union hand/source play + attach-self blocked: G-UNION-HAND-SOURCE-PLAY.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "Gap closed: G-UNION-HAND-SOURCE-PLAY (material_carrier_filter on union scan). On Deletion play Omnimon X from hand/King-Drasil-source + attach self. FULLY faithful.",
+      "audit_note": "Engine/DSL gap closed 2026-06-15; consumer card fully faithful."
     },
     "EX8-073": {
       "card_name": "Gallantmon (X Antibody)",
