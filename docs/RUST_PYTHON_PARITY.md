@@ -1281,16 +1281,19 @@ relocation completed).
 > over all 745 `cards.json` `xros_req` strings).
 > **Still legacy-coupled (by design):** the PvP/WebSocket runtime
 > (`ws_games`/`ws_manager`/`lobby` via `InteractiveGame`, which keeps
-> `PlayerType`) — tracked by excise; and `tools/run_scenario.py` (the
-> `ScenarioRunner`), pending the `gameplay-qa` skill moving to
-> `digimon-engine-cli`. Rows below may predate this update.
+> `PlayerType`) — tracked by excise. `code/tools/` is now FULLY legacy-free:
+> `run_scenario.py` was relocated into `code/engine_py_legacy/` (it is the
+> legacy `ScenarioRunner` CLI and dies with the engine). The legacy YAML
+> scenario lane is sunset — author new scenarios as `qa/scenarios/*.json` via
+> `digimon-scenario-mcp` (the Rust `digimon-engine-cli scenario` subcommand is a
+> deliberate v1 stub). Rows below may predate this update.
 
 | Surface | Caller(s) | Rust counterpart? |
 |---|---|---|
 | `engine.runners.headless_game.HeadlessGame` (Python class) | `routers/games.py` (now `RustHeadlessGame`); `agents/architect_simulator.py` | `RustHeadlessGame` is the production path; `recordings.py`/`state.py` migrated (2026-06-14). |
 | `engine.runners.interactive_game.InteractiveGame` | `routers/games.py`, `routers/debug_games.py`, `routers/matchmaking.py` (`# noqa: F401` re-export) | Pending — covered by the PvP bindings plan (`docs/superpowers/plans/2026-04-18-pyo3-pvp-bindings.md`). |
 | `engine.runners.replay_runner.ReplayRunner` | `routers/recordings.py` | ✅ Ported as `digimon_engine::runners::replay::ReplayRunner` (Phase 3 of `add-engine-debug-mcp`). Step / seek / run-to-completion / verify-mode all implemented. See `docs/DEBUG_MCP.md`. |
-| `engine.runners.scenario_runner.ScenarioRunner` | `tools/run_scenario.py`, `tools/run_qa_batch.py`, behavioral test infrastructure | Not planned (DebugRunner is the Rust-side parallel). |
+| `engine.runners.scenario_runner.ScenarioRunner` | `code/engine_py_legacy/run_scenario.py` (relocated out of `code/tools/`; `run_qa_batch.py` deleted), legacy behavioral test infra | Not planned (DebugRunner + `qa/scenarios/` JSON via `digimon-scenario-mcp` are the Rust-side parallel; `digimon-engine-cli scenario` is a v1 stub). |
 | `engine.data.tensor_layout.*` | `agents/features_extractor.py` | Not planned in scope. Add later if RL trainer survives. |
 | `engine.data.enums.PendingAction` | `digimon_gym.py` (Python fallback path) | Vestigial. Remove when the Python backend is retired. |
 | `engine.data.enums.PlayerType` | `routers/games.py`, `routers/debug_games.py` | Server orchestration concept, not engine. Stays Python-side. |
