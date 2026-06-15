@@ -13,13 +13,23 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: red }
     cost: 6
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
 
-effects: []
+effects:
+  # [Hand][Counter] <Blast Digivolve> — alt-path marker + keyword grant.
+  # PRECEDENT: BT20-060.
+  - kind: grant_keyword
+    keyword: BlastDigivolve
 
 # Stubbed:
-# - [Hand][Counter] Blast Digivolve is not modeled in this card entry.
-# - Place a Royal Knight from hand or trash as bottom source as a cost, then
-#   delete by this Digimon's DP, needs union hand/trash source placement and a
-#   source-DP comparison predicate.
-# - [When Attacking][Once Per Turn] unsuspend, then trash opponent security per
-#   two Royal Knight sources needs source-count formula for security trash.
+# - [On Play][When Digivolving][When Attacking][OPT] Place 1 [Royal Knight]
+#   trait card from your HAND or TRASH as this Digimon's bottom digivolution
+#   card (a union hand/trash → bottom-source cost), then delete 1 opponent
+#   Digimon with DP <= this Digimon's DP. Needs G-UNION-HAND-TRASH-SOURCE-COST
+#   (union hand/trash source placement) plus a source-DP-compare predicate.
+# - [When Attacking][OPT] unsuspend, then trash opponent security per 2 [Royal
+#   Knight] trait cards in this Digimon's digivolution cards. Needs
+#   G-SOURCE-COUNT-SECURITY-TRASH (trait-count-in-sources formula driving a
+#   per-bucket security trash).

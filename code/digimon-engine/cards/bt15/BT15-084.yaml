@@ -16,10 +16,44 @@ effects:
     process:
       - play_from_security: {}
 
-  # Omitted:
-  # - When this card is trashed from security by an effect, give 1 opponent
-  #   Digimon Security Attack -1 until their turn ends.
-  # - [All Turns] When an effect removes cards from your security stack, by
-  #   suspending this Tamer, apply Security Attack -1.
+  # ─── [All Turns] own-security-removed → suspend self → opponent Security A. -1 ─
   #
-  # Both need security-stack event observers with source-bound cost handling.
+  # "When an effect removes cards from your security stack, by suspending this
+  # Tamer, 1 of your opponent's Digimon gains <Security A. -1> until the end of
+  # their turn."
+  #
+  # DCGO BT15_084.cs OnLoseSecurity ActivateClass: CanUseCondition gates on
+  # CanTriggerWhenLoseSecurity(owner == card.Owner) → on_own_security_removed.
+  # CanActivateCondition = CanActivateSuspendCostEffect(card) → source_is_unsuspended
+  # (Kari must be unsuspended to pay). The whole ability is player-activated, so
+  # the player may decline (optional: true — the BT23-079 Eri Karan idiom);
+  # on accept, SuspendPermanentsClass([self]) is the cost (activation_cost:
+  # suspend_self), then a mandatory (canNoSelect: false) opponent-Digimon select
+  # applies ChangeDigimonSAttack(-1, UntilOpponentTurnEnd).
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    optional: true
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    summary: "[All Turns] When your security is removed, by suspending this Tamer, 1 opponent Digimon gets Security A. -1 until their turn ends"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get Security A. -1 until their turn ends"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
+
+  # Gap-routed (left stubbed): "When an effect trashes THIS CARD from your
+  # security stack, 1 opponent Digimon gains <Security A. -1> ..." — there is no
+  # DSL trigger for the carrier itself being discarded from its own security
+  # stack (G-DSL-ON-DISCARD-SECURITY-TRIGGER). Omitted (no stub).

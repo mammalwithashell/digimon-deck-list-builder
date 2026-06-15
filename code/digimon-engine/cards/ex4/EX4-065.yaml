@@ -35,7 +35,11 @@ effects:
           prompt: "Delete 1 opponent Digimon with the highest DP"
       - delete_permanent: { target: victim }
 
-  # Omitted:
+  # Omitted (G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD):
   # "If a Digimon with 13000 DP or more is deleted by this effect, trash the
-  # top card of your opponent's security stack" needs a deleted-by-this-effect
-  # payload carrying the deleted permanent's DP.
+  # top card of your opponent's security stack." The effect-deleted result
+  # payload is bare-bool only (`effect_deleted_any_opponent_digimon`); the
+  # result log (`EffectResultLog.deleted`) stores only `PermanentHandle`s with
+  # no DP snapshot, and post-deletion the carrier has moved to trash so a live
+  # DP read is unavailable. Needs a deleted-permanent DP threshold on the
+  # effect-deleted payload before this conditional tail can be authored.

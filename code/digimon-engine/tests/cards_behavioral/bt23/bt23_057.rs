@@ -60,7 +60,7 @@ fn opponent_digimon(id: &str, cost: u8) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(4);
     card.dp = Some(4000);
-    card.play_cost = cost;
+    card.play_cost = cost as u16;
     card
 }
 
@@ -151,20 +151,33 @@ fn bt23_057_shared_clause_plays_token_and_deletes() {
             _ => None,
         })
         .expect("shared clause");
+    // The token play lives inside an `if` branch (gated on the may/decline
+    // choice); the delete runs at top level. Walk steps recursively.
     assert!(
-        shared
-            .process
-            .iter()
-            .any(|step| matches!(step, CompiledStep::PlayToken { .. })),
+        steps_contain(&shared.process, &|s| matches!(s, CompiledStep::PlayToken { .. })),
         "shared clause must play the Hinukamuy token"
     );
     assert!(
-        shared
-            .process
-            .iter()
-            .any(|step| matches!(step, CompiledStep::DeletePermanent { .. })),
+        steps_contain(&shared.process, &|s| matches!(s, CompiledStep::DeletePermanent { .. })),
         "shared clause must delete an opponent Digimon"
     );
+}
+
+/// Recursively test whether any step (including those nested in `if` / `optional`
+/// / `for_each` bodies) satisfies `pred`.
+fn steps_contain(steps: &[CompiledStep], pred: &dyn Fn(&CompiledStep) -> bool) -> bool {
+    steps.iter().any(|step| {
+        if pred(step) {
+            return true;
+        }
+        match step {
+            CompiledStep::If { then, else_branch, .. } => {
+                steps_contain(then, pred) || steps_contain(else_branch, pred)
+            }
+            CompiledStep::Optional(body) => steps_contain(body, pred),
+            _ => false,
+        }
+    })
 }
 
 // ─── Section 2: Cost reduction ritual ────────────────────────────────────────
@@ -187,9 +200,33 @@ fn bt23_057_cost_ritual_prompts_when_three_named_cards_in_trash() {
 
     runner.play(0, 0);
 
+    // The cost ritual (before_pay_cost) fires during play resolution. Because
+    // the pay-cost ritual is a mandatory-shaped multi-select (not self-
+    // declinable), the engine first surfaces a "use this reduction?" accept/
+    // decline EffectChoice gate.
+    let gate = runner
+        .pending_selection_view()
+        .expect("cost-reduction confirmation gate must install with 3 named cards");
+    assert_eq!(gate.kind, SelectionKind::EffectChoice);
+    // Accept the reduction (the non-PASS / first accept action).
+    let accept = gate
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != PASS)
+        .expect("accept action on the cost-reduction gate");
+    runner
+        .execute_action(gate.selecting_player, accept)
+        .expect("accept the cost reduction");
+
+    // Accepting surfaces the trash multi-select (return 3 named cards).
     assert!(
-        runner.pending_selection().is_some(),
-        "cost-reduction ritual must surface a selection when 3 named cards are in trash"
+        matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::CountCappedMultiSelect { .. })
+        ),
+        "accepting the reduction must surface the trash multi-select; got {:?}",
+        runner.pending_kind()
     );
 }
 
@@ -211,11 +248,22 @@ fn bt23_057_cost_ritual_absent_with_only_two_named_cards() {
 
     runner.play(0, 0);
 
-    // Only 2 eligible cards → the multi-select min=3 is unmet → no cost ritual.
-    // No opponent Digimon present, so the On Play delete clause adds no prompt.
+    // Only 2 eligible cards → the multi-select min=3 is unmet → the cost ritual
+    // silently no-ops (G-SELECT-MULTI-MIN) and the card just plays. The first
+    // selection that installs is therefore the On Play token EffectChoice — NOT
+    // the cost-ritual trash multi-select.
     assert!(
-        runner.pending_selection().is_none(),
-        "no cost ritual selection when fewer than 3 named cards are in trash"
+        !matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::CountCappedMultiSelect { .. })
+        ),
+        "cost ritual must not run with fewer than 3 named cards; got {:?}",
+        runner.pending_kind()
+    );
+    assert!(
+        matches!(runner.pending_kind(), Some(SelectionKind::EffectChoice)),
+        "the On Play token may-play choice should be the first prompt; got {:?}",
+        runner.pending_kind()
     );
 }
 
@@ -233,12 +281,24 @@ fn bt23_057_on_play_token_is_optional_pass() {
 
     fire_on_play(&mut runner, gank);
 
+    // "You may play 1 Hinukamuy Token" is surfaced as a 2-label EffectChoice
+    // (Play / Don't play) so the decline is exposed to the RL action space.
     let view = runner
         .pending_selection_view()
         .expect("token may-play prompt must install");
-    assert!(
-        view.is_optional || view.valid_action_ids.iter().any(|a| *a == PASS),
-        "playing the Hinukamuy token is optional (you may) — a decline must be exposed"
+    assert_eq!(
+        view.kind,
+        SelectionKind::EffectChoice,
+        "the token may-play choice must be an EffectChoice"
+    );
+    let labels = view
+        .effect_choices
+        .as_ref()
+        .expect("effect-choice labels present");
+    assert_eq!(
+        labels.len(),
+        2,
+        "the token choice must expose both a play and a decline option"
     );
 }
 

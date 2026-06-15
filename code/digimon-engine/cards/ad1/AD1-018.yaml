@@ -14,6 +14,36 @@ alt_paths:
     cost: 3
 
 effects:
+  # ─── Cost reduction: 4+ [Knightmon]/[Lucemon]-text cards in trash → -5 ──────
+  #
+  # "When this card would be played, if you have 4 or more cards with
+  # [Knightmon] or [Lucemon] in its text in your trash, reduce the play cost by
+  # 5." `count_gte` over own trash cards whose printed text contains Knightmon
+  # OR Witchelny — identical to AD1-017's cost clause (BT24-088 idiom:
+  # effect_text_contains inside a count filter; BT24-040 cost_reduction shape).
+  #
+  # SOURCE-PRIORITY NOTE: DCGO AD1_018.cs's Reduce Play Cost region instead
+  # checks FIELD Digimon whose TopCard name contains Knightmon/Lucemon
+  # (HasMatchConditionOwnersPermanent) — a divergence from both the printed
+  # card face AND the sibling AD1-017 (whose DCGO uses
+  # MatchConditionOwnersCardCountInTrash >= 4). The printed card text governs
+  # "what the card says" (CLAUDE.md source priority), so the trash-text-count
+  # reading is implemented here, matching AD1-017.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          any_of:
+            - effect_text_contains: "Knightmon"
+            - effect_text_contains: "Lucemon"
+        n: 4
+    amount: 5
+    summary: "-5 play cost if 4+ [Knightmon]/[Lucemon]-text cards are in your trash"
+
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Opponent Digimon effects don't affect 1 of your Digimon"
     process:
@@ -52,7 +82,12 @@ effects:
           prompt: "Delete 1 opponent Digimon with play cost 3 or less"
       - delete_permanent: { target: victim }
 
-  # Omitted:
-  # Play-cost reduction based on text in trash and the All Turns observer for
-  # Knightmon/Lucemon-text Digimon being played are blocked by text-search count
-  # predicates and event-card text predicates.
+  # Omitted (GAP — G-DSL-EVENT-CARD-TEXT-CONTAINS):
+  # [All Turns][Once Per Turn] "When any of your Digimon with [Knightmon] or
+  # [Lucemon] in its text are played, <De-Digivolve 2> 1 of your opponent's
+  # Digimon." This observer must key on the TRIGGERING (played) card's printed
+  # effect TEXT containing [Knightmon]/[Lucemon]. The DSL has
+  # `event_card_name_contains` (AD1-001 / AD1-016) but no event-card TEXT-contains
+  # sibling, so the clause is OMITTED rather than approximated on the played
+  # card's NAME (which would under-fire vs the printed "in its text").
+  # Propose the leaf id G-DSL-EVENT-CARD-TEXT-CONTAINS.

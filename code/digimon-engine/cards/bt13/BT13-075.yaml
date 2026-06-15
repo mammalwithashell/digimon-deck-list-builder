@@ -17,9 +17,19 @@ alt_paths:
 effects: []
 
 # Stubbed:
-# - [On Play][When Digivolving] by placing an X Antibody/Royal Knight from trash
-#   under this Digimon, prevent opponent play-cost 10+ Digimon from attacking
-#   players until end of their turn. The source-placement cost and attack-target
-#   restriction must resolve as one atomic clause.
-# - Leave-field replacement by trashing the top card of security needs a
-#   replacement-effect primitive with a security trash cost.
+# - [On Play][When Digivolving] By placing 1 [X Antibody]/[Royal Knight] Digimon
+#   card from your TRASH under this Digimon as its bottom digivolution card, all
+#   of your opponent's Digimon with a play cost of 10 or higher can't attack
+#   players until the end of your opponent's turn. Needs
+#   G-PLAY-COST-GTE-MODIFIER-AURA — a play-cost-threshold can't-attack-players
+#   aura keyed off a source-placement cost (the source cost and the attack
+#   restriction must resolve as one atomic clause).
+# - [All Turns][OPT] would-leave self-protection. The printed COST is "by
+#   RETURNING 1 [X Antibody]/[Royal Knight] card from THIS DIGIMON'S
+#   DIGIVOLUTION CARDS to the BOTTOM OF YOUR DECK" (NOT a security trash). The
+#   `kind: replacement` framework + `select_own_sources` exist, but no DSL verb
+#   returns a selected digivolution source to the deck bottom — the only
+#   source-return verb is `return_selected_sources_to_hand` (to hand). NEW
+#   substrate gap: G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM (sibling of
+#   `return_selected_sources_to_hand`). Returning the source to hand instead
+#   would be an approximation and is disallowed, so the clause stays stubbed.

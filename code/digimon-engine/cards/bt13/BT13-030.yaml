@@ -14,12 +14,46 @@ alt_paths:
     from: { level_eq: 5, color_is: blue }
     cost: 3
 
-effects: []
+effects:
+  # [Your Turn][Once Per Turn] When you play a Digimon with the [Royal Knight]
+  # trait or a blue Tamer, return 1 of your opponent's Digimon with no
+  # digivolution cards to its owner's hand.
+  #
+  # Fires on `on_enter_field_anyone` (the "played" observer — covers both
+  # Digimon and Tamer plays; digivolve is intentionally NOT included since the
+  # printed trigger is "When you play"). The condition gates the arming: the
+  # player is the controller, the played card is NOT this Digimon itself
+  # (`event_permanent_is_source: false`), and it is either a Royal-Knight-trait
+  # permanent OR a blue Tamer. The bounce itself is MANDATORY ("return 1 ...",
+  # not "you may"), so the clause is not `optional`; with no sourceless
+  # opponent Digimon the mandatory target select is simply skipped.
+  # PRECEDENT: BT20-091 (Royal-Knight-played observer).
+  - when: on_enter_field_anyone
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When you play a Royal Knight or blue Tamer, return 1 opponent Digimon with no sources to hand"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_permanent_is_source: false
+        - any_of:
+            - event_target_trait_has: "Royal Knight"
+            - all_of:
+                - event_target_kind: tamer
+                - event_target_color_any_of: [blue]
+    process:
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "Return 1 opponent Digimon with no digivolution cards to its owner's hand"
+      - return_to_hand: { target: bounce_target }
 
 # Stubbed:
-# - [On Play][When Digivolving] for each own Royal Knight trait and blue Tamer,
-#   trash 2 digivolution cards from one opponent Digimon. This needs a counted
-#   foreach loop where the count is derived from multiple object groups.
-# - [Your Turn] when one of the opponent's Digimon has no digivolution cards,
-#   gain Jamming and unblockability. This needs a continuous opponent-board
-#   source-count aura.
+# - [On Play][When Digivolving] For each of your Digimon with the [Royal Knight]
+#   trait and each of your blue Tamers in play, trash the top 2 digivolution
+#   cards of 1 of your opponent's Digimon. Needs G-FOR-EACH-COUNTED-FIELD-OBJECTS
+#   (a counted foreach where the iteration count is derived from multiple field
+#   object groups — own Royal Knight Digimon + own blue Tamers).
