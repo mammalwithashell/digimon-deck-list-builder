@@ -7,7 +7,9 @@ cost: 0
 effects:
   - kind: flood_gate
     scope: face_up
-    active_when: { in_breeding: true }
+    # [Breeding][Your Turn] — gated on in_breeding AND the owner's turn so
+    # opponent-turn digivolves (Blast/Counter) are NOT blocked (matches DCGO).
+    active_when: { in_breeding: true, your_turn: true }
     modifier: CannotDigivolve
     target: { of: you, zone: [battle_area] }
 
@@ -16,7 +18,14 @@ effects:
     optional: true
     once_per_turn: true
     when_any_ally_played: { trait_has: "Royal Knight" }
-    amount_fn: { raw_rust: bt13_007_royal_knight_cost_reduction }
+    # Reduce play cost by 4, plus 1 more per digivolution card under this King
+    # Drasil. `material_count` resolves against the effect carrier
+    # (`source_permanent` = the breeding King Drasil), so it counts the cards
+    # beneath its top card — i.e. its digivolution cards. Native formula
+    # replaces the test-only `raw_rust: bt13_007_royal_knight_cost_reduction`,
+    # which was never registered in the production raw_rust registry and so
+    # silently evaluated to 0 (no reduction) in real games.
+    amount_fn: { base_per_delta: { base: 4, per: material_count, delta: 1 } }
 
   - when: start_of_your_main_phase
     scope: face_up
@@ -43,6 +52,3 @@ effects:
     summary: "[Breeding][Inherited] When a Royal Knight Option is placed, gain 1 memory"
     process:
       - gain_memory: 1
-
-  # The Royal Knight play cost reduction uses the existing raw_rust amount_fn
-  # until formulas can count this source's digivolution cards.
