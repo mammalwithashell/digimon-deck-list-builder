@@ -9,27 +9,126 @@ traits: [Holy Warrior, Royal Knight, X Antibody]
 form: Mega
 attribute: Vaccine
 
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Black/BT13_075.cs
+
 alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: black }
     cost: 4
 
-effects: []
+effects:
+  # ─── Clause 1 — [On Play] / [When Digivolving] (shared body) ────────────────
+  #
+  # Printed text:
+  #   "[On Play] [When Digivolving] By placing 1 [X Antibody]/[Royal Knight]
+  #    Digimon card from your trash under this Digimon as its bottom
+  #    digivolution card, all of your opponent's Digimon with a play cost of 10
+  #    or higher can't attack players until the end of your opponent's turn."
+  #
+  # The "By placing 1 ..." is a may-pay cost (DCGO `canNoSelect: () => true`):
+  # `select_trash` with `optional: true, cost: true` so declining (or no
+  # eligible card in trash) short-circuits the whole body — no placement and no
+  # aura. The `condition: count_gte` precheck mirrors DCGO's
+  # `CanActivateCondition` (`HasMatchConditionOwnersCardInTrash`): the clause
+  # never fires when no [X Antibody]/[Royal Knight] Digimon is in trash.
+  #
+  # The attack restriction is a CONTINUOUS floating mass modifier
+  # (`add_modifier{continuous: true}` → `Game::add_floating_mass_modifier`),
+  # NOT a one-time scan: DCGO installs `GainCanNotAttackPlayerEffect` with an
+  # `AttackerCondition` re-evaluated per attack (`Attacker.TopCard.GetCostItself
+  # >= 10`), so opponent Digimon that ENTER after resolution are also bound. The
+  # `play_cost_gte: 10` predicate reads printed play cost = DCGO's
+  # `GetCostItself`; `CannotAttackPlayer` matches DCGO's `DefenderCondition:
+  # Defender == null` (can't attack a PLAYER, may still attack Digimon).
+  # `expiry: end_of_opponents_turn` = DCGO `EffectDuration.UntilOpponentTurnEnd`.
+  - when: [on_play, when_digivolving]
+    summary: "[OnPlay/WhenDigi] By placing an [X Antibody]/[Royal Knight] Digimon from trash as bottom source, opp play-cost-10+ Digimon can't attack players until end of opp turn"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          kind: digimon
+          any_of:
+            - trait_has: "X Antibody"
+            - trait_has: "Royal Knight"
+        n: 1
+    process:
+      - select_trash:
+          of: you
+          bind_as: placed_source
+          optional: true
+          cost: true
+          filter:
+            kind: digimon
+            any_of:
+              - trait_has: "X Antibody"
+              - trait_has: "Royal Knight"
+          prompt: "Place 1 [X Antibody]/[Royal Knight] Digimon from trash as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: placed_source
+          target: source
+      - add_modifier:
+          continuous: true
+          target: { of: opponent, kind: digimon, play_cost_gte: 10 }
+          modifier: CannotAttackPlayer
+          value: 1
+          expiry: end_of_opponents_turn
 
-# Stubbed:
-# - [On Play][When Digivolving] By placing 1 [X Antibody]/[Royal Knight] Digimon
-#   card from your TRASH under this Digimon as its bottom digivolution card, all
-#   of your opponent's Digimon with a play cost of 10 or higher can't attack
-#   players until the end of your opponent's turn. Needs
-#   G-PLAY-COST-GTE-MODIFIER-AURA — a play-cost-threshold can't-attack-players
-#   aura keyed off a source-placement cost (the source cost and the attack
-#   restriction must resolve as one atomic clause).
-# - [All Turns][OPT] would-leave self-protection. The printed COST is "by
-#   RETURNING 1 [X Antibody]/[Royal Knight] card from THIS DIGIMON'S
-#   DIGIVOLUTION CARDS to the BOTTOM OF YOUR DECK" (NOT a security trash). The
-#   `kind: replacement` framework + `select_own_sources` exist, but no DSL verb
-#   returns a selected digivolution source to the deck bottom — the only
-#   source-return verb is `return_selected_sources_to_hand` (to hand). NEW
-#   substrate gap: G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM (sibling of
-#   `return_selected_sources_to_hand`). Returning the source to hand instead
-#   would be an approximation and is disallowed, so the clause stays stubbed.
+  # ─── Clause 2 — [All Turns] [Once Per Turn] would-leave self-protection ─────
+  #
+  # Printed text:
+  #   "[All Turns] [Once Per Turn] When an effect would remove this Digimon from
+  #    the battle area, by returning 1 [X Antibody]/[Royal Knight] card from this
+  #    Digimon's digivolution cards to the bottom of your deck, prevent that
+  #    removal."
+  #
+  # `kind: replacement` would-leave clause (mirrors BT22-036 Chaperomon's
+  # leave-prevention shape). DCGO `WhenRemoveField` + `IsByEffect` →
+  # `none_of: [replacement_cause: battle]` (removed BY AN EFFECT, not by battle;
+  # own- and opponent-effect both qualify, matching DCGO which does NOT exclude
+  # own_effect). DCGO `SetUpActivateClass(..., 1, ...)` = once per turn;
+  # `canNoSelect: () => true` makes the whole clause optional, but
+  # `CanEndSelectCondition` forces exactly 1 source once engaged → `min: 1,
+  # max: 1`.
+  #
+  # `active_when` source-trait guard mirrors DCGO `CanActivateCondition`
+  # (`DigivolutionCards.Count(CanSelectCardCondition) >= 1`): the prevention is
+  # only offered when a payable [X Antibody]/[Royal Knight] source exists beneath
+  # this Digimon (`self_digivolution_sources_trait_has` scans sources only,
+  # excluding the top card — exactly DCGO's `DigivolutionCards`).
+  #
+  # The cost is the NEW `return_selected_sources_to_deck` verb
+  # (G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM): it routes the chosen source to the
+  # BOTTOM of its owner's deck (DCGO `ReturnToLibraryBottomDigivolutionCards`).
+  # Returning to HAND instead would be an approximation and is disallowed.
+  # Paying the cost ends with `cancel_replacement` → DCGO `willBeRemoveField =
+  # false`.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - none_of:
+            - replacement_cause: battle
+        - any_of:
+            - self_digivolution_sources_trait_has: "X Antibody"
+            - self_digivolution_sources_trait_has: "Royal Knight"
+    summary: "[All Turns][OPT] When an effect would remove this Digimon, by returning 1 [X Antibody]/[Royal Knight] digivolution source to the bottom of your deck, prevent the removal"
+    process:
+      - select_own_sources:
+          target: source
+          bind_as: returned_source
+          min: 1
+          max: 1
+          filter:
+            any_of:
+              - trait_has: "X Antibody"
+              - trait_has: "Royal Knight"
+          prompt: "Return 1 [X Antibody]/[Royal Knight] digivolution card to the bottom of your deck to prevent removal"
+      - return_selected_sources_to_deck:
+          source_refs: returned_source
+          position: bottom
+      - cancel_replacement: {}

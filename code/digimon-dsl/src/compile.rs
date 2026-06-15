@@ -2064,6 +2064,10 @@ fn compile_step(
         S::ReturnSelectedSourcesToHand(a) => CompiledStep::ReturnSelectedSourcesToHand {
             source_refs: a.source_refs.clone(),
         },
+        S::ReturnSelectedSourcesToDeck(a) => CompiledStep::ReturnSelectedSourcesToDeck {
+            source_refs: a.source_refs.clone(),
+            position: compile_stack_position(a.position),
+        },
         S::BindPermanentProperty(a) => CompiledStep::BindPermanentProperty {
             from: compile_binding_ref(&a.from),
             property: match a.property {

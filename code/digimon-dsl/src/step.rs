@@ -165,6 +165,14 @@ pub enum StepSpec {
     /// (this is a return, not a trash). Closes BT12-031's Imperialdramon:
     /// Dragon Mode alt-cost.
     ReturnSelectedSourcesToHand(TrashSelectedSourcesArgs),
+    /// G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM (2026-06-14) — deck-routing
+    /// sibling of `ReturnSelectedSourcesToHand`. Return each
+    /// `select_own_sources`-bound digivolution source card to its owner's deck
+    /// (`position: top | bottom`). Like the to-hand verb this is a return, NOT
+    /// a trash, so it fires no `OnDigivolutionCardTrashed`. Closes BT13-075
+    /// Alphamon's would-leave self-protection cost (return 1 [X Antibody]/[Royal
+    /// Knight] source to the BOTTOM OF YOUR DECK to prevent leaving).
+    ReturnSelectedSourcesToDeck(ReturnSelectedSourcesToDeckArgs),
     TrashBottomFaceDownSourceUnderTamer(TrashBottomFaceDownSourceUnderTamerArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
@@ -429,6 +437,9 @@ impl Serialize for StepSpec {
             StepSpec::ReturnSelectedSourcesToHand(v) => {
                 kv!(s, "return_selected_sources_to_hand", v)
             }
+            StepSpec::ReturnSelectedSourcesToDeck(v) => {
+                kv!(s, "return_selected_sources_to_deck", v)
+            }
             StepSpec::TrashBottomFaceDownSourceUnderTamer(v) => {
                 kv!(s, "trash_bottom_face_down_source_under_tamer", v)
             }
@@ -686,6 +697,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_selected_sources_to_hand" => {
                 StepSpec::ReturnSelectedSourcesToHand(map.next_value()?)
             }
+            "return_selected_sources_to_deck" => {
+                StepSpec::ReturnSelectedSourcesToDeck(map.next_value()?)
+            }
             "trash_bottom_face_down_source_under_tamer" => {
                 StepSpec::TrashBottomFaceDownSourceUnderTamer(map.next_value()?)
             }
@@ -897,6 +911,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_all_sources",
                         "trash_selected_sources",
                         "return_selected_sources_to_hand",
+                        "return_selected_sources_to_deck",
                         "bind_permanent_property",
                         "hatch",
                         "play_from_hand",
@@ -1713,6 +1728,17 @@ pub struct PlaceAsBottomSourceArgs {
 #[serde(deny_unknown_fields)]
 pub struct TrashSelectedSourcesArgs {
     pub source_refs: String,
+}
+
+/// Args for `return_selected_sources_to_deck` — return each
+/// `select_own_sources`-bound digivolution source card to its owner's deck at
+/// `position` (top or bottom). Sibling of `TrashSelectedSourcesArgs` with a
+/// destination position, like the `position`-carrying source/reveal verbs.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnSelectedSourcesToDeckArgs {
+    pub source_refs: String,
+    pub position: StackPosition,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

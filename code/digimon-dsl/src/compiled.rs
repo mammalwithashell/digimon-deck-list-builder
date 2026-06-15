@@ -1700,6 +1700,14 @@ pub enum CompiledStep {
     ReturnSelectedSourcesToHand {
         source_refs: String,
     },
+    /// G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM — deck-routing sibling of
+    /// `ReturnSelectedSourcesToHand`. Return each `SelectOwnSources`-bound
+    /// digivolution source card to its owner's deck at `position` (top or
+    /// bottom). A return, not a trash — fires no `OnDigivolutionCardTrashed`.
+    ReturnSelectedSourcesToDeck {
+        source_refs: String,
+        position: CompiledStackPosition,
+    },
     BindPermanentProperty {
         from: CompiledBindingRef,
         property: CompiledPermanentProperty,
