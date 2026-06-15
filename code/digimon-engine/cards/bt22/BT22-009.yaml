@@ -32,6 +32,28 @@ effects:
           prompt: "Delete 1 opponent Digimon with 4000 DP or less"
       - delete_permanent: { target: target }
 
+  # [Inherited] Delete 1 of your opponent's Digimon with 4000 DP or less.
+  # An unbracketed inherited Digimon effect activates as a [When Digivolving]
+  # effect on the host that carries this card as a digivolution source.
+  - when: when_digivolving
+    scope: inherited
+    summary: "[Inherited] Delete 1 opponent Digimon with 4000 DP or less"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        dp_lte: 4000
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 opponent Digimon with 4000 DP or less"
+      - delete_permanent: { target: target }
+
   # Omitted:
   # [Security] At the end of the battle, play this card without paying the cost.
   # This needs a security end-of-battle delayed play hook instead of immediate
