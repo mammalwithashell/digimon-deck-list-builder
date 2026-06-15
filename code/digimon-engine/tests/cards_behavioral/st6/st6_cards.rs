@@ -286,6 +286,20 @@ fn st6_keyword_recursion_and_digiburst_shapes_are_authored() {
             ..
         }
     )));
+
+    // The action bar derives its short effect tag from the [Main] clause's
+    // authored `summary` (lowered to `Effect.name` at `lower_triggered.rs`,
+    // then surfaced as `ActionExplanation.effect_name`). Assert the headline
+    // CresGarurumon Digi-Burst clause carries that name source so the button
+    // can read "CresGarurumon: Digi-Burst 2".
+    let summary = main
+        .summary
+        .as_deref()
+        .expect("ST6-13 [Main] clause carries a summary (the effect-name source)");
+    assert!(
+        summary.contains("Digi-Burst 2"),
+        "summary feeds the action-bar effect name: {summary}"
+    );
 }
 
 #[test]

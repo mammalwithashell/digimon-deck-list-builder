@@ -64,10 +64,12 @@ export function useActionMask(mask: number[]): ParsedMask {
       if (mask[i] === 1) canPlayFromHand.add(i);
     }
 
-    // Trash from hand (30-59)
-    for (let i = ACTION.TRASH_START; i <= ACTION.TRASH_END; i++) {
-      if (mask[i] === 1) canTrashFromHand.add(i - ACTION.TRASH_START);
-    }
+    // Action ids 30-59 are HAND_EFFECT (hand [Main] activations) in the Rust
+    // engine — NOT "trash from hand". They are surfaced as named buttons via
+    // the engine-decoded action list (ActionBar `decodedActions`), so we no
+    // longer route them into `canTrashFromHand` (which would mislabel a
+    // hand [Main] effect as a discard). The field is retained empty for
+    // interface compatibility; nothing renders it.
 
     // DNA Digivolve (63-92)
     for (let i = ACTION.DNA_START; i <= ACTION.DNA_END; i++) {

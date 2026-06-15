@@ -877,6 +877,21 @@ impl RustHeadlessGame {
         json_to_pyobject(py, &value)
     }
 
+    /// Decoded list of every currently-legal action for the current decision
+    /// player, each carrying source-card and effect identity (`card_id`,
+    /// `card_name`, `effect_name`, `source_zone`, `source_index`, `label`).
+    /// Mirrors the desktop `rust_get_decoded_actions` Tauri command byte-for-byte
+    /// (same `ActionExplanation` serialization) so the React action bar renders
+    /// activatable effects identically on both surfaces. Returns an empty list
+    /// when the queried player is not the current decision player.
+    fn legal_decoded_actions(&self, py: Python) -> PyResult<PyObject> {
+        let pid = self.inner.current_decision_player();
+        let actions = ::digimon_engine::action::explain::legal_decoded_actions(&self.inner.game, pid);
+        let value = serde_json::to_value(&actions)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        json_to_pyobject(py, &value)
+    }
+
     /// Capture the current full-information game as a scenario fixture
     /// (`qa/scenarios/` schema, empty assertions). The inverse of the
     /// staging importer — re-staging the result reproduces this board.

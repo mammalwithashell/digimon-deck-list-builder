@@ -223,6 +223,10 @@ export interface DecodedAction {
   targetIndex: number | null;
   cardId: string | null;
   cardName: string | null;
+  /** For [Main]-activated effects, the matched effect's name (the DSL
+   *  `summary`); null for non-effect actions or unnamed effects. The action
+   *  bar derives a short tag from this for the button label. */
+  effectName: string | null;
 }
 
 export interface TensorSummary {

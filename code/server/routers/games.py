@@ -415,6 +415,21 @@ def game_mask(game_id: str):
     return {"action_mask": game.get_action_mask().tolist()}
 
 
+@router.get("/games/{game_id}/decoded-actions")
+@router.get("/game/{game_id}/decoded-actions", include_in_schema=False)
+def game_decoded_actions(game_id: str):
+    """Decoded list of every currently-legal action for the current decision
+    player, each carrying source-card and effect identity (`card_name`,
+    `effect_name`, `source_zone`, `source_index`, `label`). The React action
+    bar renders activatable effects from this list instead of re-deriving
+    action semantics from raw mask bit-ranges. Mirrors the desktop
+    `rust_get_decoded_actions` Tauri command (same `ActionExplanation` shape).
+
+    Engine-only route: no DB/auth dependency."""
+    game = _require_game(game_id)
+    return {"decoded_actions": game.legal_decoded_actions()}
+
+
 @router.post("/games/{game_id}/surrender")
 def surrender_game(game_id: str, request: SurrenderRequest):
     """Concede on behalf of `player_id`. Player IDs are 1 or 2 (Python

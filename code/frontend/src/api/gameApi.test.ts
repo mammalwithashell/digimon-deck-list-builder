@@ -68,6 +68,7 @@ describe('engine trace types', () => {
         targetIndex: null,
         cardId: null,
         cardName: null,
+        effectName: null,
       },
       tensorSummary: summary,
     };
