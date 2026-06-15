@@ -20,17 +20,21 @@
 #   Digimon) select 1 opponent Digimon → -3000 DP UntilEachTurnEnd. → when
 #   [on_play, when_digivolving], select_opponent_permanent { kind: digimon } +
 #   add_dp_modifier { value: -3000, expiry: end_of_turn }.
-# Clause 1b ("Then, …") — BLOCKED (dsl): "by trashing 2 bottom face-down cards
-#   from under any of your Tamers, this Digimon may digivolve into a [Glowing
-#   Dawn] card in the hand without paying the cost." The trash-2 cost is the
-#   multi-count / multi-Tamer face-down trash gap G-TRASH-N-BOTTOM-FACE-DOWN-
-#   UNDER-TAMER (qa/dsl-vocab-gaps.md): the shipping
-#   trash_bottom_face_down_source_under_tamer verb trashes exactly ONE source
-#   from ONE Tamer and chaining it twice cannot express DCGO's "2 from one Tamer
-#   OR 1+1 from two Tamers" CanEndSelectCondition. Plus the free-digivolve-into-
-#   a-hand-card-by-effect (DigivolveIntoHandOrTrashCard, payCost: false) is a
-#   second piece. The "Then" half is OMITTED rather than under-charging (trash 1
-#   instead of 2). Verdict PARTIAL.
+# Clause 1b ("Then, …") — IMPLEMENTED (2026-06-15): "by trashing 2 bottom
+#   face-down cards from under any of your Tamers, this Digimon may digivolve
+#   into a [Glowing Dawn] card in the hand without paying the cost." The trash-2
+#   cost uses the new multi-count / multi-Tamer verb
+#   trash_bottom_face_down_sources_under_tamers: { of, count: 2 }
+#   (G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER, CLOSED): it trashes 2 bottom
+#   face-down sources total, distributed across Tamers — "2 from one Tamer" or
+#   "1 from each of two Tamers" (DCGO CanEndSelectCondition), each Tamer pick
+#   surfaced as a real PendingSelection. The "may" is carried by an optional
+#   select_hand (ST23-01 idiom): declining (PASS) leaves the binding unset → the
+#   trash cost is NOT paid. On a real pick the cost is trashed then THIS Digimon
+#   (target: source) digivolves into the chosen [Glowing Dawn] hand card for
+#   FREE (cost: free, DCGO payCost: false). The clause is gated on BOTH ≥2
+#   total face-down sources AND a [Glowing Dawn] card in hand, so the trash cost
+#   is never paid for nothing. Verdict IMPLEMENTED.
 # Inherited (WhenPermanentWouldBeDeleted): BarrierSelfEffect(isInheritedEffect)
 #   → scope: inherited + grant_keyword Barrier.
 
@@ -53,11 +57,15 @@ alt_paths:
     cost: 2
 
 effects:
-  # ─── [On Play][When Digivolving] 1 opp Digimon gets -3000 DP for the turn ──
-  # (The "Then, … may digivolve …" half is BLOCKED on G-TRASH-N and omitted.)
+  # ─── [On Play][When Digivolving] 1 opp Digimon gets -3000 DP; then, by
+  #     trashing 2 bottom face-down cards from under any of your Tamers, this
+  #     Digimon may digivolve into a [Glowing Dawn] card in hand for free ──────
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn"
+    summary: "[On Play][When Digivolving] -3000 DP to 1 opp Digimon; then trash 2 FD under Tamers to free-digivolve into a [Glowing Dawn] hand card"
     process:
+      # "1 of your opponent's Digimon gets -3000 DP for the turn." — DCGO
+      # canNoSelect: false → mandatory if an opponent Digimon exists; the
+      # selection short-circuits cleanly when none do.
       - select_opponent_permanent:
           bind_as: tgt
           filter: { kind: digimon }
@@ -66,6 +74,51 @@ effects:
           target: tgt
           value: -3000
           expiry: end_of_turn
+      # "Then, by trashing 2 bottom face-down cards from under any of your
+      # Tamers, this Digimon may digivolve into a [Glowing Dawn] trait Digimon
+      # card in the hand without paying the cost."
+      #
+      # Gate (DCGO payability + valid payoff): only offer the "may digivolve"
+      # when (a) ≥2 face-down sources exist under your Tamers (the trash-2 cost
+      # is payable) AND (b) a [Glowing Dawn] Digimon card is in hand. The trash
+      # cost is never paid for nothing.
+      - if:
+          condition:
+            all_of:
+              - face_down_sources_under_tamers_gte: 2
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [hand]
+                    all_of:
+                      - kind: digimon
+                      - trait_has: "Glowing Dawn"
+                  n: 1
+          then:
+            # "may digivolve …" — the optional select_hand carries the decline.
+            # Declining (PASS) leaves the binding unset → the trash-2 cost below
+            # is NOT paid (ST23-01 idiom).
+            - select_hand:
+                of: you
+                bind_as: gd_evo
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Glowing Dawn"
+                prompt: "Digivolve this Digimon into a [Glowing Dawn] trait Digimon card in your hand for free"
+            - if:
+                condition: { binding_present: gd_evo }
+                then:
+                  # "by trashing 2 bottom face-down cards from under any of your
+                  # Tamers" — the activation cost (multi-Tamer pick surfaced).
+                  - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+                  # "this Digimon may digivolve … without paying the cost" —
+                  # THIS permanent (target: source) digivolves for free.
+                  - effect_initiated_digivolve:
+                      target: source
+                      from_hand: gd_evo
+                      cost: free
 
   # ─── Inherited <Barrier> ───────────────────────────────────────────────────
   - scope: inherited

@@ -2847,6 +2847,20 @@ Historical note:
 
 ## G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER — multi-card / multi-Tamer face-down trash cost (BT25 BEATBREAK)
 
+- **Status:** ✅ CLOSED (2026-06-15). New DSL verb
+  `trash_bottom_face_down_sources_under_tamers: { of, count }` (step.rs
+  `TrashBottomFaceDownSourcesUnderTamersArgs` → `CompiledStep` →
+  `dsl_cards/step/selections.rs::install_trash_n_bottom_face_down_sources_under_tamers`).
+  It trashes `count` bottom face-down sources total, distributed across the
+  controller's Tamers — "N from one Tamer" or "1 from each of N Tamers" — by
+  installing one single-Tamer bottom-trash `select_own_permanent` pick per
+  source, re-evaluating eligibility each time, so every Tamer pick surfaces as a
+  real `PendingSelection` (no auto-resolve, DCGO `CanEndSelectCondition`
+  reachable). Unpayable (fewer than `count` total face-down sources) ⇒
+  `cost_unpayable` + clause abort, like the single-trash verb. Paired with a new
+  no-subject predicate `face_down_sources_under_tamers_gte: <N>` that gates the
+  optional digivolve on the cost being payable. Driver BT25-035 ships
+  IMPLEMENTED (`cards/bt25/BT25-035.yaml`, `tests/cards_behavioral/bt25/bt25_035.rs` 12/12).
 - **Cards:** BT25-035 Cougarmon (`[On Play][When Digivolving] ... by trashing 2 bottom face-down cards from under any of your Tamers, this Digimon may digivolve into a [Glowing Dawn] Digimon for free`). Likely also BT25-019 / other BEATBREAK "trash N" cost cards.
 - **What's missing:** The shipping verb `trash_bottom_face_down_source_under_tamer: { of }` trashes exactly **one** bottom face-down source from **one** chosen Tamer (it installs a single `select_own_permanent` over `{ kind: tamer, has_face_down_source: true }` and trashes that Tamer's bottom face-down card, then runs the tail). It has no `count:` parameter and no support for distributing the cost across multiple Tamers (DCGO BT25_035: `maxCount: 2`, `canEndNotMax: true`, `CanEndSelectCondition = (picked==2) || (picked==1 && that Tamer has >=2 face-down sources)` — i.e. "trash 2 total: either 2 from one Tamer, or 1 from each of two Tamers"). Chaining the single-trash verb twice does NOT work: each invocation installs a selection and runs the *captured tail* on resolution, so two sequential invocations cannot share one continuation cleanly, and the "2 from one Tamer OR 1+1 from two Tamers" choice is not expressible.
 - **Lowers to engine API:** the engine already has the per-Tamer bottom-face-down trash primitive (`install_trash_bottom_face_down_source_under_tamer` in `dsl_cards/step/selections.rs`, and DCGO mirrors it with `TrashDigivolutionCardsFromTopOrBottom(trashCount: N, isFromTop: false, CanTrashCard)`). The missing piece is a DSL step that drives an N-total multi-pick over Tamers with the DCGO end-condition.
@@ -2855,7 +2869,17 @@ Historical note:
   - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
   ```
   with semantics: pick Tamers (each must carry >=1 face-down source) until `count` face-down sources are trashed total; a single Tamer with >=`count` face-down sources may satisfy it alone (DCGO `CanEndSelectCondition`). The whole step is the activation cost: if fewer than `count` face-down sources exist across all Tamers, the cost is unpayable → abort the clause (`TailAlreadyRan`), matching the single-card verb's unpayable behavior.
-- **Workaround:** None faithful for BT25-035. The single-trash verb under-charges (trashes 1 instead of 2) — a no-approximations violation. BT25-035 BLOCKED (dsl) on this gap. (Its [On Play][When Digivolving] -3000 DP rider IS expressible; the free-digivolve-by-2-trash cost is the blocked part.)
+- **Workaround:** None faithful for BT25-035. The single-trash verb under-charges (trashes 1 instead of 2) — a no-approximations violation. BT25-035 BLOCKED (dsl) on this gap. (Its [On Play][When Digivolving] -3000 DP rider IS expressible; the free-digivolve-by-2-trash cost is the blocked part.) **[RESOLVED — see Status above.]**
+
+---
+
+## G-DSL-PLACE-REVEALED-CARD-UNDER-TAMER — place a revealed card face-down under a chosen Tamer (BEATBREAK reveal-pool stash)
+
+- **Status:** ✅ CLOSED (2026-06-15). The existing `place_selected_card_under_tamer` DSL step now resolves a **reveal-pool**-bound card (in addition to hand / trash / union-zone): its `ResolvedBinding::Card` / singleton-`CardList` arm scans `Game::revealed_cards` and calls the new `EffectContext::place_revealed_card_under_tamer` (engine helper that places a `CardSourceRef::Reveal` card as the bottom-most, optionally face-down, source of a chosen own Tamer). Driver ST23-06 Gekkomon ships IMPLEMENTED (`cards/st23/ST23-06.yaml`, `tests/cards_behavioral/st23/st23_06.rs` 7/7).
+- **Cards:** ST23-06 Gekkomon (`[When Moving][On Play] Reveal the top 3 cards of your deck. Among them, add 1 [Glowing Dawn] card to the hand AND place 1 [Glowing Dawn] card face down under any of your [Glowing Dawn] trait Tamers. Return the rest to the bottom of the deck`). Likely also ST24 / other BEATBREAK reveal-and-stash cards.
+- **What was missing:** `place_selected_card_under_tamer` resolved only hand / trash / union-zone card bindings; a `select_reveal_buckets` / `select_reveal` pick (which still lives in the transient reveal pool, stored as a one-element `CardList`) fell through to the `_ => None` arm, so the second revealed card was never tucked under the Tamer (it leaked into the deck-bottom remainder).
+- **Lowers to engine API:** the placement substrate (`place_as_bottom_source` honoring `CardSourceRef::Reveal` + `face_down`) already existed; the gap was a DSL-lowering reveal-pool branch + a thin `place_revealed_card_under_tamer` helper.
+- **Note:** when no [Glowing Dawn] Tamer exists, only the add-to-hand bucket runs (DCGO `HasMatchConditionOwnersPermanent` gate) — modelled with an `if any_permanent { tamer + Glowing Dawn }` / `else` two-path reveal.
 
 ---
 

@@ -1,0 +1,131 @@
+# ST23-06 Gekkomon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Reptile, Glowing Dawn, BEATBREAK. Attribute: Data.
+#
+# Printed card text (CARD IMAGE — authoritative):
+#   Play cost 3 (top-left). Digivolve box: Lv.2 / cost 0.
+#   [Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0.
+#   [When Moving] [On Play] Reveal the top 3 cards of your deck. Among them, add
+#     1 [Glowing Dawn] trait card to the hand and place 1 such card face down
+#     under any of your [Glowing Dawn] trait Tamers. Return the rest to the
+#     bottom of the deck.
+#   Inherited Effect: <Piercing> (When this Digimon deletes your opponent's
+#     Digimon in battle while attacking, it checks security before the attack
+#     ends.)
+#
+# NOTE on data/cards.json: it files play_cost: 0 and dp: null for this card
+# (API-ingest gaps). The CARD IMAGE shows Play 3 / DP 1000, which is
+# image-authoritative per the source-priority rule; the YAML uses those.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Green/ST23_06.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 2,
+#   TopCard EqualsTraits("Glowing Dawn"), cost 0). → alt_paths digivolve from
+#   Lv.2 + Glowing Dawn trait, cost 0.
+# Shared WM/OP (ActivateClassesForSharedEffects on OnMove + OnEnterFieldAnyone,
+#   optional: false): SharedCanActivateCondition = a battle-area Digimon exists
+#   && LibraryCards.Count >= 1.
+#   SharedActivateCoroutine:
+#     - IF a [Glowing Dawn] Tamer exists (HasMatchConditionOwnersPermanent over
+#       CanSelectPermanentCondition = own Tamer + EqualsTraits("Glowing Dawn")):
+#       SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3) with TWO buckets:
+#         · Bucket 1 (mode AddHand, maxCount 1): a [Glowing Dawn] card → add to
+#           hand.
+#         · Bucket 2 (mode Custom, maxCount 1): a [Glowing Dawn] card → captured
+#           by PlaceUnderTamer, then a SelectPermanentEffect over the GD Tamers
+#           (canNoSelect: false) → AddDigivolutionCardsBottom(isFacedown: true).
+#       remainingCardsPlace: DeckBottom.
+#     - ELSE (no GD Tamer): reveal 3 with only Bucket 1 (add-to-hand); remainder
+#       DeckBottom.
+#   The reveal-pool place-under-a-chosen-Tamer is the
+#   G-DSL-PLACE-REVEALED-CARD-UNDER-TAMER gap (CLOSED 2026-06-15):
+#   place_selected_card_under_tamer now resolves a reveal-pool-bound card via
+#   EffectContext::place_revealed_card_under_tamer.
+# ESS — PierceSelfEffect(isInheritedEffect: true) → scope: inherited +
+#   grant_keyword Piercing.
+
+card: ST23-06
+name: "Gekkomon"
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Reptile, Glowing Dawn, BEATBREAK]
+attribute: Data
+
+# Alt-digivolve: Lv.2 with the [Glowing Dawn] trait / cost 0.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: "Glowing Dawn"
+    cost: 0
+
+effects:
+  # ─── [When Moving][On Play] Reveal 3; add 1 [Glowing Dawn] to hand AND place
+  #     1 such card face down under a [Glowing Dawn] Tamer; rest to deck bottom ─
+  - when: [on_play, on_move]
+    summary: "[When Moving][On Play] Reveal 3; add 1 [Glowing Dawn] to hand + place 1 face down under a [Glowing Dawn] Tamer; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      # Two paths, gated on whether a [Glowing Dawn] Tamer exists (DCGO
+      # HasMatchConditionOwnersPermanent). With a GD Tamer: add-to-hand bucket +
+      # place-under-tamer bucket. Without: only the add-to-hand bucket.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              trait_has: "Glowing Dawn"
+          then:
+            # Two buckets over the same reveal pool; no_duplicate_cards mirrors
+            # DCGO — the same card cannot be both added AND placed.
+            - select_reveal_buckets:
+                from: revealed
+                no_duplicate_cards: true
+                buckets:
+                  - bind_as: add_pick
+                    min: 1
+                    max: 1
+                    filter: { trait_has: "Glowing Dawn" }
+                  - bind_as: place_pick
+                    min: 1
+                    max: 1
+                    filter: { trait_has: "Glowing Dawn" }
+                prompt: "Add 1 [Glowing Dawn] card to hand and place 1 under a [Glowing Dawn] Tamer"
+            - add_to_hand_from_reveal: { of: you, card: add_pick }
+            # "place 1 such card face down under any of your [Glowing Dawn] Tamers"
+            # — only when a place_pick was bound (a 2nd GD card existed).
+            - if:
+                condition: { binding_present: place_pick }
+                then:
+                  - select_own_permanent:
+                      bind_as: gd_tamer
+                      filter:
+                        all_of:
+                          - kind: tamer
+                          - trait_has: "Glowing Dawn"
+                      prompt: "Choose a [Glowing Dawn] Tamer to place a card face down under"
+                  - place_selected_card_under_tamer:
+                      card: place_pick
+                      tamer: gd_tamer
+                      face_down: true
+          else:
+            # No [Glowing Dawn] Tamer — only the add-to-hand half runs.
+            - select_reveal:
+                of: you
+                bind_as: add_pick
+                filter: { trait_has: "Glowing Dawn" }
+                prompt: "Add 1 [Glowing Dawn] card to the hand"
+            - add_to_hand_from_reveal: { of: you, card: add_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Inherited <Piercing> ────────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "Inherited <Piercing>"

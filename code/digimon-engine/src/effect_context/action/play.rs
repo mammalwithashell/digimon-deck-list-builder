@@ -283,6 +283,101 @@ impl<'a> EffectContext<'a> {
         Some((permanent, token))
     }
 
+    /// USE an Option card from `player`'s hand at `hand_index`, deducting
+    /// memory according to `cost_delta`. The full Option lifecycle runs
+    /// (OnUseOption, OptionMain / mode selection, subtype disposal). The
+    /// Option-USE analogue of [`Self::play_from_hand_with_cost`].
+    ///
+    /// The Main-phase gate is LIFTED for the duration of this call — an
+    /// effect that says "play or use 1 … card" may fire from any timing (e.g.
+    /// BT25-041's `[When Attacking]`), so the use must be legal outside the
+    /// Main phase. `G-PLAY-OR-USE-FROM-HAND`.
+    ///
+    /// Returns the `OptionPlayResult`. `Pending` means the Option's body (or
+    /// a dual-mode mode-select) installed a `PendingSelection` the caller must
+    /// drive — the effect-driven phase lift persists across that re-entry.
+    pub fn use_option_from_hand_with_cost(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> crate::selection::OptionPlayResult {
+        self.game
+            .use_option_from_hand_with_cost(player, hand_index, cost_delta)
+    }
+
+    /// Unified "**play or use** 1 card from hand with `cost_delta` applied"
+    /// entry point (Aces / BEATBREAK printed wording). Inspects the hand
+    /// card's `CardKind` and routes:
+    ///
+    /// - `Digimon` / `Tamer` / `DigiEgg` → [`Self::play_from_hand_with_cost`]
+    ///   (the card is PLAYED to the battle area at the reduced cost).
+    /// - `Option` → [`Self::use_option_from_hand_with_cost`] (the card is USED
+    ///   at the reduced use cost, full Option lifecycle).
+    /// - `Dual` → because a DUAL card can enter play as a Digimon OR be used as
+    ///   an Option, the face is a player CHOICE that is part of the use (no
+    ///   auto-selection — §17). A `SelectionKind::EffectChoice` with labels
+    ///   `["Play as Digimon", "Use as Option"]` is surfaced; the callback then
+    ///   routes to the play or use path. This call returns immediately after
+    ///   installing the prompt; the caller must drive the resulting selection.
+    ///
+    /// `G-PLAY-OR-USE-FROM-HAND`. Used by ST23-04 / ST23-08 / BT25-041
+    /// ("you may play or use 1 [Glowing Dawn] trait card from your hand with
+    /// the cost reduced by 3").
+    pub fn play_or_use_from_hand_with_cost(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) {
+        let Some(card) = self.game.player(player).hand.get(hand_index) else {
+            return;
+        };
+        match card.card_kind(&self.game.card_data) {
+            crate::enums::CardKind::Digimon
+            | crate::enums::CardKind::Tamer
+            | crate::enums::CardKind::DigiEgg => {
+                let _ = self.play_from_hand_with_cost(player, hand_index, cost_delta);
+            }
+            crate::enums::CardKind::Option => {
+                let _ = self.use_option_from_hand_with_cost(player, hand_index, cost_delta);
+            }
+            crate::enums::CardKind::Token => {
+                // A Token never lives in hand; nothing to play or use.
+            }
+            crate::enums::CardKind::Dual => {
+                self.select_effect_choice(
+                    "Play as Digimon or use as Option",
+                    vec![
+                        "Play as Digimon".to_string(),
+                        "Use as Option".to_string(),
+                    ],
+                    move |cb_ctx, choice| {
+                        // Re-resolve the hand index defensively (the hand has
+                        // not mutated between installing the prompt and its
+                        // resolution within this effect, so `hand_index` is
+                        // stable, but guard against an empty/OOB hand).
+                        if cb_ctx.game.player(player).hand.get(hand_index).is_none() {
+                            return;
+                        }
+                        match choice {
+                            // 0 → Play as Digimon.
+                            0 => {
+                                let _ = cb_ctx
+                                    .play_from_hand_with_cost(player, hand_index, cost_delta);
+                            }
+                            // 1 → Use as Option.
+                            _ => {
+                                let _ = cb_ctx
+                                    .use_option_from_hand_with_cost(player, hand_index, cost_delta);
+                            }
+                        }
+                    },
+                );
+            }
+        }
+    }
+
     /// Play the top card of `player`'s security stack **without paying
     /// memory**. Used by effects that say "play the top card of your
     /// security stack" (e.g. BT12-091; Phase 2f1 DSL `PlayFromSecurity`

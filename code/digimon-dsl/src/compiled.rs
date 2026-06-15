@@ -333,6 +333,9 @@ pub struct CompiledPredicate {
     /// True when the observer's battle-area Tamers collectively have at
     /// least N distinct colors. G-DSL-DISTINCT-TAMER-COLORS.
     pub distinct_tamer_colors_gte: Option<u8>,
+    /// True when the observer's battle-area Tamers collectively carry at least
+    /// N face-down digivolution sources. G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.
+    pub face_down_sources_under_tamers_gte: Option<u8>,
     /// Battle-context leaf: true when the effect's carrier is battling an
     /// opposing Digimon with zero digivolution source cards.
     pub battle_opponent_no_sources: Option<bool>,
@@ -1226,11 +1229,29 @@ pub enum CompiledStep {
     TrashBottomFaceDownSourceUnderTamer {
         of: CompiledPlayerRef,
     },
+    /// Multi-count / multi-Tamer sibling of
+    /// `TrashBottomFaceDownSourceUnderTamer`. Trash `count` bottom-face-down
+    /// digivolution sources total, distributed across `of`'s Tamers, each pick
+    /// surfaced as a real selection. Compiled from
+    /// `trash_bottom_face_down_sources_under_tamers`; used as an activation cost
+    /// by BT25-035 Cougarmon. `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER`.
+    TrashBottomFaceDownSourcesUnderTamers {
+        of: CompiledPlayerRef,
+        count: u8,
+    },
     PlaceSelectedCardUnderTamer {
         card: CompiledBindingRef,
         tamer: CompiledBindingRef,
         face_down: bool,
         bind_as: Option<String>,
+    },
+    /// Relocate THIS effect's source Option (an in-battle-area field Option)
+    /// face-down under a chosen own permanent — a new Option-lifecycle exit
+    /// distinct from trashing. Compiled from `move_self_option_under_permanent`.
+    /// G-MOVE-SELF-OPTION-UNDER-PERMANENT.
+    MoveSelfOptionUnderPermanent {
+        target: CompiledBindingRef,
+        face_down: bool,
     },
     PlaceSelectedSourcesUnderTamer {
         source_refs: String,
@@ -1272,6 +1293,13 @@ pub enum CompiledStep {
         use_cost_lte_opponent_memory: bool,
         optional: bool,
         prompt: Option<String>,
+    },
+    /// Unified play-or-use of a `select_hand`-bound card with a cost
+    /// adjustment. `G-PLAY-OR-USE-FROM-HAND`.
+    PlayOrUseFromHand {
+        of: CompiledPlayerRef,
+        hand_index: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
     },
     PlayFromRevealedFree {
         of: CompiledPlayerRef,

@@ -1,0 +1,65 @@
+# ST23-02 Liollmon — Digimon, Lv.3, Yellow, DP 2000, Cost 3.
+# Traits: Holy Beast, Glowing Dawn, BEATBREAK. Attribute: Vaccine.
+# Printed digivolve box: [Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [Your Turn] When this Digimon would digivolve into a Digimon card with the
+#     [Glowing Dawn] trait, reduce the cost by 1.
+#   Inherited: ＜Barrier＞ (When this Digimon would be deleted in battle, by
+#     trashing your top security card, it isn't deleted.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Yellow/ST23_02.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level: 2, PermanentCondition TopCard.EqualsTraits("Glowing Dawn"),
+#   digivolutionCost: 0). → alt_paths digivolve from level 2 + Glowing Dawn
+#   trait, cost 0.
+# Clause 1 (timing None, ChangeDigivolutionCostStaticEffect changeValue -1):
+#   PermanentCondition = (targetPermanent == card.PermanentOfThisCard()) — i.e.
+#   THIS permanent (Liollmon) is the one being digivolved INTO; CardSourceCondition
+#   = the digivolve-target card EqualsTraits("Glowing Dawn"); Condition =
+#   IsOwnerTurn. setFixedCost: false → a flat -1 reduction. → kind: cost_reduction,
+#   before_pay_cost, your_turn + source_is_cost_target_permanent +
+#   cost_target { kind: digimon, trait_has: Glowing Dawn }, amount 1. Not OPT,
+#   no pay_cost — the synchronous scan credits it (BT23-005 idiom).
+# Inherited (WhenPermanentWouldBeDeleted): BarrierSelfEffect(isInheritedEffect)
+#   → scope: inherited + grant_keyword Barrier.
+
+card: ST23-02
+name: "Liollmon"
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Holy Beast, Glowing Dawn, BEATBREAK]
+attribute: Vaccine
+
+# Alt-digivolve: Lv.2 with the [Glowing Dawn] trait / cost 0.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "Glowing Dawn" }
+    cost: 0
+
+effects:
+  # ─── [Your Turn] digivolve INTO a [Glowing Dawn] Digimon → cost -1 ──────────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - trait_has: "Glowing Dawn"
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into a [Glowing Dawn] Digimon card, reduce the cost by 1"
+
+  # ─── Inherited <Barrier> ───────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "Inherited <Barrier>"

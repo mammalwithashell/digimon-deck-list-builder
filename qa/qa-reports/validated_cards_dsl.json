@@ -6768,48 +6768,36 @@
     },
     "BT25-088": {
       "card_name": "Kyo Sawashiro",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "beatbreak (Glowing Dawn)",
+      "archetype": "Glowing Dawn (BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-088.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_088.rs",
-      "test_count": 9,
-      "patterns": [
-        "B1"
-      ],
-      "notes": "Start-of-turn set-3, on-lose-security suspend-self+place-2-FD, [Security] play-self IMPLEMENTED. Clause 3 (Glowing Dawn play cost -1 by trashing FD under Tamer) BLOCKED on G-COST-REDUCTION-INTERACTIVE-PAY-COST, omitted. cards.json text was wrong (only had inherited line); authored from card image + DCGO."
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
     },
     "BT25-090": {
       "card_name": "Tomoro Tenma",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "beatbreak (Glowing Dawn)",
+      "archetype": "Glowing Dawn (BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-090.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_090.rs",
-      "test_count": 9,
-      "patterns": [
-        "B1"
-      ],
-      "notes": "Start-of-turn set-3, on-any-Digimon-suspend suspend-self+place-2-FD, [Security] play-self IMPLEMENTED. Clause 3 (Glowing Dawn Option-use cost -1) BLOCKED on G-COST-REDUCTION-INTERACTIVE-PAY-COST, omitted."
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
     },
     "BT25-049": {
       "card_name": "Armalizamon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "beatbreak (Glowing Dawn)",
+      "archetype": "Glowing Dawn (BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-049.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_049.rs",
-      "test_count": 7,
-      "patterns": [
-        "H3"
-      ],
-      "notes": "On Play/WhenDigivolving optional suspend opp Digimon, inherited Piercing, Glowing Dawn alt-digivolve IMPLEMENTED. Clause 2 (Glowing Dawn Option-use cost -3) BLOCKED on G-COST-REDUCTION-INTERACTIVE-PAY-COST, omitted."
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
     },
     "BT25-081": {
       "card_name": "Fangmon",
@@ -6829,46 +6817,50 @@
     },
     "BT25-035": {
       "card_name": "Cougarmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-15",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "beatbreak (Glowing Dawn)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-035.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_035.rs",
-      "test_count": 6,
+      "test_count": 12,
       "patterns": [
-        "H14"
+        "H14",
+        "GLOWING-DAWN-ALT-DIGIVOLVE",
+        "G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER"
       ],
-      "notes": "-3000 DP debuff (On Play/WhenDigivolving), inherited Barrier, Glowing Dawn alt-digivolve IMPLEMENTED. The 'Then, by trashing 2 FD … may digivolve into a Glowing Dawn card free' half BLOCKED on G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER, omitted."
+      "notes": "[On Play][When Digivolving] (A) 1 opp Digimon -3000 DP for the turn (mandatory); (B) by trashing 2 bottom face-down cards from under any of your Tamers (new multi-Tamer trash-2 verb trash_bottom_face_down_sources_under_tamers count:2 -- '2 from one Tamer' OR '1 from each of two Tamers', each Tamer pick a real PendingSelection), this Digimon MAY digivolve into a [Glowing Dawn] hand card for free (optional select_hand carries the 'may'; gated on face_down_sources_under_tamers_gte:2 + a Glowing Dawn in hand). Inherited <Barrier>; Lv.3 [Glowing Dawn] alt-digivolve cost 2. ALL IMPLEMENTED -- closes G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.",
+      "audit_note": "Faithful to card image + DCGO BT25_035.cs (SharedActivateCoroutine: -3000 DP UntilEachTurnEnd; gate (TamerWith2OrMoreFaceDownSources || >1 TamerWithOneFaceDownSource); maxCount 2 canEndNotMax with CanEndSelectCondition (2 picked || 1 picked w/>=2 sources); 1 Tamer->trash 2 bottom / 2 Tamers->trash 1 each; then DigivolveIntoHandOrTrashCard payCost:false isHand:true over HasGlowingDawnTraits). 12 tests: 2-from-one, 1+1-from-two, free digivolve (no memory), declinable, <2-FD unpayable gate, no-GD-in-hand negative."
     },
     "BT25-041": {
       "card_name": "Murasamemon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-06-15",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "beatbreak (Glowing Dawn)",
+      "archetype": "Glowing Dawn (BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-041.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_041.rs",
-      "test_count": 5,
+      "test_count": 9,
       "patterns": [
-        "H10"
+        "H10",
+        "GLOWING-DAWN-ALT-DIGIVOLVE",
+        "G-PLAY-OR-USE-FROM-HAND"
       ],
-      "notes": "Alliance, Glowing Dawn alt-digivolve, inherited [End of Attack][OPT] trash-FD-under-Tamer (process cost) -> unsuspend Glowing Dawn host IMPLEMENTED. Main [WD][WA][OPT] play/use Glowing Dawn -3 by add-security-or-trash-FD BLOCKED (G-COST-REDUCTION-INTERACTIVE-PAY-COST + pay-one-of-two-cost composite), omitted."
+      "notes": "Alliance, Lv.4 [Glowing Dawn] alt-digivolve, inherited [End of Attack][OPT] trash-FD-under-Tamer (process cost) -> unsuspend Glowing Dawn host, AND the main [WD][WA][OPT] clause all IMPLEMENTED. Main clause: optional engagement gate + select_effect_choice 2-way pay-cost menu (add top security to hand | trash a face-down card under a Tamer), each branch gated by its resource (ST23-05/BT25-043 gated-branch idiom), then optional select_hand over [Glowing Dawn] cards -> play_or_use_from_hand at cost reduced by 3 (G-PLAY-OR-USE-FROM-HAND). Promoted from PARTIAL.",
+      "audit_note": "Main clause faithful to DCGO BT25_041.cs SetIntSelection 3-way pay menu (value 1 add-top-security iff security present, value 2 trash-FD iff eligible Tamer, value 3 don't-pay) -> hasPaidCost-gated SelectHand over GlowingDawn -> ChangeCost -3 -> PlayOption/PlayPermanent. Tests cover both pay paths (add-security->use Option, trash-FD->play Digimon), decline, and no-GD-in-hand negative."
     },
     "BT25-057": {
       "card_name": "Monarchlizamon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
-      "archetype": "beatbreak (Glowing Dawn)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "DUAL card (Digimon + Option 'Final Judgment'); cards.json mislabels it as plain Digimon. BLOCKED on G-DSL-DUAL-PER-FACE-EFFECTS (DualSpec carries no effects: per face) + Arts Digivolve authoring. No YAML shipped."
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-057.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_057.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
     },
     "BT25-011": {
       "card_name": "Aquilamon",
@@ -7153,19 +7145,14 @@
     },
     "BT25-043": {
       "card_name": "Habakirimon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
-      "archetype": "Slice — aegiomon-2 (BT25 Olympos XII Lv6 / BEATBREAK)",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-043.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_043.rs",
-      "patterns": [
-        "E1",
-        "E2",
-        "F3"
-      ],
-      "notes": "Digimon side IMPLEMENTED (Recovery+1 + most-sec-trash unsuspend + Glowing-Dawn leave-prevention). BEATBREAK Option [Main]/Arts-Digivolve side omitted (G-DSL-BEATBREAK-ARTS-OPTION). 8 tests."
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
     },
     "BT25-044": {
       "card_name": "Junomon",
@@ -9413,6 +9400,200 @@
         "E"
       ],
       "notes": "Green Option. <Use Req. ([Glowing Dawn] trait)> self-satisfied -> unconditional from-hand color bypass via use_requirement:{all_turns:true} (P-206 idiom; flood_gate retained for battle-area scope). [Main] reveal-3, add 1 [Glowing Dawn], rest to deck bottom, place self in battle area; [Main]<Delay> (trigger:delayed, MainPhaseActivated) gain 2 memory; inherited [Security] place self. DCGO P_236.cs (== BT24-100 shape). 9/9 tests pass, 0 ignored."
+    },
+    "ST23-04": {
+      "card_name": "Murasamemon",
+      "validated_date": "2026-06-15",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_04.rs",
+      "test_count": 8,
+      "patterns": [
+        "H10",
+        "GLOWING-DAWN-ALT-DIGIVOLVE",
+        "G-PLAY-OR-USE-FROM-HAND"
+      ],
+      "notes": "<Alliance>; Lv.4 [Glowing Dawn] alt-digivolve cost 3; [On Play][When Digivolving] (A) 1 opp Digimon -5000 DP for the turn (mandatory) + (B) if your turn, by trashing a bottom face-down card under a Tamer (optional engagement gate = DCGO canNoSelect trash), you MAY play or use 1 [Glowing Dawn] card from hand at cost-3 (optional select_hand carries the hand-pick canNoSelect); inherited [End of Attack][OPT] trash-FD -> unsuspend Glowing Dawn self. ALL IMPLEMENTED on the new unified play-or-use substrate (G-PLAY-OR-USE-FROM-HAND: EffectContext::play_or_use_from_hand_with_cost + use_option_from_hand_with_cost + DSL play_or_use_from_hand verb; routes Digimon/Tamer play, Option use, Dual face-choice).",
+      "audit_note": "Faithful to printed text + DCGO ST23_04.cs (SharedActivateCoroutine: -5000 DP UntilEachTurnEnd, then IsOwnerTurn canNoSelect Tamer trash -> canNoSelect SelectHand over GlowingDawn -> ChangeCost -3 -> PlayOption/PlayPermanent payCost). Tests cover play GD Digimon at cost-3, use GD Option at cost-3, FD-trash paid, optional decline, no-GD-in-hand negative."
+    },
+    "ST23-08": {
+      "card_name": "Monarchlizamon",
+      "validated_date": "2026-06-15",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_08.rs",
+      "test_count": 7,
+      "patterns": [
+        "H10",
+        "GLOWING-DAWN-ALT-DIGIVOLVE",
+        "G-PLAY-OR-USE-FROM-HAND"
+      ],
+      "notes": "<Alliance>; Lv.4 [Glowing Dawn] alt-digivolve cost 3; [On Play][When Digivolving] (A) this +3000 DP until opp turn end (mandatory) + (B) if your turn, by trashing a bottom face-down card under a Tamer, you MAY play or use 1 [Glowing Dawn] card from hand at cost-3; inherited [End of Attack][OPT] trash-FD -> unsuspend Glowing Dawn self. ALL IMPLEMENTED on the unified play-or-use substrate (G-PLAY-OR-USE-FROM-HAND). Mirror of ST23-04 except clause A buffs self instead of debuffing an opponent.",
+      "audit_note": "Faithful to printed text + DCGO ST23_08.cs (Green; +3000 UntilOpponentTurnEnd then same canNoSelect Tamer-trash -> canNoSelect GlowingDawn SelectHand -> ChangeCost -3 -> Play/Use). Tests cover play GD Digimon at cost-3, use GD Option at cost-3, optional decline."
+    },
+    "ST23-06": {
+      "card_name": "Gekkomon",
+      "validated_date": "2026-06-15",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_06.rs",
+      "test_count": 7,
+      "patterns": [
+        "A2",
+        "A3",
+        "GLOWING-DAWN-ALT-DIGIVOLVE",
+        "G-DSL-PLACE-REVEALED-CARD-UNDER-TAMER"
+      ],
+      "notes": "[When Moving][On Play] Reveal top 3; add 1 [Glowing Dawn] card to hand AND place 1 such card face down under a [Glowing Dawn] Tamer; rest to deck bottom. The place-revealed-under-tamer half closes G-DSL-PLACE-REVEALED-CARD-UNDER-TAMER (place_selected_card_under_tamer now resolves a reveal-pool card via EffectContext::place_revealed_card_under_tamer). No GD Tamer -> only add-to-hand bucket runs (DCGO HasMatchConditionOwnersPermanent gate). Inherited <Piercing>; Lv.2 [Glowing Dawn] alt-digivolve cost 0. Image-authoritative cost 3 / DP 1000 (cards.json play_cost/dp were API-ingest gaps).",
+      "audit_note": "Faithful to card image ST23-06 + DCGO ST23_06.cs (two-bucket SimplifiedRevealDeckTopCardsAndSelect: AddHand GlowingDawn + Custom PlaceUnderTamer GlowingDawn -> SelectPermanent over GD Tamers -> AddDigivolutionCardsBottom isFacedown:true; if no GD Tamer, single AddHand bucket; remainder DeckBottom). 7 tests: add+place under GD Tamer face-down, no-GD-Tamer add-only, single-GD-to-hand, no-GD-revealed all-to-bottom, structural."
+    },
+    "ST23-15": {
+      "card_name": "e-Pulse",
+      "validated_date": "2026-06-15",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-15.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_15.rs",
+      "test_count": 7,
+      "patterns": [
+        "G-MOVE-SELF-OPTION-UNDER-PERMANENT",
+        "G-PLAY-OR-USE-FROM-HAND",
+        "OPTION-PERSIST-FIELD"
+      ],
+      "notes": "<Use Req. [BEATBREAK]>; [Main] you may play 1 [BEATBREAK] cost<=4 card from hand/trash free (select_union_zone + play_union_bound_free), then persist on field (kind:delay marker). [Start of Your Main Phase] by placing THIS card from the battle area face down under a [BEATBREAK] Tamer, <Draw 1> and gain 1 memory -- the new move_self_option_under_permanent engine primitive + DSL verb (closes G-MOVE-SELF-OPTION-UNDER-PERMANENT): fires no OnOptionTrashed / no OnDigivolutionCardTrashed; relocate declinable (canNoSelect). Inherited [Security]: re-run [Main].",
+      "audit_note": "Faithful to card image ST23-15 + DCGO ST23_15.cs (Main: Hand/Trash/Don't-play -> PlayForFree over IsDigimon||IsTamer BEATBREAK cost<=4 -> PlaceDelayOptionCards; SOMP: canNoSelect SelectPermanent over BEATBREAK Tamers -> AddDigivolutionCardsBottom isFacedown:true -> Draw 1 -> AddMemory 1; Security AddActivateMainOptionSecurityEffect). 7 tests: relocate-under-BB-Tamer face-down + draw + memory + NOT-in-trash, declinable, no-BB-Tamer no-relocate, Main play-free + persist, structural."
+    },
+    "ST23-01": {
+      "card_name": "Kekkomon",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_01.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-02": {
+      "card_name": "Liollmon",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_02.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-03": {
+      "card_name": "Cougarmon",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_03.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-05": {
+      "card_name": "Habakirimon",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_05.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-07": {
+      "card_name": "Armalizamon",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_07.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-09": {
+      "card_name": "Atratusmon",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_09.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-10": {
+      "card_name": "Pristimon",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-10.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_10.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-11": {
+      "card_name": "Wolvermon",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_11.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-12": {
+      "card_name": "Chiropmon",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_12.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-13": {
+      "card_name": "Tomoro Tenma & Kyo Sawashiro",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_13.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST23-14": {
+      "card_name": "Reina Sakuya & Makoto Kuonji",
+      "validated_date": "2026-06-15",
+      "report": "glowing-dawn-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn (BEATBREAK)",
+      "yaml_path": "code/digimon-engine/cards/st23/ST23-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_14.rs",
+      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
     }
   }
 }

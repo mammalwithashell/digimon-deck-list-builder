@@ -7,7 +7,7 @@
 #     place the top 2 cards of your deck face down under this Tamer.
 #   [Your Turn] [Once Per Turn] When you would use [Glowing Dawn] trait Option
 #     cards, by trashing the bottom face-down card from under any of your
-#     Tamers, reduce the cost by 1.                  <-- BLOCKED, see below
+#     Tamers, reduce the cost by 1.
 #   Inherited: [Security] Play this card without paying the cost.
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_090.cs
@@ -24,16 +24,22 @@
 #   active_when { all_turns, event_target_kind: digimon } gates the trigger to a
 #   Digimon suspending (not a Tamer). DCGO's 3-way menu (place-2 / suspend-only /
 #   no) reduces to optional suspend-self+place-2; declining = "No".
-# Clause 3 (BeforePayCost) — BLOCKED (engine):
-#   "[Your Turn][OPT] When you would USE a [Glowing Dawn] Option card, by
-#   trashing the bottom face-down card under any Tamer, reduce the cost by 1."
-#   Natural authoring: `kind: cost_reduction` with `pay_cost:
-#   [trash_bottom_face_down_source_under_tamer]`, but that pay_cost is
-#   INTERACTIVE (installs a Tamer selection) → parks → the cost-reduction
-#   accept-path drops the reduction credit while still trashing the face-down
-#   card. Engine gap G-COST-REDUCTION-INTERACTIVE-PAY-COST
-#   (docs/RUST_ENGINE_GAPS.md; same gap as Kyo BT25-088 clause 3, except keyed
-#   on Option-USE rather than card-PLAY). Omitted; verdict PARTIAL.
+# Clause 3 (BeforePayCost) — NOW IMPLEMENTED (2026-06-15):
+#   "[Your Turn][Once Per Turn] When you would USE a [Glowing Dawn] Option card,
+#   by trashing the bottom face-down card under any Tamer, reduce the cost by 1."
+#   Same shape as BT25-049 clause 2 (Option-USE keyed), amount 1 instead of 3.
+#   DCGO keys on CanTriggerWhenPermanentWouldPlay over a Glowing-Dawn Option
+#   with a use cost; the Tamer pick is skippable/can-no-select → the player may
+#   decline → no reduction, so the reducer is modelled `optional: true` (the
+#   accept gate IS the decline, exposed to the RL action space). maxCountPerTurn
+#   1 → once_per_turn.
+#   → kind: cost_reduction + when_any_ally_played { kind: option, trait_has:
+#     Glowing Dawn } + active_when { your_turn } + optional + once_per_turn +
+#     amount 1 + pay_cost [trash_bottom_face_down_source_under_tamer]. The
+#     interactive pay_cost parks; the engine credits the -1 behind the parked
+#     pay_cost on the Option-use path
+#     (game_actions/options.rs::try_prompt_interactive_option_use_cost_reducer,
+#     G-COST-REDUCTION-INTERACTIVE-PAY-COST closed for the Option-use path).
 # Inherited (SecuritySkill): PlaySelfTamerSecurityEffect → play_from_security.
 
 card: BT25-090
@@ -70,8 +76,21 @@ effects:
           target: source
           face_down: true
 
-  # ─── [Your Turn][OPT] Glowing Dawn Option use cost -1 — BLOCKED, omitted
-  #     (G-COST-REDUCTION-INTERACTIVE-PAY-COST). See header. ───────────────────
+  # ─── [Your Turn][Once Per Turn] When you would use a [Glowing Dawn] Option,
+  #     by trashing a bottom face-down card under a Tamer, reduce the cost by 1 ─
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    when_any_ally_played:
+      all_of:
+        - kind: option
+        - trait_has: "Glowing Dawn"
+    optional: true
+    once_per_turn: true
+    amount: 1
+    pay_cost:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+    summary: "[Your Turn][Once Per Turn] When you would use a [Glowing Dawn] Option card, by trashing a bottom face-down card under a Tamer, reduce the cost by 1"
 
   # ─── [Security] Play this card without paying the cost ─────────────────────
   # (cards.json files this under inherited_effect_description for Tamers; the

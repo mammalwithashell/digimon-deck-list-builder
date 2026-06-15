@@ -3790,6 +3790,8 @@ pub enum CardSourceRef {
 |--------|---------|
 | `play_from_hand_with_cost(player, hand_index, CostDelta) -> Option<PermanentHandle>` | Play from hand at a computed cost. `CostDelta::Free` bypasses printed cost. |
 | `play_from_trash_with_cost(player, trash_index, CostDelta) -> Option<PermanentHandle>` | Play from trash. Same cost-delta contract. |
+| `use_option_from_hand_with_cost(player, hand_index, CostDelta) -> OptionPlayResult` | USE an Option from hand at a computed use cost (full OnUseOption / OptionMain / disposal lifecycle). The Option-USE analogue of `play_from_hand_with_cost`. The Main-phase gate is LIFTED for the duration — an effect that grants "play or use" may fire from any timing. `G-PLAY-OR-USE-FROM-HAND`. |
+| `play_or_use_from_hand_with_cost(player, hand_index, CostDelta)` | Unified "**play or use** 1 card from hand" (Aces/BEATBREAK wording). Inspects `CardKind`: Digimon/Tamer/DigiEgg → play, Option → use, **Dual** → a `SelectionKind::EffectChoice` `["Play as Digimon", "Use as Option"]` face choice (§17 — no auto-select). DSL verb: `play_or_use_from_hand: { of, hand_index: <select_hand binding>, cost_delta }`. `G-PLAY-OR-USE-FROM-HAND`. |
 
 Example — free play from hand inside an OnPlay effect:
 

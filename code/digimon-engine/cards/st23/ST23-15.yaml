@@ -1,0 +1,157 @@
+# ST23-15 e-Pulse — Option, White, Use cost 3.
+# Traits: Glowing Dawn, BEATBREAK.
+#
+# Printed card text (CARD IMAGE — authoritative):
+#   <Use Req. ([BEATBREAK] trait)> (Specified cards let you ignore color
+#     requirements.)
+#   [Main] You may play 1 [BEATBREAK] trait card with a play cost of 4 or less
+#     from your hand or trash without paying the cost. Then, place this card in
+#     the battle area.
+#   [Start of Your Main Phase] By placing this card from the battle area face
+#     down under any of your [BEATBREAK] trait Tamers, <Draw 1> and gain 1 memory.
+#   Inherited [Security]: Activate this card's [Main] effects.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/White/ST23_15.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Use Req — UseRequirements(card, EqualsTraits("BEATBREAK")) → use_requirement
+#   over a battle-area BEATBREAK Digimon/Tamer (ignore color).
+# [Main] (OptionSkill) — a player-visible Hand/Trash/Don't-play SetIntSelection,
+#   then SelectHand/SelectCard(PlayForFree) over IsDigimon||IsTamer, BEATBREAK,
+#   GetCostItself<=4. → select_union_zone { zones: [hand, trash] } (optional —
+#   the "You may") + play_union_bound_free. Then PlaceDelayOptionCards keeps the
+#   Option on the battle area: modelled via the `kind: delay` marker (BT21-093
+#   idiom) so dispose_option places it as a field Delay permanent. The card's
+#   real persistent trigger is the [Start of Your Main Phase] clause below, which
+#   fires from the field Option permanent (StartOfYourMainPhase is enqueued over
+#   the whole battle area).
+# [Start of Your Main Phase] (OnStartMainPhase) — CanActivate gated on a
+#   BEATBREAK Tamer existing; SelectPermanentEffect over own BEATBREAK Tamers
+#   (canNoSelect: true → optional), then AddDigivolutionCardsBottom({this},
+#   isFacedown: true) → Draw 1 → AddMemory(1). The relocate is the new
+#   G-MOVE-SELF-OPTION-UNDER-PERMANENT engine primitive (CLOSED 2026-06-15):
+#   move_self_option_under_permanent { target, face_down } pops the field
+#   Option's top CardSource and pushes it face-down under the chosen Tamer,
+#   firing NEITHER OnOptionTrashed NOR OnDigivolutionCardTrashed (the card moves,
+#   it is not trashed). Draw + memory run only after a successful relocate.
+# [Security] (SecuritySkill, AddActivateMainOptionSecurityEffect) — re-run the
+#   [Main] body from security: same play-or-use-free clause.
+
+card: ST23-15
+name: "e-Pulse"
+kind: option
+color: [white]
+cost: 3
+traits: [Glowing Dawn, BEATBREAK]
+
+# Use Req. [BEATBREAK] trait — a BEATBREAK Digimon/Tamer on the field satisfies
+# the Option's color requirement (ignore color).
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: "BEATBREAK"
+      - all_of:
+          - kind: tamer
+          - trait_has: "BEATBREAK"
+
+effects:
+  # ─── [Main] play 1 [BEATBREAK] cost<=4 from hand/trash free; place self in BA ─
+  - when: main_from_hand
+    summary: "[Main] You may play 1 [BEATBREAK] cost<=4 card from hand/trash free; then place this card in the battle area"
+    process:
+      # "You may play 1 [BEATBREAK] trait card with a play cost of 4 or less
+      # from your hand or trash without paying the cost." — the optional
+      # select_union_zone carries the "You may"; declining (PASS) leaves the
+      # binding unset and play_union_bound_free is a silent no-op.
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: bb_pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - trait_has: "BEATBREAK"
+              - play_cost_lte: 4
+          prompt: "You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: bb_pick }
+      # "Then, place this card in the battle area." — persistence handled by the
+      # `kind: delay` marker below (dispose_option → field Delay permanent).
+
+  # ─── [Start of Your Main Phase] relocate self face down under a [BEATBREAK]
+  #     Tamer → <Draw 1> and gain 1 memory ────────────────────────────────────
+  - when: start_of_your_main_phase
+    optional: true
+    # Gate on a [BEATBREAK] Tamer existing (DCGO CanActivateCondition); without
+    # one the relocate cannot be paid and the clause does not fire.
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        trait_has: "BEATBREAK"
+    summary: "[Start of Your Main Phase] By placing this card face down under a [BEATBREAK] Tamer, <Draw 1> and gain 1 memory"
+    process:
+      # "By placing this card from the battle area face down under any of your
+      # [BEATBREAK] trait Tamers" — the optional Tamer pick carries the "may"
+      # (DCGO canNoSelect: true). Declining (PASS) leaves the binding unset →
+      # nothing is relocated, drawn, or gained.
+      - select_own_permanent:
+          bind_as: bb_tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: "BEATBREAK"
+          prompt: "Place this card face down under a [BEATBREAK] Tamer to draw 1 and gain 1 memory"
+      - if:
+          condition: { binding_present: bb_tamer }
+          then:
+            # The new Option-lifecycle exit: relocate THIS field Option face-down
+            # under the chosen Tamer (fires no OnOptionTrashed / no
+            # OnDigivolutionCardTrashed).
+            - move_self_option_under_permanent: { target: bb_tamer, face_down: true }
+            # "<Draw 1> and gain 1 memory" — only after a successful relocate.
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  # ─── kind: delay marker — keeps the Option on the battle area after [Main] ──
+  #
+  # The Option has no printed <Delay> body; this clause is a STRUCTURAL MARKER
+  # only (BT21-093 idiom) so classify_option_modes places the Option in the
+  # battle area as a field Delay permanent. Its trigger is end_of_your_next_turn
+  # with an EMPTY process (a harmless no-op that does NOT trash the card), so the
+  # Option persists until its [Start of Your Main Phase] clause relocates it. The
+  # real activation is the SOMP clause above, which fires from this field Option.
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Delay marker] e-Pulse persists in the battle area"
+    process: []
+
+  # ─── [Security] Activate this card's [Main] effects ──────────────────────────
+  #
+  # Re-run the [Main] body from security: same optional play-or-use-free clause.
+  - when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: bb_pick_sec
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - trait_has: "BEATBREAK"
+              - play_cost_lte: 4
+          prompt: "You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: bb_pick_sec }

@@ -1,0 +1,103 @@
+# ST23-10 Pristimon — Digimon, Lv.3, Black, DP 2000, Cost 3.
+# Traits: Puppet, Glowing Dawn, BEATBREAK. Attribute: Vaccine.
+# Printed digivolve box: [Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [On Play] By placing 1 card from your hand face down under any of your Tamers
+#     with the [Glowing Dawn] trait, ＜Draw 2＞ (Draw 2 cards from your deck.)
+#   Inherited: ＜Blocker＞ (This Digimon can block in the blocker timing.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Black/ST23_10.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level 2, TopCard EqualsTraits("Glowing Dawn"), cost 0). → alt_paths
+#   digivolve from level 2 + Glowing Dawn trait, cost 0.
+# On Play (OnEnterFieldAnyone): CanActivate gated on hand non-empty AND a
+#   [Glowing Dawn] Tamer existing.
+#   - SelectHandEffect maxCount 1, canNoSelect:true, canTargetCondition _=>true
+#     (ANY hand card). → optional select_hand { } (no filter).
+#   - If a card was selected: SelectPermanentEffect over IsOwnTamerCondition
+#     (own Tamer, TopCard EqualsTraits "Glowing Dawn"), maxCount 1,
+#     canNoSelect:true. → optional select_own_permanent { kind: tamer,
+#     trait_has: Glowing Dawn }.
+#   - If a Tamer was selected: AddDigivolutionCardsBottom(selectedCards, isFacedown
+#     ... false, true) → the chosen hand card placed face-down under the Tamer;
+#     then DrawClass(card.Owner, 2). → place_selected_card_under_tamer
+#     { card, tamer, face_down: true } + draw 2.
+#   Both selects optional (canNoSelect) → declining the placement aborts the
+#   draw (the draw is guarded on a Tamer actually being chosen). The "By
+#   placing … , <Draw 2>" cost-then-payoff shape means the Draw fires ONLY when
+#   the placement happens. binding_present guards reproduce that.
+# Inherited Blocker (always, BlockerSelfStaticEffect isInheritedEffect:true)
+#   → scope: inherited + grant_keyword Blocker.
+
+card: ST23-10
+name: "Pristimon"
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 2000
+traits: [Puppet, Glowing Dawn, BEATBREAK]
+attribute: Vaccine
+
+# Alt-digivolve: Lv.2 with the [Glowing Dawn] trait / cost 0.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "Glowing Dawn" }
+    cost: 0
+
+effects:
+  # ─── [On Play] By placing 1 hand card face-down under a [Glowing Dawn] Tamer,
+  #     <Draw 2> ───────────────────────────────────────────────────────────────
+  - when: on_play
+    # Gate so neither sub-prompt installs when the cost is unpayable: a hand card
+    # AND a [Glowing Dawn] Tamer must both exist (DCGO CanActivateCondition).
+    condition:
+      all_of:
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            trait_has: "Glowing Dawn"
+    summary: "[On Play] By placing 1 card from your hand face down under a [Glowing Dawn] Tamer, <Draw 2>"
+    process:
+      # "By placing 1 card from your hand" — optional (canNoSelect): ANY hand card.
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter: {}
+          prompt: "Place 1 card from your hand face down under a [Glowing Dawn] Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            # Choose the [Glowing Dawn] Tamer to place the card under (optional —
+            # declining aborts the placement and the draw).
+            - select_own_permanent:
+                bind_as: tamer
+                optional: true
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - trait_has: "Glowing Dawn"
+                prompt: "Choose a [Glowing Dawn] Tamer to place the card under"
+            - if:
+                condition: { binding_present: tamer }
+                then:
+                  - place_selected_card_under_tamer:
+                      card: stash
+                      tamer: tamer
+                      face_down: true
+                  - draw: { of: you, count: 2 }
+
+  # ─── Inherited <Blocker> ───────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "Inherited <Blocker>"

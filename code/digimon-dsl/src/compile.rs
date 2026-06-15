@@ -708,6 +708,7 @@ fn compile_predicate(
         self_color_count_gte: p.self_color_count_gte,
         has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
+        face_down_sources_under_tamers_gte: p.face_down_sources_under_tamers_gte,
         battle_opponent_no_sources: p.battle_opponent_no_sources,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
@@ -2064,6 +2065,12 @@ fn compile_step(
                 of: compile_player_ref(a.of),
             }
         }
+        S::TrashBottomFaceDownSourcesUnderTamers(a) => {
+            CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
+                of: compile_player_ref(a.of),
+                count: a.count,
+            }
+        }
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },
@@ -2072,6 +2079,10 @@ fn compile_step(
             tamer: compile_binding_ref(&a.tamer),
             face_down: a.face_down,
             bind_as: a.bind_as.clone(),
+        },
+        S::MoveSelfOptionUnderPermanent(a) => CompiledStep::MoveSelfOptionUnderPermanent {
+            target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
         },
         S::PlaceSelectedSourcesUnderTamer(a) => CompiledStep::PlaceSelectedSourcesUnderTamer {
             source_refs: a.source_refs.clone(),
@@ -2143,6 +2154,14 @@ fn compile_step(
             use_cost_lte_opponent_memory: a.use_cost_lte_opponent_memory,
             optional: a.optional,
             prompt: a.prompt.clone(),
+        },
+        S::PlayOrUseFromHand(a) => CompiledStep::PlayOrUseFromHand {
+            of: compile_player_ref(a.of),
+            hand_index: compile_binding_ref(&a.hand_index),
+            cost_delta: a
+                .cost_delta
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
         },
         S::PlayFromRevealedFree(a) => CompiledStep::PlayFromRevealedFree {
             of: compile_player_ref(a.of),

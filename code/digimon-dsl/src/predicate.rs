@@ -152,6 +152,14 @@ pub struct PredicateSpec {
     /// have 3 or more total colors"). G-DSL-DISTINCT-TAMER-COLORS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distinct_tamer_colors_gte: Option<u8>,
+    /// True when the observer's battle-area Tamer permanents collectively
+    /// carry at least N face-down digivolution sources. A no-subject global
+    /// predicate — does not inspect the candidate. Gates the `[Then]` clause of
+    /// BT25-035 Cougarmon ("by trashing 2 bottom face-down cards from under any
+    /// of your Tamers") so the optional digivolve is only offered when the
+    /// trash-2 cost is actually payable. G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub face_down_sources_under_tamers_gte: Option<u8>,
     /// True when this effect's carrier is currently battling an opposing
     /// Digimon with zero digivolution source cards. Used by inherited
     /// battle-only auras such as ST2-01 Tsunomon.

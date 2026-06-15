@@ -447,6 +447,35 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
     }
 }
 
+/// True when a cost-reduction `pay_cost` body's FIRST step INSTALLS A SELECTION
+/// (parks on a `pending_selection`) rather than completing synchronously. Such
+/// a reducer cannot be resolved by the synchronous digivolve / Option-use cost
+/// scan; the engine routes it through a dedicated interactive prompt instead
+/// (`Effect::pay_cost_interactive`). `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+///
+/// Conservative: lists the selection-installing steps actually used as cost
+/// payments today. The self-suspend / synchronous-trash idioms are NOT here, so
+/// they keep their synchronous scan handling.
+pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool {
+    let Some(first) = body.first() else {
+        return false;
+    };
+    matches!(
+        first,
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
+            | CompiledStep::SelectHand { .. }
+            | CompiledStep::SelectTrash { .. }
+            | CompiledStep::SelectReveal { .. }
+            | CompiledStep::SelectSecurity { .. }
+            | CompiledStep::SelectOwnPermanent { .. }
+            | CompiledStep::SelectOpponentPermanent { .. }
+            | CompiledStep::SelectAnyPermanent { .. }
+            | CompiledStep::SelectMaterial { .. }
+            | CompiledStep::SelectOwnSources { .. }
+            | CompiledStep::SelectCountCappedMulti { .. }
+    )
+}
+
 /// Resolve a `CompiledPlayerRef` against a read context to concrete player
 /// ids whose zone the predicate scans.
 fn players_for_compiled_ref(

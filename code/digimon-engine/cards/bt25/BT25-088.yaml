@@ -28,18 +28,19 @@
 #   reduce to: optionally suspend self then place 2 — declining the optional
 #   clause is the "No"; the DCGO "suspend only" middle option is a UI nicety not
 #   in the printed text.)
-# Clause 3 (BeforePayCost) — BLOCKED (engine):
+# Clause 3 (BeforePayCost) — NOW IMPLEMENTED (2026-06-14):
 #   "[Your Turn][OPT] When any of your [Glowing Dawn] cards would be PLAYED, by
 #   trashing the bottom face-down card under any Tamer, reduce the cost by 1."
-#   The natural authoring is `kind: cost_reduction` with `pay_cost:
-#   [trash_bottom_face_down_source_under_tamer: { of: you }]`, but that pay_cost
-#   step is INTERACTIVE (installs a 1-option Tamer selection — no-approximations
-#   never auto-resolves), so it returns RunOutcome::Parked and the cost-reduction
-#   accept-path drops the `amount` credit while still trashing the face-down
-#   card (player pays the cost, gets NO reduction). Engine gap
-#   G-COST-REDUCTION-INTERACTIVE-PAY-COST (docs/RUST_ENGINE_GAPS.md). Omitted
-#   here rather than shipping an under/over-charge — authoring it would silently
-#   diverge. Verdict PARTIAL.
+#   `kind: cost_reduction` with `when_any_ally_played: { trait_has: Glowing Dawn }`
+#   and `pay_cost: [trash_bottom_face_down_source_under_tamer]`. The pay_cost step
+#   is INTERACTIVE (installs a 1-option Tamer selection — no-approximations never
+#   auto-resolves) and PARKS, but the engine now defers the reduction credit to
+#   the parked pay_cost's success continuation on the PLAY-FROM-HAND chain
+#   (G-COST-REDUCTION-INTERACTIVE-PAY-COST closed for the play path,
+#   `game_actions/cost.rs::apply_cost_reduction_candidate allow_interactive_pay_cost`).
+#   The Option-USE and digivolve scan paths remain on the legacy synchronous
+#   scan (they pre-filter optional/paid reducers); a Glowing Dawn card played
+#   from hand (Digimon/Tamer) is the covered case here.
 # Clause 4 (SecuritySkill): PlaySelfTamerSecurityEffect → play_from_security.
 
 card: BT25-088
@@ -73,8 +74,17 @@ effects:
           target: source
           face_down: true
 
-  # ─── [Your Turn][OPT] Glowing Dawn play cost -1 — BLOCKED, intentionally
-  #     omitted (G-COST-REDUCTION-INTERACTIVE-PAY-COST). See header. ───────────
+  # ─── [Your Turn][OPT] When a [Glowing Dawn] card would be played, by trashing
+  #     a bottom face-down card under a Tamer, reduce the cost by 1 ────────────
+  - kind: cost_reduction
+    active_when: { your_turn: true }
+    when_any_ally_played: { trait_has: "Glowing Dawn" }
+    optional: true
+    once_per_turn: true
+    amount: 1
+    pay_cost:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+    summary: "[Your Turn][OPT] When a [Glowing Dawn] card would be played, by trashing a bottom face-down card under a Tamer, reduce the cost by 1"
 
   # ─── [Security] Play this card without paying the cost ─────────────────────
   - when: on_security

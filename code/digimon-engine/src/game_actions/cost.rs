@@ -82,7 +82,7 @@ impl Game {
                 && (!candidate.has_pay_cost || candidate.pay_cost_self_gated)
             {
                 let key = candidate.key.clone();
-                if let Some(amount) = self.apply_cost_reduction_candidate(&key, target) {
+                if let Some(amount) = self.apply_cost_reduction_candidate(&key, target, true) {
                     accumulated_reduction += amount;
                 }
                 processed.push(key);
@@ -151,7 +151,9 @@ impl Game {
                 callback: Box::new(move |game: &mut Game, _action_id: u16| {
                     let mut processed = accept_processed;
                     let mut reduction = accumulated_reduction;
-                    if let Some(amount) = game.apply_cost_reduction_candidate(&accept_key, target) {
+                    if let Some(amount) =
+                        game.apply_cost_reduction_candidate(&accept_key, target, true)
+                    {
                         reduction += amount;
                     }
                     processed.push(accept_key);
@@ -266,6 +268,286 @@ impl Game {
         true
     }
 
+    /// G-COST-REDUCTION-INTERACTIVE-PAY-COST (digivolve half) — consult the
+    /// field-hosted `BeforePayCost` reducers for the digivolution of `target`
+    /// for one whose `pay_cost` is INTERACTIVE (installs a selection — e.g.
+    /// ST23-03 Cougarmon's `trash_bottom_face_down_source_under_tamer`). The
+    /// synchronous scan (`scan_before_pay_cost_reduction_with_target`) cannot
+    /// host a parking pay_cost, so such a reducer is handled here BEFORE the
+    /// scan: run its pay_cost (which parks), wrap the parked selection's
+    /// resolution to credit the reduction into
+    /// `Game::pending_interactive_digivolve_reduction` and re-enter the
+    /// digivolve. Returns `true` (caller aborts; the callbacks re-enter) when a
+    /// reducer was offered. Returns `false` when no interactive reducer
+    /// qualifies — the synchronous scan then handles the remaining
+    /// (non-interactive) reducers as before.
+    ///
+    /// Only the FIRST qualifying interactive reducer is handled per call; a
+    /// second would be offered on the re-entry (its pay_cost is a fresh park).
+    /// Respects `cost_unpayable` (no eligible cost target → the pay_cost flags
+    /// it and credits nothing) and the reducer's `optional` flag (an optional
+    /// reducer gets an accept/decline gate first; a mandatory one runs the
+    /// pay_cost directly so its own selection is the first prompt).
+    pub(super) fn try_prompt_interactive_digivolve_cost_reducer(
+        &mut self,
+        acting_player: PlayerId,
+        target: CostTargetContext,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+    ) -> bool {
+        let candidates = self.collect_before_pay_cost_reducers(
+            acting_player,
+            Some(target),
+            &[],
+            CostReductionKind::Digivolve,
+        );
+        let Some(candidate) = candidates
+            .into_iter()
+            .find(|c| c.pay_cost_interactive && c.has_pay_cost)
+        else {
+            return false;
+        };
+
+        let key = candidate.key.clone();
+        let source_kind = self.effect_source_kind_for_handle(key.source_card);
+
+        if candidate.optional {
+            // Optional reducer → accept/decline gate first. On accept, run the
+            // (parking) pay_cost; on decline, re-enter the digivolve at full
+            // cost (the synchronous scan skips this interactive reducer).
+            let accept_key = key.clone();
+            let previous_phase = self.current_phase;
+            self.current_phase = GamePhase::EffectChoice;
+            let label = candidate.label.clone();
+            let amount = candidate.amount;
+            self.pending_selection = Some(PendingSelection {
+                zone_owner: None,
+                kind: SelectionKind::EffectChoice,
+                selecting_player: acting_player,
+                previous_phase,
+                valid_action_ids: vec![crate::action::space::HAND_EFFECT_START],
+                is_optional: true,
+                prompt: format!("Use {} to reduce digivolution cost?", label),
+                effect_choices: Some(vec![crate::selection::EffectChoiceEntry {
+                    label: format!("{} (-{})", label, amount),
+                    action_id: crate::action::space::HAND_EFFECT_START,
+                    source_card: Some(key.source_card),
+                    source_kind: Some(source_kind),
+                    timing: Some(crate::enums::EffectTiming::BeforePayCost),
+                    is_optional: true,
+                    observation_metadata: Default::default(),
+                }]),
+                source_card: key.source_card,
+                source_permanent: key.source_permanent,
+                source_kind,
+                callback: Box::new(move |game: &mut Game, _action_id: u16| {
+                    // On accept, run the (parking) pay_cost. If it does NOT park
+                    // (synchronous / unpayable), re-enter the digivolve here
+                    // (we are in a callback — there is no original frame to
+                    // return to); the reduction was credited iff it was paid.
+                    let parked = game.run_interactive_digivolve_reducer_pay_cost(
+                        accept_key,
+                        target,
+                        acting_player,
+                        hand_index,
+                        field_index,
+                        source,
+                    );
+                    if !parked {
+                        game.digivolve_from_hand_inner(
+                            acting_player,
+                            hand_index,
+                            field_index,
+                            source,
+                            true,
+                        );
+                    }
+                }),
+                on_decline: Some(Box::new(move |game: &mut Game| {
+                    game.digivolve_from_hand_inner(
+                        acting_player,
+                        hand_index,
+                        field_index,
+                        source,
+                        true,
+                    );
+                })),
+            });
+            return true;
+        }
+
+        // Mandatory reducer ("reduce the cost by N", no "you may") — run the
+        // pay_cost directly. Its own (parking) selection IS the first prompt.
+        // If it PARKS, the continuation re-enters the digivolve → abort here
+        // (return true). If it resolves synchronously (paid or unpayable), the
+        // reduction was credited inline and the ORIGINAL `digivolve_from_hand_inner`
+        // frame continues — return false so it proceeds (the synchronous scan
+        // skips this `pay_cost_interactive` reducer, so no double-apply).
+        self.run_interactive_digivolve_reducer_pay_cost(
+            key,
+            target,
+            acting_player,
+            hand_index,
+            field_index,
+            source,
+        )
+    }
+
+    /// Run a field-hosted interactive digivolve reducer's `pay_cost`. Returns
+    /// `true` if it PARKED on a selection (the continuation that credits the
+    /// reduction + re-enters the digivolve has been wired behind the park), or
+    /// `false` if it resolved synchronously (the reduction was credited into
+    /// `pending_interactive_digivolve_reduction` iff the cost was actually paid;
+    /// the CALLER must drive the digivolve from here — it does NOT re-enter on
+    /// the synchronous path).
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    fn run_interactive_digivolve_reducer_pay_cost(
+        &mut self,
+        key: CostReductionKey,
+        target: CostTargetContext,
+        acting_player: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+    ) -> bool {
+        let amount = self
+            .inspect_cost_reduction_candidate(&key, Some(target))
+            .unwrap_or(0);
+        // `effects_for_card` returns an OWNED Vec rebuilt each call, so move the
+        // (non-`Clone`) boxed `pay_cost_fn` out of it rather than borrowing.
+        let Some(mut effects) = self.effects_for_card(&key.card_id, key.source_card) else {
+            return false;
+        };
+        let Some(effect) = effects.get_mut(key.effect_slot as usize) else {
+            return false;
+        };
+        let max_per_turn = effect.max_per_turn;
+        let Some(pay_cost_fn) = effect.pay_cost_fn.take() else {
+            return false;
+        };
+
+        let pending_before = self.pending_selection.is_some();
+        let (synchronous_ok, cost_unpayable) = {
+            let mut ctx = EffectContext::new_with_cost_target(
+                self,
+                key.source_card,
+                key.source_permanent,
+                key.controller,
+                target.card,
+                target.from_hand,
+            );
+            ctx.cost_is_digivolve = target.is_digivolve;
+            let ok = pay_cost_fn(&mut ctx);
+            (ok, ctx.cost_unpayable)
+        };
+        let parked = !pending_before && self.pending_selection.is_some();
+
+        if parked {
+            // The pay_cost installed a selection (the interactive Tamer pick).
+            // The pick is mandatory once reached (no PASS for
+            // `trash_bottom_face_down_source_under_tamer`), so it WILL be paid
+            // on resolution — credit the reduction behind the park.
+            if max_per_turn > 0 {
+                self.record_cost_reducer_activation(&key);
+            }
+            self.wrap_interactive_digivolve_reducer_continuation(
+                amount,
+                acting_player,
+                hand_index,
+                field_index,
+                source,
+            );
+            return true;
+        }
+
+        // Synchronous outcome (no park): credit only when actually paid — a
+        // `cost_unpayable` abort (no eligible Tamer) credits nothing. The caller
+        // drives the digivolve.
+        if synchronous_ok && !cost_unpayable {
+            if max_per_turn > 0 {
+                self.record_cost_reducer_activation(&key);
+            }
+            self.pending_interactive_digivolve_reduction += amount;
+        }
+        false
+    }
+
+    /// Wrap the parked pay_cost selection so its resolution credits `amount`
+    /// into `pending_interactive_digivolve_reduction` and re-enters the
+    /// digivolve. `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    fn wrap_interactive_digivolve_reducer_continuation(
+        &mut self,
+        amount: i32,
+        acting_player: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+    ) {
+        let Some(mut pending) = self.pending_selection.take() else {
+            return;
+        };
+        let original_callback = pending.callback;
+        pending.callback = Box::new(move |game: &mut Game, action_id: u16| {
+            // The pay_cost's own callback pays the cost (e.g. trashes the
+            // face-down source). It may install nested selections; if so, the
+            // resume re-wraps until the cost fully resolves.
+            original_callback(game, action_id);
+            game.resume_interactive_digivolve_reducer_after_pending(
+                amount,
+                acting_player,
+                hand_index,
+                field_index,
+                source,
+            );
+        });
+        // The pay_cost selection itself is mandatory once entered (the player
+        // already opted in via the accept gate, or the reducer is mandatory).
+        // Preserve any inner decline path the pay_cost installed.
+        let original_decline = pending.on_decline.take();
+        pending.on_decline = original_decline.map(|orig| {
+            Box::new(move |game: &mut Game| {
+                orig(game);
+                game.resume_interactive_digivolve_reducer_after_pending(
+                    amount,
+                    acting_player,
+                    hand_index,
+                    field_index,
+                    source,
+                );
+            }) as crate::selection::DeclineCallback
+        });
+        self.pending_selection = Some(pending);
+    }
+
+    /// Resume the digivolve after an interactive reducer's parked pay_cost
+    /// resolves. If the pay_cost installed a FURTHER selection, re-wrap; else
+    /// credit the reduction (only when the cost was actually paid) and re-enter
+    /// the digivolve. `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    fn resume_interactive_digivolve_reducer_after_pending(
+        &mut self,
+        amount: i32,
+        acting_player: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+    ) {
+        if self.pending_selection.is_some() {
+            self.wrap_interactive_digivolve_reducer_continuation(
+                amount,
+                acting_player,
+                hand_index,
+                field_index,
+                source,
+            );
+            return;
+        }
+        // The parked pay_cost resolved (the mandatory Tamer pick paid the
+        // cost). Credit the reduction and re-enter the digivolve.
+        self.pending_interactive_digivolve_reduction += amount;
+        self.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, true);
+    }
+
     /// Scan all battle-area permanents of both players for
     /// `EffectTiming::BeforePayCost` effects whose condition passes, and
     /// accumulate the total cost reduction.
@@ -319,6 +601,19 @@ impl Game {
             self.collect_before_pay_cost_reducers(acting_player, cost_target, &[], cost_kind);
         let mut total = 0;
         for candidate in candidates {
+            // An INTERACTIVE pay_cost reducer (its `pay_cost` installs a
+            // selection — e.g. `trash_bottom_face_down_source_under_tamer`)
+            // cannot be resolved by this SYNCHRONOUS scan: a park would leave a
+            // dangling `pending_selection` mid-digivolve/Option-use. Such a
+            // reducer is handled by a dedicated pre-scan interactive prompt
+            // (`try_prompt_interactive_digivolve_cost_reducer` / the Option-use
+            // sibling) that wraps the play continuation behind the park and
+            // re-enters with the reduction pre-credited. Skip it here so it is
+            // never double-applied on re-entry.
+            // `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+            if candidate.pay_cost_interactive {
+                continue;
+            }
             // Optional reducers still need an explicit play-cost choice flow.
             // A `pay_cost`-bearing reducer (e.g. BT5-092's "by suspending this
             // Tamer") IS resolvable here when there is a real cost target —
@@ -346,7 +641,7 @@ impl Game {
                 target_permanents: [None, None],
             });
             if let Some(amount) =
-                self.apply_cost_reduction_candidate(&candidate.key, resolved_target)
+                self.apply_cost_reduction_candidate(&candidate.key, resolved_target, false)
             {
                 total += amount;
             }
@@ -417,6 +712,7 @@ impl Game {
                 optional: effect.optional,
                 has_pay_cost: effect.pay_cost_fn.is_some(),
                 pay_cost_self_gated: effect.pay_cost_self_gated,
+                pay_cost_interactive: effect.pay_cost_interactive,
             });
         }
         candidates
@@ -483,15 +779,41 @@ impl Game {
         Some(amount)
     }
 
+    /// Run a cost reducer's `pay_cost` (if any) and, on success, return the
+    /// reduction `amount` to credit.
+    ///
+    /// `allow_interactive_pay_cost` controls how a `pay_cost` that PARKS on a
+    /// `PendingSelection` (e.g. `trash_bottom_face_down_source_under_tamer`'s
+    /// mandatory Tamer pick — a 1-option selection the no-approximations
+    /// contract never auto-resolves) is treated:
+    ///
+    /// - `true` (the **play-from-hand chain** call sites): a parked pay_cost
+    ///   WILL be paid when its selection resolves, so credit the `amount` now
+    ///   and let the caller wrap the play continuation behind the park
+    ///   (`continue_play_from_hand_cost_reduction_chain` already wraps when
+    ///   `pending_selection.is_some()` after this returns). Closes
+    ///   `G-COST-REDUCTION-INTERACTIVE-PAY-COST` for the play path.
+    /// - `false` (the **synchronous scan** path, which cannot wrap a
+    ///   continuation): a parked pay_cost is treated as a non-credit — preserves
+    ///   the pre-existing behavior (the Option-use / digivolve scan paths
+    ///   already pre-filter optional/paid reducers, so no card reaches here and
+    ///   parks today; the guard keeps a future one from crediting a reduction it
+    ///   cannot honour).
+    ///
+    /// A genuine synchronous failure (the pay_cost returns `false` WITHOUT
+    /// installing a selection — e.g. an unpayable cost) never credits, in
+    /// either mode.
     pub(crate) fn apply_cost_reduction_candidate(
         &mut self,
         key: &CostReductionKey,
         cost_target: CostTargetContext,
+        allow_interactive_pay_cost: bool,
     ) -> Option<i32> {
         let amount = self.inspect_cost_reduction_candidate(key, Some(cost_target))?;
         let effects = self.effects_for_card(&key.card_id, key.source_card)?;
         let effect = effects.get(key.effect_slot as usize)?;
         if let Some(pay_cost_fn) = &effect.pay_cost_fn {
+            let pending_before = self.pending_selection.is_some();
             let mut ctx = EffectContext::new_with_cost_target(
                 self,
                 key.source_card,
@@ -502,7 +824,15 @@ impl Game {
             );
             ctx.cost_is_digivolve = cost_target.is_digivolve;
             if !pay_cost_fn(&mut ctx) {
-                return None;
+                // The pay_cost did not complete synchronously. Distinguish a
+                // PARK (it installed a fresh PendingSelection — the cost will be
+                // paid on resolution) from a genuine synchronous failure.
+                let parked = allow_interactive_pay_cost
+                    && !pending_before
+                    && self.pending_selection.is_some();
+                if !parked {
+                    return None;
+                }
             }
         }
         if effect.max_per_turn > 0 {

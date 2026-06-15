@@ -340,6 +340,22 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(floor) = pred.face_down_sources_under_tamers_gte {
+        // G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER: total face-down digivolution
+        // sources across the observer's battle-area Tamers. Gates BT25-035's
+        // optional free-digivolve on the trash-2 cost actually being payable.
+        let total: usize = rctx
+            .game
+            .player(rctx.player)
+            .battle_area
+            .iter()
+            .filter(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
+            .map(|perm| perm.card_sources.iter().filter(|s| s.face_down).count())
+            .sum();
+        if total < usize::from(floor) {
+            return false;
+        }
+    }
     if let Some(want) = pred.battle_opponent_no_sources {
         let Some(source) = rctx.source_permanent else {
             return false;

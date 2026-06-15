@@ -242,6 +242,24 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        // ── Unified play-OR-use (G-PLAY-OR-USE-FROM-HAND) ─────────────────
+        CompiledStep::PlayOrUseFromHand {
+            of: _,
+            hand_index,
+            cost_delta,
+        } => {
+            if let Some(ResolvedBinding::HandIndex(owner, i)) =
+                resolve_binding_ref(hand_index, ctx, bindings)
+            {
+                let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
+                // Routes by CardKind: Digimon/Tamer → play, Option → use, Dual
+                // → "Play as Digimon / Use as Option" face choice. A played
+                // Digimon's handle is recorded for any later step; the Option /
+                // Dual-Option path manages its own lifecycle internally.
+                ctx.play_or_use_from_hand_with_cost(owner, i as usize, delta);
+            }
+            true
+        }
         CompiledStep::PlayFromRevealedFree {
             of,
             card,
