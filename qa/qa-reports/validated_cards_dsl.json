@@ -4608,10 +4608,10 @@
     },
     "BT20-060": {
       "card_name": "Alphamon: Ouryuken",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-060.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_060.rs",
@@ -4623,8 +4623,8 @@
         "DNA-ROUTE",
         "DP-MODIFIER"
       ],
-      "notes": "ACE/DNA/-15000/security-trash done; +3 memory on EITHER-stack security-removed needs unified once-per-turn observer: G-SECURITY-REMOVED-OBSERVER.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "+3-memory security-removed observer authored; integration QA fix: regular DNA route corrected from name-gated to Black Lv6 + Yellow/Red Lv6 (level/color).",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT20-100": {
       "card_name": "The Last Guardian",
@@ -4763,10 +4763,10 @@
     },
     "BT13-030": {
       "card_name": "UlforceVeedramon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-030.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_030.rs",
@@ -4777,8 +4777,8 @@
         "ROYAL-KNIGHTS-POOL-STUB",
         "GAP-STUB"
       ],
-      "notes": "Added [Your Turn][OPT] RK/blue-Tamer-played -> bounce 1 opp Digimon with no sources (fixed misleading stub comment). Remaining: for-each-counted trash-2 sources (G-FOR-EACH-COUNTED-FIELD-OBJECTS).",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "Authored both clauses (for-each-counted 2N source-trash + RK/blue-Tamer-played no-source bounce). G-FOR-EACH-COUNTED-FIELD-OBJECTS was not a gap. 12 tests; image+DCGO verified faithful.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT13-075": {
       "card_name": "Alphamon",
@@ -4801,10 +4801,10 @@
     },
     "BT13-087": {
       "card_name": "Dynasmon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-087.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_087.rs",
@@ -4815,14 +4815,14 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Reveal-4/add-2/trash implemented (needs asserting test); other-RK/Lucemon-played delete-all level<=4 observer blocked: G-ALLY-PLAYED-OTHER-EVENT.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "[Your Turn] other-RK/Lucemon-played delete-all level<=4 observer authored + reveal-4 tested. Faithful (alt-digivolve box untested only).",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT13-102": {
       "card_name": "Keenan Crier",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "BLOCKED",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "PARTIAL",
       "gap_kind": "engine/dsl-gap",
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-102.yaml",
@@ -4834,15 +4834,15 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Security done; opponent hidden-hand may-trash + on-decline gain/draw (G-ONDECLINE-CALLBACK, engine); opp-turn was-played-by-effect suspend-for-memory observer (G-WAS-PLAYED-BY-EFFECT-OBSERVER, engine).",
-      "audit_note": "Re-audited 2026-06-14; core blocked on named gap(s)."
+      "notes": "On Play opponent-may-trash / on-decline gain+draw authored; remaining: [Opponent's Turn] effect-play observer with opponent's-turn suspend cost (G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN).",
+      "audit_note": "Authored 2026-06-15; one clause on a genuine residual gap."
     },
     "BT13-111": {
       "card_name": "Gallantmon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-111.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_111.rs",
@@ -4853,8 +4853,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Rush done; core On Play delete-or-fallback unimplemented: G-EFFECT-RESULT-FALLBACK + combined-both-trash cost reduction G-COMBINED-TRASH-COUNT-COST.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "On Play/WD/WA delete<=6000-or-fallback>=13000 + combined-both-trash cost reduction authored. 25 tests; verified faithful.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT13-112": {
       "card_name": "Omnimon",
@@ -4877,10 +4877,10 @@
     },
     "BT15-092": {
       "card_name": "Revelation of Light",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "BLOCKED",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt15/BT15-092.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_092.rs",
@@ -4891,14 +4891,14 @@
         "ROYAL-KNIGHTS-POOL-STUB",
         "GAP-STUB"
       ],
-      "notes": "effects:[] core blocked; this-card-discarded-from-security self-dispatch (G-DSL-ON-DISCARD-SECURITY-TRIGGER); filtered security search/play + self-to-top-security; security-Digimon -5000 debuff.",
-      "audit_note": "Re-audited 2026-06-14; core blocked on named gap(s)."
+      "notes": "Authored full card (was effects:[]): discard-from-security self-dispatch, [Main] security search/play yellow Lv4 + self-to-top, [Security] all opp+security Digimon -5000 DP. Verified faithful.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT19-093": {
       "card_name": "Queen Device",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "BLOCKED",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "PARTIAL",
       "gap_kind": "engine/dsl-gap",
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt19/BT19-093.yaml",
@@ -4910,8 +4910,8 @@
         "ROYAL-KNIGHTS-POOL-STUB",
         "GAP-STUB"
       ],
-      "notes": "effects:[] core blocked; Option-as-battle-area carrier lifecycle + negative battle-area-name predicate + CannotActivateWhenDigivolving modifier + multi-target Security A.: G-OPTION-BATTLE-AREA-CARRIER.",
-      "audit_note": "Re-audited 2026-06-14; core blocked on named gap(s)."
+      "notes": "Color-bypass + [Main]/[Security] debuffs authored; remaining: Option self-place/persist in battle area + trash-from-battle trigger (G-OPTION-PERSIST-AS-FIELD-CARRIER, G-OPTION-SELF-TRASH-TRIGGER).",
+      "audit_note": "Authored 2026-06-15; one clause on a genuine residual gap."
     },
     "BT20-017": {
       "card_name": "Jesmon",
@@ -4934,10 +4934,10 @@
     },
     "BT20-021": {
       "card_name": "Jesmon GX",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-021.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_021.rs",
@@ -4948,15 +4948,15 @@
         "ROYAL-KNIGHTS-POOL-STUB",
         "GAP-STUB"
       ],
-      "notes": "Added [Hand][Counter] Blast Digivolve alt-path. Remaining main clauses: hand/trash place-source-as-cost + source-DP compare (G-UNION-HAND-TRASH-SOURCE-COST); per-2-RK-source security trash (G-SOURCE-COUNT-SECURITY-TRASH).",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "Authored hand/trash place-source-cost delete + source-count security-trash + Blast Digivolve + DNA route. 14 tests. G-SOURCE-COUNT-SECURITY-TRASH / G-UNION-HAND-TRASH-SOURCE-COST were not gaps.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT20-045": {
       "card_name": "Examon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-045.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_045.rs",
@@ -4967,13 +4967,13 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "ACE/keywords/Blast-DNA done; DNA-gated highest-DP bottom-deck sweep G-HIGHEST-DP-SWEEP; any-suspend self-unsuspend observer G-SUSPEND-OBSERVER-UNSUSPEND.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "DNA-gated highest-DP sweep + any-suspend self-unsuspend authored; integration QA fix: added MISSING standard DNA digivolve path (Green Lv6 + Blue Lv6).",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT20-056": {
       "card_name": "Alphamon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
       "status": "PARTIAL",
       "gap_kind": "engine/dsl-gap",
       "archetype": "Royal Knights",
@@ -4986,8 +4986,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Barrier/Recovery done; during-attack breeding digivolve from hand/trash union G-BREEDING-DIGIVOLVE-UNION-ZONES; broader -8000 security-removed observer; inherited Ouryuken replacement.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "Barrier/Recovery/security-removed -8000 observer authored; remaining: during-attack breeding digivolve into Lv<=6 [Chronicle] from hand/trash union (G-BREEDING-DIGIVOLVE-UNION-ZONES, genuinely open).",
+      "audit_note": "Authored 2026-06-15; one clause on a genuine residual gap."
     },
     "BT22-025": {
       "card_name": "UlforceVeedramon",
@@ -5316,10 +5316,10 @@
     },
     "BT15-084": {
       "card_name": "Kari Kamiya",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt15/BT15-084.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_084.rs",
@@ -5330,8 +5330,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Added [All Turns] on_own_security_removed suspend-cost -> opp Security A.-1. Remaining: 'when an effect trashes THIS CARD from your security' trigger (G-DSL-ON-DISCARD-SECURITY-TRIGGER).",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "Merged BOTH security clauses: on_own_security_removed suspend-cost + on_discard_security (this-card-trashed). 9 tests, all 4 clauses; verified faithful.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT21-086": {
       "card_name": "Marcus Damon",
@@ -5354,10 +5354,10 @@
     },
     "BT22-009": {
       "card_name": "Effecmon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-009.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_009.rs",
@@ -5368,8 +5368,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Authored the silently-dropped inherited 'delete 1 opp Digimon <=4000 DP' clause + tests. Remaining: [Security] end-of-battle self-play (G-SECURITY-END-OF-BATTLE-PLAY); Link/Sup.App reqs (G-LINK-REQUIREMENTS).",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "[Security] end-of-battle play + On Play/WD delete + both digivolve circles (Lv3-red + Stnd.-trait) faithful. [Link]/[When Linking] is the Appmon Link subsystem (separate G-LINK-REQUIREMENTS), not an RK gap.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT23-064": {
       "card_name": "Bakemon",
@@ -5391,10 +5391,10 @@
     },
     "BT8-090": {
       "card_name": "Kari Kamiya",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt8/BT8-090.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_090.rs",
@@ -5405,15 +5405,15 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Start-turn memory floor done; 'card added to your security -> suspend for memory' observer: re-verify on_added_to_security (G-OWN-SECURITY-ADDED-OBSERVER).",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "[Your Turn] card-added-to-own-security -> suspend for memory observer authored (on_added_to_security wired). G-OWN-SECURITY-ADDED-OBSERVER was not a gap.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "BT9-092": {
       "card_name": "Cool Boy",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt9/BT9-092.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_092.rs",
@@ -5424,15 +5424,15 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "On Play reveal/add/bottom implemented (needs asserting test); same-level-into-X-Antibody digivolve observer omitted: G-SAME-LEVEL-X-DIGIVOLVE-OBSERVER.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "[Your Turn] same-level-into-X-Antibody digivolve observer authored + On Play reveal tested. G-SAME-LEVEL-X-DIGIVOLVE-OBSERVER was not a gap.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "EX11-069": {
       "card_name": "Yuuki",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-069.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_069.rs",
@@ -5443,8 +5443,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Tamer trash->memory + Security done; attack-trigger trash-digivolve G-EFFECT-INITIATED-DIGIVOLVE-FROM-TRASH-ON-ATTACK; end-of-all-turns suspend-cost trash-return G-END-OF-ALL-TURNS-SUSPEND-COST-TRASH-RECURSION.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "[Your Turn] attack-trigger trash-digivolve + [End of All Turns] suspend-cost trash-to-hand return authored. Both gaps were not real gaps.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "EX4-065": {
       "card_name": "Trident Gaia",
@@ -5467,10 +5467,10 @@
     },
     "RB1-035": {
       "card_name": "Hokuto Amanokawa",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-author-remaining-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/rb1/RB1-035.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/rb1/rb1_035.rs",
@@ -5481,8 +5481,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Start-turn memory + Security done; opponent-plays-Digimon level-branch observer + suspend cost: G-OPPONENT-PLAYED-DIGIMON-LEVEL-BRANCH.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "[All Turns] opponent-plays-Digimon level-branch observer (lvl4+ memory / lvl3 draw) + suspend cost authored. G-OPPONENT-PLAYED-DIGIMON-LEVEL-BRANCH was not a gap.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
     },
     "ST12-12": {
       "card_name": "Sistermon Blanc",

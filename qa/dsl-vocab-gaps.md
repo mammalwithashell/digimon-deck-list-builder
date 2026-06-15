@@ -3732,3 +3732,26 @@ Per-card scout verdicts (status `authorable-now-no-gap`) — these need CARD AUT
 ### Still genuinely OPEN (deferred — large frameworks / not yet scoped)
 - **G-BREEDING-DIGIVOLVE-UNION-ZONES** (BT20-056) — size L; attack-context breeding digivolve from hand/trash union.
 - **G-UNION-HAND-SOURCE-PLAY** (EX11-053), **G-OPPONENT-PLAYED-DIGIMON-LEVEL-BRANCH** (RB1-035), **G-OWN-SECURITY-ADDED-OBSERVER** (BT8-090, likely authorable — re-verify), **G-SECURITY-END-OF-BATTLE-PLAY** (BT22-009), **G-ONDECLINE-CALLBACK** + **G-WAS-PLAYED-BY-EFFECT-OBSERVER** (BT13-102, engine), **G-OPTION-BATTLE-AREA-CARRIER** (BT19-093, engine, size L) — rate-limited out of the scoping pass; scope before authoring their cards.
+
+
+## OPEN 2026-06-15 — Royal Knights final-3 residual gaps
+
+After authoring all 16 remaining Royal Knights cards, exactly THREE cards retain
+one clause each on a genuine residual gap (RK is now 69 IMPLEMENTED / 3 PARTIAL /
+0 BLOCKED of 72). These are the only Royal-Knights-blocking gaps left.
+
+### `G-BREEDING-DIGIVOLVE-UNION-ZONES` — attack-context breeding digivolve from hand/trash union
+- **Consumer:** BT20-056 Alphamon. "[On Play][When Digivolving] then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a Lv.6-or-lower [Chronicle] Digimon in your hand OR trash, free."
+- **Missing:** an effect-initiated digivolve where the DIGIVOLVING permanent is a breeding-area Digimon and the digivolve TARGET is sourced from a hand∪trash union, gated on an in-attack condition.
+- **Suggested API:** extend the effect-digivolve step to accept a breeding-area subject + a `from: { zones: [hand, trash] }` union target with a `during_attack` condition.
+- **First test:** BT20-056 in play attacking, a breeding Digimon present, a Lv.6 [Chronicle] in hand and one in trash → assert both are offered as free digivolve targets onto the breeding Digimon.
+
+### `G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN` — effect-play observer with opponent's-turn suspend cost
+- **Consumer:** BT13-102 Keenan Crier. "[Opponent's Turn] When an effect plays a Digimon, by suspending this Tamer, gain 1 memory."
+- **Missing:** combine a `was_played_by_effect` observer (effect-plays only) firing on the OPPONENT's turn with a source-bound suspend activation cost. The On Play on-decline clause is authored; this observer remains.
+- **First test:** opponent's turn, an effect plays a Digimon → assert an optional "suspend Keenan to gain 1 memory" prompt; a normal (non-effect) play does NOT fire it.
+
+### `G-OPTION-PERSIST-AS-FIELD-CARRIER` (+ `G-OPTION-SELF-TRASH-TRIGGER`) — Option self-places/persists in the battle area
+- **Consumer:** BT19-093 Queen Device. "[Main] … then, place this card in the battle area" (a persistent Option carrier), and "When this card is trashed from the battle area, …".
+- **Missing:** an Option self-placing into the battle area as a persistent carrier, plus a `when_trashed_from_battle_area` trigger on that Option carrier. The color-bypass + [Main]/[Security] debuff clauses are authored; the self-place/persist + trash-from-battle trigger remain.
+- **First test:** resolve BT19-093 [Main] → assert this Option is now a battle-area permanent; trash it from battle → assert the trash-from-battle clause fires.

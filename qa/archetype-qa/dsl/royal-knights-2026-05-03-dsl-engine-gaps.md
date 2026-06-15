@@ -1,5 +1,19 @@
 # Royal Knights Rust DSL/Engine Gap Rollup
 
+> **Royal Knights COMPLETION — 2026-06-15:** After closing the engine gaps,
+> all 16 remaining PARTIAL/BLOCKED cards were authored in a parallel
+> isolated-worktree wave, integrated, and faithfulness-verified against their
+> card images (a read-only re-audit caught + fixed 3 digivolve-path bugs:
+> BT20-045 missing standard DNA path, BT22-009 missing "Stnd." digivolve circle,
+> BT20-060 name-gated-instead-of-level/color DNA route). **Royal Knights is now
+> 69 IMPLEMENTED / 3 PARTIAL / 0 BLOCKED of 72.** The only 3 remaining residual
+> gaps (one clause each): `G-BREEDING-DIGIVOLVE-UNION-ZONES` (BT20-056),
+> `G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN` (BT13-102), `G-OPTION-PERSIST-AS-FIELD-CARRIER`
+> + `G-OPTION-SELF-TRASH-TRIGGER` (BT19-093) — all filed in `qa/dsl-vocab-gaps.md`
+> ("OPEN 2026-06-15 — Royal Knights final-3 residual gaps"). Of the original
+> ~30 "blockers", only 7 were real engine gaps (all closed); the other ~21 were
+> authorable with shipped vocabulary. Report: `royal-knights-author-remaining-2026-06-15`.
+>
 > **Royal Knights engine-gap closure pass — 2026-06-15:** Adversarial scoping
 > of the ~30 RK-"blocking" gaps (one scout each) found that **14 were NOT real
 > gaps** — composable from shipped vocabulary today, needing only card authoring
