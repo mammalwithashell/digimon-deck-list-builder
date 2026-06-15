@@ -136,6 +136,13 @@ impl<'a> EffectContext<'a> {
                     break;
                 }
             };
+            if !card.is_token {
+                let card_id = card.card_id(&self.game.card_data).to_string();
+                let seq = self.game.next_event_seq();
+                self.game
+                    .events
+                    .push(crate::events::GameEvent::Mill { seq, player, card_id });
+            }
             self.game.player_mut(player).trash.push(card);
             trashed += 1;
         }

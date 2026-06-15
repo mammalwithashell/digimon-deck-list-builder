@@ -2,11 +2,11 @@
 //! Python's `digimon_gym/engine/events.py::GameEvent` — a tagged enum
 //! consumed by UI animation and replay layers.
 //!
-//! Emission coverage is currently partial: `MemoryChange`, `Play`, and
-//! `GameOver` are wired in by this module's initial landing.
-//! `TurnStart`, `PhaseChange`, `Digivolve`, `Attack`, `Trash`, `Mill`,
-//! and `SecurityReveal` variants exist on the enum and will be emitted
-//! as game-phase and card-migration work wires the corresponding paths.
+//! Emission coverage is complete — every variant below is emitted by the
+//! engine: `MemoryChange`/`Play`/`GameOver`/`Concede`/`EffectFizzled` (core),
+//! `Digivolve`/`Attack`/`Trash`/`SecurityReveal` (combat + card-migration),
+//! and `TurnStart`/`PhaseChange`/`Mill` (the turn machine in `game_phases.rs`
+//! and the mill flow in `effect_context::action::trash`).
 //!
 //! Every event carries a monotonically increasing `seq` allocated by
 //! `Game::next_event_seq`. Consumers drain the buffer via
@@ -100,8 +100,7 @@ pub enum GameEvent {
         memory_paid: i16,
     },
 
-    /// A Digimon declared an attack.
-    /// (Variant defined for future wiring — not emitted yet.)
+    /// A Digimon declared an attack. Emitted by the combat declare-attack flow.
     Attack {
         seq: u64,
         player: PlayerId,
@@ -110,24 +109,24 @@ pub enum GameEvent {
         target_player: Option<PlayerId>,
     },
 
-    /// A card was moved to trash from some zone.
-    /// (Variant defined for future wiring — not emitted yet.)
+    /// A card was moved to trash from some zone. Emitted by the trash /
+    /// batched-deletion flows in `game/mod.rs`.
     Trash {
         seq: u64,
         player: PlayerId,
         card_id: String,
     },
 
-    /// A card was milled (deck→trash from the top of the deck).
-    /// (Variant defined for future wiring — not emitted yet.)
+    /// A card was milled (deck→trash from the top of the deck). Emitted by
+    /// `EffectContext::trash_from_top`.
     Mill {
         seq: u64,
         player: PlayerId,
         card_id: String,
     },
 
-    /// A security card was revealed during a security check.
-    /// (Variant defined for future wiring — not emitted yet.)
+    /// A security card was revealed during a security check. Emitted by the
+    /// combat security-check flow.
     SecurityReveal {
         seq: u64,
         defender: PlayerId,
