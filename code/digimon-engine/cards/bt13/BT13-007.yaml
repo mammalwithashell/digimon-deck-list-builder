@@ -44,11 +44,17 @@ effects:
                 source: { permanent: rk }
                 target: source
 
-  - scope: inherited
+  # [Breeding][Inherited][OPT] When a Royal Knight Option is placed, gain 1 memory.
+  # DCGO marks this SetIsInheritedEffect(true) but activates it purely on
+  # IsExistOnBreedingArea + IsOwnerTurn (it fires while King Drasil is the
+  # breeding egg). The Rust breeding dispatch (enqueue_from_breeding_permanent)
+  # SKIPS inherited-flagged effects, so this must be a face-up breeding observer
+  # gated on in_breeding + your_turn — otherwise it never fires.
+  - scope: face_up
     when: on_option_placed
-    active_when: { in_breeding: true }
+    active_when: { in_breeding: true, your_turn: true }
     once_per_turn: true
     condition: { event_card_trait_has: "Royal Knight" }
-    summary: "[Breeding][Inherited] When a Royal Knight Option is placed, gain 1 memory"
+    summary: "[Breeding][Inherited] When a Royal Knight Option is placed on your turn, gain 1 memory"
     process:
       - gain_memory: 1

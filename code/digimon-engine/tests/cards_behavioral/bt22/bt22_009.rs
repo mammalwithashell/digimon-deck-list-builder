@@ -10,9 +10,9 @@
 use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{EffectTiming, PlaySource};
+use digimon_engine::enums::EffectTiming;
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::trigger_context::TriggerSource;
+use digimon_engine::selection::TriggerSource;
 
 fn runner() -> DebugRunner {
     DebugRunner::builder()

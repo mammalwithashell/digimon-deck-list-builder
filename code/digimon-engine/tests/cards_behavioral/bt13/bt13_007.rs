@@ -1,10 +1,8 @@
 //! BT13-007 King Drasil_7D6
 //!
 //! Implemented slice:
-//! - Breeding floodgate that prevents your Digimon from digivolving (gated to
-//!   your own turn — opponent-turn Blast/Counter digivolves are not blocked).
-//! - Breeding Royal Knight play cost reduction: 4 + this Digimon's digivolution
-//!   card count, via a native `base_per_delta` formula.
+//! - Breeding floodgate that prevents your Digimon from digivolving.
+//! - Breeding Royal Knight play cost reduction, via existing raw Rust gap stub.
 //! - Start of main phase places the top Digi-Egg and Royal Knights under self.
 //! - Inherited breeding observer gains memory when Royal Knight Options are placed.
 
@@ -55,18 +53,6 @@ fn add_breeding_source(runner: &mut DebugRunner, player: u8, card_id: &str) {
         .expect("breeding permanent exists");
     // Insert beneath King Drasil's top card so it counts as a digivolution card.
     breeding.card_sources.insert(0, source);
-}
-
-/// Build a `CardSource` for `card_id` owned by `player` (for direct placement).
-fn make_source(runner: &mut DebugRunner, player: u8, card_id: &str) -> CardSource {
-    let data_idx = runner
-        .game
-        .card_data
-        .iter()
-        .position(|c| c.card_id == card_id)
-        .unwrap_or_else(|| panic!("make_source: unknown card_id {card_id}"));
-    let card_index = runner.game.next_card_index();
-    CardSource::new(data_idx, player, card_index)
 }
 
 #[test]
@@ -131,7 +117,12 @@ fn bt13_007_start_main_fires_from_breeding_and_tucks_digitama_plus_royal_knight(
 /// Build a runner with King Drasil in breeding carrying `n_sources` digivolution
 /// cards, plus one playable Royal Knight (`RK-PLAY`, cost 11) in player 0's hand.
 fn cost_reduction_runner(n_sources: usize) -> DebugRunner {
+    // Widen the memory range so a memory-20 start (needed to pay an 11-cost Royal
+    // Knight even after the reduction) is not clamped to the default cap of 10.
+    let mut rules = digimon_engine::rules::Rules::standard();
+    rules.memory_range = (-20, 20);
     let mut builder = DebugRunner::builder()
+        .with_rules(rules)
         .dsl_card("BT13-007")
         .expect("BT13-007 must load from embedded DSL pack")
         .add_card(royal_knight_digimon("RK-PLAY", 11));
@@ -177,13 +168,16 @@ fn assert_cost_reduction_for_sources(n_sources: usize) {
     let pending = runner
         .pending_selection()
         .expect("optional cost reducer must surface a pending selection");
+    // The [OPT] "you may reduce" surfaces as an EffectChoice with one accept
+    // entry; decline (PASS) is available because the selection is optional.
     let choices = pending
         .effect_choices
         .as_ref()
-        .expect("optional reducer exposes accept/decline choices");
+        .expect("optional reducer exposes an accept choice");
+    assert_eq!(choices.len(), 1, "one accept branch for the reduction");
     assert!(
-        choices.len() >= 2,
-        "optional reducer must expose an accept and a decline (PASS) branch"
+        pending.is_optional,
+        "the reducer must be optional so the player can PASS (decline the reduction)"
     );
 
     // Accept the reduction (branch 0).
@@ -265,6 +259,18 @@ fn bt13_007_floodgate_blocks_own_digivolve_only_on_your_turn() {
 /// non-Royal-Knight Option does not.
 ///
 /// Sources: BT13-007 inherited text; DCGO `BT13_007.cs`.
+/// Build a `CardSource` for `card_id` owned by `player` (for direct placement).
+fn make_source(runner: &mut DebugRunner, player: u8, card_id: &str) -> CardSource {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("make_source: unknown card_id {card_id}"));
+    let card_index = runner.game.next_card_index();
+    CardSource::new(data_idx, player, card_index)
+}
+
 #[test]
 fn bt13_007_inherited_gains_memory_when_royal_knight_option_placed() {
     let mut rk_option = make_test_card("RK-OPTION", "RK-OPTION");
