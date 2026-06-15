@@ -391,6 +391,9 @@ pub struct CompiledPredicate {
     pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
     pub event_card_name_contains: Option<String>,
+    /// Case-insensitive substring scan against the triggering event card's
+    /// printed text (effect / inherited / security). G-DSL-EVENT-CARD-TEXT-CONTAINS.
+    pub event_card_text_contains: Option<String>,
     pub event_card_level_eq: Option<u8>,
     pub event_card_level_gte: Option<CompiledDpConstraint>,
     /// Every color of the triggering event card must be within this set.

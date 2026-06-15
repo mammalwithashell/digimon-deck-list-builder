@@ -1534,6 +1534,11 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(ref needle) = pred.event_card_text_contains {
+        if !rctx.event_card_text_contains(needle) {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_card_level_eq {
         let Some(level) = event_card_level(rctx) else {
             return false;

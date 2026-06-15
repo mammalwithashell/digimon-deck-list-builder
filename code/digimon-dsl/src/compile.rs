@@ -845,6 +845,7 @@ fn compile_predicate(
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
+        event_card_text_contains: p.event_card_text_contains.clone(),
         event_card_level_eq: p.event_card_level_eq,
         event_card_level_gte: p.event_card_level_gte.as_ref().map(|d| {
             compile_dp_constraint(

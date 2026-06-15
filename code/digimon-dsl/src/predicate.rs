@@ -376,6 +376,13 @@ pub struct PredicateSpec {
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
+    /// Case-insensitive substring scan against the triggering event card's
+    /// PRINTED text (effect / inherited / security). Sibling of
+    /// `event_card_name_contains` (which matches the NAME) and the event-side
+    /// analogue of the static `effect_text_contains`. Gates observers on
+    /// "when you play a card with <X> in its text". G-DSL-EVENT-CARD-TEXT-CONTAINS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_text_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_level_eq: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]

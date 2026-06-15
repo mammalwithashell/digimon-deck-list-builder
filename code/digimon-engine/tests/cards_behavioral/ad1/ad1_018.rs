@@ -1,14 +1,14 @@
 //! AD1-018 LordKnightmon — Digimon, Lv.6, Purple/Black, DP 11000, Cost 11.
 //! Traits: [Holy Warrior, Royal Knight]. Attribute: Virus.
 //!
-//! # Printed card text (dossier — authoritative)
+//! # Printed card text (card image — authoritative)
 //!
-//! When this card would be played, if you have 4 or more cards with [Knightmon]
-//!   or [Lucemon] in its text in your trash, reduce the play cost by 5.
+//! When this card would be played, if you have a Digimon with [Knightmon] or
+//!   [Lucemon] in its NAME, reduce the play cost by 5.
 //! [On Play] [When Digivolving] Until your opponent's turn ends, their Digimon's
 //!   effects don't affect 1 of your Digimon.
 //! [All Turns] [Once Per Turn] When any of your Digimon with [Knightmon] or
-//!   [Lucemon] in its text are played, <De-Digivolve 2> 1 of your opponent's
+//!   [Lucemon] in their TEXTS are played, <De-Digivolve 2> 1 of your opponent's
 //!   Digimon.
 //! Inherited [Security]: <De-Digivolve 1> 1 of your opponent's Digimon. Then,
 //!   delete 1 of your opponent's Digimon with a play cost of 3 or less.
@@ -16,14 +16,14 @@
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/AD1/Purple/AD1_018.cs
 //!
-//! # Source-priority note (cost reduction)
-//! The DCGO `Reduce Play Cost` region checks `HasMatchConditionOwnersPermanent`
-//! over FIELD Digimon whose TopCard name contains Knightmon/Lucemon — which
-//! diverges from BOTH the printed card text (image: "4 or more cards with
-//! [Knightmon] or [Lucemon] in its text in your trash") AND its sibling AD1-017
-//! (whose DCGO uses `MatchConditionOwnersCardCountInTrash >= 4`). Per CLAUDE.md
-//! source priority the printed card face governs WHAT THE CARD SAYS, so the
-//! trash-text-count reading is implemented (matching the AD1-017 cost clause).
+//! # Corrected 2026-06-15
+//! The cost reduction was previously implemented as "4+ [Knightmon]/[Lucemon]-
+//! TEXT cards in TRASH" — an inaccurate cards.json reading that contradicted the
+//! printed card face. The image (authoritative) reads "if you have a Digimon
+//! with [Knightmon] or [Lucemon] in its NAME" — a field-presence check, matching
+//! DCGO's HasMatchConditionOwnersPermanent. The De-Digivolve-2 observer keys on
+//! the PLAYED card's TEXT via `event_card_text_contains` (G-DSL-EVENT-CARD-TEXT-
+//! CONTAINS, closed 2026-06-15).
 
 #![allow(dead_code, unused_imports)]
 
@@ -86,11 +86,11 @@ fn ad1_018_has_on_play_immunity_and_inherited_security_clause() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Section 1 — Cost reduction: 4+ [Knightmon]/[Lucemon]-text cards in trash → -5
+// Section 1 — Cost reduction: own field Digimon NAMED [Knightmon]/[Lucemon] → -5
 // ═══════════════════════════════════════════════════════════════════════════
 
 #[test]
-fn ad1_018_cost_reduction_clause_shape() {
+fn ad1_018_cost_reduction_requires_knightmon_lucemon_named_field_digimon() {
     let runner = DebugRunner::builder()
         .dsl_card("AD1-018")
         .expect("AD1-018 loads")
@@ -114,26 +114,24 @@ fn ad1_018_cost_reduction_clause_shape() {
     assert!(when_playing_this, "cost reduction applies to THIS card");
     assert_eq!(amount, Some(5), "reduce the play cost by 5");
 
-    let cond = condition.expect("cost reduction must be conditional on the trash count");
+    let cond = condition.expect("cost reduction must be conditional on a field presence");
     let agg: &CompiledCountAggregate = cond
         .count_gte
         .as_ref()
         .or_else(|| cond.all_of.iter().find_map(|p| p.count_gte.as_ref()))
-        .expect("cost reduction condition must use count_gte over trash");
+        .expect("cost reduction condition must use count_gte over the field");
     assert_eq!(
         agg.n,
-        CompiledDpConstraint::Literal(4),
-        "count threshold must be 4 ([4 or more])"
+        CompiledDpConstraint::Literal(1),
+        "presence check: >=1 named Digimon in play (card face: 'if you have a Digimon')"
     );
     assert!(
-        pred_any(&agg.filter, |q| q.effect_text_contains.as_deref() == Some("Knightmon")),
-        "count filter must include effect_text_contains: Knightmon"
+        pred_any(&agg.filter, |q| q.name_contains.as_deref() == Some("Knightmon")),
+        "count filter must match a field Digimon NAMED Knightmon"
     );
     assert!(
-        pred_any(&agg.filter, |q| {
-            q.effect_text_contains.as_deref() == Some("Lucemon")
-        }),
-        "count filter must include effect_text_contains: Lucemon"
+        pred_any(&agg.filter, |q| q.name_contains.as_deref() == Some("Lucemon")),
+        "count filter must match a field Digimon NAMED Lucemon"
     );
 }
 
@@ -329,19 +327,133 @@ fn ad1_018_inherited_security_clause_shape() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Section 4 — GAP: [All Turns][OPT] De-Digivolve-2 observer keyed on the PLAYED
-//             card's effect TEXT containing [Knightmon]/[Lucemon].
+// Section 4 — [All Turns][Once Per Turn] De-Digivolve-2 observer keyed on the
+//             PLAYED card's printed TEXT containing [Knightmon]/[Lucemon].
+//             G-DSL-EVENT-CARD-TEXT-CONTAINS (closed 2026-06-15).
 // ═══════════════════════════════════════════════════════════════════════════
-//
-// "When any of your Digimon with [Knightmon] or [Lucemon] in its text are
-// played, <De-Digivolve 2> 1 of your opponent's Digimon." This needs a NEW
-// predicate leaf — `event_card_text_contains` — that inspects the TRIGGERING
-// (played) card's printed effect text. The DSL today has `event_card_name_
-// contains` (AD1-001 / AD1-016 idiom) but no TEXT-contains sibling for the
-// event card. Logged as G-DSL-EVENT-CARD-TEXT-CONTAINS. Left stubbed; the
-// observer clause is OMITTED from the YAML (an approximation keyed on the
-// played card's NAME would under-fire vs the printed "in its text").
 
-#[ignore = "pending: G-DSL-EVENT-CARD-TEXT-CONTAINS — [All Turns][OPT] De-Digivolve-2 observer must key on the PLAYED card's effect text containing [Knightmon]/[Lucemon]"]
+/// An own Digimon fixture whose printed effect text carries `text`.
+fn ally_with_text(id: &str, text: &str) -> CardData {
+    let mut c = make_test_card_with_level(id, id, 4);
+    c.card_kind = CardKind::Digimon;
+    c.dp = Some(3000);
+    c.play_cost = 0;
+    c.effect_text = text.to_string();
+    c
+}
+
+/// Structural: the observer clause must key on `event_card_text_contains` for
+/// BOTH Knightmon and Lucemon (not the played card's name) and De-Digivolve 2.
 #[test]
-fn ad1_018_all_turns_de_digivolve_2_observer_on_knightmon_lucemon_text_play() {}
+fn ad1_018_dedigivolve_observer_keys_on_played_card_text() {
+    let runner = DebugRunner::builder()
+        .dsl_card("AD1-018")
+        .expect("AD1-018 loads")
+        .start();
+    let card = runner.compiled_card("AD1-018").expect("compiled");
+
+    let clause = card
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::OnAnyDigimonPlayed))
+        .expect("AD1-018 must carry an OnAnyDigimonPlayed De-Digivolve observer");
+
+    let cond = clause
+        .condition
+        .as_ref()
+        .expect("observer must be gated on the played card's text");
+    assert!(
+        pred_any(cond, |q| q.event_card_text_contains.as_deref() == Some("Knightmon")),
+        "observer must gate on event_card_text_contains: Knightmon"
+    );
+    assert!(
+        pred_any(cond, |q| q.event_card_text_contains.as_deref() == Some("Lucemon")),
+        "observer must gate on event_card_text_contains: Lucemon"
+    );
+    assert!(
+        clause
+            .process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::DeDigivolve { amount: Some(2), .. })),
+        "observer body must De-Digivolve 2; got {:?}",
+        clause.process
+    );
+}
+
+/// Behavioral: playing an own Digimon whose TEXT contains "Lucemon" fires the
+/// observer and De-Digivolves 2 sources off a chosen opponent Digimon.
+#[test]
+fn ad1_018_dedigivolve_fires_when_played_ally_has_lucemon_in_text() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-018")
+        .expect("AD1-018 loads")
+        .add_card(ally_with_text("LUCE-ALLY", "When this Digimon attacks, gain 1 memory. [Lucemon] only."))
+        .add_card(opp_digimon("OPP-TOP", 5))
+        .add_card(opp_digimon("OPP-SRC-A", 5))
+        .add_card(opp_digimon("OPP-SRC-B", 5))
+        .hand(0, &["LUCE-ALLY"])
+        .memory(20)
+        .start();
+    runner.game.turn_count = 5;
+
+    let _lk = runner.place_on_field(0, "AD1-018", Some(0));
+    let opp = runner.place_on_field(1, "OPP-TOP", None);
+    runner.push_source(opp, "OPP-SRC-A");
+    runner.push_source(opp, "OPP-SRC-B");
+    let sources_before = runner.game.players[1].battle_area[opp.index as usize]
+        .card_sources
+        .len();
+
+    runner.play(0, 0).expect("play the Lucemon-text ally");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("De-Digivolve-2 observer must surface an opponent target prompt");
+    assert_eq!(view.kind, SelectionKind::OppField);
+    let pick = encode_attack(0, opp.index as u16);
+    assert!(
+        view.valid_action_ids.contains(&pick),
+        "the opponent Digimon must be a valid De-Digivolve target"
+    );
+    runner.execute_action(view.selecting_player, pick).expect("De-Digivolve it");
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.game.players[1].battle_area[opp.index as usize]
+            .card_sources
+            .len(),
+        sources_before - 2,
+        "De-Digivolve 2 must remove 2 digivolution sources"
+    );
+}
+
+/// Negative: playing an own Digimon whose text contains NEITHER name does NOT
+/// fire the observer (it must key on text, not merely on a Digimon being played).
+#[test]
+fn ad1_018_dedigivolve_does_not_fire_for_unrelated_text() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-018")
+        .expect("AD1-018 loads")
+        .add_card(ally_with_text("PLAIN-ALLY", "When this Digimon attacks, draw 1."))
+        .add_card(opp_digimon("OPP-TOP2", 5))
+        .add_card(opp_digimon("OPP-SRC2", 5))
+        .hand(0, &["PLAIN-ALLY"])
+        .memory(20)
+        .start();
+    runner.game.turn_count = 5;
+
+    let _lk = runner.place_on_field(0, "AD1-018", Some(0));
+    let opp = runner.place_on_field(1, "OPP-TOP2", None);
+    runner.push_source(opp, "OPP-SRC2");
+
+    runner.play(0, 0).expect("play the unrelated-text ally");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "observer must NOT fire when the played card's text lacks Knightmon/Lucemon"
+    );
+}
