@@ -2111,8 +2111,71 @@
       },
       "test_count": 7,
       "test_file": "code/digimon-engine/tests/archetypes/titan_bt25.rs"
+    },
+    "Ice-Snow (Suzune Kazuki)": {
+      "cards": [
+        "EX11-002",
+        "EX7-016",
+        "EX11-014",
+        "EX8-019",
+        "EX7-020",
+        "P-215",
+        "EX11-015",
+        "EX8-022",
+        "EX7-021",
+        "EX11-016",
+        "EX8-023",
+        "EX7-023",
+        "EX11-017",
+        "EX8-028",
+        "BT17-077",
+        "P-228",
+        "EX8-066",
+        "EX11-057"
+      ],
+      "model_doc": "qa/archetype-qa/ice-snow-model.md",
+      "test_file": "code/digimon-engine/tests/archetypes/ice_snow.rs",
+      "slice": "user-supplied card list (digivolution costs + [When Digivolving] firing focus)",
+      "test_count_live": 5,
+      "test_count_ignored": 0,
+      "static_tests": "N/A — authored from a manual card list, not a deck_library archetype; no deck-legality/smoke gate run. Full cards_behavioral (5246) + archetypes (204) regression green.",
+      "combos_tested": [
+        {
+          "combo": "C+A: EX8-019 [Your Turn] cost -1 ramp into EX7-020 Paledramon (printed blue-Lv.3 box cost 2 -> 1) whose [When Digivolving] then strips the opponent bottom 2 sources",
+          "verdict": "PASS"
+        },
+        {
+          "combo": "C control: non-reducer plain blue Lv.3 base into EX7-020 charges the full cost 2 (proves the -1 is EX8-019)",
+          "verdict": "PASS"
+        },
+        {
+          "combo": "A: EX8-022 Frigimon [On Play][When Digivolving] strips opponent bottom 2 sources; the \"opp sourceless -> +1 memory\" rider correctly withheld while the opponent stays sourced",
+          "verdict": "PASS"
+        },
+        {
+          "combo": "B: Suzune Kazuki EX8-066 [All Turns] observer fires on an Ice-Snow digivolve -> suspend Tamer -> trash 1 opponent source",
+          "verdict": "PASS"
+        },
+        {
+          "combo": "C: EX8-023 PolarBearmon printed alt [Ice-Snow] evo box charges cost 3 vs the standard blue box cost 4",
+          "verdict": "PASS"
+        }
+      ],
+      "combos_dropped_blocked_on_unimplemented": [],
+      "combos_blocked_on_engine_bug": [],
+      "findings": [
+        {
+          "type": "ui-bug-fixed",
+          "id": "SKADI-ANYFIELD-SOFTLOCK",
+          "summary": "EX8-028 Skadimon [WD]/[WA] \"place 1 Digimon as the bottom security card\" (select_any_permanent) installed SelectionKind::Target with both-battle-area encode_attack(player,index) ids; the UI board-click router only handled OwnField/OppField, so every target was unclickable and (the inner pick being mandatory) no Decline showed -> hard softlock. Fixed via new SelectionKind::AnyField (engine), auto-serialized on both DTO wires, decoded per-id by the board (selectionTargets.ts/GamePage.tsx/GameBoard.tsx). Affects all 14 select_any_permanent + 5 select_dna_pair cards. Engine guard: ex8_028_pay_unsuspend_offers_sourceless_digimon_on_both_sides; frontend guards: selectionTargets.test.ts (10 cases)."
+        }
+      ],
+      "coverage_notes": "Per-card behavioral tests already cover in isolation: EX8-019 cost-reduction branches (ex8_019.rs), EX8-028 free-play + AnyField pay-unsuspend (ex8_028.rs), EX7-020/EX8-022 [WD] trash (ex7_020/ex8_022.rs), EX8-066 Suzune observer (ex8_066.rs). NOT re-tested at archetype level (capped; logged here): BT17-077 Blast Digivolve free + trash-all (per-card bt17_077.rs), P-228 Frozen Crown Delay -3 LIBERATOR digivolve, EX11-015 Frigimon [WD] free-play Suzune, EX11-016/EX8-023 place/lock riders, EX7-023/EX11-017 finisher locks, EX11-057 Suzune memory-on-trash. These remain candidates for a future archetype-test pass.",
+      "implemented_cards": 18,
+      "cross_set_pulled": [],
+      "cross_set_partner_used": []
     }
   },
-  "last_updated": "2026-06-11",
+  "last_updated": "2026-06-14",
   "version": 1
 }

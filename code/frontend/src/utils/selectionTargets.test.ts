@@ -1,11 +1,18 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  anyFieldSelectionActionId,
+  anyFieldSelectionHighlights,
   fieldSelectionActionId,
   fieldSelectionHighlights,
+  isAnyFieldSelectionKind,
   isFieldSelectionKind,
 } from './selectionTargets';
-import { SELECTION } from './constants';
+import { ACTION, ATTACK_TARGETS_PER_SLOT, SELECTION } from './constants';
+
+/** Engine `encode_attack(player, index)` — how AnyField ids are wired. */
+const anyId = (enginePlayer: number, slot: number) =>
+  ACTION.ATTACK_START + enginePlayer * ATTACK_TARGETS_PER_SLOT + slot;
 
 // The engine encodes EVERY field-target selection — own field or opponent
 // field — as `OWN_FIELD_START + slot` (== `encode_attack(0, slot)` in
@@ -107,5 +114,74 @@ describe('fieldSelectionHighlights', () => {
     ]);
     expect(own.size).toBe(0);
     expect(enemy.size).toBe(0);
+  });
+});
+
+// `AnyField` selections (`select_any_permanent` / `select_dna_pair`, e.g.
+// EX8-028 Skadimon "place 1 Digimon with no digivolution cards as the bottom
+// security card") span BOTH battle areas. Unlike OwnField/OppField, each valid
+// id carries the ABSOLUTE engine player: `encode_attack(player, index)`. The
+// own engine id is `selectingPlayer - 1`, so the decode is perspective-robust.
+// Routing these as `Target` left every target unclickable AND uncancellable
+// (the inner pick is mandatory) — the softlock these tests pin against.
+describe('isAnyFieldSelectionKind', () => {
+  it('accepts AnyField and rejects everything else', () => {
+    expect(isAnyFieldSelectionKind('AnyField')).toBe(true);
+    expect(isAnyFieldSelectionKind('OppField')).toBe(false);
+    expect(isAnyFieldSelectionKind('Target')).toBe(false);
+    expect(isAnyFieldSelectionKind(undefined)).toBe(false);
+  });
+});
+
+describe('anyFieldSelectionHighlights', () => {
+  it('splits both-field ids into own/enemy by decoding the engine player (local = P1)', () => {
+    // selectingPlayer 1 → own engine id 0. Own slots 0,1 (ids 100,101);
+    // enemy slots 1,3 (ids 116,118 = 115 + slot).
+    const { own, enemy } = anyFieldSelectionHighlights(
+      'AnyField',
+      [anyId(0, 0), anyId(0, 1), anyId(1, 1), anyId(1, 3)],
+      1,
+    );
+    expect([...own].sort((a, b) => a - b)).toEqual([0, 1]);
+    expect([...enemy].sort((a, b) => a - b)).toEqual([1, 3]);
+  });
+
+  it('is perspective-robust — when the selecting player is P2, side mapping flips', () => {
+    // selectingPlayer 2 → own engine id 1. Now engine-player-1 ids are OWN.
+    const { own, enemy } = anyFieldSelectionHighlights(
+      'AnyField',
+      [anyId(0, 0), anyId(1, 2)],
+      2,
+    );
+    expect([...own]).toEqual([2]); // engine player 1 slot 2 is "own"
+    expect([...enemy]).toEqual([0]); // engine player 0 slot 0 is the opponent
+  });
+
+  it('returns empty sets for non-AnyField kinds', () => {
+    const { own, enemy } = anyFieldSelectionHighlights('OppField', [anyId(0, 0)], 1);
+    expect(own.size).toBe(0);
+    expect(enemy.size).toBe(0);
+  });
+});
+
+describe('anyFieldSelectionActionId', () => {
+  const valid = new Set([anyId(0, 1), anyId(1, 3)]); // own slot 1, enemy slot 3 (P1 view)
+
+  it('maps an own-side click to the engine-player-encoded id', () => {
+    expect(anyFieldSelectionActionId('AnyField', false, 1, valid, 1)).toBe(anyId(0, 1));
+  });
+
+  it('maps an opponent-side click to the opponent engine-player-encoded id', () => {
+    expect(anyFieldSelectionActionId('AnyField', true, 3, valid, 1)).toBe(anyId(1, 3));
+  });
+
+  it('returns null for a slot that is not a valid target', () => {
+    expect(anyFieldSelectionActionId('AnyField', false, 2, valid, 1)).toBeNull();
+    expect(anyFieldSelectionActionId('AnyField', true, 0, valid, 1)).toBeNull();
+  });
+
+  it('returns null for non-AnyField kinds', () => {
+    expect(anyFieldSelectionActionId('OppField', true, 3, valid, 1)).toBeNull();
+    expect(anyFieldSelectionActionId(undefined, true, 3, valid, 1)).toBeNull();
   });
 });
