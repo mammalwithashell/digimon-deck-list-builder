@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
   ActionTrace,
+  DecodedAction,
   GameState,
   GameEvent,
   GamePhase,
@@ -31,6 +32,11 @@ interface GameStore {
 
   // UI state
   actionMask: number[];
+  /** Engine-decoded list of every currently-legal action for the decision
+   *  player, each carrying source-card + effect identity. The action bar
+   *  renders activatable effects from this (card + effect name) instead of
+   *  re-deriving labels from raw mask ranges. Refreshed alongside the mask. */
+  decodedActions: DecodedAction[];
   /** True while a non-human agent still has actions to take in paced mode
    *  (add-bot-action-pacing). GamePage's pacing driver requests the next
    *  beat while set; human action submission is locked for the duration. */
@@ -49,6 +55,7 @@ interface GameStore {
   setGameSeed: (seed: string | null) => void;
   setGameState: (state: GameState) => void;
   setActionMask: (mask: number[]) => void;
+  setDecodedActions: (actions: DecodedAction[]) => void;
   setAgentPending: (pending: boolean) => void;
   setPlayerLabels: (labels: Record<number, string>) => void;
   selectAttacker: (slot: number | null) => void;
@@ -77,6 +84,7 @@ const initialState = {
   pendingSelection: null,
   pendingAttack: null,
   actionMask: [],
+  decodedActions: [],
   agentPending: false,
   selectedAttacker: null,
   hoveredCard: null,
@@ -110,6 +118,7 @@ export const useGameStore = create<GameStore>((set) => ({
     }),
 
   setActionMask: (mask) => set({ actionMask: mask }),
+  setDecodedActions: (actions) => set({ decodedActions: actions }),
   setAgentPending: (pending) => set({ agentPending: pending }),
   setPlayerLabels: (labels) => set({ playerLabels: labels }),
   selectAttacker: (slot) => set({ selectedAttacker: slot }),

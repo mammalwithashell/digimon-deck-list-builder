@@ -15,6 +15,9 @@
 
 use std::sync::Arc;
 
+use digimon_engine::action::explain::{
+    explain_action, legal_decoded_actions, ActionKind, ActionZone,
+};
 use digimon_engine::action::{
     build_action_mask, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
     HAND_EFFECT_START, TRASH_EFFECT_START,
@@ -164,6 +167,17 @@ impl CardEffect for TrashMainMemGate {
     }
 }
 
+/// [Field] [Main] with NO effect name — the decoder must surface `None` for
+/// `effect_name` while still identifying the source card.
+struct FieldMainNoName;
+impl CardEffect for FieldMainNoName {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::declarative(card)
+            .timing(EffectTiming::MainOnField)
+            .build()]
+    }
+}
+
 fn test_registry() -> CardEffectRegistry {
     let mut r = CardEffectRegistry::default();
     r.insert("HAND-ALWAYS", Arc::new(HandMainAlways));
@@ -171,6 +185,7 @@ fn test_registry() -> CardEffectRegistry {
     r.insert("FIELD-OPT", Arc::new(FieldMainOptTop));
     r.insert("FIELD-INH", Arc::new(FieldMainInherited));
     r.insert("FIELD-TURN", Arc::new(FieldMainTurnGate));
+    r.insert("FIELD-NONAME", Arc::new(FieldMainNoName));
     r.insert("TRASH-ALWAYS", Arc::new(TrashMainAlways));
     r.insert("TRASH-MEM", Arc::new(TrashMainMemGate));
     // Plain vanilla digimon used as the top card in stack-based tests.
@@ -508,4 +523,136 @@ fn main_effects_do_not_emit_outside_main_phase() {
     assert_eq!(mask[(HAND_EFFECT_START) as usize], 0.0);
     assert_eq!(mask[field_main_bit(0)], 0.0);
     assert_eq!(mask[(TRASH_EFFECT_START) as usize], 0.0);
+}
+
+// ─── Decoder: effect-name surfacing (§ action-bar-activatable-effects) ──
+
+#[test]
+fn decoder_names_field_main_effect() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("FIELD-OPT", CardColor::Red))
+        .with_registry(test_registry())
+        .start();
+
+    let tp = r.game.turn_player();
+    r.place_on_field(tp, "FIELD-OPT", Some(0));
+    r.game.enter_main_phase();
+
+    let e = explain_action(&r.game, tp, field_main_bit(0) as u16);
+    assert_eq!(e.kind, ActionKind::FieldEffect);
+    assert_eq!(e.source_zone, Some(ActionZone::Battle));
+    assert_eq!(e.source_index, Some(0));
+    assert_eq!(e.card_name.as_deref(), Some("FIELD-OPT"));
+    assert_eq!(
+        e.effect_name.as_deref(),
+        Some("Field Main — top, OPT"),
+        "decoder must name the matched field [Main] effect"
+    );
+    assert!(
+        e.label.contains("Field Main — top, OPT"),
+        "label folds in the effect name: {}",
+        e.label
+    );
+}
+
+#[test]
+fn decoder_names_hand_main_effect() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_option("HAND-ALWAYS", CardColor::Red))
+        .with_registry(test_registry())
+        .hand(0, &["HAND-ALWAYS"])
+        .start();
+
+    r.game.enter_main_phase();
+
+    let e = explain_action(&r.game, 0, HAND_EFFECT_START);
+    assert_eq!(e.kind, ActionKind::HandEffect);
+    assert_eq!(e.source_zone, Some(ActionZone::Hand));
+    assert_eq!(e.source_index, Some(0));
+    assert_eq!(e.card_name.as_deref(), Some("HAND-ALWAYS"));
+    assert_eq!(e.effect_name.as_deref(), Some("Hand Main — always"));
+}
+
+#[test]
+fn decoder_names_trash_main_effect() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_option("TRASH-ALWAYS", CardColor::Red))
+        .with_registry(test_registry())
+        .start();
+
+    let tp = r.game.turn_player();
+    plant_trash(&mut r, tp, "TRASH-ALWAYS");
+    r.game.enter_main_phase();
+
+    let e = explain_action(&r.game, tp, TRASH_EFFECT_START);
+    assert_eq!(e.kind, ActionKind::TrashEffect);
+    assert_eq!(e.source_zone, Some(ActionZone::Trash));
+    assert_eq!(e.source_index, Some(0));
+    assert_eq!(e.card_name.as_deref(), Some("TRASH-ALWAYS"));
+    assert_eq!(e.effect_name.as_deref(), Some("Trash Main — always"));
+}
+
+#[test]
+fn decoder_unnamed_effect_returns_none_but_identifies_card() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("FIELD-NONAME", CardColor::Red))
+        .with_registry(test_registry())
+        .start();
+
+    let tp = r.game.turn_player();
+    r.place_on_field(tp, "FIELD-NONAME", Some(0));
+    r.game.enter_main_phase();
+
+    let e = explain_action(&r.game, tp, field_main_bit(0) as u16);
+    assert_eq!(e.kind, ActionKind::FieldEffect);
+    assert_eq!(
+        e.card_name.as_deref(),
+        Some("FIELD-NONAME"),
+        "card is still identified even with no effect name"
+    );
+    assert_eq!(
+        e.effect_name, None,
+        "an effect with no printed name surfaces effect_name = None"
+    );
+}
+
+/// Mask-vs-decoder agreement: `legal_decoded_actions` lists exactly the
+/// effect the mask surfaced, and stops listing it once the mask retracts the
+/// bit (here, when the field [Main] OPT is exhausted).
+#[test]
+fn mask_and_decoder_agree_on_field_main() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("FIELD-OPT", CardColor::Red))
+        .with_registry(test_registry())
+        .start();
+
+    let tp = r.game.turn_player();
+    let handle = r.place_on_field(tp, "FIELD-OPT", Some(0));
+    r.game.enter_main_phase();
+
+    let bit = field_main_bit(0) as u16;
+
+    // Mask emits the bit → decoder lists it, named, with FieldEffect kind.
+    assert_eq!(build_action_mask(&r.game, tp)[bit as usize], 1.0);
+    let decoded = legal_decoded_actions(&r.game, tp);
+    let entry = decoded
+        .iter()
+        .find(|a| a.action_id == bit)
+        .expect("decoder lists the field [Main] action the mask emitted");
+    assert_eq!(entry.kind, ActionKind::FieldEffect);
+    assert_eq!(entry.effect_name.as_deref(), Some("Field Main — top, OPT"));
+
+    // Exhaust the OPT → mask retracts the bit → decoder drops the action.
+    let source_handle = r.game.players[tp as usize].battle_area[handle.index as usize]
+        .top_card()
+        .handle();
+    r.game.players[tp as usize].battle_area[handle.index as usize]
+        .record_activation(source_handle, 0);
+
+    assert_eq!(build_action_mask(&r.game, tp)[bit as usize], 0.0);
+    let decoded_after = legal_decoded_actions(&r.game, tp);
+    assert!(
+        !decoded_after.iter().any(|a| a.action_id == bit),
+        "decoder must not list an action the mask no longer emits"
+    );
 }

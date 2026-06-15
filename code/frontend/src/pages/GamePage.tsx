@@ -245,6 +245,40 @@ export function GamePage() {
     };
   }, []);
 
+  // Refresh the engine-decoded action list whenever the legal-action set
+  // changes. The action bar renders activatable effects (card + effect name)
+  // from this instead of re-deriving labels from raw mask ranges. Cleared
+  // while the agent is acting or the game is over. WebSocket modes (PvP /
+  // vs-AI-online / spectator) drive state through their own channel and the
+  // /games decoded-actions endpoint may not back them — they fall back to the
+  // action bar's mask-based rendering, so we skip the fetch there.
+  useEffect(() => {
+    const gid = store.gameId;
+    if (!gid || useWebSocket || store.agentPending || store.isGameOver) {
+      store.setDecodedActions([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const actions = await gameApi.getDecodedActions(gid);
+        if (!cancelled) store.setDecodedActions(actions);
+      } catch {
+        if (!cancelled) store.setDecodedActions([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    store.gameId,
+    store.actionMask,
+    store.agentPending,
+    store.isGameOver,
+    useWebSocket,
+  ]);
+
   // Hydrate store from URL param when navigating to /game/:id
   useEffect(() => {
     if (urlGameId && !store.gameId) {
@@ -1294,6 +1328,7 @@ export function GamePage() {
           onSurrender={handleSurrender}
           isGameOver={store.isGameOver}
           canActivateEffect={parsedMask.canActivateEffect}
+          decodedActions={store.agentPending ? [] : store.decodedActions}
         />
       </div>
 

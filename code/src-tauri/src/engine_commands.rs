@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use digimon_engine::action::build_action_mask;
-use digimon_engine::action::explain::{explain_action, ActionExplanation};
+use digimon_engine::action::explain::{explain_action, legal_decoded_actions, ActionExplanation};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::combat::AttackResult;
@@ -1688,6 +1688,22 @@ pub fn rust_get_mask(state: tauri::State<'_, RustEngineState>) -> Result<Vec<u8>
     let guard = state.game.lock().map_err(|e| e.to_string())?;
     let game = guard.as_ref().ok_or("No active game")?;
     Ok(action_mask_bytes(game))
+}
+
+/// Decoded list of every currently-legal action for the current decision
+/// player, each carrying source-card and effect identity (`card_name`,
+/// `effect_name`, `source_zone`, `source_index`, `label`). The action bar
+/// renders activatable effects from this list so it never re-derives action
+/// semantics from raw mask bit-ranges (which mis-decodes trash/hand [Main]
+/// effects). Parallels `rust_get_mask` and is fetched per state update.
+#[tauri::command]
+pub fn rust_get_decoded_actions(
+    state: tauri::State<'_, RustEngineState>,
+) -> Result<Vec<ActionExplanation>, String> {
+    let guard = state.game.lock().map_err(|e| e.to_string())?;
+    let game = guard.as_ref().ok_or("No active game")?;
+    let pid = current_decision_player(game);
+    Ok(legal_decoded_actions(game, pid))
 }
 
 #[tauri::command]
