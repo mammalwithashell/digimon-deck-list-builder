@@ -157,6 +157,16 @@ describe('anyFieldSelectionHighlights', () => {
     expect([...enemy]).toEqual([0]); // engine player 0 slot 0 is the opponent
   });
 
+  it('decodes the opponent 14th slot (slot 13 → id 128), the previously-dropped edge', () => {
+    const { own, enemy } = anyFieldSelectionHighlights(
+      'AnyField',
+      [anyId(1, 13)], // 100 + 15 + 13 = 128
+      1,
+    );
+    expect(own.size).toBe(0);
+    expect([...enemy]).toEqual([13]);
+  });
+
   it('returns empty sets for non-AnyField kinds', () => {
     const { own, enemy } = anyFieldSelectionHighlights('OppField', [anyId(0, 0)], 1);
     expect(own.size).toBe(0);
