@@ -10,7 +10,7 @@ from jose import JWTError
 
 from server.config import settings
 from server.db.auth import decode_access_token
-from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
+from server.rust_interactive_game import RustInteractiveGame
 from server.state_filter import filter_state_for_player
 from server.routers.state import active_games
 from server.routers.ws_manager import manager
@@ -73,7 +73,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
         await websocket.close(code=4004, reason="Game not found")
         return
 
-    if not isinstance(runner, InteractiveGame):
+    if not isinstance(runner, RustInteractiveGame):
         await websocket.close(code=4004, reason="Game does not support WebSocket")
         return
 
@@ -196,7 +196,7 @@ async def _handle_action(
     game_id: str,
     player_id: int,
     data: Dict[str, Any],
-    runner: InteractiveGame,
+    runner: RustInteractiveGame,
 ) -> None:
     """Process an action message from a player."""
     action_id = data.get("action_id")
@@ -240,7 +240,7 @@ async def _handle_surrender(
     ws: WebSocket,
     game_id: str,
     player_id: int,
-    runner: InteractiveGame,
+    runner: RustInteractiveGame,
 ) -> None:
     """Process a surrender message from a player."""
     if runner.game.game_over:

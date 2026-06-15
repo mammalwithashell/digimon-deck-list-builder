@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from starlette.websockets import WebSocket, WebSocketState
 
-from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
+from server.rust_interactive_game import RustInteractiveGame
 from server.state_filter import (
     filter_state_for_player,
     filter_state_for_spectator,
@@ -157,7 +157,7 @@ class ConnectionManager:
     async def broadcast_state(
         self,
         game_id: str,
-        runner: InteractiveGame,
+        runner: RustInteractiveGame,
         *,
         logs: Optional[List[str]] = None,
         events: Optional[List[Dict[str, Any]]] = None,

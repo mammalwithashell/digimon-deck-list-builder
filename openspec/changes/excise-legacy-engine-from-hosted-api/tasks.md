@@ -1,40 +1,49 @@
-> **STATUS: DEFERRED — DO NOT START.** These tasks are a phasing sketch, not scheduled work. Do not begin any phase without an explicit decision to prioritize this change. Each phase is gated on differential testing against the Python path before cutover.
+> **STATUS: ACTIVE — PvP cutover landed (2026-06-15).** The hosted API now runs
+> all gameplay on the Rust engine; `code/server/` imports zero `engine_py_legacy`
+> (guardrail-enforced). Phases 1–3 + 5 were delivered by
+> `shrink-legacy-engine-surface`; phase 4 (live PvP) was done as a full cutover.
+> Remaining: GameEvent wiring (animation parity — also benefits desktop) and the
+> final `code/engine_py_legacy/` deletion. Note: the original "differential-test
+> against the Python path" gate was dropped — the Python engine is bit-rotted and
+> cannot serve as an oracle (see design findings 2026-06-14); the Rust faithfulness
+> suite (DCGO replay + behavioral + judge-quiz) + new interactive-wire tests are the gate.
 
-## 0. Prioritization gate (must clear before any task below)
+## 0. Prioritization gate
 
-- [ ] 0.1 Explicit decision to schedule this migration (owner + sequencing vs other engine work).
-- [ ] 0.2 Confirm `make-training-build-legacy-free` has landed (training is already legacy-free; the server is the remaining surface).
+- [x] 0.1 Explicit decision to schedule this migration. **— prioritized 2026-06-15 ("use the Rust engine for all gameplay now" → full cutover).**
+- [x] 0.2 Confirm `make-training-build-legacy-free` has landed (training already legacy-free). **— training is Rust-only/code-complete; the server was the remaining surface and is now migrated.**
 
 ## 1. Deck rules → Rust deck tools (lowest risk)
 
-- [ ] 1.1 Expose parse/validate/summarize + restricted-list over PyO3 from `code/digimon-engine/src/deck_tools.rs`.
-- [ ] 1.2 Differential-test against `engine_py_legacy.engine.data.deck_loader` (`parse_deck`, `validate_deck`, `summarize_deck`, `RESTRICTED_LIST`, `CardRestriction`) over a deck corpus.
-- [ ] 1.3 Migrate `simulations.py`, `lobby.py`, `db/routers/decks.py`, `db/routers/training.py`; re-home `PlayerType` and small enums off legacy.
+- [x] 1.1 Expose parse/validate/summarize + restricted-list over PyO3. **— already exposed in `digimon-engine-py`.**
+- [x] 1.2 Differential-test against the Python deck-loader over a corpus. **— verified deck modes (standard/no_restriction/eden/titan/edh) on the Rust binding; restricted/EDEN lists byte-identical (shrink-legacy-engine-surface §2).**
+- [x] 1.3 Migrate `simulations.py`, `lobby.py`, `db/routers/decks.py`, `db/routers/training.py`; re-home `PlayerType`. **— migrated; `PlayerType` had no consumer once `InteractiveGame` was removed (deleted, not re-homed).**
 
 ## 2. Replay + recordings → Rust replay core
 
-- [ ] 2.1 Expose the replay core (`runners/replay.rs`) for server use via PyO3.
-- [ ] 2.2 Recording-format compatibility gate over a corpus of existing recordings.
-- [ ] 2.3 Migrate `state.py`, `replays.py`, `recordings.py` off `ReplayRunner`/`HeadlessGame`.
+- [x] 2.1 Expose the replay core over PyO3. **— `RustReplayRunner` added (shrink §3).**
+- [x] 2.2 Recording-format compatibility gate. **— round-trip gate (record → replay → same winner) over `RustHeadlessGame` recordings.**
+- [x] 2.3 Migrate `state.py`, `replays.py`, `recordings.py` off `ReplayRunner`/`HeadlessGame`. **— done; save gate → `RustHeadlessGame`, `record_actions=True`.**
 
 ## 3. State redaction over Rust state
 
-- [ ] 3.1 Implement redaction (Rust-native or thin Python over PyO3 state) satisfying the `state_filter` contract.
-- [ ] 3.2 Differential-test redacted output (player + spectator) against `engine_py_legacy.engine.state_filter`.
-- [ ] 3.3 Migrate `ws_manager.py`, `ws_games.py`.
+- [x] 3.1 Implement redaction satisfying the `state_filter` contract. **— `state_filter.py` relocated to `code/server/`; engine-agnostic dict filter over Rust `to_ui_json` (shrink §1).**
+- [x] 3.2 Differential-test redacted output (player + spectator). **— contract tests over real Rust `to_ui_json` output (Python differential dropped — bit-rotted, not an oracle).**
+- [x] 3.3 Migrate `ws_manager.py`, `ws_games.py`. **— done (phase 4).**
 
-## 4. Live PvP runtime → interactive Rust runner (highest risk)
+## 4. Live PvP runtime → Rust interactive runner (the cutover)
 
-- [ ] 4.1 Add an interactive Rust runner PyO3 surface (selection prompts, per-player observation, play-order/turn machinery); preserve the Python 1/2 ↔ Rust 0/1 player-ID convention.
-- [ ] 4.2 Shadow-run against the Python engine; compare turn-by-turn outcomes.
-- [ ] 4.3 Migrate `lobby.py`, `matchmaking.py`, `ws_*` to the Rust interactive runner; per-route flag for staged cutover.
+- [x] 4.1 Interactive runner over the Rust engine, preserving the Python 1/2 player-id convention. **— NO new pyclass needed (finding): `RustHeadlessGame` already exposes the interactive surface. Built `code/server/rust_interactive_game.py` (`RustInteractiveGame`) — a thin Python adapter (step / get_action_mask / `.game.*` shim / surrender→concede / event drain). PvP is human-vs-human, so no bot/policy loop (that lives in `games.py`).**
+- [x] 4.2 ~~Shadow-run against the Python engine~~. **— NOT POSSIBLE (Python bit-rotted). Validated instead via `code/tests/api/test_rust_interactive_game.py` (full game to a winner, surrender, redaction, events) + the engine's existing faithfulness suite.**
+- [x] 4.3 Migrate `lobby.py`, `ws_*` to the Rust interactive runner. **— FULL cutover (Rust-only, no legacy fallback — the bit-rotted Python path is not a viable rollback). `matchmaking` rides on `lobby`. The whole `code/server/` is now legacy-free.**
+- [ ] 4.4 **Wire the unwired Rust `GameEvent`s** (`TurnStart`/`PhaseChange`/`Digivolve`/`Attack`/`Trash`/`Mill`/`SecurityReveal`) so PvP animations match legacy. **— REMAINING. Engine work (combat/digivolve/deletion/security/turn machinery) + wheel rebuild + per-event tests. PvP is correct without it (events drive animations only; sparse-events matches current desktop). Also fixes desktop bot-game animations.**
 
 ## 5. Admin AI script_promotion
 
-- [ ] 5.1 Decide retire vs migrate `script_promotion` (`db/routers/admin_ai.py`) with the admin AI pipeline owner.
-- [ ] 5.2 Execute the decision.
+- [x] 5.1/5.2 Retire vs migrate → **RETIRED** (Python card-script lane; Rust DSL-first). **— done (shrink §4): import + 2 promote endpoints → 410; `GET /admin/promotions` keeps historical audits.**
 
 ## 6. Close-out
 
-- [ ] 6.1 Assert `code/server/` imports zero `engine_py_legacy` (guardrail test, mirroring the training guardrail).
-- [ ] 6.2 Retire `docs/RUST_PYTHON_PARITY.md`; update `docs/ARCHITECTURE.md` and `docs/DEPLOYMENT.md`.
+- [x] 6.1 Assert `code/server/` imports zero `engine_py_legacy`. **— `code/tests/api/test_legacy_free_support_surfaces.py` now asserts the WHOLE server (incl. ws_*/lobby/matchmaking + `server.api`) imports with `engine_py_legacy` blocked.**
+- [ ] 6.2 Retire `docs/RUST_PYTHON_PARITY.md`; update `docs/ARCHITECTURE.md` / `docs/DEPLOYMENT.md`. **— REMAINING; gated on the final `code/engine_py_legacy/` deletion (the directory still ships the sunset engine + legacy tests + the relocated `run_scenario.py`). Parity doc stays as a live tracker until then.**
+- [ ] 6.3 **Delete `code/engine_py_legacy/`** (the final gate) — relocate any remaining server/tool-imported modules first (none remain in production), migrate `test_rust_backend_parity.py` into `code/tests`, drop the two `pyproject.toml` exclusion lines. **— REMAINING; the actual directory removal.**

@@ -22,15 +22,7 @@ from server.db.auth import get_current_user
 from server.db.database import get_db
 from server.db.models import User
 from digimon_engine import parse_deck
-
-# NOTE: PlayerType + InteractiveGame remain on the legacy engine — they are the
-# PvP/WebSocket runtime, explicitly out of scope for shrink-legacy-engine-surface
-# and tracked by excise-legacy-engine-from-hosted-api. PlayerType cannot be
-# re-homed independently: InteractiveGame compares `player_type == PlayerType.Human`
-# using the legacy enum (interactive_game.py:124), so a server-side enum would
-# break that identity check. It migrates with InteractiveGame.
-from engine_py_legacy.engine.data.enums import PlayerType
-from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
+from server.rust_interactive_game import RustInteractiveGame
 from server.routers.state import active_games
 from server.routers.ws_manager import GameSettings, manager
 
@@ -244,14 +236,11 @@ async def join_lobby_game(
     if not deck2:
         raise HTTPException(status_code=400, detail="A deck must be provided")
 
-    # Create the InteractiveGame (both players are human)
-    runner = InteractiveGame(
-        pending.host_deck,
-        deck2,
-        player1_type=PlayerType.Human,
-        player2_type=PlayerType.Human,
-        agent_action_delay_ms=0,
-    )
+    # Create the interactive game on the Rust engine (both players are human).
+    try:
+        runner = RustInteractiveGame(pending.host_deck, deck2)
+    except Exception as exc:  # PyValueError from the Rust binding (illegal deck)
+        raise HTTPException(status_code=400, detail=f"Engine construction failed: {exc}")
 
     active_games[game_id] = runner
 
