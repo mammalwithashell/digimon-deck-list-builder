@@ -115,6 +115,16 @@ impl Game {
                 }
             };
             handles.push(card.handle());
+            let card_id = card.card_id(&self.card_data).to_string();
+            let card_name = card.card_name(&self.card_data).to_string();
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Reveal {
+                seq,
+                player: player_id,
+                card_id,
+                card_name,
+                source_zone: crate::events::RevealZone::DeckTop,
+            });
             self.revealed_cards.push(card);
         }
         handles
@@ -132,6 +142,16 @@ impl Game {
                 break;
             };
             handles.push(card.handle());
+            let card_id = card.card_id(&self.card_data).to_string();
+            let card_name = card.card_name(&self.card_data).to_string();
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Reveal {
+                seq,
+                player: player_id,
+                card_id,
+                card_name,
+                source_zone: crate::events::RevealZone::DeckTop,
+            });
             self.revealed_cards.push(card);
         }
         handles

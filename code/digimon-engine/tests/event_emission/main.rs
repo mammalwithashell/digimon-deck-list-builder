@@ -6,6 +6,9 @@
 mod attack;
 mod digivolve_driven_attack;
 mod digivolve_payload;
+mod effect_target;
+mod memory_source;
 mod play_payload;
+mod reveal;
 mod security_reveal;
 mod trash;

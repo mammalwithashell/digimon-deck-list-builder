@@ -942,8 +942,10 @@ pub struct GameEventDto {
     pub seq: u32,
     pub player: i32,
     pub source_card_id: Option<String>,
+    pub source_card_name: Option<String>,
     pub source_slot: Option<i32>,
     pub target_card_id: Option<String>,
+    pub target_card_name: Option<String>,
     pub target_slot: Option<i32>,
     pub meta: serde_json::Value,
 }
@@ -1054,8 +1056,10 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
         seq: event.seq() as u32,
         player: 0,
         source_card_id: None,
+        source_card_name: None,
         source_slot: None,
         target_card_id: None,
+        target_card_name: None,
         target_slot: None,
         meta: serde_json::json!({}),
     };
@@ -1065,9 +1069,13 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
             player,
             delta,
             total,
+            source_card_id,
+            source_card_name,
             ..
         } => {
             dto.player = py_player_id(player);
+            dto.source_card_id = source_card_id;
+            dto.source_card_name = source_card_name;
             dto.meta = serde_json::json!({ "delta": delta, "total": total });
         }
         GameEvent::TurnStart {
@@ -1083,6 +1091,7 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
         GameEvent::Play {
             player,
             card_id,
+            card_name,
             field_index,
             cost_paid,
             cost_printed,
@@ -1091,6 +1100,7 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
         } => {
             dto.player = py_player_id(player);
             dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
             dto.source_slot = Some(i32::from(field_index));
             dto.meta = serde_json::json!({
                 "cost_paid": cost_paid,
@@ -1101,6 +1111,7 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
         GameEvent::Digivolve {
             player,
             top_card_id,
+            card_name,
             field_index,
             from_stack_top,
             was_dna,
@@ -1110,6 +1121,7 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
         } => {
             dto.player = py_player_id(player);
             dto.source_card_id = Some(top_card_id);
+            dto.source_card_name = Some(card_name);
             dto.source_slot = Some(i32::from(field_index));
             dto.meta = serde_json::json!({
                 "from_stack_top": from_stack_top,
@@ -1123,29 +1135,80 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
             attacker_field_index,
             target_field_index,
             target_player,
+            attacker_card_id,
+            attacker_card_name,
+            target_card_id,
+            target_card_name,
+            attacker_dp,
+            target_dp,
             ..
         } => {
             dto.player = py_player_id(player);
+            dto.source_card_id = Some(attacker_card_id);
+            dto.source_card_name = Some(attacker_card_name);
             dto.source_slot = Some(i32::from(attacker_field_index));
+            dto.target_card_id = target_card_id;
+            dto.target_card_name = target_card_name;
             dto.target_slot = target_field_index.map(i32::from);
             dto.meta = serde_json::json!({
                 "target_player": target_player.map(py_player_id),
+                "attacker_dp": attacker_dp,
+                "target_dp": target_dp,
             });
         }
         GameEvent::Trash {
-            player, card_id, ..
+            player,
+            card_id,
+            card_name,
+            ..
         }
         | GameEvent::Mill {
-            player, card_id, ..
+            player,
+            card_id,
+            card_name,
+            ..
         } => {
             dto.player = py_player_id(player);
             dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
         }
         GameEvent::SecurityReveal {
-            defender, card_id, ..
+            defender,
+            card_id,
+            card_name,
+            ..
         } => {
             dto.player = py_player_id(defender);
             dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+        }
+        GameEvent::EffectTarget {
+            player,
+            source_card_id,
+            source_card_name,
+            targets,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(source_card_id);
+            dto.source_card_name = Some(source_card_name);
+            let targets_json: Vec<serde_json::Value> = targets
+                .into_iter()
+                .map(|t| serde_json::json!({ "card_id": t.card_id, "card_name": t.card_name }))
+                .collect();
+            dto.meta = serde_json::json!({ "targets": targets_json });
+        }
+        GameEvent::Reveal {
+            player,
+            card_id,
+            card_name,
+            source_zone,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+            dto.meta = serde_json::json!({ "source_zone": format!("{:?}", source_zone) });
         }
         GameEvent::GameOver { winner, reason, .. } => {
             dto.meta = serde_json::json!({
@@ -2174,16 +2237,33 @@ mod tests {
             player: 0,
             delta: -3,
             total: 0,
+            source_card_id: Some("BT25-098".to_string()),
+            source_card_name: Some("Cyber Engage".to_string()),
         });
         let play_seq = game.next_event_seq();
         game.events.push(GameEvent::Play {
             seq: play_seq,
             player: 0,
             card_id: "BT1-001".to_string(),
+            card_name: "Agumon".to_string(),
             field_index: 0,
             cost_paid: 3,
             cost_printed: 3,
             via_alt_path: None,
+        });
+        let attack_seq = game.next_event_seq();
+        game.events.push(GameEvent::Attack {
+            seq: attack_seq,
+            player: 0,
+            attacker_field_index: 0,
+            target_field_index: Some(1),
+            target_player: Some(1),
+            attacker_card_id: "BT1-009".to_string(),
+            attacker_card_name: "Greymon".to_string(),
+            target_card_id: Some("BT25-020".to_string()),
+            target_card_name: Some("Tyrannomon".to_string()),
+            attacker_dp: Some(5000),
+            target_dp: Some(3000),
         });
         let game_over_seq = game.next_event_seq();
         game.events.push(GameEvent::GameOver {
@@ -2194,16 +2274,28 @@ mod tests {
 
         let drained = drain_events(&mut game);
 
-        assert_eq!(drained.len(), 3);
+        assert_eq!(drained.len(), 4);
         assert_eq!(drained[0].event_type, "MemoryChange");
         assert_eq!(drained[0].player, 1);
         assert_eq!(drained[0].meta["delta"], -3);
+        // Effect-source attribution surfaces on the desktop DTO.
+        assert_eq!(drained[0].source_card_id.as_deref(), Some("BT25-098"));
+        assert_eq!(drained[0].source_card_name.as_deref(), Some("Cyber Engage"));
         assert_eq!(drained[1].event_type, "Play");
         assert_eq!(drained[1].source_card_id.as_deref(), Some("BT1-001"));
+        assert_eq!(drained[1].source_card_name.as_deref(), Some("Agumon"));
         assert_eq!(drained[1].source_slot, Some(0));
         assert_eq!(drained[1].meta["cost_paid"], 3);
-        assert_eq!(drained[2].event_type, "GameOver");
-        assert_eq!(drained[2].meta["winner"], 1);
+        // Attack carries attacker + target identity (no more "slot N").
+        assert_eq!(drained[2].event_type, "Attack");
+        assert_eq!(drained[2].source_card_id.as_deref(), Some("BT1-009"));
+        assert_eq!(drained[2].source_card_name.as_deref(), Some("Greymon"));
+        assert_eq!(drained[2].target_card_id.as_deref(), Some("BT25-020"));
+        assert_eq!(drained[2].target_card_name.as_deref(), Some("Tyrannomon"));
+        assert_eq!(drained[2].meta["attacker_dp"], 5000);
+        assert_eq!(drained[2].meta["target_dp"], 3000);
+        assert_eq!(drained[3].event_type, "GameOver");
+        assert_eq!(drained[3].meta["winner"], 1);
         assert_eq!(drain_events(&mut game).len(), 0);
     }
 
