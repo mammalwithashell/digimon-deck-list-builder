@@ -133,8 +133,17 @@ export function useActionMask(mask: number[]): ParsedMask {
     for (let i = SELECTION.OWN_FIELD_START; i <= SELECTION.OWN_FIELD_END; i++) {
       if (mask[i] === 1) validSelections.add(i);
     }
-    // Enemy field
-    for (let i = SELECTION.ENEMY_FIELD_START; i <= SELECTION.ENEMY_FIELD_END; i++) {
+    // Enemy field. Mixed-side `AnyField` prompts (select_any_permanent, e.g.
+    // EX8-028 Skadimon "place 1 Digimon as the bottom security card") encode
+    // opponent slots as `OWN_FIELD_START + ATTACK_TARGETS_PER_SLOT + slot`
+    // (= `encode_attack(1, slot)`, 115-128). The legacy `ENEMY_FIELD_END` (127,
+    // stride-14) dropped opponent slot 13 (id 128), so an AnyField pick on the
+    // 14th opposing Digimon was unclickable. Widen the upper bound to 128; the
+    // ids past `ENEMY_FIELD_END` are only ever set for these mixed-side prompts,
+    // so this is purely additive.
+    const enemyFieldEnd =
+      SELECTION.OWN_FIELD_START + ATTACK_TARGETS_PER_SLOT + MAX_BATTLE_AREA_SLOTS - 1;
+    for (let i = SELECTION.ENEMY_FIELD_START; i <= enemyFieldEnd; i++) {
       if (mask[i] === 1) validSelections.add(i);
     }
     // Trash

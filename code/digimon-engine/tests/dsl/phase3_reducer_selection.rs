@@ -85,7 +85,10 @@ fn select_any_permanent_can_bind_either_players_field() {
             .pending_selection
             .as_ref()
             .expect("select_any_permanent should park a selection");
-        assert_eq!(pending.kind, SelectionKind::Target);
+        // AnyField (not Target): select_any_permanent spans BOTH battle areas and
+        // encodes the engine player per id (encode_attack(player, index)), so the
+        // UI can decode the side — see SelectionKind::AnyField.
+        assert_eq!(pending.kind, SelectionKind::AnyField);
         assert_eq!(pending.valid_action_ids.len(), 2);
         let action = *pending
             .valid_action_ids
