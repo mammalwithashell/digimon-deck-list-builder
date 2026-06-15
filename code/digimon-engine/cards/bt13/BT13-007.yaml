@@ -25,7 +25,7 @@ effects:
     # replaces the test-only `raw_rust: bt13_007_royal_knight_cost_reduction`,
     # which was never registered in the production raw_rust registry and so
     # silently evaluated to 0 (no reduction) in real games.
-    amount_fn: { base_per_delta: { base: 4, per: material_count, delta: 1 } }
+    amount_fn: { base: 4, per: material_count, delta: 1 }
 
   - when: start_of_your_main_phase
     scope: face_up
