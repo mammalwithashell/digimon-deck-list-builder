@@ -4,7 +4,7 @@ redacting opponent hand/security. Guards the `add-permanent-stack-inspector`
 serialization surface against accidental redaction.
 """
 
-from engine_py_legacy.engine.state_filter import (
+from server.state_filter import (
     filter_state_for_player,
     filter_state_for_spectator,
 )
@@ -71,3 +71,43 @@ def test_modifiers_survive_spectator_filter():
     # Both hands redacted for spectators.
     assert filtered["player1"]["handIds"] == []
     assert filtered["player2"]["handIds"] == []
+
+
+def test_redaction_over_rust_to_ui_json():
+    """Integration: the relocated filter runs unchanged over the REAL Rust
+    `RustHeadlessGame.to_ui_json()` dict — opponent hand/security are redacted,
+    counts and public zones survive, the viewer keeps their own hand.
+
+    Locks the Rust-output contract: the filter is allowlist-by-omission, so a
+    new hidden key in `to_ui_json` would NOT be redacted and must be added to
+    `_redact_player`. This asserts the keys that exist today.
+    """
+    import pytest
+
+    digimon_engine = pytest.importorskip("digimon_engine")
+
+    deck = ["ST1-01"] * 5 + ["ST1-03"] * 45
+    game = digimon_engine.RustHeadlessGame(
+        deck, deck, seed=1, observation_profile="standard_lite_v2"
+    )
+    full = game.to_ui_json()
+
+    filtered = filter_state_for_player(full, player_id=1)
+
+    # Opponent (player2) hand + security card data is fully redacted.
+    assert filtered["player2"]["handIds"] == []
+    assert filtered["player2"]["handCards"] == []
+    assert filtered["player2"]["securityIds"] == []
+    # Counts survive redaction (they live in separate keys).
+    assert filtered["player2"]["handCount"] == full["player2"]["handCount"]
+    assert filtered["player2"]["securityCount"] == full["player2"]["securityCount"]
+
+    # The viewer keeps their own hand but never sees their own (face-down) security.
+    assert filtered["player1"]["handIds"] == full["player1"]["handIds"]
+    assert filtered["player1"]["handCards"] == full["player1"]["handCards"]
+    assert filtered["player1"]["securityIds"] == []
+
+    # Public zones pass through untouched for both players.
+    for key in ("player1", "player2"):
+        assert filtered[key]["battleArea"] == full[key]["battleArea"]
+    assert filtered["memoryGauge"] == full["memoryGauge"]

@@ -21,7 +21,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.db.auth import get_current_user
 from server.db.database import get_db
 from server.db.models import User
-from engine_py_legacy.engine.data.deck_loader import parse_deck
+from digimon_engine import parse_deck
+
+# NOTE: PlayerType + InteractiveGame remain on the legacy engine — they are the
+# PvP/WebSocket runtime, explicitly out of scope for shrink-legacy-engine-surface
+# and tracked by excise-legacy-engine-from-hosted-api. PlayerType cannot be
+# re-homed independently: InteractiveGame compares `player_type == PlayerType.Human`
+# using the legacy enum (interactive_game.py:124), so a server-side enum would
+# break that identity check. It migrates with InteractiveGame.
 from engine_py_legacy.engine.data.enums import PlayerType
 from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
 from server.routers.state import active_games

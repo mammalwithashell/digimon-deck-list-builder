@@ -42,7 +42,8 @@ from server.db.models import (
     ScriptPromotionAudit,
     User,
 )
-from engine_py_legacy.engine.data import script_promotion
+# script_promotion import removed — the Python frozen-script promotion lane is
+# retired (shrink-legacy-engine-surface); its tests were removed/repointed.
 
 
 @pytest.fixture
@@ -933,118 +934,26 @@ class TestAITasks:
         assert list_resp.status_code == 200
         assert any(item["id"] == item_id for item in list_resp.json())
 
-    async def test_promote_completed_review_task_card(self, client: AsyncClient, session_factory, monkeypatch, tmp_path):
-        from server.db.routers import admin_ai as admin_ai_router
-
-        admin_tokens = await _register_and_login(client, "adminpromotefromtask")
-        await _grant_roles(session_factory, "adminpromotefromtask", ROLE_ADMIN)
-
-        async with session_factory() as db:
-            task = AITask(
-                task_type="review_batch",
-                payload_json=json.dumps(
-                    {"cards": [{"card_id": "BT24-001", "set_id": "bt24", "module_name": "bt24_001"}]}
-                ),
-                sanitized_input_json=json.dumps(
-                    {"cards": [{"card_id": "BT24-001", "set_id": "bt24", "module_name": "bt24_001"}]}
-                ),
-                result_json=json.dumps(
-                    {
-                        "cards": {
-                            "BT24-001": {
-                                "faithful_to_card_text": True,
-                                "engine_supported": True,
-                                "issues": [],
-                                "suggested_fixes": [],
-                                "engine_requests": [],
-                            }
-                        }
-                    }
-                ),
-                status="completed",
-                cost_estimate_usd=0.01,
-            )
-            db.add(task)
-            await db.commit()
-            await db.refresh(task)
-            task_id = task.id
-
-        def fake_promote_script_from_generated(*, card_id, set_id, module_name, expected_generated_hash):
-            assert card_id == "BT24-001"
-            assert set_id == "bt24"
-            assert module_name == "bt24_001"
-            assert expected_generated_hash == "abc123"
-            return {
-                "card_id": card_id,
-                "set_id": set_id,
-                "module_name": module_name,
-                "generated_hash": "abc123",
-                "frozen_hash": "def456",
-                "manifest_version": 42,
-            }
-
-        monkeypatch.setattr(admin_ai_router, "_sha256", lambda _: "abc123")
-        monkeypatch.setattr(admin_ai_router, "promote_script_from_generated", fake_promote_script_from_generated)
-
-        # Make generated path exist for endpoint preflight check.
-        test_scripts = tmp_path / "scripts"
-        generated_dir = test_scripts / "generated" / "bt24"
-        generated_dir.mkdir(parents=True, exist_ok=True)
-        (generated_dir / "bt24_001.py").write_text("print('x')\n", encoding="utf-8")
-        monkeypatch.setattr(admin_ai_router, "scripts_root", lambda: test_scripts)
-
-        resp = await client.post(
-            f"/admin/ai-tasks/{task_id}/promote",
-            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
-            json={"card_id": "BT24-001", "notes": "approved"},
+    async def test_promote_endpoints_are_retired(self, client: AsyncClient):
+        # Python frozen-script promotion is retired (shrink-legacy-engine-surface,
+        # rule 28: card scripting is Rust DSL-first). Both promote endpoints now
+        # return 410 Gone; GET /admin/promotions still serves historical audits.
+        r1 = await client.post(
+            "/admin/ai-tasks/some-task/promote",
+            json={"card_id": "BT24-001", "notes": "x"},
         )
-        assert resp.status_code == 201
-        body = resp.json()
-        assert body["card_id"] == "BT24-001"
-        assert body["ai_task_id"] == task_id
-        assert body["manifest_version"] == 42
-        assert body["work_type"] == "task"
-        assert body["work_id"] == task_id
+        assert r1.status_code == 410
 
-        async with session_factory() as db:
-            rows = (await db.execute(select(ScriptPromotionAudit))).scalars().all()
-            assert len(rows) == 1
-            assert rows[0].card_id == "BT24-001"
-            assert rows[0].ai_task_id == task_id
-
-            db.add(
-                ScriptPromotionAudit(
-                    card_id="BT21-001",
-                    set_id="bt21",
-                    module_name="bt21_001",
-                    generated_hash="g21",
-                    frozen_hash="f21",
-                    manifest_version=1,
-                    ai_task_id=None,
-                    notes="manual",
-                )
-            )
-            await db.commit()
-
-        list_by_set = await client.get(
+        r2 = await client.post(
             "/admin/promotions",
-            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
-            params={"set_id": "bt24"},
+            json={
+                "card_id": "BT24-001",
+                "set_id": "bt24",
+                "module_name": "bt24_001",
+                "expected_generated_hash": "abc",
+            },
         )
-        assert list_by_set.status_code == 200
-        set_rows = list_by_set.json()
-        assert len(set_rows) == 1
-        assert set_rows[0]["card_id"] == "BT24-001"
-
-        list_by_work = await client.get(
-            "/admin/promotions",
-            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
-            params={"work_id": task_id},
-        )
-        assert list_by_work.status_code == 200
-        work_rows = list_by_work.json()
-        assert len(work_rows) == 1
-        assert work_rows[0]["work_id"] == task_id
+        assert r2.status_code == 410
 
 
 class TestAIFixBatches:
@@ -1950,29 +1859,6 @@ class TestSetRuns:
 
 
 class TestPromotionAndRetrieval:
-    def test_promote_generated_script_updates_manifest(self, tmp_path, monkeypatch):
-        scripts_dir = tmp_path / "scripts"
-        generated_dir = scripts_dir / "generated" / "bt24"
-        generated_dir.mkdir(parents=True, exist_ok=True)
-        generated_file = generated_dir / "bt24_001.py"
-        generated_file.write_text("print('generated')\n", encoding="utf-8")
-        expected_hash = hashlib.sha256(generated_file.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
-        manifest_path = scripts_dir / "_frozen_manifest.json"
-
-        monkeypatch.setattr(script_promotion, "scripts_root", lambda: scripts_dir)
-        result = script_promotion.promote_script_from_generated(
-            card_id="BT24-001",
-            set_id="bt24",
-            module_name="bt24_001",
-            expected_generated_hash=expected_hash,
-            manifest_path=manifest_path,
-        )
-        assert (scripts_dir / "bt24" / "bt24_001.py").exists()
-        assert result["card_id"] == "BT24-001"
-
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        assert "BT24-001" in manifest["cards"]
-
     def test_local_rag_index_build_and_retrieve(self, tmp_path):
         src = tmp_path / "sources"
         src.mkdir(parents=True, exist_ok=True)

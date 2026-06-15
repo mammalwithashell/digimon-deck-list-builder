@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from starlette.websockets import WebSocket, WebSocketState
 
 from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
-from engine_py_legacy.engine.state_filter import (
+from server.state_filter import (
     filter_state_for_player,
     filter_state_for_spectator,
 )

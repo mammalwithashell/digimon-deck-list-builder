@@ -24,12 +24,13 @@ from server.db.schemas import (
     UpdateDeckFolderRequest,
     UpdateDeckLibraryRequest,
 )
-# validate_deck + CardRestriction stay on Python: the no_restriction game-mode
-# path passes an empty CardRestriction() to bypass restricted-list checks,
-# and the Rust binding only exposes the official-ENG list path. Tracked in
-# RUST_PYTHON_PARITY.md.
-from engine_py_legacy.engine.data.deck_loader import validate_deck, RESTRICTED_LIST, CardRestriction
-from digimon_engine import out_of_set_cards, validate_deck_for_game_mode
+# Deck legality runs on the Rust deck tools (rule 22). The no_restriction
+# game-mode routes through validate_deck_for_game_mode("no_restriction") — which
+# skips card_limits + choice_groups, equivalent to the old empty Python
+# CardRestriction() — rather than a custom-CardRestriction overload.
+# titan/edh_commander keep a thin Python size/singleton wrapper over the Rust
+# binding + CardDatabase (see _validate_for_mode).
+from digimon_engine import out_of_set_cards, validate_deck, validate_deck_for_game_mode
 
 router = APIRouter(prefix="/decks", tags=["decks"])
 
@@ -62,8 +63,10 @@ def _validate_for_mode(card_ids: list[str], game_mode: str, titan_role: str | No
     Returns (is_valid, error_list).
     """
     if game_mode == "no_restriction":
-        # Only check deck size and card existence — no restricted list
-        result = validate_deck(card_ids, restricted_list=CardRestriction())
+        # Only check deck size and card existence — no restricted list.
+        # Rust's no_restriction mode skips card_limits + choice_groups,
+        # equivalent to the old empty Python CardRestriction().
+        result = validate_deck_for_game_mode(card_ids, "no_restriction")
         return result.is_valid, result.errors
 
     if game_mode == "eden":

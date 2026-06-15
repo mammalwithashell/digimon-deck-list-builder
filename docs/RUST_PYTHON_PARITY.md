@@ -1268,9 +1268,24 @@ The sole exception was `engine.onnx_policy.load_onnx_policy`, which now
 lives at `digimon_gym.inference.onnx_policy.load_onnx_policy` (Phase 5
 relocation completed).
 
+> **Update (2026-06-14, shrink-legacy-engine-surface):** the non-PvP hosted-API
+> support surfaces and most `code/tools` are now legacy-free. Deck legality
+> (`simulations`/`training`/`decks`/`lobby` `parse_deck`), replay + recordings
+> (`replays`/`recordings`/`state` via the new PyO3 `RustReplayRunner`), and state
+> redaction (relocated to `server/state_filter.py`) all run on the Rust engine;
+> the `script_promotion` lane is retired. Tools: `promote_script` /
+> `check_frozen_integrity` / `run_qa_batch` / `archive/bootstrap_frozen_manifest`
+> deleted; `meta_loader` inlines `RE_CARD_ID`; `resolve_deck` dropped its legacy
+> fallback; `train_card_autoencoder` uses the relocated `tools/card_features.py`.
+> **Still legacy-coupled (by design, tracked by excise):** the PvP/WebSocket
+> runtime (`ws_games`/`ws_manager`/`lobby` via `InteractiveGame`, which keeps
+> `PlayerType`), and `tools/ingest_cards.py`'s function-local
+> `parse_xros_req`/`parse_digixros_req` (port pending). Rows below may predate
+> this update.
+
 | Surface | Caller(s) | Rust counterpart? |
 |---|---|---|
-| `engine.runners.headless_game.HeadlessGame` (Python class) | `routers/state.py`, `routers/recordings.py`, `routers/games.py`, `digimon_gym.py` (Python fallback path), `agents/architect_simulator.py` | `RustHeadlessGame` exists but has a different state-shape; per-caller migration is non-trivial. |
+| `engine.runners.headless_game.HeadlessGame` (Python class) | `routers/games.py` (now `RustHeadlessGame`); `agents/architect_simulator.py` | `RustHeadlessGame` is the production path; `recordings.py`/`state.py` migrated (2026-06-14). |
 | `engine.runners.interactive_game.InteractiveGame` | `routers/games.py`, `routers/debug_games.py`, `routers/matchmaking.py` (`# noqa: F401` re-export) | Pending — covered by the PvP bindings plan (`docs/superpowers/plans/2026-04-18-pyo3-pvp-bindings.md`). |
 | `engine.runners.replay_runner.ReplayRunner` | `routers/recordings.py` | ✅ Ported as `digimon_engine::runners::replay::ReplayRunner` (Phase 3 of `add-engine-debug-mcp`). Step / seek / run-to-completion / verify-mode all implemented. See `docs/DEBUG_MCP.md`. |
 | `engine.runners.scenario_runner.ScenarioRunner` | `tools/run_scenario.py`, `tools/run_qa_batch.py`, behavioral test infrastructure | Not planned (DebugRunner is the Rust-side parallel). |

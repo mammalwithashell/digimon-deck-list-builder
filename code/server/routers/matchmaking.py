@@ -38,7 +38,6 @@ from server.db.auth import get_current_user
 from server.db.database import get_db
 from server.db.models import Deck, User
 from digimon_engine import validate_deck
-from engine_py_legacy.engine.runners.interactive_game import InteractiveGame  # noqa: F401
 from server.routers.lobby import (
     PendingGame,
     _generate_join_code,

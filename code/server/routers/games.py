@@ -182,7 +182,9 @@ def create_game(request: CreateGameRequest):
     # accepts u64; `secrets.randbits(64)` stays inside that range.
     seed = request.seed if request.seed is not None else secrets.randbits(64)
     try:
-        game = RustHeadlessGame(deck1, deck2, False, False, False, seed)
+        # record_actions=True so the game can be persisted via
+        # POST /games/{id}/recordings and replayed through RustReplayRunner.
+        game = RustHeadlessGame(deck1, deck2, False, True, False, seed)
     except Exception as exc:  # PyValueError from the Rust binding
         raise HTTPException(status_code=400, detail=f"Engine construction failed: {exc}")
 

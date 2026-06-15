@@ -5,6 +5,11 @@ hands, security stacks, etc.  For WebSocket PvP this leaks hidden
 information.  This module provides filtering functions that produce
 perspective-appropriate copies of the full state dict.
 
+Relocated from ``engine_py_legacy.engine.state_filter`` (rule 22: production
+code must not import the sunset Python engine). The filter is engine-agnostic —
+it operates purely on the ``to_ui_json`` dict shape and consumes the Rust
+``RustHeadlessGame.to_ui_json()`` output unchanged.
+
 Public zones (visible to everyone):
     battle area, breeding area, trash, memory gauge, phase, turn count,
     revealed cards, pending selection/attack context.

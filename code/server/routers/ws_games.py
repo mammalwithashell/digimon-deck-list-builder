@@ -11,7 +11,7 @@ from jose import JWTError
 from server.config import settings
 from server.db.auth import decode_access_token
 from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
-from engine_py_legacy.engine.state_filter import filter_state_for_player
+from server.state_filter import filter_state_for_player
 from server.routers.state import active_games
 from server.routers.ws_manager import manager
 
@@ -107,7 +107,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
         await manager.connect_spectator(game_id, websocket)
         # Send current state
         full_state = runner.game.to_ui_json()
-        from engine_py_legacy.engine.state_filter import filter_state_for_spectator
+        from server.state_filter import filter_state_for_spectator
 
         spec_state = filter_state_for_spectator(
             full_state, manager.get_settings(game_id).spectator_mode

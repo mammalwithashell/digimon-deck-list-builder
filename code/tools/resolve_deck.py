@@ -35,14 +35,11 @@ if str(_CODE_DIR) not in sys.path:
 
 from data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH, CARDS_JSON as _CARDS_JSON_PATH
 
-# Prefer the Rust-backed PyO3 binding (production runtime + RL training).
-# Fall back to the sunset Python engine for lightweight CI workflows
-# (e.g. frozen-integrity) that don't build the wheel.
-try:
-    from digimon_engine import CardDatabase, CardKind
-except ImportError:
-    from engine_py_legacy.engine.data.card_database import CardDatabase
-    from engine_py_legacy.engine.data.enums import CardKind
+# Rust-backed PyO3 binding (production runtime + RL training). The sunset
+# Python-engine fallback was removed with shrink-legacy-engine-surface (the
+# frozen-integrity CI lane it served is retired) — this tool requires the
+# digimon_engine wheel.
+from digimon_engine import CardDatabase, CardKind
 
 from tools.xros_req_parser import (
     XrosReqParseResult,
