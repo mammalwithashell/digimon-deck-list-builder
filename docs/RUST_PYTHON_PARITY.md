@@ -1276,12 +1276,14 @@ relocation completed).
 > the `script_promotion` lane is retired. Tools: `promote_script` /
 > `check_frozen_integrity` / `run_qa_batch` / `archive/bootstrap_frozen_manifest`
 > deleted; `meta_loader` inlines `RE_CARD_ID`; `resolve_deck` dropped its legacy
-> fallback; `train_card_autoencoder` uses the relocated `tools/card_features.py`.
-> **Still legacy-coupled (by design, tracked by excise):** the PvP/WebSocket
-> runtime (`ws_games`/`ws_manager`/`lobby` via `InteractiveGame`, which keeps
-> `PlayerType`), and `tools/ingest_cards.py`'s function-local
-> `parse_xros_req`/`parse_digixros_req` (port pending). Rows below may predate
-> this update.
+> fallback; `train_card_autoencoder` uses the relocated `tools/card_features.py`;
+> `ingest_cards` uses the relocated `tools/xros_cost_parser.py` (byte-identical
+> over all 745 `cards.json` `xros_req` strings).
+> **Still legacy-coupled (by design):** the PvP/WebSocket runtime
+> (`ws_games`/`ws_manager`/`lobby` via `InteractiveGame`, which keeps
+> `PlayerType`) — tracked by excise; and `tools/run_scenario.py` (the
+> `ScenarioRunner`), pending the `gameplay-qa` skill moving to
+> `digimon-engine-cli`. Rows below may predate this update.
 
 | Surface | Caller(s) | Rust counterpart? |
 |---|---|---|
