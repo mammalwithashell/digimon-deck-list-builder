@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-14",
+  "last_updated": "2026-06-15",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -4744,10 +4744,10 @@
     },
     "BT13-019": {
       "card_name": "Gankoomon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-engine-gaps-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-019.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_019.rs",
@@ -4758,8 +4758,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Blocker done; union play [Sistermon]-from-trash OR Royal-Knight-from-breeding-sources with name exclusion blocked: G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "Gap closed: G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY (select_union_zone over trash + breeding sources, name exclusion). FULLY faithful.",
+      "audit_note": "Engine/DSL gap closed 2026-06-15; consumer card now fully faithful."
     },
     "BT13-030": {
       "card_name": "UlforceVeedramon",
@@ -4782,10 +4782,10 @@
     },
     "BT13-075": {
       "card_name": "Alphamon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "BLOCKED",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-engine-gaps-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-075.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_075.rs",
@@ -4796,8 +4796,8 @@
         "ROYAL-KNIGHTS-POOL-STUB",
         "GAP-STUB"
       ],
-      "notes": "Both clauses need new substrate (no approximation): On Play place trash-source-as-cost -> opp play_cost>=10 can't-attack-players aura (G-PLAY-COST-GTE-MODIFIER-AURA); [All Turns][OPT] would-leave replacement cost returns a digivolution source to DECK BOTTOM but only return-to-hand verb exists (G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM).",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "Gaps closed: G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM (would-leave self-protection) + On Play play-cost>=10 can't-attack aura (authorable-now). Both clauses authored. FULLY faithful.",
+      "audit_note": "Engine/DSL gap closed 2026-06-15; consumer card now fully faithful."
     },
     "BT13-087": {
       "card_name": "Dynasmon",
@@ -5143,10 +5143,10 @@
     },
     "EX10-068": {
       "card_name": "Digimon Emperor",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-engine-gaps-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/ex10/EX10-068.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_068.rs",
@@ -5157,8 +5157,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "On Play delete<=5 + Security done; start-main distinct-color memory G-DISTINCT-COLOR-COUNT; returned-card color-bound union play G-RETURNED-CARD-COLOR-BINDING.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "Gap closed: G-RETURNED-CARD-COLOR-BINDING (returned-card color-bound Lv<=4 union play) + distinct-color memory (authorable-now). FULLY faithful.",
+      "audit_note": "Engine/DSL gap closed 2026-06-15; consumer card now fully faithful."
     },
     "EX11-053": {
       "card_name": "Omekamon",
@@ -5240,10 +5240,10 @@
     },
     "AD1-018": {
       "card_name": "LordKnightmon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-engine-gaps-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/ad1/AD1-018.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_018.rs",
@@ -5254,8 +5254,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Added trash-text-count(Knightmon/Lucemon>=4) -> -5 cost + behavioral tests for On Play immunity & inherited Security De-Digivolve+delete. Remaining: De-Digivolve-2 observer keyed on PLAYED card's effect text (new gap G-DSL-EVENT-CARD-TEXT-CONTAINS).",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "Gap closed: G-DSL-EVENT-CARD-TEXT-CONTAINS. De-Digivolve-2 observer keyed on the played card's TEXT now authored. Also fixed cost-reduction faithfulness bug (field-name presence per card image, not trash-text-count). FULLY faithful.",
+      "audit_note": "Engine/DSL gap closed 2026-06-15; consumer card now fully faithful."
     },
     "BT13-007": {
       "card_name": "King Drasil_7D6",
@@ -5448,10 +5448,10 @@
     },
     "EX4-065": {
       "card_name": "Trident Gaia",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-engine-gaps-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/ex4/EX4-065.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_065.rs",
@@ -5462,8 +5462,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Added asserting test for [Main]/[Security] highest-DP delete. Remaining: '13000+ DP deleted by this effect -> trash opp top security' (G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD: effect-deleted payload lacks deleted DP).",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "Gap closed: G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD (deleted-permanent DP captured on effect-result payload -> 13000+ security-trash tail). FULLY faithful.",
+      "audit_note": "Engine/DSL gap closed 2026-06-15; consumer card now fully faithful."
     },
     "RB1-035": {
       "card_name": "Hokuto Amanokawa",
@@ -5505,10 +5505,10 @@
     },
     "ST12-15": {
       "card_name": "From Master to Disciple",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-06-15",
+      "report": "royal-knights-engine-gaps-2026-06-15",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/st12/ST12-15.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st12/st12_15.rs",
@@ -5519,8 +5519,8 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Main/Security search implemented (needs asserting test); Delay next-digivolve cost -1 blocked: G-DELAY-NEXT-DIGIVOLVE-COST-REDUCTION.",
-      "audit_note": "Re-audited 2026-06-14; remaining gap(s) named in notes."
+      "notes": "Gap closed: G-DELAY-NEXT-DIGIVOLVE-COST-REDUCTION (Delay one-shot free next-digivolve -1, auto-applies). Also fixed optional-on-mandatory search pitfall. FULLY faithful.",
+      "audit_note": "Engine/DSL gap closed 2026-06-15; consumer card now fully faithful."
     },
     "BT24-004": {
       "card_name": "Wanyamon",

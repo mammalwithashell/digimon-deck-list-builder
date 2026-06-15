@@ -3694,3 +3694,41 @@ surfaced or sharpened during the pass.
 - **Missing:** no formula counts cards of a given trait among *this permanent's* digivolution sources (only `same_level_pairs_in_sources` exists). Need `trait_count_in_sources { trait: "Royal Knight" }` → floor-div 2 → N security trashes.
 - **Suggested API:** a `trait_count_in_sources` formula term; drive `trash_top_security` repeated floor(count/2) times.
 - **First test:** BT20-021 with 4 Royal-Knight sources → 2 security trashes; 3 sources → 1; 1 source → 0.
+
+
+## RESOLVED / RECLASSIFIED 2026-06-15 — Royal Knights engine-gap closure pass
+
+Adversarial scoping of the ~30 Royal-Knights-"blocking" gaps found that **14 were
+not real gaps** (composable from shipped vocabulary today) and closed **6 genuine
+small/medium gaps** via TDD. Net: only a handful of true RK gaps remain (the large
+frameworks below).
+
+### CLOSED this pass (TDD, consumer card now fully faithful)
+- **G-DSL-EVENT-CARD-TEXT-CONTAINS** — new event-predicate leaf `event_card_text_contains` (played card's printed text). Consumer AD1-018. Commit `19be5a16`.
+- **G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM** — new DSL verb `return_selected_sources_to_deck { position }`. Consumer BT13-075. Commit `a83d2827`.
+- **G-RETURNED-CARD-COLOR-BINDING** — new predicate leaf `color_matches_returned_card` (reads the effect's returned-to-deck result log). Consumer EX10-068. Commit `78c84132`.
+- **G-DELAY-NEXT-DIGIVOLVE-COST-REDUCTION** — engine fix: free digivolve-cost reducer auto-applies (no spurious accept/decline). Consumer ST12-15. Commit `b414917f`.
+- **G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD** — effect-result log now carries each deleted permanent's pre-removal DP; new predicate `effect_deleted_opponent_digimon_dp_gte`. Consumer EX4-065. Commit `ba9afcee`.
+- **G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY** — `select_union_zone` extended with a `material` zone (`material_of: { own_breeding }`) + per-zone filters. Consumer BT13-019. Commit `59eb5994`.
+
+### RECLASSIFIED — NOT a gap (authorable-now with existing vocabulary)
+Per-card scout verdicts (status `authorable-now-no-gap`) — these need CARD AUTHORING, not engine work. Do NOT re-file as engine/DSL gaps:
+- **G-PLAY-COST-GTE-MODIFIER-AURA** (BT13-075) — continuous CannotAttackPlayer aura + `play_cost_gte` filter; authored in BT13-075 this pass.
+- **G-DISTINCT-COLOR-COUNT** (EX10-068) — `distinct_colors_count` formula; authored in EX10-068 this pass.
+- **G-FOR-EACH-COUNTED-FIELD-OBJECTS** (BT13-030) — repeat-count over summed field groups.
+- **G-SOURCE-COUNT-SECURITY-TRASH** (BT20-021) — trait-count-in-sources formula already composable.
+- **G-UNION-HAND-TRASH-SOURCE-COST** (BT20-021) — hand/trash place-as-source cost composable.
+- **G-ALLY-PLAYED-OTHER-EVENT** (BT13-087) — `on_ally_played` + event filters compose it.
+- **G-SECURITY-REMOVED-OBSERVER-UNIFIED** (BT20-056, BT20-060) — composable from the shipped on_own/on_opponent security-removed timings.
+- **G-SUSPEND-OBSERVER-UNSUSPEND** (BT20-045) — any-suspend observer composable.
+- **G-HIGHEST-DP-SWEEP** (BT20-045) — highest-DP aggregate sweep composable.
+- **G-EFFECT-INITIATED-DIGIVOLVE-FROM-TRASH-ON-ATTACK** (EX11-069) — composable.
+- **G-END-OF-ALL-TURNS-SUSPEND-COST-TRASH-RECURSION** (EX11-069) — composable.
+- **G-EFFECT-RESULT-FALLBACK** (BT13-111) — composable.
+- **G-COMBINED-TRASH-COUNT-COST** (BT13-111) — both-players-trash count formula composable.
+- **G-SAME-LEVEL-X-DIGIVOLVE-OBSERVER** (BT9-092) — composable.
+- **G-DSL-ON-DISCARD-SECURITY-TRIGGER** (BT15-084, BT15-092) — already CLOSED (shipped earlier).
+
+### Still genuinely OPEN (deferred — large frameworks / not yet scoped)
+- **G-BREEDING-DIGIVOLVE-UNION-ZONES** (BT20-056) — size L; attack-context breeding digivolve from hand/trash union.
+- **G-UNION-HAND-SOURCE-PLAY** (EX11-053), **G-OPPONENT-PLAYED-DIGIMON-LEVEL-BRANCH** (RB1-035), **G-OWN-SECURITY-ADDED-OBSERVER** (BT8-090, likely authorable — re-verify), **G-SECURITY-END-OF-BATTLE-PLAY** (BT22-009), **G-ONDECLINE-CALLBACK** + **G-WAS-PLAYED-BY-EFFECT-OBSERVER** (BT13-102, engine), **G-OPTION-BATTLE-AREA-CARRIER** (BT19-093, engine, size L) — rate-limited out of the scoping pass; scope before authoring their cards.

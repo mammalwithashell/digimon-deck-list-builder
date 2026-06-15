@@ -1,5 +1,24 @@
 # Royal Knights Rust DSL/Engine Gap Rollup
 
+> **Royal Knights engine-gap closure pass — 2026-06-15:** Adversarial scoping
+> of the ~30 RK-"blocking" gaps (one scout each) found that **14 were NOT real
+> gaps** — composable from shipped vocabulary today, needing only card authoring
+> — and **6 genuine small/medium gaps were closed via TDD**, each making its
+> consumer card fully faithful: `event_card_text_contains` (AD1-018, `19be5a16`),
+> `return_selected_sources_to_deck` (BT13-075, `a83d2827`), `color_matches_returned_card`
+> (EX10-068, `78c84132`), Delay free-reducer auto-apply (ST12-15, `b414917f`),
+> deleted-DP effect payload + `effect_deleted_opponent_digimon_dp_gte` (EX4-065,
+> `ba9afcee`), and `select_union_zone` material/breeding-source union (BT13-019,
+> `59eb5994`). RK verdicts now **IMPLEMENTED 55 / PARTIAL 14 / BLOCKED 3**.
+> Closures + the 14 reclassifications are itemized in `qa/dsl-vocab-gaps.md`
+> ("RESOLVED / RECLASSIFIED 2026-06-15"). Still genuinely open (deferred):
+> the large frameworks — G-OPTION-BATTLE-AREA-CARRIER (BT19-093),
+> G-ONDECLINE-CALLBACK + G-WAS-PLAYED-BY-EFFECT-OBSERVER (BT13-102),
+> G-BREEDING-DIGIVOLVE-UNION-ZONES (BT20-056), G-UNION-HAND-SOURCE-PLAY
+> (EX11-053), G-OPPONENT-PLAYED-DIGIMON-LEVEL-BRANCH (RB1-035),
+> G-SECURITY-END-OF-BATTLE-PLAY (BT22-009), G-OWN-SECURITY-ADDED-OBSERVER
+> (BT8-090). Report: `royal-knights-engine-gaps-2026-06-15`.
+>
 > **Royal Knights re-audit + implementation pass — 2026-06-14:** A full
 > 72-card re-audit (vs printed text + YAML + tests, 8 parallel auditors) found
 > the verdict tracker `validated_cards_dsl.json` was **badly stale** — most
