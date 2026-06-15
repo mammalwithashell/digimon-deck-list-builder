@@ -3651,3 +3651,46 @@ BT25-075's observer sub-clause.
 
 ## RESOLVED 2026-06-13 — `app_fuse` step (effect-initiated App Fuse)  [G-DSL-APP-FUSE]
 **Status: RESOLVED 2026-06-13.** New DSL step `app_fuse: { from: hand|trash, result_filter?, optional }` for the printed "1 of your Digimon may app fuse into a Digimon card in the hand/trash" rider. Lowers to `CompiledStep::AppFuse` → `EffectContext::initiate_effect_app_fuse`. Added to `body_first_step_is_declinable` (installs its own PASS-able selections). First users: BT21-084, BT23-079, P-241, BT24-087, BT25-089. See `docs/RUST_ENGINE_GAPS.md` "Effect-initiated App Fuse — RESOLVED 2026-06-13".
+
+
+## OPEN 2026-06-14 — Royal Knights re-audit pass: newly surfaced gaps
+
+The 2026-06-14 Royal Knights audit/implementation pass closed ~17 cards whose
+prior gap markers were stale. The following gaps remain genuinely open and were
+surfaced or sharpened during the pass.
+
+### `G-DSL-EVENT-CARD-TEXT-CONTAINS` — event predicate on the played card's effect TEXT
+- **Consumer:** AD1-018 LordKnightmon ([All Turns][OPT] "When you play a Digimon with [Knightmon]/[Lucemon] in its text, <De-Digivolve 2>").
+- **Missing:** DSL has `event_card_name_contains` and `event_card_trait_has` leaves, plus a static `effect_text_contains`, but no event-card leaf that matches the *played* card's effect text. The De-Digivolve-2 observer cannot gate on "in its text".
+- **Suggested API:** add an `event_card_text_contains: "<substr>"` predicate leaf (sibling of `event_card_name_contains`) reading the played card's effect_description.
+- **First test:** play a Digimon whose effect text contains "Lucemon" while AD1-018 is in play; assert the De-Digivolve-2 prompt fires; play one without it and assert no fire.
+
+### `G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM` — return a selected digivolution source to deck bottom
+- **Consumer:** BT13-075 Alphamon ([All Turns][OPT] would-leave self-protection: "by returning 1 [X Antibody]/[Royal Knight] card from this Digimon's digivolution cards to the BOTTOM OF YOUR DECK, it doesn't leave").
+- **Missing:** the only source-return DSL verb is `return_selected_sources_to_hand` (to hand). No sibling returns a chosen digivolution source to the deck bottom; returning to hand would be an approximation (disallowed).
+- **Suggested API:** `return_selected_sources_to_deck { position: bottom }` (or a `destination` param on the existing verb).
+- **First test:** BT13-075 with X-Antibody/Royal-Knight sources, trigger a would-leave-by-effect; assert the pay-cost selection returns a chosen source to deck bottom and cancels the departure; decline path lets it leave.
+
+### `G-PLAY-COST-GTE-MODIFIER-AURA` — continuous can't-attack-players aura keyed on opponent play cost ≥ N
+- **Consumer:** BT13-075 Alphamon ([On Play][When Digivolving] "opponent's Digimon with play cost 10 or higher can't attack players until end of opp turn"); related BT20-021.
+- **Missing:** a continuous, re-evaluated `CannotAttackPlayer` aura filtered by `play_cost_gte: N` that also covers opponent Digimon entering after resolution. Current snapshot/for_each modifiers don't cover late entrants. The clause is also atomic with a source-placement cost.
+- **Suggested API:** an aura step with `target_filter: { play_cost_gte: N }` applying `CannotAttackPlayer` with `Expiry::end_of_opponents_turn`.
+- **First test:** resolve BT13-075's On Play; a ≥10-cost opponent Digimon that enters AFTER resolution still can't attack players that turn; a <10-cost one can.
+
+### `G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD` — deleted-permanent DP on the effect-deleted result payload
+- **Consumer:** EX4-065 Trident Gaia ("If a Digimon with 13000 DP or more is deleted by this effect, trash opp's top security card").
+- **Missing:** the effect-deleted result payload (`effect_deleted_any_opponent_digimon`) stores only PermanentHandles — no DP, and the carrier has moved to trash by the time the rider evaluates. No predicate exposes "the DP of the just-deleted permanent ≥ N".
+- **Suggested API:** capture deleted-permanent DP (pre-removal snapshot, cf. rule 25) into the effect-deleted payload and add a `deleted_dp_gte: N` result predicate.
+- **First test:** EX4-065 deletes a 13000-DP highest opponent Digimon → opp top security trashed; deletes a 12000-DP one → no trash.
+
+### `G-FOR-EACH-COUNTED-FIELD-OBJECTS` — repeat an op N times where N counts over multiple field-object groups
+- **Consumer:** BT13-030 UlforceVeedramon ([On Play][When Digivolving] "for each of your Royal Knights AND each of your blue Tamers, trash the top 2 digivolution cards of 1 opponent Digimon").
+- **Missing:** an iteration count derived from the sum of two distinct own-field object groups (Royal-Knight Digimon + blue Tamers) driving N repetitions of a per-target trash-2-sources op.
+- **Suggested API:** a `repeat: { count: <formula over multiple count_in_zone terms> }` wrapper, or extend `for_each` to accept a numeric repeat-count formula.
+- **First test:** 2 Royal Knights + 1 blue Tamer → 3 iterations of "trash top 2 sources of a chosen opponent Digimon".
+
+### `G-SOURCE-COUNT-SECURITY-TRASH` — trait-count-in-this-permanent's-sources formula
+- **Consumer:** BT20-021 Jesmon GX ([When Attacking][OPT] "unsuspend self, then trash opp top security for every 2 [Royal Knight] cards in this Digimon's digivolution cards").
+- **Missing:** no formula counts cards of a given trait among *this permanent's* digivolution sources (only `same_level_pairs_in_sources` exists). Need `trait_count_in_sources { trait: "Royal Knight" }` → floor-div 2 → N security trashes.
+- **Suggested API:** a `trait_count_in_sources` formula term; drive `trash_top_security` repeated floor(count/2) times.
+- **First test:** BT20-021 with 4 Royal-Knight sources → 2 security trashes; 3 sources → 1; 1 source → 0.

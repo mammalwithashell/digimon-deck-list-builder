@@ -1,5 +1,28 @@
 # Royal Knights Rust DSL/Engine Gap Rollup
 
+> **Royal Knights re-audit + implementation pass — 2026-06-14:** A full
+> 72-card re-audit (vs printed text + YAML + tests, 8 parallel auditors) found
+> the verdict tracker `validated_cards_dsl.json` was **badly stale** — most
+> "BLOCKED"/ignored-test gap markers cited substrate that had already shipped,
+> and several cards (BT13-112, BT20-017, BT23-072, BT20-083, BT13-110, BT23-013,
+> BT23-054, …) were fully FAITHFUL but still labelled BLOCKED/PARTIAL. The pass:
+> (1) **implemented ~17 authorable-now clauses** via TDD — headline fix:
+> **BT13-007 King Drasil's Royal-Knight cost reduction was a silent no-op in
+> production** (its `amount_fn` was registered only in a test file → `formula_eval`
+> returned 0); replaced with a native `base_per_delta(4 + material_count)` formula.
+> Also closed: AD1-004, AD1-017 (was `effects:[]`), AD1-018, BT22-009 (dropped
+> inherited delete), BT23-057 (was `effects:[]`), BT23-035, BT23-047, BT13-095,
+> BT21-086, BT22-041, BT23-058, BT22-025, BT15-084, BT20-021 (Blast Digivolve),
+> BT13-030. (2) **Reconciled all 72 verdicts** → IMPLEMENTED 49 / PARTIAL 19 /
+> BLOCKED 4 (was reported 25/36/11). (3) **Filed 6 new gaps** in
+> `qa/dsl-vocab-gaps.md` (G-DSL-EVENT-CARD-TEXT-CONTAINS,
+> G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM, G-PLAY-COST-GTE-MODIFIER-AURA,
+> G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD, G-FOR-EACH-COUNTED-FIELD-OBJECTS,
+> G-SOURCE-COUNT-SECURITY-TRASH). BT13-075 remains the only fully-BLOCKED RK
+> body (needs the latter two-ish gaps); BT13-102/BT15-092/BT19-093 stay BLOCKED
+> on engine-level gaps (on-decline callback, discard-from-security trigger,
+> Option-battle-area carrier). Report: `royal-knights-audit-2026-06-14`.
+>
 > **Royal Knights reconciliation — 2026-05-22:** The current
 > `qa/archetype-qa/royal-knights/deck_pool.json` resolves to **72** cards;
 > all 72 have Rust YAML under `code/digimon-engine/cards/` and a behavioral
