@@ -84,6 +84,7 @@ fn place_union_hand_or_trash_card_under_source_tamer_uses_origin() {
             0,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "Choose a matching card from hand or trash to place under this Tamer",
             false,
             move |_game, card, _zone| {
@@ -143,6 +144,7 @@ fn place_union_card_under_chosen_tamer_handles_hand_origin() {
             0,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "Choose a matching card from hand or trash to place under a Tamer",
             false,
             move |_game, card, _zone| card.handle() == hand_handle,

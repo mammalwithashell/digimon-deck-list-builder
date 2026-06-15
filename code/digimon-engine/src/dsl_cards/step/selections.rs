@@ -842,6 +842,7 @@ pub fn try_install(
             material_of,
             filter,
             zone_filters,
+            material_carrier_filter,
             bind_as,
             prompt,
             optional,
@@ -874,6 +875,7 @@ pub fn try_install(
                 material_of.clone(),
                 filter.clone(),
                 zone_filters.clone(),
+                material_carrier_filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -3025,6 +3027,7 @@ fn install_select_union_zone(
     material_of: Option<CompiledBindingRef>,
     filter: CompiledPredicate,
     zone_filters: digimon_dsl::compiled::CompiledUnionZoneFilters,
+    material_carrier_filter: Option<CompiledPredicate>,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -3049,6 +3052,34 @@ fn install_select_union_zone(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // G-UNION-HAND-SOURCE-PLAY: build the carrier-restriction predicate closure
+    // for the `material_of: None` scan. Each candidate carrier's TOP CARD is
+    // evaluated against `material_carrier_filter` (a permanent subject) before
+    // its sources are enumerated; `None` → every field carrier is scanned.
+    let carrier_filter_bindings = bindings.clone();
+    type CarrierFilter =
+        Box<dyn Fn(&crate::game::Game, crate::permanent::PermanentHandle) -> bool + Send + Sync>;
+    let carrier_filter: Option<CarrierFilter> = material_carrier_filter.map(|pred| {
+        let b = carrier_filter_bindings;
+        let f: CarrierFilter = Box::new(
+            move |game: &crate::game::Game, handle: crate::permanent::PermanentHandle| {
+                let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                eval_predicate_with_bindings(
+                    &pred,
+                    &read_ctx,
+                    PredicateSubject::Permanent(handle),
+                    Some(&b),
+                )
+            },
+        );
+        f
+    });
     // Clone state for the decline path before the success callback consumes
     // them. G-OPTIONAL-SELECTION-CONTINUE-TAIL — declining an optional
     // union-zone selection must still run the outer tail so subsequent
@@ -3062,6 +3093,7 @@ fn install_select_union_zone(
         target_player,
         zoneset,
         material_target,
+        carrier_filter,
         &prompt,
         optional,
         // PUPPETS-G021: evaluate the compiled predicate against the card's

@@ -1220,11 +1220,22 @@ impl<'a> EffectContext<'a> {
     /// [Royal Knight] from breeding sources" in one prompt
     /// (G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY). A uniform filter simply
     /// ignores the third argument.
+    /// **Carrier filter (per-carrier material restriction):** when
+    /// `material_of` is `None` (scan all my field permanents) and
+    /// `material_carrier_filter` is `Some`, each candidate carrier is evaluated
+    /// against the predicate (its top card / permanent subject) BEFORE its
+    /// sources are enumerated — non-matching carriers contribute no source
+    /// candidates. Lets one prompt offer "1 X from hand OR 1 X from under a
+    /// fielded [King Drasil_7D6]" (G-UNION-HAND-SOURCE-PLAY). `None` → every
+    /// field carrier is scanned. Ignored when `material_of` pins a carrier.
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
         zones: crate::selection::UnionZoneSet,
         material_of: Option<crate::permanent::PermanentHandle>,
+        material_carrier_filter: Option<
+            Box<dyn Fn(&Game, crate::permanent::PermanentHandle) -> bool + Send + Sync>,
+        >,
         prompt: &str,
         is_optional: bool,
         filter: F,
@@ -1293,6 +1304,17 @@ impl<'a> EffectContext<'a> {
                                     player: of_player,
                                     index: index as u8,
                                 })
+                        })
+                        // G-UNION-HAND-SOURCE-PLAY: restrict the field carrier
+                        // scan to carriers matching `material_carrier_filter`
+                        // (e.g. a [King Drasil_7D6] top card). Only applies to
+                        // the broad `material_of: None` scan; a pinned carrier
+                        // above bypasses this.
+                        .filter(|handle| {
+                            material_carrier_filter
+                                .as_ref()
+                                .map(|f| f(self.game, *handle))
+                                .unwrap_or(true)
                         })
                         .collect()
                 };
@@ -2131,11 +2153,15 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
 
     /// Install a union-zone selection where `self.selecting_player` picks.
     /// Forwards to `EffectContext::select_union_zone`.
+    #[allow(clippy::too_many_arguments)]
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: crate::enums::PlayerId,
         zones: crate::selection::UnionZoneSet,
         material_of: Option<crate::permanent::PermanentHandle>,
+        material_carrier_filter: Option<
+            Box<dyn Fn(&Game, crate::permanent::PermanentHandle) -> bool + Send + Sync>,
+        >,
         prompt: &str,
         is_optional: bool,
         filter: F,
@@ -2160,6 +2186,7 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
             of_player,
             zones,
             material_of,
+            material_carrier_filter,
             prompt,
             is_optional,
             filter,

@@ -1755,6 +1755,14 @@ pub enum CompiledStep {
         /// bincode, which is not self-describing and cannot skip fields.
         #[serde(default)]
         zone_filters: CompiledUnionZoneFilters,
+        /// Restricts the `material_of: None` carrier scan to field permanents
+        /// whose top card matches this predicate (filters the CARRIER, not the
+        /// candidate source cards). `None` → scan every field permanent's
+        /// sources. G-UNION-HAND-SOURCE-PLAY. NOTE: no `skip_serializing_if` —
+        /// the embedded pack round-trips through bincode (non-self-describing),
+        /// so the field must always be encoded.
+        #[serde(default)]
+        material_carrier_filter: Option<CompiledPredicate>,
         bind_as: Option<String>,
         prompt: String,
         prompt_key: Option<String>,

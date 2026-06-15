@@ -60,6 +60,7 @@ fn selected_union_zone_card_can_feed_effect_digivolve_from_card_handle() {
             material_of: None,
             filter: CompiledPredicate::default(),
             zone_filters: Default::default(),
+            material_carrier_filter: None,
             bind_as: Some("evo".to_string()),
             prompt: "Pick evolution card".to_string(),
             prompt_key: None,

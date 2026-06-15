@@ -280,6 +280,7 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         CompiledStep::SelectUnionZone {
             filter,
             zone_filters,
+            material_carrier_filter,
             ..
         } => {
             collect_predicate_raw_rust_fns(filter, names);
@@ -287,6 +288,7 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
                 &zone_filters.hand,
                 &zone_filters.trash,
                 &zone_filters.material,
+                material_carrier_filter,
             ]
             .into_iter()
             .flatten()

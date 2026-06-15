@@ -74,6 +74,7 @@ fn install_sets_phase_and_kind() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "pick one",
             false,
             |_, _, _| true,
@@ -117,6 +118,7 @@ fn valid_action_ids_covers_both_zones() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "pick",
             false,
             |_, _, _| true,
@@ -173,6 +175,7 @@ fn filter_restricts_valid_action_ids() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "trash only",
             false,
             |game, card, _zone| game.card_data[card.data_index].card_id.starts_with('T'),
@@ -211,6 +214,7 @@ fn empty_filter_is_noop() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "none eligible",
             true,
             |_, _, _| false,
@@ -246,6 +250,7 @@ fn hand_only_zone_excludes_trash() {
             tp,
             UnionZoneSet::HAND,
             None,
+            None, // material_carrier_filter
             "hand only",
             false,
             |_, _, _| true,
@@ -274,6 +279,7 @@ fn trash_only_zone_excludes_hand() {
             tp,
             UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "trash only",
             false,
             |_, _, _| true,
@@ -314,6 +320,7 @@ fn callback_receives_correct_handle_for_trash_pick() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "pick",
             false,
             |_, _, _| true,
@@ -363,6 +370,7 @@ fn callback_receives_correct_handle_for_hand_pick() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "pick",
             false,
             |_, _, _| true,
@@ -399,6 +407,7 @@ fn mandatory_rejects_pass() {
             tp,
             UnionZoneSet::HAND,
             None,
+            None, // material_carrier_filter
             "must pick",
             false,
             |_, _, _| true,
@@ -428,6 +437,7 @@ fn optional_accepts_pass() {
             tp,
             UnionZoneSet::HAND,
             None,
+            None, // material_carrier_filter
             "optional",
             true,
             |_, _, _| true,

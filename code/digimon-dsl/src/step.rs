@@ -2617,6 +2617,18 @@ pub struct SelectUnionArgs {
     /// shared `filter` applies uniformly to every zone (legacy behavior).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub zone_filters: Option<UnionZoneFilters>,
+    /// Restricts the `material` zone scan (when `material_of` is omitted, i.e.
+    /// "scan all my field permanents") to carriers whose top card matches this
+    /// predicate. Each candidate carrier's TOP CARD is evaluated against the
+    /// predicate before its digivolution sources are enumerated; non-matching
+    /// carriers contribute no source candidates. This is distinct from
+    /// `filter`/`zone_filters.material`, which filter the candidate SOURCE
+    /// CARDS — this filters the CARRIER. Lets one prompt offer "1 X from hand
+    /// OR 1 X from under a fielded [King Drasil_7D6]" (G-UNION-HAND-SOURCE-PLAY,
+    /// EX11-053). Omitted → every field permanent's sources are scanned (legacy
+    /// behavior). Has no effect when `material_of` pins a specific carrier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub material_carrier_filter: Option<PredicateSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,

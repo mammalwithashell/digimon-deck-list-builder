@@ -2789,6 +2789,14 @@ fn compile_step(
                     }),
                 })
                 .unwrap_or_default(),
+            material_carrier_filter: a.material_carrier_filter.as_ref().map(|p| {
+                compile_predicate(
+                    p,
+                    &format!("{prefix}.material_carrier_filter"),
+                    card_id,
+                    errors,
+                )
+            }),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),

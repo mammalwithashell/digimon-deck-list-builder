@@ -969,6 +969,15 @@ fn validate_step(
                     }
                 }
             }
+            if let Some(pred) = &args.material_carrier_filter {
+                validate_predicate(
+                    pred,
+                    &format!("{prefix}.material_carrier_filter"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
         }
         StepSpec::SelectCountCappedMulti(args) => {
             if let crate::step::CountBound::Formula { formula } = &args.max {
@@ -1353,6 +1362,15 @@ fn validate_step_binding_scope(
                         );
                     }
                 }
+            }
+            if let Some(pred) = &args.material_carrier_filter {
+                validate_predicate_binding_scope(
+                    pred,
+                    &format!("{prefix}.material_carrier_filter"),
+                    card_id,
+                    scope,
+                    errors,
+                );
             }
             declare_optional_binding(scope, &args.bind_as);
         }
