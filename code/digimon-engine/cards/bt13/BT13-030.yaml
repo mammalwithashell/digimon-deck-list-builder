@@ -14,30 +14,79 @@ alt_paths:
     from: { level_eq: 5, color_is: blue }
     cost: 3
 
+# ─── Printed text (card image — verbatim) ─────────────────────────────────────
+#   [On Play][When Digivolving] For each of your Digimon with the [Royal Knight]
+#     trait and each of your blue Tamers, trash the top 2 digivolution cards of
+#     1 of your opponent's Digimon.
+#   [Your Turn][Once Per Turn] When you play a Digimon with the [Royal Knight]
+#     trait or a blue Tamer, return 1 of your opponent's Digimon with no
+#     digivolution cards to the hand.
+#
+# ─── DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/BT13/Blue/BT13_030.cs) ───
+#   Clause 1 (two identical OnEnterFieldAnyone blocks — [On Play] and
+#     [When Digivolving]): ONE mandatory SelectPermanentEffect over opponent
+#     Digimon with >=1 trashable digivolution card (maxCount = min(1, ...),
+#     canNoSelect:false), then TrashDigivolutionCardsFromTopOrBottom with
+#     trashCount = 2 * Owner.GetBattleAreaPermanents().Count(p =>
+#       (p.IsDigimon && p.TopCard.HasRoyalKnightTraits)
+#       || (p.TopCard.CardColors.Contains(Blue) && p.IsTamer)).
+#     => SINGLE pick, trash 2N from the top (NOT N separate picks of 2). Per
+#     CLAUDE.md source priority DCGO governs how the card resolves, so the
+#     literal-English "for each ..." is modeled as a 2N-count single trash.
+#   Clause 2 ([Your Turn][Once Per Turn] OnPermanentPlay observer): on an own
+#     Royal-Knight Digimon OR own blue Tamer play, Mode.Bounce returns 1
+#     opponent Digimon with NO digivolution cards (HasNoDigivolutionCards) to
+#     the hand (maxCount min(1,...), canNoSelect:false), owner-turn gated.
+
 effects:
-  # [Your Turn][Once Per Turn] When you play a Digimon with the [Royal Knight]
-  # trait or a blue Tamer, return 1 of your opponent's Digimon with no
-  # digivolution cards to its owner's hand.
-  #
-  # Fires on `on_enter_field_anyone` (the "played" observer — covers both
-  # Digimon and Tamer plays; digivolve is intentionally NOT included since the
-  # printed trigger is "When you play"). The condition gates the arming: the
-  # player is the controller, the played card is NOT this Digimon itself
-  # (`event_permanent_is_source: false`), and it is either a Royal-Knight-trait
-  # permanent OR a blue Tamer. The bounce itself is MANDATORY ("return 1 ...",
-  # not "you may"), so the clause is not `optional`; with no sourceless
-  # opponent Digimon the mandatory target select is simply skipped.
-  # PRECEDENT: BT20-091 (Royal-Knight-played observer).
+  # ─── [On Play][When Digivolving] trash 2N opponent digivolution cards ───────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash top 2N sources of 1 opp Digimon, N = own Royal Knights + blue Tamers"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        materials_count_gte: 1
+    process:
+      - select_opponent_permanent:
+          bind_as: trash_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_gte: 1
+          prompt: "Select 1 opponent Digimon to trash digivolution cards from"
+      - trash_top_stacked_sources:
+          target: trash_target
+          # 2 * (your Royal-Knight Digimon + your blue Tamers in play).
+          count:
+            base: 0
+            delta: 2
+            per:
+              card_count_in_zone:
+                of: you
+                zone: battle_area
+                filter:
+                  any_of:
+                    - all_of:
+                        - kind: digimon
+                        - trait_has: "Royal Knight"
+                    - all_of:
+                        - kind: tamer
+                        - color_is: blue
+
+  # ─── [Your Turn][OPT] bounce 1 no-source opp Digimon on RK/blue-Tamer play ──
   - when: on_enter_field_anyone
     once_per_turn: true
     active_when: { your_turn: true }
-    summary: "[Your Turn][OPT] When you play a Royal Knight or blue Tamer, return 1 opponent Digimon with no sources to hand"
+    summary: "[Your Turn][OPT] On own [Royal Knight]/blue-Tamer play, return 1 opp Digimon with no sources to hand"
     condition:
       all_of:
         - event_target_owner: you
-        - event_permanent_is_source: false
         - any_of:
-            - event_target_trait_has: "Royal Knight"
+            - all_of:
+                - event_target_kind: digimon
+                - event_target_trait_has: "Royal Knight"
             - all_of:
                 - event_target_kind: tamer
                 - event_target_color_any_of: [blue]
@@ -48,12 +97,5 @@ effects:
             all_of:
               - kind: digimon
               - materials_count_lte: 0
-          prompt: "Return 1 opponent Digimon with no digivolution cards to its owner's hand"
+          prompt: "Return 1 of your opponent's Digimon with no digivolution cards to the hand"
       - return_to_hand: { target: bounce_target }
-
-# Stubbed:
-# - [On Play][When Digivolving] For each of your Digimon with the [Royal Knight]
-#   trait and each of your blue Tamers in play, trash the top 2 digivolution
-#   cards of 1 of your opponent's Digimon. Needs G-FOR-EACH-COUNTED-FIELD-OBJECTS
-#   (a counted foreach where the iteration count is derived from multiple field
-#   object groups — own Royal Knight Digimon + own blue Tamers).

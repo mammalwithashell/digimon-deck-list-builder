@@ -1,3 +1,60 @@
+# BT13-111 Gallantmon — Digimon, Lv.6, Red, Cost 13, DP 13000.
+# Traits: [Royal Knight, Holy Warrior]. Attribute: Virus. Form: Mega.
+#
+# Printed card text (card image BT13-111 — authoritative for printed text):
+#   When you would play this card from the hand, if you have no Digimon,
+#   reduce the play cost by 2 for every 5 total cards in both players' trashes.
+#   ＜Rush＞ (This Digimon can attack the turn it was played.)
+#   [On Play] [When Digivolving] [When Attacking] Delete 1 of your opponent's
+#   Digimon with 6000 DP or less. If no opponent's Digimon was deleted by this
+#   effect, delete 1 of their Digimon with 13000 DP or more.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Red/BT13_111.cs
+#
+# DCGO crosscheck:
+#   Region "Play Cost -" (None / ChangeCostClass): count() = 2*((own.Trash +
+#     enemy.Trash) / 5). CanUseCondition gates: card is in HandCards (RootCondition
+#     == Hand — scopes out the digivolve path), count() >= 1, AND
+#     GetBattleAreaDigimons().Count == 0 (controller has no Digimon in play).
+#   Region "Rush" (None): RushSelfStaticEffect.
+#   Regions OnEnterFieldAnyone (On Play), OnEnterFieldAnyone (When Digivolving),
+#     OnAllyAttack (When Attacking): identical bodies. SelectPermanent maxCount
+#     Min(1, count) over opp battle-area Digimon with DP <= 6000, canNoSelect:false
+#     (mandatory single pick when a target exists), then
+#     DeletePeremanentAndProcessAccordingToResult → FailureProcess (fires when no
+#     deletion occurred) selects an opp Digimon with DP >= 13000 (mode Destroy).
+#
+# ─── Implementation notes ─────────────────────────────────────────────────────
+#
+# Clause A — BeforePayCost cost reduction (G-COMBINED-TRASH-COUNT-COST, authorable):
+#   "if you have no Digimon" → controller's OWN battle-area Digimon count == 0,
+#   encoded as `count_lte { filter: { of: you, zone: [battle_area], kind: digimon }, n: 0 }`.
+#   "reduce the play cost by 2 for every 5 total cards in both players' trashes" →
+#   `amount_fn` BasePerDelta with `shared_trash_count { bucket: 5 }` and `delta: 2`
+#   = 0 + floor((own+opp trash)/5) * 2. (cost_reduction subtracts the amount_fn
+#   result.) `when_playing_this: true` scopes to the hand-play path only (DCGO
+#   RootCondition == Hand), excluding the digivolve route.
+#   Sibling precedent: P-186 Gallantmon (cards/p/P-186.yaml clause A, identical
+#   shared_trash_count{bucket:5}/delta:2 shape; the only difference is the gate —
+#   P-186 gates on "any Digimon >=13000 DP", BT13-111 gates on "you have no Digimon").
+#
+# Clause B — [On Play][When Digivolving][When Attacking] delete-with-fallback
+#   (G-EFFECT-RESULT-FALLBACK, authorable):
+#   Try delete 1 opp Digimon with DP <= 6000 (mandatory single pick when a target
+#   exists). Then `if effect_deleted_any_opponent_digimon: false` → delete 1 opp
+#   Digimon with DP >= 13000. The result-log predicate reads ACTUAL deletions, so
+#   the >=13000 fallback fires only when the <=6000 delete did not resolve
+#   (matching DCGO FailureProcess). Mandatory deletes use a non-optional
+#   select_opponent_permanent.
+#   Sibling precedent: BT25-014 Meramon (effect_deleted_any_opponent_digimon:false
+#   fallback after a dp_lte delete) + BT25-018 (multi-trigger select_opponent_permanent
+#   + dp filter). P-186 uses the analogous binding_absent fallback shape.
+#
+# ─── Gap notes ────────────────────────────────────────────────────────────────
+# No new engine/DSL gaps — all primitives ship (shared_trash_count, count_lte,
+# when_playing_this cost_reduction, effect_deleted_any_opponent_digimon,
+# dp_lte/dp_gte, multi-trigger when: [on_play, when_digivolving, when_attacking]).
+
 card: BT13-111
 name: Gallantmon
 kind: digimon
@@ -15,12 +72,63 @@ alt_paths:
     cost: 5
 
 effects:
+  # ─── Clause A: BeforePayCost cost reduction ───────────────────────────────
+  #
+  # "When you would play this card from the hand, if you have no Digimon,
+  #  reduce the play cost by 2 for every 5 total cards in both players' trashes."
+  #
+  # amount_fn: BasePerDelta with shared_trash_count{bucket:5} * delta:2
+  # = floor(total_trash / 5) * 2. Gate: controller's own battle-area Digimon == 0.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      count_lte:
+        filter:
+          of: you
+          zone: [battle_area]
+          kind: digimon
+        n: 0
+    amount_fn:
+      base: 0
+      per:
+        shared_trash_count:
+          bucket: 5
+      delta: 2
+    summary: "When played from hand with no Digimon in play, reduce play cost by 2 per 5 combined-trash cards"
+
+  # ─── Rush ─────────────────────────────────────────────────────────────────
   - kind: grant_keyword
     keyword: Rush
 
-# Stubbed:
-# - Play-cost reduction by 2 per 5 cards in both players' trash when played
-#   from hand needs a combined-trash-count cost formula.
-# - [On Play][When Digivolving][When Attacking] delete <=6000 DP, then if no
-#   deletion occurred delete >=13000 DP instead. This needs an effect-result
-#   branch/fallback primitive.
+  # ─── Clause B: [On Play][When Digivolving][When Attacking] delete-with-fallback ─
+  #
+  # "Delete 1 of your opponent's Digimon with 6000 DP or less. If no opponent's
+  #  Digimon was deleted by this effect, delete 1 of their Digimon with 13000 DP
+  #  or more."
+  #
+  # The <=6000 delete is a mandatory single pick when a legal target exists
+  # (DCGO maxCount Min(1,count), canNoSelect:false). The fallback fires only when
+  # the first delete did not actually delete anything (FailureProcess).
+  - when: [on_play, when_digivolving, when_attacking]
+    summary: "[On Play][When Digivolving][When Attacking] Delete 1 opp Digimon <=6000 DP; if none deleted, delete 1 opp Digimon >=13000 DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+          prompt: "Delete 1 of your opponent's Digimon with 6000 DP or less"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - select_opponent_permanent:
+                bind_as: victim2
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_gte: 13000
+                prompt: "Delete 1 of your opponent's Digimon with 13000 DP or more instead"
+            - delete_permanent: { target: victim2 }

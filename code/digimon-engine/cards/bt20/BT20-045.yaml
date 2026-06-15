@@ -32,8 +32,65 @@ effects:
   - kind: grant_keyword
     keyword: Evade
 
-# Stubbed:
-# - DNA-gated highest-DP bottom-deck sweep needs DNA-origin gating plus highest
-#   DP aggregate selection over all opponent Digimon.
-# - [All Turns][Once Per Turn] when any Digimon suspends, may unsuspend this
-#   Digimon needs event-target suspend observer dispatch.
+  # ─── [When Digivolving] DNA-gated highest-DP bottom-deck sweep ────────────────
+  # Printed text (cards.json effect_description_eng):
+  #   "[When Digivolving] If DNA digivolving, return all of your opponent's
+  #    Digimon with the highest DP to the bottom of the deck."
+  #
+  # DCGO BT20_045.cs OnEnterField body is gated by CardEffectCommons.IsJogress
+  # (the DNA-origin antecedent). The highest_dp aggregate returns EVERY opponent
+  # Digimon tied for the highest DP. `for_each` snapshots stable top-card
+  # CardHandles up front, so mid-sweep removals do not shift the highest-DP set.
+  #
+  # Printed timing is [When Digivolving] only (NOT [On Play]) — Blast DNA / DNA
+  # digivolve both flow through when_digivolving with current_dna_origin set, so
+  # the `dna_origin: true` gate fires on those paths and is skipped on a plain
+  # standard digivolve. Precedent: BT17-078 clause 3 (DNA-gated bottom-deck-by-
+  # level) + BT25-084 (highest-DP for_each aggregate sweep, body = delete).
+  - when: when_digivolving
+    summary: "[When Digivolving] If DNA digivolving, return all opp highest-DP Digimon to bottom of deck"
+    active_when:
+      all_of:
+        - dna_origin: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - dp_gte:
+                  aggregate:
+                    selector: highest_dp
+                    scope: opponent
+          bind_as: returnee
+          body:
+            - return_to_deck:
+                target: returnee
+                position: bottom
+
+  # ─── [All Turns][Once Per Turn] when any Digimon suspends → may unsuspend ─────
+  # Printed text:
+  #   "[All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may
+  #    unsuspend."
+  #
+  # "Any Digimon" = EITHER player's Digimon, no owner gate — so the only
+  # condition is `event_target_kind: digimon`. This is AD1-014's on_suspend
+  # clause WITHOUT its `event_target_owner: you` restriction, matching DCGO
+  # IsPermanentExistsOnBattleAreaDigimon (any owner) per BT20_045.cs:191-194.
+  # `target: source` resolves to the BT20-045 permanent (target: self would be
+  # dropped by the unsuspend lowering). Precedent: AD1-024 clause 4 (any-owner
+  # event_target_kind: digimon + unsuspend self).
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When any Digimon suspends, this Digimon may unsuspend"
+    condition:
+      event_target_kind: digimon
+    process:
+      - unsuspend: { target: source }

@@ -51,5 +51,17 @@ effects:
             - trash_top_security: { of: opponent }
             - recover: { of: you, count: 1 }
 
-  # [All Turns][OPT] security stacks removed -> gain 3 memory is omitted:
-  # no faithful reusable security-removed observer is available for this batch.
+  # [All Turns][OPT] When security stacks are removed from, gain 3 memory.
+  #
+  # DCGO BT20_060.cs:256-284 implements this as ONE `OnLoseSecurity` clause
+  # gated by `CanTriggerWhenLoseSecurity(_, _ => true)` (fires for EITHER stack)
+  # under a single OPT key `RemovedSec_BT20_060` -> one fire across both stacks
+  # per turn. Listing both security-removed timings in one triggered clause makes
+  # the lowering cluster them under a single shared once-per-turn lockout
+  # (precedent: BT16-102.yaml:94). Memory gain is mandatory (no printed "may").
+  - when: [on_own_security_removed, on_opponent_security_removed]
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] When security stacks are removed from, gain 3 memory"
+    process:
+      - gain_memory: 3

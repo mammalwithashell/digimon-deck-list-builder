@@ -18,7 +18,8 @@ use digimon_engine::action::space::{DNA_DIGIVOLVE_START, PASS, PLAY_HAND_START};
 use digimon_engine::action::{build_action_mask, encode_attack};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level};
-use digimon_engine::enums::{CardColor, GamePhase};
+use digimon_engine::enums::{CardColor, EffectTiming, GamePhase};
+use digimon_engine::selection::TriggerSource;
 
 fn runner() -> DebugRunner {
     DebugRunner::builder()
@@ -281,8 +282,174 @@ fn bt20_060_dna_origin_trashes_security_and_recovers() {
     );
 }
 
+// ─── [All Turns][OPT] security-removed → gain 3 memory (unified observer) ────
+//
+// Printed: [All Turns][Once Per Turn] When security stacks are removed from,
+// gain 3 memory. DCGO BT20_060.cs:256-284 implements this as ONE
+// `OnLoseSecurity` clause gated by `CanTriggerWhenLoseSecurity(_, _ => true)`
+// (fires for EITHER stack) under a single OPT key `RemovedSec_BT20_060` → one
+// fire across both stacks per turn. The DSL expresses this by listing both
+// security-removed timings in one triggered clause; the lowering clusters them
+// under a single shared once-per-turn lockout (precedent: BT16-102.yaml:94).
+
+/// Helper: fire one security-removed observer for BT20-060's carrier.
+fn fire_security_removed(
+    runner: &mut DebugRunner,
+    carrier: digimon_engine::permanent::PermanentHandle,
+    timing: EffectTiming,
+) {
+    runner
+        .game
+        .enqueue_triggered(timing, TriggerSource::Permanent(carrier));
+    runner.game.drain_effect_queue();
+}
+
+/// Structure: the [All Turns][OPT] clause fires on BOTH security-removed
+/// timings (own + opponent), is all-turns, once_per_turn, and gains 3 memory.
 #[test]
-#[ignore = "pending: G-SECURITY-REMOVED-OBSERVER — all-turns security stack removed observer"]
-fn bt20_060_security_removed_gain_three_memory_once_per_turn() {
-    panic!("requires security-removed event dispatch and OPT handling");
+fn bt20_060_security_removed_clause_is_unified_all_turns_opt() {
+    let runner = runner();
+    let card = runner
+        .compiled_card("BT20-060")
+        .expect("BT20-060 compiled card present");
+
+    let clause = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if triggered
+                    .when
+                    .contains(&CompiledTiming::OnOwnSecurityRemoved)
+                    || triggered
+                        .when
+                        .contains(&CompiledTiming::OnOpponentSecurityRemoved) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("security-removed memory clause exists");
+
+    assert!(
+        clause
+            .when
+            .contains(&CompiledTiming::OnOwnSecurityRemoved),
+        "must fire when OWN security stack is removed from"
+    );
+    assert!(
+        clause
+            .when
+            .contains(&CompiledTiming::OnOpponentSecurityRemoved),
+        "must fire when OPPONENT's security stack is removed from"
+    );
+    assert!(
+        clause.once_per_turn,
+        "printed [Once Per Turn] — single shared lockout across both stacks"
+    );
+    assert!(
+        clause.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::GainMemory(3)
+        )),
+        "clause must gain exactly 3 memory; process={:?}",
+        clause.process
+    );
+}
+
+/// Positive: firing the OWN-stack observer gains exactly 3 memory.
+#[test]
+fn bt20_060_own_security_removed_gains_three_memory() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-060")
+        .expect("BT20-060 YAML loads")
+        .memory(0)
+        .start();
+    let carrier = runner.place_on_field(0, "BT20-060", Some(0));
+
+    let before = runner.memory();
+    fire_security_removed(&mut runner, carrier, EffectTiming::OnOwnSecurityRemoved);
+    let delta = runner.memory() - before;
+
+    assert_eq!(
+        delta, 3,
+        "own-stack security removal must gain exactly 3 memory; delta={delta}"
+    );
+}
+
+/// Positive: firing the OPPONENT-stack observer gains exactly 3 memory.
+#[test]
+fn bt20_060_opponent_security_removed_gains_three_memory() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-060")
+        .expect("BT20-060 YAML loads")
+        .memory(0)
+        .start();
+    let carrier = runner.place_on_field(0, "BT20-060", Some(0));
+
+    let before = runner.memory();
+    fire_security_removed(
+        &mut runner,
+        carrier,
+        EffectTiming::OnOpponentSecurityRemoved,
+    );
+    let delta = runner.memory() - before;
+
+    assert_eq!(
+        delta, 3,
+        "opponent-stack security removal must gain exactly 3 memory; delta={delta}"
+    );
+}
+
+/// Unified OPT: removing from BOTH stacks in the SAME turn fires the observer
+/// only ONCE — total memory gain is EXACTLY 3 (not 6). This is the load-bearing
+/// assertion for G-SECURITY-REMOVED-OBSERVER-UNIFIED: the two security-removed
+/// timings share a single once-per-turn lockout.
+#[test]
+fn bt20_060_both_stacks_same_turn_fires_once_gaining_exactly_three() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-060")
+        .expect("BT20-060 YAML loads")
+        .memory(0)
+        .start();
+    let carrier = runner.place_on_field(0, "BT20-060", Some(0));
+
+    let before = runner.memory();
+
+    // First: own stack hit → observer fires (+3).
+    fire_security_removed(&mut runner, carrier, EffectTiming::OnOwnSecurityRemoved);
+    // Then (same turn): opponent stack hit → shared OPT lockout suppresses it.
+    fire_security_removed(
+        &mut runner,
+        carrier,
+        EffectTiming::OnOpponentSecurityRemoved,
+    );
+
+    let delta = runner.memory() - before;
+    assert_eq!(
+        delta, 3,
+        "unified observer fires once across both stacks per turn (+3, not +6); delta={delta}"
+    );
+}
+
+/// OPT lockout: a second removal from the SAME stack in the same turn is also
+/// suppressed (the [Once Per Turn] gate is not per-stack).
+#[test]
+fn bt20_060_second_same_stack_removal_is_suppressed_same_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-060")
+        .expect("BT20-060 YAML loads")
+        .memory(0)
+        .start();
+    let carrier = runner.place_on_field(0, "BT20-060", Some(0));
+
+    let before = runner.memory();
+    fire_security_removed(&mut runner, carrier, EffectTiming::OnOwnSecurityRemoved);
+    fire_security_removed(&mut runner, carrier, EffectTiming::OnOwnSecurityRemoved);
+    let delta = runner.memory() - before;
+
+    assert_eq!(
+        delta, 3,
+        "[Once Per Turn] suppresses a second same-stack removal in the same turn; delta={delta}"
+    );
 }

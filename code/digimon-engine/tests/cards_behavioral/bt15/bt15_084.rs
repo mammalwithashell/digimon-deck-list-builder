@@ -1,47 +1,56 @@
 //! BT15-084 Kari Kamiya — Tamer, Yellow, Cost 4.
 //!
-//! # Card text (cards.json — authoritative for printed text)
+//! # Card text (card image — authoritative)
 //!
-//! ```text
 //! When an effect trashes this card from the security stack, 1 of your
-//!   opponent's Digimon gains <Security A. -1> until the end of their turn.
+//! opponent's Digimon gains [Security A. -1] until the end of their turn.
 //! [Start of Your Turn] If you have 2 or less memory, set it to 3.
 //! [All Turns] When an effect removes cards from your security stack, by
-//!   suspending this Tamer, 1 of your opponent's Digimon gains <Security A. -1>
-//!   until the end of their turn.
+//! suspending this Tamer, 1 of your opponent's Digimon gains [Security A. -1]
+//! until the end of their turn.
 //! [Security] Play this card without paying the cost.
-//! ```
 //!
-//! # DCGO C# reference
-//! DCGO/Assets/Scripts/CardEffect/BT15/Yellow/BT15_084.cs
+//! # DCGO C# reference — DCGO/Assets/Scripts/CardEffect/BT15/Yellow/BT15_084.cs
+//! - OnDiscardSecurity (this card effect-trashed from security): MANDATORY
+//!   (canNoSelect:false), gated on >=1 opponent Digimon → SecurityAttackChange(-1).
+//! - OnLoseSecurity (any own security removed): OPTIONAL, suspend-self cost,
+//!   then mandatory opponent-Digimon SecurityAttackChange(-1).
+//! - OnStartTurn: set memory to 3 if <= 2. SecuritySkill: play self free.
 //!
-//! # Implemented slice
-//! - [Start of Your Turn] memory floor.
-//! - [Security] play free.
-//! - [All Turns] on-own-security-removed observer: by suspending this Tamer
-//!   (the activation cost), give 1 opponent Digimon Security Attack -1 until
-//!   end of their turn.
-//!
-//! # Gap-routed slice (left stubbed + ignored)
-//! - "When an effect trashes THIS CARD from the security stack, ..." — there is
-//!   no DSL trigger for the carrier itself being discarded from its own
-//!   security stack (G-DSL-ON-DISCARD-SECURITY-TRIGGER).
-//!
-//! # Patterns this test covers (RUST_DSL_TEST_API §4.3)
-//! - F9 security-removed-conditioned Tamer (suspend-self activation cost)
-//! - H4 Security A. -1 (SecurityAttackChange modifier)
+//! Both [All Turns] suspend-cost AND [Security-trash] clauses are implemented
+//! and tested here (merged 2026-06-15).
 
-use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
-use digimon_engine::action::space::encode_attack;
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+
+use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::{CardKind, ModifierType};
+use digimon_engine::enums::{CardColor, CardKind, ModifierType, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::SelectionKind;
 
 const CARD_ID: &str = "BT15-084";
+
+// An OnPlay card that trashes the controller's top security by effect — the
+// event both BT15-084 security clauses key on (OnDiscardSecurity when Kari is
+// the trashed card; OnOwnSecurityRemoved for the broader observer).
+const TRASHER_YAML: &str = r#"
+card: DSL-SEC-TRASHER
+name: Sec Trasher
+kind: digimon
+level: 4
+color: [yellow]
+cost: 0
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] Trash your top security card"
+    process:
+      - trash_top_security: { of: you }
+"#;
 
 fn opp_digimon(id: &str) -> CardData {
     let mut card = make_test_card(id, id);
@@ -55,54 +64,22 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT15-084 must load from embedded DSL pack")
+        .from_dsl_yaml(TRASHER_YAML)
+        .expect("inline trasher fixture compiles")
         .add_card(make_test_card("PAD", "PAD"))
         .add_card(opp_digimon("OPP-A"))
         .add_card(opp_digimon("OPP-B"))
-        .deck(0, &["PAD"; 10])
-        .deck(1, &["PAD"; 10])
+        .deck(0, &["PAD"; 12])
+        .deck(1, &["PAD"; 12])
 }
 
 fn encode_permanent(handle: PermanentHandle) -> u16 {
     encode_attack(0, handle.index as u16)
 }
 
-// ─── Structural ──────────────────────────────────────────────────────────────
-
-#[test]
-fn bt15_084_has_memory_floor_security_play_and_security_removed_clauses() {
-    let runner = base().memory(5).start();
-    let card = runner.compiled_card(CARD_ID).expect("compiled card");
-
-    assert!(
-        card.effects.iter().any(|clause| matches!(
-            clause,
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::StartOfYourTurn)
-        )),
-        "BT15-084 must have a start-of-turn memory floor"
-    );
-    assert!(
-        card.effects.iter().any(|clause| matches!(
-            clause,
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity)
-        )),
-        "BT15-084 must have a Security play clause"
-    );
-    assert!(
-        card.effects.iter().any(|clause| matches!(
-            clause,
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnOwnSecurityRemoved)
-        )),
-        "BT15-084 must have an own-security-removed observer"
-    );
-}
-
-// ─── On-own-security-removed: behavior + negative gating ─────────────────────
-
 /// Drive a real "an effect removes a card from your security stack" event so the
-/// observer fires. Trashes player 0's top security card through an
-/// `EffectContext` (player-0 effect), then drains the effect queue so the
-/// `OnOwnSecurityRemoved` observers dispatch — the medusamon.rs idiom.
+/// own-security-removed observer fires (trashes player 0's top security via an
+/// EffectContext, then drains the queue).
 fn fire_own_security_removed(runner: &mut DebugRunner) {
     {
         let mut ctx = EffectContext::new(&mut runner.game, CardHandle(0), None, 0);
@@ -115,7 +92,6 @@ fn fire_own_security_removed(runner: &mut DebugRunner) {
 }
 
 /// Accept the outer optional activation prompt ("by suspending this Tamer").
-/// Mirrors the BT23-079 Eri Karan idiom.
 fn accept_optional_activation(runner: &mut DebugRunner) {
     let action = runner
         .game
@@ -126,6 +102,37 @@ fn accept_optional_activation(runner: &mut DebugRunner) {
     let _ = runner.game.resolve_selection(0, action);
     runner.game.drain_effect_queue();
 }
+
+// ─── Structural ──────────────────────────────────────────────────────────────
+
+#[test]
+fn bt15_084_has_all_four_clauses() {
+    let runner = base().memory(5).start();
+    let card = runner.compiled_card(CARD_ID).expect("compiled card");
+
+    let has = |f: &dyn Fn(&digimon_dsl::compiled::CompiledTriggeredClause) -> bool| {
+        card.effects.iter().any(|c| matches!(c, CompiledClause::Triggered(t) if f(t)))
+    };
+    assert!(
+        has(&|t| t.when.contains(&CompiledTiming::StartOfYourTurn)),
+        "must have start-of-turn memory floor"
+    );
+    assert!(
+        has(&|t| t.when.contains(&CompiledTiming::OnSecurity)),
+        "must have a Security play clause"
+    );
+    assert!(
+        has(&|t| t.when.contains(&CompiledTiming::OnOwnSecurityRemoved)),
+        "must have an own-security-removed (suspend-cost) observer"
+    );
+    assert!(
+        has(&|t| t.scope == CompiledScope::Security
+            && t.when.contains(&CompiledTiming::OnDiscardSecurity)),
+        "must have a security-scope OnDiscardSecurity clause"
+    );
+}
+
+// ─── [All Turns] own-security-removed → suspend self → opp Security A. -1 ─────
 
 #[test]
 fn bt15_084_security_removed_installs_optional_activation_prompt() {
@@ -152,8 +159,6 @@ fn bt15_084_security_removed_accept_suspends_self_and_applies_security_attack_mi
     fire_own_security_removed(&mut runner);
     accept_optional_activation(&mut runner);
 
-    // After accepting, Kari has paid the suspend cost and the mandatory
-    // opponent-Digimon selection installs.
     assert!(
         runner.game.players[0].battle_area[kari.index as usize].is_suspended,
         "suspending Kari is the activation cost"
@@ -174,18 +179,12 @@ fn bt15_084_security_removed_accept_suspends_self_and_applies_security_attack_mi
     runner.auto_resolve().expect("finish security-removed effect");
 
     assert_eq!(
-        runner
-            .game
-            .modifiers
-            .sum(opp_a, ModifierType::SecurityAttackChange),
+        runner.game.modifiers.sum(opp_a, ModifierType::SecurityAttackChange),
         -1,
         "chosen opponent Digimon gets Security A. -1"
     );
     assert_eq!(
-        runner
-            .game
-            .modifiers
-            .sum(opp_b, ModifierType::SecurityAttackChange),
+        runner.game.modifiers.sum(opp_b, ModifierType::SecurityAttackChange),
         0,
         "the unchosen opponent Digimon is unaffected"
     );
@@ -200,7 +199,7 @@ fn bt15_084_security_removed_decline_does_nothing() {
     fire_own_security_removed(&mut runner);
     assert!(runner.pending_is_optional(), "optional prompt appears");
     runner
-        .execute_action(0, digimon_engine::action::space::PASS)
+        .execute_action(0, PASS)
         .expect("decline the optional activation");
     let _ = runner.auto_resolve();
 
@@ -209,10 +208,7 @@ fn bt15_084_security_removed_decline_does_nothing() {
         "declining leaves Kari unsuspended"
     );
     assert_eq!(
-        runner
-            .game
-            .modifiers
-            .sum(opp, ModifierType::SecurityAttackChange),
+        runner.game.modifiers.sum(opp, ModifierType::SecurityAttackChange),
         0,
         "declining applies no Security A. -1"
     );
@@ -220,8 +216,6 @@ fn bt15_084_security_removed_decline_does_nothing() {
 
 #[test]
 fn bt15_084_security_removed_with_kari_already_suspended_installs_no_prompt() {
-    // NEGATIVE: the suspend-self activation cost can't be paid when Kari is
-    // already suspended, so the observer installs no selection.
     let mut runner = base().security(0, &["PAD"; 3]).memory(5).start();
     let kari = runner.place_on_field(0, CARD_ID, Some(0));
     runner.place_on_field(1, "OPP-A", Some(0));
@@ -237,7 +231,6 @@ fn bt15_084_security_removed_with_kari_already_suspended_installs_no_prompt() {
 
 #[test]
 fn bt15_084_security_removed_with_no_opponent_digimon_installs_no_prompt() {
-    // NEGATIVE: no opponent Digimon to debuff → no selection.
     let mut runner = base().security(0, &["PAD"; 3]).memory(5).start();
     runner.place_on_field(0, CARD_ID, Some(0));
 
@@ -249,8 +242,85 @@ fn bt15_084_security_removed_with_no_opponent_digimon_installs_no_prompt() {
     );
 }
 
-// ─── Gap-routed clause (left stubbed) ────────────────────────────────────────
+// ─── [Security-trash] this card effect-trashed from security → opp Sec A. -1 ──
 
-#[ignore = "pending: G-DSL-ON-DISCARD-SECURITY-TRIGGER — needs observer for this card being trashed from security by an effect"]
+/// When Kari (top security) is trashed BY an effect and the opponent controls a
+/// Digimon, the on_discard_security clause installs a MANDATORY opponent-Digimon
+/// prompt; resolving it applies Security A. -1.
 #[test]
-fn bt15_084_when_trashed_from_security_applies_security_attack_minus() {}
+fn bt15_084_when_trashed_from_security_applies_security_attack_minus() {
+    let mut runner = base()
+        .hand(0, &["DSL-SEC-TRASHER"])
+        .security(0, &["PAD", "PAD", CARD_ID])
+        .memory(8)
+        .start();
+
+    let opp = runner.place_on_field(1, "OPP-A", Some(0));
+
+    runner.play(0, 0).expect("play the trasher");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("effect-trashing Kari from security must install a target prompt");
+    assert_eq!(view.kind, SelectionKind::OppField, "select 1 opponent Digimon");
+    assert!(
+        !runner.pending_is_optional(),
+        "the [Security-trash] effect is mandatory (DCGO canNoSelect:false)"
+    );
+
+    runner
+        .execute_action(view.selecting_player, encode_permanent(opp))
+        .expect("pick the opponent Digimon");
+    runner.auto_resolve().expect("resolve");
+
+    assert_eq!(
+        runner.game.modifiers.sum(opp, ModifierType::SecurityAttackChange),
+        -1,
+        "chosen opponent Digimon gets Security A. -1"
+    );
+}
+
+/// Kari lands in trash after the effect-trash and the security stack shrinks.
+#[test]
+fn bt15_084_effect_trash_moves_kari_to_trash() {
+    let mut runner = base()
+        .hand(0, &["DSL-SEC-TRASHER"])
+        .security(0, &["PAD", "PAD", CARD_ID])
+        .memory(8)
+        .start();
+    let _opp = runner.place_on_field(1, "OPP-A", Some(0));
+    let sec_before = runner.security_count(0);
+
+    runner.play(0, 0).expect("play the trasher");
+    runner.auto_resolve().ok();
+
+    assert_eq!(
+        runner.security_count(0),
+        sec_before - 1,
+        "the effect-trashed Kari leaves the security stack"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
+        "Kari must be in the controller's trash after the effect-trash"
+    );
+}
+
+/// Negative: the on-discard clause is gated on >=1 opponent Digimon.
+#[test]
+fn bt15_084_discard_no_prompt_when_opponent_has_no_digimon() {
+    let mut runner = base()
+        .hand(0, &["DSL-SEC-TRASHER"])
+        .security(0, &["PAD", "PAD", CARD_ID])
+        .memory(8)
+        .start();
+
+    runner.play(0, 0).expect("play the trasher");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "with no opponent Digimon, the on-discard Security A. -1 clause installs no prompt"
+    );
+}

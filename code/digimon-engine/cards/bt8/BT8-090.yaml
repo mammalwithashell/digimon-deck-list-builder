@@ -16,7 +16,25 @@ effects:
     process:
       - play_from_security: {}
 
-  # Omitted:
-  # [Your Turn] When a card is added to your security stack, you may suspend
-  # this Tamer to gain 1 memory. This needs a global own-security-added observer
-  # with a source-bound suspend cost.
+  # ─── [Your Turn] own-security-added observer ──────────────────────────────
+  #
+  # Printed: "[Your Turn] When a card is added to your security stack, you may
+  # suspend this Tamer to gain 1 memory."
+  #
+  # `on_added_to_security` fires off TriggerSource::SecurityPlaced, which scans
+  # the security owner's battle area — so a clause on Kari's controller fires
+  # precisely on adds to YOUR security (DCGO BT8_090.cs: CanTriggerWhenAddSecurity
+  # gated on `player == card.Owner`). `active_when: your_turn` encodes the
+  # printed [Your Turn] gate (DCGO IsOwnerTurn). `optional: true` exposes the
+  # accept/decline PASS for "you may". `source_is_unsuspended` mirrors DCGO's
+  # CanActivateSuspendCostEffect so the suspend cost is only offered when payable.
+  # The suspend cost lifts to EffectBuilder::activation_cost (suspend self), then
+  # the body gains 1 memory (DCGO: SuspendPermanentsClass(...).Tap() → AddMemory(1)).
+  - when: on_added_to_security
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[Your Turn] When a card is added to your security, may suspend self to gain 1 memory"
+    condition: { source_is_unsuspended: true }
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1

@@ -9,27 +9,91 @@ traits: [Holy Warrior, X Antibody, Royal Knight]
 attribute: Data
 ace_overflow: -5
 
+# ─── Printed card text (card image — authoritative; cross-checked cards.json) ──
+# DNA Digivolve Lv.6 w/[Jesmon] in name + Lv.6 w/[Gankoomon] in name: Cost 0
+# [Hand] [Counter] <Blast Digivolve>
+# [On Play] [When Digivolving] [When Attacking] [Once Per Turn]
+#   By placing 1 [Royal Knight] trait card from your hand or trash as this
+#   Digimon's bottom digivolution card, delete 1 of your opponent's Digimon
+#   with as much or less DP as this Digimon.
+# [When Attacking] [Once Per Turn]
+#   This Digimon unsuspends. Then, for every 2 [Royal Knight] trait cards in this
+#   Digimon's digivolution cards, trash your opponent's top security card.
+# Inherited: Ace Overflow <-5>.
+#
+# DCGO C# reference (READ-ONLY): DCGO/Assets/Scripts/CardEffect/BT20/Red/BT20_021.cs
+
 alt_paths:
+  # Printed standard digivolve requirement (card corner: Digivolve Lv.6, cost 6).
   - kind: digivolve
     from: { level_eq: 6, color_is: red }
     cost: 6
-  - kind: burst_digivolve
-    marker: true
+  # DNA Digivolve: a Lv.6 with [Jesmon] in name + a Lv.6 with [Gankoomon] in
+  # name, cost 0. DCGO BT20_021.cs GetJogress: ContainsCardName("Jesmon") +
+  # ContainsCardName("Gankoomon"), each Levels_ForJogress contains 6.
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, name_contains: "Jesmon" }
+      - { level_eq: 6, name_contains: "Gankoomon" }
     cost: 0
 
 effects:
-  # [Hand][Counter] <Blast Digivolve> — alt-path marker + keyword grant.
-  # PRECEDENT: BT20-060.
+  # ─── Clause 1 — [Hand][Counter] <Blast Digivolve> marker ────────────────────
+  # DCGO: BlastDigivolveEffect at OnCounterTiming.
   - kind: grant_keyword
     keyword: BlastDigivolve
+    summary: "<Blast Digivolve>"
 
-# Stubbed:
-# - [On Play][When Digivolving][When Attacking][OPT] Place 1 [Royal Knight]
-#   trait card from your HAND or TRASH as this Digimon's bottom digivolution
-#   card (a union hand/trash → bottom-source cost), then delete 1 opponent
-#   Digimon with DP <= this Digimon's DP. Needs G-UNION-HAND-TRASH-SOURCE-COST
-#   (union hand/trash source placement) plus a source-DP-compare predicate.
-# - [When Attacking][OPT] unsuspend, then trash opponent security per 2 [Royal
-#   Knight] trait cards in this Digimon's digivolution cards. Needs
-#   G-SOURCE-COUNT-SECURITY-TRASH (trait-count-in-sources formula driving a
-#   per-bucket security trash).
+  # ─── Clause 2 — [On Play][When Digivolving][When Attacking][Once Per Turn] ───
+  # By placing 1 [Royal Knight] trait card from hand or trash as this Digimon's
+  # bottom digivolution card (an OPTIONAL cost — DCGO canNoSelect:true), delete
+  # 1 opponent Digimon with DP <= this Digimon's (live) DP.
+  # G-UNION-HAND-TRASH-SOURCE-COST (authorable-now): select_union_zone cost +
+  # then-block (BT25-082 cost-placement) + dp_lte source_dp delete (AD1-005).
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[OP][WD][WA][OPT] Place 1 [Royal Knight] from hand/trash as bottom source, delete 1 opp Digimon with DP <= this Digimon"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          cost: true
+          bind_as: rk_card
+          filter: { trait_has: "Royal Knight" }
+          prompt: "Place 1 [Royal Knight] trait card from your hand or trash as this Digimon's bottom digivolution card"
+          then:
+            - place_as_bottom_source: { source: rk_card, target: source }
+            - select_opponent_permanent:
+                bind_as: del_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: { formula: { source_dp: {} } }
+                prompt: "Delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
+            - if:
+                condition: { binding_present: del_target }
+                then:
+                  - delete_permanent: { target: del_target }
+
+  # ─── Clause 3 — [When Attacking][Once Per Turn] ─────────────────────────────
+  # This Digimon unsuspends. Then, for every 2 [Royal Knight] trait cards in this
+  # Digimon's digivolution cards, trash the opponent's top security card.
+  # MANDATORY (DCGO BT20_021.cs "when attacking 2": isOptional=false). The trash
+  # count is floor(RK-source-count / 2); source_stack_count skips the top card,
+  # matching DCGO's DigivolutionCards.Count(HasRoyalKnightTraits).
+  # G-SOURCE-COUNT-SECURITY-TRASH (authorable-now): source_stack_count formula
+  # (BT20-037) + floor_div trash_top_security (BT17-018) + unsuspend (AD1-006).
+  - when: when_attacking
+    once_per_turn: true
+    summary: "[WA][OPT] Unsuspend self; trash opp top security for every 2 [Royal Knight] sources"
+    process:
+      - unsuspend: { target: source }
+      - trash_top_security:
+          of: opponent
+          count:
+            floor_div:
+              - source_stack_count:
+                  target: source
+                  filter: { trait_has: "Royal Knight" }
+              - 2
