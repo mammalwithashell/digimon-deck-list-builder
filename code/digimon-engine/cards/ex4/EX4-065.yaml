@@ -6,7 +6,7 @@ cost: 8
 
 effects:
   - when: main_from_hand
-    summary: "[Main] Delete 1 opponent Digimon with the highest DP"
+    summary: "[Main] Delete 1 opp Digimon with the highest DP; if a 13000+-DP Digimon was deleted by this effect, trash opp top security"
     process:
       - select_opponent_permanent:
           bind_as: victim
@@ -19,9 +19,18 @@ effects:
                     scope: opponent
           prompt: "Delete 1 opponent Digimon with the highest DP"
       - delete_permanent: { target: victim }
+      # "If a Digimon with 13000 DP or more is deleted by this effect, trash
+      # the top card of your opponent's security stack." Keyed on the
+      # PRE-REMOVAL DP of what WAS deleted (DCGO EX4_065.cs:71 uses
+      # `DPJustBeforeRemoveField >= 13000`), not on the live target — the
+      # carrier is in trash by the time this rider evaluates (rule 25).
+      - if:
+          condition: { effect_deleted_opponent_digimon_dp_gte: 13000 }
+          then:
+            - trash_top_security: { of: opponent }
 
   - when: on_security
-    summary: "[Security] Activate this card's Main effect"
+    summary: "[Security] Activate this card's Main effect (delete highest-DP; 13000+-DP deletion trashes opp top security)"
     process:
       - select_opponent_permanent:
           bind_as: victim
@@ -34,12 +43,7 @@ effects:
                     scope: opponent
           prompt: "Delete 1 opponent Digimon with the highest DP"
       - delete_permanent: { target: victim }
-
-  # Omitted (G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD):
-  # "If a Digimon with 13000 DP or more is deleted by this effect, trash the
-  # top card of your opponent's security stack." The effect-deleted result
-  # payload is bare-bool only (`effect_deleted_any_opponent_digimon`); the
-  # result log (`EffectResultLog.deleted`) stores only `PermanentHandle`s with
-  # no DP snapshot, and post-deletion the carrier has moved to trash so a live
-  # DP read is unavailable. Needs a deleted-permanent DP threshold on the
-  # effect-deleted payload before this conditional tail can be authored.
+      - if:
+          condition: { effect_deleted_opponent_digimon_dp_gte: 13000 }
+          then:
+            - trash_top_security: { of: opponent }

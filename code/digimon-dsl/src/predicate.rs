@@ -486,6 +486,16 @@ pub struct PredicateSpec {
     pub effect_deleted_any_own_digimon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_deleted_any_opponent_digimon: Option<bool>,
+    /// True iff at least one OPPONENT Digimon deleted by THIS effect had
+    /// pre-removal effective DP `>= N`. The DP-threshold sibling of
+    /// `effect_deleted_any_opponent_digimon`; reads the per-deletion DP
+    /// snapshot recorded in the effect-result log (the carrier is in trash by
+    /// the time a rider evaluates, so the snapshot is the only faithful DP
+    /// source). Driver: EX4-065 Trident Gaia
+    /// ("If a Digimon with 13000 DP or more is deleted by this effect, trash
+    /// the opponent's top security card"). G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_deleted_opponent_digimon_dp_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_played_any_digimon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

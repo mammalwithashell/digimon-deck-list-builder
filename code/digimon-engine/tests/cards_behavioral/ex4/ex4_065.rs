@@ -147,9 +147,103 @@ fn ex4_065_main_no_target_is_a_noop() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Gap-routed tail
+// Conditional tail: trash opp top security iff a 13000+-DP Digimon was deleted
+// by this effect (G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD)
 // ════════════════════════════════════════════════════════════════════════════
 
-#[ignore = "pending: G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD — the conditional 'if a 13000+ DP Digimon was deleted by this effect, trash opp top security' needs a deleted-permanent DP threshold on the effect-deleted result payload (the log stores only PermanentHandles, no DP, and the carrier has moved to trash); tracker: qa/dsl-vocab-gaps.md"]
+/// Helper: build a runner with EX4-065 in hand, one opponent Digimon of the
+/// given DP on field, and a 3-card opponent security stack. Activates the
+/// [Main] effect and drives the single legal highest-DP delete pick.
+fn run_main_delete_with_security(opp_dp: i32) -> DebugRunner {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX4-065 loads")
+        .add_card(opp_digimon("OPP-TARGET", opp_dp))
+        .add_card(make_test_card("FILL", "Fill"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(1, &["FILL"; 3])
+        .memory(8)
+        .start();
+
+    r.place_on_field(1, "OPP-TARGET", Some(0));
+    assert_eq!(r.battle_area_size(1), 1);
+    assert_eq!(r.security_count(1), 3, "opponent starts with 3 security");
+
+    assert!(r.game.activate_hand_main(0, 0), "activate Trident Gaia [Main]");
+    let view = r
+        .pending_selection_view()
+        .expect("highest-DP delete target prompt installs");
+    r.execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("delete the highest-DP opponent Digimon");
+    let _ = r.auto_resolve();
+    assert_eq!(r.battle_area_size(1), 0, "the opponent Digimon was deleted");
+    r
+}
+
+/// (A) POSITIVE: deleting a 14000-DP (>= 13000) highest opponent Digimon trashes
+/// the opponent's top security card.
 #[test]
-fn ex4_065_trashes_security_when_deleted_dp_13000_or_more() {}
+fn ex4_065_trashes_security_when_deleted_dp_13000_or_more() {
+    let r = run_main_delete_with_security(14000);
+    assert_eq!(
+        r.security_count(1),
+        2,
+        "deleting a >= 13000-DP Digimon by this effect trashes opp top security"
+    );
+}
+
+/// Boundary: exactly 13000 DP also trashes (the threshold is `>= 13000`).
+#[test]
+fn ex4_065_trashes_security_at_exactly_13000_dp() {
+    let r = run_main_delete_with_security(13000);
+    assert_eq!(
+        r.security_count(1),
+        2,
+        "13000 DP is on the threshold and trashes opp top security"
+    );
+}
+
+/// (B) NEGATIVE: deleting a 12000-DP (< 13000) highest opponent Digimon does NOT
+/// trash any security.
+#[test]
+fn ex4_065_no_security_trash_when_deleted_dp_below_13000() {
+    let r = run_main_delete_with_security(12000);
+    assert_eq!(
+        r.security_count(1),
+        3,
+        "deleting a < 13000-DP Digimon must NOT trash opp security"
+    );
+}
+
+/// (C) NO TARGET: with no opponent Digimon to delete, the conditional tail must
+/// not fire — security is untouched.
+#[test]
+fn ex4_065_no_security_trash_when_no_delete_target() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX4-065 loads")
+        .add_card(make_test_card("FILL", "Fill"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(1, &["FILL"; 3])
+        .memory(8)
+        .start();
+
+    assert!(r.game.activate_hand_main(0, 0), "activate Trident Gaia [Main]");
+    let _ = r.auto_resolve();
+    assert_eq!(r.battle_area_size(1), 0, "no opponent Digimon to delete");
+    assert_eq!(
+        r.security_count(1),
+        3,
+        "no deletion ⇒ no security trash"
+    );
+}
+
+// NOTE: the [Security] clause shares the identical delete + conditional
+// security-trash process steps with [Main] (the YAML authors the same rider on
+// both `main_from_hand` and `on_security`), so the [Main]-path coverage above
+// exercises the same rider logic. The structural test
+// `ex4_065_has_main_and_security_shells` asserts both clauses are present.

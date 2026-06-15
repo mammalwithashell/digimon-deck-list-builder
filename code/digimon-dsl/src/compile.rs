@@ -898,6 +898,17 @@ fn compile_predicate(
         }),
         effect_deleted_any_own_digimon: p.effect_deleted_any_own_digimon,
         effect_deleted_any_opponent_digimon: p.effect_deleted_any_opponent_digimon,
+        effect_deleted_opponent_digimon_dp_gte: p
+            .effect_deleted_opponent_digimon_dp_gte
+            .as_ref()
+            .map(|d| {
+                compile_dp_constraint(
+                    d,
+                    &format!("{prefix}.effect_deleted_opponent_digimon_dp_gte"),
+                    card_id,
+                    errors,
+                )
+            }),
         effect_played_any_digimon: p.effect_played_any_digimon,
         effect_digivolved_any_digimon: p.effect_digivolved_any_digimon,
         effect_added_any_card_to_hand: p.effect_added_any_card_to_hand,

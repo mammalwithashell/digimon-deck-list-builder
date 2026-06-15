@@ -364,6 +364,7 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
         &predicate.security_count_gte,
         &predicate.face_up_security_count_lte,
         &predicate.face_up_security_count_gte,
+        &predicate.effect_deleted_opponent_digimon_dp_gte,
     ]
     .into_iter()
     .flatten()

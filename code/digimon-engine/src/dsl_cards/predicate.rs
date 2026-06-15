@@ -726,6 +726,7 @@ fn eval_result_bound_fields(
             && pred.returned_card_matching.is_none()
             && pred.effect_deleted_any_own_digimon != Some(true)
             && pred.effect_deleted_any_opponent_digimon != Some(true)
+            && pred.effect_deleted_opponent_digimon_dp_gte.is_none()
             && pred.effect_played_any_digimon != Some(true)
             && pred.effect_digivolved_any_digimon != Some(true)
             && pred.effect_added_any_card_to_hand != Some(true);
@@ -772,14 +773,29 @@ fn eval_result_bound_fields(
         }
     }
     if let Some(want) = pred.effect_deleted_any_own_digimon {
-        let actual = log.deleted.iter().any(|h| h.player == rctx.player);
+        let actual = log.deleted.iter().any(|(h, _)| h.player == rctx.player);
         if actual != want {
             return false;
         }
     }
     if let Some(want) = pred.effect_deleted_any_opponent_digimon {
-        let actual = log.deleted.iter().any(|h| h.player != rctx.player);
+        let actual = log.deleted.iter().any(|(h, _)| h.player != rctx.player);
         if actual != want {
+            return false;
+        }
+    }
+    // G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD — true iff at least one OPPONENT
+    // Digimon deleted by THIS effect had pre-removal effective DP >= N. The DP
+    // was snapshotted at the delete-step call site (the carrier is in trash by
+    // now, so the log's captured DP is the only faithful source). DCGO
+    // EX4_065.cs:71 uses the identical `DPJustBeforeRemoveField >= 13000`.
+    if let Some(floor) = &pred.effect_deleted_opponent_digimon_dp_gte {
+        let n = eval_int_constraint_read(floor, rctx, rctx.source_permanent, Some(bindings));
+        let actual = log
+            .deleted
+            .iter()
+            .any(|(h, dp)| h.player != rctx.player && dp.is_some_and(|d| d >= n));
+        if !actual {
             return false;
         }
     }

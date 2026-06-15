@@ -432,6 +432,10 @@ pub struct CompiledPredicate {
     pub returned_card_matching: Option<Box<CompiledPredicate>>,
     pub effect_deleted_any_own_digimon: Option<bool>,
     pub effect_deleted_any_opponent_digimon: Option<bool>,
+    /// DP-threshold sibling of `effect_deleted_any_opponent_digimon`: true iff
+    /// an opponent Digimon with pre-removal effective DP `>= N` was deleted by
+    /// this effect. G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD (EX4-065).
+    pub effect_deleted_opponent_digimon_dp_gte: Option<CompiledDpConstraint>,
     pub effect_played_any_digimon: Option<bool>,
     pub effect_digivolved_any_digimon: Option<bool>,
     pub effect_added_any_card_to_hand: Option<bool>,
