@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "python .claude/hooks/digimon_rules_baseline.py" }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "python .claude/hooks/digimon_rules_hint.py" }
+        ]
+      }
+    ]
+  }
+}
