@@ -27,7 +27,7 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["code"]
 include = ["server*", "digimon_gym*"]
-exclude = ["engine_py_legacy*", "tests*", "tools*"]
+exclude = ["tests*", "tools*"]
 
 [tool.setuptools]
 py-modules = ["data_paths"]
@@ -38,13 +38,10 @@ py-modules = ["data_paths"]
 [tool.pytest.ini_options]
 testpaths = ["code/tests"]
 pythonpath = ["code"]
-addopts = "--ignore=code/tests/test_rl_gym.py --ignore=code/tests/ai_pipeline --ignore=code/engine_py_legacy -v"
-norecursedirs = ["code/engine_py_legacy"]
+addopts = "--ignore=code/tests/test_rl_gym.py --ignore=code/tests/ai_pipeline -v"
 asyncio_mode = "auto"
 markers = [
     "ai_pipeline: AI pipeline tests (server.ai.* and DB deps)",
-    "behavioral: Behavioral tests using DebugRunner with real card effects",
-    "scenario: YAML scenario-based tests",
     "slow: Tests that take >10s (greedy baselines)",
 ]
 

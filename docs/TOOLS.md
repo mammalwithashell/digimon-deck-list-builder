@@ -100,37 +100,15 @@ After training, the script prints a spot-check showing each sampled card and its
 
 ---
 
-## 2. Script Promotion
+## 2. Script Promotion — RETIRED
 
-### 2.1 Promote Script
-
-**Script:** `code/tools/promote_script.py`
-
-Promotes a generated card script from the generated lane into the frozen production lane. Calls `engine_py_legacy.engine.data.script_promotion.promote_script_from_generated` and requires the expected hash of the generated script for safety.
-
-```bash
-python code/tools/promote_script.py \
-  --card-id BT22-001 \
-  --set-id BT22 \
-  --module-name bt22_001 \
-  --expected-generated-hash <sha256>
-```
-
-On success, prints the promotion result as JSON (frozen path, hash). The script is moved to `code/engine_py_legacy/engine/data/scripts/{set_id}/` and the frozen manifest is updated.
-
----
-
-### 2.2 Check Frozen Integrity
-
-**Script:** `code/tools/check_frozen_integrity.py`
-
-CI guard that verifies no frozen scripts have been modified outside of the promotion workflow. Computes SHA-256 hashes of all files in `code/engine_py_legacy/engine/data/scripts/` (excluding `generated/` and `__pycache__`) and compares them against `_frozen_manifest.json`. Also detects untracked frozen files that are not in the manifest.
-
-```bash
-python code/tools/check_frozen_integrity.py
-```
-
-Exits non-zero if any frozen file has been modified, is missing, or is present without a manifest entry. Intended to run in CI on every PR that touches the `scripts/` directory.
+The Python frozen/generated card-script promotion lane is **retired**
+(shrink-legacy-engine-surface, 2026-06-14). Card scripting is now Rust
+DSL-first (rule 28), so there is nothing to promote. The tools
+`promote_script.py`, `check_frozen_integrity.py`, `run_qa_batch.py`, and
+`archive/bootstrap_frozen_manifest.py` were deleted, and the hosted-API
+`/admin/promotions` + `/admin/ai-tasks/{id}/promote` endpoints now return
+`410 Gone` (`GET /admin/promotions` still serves historical audit rows).
 
 ---
 

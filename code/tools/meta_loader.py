@@ -40,8 +40,11 @@ from data_paths import (
     ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH,
     DECK_LIBRARY as _DECK_LIBRARY_PATH,
 )
-from engine_py_legacy.engine.data.deck_loader import RE_CARD_ID  # parity-doc: regex stays on Python
 from digimon_engine import expand_deck_dict, parse_deck
+
+# Card-id pattern (relocated from engine_py_legacy.deck_loader.RE_CARD_ID with
+# shrink-legacy-engine-surface — it is a plain regex, no engine dependency).
+RE_CARD_ID = re.compile(r"^[A-Z]{1,3}\d*-\d+$")
 
 logger = logging.getLogger(__name__)
 

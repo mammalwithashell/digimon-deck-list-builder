@@ -71,17 +71,14 @@ from server.db.schemas import (
     ApproveSetIssuesResponse,
     EngineBacklogCreateRequest,
     EngineBacklogResponse,
-    PromotionRequest,
     PromotionResponse,
     QueueSetIssueFixesRequest,
     QueueSetIssueFixesResponse,
-    TaskPromotionRequest,
 )
-from engine_py_legacy.engine.data.script_promotion import (
-    ScriptPromotionError,
-    promote_script_from_generated,
-    scripts_root,
-)
+# Python frozen/generated card-script promotion (engine_py_legacy.script_promotion)
+# is RETIRED — card scripting is Rust DSL-first (shrink-legacy-engine-surface,
+# rule 22/28). The two promote endpoints below now return 410 Gone;
+# `list_promotions` still serves historical `ScriptPromotionAudit` rows.
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 dispatcher = TaskDispatcher()
@@ -1192,149 +1189,26 @@ async def list_applied_cards(
     return results
 
 
-@router.post("/ai-tasks/{task_id}/promote", response_model=PromotionResponse, status_code=status.HTTP_201_CREATED)
-async def promote_task_card(
-    task_id: str,
-    request: TaskPromotionRequest,
-    user: User = Depends(require_roles(ROLE_ADMIN)),
-    db: AsyncSession = Depends(get_db),
-):
-    result = await db.execute(select(AITask).where(AITask.id == task_id))
-    task = result.scalar_one_or_none()
-    if task is None:
-        raise HTTPException(status_code=404, detail="AI task not found")
-    if task.task_type not in {"review_batch", "script_autofix"}:
-        raise HTTPException(status_code=400, detail="Task type does not support task-linked promotion")
-    if task.status != "completed":
-        raise HTTPException(status_code=400, detail="Task must be completed before promotion")
-
-    card_id = request.card_id.strip().upper()
-
-    # --- Quality Gate 1: review_batch must find card faithful to card text ---
-    if task.task_type == "review_batch":
-        result_data = _load_json(task.result_json, {})
-        cards_results = result_data.get("cards", {}) if isinstance(result_data, dict) else {}
-        card_review = cards_results.get(card_id, {}) if isinstance(cards_results, dict) else {}
-        if not card_review.get("faithful_to_card_text", False):
-            raise HTTPException(
-                status_code=409,
-                detail=f"Cannot promote: review found card {card_id} is not faithful to card text",
-            )
-
-    # --- Quality Gate 2: script_autofix must have a successful apply audit ---
-    if task.task_type == "script_autofix":
-        audit_result = await db.execute(
-            select(AIFixApplyAudit).where(
-                AIFixApplyAudit.ai_task_id == task.id,
-                AIFixApplyAudit.status == "applied",
-            ).limit(1)
-        )
-        if audit_result.scalar_one_or_none() is None:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Cannot promote: no successful apply audit found for task {task_id}",
-            )
-
-    sanitized = _load_json(task.sanitized_input_json, {})
-    payload = _load_json(task.payload_json, {})
-    cards = sanitized.get("cards", []) if isinstance(sanitized, dict) else []
-    if not cards and task.task_type == "script_autofix":
-        cards = [
-            {
-                "card_id": payload.get("card_id"),
-                "set_id": payload.get("set_id"),
-                "module_name": payload.get("module_name"),
-            }
-        ]
-    if not cards:
-        cards = payload.get("cards", []) if isinstance(payload, dict) else []
-    if not isinstance(cards, list):
-        cards = []
-
-    selected: Optional[dict[str, Any]] = None
-    for entry in cards:
-        if not isinstance(entry, dict):
-            continue
-        if str(entry.get("card_id", "")).strip().upper() == card_id:
-            selected = entry
-            break
-    if selected is None:
-        raise HTTPException(status_code=400, detail=f"Card {card_id} not found in task payload/sanitized_input")
-
-    set_id = str(selected.get("set_id", "")).strip().lower()
-    module_name = str(selected.get("module_name", "")).strip().lower()
-    if not set_id or not module_name:
-        raise HTTPException(status_code=400, detail=f"Task card entry for {card_id} is missing set_id/module_name")
-
-    generated_path = scripts_root() / "generated" / set_id / f"{module_name}.py"
-    if not generated_path.exists():
-        raise HTTPException(status_code=400, detail=f"Generated script not found: {generated_path}")
-    expected_generated_hash = _sha256(str(generated_path))
-
-    try:
-        promotion = promote_script_from_generated(
-            card_id=card_id,
-            set_id=set_id,
-            module_name=module_name,
-            expected_generated_hash=expected_generated_hash,
-        )
-    except ScriptPromotionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    audit = ScriptPromotionAudit(
-        card_id=card_id,
-        set_id=set_id,
-        module_name=module_name,
-        generated_hash=promotion["generated_hash"],
-        frozen_hash=promotion["frozen_hash"],
-        manifest_version=int(promotion["manifest_version"]),
-        ai_task_id=task.id,
-        promoted_by=user.id,
-        notes=request.notes,
+@router.post("/ai-tasks/{task_id}/promote", status_code=status.HTTP_410_GONE)
+async def promote_task_card(task_id: str):
+    """RETIRED: task-linked Python frozen-script promotion is removed
+    (shrink-legacy-engine-surface) — card scripting is Rust DSL-first (rule 28).
+    """
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Script promotion is retired — card scripting is Rust DSL-first.",
     )
-    db.add(audit)
-    await db.commit()
-    await db.refresh(audit)
-    return _promotion_to_response(audit, task=task)
 
 
-@router.post("/promotions", response_model=PromotionResponse, status_code=status.HTTP_201_CREATED)
-async def promote_script(
-    request: PromotionRequest,
-    user: User = Depends(require_roles(ROLE_ADMIN)),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        result = promote_script_from_generated(
-            card_id=request.card_id,
-            set_id=request.set_id,
-            module_name=request.module_name,
-            expected_generated_hash=request.expected_generated_hash,
-        )
-    except ScriptPromotionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    linked_task: AITask | None = None
-    if request.ai_task_id:
-        linked_task = (
-            await db.execute(select(AITask).where(AITask.id == request.ai_task_id))
-        ).scalar_one_or_none()
-
-    audit = ScriptPromotionAudit(
-        card_id=request.card_id,
-        set_id=request.set_id,
-        module_name=request.module_name,
-        generated_hash=result["generated_hash"],
-        frozen_hash=result["frozen_hash"],
-        manifest_version=int(result["manifest_version"]),
-        ai_task_id=request.ai_task_id,
-        promoted_by=user.id,
-        notes=request.notes,
+@router.post("/promotions", status_code=status.HTTP_410_GONE)
+async def promote_script():
+    """RETIRED: the Python frozen/generated card-script promotion lane is removed
+    (shrink-legacy-engine-surface) — card scripting is Rust DSL-first (rule 28).
+    """
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Script promotion is retired — card scripting is Rust DSL-first.",
     )
-    db.add(audit)
-    await db.commit()
-    await db.refresh(audit)
-    return _promotion_to_response(audit, task=linked_task)
 
 
 @router.get("/promotions", response_model=List[PromotionResponse])

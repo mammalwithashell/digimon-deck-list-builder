@@ -20,6 +20,19 @@ use crate::permanent::PermanentHandle;
 use crate::selection::{AttackTarget, PendingSelection, SelectionKind};
 
 impl Game {
+    /// Set a MAIN turn phase and emit a [`crate::events::GameEvent::PhaseChange`].
+    /// Used ONLY by the turn machine for the Unsuspend/Draw/Breeding/Main/EndTurn
+    /// progression — NOT by the transient selection sub-phases (SelectTarget,
+    /// EffectChoice, …), which set `current_phase` directly and are not
+    /// turn-phase changes. `player` is the current turn player.
+    fn set_turn_phase(&mut self, phase: GamePhase) {
+        self.current_phase = phase;
+        let seq = self.next_event_seq();
+        let player = self.turn_player();
+        self.events
+            .push(crate::events::GameEvent::PhaseChange { seq, player, phase });
+    }
+
     /// Begin a new turn for the current turn player.
     pub(crate) fn begin_turn(&mut self) {
         let tp = self.turn_player();
@@ -53,6 +66,15 @@ impl Game {
     fn continue_begin_turn_after_start_delays(&mut self) {
         let tp = self.turn_player();
 
+        // A new turn has started — fires once per turn (including turn 1, which
+        // reaches here without going through the end-of-turn `turn_count` bump).
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::TurnStart {
+            seq,
+            player: tp,
+            turn_count: self.turn_count,
+        });
+
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::UntilNextUnsuspend);
 
         // Reset per-turn state
@@ -68,7 +90,7 @@ impl Game {
         // directly mutates `is_suspended` without firing `OnUnsuspend`
         // observers (phase-start unsuspension is not a trigger-carrying
         // event per the rules).
-        self.current_phase = GamePhase::Unsuspend;
+        self.set_turn_phase(GamePhase::Unsuspend);
         {
             let n = self.player(tp).battle_area.len();
             let mut unlocked: Vec<u8> = Vec::with_capacity(n);
@@ -157,7 +179,7 @@ impl Game {
         self.reevaluate_until_condition_modifiers_if_dirty();
 
         // Draw phase
-        self.current_phase = GamePhase::Draw;
+        self.set_turn_phase(GamePhase::Draw);
         let should_skip_draw = match self.rules.skip_first_draw {
             // "The first player of the game skips their first draw." Turn 1
             // uniquely identifies that moment — whoever the coin flip sat at
@@ -191,7 +213,7 @@ impl Game {
         }
 
         // Breeding phase
-        self.current_phase = GamePhase::Breeding;
+        self.set_turn_phase(GamePhase::Breeding);
         if !self.has_actionable_breeding_option(tp) {
             self.enter_main_phase();
         }
@@ -216,7 +238,7 @@ impl Game {
     /// Advance from breeding to main phase.
     pub fn enter_main_phase(&mut self) {
         let tp = self.turn_player();
-        self.current_phase = GamePhase::Main;
+        self.set_turn_phase(GamePhase::Main);
         // StartOfYourMainPhase fires after Draw/Breeding, before the turn player
         // takes their main-phase actions. Matches Python's OnStartMainPhase.
         self.enqueue_triggered(
@@ -248,7 +270,7 @@ impl Game {
             return;
         }
 
-        self.current_phase = GamePhase::EndTurn;
+        self.set_turn_phase(GamePhase::EndTurn);
 
         let ending_player = self.turn_player();
 
@@ -288,7 +310,7 @@ impl Game {
 
     fn continue_end_turn_after_effects(&mut self, ending_player: PlayerId, memory_before: i16) {
         if memory_before < 0 && self.memory >= 0 && !self.game_over {
-            self.current_phase = GamePhase::Main;
+            self.set_turn_phase(GamePhase::Main);
             return;
         }
 
